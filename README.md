@@ -4,11 +4,17 @@ Browser-based code review tool for Claude Code. Shows git diffs in a GitHub-styl
 
 ## Quick Start
 
+**Option A** — cross-platform (Claude Code, Cursor, Codex, and 40+ agents):
 ```bash
 npx skills add vrppaul/claude-review -g -y
 ```
 
-That's it. Type `/review-ui` in Claude Code (also works in Cursor, Codex, and 40+ agents). The CLI is installed automatically on first use.
+**Option B** — Claude Code plugin marketplace:
+```
+/plugin marketplace add vrppaul/claude-review
+```
+
+Type `/review-ui` and the CLI is installed automatically on first use.
 
 ### Manual CLI install (optional)
 
