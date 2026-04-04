@@ -1,21 +1,21 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-review-marketplace",
   "description": "Browser-based code review tools for Claude Code",
+  "owner": {
+    "name": "vrppaul",
+    "email": "vrppaul@github.com"
+  },
   "plugins": [
     {
       "name": "claude-review",
       "description": "Browser-based code review tool. Shows git diffs in a GitHub-style UI with syntax highlighting, inline comments, and sends formatted feedback back to Claude.",
-      "version": "0.1.0",
-      "author": "vrppaul",
-      "license": "MIT",
-      "homepage": "https://github.com/vrppaul/claude-review",
-      "keywords": ["code-review", "diff-viewer", "developer-tools"],
-      "source": {
-        "type": "github",
-        "owner": "vrppaul",
-        "repo": "claude-review",
-        "path": "plugin"
-      }
+      "author": {
+        "name": "vrppaul"
+      },
+      "source": "./plugin",
+      "category": "development",
+      "homepage": "https://github.com/vrppaul/claude-review"
     }
   ]
 }
