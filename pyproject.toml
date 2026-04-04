@@ -1,0 +1,120 @@
+[project]
+name = "claude-review"
+version = "0.1.0"
+description = "Browser-based code review tool for Claude Code"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.135.3",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "structlog>=25.5.0",
+    "uvicorn>=0.43.0",
+]
+
+[project.scripts]
+claude-review = "claude_review.cli:main"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-playwright>=0.7.2",
+    "ruff>=0.15.9",
+    "ty>=0.0.28",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "unit: pure logic tests, no I/O",
+    "integration: tests with real git repos or server",
+    "e2e: full browser round-trip tests",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+src = ["src"]
+fix = true
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.pyc",
+    "build",
+    "dist",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "E",        # pycodestyle errors
+    "F",        # pyflakes
+    "I",        # isort
+    "UP",       # pyupgrade
+    "B",        # flake8-bugbear
+    "C4",       # flake8-comprehensions
+    "N",        # pep8-naming
+    "SIM",      # flake8-simplify
+    "TID",      # tidy imports
+    "W",        # pycodestyle warnings
+    "RUF",      # Ruff-specific rules
+    "ASYNC",    # async anti-patterns
+    "T20",      # no print() in source (use structlog)
+    "RSE",      # unnecessary parens on raise
+    "PERF",     # performance anti-patterns
+    "FURB",     # refurb modernizations
+    "PLC0415",  # import-outside-toplevel
+]
+ignore = [
+    "B008",     # function call in argument defaults (common in FastAPI)
+    "SIM108",   # ternary operator — if/else often more readable
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["claude_review"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["D", "ANN", "SLF001", "T20", "PLC0415"]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.rules]
+possibly-missing-attribute = "warn"
+no-matching-overload = "warn"
+invalid-assignment = "warn"
+invalid-return-type = "warn"
+invalid-argument-type = "warn"
+missing-argument = "warn"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]
+
+[tool.hatchling.build]
+packages = ["src/claude_review"]
+
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/claude_review/static/dist" = "claude_review/static/dist"
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
