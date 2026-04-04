@@ -2,9 +2,10 @@
 
 ## Next
 
-- [ ] Publish to PyPI (`uv tool install claude-review` without git+)
-- [ ] Update local skill path to use `uvx claude-review` once on PyPI
+- [ ] Publish to PyPI (`uvx claude-review` without git+)
+- [ ] Submit to official Claude Code plugin marketplace
 - [ ] Component tests (CommentBox, DiffView, FileList) with @testing-library/svelte
+- [ ] Version bumping strategy (keep pyproject.toml and plugin.json in sync)
 
 ## Future
 
@@ -14,3 +15,5 @@
 - [ ] Auto-push via Channel MCP
 - [ ] Comment persistence across review rounds
 - [ ] Cross-platform browser open (macOS/Windows support alongside xdg-open)
+- [ ] Collapse/expand file diffs
+- [ ] Search within diff

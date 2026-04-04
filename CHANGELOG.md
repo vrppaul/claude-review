@@ -13,6 +13,10 @@
 - Double-submit protection (409)
 - Supports tracked, staged, and untracked files
 - `/review-ui` slash command via `npx skills add`
+- Claude Code plugin marketplace (`/plugin marketplace add vrppaul/claude-review`)
+- CI: GitHub Actions (lint, Python tests, frontend tests, e2e, build verification)
+- Pre-commit hooks: ruff, ty, bandit, conventional commits
+- Auto-build frontend via hatch build hook (`uv build` builds both BE and FE)
 - DDD-lite architecture: domain, services, repositories, presentation
 - 29 Python tests (unit/integration/e2e with Playwright)
 - 15 frontend tests (vitest)
