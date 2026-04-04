@@ -50,7 +50,7 @@ class GitRepository:
             )
             await proc.communicate()
             return proc.returncode == 0
-        except (FileNotFoundError, NotADirectoryError):
+        except FileNotFoundError, NotADirectoryError:
             return False
 
     async def _run(self, path: Path, cmd: list[str], env: dict | None = None) -> str:
