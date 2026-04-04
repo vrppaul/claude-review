@@ -112,3 +112,5 @@ def main(argv: list[str] | None = None) -> None:
     if result:
         sys.stdout.write(result)
         sys.stdout.write("\n")
+    else:
+        sys.stderr.write("No changes found.\n")
