@@ -1,32 +1,26 @@
-"""FastAPI application factory."""
-
-import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from claude_review.domain.models import DiffFile
-from claude_review.presentation.routes import create_router
+from claude_review.presentation.routes import router
+from claude_review.presentation.schemas import ServerState
+from claude_review.services.review_service import ReviewService
 
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
 
 
 def create_app(
     diff_files: list[DiffFile],
-    shutdown_event: asyncio.Event,
-    result_holder: list[str] | None = None,
-    heartbeat_holder: list[float] | None = None,
+    state: ServerState,
 ) -> FastAPI:
-    """Create the FastAPI application with injected dependencies."""
     app = FastAPI(title="Claude Review")
 
-    router = create_router(
-        diff_files=diff_files,
-        shutdown_event=shutdown_event,
-        result_holder=result_holder if result_holder is not None else [],
-        heartbeat_holder=heartbeat_holder if heartbeat_holder is not None else [],
-    )
+    app.state.diff_files = diff_files
+    app.state.server_state = state
+    app.state.review_service = ReviewService()
+
     app.include_router(router)
 
     if STATIC_DIR.exists():

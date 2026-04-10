@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 from claude_review.presentation.app import create_app
+from claude_review.presentation.schemas import ServerState
 
 
 @pytest.fixture
@@ -34,13 +35,13 @@ def mock_diff_files() -> list[DiffFile]:
 
 
 @pytest.fixture
-def shutdown_event() -> asyncio.Event:
-    return asyncio.Event()
+def server_state() -> ServerState:
+    return ServerState(shutdown_event=asyncio.Event())
 
 
 @pytest.fixture
-async def client(mock_diff_files: list[DiffFile], shutdown_event: asyncio.Event):
-    app = create_app(diff_files=mock_diff_files, shutdown_event=shutdown_event)
+async def client(mock_diff_files: list[DiffFile], server_state: ServerState):
+    app = create_app(diff_files=mock_diff_files, state=server_state)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 
@@ -113,16 +114,16 @@ async def test_submit_with_empty_comments(client: AsyncClient) -> None:
     assert data["markdown"] == ""
 
 
-async def test_submit_triggers_shutdown_signal(client: AsyncClient, shutdown_event: asyncio.Event) -> None:
+async def test_submit_triggers_shutdown_signal(client: AsyncClient, server_state: ServerState) -> None:
     """POST /api/submit sets the shutdown event."""
-    assert not shutdown_event.is_set()
+    assert not server_state.shutdown_event.is_set()
 
     await client.post(
         "/api/submit",
         json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": "note"}]},
     )
 
-    assert shutdown_event.is_set()
+    assert server_state.shutdown_event.is_set()
 
 
 async def test_double_submit_returns_409(client: AsyncClient) -> None:
@@ -134,3 +135,51 @@ async def test_double_submit_returns_409(client: AsyncClient) -> None:
 
     second = await client.post("/api/submit", json=payload)
     assert second.status_code == 409
+
+
+async def test_submit_stores_result_in_state(client: AsyncClient, server_state: ServerState) -> None:
+    """POST /api/submit stores formatted markdown in state.result."""
+    assert server_state.result is None
+
+    await client.post(
+        "/api/submit",
+        json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": "fix this"}]},
+    )
+
+    assert server_state.result is not None
+    assert "fix this" in server_state.result
+
+
+async def test_heartbeat_updates_state(client: AsyncClient, server_state: ServerState) -> None:
+    """POST /api/heartbeat records a timestamp in state."""
+    assert server_state.last_heartbeat is None
+
+    response = await client.post("/api/heartbeat")
+
+    assert response.status_code == 200
+    assert server_state.last_heartbeat is not None
+    assert server_state.last_heartbeat > 0
+
+
+async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
+    """POST /api/submit with invalid comment data returns 422."""
+    # Empty body
+    response = await client.post(
+        "/api/submit",
+        json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": ""}]},
+    )
+    assert response.status_code == 422
+
+    # start_line > end_line
+    response = await client.post(
+        "/api/submit",
+        json={"comments": [{"file": "x.py", "start_line": 10, "end_line": 5, "body": "note"}]},
+    )
+    assert response.status_code == 422
+
+    # Negative line number
+    response = await client.post(
+        "/api/submit",
+        json={"comments": [{"file": "x.py", "start_line": 0, "end_line": 1, "body": "note"}]},
+    )
+    assert response.status_code == 422

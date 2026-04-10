@@ -1,12 +1,17 @@
-"""Git repository for accessing diff data."""
-
 import asyncio
 import contextlib
 import os
 import tempfile
 from pathlib import Path
 
+import structlog
+
 from claude_review.domain.exceptions import GitError
+
+log = structlog.get_logger()
+
+
+GIT_TIMEOUT = 30.0
 
 
 class GitRepository:
@@ -38,7 +43,6 @@ class GitRepository:
                 os.unlink(tmp_index)
 
     async def _has_commits(self, path: Path) -> bool:
-        """Check if the repo has at least one commit."""
         try:
             proc = await asyncio.create_subprocess_exec(
                 "git",
@@ -48,13 +52,15 @@ class GitRepository:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            await proc.communicate()
+            await asyncio.wait_for(proc.communicate(), timeout=GIT_TIMEOUT)
             return proc.returncode == 0
-        except FileNotFoundError, NotADirectoryError:
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except TimeoutError:
+            proc.kill()
             return False
 
-    async def _run(self, path: Path, cmd: list[str], env: dict | None = None) -> str:
-        """Run a git command and return stdout."""
+    async def _run(self, path: Path, cmd: list[str], env: dict[str, str] | None = None) -> str:
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -67,10 +73,16 @@ class GitRepository:
             msg = f"git operation failed: {e}"
             raise GitError(msg) from e
 
-        stdout, stderr = await proc.communicate()
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=GIT_TIMEOUT)
+        except TimeoutError:
+            proc.kill()
+            msg = f"git command timed out after {GIT_TIMEOUT}s: {' '.join(cmd[:2])}"
+            raise GitError(msg) from None
 
         if proc.returncode != 0:
             msg = f"git command failed: {stderr.decode().strip()}"
+            log.warning("git_command_failed", cmd=cmd[:2], returncode=proc.returncode)
             raise GitError(msg)
 
         return stdout.decode()

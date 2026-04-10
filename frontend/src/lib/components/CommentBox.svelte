@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	interface Props {
 		onSave: (body: string) => void;
 		onCancel: () => void;
@@ -14,11 +16,12 @@
 		if (endLine != null && endLine !== startLine) return `Lines ${startLine}-${endLine}`;
 		return `Line ${startLine}`;
 	}
+	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
 	let body = $state(initialBody);
 
 	let textareaEl: HTMLTextAreaElement;
 
-	$effect(() => {
+	onMount(() => {
 		textareaEl?.focus();
 	});
 

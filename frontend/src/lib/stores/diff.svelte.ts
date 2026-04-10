@@ -2,6 +2,7 @@ import type { DiffFile, DiffResponse } from '$lib/types';
 
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
+const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 
 export const diffStore = {
 	get files() {
@@ -11,7 +12,7 @@ export const diffStore = {
 		return selectedPath;
 	},
 	get selectedFile(): DiffFile | undefined {
-		return files.find((f) => f.path === selectedPath);
+		return selectedFile;
 	},
 
 	setFiles(newFiles: DiffFile[]) {
@@ -21,6 +22,11 @@ export const diffStore = {
 
 	selectFile(path: string) {
 		selectedPath = path;
+	},
+
+	clear() {
+		files = [];
+		selectedPath = null;
 	},
 
 	async fetchDiff() {

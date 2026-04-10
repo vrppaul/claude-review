@@ -27,7 +27,7 @@ const mockFiles: DiffFile[] = [
 
 describe('diffStore', () => {
 	beforeEach(() => {
-		diffStore.setFiles([]);
+		diffStore.clear();
 	});
 
 	it('starts with empty files', () => {

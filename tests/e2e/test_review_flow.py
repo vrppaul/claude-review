@@ -9,11 +9,12 @@ import uvicorn
 from playwright.async_api import Page, async_playwright
 
 from claude_review.presentation.app import create_app
+from claude_review.presentation.schemas import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from tests.helpers import git
 
-ServerFixture = tuple[str, list[str], asyncio.Event]
+ServerFixture = tuple[str, ServerState]
 
 
 @pytest.fixture
@@ -43,13 +44,8 @@ async def server_url(e2e_repo: Path) -> AsyncGenerator[ServerFixture]:
     diff_service = DiffService(git_repository=git_repo)
     diff_files = await diff_service.get_diff(e2e_repo)
 
-    shutdown_event = asyncio.Event()
-    result_holder: list[str] = []
-    app = create_app(
-        diff_files=diff_files,
-        shutdown_event=shutdown_event,
-        result_holder=result_holder,
-    )
+    state = ServerState(shutdown_event=asyncio.Event())
+    app = create_app(diff_files=diff_files, state=state)
 
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning")
     server = uvicorn.Server(config)
@@ -65,7 +61,7 @@ async def server_url(e2e_repo: Path) -> AsyncGenerator[ServerFixture]:
     port = server.servers[0].sockets[0].getsockname()[1]
     url = f"http://127.0.0.1:{port}"
 
-    yield url, result_holder, shutdown_event
+    yield url, state
 
     server.should_exit = True
     await task
@@ -81,7 +77,7 @@ async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
 
 async def test_review_flow_add_comment_and_submit(server_url: ServerFixture) -> None:
     """Full round trip: see diff, add comment, submit, verify output."""
-    url, result_holder, _shutdown_event = server_url
+    url, state = server_url
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
@@ -100,15 +96,15 @@ async def test_review_flow_add_comment_and_submit(server_url: ServerFixture) -> 
         await page.locator("button:text('Submit Review')").click()
         await page.wait_for_selector("text=Review submitted")
 
-        assert len(result_holder) == 1
-        assert "This needs fixing" in result_holder[0]
+        assert state.result is not None
+        assert "This needs fixing" in state.result
 
         await browser.close()
 
 
 async def test_multi_line_range_comment(server_url: ServerFixture) -> None:
     """Shift+click creates a range comment (e.g. file:1-3)."""
-    url, result_holder, _shutdown_event = server_url
+    url, state = server_url
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
@@ -134,17 +130,17 @@ async def test_multi_line_range_comment(server_url: ServerFixture) -> None:
         await page.locator("button:text('Submit Review')").click()
         await page.wait_for_selector("text=Review submitted")
 
-        assert len(result_holder) == 1
+        assert state.result is not None
         # Should contain a range like "file:X-Y"
-        assert "Refactor this range" in result_holder[0]
-        assert "-" in result_holder[0]  # range notation present
+        assert "Refactor this range" in state.result
+        assert "-" in state.result  # range notation present
 
         await browser.close()
 
 
 async def test_multi_file_review(server_url: ServerFixture) -> None:
     """Comments across multiple files all appear in output."""
-    url, result_holder, _shutdown_event = server_url
+    url, state = server_url
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
@@ -171,16 +167,16 @@ async def test_multi_file_review(server_url: ServerFixture) -> None:
         await page.locator("button:text('Submit Review')").click()
         await page.wait_for_selector("text=Review submitted")
 
-        assert len(result_holder) == 1
-        assert "Comment on file 1" in result_holder[0]
-        assert "Comment on file 2" in result_holder[0]
+        assert state.result is not None
+        assert "Comment on file 1" in state.result
+        assert "Comment on file 2" in state.result
 
         await browser.close()
 
 
 async def test_empty_submit_button_disabled(server_url: ServerFixture) -> None:
     """Submit with no comments — button should be disabled."""
-    url, _result_holder, _shutdown_event = server_url
+    url, _state = server_url
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
