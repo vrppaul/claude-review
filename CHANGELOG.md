@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Python 2 `except` syntax bug in git_repository.py (`except A, B:` → `except (A, B):`)
+- Deprecated `asyncio.get_event_loop()` → `get_running_loop()`
+- svelte-check warning in CommentBox (initialBody capture)
+
+### Changed
+- Replaced `xdg-open` subprocess with cross-platform `webbrowser.open()`
+- Replaced closure-based DI with FastAPI `Depends()` pattern (presentation layer)
+- Replaced fragile list holders with `ServerState` dataclass
+- Made `diffStore.selectedFile` a `$derived` for proper reactivity
+
+### Added
+- structlog logging (silent by default, `--verbose` flag to enable)
+- Pydantic field validators on `CommentInput` (positive lines, non-empty body, start ≤ end)
+- 30s timeout on all git subprocess operations
+- ESLint flat config for Svelte 5 + TypeScript (`eslint.config.js`)
+- `diffStore.clear()` for test isolation
+- Tests for heartbeat endpoint, state.result storage, and input validation (32 Python tests, 15 frontend tests)
+
+### Removed
+- Unused `pydantic-settings` dependency
+
 ## [0.1.0] - 2026-04-04
 
 ### Added

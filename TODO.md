@@ -14,6 +14,5 @@
 - [ ] Approve action
 - [ ] Auto-push via Channel MCP
 - [ ] Comment persistence across review rounds
-- [ ] Cross-platform browser open (macOS/Windows support alongside xdg-open)
 - [ ] Collapse/expand file diffs
 - [ ] Search within diff
