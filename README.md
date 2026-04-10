@@ -2,6 +2,8 @@
 
 Browser-based code review tool for Claude Code. Shows git diffs in a GitHub-style UI with syntax highlighting, lets you write inline comments (single-line or drag to select ranges), and sends formatted feedback back to Claude.
 
+![claude-review screenshot](docs/screenshot.png)
+
 ## Quick Start
 
 **Option A** — cross-platform (Claude Code, Cursor, Codex, and 40+ agents):
