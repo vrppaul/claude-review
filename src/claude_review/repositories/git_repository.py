@@ -54,7 +54,7 @@ class GitRepository:
             )
             await asyncio.wait_for(proc.communicate(), timeout=GIT_TIMEOUT)
             return proc.returncode == 0
-        except (FileNotFoundError, NotADirectoryError):
+        except (FileNotFoundError, NotADirectoryError):  # fmt: skip
             return False
         except TimeoutError:
             proc.kill()
