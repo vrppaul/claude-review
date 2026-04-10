@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2026-04-10
 
 ### Fixed
 - Python 2 `except` syntax bug in git_repository.py (`except A, B:` → `except (A, B):`)

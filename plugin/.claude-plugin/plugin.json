@@ -1,5 +1,5 @@
 {
   "name": "claude-review",
   "description": "Browser-based code review tool. Shows git diffs, lets you write inline comments, sends feedback back to Claude.",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

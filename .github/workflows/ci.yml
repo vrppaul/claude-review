@@ -78,8 +78,9 @@ jobs:
       - run: uv build
       - run: |
           python3 -c "
-          import zipfile
-          z = zipfile.ZipFile('dist/claude_review-0.1.0-py3-none-any.whl')
+          import glob, zipfile
+          whl = glob.glob('dist/claude_review-*.whl')[0]
+          z = zipfile.ZipFile(whl)
           static = [f for f in z.namelist() if 'static' in f]
           assert len(static) >= 3, f'Expected static files in wheel, got: {static}'
           print('Wheel contains static files:', static)
