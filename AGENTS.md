@@ -30,12 +30,12 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 - **uv** — project init, dependency management, running everything
 - **hatchling** — build system
 - **FastAPI + uvicorn** — async web server
-- **Pydantic + pydantic-settings** — all models (domain, schemas, config)
+- **Pydantic** — all models (domain, schemas)
 - **structlog** — structured logging
 - **ruff** — lint + format
 - **pytest + pytest-asyncio** — Python tests
 - **Svelte 5** — frontend (runes: `$state`, `$derived`, `$effect`)
-- **Vite 6** — frontend build tool
+- **Vite 8** — frontend build tool
 - **TypeScript** — strict mode, no `any`
 - **Tailwind CSS 4 + DaisyUI 5** — styling
 - **pnpm** — JS package manager
@@ -50,39 +50,30 @@ DDD-lite with clean layer separation:
 - **domain/** — Pydantic models (DiffFile, Comment, ReviewResult). No I/O, no framework imports.
 - **services/** — orchestration (DiffService, ReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
-- **presentation/** — FastAPI routes + Pydantic schemas. Thin layer calling services.
+- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly.
 
 Dependencies flow inward: presentation → services → domain, repositories → domain
 
 ## Code Style
 
 ```python
-import asyncio
-from pathlib import Path
-from typing import Protocol
+# Domain — pure models, no I/O
+class FileStatus(StrEnum):
+    MODIFIED = "modified"
+    ADDED = "added"
 
-import structlog
-
-log = structlog.get_logger()
-
-
+# Protocols — interfaces for infrastructure
 class GitRepositoryProtocol(Protocol):
-    """Protocol for git operations."""
+    async def get_raw_diff(self, path: Path) -> str: ...
 
-    async def get_diff(self, path: Path) -> str: ...
-
-
-class GitRepository:
-    """Git repository implementation using git CLI."""
-
-    async def get_diff(self, path: Path) -> str:
-        proc = await asyncio.create_subprocess_exec(
-            "git", "diff", "HEAD",
-            cwd=path,
-            stdout=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await proc.communicate()
-        return stdout.decode()
+# Presentation — FastAPI routes with Depends() DI
+@router.post("/submit")
+async def submit_review(
+    request: SubmitRequest,
+    state: ServerState = Depends(get_state),
+    review_service: ReviewService = Depends(get_review_service),
+) -> SubmitResponse:
+    ...
 ```
 
 ## Conventions
@@ -133,3 +124,5 @@ Types: `feat fix docs style refactor perf test build ci chore`
 - `README.md` — project overview, usage, installation
 - `CHANGELOG.md` — what changed and when
 - `TODO.md` — planned work
+- `CONTRIBUTING.md` — dev setup, conventions for contributors
+- `SECURITY.md` — vulnerability reporting

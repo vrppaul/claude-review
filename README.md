@@ -32,6 +32,7 @@ Then you can run it directly:
 claude-review              # opens browser with diff of current changes
 claude-review --port 8080  # specific port
 claude-review --no-open    # don't open browser automatically
+claude-review --verbose    # enable diagnostic logging to stderr
 claude-review /path/to/repo
 ```
 
@@ -69,6 +70,7 @@ uv run ty check src/             # type check
 cd frontend && pnpm install      # install dependencies
 cd frontend && pnpm build        # build (outputs to src/claude_review/static/dist/)
 cd frontend && pnpm test         # run tests
+cd frontend && pnpm lint         # lint
 cd frontend && pnpm check        # type check
 ```
 
