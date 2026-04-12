@@ -1,6 +1,7 @@
 import type { Comment, SubmitResponse } from '$lib/types';
 
 let comments = $state<Comment[]>([]);
+let reviewBody = $state('');
 let submitted = $state(false);
 
 let nextId = 0;
@@ -16,8 +17,18 @@ export const commentStore = {
 	get count() {
 		return comments.length;
 	},
+	get reviewBody() {
+		return reviewBody;
+	},
+	get hasContent() {
+		return comments.length > 0 || reviewBody.trim().length > 0;
+	},
 	get submitted() {
 		return submitted;
+	},
+
+	setReviewBody(text: string) {
+		reviewBody = text;
 	},
 
 	add(file: string, startLine: number, endLine: number, body: string) {
@@ -50,18 +61,21 @@ export const commentStore = {
 
 	clear() {
 		comments = [];
+		reviewBody = '';
 		submitted = false;
 		nextId = 0;
 	},
 
 	async submit(): Promise<SubmitResponse> {
+		const trimmedBody = reviewBody.trim();
 		const payload = {
 			comments: comments.map(({ file, start_line, end_line, body }) => ({
 				file,
 				start_line,
 				end_line,
 				body
-			}))
+			})),
+			...(trimmedBody ? { body: trimmedBody } : {})
 		};
 
 		const response = await fetch('/api/submit', {

@@ -46,7 +46,7 @@ async def submit_review(
         for c in request.comments
     ]
 
-    result = review_service.format_review(comments)
+    result = review_service.format_review(comments, body=request.body)
     state.result = result.markdown
     state.shutdown_event.set()
     log.info("review_submitted", comment_count=result.comment_count)

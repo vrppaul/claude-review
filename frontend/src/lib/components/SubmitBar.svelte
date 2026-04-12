@@ -2,17 +2,20 @@
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import ReviewModal from './ReviewModal.svelte';
 
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let currentCommentIdx = $state(-1);
+	let showModal = $state(false);
 
 	async function handleSubmit() {
-		if (commentStore.count === 0 || submitting) return;
+		if (!commentStore.hasContent || submitting) return;
 		submitting = true;
 		error = null;
 		try {
 			await commentStore.submit();
+			showModal = false;
 			window.close();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Submit failed';
@@ -26,10 +29,8 @@
 		currentCommentIdx = (currentCommentIdx + direction + commentStore.count) % commentStore.count;
 		const comment = commentStore.comments[currentCommentIdx];
 
-		// Switch to the file containing this comment
 		diffStore.selectFile(comment.file);
 
-		// Scroll to the comment element
 		requestAnimationFrame(() => {
 			const el = document.getElementById(comment.id);
 			el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -39,6 +40,8 @@
 	onMount(() => {
 		function onKeydown(e: KeyboardEvent) {
 			if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+				if (showModal) return; // modal handles its own shortcut
+				if (commentStore.count === 0) return; // match button disabled state
 				e.preventDefault();
 				handleSubmit();
 			}
@@ -76,17 +79,32 @@
 				</div>
 			{/if}
 		</div>
-		<button
-			class="btn btn-primary btn-sm"
-			disabled={commentStore.count === 0 || submitting}
-			onclick={handleSubmit}
-		>
-			{#if submitting}
-				<span class="loading loading-spinner loading-xs"></span>
-				Submitting...
-			{:else}
-				Submit Review (Ctrl+Shift+Enter)
-			{/if}
-		</button>
+		<div class="flex items-center gap-2">
+			<button
+				class="btn btn-primary btn-sm"
+				onclick={() => (showModal = true)}
+			>
+				Finish review
+			</button>
+			<button
+				class="btn btn-success btn-sm"
+				disabled={commentStore.count === 0 || submitting}
+				onclick={handleSubmit}
+			>
+				{#if submitting}
+					<span class="loading loading-spinner loading-xs"></span>
+					Submitting...
+				{:else}
+					Quick submit (Ctrl+Shift+Enter)
+				{/if}
+			</button>
+		</div>
 	</div>
+
+	{#if showModal}
+		<ReviewModal
+			onSubmit={handleSubmit}
+			onClose={() => (showModal = false)}
+		/>
+	{/if}
 {/if}

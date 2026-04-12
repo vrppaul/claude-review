@@ -43,6 +43,7 @@ class SubmitRequest(BaseModel):
     """Request body for POST /api/submit."""
 
     comments: list[CommentInput]
+    body: str | None = Field(default=None, max_length=50_000)
 
 
 class SubmitResponse(BaseModel):

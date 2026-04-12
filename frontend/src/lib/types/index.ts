@@ -37,6 +37,7 @@ export interface Comment {
 
 export interface SubmitRequest {
 	comments: Omit<Comment, 'id'>[];
+	body?: string;
 }
 
 export interface SubmitResponse {

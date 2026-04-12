@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0] - 2026-04-12
+
+### Added
+- **Review summary** — general feedback not tied to a specific line (like GitHub PR review body)
+- **Review modal** — "Finish review" button opens a modal with comment recap and summary textarea
+- **Quick submit** — green button for immediate inline-comment-only submission (Ctrl+Shift+Enter)
+- ReviewModal component with ARIA attributes (`role="dialog"`, `aria-modal`, `aria-labelledby`)
+- Keyboard shortcut guard — Ctrl+Shift+Enter respects disabled button state
+- E2E tests: modal submit, keyboard bypass prevention, Esc-close-and-preserve-body
+- Self-review principles documented in AGENTS.md
+
+### Changed
+- Centralized Playwright page fixture with 5s timeout in conftest.py
+- E2E tests refactored to use shared `page` fixture instead of manual browser management
+
 ## [0.3.1] - 2026-04-12
 
 ### Fixed

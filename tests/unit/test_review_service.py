@@ -77,5 +77,59 @@ def test_result_starts_with_header() -> None:
     assert result.markdown.startswith("## Code Review Comments")
 
 
+def test_body_alone_produces_review_with_summary() -> None:
+    """A review with only a body and no inline comments."""
+    service = _service()
+
+    result = service.format_review([], body="Wrong approach, let's use a different pattern.")
+
+    assert result.comment_count == 1
+    assert "Wrong approach" in result.markdown
+    assert result.markdown.startswith("## Code Review Comments")
+
+
+def test_body_with_inline_comments_appears_first() -> None:
+    """Body text appears before inline comments in the output."""
+    service = _service()
+    comments = [Comment(file="x.py", start_line=1, end_line=1, body="Fix this line")]
+
+    result = service.format_review(comments, body="Generally good, one issue.")
+
+    assert result.comment_count == 2
+    body_pos = result.markdown.index("Generally good")
+    inline_pos = result.markdown.index("### x.py:1")
+    assert body_pos < inline_pos
+
+
+def test_empty_body_treated_as_no_body() -> None:
+    """Empty string body is ignored, same as None."""
+    service = _service()
+    comments = [Comment(file="x.py", start_line=1, end_line=1, body="note")]
+
+    result = service.format_review(comments, body="")
+
+    assert result.comment_count == 1
+
+
+def test_whitespace_only_body_treated_as_no_body() -> None:
+    """Whitespace-only body is ignored, same as empty."""
+    service = _service()
+    comments = [Comment(file="x.py", start_line=1, end_line=1, body="note")]
+
+    result = service.format_review(comments, body="   \n  ")
+
+    assert result.comment_count == 1
+
+
+def test_no_body_no_comments_produces_empty() -> None:
+    """No body and no comments produces empty result."""
+    service = _service()
+
+    result = service.format_review([], body=None)
+
+    assert result.comment_count == 0
+    assert result.markdown == ""
+
+
 def _service() -> ReviewService:
     return ReviewService()

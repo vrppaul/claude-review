@@ -72,10 +72,44 @@ describe('commentStore', () => {
 	it('clear resets everything', () => {
 		commentStore.add('a.ts', 1, 1, 'x');
 		commentStore.add('b.ts', 2, 2, 'y');
+		commentStore.setReviewBody('some summary');
 		commentStore.clear();
 
 		expect(commentStore.count).toBe(0);
+		expect(commentStore.reviewBody).toBe('');
 		expect(commentStore.submitted).toBe(false);
+	});
+
+	describe('reviewBody', () => {
+		it('starts empty', () => {
+			expect(commentStore.reviewBody).toBe('');
+		});
+
+		it('setReviewBody updates the body', () => {
+			commentStore.setReviewBody('Wrong approach');
+
+			expect(commentStore.reviewBody).toBe('Wrong approach');
+		});
+
+		it('hasContent is true with only review body', () => {
+			expect(commentStore.hasContent).toBe(false);
+
+			commentStore.setReviewBody('Some feedback');
+
+			expect(commentStore.hasContent).toBe(true);
+		});
+
+		it('hasContent is true with only inline comments', () => {
+			commentStore.add('file.ts', 1, 1, 'fix');
+
+			expect(commentStore.hasContent).toBe(true);
+		});
+
+		it('whitespace-only body does not count as content', () => {
+			commentStore.setReviewBody('   \n  ');
+
+			expect(commentStore.hasContent).toBe(false);
+		});
 	});
 
 	describe('submit', () => {
@@ -100,6 +134,44 @@ describe('commentStore', () => {
 			});
 			expect(result.comment_count).toBe(1);
 			expect(commentStore.submitted).toBe(true);
+
+			vi.unstubAllGlobals();
+		});
+
+		it('includes body in payload when review body is set', async () => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn().mockResolvedValue({
+					ok: true,
+					json: () => Promise.resolve({ markdown: '## Comments', comment_count: 1 })
+				})
+			);
+
+			commentStore.setReviewBody('General feedback');
+			await commentStore.submit();
+
+			const call = vi.mocked(fetch).mock.calls[0];
+			const payload = JSON.parse(call[1]!.body as string);
+			expect(payload.body).toBe('General feedback');
+
+			vi.unstubAllGlobals();
+		});
+
+		it('omits body from payload when review body is empty', async () => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn().mockResolvedValue({
+					ok: true,
+					json: () => Promise.resolve({ markdown: '## Comments', comment_count: 1 })
+				})
+			);
+
+			commentStore.add('file.ts', 1, 1, 'fix');
+			await commentStore.submit();
+
+			const call = vi.mocked(fetch).mock.calls[0];
+			const payload = JSON.parse(call[1]!.body as string);
+			expect(payload.body).toBeUndefined();
 
 			vi.unstubAllGlobals();
 		});

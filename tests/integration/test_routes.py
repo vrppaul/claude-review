@@ -188,6 +188,44 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+# --- Review body tests ---
+
+
+async def test_submit_with_body_only(client: AsyncClient, server_state: ServerState) -> None:
+    """Submit with review body but no inline comments."""
+    response = await client.post(
+        "/api/submit",
+        json={"comments": [], "body": "Wrong approach, reconsider the design."},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["comment_count"] == 1
+    assert "Wrong approach" in data["markdown"]
+    assert server_state.shutdown_event.is_set()
+
+
+async def test_submit_with_body_and_comments(client: AsyncClient) -> None:
+    """Submit with both review body and inline comments."""
+    response = await client.post(
+        "/api/submit",
+        json={
+            "comments": [
+                {"file": "x.py", "start_line": 1, "end_line": 1, "body": "Fix this"},
+            ],
+            "body": "Generally good, one issue.",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["comment_count"] == 2
+    # Body appears before inline comment
+    body_pos = data["markdown"].index("Generally good")
+    inline_pos = data["markdown"].index("### x.py:1")
+    assert body_pos < inline_pos
+
+
 # --- Files mode tests ---
 
 

@@ -6,12 +6,22 @@ from claude_review.domain.models import Comment, ReviewResult
 class ReviewService:
     """Formats review comments into markdown for Claude."""
 
-    def format_review(self, comments: list[Comment]) -> ReviewResult:
-        """Convert a list of comments into a formatted markdown review."""
-        if not comments:
+    def format_review(self, comments: list[Comment], body: str | None = None) -> ReviewResult:
+        """Convert comments and optional review body into formatted markdown.
+
+        The body (review summary) appears as a paragraph before inline comments,
+        matching GitHub's PR review style.
+        """
+        has_body = bool(body and body.strip())
+        count = len(comments) + (1 if has_body else 0)
+
+        if count == 0:
             return ReviewResult(markdown="", comment_count=0)
 
         parts = ["## Code Review Comments\n"]
+
+        if has_body:
+            parts.append(f"{body}\n")
 
         for comment in comments:
             line_ref = self._format_line_ref(comment)
@@ -19,7 +29,7 @@ class ReviewService:
 
         return ReviewResult(
             markdown="\n".join(parts),
-            comment_count=len(comments),
+            comment_count=count,
         )
 
     def _format_line_ref(self, comment: Comment) -> str:

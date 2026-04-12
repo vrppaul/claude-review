@@ -114,6 +114,22 @@ async def submit_review(
 - Use generic Exception for error handling
 - Commit secrets or credentials
 
+## Self-Review
+
+Before presenting work, review every changed file against these principles:
+
+**Clean and readable** — each function does one thing. No god methods. Decompose like existing services do (e.g. `DiffService` has `_parse_diff`, `_parse_file_chunk`, `_extract_path`, `_detect_status`, `_parse_hunks`, `_build_hunk`).
+
+**Well documented / self-documenting** — names explain intent. Non-obvious patterns get a one-line comment (e.g. `# Only close when clicking the backdrop itself, not the modal content`). Module docstrings explain *why*, not just *what*.
+
+**Functional tests** — tests verify user-facing behavior, not internal data structures. Test names read like requirements: "file content is preserved line by line", not "returns list of DiffLine with type CONTEXT". Compare `tests/integration/test_diff_service.py` for the standard.
+
+**Modular** — components and services are independently testable. Dependencies are explicit (FastAPI `Depends()`, constructor injection). No hidden coupling between layers.
+
+**No meaningless defaults** — required parameters must be explicit. If a caller must always provide a value, don't give it a default that silently hides bugs. Optional parameters (like `body: str | None = None`) are fine when the absence is a valid state.
+
+**Extensible for future modes** — new review modes (transcript, etc.) should work by adding code, not modifying existing conditionals. Use `isDiffMode` checks (opt-in to diff-specific behavior) rather than `!isFilesMode` checks (which break when a third mode is added). Use lookup maps for mode-dependent values (see `sidebarTitle` in `FileList.svelte`).
+
 ## Commit Messages
 
 Conventional Commits: `type(scope): description`
