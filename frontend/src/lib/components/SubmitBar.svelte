@@ -82,12 +82,14 @@
 		<div class="flex items-center gap-2">
 			<button
 				class="btn btn-primary btn-sm"
+				data-testid="finish-review"
 				onclick={() => (showModal = true)}
 			>
 				Finish review
 			</button>
 			<button
 				class="btn btn-success btn-sm"
+				data-testid="quick-submit"
 				disabled={commentStore.count === 0 || submitting}
 				onclick={handleSubmit}
 			>

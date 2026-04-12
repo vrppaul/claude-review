@@ -79,6 +79,12 @@
 		transcript: 'Messages'
 	};
 
+	const modeBadgeClass: Record<string, string> = {
+		diff: 'badge-info',
+		files: 'badge-warning',
+		transcript: 'badge-secondary'
+	};
+
 	const isDiffMode = $derived(diffStore.mode === 'diff');
 	const tree = $derived(isDiffMode ? buildTree(diffStore.files) : []);
 </script>
@@ -90,6 +96,7 @@
 		{@const stats = fileStats(node.file)}
 		<li>
 			<button
+				data-testid="file-item"
 				class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs"
 				class:btn-active={diffStore.selectedPath === node.file.path}
 				style="padding-left: {depth * 12 + 8}px"
@@ -125,6 +132,7 @@
 	{@const fileComments = commentStore.getForFile(file.path)}
 	<li>
 		<button
+			data-testid="file-item"
 			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs"
 			class:btn-active={diffStore.selectedPath === file.path}
 			onclick={() => diffStore.selectFile(file.path)}
@@ -137,9 +145,10 @@
 	</li>
 {/snippet}
 
-<aside class="w-96 border-r border-base-300 overflow-y-auto bg-base-100">
+<aside data-testid="sidebar" class="w-96 border-r border-base-300 overflow-y-auto bg-base-100">
 	<div class="p-3">
-		<h2 class="font-semibold text-sm text-base-content/60 uppercase tracking-wide mb-2">
+		<h2 class="font-semibold text-sm text-base-content/60 uppercase tracking-wide mb-2 flex items-center gap-2">
+			<span class="badge badge-sm {modeBadgeClass[diffStore.mode] ?? 'badge-ghost'}">{diffStore.mode}</span>
 			{sidebarTitle[diffStore.mode] ?? 'Files'} ({diffStore.files.length})
 		</h2>
 		{#if isDiffMode}

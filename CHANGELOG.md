@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.1] - 2026-04-12
+
+### Added
+- Review mode badge in bottom bar (Diff / Files / Transcript)
+- `data-testid` attributes on key interactive elements for stable E2E selectors
+
+### Changed
+- Browser opens in new window (`webbrowser.open_new`) instead of reusing existing tab
+- Replaced argparse with click for CLI argument parsing
+- E2E tests use `page.get_by_test_id()` instead of brittle text selectors
+
 ## [0.4.0] - 2026-04-12
 
 ### Added

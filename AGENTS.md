@@ -90,6 +90,7 @@ async def submit_review(
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations
+- **E2E selectors**: use `data-testid` attributes on interactive elements, never text-based selectors (`button:text('...')`). Tests use `page.get_by_test_id("name")`. Add `data-testid` to every new button, input, and modal.
 
 ## Boundaries
 

@@ -1,12 +1,12 @@
 """CLI entry point for claude-review."""
 
-import argparse
 import asyncio
 import logging
 import sys
 import webbrowser
 from pathlib import Path
 
+import click
 import structlog
 import uvicorn
 
@@ -33,48 +33,6 @@ def _configure_logging(*, verbose: bool = False) -> None:
         ],
         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
     )
-
-
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="claude-review",
-        description="Browser-based code review tool for Claude Code",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=0,
-        help="Port to run the server on (default: auto-assign)",
-    )
-    parser.add_argument(
-        "--no-open",
-        action="store_true",
-        help="Don't open the browser automatically",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable diagnostic logging to stderr",
-    )
-
-    parser.add_argument(
-        "path",
-        nargs="?",
-        default=None,
-        help="Path to the git repository (default: current directory)",
-    )
-    parser.add_argument(
-        "--files",
-        nargs="+",
-        type=Path,
-        metavar="FILE",
-        help="Review text files instead of git diff",
-    )
-
-    args = parser.parse_args(argv)
-    if args.files and args.path:
-        parser.error("--files and positional path cannot be used together")
-    return args
 
 
 async def _load_diff(repo_path: Path) -> list[DiffFile]:
@@ -141,19 +99,33 @@ async def run(
 
 
 def _open_browser(url: str) -> None:
-    webbrowser.open(url)
+    webbrowser.open_new(url)
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = parse_args(argv)
-    _configure_logging(verbose=args.verbose)
+@click.command()
+@click.argument("path", required=False, type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--files",
+    multiple=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Review text files instead of git diff.",
+)
+@click.option("--port", default=0, type=int, help="Port to run the server on.")
+@click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
+@click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
+def main(path: Path | None, files: tuple[Path, ...], port: int, no_open: bool, verbose: bool) -> None:
+    """Browser-based code review tool for Claude Code."""
+    if files and path:
+        raise click.UsageError("--files and positional path cannot be used together.")
 
-    if args.files:
-        diff_files = _load_text_files(args.files)
+    _configure_logging(verbose=verbose)
+
+    if files:
+        diff_files = _load_text_files(list(files))
         mode = ReviewMode.FILES
         no_content_msg = "No content to review.\n"
     else:
-        repo_path = Path(args.path or ".").resolve()
+        repo_path = (path or Path(".")).resolve()
         diff_files = asyncio.run(_load_diff(repo_path))
         mode = ReviewMode.DIFF
         no_content_msg = "No changes found.\n"
@@ -163,7 +135,7 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     log.info("content_loaded", file_count=len(diff_files), mode=mode)
-    result = asyncio.run(run(diff_files, mode, args.port, open_browser=not args.no_open))
+    result = asyncio.run(run(diff_files, mode, port, open_browser=not no_open))
 
     if result:
         sys.stdout.write(result)

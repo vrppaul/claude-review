@@ -44,6 +44,7 @@
 	{/if}
 	<textarea
 		bind:this={textareaEl}
+		data-testid="comment-input"
 		class="textarea textarea-bordered w-full text-sm min-h-16 focus:outline-none focus:border-info"
 		placeholder="Add your comment... (Ctrl+Enter to save, Esc to cancel)"
 		bind:value={body}
@@ -53,6 +54,7 @@
 		<button class="btn btn-ghost btn-xs" onclick={onCancel}>Cancel</button>
 		<button
 			class="btn btn-primary btn-xs"
+			data-testid="save-comment"
 			disabled={!body.trim()}
 			onclick={() => onSave(body.trim())}
 		>

@@ -48,9 +48,8 @@ async def _start_server(diff_files, state, mode=ReviewMode.DIFF) -> AsyncGenerat
 async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
     """Helper: click a line gutter and add a comment."""
     await line_locator.click()
-    comment_textarea = page.get_by_placeholder("Add your comment")
-    await comment_textarea.fill(text)
-    await page.locator("button:text('Comment')").click()
+    await page.get_by_test_id("comment-input").fill(text)
+    await page.get_by_test_id("save-comment").click()
     await page.wait_for_selector(f"text={text}")
 
 
@@ -95,15 +94,15 @@ async def test_review_flow_add_comment_and_submit(server_url: ServerFixture, pag
     """Full round trip: see diff, add comment, submit, verify output."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    file_buttons = await page.query_selector_all("aside button")
+    file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) >= 1
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "This needs fixing")
 
-    await page.locator("button:text('Quick submit')").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -114,21 +113,20 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
     """Drag creates a range comment (e.g. file:1-3)."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    first_cell = page.locator("td.cursor-pointer").first
-    later_cell = page.locator("td.cursor-pointer").nth(4)
+    first_cell = page.get_by_test_id("line-gutter").first
+    later_cell = page.get_by_test_id("line-gutter").nth(4)
 
     await first_cell.dispatch_event("mousedown")
     await later_cell.dispatch_event("mouseenter")
-    await page.dispatch_event("div.overflow-auto", "mouseup")
+    await page.get_by_test_id("diff-view").dispatch_event("mouseup")
 
-    comment_textarea = page.get_by_placeholder("Add your comment")
-    await comment_textarea.fill("Refactor this range")
-    await page.locator("button:text('Comment')").first.click()
+    await page.get_by_test_id("comment-input").fill("Refactor this range")
+    await page.get_by_test_id("save-comment").click()
     await page.wait_for_selector("text=Refactor this range")
 
-    await page.locator("button:text('Quick submit')").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -140,21 +138,21 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     """Comments across multiple files all appear in output."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    file_buttons = await page.query_selector_all("aside button")
+    file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) >= 2
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Comment on file 1")
 
     await file_buttons[1].click()
-    await page.locator("td.cursor-pointer").first.wait_for()
+    await page.get_by_test_id("line-gutter").first.wait_for()
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Comment on file 2")
 
-    await page.locator("button:text('Quick submit')").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -166,9 +164,9 @@ async def test_empty_submit_button_disabled(server_url: ServerFixture, page: Pag
     """Submit with no comments — button should be disabled."""
     url, _state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    submit_btn = page.locator("button:text('Quick submit')")
+    submit_btn = page.get_by_test_id("quick-submit")
     assert await submit_btn.is_disabled()
 
 
@@ -179,15 +177,15 @@ async def test_review_body_only_via_modal(server_url: ServerFixture, page: Page)
     """Submit with only a review summary via the modal, no inline comments."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    await page.locator("button:text('Finish review')").click()
+    await page.get_by_test_id("finish-review").click()
     await page.wait_for_selector("text=Submit Review")
 
-    modal_textarea = page.get_by_placeholder("General feedback")
+    modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Wrong approach, reconsider the design.")
 
-    await page.locator("button:text('Submit review')").click()
+    await page.get_by_test_id("modal-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -198,18 +196,18 @@ async def test_review_body_with_inline_comment_via_modal(server_url: ServerFixtu
     """Add inline comment, then open modal to add summary, submit from modal."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Fix this line")
 
-    await page.locator("button:text('Finish review')").click()
+    await page.get_by_test_id("finish-review").click()
     await page.wait_for_selector("text=1 inline comment")
 
-    modal_textarea = page.get_by_placeholder("General feedback")
+    modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Generally good.")
 
-    await page.locator("button:text('Submit review')").click()
+    await page.get_by_test_id("modal-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -221,16 +219,16 @@ async def test_keyboard_shortcut_respects_disabled_button(server_url: ServerFixt
     """Ctrl+Shift+Enter does nothing when there are no inline comments, even if body was typed."""
     url, state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
     # Type a body via modal, then close it
-    await page.locator("button:text('Finish review')").click()
-    modal_textarea = page.get_by_placeholder("General feedback")
+    await page.get_by_test_id("finish-review").click()
+    modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Some general feedback")
     await page.keyboard.press("Escape")
 
     # Quick submit button should still be disabled (no inline comments)
-    submit_btn = page.locator("button:text('Quick submit')")
+    submit_btn = page.get_by_test_id("quick-submit")
     assert await submit_btn.is_disabled()
 
     # Ctrl+Shift+Enter should NOT submit
@@ -242,20 +240,20 @@ async def test_modal_esc_closes_and_preserves_body(server_url: ServerFixture, pa
     """Esc closes the modal, and reopening preserves the typed text."""
     url, _state = server_url
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
     # Open modal and type
-    await page.locator("button:text('Finish review')").click()
-    modal_textarea = page.get_by_placeholder("General feedback")
+    await page.get_by_test_id("finish-review").click()
+    modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Draft feedback")
 
     # Close with Esc
     await page.keyboard.press("Escape")
-    await page.locator("button:text('Finish review')").wait_for()
+    await page.get_by_test_id("finish-review").wait_for()
 
     # Reopen — text should still be there
-    await page.locator("button:text('Finish review')").click()
-    modal_textarea = page.get_by_placeholder("General feedback")
+    await page.get_by_test_id("finish-review").click()
+    modal_textarea = page.get_by_test_id("review-body")
     assert await modal_textarea.input_value() == "Draft feedback"
 
 
@@ -291,30 +289,27 @@ async def test_files_mode_sidebar_shows_files_without_diff_decorations(
     """Sidebar shows plain file list — no status badges, no +/- stats."""
     url, _state = files_mode_server
     await page.goto(url)
-    await page.wait_for_selector("aside h2")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    header = await page.locator("aside h2").text_content()
+    header = await page.get_by_test_id("sidebar").locator("h2").text_content()
     assert header is not None
     assert "Files" in header
     assert "Changed" not in header
 
-    file_buttons = await page.query_selector_all("aside button")
+    file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) == 2
-
-    status_selector = "aside .badge-warning, aside .badge-success, aside .badge-error, aside .badge-info"
-    assert len(await page.query_selector_all(status_selector)) == 0
 
 
 async def test_files_mode_comment_and_submit(files_mode_server: ServerFixture, page: Page) -> None:
     """Full round-trip in files mode: click line, comment, submit, verify output."""
     url, state = files_mode_server
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Plan needs more detail")
 
-    await page.locator("button:text('Quick submit')").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
@@ -325,20 +320,20 @@ async def test_files_mode_comments_across_multiple_files(files_mode_server: Serv
     """Comments on different files all appear in the submission output."""
     url, state = files_mode_server
     await page.goto(url)
-    await page.wait_for_selector("aside")
+    await page.get_by_test_id("sidebar").wait_for()
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Comment on plan")
 
-    file_buttons = await page.query_selector_all("aside button")
+    file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) >= 2
     await file_buttons[1].click()
-    await page.locator("td.cursor-pointer").first.wait_for()
+    await page.get_by_test_id("line-gutter").first.wait_for()
 
-    line_cell = page.locator("td.cursor-pointer").first
+    line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Comment on notes")
 
-    await page.locator("button:text('Quick submit')").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None

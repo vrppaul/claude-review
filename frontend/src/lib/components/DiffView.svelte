@@ -58,7 +58,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex-1 overflow-auto bg-base-100" onmouseup={() => selection.handleMouseUp()}>
+<div data-testid="diff-view" class="flex-1 overflow-auto bg-base-100" onmouseup={() => selection.handleMouseUp()}>
 	<div class="sticky top-0 bg-base-200 border-b border-base-300 px-4 py-3 font-mono text-sm z-10">
 		<span class="font-semibold">{file.path}</span>
 		{#if isDiffMode}
@@ -99,6 +99,7 @@
 							{/if}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
+								data-testid="line-gutter"
 								class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
 								onmousedown={() => selection.handleMouseDown(line, flatIdx)}
 								title="Click to comment, drag for range"

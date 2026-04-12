@@ -74,6 +74,7 @@
 				<h4 class="text-sm font-semibold text-base-content/60 mb-2">Review summary</h4>
 				<textarea
 					bind:this={textareaEl}
+					data-testid="review-body"
 					class="textarea textarea-bordered w-full text-sm min-h-24 focus:outline-none focus:border-info"
 					placeholder="General feedback — not tied to a specific line (optional)"
 					value={commentStore.reviewBody}
@@ -88,6 +89,7 @@
 			</button>
 			<button
 				class="btn btn-success btn-sm"
+				data-testid="modal-submit"
 				disabled={!commentStore.hasContent}
 				onclick={onSubmit}
 			>

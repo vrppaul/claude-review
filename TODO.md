@@ -2,12 +2,8 @@
 
 ## Next
 
-- [ ] Overall comment — general comment box (like GitHub PR reviews), not tied to a specific line
 - [ ] Transcript mode — review conversation messages (user + assistant), each message in sidebar
 - [ ] Side-by-side markdown rendering — rendered markdown on one side, raw text with line numbers on the other
-- [ ] Show review mode in UI — display which mode is active
-- [ ] Open in new browser window on top — `webbrowser.open_new()` + bring to foreground, not a tab in existing window
-- [ ] Replace argparse with click — cleaner CLI
 
 ## Transcript mode prep
 
@@ -26,7 +22,6 @@ When implementing `ReviewMode.TRANSCRIPT`:
 ## Testing
 
 - [ ] Component tests (CommentBox, DiffView, FileList) with @testing-library/svelte
-- [ ] Replace text-based Playwright selectors with `data-testid` attributes — text selectors break when labels change (e.g. "Submit" → "Quick submit" broke all E2E tests)
 
 ## Future
 
@@ -35,5 +30,6 @@ When implementing `ReviewMode.TRANSCRIPT`:
 - [ ] Approve action
 - [ ] Auto-push via Channel MCP
 - [ ] Comment persistence across review rounds
+- [ ] Expand hidden lines between hunks — like GitHub/GitLab's "show N hidden lines" clickable divider
 - [ ] Collapse/expand file diffs
 - [ ] Search within diff
