@@ -12,14 +12,14 @@ Usage:
 
 ## Steps
 
-1. Check if `claude-review` is installed:
+1. Check if `claude-review` is installed and up to date:
    ```bash
-   which claude-review
+   claude-review --help 2>&1 | grep -q '\-\-files' && echo "up-to-date" || echo "needs-update"
    ```
 
-2. If not installed, install it:
+2. If not installed or needs update, install/upgrade it:
    ```bash
-   uv tool install git+https://github.com/vrppaul/claude-review
+   uv tool install --upgrade git+https://github.com/vrppaul/claude-review
    ```
 
 3. Determine the mode:
