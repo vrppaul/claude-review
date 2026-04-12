@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
@@ -11,6 +12,7 @@ export default defineConfig({
         runes: true,
       },
     }),
+    svelteTesting(), // enables client-side mounting for @testing-library/svelte
   ],
 
   resolve: {

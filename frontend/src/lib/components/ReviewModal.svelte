@@ -84,7 +84,7 @@
 		</div>
 
 		<div class="px-6 py-4 border-t border-base-300 flex justify-end gap-2">
-			<button class="btn btn-ghost btn-sm" onclick={onClose}>
+			<button class="btn btn-ghost btn-sm" data-testid="cancel-modal" onclick={onClose}>
 				Cancel
 			</button>
 			<button

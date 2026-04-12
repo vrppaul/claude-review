@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.2] - 2026-04-12
+
+### Added
+- Component tests for CommentBox, ReviewModal, DiffView, FileList, SubmitBar (19 tests)
+- Frontend pre-commit hooks — ESLint, svelte-check, Prettier (skip gracefully if pnpm not installed)
+- `svelteTesting()` plugin for client-side component mounting in vitest
+- `data-testid` on comment count, cancel buttons, and all remaining interactive elements
+
+### Changed
+- Clarified test selector convention in AGENTS.md: testids for interaction, getByText for visible content assertions
+
 ## [0.4.1] - 2026-04-12
 
 ### Added

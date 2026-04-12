@@ -51,7 +51,7 @@
 		onkeydown={handleKeydown}
 	></textarea>
 	<div class="flex justify-end gap-2">
-		<button class="btn btn-ghost btn-xs" onclick={onCancel}>Cancel</button>
+		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>Cancel</button>
 		<button
 			class="btn btn-primary btn-xs"
 			data-testid="save-comment"

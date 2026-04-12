@@ -61,6 +61,32 @@ repos:
       - id: validate-pyproject
         name: validate pyproject.toml
 
+  # Frontend — ESLint, svelte-check, Prettier
+  # Uses local hooks because mirror repos don't support Svelte plugins.
+  # Skipped gracefully if pnpm is not installed.
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: eslint (frontend)
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm lint'
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+
+      - id: frontend-check
+        name: svelte-check (frontend)
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm check'
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+
+      - id: frontend-format
+        name: prettier (frontend)
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format'
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+
   # Conventional commits enforcement
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0

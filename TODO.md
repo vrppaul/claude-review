@@ -21,8 +21,6 @@ When implementing `ReviewMode.TRANSCRIPT`:
 
 ## Testing
 
-- [ ] Component tests (CommentBox, DiffView, FileList) with @testing-library/svelte
-
 ## Future
 
 - [ ] Live updates (FileChanged hook + WebSocket)

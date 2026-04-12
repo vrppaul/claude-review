@@ -63,7 +63,7 @@
 			{#if error}
 				<span class="text-sm text-error">{error}</span>
 			{:else}
-				<span class="text-sm text-base-content/60">
+				<span data-testid="comment-count" class="text-sm text-base-content/60">
 					{commentStore.count}
 					{commentStore.count === 1 ? 'comment' : 'comments'}
 				</span>
