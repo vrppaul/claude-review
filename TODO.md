@@ -18,7 +18,7 @@ When implementing `ReviewMode.TRANSCRIPT`:
 
 ## Infrastructure
 
-- [ ] Publish to PyPI (`uvx claude-review` without git+)
+- [ ] Publish to PyPI — currently the skill always runs `uv tool install --upgrade git+...` which pulls latest from git on every invocation. PyPI would give proper semver, faster installs (wheels instead of git clone), and let users pin/upgrade on their own terms (`uv tool install claude-review` / `uv tool upgrade claude-review`).
 - [ ] Submit to official Claude Code plugin marketplace
 - [ ] Version bumping strategy (keep pyproject.toml and plugin.json in sync)
 

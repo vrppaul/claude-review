@@ -12,17 +12,12 @@ Usage:
 
 ## Steps
 
-1. Check if `claude-review` is installed and up to date:
-   ```bash
-   claude-review --help 2>&1 | grep -q '\-\-files' && echo "up-to-date" || echo "needs-update"
-   ```
-
-2. If not installed or needs update, install/upgrade it:
+1. Install or upgrade `claude-review` to the latest version:
    ```bash
    uv tool install --upgrade git+https://github.com/vrppaul/claude-review
    ```
 
-3. Determine the mode:
+2. Determine the mode:
    - If the argument is `plan`: find the current plan file path from your system prompt (look for the plan file path mentioned in the "Plan File Info" section). Run:
      ```bash
      claude-review --files <plan-file-path>
