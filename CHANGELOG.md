@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-04-12
+
+### Fixed
+- Skill always upgrades CLI to latest on each run (no stale versions)
+- Updated CONTRIBUTING.md with releasing steps and distribution channels
+
 ## [0.3.0] - 2026-04-12
 
 ### Added
