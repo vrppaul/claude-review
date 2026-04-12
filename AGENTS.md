@@ -13,7 +13,8 @@ uv run pytest tests/e2e/             # E2E tests (Playwright browser)
 uv run ruff check src/               # Lint Python
 uv run ruff format src/              # Format Python
 uv run ty check src/                 # Type check Python
-uv run claude-review                 # Run the tool
+uv run claude-review                 # Run the tool (diff mode)
+uv run claude-review --files f.md    # Run the tool (files mode)
 uv run claude-review --port 8080     # Run on specific port
 cd frontend && pnpm install          # Install frontend dependencies
 cd frontend && pnpm build            # Build frontend (outputs to src/claude_review/static/dist/)
@@ -48,7 +49,7 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 DDD-lite with clean layer separation:
 
 - **domain/** — Pydantic models (DiffFile, Comment, ReviewResult). No I/O, no framework imports.
-- **services/** — orchestration (DiffService, ReviewService). Depends on domain + repository protocols.
+- **services/** — orchestration (DiffService, TextFileService, ReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
 - **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly.
 
@@ -59,8 +60,8 @@ Dependencies flow inward: presentation → services → domain, repositories →
 ```python
 # Domain — pure models, no I/O
 class FileStatus(StrEnum):
-    MODIFIED = "modified"
-    ADDED = "added"
+    MODIFIED = auto()
+    ADDED = auto()
 
 # Protocols — interfaces for infrastructure
 class GitRepositoryProtocol(Protocol):
@@ -88,7 +89,7 @@ async def submit_review(
 - **Logging**: DEBUG for timing/perf, INFO for operations, WARNING for recoverable issues, ERROR for failures
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
-- **Enums**: use `StrEnum` for all string enumerations
+- **Enums**: use `StrEnum` with `auto()` for all string enumerations
 
 ## Boundaries
 

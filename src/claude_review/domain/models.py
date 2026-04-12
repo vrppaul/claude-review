@@ -1,25 +1,36 @@
 """Domain models for claude-review."""
 
-from enum import StrEnum
+from enum import StrEnum, auto
 
 from pydantic import BaseModel
+
+
+class ReviewMode(StrEnum):
+    """What kind of content is being reviewed.
+
+    DIFF  — git changes (the default): two-column line numbers, add/delete styling.
+    FILES — plain text files (plans, docs): single line numbers, no diff decoration.
+    """
+
+    DIFF = auto()
+    FILES = auto()
 
 
 class LineType(StrEnum):
     """Type of a diff line."""
 
-    CONTEXT = "context"
-    ADD = "add"
-    DELETE = "delete"
+    CONTEXT = auto()
+    ADD = auto()
+    DELETE = auto()
 
 
 class FileStatus(StrEnum):
     """Status of a file in the diff."""
 
-    MODIFIED = "modified"
-    ADDED = "added"
-    DELETED = "deleted"
-    RENAMED = "renamed"
+    MODIFIED = auto()
+    ADDED = auto()
+    DELETED = auto()
+    RENAMED = auto()
 
 
 class DiffLine(BaseModel):

@@ -73,7 +73,14 @@
 		});
 	}
 
-	const tree = $derived(buildTree(diffStore.files));
+	const sidebarTitle: Record<string, string> = {
+		diff: 'Changed Files',
+		files: 'Files',
+		transcript: 'Messages'
+	};
+
+	const isDiffMode = $derived(diffStore.mode === 'diff');
+	const tree = $derived(isDiffMode ? buildTree(diffStore.files) : []);
 </script>
 
 {#snippet renderNode(node: TreeNode, depth: number)}
@@ -114,15 +121,39 @@
 	{/if}
 {/snippet}
 
+{#snippet renderFileItem(file: DiffFile)}
+	{@const fileComments = commentStore.getForFile(file.path)}
+	<li>
+		<button
+			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs"
+			class:btn-active={diffStore.selectedPath === file.path}
+			onclick={() => diffStore.selectFile(file.path)}
+		>
+			<span class="truncate flex-1">{file.path}</span>
+			{#if fileComments.length > 0}
+				<span class="badge badge-xs badge-neutral">{fileComments.length}</span>
+			{/if}
+		</button>
+	</li>
+{/snippet}
+
 <aside class="w-96 border-r border-base-300 overflow-y-auto bg-base-100">
 	<div class="p-3">
 		<h2 class="font-semibold text-sm text-base-content/60 uppercase tracking-wide mb-2">
-			Changed Files ({diffStore.files.length})
+			{sidebarTitle[diffStore.mode] ?? 'Files'} ({diffStore.files.length})
 		</h2>
-		<ul>
-			{#each tree as node (node.path)}
-				{@render renderNode(node, 0)}
-			{/each}
-		</ul>
+		{#if isDiffMode}
+			<ul>
+				{#each tree as node (node.path)}
+					{@render renderNode(node, 0)}
+				{/each}
+			</ul>
+		{:else}
+			<ul>
+				{#each diffStore.files as file (file.path)}
+					{@render renderFileItem(file)}
+				{/each}
+			</ul>
+		{/if}
 	</div>
 </aside>

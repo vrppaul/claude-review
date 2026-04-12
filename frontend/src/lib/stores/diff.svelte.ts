@@ -1,7 +1,8 @@
-import type { DiffFile, DiffResponse } from '$lib/types';
+import type { DiffFile, DiffResponse, ReviewMode } from '$lib/types';
 
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
+let mode = $state<ReviewMode>('diff');
 const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 
 export const diffStore = {
@@ -14,9 +15,13 @@ export const diffStore = {
 	get selectedFile(): DiffFile | undefined {
 		return selectedFile;
 	},
+	get mode(): ReviewMode {
+		return mode;
+	},
 
-	setFiles(newFiles: DiffFile[]) {
+	setFiles(newFiles: DiffFile[], newMode: ReviewMode) {
 		files = newFiles;
+		mode = newMode;
 		selectedPath = newFiles.length > 0 ? newFiles[0].path : null;
 	},
 
@@ -27,6 +32,7 @@ export const diffStore = {
 	clear() {
 		files = [];
 		selectedPath = null;
+		mode = 'diff';
 	},
 
 	async fetchDiff() {
@@ -35,6 +41,6 @@ export const diffStore = {
 			throw new Error(`Failed to fetch diff: ${response.status}`);
 		}
 		const data: DiffResponse = await response.json();
-		this.setFiles(data.files);
+		this.setFiles(data.files, data.mode);
 	}
 };

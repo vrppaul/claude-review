@@ -6,15 +6,57 @@ from pathlib import Path
 
 import pytest
 import uvicorn
+from fastapi import FastAPI
 from playwright.async_api import Page, async_playwright
 
+from claude_review.domain.models import ReviewMode
 from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
+from claude_review.services.text_file_service import TextFileService
 from tests.helpers import git
 
 ServerFixture = tuple[str, ServerState]
+
+
+# --- Shared helpers ---
+
+
+async def _start_server(
+    app: FastAPI,
+    state: ServerState,
+) -> AsyncGenerator[ServerFixture]:
+    """Start a uvicorn server and yield (url, state)."""
+    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning")
+    server = uvicorn.Server(config)
+
+    task = asyncio.create_task(server.serve())
+
+    for _ in range(50):
+        await asyncio.sleep(0.1)
+        if server.started:
+            break
+    assert server.started, "Server failed to start within 5 seconds"
+
+    port = server.servers[0].sockets[0].getsockname()[1]
+    url = f"http://127.0.0.1:{port}"
+
+    yield url, state
+
+    server.should_exit = True
+    await task
+
+
+async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
+    """Helper: click a line gutter and add a comment."""
+    await line_locator.click()
+    await page.locator("textarea").fill(text)
+    await page.locator("button:text('Comment')").click()
+    await page.wait_for_selector(f"text={text}")
+
+
+# --- Diff mode fixtures ---
 
 
 @pytest.fixture
@@ -45,34 +87,13 @@ async def server_url(e2e_repo: Path) -> AsyncGenerator[ServerFixture]:
     diff_files = await diff_service.get_diff(e2e_repo)
 
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state)
+    app = create_app(diff_files=diff_files, state=state, mode=ReviewMode.DIFF)
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning")
-    server = uvicorn.Server(config)
-
-    task = asyncio.create_task(server.serve())
-
-    for _ in range(50):
-        await asyncio.sleep(0.1)
-        if server.started:
-            break
-    assert server.started, "Server failed to start within 5 seconds"
-
-    port = server.servers[0].sockets[0].getsockname()[1]
-    url = f"http://127.0.0.1:{port}"
-
-    yield url, state
-
-    server.should_exit = True
-    await task
+    async for fixture in _start_server(app, state):
+        yield fixture
 
 
-async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
-    """Helper: click a line gutter and add a comment."""
-    await line_locator.click()
-    await page.locator("textarea").fill(text)
-    await page.locator("button:text('Comment')").click()
-    await page.wait_for_selector(f"text={text}")
+# --- Diff mode tests ---
 
 
 async def test_review_flow_add_comment_and_submit(server_url: ServerFixture) -> None:
@@ -186,5 +207,120 @@ async def test_empty_submit_button_disabled(server_url: ServerFixture) -> None:
 
         submit_btn = page.locator("button:text('Submit Review')")
         assert await submit_btn.is_disabled()
+
+        await browser.close()
+
+
+# --- Files mode fixtures ---
+
+
+@pytest.fixture
+def text_files(tmp_path: Path) -> list[Path]:
+    """Create text files for files-mode testing."""
+    f1 = tmp_path / "plan.md"
+    f1.write_text("# My Plan\n\nStep 1: Do something\nStep 2: Do more\n")
+    f2 = tmp_path / "notes.md"
+    f2.write_text("Some notes\nMore notes\n")
+    return [f1, f2]
+
+
+@pytest.fixture
+async def files_mode_server(text_files: list[Path]) -> AsyncGenerator[ServerFixture]:
+    """Start a real server in files mode."""
+    diff_files = TextFileService().read_files(text_files)
+    state = ServerState(shutdown_event=asyncio.Event())
+    app = create_app(diff_files=diff_files, state=state, mode=ReviewMode.FILES)
+
+    async for fixture in _start_server(app, state):
+        yield fixture
+
+
+# --- Files mode tests ---
+
+
+async def test_files_mode_sidebar_shows_files_without_diff_decorations(
+    files_mode_server: ServerFixture,
+) -> None:
+    """Sidebar shows plain file list — no status badges, no +/- stats."""
+    url, _state = files_mode_server
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url)
+        await page.wait_for_selector("aside h2")
+
+        # Header says "Files" not "Changed Files"
+        header = await page.locator("aside h2").text_content()
+        assert header is not None
+        assert "Files" in header
+        assert "Changed" not in header
+
+        # Two file entries
+        file_buttons = await page.query_selector_all("aside button")
+        assert len(file_buttons) == 2
+
+        # No diff status badges (M/A/D/R)
+        status_selector = "aside .badge-warning, aside .badge-success, aside .badge-error, aside .badge-info"
+        assert len(await page.query_selector_all(status_selector)) == 0
+
+        await browser.close()
+
+
+async def test_files_mode_comment_and_submit(files_mode_server: ServerFixture) -> None:
+    """Full round-trip in files mode: click line, comment, submit, verify output."""
+    url, state = files_mode_server
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url)
+        await page.wait_for_selector("aside")
+
+        # Click a line number to open comment box
+        line_cell = page.locator("td.cursor-pointer").first
+        await _click_line_and_comment(page, line_cell, "Plan needs more detail")
+
+        # Submit
+        await page.locator("button:text('Submit Review')").click()
+        await page.wait_for_selector("text=Review submitted")
+
+        assert state.result is not None
+        assert "Plan needs more detail" in state.result
+
+        await browser.close()
+
+
+async def test_files_mode_comments_across_multiple_files(files_mode_server: ServerFixture) -> None:
+    """Comments on different files all appear in the submission output."""
+    url, state = files_mode_server
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url)
+        await page.wait_for_selector("aside")
+
+        # Comment on first file
+        line_cell = page.locator("td.cursor-pointer").first
+        await _click_line_and_comment(page, line_cell, "Comment on plan")
+
+        # Switch to second file
+        file_buttons = await page.query_selector_all("aside button")
+        assert len(file_buttons) >= 2
+        await file_buttons[1].click()
+        await page.locator("td.cursor-pointer").first.wait_for()
+
+        # Comment on second file
+        line_cell = page.locator("td.cursor-pointer").first
+        await _click_line_and_comment(page, line_cell, "Comment on notes")
+
+        # Submit
+        await page.locator("button:text('Submit Review')").click()
+        await page.wait_for_selector("text=Review submitted")
+
+        assert state.result is not None
+        assert "Comment on plan" in state.result
+        assert "Comment on notes" in state.result
 
         await browser.close()

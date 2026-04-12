@@ -1,6 +1,6 @@
 # Claude Review
 
-Browser-based code review tool for Claude Code. Shows git diffs in a GitHub-style UI with syntax highlighting, lets you write inline comments (single-line or drag to select ranges), and sends formatted feedback back to Claude.
+Browser-based review tool for Claude Code. Add inline comments on code changes or text files, and send structured feedback back to Claude.
 
 ![claude-review screenshot](docs/screenshot.png)
 
@@ -18,44 +18,71 @@ npx skills add vrppaul/claude-review -g -y
 
 Type `/review-ui` and the CLI is installed automatically on first use.
 
-### Manual CLI install (optional)
+## Review Modes
 
-If you prefer to install the CLI yourself:
+### Diff mode (default)
+
+Review current git changes in a GitHub-style diff view.
+
+```
+/review-ui
+```
+
+Shows all uncommitted changes (tracked, staged, and untracked) with two-column line numbers, add/delete highlighting, and a file tree sidebar.
+
+### Files mode
+
+Review any text files — plans, docs, configs, source code.
+
+```
+/review-ui plan
+```
+
+Opens the current plan file for inline review before approving. You can also review arbitrary files from the CLI:
 
 ```bash
-uv tool install git+https://github.com/vrppaul/claude-review
+claude-review --files plan.md
+claude-review --files design.md api.py schema.sql
 ```
 
-Then you can run it directly:
+Shows files with single-column line numbers, syntax highlighting based on file extension, and a flat file list sidebar.
 
-```bash
-claude-review              # opens browser with diff of current changes
-claude-review --port 8080  # specific port
-claude-review --no-open    # don't open browser automatically
-claude-review --verbose    # enable diagnostic logging to stderr
-claude-review /path/to/repo
-```
-
-## How It Works
+### How it works
 
 ```
-You type /review-ui in Claude Code
-  → Server starts, browser opens with current diff
-  → You read diff, add inline comments on any line
-  → You click Submit (or Ctrl+Shift+Enter)
-  → Browser closes, formatted comments appear in Claude's context
-  → Claude reads feedback and makes the requested changes
+/review-ui (or /review-ui plan)
+  -> Server starts, browser opens
+  -> You read the content, add inline comments on any line
+  -> Click Submit (or Ctrl+Shift+Enter)
+  -> Browser closes, formatted comments appear in Claude's context
+  -> Claude reads feedback and makes the requested changes
 ```
 
 ## Features
 
-- GitHub-style diff view with syntax highlighting
-- Click to comment on any line, drag for multi-line ranges
-- File tree sidebar with change stats (+/- per file)
+- Inline comments on single lines or drag-to-select ranges
+- Syntax highlighting (Python, TypeScript, Markdown, Rust, Go, SQL, and more)
 - Comment navigation (prev/next buttons)
 - Light/dark theme (auto-detects system preference, manual toggle)
 - Auto-shutdown when browser tab is closed
-- Works with tracked, staged, and untracked files
+
+## CLI Reference
+
+```bash
+claude-review                         # diff mode — review git changes
+claude-review /path/to/repo           # diff mode — specific repository
+claude-review --files file1.md        # files mode — review text files
+claude-review --files a.md b.py c.rs  # files mode — multiple files
+claude-review --port 8080             # use specific port
+claude-review --no-open               # don't open browser automatically
+claude-review --verbose               # enable diagnostic logging
+```
+
+### Manual install (optional)
+
+```bash
+uv tool install git+https://github.com/vrppaul/claude-review
+```
 
 ## Development
 

@@ -10,10 +10,12 @@ from pathlib import Path
 import structlog
 import uvicorn
 
+from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
+from claude_review.services.text_file_service import TextFileService
 
 log = structlog.get_logger()
 
@@ -54,30 +56,51 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Enable diagnostic logging to stderr",
     )
+
     parser.add_argument(
         "path",
         nargs="?",
-        default=".",
+        default=None,
         help="Path to the git repository (default: current directory)",
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--files",
+        nargs="+",
+        type=Path,
+        metavar="FILE",
+        help="Review text files instead of git diff",
+    )
+
+    args = parser.parse_args(argv)
+    if args.files and args.path:
+        parser.error("--files and positional path cannot be used together")
+    return args
 
 
-async def run(repo_path: Path, port: int, *, open_browser: bool = True) -> str:
-    """Run the review server and return formatted review markdown."""
+async def _load_diff(repo_path: Path) -> list[DiffFile]:
+    """Load diff files from a git repository."""
     git_repo = GitRepository()
     diff_service = DiffService(git_repository=git_repo)
     log.info("loading_diff", path=str(repo_path))
-    diff_files = await diff_service.get_diff(repo_path)
+    return await diff_service.get_diff(repo_path)
 
-    if not diff_files:
-        log.info("no_changes_found")
-        return ""
 
-    log.info("diff_loaded", file_count=len(diff_files))
+def _load_text_files(paths: list[Path]) -> list[DiffFile]:
+    """Load text files for review."""
+    log.info("loading_files", count=len(paths))
+    return TextFileService().read_files(paths)
 
+
+async def run(
+    diff_files: list[DiffFile],
+    mode: ReviewMode,
+    port: int,
+    *,
+    open_browser: bool = True,
+) -> str:
+    """Start the review server and return formatted review markdown."""
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state)
+    app = create_app(diff_files=diff_files, state=state, mode=mode)
 
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
@@ -124,11 +147,24 @@ def _open_browser(url: str) -> None:
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     _configure_logging(verbose=args.verbose)
-    repo_path = Path(args.path).resolve()
-    result = asyncio.run(run(repo_path, args.port, open_browser=not args.no_open))
+
+    if args.files:
+        diff_files = _load_text_files(args.files)
+        mode = ReviewMode.FILES
+        no_content_msg = "No content to review.\n"
+    else:
+        repo_path = Path(args.path or ".").resolve()
+        diff_files = asyncio.run(_load_diff(repo_path))
+        mode = ReviewMode.DIFF
+        no_content_msg = "No changes found.\n"
+
+    if not diff_files:
+        sys.stderr.write(no_content_msg)
+        return
+
+    log.info("content_loaded", file_count=len(diff_files), mode=mode)
+    result = asyncio.run(run(diff_files, mode, args.port, open_browser=not args.no_open))
 
     if result:
         sys.stdout.write(result)
         sys.stdout.write("\n")
-    else:
-        sys.stderr.write("No changes found.\n")

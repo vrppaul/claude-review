@@ -4,7 +4,7 @@ import asyncio
 
 from pydantic import BaseModel, Field, model_validator
 
-from claude_review.domain.models import DiffFile
+from claude_review.domain.models import DiffFile, ReviewMode
 
 
 class ServerState:
@@ -20,6 +20,7 @@ class DiffResponse(BaseModel):
     """Response for GET /api/diff."""
 
     files: list[DiffFile]
+    mode: ReviewMode
 
 
 class CommentInput(BaseModel):

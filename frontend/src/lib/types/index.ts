@@ -1,5 +1,6 @@
 export type LineType = 'context' | 'add' | 'delete';
 export type FileStatus = 'modified' | 'added' | 'deleted' | 'renamed';
+export type ReviewMode = 'diff' | 'files';
 
 export interface DiffLine {
 	type: LineType;
@@ -23,6 +24,7 @@ export interface DiffFile {
 
 export interface DiffResponse {
 	files: DiffFile[];
+	mode: ReviewMode;
 }
 
 export interface Comment {

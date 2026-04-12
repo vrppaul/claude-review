@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0] - 2026-04-12
+
+### Added
+- **Files mode** — review plain text files instead of git diffs (`claude-review --files plan.md`)
+- `/review-ui plan` — review the current plan file before approving
+- `ReviewMode` enum (diff, files) with mode-aware frontend rendering
+- `TextFileService` — converts text files into reviewable content
+- Flat file list sidebar for files mode (no tree structure, no diff badges)
+- Simplified DiffView for non-diff modes (single line number column, no +/- prefixes)
+- 20 new tests (unit, integration, E2E) for files mode
+
+### Changed
+- `create_app()` now requires explicit `mode` parameter (no silent default)
+- `run()` accepts pre-loaded data instead of loading internally
+- All `StrEnum` values use `auto()` instead of hardcoded strings
+- Sidebar title derived from mode via lookup map (extensible for future modes)
+- Diff-specific styling (row coloring, gutter classes) guarded by `isDiffMode`
+
 ## [0.2.0] - 2026-04-10
 
 ### Fixed

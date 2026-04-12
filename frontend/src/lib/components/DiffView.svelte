@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { diffStore } from '$lib/stores/diff.svelte';
 	import { detectLanguage, highlightLine } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
@@ -12,7 +13,9 @@
 
 	let { file }: Props = $props();
 
+	const isDiffMode = $derived(diffStore.mode === 'diff');
 	const language = $derived(detectLanguage(file.path));
+	const colSpan = $derived(isDiffMode ? 4 : 2);
 	const selection = createLineSelection();
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks
@@ -58,14 +61,18 @@
 <div class="flex-1 overflow-auto bg-base-100" onmouseup={() => selection.handleMouseUp()}>
 	<div class="sticky top-0 bg-base-200 border-b border-base-300 px-4 py-3 font-mono text-sm z-10">
 		<span class="font-semibold">{file.path}</span>
-		<span class="badge badge-sm ml-2">{file.status}</span>
+		{#if isDiffMode}
+			<span class="badge badge-sm ml-2">{file.status}</span>
+		{/if}
 	</div>
 
 	{#each file.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
-			<div class="bg-base-200/50 px-4 py-1 font-mono text-xs text-base-content/50">
-				{hunk.header}
-			</div>
+			{#if isDiffMode && hunk.header}
+				<div class="bg-base-200/50 px-4 py-1 font-mono text-xs text-base-content/50">
+					{hunk.header}
+				</div>
+			{/if}
 
 			<table class="w-full font-mono text-sm border-collapse">
 				<tbody>
@@ -77,17 +84,19 @@
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
-							class="hover:bg-base-200/50 {lineTypeClass(line.type)} {inRange ? 'border-l-4 border-l-info' : ''}"
+							class="hover:bg-base-200/50 {isDiffMode ? lineTypeClass(line.type) : ''} {inRange ? 'border-l-4 border-l-info' : ''}"
 							onmouseenter={() => selection.handleMouseEnter(line, flatIdx)}
 						>
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<td
-								class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
-								onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-								title="Click to comment, drag for range"
-							>
-								{line.old_no ?? ''}
-							</td>
+							{#if isDiffMode}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<td
+									class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
+									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
+									title="Click to comment, drag for range"
+								>
+									{line.old_no ?? ''}
+								</td>
+							{/if}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
@@ -96,17 +105,19 @@
 							>
 								{line.new_no ?? ''}
 							</td>
-							<td class="px-1 w-4 select-none {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}">
-								{linePrefix(line.type)}
-							</td>
-							<td class="px-2 whitespace-pre-wrap break-all {line.type === 'add' ? 'bg-success/5' : line.type === 'delete' ? 'bg-error/5' : 'bg-base-100'}">
+							{#if isDiffMode}
+								<td class="px-1 w-4 select-none {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}">
+									{linePrefix(line.type)}
+								</td>
+							{/if}
+							<td class="px-2 whitespace-pre-wrap break-all {isDiffMode && line.type === 'add' ? 'bg-success/5' : isDiffMode && line.type === 'delete' ? 'bg-error/5' : 'bg-base-100'}">
 								{@html highlightLine(line.content, language)}
 							</td>
 						</tr>
 
 						{#if lineComments.length > 0 || showCommentBox}
 							<tr>
-								<td colspan="4">
+								<td colspan={colSpan}>
 									{#each lineComments as comment (comment.id)}
 										<CommentThread {comment} />
 									{/each}

@@ -3,8 +3,8 @@ import asyncio
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
 
-from claude_review.domain.models import Comment, DiffFile
-from claude_review.presentation.dependencies import get_diff_files, get_review_service, get_state
+from claude_review.domain.models import Comment, DiffFile, ReviewMode
+from claude_review.presentation.dependencies import get_diff_files, get_review_mode, get_review_service, get_state
 from claude_review.presentation.schemas import DiffResponse, ServerState, SubmitRequest, SubmitResponse
 from claude_review.services.review_service import ReviewService
 
@@ -14,8 +14,11 @@ router = APIRouter(prefix="/api")
 
 
 @router.get("/diff")
-async def get_diff(diff_files: list[DiffFile] = Depends(get_diff_files)) -> DiffResponse:
-    return DiffResponse(files=diff_files)
+async def get_diff(
+    diff_files: list[DiffFile] = Depends(get_diff_files),
+    mode: ReviewMode = Depends(get_review_mode),
+) -> DiffResponse:
+    return DiffResponse(files=diff_files, mode=mode)
 
 
 @router.post("/heartbeat")

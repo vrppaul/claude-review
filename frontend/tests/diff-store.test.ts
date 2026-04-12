@@ -37,7 +37,7 @@ describe('diffStore', () => {
 	});
 
 	it('setFiles populates store and auto-selects first file', () => {
-		diffStore.setFiles(mockFiles);
+		diffStore.setFiles(mockFiles, 'diff');
 
 		expect(diffStore.files).toHaveLength(2);
 		expect(diffStore.selectedPath).toBe('src/a.ts');
@@ -45,7 +45,7 @@ describe('diffStore', () => {
 	});
 
 	it('selectFile changes the selected file', () => {
-		diffStore.setFiles(mockFiles);
+		diffStore.setFiles(mockFiles, 'diff');
 		diffStore.selectFile('src/b.ts');
 
 		expect(diffStore.selectedPath).toBe('src/b.ts');
@@ -79,6 +79,39 @@ describe('diffStore', () => {
 		);
 
 		await expect(diffStore.fetchDiff()).rejects.toThrow('Failed to fetch diff: 500');
+
+		vi.unstubAllGlobals();
+	});
+
+	it('mode defaults to diff', () => {
+		expect(diffStore.mode).toBe('diff');
+	});
+
+	it('setFiles with mode updates the mode', () => {
+		diffStore.setFiles(mockFiles, 'files');
+
+		expect(diffStore.mode).toBe('files');
+	});
+
+	it('clear resets mode to diff', () => {
+		diffStore.setFiles(mockFiles, 'files');
+		diffStore.clear();
+
+		expect(diffStore.mode).toBe('diff');
+	});
+
+	it('fetchDiff captures mode from API response', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve({ files: mockFiles, mode: 'files' })
+			})
+		);
+
+		await diffStore.fetchDiff();
+
+		expect(diffStore.mode).toBe('files');
 
 		vi.unstubAllGlobals();
 	});

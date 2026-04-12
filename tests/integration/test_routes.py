@@ -1,13 +1,15 @@
 """API contract tests for the presentation layer."""
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode
 from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import ServerState
+from claude_review.services.text_file_service import TextFileService
 
 
 @pytest.fixture
@@ -41,7 +43,7 @@ def server_state() -> ServerState:
 
 @pytest.fixture
 async def client(mock_diff_files: list[DiffFile], server_state: ServerState):
-    app = create_app(diff_files=mock_diff_files, state=server_state)
+    app = create_app(diff_files=mock_diff_files, state=server_state, mode=ReviewMode.DIFF)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 
@@ -53,6 +55,7 @@ async def test_get_diff_returns_files_json(client: AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "files" in data
+    assert data["mode"] == "diff"
     assert len(data["files"]) == 1
     assert data["files"][0]["path"] == "src/handler.ts"
     assert data["files"][0]["status"] == "modified"
@@ -183,3 +186,59 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
         json={"comments": [{"file": "x.py", "start_line": 0, "end_line": 1, "body": "note"}]},
     )
     assert response.status_code == 422
+
+
+# --- Files mode tests ---
+
+
+@pytest.fixture
+def plan_file(tmp_path: Path) -> Path:
+    """A real text file for files-mode integration tests."""
+    f = tmp_path / "plan.md"
+    f.write_text("# My Plan\n\nStep one\nStep two\n")
+    return f
+
+
+@pytest.fixture
+async def files_mode_client(plan_file: Path, server_state: ServerState):
+    """Client backed by a real text file loaded through TextFileService."""
+    diff_files = TextFileService().read_files([plan_file])
+    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.FILES)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+async def test_files_mode_api_reports_mode(files_mode_client: AsyncClient) -> None:
+    """The API tells the frontend which mode to render."""
+    response = await files_mode_client.get("/api/diff")
+
+    assert response.status_code == 200
+    assert response.json()["mode"] == "files"
+
+
+async def test_files_mode_review_round_trip(
+    files_mode_client: AsyncClient,
+    plan_file: Path,
+    server_state: ServerState,
+) -> None:
+    """Load a text file, comment on a specific line, submit — verify output."""
+    # Get the file path as the service resolved it
+    data = (await files_mode_client.get("/api/diff")).json()
+    file_path = data["files"][0]["path"]
+
+    # Comment on line 3 ("Step one")
+    response = await files_mode_client.post(
+        "/api/submit",
+        json={
+            "comments": [
+                {"file": file_path, "start_line": 3, "end_line": 3, "body": "Needs more detail"},
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["comment_count"] == 1
+    assert f"### {file_path}:3" in result["markdown"]
+    assert "Needs more detail" in result["markdown"]
+    assert server_state.shutdown_event.is_set()
