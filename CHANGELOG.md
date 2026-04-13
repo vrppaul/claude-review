@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0] - 2026-04-13
+
+### Added
+- **Markdown preview** — three content view modes for markdown files: Raw (default), Preview (rendered), Side by side (raw + rendered)
+- `ContentViewToggle` — toggle buttons in DiffView header, visible only for markdown content
+- `MarkdownRenderer` — renders markdown via `marked` with highlight.js code block syntax highlighting
+- `PreviewView` — full rendered markdown with comment count badge
+- `SideBySideView` — split pane with synced scroll, commenting via left pane
+- `RawView` — extracted from DiffView for reuse in side-by-side mode
+- `@tailwindcss/typography` — prose styles for rendered markdown (headings, tables, code blocks, lists)
+- 7 E2E tests for markdown view modes (toggle, preview, side-by-side, commenting, persistence, badge, non-markdown)
+- 12 new frontend unit tests (store, toggle, renderer, DiffView mode switching, comment badge)
+
+### Changed
+- DiffView refactored to thin dispatcher: sticky header + mode-based component routing
+- `contentViewMode` stored globally in diffStore, persists across file navigation, resets on `clear()`
+
 ## [0.5.0] - 2026-04-13
 
 ### Added

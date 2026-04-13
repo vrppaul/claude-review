@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
@@ -40,6 +41,7 @@ const textFile: DiffFile = {
 
 describe('DiffView', () => {
 	beforeEach(() => {
+		diffStore.clear();
 		commentStore.clear();
 	});
 
@@ -126,6 +128,149 @@ describe('DiffView', () => {
 
 		expect(getByTestId('diff-view').textContent).toContain('can you refactor auth?');
 		expect(getByTestId('diff-view').textContent).toContain('use JWT instead');
+	});
+
+	it('shows content view toggle for markdown files', () => {
+		const mdFile: DiffFile = {
+			path: 'docs/readme.md',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
+				}
+			]
+		};
+		diffStore.setFiles([mdFile], 'files');
+
+		const { getByTestId } = render(DiffView, { props: { file: mdFile } });
+
+		expect(getByTestId('content-view-toggle')).toBeTruthy();
+	});
+
+	it('hides content view toggle for non-markdown files', () => {
+		diffStore.setFiles([diffFile], 'diff');
+
+		const { queryByTestId } = render(DiffView, { props: { file: diffFile } });
+
+		expect(queryByTestId('content-view-toggle')).toBeNull();
+	});
+
+	it('shows content view toggle in transcript mode', () => {
+		const transcriptFile: DiffFile = {
+			path: 'assistant (14:30) #1',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Response' }]
+				}
+			]
+		};
+		diffStore.setFiles([transcriptFile], 'transcript');
+
+		const { getByTestId } = render(DiffView, { props: { file: transcriptFile } });
+
+		expect(getByTestId('content-view-toggle')).toBeTruthy();
+	});
+
+	it('switches to preview mode when toggle is clicked', async () => {
+		const mdFile: DiffFile = {
+			path: 'docs/readme.md',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
+				}
+			]
+		};
+		diffStore.setFiles([mdFile], 'files');
+
+		const { getByTestId, queryByTestId } = render(DiffView, { props: { file: mdFile } });
+
+		await userEvent.setup().click(getByTestId('view-mode-preview'));
+
+		expect(getByTestId('preview-view')).toBeTruthy();
+		expect(queryByTestId('raw-view')).toBeNull();
+	});
+
+	it('preview mode shows comment badge when comments exist', async () => {
+		const mdFile: DiffFile = {
+			path: 'docs/readme.md',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
+				}
+			]
+		};
+		diffStore.setFiles([mdFile], 'files');
+		commentStore.add('docs/readme.md', 1, 1, 'Fix this heading');
+
+		const { getByTestId } = render(DiffView, { props: { file: mdFile } });
+
+		await userEvent.setup().click(getByTestId('view-mode-preview'));
+
+		const badge = getByTestId('preview-comment-badge');
+		expect(badge.textContent).toContain('1 comment');
+		expect(badge.textContent).toContain('switch to Raw');
+	});
+
+	it('shows raw view by default for markdown files', () => {
+		const mdFile: DiffFile = {
+			path: 'docs/readme.md',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
+				}
+			]
+		};
+		diffStore.setFiles([mdFile], 'files');
+
+		const { getByTestId, queryByTestId } = render(DiffView, { props: { file: mdFile } });
+
+		expect(getByTestId('raw-view')).toBeTruthy();
+		expect(queryByTestId('preview-view')).toBeNull();
+	});
+
+	it('switches to side-by-side mode when toggle is clicked', async () => {
+		const mdFile: DiffFile = {
+			path: 'docs/readme.md',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
+				}
+			]
+		};
+		diffStore.setFiles([mdFile], 'files');
+
+		const { getByTestId, queryByTestId } = render(DiffView, { props: { file: mdFile } });
+
+		await userEvent.setup().click(getByTestId('view-mode-side-by-side'));
+
+		expect(getByTestId('side-by-side-view')).toBeTruthy();
+		// raw-view is present as the left pane inside side-by-side
+		expect(getByTestId('raw-view')).toBeTruthy();
+		expect(getByTestId('markdown-content')).toBeTruthy();
+		expect(queryByTestId('preview-view')).toBeNull();
 	});
 
 	it('hides status badge in transcript mode', () => {

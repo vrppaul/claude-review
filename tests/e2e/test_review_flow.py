@@ -122,7 +122,7 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
 
     await first_cell.dispatch_event("mousedown")
     await later_cell.dispatch_event("mouseenter")
-    await page.get_by_test_id("diff-view").dispatch_event("mouseup")
+    await page.get_by_test_id("raw-view").dispatch_event("mouseup")
 
     await page.get_by_test_id("comment-input").fill("Refactor this range")
     await page.get_by_test_id("save-comment").click()
@@ -341,6 +341,136 @@ async def test_files_mode_comments_across_multiple_files(files_mode_server: Serv
     assert state.result is not None
     assert "Comment on plan" in state.result
     assert "Comment on notes" in state.result
+
+
+# --- Markdown view mode tests (use files mode with .md files) ---
+
+
+async def test_markdown_file_shows_view_toggle(files_mode_server: ServerFixture, page: Page) -> None:
+    """Markdown files show the content view toggle in the header."""
+    url, _state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    toggle = page.get_by_test_id("content-view-toggle")
+    await toggle.wait_for()
+    assert await toggle.is_visible()
+
+    raw_btn = page.get_by_test_id("view-mode-raw")
+    preview_btn = page.get_by_test_id("view-mode-preview")
+    sbs_btn = page.get_by_test_id("view-mode-side-by-side")
+    assert await raw_btn.is_visible()
+    assert await preview_btn.is_visible()
+    assert await sbs_btn.is_visible()
+
+
+async def test_markdown_preview_renders_content(files_mode_server: ServerFixture, page: Page) -> None:
+    """Switching to preview mode renders markdown as HTML."""
+    url, _state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("view-mode-preview").click()
+    preview = page.get_by_test_id("preview-view")
+    await preview.wait_for()
+
+    content = page.get_by_test_id("markdown-content")
+    # plan.md contains "# My Plan" which should render as an h1
+    heading = content.locator("h1")
+    await heading.wait_for()
+    assert await heading.text_content() == "My Plan"
+
+
+async def test_side_by_side_shows_both_panes(files_mode_server: ServerFixture, page: Page) -> None:
+    """Side-by-side mode shows raw view and rendered markdown."""
+    url, _state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("view-mode-side-by-side").click()
+    sbs = page.get_by_test_id("side-by-side-view")
+    await sbs.wait_for()
+
+    # Left pane: raw view with line gutters
+    raw_view = page.get_by_test_id("raw-view")
+    assert await raw_view.is_visible()
+    gutters = await page.get_by_test_id("line-gutter").all()
+    assert len(gutters) > 0
+
+    # Right pane: rendered markdown
+    md_content = page.get_by_test_id("markdown-content")
+    assert await md_content.is_visible()
+
+
+async def test_commenting_works_in_side_by_side(files_mode_server: ServerFixture, page: Page) -> None:
+    """Adding a comment in the left pane of side-by-side mode works."""
+    url, state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("view-mode-side-by-side").click()
+    await page.get_by_test_id("side-by-side-view").wait_for()
+
+    line_cell = page.get_by_test_id("line-gutter").first
+    await _click_line_and_comment(page, line_cell, "Side-by-side comment")
+
+    await page.get_by_test_id("quick-submit").click()
+    await page.wait_for_selector("text=Review submitted")
+
+    assert state.result is not None
+    assert "Side-by-side comment" in state.result
+
+
+async def test_view_mode_persists_across_file_navigation(files_mode_server: ServerFixture, page: Page) -> None:
+    """Switching to preview on one .md file persists when navigating to another .md file."""
+    url, _state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    # Switch first file to preview
+    await page.get_by_test_id("view-mode-preview").click()
+    await page.get_by_test_id("preview-view").wait_for()
+
+    # Navigate to second file
+    file_buttons = await page.get_by_test_id("file-item").all()
+    assert len(file_buttons) >= 2
+    await file_buttons[1].click()
+
+    # Preview mode should persist
+    await page.get_by_test_id("preview-view").wait_for()
+    assert await page.get_by_test_id("preview-view").is_visible()
+
+
+async def test_preview_shows_comment_badge(files_mode_server: ServerFixture, page: Page) -> None:
+    """Adding comments in raw mode shows a badge when switching to preview."""
+    url, _state = files_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    # Add a comment in raw mode
+    line_cell = page.get_by_test_id("line-gutter").first
+    await _click_line_and_comment(page, line_cell, "Needs work")
+
+    # Switch to preview — badge should show
+    await page.get_by_test_id("view-mode-preview").click()
+    await page.get_by_test_id("preview-view").wait_for()
+
+    badge = page.get_by_test_id("preview-comment-badge")
+    await badge.wait_for()
+    badge_text = await badge.text_content()
+    assert badge_text is not None
+    assert "1 comment" in badge_text
+    assert "Raw" in badge_text
+
+
+async def test_toggle_hidden_for_non_markdown_in_diff_mode(server_url: ServerFixture, page: Page) -> None:
+    """Non-markdown files (e.g. .py, .ts) do not show the view toggle."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    toggle = page.get_by_test_id("content-view-toggle")
+    assert await toggle.count() == 0
 
 
 # --- Transcript mode fixtures ---

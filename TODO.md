@@ -2,7 +2,6 @@
 
 ## Next
 
-- [ ] Side-by-side markdown rendering — rendered markdown on one side, raw text with line numbers on the other
 - [ ] Live updates — watch for file changes (FileChanged hook + WebSocket) and refresh diff in browser automatically
 
 ## Infrastructure

@@ -77,6 +77,7 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 ## Features
 
 - Inline comments on single lines or drag-to-select ranges
+- Markdown preview — Raw, Preview (rendered), and Side-by-side view modes for `.md` files and transcripts
 - Syntax highlighting (Python, TypeScript, Markdown, Rust, Go, SQL, and more)
 - Comment navigation (prev/next buttons)
 - Light/dark theme (auto-detects system preference, manual toggle)

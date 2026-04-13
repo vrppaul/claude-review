@@ -1,8 +1,14 @@
-import type { DiffFile, DiffResponse, ReviewMode } from "$lib/types";
+import type {
+  ContentViewMode,
+  DiffFile,
+  DiffResponse,
+  ReviewMode,
+} from "$lib/types";
 
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
 let mode = $state<ReviewMode>("diff");
+let contentViewMode = $state<ContentViewMode>("raw");
 const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 
 export const diffStore = {
@@ -18,6 +24,9 @@ export const diffStore = {
   get mode(): ReviewMode {
     return mode;
   },
+  get contentViewMode(): ContentViewMode {
+    return contentViewMode;
+  },
 
   setFiles(newFiles: DiffFile[], newMode: ReviewMode) {
     files = newFiles;
@@ -29,10 +38,15 @@ export const diffStore = {
     selectedPath = path;
   },
 
+  setContentViewMode(newMode: ContentViewMode) {
+    contentViewMode = newMode;
+  },
+
   clear() {
     files = [];
     selectedPath = null;
     mode = "diff";
+    contentViewMode = "raw";
   },
 
   async fetchDiff() {

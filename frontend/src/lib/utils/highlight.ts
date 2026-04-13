@@ -1,4 +1,5 @@
 import hljs from "highlight.js/lib/core";
+export { hljs };
 
 // Register common languages
 import javascript from "highlight.js/lib/languages/javascript";

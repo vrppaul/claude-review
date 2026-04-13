@@ -121,4 +121,21 @@ describe('diffStore', () => {
 
 		expect(diffStore.mode).toBe('transcript');
 	});
+
+	it('contentViewMode defaults to raw', () => {
+		expect(diffStore.contentViewMode).toBe('raw');
+	});
+
+	it('setContentViewMode updates the view mode', () => {
+		diffStore.setContentViewMode('preview');
+
+		expect(diffStore.contentViewMode).toBe('preview');
+	});
+
+	it('clear resets contentViewMode to raw', () => {
+		diffStore.setContentViewMode('side-by-side');
+		diffStore.clear();
+
+		expect(diffStore.contentViewMode).toBe('raw');
+	});
 });
