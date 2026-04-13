@@ -115,4 +115,10 @@ describe('diffStore', () => {
 
 		vi.unstubAllGlobals();
 	});
+
+	it('setFiles with transcript mode updates the mode', () => {
+		diffStore.setFiles(mockFiles, 'transcript');
+
+		expect(diffStore.mode).toBe('transcript');
+	});
 });

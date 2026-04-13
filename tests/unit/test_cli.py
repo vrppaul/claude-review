@@ -22,3 +22,21 @@ def test_files_and_path_mutually_exclusive() -> None:
 
     assert result.exit_code != 0
     assert "cannot be used together" in result.output
+
+
+def test_transcript_and_path_mutually_exclusive() -> None:
+    """--transcript and positional path cannot be used together."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--transcript", __file__, "."])
+
+    assert result.exit_code != 0
+    assert "cannot be used together" in result.output
+
+
+def test_transcript_and_files_mutually_exclusive() -> None:
+    """--transcript and --files cannot be used together."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--transcript", __file__, "--files", __file__])
+
+    assert result.exit_code != 0
+    assert "cannot be used together" in result.output

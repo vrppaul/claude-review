@@ -14,7 +14,10 @@
 	let { file }: Props = $props();
 
 	const isDiffMode = $derived(diffStore.mode === 'diff');
-	const language = $derived(detectLanguage(file.path));
+	const isTranscriptMode = $derived(diffStore.mode === 'transcript');
+	// Transcript paths like "user (22:41) #1" have no extension, so detectLanguage returns null.
+	// Claude's responses contain markdown, so we force markdown highlighting for readability.
+	const language = $derived(isTranscriptMode ? 'markdown' : detectLanguage(file.path));
 	const colSpan = $derived(isDiffMode ? 4 : 2);
 	const selection = createLineSelection();
 

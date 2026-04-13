@@ -1,6 +1,7 @@
 """E2E tests: full round-trip with real server and real browser."""
 
 import asyncio
+import json
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -10,10 +11,11 @@ from playwright.async_api import Page
 
 from claude_review.domain.models import ReviewMode
 from claude_review.presentation.app import create_app
-from claude_review.presentation.schemas import ServerState
+from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
+from claude_review.services.transcript_service import TranscriptService
 from tests.helpers import git
 
 ServerFixture = tuple[str, ServerState]
@@ -339,3 +341,78 @@ async def test_files_mode_comments_across_multiple_files(files_mode_server: Serv
     assert state.result is not None
     assert "Comment on plan" in state.result
     assert "Comment on notes" in state.result
+
+
+# --- Transcript mode fixtures ---
+
+
+@pytest.fixture
+def transcript_file(tmp_path: Path) -> Path:
+    """Create a JSONL conversation file for transcript-mode testing."""
+    f = tmp_path / "conversation.jsonl"
+    lines = [
+        json.dumps(
+            {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": "can you refactor the auth module?\nuse JWT instead of sessions",
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
+                },
+            }
+        ),
+    ]
+    f.write_text("\n".join(lines))
+    return f
+
+
+@pytest.fixture
+async def transcript_mode_server(transcript_file: Path) -> AsyncGenerator[ServerFixture]:
+    """Start a real server in transcript mode."""
+    diff_files = TranscriptService().parse(transcript_file)
+    state = ServerState(shutdown_event=asyncio.Event())
+
+    async for fixture in _start_server(diff_files, state, ReviewMode.TRANSCRIPT):
+        yield fixture
+
+
+# --- Transcript mode tests ---
+
+
+async def test_transcript_mode_sidebar_shows_messages(transcript_mode_server: ServerFixture, page: Page) -> None:
+    """Sidebar shows message list with 'Messages' header."""
+    url, _state = transcript_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    header = await page.get_by_test_id("sidebar").locator("h2").text_content()
+    assert header is not None
+    assert "Messages" in header
+
+    file_buttons = await page.get_by_test_id("file-item").all()
+    assert len(file_buttons) == 2
+
+
+async def test_transcript_mode_comment_and_submit(transcript_mode_server: ServerFixture, page: Page) -> None:
+    """Full round-trip in transcript mode: comment on message, submit, verify output."""
+    url, state = transcript_mode_server
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    line_cell = page.get_by_test_id("line-gutter").first
+    await _click_line_and_comment(page, line_cell, "Wrong approach")
+
+    await page.get_by_test_id("quick-submit").click()
+    await page.wait_for_selector("text=Review submitted")
+
+    assert state.result is not None
+    assert "Transcript Review" in state.result
+    assert "Wrong approach" in state.result

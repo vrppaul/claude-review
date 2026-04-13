@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0] - 2026-04-13
+
+### Added
+- **Transcript mode** — review Claude Code conversation transcripts (`claude-review --transcript conv.jsonl`)
+- `/review-ui transcript` — review the current session's conversation
+- `TranscriptService` — parses Claude Code JSONL files, merges consecutive turns, filters tool calls and thinking blocks
+- `TranscriptReviewService` — formats transcript comments as self-contained blockquote markdown
+- Messages shown newest-first with timestamps in sidebar labels
+- 28 new tests (unit, integration, E2E, frontend) for transcript mode
+
+### Changed
+- Services instantiated in route handlers instead of stored on `app.state`
+- `ServerState` moved from `schemas.py` to dedicated `state.py` module
+- CLI uses single `asyncio.run()` instead of two separate event loops
+- Heartbeat timeout extracted to `HEARTBEAT_TIMEOUT` module constant
+
 ## [0.4.2] - 2026-04-12
 
 ### Added

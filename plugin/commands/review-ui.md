@@ -8,6 +8,7 @@ Open the claude-review diff viewer in the browser so the user can review code ch
 Accepts an optional argument:
 - No argument: review current git changes (default)
 - `plan`: review the current plan file
+- `transcript`: review the current conversation as a transcript
 
 ## Steps
 
@@ -20,6 +21,10 @@ Accepts an optional argument:
    - If the argument is `plan`: find the current plan file path from your system prompt (look for the plan file path mentioned in the "Plan File Info" section). Run:
      ```bash
      claude-review --files <plan-file-path>
+     ```
+   - If the argument is `transcript`: find the current conversation JSONL file. It lives at `~/.claude/projects/<project-dir-hash>/<session-id>.jsonl` — the session ID is in your system prompt. Run:
+     ```bash
+     claude-review --transcript <path-to-jsonl>
      ```
    - If no argument: run the default git diff review:
      ```bash

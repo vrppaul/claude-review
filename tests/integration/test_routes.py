@@ -1,6 +1,7 @@
 """API contract tests for the presentation layer."""
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -8,8 +9,9 @@ from httpx import ASGITransport, AsyncClient
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode
 from claude_review.presentation.app import create_app
-from claude_review.presentation.schemas import ServerState
+from claude_review.presentation.state import ServerState
 from claude_review.services.text_file_service import TextFileService
+from claude_review.services.transcript_service import TranscriptService
 
 
 @pytest.fixture
@@ -279,4 +281,76 @@ async def test_files_mode_review_round_trip(
     assert result["comment_count"] == 1
     assert f"### {file_path}:3" in result["markdown"]
     assert "Needs more detail" in result["markdown"]
+    assert server_state.shutdown_event.is_set()
+
+
+# --- Transcript mode tests ---
+
+
+@pytest.fixture
+def transcript_file(tmp_path: Path) -> Path:
+    """A JSONL conversation file for transcript-mode integration tests."""
+    f = tmp_path / "conversation.jsonl"
+    lines = [
+        json.dumps({"type": "user", "message": {"role": "user", "content": "can you refactor the auth module?"}}),
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
+                },
+            }
+        ),
+    ]
+    f.write_text("\n".join(lines))
+    return f
+
+
+@pytest.fixture
+async def transcript_mode_client(transcript_file: Path, server_state: ServerState):
+    """Client backed by a real transcript file loaded through TranscriptService."""
+    diff_files = TranscriptService().parse(transcript_file)
+    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.TRANSCRIPT)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+async def test_transcript_mode_api_reports_mode(transcript_mode_client: AsyncClient) -> None:
+    """The API tells the frontend which mode to render."""
+    response = await transcript_mode_client.get("/api/diff")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "transcript"
+    assert len(data["files"]) == 2
+    # Newest first
+    assert "assistant" in data["files"][0]["path"]
+    assert "user" in data["files"][1]["path"]
+
+
+async def test_transcript_mode_review_round_trip(
+    transcript_mode_client: AsyncClient,
+    server_state: ServerState,
+) -> None:
+    """Load transcript, comment on a message, submit — verify self-contained output."""
+    data = (await transcript_mode_client.get("/api/diff")).json()
+    # Find the user message (newest-first, so it's second)
+    user_file = next(f for f in data["files"] if "user" in f["path"])
+
+    response = await transcript_mode_client.post(
+        "/api/submit",
+        json={
+            "comments": [
+                {"file": user_file["path"], "start_line": 1, "end_line": 1, "body": "Wrong approach"},
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["comment_count"] == 1
+    assert "## Transcript Review" in result["markdown"]
+    assert "> can you refactor the auth module?" in result["markdown"]
+    assert "Wrong approach" in result["markdown"]
     assert server_state.shutdown_event.is_set()

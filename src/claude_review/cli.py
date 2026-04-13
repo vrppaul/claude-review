@@ -12,12 +12,15 @@ import uvicorn
 
 from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.presentation.app import create_app
-from claude_review.presentation.schemas import ServerState
+from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
+from claude_review.services.transcript_service import TranscriptService
 
 log = structlog.get_logger()
+
+HEARTBEAT_TIMEOUT = 10.0
 
 
 def _configure_logging(*, verbose: bool = False) -> None:
@@ -43,13 +46,7 @@ async def _load_diff(repo_path: Path) -> list[DiffFile]:
     return await diff_service.get_diff(repo_path)
 
 
-def _load_text_files(paths: list[Path]) -> list[DiffFile]:
-    """Load text files for review."""
-    log.info("loading_files", count=len(paths))
-    return TextFileService().read_files(paths)
-
-
-async def run(
+async def _serve(
     diff_files: list[DiffFile],
     mode: ReviewMode,
     port: int,
@@ -62,8 +59,6 @@ async def run(
 
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
-
-    heartbeat_timeout = 10.0  # seconds without heartbeat before shutdown
 
     async def wait_for_shutdown() -> None:
         for _ in range(100):  # 5 second startup timeout
@@ -86,7 +81,7 @@ async def run(
             await asyncio.sleep(1.0)
             if state.last_heartbeat is not None:
                 now = asyncio.get_running_loop().time()
-                if now - state.last_heartbeat > heartbeat_timeout:
+                if now - state.last_heartbeat > HEARTBEAT_TIMEOUT:
                     log.info("heartbeat_timeout", last_heartbeat_age=round(now - state.last_heartbeat, 1))
                     break
 
@@ -102,6 +97,39 @@ def _open_browser(url: str) -> None:
     webbrowser.open_new(url)
 
 
+async def _run(
+    path: Path | None,
+    files: tuple[Path, ...],
+    transcript: Path | None,
+    port: int,
+    *,
+    open_browser: bool = True,
+) -> str:
+    """Load content and start the review server. Single async entry point."""
+    if transcript:
+        log.info("loading_transcript", path=str(transcript))
+        diff_files = TranscriptService().parse(transcript)
+        mode = ReviewMode.TRANSCRIPT
+        no_content_msg = "No messages to review.\n"
+    elif files:
+        log.info("loading_files", count=len(files))
+        diff_files = TextFileService().read_files(list(files))
+        mode = ReviewMode.FILES
+        no_content_msg = "No content to review.\n"
+    else:
+        repo_path = (path or Path(".")).resolve()
+        diff_files = await _load_diff(repo_path)
+        mode = ReviewMode.DIFF
+        no_content_msg = "No changes found.\n"
+
+    if not diff_files:
+        sys.stderr.write(no_content_msg)
+        return ""
+
+    log.info("content_loaded", file_count=len(diff_files), mode=mode)
+    return await _serve(diff_files, mode, port, open_browser=open_browser)
+
+
 @click.command()
 @click.argument("path", required=False, type=click.Path(exists=True, path_type=Path))
 @click.option(
@@ -110,32 +138,29 @@ def _open_browser(url: str) -> None:
     type=click.Path(exists=True, path_type=Path),
     help="Review text files instead of git diff.",
 )
+@click.option(
+    "--transcript",
+    type=click.Path(exists=True, path_type=Path),
+    help="Review a conversation transcript JSONL file.",
+)
 @click.option("--port", default=0, type=int, help="Port to run the server on.")
 @click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
 @click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
-def main(path: Path | None, files: tuple[Path, ...], port: int, no_open: bool, verbose: bool) -> None:
+def main(
+    path: Path | None,
+    files: tuple[Path, ...],
+    transcript: Path | None,
+    port: int,
+    no_open: bool,
+    verbose: bool,
+) -> None:
     """Browser-based code review tool for Claude Code."""
-    if files and path:
-        raise click.UsageError("--files and positional path cannot be used together.")
+    if (files and transcript) or (files and path) or (transcript and path):
+        raise click.UsageError("--files, --transcript, and positional path cannot be used together.")
 
     _configure_logging(verbose=verbose)
 
-    if files:
-        diff_files = _load_text_files(list(files))
-        mode = ReviewMode.FILES
-        no_content_msg = "No content to review.\n"
-    else:
-        repo_path = (path or Path(".")).resolve()
-        diff_files = asyncio.run(_load_diff(repo_path))
-        mode = ReviewMode.DIFF
-        no_content_msg = "No changes found.\n"
-
-    if not diff_files:
-        sys.stderr.write(no_content_msg)
-        return
-
-    log.info("content_loaded", file_count=len(diff_files), mode=mode)
-    result = asyncio.run(run(diff_files, mode, port, open_browser=not no_open))
+    result = asyncio.run(_run(path, files, transcript, port, open_browser=not no_open))
 
     if result:
         sys.stdout.write(result)

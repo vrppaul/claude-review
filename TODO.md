@@ -2,16 +2,8 @@
 
 ## Next
 
-- [ ] Transcript mode — review conversation messages (user + assistant), each message in sidebar
 - [ ] Side-by-side markdown rendering — rendered markdown on one side, raw text with line numbers on the other
-
-## Transcript mode prep
-
-When implementing `ReviewMode.TRANSCRIPT`:
-
-- [ ] `ReviewService` — pass mode to `format_review`, use `## Transcript Review Comments` and `### User message 1:15` format
-- [ ] DiffView gutter styling — `lineGutterClass()` hardcoded to diff concepts, transcript may need role-specific styling
-- [ ] Frontend `ReviewMode` type — add `switch` with `never` exhaustiveness check for mode-dependent logic
+- [ ] Live updates — watch for file changes (FileChanged hook + WebSocket) and refresh diff in browser automatically
 
 ## Infrastructure
 
@@ -21,9 +13,10 @@ When implementing `ReviewMode.TRANSCRIPT`:
 
 ## Testing
 
+- [ ] Eliminate `tmp_path` from unit tests — services (TextFileService, TranscriptService) should accept data in-memory so unit tests don't touch the filesystem. File reading is a thin outer layer, not the thing under test.
+
 ## Future
 
-- [ ] Live updates (FileChanged hook + WebSocket)
 - [ ] Claude responding to individual comments
 - [ ] Approve action
 - [ ] Auto-push via Channel MCP

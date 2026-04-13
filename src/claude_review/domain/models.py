@@ -10,10 +10,12 @@ class ReviewMode(StrEnum):
 
     DIFF  — git changes (the default): two-column line numbers, add/delete styling.
     FILES — plain text files (plans, docs): single line numbers, no diff decoration.
+    TRANSCRIPT — conversation messages: each message is a reviewable block.
     """
 
     DIFF = auto()
     FILES = auto()
+    TRANSCRIPT = auto()
 
 
 class LineType(StrEnum):

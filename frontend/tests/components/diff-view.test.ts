@@ -103,4 +103,48 @@ describe('DiffView', () => {
 		// Empty header should not render
 		expect(queryByText('@@ ')).toBeNull();
 	});
+
+	it('renders transcript message content', () => {
+		const transcriptFile: DiffFile = {
+			path: 'user-1',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [
+						{ type: 'context', old_no: null, new_no: 1, content: 'can you refactor auth?' },
+						{ type: 'context', old_no: null, new_no: 2, content: 'use JWT instead' }
+					]
+				}
+			]
+		};
+		diffStore.setFiles([transcriptFile], 'transcript');
+
+		const { getByTestId } = render(DiffView, { props: { file: transcriptFile } });
+
+		expect(getByTestId('diff-view').textContent).toContain('can you refactor auth?');
+		expect(getByTestId('diff-view').textContent).toContain('use JWT instead');
+	});
+
+	it('hides status badge in transcript mode', () => {
+		const transcriptFile: DiffFile = {
+			path: 'assistant-2',
+			status: 'added',
+			hunks: [
+				{
+					header: '',
+					old_start: 0,
+					new_start: 1,
+					lines: [{ type: 'context', old_no: null, new_no: 1, content: 'response' }]
+				}
+			]
+		};
+		diffStore.setFiles([transcriptFile], 'transcript');
+
+		const { queryByText } = render(DiffView, { props: { file: transcriptFile } });
+
+		expect(queryByText('added')).toBeNull();
+	});
 });

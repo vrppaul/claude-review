@@ -1,6 +1,6 @@
 # Claude Review
 
-Browser-based review tool for Claude Code. Add inline comments on code changes or text files, and send structured feedback back to Claude.
+Browser-based review tool for Claude Code. Add inline comments on code changes, text files, or conversation transcripts, and send structured feedback back to Claude.
 
 ![claude-review screenshot](docs/screenshot.png)
 
@@ -47,10 +47,26 @@ claude-review --files design.md api.py schema.sql
 
 Shows files with single-column line numbers, syntax highlighting based on file extension, and a flat file list sidebar.
 
+### Transcript mode
+
+Review a Claude Code conversation — every user and assistant message appears as a reviewable entry.
+
+```
+/review-ui transcript
+```
+
+Opens the current session's conversation for inline review. You can also review any JSONL conversation file from the CLI:
+
+```bash
+claude-review --transcript ~/.claude/projects/<project>/<session-id>.jsonl
+```
+
+Shows messages newest-first with timestamps, merges consecutive same-role entries into turns, and filters out tool calls and thinking blocks.
+
 ### How it works
 
 ```
-/review-ui (or /review-ui plan)
+/review-ui (or /review-ui plan, /review-ui transcript)
   -> Server starts, browser opens
   -> You read the content, add inline comments on any line
   -> Click Submit (or Ctrl+Shift+Enter)
@@ -73,6 +89,7 @@ claude-review                         # diff mode — review git changes
 claude-review /path/to/repo           # diff mode — specific repository
 claude-review --files file1.md        # files mode — review text files
 claude-review --files a.md b.py c.rs  # files mode — multiple files
+claude-review --transcript conv.jsonl # transcript mode — review conversation
 claude-review --port 8080             # use specific port
 claude-review --no-open               # don't open browser automatically
 claude-review --verbose               # enable diagnostic logging

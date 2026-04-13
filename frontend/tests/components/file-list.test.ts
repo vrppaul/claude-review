@@ -112,4 +112,41 @@ describe('FileList', () => {
 
 		expect(getByText('files')).toBeTruthy();
 	});
+
+	it('shows "Messages" header in transcript mode', () => {
+		const transcriptFiles: DiffFile[] = [
+			{
+				path: 'user-1',
+				status: 'added',
+				hunks: [
+					{
+						header: '',
+						old_start: 0,
+						new_start: 1,
+						lines: [{ type: 'context', old_no: null, new_no: 1, content: 'hello' }]
+					}
+				]
+			},
+			{
+				path: 'assistant-2',
+				status: 'added',
+				hunks: [
+					{
+						header: '',
+						old_start: 0,
+						new_start: 1,
+						lines: [{ type: 'context', old_no: null, new_no: 1, content: 'hi' }]
+					}
+				]
+			}
+		];
+		diffStore.setFiles(transcriptFiles, 'transcript');
+
+		const { getByTestId, getAllByTestId, getByText } = render(FileList);
+		const header = getByTestId('sidebar').querySelector('h2');
+
+		expect(header?.textContent).toContain('Messages');
+		expect(getByText('transcript')).toBeTruthy();
+		expect(getAllByTestId('file-item')).toHaveLength(2);
+	});
 });
