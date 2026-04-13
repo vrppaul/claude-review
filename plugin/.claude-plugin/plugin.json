@@ -1,5 +1,5 @@
 {
   "name": "claude-review",
   "description": "Browser-based code review tool. Review git diffs, text files, or transcripts with inline comments, markdown preview, and side-by-side view.",
-  "version": "0.6.0"
+  "version": "1.0.0"
 }

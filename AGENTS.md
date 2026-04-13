@@ -13,10 +13,11 @@ uv run pytest tests/e2e/             # E2E tests (Playwright browser)
 uv run ruff check src/               # Lint Python
 uv run ruff format src/              # Format Python
 uv run ty check src/                 # Type check Python
-uv run claude-review                 # Run the tool (diff mode)
-uv run claude-review --files f.md    # Run the tool (files mode)
-uv run claude-review --transcript c.jsonl  # Run the tool (transcript mode)
-uv run claude-review --port 8080     # Run on specific port
+uv run claude-review diff                    # Run the tool (diff mode)
+uv run claude-review diff --base HEAD~3      # Diff since a specific commit
+uv run claude-review files f.md              # Run the tool (files mode)
+uv run claude-review transcript c.jsonl      # Run the tool (transcript mode)
+uv run claude-review --port 8080 diff        # Run on specific port
 cd frontend && pnpm install          # Install frontend dependencies
 cd frontend && pnpm build            # Build frontend (outputs to src/claude_review/static/dist/)
 cd frontend && pnpm test             # Run frontend tests
@@ -143,7 +144,7 @@ Types: `feat fix docs style refactor perf test build ci chore`
 After any meaningful change, follow this checklist (details in CONTRIBUTING.md):
 
 1. Bump version in `pyproject.toml`, `plugin/.claude-plugin/plugin.json`, and `CHANGELOG.md` (keep in sync)
-2. Update `plugin/commands/review-ui.md` if skill description or usage changed
+2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 3. Update `README.md` features, `TODO.md` (remove completed items)
 4. Commit: `chore: release vX.Y.Z`
 5. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z`

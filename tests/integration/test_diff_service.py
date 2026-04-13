@@ -125,3 +125,59 @@ async def test_deleted_file_status(tmp_git_repo: Path, diff_service: DiffService
     assert len(files) == 1
     assert files[0].status == FileStatus.DELETED
     assert all(line.type == LineType.DELETE for line in files[0].hunks[0].lines)
+
+
+async def test_base_shows_committed_changes(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """--base shows changes committed after the base ref."""
+    # Record the initial commit
+    base = git(tmp_git_repo, "rev-parse", "HEAD").strip()
+
+    # Make a second commit
+    (tmp_git_repo / "second.py").write_text("print('hello')\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "second commit")
+
+    files = await diff_service.get_diff(tmp_git_repo, base=base)
+
+    paths = {f.path for f in files}
+    assert "second.py" in paths
+
+
+async def test_base_includes_uncommitted_changes(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """--base includes both committed and uncommitted changes."""
+    base = git(tmp_git_repo, "rev-parse", "HEAD").strip()
+
+    # Committed change
+    (tmp_git_repo / "committed.py").write_text("committed\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add committed")
+
+    # Uncommitted change
+    (tmp_git_repo / "uncommitted.py").write_text("uncommitted\n")
+
+    files = await diff_service.get_diff(tmp_git_repo, base=base)
+
+    paths = {f.path for f in files}
+    assert "committed.py" in paths
+    assert "uncommitted.py" in paths
+
+
+async def test_base_includes_untracked_files(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """--base includes untracked files as additions."""
+    base = git(tmp_git_repo, "rev-parse", "HEAD").strip()
+
+    (tmp_git_repo / "untracked.txt").write_text("new file\n")
+
+    files = await diff_service.get_diff(tmp_git_repo, base=base)
+
+    assert len(files) == 1
+    assert files[0].path == "untracked.txt"
+    assert files[0].status == FileStatus.ADDED
+
+
+async def test_invalid_base_raises_error(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """Nonexistent base commit raises GitError."""
+    from claude_review.domain.exceptions import GitError
+
+    with pytest.raises(GitError):
+        await diff_service.get_diff(tmp_git_repo, base="nonexistent_ref_abc123")

@@ -23,10 +23,10 @@ uv run pre-commit install --hook-type commit-msg --hook-type pre-commit
 
 ```bash
 # Run locally (diff mode)
-uv run claude-review
+uv run claude-review diff
 
 # Run locally (files mode)
-uv run claude-review --files some-file.md
+uv run claude-review files some-file.md
 
 # Run tests
 uv run pytest                        # all Python tests
@@ -78,7 +78,7 @@ See [AGENTS.md](AGENTS.md) for the full conventions reference.
    - `pyproject.toml` — Python package version
    - `plugin/.claude-plugin/plugin.json` — plugin marketplace version
    - `CHANGELOG.md` — release notes
-2. Update `plugin/commands/review-ui.md` if the skill's description or usage changed
+2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 3. Commit: `chore: release vX.Y.Z`
 4. Push: `git push origin master --tags`
 5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`

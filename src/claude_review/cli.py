@@ -38,12 +38,12 @@ def _configure_logging(*, verbose: bool = False) -> None:
     )
 
 
-async def _load_diff(repo_path: Path) -> list[DiffFile]:
+async def _load_diff(repo_path: Path, base: str | None = None) -> list[DiffFile]:
     """Load diff files from a git repository."""
     git_repo = GitRepository()
     diff_service = DiffService(git_repository=git_repo)
-    log.info("loading_diff", path=str(repo_path))
-    return await diff_service.get_diff(repo_path)
+    log.info("loading_diff", path=str(repo_path), base=base)
+    return await diff_service.get_diff(repo_path, base=base)
 
 
 async def _serve(
@@ -97,71 +97,74 @@ def _open_browser(url: str) -> None:
     webbrowser.open_new(url)
 
 
-async def _run(
-    path: Path | None,
-    files: tuple[Path, ...],
-    transcript: Path | None,
-    port: int,
-    *,
-    open_browser: bool = True,
-) -> str:
-    """Load content and start the review server. Single async entry point."""
-    if transcript:
-        log.info("loading_transcript", path=str(transcript))
-        diff_files = TranscriptService().parse(transcript)
-        mode = ReviewMode.TRANSCRIPT
-        no_content_msg = "No messages to review.\n"
-    elif files:
-        log.info("loading_files", count=len(files))
-        diff_files = TextFileService().read_files(list(files))
-        mode = ReviewMode.FILES
-        no_content_msg = "No content to review.\n"
-    else:
-        repo_path = (path or Path(".")).resolve()
-        diff_files = await _load_diff(repo_path)
-        mode = ReviewMode.DIFF
-        no_content_msg = "No changes found.\n"
-
-    if not diff_files:
-        sys.stderr.write(no_content_msg)
-        return ""
-
-    log.info("content_loaded", file_count=len(diff_files), mode=mode)
-    return await _serve(diff_files, mode, port, open_browser=open_browser)
-
-
-@click.command()
-@click.argument("path", required=False, type=click.Path(exists=True, path_type=Path))
-@click.option(
-    "--files",
-    multiple=True,
-    type=click.Path(exists=True, path_type=Path),
-    help="Review text files instead of git diff.",
-)
-@click.option(
-    "--transcript",
-    type=click.Path(exists=True, path_type=Path),
-    help="Review a conversation transcript JSONL file.",
-)
-@click.option("--port", default=0, type=int, help="Port to run the server on.")
-@click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
-@click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
-def main(
-    path: Path | None,
-    files: tuple[Path, ...],
-    transcript: Path | None,
-    port: int,
-    no_open: bool,
-    verbose: bool,
-) -> None:
-    """Browser-based code review tool for Claude Code."""
-    if (files and transcript) or (files and path) or (transcript and path):
-        raise click.UsageError("--files, --transcript, and positional path cannot be used together.")
-
-    _configure_logging(verbose=verbose)
-
-    result = asyncio.run(_run(path, files, transcript, port, open_browser=not no_open))
-
+def _print_result(result: str) -> None:
+    """Write review result to stdout if non-empty."""
     if result:
         sys.stdout.write(result)
         sys.stdout.write("\n")
+
+
+@click.group()
+@click.option("--port", default=0, type=int, help="Port to run the server on.")
+@click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
+@click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
+@click.pass_context
+def main(ctx: click.Context, port: int, no_open: bool, verbose: bool) -> None:
+    """Browser-based code review tool for Claude Code."""
+    _configure_logging(verbose=verbose)
+    ctx.ensure_object(dict)
+    ctx.obj["port"] = port
+    ctx.obj["open_browser"] = not no_open
+
+
+@main.command("diff")
+@click.argument("path", required=False, type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--base", type=str, default=None, help="Compare against a specific commit (e.g., HEAD~3, abc123, v0.5.0)."
+)
+@click.pass_context
+def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
+    """Review git changes."""
+    repo_path = (path or Path(".")).resolve()
+
+    async def _run() -> str:
+        diff_files = await _load_diff(repo_path, base=base)
+        if not diff_files:
+            sys.stderr.write("No changes found.\n")
+            return ""
+        log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.DIFF)
+        return await _serve(diff_files, ReviewMode.DIFF, ctx.obj["port"], open_browser=ctx.obj["open_browser"])
+
+    _print_result(asyncio.run(_run()))
+
+
+@main.command("files")
+@click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path))
+@click.pass_context
+def files_cmd(ctx: click.Context, paths: tuple[Path, ...]) -> None:
+    """Review text files — plans, docs, configs, source code."""
+    log.info("loading_files", count=len(paths))
+    diff_files = TextFileService().read_files(list(paths))
+    if not diff_files:
+        sys.stderr.write("No content to review.\n")
+        return
+    log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.FILES)
+    result = asyncio.run(_serve(diff_files, ReviewMode.FILES, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))
+    _print_result(result)
+
+
+@main.command("transcript")
+@click.argument("path", required=True, type=click.Path(exists=True, path_type=Path))
+@click.pass_context
+def transcript_cmd(ctx: click.Context, path: Path) -> None:
+    """Review a conversation transcript JSONL file."""
+    log.info("loading_transcript", path=str(path))
+    diff_files = TranscriptService().parse(path)
+    if not diff_files:
+        sys.stderr.write("No messages to review.\n")
+        return
+    log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.TRANSCRIPT)
+    result = asyncio.run(
+        _serve(diff_files, ReviewMode.TRANSCRIPT, ctx.obj["port"], open_browser=ctx.obj["open_browser"])
+    )
+    _print_result(result)

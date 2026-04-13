@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0] - 2026-04-13
+
+### Breaking
+- **CLI subcommands** — `diff`, `files`, `transcript` replace flat `--files`/`--transcript` options. Subcommand is now required (e.g. `claude-review diff` instead of `claude-review`).
+
+### Added
+- **`--base` option** — compare changes since a specific commit (`claude-review diff --base HEAD~3`)
+- `/review-ui diff --base <commit>` — review changes since a specific commit from the skill
+
 ## [0.6.0] - 2026-04-13
 
 ### Added

@@ -21,12 +21,13 @@ class GitRepository:
     without modifying the user's actual staging area.
     """
 
-    async def get_raw_diff(self, path: Path) -> str:
+    async def get_raw_diff(self, path: Path, base: str | None = None) -> str:
         """Return unified diff of all changes including untracked files.
 
         Creates a temporary git index, stages everything there, and diffs
-        against HEAD. For repos with no commits, git diff --cached implicitly
-        diffs against the empty tree. The real index is untouched.
+        against a base ref. When base is None, diffs against HEAD (uncommitted
+        changes only). When base is provided, diffs from that commit to the
+        current working tree. The real index is untouched.
         """
         fd, tmp_index = tempfile.mkstemp(suffix=".git-index")
         os.close(fd)
@@ -37,7 +38,11 @@ class GitRepository:
                 await self._run(path, ["git", "read-tree", "HEAD"], env=env)
 
             await self._run(path, ["git", "add", "-A"], env=env)
-            return await self._run(path, ["git", "diff", "--cached"], env=env)
+
+            diff_cmd = ["git", "diff", "--cached"]
+            if base is not None:
+                diff_cmd = ["git", "diff", base, "--cached"]
+            return await self._run(path, diff_cmd, env=env)
         finally:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(tmp_index)

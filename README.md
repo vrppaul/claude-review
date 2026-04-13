@@ -86,14 +86,16 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 ## CLI Reference
 
 ```bash
-claude-review                         # diff mode — review git changes
-claude-review /path/to/repo           # diff mode — specific repository
-claude-review --files file1.md        # files mode — review text files
-claude-review --files a.md b.py c.rs  # files mode — multiple files
-claude-review --transcript conv.jsonl # transcript mode — review conversation
-claude-review --port 8080             # use specific port
-claude-review --no-open               # don't open browser automatically
-claude-review --verbose               # enable diagnostic logging
+claude-review diff                         # diff mode — review git changes
+claude-review diff /path/to/repo           # diff mode — specific repository
+claude-review diff --base HEAD~3           # diff since a specific commit
+claude-review diff --base v0.5.0           # diff since a tag
+claude-review files plan.md                # files mode — review text files
+claude-review files a.md b.py c.rs         # files mode — multiple files
+claude-review transcript conv.jsonl        # transcript mode — review conversation
+claude-review --port 8080 diff             # shared options before subcommand
+claude-review --no-open diff               # don't open browser automatically
+claude-review --verbose diff --base HEAD~1 # enable diagnostic logging
 ```
 
 ### Manual install (optional)
