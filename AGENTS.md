@@ -138,10 +138,22 @@ Conventional Commits: `type(scope): description`
 
 Types: `feat fix docs style refactor perf test build ci chore`
 
+## Releasing
+
+After any meaningful change, follow this checklist (details in CONTRIBUTING.md):
+
+1. Bump version in `pyproject.toml`, `plugin/.claude-plugin/plugin.json`, and `CHANGELOG.md` (keep in sync)
+2. Update `plugin/commands/review-ui.md` if skill description or usage changed
+3. Update `README.md` features, `TODO.md` (remove completed items)
+4. Commit: `chore: release vX.Y.Z`
+5. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z`
+6. Update local skill: `npx skills update review-ui -g -y`
+7. Reinstall CLI locally: `uv tool install --upgrade --editable .`
+
 ## Documentation
 
 - `README.md` — project overview, usage, installation
 - `CHANGELOG.md` — what changed and when
-- `TODO.md` — planned work
+- `TODO.md` — planned work (remove items when done, don't check them off)
 - `CONTRIBUTING.md` — dev setup, conventions for contributors
 - `SECURITY.md` — vulnerability reporting

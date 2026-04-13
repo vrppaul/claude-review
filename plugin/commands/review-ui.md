@@ -1,9 +1,9 @@
 ---
 name: review-ui
-description: Open a browser-based review UI to comment on current git changes
+description: Open a browser-based review UI to comment on current git changes, with markdown preview
 ---
 
-Open the claude-review diff viewer in the browser so the user can review code changes and leave inline comments.
+Open the claude-review diff viewer in the browser so the user can review code changes and leave inline comments. Markdown files and transcripts support Raw, Preview, and Side-by-side view modes.
 
 Accepts an optional argument:
 - No argument: review current git changes (default)

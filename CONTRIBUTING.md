@@ -68,23 +68,29 @@ Dependencies flow inward: presentation → services → domain
 The frontend uses a `ReviewMode` that flows from the backend API to control rendering:
 - `diff` — two-column line numbers, add/delete styling, file tree sidebar
 - `files` — single line numbers, no diff decoration, flat file list sidebar
+- `transcript` — conversation messages as reviewable entries, markdown highlighting
 
 See [AGENTS.md](AGENTS.md) for the full conventions reference.
 
 ## Releasing
 
-1. Update version in `pyproject.toml` and `plugin/.claude-plugin/plugin.json` (keep in sync)
-2. Update `CHANGELOG.md` with the new version and changes
+1. Update version in **all three places** (keep in sync):
+   - `pyproject.toml` — Python package version
+   - `plugin/.claude-plugin/plugin.json` — plugin marketplace version
+   - `CHANGELOG.md` — release notes
+2. Update `plugin/commands/review-ui.md` if the skill's description or usage changed
 3. Commit: `chore: release vX.Y.Z`
-4. Tag: `git tag vX.Y.Z`
-5. Push: `git push origin master --tags`
+4. Push: `git push origin master --tags`
+5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+6. Update local skill: `npx skills update review-ui -g -y`
+7. Reinstall CLI locally: `uv tool install --upgrade --editable .`
 
 Users install/upgrade the CLI via:
 ```bash
 uv tool install --upgrade git+https://github.com/vrppaul/claude-review
 ```
 
-The skill definitions auto-upgrade the CLI when new features are required.
+Skills update via `npx skills update` — pulls latest from the repo.
 
 ## Distribution channels
 
