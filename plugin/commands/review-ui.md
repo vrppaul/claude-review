@@ -5,9 +5,9 @@ description: Open a browser-based review UI to comment on current git changes, w
 
 Open the claude-review diff viewer in the browser so the user can review code changes and leave inline comments. Markdown files and transcripts support Raw, Preview, and Side-by-side view modes.
 
-Accepts an argument:
-- `diff` or no argument: review current git changes
-- `diff --base <commit>`: review changes since a specific commit (tag, SHA, HEAD~N)
+Usage:
+- No argument: review current git changes
+- `last 3 commits`, `since v0.5.0`, `diff --base HEAD~3`: review changes since a specific point
 - `plan`: review the current plan file
 - `transcript`: review the current conversation as a transcript
 
@@ -19,22 +19,15 @@ Accepts an argument:
    ```
 
 2. Determine the mode:
-   - If the argument starts with `diff`: run `claude-review diff`, passing any flags through.
-     Example: `/review-ui diff --base HEAD~3` runs:
-     ```bash
-     claude-review diff --base HEAD~3
-     ```
-   - If the argument is `plan`: find the current plan file path from your system prompt (look for the plan file path mentioned in the "Plan File Info" section). Run:
-     ```bash
-     claude-review files <plan-file-path>
-     ```
-   - If the argument is `transcript`: find the current conversation JSONL file. It lives at `~/.claude/projects/<project-dir-hash>/<session-id>.jsonl` — the session ID is in your system prompt. Run:
-     ```bash
-     claude-review transcript <path-to-jsonl>
-     ```
-   - If no argument or `diff` without flags: run the default git diff review:
-     ```bash
-     claude-review diff
-     ```
+   - If the argument is `plan`: run `claude-review files <plan-file-path>` (find the plan file path in the "Plan File Info" section of your system prompt).
+   - If the argument is `transcript`: run `claude-review transcript <path-to-jsonl>` (find the JSONL at `~/.claude/projects/<project-dir-hash>/<session-id>.jsonl`).
+   - Otherwise it's a diff review. Translate the argument to a `claude-review diff` command:
+     - No argument → `claude-review diff`
+     - `diff` → `claude-review diff`
+     - `diff --base HEAD~3` → `claude-review diff --base HEAD~3`
+     - `last 3 commits` → `claude-review diff --base HEAD~3`
+     - `two last commits` → `claude-review diff --base HEAD~2`
+     - `since v0.5.0` → `claude-review diff --base v0.5.0`
+     - Any natural language describing a commit range → figure out the git ref and pass it as `--base`
 
 When it finishes, the user's review comments will be printed to stdout. Read them carefully and address each comment by making the requested changes.
