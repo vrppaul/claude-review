@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.1] - 2026-07-12
+
+### Changed
+- **PyPI distribution** — releases are published to PyPI as a prebuilt wheel; installing no longer requires Node/pnpm (`uv tool install claude-review`)
+- Skill and plugin install the CLI from PyPI instead of building from the git repo
+- Sdist ships prebuilt frontend assets and excludes `frontend/`, so building from sdist needs no JS toolchain
+- Release workflow (`release.yml`) publishes on tag push via PyPI trusted publishing (OIDC, no tokens), gated on the full CI suite passing on the tagged commit; publish re-runs are idempotent (`--check-url`)
+- `scripts/verify_artifacts.py` — shared artifact verification (self-contained wheel/sdist, version sync across `pyproject.toml`/`plugin.json`, no source maps) used by both CI and release
+- Frontend production build no longer emits source maps — cuts the wheel from ~308 KB to ~90 KB
+
+### Fixed
+- Build hook now fails loudly when pnpm is missing during a distribution build — previously it silently produced a package with no UI
+- Build hook creates `static/dist/` itself when skipping the frontend build on editable installs — CI jobs no longer need the `mkdir` workaround
+
 ## [1.0.0] - 2026-04-13
 
 ### Breaking
