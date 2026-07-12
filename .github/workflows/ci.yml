@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_call: # release.yml runs the full suite as a publish gate
 
 permissions:
   contents: read
@@ -15,7 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-      - run: mkdir -p src/claude_review/static/dist
       - run: uv sync --no-install-project
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
@@ -26,7 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-      - run: mkdir -p src/claude_review/static/dist
       - run: uv sync --no-install-project
       - run: uv run pytest tests/unit/ tests/integration/ -v
 
@@ -80,12 +79,4 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: uv build
-      - run: |
-          python3 -c "
-          import glob, zipfile
-          whl = glob.glob('dist/claude_review-*.whl')[0]
-          z = zipfile.ZipFile(whl)
-          static = [f for f in z.namelist() if 'static' in f]
-          assert len(static) >= 3, f'Expected static files in wheel, got: {static}'
-          print('Wheel contains static files:', static)
-          "
+      - run: python3 scripts/verify_artifacts.py

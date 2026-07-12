@@ -80,22 +80,22 @@ See [AGENTS.md](AGENTS.md) for the full conventions reference.
    - `CHANGELOG.md` — release notes
 2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 3. Commit: `chore: release vX.Y.Z`
-4. Push: `git push origin master --tags`
-5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+4. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), and publishes to PyPI via trusted publishing. The workflow fails if the tag doesn't match the `pyproject.toml` version or if `plugin.json` is out of sync.
+5. **Wait for the Release workflow to go green** — the version must be live on PyPI before skills point users at it (`uv tool install claude-review` fails until then).
 6. Update local skill: `npx skills update review-ui -g -y`
 7. Reinstall CLI locally: `uv tool install --upgrade --editable .`
 
 Users install/upgrade the CLI via:
 ```bash
-uv tool install --upgrade git+https://github.com/vrppaul/claude-review
+uv tool install --upgrade claude-review
 ```
 
 Skills update via `npx skills update` — pulls latest from the repo.
 
 ## Distribution channels
 
-- **CLI** — `uv tool install git+https://github.com/vrppaul/claude-review`
+- **CLI** — `uv tool install claude-review` (prebuilt wheel from [PyPI](https://pypi.org/project/claude-review/), no Node/pnpm needed)
 - **Skills** — `npx skills add vrppaul/claude-review -g -y` (cross-platform)
 - **Plugin marketplace** — `/plugin marketplace add vrppaul/claude-review` (Claude Code)
 
-All channels pull from this repo. Pushing to `master` updates skill definitions immediately. CLI users need to upgrade explicitly (handled by the skill's auto-upgrade check).
+Skills and the plugin pull from this repo — pushing to `master` updates skill definitions immediately. The CLI is published to PyPI on tag push; CLI users upgrade explicitly (handled by the skill's auto-upgrade check).

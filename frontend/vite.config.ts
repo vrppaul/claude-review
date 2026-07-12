@@ -24,7 +24,7 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, '../src/claude_review/static/dist'),
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false, // maps ship in the PyPI wheel and would triple its size
   },
 
   test: {

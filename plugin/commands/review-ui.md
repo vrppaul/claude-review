@@ -15,7 +15,7 @@ Usage:
 
 1. Install or upgrade `claude-review` to the latest version:
    ```bash
-   uv tool install --upgrade git+https://github.com/vrppaul/claude-review
+   uv tool install --upgrade claude-review
    ```
 
 2. Determine the mode:

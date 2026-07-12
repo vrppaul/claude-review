@@ -147,8 +147,8 @@ After any meaningful change, follow this checklist (details in CONTRIBUTING.md):
 2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 3. Update `README.md` features, `TODO.md` (remove completed items)
 4. Commit: `chore: release vX.Y.Z`
-5. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z`
-6. Update local skill: `npx skills update review-ui -g -y`
+5. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`: full CI suite, artifact verification (`scripts/verify_artifacts.py`), then PyPI publish (tag must match `pyproject.toml` version)
+6. After the Release workflow is green, update local skill: `npx skills update review-ui -g -y`
 7. Reinstall CLI locally: `uv tool install --upgrade --editable .`
 
 ## Documentation

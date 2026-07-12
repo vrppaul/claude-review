@@ -101,8 +101,10 @@ claude-review --verbose diff --base HEAD~1 # enable diagnostic logging
 ### Manual install (optional)
 
 ```bash
-uv tool install git+https://github.com/vrppaul/claude-review
+uv tool install claude-review
 ```
+
+Ships as a prebuilt wheel on [PyPI](https://pypi.org/project/claude-review/) — no Node or pnpm required.
 
 ## Development
 

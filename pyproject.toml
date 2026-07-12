@@ -91,6 +91,8 @@ known-first-party = ["claude_review"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D", "ANN", "SLF001", "T20", "PLC0415"]
+# Standalone CI scripts run on bare python3 with no deps — print, not structlog
+"scripts/**" = ["T20"]
 
 [tool.ty.environment]
 python-version = "3.14"
@@ -115,6 +117,14 @@ sources = ["src"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/claude_review/static/dist" = "claude_review/static/dist"
+
+# Sdist ships prebuilt frontend assets (gitignored, hence force-include) and
+# excludes frontend/ sources, so building a wheel from sdist needs no Node/pnpm.
+[tool.hatch.build.targets.sdist]
+exclude = ["/frontend"]
+
+[tool.hatch.build.targets.sdist.force-include]
+"src/claude_review/static/dist" = "src/claude_review/static/dist"
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
