@@ -65,16 +65,13 @@
 		selection.clearCommenting();
 	}
 
-	function lineTypeClass(type: DiffLine['type']): string {
-		if (type === 'add') return 'bg-success/10';
-		if (type === 'delete') return 'bg-error/10';
+	/** One class decides a row's tint, its edge colour and its gutter colour. */
+	function rowClass(type: DiffLine['type'], marked: boolean): string {
+		if (marked) return 'cr-row-marked';
+		if (!isDiffMode) return '';
+		if (type === 'add') return 'cr-row-add';
+		if (type === 'delete') return 'cr-row-del';
 		return '';
-	}
-
-	function lineGutterClass(type: DiffLine['type']): string {
-		if (type === 'add') return 'bg-success/25 text-success';
-		if (type === 'delete') return 'bg-error/25 text-error';
-		return 'text-base-content/40';
 	}
 
 	function linePrefix(type: DiffLine['type']): string {
@@ -103,7 +100,7 @@
 	{#each file.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode && hunk.header}
-				<div class="bg-base-200/50 px-4 py-1 font-mono text-xs text-base-content/50">
+				<div class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45">
 					{hunk.header}
 				</div>
 			{/if}
@@ -111,7 +108,7 @@
 			<!-- Fixed layout so every hunk's gutters line up: the automatic
 				algorithm sizes each table from its own rows, and a hunk whose
 				line numbers are wider would step the columns out of line. -->
-			<table class="w-full table-fixed border-collapse font-mono text-sm">
+			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<colgroup>
 					{#if isDiffMode}
 						<col class="w-12" />
@@ -132,15 +129,15 @@
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
-							class="hover:bg-base-200/50 {isDiffMode ? lineTypeClass(line.type) : ''} {inRange ? 'border-l-4 border-l-info' : ''}"
+							class="cr-row {rowClass(line.type, inRange)} hover:brightness-110"
 							onmouseenter={() => selection.handleMouseEnter(line, flatIdx)}
 						>
 							{#if isDiffMode}
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<td
-									class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
+									class="cr-gutter w-12 cursor-pointer px-2 text-right select-none"
 									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-									title="Click to comment, drag for range"
+									title="Click to comment, drag for a range"
 								>
 									{line.old_no ?? ''}
 								</td>
@@ -148,18 +145,18 @@
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								data-testid="line-gutter"
-								class="w-12 text-right px-2 select-none cursor-pointer border-r border-base-300 {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}"
+								class="cr-gutter w-12 cursor-pointer border-r border-base-300 px-2 text-right select-none"
 								onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-								title="Click to comment, drag for range"
+								title="Click to comment, drag for a range"
 							>
 								{line.new_no ?? ''}
 							</td>
 							{#if isDiffMode}
-								<td class="px-1 w-4 select-none {inRange ? 'bg-info/20 text-info' : lineGutterClass(line.type)}">
+								<td class="cr-sign w-4 px-1 text-center select-none">
 									{linePrefix(line.type)}
 								</td>
 							{/if}
-							<td class="px-2 whitespace-pre-wrap break-all {isDiffMode && line.type === 'add' ? 'bg-success/5' : isDiffMode && line.type === 'delete' ? 'bg-error/5' : 'bg-base-100'}">
+							<td class="px-2 break-all whitespace-pre-wrap">
 								{@html highlighted[hunkIdx][lineIdx]}
 							</td>
 						</tr>

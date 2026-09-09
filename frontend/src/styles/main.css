@@ -199,3 +199,57 @@
 .cr-section {
   content-visibility: auto;
 }
+
+/*
+ * Diff rows.
+ *
+ * A changed row is marked at its left edge and tinted only faintly, rather
+ * than washed with colour across its width. Highlighted code sits on top of
+ * these, and a saturated field underneath drags every token towards it.
+ * Unchanged rows carry a transparent edge of the same width so nothing
+ * shifts sideways between them.
+ */
+.cr-code {
+  font-size: var(--cr-code-size);
+  line-height: var(--cr-code-leading);
+}
+
+.cr-row > td:first-child {
+  border-left: 2px solid transparent;
+}
+.cr-row-add {
+  background: var(--cr-add-tint);
+}
+.cr-row-add > td:first-child {
+  border-left-color: var(--cr-add-edge);
+}
+.cr-row-del {
+  background: var(--cr-del-tint);
+}
+.cr-row-del > td:first-child {
+  border-left-color: var(--cr-del-edge);
+}
+/* Selection outranks the change underneath it: it is the reader's own mark */
+.cr-row-marked {
+  background: var(--cr-mark-tint);
+}
+.cr-row-marked > td:first-child {
+  border-left-color: var(--cr-mark);
+}
+
+.cr-gutter {
+  color: var(--cr-gutter-fg);
+  font-variant-numeric: tabular-nums;
+}
+.cr-row-add .cr-gutter,
+.cr-row-add .cr-sign {
+  color: var(--cr-add-edge);
+}
+.cr-row-del .cr-gutter,
+.cr-row-del .cr-sign {
+  color: var(--cr-del-edge);
+}
+.cr-row-marked .cr-gutter,
+.cr-row-marked .cr-sign {
+  color: var(--cr-mark);
+}
