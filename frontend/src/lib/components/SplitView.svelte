@@ -7,6 +7,7 @@
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
+	import { linesInRange } from '$lib/utils/quote';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -205,10 +206,26 @@
 							<tr>
 								<td colspan="4">
 									{#each leftComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
+										<CommentThread
+											{comment}
+											quote={linesInRange(
+												shown.hunks,
+												comment.side,
+												comment.start_line,
+												comment.end_line
+											)}
+										/>
 									{/each}
 									{#each rightComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
+										<CommentThread
+											{comment}
+											quote={linesInRange(
+												shown.hunks,
+												comment.side,
+												comment.start_line,
+												comment.end_line
+											)}
+										/>
 									{/each}
 									{#if showBox}
 										<div class="px-3 py-2">

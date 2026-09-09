@@ -5,7 +5,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 
 from claude_review.domain.exceptions import FileWindowError
-from claude_review.domain.models import Comment, DiffFile, ReviewMode
+from claude_review.domain.models import Comment, DiffFile, ReviewMode, ThreadQuestion
 from claude_review.presentation.dependencies import (
     get_diff_base,
     get_diff_files,
@@ -15,8 +15,11 @@ from claude_review.presentation.dependencies import (
     get_state,
 )
 from claude_review.presentation.schemas import (
+    AskRequest,
     DiffResponse,
+    EventResponse,
     FileWindowResponse,
+    ReplyRequest,
     SubmitRequest,
     SubmitResponse,
 )
@@ -74,6 +77,63 @@ async def get_file_window(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return FileWindowResponse(start=window.start, lines=window.lines, total=window.total)
+
+
+@router.post("/ask")
+async def ask_about_thread(
+    request: AskRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Take a question about one thread, for whoever is answering to pick up.
+
+    The reader does not wait here: the answer arrives later, pushed down the
+    session socket, so writing the review is never blocked on a reply.
+    """
+    state.questions.put_nowait(
+        ThreadQuestion(
+            thread_id=request.thread_id,
+            file=request.file,
+            side=request.side,
+            start_line=request.start_line,
+            end_line=request.end_line,
+            quote=request.quote,
+            body=request.body,
+        )
+    )
+    log.info("thread_question", thread_id=request.thread_id, file=request.file)
+    return {"status": "asked"}
+
+
+@router.get("/events")
+async def next_event(
+    wait_seconds: float = Query(default=25.0, gt=0, le=600),
+    state: ServerState = Depends(get_state),
+) -> EventResponse:
+    """Wait for the next thing the reader asks.
+
+    A long poll rather than a socket: the caller is a command in a shell,
+    and blocking until there is something to do is exactly its shape.
+    Returning "timeout" lets the caller decide whether to keep waiting.
+    """
+    try:
+        question = await asyncio.wait_for(state.questions.get(), timeout=wait_seconds)
+    except TimeoutError:
+        return EventResponse(type="timeout")
+
+    if state.shutdown_event.is_set():
+        return EventResponse(type="closed")
+    return EventResponse(type="question", question=question)
+
+
+@router.post("/reply")
+async def reply_to_thread(
+    request: ReplyRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Push an answer into a thread of a review that is still open."""
+    state.push({"type": "reply", "thread_id": request.thread_id, "text": request.text})
+    log.info("thread_reply", thread_id=request.thread_id)
+    return {"status": "sent"}
 
 
 @router.websocket("/session")

@@ -115,3 +115,26 @@ class ReviewResult(BaseModel):
 
     markdown: str
     comment_count: int
+
+
+class ThreadQuestion(BaseModel):
+    """Something the reader asked about one comment thread.
+
+    It carries the quoted lines as well as the question, because the Claude
+    that answers may be reading this without the file in front of it.
+    """
+
+    thread_id: str
+    file: str
+    side: LineSide
+    start_line: int
+    end_line: int
+    quote: list[str]
+    body: str
+
+
+class ThreadReply(BaseModel):
+    """An answer to one thread, on its way back to the browser."""
+
+    thread_id: str
+    text: str

@@ -2,7 +2,13 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-from claude_review.domain.models import CommentSeverity, DiffFile, LineSide, ReviewMode
+from claude_review.domain.models import (
+    CommentSeverity,
+    DiffFile,
+    LineSide,
+    ReviewMode,
+    ThreadQuestion,
+)
 
 
 class DiffResponse(BaseModel):
@@ -51,3 +57,29 @@ class FileWindowResponse(BaseModel):
     start: int
     lines: list[str]
     total: int
+
+
+class AskRequest(BaseModel):
+    """Request body for POST /api/ask — the reader asking about a thread."""
+
+    thread_id: str = Field(min_length=1, max_length=200)
+    file: str = Field(min_length=1)
+    side: LineSide
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    quote: list[str] = Field(default_factory=list, max_length=200)
+    body: str = Field(min_length=1, max_length=50_000)
+
+
+class ReplyRequest(BaseModel):
+    """Request body for POST /api/reply — the answer coming back."""
+
+    thread_id: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=50_000)
+
+
+class EventResponse(BaseModel):
+    """Response for GET /api/events, the long poll an answerer waits on."""
+
+    type: str
+    question: ThreadQuestion | None = None

@@ -3,6 +3,7 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { openSession } from '$lib/stores/session.svelte';
+	import { discussionStore } from '$lib/stores/discussion.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
@@ -28,7 +29,11 @@
 
 		// Holding this open is what tells the server the review is still on
 		// screen; a poll is throttled to a crawl in a background tab.
-		return openSession(() => {});
+		return openSession((message) => {
+			if (message.type === 'reply' && typeof message.text === 'string') {
+				discussionStore.receive(String(message.thread_id), message.text);
+			}
+		});
 	});
 </script>
 

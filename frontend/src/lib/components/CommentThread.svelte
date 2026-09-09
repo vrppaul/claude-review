@@ -1,15 +1,35 @@
 <script lang="ts">
 	import type { Comment, CommentSeverity } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { discussionStore } from '$lib/stores/discussion.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import CommentBox from './CommentBox.svelte';
 
 	interface Props {
 		comment: Comment;
+		/** The lines the comment covers, sent along with a question. */
+		quote?: string[];
 	}
 
-	let { comment }: Props = $props();
+	let { comment, quote = [] }: Props = $props();
 	let editing = $state(false);
+	let asking = $state(false);
+	let question = $state('');
+	let askFailed = $state<string | null>(null);
+
+	const talk = $derived(discussionStore.forThread(comment.id));
+
+	async function ask() {
+		if (!question.trim()) return;
+		askFailed = null;
+		try {
+			await discussionStore.ask(comment, quote, question.trim());
+			asking = false;
+			question = '';
+		} catch (e) {
+			askFailed = e instanceof Error ? e.message : 'Could not ask';
+		}
+	}
 
 	function handleSave(body: string, severity: CommentSeverity) {
 		commentStore.update(comment.id, body, severity);
@@ -51,6 +71,13 @@
 						Edit
 					</button>
 					<button
+						data-testid="ask-claude"
+						class="btn btn-ghost btn-xs"
+						onclick={() => (asking = !asking)}
+					>
+						Ask Claude
+					</button>
+					<button
 						data-testid="delete-comment"
 						class="btn btn-ghost btn-xs hover:text-error"
 						onclick={() => commentStore.remove(comment.id)}
@@ -60,6 +87,47 @@
 				</div>
 			</div>
 			<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
+
+			{#if asking}
+				<div class="mt-3 space-y-2 border-t border-base-300 pt-3">
+					<textarea
+						data-testid="ask-input"
+						class="cr-comment-body textarea min-h-16 w-full bg-base-100 focus:outline-none"
+						placeholder="Ask Claude about this — it keeps reading while you write"
+						bind:value={question}
+					></textarea>
+					<div class="flex items-center gap-2">
+						{#if askFailed}
+							<span data-testid="ask-error" class="text-xs text-error">{askFailed}</span>
+						{/if}
+						<div class="flex-1"></div>
+						<button class="btn btn-ghost btn-xs" onclick={() => (asking = false)}>Cancel</button>
+						<button
+							class="btn btn-primary btn-xs"
+							data-testid="send-question"
+							disabled={!question.trim()}
+							onclick={ask}
+						>
+							Ask
+						</button>
+					</div>
+				</div>
+			{/if}
+
+			{#if talk}
+				<div data-testid="thread-talk" class="mt-3 border-t border-base-300 pt-3">
+					<p class="cr-comment-body cr-muted whitespace-pre-wrap">{talk.asked}</p>
+					{#if talk.answer === null}
+						<p data-testid="awaiting-answer" class="cr-muted mt-2 text-xs">
+							Waiting for Claude…
+						</p>
+					{:else}
+						<p data-testid="thread-answer" class="cr-comment-body mt-2 whitespace-pre-wrap">
+							{talk.answer}
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

@@ -2,6 +2,8 @@
 
 import asyncio
 
+from claude_review.domain.models import ThreadQuestion
+
 
 class ServerState:
     """Shared mutable state between the HTTP server and the CLI event loop.
@@ -20,6 +22,10 @@ class ServerState:
         self._ever_connected = False
         self._alone_since: float | None = None
         self._listeners: set[asyncio.Queue[dict]] = set()
+        # Questions the reader has asked about a thread, waiting to be taken
+        # by whoever is answering. A queue rather than a callback: the asking
+        # and the answering are separate processes.
+        self.questions: asyncio.Queue[ThreadQuestion] = asyncio.Queue()
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1

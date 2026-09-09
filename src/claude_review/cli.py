@@ -1,9 +1,11 @@
 """CLI entry point for claude-review."""
 
 import asyncio
+import json
 import logging
 import socket
 import sys
+import urllib.request
 import webbrowser
 from collections.abc import Coroutine
 from pathlib import Path
@@ -177,6 +179,45 @@ def main(ctx: click.Context, port: int, no_open: bool, verbose: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["port"] = port
     ctx.obj["open_browser"] = not no_open
+
+
+@main.command("wait")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option(
+    "--seconds",
+    default=25.0,
+    type=float,
+    help="How long to wait before reporting that nothing was asked.",
+)
+def wait_cmd(port: int, seconds: float) -> None:
+    """Wait for the reader to ask about a comment thread.
+
+    Prints one JSON object and exits, so a caller can loop: a question to
+    answer, "timeout" if nothing was asked, or "closed" once the review is
+    over. Answer with `claude-review reply`.
+    """
+    with urllib.request.urlopen(
+        f"http://127.0.0.1:{port}/api/events?wait_seconds={seconds}",
+        timeout=seconds + 10,
+    ) as response:
+        sys.stdout.write(response.read().decode())
+        sys.stdout.write("\n")
+
+
+@main.command("reply")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--thread", required=True, type=str, help="Thread the answer belongs to.")
+@click.argument("text", required=True, type=str)
+def reply_cmd(port: int, thread: str, text: str) -> None:
+    """Answer a question the reader asked about a comment thread."""
+    payload = json.dumps({"thread_id": thread, "text": text}).encode()
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/reply",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        response.read()
 
 
 @main.command("diff")

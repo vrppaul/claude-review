@@ -4,10 +4,12 @@ Click's CliRunner catches SystemExit, which hides exactly the failure this
 covers: what the user sees in a terminal when the server cannot start.
 """
 
+import json
 import socket
 import subprocess
 import sys
 import time
+import urllib.request
 from importlib.metadata import version
 from pathlib import Path
 
@@ -135,3 +137,106 @@ def _wait_for_server(port: int, timeout: float = 20.0) -> None:
         except OSError:
             time.sleep(0.2)
     raise AssertionError(f"server did not come up on port {port}")
+
+
+def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) -> None:
+    """The reader asks in one process; the answer is written in another."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+
+        # A browser holds the review open and hears the answer come back
+        with connect(f"ws://127.0.0.1:{port}/api/session") as review:
+            waiting = subprocess.Popen(
+                [sys.executable, "-m", "claude_review", "wait", "--port", str(port), "--seconds", "20"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            time.sleep(1.0)
+
+            _post(
+                port,
+                "/api/ask",
+                {
+                    "thread_id": "comment-1",
+                    "file": "initial.txt",
+                    "side": "new",
+                    "start_line": 1,
+                    "end_line": 1,
+                    "quote": ["changed"],
+                    "body": "Why this rather than the constant?",
+                },
+            )
+
+            asked = json.loads(waiting.communicate(timeout=30)[0])
+            assert asked["type"] == "question"
+            assert asked["question"]["body"] == "Why this rather than the constant?"
+
+            answer = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "claude_review",
+                    "reply",
+                    "--port",
+                    str(port),
+                    "--thread",
+                    "comment-1",
+                    "Because the constant moved to config",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            assert answer.returncode == 0
+
+            pushed = json.loads(review.recv(timeout=10))
+            assert pushed == {
+                "type": "reply",
+                "thread_id": "comment-1",
+                "text": "Because the constant moved to config",
+            }
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+
+def test_waiting_reports_when_nothing_was_asked(tmp_git_repo: Path) -> None:
+    """A caller in a loop needs to be told, not left hanging."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+        result = _run_cli("wait", "--port", str(port), "--seconds", "1")
+
+        assert json.loads(result.stdout)["type"] == "timeout"
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+
+def _post(port: int, path: str, payload: dict) -> None:
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        response.read()

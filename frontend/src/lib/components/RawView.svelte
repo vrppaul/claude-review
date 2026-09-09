@@ -6,6 +6,7 @@
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
+	import { linesInRange } from '$lib/utils/quote';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
@@ -212,7 +213,15 @@
 							<tr>
 								<td colspan={colSpan}>
 									{#each lineComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
+										<CommentThread
+											{comment}
+											quote={linesInRange(
+												shown.hunks,
+												comment.side,
+												comment.start_line,
+												comment.end_line
+											)}
+										/>
 									{/each}
 									{#if showCommentBox}
 										<CommentBox
