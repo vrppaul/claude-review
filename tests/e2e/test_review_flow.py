@@ -27,7 +27,8 @@ ServerFixture = tuple[str, ServerState]
 async def _start_server(diff_files, state, mode=ReviewMode.DIFF) -> AsyncGenerator[ServerFixture]:
     """Start a uvicorn server and yield (url, state)."""
     app = create_app(diff_files=diff_files, state=state, mode=mode)
-    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning")
+    # Match the CLI: the default picks uvicorn's older websockets integration
+    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
     server = uvicorn.Server(config)
 
     task = asyncio.create_task(server.serve())
