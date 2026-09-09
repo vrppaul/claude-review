@@ -6,6 +6,9 @@ const mockFiles: DiffFile[] = [
 	{
 		path: 'src/a.ts',
 		status: 'modified',
+		is_binary: false,
+		old_mode: null,
+		new_mode: null,
 		hunks: [
 			{
 				header: '@@ -1,3 +1,4 @@',
@@ -21,6 +24,9 @@ const mockFiles: DiffFile[] = [
 	{
 		path: 'src/b.ts',
 		status: 'added',
+		is_binary: false,
+		old_mode: null,
+		new_mode: null,
 		hunks: []
 	}
 ];

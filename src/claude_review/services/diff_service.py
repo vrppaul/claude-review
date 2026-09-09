@@ -48,9 +48,16 @@ class DiffService:
             return None
 
         status = self._detect_status(header)
-        hunks = self._parse_hunks(lines)
+        old_mode, new_mode = self._detect_mode_change(header)
 
-        return DiffFile(path=path, status=status, hunks=hunks)
+        return DiffFile(
+            path=path,
+            status=status,
+            hunks=self._parse_hunks(lines),
+            is_binary=any(line.startswith("Binary files ") for line in header),
+            old_mode=old_mode,
+            new_mode=new_mode,
+        )
 
     def _header_lines(self, lines: list[str]) -> list[str]:
         """Return the metadata lines that precede the first hunk.
@@ -148,6 +155,20 @@ class DiffService:
             if line.startswith("rename from"):
                 return FileStatus.RENAMED
         return FileStatus.MODIFIED
+
+    def _detect_mode_change(self, header: list[str]) -> tuple[str | None, str | None]:
+        """Read a permission change, which git reports as "old mode"/"new mode".
+
+        A newly added file has "new file mode" instead, which is the file's
+        only mode rather than a change, so it is deliberately not matched.
+        """
+        old_mode = new_mode = None
+        for line in header:
+            if line.startswith("old mode "):
+                old_mode = line.removeprefix("old mode ").strip()
+            elif line.startswith("new mode "):
+                new_mode = line.removeprefix("new mode ").strip()
+        return old_mode, new_mode
 
     def _parse_hunks(self, lines: list[str]) -> list[DiffHunk]:
         """Parse all hunks from a file's diff lines."""

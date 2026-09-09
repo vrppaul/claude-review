@@ -23,6 +23,9 @@ export interface DiffFile {
   path: string;
   status: FileStatus;
   hunks: DiffHunk[];
+  is_binary: boolean;
+  old_mode: string | null;
+  new_mode: string | null;
 }
 
 export interface DiffResponse {

@@ -10,6 +10,9 @@ const diffFiles: DiffFile[] = [
 	{
 		path: 'src/handler.ts',
 		status: 'modified',
+		is_binary: false,
+		old_mode: null,
+		new_mode: null,
 		hunks: [
 			{
 				header: '@@ -1,2 +1,3 @@',
@@ -25,6 +28,9 @@ const diffFiles: DiffFile[] = [
 	{
 		path: 'src/utils.ts',
 		status: 'added',
+		is_binary: false,
+		old_mode: null,
+		new_mode: null,
 		hunks: []
 	}
 ];
@@ -33,6 +39,9 @@ const textFiles: DiffFile[] = [
 	{
 		path: '/tmp/plan.md',
 		status: 'added',
+		is_binary: false,
+		old_mode: null,
+		new_mode: null,
 		hunks: [
 			{
 				header: '',
@@ -118,6 +127,9 @@ describe('FileList', () => {
 			{
 				path: 'user-1',
 				status: 'added',
+				is_binary: false,
+				old_mode: null,
+				new_mode: null,
 				hunks: [
 					{
 						header: '',
@@ -130,6 +142,9 @@ describe('FileList', () => {
 			{
 				path: 'assistant-2',
 				status: 'added',
+				is_binary: false,
+				old_mode: null,
+				new_mode: null,
 				hunks: [
 					{
 						header: '',

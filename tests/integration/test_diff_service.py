@@ -246,3 +246,50 @@ async def test_deleted_file_keeps_its_path(tmp_git_repo: Path, diff_service: Dif
 
     assert "初期.txt" in by_path
     assert by_path["初期.txt"].status == FileStatus.DELETED
+
+
+async def test_binary_file_is_marked_as_binary(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A binary file appears in the review, flagged so the UI can explain the blank."""
+    (tmp_git_repo / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x01\x02\x03")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert by_path["logo.png"].is_binary
+    assert by_path["logo.png"].hunks == []
+
+
+async def test_text_file_is_not_marked_as_binary(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A regular text change is not mistaken for binary."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert not by_path["initial.txt"].is_binary
+
+
+async def test_permission_change_reports_both_modes(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """Making a file executable is visible even though no line changed."""
+    script = tmp_git_repo / "run.sh"
+    script.write_text("echo hi\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add script")
+    script.chmod(0o755)
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert by_path["run.sh"].old_mode == "100644"
+    assert by_path["run.sh"].new_mode == "100755"
+
+
+async def test_content_change_reports_no_mode_change(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A plain edit leaves the mode fields empty."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert by_path["initial.txt"].old_mode is None
+    assert by_path["initial.txt"].new_mode is None

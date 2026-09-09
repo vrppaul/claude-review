@@ -67,11 +67,19 @@ class DiffHunk(BaseModel):
 
 
 class DiffFile(BaseModel):
-    """A file that has been changed."""
+    """A file that has been changed.
+
+    A file can change without producing hunks: binary content has no lines to
+    show, and a permission change touches no line at all. The extra fields let
+    the UI say which of those happened instead of showing an empty panel.
+    """
 
     path: str
     status: FileStatus
     hunks: list[DiffHunk]
+    is_binary: bool = False
+    old_mode: str | None = None
+    new_mode: str | None = None
 
 
 class Comment(BaseModel):

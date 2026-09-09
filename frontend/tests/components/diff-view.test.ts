@@ -9,6 +9,9 @@ import type { DiffFile } from '$lib/types';
 const diffFile: DiffFile = {
 	path: 'src/handler.ts',
 	status: 'modified',
+	is_binary: false,
+	old_mode: null,
+	new_mode: null,
 	hunks: [
 		{
 			header: '@@ -1,3 +1,4 @@',
@@ -26,6 +29,9 @@ const diffFile: DiffFile = {
 const textFile: DiffFile = {
 	path: '/tmp/plan.md',
 	status: 'added',
+	is_binary: false,
+	old_mode: null,
+	new_mode: null,
 	hunks: [
 		{
 			header: '',
@@ -110,6 +116,9 @@ describe('DiffView', () => {
 		const transcriptFile: DiffFile = {
 			path: 'user-1',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -134,6 +143,9 @@ describe('DiffView', () => {
 		const mdFile: DiffFile = {
 			path: 'docs/readme.md',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -162,6 +174,9 @@ describe('DiffView', () => {
 		const transcriptFile: DiffFile = {
 			path: 'assistant (14:30) #1',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -182,6 +197,9 @@ describe('DiffView', () => {
 		const mdFile: DiffFile = {
 			path: 'docs/readme.md',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -205,6 +223,9 @@ describe('DiffView', () => {
 		const mdFile: DiffFile = {
 			path: 'docs/readme.md',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -230,6 +251,9 @@ describe('DiffView', () => {
 		const mdFile: DiffFile = {
 			path: 'docs/readme.md',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -251,6 +275,9 @@ describe('DiffView', () => {
 		const mdFile: DiffFile = {
 			path: 'docs/readme.md',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -277,6 +304,9 @@ describe('DiffView', () => {
 		const transcriptFile: DiffFile = {
 			path: 'assistant-2',
 			status: 'added',
+			is_binary: false,
+			old_mode: null,
+			new_mode: null,
 			hunks: [
 				{
 					header: '',
@@ -328,5 +358,55 @@ describe('comment anchoring across diff sides', () => {
 
 		expect(getAllByText('the old one')).toHaveLength(1);
 		expect(getAllByText('the new one')).toHaveLength(1);
+	});
+});
+
+describe('files with no lines to show', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+	});
+
+	const binaryFile: DiffFile = {
+		path: 'docs/logo.png',
+		status: 'added',
+		hunks: [],
+		is_binary: true,
+		old_mode: null,
+		new_mode: null
+	};
+
+	const modeOnlyFile: DiffFile = {
+		path: 'scripts/run.sh',
+		status: 'modified',
+		hunks: [],
+		is_binary: false,
+		old_mode: '100644',
+		new_mode: '100755'
+	};
+
+	it('explains why a binary file shows nothing', () => {
+		diffStore.setFiles([binaryFile], 'diff');
+
+		const { getByTestId } = render(DiffView, { props: { file: binaryFile } });
+
+		expect(getByTestId('empty-file-note').textContent).toContain('Binary file');
+	});
+
+	it('shows a permission change that touched no line', () => {
+		diffStore.setFiles([modeOnlyFile], 'diff');
+
+		const { getByTestId } = render(DiffView, { props: { file: modeOnlyFile } });
+
+		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
+	});
+
+	it('does not claim an empty panel for a file that has hunks', () => {
+		diffStore.setFiles([diffFile], 'diff');
+
+		const { queryByTestId } = render(DiffView, { props: { file: diffFile } });
+
+		expect(queryByTestId('empty-file-note')).toBeNull();
+		expect(queryByTestId('mode-change-note')).toBeNull();
 	});
 });

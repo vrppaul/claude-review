@@ -8,6 +8,9 @@ import type { DiffFile } from '$lib/types';
 const mockFile: DiffFile = {
 	path: 'test.py',
 	status: 'modified',
+	is_binary: false,
+	old_mode: null,
+	new_mode: null,
 	hunks: [
 		{
 			header: '@@ -1 +1 @@',
