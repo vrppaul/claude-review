@@ -6,6 +6,7 @@ self-contained markdown that includes context from the conversation.
 
 from claude_review.domain.models import (
     Comment,
+    CommentSeverity,
     DiffFile,
     DiffHunk,
     DiffLine,
@@ -42,7 +43,11 @@ def _service() -> TranscriptReviewService:
 def test_heading_is_transcript_review() -> None:
     """Non-empty review starts with ## Transcript Review."""
     files = [_make_message("user-1", ["hello"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="Bad idea")]
+    comments = [
+        Comment(
+            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Bad idea"
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 
@@ -52,7 +57,16 @@ def test_heading_is_transcript_review() -> None:
 def test_single_comment_with_context() -> None:
     """Comment includes blockquote of surrounding lines."""
     files = [_make_message("user-1", ["line one", "line two", "line three", "line four", "line five"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=3, end_line=3, body="This is wrong")]
+    comments = [
+        Comment(
+            file="user-1",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=3,
+            end_line=3,
+            body="This is wrong",
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 
@@ -68,7 +82,11 @@ def test_single_comment_with_context() -> None:
 def test_context_at_start_of_message() -> None:
     """Comment on line 1 doesn't crash — context starts at beginning."""
     files = [_make_message("user-1", ["first line", "second line"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="Fix this")]
+    comments = [
+        Comment(
+            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix this"
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 
@@ -80,7 +98,11 @@ def test_context_at_start_of_message() -> None:
 def test_context_at_end_of_message() -> None:
     """Comment on last line doesn't crash — context ends at message boundary."""
     files = [_make_message("user-1", ["first", "second", "last"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=3, end_line=3, body="Fix last")]
+    comments = [
+        Comment(
+            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=3, end_line=3, body="Fix last"
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 
@@ -92,7 +114,16 @@ def test_context_at_end_of_message() -> None:
 def test_body_appears_before_comments() -> None:
     """Body text appears before inline comments."""
     files = [_make_message("user-1", ["hello"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="Inline note")]
+    comments = [
+        Comment(
+            file="user-1",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body="Inline note",
+        )
+    ]
 
     result = _service().format_review(comments, "General feedback here.", files)
 
@@ -105,7 +136,9 @@ def test_body_appears_before_comments() -> None:
 def test_empty_body_treated_as_no_body() -> None:
     """Empty string body is ignored."""
     files = [_make_message("user-1", ["hello"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="note")]
+    comments = [
+        Comment(file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+    ]
 
     result = _service().format_review(comments, "", files)
 
@@ -127,8 +160,22 @@ def test_multiple_comments_each_get_blockquote() -> None:
         _make_message("assistant-2", ["def authenticate(token):", "    return jwt.decode(token)"]),
     ]
     comments = [
-        Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="Wrong approach"),
-        Comment(file="assistant-2", side=LineSide.NEW, start_line=1, end_line=2, body="Don't use JWT"),
+        Comment(
+            file="user-1",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body="Wrong approach",
+        ),
+        Comment(
+            file="assistant-2",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=2,
+            body="Don't use JWT",
+        ),
     ]
 
     result = _service().format_review(comments, None, files)
@@ -143,7 +190,11 @@ def test_multiple_comments_each_get_blockquote() -> None:
 def test_no_line_numbers_or_headings_in_output() -> None:
     """Output has no ### headings, no line numbers — just blockquotes and comments."""
     files = [_make_message("user-1", ["hello world"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="Fix it")]
+    comments = [
+        Comment(
+            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix it"
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 
@@ -154,7 +205,9 @@ def test_no_line_numbers_or_headings_in_output() -> None:
 def test_whitespace_only_body_treated_as_no_body() -> None:
     """Whitespace-only body is ignored, same as empty."""
     files = [_make_message("user-1", ["hello"])]
-    comments = [Comment(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, body="note")]
+    comments = [
+        Comment(file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+    ]
 
     result = _service().format_review(comments, "   \n  ", files)
 
@@ -175,7 +228,16 @@ def test_range_comment_includes_full_range_in_blockquote() -> None:
             ],
         )
     ]
-    comments = [Comment(file="assistant-2", side=LineSide.NEW, start_line=2, end_line=4, body="Refactor this")]
+    comments = [
+        Comment(
+            file="assistant-2",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=2,
+            end_line=4,
+            body="Refactor this",
+        )
+    ]
 
     result = _service().format_review(comments, None, files)
 

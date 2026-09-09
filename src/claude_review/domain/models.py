@@ -82,6 +82,19 @@ class DiffFile(BaseModel):
     new_mode: str | None = None
 
 
+class CommentSeverity(StrEnum):
+    """How the reader means a comment to be taken.
+
+    NOTE — an observation; act on it if you agree.
+    QUESTION — asking, not asserting; answer before changing anything.
+    BLOCKER — this has to change before the work is done.
+    """
+
+    NOTE = auto()
+    QUESTION = auto()
+    BLOCKER = auto()
+
+
 class Comment(BaseModel):
     """A review comment on a line or range of one side of the diff.
 
@@ -91,6 +104,7 @@ class Comment(BaseModel):
 
     file: str
     side: LineSide
+    severity: CommentSeverity
     start_line: int
     end_line: int
     body: str

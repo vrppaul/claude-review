@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile, DiffLine } from '$lib/types';
+	import type { CommentSeverity, DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
@@ -93,10 +93,10 @@
 			.map((line) => line.content);
 	});
 
-	function handleSaveComment(body: string) {
+	function handleSaveComment(body: string, severity: CommentSeverity) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		commentStore.add(file.path, side, line, endLine, body);
+		commentStore.add(file.path, side, line, endLine, body, severity);
 		selection.clearCommenting();
 	}
 

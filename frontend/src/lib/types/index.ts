@@ -1,6 +1,8 @@
 export type LineType = "context" | "add" | "delete";
 /** Which version of the file a line belongs to. Removed lines are "old". */
 export type LineSide = "old" | "new";
+/** How the reader means a comment to be taken. */
+export type CommentSeverity = "note" | "question" | "blocker";
 export type FileStatus = "modified" | "added" | "deleted" | "renamed";
 export type ReviewMode = "diff" | "files" | "transcript";
 export type ContentViewMode = "raw" | "preview" | "side-by-side";
@@ -40,6 +42,7 @@ export interface Comment {
   id: string;
   file: string;
   side: LineSide;
+  severity: CommentSeverity;
   start_line: number;
   end_line: number;
   body: string;

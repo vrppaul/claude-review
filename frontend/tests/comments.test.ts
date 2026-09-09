@@ -150,7 +150,16 @@ describe('commentStore', () => {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					comments: [{ file: 'file.ts', side: 'new', start_line: 10, end_line: 10, body: 'fix this' }]
+					comments: [
+					{
+						file: 'file.ts',
+						side: 'new',
+						severity: 'note',
+						start_line: 10,
+						end_line: 10,
+						body: 'fix this'
+					}
+				]
 				})
 			});
 			expect(result.comment_count).toBe(1);

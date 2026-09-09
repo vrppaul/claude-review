@@ -3,14 +3,23 @@
 These test the formatting of comments into markdown for Claude.
 """
 
-from claude_review.domain.models import Comment, LineSide
+from claude_review.domain.models import Comment, CommentSeverity, LineSide
 from claude_review.services.review_service import ReviewService
 
 
 def test_single_comment_formats_with_file_and_line() -> None:
     """A single comment produces markdown with ### file:line header."""
     service = _service()
-    comments = [Comment(file="src/handler.ts", side=LineSide.NEW, start_line=42, end_line=42, body="Wrong null check")]
+    comments = [
+        Comment(
+            file="src/handler.ts",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=42,
+            end_line=42,
+            body="Wrong null check",
+        )
+    ]
 
     result = service.format_review(comments)
 
@@ -22,7 +31,16 @@ def test_single_comment_formats_with_file_and_line() -> None:
 def test_multiline_comment_formats_as_range() -> None:
     """Comment on lines 10-15 produces ### file:10-15."""
     service = _service()
-    comments = [Comment(file="src/utils.py", side=LineSide.NEW, start_line=10, end_line=15, body="Refactor this block")]
+    comments = [
+        Comment(
+            file="src/utils.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=10,
+            end_line=15,
+            body="Refactor this block",
+        )
+    ]
 
     result = service.format_review(comments)
 
@@ -34,9 +52,20 @@ def test_multiple_comments_across_files() -> None:
     """All comments appear in output, ordered as given."""
     service = _service()
     comments = [
-        Comment(file="src/a.py", side=LineSide.NEW, start_line=1, end_line=1, body="Fix A"),
-        Comment(file="src/b.py", side=LineSide.NEW, start_line=5, end_line=5, body="Fix B"),
-        Comment(file="src/a.py", side=LineSide.NEW, start_line=20, end_line=25, body="Fix A again"),
+        Comment(
+            file="src/a.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix A"
+        ),
+        Comment(
+            file="src/b.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=5, end_line=5, body="Fix B"
+        ),
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=20,
+            end_line=25,
+            body="Fix A again",
+        ),
     ]
 
     result = service.format_review(comments)
@@ -70,7 +99,9 @@ def test_empty_review_produces_minimal_output() -> None:
 def test_result_starts_with_header() -> None:
     """Non-empty review starts with ## Code Review Comments."""
     service = _service()
-    comments = [Comment(file="x.py", side=LineSide.NEW, start_line=1, end_line=1, body="note")]
+    comments = [
+        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+    ]
 
     result = service.format_review(comments)
 
@@ -91,7 +122,16 @@ def test_body_alone_produces_review_with_summary() -> None:
 def test_body_with_inline_comments_appears_first() -> None:
     """Body text appears before inline comments in the output."""
     service = _service()
-    comments = [Comment(file="x.py", side=LineSide.NEW, start_line=1, end_line=1, body="Fix this line")]
+    comments = [
+        Comment(
+            file="x.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body="Fix this line",
+        )
+    ]
 
     result = service.format_review(comments, body="Generally good, one issue.")
 
@@ -104,7 +144,9 @@ def test_body_with_inline_comments_appears_first() -> None:
 def test_empty_body_treated_as_no_body() -> None:
     """Empty string body is ignored, same as None."""
     service = _service()
-    comments = [Comment(file="x.py", side=LineSide.NEW, start_line=1, end_line=1, body="note")]
+    comments = [
+        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+    ]
 
     result = service.format_review(comments, body="")
 
@@ -114,7 +156,9 @@ def test_empty_body_treated_as_no_body() -> None:
 def test_whitespace_only_body_treated_as_no_body() -> None:
     """Whitespace-only body is ignored, same as empty."""
     service = _service()
-    comments = [Comment(file="x.py", side=LineSide.NEW, start_line=1, end_line=1, body="note")]
+    comments = [
+        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+    ]
 
     result = service.format_review(comments, body="   \n  ")
 
@@ -138,7 +182,16 @@ def _service() -> ReviewService:
 def test_comment_on_a_removed_line_says_so() -> None:
     """A comment on the old side is marked, so its number is not read as current."""
     service = _service()
-    comments = [Comment(file="src/a.py", side=LineSide.OLD, start_line=42, end_line=42, body="Why drop this?")]
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.OLD,
+            severity=CommentSeverity.NOTE,
+            start_line=42,
+            end_line=42,
+            body="Why drop this?",
+        )
+    ]
 
     result = service.format_review(comments)
 
@@ -148,7 +201,16 @@ def test_comment_on_a_removed_line_says_so() -> None:
 def test_removed_range_is_marked_once() -> None:
     """A range on the old side keeps the range and the marker."""
     service = _service()
-    comments = [Comment(file="src/a.py", side=LineSide.OLD, start_line=10, end_line=14, body="Restore this")]
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.OLD,
+            severity=CommentSeverity.NOTE,
+            start_line=10,
+            end_line=14,
+            body="Restore this",
+        )
+    ]
 
     result = service.format_review(comments)
 
@@ -159,8 +221,22 @@ def test_same_line_number_on_both_sides_stays_distinguishable() -> None:
     """A replaced line has an old 42 and a new 42; the output tells them apart."""
     service = _service()
     comments = [
-        Comment(file="src/a.py", side=LineSide.OLD, start_line=42, end_line=42, body="The old one"),
-        Comment(file="src/a.py", side=LineSide.NEW, start_line=42, end_line=42, body="The new one"),
+        Comment(
+            file="src/a.py",
+            side=LineSide.OLD,
+            severity=CommentSeverity.NOTE,
+            start_line=42,
+            end_line=42,
+            body="The old one",
+        ),
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=42,
+            end_line=42,
+            body="The new one",
+        ),
     ]
 
     result = service.format_review(comments)
@@ -168,3 +244,60 @@ def test_same_line_number_on_both_sides_stays_distinguishable() -> None:
     assert "### src/a.py:42 (removed)\nThe old one" in result.markdown
     assert "### src/a.py:42\nThe new one" in result.markdown
     assert result.comment_count == 2
+
+
+def test_a_question_is_marked_as_one() -> None:
+    """A question wants an answer before anything changes."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.QUESTION,
+            start_line=4,
+            end_line=4,
+            body="Is this reachable?",
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "### src/a.py:4 — question" in result.markdown
+
+
+def test_a_blocker_is_marked_as_one() -> None:
+    service = _service()
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.BLOCKER,
+            start_line=4,
+            end_line=4,
+            body="This drops the lock",
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "### src/a.py:4 — blocker" in result.markdown
+
+
+def test_an_ordinary_note_is_left_unmarked() -> None:
+    """Most comments are notes, so saying so on each would be noise."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=4,
+            end_line=4,
+            body="Reads well",
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "### src/a.py:4\n" in result.markdown
+    assert "note" not in result.markdown

@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { LineSide } from '$lib/types';
+	import type { CommentSeverity, LineSide } from '$lib/types';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 
 	const SUGGESTION_FENCE = '```suggestion';
 
 	interface Props {
-		onSave: (body: string) => void;
+		onSave: (body: string, severity: CommentSeverity) => void;
 		onCancel: () => void;
 		side?: LineSide;
 		startLine?: number;
 		endLine?: number;
 		initialBody?: string;
+		initialSeverity?: CommentSeverity;
 		/** The lines being commented on, so a suggestion can start from them. */
 		suggestFrom?: string[];
 	}
@@ -23,8 +24,15 @@
 		startLine,
 		endLine,
 		initialBody = '',
+		initialSeverity = 'note',
 		suggestFrom
 	}: Props = $props();
+
+	const severities: { value: CommentSeverity; label: string }[] = [
+		{ value: 'note', label: 'Note' },
+		{ value: 'question', label: 'Question' },
+		{ value: 'blocker', label: 'Blocker' }
+	];
 
 	const label = $derived(
 		startLine == null ? null : lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine)
@@ -32,6 +40,8 @@
 
 	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
 	let body = $state(initialBody);
+	// svelte-ignore state_referenced_locally — same
+	let severity = $state<CommentSeverity>(initialSeverity);
 
 	let textareaEl: HTMLTextAreaElement;
 
@@ -43,7 +53,7 @@
 	});
 
 	function save() {
-		if (body.trim()) onSave(body.trim());
+		if (body.trim()) onSave(body.trim(), severity);
 	}
 
 	/**
@@ -76,9 +86,24 @@
 </script>
 
 <div class="cr-comment space-y-3 rounded-r px-4 py-3">
-	{#if label}
-		<div class="cr-comment-ref font-mono text-xs">{label}</div>
-	{/if}
+	<div class="flex items-center gap-3">
+		{#if label}
+			<span class="cr-comment-ref font-mono text-xs">{label}</span>
+		{/if}
+		<div class="flex-1"></div>
+		<div data-testid="severity-picker" class="cr-segmented">
+			{#each severities as choice (choice.value)}
+				<button
+					data-testid="severity-{choice.value}"
+					class="cr-segment"
+					aria-pressed={severity === choice.value}
+					onclick={() => (severity = choice.value)}
+				>
+					{choice.label}
+				</button>
+			{/each}
+		</div>
+	</div>
 	<textarea
 		bind:this={textareaEl}
 		data-testid="comment-input"

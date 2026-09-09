@@ -483,3 +483,27 @@ describe('the diff as one stream', () => {
 		expect(getByTestId('comment-input')).toBeTruthy();
 	});
 });
+
+describe('showing how a comment is meant', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+		diffStore.setFiles([diffFile], 'diff');
+	});
+
+	it('marks a blocker as one', () => {
+		commentStore.add('src/handler.ts', 'new', 2, 2, 'This drops the lock', 'blocker');
+
+		const { getByTestId } = render(DiffView);
+
+		expect(getByTestId('comment-severity').textContent).toBe('blocker');
+	});
+
+	it('says nothing on an ordinary note', () => {
+		commentStore.add('src/handler.ts', 'new', 2, 2, 'Reads well');
+
+		const { queryByTestId } = render(DiffView);
+
+		expect(queryByTestId('comment-severity')).toBeNull();
+	});
+});

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment } from '$lib/types';
+	import type { Comment, CommentSeverity } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import CommentBox from './CommentBox.svelte';
@@ -11,8 +11,8 @@
 	let { comment }: Props = $props();
 	let editing = $state(false);
 
-	function handleSave(body: string) {
-		commentStore.update(comment.id, body);
+	function handleSave(body: string, severity: CommentSeverity) {
+		commentStore.update(comment.id, body, severity);
 		editing = false;
 	}
 
@@ -25,6 +25,7 @@
 			onSave={handleSave}
 			onCancel={() => (editing = false)}
 			initialBody={comment.body}
+			initialSeverity={comment.severity}
 			side={comment.side}
 			startLine={comment.start_line}
 			endLine={comment.end_line}
@@ -35,6 +36,9 @@
 				<span data-testid="comment-line-label" class="cr-comment-ref font-mono text-xs">
 					{label}
 				</span>
+				{#if comment.severity !== 'note'}
+					<span data-testid="comment-severity" class="cr-severity">{comment.severity}</span>
+				{/if}
 				<div class="flex-1"></div>
 				<div
 					class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100"

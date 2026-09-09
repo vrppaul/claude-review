@@ -78,6 +78,7 @@ async def submit_review(
         Comment(
             file=c.file,
             side=c.side,
+            severity=c.severity,
             start_line=c.start_line,
             end_line=c.end_line,
             body=c.body,

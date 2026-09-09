@@ -1,4 +1,9 @@
-import type { Comment, LineSide, SubmitResponse } from "$lib/types";
+import type {
+  Comment,
+  CommentSeverity,
+  LineSide,
+  SubmitResponse,
+} from "$lib/types";
 
 let comments = $state<Comment[]>([]);
 let reviewBody = $state("");
@@ -37,11 +42,13 @@ export const commentStore = {
     startLine: number,
     endLine: number,
     body: string,
+    severity: CommentSeverity = "note",
   ) {
     const comment: Comment = {
       id: generateId(),
       file,
       side,
+      severity,
       start_line: startLine,
       end_line: endLine,
       body,
@@ -50,8 +57,10 @@ export const commentStore = {
     return comment.id;
   },
 
-  update(id: string, body: string) {
-    comments = comments.map((c) => (c.id === id ? { ...c, body } : c));
+  update(id: string, body: string, severity?: CommentSeverity) {
+    comments = comments.map((c) =>
+      c.id === id ? { ...c, body, severity: severity ?? c.severity } : c,
+    );
   },
 
   remove(id: string) {
@@ -79,13 +88,16 @@ export const commentStore = {
   async submit(): Promise<SubmitResponse> {
     const trimmedBody = reviewBody.trim();
     const payload = {
-      comments: comments.map(({ file, side, start_line, end_line, body }) => ({
-        file,
-        side,
-        start_line,
-        end_line,
-        body,
-      })),
+      comments: comments.map(
+        ({ file, side, severity, start_line, end_line, body }) => ({
+          file,
+          side,
+          severity,
+          start_line,
+          end_line,
+          body,
+        }),
+      ),
       ...(trimmedBody ? { body: trimmedBody } : {}),
     };
 

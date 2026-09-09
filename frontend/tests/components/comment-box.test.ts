@@ -14,7 +14,7 @@ describe('CommentBox', () => {
 		await userEvent.type(input, '  Fix this  ');
 		await userEvent.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Fix this');
+		expect(onSave).toHaveBeenCalledWith('Fix this', 'note');
 	});
 
 	it('disables Comment button when input is empty', () => {
@@ -117,5 +117,42 @@ describe('suggesting a replacement', () => {
 		await user.click(getByTestId('suggest-change'));
 
 		expect((getByTestId('suggest-change') as HTMLButtonElement).disabled).toBe(true);
+	});
+});
+
+describe('how a comment is meant', () => {
+	it('is an ordinary note unless said otherwise', async () => {
+		const user = userEvent.setup();
+		const onSave = vi.fn();
+		const { getByTestId } = render(CommentBox, {
+			props: { onSave, onCancel: vi.fn(), startLine: 1 }
+		});
+
+		await user.type(getByTestId('comment-input'), 'Reads well');
+		await user.click(getByTestId('save-comment'));
+
+		expect(onSave).toHaveBeenCalledWith('Reads well', 'note');
+	});
+
+	it('can be marked as a question', async () => {
+		const user = userEvent.setup();
+		const onSave = vi.fn();
+		const { getByTestId } = render(CommentBox, {
+			props: { onSave, onCancel: vi.fn(), startLine: 1 }
+		});
+
+		await user.click(getByTestId('severity-question'));
+		await user.type(getByTestId('comment-input'), 'Is this reachable?');
+		await user.click(getByTestId('save-comment'));
+
+		expect(onSave).toHaveBeenCalledWith('Is this reachable?', 'question');
+	});
+
+	it('reopens for editing with the mark it was saved under', async () => {
+		const { getByTestId } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), startLine: 1, initialSeverity: 'blocker' }
+		});
+
+		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
 	});
 });
