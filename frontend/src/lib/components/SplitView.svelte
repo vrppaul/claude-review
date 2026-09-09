@@ -48,6 +48,13 @@
 		return () => window.removeEventListener('mouseup', handler);
 	});
 
+	/** Enter or Space on a line's number opens the composer there. */
+	function commentOnKey(event: KeyboardEvent, line: DiffLine, index: number) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		selection.commentOnLine(line, index);
+	}
+
 	function handleSaveComment(body: string) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
@@ -117,19 +124,28 @@
 						<tr class="cr-side-del">
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								class="cr-gutter w-12 cursor-pointer px-2 text-right select-none {edge(
+								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(
 									row.left,
 									'delete'
-								)} {tint(row.left, 'delete')}"
-								onmousedown={() =>
-									row.left &&
-									selection.handleMouseDown(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
+								)}"
 								onmouseenter={() =>
 									row.left &&
 									selection.handleMouseEnter(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
-								title="Click to comment, drag for a range"
 							>
-								{row.left?.line.old_no ?? ''}
+								{#if row.left}
+									{@const cell = row.left}
+									<button
+										class="cr-gutter-button"
+										tabindex="-1"
+										aria-label="Comment on removed line {cell.line.old_no ?? ''}"
+										onmousedown={() =>
+											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onkeydown={(e) =>
+											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+									>
+										{cell.line.old_no ?? ''}
+									</button>
+								{/if}
 							</td>
 							<td
 								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(
@@ -142,20 +158,28 @@
 
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								data-testid="line-gutter"
-								class="cr-gutter cr-side-add w-12 cursor-pointer px-2 text-right select-none {edge(
+								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(
 									row.right,
 									'add'
 								)} {tint(row.right, 'add')}"
-								onmousedown={() =>
-									row.right &&
-									selection.handleMouseDown(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
 								onmouseenter={() =>
 									row.right &&
 									selection.handleMouseEnter(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
-								title="Click to comment, drag for a range"
 							>
-								{row.right?.line.new_no ?? ''}
+								{#if row.right}
+									{@const cell = row.right}
+									<button
+										data-testid="line-gutter"
+										class="cr-gutter-button"
+										aria-label="Comment on line {cell.line.new_no ?? ''}"
+										onmousedown={() =>
+											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onkeydown={(e) =>
+											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+									>
+										{cell.line.new_no ?? ''}
+									</button>
+								{/if}
 							</td>
 							<td class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'add')}">
 								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}

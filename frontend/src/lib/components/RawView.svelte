@@ -71,6 +71,13 @@
 		return () => window.removeEventListener('mouseup', handler);
 	});
 
+	/** Enter or Space on a line's number opens the composer there. */
+	function commentOnKey(event: KeyboardEvent, line: DiffLine, index: number) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		selection.commentOnLine(line, index);
+	}
+
 	function handleSaveComment(body: string) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
@@ -151,23 +158,30 @@
 							onmouseenter={() => selection.handleMouseEnter(line, flatIdx)}
 						>
 							{#if isDiffMode}
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<td
-									class="cr-gutter w-12 cursor-pointer px-2 text-right select-none"
-									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-									title="Click to comment, drag for a range"
-								>
-									{line.old_no ?? ''}
+								<td class="cr-gutter w-12 p-0 text-right select-none">
+									<button
+										class="cr-gutter-button"
+										tabindex="-1"
+										aria-label="Comment on line {line.old_no ?? ''}"
+										onmousedown={() => selection.handleMouseDown(line, flatIdx)}
+										onkeydown={(e) => commentOnKey(e, line, flatIdx)}
+									>
+										{line.old_no ?? ''}
+									</button>
 								</td>
 							{/if}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								data-testid="line-gutter"
-								class="cr-gutter w-12 cursor-pointer border-r border-base-300 px-2 text-right select-none"
-								onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-								title="Click to comment, drag for a range"
+								class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none"
 							>
-								{line.new_no ?? ''}
+								<button
+									data-testid="line-gutter"
+									class="cr-gutter-button"
+									aria-label="Comment on line {line.new_no ?? line.old_no ?? ''}"
+									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
+									onkeydown={(e) => commentOnKey(e, line, flatIdx)}
+								>
+									{line.new_no ?? ''}
+								</button>
 							</td>
 							{#if isDiffMode}
 								<td class="cr-sign w-4 px-1 text-center select-none">

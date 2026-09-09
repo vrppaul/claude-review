@@ -85,6 +85,19 @@ export function createLineSelection() {
       dragAnchorIndex = null;
     },
 
+    /** Open the composer on one line, without a drag — the keyboard path. */
+    commentOnLine(line: DiffLine, index: number) {
+      const lineNo = getLineNumber(line);
+      if (lineNo === 0) return;
+      dragging = false;
+      commentingAt = {
+        side: lineSide(line),
+        line: lineNo,
+        endLine: lineNo,
+        anchorIndex: index,
+      };
+    },
+
     clearCommenting() {
       commentingAt = null;
     },

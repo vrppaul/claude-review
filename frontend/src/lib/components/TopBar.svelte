@@ -100,5 +100,6 @@
 		{/if}
 	</button>
 
+	<span class="cr-muted hidden text-xs lg:inline">Press ? for keys</span>
 	<ThemeToggle />
 </header>

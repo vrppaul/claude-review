@@ -76,7 +76,9 @@ describe('split layout', () => {
 		diffStore.setDiffLayout('split');
 
 		const { getByTestId } = render(FileSection, { props: { file } });
-		const oldGutter = getByTestId('split-view').querySelectorAll('tbody > tr')[1].querySelector('td')!;
+		const oldGutter = getByTestId('split-view')
+			.querySelectorAll('tbody > tr')[1]
+			.querySelector('button')!;
 
 		await user.click(oldGutter);
 		await user.click(document.body);

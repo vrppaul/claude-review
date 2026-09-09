@@ -666,3 +666,78 @@ async def test_comment_left_in_split_layout_reaches_claude(server_url: ServerFix
 
     assert state.result is not None
     assert "Split comment" in state.result
+
+
+async def test_a_comment_can_be_left_without_a_mouse(server_url: ServerFixture, page: Page) -> None:
+    """The tool's central action has a keyboard path."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type("Typed, not clicked")
+    await page.keyboard.press("Control+Enter")
+    await page.wait_for_selector("text=Typed, not clicked")
+
+    await page.keyboard.press("Control+Shift+Enter")
+    await page.get_by_test_id("submitted-banner").wait_for()
+
+    assert state.result is not None
+    assert "Typed, not clicked" in state.result
+
+
+async def test_j_and_k_move_between_lines(server_url: ServerFixture, page: Page) -> None:
+    """Moving is moving focus, so the browser keeps the cursor on screen."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.keyboard.press("j")
+    first = await page.evaluate("document.activeElement.getAttribute('aria-label')")
+    await page.keyboard.press("j")
+    second = await page.evaluate("document.activeElement.getAttribute('aria-label')")
+    await page.keyboard.press("k")
+    back = await page.evaluate("document.activeElement.getAttribute('aria-label')")
+
+    assert first != second
+    assert back == first
+
+
+async def test_question_mark_shows_the_keys(server_url: ServerFixture, page: Page) -> None:
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.keyboard.press("?")
+    await page.get_by_test_id("shortcuts-list").wait_for()
+
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("shortcuts-list").wait_for(state="detached")
+
+
+async def test_v_marks_the_file_you_are_in_as_viewed(server_url: ServerFixture, page: Page) -> None:
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.keyboard.press("j")
+    await page.keyboard.press("v")
+
+    await page.get_by_test_id("sidebar-heading").filter(has_text="1 viewed").wait_for()
+
+
+async def test_typing_a_comment_does_not_trigger_shortcuts(server_url: ServerFixture, page: Page) -> None:
+    """The letters that move around must still be letters inside a comment."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type("just keep vjunk pn")
+
+    assert await page.get_by_test_id("comment-input").input_value() == "just keep vjunk pn"

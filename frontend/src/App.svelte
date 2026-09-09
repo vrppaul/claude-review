@@ -4,6 +4,7 @@
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
+	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
 
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -43,6 +44,7 @@
 		</div>
 	</div>
 {:else}
+	<KeyboardShortcuts />
 	<div class="flex h-screen flex-col">
 		<SubmitBar />
 		<div class="flex min-h-0 flex-1">
