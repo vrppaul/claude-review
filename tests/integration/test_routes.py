@@ -61,7 +61,7 @@ async def client(mock_diff_files: list[DiffFile], server_state: ServerState):
         mode=ReviewMode.DIFF,
         title="test-repo: uncommitted changes",
     )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
 
@@ -286,7 +286,7 @@ async def files_mode_client(plan_file: Path, server_state: ServerState):
     """Client backed by a real text file loaded through TextFileService."""
     diff_files = TextFileService().read_files([plan_file])
     app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.FILES)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
 
@@ -361,7 +361,7 @@ async def transcript_mode_client(transcript_file: Path, server_state: ServerStat
     """Client backed by a real transcript file loaded through TranscriptService."""
     diff_files = TranscriptService().parse(transcript_file)
     app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.TRANSCRIPT)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
 
@@ -433,7 +433,7 @@ async def repo_backed_client(mock_diff_files: list[DiffFile], server_state: Serv
         root=tmp_path,
     )
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
 
@@ -477,7 +477,7 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
     app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = _changed_lines((await client.get("/api/diff")).json())
         ignored = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "true"})).json())
 
@@ -506,7 +506,7 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
     app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = (await client.get("/api/diff")).json()
         ignored = (await client.get("/api/diff", params={"ignore_whitespace": "true"})).json()
 

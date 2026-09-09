@@ -15,6 +15,10 @@ from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 
 GRACE = 3.0
+LOCAL_ORIGIN = "http://127.0.0.1:8000"
+# The test client hardcodes "testserver" as the Host for sockets whatever
+# its base URL, so the review's own page has to be stated outright
+LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
 
 
 @pytest.fixture
@@ -38,16 +42,19 @@ def client(state: ServerState) -> TestClient:
             ],
         )
     ]
-    return TestClient(create_app(diff_files=files, state=state, mode=ReviewMode.DIFF))
+    return TestClient(
+        create_app(diff_files=files, state=state, mode=ReviewMode.DIFF),
+        base_url=LOCAL_ORIGIN,
+    )
 
 
 def test_the_review_is_alive_while_a_browser_holds_the_socket(client: TestClient, state: ServerState) -> None:
-    with client.websocket_connect("/api/session"):
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS):
         assert not state.browser_gone(now=1000.0, grace=GRACE)
 
 
 def test_the_review_winds_down_once_the_last_browser_leaves(client: TestClient, state: ServerState) -> None:
-    with client.websocket_connect("/api/session"):
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS):
         pass
 
     # The loop clock the server read on disconnect is monotonic and far below
@@ -79,7 +86,7 @@ def test_a_second_tab_keeps_the_review_alive(state: ServerState) -> None:
 
 def test_the_server_can_push_to_an_open_review(client: TestClient, state: ServerState) -> None:
     """The socket carries messages the other way too."""
-    with client.websocket_connect("/api/session") as websocket:
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as websocket:
         state.push({"type": "reload"})
 
         assert websocket.receive_json() == {"type": "reload"}

@@ -22,6 +22,11 @@ from claude_review.domain.models import (
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 
+LOCAL_ORIGIN = "http://127.0.0.1:8000"
+# The test client hardcodes "testserver" as the Host for sockets whatever
+# its base URL, so the review's own page has to be stated outright
+LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
+
 QUESTION = {
     "thread_id": "comment-1",
     "file": "src/a.py",
@@ -58,7 +63,7 @@ def _files() -> list[DiffFile]:
 @pytest.fixture
 async def client(state: ServerState):
     app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
 
@@ -113,9 +118,9 @@ async def test_a_question_needs_something_asked(client: AsyncClient) -> None:
 
 def test_an_answer_reaches_the_review_on_screen(state: ServerState) -> None:
     app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
-    client = TestClient(app)
+    client = TestClient(app, base_url=LOCAL_ORIGIN)
 
-    with client.websocket_connect("/api/session") as socket:
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
         client.post("/api/reply", json={"thread_id": "comment-1", "text": "Because it moved up"})
 
         assert socket.receive_json() == {
