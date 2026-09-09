@@ -1,5 +1,7 @@
 import { SvelteSet } from "svelte/reactivity";
 
+import { expansionStore } from "$lib/stores/expansions.svelte";
+
 import type {
   ContentViewMode,
   DiffFile,
@@ -64,6 +66,9 @@ export const diffStore = {
    */
   async setIgnoreWhitespace(next: boolean) {
     ignoreWhitespace = next;
+    // Hunks are renumbered and re-indexed by the retake, so lines revealed
+    // against the old ones would be shown under the wrong numbers
+    expansionStore.clear();
     await this.fetchDiff();
   },
   get viewedCount(): number {

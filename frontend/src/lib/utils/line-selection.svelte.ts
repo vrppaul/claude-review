@@ -61,7 +61,9 @@ export function createLineSelection() {
       const lineNo = getLineNumber(line);
       if (lineNo === 0) return;
       dragEnd = lineNo;
-      dragAnchorIndex = Math.max(dragAnchorIndex ?? index, index);
+      // The composer opens under the row the cursor is on, so this follows the
+      // drag back up rather than staying at the furthest point it reached
+      dragAnchorIndex = index;
     },
 
     handleMouseUp() {

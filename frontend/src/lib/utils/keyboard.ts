@@ -7,10 +7,29 @@
  * would have to be kept in step with the real one.
  */
 
+/** Text-entry inputs; a checkbox or a button is not one of them. */
+const TYPED_INTO = new Set([
+  "text",
+  "search",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+]);
+
+/**
+ * Whether a key belongs to whatever has focus rather than to the review.
+ *
+ * Checking only the tag name caught checkboxes too, so one click on "Viewed"
+ * parked focus on a hidden input and every shortcut went dead with nothing
+ * on screen to explain it.
+ */
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+  if (target.isContentEditable || target.tagName === "TEXTAREA") return true;
+  if (!(target instanceof HTMLInputElement)) return false;
+  return TYPED_INTO.has(target.type);
 }
 
 function gutters(): HTMLElement[] {

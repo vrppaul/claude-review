@@ -55,6 +55,7 @@
 	</div>
 {:else}
 	<KeyboardShortcuts />
+	<div class="flex h-screen flex-col">
 	{#if restored > 0}
 		<div
 			data-testid="restored-notice"
@@ -67,7 +68,6 @@
 			<button class="btn btn-ghost btn-xs" onclick={() => (restored = 0)}>Dismiss</button>
 		</div>
 	{/if}
-	<div class="flex h-screen flex-col">
 		<SubmitBar />
 		<div class="flex min-h-0 flex-1">
 			<FileList />

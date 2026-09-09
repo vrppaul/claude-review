@@ -23,10 +23,28 @@ export function scrollToFile(path: string): void {
   sections.get(path)?.scrollIntoView({ block: "start" });
 }
 
-export function scrollToComment(commentId: string): void {
-  document
-    .getElementById(commentId)
-    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+/**
+ * Bring a comment into view, building its file first if need be.
+ *
+ * A file's rows are only built once it has been near the viewport, so a
+ * comment further down the review — restored from a draft, say — has no
+ * element yet. Scrolling to the file makes one appear, and the comment can
+ * be reached on the next frame.
+ */
+export function scrollToComment(commentId: string, file?: string): void {
+  const found = document.getElementById(commentId);
+  if (found) {
+    found.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  if (file === undefined) return;
+  scrollToFile(file);
+  requestAnimationFrame(() =>
+    document
+      .getElementById(commentId)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+  );
 }
 
 /**

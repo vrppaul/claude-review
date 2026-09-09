@@ -27,7 +27,7 @@
 		function onKeydown(e: KeyboardEvent) {
 			if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
 				if (showModal) return; // the modal handles its own shortcut
-				if (commentStore.count === 0) return; // match the button's disabled state
+				if (!commentStore.hasContent) return; // match the button's disabled state
 				e.preventDefault();
 				handleSubmit();
 			}

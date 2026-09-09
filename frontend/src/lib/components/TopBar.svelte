@@ -14,18 +14,15 @@
 
 	let { submitting, error, onSubmit, onOpenModal }: Props = $props();
 
-	let atComment = $state(-1);
-
 	function step(direction: 1 | -1) {
-		if (commentStore.count === 0) return;
-		atComment = (atComment + direction + commentStore.count) % commentStore.count;
-		const comment = commentStore.comments[atComment];
+		const comment = commentStore.step(direction);
+		if (!comment) return;
 
 		// A folded file has no comment on screen to move to, so open it first
 		if (diffStore.isCollapsed(comment.file)) {
 			diffStore.toggleCollapsed(comment.file);
 		}
-		requestAnimationFrame(() => scrollToComment(comment.id));
+		requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
 	}
 </script>
 
@@ -104,7 +101,7 @@
 	<button
 		class="btn btn-primary btn-sm"
 		data-testid="quick-submit"
-		disabled={commentStore.count === 0 || submitting}
+		disabled={!commentStore.hasContent || submitting}
 		onclick={onSubmit}
 		title="Ctrl+Shift+Enter"
 	>

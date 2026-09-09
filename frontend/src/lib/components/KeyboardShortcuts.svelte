@@ -7,7 +7,6 @@
 
 	let showHelp = $state(false);
 	let atFile = $state(-1);
-	let atComment = $state(-1);
 
 	const shortcuts: { keys: string; does: string }[] = [
 		{ keys: 'j / k', does: 'Move down or up a line' },
@@ -32,11 +31,10 @@
 	}
 
 	function stepComment(direction: 1 | -1) {
-		if (commentStore.count === 0) return;
-		atComment = (atComment + direction + commentStore.count) % commentStore.count;
-		const comment = commentStore.comments[atComment];
+		const comment = commentStore.step(direction);
+		if (!comment) return;
 		if (diffStore.isCollapsed(comment.file)) diffStore.toggleCollapsed(comment.file);
-		requestAnimationFrame(() => scrollToComment(comment.id));
+		requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
 	}
 
 	function actOnCurrentFile(act: (path: string) => void) {

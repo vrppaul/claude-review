@@ -131,7 +131,8 @@
 				<tbody>
 					{#each rowsPerHunk[hunkIdx] as row, rowIdx (rowIdx)}
 						{@const leftComments = commentsFor(row.left)}
-						{@const rightComments = commentsFor(row.right)}
+						{@const rightComments =
+							row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
 						{@const boxAt = selection.commentingAt?.anchorIndex}
 						{@const showBox =
 							(row.left && hunkOffsets[hunkIdx] + row.left.index === boxAt) ||

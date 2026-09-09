@@ -13,9 +13,16 @@ let submitted = $state(false);
 let nextId = 0;
 // What the draft is tied to, so it is not restored onto another review
 let draftTitle = $state<string | null>(null);
+// Where the reader is in the list, shared by every control that steps it
+let cursor = $state(-1);
 
 function generateId(): string {
   return `comment-${++nextId}`;
+}
+
+function idNumber(id: string): number {
+  const parsed = Number.parseInt(id.replace("comment-", ""), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function remember(): void {
@@ -40,6 +47,13 @@ export const commentStore = {
     return submitted;
   },
 
+  /** Step to the next or previous comment, and say which it is. */
+  step(direction: 1 | -1): Comment | undefined {
+    if (comments.length === 0) return undefined;
+    cursor = (cursor + direction + comments.length) % comments.length;
+    return comments[cursor];
+  },
+
   setReviewBody(text: string) {
     reviewBody = text;
     remember();
@@ -58,7 +72,13 @@ export const commentStore = {
 
     comments = draft.comments;
     reviewBody = draft.reviewBody ?? "";
-    nextId = comments.length;
+    // Past the highest id in the draft, not past its length: deleting a
+    // comment before saving would otherwise hand its id out a second time,
+    // and two comments sharing an id edit and delete as one.
+    nextId = comments.reduce(
+      (highest, c) => Math.max(highest, idNumber(c.id)),
+      0,
+    );
     return comments.length;
   },
 
@@ -112,6 +132,7 @@ export const commentStore = {
     reviewBody = "";
     submitted = false;
     nextId = 0;
+    cursor = -1;
     draftTitle = null;
   },
 
