@@ -4,6 +4,7 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
+	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -17,8 +18,14 @@
 
 	const isDiffMode = $derived(diffStore.mode === 'diff');
 	const colSpan = $derived(isDiffMode ? 4 : 2);
-	// Markup per hunk per line, computed once per file rather than per row
-	const highlighted = $derived(highlightFile(file, language));
+	// Markup per hunk per line, computed once per file rather than per row.
+	// A row coloured end to end says a line changed but not where, so what
+	// actually differs inside a replaced line is marked on top of the syntax.
+	const highlighted = $derived(
+		highlightFile(file, language).map((hunkHtml, i) =>
+			isDiffMode ? applyWordMarks(file.hunks[i].lines, hunkHtml) : hunkHtml
+		)
+	);
 	// Comments indexed by the row they belong to, rather than scanned per line
 	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
 	const modeChange = $derived(

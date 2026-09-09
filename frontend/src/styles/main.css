@@ -277,3 +277,13 @@
   color: var(--cr-mark);
   font-variant-numeric: tabular-nums;
 }
+
+/* What actually differs inside a replaced line, over the row's own tint */
+.cr-row-add .cr-word {
+  background: color-mix(in srgb, var(--cr-add-edge) 32%, transparent);
+  border-radius: 2px;
+}
+.cr-row-del .cr-word {
+  background: color-mix(in srgb, var(--cr-del-edge) 32%, transparent);
+  border-radius: 2px;
+}
