@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { lineRefLabel } from '$lib/utils/line-label';
 
 	interface Props {
 		onSubmit: () => void;
@@ -62,7 +63,9 @@
 					<ul class="space-y-1">
 						{#each commentStore.comments as comment (comment.id)}
 							<li class="text-xs font-mono bg-base-200 rounded px-3 py-2">
-								<span class="text-info">{comment.file}:{comment.start_line}{comment.start_line !== comment.end_line ? `-${comment.end_line}` : ''}</span>
+								<span data-testid="modal-comment-ref" class="text-info"
+									>{comment.file}:{lineRefLabel(comment.side, comment.start_line, comment.end_line)}</span
+								>
 								<span class="text-base-content/60 ml-2">{truncate(comment.body, 80)}</span>
 							</li>
 						{/each}

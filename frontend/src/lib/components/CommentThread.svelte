@@ -25,6 +25,7 @@
 			onSave={handleSave}
 			onCancel={() => (editing = false)}
 			initialBody={comment.body}
+			side={comment.side}
 			startLine={comment.start_line}
 			endLine={comment.end_line}
 		/>

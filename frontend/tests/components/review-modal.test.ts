@@ -92,3 +92,29 @@ describe('ReviewModal', () => {
 		expect(onClose).toHaveBeenCalled();
 	});
 });
+
+describe('ReviewModal line references', () => {
+	beforeEach(() => {
+		commentStore.clear();
+	});
+
+	it('marks a comment that sits on a removed line', () => {
+		commentStore.add('src/app.ts', 'old', 42, 42, 'why was this dropped');
+
+		const { getByTestId } = render(ReviewModal, {
+			props: { onSubmit: () => {}, onClose: () => {} }
+		});
+
+		expect(getByTestId('modal-comment-ref').textContent).toBe('src/app.ts:42 (removed)');
+	});
+
+	it('leaves a comment on the current version unmarked', () => {
+		commentStore.add('src/app.ts', 'new', 42, 47, 'tighten this');
+
+		const { getByTestId } = render(ReviewModal, {
+			props: { onSubmit: () => {}, onClose: () => {} }
+		});
+
+		expect(getByTestId('modal-comment-ref').textContent).toBe('src/app.ts:42-47');
+	});
+});

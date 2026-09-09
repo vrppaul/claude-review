@@ -16,3 +16,18 @@ export function lineRangeLabel(
   }
   return `${removed ? "Removed line" : "Line"} ${startLine}`;
 }
+
+/**
+ * Compact reference used next to a file path: "42", "42-47", "42 (removed)".
+ * Matches the wording the submitted review uses, so the preview and the
+ * output the agent reads say the same thing.
+ */
+export function lineRefLabel(
+  side: LineSide,
+  startLine: number,
+  endLine: number,
+): string {
+  const span =
+    endLine !== startLine ? `${startLine}-${endLine}` : `${startLine}`;
+  return side === "old" ? `${span} (removed)` : span;
+}

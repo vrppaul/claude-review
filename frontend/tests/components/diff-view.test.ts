@@ -410,3 +410,22 @@ describe('files with no lines to show', () => {
 		expect(queryByTestId('mode-change-note')).toBeNull();
 	});
 });
+
+describe('editing a comment', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+	});
+
+	it('keeps the removed wording when the comment is reopened for editing', async () => {
+		const user = userEvent.setup();
+		diffStore.setFiles([diffFile], 'diff');
+		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+
+		const { getByText, getByTestId } = render(DiffView, { props: { file: diffFile } });
+		await user.click(getByText('Edit'));
+
+		expect(getByTestId('comment-input')).toBeTruthy();
+		expect(getByText('Removed line 2')).toBeTruthy();
+	});
+});
