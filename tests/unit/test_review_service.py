@@ -5,7 +5,7 @@ These test the formatting of comments into markdown for Claude.
 
 import pytest
 
-from claude_review.domain.models import Comment, CommentSeverity, LineSide
+from claude_review.domain.models import Comment, CommentSeverity, LineSide, Turn, TurnAuthor
 from claude_review.services.review_service import ReviewService
 
 
@@ -321,3 +321,109 @@ def test_a_filename_cannot_write_its_own_heading() -> None:
             end_line=1,
             body="looks fine",
         )
+
+
+def test_an_answered_thread_carries_the_conversation() -> None:
+    """A thread that was discussed sends its turns, not only its first line."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/state.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.QUESTION,
+            start_line=60,
+            end_line=64,
+            body="Every open review gets this push. Deliberate?",
+            turns=[
+                Turn(author=TurnAuthor.AUTHOR, body="Deliberate: two tabs are one reader."),
+                Turn(author=TurnAuthor.READER, body="Then say so in the docstring."),
+            ],
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "Every open review gets this push. Deliberate?" in result.markdown
+    assert "> **You:** Deliberate: two tabs are one reader." in result.markdown
+    assert "> **Reviewer:** Then say so in the docstring." in result.markdown
+
+
+def test_a_settled_thread_says_it_is_settled() -> None:
+    """Resolved is on the comment, so it survives into what the agent reads."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/state.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.QUESTION,
+            start_line=60,
+            end_line=60,
+            body="Deliberate?",
+            resolved=True,
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "### `src/state.py`:60 — question, resolved" in result.markdown
+
+
+def test_a_comment_whose_lines_moved_carries_what_it_was_written_against() -> None:
+    """An outdated anchor is useless alone, so the lines travel with it."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/routes.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=104,
+            end_line=105,
+            body="Two mechanisms for one review.",
+            outdated=True,
+            quote=["asked = ensure_future(state.questions.get())", "closed = ensure_future(state.wait())"],
+        )
+    ]
+
+    result = service.format_review(comments)
+
+    assert "outdated" in result.markdown
+    assert "asked = ensure_future(state.questions.get())" in result.markdown
+    assert "Two mechanisms for one review." in result.markdown
+
+
+def test_a_later_round_says_which_round_it_is() -> None:
+    """A round is a reply to the work done since the last one."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body="Still reads oddly.",
+        )
+    ]
+
+    result = service.format_review(comments, round_number=2)
+
+    assert result.markdown.startswith("## Code Review Comments — round 2")
+
+
+def test_the_first_round_is_not_numbered() -> None:
+    """One round is just a review; numbering it would only add noise."""
+    service = _service()
+    comments = [
+        Comment(
+            file="src/a.py",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body="Fine.",
+        )
+    ]
+
+    result = service.format_review(comments, round_number=1)
+
+    assert result.markdown.startswith("## Code Review Comments\n")

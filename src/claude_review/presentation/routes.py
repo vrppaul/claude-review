@@ -2,10 +2,17 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 
 from claude_review.domain.exceptions import FileWindowError
-from claude_review.domain.models import Comment, DiffFile, ReviewMode, ThreadQuestion
+from claude_review.domain.models import (
+    Comment,
+    DiffFile,
+    ReviewMode,
+    RoundSubmission,
+    ThreadQuestion,
+    Turn,
+)
 from claude_review.presentation.dependencies import (
     get_diff_base,
     get_diff_files,
@@ -16,10 +23,12 @@ from claude_review.presentation.dependencies import (
 )
 from claude_review.presentation.schemas import (
     AskRequest,
+    CommentInput,
     DiffResponse,
     EventResponse,
     FileWindowResponse,
     ReplyRequest,
+    RoundResponse,
     SubmitRequest,
     SubmitResponse,
 )
@@ -43,6 +52,7 @@ async def get_diff(
     title: str = Depends(get_review_title),
     root: Path | None = Depends(get_repo_root),
     base: str | None = Depends(get_diff_base),
+    state: ServerState = Depends(get_state),
 ) -> DiffResponse:
     """Serve the review's content.
 
@@ -53,7 +63,13 @@ async def get_diff(
     if ignore_whitespace and root is not None:
         diff_files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base, ignore_whitespace=True)
 
-    return DiffResponse(files=diff_files, mode=mode, title=title)
+    return DiffResponse(
+        files=diff_files,
+        mode=mode,
+        title=title,
+        round=state.round,
+        answerer_attached=state.answerer_attached,
+    )
 
 
 @router.get("/file-window")
@@ -87,15 +103,17 @@ async def ask_about_thread(
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
-    state.questions.put_nowait(
+    state.events.put_nowait(
         ThreadQuestion(
             thread_id=request.thread_id,
+            question_id=request.question_id,
             file=request.file,
             side=request.side,
             start_line=request.start_line,
             end_line=request.end_line,
             quote=request.quote,
             body=request.body,
+            history=[Turn(author=t.author, body=t.body, round=t.round) for t in request.history],
         )
     )
     log.info("thread_question", thread_id=request.thread_id, file=request.file)
@@ -107,26 +125,35 @@ async def next_event(
     wait_seconds: float = Query(default=25.0, gt=0, le=600),
     state: ServerState = Depends(get_state),
 ) -> EventResponse:
-    """Wait for the next thing the reader asks.
+    """Wait for the next thing the reader hands over.
 
     A long poll rather than a socket: the caller is a command in a shell,
     and blocking until there is something to do is exactly its shape.
     Returning "timeout" lets the caller decide whether to keep waiting.
     """
+    # Asking at all is what says an agent is there, which is what makes
+    # rounds worth offering in the review
+    state.attach_answerer()
+
     if state.shutdown_event.is_set():
         return EventResponse(type="closed")
 
-    asked = asyncio.ensure_future(state.questions.get())
+    taken = asyncio.ensure_future(state.events.get())
     closed = asyncio.ensure_future(state.shutdown_event.wait())
     try:
-        done, _ = await asyncio.wait({asked, closed}, timeout=wait_seconds, return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait({taken, closed}, timeout=wait_seconds, return_when=asyncio.FIRST_COMPLETED)
     finally:
-        for pending in (asked, closed):
+        for pending in (taken, closed):
             if not pending.done():
                 pending.cancel()
 
-    if asked in done:
-        return EventResponse(type="question", question=asked.result())
+    # What was handed over outranks the review ending: a round sent as the
+    # last act would otherwise be dropped for the shutdown that followed it
+    if taken in done:
+        event = taken.result()
+        if isinstance(event, RoundSubmission):
+            return EventResponse(type="round", round=event)
+        return EventResponse(type="question", question=event)
     if closed in done:
         return EventResponse(type="closed")
     return EventResponse(type="timeout")
@@ -138,8 +165,15 @@ async def reply_to_thread(
     state: ServerState = Depends(get_state),
 ) -> dict[str, str]:
     """Push an answer into a thread of a review that is still open."""
-    state.push({"type": "reply", "thread_id": request.thread_id, "text": request.text})
-    log.info("thread_reply", thread_id=request.thread_id)
+    state.push(
+        {
+            "type": "reply",
+            "thread_id": request.thread_id,
+            "question_id": request.question_id,
+            "text": request.text,
+        }
+    )
+    log.info("thread_reply", thread_id=request.thread_id, question_id=request.question_id)
     return {"status": "sent"}
 
 
@@ -181,31 +215,87 @@ async def submit_review(
     mode: ReviewMode = Depends(get_review_mode),
     diff_files: list[DiffFile] = Depends(get_diff_files),
 ) -> SubmitResponse:
+    """Send what has been written, and either end the review or carry on.
+
+    Ending is the plain case: one send, and the agent reads the result on
+    stdout. A round keeps the review open instead — the threads stay on
+    screen, so an answer has somewhere to come back to.
+    """
     if state.shutdown_event.is_set():
         raise HTTPException(status_code=409, detail="Review already submitted")
 
-    comments = [
-        Comment(
-            file=c.file,
-            side=c.side,
-            severity=c.severity,
-            start_line=c.start_line,
-            end_line=c.end_line,
-            body=c.body,
-        )
-        for c in request.comments
-    ]
+    comments = [_to_comment(c) for c in request.comments]
+    sent_round = state.round
 
     if mode == ReviewMode.TRANSCRIPT:
-        result = TranscriptReviewService().format_review(comments, request.body, diff_files)
+        result = TranscriptReviewService().format_review(comments, request.body, diff_files, round_number=sent_round)
     else:
-        result = ReviewService().format_review(comments, body=request.body)
+        result = ReviewService().format_review(comments, body=request.body, round_number=sent_round)
 
     state.result = result.markdown
-    state.shutdown_event.set()
-    log.info("review_submitted", comment_count=result.comment_count)
+    state.events.put_nowait(
+        RoundSubmission(number=sent_round, markdown=result.markdown, comment_count=result.comment_count)
+    )
+
+    if request.end:
+        state.shutdown_event.set()
+    else:
+        state.round += 1
+        state.push({"type": "round", "number": state.round})
+
+    log.info("review_submitted", comment_count=result.comment_count, round=sent_round, ended=request.end)
 
     return SubmitResponse(
         markdown=result.markdown,
         comment_count=result.comment_count,
+        round=sent_round,
+        ended=request.end,
     )
+
+
+def _to_comment(comment: CommentInput) -> Comment:
+    """Take a thread off the wire, turns and all."""
+    return Comment(
+        file=comment.file,
+        side=comment.side,
+        severity=comment.severity,
+        start_line=comment.start_line,
+        end_line=comment.end_line,
+        body=comment.body,
+        turns=[Turn(author=t.author, body=t.body, round=t.round) for t in comment.turns],
+        resolved=comment.resolved,
+        outdated=comment.outdated,
+        quote=comment.quote,
+    )
+
+
+@router.post("/round")
+async def retake_diff(
+    http_request: Request,
+    state: ServerState = Depends(get_state),
+    root: Path | None = Depends(get_repo_root),
+    base: str | None = Depends(get_diff_base),
+) -> RoundResponse:
+    """Take the diff again, after the work a round asked for.
+
+    The reviews on screen are told to reload it rather than being handed the
+    files: a browser has its own view of the diff — which files are folded,
+    whether whitespace counts — and asking it to fetch keeps that one path.
+    """
+    if root is None:
+        raise HTTPException(status_code=404, detail="No repository to retake the diff from")
+
+    files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base)
+    http_request.app.state.diff_files = files
+    state.push({"type": "diff", "round": state.round})
+    log.info("diff_retaken", file_count=len(files), round=state.round)
+
+    return RoundResponse(file_count=len(files), round=state.round)
+
+
+@router.post("/end")
+async def end_review(state: ServerState = Depends(get_state)) -> dict[str, str]:
+    """End a review that has been kept open for rounds."""
+    state.shutdown_event.set()
+    log.info("review_ended", round=state.round)
+    return {"status": "ended"}

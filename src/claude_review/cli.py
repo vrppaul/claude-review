@@ -1,6 +1,7 @@
 """CLI entry point for claude-review."""
 
 import asyncio
+import hashlib
 import json
 import logging
 import socket
@@ -30,6 +31,11 @@ log = structlog.get_logger()
 # How long the review may have no browser attached before the server winds
 # down. A reload drops the socket and takes it again within a moment.
 DISCONNECT_GRACE = 3.0
+
+# Where derived ports live: above the well-known and registered services,
+# below the ephemeral range the kernel hands out.
+STABLE_PORT_FLOOR = 40_000
+STABLE_PORT_CEILING = 60_000
 
 
 def _configure_logging(*, verbose: bool = False) -> None:
@@ -70,6 +76,7 @@ async def _serve(
     root: Path | None = None,
     base: str | None = None,
     open_browser: bool = True,
+    may_fall_back: bool = False,
 ) -> str:
     """Start the review server and return formatted review markdown."""
     state = ServerState(shutdown_event=asyncio.Event())
@@ -78,7 +85,7 @@ async def _serve(
     # Bind before handing the socket to uvicorn: a port clash then surfaces here
     # as an OSError we can explain, instead of uvicorn calling sys.exit() from
     # inside the event loop and printing a traceback.
-    sock = _bind(port)
+    sock = _bind(port, may_fall_back=may_fall_back)
     url = f"http://127.0.0.1:{sock.getsockname()[1]}"
 
     # The default picks uvicorn's older websockets integration, which warns on
@@ -122,11 +129,11 @@ async def _serve(
     return state.result or ""
 
 
-def _bind(port: int) -> socket.socket:
+def _bind(port: int, *, may_fall_back: bool = False) -> socket.socket:
     """Take the loopback port the server will listen on.
 
     Raises:
-        PortUnavailableError: If the port is already taken.
+        PortUnavailableError: If a port that was asked for is already taken.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -134,10 +141,29 @@ def _bind(port: int) -> socket.socket:
         sock.bind(("127.0.0.1", port))
     except OSError as e:
         sock.close()
+        if may_fall_back:
+            # Nobody asked for this port; it was worked out from what is
+            # being reviewed. Something else holding it is not the reader's
+            # problem, and a review on any port beats no review.
+            log.info("derived_port_taken", port=port)
+            return _bind(0)
         msg = f"port {port} is already in use — pass a different --port, or omit it to pick a free one"
         raise PortUnavailableError(msg) from e
     sock.listen(128)
     return sock
+
+
+def _stable_port(root: Path, base: str | None) -> int:
+    """Work out which port this review should come back on.
+
+    A review reopened on the same thing should land on the same origin: an
+    unsent draft lives in the browser's storage, which is keyed by origin,
+    so a fresh port every time throws away the comments of whoever closed
+    the tab and opened the review again.
+    """
+    seed = f"{root.resolve()}\n{base or ''}".encode()
+    span = STABLE_PORT_CEILING - STABLE_PORT_FLOOR
+    return STABLE_PORT_FLOOR + int.from_bytes(hashlib.blake2s(seed, digest_size=4).digest()) % span
 
 
 def _diff_title(repo_path: Path, base: str | None) -> str:
@@ -206,7 +232,9 @@ def _run_review(session: Coroutine[Any, Any, str]) -> None:
 
 @click.group()
 @click.version_option(package_name="claude-review")
-@click.option("--port", default=0, type=int, help="Port to run the server on.")
+@click.option(
+    "--port", default=0, type=int, help="Port to run the server on. Derived from what is reviewed if omitted."
+)
 @click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
 @click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
 @click.pass_context
@@ -244,13 +272,38 @@ def wait_cmd(port: int, seconds: float) -> None:
 @main.command("reply")
 @click.option("--port", required=True, type=int, help="Port the review is served on.")
 @click.option("--thread", required=True, type=str, help="Thread the answer belongs to.")
+@click.option(
+    "--question",
+    type=str,
+    default=None,
+    help="Question being answered, from the event. Omitted, the oldest one still waiting takes it.",
+)
 @click.argument("text", required=True, type=str)
-def reply_cmd(port: int, thread: str, text: str) -> None:
-    """Answer a question the reader asked about a comment thread."""
+def reply_cmd(port: int, thread: str, question: str | None, text: str) -> None:
+    """Answer a question the reader asked about a comment thread.
+
+    A thread can have several questions waiting at once, so naming the one
+    being answered is what puts the answer under it rather than under
+    whatever was asked last.
+    """
     _call(
         f"http://127.0.0.1:{port}/api/reply",
-        payload={"thread_id": thread, "text": text},
+        payload={"thread_id": thread, "question_id": question, "text": text},
     )
+
+
+@main.command("round")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+def round_cmd(port: int) -> None:
+    """Take the diff again, after making the changes a round asked for.
+
+    The reviews on screen reload it, keeping their threads: a comment whose
+    lines survived follows them, and one whose lines are gone is marked
+    outdated rather than pointing at whatever moved into their place.
+    """
+    body = _call(f"http://127.0.0.1:{port}/api/round", payload={})
+    sys.stdout.write(body)
+    sys.stdout.write("\n")
 
 
 @main.command("diff")
@@ -269,14 +322,16 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
             sys.stderr.write("No changes found.\n")
             return ""
         log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.DIFF)
+        asked_for = ctx.obj["port"]
         return await _serve(
             diff_files,
             ReviewMode.DIFF,
-            ctx.obj["port"],
+            asked_for or _stable_port(root, base),
             _diff_title(repo_path, base),
             root=root,
             base=base,
             open_browser=ctx.obj["open_browser"],
+            may_fall_back=not asked_for,
         )
 
     _run_review(_run())
@@ -293,13 +348,15 @@ def files_cmd(ctx: click.Context, paths: tuple[Path, ...]) -> None:
         sys.stderr.write("No content to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.FILES)
+    asked_for = ctx.obj["port"]
     _run_review(
         _serve(
             diff_files,
             ReviewMode.FILES,
-            ctx.obj["port"],
+            asked_for or _stable_port(paths[0], f"files:{len(paths)}"),
             _files_title(list(paths)),
             open_browser=ctx.obj["open_browser"],
+            may_fall_back=not asked_for,
         )
     )
 
@@ -315,12 +372,14 @@ def transcript_cmd(ctx: click.Context, path: Path) -> None:
         sys.stderr.write("No messages to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.TRANSCRIPT)
+    asked_for = ctx.obj["port"]
     _run_review(
         _serve(
             diff_files,
             ReviewMode.TRANSCRIPT,
-            ctx.obj["port"],
+            asked_for or _stable_port(path, "transcript"),
             _transcript_title(path),
             open_browser=ctx.obj["open_browser"],
+            may_fall_back=not asked_for,
         )
     )

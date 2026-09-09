@@ -29,6 +29,7 @@ LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
 
 QUESTION = {
     "thread_id": "comment-1",
+    "question_id": "comment-1",
     "file": "src/a.py",
     "side": "new",
     "start_line": 42,
@@ -72,7 +73,7 @@ async def test_a_question_waits_for_whoever_is_answering(client: AsyncClient, st
     response = await client.post("/api/ask", json=QUESTION)
 
     assert response.status_code == 200
-    assert state.questions.qsize() == 1
+    assert state.events.qsize() == 1
 
 
 async def test_the_answerer_is_handed_the_question(client: AsyncClient) -> None:
@@ -116,6 +117,45 @@ async def test_a_question_needs_something_asked(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> None:
+    """A thread can have several questions waiting, so an answer needs a name for one."""
+    await client.post("/api/ask", json={**QUESTION, "question_id": "turn-2"}, headers=LOCAL_HEADERS)
+
+    event = (await client.get("/api/events?wait_seconds=1", headers=LOCAL_HEADERS)).json()
+
+    assert event["question"]["question_id"] == "turn-2"
+
+
+def test_an_answer_says_which_question_it_answers(state: ServerState) -> None:
+    """Without it the browser files the answer under whatever was asked last."""
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+    client = TestClient(app, base_url=LOCAL_ORIGIN)
+
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        client.post(
+            "/api/reply",
+            json={"thread_id": "comment-1", "question_id": "turn-2", "text": "It moved to config"},
+        )
+
+        assert socket.receive_json() == {
+            "type": "reply",
+            "thread_id": "comment-1",
+            "question_id": "turn-2",
+            "text": "It moved to config",
+        }
+
+
+def test_an_answer_that_names_no_question_still_arrives(state: ServerState) -> None:
+    """A person answering by hand should not have to quote an id."""
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+    client = TestClient(app, base_url=LOCAL_ORIGIN)
+
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        client.post("/api/reply", json={"thread_id": "comment-1", "text": "It moved to config"})
+
+        assert socket.receive_json()["question_id"] is None
+
+
 def test_an_answer_reaches_the_review_on_screen(state: ServerState) -> None:
     app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
     client = TestClient(app, base_url=LOCAL_ORIGIN)
@@ -126,6 +166,7 @@ def test_an_answer_reaches_the_review_on_screen(state: ServerState) -> None:
         assert socket.receive_json() == {
             "type": "reply",
             "thread_id": "comment-1",
+            "question_id": None,
             "text": "Because it moved up",
         }
 

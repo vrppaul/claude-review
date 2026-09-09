@@ -2,7 +2,7 @@
 
 import asyncio
 
-from claude_review.domain.models import ThreadQuestion
+from claude_review.domain.models import RoundSubmission, ThreadQuestion
 
 
 class ServerState:
@@ -22,10 +22,17 @@ class ServerState:
         self._ever_connected = False
         self._alone_since: float | None = None
         self._listeners: set[asyncio.Queue[dict]] = set()
-        # Questions the reader has asked about a thread, waiting to be taken
-        # by whoever is answering. A queue rather than a callback: the asking
-        # and the answering are separate processes.
-        self.questions: asyncio.Queue[ThreadQuestion] = asyncio.Queue()
+        # What the reader has handed over and nobody has taken yet: questions
+        # about a thread, and rounds of the review itself. One queue rather
+        # than two, so they are answered in the order they were sent. A queue
+        # rather than a callback: asking and answering are separate processes.
+        self.events: asyncio.Queue[ThreadQuestion | RoundSubmission] = asyncio.Queue()
+        # Which round is being written. It goes up when one is sent and the
+        # review stays open.
+        self.round = 1
+        # Whether anything is waiting to answer. Rounds are only worth
+        # offering when someone is there to work through them.
+        self.answerer_attached = False
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1
@@ -46,6 +53,13 @@ class ServerState:
         if not self._ever_connected or self._alone_since is None:
             return False
         return now - self._alone_since > grace
+
+    def attach_answerer(self) -> None:
+        """Note that something is waiting to answer, and tell the review."""
+        if self.answerer_attached:
+            return
+        self.answerer_attached = True
+        self.push({"type": "answerer", "attached": True})
 
     def listen(self) -> asyncio.Queue[dict]:
         """Register a socket to receive what the server pushes."""

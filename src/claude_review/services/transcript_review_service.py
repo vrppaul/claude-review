@@ -6,9 +6,21 @@ blockquotes — because Claude won't have the transcript in context when it
 reads the review output.
 """
 
-from claude_review.domain.models import Comment, DiffFile, ReviewResult
+from claude_review.domain.models import Comment, DiffFile, ReviewResult, Turn, TurnAuthor
 
 CONTEXT_LINES = 2
+
+# The agent reading this wrote the change, so its own turns are "You"
+TURN_LABELS = {TurnAuthor.AUTHOR: "You", TurnAuthor.READER: "Reviewer"}
+
+
+def _format_turn(turn: Turn) -> str:
+    """Quote one turn of a thread under the comment that opened it."""
+    label = f"> **{TURN_LABELS[turn.author]}:**"
+    if "\n" not in turn.body:
+        return f"{label} {turn.body}"
+    quoted = "\n".join(f"> {line}" if line else ">" for line in turn.body.splitlines())
+    return f"{label}\n{quoted}"
 
 
 class TranscriptReviewService:
@@ -19,6 +31,7 @@ class TranscriptReviewService:
         comments: list[Comment],
         body: str | None,
         diff_files: list[DiffFile],
+        round_number: int = 1,
     ) -> ReviewResult:
         """Convert comments and optional body into formatted markdown.
 
@@ -32,17 +45,16 @@ class TranscriptReviewService:
             return ReviewResult(markdown="", comment_count=0)
 
         files_by_path = {f.path: f for f in diff_files}
-        parts = ["## Transcript Review\n"]
+        heading = "## Transcript Review" if round_number <= 1 else f"## Transcript Review — round {round_number}"
+        parts = [f"{heading}\n"]
 
         if has_body:
             parts.append(f"{body}\n")
 
         for comment in comments:
             context = self._get_context(files_by_path, comment)
-            if context:
-                parts.append(f"{context}\n{comment.body}\n")
-            else:
-                parts.append(f"{comment.body}\n")
+            said = "\n".join([comment.body, *(_format_turn(turn) for turn in comment.turns)])
+            parts.append(f"{context}\n{said}\n" if context else f"{said}\n")
 
         return ReviewResult(
             markdown="\n".join(parts),

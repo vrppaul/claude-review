@@ -95,11 +95,35 @@ class CommentSeverity(StrEnum):
     BLOCKER = auto()
 
 
+class TurnAuthor(StrEnum):
+    """Who wrote a turn in a thread.
+
+    READER — the person reviewing.
+    AUTHOR — whoever wrote the change and answers for it.
+    """
+
+    READER = auto()
+    AUTHOR = auto()
+
+
+class Turn(BaseModel):
+    """One thing said in a thread after the comment that opened it."""
+
+    author: TurnAuthor
+    body: str
+    round: int = 1
+
+
 class Comment(BaseModel):
-    """A review comment on a line or range of one side of the diff.
+    """A thread hanging on a line or range of one side of the diff.
 
     Line numbers are only meaningful together with the side: a hunk that
     replaces a line has both an old line 42 and a new line 42.
+
+    The comment that opened the thread stays in `body`, and everything said
+    afterwards is a turn. Keeping the opening separate is not ceremony: it is
+    what the anchor, the severity and the whole comment are about, and a
+    review with nothing discussed is still only a body.
     """
 
     file: str
@@ -108,6 +132,14 @@ class Comment(BaseModel):
     start_line: int
     end_line: int
     body: str
+    turns: list[Turn] = []
+    # Settled, by the reader who opened it. Travels with the review, because
+    # an agent reading a settled thread should not act on it again.
+    resolved: bool = False
+    # The lines it hung on are gone from the current diff. Then the anchor
+    # says nothing useful and `quote` is what the thread is about.
+    outdated: bool = False
+    quote: list[str] = []
 
 
 class ReviewResult(BaseModel):
@@ -125,12 +157,31 @@ class ThreadQuestion(BaseModel):
     """
 
     thread_id: str
+    # Which question in that thread. A thread can have more than one waiting
+    # at a time, and an answer has to say which it belongs to.
+    question_id: str
     file: str
     side: LineSide
     start_line: int
     end_line: int
     quote: list[str]
     body: str
+    # What was already said in this thread, so an answer to the third
+    # question is not written as if it were the first
+    history: list[Turn] = []
+
+
+class RoundSubmission(BaseModel):
+    """One round of a review, on its way to whoever answers it.
+
+    A round is everything written since the last one was sent. The review
+    does not end with it: the agent answers, changes what it changed, and
+    the diff is retaken under the same threads.
+    """
+
+    number: int
+    markdown: str
+    comment_count: int
 
 
 class ThreadReply(BaseModel):
@@ -138,3 +189,4 @@ class ThreadReply(BaseModel):
 
     thread_id: str
     text: str
+    question_id: str | None = None

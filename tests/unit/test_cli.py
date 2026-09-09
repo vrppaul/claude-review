@@ -4,7 +4,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from claude_review.cli import _diff_title, _files_title, _transcript_title, main
+from claude_review.cli import _diff_title, _files_title, _stable_port, _transcript_title, main
 
 
 def test_help_shows_usage() -> None:
@@ -64,3 +64,36 @@ def test_files_title_counts_what_was_opened() -> None:
 
 def test_transcript_title_names_the_conversation() -> None:
     assert _transcript_title(Path("/tmp/sessions/abc123.jsonl")) == "Conversation abc123"
+
+
+def test_reopening_the_same_review_lands_on_the_same_port() -> None:
+    """The port is the origin, and the origin is where a draft is kept."""
+    first = _stable_port(Path("/home/dev/project"), "HEAD~3")
+    again = _stable_port(Path("/home/dev/project"), "HEAD~3")
+
+    assert first == again
+
+
+def test_a_different_review_gets_a_different_port() -> None:
+    """Two repositories reopened side by side must not share a draft."""
+    project = _stable_port(Path("/home/dev/project"), None)
+    other = _stable_port(Path("/home/dev/other"), None)
+    since_a_tag = _stable_port(Path("/home/dev/project"), "v1.0.0")
+
+    assert project != other
+    assert project != since_a_tag
+
+
+def test_a_derived_port_stays_out_of_the_way() -> None:
+    """High enough to be free of well-known services and of ephemeral ports."""
+    port = _stable_port(Path("/home/dev/project"), None)
+
+    assert 40000 <= port <= 60000
+
+
+def test_round_subcommand_in_help() -> None:
+    """The half that retakes the diff is discoverable from the CLI."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--help"])
+
+    assert "round" in result.output

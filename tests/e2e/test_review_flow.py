@@ -812,30 +812,89 @@ async def test_comments_survive_a_reload(server_url: ServerFixture, page: Page) 
 async def test_a_question_asked_in_a_thread_is_answered_in_it(server_url: ServerFixture, page: Page) -> None:
     """The whole round trip: asked in the browser, answered from outside it."""
     url, _state = server_url
+    port = int(url.rsplit(":", 1)[1])
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Why the shorter greeting?")
+    # Asking is only offered while something is waiting to answer
+    waiting = asyncio.create_task(_take_question(port, seconds=15))
+    await page.get_by_test_id("end-review").wait_for()
 
-    await page.get_by_test_id("ask-claude").click()
-    await page.get_by_test_id("ask-input").fill("Was the old one used anywhere else?")
-    await page.get_by_test_id("send-question").click()
+    await _first_gutter(page, "main.py").click()
+    await page.get_by_test_id("comment-input").fill("Was the old greeting used anywhere else?")
+    await page.get_by_test_id("ask-now").click()
     await page.get_by_test_id("awaiting-answer").wait_for()
 
-    # Whoever is answering picks the question up out of band
-    port = int(url.rsplit(":", 1)[1])
-    asked = await _take_question(port)
-    assert asked["question"]["body"] == "Was the old one used anywhere else?"
+    asked = await waiting
+    assert asked["question"]["body"] == "Was the old greeting used anywhere else?"
     assert asked["question"]["quote"] == ["def hello():"]
 
-    await _send_reply(port, asked["question"]["thread_id"], "No, it was the only caller.")
+    await _send_reply(
+        port,
+        asked["question"]["thread_id"],
+        asked["question"]["question_id"],
+        "No, it was the only caller.",
+    )
 
     answer = page.get_by_test_id("thread-answer")
     await answer.wait_for()
-    assert (await answer.text_content()).strip() == "No, it was the only caller."
+    assert "No, it was the only caller." in await answer.text_content()
+    # And it is marked as something the reader has not looked at yet
+    await page.get_by_test_id("comment-unread").wait_for()
 
 
-async def _take_question(port: int) -> dict:
+async def test_a_round_is_sent_without_ending_the_review(server_url: ServerFixture, page: Page) -> None:
+    """Rounds appear once something is waiting to answer them."""
+    url, state = server_url
+    port = int(url.rsplit(":", 1)[1])
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    # An agent waiting on the review is what makes a round worth offering
+    waiting = asyncio.create_task(_take_question(port, seconds=15))
+    await page.get_by_test_id("end-review").wait_for()
+
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
+    await page.get_by_test_id("quick-submit").click()
+
+    handed_over = await waiting
+    assert handed_over["type"] == "round"
+    assert "Shorten this greeting" in handed_over["round"]["markdown"]
+
+    # The review is still open, with its threads on screen
+    assert not state.shutdown_event.is_set()
+    await page.wait_for_selector("text=Shorten this greeting")
+
+    await page.get_by_test_id("end-review").click()
+    await page.get_by_test_id("submitted-banner").wait_for()
+    assert state.shutdown_event.is_set()
+
+
+async def test_a_second_round_carries_only_what_is_new(server_url: ServerFixture, page: Page) -> None:
+    """A round is what has been written since the last one, not the review again."""
+    url, _state = server_url
+    port = int(url.rsplit(":", 1)[1])
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    first = asyncio.create_task(_take_question(port, seconds=15))
+    await page.get_by_test_id("end-review").wait_for()
+
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
+    await page.get_by_test_id("quick-submit").click()
+    await first
+
+    second = asyncio.create_task(_take_question(port, seconds=15))
+    await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "And name this properly")
+    await page.get_by_test_id("quick-submit").click()
+
+    round_two = await second
+    assert "round 2" in round_two["round"]["markdown"]
+    assert "And name this properly" in round_two["round"]["markdown"]
+    assert "Shorten this greeting" not in round_two["round"]["markdown"]
+
+
+async def _take_question(port: int, seconds: int = 10) -> dict:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
@@ -844,7 +903,7 @@ async def _take_question(port: int) -> dict:
         "--port",
         str(port),
         "--seconds",
-        "10",
+        str(seconds),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -852,7 +911,7 @@ async def _take_question(port: int) -> dict:
     return json.loads(stdout)
 
 
-async def _send_reply(port: int, thread_id: str, text: str) -> None:
+async def _send_reply(port: int, thread_id: str, question_id: str, text: str) -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
@@ -862,6 +921,8 @@ async def _send_reply(port: int, thread_id: str, text: str) -> None:
         str(port),
         "--thread",
         thread_id,
+        "--question",
+        question_id,
         text,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,

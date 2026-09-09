@@ -139,6 +139,20 @@ def _wait_for_server(port: int, timeout: float = 20.0) -> None:
     raise AssertionError(f"server did not come up on port {port}")
 
 
+def _next_push(socket, kind: str, tries: int = 5) -> dict:
+    """Read pushes until the one being waited for arrives.
+
+    The socket carries more than answers — a review is told when an agent
+    attaches, and when a round retakes the diff.
+    """
+    for _ in range(tries):
+        message = json.loads(socket.recv(timeout=10))
+        if message.get("type") == kind:
+            return message
+    msg = f"no {kind} push arrived"
+    raise AssertionError(msg)
+
+
 def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) -> None:
     """The reader asks in one process; the answer is written in another."""
     (tmp_git_repo / "initial.txt").write_text("changed\n")
@@ -168,6 +182,7 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
                 "/api/ask",
                 {
                     "thread_id": "comment-1",
+                    "question_id": "comment-1",
                     "file": "initial.txt",
                     "side": "new",
                     "start_line": 1,
@@ -191,6 +206,8 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
                     str(port),
                     "--thread",
                     "comment-1",
+                    "--question",
+                    "comment-1",
                     "Because the constant moved to config",
                 ],
                 capture_output=True,
@@ -200,10 +217,10 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
             )
             assert answer.returncode == 0
 
-            pushed = json.loads(review.recv(timeout=10))
-            assert pushed == {
+            assert _next_push(review, "reply") == {
                 "type": "reply",
                 "thread_id": "comment-1",
+                "question_id": "comment-1",
                 "text": "Because the constant moved to config",
             }
     finally:
