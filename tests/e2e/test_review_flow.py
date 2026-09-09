@@ -894,6 +894,88 @@ async def test_a_second_round_carries_only_what_is_new(server_url: ServerFixture
     assert "Shorten this greeting" not in round_two["round"]["markdown"]
 
 
+async def test_the_panel_carries_a_message_to_the_agent_and_back(server_url: ServerFixture, page: Page) -> None:
+    """The whole round trip for what belongs to no line of the diff."""
+    url, _state = server_url
+    port = int(url.rsplit(":", 1)[1])
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    # The panel shows itself once something is there to answer
+    waiting = asyncio.create_task(_take_question(port, seconds=15))
+    await page.get_by_test_id("panel-input").wait_for()
+
+    await page.get_by_test_id("panel-input").fill("Which tests cover this?")
+    await page.get_by_test_id("send-message").click()
+    await page.get_by_test_id("panel-working").wait_for()
+
+    handed_over = await waiting
+    assert handed_over["type"] == "message"
+    assert handed_over["message"]["text"] == "Which tests cover this?"
+
+    await _say(port, handed_over["message"]["message_id"], "The e2e one, and two unit tests.")
+
+    answer = page.get_by_test_id("panel-answer")
+    await answer.wait_for()
+    assert "The e2e one, and two unit tests." in await answer.text_content()
+
+
+async def test_a_message_carries_the_thread_it_points_at(server_url: ServerFixture, page: Page) -> None:
+    """Pointing at a thread saves retyping which line it was, and losing it."""
+    url, _state = server_url
+    port = int(url.rsplit(":", 1)[1])
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    waiting = asyncio.create_task(_take_question(port, seconds=15))
+    await page.get_by_test_id("panel-input").wait_for()
+
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Is this greeting used?")
+
+    await page.get_by_test_id("panel-input").fill("Look again at @")
+    await page.get_by_test_id("thread-option").first.click()
+    await page.get_by_test_id("send-message").click()
+
+    handed_over = await waiting
+    [thread] = handed_over["message"]["threads"]
+    assert thread["body"] == "Is this greeting used?"
+    assert thread["quote"] == ["def hello():"]
+
+
+async def test_the_review_says_when_the_tree_moves_under_it(server_url: ServerFixture, page: Page) -> None:
+    """Said, never acted on: the reader decides when to take the diff again."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    state.push({"type": "changed", "files": 2})
+
+    notice = page.get_by_test_id("tree-moved")
+    await notice.wait_for()
+    assert "2 files have changed" in " ".join((await notice.text_content() or "").split())
+
+    await page.get_by_test_id("dismiss-moved").click()
+    assert await notice.count() == 0
+
+
+async def _say(port: int, message_id: str, text: str) -> None:
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "claude_review",
+        "say",
+        "--port",
+        str(port),
+        "--message",
+        message_id,
+        text,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    assert proc.returncode == 0, stderr.decode()
+
+
 async def _take_question(port: int, seconds: int = 10) -> dict:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
