@@ -19,7 +19,7 @@
 	const label = $derived(lineRangeLabel(comment.side, comment.start_line, comment.end_line));
 </script>
 
-<div id={comment.id} class="bg-warning/10 border border-warning/30 rounded-lg p-4">
+<div id={comment.id} class="px-3 py-2">
 	{#if editing}
 		<CommentBox
 			onSave={handleSave}
@@ -30,17 +30,28 @@
 			endLine={comment.end_line}
 		/>
 	{:else}
-		<div class="flex items-start justify-between gap-2">
-			<div class="flex-1">
-				<span data-testid="comment-line-label" class="text-xs text-warning font-mono font-semibold">{label}</span>
-				<p class="text-sm whitespace-pre-wrap">{comment.body}</p>
-			</div>
-			<div class="flex gap-0.5">
-				<button class="btn btn-ghost btn-xs" onclick={() => (editing = true)}>Edit</button>
-				<button class="btn btn-ghost btn-xs text-error" onclick={() => commentStore.remove(comment.id)}>
+		<div class="cr-comment rounded-r px-4 py-3">
+			<div class="flex items-baseline gap-3">
+				<span data-testid="comment-line-label" class="cr-comment-ref font-mono text-xs">
+					{label}
+				</span>
+				<div class="flex-1"></div>
+				<button
+					data-testid="edit-comment"
+					class="btn btn-ghost btn-xs"
+					onclick={() => (editing = true)}
+				>
+					Edit
+				</button>
+				<button
+					data-testid="delete-comment"
+					class="btn btn-ghost btn-xs text-error"
+					onclick={() => commentStore.remove(comment.id)}
+				>
 					Delete
 				</button>
 			</div>
+			<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
 		</div>
 	{/if}
 </div>

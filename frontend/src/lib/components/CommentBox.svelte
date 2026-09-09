@@ -14,10 +14,10 @@
 
 	let { onSave, onCancel, side, startLine, endLine, initialBody = '' }: Props = $props();
 
-	function lineLabel(): string | null {
-		if (startLine == null) return null;
-		return lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine);
-	}
+	const label = $derived(
+		startLine == null ? null : lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine)
+	);
+
 	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
 	let body = $state(initialBody);
 
@@ -27,12 +27,14 @@
 		textareaEl?.focus();
 	});
 
+	function save() {
+		if (body.trim()) onSave(body.trim());
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
 			e.preventDefault();
-			if (body.trim()) {
-				onSave(body.trim());
-			}
+			save();
 		}
 		if (e.key === 'Escape') {
 			onCancel();
@@ -40,27 +42,31 @@
 	}
 </script>
 
-<div class="bg-base-200 border border-base-300 rounded-lg p-4 space-y-3">
-	{#if lineLabel()}
-		<div class="text-xs text-info font-mono">{lineLabel()}</div>
+<div class="cr-comment space-y-3 rounded-r px-4 py-3">
+	{#if label}
+		<div class="cr-comment-ref font-mono text-xs">{label}</div>
 	{/if}
 	<textarea
 		bind:this={textareaEl}
 		data-testid="comment-input"
-		class="textarea textarea-bordered w-full text-sm min-h-16 focus:outline-none focus:border-info"
-		placeholder="Add your comment... (Ctrl+Enter to save, Esc to cancel)"
+		class="cr-comment-body textarea min-h-20 w-full bg-base-100 focus:outline-none"
+		placeholder="What should change here?"
 		bind:value={body}
 		onkeydown={handleKeydown}
 	></textarea>
-	<div class="flex justify-end gap-2">
-		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>Cancel</button>
+	<div class="flex items-center gap-2">
+		<span class="text-xs text-base-content/50">Ctrl+Enter to save</span>
+		<div class="flex-1"></div>
+		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>
+			Cancel
+		</button>
 		<button
 			class="btn btn-primary btn-xs"
 			data-testid="save-comment"
 			disabled={!body.trim()}
-			onclick={() => onSave(body.trim())}
+			onclick={save}
 		>
-			Comment
+			Save
 		</button>
 	</div>
 </div>

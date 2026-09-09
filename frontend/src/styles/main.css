@@ -253,3 +253,27 @@
 .cr-row-marked .cr-sign {
   color: var(--cr-mark);
 }
+
+/*
+ * Comments.
+ *
+ * A comment is what the review produces, so it is set larger than the code
+ * it annotates, in the reading face rather than the code one, and capped at
+ * a readable measure instead of running the full width of the window. Its
+ * colour is the mark colour — the same one selection uses — because both are
+ * the reader's own marks on someone else's code.
+ */
+.cr-comment {
+  max-width: 72ch;
+  border-left: 2px solid var(--cr-mark);
+  background: var(--cr-mark-tint);
+}
+.cr-comment-body {
+  font-family: var(--font-sans);
+  font-size: var(--cr-comment-size);
+  line-height: var(--cr-comment-leading);
+}
+.cr-comment-ref {
+  color: var(--cr-mark);
+  font-variant-numeric: tabular-nums;
+}
