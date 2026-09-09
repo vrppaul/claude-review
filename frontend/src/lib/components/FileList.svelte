@@ -2,6 +2,7 @@
 	import type { DiffFile, FileStatus } from '$lib/types';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { fileStats } from '$lib/utils/file-stats';
 
 	const statusBadge: Record<FileStatus, { label: string; class: string }> = {
 		modified: { label: 'M', class: 'badge-warning' },
@@ -9,18 +10,6 @@
 		deleted: { label: 'D', class: 'badge-error' },
 		renamed: { label: 'R', class: 'badge-info' }
 	};
-
-	function fileStats(file: DiffFile): { additions: number; deletions: number } {
-		let additions = 0;
-		let deletions = 0;
-		for (const hunk of file.hunks) {
-			for (const line of hunk.lines) {
-				if (line.type === 'add') additions++;
-				else if (line.type === 'delete') deletions++;
-			}
-		}
-		return { additions, deletions };
-	}
 
 	interface TreeNode {
 		name: string;
