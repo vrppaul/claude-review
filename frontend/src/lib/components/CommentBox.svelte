@@ -25,6 +25,9 @@
 
 	onMount(() => {
 		textareaEl?.focus();
+		// Commenting on a line near the bottom of the window opened the composer
+		// mostly below it: focused, but with its buttons out of sight.
+		textareaEl?.scrollIntoView({ block: 'nearest' });
 	});
 
 	function save() {

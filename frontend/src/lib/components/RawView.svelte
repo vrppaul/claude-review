@@ -78,13 +78,15 @@
 		selection.clearCommenting();
 	}
 
-	/** One class decides a row's tint, its edge colour and its gutter colour. */
+	/**
+	 * A row's tint, edge and gutter colour.
+	 *
+	 * Selection is added to the change rather than replacing it: a line keeps
+	 * showing what changed on it while you are writing about it.
+	 */
 	function rowClass(type: DiffLine['type'], marked: boolean): string {
-		if (marked) return 'cr-row-marked';
-		if (!isDiffMode) return '';
-		if (type === 'add') return 'cr-row-add';
-		if (type === 'delete') return 'cr-row-del';
-		return '';
+		const change = !isDiffMode ? '' : type === 'add' ? 'cr-row-add' : type === 'delete' ? 'cr-row-del' : '';
+		return marked ? `${change} cr-row-marked` : change;
 	}
 
 	function linePrefix(type: DiffLine['type']): string {
@@ -172,7 +174,7 @@
 									{linePrefix(line.type)}
 								</td>
 							{/if}
-							<td class="px-2 break-all whitespace-pre-wrap">
+							<td class="cr-code-cell px-2 whitespace-pre-wrap">
 								{@html highlighted[hunkIdx][lineIdx]}
 							</td>
 						</tr>

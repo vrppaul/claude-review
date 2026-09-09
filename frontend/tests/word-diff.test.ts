@@ -24,6 +24,35 @@ describe('wordRanges', () => {
 		expect(added).toEqual([]);
 	});
 
+	it('gives up when most of the line is different', () => {
+		// A rewritten sentence: marking nearly every word is confetti, and the
+		// row colour has already said the line changed
+		const { removed, added } = wordRanges(
+			'tab closes. There is no persistence: closing the tab discards everything.',
+			'tab closes, or when the heartbeat stops arriving for STALE_AFTER_SECONDS.'
+		);
+
+		expect(removed).toEqual([]);
+		expect(added).toEqual([]);
+	});
+
+	it('joins changes separated by only a character or two', () => {
+		const { added } = wordRanges('call(a, b)', 'call(x, y)');
+
+		// "x, y" is one edit to read, not two boxes with a comma between them
+		expect(added).toHaveLength(1);
+		expect(pick('call(x, y)', added)).toEqual(['x, y']);
+	});
+
+	it('keeps changes at opposite ends of a line apart', () => {
+		const { added } = wordRanges(
+			'result = compute(first) + compute(second)',
+			'result = compute(alpha) + compute(second)'
+		);
+
+		expect(added).toHaveLength(1);
+	});
+
 	it('gives up on lines with almost nothing in common', () => {
 		const { removed, added } = wordRanges('return None', 'raise ValueError("boom")');
 

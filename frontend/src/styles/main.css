@@ -278,13 +278,37 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* What actually differs inside a replaced line, over the row's own tint */
-.cr-row-add .cr-word {
-  background: color-mix(in srgb, var(--cr-add-edge) 32%, transparent);
-  border-radius: 2px;
+/*
+ * Code wraps at word boundaries, and only breaks inside a word when a single
+ * token is wider than the column. Breaking at any character, which is what
+ * the two-column layouts used to do, splits identifiers mid-word.
+ */
+.cr-code-cell {
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
-.cr-row-del .cr-word {
-  background: color-mix(in srgb, var(--cr-del-edge) 32%, transparent);
+
+/*
+ * What actually differs inside a replaced line. The colour is set on the row
+ * so selection, which changes the row's background, does not take the marking
+ * with it — while you write about a line you can still see what changed on it.
+ *
+ * The band is painted shorter than the line box on purpose: filling it would
+ * make the marks on consecutive rows touch and read as one solid block.
+ */
+.cr-row-add,
+.cr-cell-add,
+.cr-side-add {
+  --cr-word-bg: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
+}
+.cr-row-del,
+.cr-cell-del,
+.cr-side-del {
+  --cr-word-bg: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
+}
+.cr-word {
+  background: linear-gradient(var(--cr-word-bg), var(--cr-word-bg)) center /
+    100% 1.2em no-repeat;
   border-radius: 2px;
 }
 
@@ -300,16 +324,6 @@
 }
 .cr-cell-marked {
   background: var(--cr-mark-tint);
-}
-.cr-cell-add .cr-word,
-.cr-side-add .cr-word {
-  background: color-mix(in srgb, var(--cr-add-edge) 32%, transparent);
-  border-radius: 2px;
-}
-.cr-cell-del .cr-word,
-.cr-side-del .cr-word {
-  background: color-mix(in srgb, var(--cr-del-edge) 32%, transparent);
-  border-radius: 2px;
 }
 .cr-edge {
   border-left: 2px solid transparent;

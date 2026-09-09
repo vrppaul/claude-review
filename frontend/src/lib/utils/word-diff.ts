@@ -4,9 +4,13 @@ import type { DiffLine } from "$lib/types";
  * marking is worth, and a line that long is rarely read word by word. */
 const MAX_TOKENS = 400;
 
-/** Below this share in common, marking the differences marks almost the whole
- * line, which says less than the row colour already does. */
-const MIN_SIMILARITY = 0.35;
+/** Above this share of a line marked, the marking is confetti and says less
+ * than the row colour already does. */
+const MAX_MARKED_SHARE = 0.5;
+
+/** Two changes this close together read as one edit, and the punctuation or
+ * space between them does not deserve a gap in the marking. */
+const JOIN_WITHIN = 2;
 
 export type Range = [start: number, end: number];
 
@@ -33,14 +37,14 @@ export function wordRanges(
     return none;
   }
 
-  const shared = common.beforeKept.filter(Boolean).length;
-  const longest = Math.max(before.length, after.length);
-  if (longest === 0 || shared / longest < MIN_SIMILARITY) return none;
+  const removed = join(rangesOfChanged(before, common.beforeKept));
+  const added = join(rangesOfChanged(after, common.afterKept));
 
-  return {
-    removed: rangesOfChanged(before, common.beforeKept),
-    added: rangesOfChanged(after, common.afterKept),
-  };
+  const marked = covered(removed) + covered(added);
+  const total = removedText.length + addedText.length;
+  if (total === 0 || marked / total > MAX_MARKED_SHARE) return none;
+
+  return { removed, added };
 }
 
 /**
@@ -150,6 +154,23 @@ function readCharacter(html: string, at: number): string {
   const semicolon = html.indexOf(";", at);
   const isEntity = semicolon !== -1 && semicolon - at <= 8;
   return isEntity ? html.slice(at, semicolon + 1) : html[at];
+}
+
+/** Merge ranges with only a character or two between them. */
+function join(ranges: Range[]): Range[] {
+  if (ranges.length < 2) return ranges;
+
+  const merged: Range[] = [ranges[0]];
+  for (const [start, end] of ranges.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (start - last[1] <= JOIN_WITHIN) last[1] = end;
+    else merged.push([start, end]);
+  }
+  return merged;
+}
+
+function covered(ranges: Range[]): number {
+  return ranges.reduce((total, [start, end]) => total + (end - start), 0);
 }
 
 function longestCommonSubsequence(

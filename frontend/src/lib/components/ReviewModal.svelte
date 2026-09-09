@@ -91,7 +91,7 @@
 				Cancel
 			</button>
 			<button
-				class="btn btn-success btn-sm"
+				class="btn btn-primary btn-sm"
 				data-testid="modal-submit"
 				disabled={!commentStore.hasContent}
 				onclick={onSubmit}

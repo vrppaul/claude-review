@@ -68,10 +68,13 @@
 		return selection.isHighlighted(cellSide(cell), selection.getLineNumber(cell.line));
 	}
 
+	/** Selection is added to the change rather than replacing it, so a line
+	 * keeps showing what changed on it while you are writing about it. */
 	function tint(cell: SplitCell | undefined, type: DiffLine['type']): string {
 		if (!cell) return 'cr-cell-absent';
-		if (marked(cell)) return 'cr-cell-marked';
-		return cell.line.type === type ? `cr-cell-${type === 'add' ? 'add' : 'del'}` : '';
+		const change =
+			cell.line.type === type ? `cr-cell-${type === 'add' ? 'add' : 'del'}` : '';
+		return marked(cell) ? `${change} cr-cell-marked` : change;
 	}
 
 	function edge(cell: SplitCell | undefined, type: DiffLine['type']): string {
@@ -129,7 +132,7 @@
 								{row.left?.line.old_no ?? ''}
 							</td>
 							<td
-								class="border-r border-base-300 px-2 break-all whitespace-pre-wrap {tint(
+								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(
 									row.left,
 									'delete'
 								)}"
@@ -154,7 +157,7 @@
 							>
 								{row.right?.line.new_no ?? ''}
 							</td>
-							<td class="cr-side-add px-2 break-all whitespace-pre-wrap {tint(row.right, 'add')}">
+							<td class="cr-side-add cr-code-cell px-2 whitespace-pre-wrap {tint(row.right, 'add')}">
 								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}
 							</td>
 						</tr>

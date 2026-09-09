@@ -45,7 +45,7 @@
 				</button>
 				<button
 					data-testid="delete-comment"
-					class="btn btn-ghost btn-xs text-error"
+					class="btn btn-ghost btn-xs hover:text-error"
 					onclick={() => commentStore.remove(comment.id)}
 				>
 					Delete
