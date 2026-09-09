@@ -181,3 +181,68 @@ async def test_invalid_base_raises_error(tmp_git_repo: Path, diff_service: DiffS
 
     with pytest.raises(GitError):
         await diff_service.get_diff(tmp_git_repo, base="nonexistent_ref_abc123")
+
+
+async def test_diff_includes_files_with_non_ascii_names(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A file whose name has non-ASCII characters still appears in the review."""
+    (tmp_git_repo / "документ.md").write_text("hello\n")
+    (tmp_git_repo / "café.py").write_text("x = 1\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+
+    paths = {f.path for f in files}
+    assert "документ.md" in paths
+    assert "café.py" in paths
+
+
+async def test_diff_includes_files_with_spaces_in_names(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A file whose name contains spaces still appears in the review."""
+    (tmp_git_repo / "my notes.md").write_text("todo\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+
+    assert "my notes.md" in {f.path for f in files}
+
+
+async def test_diff_reads_content_of_non_ascii_named_file(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """Content of a non-ASCII named file is parsed, not just its path."""
+    (tmp_git_repo / "заметки.txt").write_text("first line\nsecond line\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    contents = [line.content for hunk in by_path["заметки.txt"].hunks for line in hunk.lines]
+    assert contents == ["first line", "second line"]
+
+
+async def test_diff_handles_name_that_looks_like_a_diff_header(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A path containing " b/" does not confuse header parsing."""
+    (tmp_git_repo / "a b").mkdir()
+    (tmp_git_repo / "a b" / "c.py").write_text("x = 1\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+
+    assert "a b/c.py" in {f.path for f in files}
+
+
+async def test_diff_handles_quoted_name(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A path git has to quote is unquoted back to its real name."""
+    (tmp_git_repo / 'weird"name.txt').write_text("content\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+
+    assert 'weird"name.txt' in {f.path for f in files}
+
+
+async def test_deleted_file_keeps_its_path(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A deleted file is named from the "---" side, since "+++" is /dev/null."""
+    (tmp_git_repo / "初期.txt").write_text("content\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add file")
+    (tmp_git_repo / "初期.txt").unlink()
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert "初期.txt" in by_path
+    assert by_path["初期.txt"].status == FileStatus.DELETED

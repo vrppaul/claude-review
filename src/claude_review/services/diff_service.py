@@ -6,6 +6,9 @@ from pathlib import Path
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 from claude_review.domain.protocols import GitRepositoryProtocol
 
+# Git escapes these as two characters inside a quoted path
+_CONTROL_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, '"': 34, "\\": 92}
+
 
 class DiffService:
     """Parses raw git diff output into structured domain models."""
@@ -38,23 +41,102 @@ class DiffService:
     def _parse_file_chunk(self, chunk: str) -> DiffFile | None:
         """Parse a single file's diff chunk."""
         lines = chunk.split("\n")
+        header = self._header_lines(lines)
 
-        path = self._extract_path(lines[0])
+        path = self._extract_path(header)
         if path is None:
             return None
 
-        status = self._detect_status(lines)
+        status = self._detect_status(header)
         hunks = self._parse_hunks(lines)
 
         return DiffFile(path=path, status=status, hunks=hunks)
 
-    def _extract_path(self, header_line: str) -> str | None:
-        """Extract file path from the diff header line."""
-        # Header format: "a/path/to/file b/path/to/file"
+    def _header_lines(self, lines: list[str]) -> list[str]:
+        """Return the metadata lines that precede the first hunk.
+
+        Hunk content carries a leading +/-/space, so a removed line reading
+        "-- x" arrives as "--- x" and would otherwise look like a path marker.
+        """
+        for i, line in enumerate(lines):
+            if line.startswith("@@"):
+                return lines[:i]
+        return lines
+
+    def _extract_path(self, lines: list[str]) -> str | None:
+        """Extract the file path from a file's diff chunk.
+
+        The "a/x b/x" header holds both paths on one line with nothing but a
+        space between them, so a name containing " b/" splits it wrongly. The
+        "+++"/"---" markers carry exactly one path each and are preferred;
+        the "a/x b/x" line is only the fallback for chunks that have neither,
+        such as binary files and mode-only changes.
+        """
+        for line in lines:
+            if line.startswith("+++ ") and not line.startswith("+++ /dev/null"):
+                return self._strip_prefix(self._read_marker_path(line[4:]))
+            # A deleted file has "+++ /dev/null", so its name lives on the "---" side
+            if line.startswith("--- ") and not line.startswith("--- /dev/null"):
+                return self._strip_prefix(self._read_marker_path(line[4:]))
+
+        return self._extract_header_path(lines[0])
+
+    def _read_marker_path(self, value: str) -> str:
+        """Read one path from a "---"/"+++" marker.
+
+        Git appends a tab when the path would otherwise be ambiguous, and
+        quotes the whole path when it holds characters that need escaping.
+        """
+        return self._unquote(value.split("\t")[0])
+
+    def _strip_prefix(self, path: str) -> str:
+        """Drop the "a/" or "b/" side prefix git puts on diff paths."""
+        if path.startswith(("a/", "b/")):
+            return path[2:]
+        return path
+
+    def _extract_header_path(self, header_line: str) -> str | None:
+        """Extract the new path from the "a/x b/x" header line."""
+        quoted = re.match(r'("(?:[^"\\]|\\.)*") ("(?:[^"\\]|\\.)*")$', header_line)
+        if quoted:
+            return self._strip_prefix(self._unquote(quoted.group(2)))
+
         match = re.match(r"a/(.+?) b/(.+)", header_line)
         if match:
             return match.group(2)
         return None
+
+    def _unquote(self, value: str) -> str:
+        """Decode git's C-style path quoting: '"\\320\\266.py"' -> 'ж.py'.
+
+        Git quotes a path when it contains characters it must escape, writing
+        every byte outside plain ASCII as an octal escape. Decoding collects
+        the raw bytes first, because one character can span several escapes.
+        """
+        if not (value.startswith('"') and value.endswith('"') and len(value) >= 2):
+            return value
+
+        body = value[1:-1]
+        out = bytearray()
+        i = 0
+        while i < len(body):
+            if body[i] != "\\" or i + 1 >= len(body):
+                out.extend(body[i].encode())
+                i += 1
+                continue
+
+            escape = body[i + 1]
+            if escape in _CONTROL_ESCAPES:
+                out.append(_CONTROL_ESCAPES[escape])
+                i += 2
+            elif escape.isdigit():
+                out.append(int(body[i + 1 : i + 4], 8))
+                i += 4
+            else:
+                out.extend(escape.encode())
+                i += 2
+
+        return out.decode("utf-8", errors="replace")
 
     def _detect_status(self, lines: list[str]) -> FileStatus:
         """Detect file status from diff metadata lines."""
