@@ -54,6 +54,27 @@ a conversation with Claude inside it.
   from 2.0s to 0.19s to add a comment
 - Adds `websockets`, which uvicorn needs to serve a socket at all
 
+### Security
+- **The server answers its own page and nothing else.** It had no `Host`
+  check, so a page on any domain could point that domain at 127.0.0.1 and
+  read the whole working tree and any file in the repository; and the
+  same-origin policy never applies to WebSockets, so any page the developer
+  had open could connect to the session socket, read what the server pushed,
+  and throw away an unsent review by connecting and disconnecting once
+- **A previewed markdown file is read, not run.** The preview rendered raw
+  HTML out of the repository under review, so `<img onerror>` in a
+  contributor's file ran script with the review's own origin — able to read
+  the diff, read repository files, and submit comments of its own for an
+  agent to act on
+- **Expanding context is scoped to the files in the review**, rather than to
+  anything in the repository, and no longer names the checkout's location in
+  its errors
+- **A filename can no longer write its own heading in the review.** Git
+  quotes odd paths and the parser decodes them faithfully, so a name
+  containing a newline could forge a whole section — a fabricated blocker in
+  what the agent reads
+- The page states what it may load and refuses to be framed
+
 ### Fixed
 - **Files with non-ASCII names vanished from the review.** Git quotes such
   paths and the header parser did not expect it, so the file was dropped with
@@ -67,6 +88,25 @@ a conversation with Claude inside it.
 - A busy port explains itself instead of printing a traceback
 - Code no longer breaks mid-identifier when a line is too long for its column
 - The composer opens in view when commenting near the bottom of the window
+- Reading the diff no longer leaves a git object in the repository for every
+  untracked file — 200 files used to leave 1.4 MB behind
+- Expanding a hunk's context works from a subdirectory, not only from the
+  repository root, and reading a window no longer loads the whole file: a
+  134 MB file cost 454 MB of memory and stalled the server for two seconds
+- Ignoring whitespace can be turned back off
+- A comment appeared twice in the split layout when it sat on an unchanged
+  line, and one click on a checkbox killed every keyboard shortcut
+- A restored draft could hand out a comment id twice, which made two
+  comments edit and delete as one
+- Comment navigation reaches a comment in a file whose rows are not built yet
+- A summary with no inline comments can be sent from the header, as it always
+  could from the dialog
+- `wait` and `reply` explain a missing or refusing server instead of printing
+  a traceback, and `wait` is told when the review ends
+- With `--no-open`, the review's URL is printed rather than left unsaid
+- A copied file is shown as a new one, not as a modified one with no lines
+- In files mode a file is named the way the reader names it, not by its full
+  path
 
 ## [1.0.1] - 2026-07-12
 
