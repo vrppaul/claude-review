@@ -71,3 +71,40 @@ describe('SubmitBar', () => {
 		expect(btn.disabled).toBe(false);
 	});
 });
+
+describe('the review header', () => {
+	beforeEach(() => {
+		commentStore.clear();
+		diffStore.clear();
+	});
+
+	it('says what is under review', () => {
+		diffStore.setFiles([mockFile], 'diff', 'claude-review: uncommitted changes');
+
+		const { getByTestId } = render(SubmitBar);
+
+		expect(getByTestId('review-title').textContent?.trim()).toBe(
+			'claude-review: uncommitted changes'
+		);
+	});
+
+	it('leaves the title out when the server sent none', () => {
+		diffStore.setFiles([mockFile], 'diff');
+
+		const { queryByTestId } = render(SubmitBar);
+
+		expect(queryByTestId('review-title')).toBeNull();
+	});
+
+	it('offers comment navigation only once there is a comment', async () => {
+		diffStore.setFiles([mockFile], 'diff');
+
+		const { queryByTestId, rerender } = render(SubmitBar);
+		expect(queryByTestId('next-comment')).toBeNull();
+
+		commentStore.add('test.py', 'new', 1, 1, 'fix');
+		await rerender({});
+
+		expect(queryByTestId('next-comment')).toBeTruthy();
+	});
+});

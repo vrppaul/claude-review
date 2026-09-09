@@ -13,7 +13,7 @@
 
 <button
 	data-testid="theme-toggle"
-	class="btn btn-ghost btn-sm btn-circle fixed top-2 right-2 z-50"
+	class="btn btn-circle btn-ghost btn-sm"
 	onclick={() => themeStore.cycle()}
 	{title}
 	aria-label={title}

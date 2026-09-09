@@ -10,6 +10,7 @@ class DiffResponse(BaseModel):
 
     files: list[DiffFile]
     mode: ReviewMode
+    title: str
 
 
 class CommentInput(BaseModel):

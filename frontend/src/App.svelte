@@ -4,7 +4,6 @@
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -44,10 +43,11 @@
 		</div>
 	</div>
 {:else}
-	<ThemeToggle />
-	<div class="flex h-screen pb-14">
-		<FileList />
-		<DiffView />
+	<div class="flex h-screen flex-col">
+		<SubmitBar />
+		<div class="flex min-h-0 flex-1">
+			<FileList />
+			<DiffView />
+		</div>
 	</div>
-	<SubmitBar />
 {/if}

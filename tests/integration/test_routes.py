@@ -52,7 +52,12 @@ def server_state() -> ServerState:
 
 @pytest.fixture
 async def client(mock_diff_files: list[DiffFile], server_state: ServerState):
-    app = create_app(diff_files=mock_diff_files, state=server_state, mode=ReviewMode.DIFF)
+    app = create_app(
+        diff_files=mock_diff_files,
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        title="test-repo: uncommitted changes",
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 
@@ -361,3 +366,11 @@ async def test_transcript_mode_review_round_trip(
     assert "> can you refactor the auth module?" in result["markdown"]
     assert "Wrong approach" in result["markdown"]
     assert server_state.shutdown_event.is_set()
+
+
+async def test_diff_response_says_what_is_under_review(client: AsyncClient) -> None:
+    """The UI can name the thing being reviewed, not just list its files."""
+    response = await client.get("/api/diff")
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "test-repo: uncommitted changes"

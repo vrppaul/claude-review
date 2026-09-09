@@ -118,7 +118,7 @@ async def test_review_flow_add_comment_and_submit(server_url: ServerFixture, pag
     await _click_line_and_comment(page, line_cell, "This needs fixing")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "This needs fixing" in state.result
@@ -140,7 +140,7 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
     await page.wait_for_selector("text=Refactor this range")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Refactor this range" in state.result
@@ -160,7 +160,7 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "Comment on new file")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "main.py" in state.result
@@ -195,7 +195,7 @@ async def test_review_body_only_via_modal(server_url: ServerFixture, page: Page)
     await modal_textarea.fill("Wrong approach, reconsider the design.")
 
     await page.get_by_test_id("modal-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Wrong approach" in state.result
@@ -217,7 +217,7 @@ async def test_review_body_with_inline_comment_via_modal(server_url: ServerFixtu
     await modal_textarea.fill("Generally good.")
 
     await page.get_by_test_id("modal-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Generally good." in state.result
@@ -317,7 +317,7 @@ async def test_files_mode_comment_and_submit(files_mode_server: ServerFixture, p
     await _click_line_and_comment(page, line_cell, "Plan needs more detail")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Plan needs more detail" in state.result
@@ -341,7 +341,7 @@ async def test_files_mode_comments_across_multiple_files(files_mode_server: Serv
     await _click_line_and_comment(page, line_cell, "Comment on notes")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Comment on plan" in state.result
@@ -414,7 +414,7 @@ async def test_commenting_works_in_side_by_side(files_mode_server: ServerFixture
     await _click_line_and_comment(page, _first_gutter(page, "plan.md"), "Side-by-side comment")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Side-by-side comment" in state.result
@@ -533,7 +533,7 @@ async def test_transcript_mode_comment_and_submit(transcript_mode_server: Server
     await _click_line_and_comment(page, line_cell, "Wrong approach")
 
     await page.get_by_test_id("quick-submit").click()
-    await page.wait_for_selector("text=Review submitted")
+    await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
     assert "Transcript Review" in state.result

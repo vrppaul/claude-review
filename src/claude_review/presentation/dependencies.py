@@ -14,3 +14,7 @@ def get_diff_files(request: Request) -> list[DiffFile]:
 
 def get_review_mode(request: Request) -> ReviewMode:
     return request.app.state.review_mode
+
+
+def get_review_title(request: Request) -> str:
+    return request.app.state.review_title

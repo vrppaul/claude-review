@@ -14,12 +14,16 @@ def create_app(
     diff_files: list[DiffFile],
     state: ServerState,
     mode: ReviewMode,
+    title: str = "",
 ) -> FastAPI:
     app = FastAPI(title="Claude Review")
 
     app.state.diff_files = diff_files
     app.state.server = state
     app.state.review_mode = mode
+    # Names what is under review, so the UI can say so rather than only
+    # listing files: which repository, and against what
+    app.state.review_title = title
 
     app.include_router(router)
 

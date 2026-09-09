@@ -54,12 +54,13 @@ async def _serve(
     diff_files: list[DiffFile],
     mode: ReviewMode,
     port: int,
+    title: str,
     *,
     open_browser: bool = True,
 ) -> str:
     """Start the review server and return formatted review markdown."""
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state, mode=mode)
+    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title)
 
     # Bind before handing the socket to uvicorn: a port clash then surfaces here
     # as an OSError we can explain, instead of uvicorn calling sys.exit() from
@@ -122,6 +123,21 @@ def _bind(port: int) -> socket.socket:
     return sock
 
 
+def _diff_title(repo_path: Path, base: str | None) -> str:
+    """Name the repository under review and what it is compared against."""
+    where = repo_path.name or str(repo_path)
+    against = f"changes since {base}" if base else "uncommitted changes"
+    return f"{where}: {against}"
+
+
+def _files_title(paths: list[Path]) -> str:
+    return f"{len(paths)} file{'' if len(paths) == 1 else 's'}"
+
+
+def _transcript_title(path: Path) -> str:
+    return f"Conversation {path.stem}"
+
+
 def _open_browser(url: str) -> None:
     webbrowser.open_new(url)
 
@@ -175,7 +191,13 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
             sys.stderr.write("No changes found.\n")
             return ""
         log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.DIFF)
-        return await _serve(diff_files, ReviewMode.DIFF, ctx.obj["port"], open_browser=ctx.obj["open_browser"])
+        return await _serve(
+            diff_files,
+            ReviewMode.DIFF,
+            ctx.obj["port"],
+            _diff_title(repo_path, base),
+            open_browser=ctx.obj["open_browser"],
+        )
 
     _run_review(_run())
 
@@ -191,7 +213,15 @@ def files_cmd(ctx: click.Context, paths: tuple[Path, ...]) -> None:
         sys.stderr.write("No content to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.FILES)
-    _run_review(_serve(diff_files, ReviewMode.FILES, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))
+    _run_review(
+        _serve(
+            diff_files,
+            ReviewMode.FILES,
+            ctx.obj["port"],
+            _files_title(list(paths)),
+            open_browser=ctx.obj["open_browser"],
+        )
+    )
 
 
 @main.command("transcript")
@@ -205,4 +235,12 @@ def transcript_cmd(ctx: click.Context, path: Path) -> None:
         sys.stderr.write("No messages to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.TRANSCRIPT)
-    _run_review(_serve(diff_files, ReviewMode.TRANSCRIPT, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))
+    _run_review(
+        _serve(
+            diff_files,
+            ReviewMode.TRANSCRIPT,
+            ctx.obj["port"],
+            _transcript_title(path),
+            open_browser=ctx.obj["open_browser"],
+        )
+    )

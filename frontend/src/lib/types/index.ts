@@ -31,6 +31,7 @@ export interface DiffFile {
 export interface DiffResponse {
   files: DiffFile[];
   mode: ReviewMode;
+  title: string;
 }
 
 export interface Comment {

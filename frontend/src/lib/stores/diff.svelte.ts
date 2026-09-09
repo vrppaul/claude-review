@@ -11,6 +11,7 @@ let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
 let mode = $state<ReviewMode>("diff");
 let contentViewMode = $state<ContentViewMode>("raw");
+let title = $state("");
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
 // a folded file can still be unread, and a viewed one can be reopened.
@@ -33,6 +34,10 @@ export const diffStore = {
   },
   get contentViewMode(): ContentViewMode {
     return contentViewMode;
+  },
+  /** What is under review — which repository, and against what. */
+  get title(): string {
+    return title;
   },
   get viewedCount(): number {
     return viewed.size;
@@ -60,9 +65,10 @@ export const diffStore = {
     setMembership(collapsed, path, !collapsed.has(path));
   },
 
-  setFiles(newFiles: DiffFile[], newMode: ReviewMode) {
+  setFiles(newFiles: DiffFile[], newMode: ReviewMode, newTitle = "") {
     files = newFiles;
     mode = newMode;
+    title = newTitle;
     selectedPath = newFiles.length > 0 ? newFiles[0].path : null;
     viewed.clear();
     collapsed.clear();
@@ -82,6 +88,7 @@ export const diffStore = {
     selectedPath = null;
     mode = "diff";
     contentViewMode = "raw";
+    title = "";
     viewed.clear();
     collapsed.clear();
   },
@@ -92,7 +99,7 @@ export const diffStore = {
       throw new Error(`Failed to fetch diff: ${response.status}`);
     }
     const data: DiffResponse = await response.json();
-    this.setFiles(data.files, data.mode);
+    this.setFiles(data.files, data.mode, data.title);
   },
 };
 
