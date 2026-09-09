@@ -226,25 +226,36 @@ async def test_review_body_with_inline_comment_via_modal(server_url: ServerFixtu
     assert "Fix this line" in state.result
 
 
-async def test_keyboard_shortcut_respects_disabled_button(server_url: ServerFixture, page: Page) -> None:
-    """Ctrl+Shift+Enter does nothing when there are no inline comments, even if body was typed."""
+async def test_nothing_written_means_nothing_to_send(server_url: ServerFixture, page: Page) -> None:
+    """Neither the button nor the shortcut sends an empty review."""
     url, state = server_url
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    # Type a body via modal, then close it
-    await page.get_by_test_id("finish-review").click()
-    modal_textarea = page.get_by_test_id("review-body")
-    await modal_textarea.fill("Some general feedback")
-    await page.keyboard.press("Escape")
+    assert await page.get_by_test_id("quick-submit").is_disabled()
 
-    # Quick submit button should still be disabled (no inline comments)
-    submit_btn = page.get_by_test_id("quick-submit")
-    assert await submit_btn.is_disabled()
-
-    # Ctrl+Shift+Enter should NOT submit
     await page.keyboard.press("Control+Shift+Enter")
     assert state.result is None
+
+
+async def test_a_summary_on_its_own_is_a_review(server_url: ServerFixture, page: Page) -> None:
+    """The header and the dialog agree on what counts as something to send."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("finish-review").click()
+    await page.get_by_test_id("review-body").fill("The shape is right; the naming needs work.")
+    await page.keyboard.press("Escape")
+
+    submit = page.get_by_test_id("quick-submit")
+    assert not await submit.is_disabled()
+
+    await submit.click()
+    await page.get_by_test_id("submitted-banner").wait_for()
+
+    assert state.result is not None
+    assert "The shape is right" in state.result
 
 
 async def test_modal_esc_closes_and_preserves_body(server_url: ServerFixture, page: Page) -> None:
