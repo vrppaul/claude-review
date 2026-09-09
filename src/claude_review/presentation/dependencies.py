@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import Request
 
 from claude_review.domain.models import DiffFile, ReviewMode
@@ -18,3 +20,7 @@ def get_review_mode(request: Request) -> ReviewMode:
 
 def get_review_title(request: Request) -> str:
     return request.app.state.review_title
+
+
+def get_repo_root(request: Request) -> Path | None:
+    return request.app.state.repo_root

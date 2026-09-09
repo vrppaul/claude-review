@@ -1,13 +1,16 @@
 <script lang="ts">
 	import type { DiffFile, DiffLine, LineSide } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
+	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
+	import HunkGap from './HunkGap.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -16,16 +19,17 @@
 
 	let { file, language }: Props = $props();
 
+	const shown = $derived(withRevealed(file, expansionStore.forFile(file.path)));
 	const highlighted = $derived(
-		highlightFile(file, language).map((hunkHtml, i) =>
-			applyWordMarks(file.hunks[i].lines, hunkHtml)
+		highlightFile(shown, language).map((hunkHtml, i) =>
+			applyWordMarks(shown.hunks[i].lines, hunkHtml)
 		)
 	);
 	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
-	const rowsPerHunk = $derived(file.hunks.map((hunk) => buildSplitRows(hunk.lines)));
+	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
 	const hunkOffsets = $derived(
-		file.hunks.reduce<number[]>((acc, hunk, i) => {
-			acc.push(i === 0 ? 0 : acc[i - 1] + file.hunks[i - 1].lines.length);
+		shown.hunks.reduce<number[]>((acc, hunk, i) => {
+			acc.push(i === 0 ? 0 : acc[i - 1] + shown.hunks[i - 1].lines.length);
 			return acc;
 		}, [])
 	);
@@ -78,8 +82,9 @@
 </script>
 
 <div data-testid="split-view">
-	{#each file.hunks as hunk, hunkIdx (hunkIdx)}
+	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
+			<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
 			{#if hunk.header}
 				<div
 					class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45"

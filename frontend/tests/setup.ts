@@ -28,7 +28,10 @@ class ImmediateIntersectionObserver implements IntersectionObserver {
 	takeRecords = vi.fn(() => []);
 }
 
-vi.stubGlobal('IntersectionObserver', ImmediateIntersectionObserver);
+// Assigned rather than stubbed: a test that calls vi.unstubAllGlobals()
+// to drop its own fetch mock would otherwise take this away with it.
+globalThis.IntersectionObserver =
+	ImmediateIntersectionObserver as unknown as typeof IntersectionObserver;
 
 if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();

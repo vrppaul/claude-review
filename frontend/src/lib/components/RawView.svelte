@@ -1,13 +1,16 @@
 <script lang="ts">
 	import type { DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
+	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
+	import HunkGap from './HunkGap.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -21,9 +24,12 @@
 	// Markup per hunk per line, computed once per file rather than per row.
 	// A row coloured end to end says a line changed but not where, so what
 	// actually differs inside a replaced line is marked on top of the syntax.
+	// Lines revealed from the file sit inside the hunk above which they were
+	// read, so numbering, highlighting and anchoring need no special case.
+	const shown = $derived(withRevealed(file, expansionStore.forFile(file.path)));
 	const highlighted = $derived(
-		highlightFile(file, language).map((hunkHtml, i) =>
-			isDiffMode ? applyWordMarks(file.hunks[i].lines, hunkHtml) : hunkHtml
+		highlightFile(shown, language).map((hunkHtml, i) =>
+			isDiffMode ? applyWordMarks(shown.hunks[i].lines, hunkHtml) : hunkHtml
 		)
 	);
 	// Comments indexed by the row they belong to, rather than scanned per line
@@ -46,8 +52,8 @@
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks
 	const hunkOffsets = $derived(
-		file.hunks.reduce<number[]>((acc, hunk, i) => {
-			acc.push(i === 0 ? 0 : acc[i - 1] + file.hunks[i - 1].lines.length);
+		shown.hunks.reduce<number[]>((acc, hunk, i) => {
+			acc.push(i === 0 ? 0 : acc[i - 1] + shown.hunks[i - 1].lines.length);
 			return acc;
 		}, [])
 	);
@@ -104,8 +110,11 @@
 		</div>
 	{/if}
 
-	{#each file.hunks as hunk, hunkIdx (hunkIdx)}
+	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
+			{#if isDiffMode}
+				<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
+			{/if}
 			{#if isDiffMode && hunk.header}
 				<div class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45">
 					{hunk.header}

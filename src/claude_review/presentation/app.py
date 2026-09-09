@@ -15,6 +15,7 @@ def create_app(
     state: ServerState,
     mode: ReviewMode,
     title: str = "",
+    root: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Claude Review")
 
@@ -24,6 +25,9 @@ def create_app(
     # Names what is under review, so the UI can say so rather than only
     # listing files: which repository, and against what
     app.state.review_title = title
+    # The tree that expanding a hunk's context may read from. None in modes
+    # whose content did not come from a repository.
+    app.state.repo_root = root
 
     app.include_router(router)
 

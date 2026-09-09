@@ -7,3 +7,7 @@ class GitError(Exception):
 
 class PortUnavailableError(Exception):
     """Raised when the review server cannot take the requested port."""
+
+
+class FileWindowError(Exception):
+    """Raised when a requested window of file content cannot be served."""

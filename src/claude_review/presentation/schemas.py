@@ -42,3 +42,11 @@ class SubmitResponse(BaseModel):
 
     markdown: str
     comment_count: int
+
+
+class FileWindowResponse(BaseModel):
+    """Response for GET /api/file-window."""
+
+    start: int
+    lines: list[str]
+    total: int

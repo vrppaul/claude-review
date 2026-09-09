@@ -374,3 +374,47 @@ async def test_diff_response_says_what_is_under_review(client: AsyncClient) -> N
 
     assert response.status_code == 200
     assert response.json()["title"] == "test-repo: uncommitted changes"
+
+
+@pytest.fixture
+async def repo_backed_client(mock_diff_files: list[DiffFile], server_state: ServerState, tmp_path: Path):
+    """A client whose server can read files, as diff mode's can."""
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 31)))
+    app = create_app(
+        diff_files=mock_diff_files,
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        title="test-repo: uncommitted changes",
+        root=tmp_path,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+async def test_file_window_serves_lines_the_diff_left_out(repo_backed_client: AsyncClient) -> None:
+    """Context around a hunk can be widened without reloading the review."""
+    response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 4, "end": 6})
+
+    assert response.status_code == 200
+    assert response.json() == {"start": 4, "lines": ["line 4", "line 5", "line 6"], "total": 30}
+
+
+async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: AsyncClient) -> None:
+    response = await repo_backed_client.get("/api/file-window", params={"path": "../outside.txt", "start": 1, "end": 1})
+
+    assert response.status_code == 400
+
+
+async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: AsyncClient) -> None:
+    response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 0, "end": 3})
+
+    assert response.status_code == 422
+
+
+async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -> None:
+    """Files and transcript modes have no tree to widen context from."""
+    response = await client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
+
+    assert response.status_code == 404
