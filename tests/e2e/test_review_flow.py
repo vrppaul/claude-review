@@ -741,3 +741,22 @@ async def test_typing_a_comment_does_not_trigger_shortcuts(server_url: ServerFix
     await page.keyboard.type("just keep vjunk pn")
 
     assert await page.get_by_test_id("comment-input").input_value() == "just keep vjunk pn"
+
+
+async def test_a_suggestion_reaches_claude_as_a_replacement(server_url: ServerFixture, page: Page) -> None:
+    """Saying what the code should be beats describing it."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await _first_gutter(page, "main.py").click()
+    await page.get_by_test_id("comment-input").fill("Return the greeting we agreed on")
+    await page.get_by_test_id("suggest-change").click()
+
+    await page.get_by_test_id("save-comment").click()
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("submitted-banner").wait_for()
+
+    assert state.result is not None
+    assert "```suggestion" in state.result
+    assert "Return the greeting we agreed on" in state.result

@@ -55,6 +55,21 @@
 		selection.commentOnLine(line, index);
 	}
 
+	/** The current text of the lines being commented on. */
+	const selectedText = $derived.by(() => {
+		const at = selection.commentingAt;
+		if (!at) return undefined;
+		return shown.hunks
+			.flatMap((hunk) => hunk.lines)
+			.filter(
+				(line) =>
+					selection.lineSide(line) === at.side &&
+					selection.getLineNumber(line) >= at.line &&
+					selection.getLineNumber(line) <= at.endLine
+			)
+			.map((line) => line.content);
+	});
+
 	function handleSaveComment(body: string) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
@@ -203,6 +218,7 @@
 												side={selection.commentingAt?.side}
 												startLine={selection.commentingAt?.line}
 												endLine={selection.commentingAt?.endLine}
+												suggestFrom={selectedText}
 											/>
 										</div>
 									{/if}

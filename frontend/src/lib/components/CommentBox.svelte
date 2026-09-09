@@ -3,6 +3,8 @@
 	import type { LineSide } from '$lib/types';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 
+	const SUGGESTION_FENCE = '```suggestion';
+
 	interface Props {
 		onSave: (body: string) => void;
 		onCancel: () => void;
@@ -10,9 +12,19 @@
 		startLine?: number;
 		endLine?: number;
 		initialBody?: string;
+		/** The lines being commented on, so a suggestion can start from them. */
+		suggestFrom?: string[];
 	}
 
-	let { onSave, onCancel, side, startLine, endLine, initialBody = '' }: Props = $props();
+	let {
+		onSave,
+		onCancel,
+		side,
+		startLine,
+		endLine,
+		initialBody = '',
+		suggestFrom
+	}: Props = $props();
 
 	const label = $derived(
 		startLine == null ? null : lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine)
@@ -32,6 +44,24 @@
 
 	function save() {
 		if (body.trim()) onSave(body.trim());
+	}
+
+	/**
+	 * Start a replacement for the commented lines.
+	 *
+	 * Saying what the code should be instead beats describing it: Claude gets
+	 * something it can apply rather than something it has to interpret.
+	 */
+	function suggest() {
+		if (!suggestFrom || body.includes(SUGGESTION_FENCE)) return;
+		const block = `${SUGGESTION_FENCE}\n${suggestFrom.join('\n')}\n\`\`\``;
+		body = body.trim() ? `${body.trim()}\n\n${block}` : block;
+		requestAnimationFrame(() => {
+			textareaEl?.focus();
+			// Land in the block itself rather than after it
+			const at = body.indexOf(SUGGESTION_FENCE) + SUGGESTION_FENCE.length + 1;
+			textareaEl?.setSelectionRange(at, body.length - 4);
+		});
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -58,6 +88,16 @@
 		onkeydown={handleKeydown}
 	></textarea>
 	<div class="flex items-center gap-2">
+		{#if suggestFrom && suggestFrom.length > 0}
+			<button
+				class="btn btn-ghost btn-xs"
+				data-testid="suggest-change"
+				disabled={body.includes(SUGGESTION_FENCE)}
+				onclick={suggest}
+			>
+				Suggest a change
+			</button>
+		{/if}
 		<span class="cr-muted text-xs">Ctrl+Enter to save</span>
 		<div class="flex-1"></div>
 		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>

@@ -62,3 +62,60 @@ describe('CommentBox', () => {
 		expect(input.value).toBe('existing text');
 	});
 });
+
+describe('suggesting a replacement', () => {
+	it('starts the suggestion from the lines being commented on', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = render(CommentBox, {
+			props: {
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				startLine: 3,
+				endLine: 4,
+				suggestFrom: ['    if x:', '        return 1']
+			}
+		});
+
+		await user.click(getByTestId('suggest-change'));
+
+		const value = (getByTestId('comment-input') as HTMLTextAreaElement).value;
+		expect(value).toBe('```suggestion\n    if x:\n        return 1\n```');
+	});
+
+	it('keeps what was already written above the suggestion', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = render(CommentBox, {
+			props: {
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				startLine: 3,
+				suggestFrom: ['x = 1']
+			}
+		});
+
+		await user.type(getByTestId('comment-input'), 'Name it after the unit');
+		await user.click(getByTestId('suggest-change'));
+
+		const value = (getByTestId('comment-input') as HTMLTextAreaElement).value;
+		expect(value).toBe('Name it after the unit\n\n```suggestion\nx = 1\n```');
+	});
+
+	it('offers nothing to suggest when no lines were given', () => {
+		const { queryByTestId } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), startLine: 3 }
+		});
+
+		expect(queryByTestId('suggest-change')).toBeNull();
+	});
+
+	it('will not start a second suggestion in one comment', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), startLine: 3, suggestFrom: ['x = 1'] }
+		});
+
+		await user.click(getByTestId('suggest-change'));
+
+		expect((getByTestId('suggest-change') as HTMLButtonElement).disabled).toBe(true);
+	});
+});
