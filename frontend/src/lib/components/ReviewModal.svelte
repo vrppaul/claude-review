@@ -59,7 +59,7 @@
 					bind:this={textareaEl}
 					data-testid="review-body"
 					class="cr-comment-body textarea min-h-24 w-full bg-base-100 focus:outline-none"
-					placeholder="What should Claude know about the change as a whole?"
+					placeholder="What should the author know about the change as a whole?"
 					value={commentStore.reviewBody}
 					oninput={(e) => commentStore.setReviewBody(e.currentTarget.value)}
 				></textarea>
@@ -107,7 +107,7 @@
 				disabled={!commentStore.hasContent}
 				onclick={onSubmit}
 			>
-				Send to Claude
+				Send review
 			</button>
 		</div>
 	</div>

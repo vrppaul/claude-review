@@ -60,13 +60,18 @@
 <script lang="ts">
 	interface Props {
 		text: string;
+		/** Inside a thread, where the reading face and measure are already set. */
+		dense?: boolean;
 	}
 
-	let { text }: Props = $props();
+	let { text, dense = false }: Props = $props();
 
 	const html = $derived(marked.parse(text) as string);
 </script>
 
-<div data-testid="markdown-content" class="cr-prose prose prose-sm">
+<div
+	data-testid="markdown-content"
+	class={dense ? 'cr-comment-body cr-prose prose prose-sm' : 'cr-prose prose prose-sm'}
+>
 	{@html html}
 </div>

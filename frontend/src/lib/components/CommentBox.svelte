@@ -7,6 +7,8 @@
 
 	interface Props {
 		onSave: (body: string, severity: CommentSeverity) => void;
+		/** Hand this one over now, rather than with the rest of the review. */
+		onAsk?: (body: string, severity: CommentSeverity) => void;
 		onCancel: () => void;
 		side?: LineSide;
 		startLine?: number;
@@ -15,17 +17,24 @@
 		initialSeverity?: CommentSeverity;
 		/** The lines being commented on, so a suggestion can start from them. */
 		suggestFrom?: string[];
+		/** A reply has no weight of its own: the thread's belongs to the comment. */
+		severityPicker?: boolean;
+		/** Written inside a thread, which already draws the card around it. */
+		nested?: boolean;
 	}
 
 	let {
 		onSave,
+		onAsk,
 		onCancel,
 		side,
 		startLine,
 		endLine,
 		initialBody = '',
 		initialSeverity = 'note',
-		suggestFrom
+		suggestFrom,
+		severityPicker = true,
+		nested = false
 	}: Props = $props();
 
 	const severities: { value: CommentSeverity; label: string }[] = [
@@ -70,6 +79,16 @@
 	}
 
 	/**
+	 * Send this one straight to whoever is answering.
+	 *
+	 * It is a question by definition — asking and then leaving the comment
+	 * marked as a note would say two different things about the same words.
+	 */
+	function ask() {
+		if (body.trim()) onAsk?.(body.trim(), 'question');
+	}
+
+	/**
 	 * Start a replacement for the commented lines.
 	 *
 	 * Saying what the code should be instead beats describing it: Claude gets
@@ -98,29 +117,31 @@
 	}
 </script>
 
-<div class="cr-comment space-y-3 rounded-r px-4 py-3">
+<div class={nested ? "space-y-2" : "cr-comment space-y-3 rounded-r px-4 py-3"}>
 	<div class="flex items-center gap-3">
 		{#if label}
 			<span class="cr-comment-ref font-mono text-xs">{label}</span>
 		{/if}
 		<div class="flex-1"></div>
-		<div data-testid="severity-picker" class="cr-segmented">
-			{#each severities as choice (choice.value)}
-				<button
-					data-testid="severity-{choice.value}"
-					class="cr-segment"
-					aria-pressed={severity === choice.value}
-					onclick={() => (severity = choice.value)}
-				>
-					{choice.label}
-				</button>
-			{/each}
-		</div>
+		{#if severityPicker}
+			<div data-testid="severity-picker" class="cr-segmented">
+				{#each severities as choice (choice.value)}
+					<button
+						data-testid="severity-{choice.value}"
+						class="cr-segment"
+						aria-pressed={severity === choice.value}
+						onclick={() => (severity = choice.value)}
+					>
+						{choice.label}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	</div>
 	<textarea
 		bind:this={textareaEl}
 		data-testid="comment-input"
-		class="cr-comment-body textarea min-h-20 w-full bg-base-100 focus:outline-none"
+		class="cr-field cr-comment-body textarea min-h-20 w-full focus:outline-none"
 		placeholder="What should change here?"
 		bind:value={body}
 		onkeydown={handleKeydown}
@@ -136,18 +157,29 @@
 				Suggest a change
 			</button>
 		{/if}
-		<span class="cr-muted text-xs">Ctrl+Enter to save</span>
 		<div class="flex-1"></div>
 		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>
 			Cancel
 		</button>
+		{#if onAsk}
+			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!body.trim()} onclick={ask}>
+				Ask now
+			</button>
+		{/if}
 		<button
 			class="btn btn-primary btn-xs"
 			data-testid="save-comment"
 			disabled={!body.trim()}
 			onclick={save}
 		>
-			Save
+			Add to review
 		</button>
 	</div>
+	<p class="cr-faint text-xs">
+		{#if onAsk}
+			Ctrl+Enter adds it to the review. Ask now sends this one straight away.
+		{:else}
+			Ctrl+Enter to save.
+		{/if}
+	</p>
 </div>

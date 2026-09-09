@@ -36,8 +36,38 @@ export interface DiffResponse {
   files: DiffFile[];
   mode: ReviewMode;
   title: string;
+  round: number;
+  answerer_attached: boolean;
 }
 
+/** Who wrote a turn: the reader, or whoever answers for the change. */
+export type TurnAuthor = "reader" | "author";
+
+export interface Turn {
+  author: TurnAuthor;
+  body: string;
+  round: number;
+  /** When it was said. Read in the thread, never sent with the review. */
+  at?: number;
+  /** Identity of this turn, so an answer can name what it answers. */
+  id?: string;
+  /** Which question this answer belongs to. */
+  answers?: string;
+}
+
+/** A question handed over and not answered yet. */
+export interface Awaited {
+  id: string;
+  at: number;
+}
+
+/**
+ * A thread hanging on a line or range.
+ *
+ * The comment that opened it stays in `body`; everything said afterwards is
+ * a turn. The last four fields never leave the browser — they are how the
+ * thread is read, not what it says.
+ */
 export interface Comment {
   id: string;
   file: string;
@@ -46,14 +76,38 @@ export interface Comment {
   start_line: number;
   end_line: number;
   body: string;
+  turns: Turn[];
+  resolved: boolean;
+  outdated: boolean;
+  /** The lines it was written against, kept for when they are gone. */
+  quote: string[];
+  /** Questions with the author and not answered yet, oldest first. */
+  awaiting: Awaited[];
+  /** Folded away by the reader, to get its space back without settling it. */
+  collapsed: boolean;
+  /** An answer arrived that has not been looked at. */
+  unread: boolean;
+  /** Which round it was written in, so a thread can show where one ended. */
+  round: number;
+  /** When it was written. Read in the thread, never sent with the review. */
+  at: number;
 }
 
+/** A thread as it goes back: what was said, not how it was read. */
+export type CommentPayload = Omit<
+  Comment,
+  "id" | "awaiting" | "unread" | "collapsed" | "round" | "at" | "turns"
+> & { turns: Omit<Turn, "at" | "id" | "answers">[] };
+
 export interface SubmitRequest {
-  comments: Omit<Comment, "id">[];
+  comments: CommentPayload[];
   body?: string;
+  end?: boolean;
 }
 
 export interface SubmitResponse {
   markdown: string;
   comment_count: number;
+  round: number;
+  ended: boolean;
 }

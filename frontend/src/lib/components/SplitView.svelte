@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine, LineSide } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { reviewStore } from '$lib/stores/review.svelte';
 	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
-	import { linesInRange } from '$lib/utils/quote';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -74,8 +74,23 @@
 	function handleSaveComment(body: string, severity: CommentSeverity) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		commentStore.add(file.path, side, line, endLine, body, severity);
+		// The lines travel with the comment: once the diff is taken again
+		// they are how the thread finds where it belongs
+		commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
 		selection.clearCommenting();
+	}
+
+	/** Write the comment and hand it straight to whoever is answering. */
+	async function handleAskComment(body: string, severity: CommentSeverity) {
+		if (!selection.commentingAt) return;
+		const { side, line, endLine } = selection.commentingAt;
+		const id = commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
+		selection.clearCommenting();
+		try {
+			await commentStore.ask(id);
+		} catch {
+			// The comment is written either way; the thread offers to ask again
+		}
 	}
 
 	function cellSide(cell: SplitCell): LineSide {
@@ -106,6 +121,20 @@
 		return cell.line.type === type ? `cr-edge cr-edge-${type === 'add' ? 'add' : 'del'}` : 'cr-edge';
 	}
 </script>
+
+{#snippet composer()}
+	<div class="px-3 py-2">
+		<CommentBox
+			onSave={handleSaveComment}
+			onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
+			onCancel={() => selection.clearCommenting()}
+			side={selection.commentingAt?.side}
+			startLine={selection.commentingAt?.line}
+			endLine={selection.commentingAt?.endLine}
+			suggestFrom={selectedText}
+		/>
+	</div>
+{/snippet}
 
 <div data-testid="split-view">
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
@@ -204,41 +233,24 @@
 						</tr>
 
 						{#if leftComments || rightComments || showBox}
+							<!-- A comment sits under the side it is about: in two columns the
+								old and the new line share a number, and a box in the wrong half
+								says nothing about which one is meant. -->
 							<tr>
-								<td colspan="4">
+								<td colspan="2" class="align-top">
 									{#each leftComments ?? [] as comment (comment.id)}
-										<CommentThread
-											{comment}
-											quote={linesInRange(
-												shown.hunks,
-												comment.side,
-												comment.start_line,
-												comment.end_line
-											)}
-										/>
+										<CommentThread {comment} />
 									{/each}
+									{#if showBox && selection.commentingAt?.side === 'old'}
+										{@render composer()}
+									{/if}
+								</td>
+								<td colspan="2" class="align-top">
 									{#each rightComments ?? [] as comment (comment.id)}
-										<CommentThread
-											{comment}
-											quote={linesInRange(
-												shown.hunks,
-												comment.side,
-												comment.start_line,
-												comment.end_line
-											)}
-										/>
+										<CommentThread {comment} />
 									{/each}
-									{#if showBox}
-										<div class="px-3 py-2">
-											<CommentBox
-												onSave={handleSaveComment}
-												onCancel={() => selection.clearCommenting()}
-												side={selection.commentingAt?.side}
-												startLine={selection.commentingAt?.line}
-												endLine={selection.commentingAt?.endLine}
-												suggestFrom={selectedText}
-											/>
-										</div>
+									{#if showBox && selection.commentingAt?.side === 'new'}
+										{@render composer()}
 									{/if}
 								</td>
 							</tr>

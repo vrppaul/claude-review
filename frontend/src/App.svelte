@@ -3,7 +3,9 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { openSession } from '$lib/stores/session.svelte';
-	import { discussionStore } from '$lib/stores/discussion.svelte';
+	import { reviewStore } from '$lib/stores/review.svelte';
+	import { soundStore } from '$lib/stores/sound.svelte';
+	import { markTab } from '$lib/utils/tab';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
@@ -29,11 +31,34 @@
 
 		// Holding this open is what tells the server the review is still on
 		// screen; a poll is throttled to a crawl in a background tab.
-		return openSession((message) => {
-			if (message.type === 'reply' && typeof message.text === 'string') {
-				discussionStore.receive(String(message.thread_id), message.text);
-			}
-		});
+		return openSession(handle);
+	});
+
+	/** What the server has to say while the review is open. */
+	function handle(message: { type: string; [key: string]: unknown }) {
+		if (message.type === 'reply' && typeof message.text === 'string') {
+			commentStore.receiveReply(
+				String(message.thread_id),
+				message.text,
+				typeof message.question_id === 'string' ? message.question_id : undefined
+			);
+			soundStore.announce();
+		} else if (message.type === 'answerer') {
+			reviewStore.attachAnswerer();
+		} else if (message.type === 'round' && typeof message.number === 'number') {
+			reviewStore.setRound(message.number);
+		} else if (message.type === 'diff') {
+			// The work a round asked for has landed. Take the diff again and
+			// move the threads onto it: one whose lines survived follows them,
+			// one whose lines are gone says so.
+			void diffStore.fetchDiff().then(() => commentStore.reanchorAll(diffStore.files));
+		}
+	}
+
+	// An answer can arrive while the review is in a background tab, where the
+	// dot beside the thread cannot be seen
+	$effect(() => {
+		markTab(commentStore.unreadCount, diffStore.title || 'Claude Review');
 	});
 </script>
 

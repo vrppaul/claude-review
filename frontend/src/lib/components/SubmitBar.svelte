@@ -9,13 +9,31 @@
 	let showModal = $state(false);
 
 	async function handleSubmit() {
-		if (!commentStore.hasContent || submitting) return;
+		await send(() => commentStore.submit(true), { closes: true });
+	}
+
+	/**
+	 * Send what has been written and keep reading.
+	 *
+	 * The tab stays: the threads are still on screen, which is where the
+	 * answers to this round come back to.
+	 */
+	async function handleSendRound() {
+		await send(() => commentStore.submit(false), { closes: false });
+	}
+
+	async function handleEnd() {
+		await send(() => commentStore.end(), { closes: true });
+	}
+
+	async function send(act: () => Promise<unknown>, { closes }: { closes: boolean }) {
+		if (submitting) return;
 		submitting = true;
 		error = null;
 		try {
-			await commentStore.submit();
+			await act();
 			showModal = false;
-			window.close();
+			if (closes) window.close();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not send the review';
 		} finally {
@@ -27,7 +45,7 @@
 		function onKeydown(e: KeyboardEvent) {
 			if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
 				if (showModal) return; // the modal handles its own shortcut
-				if (!commentStore.hasContent) return; // match the button's disabled state
+				if (!commentStore.hasUnsent) return; // match the button's disabled state
 				e.preventDefault();
 				handleSubmit();
 			}
@@ -47,7 +65,14 @@
 		<p class="font-semibold">Review sent. You can close this tab.</p>
 	</div>
 {:else}
-	<TopBar {submitting} {error} onSubmit={handleSubmit} onOpenModal={() => (showModal = true)} />
+	<TopBar
+		{submitting}
+		{error}
+		onSubmit={handleSubmit}
+		onSendRound={handleSendRound}
+		onEnd={handleEnd}
+		onOpenModal={() => (showModal = true)}
+	/>
 
 	{#if showModal}
 		<ReviewModal onSubmit={handleSubmit} onClose={() => (showModal = false)} />

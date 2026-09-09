@@ -13,6 +13,7 @@
 		{ keys: 'Enter', does: 'Comment on this line' },
 		{ keys: '] / [', does: 'Next / previous file' },
 		{ keys: 'n / p', does: 'Next / previous comment' },
+		{ keys: 'a', does: 'Next unread reply' },
 		{ keys: 'v', does: 'Mark this file viewed' },
 		{ keys: 'u', does: 'Fold or unfold this file' },
 		{ keys: 'Ctrl+Shift+Enter', does: 'Send the review' },
@@ -38,6 +39,17 @@
 		requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
 	}
 
+	/** Go to the oldest thread carrying an answer nobody has looked at. */
+	function stepUnread() {
+		const comment = commentStore.unread[0];
+		if (!comment) return;
+		if (diffStore.isCollapsed(comment.file)) diffStore.toggleCollapsed(comment.file);
+		requestAnimationFrame(() => {
+			scrollToComment(comment.id, comment.file);
+			commentStore.markRead(comment.id);
+		});
+	}
+
 	function actOnCurrentFile(act: (path: string) => void) {
 		const path = currentSectionPath() ?? diffStore.selectedPath;
 		if (path) act(path);
@@ -57,6 +69,7 @@
 			k: () => moveByLine(-1),
 			']': () => stepFile(1),
 			'[': () => stepFile(-1),
+			a: stepUnread,
 			n: () => stepComment(1),
 			p: () => stepComment(-1),
 			v: () => actOnCurrentFile((path) => diffStore.toggleViewed(path)),

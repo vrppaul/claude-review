@@ -138,11 +138,11 @@ describe('diffStore', () => {
 		expect(diffStore.contentViewMode).toBe('preview');
 	});
 
-	it('clear resets contentViewMode to raw', () => {
+	it('keeps how a file is shown across reviews — it is the reader, not the review', () => {
 		diffStore.setContentViewMode('side-by-side');
 		diffStore.clear();
 
-		expect(diffStore.contentViewMode).toBe('raw');
+		expect(diffStore.contentViewMode).toBe('side-by-side');
 	});
 });
 
@@ -179,5 +179,40 @@ describe('retaking the diff', () => {
 
 		// Retaking the diff must not undo a reader's progress through it
 		expect(diffStore.isViewed('src/a.ts')).toBe(true);
+	});
+});
+
+describe('the choices a reader makes about how a review is drawn', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		diffStore.clear();
+	});
+
+	it('remembers the layout', () => {
+		diffStore.setDiffLayout('split');
+
+		expect(localStorage.getItem('claude-review:layout')).toBe('split');
+	});
+
+	it('remembers how a markdown file is shown', () => {
+		diffStore.setContentViewMode('side-by-side');
+
+		expect(localStorage.getItem('claude-review:content-view')).toBe('side-by-side');
+	});
+
+	it('keeps them across a review, which is not what they belong to', () => {
+		diffStore.setDiffLayout('split');
+
+		diffStore.clear();
+
+		expect(diffStore.diffLayout).toBe('split');
+	});
+
+	it('ignores a stored choice that is no longer a choice', () => {
+		localStorage.setItem('claude-review:layout', 'three-columns');
+
+		diffStore.clear();
+
+		expect(diffStore.diffLayout).toBe('unified');
 	});
 });

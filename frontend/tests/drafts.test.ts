@@ -82,9 +82,43 @@ describe('an unsent review', () => {
 	});
 
 	it('forgets a draft when asked', () => {
-		saveDraft({ title: 'repo', comments: [], reviewBody: 'x' });
+		saveDraft({ title: 'repo', comments: [], sent: [], reviewBody: 'x' });
 		clearDraft();
 
 		expect(loadDraft('repo')).toBeNull();
+	});
+});
+
+describe('a draft written by an older version', () => {
+	beforeEach(() => {
+		localStorage.clear();
+	});
+
+	it('is brought up to the current shape rather than thrown away', () => {
+		localStorage.setItem(
+			'claude-review:draft',
+			JSON.stringify({
+				title: 'repo: uncommitted changes',
+				comments: [
+					{
+						id: 'comment-1',
+						file: 'a.py',
+						side: 'new',
+						severity: 'note',
+						start_line: 1,
+						end_line: 1,
+						body: 'written before threads existed'
+					}
+				],
+				reviewBody: ''
+			})
+		);
+
+		const draft = loadDraft('repo: uncommitted changes');
+
+		expect(draft?.comments[0].body).toBe('written before threads existed');
+		expect(draft?.comments[0].turns).toEqual([]);
+		expect(draft?.comments[0].awaiting).toEqual([]);
+		expect(draft?.sent).toEqual([]);
 	});
 });

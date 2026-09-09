@@ -1,6 +1,8 @@
 import { SvelteSet } from "svelte/reactivity";
 
 import { expansionStore } from "$lib/stores/expansions.svelte";
+import { reviewStore } from "$lib/stores/review.svelte";
+import { readChoice, readFlag, writeChoice } from "$lib/utils/preferences";
 
 import type {
   ContentViewMode,
@@ -13,10 +15,18 @@ import type {
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
 let mode = $state<ReviewMode>("diff");
-let contentViewMode = $state<ContentViewMode>("raw");
+let contentViewMode = $state<ContentViewMode>(
+  readChoice<ContentViewMode>(
+    "content-view",
+    ["raw", "preview", "side-by-side"],
+    "raw",
+  ),
+);
 let title = $state("");
-let diffLayout = $state<DiffLayout>("unified");
-let ignoreWhitespace = $state(false);
+let diffLayout = $state<DiffLayout>(
+  readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
+);
+let ignoreWhitespace = $state(readFlag("ignore-whitespace"));
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
 // a folded file can still be unread, and a viewed one can be reopened.
@@ -51,6 +61,7 @@ export const diffStore = {
 
   setDiffLayout(next: DiffLayout) {
     diffLayout = next;
+    writeChoice("layout", next);
   },
 
   /** Whether whitespace-only changes are left out of the diff. */
@@ -66,6 +77,7 @@ export const diffStore = {
    */
   async setIgnoreWhitespace(next: boolean) {
     ignoreWhitespace = next;
+    writeChoice("ignore-whitespace", next);
     // Hunks are renumbered and re-indexed by the retake, so lines revealed
     // against the old ones would be shown under the wrong numbers
     expansionStore.clear();
@@ -111,15 +123,26 @@ export const diffStore = {
 
   setContentViewMode(newMode: ContentViewMode) {
     contentViewMode = newMode;
+    writeChoice("content-view", newMode);
   },
 
   clear() {
     files = [];
     selectedPath = null;
     mode = "diff";
-    contentViewMode = "raw";
-    diffLayout = "unified";
-    ignoreWhitespace = false;
+    // The reader's choices about how a review is drawn outlive one review;
+    // only what is on screen is cleared here
+    contentViewMode = readChoice<ContentViewMode>(
+      "content-view",
+      ["raw", "preview", "side-by-side"],
+      "raw",
+    );
+    diffLayout = readChoice<DiffLayout>(
+      "layout",
+      ["unified", "split"],
+      "unified",
+    );
+    ignoreWhitespace = readFlag("ignore-whitespace");
     title = "";
     viewed.clear();
     collapsed.clear();
@@ -133,6 +156,9 @@ export const diffStore = {
     }
     const data: DiffResponse = await response.json();
     this.setFiles(data.files, data.mode, data.title);
+    // A review reloaded in the middle of a round has to learn where it is
+    reviewStore.setRound(data.round ?? 1);
+    if (data.answerer_attached) reviewStore.attachAnswerer();
   },
 };
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { reviewStore } from '$lib/stores/review.svelte';
 	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
-	import { linesInRange } from '$lib/utils/quote';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
@@ -97,8 +97,23 @@
 	function handleSaveComment(body: string, severity: CommentSeverity) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		commentStore.add(file.path, side, line, endLine, body, severity);
+		// The lines travel with the comment: once the diff is taken again
+		// they are how the thread finds where it belongs
+		commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
 		selection.clearCommenting();
+	}
+
+	/** Write the comment and hand it straight to whoever is answering. */
+	async function handleAskComment(body: string, severity: CommentSeverity) {
+		if (!selection.commentingAt) return;
+		const { side, line, endLine } = selection.commentingAt;
+		const id = commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
+		selection.clearCommenting();
+		try {
+			await commentStore.ask(id);
+		} catch {
+			// The comment is written either way; the thread offers to ask again
+		}
 	}
 
 	/**
@@ -213,19 +228,12 @@
 							<tr>
 								<td colspan={colSpan}>
 									{#each lineComments ?? [] as comment (comment.id)}
-										<CommentThread
-											{comment}
-											quote={linesInRange(
-												shown.hunks,
-												comment.side,
-												comment.start_line,
-												comment.end_line
-											)}
-										/>
+										<CommentThread {comment} />
 									{/each}
 									{#if showCommentBox}
 										<CommentBox
 											onSave={handleSaveComment}
+											onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
 											onCancel={() => selection.clearCommenting()}
 											side={selection.commentingAt?.side}
 											startLine={selection.commentingAt?.line}

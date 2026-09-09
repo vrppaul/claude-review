@@ -1,18 +1,26 @@
 <script lang="ts">
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import { reviewStore } from '$lib/stores/review.svelte';
 	import { scrollToComment } from '$lib/utils/scroll';
 	import DiffLayoutToggle from './DiffLayoutToggle.svelte';
+	import RepliesMenu from './RepliesMenu.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 
 	interface Props {
 		submitting: boolean;
 		error: string | null;
 		onSubmit: () => void;
+		onSendRound: () => void;
+		onEnd: () => void;
 		onOpenModal: () => void;
 	}
 
-	let { submitting, error, onSubmit, onOpenModal }: Props = $props();
+	let { submitting, error, onSubmit, onSendRound, onEnd, onOpenModal }: Props = $props();
+
+	// A round is only worth offering while something is there to work through
+	// it; on its own, sending is the end of the review
+	const inRounds = $derived(reviewStore.canSendRound);
 
 	function step(direction: 1 | -1) {
 		const comment = commentStore.step(direction);
@@ -64,9 +72,17 @@
 		<span data-testid="submit-error" class="text-sm text-error">{error}</span>
 	{/if}
 
+	{#if commentStore.answered.length > 0}
+		<RepliesMenu />
+	{/if}
+
 	<span data-testid="comment-count" class="cr-muted text-sm">
-		{commentStore.count}
-		{commentStore.count === 1 ? 'comment' : 'comments'}
+		{#if inRounds}
+			{commentStore.unsentCount} unsent · {commentStore.count}
+		{:else}
+			{commentStore.count}
+			{commentStore.count === 1 ? 'comment' : 'comments'}
+		{/if}
 	</span>
 
 	{#if commentStore.count > 0}
@@ -99,18 +115,25 @@
 	<button class="btn btn-ghost btn-sm" data-testid="finish-review" onclick={onOpenModal}>
 		Add a summary
 	</button>
+	{#if inRounds}
+		<button class="btn btn-outline btn-sm" data-testid="end-review" onclick={onEnd}>
+			End review
+		</button>
+	{/if}
 	<button
 		class="btn btn-primary btn-sm"
 		data-testid="quick-submit"
-		disabled={!commentStore.hasContent || submitting}
-		onclick={onSubmit}
+		disabled={!commentStore.hasUnsent || submitting}
+		onclick={inRounds ? onSendRound : onSubmit}
 		title="Ctrl+Shift+Enter"
 	>
 		{#if submitting}
 			<span class="loading loading-xs loading-spinner"></span>
 			Sending
+		{:else if inRounds}
+			Send round {reviewStore.round}
 		{:else}
-			Send to Claude
+			Send review
 		{/if}
 	</button>
 

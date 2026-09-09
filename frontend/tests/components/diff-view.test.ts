@@ -47,6 +47,9 @@ const textFile: DiffFile = {
 
 describe('DiffView', () => {
 	beforeEach(() => {
+		// The reader's view choices outlive a review now, so a test about
+		// defaults has to start without one stored
+		localStorage.clear();
 		diffStore.clear();
 		commentStore.clear();
 	});
@@ -326,6 +329,9 @@ describe('DiffView', () => {
 
 describe('comment anchoring across diff sides', () => {
 	beforeEach(() => {
+		// The reader's view choices outlive a review now, so a test about
+		// defaults has to start without one stored
+		localStorage.clear();
 		diffStore.clear();
 		commentStore.clear();
 	});
@@ -363,6 +369,9 @@ describe('comment anchoring across diff sides', () => {
 
 describe('files with no lines to show', () => {
 	beforeEach(() => {
+		// The reader's view choices outlive a review now, so a test about
+		// defaults has to start without one stored
+		localStorage.clear();
 		diffStore.clear();
 		commentStore.clear();
 	});
@@ -413,6 +422,9 @@ describe('files with no lines to show', () => {
 
 describe('editing a comment', () => {
 	beforeEach(() => {
+		// The reader's view choices outlive a review now, so a test about
+		// defaults has to start without one stored
+		localStorage.clear();
 		diffStore.clear();
 		commentStore.clear();
 	});
@@ -432,6 +444,9 @@ describe('editing a comment', () => {
 
 describe('the diff as one stream', () => {
 	beforeEach(() => {
+		// The reader's view choices outlive a review now, so a test about
+		// defaults has to start without one stored
+		localStorage.clear();
 		diffStore.clear();
 		commentStore.clear();
 	});

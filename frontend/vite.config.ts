@@ -31,5 +31,9 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
     setupFiles: ['./tests/setup.ts'],
+    // Typing into a component is simulated keystroke by keystroke, and the
+    // files run in parallel: on a busy machine the default five seconds is
+    // not slack, it is a coin toss
+    testTimeout: 20_000,
   },
 });

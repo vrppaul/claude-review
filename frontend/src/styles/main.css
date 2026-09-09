@@ -281,7 +281,7 @@
  * the reader's own marks on someone else's code.
  */
 .cr-comment {
-  max-width: 72ch;
+  max-width: 96ch;
   border-left: 2px solid var(--cr-mark);
   background: var(--cr-mark-tint);
 }
@@ -536,4 +536,199 @@
 .cr-word {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+}
+
+/*
+ * A thread reads as a conversation.
+ *
+ * The reader's turns stay on the comment's own tint — the colour their
+ * marks are made in everywhere else — and an answer sits on the page's
+ * untinted ground, indented under the question, held to it by a short rail.
+ * The distinction is the tint rather than a new colour, so it survives both
+ * themes without either side being invented for the occasion.
+ */
+.cr-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.cr-exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+.cr-reply {
+  position: relative;
+  padding-left: 1.5rem;
+}
+.cr-tie {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 20px;
+  height: 17px;
+  border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
+  border-bottom-left-radius: 8px;
+}
+.cr-answer {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  padding: 0.625rem 0.75rem;
+}
+/* Said once per turn, and quieter than what was said */
+.cr-who {
+  font-size: 0.6875rem;
+  color: var(--cr-faint);
+}
+.cr-who strong {
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/*
+ * A turn that has not arrived is still a turn: it holds its place and
+ * breathes, because a line that never changes reads as a hang.
+ */
+.cr-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--cr-muted);
+  display: inline-block;
+  animation: cr-pulse 1.4s ease-in-out infinite;
+}
+.cr-dot:nth-of-type(2) {
+  animation-delay: 0.18s;
+}
+.cr-dot:nth-of-type(3) {
+  animation-delay: 0.36s;
+}
+@keyframes cr-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* An answer lands with one tint that fades, and leaves the dot behind */
+.cr-answer-new {
+  animation: cr-land 1.8s ease-out 1;
+}
+@keyframes cr-land {
+  0% {
+    border-color: var(--cr-mark);
+    background: var(--cr-mark-tint);
+  }
+  100% {
+    border-color: var(--color-base-300);
+    background: var(--color-base-100);
+  }
+}
+
+/*
+ * Where the reader writes, inside a thread. It takes the comment's tint
+ * rather than the page's ground, which is what an answer sits on: the two
+ * are different things and must not read as the same box.
+ */
+.cr-field {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--cr-mark) 35%, transparent);
+}
+.cr-field:focus {
+  border-color: var(--cr-mark);
+}
+
+/* A settled thread gives back its space and its mark colour */
+.cr-resolved {
+  background: var(--color-base-200);
+  border-left: 2px solid var(--color-base-300);
+}
+/* One that has lost its lines keeps its own copy of them */
+.cr-stale {
+  background: color-mix(in srgb, var(--cr-mark) 7%, transparent);
+  border-left: 2px solid var(--cr-faint);
+}
+.cr-stale-quote {
+  background: var(--color-base-100);
+  border-left: 2px solid var(--cr-faint);
+}
+
+/* Where a round ended, inside a thread that outlived it */
+.cr-round-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.cr-round-mark > span:first-child,
+.cr-round-mark > span:last-child {
+  flex-grow: 1;
+  height: 1px;
+  background: var(--color-base-300);
+}
+
+/* Which side of the diff a thread hangs on, in the diff's own signs */
+.cr-sign-del {
+  color: var(--cr-del-text);
+  margin-right: 0.25rem;
+}
+.cr-sign-add {
+  color: var(--cr-add-text);
+  margin-right: 0.25rem;
+}
+
+/*
+ * A suggestion is a change, so it is shown as one: the lines it replaces
+ * above the lines it puts there, marked the way the diff marks them.
+ */
+.cr-suggestion {
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  overflow: hidden;
+}
+.cr-sugg-row {
+  font-family: var(--font-mono);
+  font-size: var(--cr-code-size);
+  line-height: var(--cr-code-leading);
+  white-space: pre-wrap;
+  padding: 0 0.5rem;
+  border-left: 2px solid transparent;
+}
+.cr-sugg-sign {
+  display: inline-block;
+  width: 1.25ch;
+  margin-right: 0.5ch;
+}
+.cr-sugg-del {
+  background: var(--cr-del-tint);
+  border-left-color: var(--cr-del-edge);
+  color: var(--cr-del-text);
+}
+.cr-sugg-add {
+  background: var(--cr-add-tint);
+  border-left-color: var(--cr-add-edge);
+  color: var(--cr-add-text);
+}
+
+/*
+ * A thread that has gone out with a round. It keeps its place and its
+ * conversation, and gives up the mark colour: what is still in the reader's
+ * hands is what the colour is for.
+ */
+.cr-sent {
+  background: color-mix(in srgb, var(--cr-mark) 5%, transparent);
+  border-left-color: var(--color-base-300);
+}
+.cr-sent .cr-comment-ref {
+  color: var(--cr-muted);
+}
+
+/* Folded by hand: one line, and the first words of what was said */
+.cr-folded {
+  background: var(--color-base-200);
+  border-left: 2px solid var(--cr-mark);
 }
