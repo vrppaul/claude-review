@@ -607,3 +607,30 @@ async def test_sidebar_counts_files_marked_viewed(server_url: ServerFixture, pag
 
     heading = page.get_by_test_id("sidebar-heading")
     await heading.filter(has_text="1 viewed").wait_for()
+
+
+async def test_a_file_further_down_the_stream_is_readable(server_url: ServerFixture, page: Page) -> None:
+    """Files build as they are approached, so scrolling to one shows its lines."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    last = _section(page, "new_file.ts")
+    await last.scroll_into_view_if_needed()
+
+    await last.get_by_test_id("raw-view").wait_for()
+    assert await last.get_by_test_id("line-gutter").count() > 0
+
+
+async def test_scrolling_to_a_file_from_the_sidebar_shows_its_lines(server_url: ServerFixture, page: Page) -> None:
+    """The sidebar moves the reader, and the file it lands on is ready to read."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    items = await page.get_by_test_id("file-item").all()
+    await items[-1].click()
+
+    visible_sections = page.get_by_test_id("file-section")
+    assert await visible_sections.count() >= 2
+    await page.get_by_test_id("raw-view").last.wait_for()

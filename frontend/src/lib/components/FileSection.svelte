@@ -5,7 +5,7 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { detectLanguage } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
-	import { registerSection } from '$lib/utils/scroll';
+	import { registerSection, whenNearViewport } from '$lib/utils/scroll';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';
@@ -39,8 +39,17 @@
 	const estimatedHeight = $derived(collapsed ? 41 : 41 + Math.max(rowCount, 1) * 21);
 
 	let element: HTMLElement | undefined = $state();
+	// Rows are built when the file comes within reach, and kept from then on
+	let built = $state(false);
 
 	$effect(() => (element ? registerSection(file.path, element) : undefined));
+
+	$effect(() => {
+		if (!element || built) return;
+		return whenNearViewport(element, element.closest('[data-testid="diff-view"]'), () => {
+			built = true;
+		});
+	});
 </script>
 
 <section
@@ -105,12 +114,16 @@
 	</div>
 
 	{#if !collapsed}
-		{#if viewMode === 'preview'}
-			<PreviewView {file} />
-		{:else if viewMode === 'side-by-side'}
-			<SideBySideView {file} {language} />
+		{#if built}
+			{#if viewMode === 'preview'}
+				<PreviewView {file} />
+			{:else if viewMode === 'side-by-side'}
+				<SideBySideView {file} {language} />
+			{:else}
+				<RawView {file} {language} />
+			{/if}
 		{:else}
-			<RawView {file} {language} />
+			<div data-testid="file-placeholder" style="height: {estimatedHeight - 41}px"></div>
 		{/if}
 	{/if}
 </section>

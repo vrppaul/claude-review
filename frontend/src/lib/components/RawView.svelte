@@ -2,6 +2,7 @@
 	import type { DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import { indexByRow } from '$lib/utils/comment-index';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
@@ -18,6 +19,8 @@
 	const colSpan = $derived(isDiffMode ? 4 : 2);
 	// Markup per hunk per line, computed once per file rather than per row
 	const highlighted = $derived(highlightFile(file, language));
+	// Comments indexed by the row they belong to, rather than scanned per line
+	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
 	const modeChange = $derived(
 		file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null
 	);
@@ -105,13 +108,26 @@
 				</div>
 			{/if}
 
-			<table class="w-full font-mono text-sm border-collapse">
+			<!-- Fixed layout so every hunk's gutters line up: the automatic
+				algorithm sizes each table from its own rows, and a hunk whose
+				line numbers are wider would step the columns out of line. -->
+			<table class="w-full table-fixed border-collapse font-mono text-sm">
+				<colgroup>
+					{#if isDiffMode}
+						<col class="w-12" />
+					{/if}
+					<col class="w-12" />
+					{#if isDiffMode}
+						<col class="w-4" />
+					{/if}
+					<col />
+				</colgroup>
 				<tbody>
 					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
 						{@const flatIdx = hunkOffsets[hunkIdx] + lineIdx}
 						{@const lineNo = selection.getLineNumber(line)}
 						{@const side = selection.lineSide(line)}
-						{@const lineComments = commentStore.getForLine(file.path, side, lineNo)}
+						{@const lineComments = commentsByRow.get(`${side}:${lineNo}`)}
 						{@const inRange = selection.isHighlighted(side, lineNo)}
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -148,10 +164,10 @@
 							</td>
 						</tr>
 
-						{#if lineComments.length > 0 || showCommentBox}
+						{#if lineComments || showCommentBox}
 							<tr>
 								<td colspan={colSpan}>
-									{#each lineComments as comment (comment.id)}
+									{#each lineComments ?? [] as comment (comment.id)}
 										<CommentThread {comment} />
 									{/each}
 									{#if showCommentBox}
