@@ -300,10 +300,8 @@ async def test_files_mode_sidebar_shows_files_without_diff_decorations(
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    header = await page.get_by_test_id("sidebar").locator("h2").text_content()
-    assert header is not None
-    assert "Files" in header
-    assert "Changed" not in header
+    heading = await page.get_by_test_id("sidebar-heading").text_content()
+    assert heading == "2 files"
 
     file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) == 2
@@ -518,9 +516,8 @@ async def test_transcript_mode_sidebar_shows_messages(transcript_mode_server: Se
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    header = await page.get_by_test_id("sidebar").locator("h2").text_content()
-    assert header is not None
-    assert "Messages" in header
+    heading = await page.get_by_test_id("sidebar-heading").text_content()
+    assert heading == "2 messages"
 
     file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) == 2
@@ -583,3 +580,30 @@ async def test_marking_a_file_viewed_folds_it(server_url: ServerFixture, page: P
 
     await main.get_by_test_id("viewed-toggle").check()
     await main.get_by_test_id("raw-view").wait_for(state="detached")
+
+
+async def test_filtering_the_sidebar_narrows_the_list(server_url: ServerFixture, page: Page) -> None:
+    """A long review is navigated by narrowing the list, not by scrolling it."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("file-filter").fill("new_file")
+
+    items = await page.get_by_test_id("file-item").all()
+    assert len(items) == 1
+    text = await items[0].text_content()
+    assert text is not None
+    assert "new_file.ts" in text
+
+
+async def test_sidebar_counts_files_marked_viewed(server_url: ServerFixture, page: Page) -> None:
+    """Progress through a review is visible without counting rows by eye."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await _section(page, "main.py").get_by_test_id("viewed-toggle").check()
+
+    heading = page.get_by_test_id("sidebar-heading")
+    await heading.filter(has_text="1 viewed").wait_for()
