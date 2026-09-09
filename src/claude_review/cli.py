@@ -72,7 +72,9 @@ async def _serve(
     sock = _bind(port)
     url = f"http://127.0.0.1:{sock.getsockname()[1]}"
 
-    config = uvicorn.Config(app, log_level="error")
+    # The default picks uvicorn's older websockets integration, which warns on
+    # every connection with websockets 14 and later
+    config = uvicorn.Config(app, log_level="error", ws="websockets-sansio")
     server = uvicorn.Server(config)
 
     async def wait_for_shutdown() -> None:
