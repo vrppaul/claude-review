@@ -76,12 +76,27 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 
 ## Features
 
-- Inline comments on single lines or drag-to-select ranges
-- Markdown preview — Raw, Preview (rendered), and Side-by-side view modes for `.md` files and transcripts
-- Syntax highlighting (Python, TypeScript, Markdown, Rust, Go, SQL, and more)
-- Comment navigation (prev/next buttons)
-- Light/dark theme (auto-detects system preference, manual toggle)
-- Auto-shutdown when browser tab is closed
+**Reading**
+
+- The whole diff as one stream — every file on screen, the sidebar navigates by scrolling
+- Unified or split layout, with what changed inside a replaced line marked word by word
+- Show the lines a hunk left out, or leave whitespace-only changes out entirely
+- Fold a file away, mark it viewed, filter the tree by path
+- Syntax highlighting that reads a hunk whole, so a docstring stays a docstring
+- Light and dark, remembered, following the system until you choose
+
+**Commenting**
+
+- Inline comments on a line or a dragged range, on either side of the diff
+- Suggest a replacement rather than describing one
+- Mark a comment as a question or a blocker
+- Ask Claude about a thread and read the answer without leaving the review
+- Comments survive a reload
+
+**Keyboard**
+
+- `j` / `k` between lines, `Enter` to comment, `]` / `[` between files
+- `n` / `p` between comments, `v` viewed, `u` fold, `?` for the list
 
 ## CLI Reference
 
@@ -96,7 +111,22 @@ claude-review transcript conv.jsonl        # transcript mode — review conversa
 claude-review --port 8080 diff             # shared options before subcommand
 claude-review --no-open diff               # don't open browser automatically
 claude-review --verbose diff --base HEAD~1 # enable diagnostic logging
+claude-review --version                    # print the installed version
 ```
+
+### Answering questions from the review
+
+While a review is open, any comment can carry a question. These two commands
+let the Claude that wrote the change be the one that answers it:
+
+```bash
+claude-review wait --port 8765             # block until something is asked
+claude-review reply --port 8765 --thread comment-3 "Because it moved to config"
+```
+
+`wait` prints one JSON object and exits — a question, or `{"type":"timeout"}`
+if nothing was asked — so it can be driven from a loop. The `/review-ui` skill
+documents the loop.
 
 ### Manual install (optional)
 

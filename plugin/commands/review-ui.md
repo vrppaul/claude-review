@@ -31,3 +31,40 @@ Usage:
      - Any natural language describing a commit range → figure out the git ref and pass it as `--base`
 
 When it finishes, the user's review comments will be printed to stdout. Read them carefully and address each comment by making the requested changes.
+
+## Discussing a thread while the review is open (optional)
+
+Skip this unless the user asks for it, or has asked a question in a thread
+before. It changes nothing about the flow above; it adds a second half.
+
+The review UI has an "Ask Claude" button on every comment. A question left
+there waits for you to pick it up, and your answer appears in that thread
+while the user keeps reading. To be available for that, run the review in the
+background instead of waiting on it:
+
+1. Start it in the background on a port you choose, and open the URL yourself:
+   ```bash
+   claude-review --port 8765 --no-open diff
+   ```
+   If the port is taken the command says so; pick another.
+
+2. Loop until the review is sent:
+   ```bash
+   claude-review wait --port 8765 --seconds 25
+   ```
+   It prints one JSON object and exits:
+   - `{"type": "question", "question": {...}}` — answer it, then wait again.
+     The question carries `thread_id`, the file, the line range and `quote`,
+     the lines it is about.
+   - `{"type": "timeout"}` — nothing was asked; wait again.
+
+3. Answer in the thread it belongs to:
+   ```bash
+   claude-review reply --port 8765 --thread <thread_id> "..."
+   ```
+   Answer from what you know about this change — why you wrote it that way,
+   what you considered and rejected. That context is the reason to route the
+   question to you rather than to a fresh session.
+
+4. The review's comments arrive on the background command's output when the
+   user sends it, as they normally would. That ends the loop.

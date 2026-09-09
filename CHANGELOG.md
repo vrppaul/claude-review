@@ -1,5 +1,73 @@
 # Changelog
 
+## [1.1.0] - 2026-09-09
+
+A pass over how a review reads and how it is written, plus the beginnings of
+a conversation with Claude inside it.
+
+### Added
+- **The whole diff as one stream** — every file is on screen at once and the
+  sidebar navigates by scrolling to one, so find-in-page, selection across
+  files and the reading position all survive moving around
+- **Split layout** — the old version faced against the new one, chosen once
+  for the review from the header
+- **Word-level marking** inside a replaced line, so a renamed identifier or a
+  changed constant is visible without comparing two long lines by eye
+- **Show the lines a hunk left out**, a screenful at a time or the whole gap
+- **Ignore whitespace** — retakes the diff with `-w`, so a reindented block
+  stops burying the one line that changed
+- **Ask Claude about a comment thread** — the question waits for whoever is
+  answering, the reader carries on, and the answer is pushed into the thread.
+  `claude-review wait` and `claude-review reply` are the answering half
+- **Suggest a replacement** — a comment can carry the code it should become
+- **Comment severity** — a question wants an answer before anything changes;
+  a blocker has to be dealt with
+- **Keyboard** — `j`/`k` between lines, `Enter` to comment, `]`/`[` between
+  files, `n`/`p` between comments, `v` viewed, `u` fold, `?` for the list
+- **Fold a file, mark it viewed**, filter the tree by path, and see progress
+  through a long review in the sidebar heading
+- **Comments survive a reload** — an unsent review is picked up where it
+  stopped, tied to what was being reviewed
+- `--version`
+
+### Changed
+- **The server holds the review open on a socket** rather than a heartbeat.
+  Browsers throttle timers in a background tab to about once a minute, so
+  switching away used to look like an abandoned review: the server exited and
+  took the unsent comments with it
+- **One palette** for chrome, diff and syntax, replacing a stylesheet that
+  imported both highlight.js themes and re-stated forty token colours by hand.
+  No syntax colour uses green or red, which belong to the diff
+- **A changed row is marked at its edge** over a faint tint, rather than
+  washed with colour that dragged every syntax token towards it
+- **A comment reads as a note**, not a warning: the mark colour, the reading
+  face, one step larger than the code, at a capped measure
+- **The header carries the review's identity and actions** — which repository
+  and against what — and the bottom strip is gone
+- Contrast holds in both themes: every muted token now sits above 4.5:1, where
+  light used to lose about a fifth of its contrast to dark
+- A hunk is highlighted as a document, so a docstring stays a docstring on
+  every one of its lines, and it costs two highlighter calls instead of one
+  per line
+- A file's rows are built when it comes within reach. A 60-file review of
+  3,500 changed lines went from 4.3s to 0.27s before it could be read, and
+  from 2.0s to 0.19s to add a comment
+- Adds `websockets`, which uvicorn needs to serve a socket at all
+
+### Fixed
+- **Files with non-ASCII names vanished from the review.** Git quotes such
+  paths and the header parser did not expect it, so the file was dropped with
+  no warning
+- **A renamed file was reported under its old path**, sending the agent to a
+  file git had already moved
+- **A comment on a removed line appeared twice** and its number was
+  ambiguous — `file.py:42` meant either side. Comments now carry the side
+- Binary files and permission-only changes said why they had no lines to show
+  instead of rendering an empty panel
+- A busy port explains itself instead of printing a traceback
+- Code no longer breaks mid-identifier when a line is too long for its column
+- The composer opens in view when commenting near the bottom of the window
+
 ## [1.0.1] - 2026-07-12
 
 ### Changed
