@@ -149,26 +149,72 @@ class ReviewResult(BaseModel):
     comment_count: int
 
 
-class ThreadQuestion(BaseModel):
-    """Something the reader asked about one comment thread.
+class ThreadContext(BaseModel):
+    """One thread, as whoever answers is told about it.
 
-    It carries the quoted lines as well as the question, because the Claude
-    that answers may be reading this without the file in front of it.
+    It carries the quoted lines as well as what was said, because the agent
+    that answers may be reading this without the file in front of it. The
+    same shape serves a question asked in the thread and a thread a panel
+    message points at: one way of being told what is being discussed.
     """
 
     thread_id: str
-    # Which question in that thread. A thread can have more than one waiting
-    # at a time, and an answer has to say which it belongs to.
-    question_id: str
     file: str
     side: LineSide
     start_line: int
     end_line: int
-    quote: list[str]
+    quote: list[str] = []
     body: str
     # What was already said in this thread, so an answer to the third
     # question is not written as if it were the first
     history: list[Turn] = []
+
+
+class ThreadQuestion(ThreadContext):
+    """Something the reader asked about one comment thread."""
+
+    # Which question in that thread. A thread can have more than one waiting
+    # at a time, and an answer has to say which it belongs to.
+    question_id: str
+
+
+class PanelMessage(BaseModel):
+    """Something the reader typed in the agent panel.
+
+    A thread is about one line; this is about everything else — the plan,
+    the tests, a file nobody commented on. It may still point at threads,
+    and then it carries them, so the agent is not left guessing which lines
+    "that one" meant.
+    """
+
+    message_id: str
+    text: str
+    threads: list[ThreadContext] = []
+
+
+class AgentStatus(BaseModel):
+    """What the agent has said about itself.
+
+    Nothing here can be measured from this side — the agent lives in another
+    process — so every field starts empty and stays empty until it reports.
+    A zero would read as a measurement, and it would be a lie.
+    """
+
+    model: str | None = None
+    context: str | None = None
+    # When it last reported, in epoch milliseconds, so the panel can say how
+    # old the numbers are rather than presenting them as current
+    at: int | None = None
+
+
+class PanelCancel(BaseModel):
+    """The reader withdrawing a panel message before it was answered.
+
+    A request, not a kill: it goes onto the same queue as everything else,
+    and whoever is working decides what to do about it.
+    """
+
+    message_id: str
 
 
 class RoundSubmission(BaseModel):

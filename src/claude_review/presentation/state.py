@@ -2,7 +2,13 @@
 
 import asyncio
 
-from claude_review.domain.models import RoundSubmission, ThreadQuestion
+from claude_review.domain.models import (
+    AgentStatus,
+    PanelCancel,
+    PanelMessage,
+    RoundSubmission,
+    ThreadQuestion,
+)
 
 
 class ServerState:
@@ -23,16 +29,21 @@ class ServerState:
         self._alone_since: float | None = None
         self._listeners: set[asyncio.Queue[dict]] = set()
         # What the reader has handed over and nobody has taken yet: questions
-        # about a thread, and rounds of the review itself. One queue rather
-        # than two, so they are answered in the order they were sent. A queue
-        # rather than a callback: asking and answering are separate processes.
-        self.events: asyncio.Queue[ThreadQuestion | RoundSubmission] = asyncio.Queue()
+        # about a thread, rounds of the review itself, and what was typed in
+        # the panel. One queue rather than several, so they are answered in
+        # the order they were sent — an answer written after a round must not
+        # arrive before it. A queue rather than a callback: asking and
+        # answering are separate processes.
+        self.events: asyncio.Queue[ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel] = asyncio.Queue()
         # Which round is being written. It goes up when one is sent and the
         # review stays open.
         self.round = 1
         # Whether anything is waiting to answer. Rounds are only worth
         # offering when someone is there to work through them.
         self.answerer_attached = False
+        # What the agent has said about itself. Empty until it says anything;
+        # a review reloaded mid-conversation reads it back from here.
+        self.agent = AgentStatus()
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1

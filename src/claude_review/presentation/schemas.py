@@ -3,9 +3,12 @@
 from pydantic import BaseModel, Field, model_validator
 
 from claude_review.domain.models import (
+    AgentStatus,
     CommentSeverity,
     DiffFile,
     LineSide,
+    PanelCancel,
+    PanelMessage,
     ReviewMode,
     RoundSubmission,
     ThreadQuestion,
@@ -23,6 +26,9 @@ class DiffResponse(BaseModel):
     # it. A review reloaded mid-round has to learn both from somewhere.
     round: int = 1
     answerer_attached: bool = False
+    # What the agent last said about itself, so a reloaded review does not
+    # lose the model and the context along with the pushes it missed
+    agent: AgentStatus = AgentStatus()
 
 
 class TurnInput(BaseModel):
@@ -108,6 +114,56 @@ class AskRequest(BaseModel):
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
 
 
+class ThreadInput(BaseModel):
+    """A thread as the browser hands it over, for a panel message to carry.
+
+    The browser holds the threads — they are unsent work, and never reach
+    this side until a round is — so a message pointing at one sends it
+    along. What arrives is the thread as it stands right now.
+    """
+
+    thread_id: str = Field(min_length=1, max_length=200)
+    file: str = Field(min_length=1)
+    side: LineSide
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    quote: list[str] = Field(default_factory=list, max_length=200)
+    body: str = Field(min_length=1, max_length=50_000)
+    history: list[TurnInput] = Field(default_factory=list, max_length=200)
+
+
+class MessageRequest(BaseModel):
+    """Request body for POST /api/message — the reader typing in the panel."""
+
+    message_id: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=50_000)
+    threads: list[ThreadInput] = Field(default_factory=list, max_length=50)
+
+
+class SayRequest(BaseModel):
+    """Request body for POST /api/say — the agent answering the panel."""
+
+    message_id: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=50_000)
+
+
+class CancelRequest(BaseModel):
+    """Request body for POST /api/cancel — the reader taking it back."""
+
+    message_id: str = Field(min_length=1, max_length=200)
+
+
+class StatusRequest(BaseModel):
+    """Request body for POST /api/status — what only the agent knows.
+
+    Both are free text on purpose: how an agent measures its own context is
+    its business, and this side only repeats it with a time beside it.
+    """
+
+    model: str | None = Field(default=None, max_length=200)
+    context: str | None = Field(default=None, max_length=200)
+
+
 class ReplyRequest(BaseModel):
     """Request body for POST /api/reply — the answer coming back."""
 
@@ -124,3 +180,5 @@ class EventResponse(BaseModel):
     type: str
     question: ThreadQuestion | None = None
     round: RoundSubmission | None = None
+    message: PanelMessage | None = None
+    cancel: PanelCancel | None = None

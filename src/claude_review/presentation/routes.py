@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 
 import structlog
@@ -8,8 +9,11 @@ from claude_review.domain.exceptions import FileWindowError
 from claude_review.domain.models import (
     Comment,
     DiffFile,
+    PanelCancel,
+    PanelMessage,
     ReviewMode,
     RoundSubmission,
+    ThreadContext,
     ThreadQuestion,
     Turn,
 )
@@ -23,14 +27,19 @@ from claude_review.presentation.dependencies import (
 )
 from claude_review.presentation.schemas import (
     AskRequest,
+    CancelRequest,
     CommentInput,
     DiffResponse,
     EventResponse,
     FileWindowResponse,
+    MessageRequest,
     ReplyRequest,
     RoundResponse,
+    SayRequest,
+    StatusRequest,
     SubmitRequest,
     SubmitResponse,
+    ThreadInput,
 )
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -69,6 +78,7 @@ async def get_diff(
         title=title,
         round=state.round,
         answerer_attached=state.answerer_attached,
+        agent=state.agent,
     )
 
 
@@ -150,13 +160,23 @@ async def next_event(
     # What was handed over outranks the review ending: a round sent as the
     # last act would otherwise be dropped for the shutdown that followed it
     if taken in done:
-        event = taken.result()
-        if isinstance(event, RoundSubmission):
-            return EventResponse(type="round", round=event)
-        return EventResponse(type="question", question=event)
+        return _envelope(taken.result())
     if closed in done:
         return EventResponse(type="closed")
     return EventResponse(type="timeout")
+
+
+def _envelope(event: ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel) -> EventResponse:
+    """Name what came off the queue, so the loop can tell the kinds apart."""
+    match event:
+        case RoundSubmission():
+            return EventResponse(type="round", round=event)
+        case PanelMessage():
+            return EventResponse(type="message", message=event)
+        case PanelCancel():
+            return EventResponse(type="cancel", cancel=event)
+        case _:
+            return EventResponse(type="question", question=event)
 
 
 @router.post("/reply")
@@ -175,6 +195,91 @@ async def reply_to_thread(
     )
     log.info("thread_reply", thread_id=request.thread_id, question_id=request.question_id)
     return {"status": "sent"}
+
+
+@router.post("/message")
+async def take_panel_message(
+    request: MessageRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Take what the reader typed in the panel, for the agent to pick up.
+
+    Everything typed there goes now — the panel has no "add to review",
+    because a message about the plan or the tests belongs to no thread and
+    has nothing to wait for.
+    """
+    state.events.put_nowait(
+        PanelMessage(
+            message_id=request.message_id,
+            text=request.text,
+            threads=[_to_thread(t) for t in request.threads],
+        )
+    )
+    log.info("panel_message", message_id=request.message_id, threads=len(request.threads))
+    return {"status": "sent"}
+
+
+def _to_thread(thread: ThreadInput) -> ThreadContext:
+    """Take a thread a message points at off the wire, turns and all."""
+    return ThreadContext(
+        thread_id=thread.thread_id,
+        file=thread.file,
+        side=thread.side,
+        start_line=thread.start_line,
+        end_line=thread.end_line,
+        quote=thread.quote,
+        body=thread.body,
+        history=[Turn(author=t.author, body=t.body, round=t.round) for t in thread.history],
+    )
+
+
+@router.post("/say")
+async def say_in_panel(
+    request: SayRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Push the agent's answer into the panel of a review still open."""
+    state.push({"type": "chat", "message_id": request.message_id, "text": request.text})
+    log.info("panel_answer", message_id=request.message_id)
+    return {"status": "sent"}
+
+
+@router.post("/cancel")
+async def cancel_panel_message(
+    request: CancelRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Take back a message the agent has not answered yet.
+
+    A request rather than a kill: it joins the queue behind whatever else is
+    waiting, and the agent decides what to do about it. Nothing here can
+    reach into another process and stop it mid-thought.
+    """
+    state.events.put_nowait(PanelCancel(message_id=request.message_id))
+    log.info("panel_cancelled", message_id=request.message_id)
+    return {"status": "cancelled"}
+
+
+@router.post("/status")
+async def report_status(
+    request: StatusRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Take what the agent says about itself, and pass it on unchanged.
+
+    Which model, and how much of its context is spent: neither can be
+    measured from here, so both are quoted with the time they were said.
+    """
+    now = int(time.time() * 1000)
+    if request.model is not None:
+        state.agent.model = request.model
+    if request.context is not None:
+        state.agent.context = request.context
+    state.agent.at = now
+
+    state.push({"type": "status", "model": state.agent.model, "context": state.agent.context, "at": now})
+    log.info("agent_status", model=state.agent.model, context=state.agent.context)
+    return {"status": "noted"}
 
 
 @router.websocket("/session")
