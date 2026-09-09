@@ -1,5 +1,71 @@
 # Changelog
 
+## [1.2.0] - 2026-09-09
+
+A comment becomes a thread, and sending stops having to be the end of the
+review.
+
+### Added
+- **Threads** — a comment carries turns with speakers and a composer under
+  the last one, an answer hangs off the question it answers, and asking
+  twice no longer overwrites the first exchange
+- **Ask from the composer** — "Add to review" keeps the comment with the
+  rest and sends it when the review does; "Ask now" hands it over
+  immediately and marks it a question. The severity chip stops looking like
+  a control that asks
+- **Rounds** — with an agent waiting on the review, sending sends a round and
+  leaves the review open: the agent answers, makes the changes and retakes
+  the diff with `claude-review round`, and the reading carries on. "End
+  review" is the separate act that finishes it. A round carries what is new
+  since the last one, not the whole review again
+- **Threads survive a retaken diff** — a thread whose lines moved follows
+  them, and one whose lines are gone is marked outdated and keeps a copy of
+  what it was written against. Both travel into the submitted markdown
+- **Resolve a thread**, which collapses it to a line and goes out marked
+  resolved — the state belongs to the comment, not to the tab
+- **A "Replies" list in the header** — answers you have not read, with a
+  count, a jump to the thread, `a` for the next one, and an optional tick
+  when one lands while the review is in a background tab
+- **The tab says so** — the title carries the unread count and the icon takes
+  a dot, so an answer is visible from a tab strip
+- **An answer lands under the question it answers.** Every question carries
+  an id: `wait` hands it over, `reply --question` gives it back, and two
+  questions asked before either is answered still read straight. A question
+  also carries the whole thread, starting with the comment that opened it
+- **Comments and answers are markdown** — code blocks with highlighting,
+  lists, inline code, through the renderer that already draws md previews
+- **Fold a thread away** with the same control that folds a file, and read a
+  folded or settled one by opening it. Resolving folds a thread rather than
+  hiding it: settling something no longer means it cannot be read
+- **A suggestion is shown as the change it asks for** — the lines it replaces
+  above the lines it puts there, marked the way the diff marks them
+- **What has already gone out is marked** — a thread sent with a round carries
+  a `sent · round N` stamp and gives up the mark colour, and the header counts
+  what the answering side has not seen
+- `claude-review round`, and `claude-review wait` now also hands over rounds
+
+### Changed
+- **A review reopened on the same repository comes back on the same port**,
+  derived from the repository and the base ref, so the draft left in the
+  browser's storage is still there. `--port` still wins, and a derived port
+  someone else holds falls back to a free one
+- **Nothing in the interface is named Claude** — whoever answers is whatever
+  agent is driving the review, and the wording now says so
+- **A comment sits under the side it is about** in the two-column layout, and
+  says which side that is in the diff's own signs — the same line number
+  exists on both, and a box in the wrong half named neither
+- **A comment is measured for reading, not pinched into a column** — the
+  measure went from 72 to 96 characters
+- **Asking belongs to what it asks about** — the control sits under the last
+  thing said in the thread and hands over everything since, while the
+  composer's own "Ask now" is about what has just been typed
+- **The reader's choices are remembered** — layout, how a markdown file is
+  shown, and whether whitespace counts, kept beside the theme. They belong to
+  the reader, not to one review, so they survive both
+- **A draft written by an older version is brought up to the current shape**
+  rather than dropped. The version is there so work can be carried forward —
+  losing an hour of reading to a version number is the worse failure
+
 ## [1.1.0] - 2026-09-09
 
 A pass over how a review reads and how it is written, plus the beginnings of

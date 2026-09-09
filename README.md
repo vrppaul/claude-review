@@ -90,13 +90,23 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - Inline comments on a line or a dragged range, on either side of the diff
 - Suggest a replacement rather than describing one
 - Mark a comment as a question or a blocker
-- Ask Claude about a thread and read the answer without leaving the review
-- Comments survive a reload
+- Ask about a comment without leaving the review, and read the answer in the
+  thread it belongs to — turns, speakers and a composer under the last one
+- Resolve a thread that is settled; it goes out marked resolved
+- A "Replies" list in the header counts answers you have not read, and the
+  tab title says so from a background tab
+- Send a round rather than ending the review: the threads stay on screen, the
+  agent answers and makes the changes, and the diff is taken again beneath
+  them — a thread whose lines moved follows them, one whose lines are gone
+  says so
+- Comments survive a reload, and a review reopened on the same repository
+  comes back on the same port, so an unsent draft is still there
 
 **Keyboard**
 
 - `j` / `k` between lines, `Enter` to comment, `]` / `[` between files
-- `n` / `p` between comments, `v` viewed, `u` fold, `?` for the list
+- `n` / `p` between comments, `a` to the next unread reply
+- `v` viewed, `u` fold, `?` for the list
 
 ## CLI Reference
 
@@ -108,6 +118,9 @@ claude-review diff --base v0.5.0           # diff since a tag
 claude-review files plan.md                # files mode — review text files
 claude-review files a.md b.py c.rs         # files mode — multiple files
 claude-review transcript conv.jsonl        # transcript mode — review conversation
+claude-review wait --port 8765             # wait for a question or a round
+claude-review reply --port 8765 --thread <id> --question <id> "..."   # answer in a thread
+claude-review round --port 8765            # retake the diff after a round
 claude-review --port 8080 diff             # shared options before subcommand
 claude-review --no-open diff               # don't open browser automatically
 claude-review --verbose diff --base HEAD~1 # enable diagnostic logging

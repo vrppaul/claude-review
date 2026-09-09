@@ -5,12 +5,13 @@ tests. Remove items when done — don't check them off.
 
 ## Left from the overhaul
 
-- [ ] `feat(server)`: tell an open review that the files changed, and offer to
-      retake the diff. Deliberately a notice rather than an automatic reload:
-      swapping the diff under someone mid-comment orphans what they wrote, and
-      marking a comment outdated is its own piece of work.
 - [ ] `feat(ui)`: choose the base ref from the header. The server can already
       retake a diff; this is the control for it.
+- [ ] `feat(ui)`: say in the review when a round changed a file nobody has a
+      thread on, so a reader knows where to look next.
+- [ ] `feat(ui)`: let a turn be deleted. A comment can be removed and a
+      thread resolved, but a reply — the reader's or the author's — stays
+      whatever it says. A duplicate answer has no way out of the thread.
 
 ## Infrastructure
 
