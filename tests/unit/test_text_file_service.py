@@ -101,3 +101,32 @@ class TestReadFiles:
 
         assert len(result[0].hunks[0].lines) == 2
         assert result[0].hunks[0].lines[-1].content == "line two"
+
+
+def test_a_file_under_the_working_directory_is_named_relatively(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ "docs/plan.md" is what the reader calls it, not its full path."""
+    (tmp_path / "docs").mkdir()
+    plan = tmp_path / "docs" / "plan.md"
+    plan.write_text("# Plan\n")
+    monkeypatch.chdir(tmp_path)
+
+    files = TextFileService().read_files([Path("docs/plan.md")])
+
+    assert files[0].path == "docs/plan.md"
+
+
+def test_a_file_outside_the_working_directory_keeps_its_full_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Shortening it to "../../elsewhere.md" would say less, not more."""
+    outside = tmp_path / "elsewhere.md"
+    outside.write_text("content\n")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.chdir(work)
+
+    files = TextFileService().read_files([outside])
+
+    assert files[0].path == str(outside.resolve())

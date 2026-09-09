@@ -37,9 +37,21 @@ class TextFileService:
                 continue
 
             lines = self._split_lines(text)
-            result.append(self._build_diff_file(str(resolved), lines))
+            result.append(self._build_diff_file(self._display_path(resolved), lines))
 
         return result
+
+    def _display_path(self, path: Path) -> str:
+        """Name a file the way the reader would.
+
+        A path under the working directory reads as "docs/plan.md" rather
+        than its full location; one outside it keeps the full path, since
+        "../../elsewhere.md" would say less.
+        """
+        try:
+            return str(path.relative_to(Path.cwd()))
+        except ValueError:
+            return str(path)
 
     def _read_text(self, path: Path) -> str:
         """Read file content as UTF-8 text.
