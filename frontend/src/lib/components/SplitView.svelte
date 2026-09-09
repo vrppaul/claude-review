@@ -1,0 +1,185 @@
+<script lang="ts">
+	import type { DiffFile, DiffLine, LineSide } from '$lib/types';
+	import { commentStore } from '$lib/stores/comments.svelte';
+	import { indexByRow } from '$lib/utils/comment-index';
+	import { highlightFile } from '$lib/utils/highlight';
+	import { createLineSelection } from '$lib/utils/line-selection.svelte';
+	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
+	import { applyWordMarks } from '$lib/utils/word-diff';
+	import CommentBox from './CommentBox.svelte';
+	import CommentThread from './CommentThread.svelte';
+
+	interface Props {
+		file: DiffFile;
+		language: string | null;
+	}
+
+	let { file, language }: Props = $props();
+
+	const highlighted = $derived(
+		highlightFile(file, language).map((hunkHtml, i) =>
+			applyWordMarks(file.hunks[i].lines, hunkHtml)
+		)
+	);
+	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
+	const rowsPerHunk = $derived(file.hunks.map((hunk) => buildSplitRows(hunk.lines)));
+	const hunkOffsets = $derived(
+		file.hunks.reduce<number[]>((acc, hunk, i) => {
+			acc.push(i === 0 ? 0 : acc[i - 1] + file.hunks[i - 1].lines.length);
+			return acc;
+		}, [])
+	);
+
+	const selection = createLineSelection();
+
+	$effect(() => {
+		void file.path;
+		selection.reset();
+	});
+
+	// Window-level so a drag that leaves the table still ends
+	$effect(() => {
+		const handler = () => selection.handleMouseUp();
+		window.addEventListener('mouseup', handler);
+		return () => window.removeEventListener('mouseup', handler);
+	});
+
+	function handleSaveComment(body: string) {
+		if (!selection.commentingAt) return;
+		const { side, line, endLine } = selection.commentingAt;
+		commentStore.add(file.path, side, line, endLine, body);
+		selection.clearCommenting();
+	}
+
+	function cellSide(cell: SplitCell): LineSide {
+		return selection.lineSide(cell.line);
+	}
+
+	function commentsFor(cell: SplitCell | undefined): ReturnType<typeof commentsByRow.get> {
+		if (!cell) return undefined;
+		return commentsByRow.get(`${cellSide(cell)}:${selection.getLineNumber(cell.line)}`);
+	}
+
+	function marked(cell: SplitCell): boolean {
+		return selection.isHighlighted(cellSide(cell), selection.getLineNumber(cell.line));
+	}
+
+	function tint(cell: SplitCell | undefined, type: DiffLine['type']): string {
+		if (!cell) return 'cr-cell-absent';
+		if (marked(cell)) return 'cr-cell-marked';
+		return cell.line.type === type ? `cr-cell-${type === 'add' ? 'add' : 'del'}` : '';
+	}
+
+	function edge(cell: SplitCell | undefined, type: DiffLine['type']): string {
+		if (!cell) return 'cr-edge';
+		if (marked(cell)) return 'cr-edge cr-edge-marked';
+		return cell.line.type === type ? `cr-edge cr-edge-${type === 'add' ? 'add' : 'del'}` : 'cr-edge';
+	}
+</script>
+
+<div data-testid="split-view">
+	{#each file.hunks as hunk, hunkIdx (hunkIdx)}
+		<div class="border-b border-base-300">
+			{#if hunk.header}
+				<div
+					class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45"
+				>
+					{hunk.header}
+				</div>
+			{/if}
+
+			<table class="cr-code w-full table-fixed border-collapse font-mono">
+				<!-- Fixed layout with both content columns unsized: the two halves
+					then split what the gutters leave, so neither side is wider. -->
+				<colgroup>
+					<col class="w-12" />
+					<col />
+					<col class="w-12" />
+					<col />
+				</colgroup>
+				<tbody>
+					{#each rowsPerHunk[hunkIdx] as row, rowIdx (rowIdx)}
+						{@const leftComments = commentsFor(row.left)}
+						{@const rightComments = commentsFor(row.right)}
+						{@const boxAt = selection.commentingAt?.anchorIndex}
+						{@const showBox =
+							(row.left && hunkOffsets[hunkIdx] + row.left.index === boxAt) ||
+							(row.right && hunkOffsets[hunkIdx] + row.right.index === boxAt)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<tr class="cr-side-del">
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<td
+								class="cr-gutter w-12 cursor-pointer px-2 text-right select-none {edge(
+									row.left,
+									'delete'
+								)} {tint(row.left, 'delete')}"
+								onmousedown={() =>
+									row.left &&
+									selection.handleMouseDown(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
+								onmouseenter={() =>
+									row.left &&
+									selection.handleMouseEnter(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
+								title="Click to comment, drag for a range"
+							>
+								{row.left?.line.old_no ?? ''}
+							</td>
+							<td
+								class="border-r border-base-300 px-2 break-all whitespace-pre-wrap {tint(
+									row.left,
+									'delete'
+								)}"
+							>
+								{#if row.left}{@html highlighted[hunkIdx][row.left.index]}{/if}
+							</td>
+
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<td
+								data-testid="line-gutter"
+								class="cr-gutter cr-side-add w-12 cursor-pointer px-2 text-right select-none {edge(
+									row.right,
+									'add'
+								)} {tint(row.right, 'add')}"
+								onmousedown={() =>
+									row.right &&
+									selection.handleMouseDown(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
+								onmouseenter={() =>
+									row.right &&
+									selection.handleMouseEnter(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
+								title="Click to comment, drag for a range"
+							>
+								{row.right?.line.new_no ?? ''}
+							</td>
+							<td class="cr-side-add px-2 break-all whitespace-pre-wrap {tint(row.right, 'add')}">
+								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}
+							</td>
+						</tr>
+
+						{#if leftComments || rightComments || showBox}
+							<tr>
+								<td colspan="4">
+									{#each leftComments ?? [] as comment (comment.id)}
+										<CommentThread {comment} />
+									{/each}
+									{#each rightComments ?? [] as comment (comment.id)}
+										<CommentThread {comment} />
+									{/each}
+									{#if showBox}
+										<div class="px-3 py-2">
+											<CommentBox
+												onSave={handleSaveComment}
+												onCancel={() => selection.clearCommenting()}
+												side={selection.commentingAt?.side}
+												startLine={selection.commentingAt?.line}
+												endLine={selection.commentingAt?.endLine}
+											/>
+										</div>
+									{/if}
+								</td>
+							</tr>
+						{/if}
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/each}
+</div>

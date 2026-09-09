@@ -634,3 +634,35 @@ async def test_scrolling_to_a_file_from_the_sidebar_shows_its_lines(server_url: 
     visible_sections = page.get_by_test_id("file-section")
     assert await visible_sections.count() >= 2
     await page.get_by_test_id("raw-view").last.wait_for()
+
+
+async def test_split_layout_faces_the_two_versions(server_url: ServerFixture, page: Page) -> None:
+    """A replacement can be read across rather than down."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("layout-split").click()
+
+    main = _section(page, "main.py")
+    await main.get_by_test_id("split-view").wait_for()
+    assert await main.get_by_test_id("raw-view").count() == 0
+
+
+async def test_comment_left_in_split_layout_reaches_claude(server_url: ServerFixture, page: Page) -> None:
+    """Commenting works the same in either layout."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await page.get_by_test_id("layout-split").click()
+    main = _section(page, "main.py")
+    await main.get_by_test_id("split-view").wait_for()
+
+    await _click_line_and_comment(page, main.get_by_test_id("line-gutter").first, "Split comment")
+
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("submitted-banner").wait_for()
+
+    assert state.result is not None
+    assert "Split comment" in state.result

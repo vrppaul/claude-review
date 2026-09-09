@@ -287,3 +287,50 @@
   background: color-mix(in srgb, var(--cr-del-edge) 32%, transparent);
   border-radius: 2px;
 }
+
+/*
+ * Split layout. Each side of a row carries its own change, so the tint and
+ * the edge are set per cell rather than per row.
+ */
+.cr-cell-add {
+  background: var(--cr-add-tint);
+}
+.cr-cell-del {
+  background: var(--cr-del-tint);
+}
+.cr-cell-marked {
+  background: var(--cr-mark-tint);
+}
+.cr-cell-add .cr-word,
+.cr-side-add .cr-word {
+  background: color-mix(in srgb, var(--cr-add-edge) 32%, transparent);
+  border-radius: 2px;
+}
+.cr-cell-del .cr-word,
+.cr-side-del .cr-word {
+  background: color-mix(in srgb, var(--cr-del-edge) 32%, transparent);
+  border-radius: 2px;
+}
+.cr-edge {
+  border-left: 2px solid transparent;
+}
+.cr-edge-add {
+  border-left-color: var(--cr-add-edge);
+}
+.cr-edge-del {
+  border-left-color: var(--cr-del-edge);
+}
+.cr-edge-marked {
+  border-left-color: var(--cr-mark);
+}
+/* An absent side of a replacement: nothing was there, and it is not a gap */
+.cr-cell-absent {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    var(--color-base-300) 6px,
+    var(--color-base-300) 7px
+  );
+  opacity: 0.35;
+}

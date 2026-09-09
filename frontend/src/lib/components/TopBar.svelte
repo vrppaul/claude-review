@@ -2,6 +2,7 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { scrollToComment } from '$lib/utils/scroll';
+	import DiffLayoutToggle from './DiffLayoutToggle.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 
 	interface Props {
@@ -40,6 +41,10 @@
 	{/if}
 
 	<div class="flex-1"></div>
+
+	{#if diffStore.mode === 'diff'}
+		<DiffLayoutToggle />
+	{/if}
 
 	{#if error}
 		<span data-testid="submit-error" class="text-sm text-error">{error}</span>

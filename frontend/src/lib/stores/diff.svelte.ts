@@ -3,6 +3,7 @@ import { SvelteSet } from "svelte/reactivity";
 import type {
   ContentViewMode,
   DiffFile,
+  DiffLayout,
   DiffResponse,
   ReviewMode,
 } from "$lib/types";
@@ -12,6 +13,7 @@ let selectedPath = $state<string | null>(null);
 let mode = $state<ReviewMode>("diff");
 let contentViewMode = $state<ContentViewMode>("raw");
 let title = $state("");
+let diffLayout = $state<DiffLayout>("unified");
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
 // a folded file can still be unread, and a viewed one can be reopened.
@@ -38,6 +40,14 @@ export const diffStore = {
   /** What is under review — which repository, and against what. */
   get title(): string {
     return title;
+  },
+  /** Whether a diff reads down one column or across two. */
+  get diffLayout(): DiffLayout {
+    return diffLayout;
+  },
+
+  setDiffLayout(next: DiffLayout) {
+    diffLayout = next;
   },
   get viewedCount(): number {
     return viewed.size;
@@ -88,6 +98,7 @@ export const diffStore = {
     selectedPath = null;
     mode = "diff";
     contentViewMode = "raw";
+    diffLayout = "unified";
     title = "";
     viewed.clear();
     collapsed.clear();

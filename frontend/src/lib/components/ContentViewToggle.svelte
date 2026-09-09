@@ -5,7 +5,7 @@
 	const modes: { value: ContentViewMode; label: string; testId: string }[] = [
 		{ value: 'raw', label: 'Raw', testId: 'view-mode-raw' },
 		{ value: 'preview', label: 'Preview', testId: 'view-mode-preview' },
-		{ value: 'side-by-side', label: 'Side by side', testId: 'view-mode-side-by-side' }
+		{ value: 'side-by-side', label: 'Both', testId: 'view-mode-side-by-side' }
 	];
 </script>
 

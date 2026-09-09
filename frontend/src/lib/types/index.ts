@@ -4,6 +4,8 @@ export type LineSide = "old" | "new";
 export type FileStatus = "modified" | "added" | "deleted" | "renamed";
 export type ReviewMode = "diff" | "files" | "transcript";
 export type ContentViewMode = "raw" | "preview" | "side-by-side";
+/** Whether a diff reads down one column or across two. */
+export type DiffLayout = "unified" | "split";
 
 export interface DiffLine {
   type: LineType;

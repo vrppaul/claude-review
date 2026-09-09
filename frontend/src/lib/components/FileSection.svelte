@@ -9,6 +9,7 @@
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';
+	import SplitView from './SplitView.svelte';
 	import SideBySideView from './SideBySideView.svelte';
 
 	interface Props {
@@ -119,6 +120,8 @@
 				<PreviewView {file} />
 			{:else if viewMode === 'side-by-side'}
 				<SideBySideView {file} {language} />
+			{:else if isDiffMode && diffStore.diffLayout === 'split' && file.hunks.length > 0}
+				<SplitView {file} {language} />
 			{:else}
 				<RawView {file} {language} />
 			{/if}
