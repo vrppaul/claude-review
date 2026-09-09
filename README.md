@@ -102,6 +102,18 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - Comments survive a reload, and a review reopened on the same repository
   comes back on the same port, so an unsent draft is still there
 
+**Talking to the agent**
+
+- A panel on the right for what a thread is not about — the plan, the tests, a
+  file nobody commented on. It reaches the same agent that answers the threads
+- Point at a thread with `@`, and its lines, comment and turns travel with the
+  message
+- Two numbers, told apart: what handing the review over costs, and how much
+  context the agent says it has left
+- Stop a message the agent is still working on — a request, not a kill
+- When the working tree moves on, the review says so and offers to take the
+  diff again. It never swaps it under a half-written comment
+
 **Keyboard**
 
 - `j` / `k` between lines, `Enter` to comment, `]` / `[` between files
@@ -118,8 +130,10 @@ claude-review diff --base v0.5.0           # diff since a tag
 claude-review files plan.md                # files mode — review text files
 claude-review files a.md b.py c.rs         # files mode — multiple files
 claude-review transcript conv.jsonl        # transcript mode — review conversation
-claude-review wait --port 8765             # wait for a question or a round
+claude-review wait --port 8765             # wait for a question, a message or a round
 claude-review reply --port 8765 --thread <id> --question <id> "..."   # answer in a thread
+claude-review say --port 8765 --message <id> "..."                    # answer in the panel
+claude-review status --port 8765 --model opus-5 --context "53% of 1M" # what only the agent knows
 claude-review round --port 8765            # retake the diff after a round
 claude-review --port 8080 diff             # shared options before subcommand
 claude-review --no-open diff               # don't open browser automatically
@@ -127,19 +141,21 @@ claude-review --verbose diff --base HEAD~1 # enable diagnostic logging
 claude-review --version                    # print the installed version
 ```
 
-### Answering questions from the review
+### Answering from the review
 
-While a review is open, any comment can carry a question. These two commands
-let the Claude that wrote the change be the one that answers it:
+While a review is open, any comment can carry a question, and the panel
+carries everything that belongs to no comment. These commands let the agent
+that wrote the change be the one that answers:
 
 ```bash
-claude-review wait --port 8765             # block until something is asked
+claude-review wait --port 8765             # block until something is said
 claude-review reply --port 8765 --thread comment-3 "Because it moved to config"
+claude-review say --port 8765 --message panel-1 "One failed; fixed and green"
 ```
 
-`wait` prints one JSON object and exits — a question, or `{"type":"timeout"}`
-if nothing was asked — so it can be driven from a loop. The `/review-ui` skill
-documents the loop.
+`wait` prints one JSON object and exits — a question, a panel message, a
+round, or `{"type":"timeout"}` if nothing was said — so it can be driven from
+a loop. The `/review-ui` skill documents the loop.
 
 ### Manual install (optional)
 

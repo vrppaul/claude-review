@@ -32,7 +32,7 @@ Usage:
 
 When it finishes, the user's review comments will be printed to stdout. Read them carefully and address each comment by making the requested changes.
 
-## Discussing a thread, and reviewing in rounds (optional)
+## Talking through the review: threads, the panel, and rounds (optional)
 
 Skip this unless the user asks for it, or has asked a question in a thread
 before. It changes nothing about the flow above; it adds a second half.
@@ -40,9 +40,12 @@ before. It changes nothing about the flow above; it adds a second half.
 Every thread in the review UI has an "Ask now" button, and the composer
 offers it beside "Add to review". A question left there waits for you to
 pick it up, and your answer appears in that thread while the user keeps
-reading. Once you are waiting, the review also offers to send a **round**
-rather than to end: the user sends what they have written, you answer and
-make the changes, the diff is taken again, and the review carries on.
+reading. The **agent panel** on the right is the same conversation for
+everything a thread is not about — the plan, the tests, a file nobody
+commented on — and what is typed there goes at once. Once you are waiting,
+the review also offers to send a **round** rather than to end: the user
+sends what they have written, you answer and make the changes, the diff is
+taken again, and the review carries on.
 
 Two rules while the review is open. **Answer questions as they arrive** — a
 thread that goes quiet for ten minutes reads as a hang, and the reader is
@@ -71,9 +74,17 @@ waiting on it:
      The question carries `thread_id` and `question_id`, the file, the line
      range, `quote` — the lines it is about — and `history`, everything
      already said in that thread, starting with the comment that opened it.
+   - `{"type": "message", "message": {"message_id": "panel-1", "text": "...",
+     "threads": [...]}}` — the user has said something in the agent panel,
+     which is about the review rather than about one line: the plan, the
+     tests, a file nobody commented on. Answer it with `say` (step 4). Any
+     threads it points at come with it, in the same shape as a question.
    - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
      user has sent a round. Address it as you would a finished review, then
-     retake the diff (step 4) and keep waiting.
+     retake the diff (step 5) and keep waiting.
+   - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
+     taken a message back. Drop what you were doing for it if you still can,
+     and say nothing about it unless it is already half done.
    - `{"type": "timeout"}` — nothing was asked; wait again.
    - `{"type": "closed"}` — the review is over. Stop.
 
@@ -87,7 +98,20 @@ waiting on it:
    way, what you considered and rejected. That context is the reason to route
    the question to you rather than to a fresh session.
 
-4. After making the changes a round asked for, show them:
+4. Answer a panel message, naming the message:
+   ```bash
+   claude-review say --port 8765 --message <message_id> "..."
+   ```
+   The panel is one conversation, so the answer lands under the message it
+   names. Optionally, say what only you can know about yourself — the panel
+   shows it beside the review's own weight, with the time it was said:
+   ```bash
+   claude-review status --port 8765 --model opus-5 --context "53% of 1M"
+   ```
+   Report it when it changes, not on every turn. Say nothing and the panel
+   shows nothing, which is better than a number that is a guess.
+
+5. After making the changes a round asked for, show them:
    ```bash
    claude-review round --port 8765
    ```
@@ -95,5 +119,9 @@ waiting on it:
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against.
 
-5. A review the user ends prints its last round on the background command's
+6. A review the user ends prints its last round on the background command's
    output, as it normally would. That ends the loop.
+
+While you work, the review says when the working tree has moved on and
+offers the user a "Retake" of its own. It never swaps the diff by itself, so
+nothing you change under a half-written comment throws it away.

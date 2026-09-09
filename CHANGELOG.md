@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.3.0] - 2026-09-09
+
+The review gains a second conversation: one about the change as a whole,
+with the agent that wrote it.
+
+### Added
+- **The agent panel** — a panel on the right for everything a thread is not
+  about: the plan, the tests, a file nobody commented on. It reaches the
+  same agent that answers the threads, in the same vocabulary — the reader's
+  turns on the mark's tint, an answer on the page's own ground, a waiting
+  turn that holds its place. Everything typed there goes at once; there is
+  one button, because "add to review" has no meaning outside a thread
+- **Point at a thread with `@`** — the picker lists the threads with their
+  state, and what travels with the message is the thread itself: its lines,
+  the comment that opened it and every turn since. The reference is a token
+  in the text, so deleting the word takes the reference with it
+- **Two numbers, told apart** — what handing this review over costs is
+  arithmetic over the diff and the threads, and the review does it. How much
+  context the agent has left cannot be measured from here at all, so it is
+  quoted with who said it and when, and shown as nothing until it is said
+- **Stop a message** the agent is still working on — a request on the same
+  queue, not a kill: nothing here can reach into another process
+- **A notice when the working tree moves on** — the server polls
+  `git status --porcelain` and says how many files have changed since the
+  diff was taken. It never swaps the diff by itself: doing that under a
+  half-written comment orphans it. After a retake, the bar says what became
+  of the threads and offers a way to the one that lost its lines
+- **`claude-review say`** answers a panel message by name, and
+  **`claude-review status --model --context`** reports what only the agent
+  can know. `claude-review wait` now also yields `message` and `cancel`
+
+### Changed
+- The panel's conversation, its width and whether it is open live in the
+  draft and the reader's preferences, so a reload keeps all three
+
 ## [1.2.0] - 2026-09-09
 
 A comment becomes a thread, and sending stops having to be the end of the
