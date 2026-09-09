@@ -42,11 +42,11 @@
 {#if hidden > 0}
 	<div
 		data-testid="hunk-gap"
-		class="flex items-center gap-3 border-y border-base-300 bg-base-200/40 px-4 py-1"
+		class="flex items-center gap-3 border-y border-base-300 bg-base-200 px-4 py-1"
 	>
 		<button
 			data-testid="expand-context"
-			class="btn btn-ghost btn-xs font-mono text-xs text-base-content/60"
+			class="cr-muted btn btn-ghost btn-xs font-mono text-xs"
 			disabled={loading}
 			onclick={reveal}
 		>

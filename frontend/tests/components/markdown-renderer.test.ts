@@ -39,12 +39,10 @@ describe('MarkdownRenderer', () => {
 		expect(items[1].textContent).toBe('item two');
 	});
 
-	it('applies prose classes for typography', () => {
-		const { getByTestId } = render(MarkdownRenderer, { props: { text: 'test' } });
+	it('renders a heading as a heading, not as its source', () => {
+		const { getByTestId } = render(MarkdownRenderer, { props: { text: '# Title' } });
 
-		const container = getByTestId('markdown-content');
-		expect(container.classList.contains('prose')).toBe(true);
-		expect(container.classList.contains('prose-sm')).toBe(true);
-		expect(container.classList.contains('max-w-none')).toBe(true);
+		const heading = getByTestId('markdown-content').querySelector('h1');
+		expect(heading?.textContent).toBe('Title');
 	});
 });

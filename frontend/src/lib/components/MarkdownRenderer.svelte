@@ -26,6 +26,6 @@
 	const html = $derived(marked.parse(text) as string);
 </script>
 
-<div data-testid="markdown-content" class="prose prose-sm max-w-none">
+<div data-testid="markdown-content" class="cr-prose prose prose-sm">
 	{@html html}
 </div>

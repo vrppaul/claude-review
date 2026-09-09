@@ -17,11 +17,11 @@ describe('ContentViewToggle', () => {
 		expect(getByTestId('view-mode-side-by-side')).toBeTruthy();
 	});
 
-	it('raw button is active by default', () => {
+	it('starts on the raw text', () => {
 		const { getByTestId } = render(ContentViewToggle);
 
-		expect(getByTestId('view-mode-raw').classList.contains('btn-outline')).toBe(false);
-		expect(getByTestId('view-mode-preview').classList.contains('btn-outline')).toBe(true);
+		expect(getByTestId('view-mode-raw').getAttribute('aria-pressed')).toBe('true');
+		expect(getByTestId('view-mode-preview').getAttribute('aria-pressed')).toBe('false');
 	});
 
 	it('clicking preview updates the store', async () => {
@@ -42,13 +42,13 @@ describe('ContentViewToggle', () => {
 		expect(diffStore.contentViewMode).toBe('side-by-side');
 	});
 
-	it('active state follows the store', async () => {
+	it('shows which mode is chosen', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ContentViewToggle);
 
 		await user.click(getByTestId('view-mode-preview'));
 
-		expect(getByTestId('view-mode-raw').classList.contains('btn-outline')).toBe(true);
-		expect(getByTestId('view-mode-preview').classList.contains('btn-outline')).toBe(false);
+		expect(getByTestId('view-mode-raw').getAttribute('aria-pressed')).toBe('false');
+		expect(getByTestId('view-mode-preview').getAttribute('aria-pressed')).toBe('true');
 	});
 });

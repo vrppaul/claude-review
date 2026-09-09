@@ -6,11 +6,13 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { scrollToFile } from '$lib/utils/scroll';
 
-	const statusBadge: Record<FileStatus, { label: string; class: string }> = {
-		modified: { label: 'M', class: 'badge-warning' },
-		added: { label: 'A', class: 'badge-success' },
-		deleted: { label: 'D', class: 'badge-error' },
-		renamed: { label: 'R', class: 'badge-info' }
+	// A letter in the change's own colour, rather than a filled disc: the file
+	// name is what the eye should land on in this list.
+	const statusMark: Record<FileStatus, { label: string; colour: string }> = {
+		modified: { label: 'M', colour: 'var(--color-warning)' },
+		added: { label: 'A', colour: 'var(--cr-add-text)' },
+		deleted: { label: 'D', colour: 'var(--cr-del-text)' },
+		renamed: { label: 'R', colour: 'var(--cr-mark)' }
 	};
 
 	interface TreeNode {
@@ -98,7 +100,7 @@
 </script>
 
 {#snippet fileRow(file: DiffFile, name: string, depth: number)}
-	{@const badge = statusBadge[file.status]}
+	{@const mark = statusMark[file.status]}
 	{@const fileComments = commentStore.getForFile(file.path)}
 	{@const stats = fileStats(file)}
 	{@const viewed = diffStore.isViewed(file.path)}
@@ -113,7 +115,9 @@
 			onclick={() => scrollToFile(file.path)}
 		>
 			{#if isDiffMode}
-				<span class="badge badge-xs {badge.class}">{badge.label}</span>
+				<span class="w-3 shrink-0 text-center font-semibold" style="color: {mark.colour}"
+					>{mark.label}</span
+				>
 			{/if}
 			<span class="flex-1 truncate">{name}</span>
 			{#if viewed}
@@ -131,8 +135,8 @@
 				<span class="badge badge-xs badge-primary">{fileComments.length}</span>
 			{/if}
 			{#if isDiffMode}
-				<span class="text-success/80">+{stats.additions}</span>
-				<span class="text-error/80">−{stats.deletions}</span>
+				<span style="color: var(--cr-add-text)">+{stats.additions}</span>
+				<span style="color: var(--cr-del-text)">−{stats.deletions}</span>
 			{/if}
 		</button>
 	</li>
@@ -146,7 +150,7 @@
 		<li>
 			<button
 				data-testid="folder-item"
-				class="flex w-full items-center gap-1 px-2 py-1 text-left font-mono text-xs font-semibold text-base-content/50 hover:text-base-content"
+				class="cr-muted flex w-full items-center gap-1 px-2 py-1 text-left font-mono text-xs font-semibold hover:text-base-content"
 				style="padding-left: {depth * 12 + 8}px"
 				aria-expanded={!folded}
 				onclick={() => toggleFolder(node.path)}
@@ -172,7 +176,10 @@
 	{/if}
 {/snippet}
 
-<aside data-testid="sidebar" class="w-96 overflow-y-auto border-r border-base-300 bg-base-100">
+<aside
+	data-testid="sidebar"
+	class="w-60 shrink-0 overflow-y-auto border-r border-base-300 bg-base-100 lg:w-72 2xl:w-88"
+>
 	<div class="p-3">
 		<div class="mb-2 flex items-baseline gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
@@ -181,13 +188,13 @@
 		<input
 			data-testid="file-filter"
 			type="search"
-			class="input input-sm mb-2 w-full font-mono text-xs"
-			placeholder="Filter by path"
+			class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
+			placeholder="Jump to a file"
 			bind:value={filter}
 		/>
 
 		{#if matching.length === 0}
-			<p data-testid="no-matches" class="px-2 py-4 text-xs text-base-content/50">
+			<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
 				No file matches “{filter}”.
 			</p>
 		{:else if isDiffMode}

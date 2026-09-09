@@ -90,7 +90,7 @@
 			<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
 			{#if hunk.header}
 				<div
-					class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45"
+					class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs"
 				>
 					{hunk.header}
 				</div>
@@ -157,7 +157,7 @@
 							>
 								{row.right?.line.new_no ?? ''}
 							</td>
-							<td class="cr-side-add cr-code-cell px-2 whitespace-pre-wrap {tint(row.right, 'add')}">
+							<td class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'add')}">
 								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}
 							</td>
 						</tr>

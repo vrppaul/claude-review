@@ -100,14 +100,14 @@
 	{#if modeChange}
 		<div
 			data-testid="mode-change-note"
-			class="border-b border-base-300 bg-base-200/50 px-4 py-2 font-mono text-xs text-base-content/60"
+			class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs"
 		>
 			Permission changed: {modeChange}
 		</div>
 	{/if}
 
 	{#if emptyReason}
-		<div data-testid="empty-file-note" class="px-4 py-8 text-center text-sm text-base-content/50">
+		<div data-testid="empty-file-note" class="cr-muted px-4 py-8 text-center text-sm">
 			{emptyReason}
 		</div>
 	{/if}
@@ -118,7 +118,7 @@
 				<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
 			{/if}
 			{#if isDiffMode && hunk.header}
-				<div class="border-y border-base-300 bg-base-200/60 px-4 py-1 font-mono text-xs text-base-content/45">
+				<div class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
 					{hunk.header}
 				</div>
 			{/if}
@@ -174,7 +174,7 @@
 									{linePrefix(line.type)}
 								</td>
 							{/if}
-							<td class="cr-code-cell px-2 whitespace-pre-wrap">
+							<td class="cr-code-cell px-2 pr-4 whitespace-pre-wrap">
 								{@html highlighted[hunkIdx][lineIdx]}
 							</td>
 						</tr>

@@ -58,7 +58,7 @@
 		onkeydown={handleKeydown}
 	></textarea>
 	<div class="flex items-center gap-2">
-		<span class="text-xs text-base-content/50">Ctrl+Enter to save</span>
+		<span class="cr-muted text-xs">Ctrl+Enter to save</span>
 		<div class="flex-1"></div>
 		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>
 			Cancel

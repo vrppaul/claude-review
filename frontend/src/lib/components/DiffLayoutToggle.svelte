@@ -8,13 +8,11 @@
 	];
 </script>
 
-<div data-testid="diff-layout-toggle" class="join">
+<div data-testid="diff-layout-toggle" class="cr-segmented">
 	{#each layouts as layout (layout.value)}
 		<button
 			data-testid={layout.testId}
-			class="btn join-item btn-xs {diffStore.diffLayout === layout.value
-				? 'btn-primary'
-				: 'btn-outline btn-primary'}"
+			class="cr-segment"
 			aria-pressed={diffStore.diffLayout === layout.value}
 			onclick={() => diffStore.setDiffLayout(layout.value)}
 		>

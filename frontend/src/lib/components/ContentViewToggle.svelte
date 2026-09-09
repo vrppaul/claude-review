@@ -9,11 +9,12 @@
 	];
 </script>
 
-<div data-testid="content-view-toggle" class="join ml-4">
+<div data-testid="content-view-toggle" class="cr-segmented">
 	{#each modes as mode (mode.value)}
 		<button
 			data-testid={mode.testId}
-			class="join-item btn btn-xs {diffStore.contentViewMode === mode.value ? 'btn-primary' : 'btn-outline btn-primary'}"
+			class="cr-segment"
+			aria-pressed={diffStore.contentViewMode === mode.value}
 			onclick={() => diffStore.setContentViewMode(mode.value)}
 		>
 			{mode.label}

@@ -61,11 +61,13 @@
 	style="contain-intrinsic-size: auto {estimatedHeight}px"
 >
 	<div
-		class="sticky top-0 z-10 flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2"
+		class="sticky top-0 z-10 flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2 {viewed
+			? 'opacity-55'
+			: ''}"
 	>
 		<button
 			data-testid="collapse-file"
-			class="btn btn-ghost btn-xs px-1"
+			class="btn btn-ghost btn-xs px-1.5"
 			aria-expanded={!collapsed}
 			aria-label={collapsed ? `Expand ${file.path}` : `Collapse ${file.path}`}
 			onclick={() => diffStore.toggleCollapsed(file.path)}
@@ -83,10 +85,10 @@
 		<span class="font-mono text-sm font-semibold">{file.path}</span>
 
 		{#if isDiffMode}
-			<span class="badge badge-sm badge-ghost">{file.status}</span>
+			<span class="cr-muted text-xs">{file.status}</span>
 			<span class="font-mono text-xs">
-				<span class="text-success">+{stats.additions}</span>
-				<span class="text-error">−{stats.deletions}</span>
+				<span style="color: var(--cr-add-text)">+{stats.additions}</span>
+				<span style="color: var(--cr-del-text)">−{stats.deletions}</span>
 			</span>
 		{/if}
 
@@ -102,14 +104,20 @@
 			<ContentViewToggle />
 		{/if}
 
-		<label class="flex cursor-pointer items-center gap-1.5 text-xs text-base-content/70">
+		<label class="cr-chip">
 			<input
 				data-testid="viewed-toggle"
 				type="checkbox"
-				class="checkbox checkbox-xs"
 				checked={viewed}
 				onchange={() => diffStore.toggleViewed(file.path)}
 			/>
+			<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+				{#if viewed}
+					<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
+				{:else}
+					<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1" />
+				{/if}
+			</svg>
 			Viewed
 		</label>
 	</div>

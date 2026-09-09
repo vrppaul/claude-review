@@ -35,7 +35,7 @@
 >
 	<span class="font-semibold">Review</span>
 	{#if diffStore.title}
-		<span data-testid="review-title" class="truncate font-mono text-xs text-base-content/60">
+		<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
 			{diffStore.title}
 		</span>
 	{/if}
@@ -50,7 +50,7 @@
 		<span data-testid="submit-error" class="text-sm text-error">{error}</span>
 	{/if}
 
-	<span data-testid="comment-count" class="text-sm text-base-content/60">
+	<span data-testid="comment-count" class="cr-muted text-sm">
 		{commentStore.count}
 		{commentStore.count === 1 ? 'comment' : 'comments'}
 	</span>
@@ -64,7 +64,9 @@
 				title="Previous comment"
 				aria-label="Previous comment"
 			>
-				&#9650;
+				<svg class="h-3 w-3 rotate-180" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+					<path d="M2 4l4 4 4-4z" />
+				</svg>
 			</button>
 			<button
 				data-testid="next-comment"
@@ -73,7 +75,9 @@
 				title="Next comment"
 				aria-label="Next comment"
 			>
-				&#9660;
+				<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+					<path d="M2 4l4 4 4-4z" />
+				</svg>
 			</button>
 		</div>
 	{/if}

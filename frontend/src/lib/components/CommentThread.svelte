@@ -30,26 +30,30 @@
 			endLine={comment.end_line}
 		/>
 	{:else}
-		<div class="cr-comment rounded-r px-4 py-3">
+		<div class="cr-comment group rounded-r px-4 py-3">
 			<div class="flex items-baseline gap-3">
 				<span data-testid="comment-line-label" class="cr-comment-ref font-mono text-xs">
 					{label}
 				</span>
 				<div class="flex-1"></div>
-				<button
-					data-testid="edit-comment"
-					class="btn btn-ghost btn-xs"
-					onclick={() => (editing = true)}
+				<div
+					class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
 				>
-					Edit
-				</button>
-				<button
-					data-testid="delete-comment"
-					class="btn btn-ghost btn-xs hover:text-error"
-					onclick={() => commentStore.remove(comment.id)}
-				>
-					Delete
-				</button>
+					<button
+						data-testid="edit-comment"
+						class="btn btn-ghost btn-xs"
+						onclick={() => (editing = true)}
+					>
+						Edit
+					</button>
+					<button
+						data-testid="delete-comment"
+						class="btn btn-ghost btn-xs hover:text-error"
+						onclick={() => commentStore.remove(comment.id)}
+					>
+						Delete
+					</button>
+				</div>
 			</div>
 			<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
 		</div>

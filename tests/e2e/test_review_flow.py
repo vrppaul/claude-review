@@ -189,7 +189,7 @@ async def test_review_body_only_via_modal(server_url: ServerFixture, page: Page)
     await page.get_by_test_id("sidebar").wait_for()
 
     await page.get_by_test_id("finish-review").click()
-    await page.wait_for_selector("text=Submit Review")
+    await page.get_by_test_id("review-body").wait_for()
 
     modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Wrong approach, reconsider the design.")

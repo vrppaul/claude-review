@@ -38,14 +38,19 @@ describe('ReviewModal', () => {
 		expect(queryByText('inline comment')).toBeNull();
 	});
 
-	it('shows comment file:line in recap', () => {
-		commentStore.add('src/app.ts', 'new', 42, 42, 'wrong logic');
+	it('shows each comment in full before it is sent', () => {
+		const long =
+			'This reads the clock twice per call, so a sweep can see two different ' +
+			'instants and drop a session that was alive when it started.';
+		commentStore.add('src/app.ts', 'new', 42, 42, long);
 
-		const { getByText } = render(ReviewModal, {
+		const { getByText, getByTestId } = render(ReviewModal, {
 			props: { onSubmit: vi.fn(), onClose: vi.fn() }
 		});
 
-		expect(getByText('src/app.ts:42')).toBeTruthy();
+		// The last screen before sending is the wrong place to truncate
+		expect(getByText(long)).toBeTruthy();
+		expect(getByTestId('modal-comment-ref').textContent).toContain('src/app.ts');
 	});
 
 	it('disables submit when no content', () => {
@@ -105,7 +110,9 @@ describe('ReviewModal line references', () => {
 			props: { onSubmit: () => {}, onClose: () => {} }
 		});
 
-		expect(getByTestId('modal-comment-ref').textContent).toBe('src/app.ts:42 (removed)');
+		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'src/app.ts · Removed line 42'
+		);
 	});
 
 	it('leaves a comment on the current version unmarked', () => {
@@ -115,6 +122,8 @@ describe('ReviewModal line references', () => {
 			props: { onSubmit: () => {}, onClose: () => {} }
 		});
 
-		expect(getByTestId('modal-comment-ref').textContent).toBe('src/app.ts:42-47');
+		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'src/app.ts · Lines 42-47'
+		);
 	});
 });

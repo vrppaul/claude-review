@@ -66,7 +66,11 @@
   --cr-del-tint: rgb(242 84 91 / 0.09);
   --cr-mark: #5b8def;
   --cr-mark-tint: rgb(91 141 239 / 0.14);
-  --cr-gutter-fg: #66748a;
+  --cr-gutter-fg: #7c8a9e;
+  --cr-muted: #98a5b6;
+  --cr-faint: #7a8798;
+  --cr-add-text: #59c470;
+  --cr-del-text: #ff8086;
 
   --cr-syn-keyword: #c792ea;
   --cr-syn-string: #e0a458;
@@ -115,7 +119,11 @@
   --cr-del-tint: rgb(200 50 60 / 0.08);
   --cr-mark: #2c6bd9;
   --cr-mark-tint: rgb(44 107 217 / 0.12);
-  --cr-gutter-fg: #8593a4;
+  --cr-gutter-fg: #5d6a7a;
+  --cr-muted: #4c5866;
+  --cr-faint: #5d6a7a;
+  --cr-add-text: #16702e;
+  --cr-del-text: #a5222c;
 
   --cr-syn-keyword: #8250df;
   --cr-syn-string: #8a5a00;
@@ -240,14 +248,23 @@
 .cr-gutter {
   color: var(--cr-gutter-fg);
   font-variant-numeric: tabular-nums;
+  /* A wrapped line's number belongs beside its first visual line, not
+     floating in the middle of however many lines it took */
+  vertical-align: top;
 }
+.cr-sign {
+  vertical-align: top;
+}
+/* The rule at the row's edge can be light; the glyphs beside it are text */
 .cr-row-add .cr-gutter,
-.cr-row-add .cr-sign {
-  color: var(--cr-add-edge);
+.cr-row-add .cr-sign,
+.cr-cell-add .cr-gutter {
+  color: var(--cr-add-text);
 }
 .cr-row-del .cr-gutter,
-.cr-row-del .cr-sign {
-  color: var(--cr-del-edge);
+.cr-row-del .cr-sign,
+.cr-cell-del .cr-gutter {
+  color: var(--cr-del-text);
 }
 .cr-row-marked .cr-gutter,
 .cr-row-marked .cr-sign {
@@ -342,9 +359,107 @@
   background: repeating-linear-gradient(
     45deg,
     transparent,
-    transparent 6px,
-    var(--color-base-300) 6px,
-    var(--color-base-300) 7px
+    transparent 11px,
+    var(--color-base-300) 11px,
+    var(--color-base-300) 12px
   );
-  opacity: 0.35;
+  opacity: 0.5;
+}
+
+/* Muted text carries the same weight in both themes rather than being an
+   alpha of the body colour, which light loses a fifth of its contrast to. */
+.cr-muted {
+  color: var(--cr-muted);
+}
+.cr-faint {
+  color: var(--cr-faint);
+}
+
+/* One focus treatment, in the palette, so keyboard use is visible everywhere */
+:where(button, input, textarea, select, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--cr-mark);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+/*
+ * Segmented controls. These pick a view, they do not act, so they read as a
+ * track with the current chip raised rather than as rows of primary buttons.
+ */
+.cr-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-field);
+  background: var(--color-base-300);
+}
+.cr-segment {
+  padding: 1px 8px;
+  border-radius: calc(var(--radius-field) - 1px);
+  color: var(--cr-muted);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.cr-segment:hover {
+  color: var(--color-base-content);
+}
+.cr-segment[aria-pressed="true"] {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+
+/* A chip the whole of which is the hit target, over a 16px checkbox */
+.cr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-field);
+  color: var(--cr-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.cr-chip:hover {
+  background: var(--color-base-300);
+  color: var(--color-base-content);
+}
+.cr-chip:has(:checked) {
+  color: var(--cr-add-text);
+}
+.cr-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.cr-chip:has(:focus-visible) {
+  outline: 2px solid var(--cr-mark);
+  outline-offset: 1px;
+}
+
+/* Rendered prose gets the same measure as a comment: it is prose too */
+.cr-prose {
+  max-width: 72ch;
+}
+
+/*
+ * A disabled action still has to be readable: "Send to Claude" is disabled
+ * on arrival, so at the default opacity the first thing a reader sees is a
+ * button they cannot make out.
+ */
+.btn:disabled,
+.btn[disabled] {
+  opacity: 1;
+  background-color: var(--color-base-300);
+  color: var(--cr-muted);
+  border-color: transparent;
+}
+
+/* The palette sets depth to zero, so a dialog needs its own way of reading
+   as being on top of the page rather than part of it */
+.cr-dialog {
+  border: 1px solid var(--color-base-300);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.45);
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import { lineRefLabel } from '$lib/utils/line-label';
+	import { lineRangeLabel } from '$lib/utils/line-label';
 
 	interface Props {
 		onSubmit: () => void;
@@ -27,10 +27,6 @@
 		}
 	}
 
-	function truncate(text: string, max: number): string {
-		return text.length > max ? text.slice(0, max) + '...' : text;
-	}
-
 	function handleBackdropClick(e: MouseEvent) {
 		// Only close when clicking the backdrop itself, not the modal content
 		if (e.target === e.currentTarget) {
@@ -45,50 +41,58 @@
 	aria-modal="true"
 	aria-labelledby="review-modal-title"
 	tabindex="-1"
-	class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
+	class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
 	onkeydown={handleKeydown}
 	onclick={handleBackdropClick}
 >
-	<div class="bg-base-100 rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
-		<div class="px-6 py-4 border-b border-base-300">
-			<h3 id="review-modal-title" class="text-lg font-semibold">Submit Review</h3>
+	<div class="cr-dialog flex max-h-[80vh] w-full max-w-xl flex-col rounded-lg bg-base-100">
+		<div class="border-b border-base-300 px-6 py-4">
+			<h3 id="review-modal-title" class="text-lg font-semibold">Review summary</h3>
 		</div>
 
-		<div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+		<div class="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+			<div>
+				<h4 class="cr-muted mb-2 text-sm font-semibold">
+					General feedback, not tied to a line
+				</h4>
+				<textarea
+					bind:this={textareaEl}
+					data-testid="review-body"
+					class="cr-comment-body textarea min-h-24 w-full bg-base-100 focus:outline-none"
+					placeholder="What should Claude know about the change as a whole?"
+					value={commentStore.reviewBody}
+					oninput={(e) => commentStore.setReviewBody(e.currentTarget.value)}
+				></textarea>
+			</div>
+
 			{#if commentStore.count > 0}
 				<div>
-					<h4 class="text-sm font-semibold text-base-content/60 mb-2">
+					<h4 class="cr-muted mb-2 text-sm font-semibold">
 						{commentStore.count} inline {commentStore.count === 1 ? 'comment' : 'comments'}
 					</h4>
-					<ul class="space-y-1">
+					<ul class="space-y-2">
 						{#each commentStore.comments as comment (comment.id)}
-							<li class="text-xs font-mono bg-base-200 rounded px-3 py-2">
-								<span data-testid="modal-comment-ref" class="text-info"
-									>{comment.file}:{lineRefLabel(comment.side, comment.start_line, comment.end_line)}</span
-								>
-								<span class="text-base-content/60 ml-2">{truncate(comment.body, 80)}</span>
+							<li class="rounded bg-base-200 px-3 py-2">
+								<div data-testid="modal-comment-ref" class="cr-comment-ref font-mono text-xs">
+									{comment.file} · {lineRangeLabel(
+										comment.side,
+										comment.start_line,
+										comment.end_line
+									)}
+								</div>
+								<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
 							</li>
 						{/each}
 					</ul>
 				</div>
 			{/if}
-
-			<div>
-				<h4 class="text-sm font-semibold text-base-content/60 mb-2">Review summary</h4>
-				<textarea
-					bind:this={textareaEl}
-					data-testid="review-body"
-					class="textarea textarea-bordered w-full text-sm min-h-24 focus:outline-none focus:border-info"
-					placeholder="General feedback — not tied to a specific line (optional)"
-					value={commentStore.reviewBody}
-					oninput={(e) => commentStore.setReviewBody(e.currentTarget.value)}
-				></textarea>
-			</div>
 		</div>
 
-		<div class="px-6 py-4 border-t border-base-300 flex justify-end gap-2">
+		<div class="flex items-center gap-2 border-t border-base-300 px-6 py-4">
+			<span class="cr-muted text-xs">Ctrl+Shift+Enter to send</span>
+			<div class="flex-1"></div>
 			<button class="btn btn-ghost btn-sm" data-testid="cancel-modal" onclick={onClose}>
-				Cancel
+				Keep reviewing
 			</button>
 			<button
 				class="btn btn-primary btn-sm"
@@ -96,7 +100,7 @@
 				disabled={!commentStore.hasContent}
 				onclick={onSubmit}
 			>
-				Submit review (Ctrl+Shift+Enter)
+				Send to Claude
 			</button>
 		</div>
 	</div>
