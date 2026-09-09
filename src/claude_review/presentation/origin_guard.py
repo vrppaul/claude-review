@@ -15,12 +15,11 @@ the server pushes, and — since the review ends when the last socket closes —
 throw away an unsent review by connecting and disconnecting once.
 """
 
-from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
 
-from starlette.datastructures import Headers
+from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import PlainTextResponse
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]", "::1"})
 
@@ -47,6 +46,50 @@ def is_local_origin(value: str | None) -> bool:
     return parsed.scheme in ("http", "https") and is_local_host(parsed.netloc)
 
 
+# The page loads nothing from anywhere else, so it can say so. This is
+# defence in depth behind escaping, not a substitute for it: the inline
+# script that applies the theme before first paint needs 'unsafe-inline',
+# which leaves script injection possible — but not exfiltration, since
+# connect-src and img-src stay on this origin.
+SECURITY_HEADERS = {
+    "content-security-policy": (
+        "default-src 'none'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "base-uri 'none'; "
+        "form-action 'none'; "
+        "frame-ancestors 'none'"
+    ),
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+}
+
+
+class SecurityHeaders:
+    """Say what the review's page is allowed to do, and who may frame it."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                for name, value in SECURITY_HEADERS.items():
+                    headers.setdefault(name, value)
+            await send(message)
+
+        await self.app(scope, receive, with_headers)
+
+
 class LocalOriginOnly:
     """Middleware refusing anything that is not this machine's own page."""
 
@@ -70,6 +113,6 @@ class LocalOriginOnly:
             await PlainTextResponse("Not this server's page", status_code=403)(scope, receive, send)
 
 
-async def _reject_socket(send: Callable[[dict], Awaitable[None]]) -> None:
+async def _reject_socket(send: Send) -> None:
     """Close the handshake before it becomes a socket."""
     await send({"type": "websocket.close", "code": 1008})

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.presentation.origin_guard import LocalOriginOnly
+from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
 from claude_review.presentation.routes import router
 from claude_review.presentation.state import ServerState
 
@@ -34,7 +34,8 @@ def create_app(
     # whitespace ignored, or after the files change
     app.state.diff_base = base
 
-    # Before anything else: this server answers its own page and nothing else
+    app.add_middleware(SecurityHeaders)
+    # Outermost, so it runs first: this server answers its own page and nothing else
     app.add_middleware(LocalOriginOnly)
 
     app.include_router(router)

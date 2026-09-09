@@ -46,3 +46,60 @@ describe('MarkdownRenderer', () => {
 		expect(heading?.textContent).toBe('Title');
 	});
 });
+
+describe('a previewed file is read, not run', () => {
+	it('shows raw HTML instead of rendering it', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '# Doc\n\n<img src=x onerror="alert(1)">\n' }
+		});
+
+		const content = getByTestId('markdown-content');
+		expect(content.querySelector('img')).toBeNull();
+		expect(content.textContent).toContain('<img src=x onerror="alert(1)">');
+	});
+
+	it('does not render a script tag from the file under review', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '<script>window.pwned = 1<\/script>\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('script')).toBeNull();
+	});
+
+	it('leaves a link that is code rather than a destination as text', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[click me](javascript:alert(1))\n' }
+		});
+
+		const content = getByTestId('markdown-content');
+		expect(content.querySelector('a')).toBeNull();
+		expect(content.textContent).toContain('click me');
+	});
+
+	it('still renders an ordinary link', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[docs](https://example.com/a)\n' }
+		});
+
+		const link = getByTestId('markdown-content').querySelector('a');
+		expect(link?.getAttribute('href')).toBe('https://example.com/a');
+	});
+
+	it('still renders a relative link', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[other](./other.md)\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe(
+			'./other.md'
+		);
+	});
+
+	it('keeps code blocks escaped rather than double-escaped', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '```js\nconst a = 1 < 2 && 3 > 2;\n```\n' }
+		});
+
+		expect(getByTestId('markdown-content').textContent).toContain('const a = 1 < 2 && 3 > 2;');
+	});
+});

@@ -118,3 +118,19 @@ def test_a_refused_socket_does_not_count_as_a_reader_leaving(state: ServerState)
         pass
 
     assert not state.browser_gone(now=1e12, grace=3.0)
+
+
+async def test_the_page_says_what_it_may_load(client: AsyncClient) -> None:
+    """It loads nothing from anywhere else, so it can say so."""
+    policy = (await client.get("/api/diff")).headers["content-security-policy"]
+
+    assert "default-src 'none'" in policy
+    assert "connect-src 'self'" in policy
+
+
+async def test_the_review_cannot_be_framed(client: AsyncClient) -> None:
+    """Framing it would let a page bait a click on Send and end the review."""
+    headers = (await client.get("/api/diff")).headers
+
+    assert "frame-ancestors 'none'" in headers["content-security-policy"]
+    assert headers["x-frame-options"] == "DENY"
