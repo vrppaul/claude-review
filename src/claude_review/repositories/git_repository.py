@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -41,7 +42,17 @@ class GitRepository:
         """
         fd, tmp_index = tempfile.mkstemp(suffix=".git-index")
         os.close(fd)
-        env = {**os.environ, "GIT_INDEX_FILE": tmp_index}
+        tmp_objects = tempfile.mkdtemp(suffix=".git-objects")
+        env = {**os.environ, "GIT_INDEX_FILE": tmp_index, "GIT_OBJECT_DIRECTORY": tmp_objects}
+
+        # Staging writes a blob for every untracked file. Sending those to a
+        # directory that is thrown away afterwards keeps them out of the
+        # repository, which would otherwise gain one per file — a review of a
+        # tree with a large untracked build directory left megabytes behind.
+        # The real object store is still readable as an alternate.
+        real_objects = await self._object_directory(path)
+        if real_objects is not None:
+            env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = real_objects
 
         try:
             if await self._has_commits(path):
@@ -58,6 +69,15 @@ class GitRepository:
         finally:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(tmp_index)
+            shutil.rmtree(tmp_objects, ignore_errors=True)
+
+    async def _object_directory(self, path: Path) -> str | None:
+        """Absolute path of the repository's object store, if git will say."""
+        try:
+            found = await self._run(path, ["git", "rev-parse", "--path-format=absolute", "--git-path", "objects"])
+        except GitError:
+            return None
+        return found.strip() or None
 
     async def _has_commits(self, path: Path) -> bool:
         try:
