@@ -26,6 +26,19 @@ class LineType(StrEnum):
     DELETE = auto()
 
 
+class LineSide(StrEnum):
+    """Which version of the file a line belongs to.
+
+    OLD — the version before the change; such a line no longer exists in the
+    working tree, so its number only makes sense against the original file.
+    NEW — the version after the change. Files and transcript modes have no
+    "before", so every line there is NEW.
+    """
+
+    OLD = auto()
+    NEW = auto()
+
+
 class FileStatus(StrEnum):
     """Status of a file in the diff."""
 
@@ -62,9 +75,14 @@ class DiffFile(BaseModel):
 
 
 class Comment(BaseModel):
-    """A review comment on a specific line or range."""
+    """A review comment on a line or range of one side of the diff.
+
+    Line numbers are only meaningful together with the side: a hunk that
+    replaces a line has both an old line 42 and a new line 42.
+    """
 
     file: str
+    side: LineSide
     start_line: int
     end_line: int
     body: str

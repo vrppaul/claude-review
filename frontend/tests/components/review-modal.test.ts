@@ -10,8 +10,8 @@ describe('ReviewModal', () => {
 	});
 
 	it('shows inline comment count when comments exist', () => {
-		commentStore.add('file.ts', 1, 1, 'fix this');
-		commentStore.add('file.ts', 5, 5, 'and this');
+		commentStore.add('file.ts', 'new', 1, 1, 'fix this');
+		commentStore.add('file.ts', 'new', 5, 5, 'and this');
 
 		const { getByText } = render(ReviewModal, {
 			props: { onSubmit: vi.fn(), onClose: vi.fn() }
@@ -21,7 +21,7 @@ describe('ReviewModal', () => {
 	});
 
 	it('shows singular label for one comment', () => {
-		commentStore.add('file.ts', 1, 1, 'fix');
+		commentStore.add('file.ts', 'new', 1, 1, 'fix');
 
 		const { getByText } = render(ReviewModal, {
 			props: { onSubmit: vi.fn(), onClose: vi.fn() }
@@ -39,7 +39,7 @@ describe('ReviewModal', () => {
 	});
 
 	it('shows comment file:line in recap', () => {
-		commentStore.add('src/app.ts', 42, 42, 'wrong logic');
+		commentStore.add('src/app.ts', 'new', 42, 42, 'wrong logic');
 
 		const { getByText } = render(ReviewModal, {
 			props: { onSubmit: vi.fn(), onClose: vi.fn() }
@@ -70,7 +70,7 @@ describe('ReviewModal', () => {
 
 	it('calls onSubmit when submit button is clicked', async () => {
 		const onSubmit = vi.fn();
-		commentStore.add('file.ts', 1, 1, 'fix');
+		commentStore.add('file.ts', 'new', 1, 1, 'fix');
 
 		const { getByTestId } = render(ReviewModal, {
 			props: { onSubmit, onClose: vi.fn() }

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.domain.models import DiffFile, LineSide, ReviewMode
 
 
 class DiffResponse(BaseModel):
@@ -16,6 +16,7 @@ class CommentInput(BaseModel):
     """A single comment in the submit request."""
 
     file: str = Field(min_length=1)
+    side: LineSide
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
     body: str = Field(min_length=1, max_length=50_000)

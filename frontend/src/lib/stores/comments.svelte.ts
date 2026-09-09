@@ -1,4 +1,4 @@
-import type { Comment, SubmitResponse } from "$lib/types";
+import type { Comment, LineSide, SubmitResponse } from "$lib/types";
 
 let comments = $state<Comment[]>([]);
 let reviewBody = $state("");
@@ -31,10 +31,17 @@ export const commentStore = {
     reviewBody = text;
   },
 
-  add(file: string, startLine: number, endLine: number, body: string) {
+  add(
+    file: string,
+    side: LineSide,
+    startLine: number,
+    endLine: number,
+    body: string,
+  ) {
     const comment: Comment = {
       id: generateId(),
       file,
+      side,
       start_line: startLine,
       end_line: endLine,
       body,
@@ -55,8 +62,11 @@ export const commentStore = {
     return comments.filter((c) => c.file === file);
   },
 
-  getForLine(file: string, line: number): Comment[] {
-    return comments.filter((c) => c.file === file && c.end_line === line);
+  /** Comments anchored to the end of their range on this exact row. */
+  getForLine(file: string, side: LineSide, line: number): Comment[] {
+    return comments.filter(
+      (c) => c.file === file && c.side === side && c.end_line === line,
+    );
   },
 
   clear() {
@@ -69,8 +79,9 @@ export const commentStore = {
   async submit(): Promise<SubmitResponse> {
     const trimmedBody = reviewBody.trim();
     const payload = {
-      comments: comments.map(({ file, start_line, end_line, body }) => ({
+      comments: comments.map(({ file, side, start_line, end_line, body }) => ({
         file,
+        side,
         start_line,
         end_line,
         body,

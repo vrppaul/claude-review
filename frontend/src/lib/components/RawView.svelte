@@ -41,8 +41,8 @@
 
 	function handleSaveComment(body: string) {
 		if (!selection.commentingAt) return;
-		const { line, endLine } = selection.commentingAt;
-		commentStore.add(file.path, line, endLine, body);
+		const { side, line, endLine } = selection.commentingAt;
+		commentStore.add(file.path, side, line, endLine, body);
 		selection.clearCommenting();
 	}
 
@@ -79,8 +79,9 @@
 					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
 						{@const flatIdx = hunkOffsets[hunkIdx] + lineIdx}
 						{@const lineNo = selection.getLineNumber(line)}
-						{@const lineComments = commentStore.getForLine(file.path, lineNo)}
-						{@const inRange = selection.isHighlighted(lineNo)}
+						{@const side = selection.lineSide(line)}
+						{@const lineComments = commentStore.getForLine(file.path, side, lineNo)}
+						{@const inRange = selection.isHighlighted(side, lineNo)}
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
@@ -126,6 +127,7 @@
 										<CommentBox
 											onSave={handleSaveComment}
 											onCancel={() => selection.clearCommenting()}
+											side={selection.commentingAt?.side}
 											startLine={selection.commentingAt?.line}
 											endLine={selection.commentingAt?.endLine}
 										/>

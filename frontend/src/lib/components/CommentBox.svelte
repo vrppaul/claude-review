@@ -1,20 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { LineSide } from '$lib/types';
+	import { lineRangeLabel } from '$lib/utils/line-label';
 
 	interface Props {
 		onSave: (body: string) => void;
 		onCancel: () => void;
+		side?: LineSide;
 		startLine?: number;
 		endLine?: number;
 		initialBody?: string;
 	}
 
-	let { onSave, onCancel, startLine, endLine, initialBody = '' }: Props = $props();
+	let { onSave, onCancel, side, startLine, endLine, initialBody = '' }: Props = $props();
 
 	function lineLabel(): string | null {
 		if (startLine == null) return null;
-		if (endLine != null && endLine !== startLine) return `Lines ${startLine}-${endLine}`;
-		return `Line ${startLine}`;
+		return lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine);
 	}
 	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
 	let body = $state(initialBody);

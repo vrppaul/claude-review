@@ -215,7 +215,7 @@ describe('DiffView', () => {
 			]
 		};
 		diffStore.setFiles([mdFile], 'files');
-		commentStore.add('docs/readme.md', 1, 1, 'Fix this heading');
+		commentStore.add('docs/readme.md', 'new', 1, 1, 'Fix this heading');
 
 		const { getByTestId } = render(DiffView, { props: { file: mdFile } });
 
@@ -291,5 +291,42 @@ describe('DiffView', () => {
 		const { queryByText } = render(DiffView, { props: { file: transcriptFile } });
 
 		expect(queryByText('added')).toBeNull();
+	});
+});
+
+describe('comment anchoring across diff sides', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+	});
+
+	it('shows a comment on a removed line only once', () => {
+		// The fixture replaces line 2, so old line 2 and new line 2 both exist.
+		diffStore.setFiles([diffFile], 'diff');
+		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+
+		const { getAllByText } = render(DiffView, { props: { file: diffFile } });
+
+		expect(getAllByText('why was this dropped')).toHaveLength(1);
+	});
+
+	it('labels a comment on a removed line as removed', () => {
+		diffStore.setFiles([diffFile], 'diff');
+		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+
+		const { getByTestId } = render(DiffView, { props: { file: diffFile } });
+
+		expect(getByTestId('comment-line-label').textContent).toBe('Removed line 2');
+	});
+
+	it('shows both sides of a replaced line as separate comments', () => {
+		diffStore.setFiles([diffFile], 'diff');
+		commentStore.add('src/handler.ts', 'old', 2, 2, 'the old one');
+		commentStore.add('src/handler.ts', 'new', 2, 2, 'the new one');
+
+		const { getAllByText } = render(DiffView, { props: { file: diffFile } });
+
+		expect(getAllByText('the old one')).toHaveLength(1);
+		expect(getAllByText('the new one')).toHaveLength(1);
 	});
 });

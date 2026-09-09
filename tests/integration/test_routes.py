@@ -7,7 +7,14 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode
+from claude_review.domain.models import (
+    DiffFile,
+    DiffHunk,
+    DiffLine,
+    FileStatus,
+    LineType,
+    ReviewMode,
+)
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.services.text_file_service import TextFileService
@@ -94,8 +101,8 @@ async def test_submit_with_comments_returns_formatted_markdown(
         "/api/submit",
         json={
             "comments": [
-                {"file": "src/handler.ts", "start_line": 42, "end_line": 42, "body": "Wrong null check"},
-                {"file": "src/handler.ts", "start_line": 67, "end_line": 70, "body": "Add max retry"},
+                {"file": "src/handler.ts", "side": "new", "start_line": 42, "end_line": 42, "body": "Wrong null check"},
+                {"file": "src/handler.ts", "side": "new", "start_line": 67, "end_line": 70, "body": "Add max retry"},
             ]
         },
     )
@@ -125,7 +132,7 @@ async def test_submit_triggers_shutdown_signal(client: AsyncClient, server_state
 
     await client.post(
         "/api/submit",
-        json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": "note"}]},
+        json={"comments": [{"file": "x.py", "side": "new", "start_line": 1, "end_line": 1, "body": "note"}]},
     )
 
     assert server_state.shutdown_event.is_set()
@@ -133,7 +140,7 @@ async def test_submit_triggers_shutdown_signal(client: AsyncClient, server_state
 
 async def test_double_submit_returns_409(client: AsyncClient) -> None:
     """Second submit returns 409 Conflict."""
-    payload = {"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": "note"}]}
+    payload = {"comments": [{"file": "x.py", "side": "new", "start_line": 1, "end_line": 1, "body": "note"}]}
 
     first = await client.post("/api/submit", json=payload)
     assert first.status_code == 200
@@ -148,7 +155,7 @@ async def test_submit_stores_result_in_state(client: AsyncClient, server_state: 
 
     await client.post(
         "/api/submit",
-        json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": "fix this"}]},
+        json={"comments": [{"file": "x.py", "side": "new", "start_line": 1, "end_line": 1, "body": "fix this"}]},
     )
 
     assert server_state.result is not None
@@ -171,21 +178,21 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
     # Empty body
     response = await client.post(
         "/api/submit",
-        json={"comments": [{"file": "x.py", "start_line": 1, "end_line": 1, "body": ""}]},
+        json={"comments": [{"file": "x.py", "side": "new", "start_line": 1, "end_line": 1, "body": ""}]},
     )
     assert response.status_code == 422
 
     # start_line > end_line
     response = await client.post(
         "/api/submit",
-        json={"comments": [{"file": "x.py", "start_line": 10, "end_line": 5, "body": "note"}]},
+        json={"comments": [{"file": "x.py", "side": "new", "start_line": 10, "end_line": 5, "body": "note"}]},
     )
     assert response.status_code == 422
 
     # Negative line number
     response = await client.post(
         "/api/submit",
-        json={"comments": [{"file": "x.py", "start_line": 0, "end_line": 1, "body": "note"}]},
+        json={"comments": [{"file": "x.py", "side": "new", "start_line": 0, "end_line": 1, "body": "note"}]},
     )
     assert response.status_code == 422
 
@@ -213,7 +220,7 @@ async def test_submit_with_body_and_comments(client: AsyncClient) -> None:
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "start_line": 1, "end_line": 1, "body": "Fix this"},
+                {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1, "body": "Fix this"},
             ],
             "body": "Generally good, one issue.",
         },
@@ -271,7 +278,7 @@ async def test_files_mode_review_round_trip(
         "/api/submit",
         json={
             "comments": [
-                {"file": file_path, "start_line": 3, "end_line": 3, "body": "Needs more detail"},
+                {"file": file_path, "side": "new", "start_line": 3, "end_line": 3, "body": "Needs more detail"},
             ]
         },
     )
@@ -342,7 +349,7 @@ async def test_transcript_mode_review_round_trip(
         "/api/submit",
         json={
             "comments": [
-                {"file": user_file["path"], "start_line": 1, "end_line": 1, "body": "Wrong approach"},
+                {"file": user_file["path"], "side": "new", "start_line": 1, "end_line": 1, "body": "Wrong approach"},
             ]
         },
     )

@@ -1,6 +1,6 @@
 """Service for formatting review comments into markdown."""
 
-from claude_review.domain.models import Comment, ReviewResult
+from claude_review.domain.models import Comment, LineSide, ReviewResult
 
 
 class ReviewService:
@@ -33,7 +33,15 @@ class ReviewService:
         )
 
     def _format_line_ref(self, comment: Comment) -> str:
-        """Format line reference: '42' for single line, '42-47' for range."""
-        if comment.start_line == comment.end_line:
-            return str(comment.start_line)
-        return f"{comment.start_line}-{comment.end_line}"
+        """Format line reference: '42', '42-47', or '42 (removed)'.
+
+        A comment on the old side points at a line the change deleted, so the
+        number refers to the file as it was — saying so keeps the reader from
+        opening that line in the current file and reading something unrelated.
+        """
+        span = str(comment.start_line)
+        if comment.start_line != comment.end_line:
+            span = f"{comment.start_line}-{comment.end_line}"
+        if comment.side == LineSide.OLD:
+            return f"{span} (removed)"
+        return span

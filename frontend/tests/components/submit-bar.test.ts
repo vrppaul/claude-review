@@ -25,8 +25,8 @@ describe('SubmitBar', () => {
 	});
 
 	it('shows comment count', () => {
-		commentStore.add('test.py', 1, 1, 'fix');
-		commentStore.add('test.py', 2, 2, 'fix2');
+		commentStore.add('test.py', 'new', 1, 1, 'fix');
+		commentStore.add('test.py', 'new', 2, 2, 'fix2');
 
 		const { getByTestId } = render(SubmitBar);
 		const count = getByTestId('comment-count');
@@ -36,7 +36,7 @@ describe('SubmitBar', () => {
 	});
 
 	it('shows singular label for one comment', () => {
-		commentStore.add('test.py', 1, 1, 'fix');
+		commentStore.add('test.py', 'new', 1, 1, 'fix');
 
 		const { getByTestId } = render(SubmitBar);
 		const count = getByTestId('comment-count');
@@ -53,7 +53,7 @@ describe('SubmitBar', () => {
 	});
 
 	it('enables quick submit when inline comments exist', () => {
-		commentStore.add('test.py', 1, 1, 'fix');
+		commentStore.add('test.py', 'new', 1, 1, 'fix');
 
 		const { getByTestId } = render(SubmitBar);
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Comment } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { lineRangeLabel } from '$lib/utils/line-label';
 	import CommentBox from './CommentBox.svelte';
 
 	interface Props {
@@ -15,12 +16,7 @@
 		editing = false;
 	}
 
-	function lineRef(): string {
-		if (comment.start_line === comment.end_line) {
-			return `${comment.start_line}`;
-		}
-		return `${comment.start_line}-${comment.end_line}`;
-	}
+	const label = $derived(lineRangeLabel(comment.side, comment.start_line, comment.end_line));
 </script>
 
 <div id={comment.id} class="bg-warning/10 border border-warning/30 rounded-lg p-4">
@@ -35,7 +31,7 @@
 	{:else}
 		<div class="flex items-start justify-between gap-2">
 			<div class="flex-1">
-				<span class="text-xs text-warning font-mono font-semibold">Line {lineRef()}</span>
+				<span data-testid="comment-line-label" class="text-xs text-warning font-mono font-semibold">{label}</span>
 				<p class="text-sm whitespace-pre-wrap">{comment.body}</p>
 			</div>
 			<div class="flex gap-0.5">

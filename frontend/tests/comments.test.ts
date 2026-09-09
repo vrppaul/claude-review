@@ -12,7 +12,7 @@ describe('commentStore', () => {
 	});
 
 	it('adds a comment with generated id', () => {
-		const id = commentStore.add('file.ts', 10, 10, 'fix this');
+		const id = commentStore.add('file.ts', 'new', 10, 10, 'fix this');
 
 		expect(id).toBeTruthy();
 		expect(commentStore.count).toBe(1);
@@ -25,30 +25,51 @@ describe('commentStore', () => {
 	});
 
 	it('adds multi-line comment', () => {
-		commentStore.add('file.ts', 10, 15, 'refactor this block');
+		commentStore.add('file.ts', 'new', 10, 15, 'refactor this block');
 
 		expect(commentStore.comments[0].start_line).toBe(10);
 		expect(commentStore.comments[0].end_line).toBe(15);
 	});
 
+	it('keeps comments on the two sides of the same line number apart', () => {
+		commentStore.add('file.ts', 'old', 42, 42, 'about the removed line');
+		commentStore.add('file.ts', 'new', 42, 42, 'about the replacement');
+
+		const removed = commentStore.getForLine('file.ts', 'old', 42);
+		const added = commentStore.getForLine('file.ts', 'new', 42);
+
+		expect(removed).toHaveLength(1);
+		expect(removed[0].body).toBe('about the removed line');
+		expect(added).toHaveLength(1);
+		expect(added[0].body).toBe('about the replacement');
+	});
+
+	it('sends the side to the server so line numbers stay unambiguous', () => {
+		commentStore.add('file.ts', 'old', 7, 9, 'why was this dropped');
+
+		expect(commentStore.comments[0].side).toBe('old');
+		expect(commentStore.comments[0].start_line).toBe(7);
+		expect(commentStore.comments[0].end_line).toBe(9);
+	});
+
 	it('updates a comment body', () => {
-		const id = commentStore.add('file.ts', 1, 1, 'original');
+		const id = commentStore.add('file.ts', 'new', 1, 1, 'original');
 		commentStore.update(id, 'updated');
 
 		expect(commentStore.comments[0].body).toBe('updated');
 	});
 
 	it('removes a comment', () => {
-		const id = commentStore.add('file.ts', 1, 1, 'to delete');
+		const id = commentStore.add('file.ts', 'new', 1, 1, 'to delete');
 		commentStore.remove(id);
 
 		expect(commentStore.count).toBe(0);
 	});
 
 	it('filters comments by file', () => {
-		commentStore.add('a.ts', 1, 1, 'comment A');
-		commentStore.add('b.ts', 1, 1, 'comment B');
-		commentStore.add('a.ts', 5, 5, 'comment A2');
+		commentStore.add('a.ts', 'new', 1, 1, 'comment A');
+		commentStore.add('b.ts', 'new', 1, 1, 'comment B');
+		commentStore.add('a.ts', 'new', 5, 5, 'comment A2');
 
 		expect(commentStore.getForFile('a.ts')).toHaveLength(2);
 		expect(commentStore.getForFile('b.ts')).toHaveLength(1);
@@ -56,22 +77,22 @@ describe('commentStore', () => {
 	});
 
 	it('getForLine returns comments anchored at their end line only', () => {
-		commentStore.add('file.ts', 10, 15, 'range comment');
-		commentStore.add('file.ts', 20, 20, 'single line');
+		commentStore.add('file.ts', 'new', 10, 15, 'range comment');
+		commentStore.add('file.ts', 'new', 20, 20, 'single line');
 
 		// Range comment only renders at end_line (15), not at start or middle
-		expect(commentStore.getForLine('file.ts', 10)).toHaveLength(0);
-		expect(commentStore.getForLine('file.ts', 12)).toHaveLength(0);
-		expect(commentStore.getForLine('file.ts', 15)).toHaveLength(1);
+		expect(commentStore.getForLine('file.ts', 'new', 10)).toHaveLength(0);
+		expect(commentStore.getForLine('file.ts', 'new', 12)).toHaveLength(0);
+		expect(commentStore.getForLine('file.ts', 'new', 15)).toHaveLength(1);
 		// Outside range
-		expect(commentStore.getForLine('file.ts', 16)).toHaveLength(0);
+		expect(commentStore.getForLine('file.ts', 'new', 16)).toHaveLength(0);
 		// Single line comment at line 20
-		expect(commentStore.getForLine('file.ts', 20)).toHaveLength(1);
+		expect(commentStore.getForLine('file.ts', 'new', 20)).toHaveLength(1);
 	});
 
 	it('clear resets everything', () => {
-		commentStore.add('a.ts', 1, 1, 'x');
-		commentStore.add('b.ts', 2, 2, 'y');
+		commentStore.add('a.ts', 'new', 1, 1, 'x');
+		commentStore.add('b.ts', 'new', 2, 2, 'y');
 		commentStore.setReviewBody('some summary');
 		commentStore.clear();
 
@@ -100,7 +121,7 @@ describe('commentStore', () => {
 		});
 
 		it('hasContent is true with only inline comments', () => {
-			commentStore.add('file.ts', 1, 1, 'fix');
+			commentStore.add('file.ts', 'new', 1, 1, 'fix');
 
 			expect(commentStore.hasContent).toBe(true);
 		});
@@ -122,14 +143,14 @@ describe('commentStore', () => {
 				})
 			);
 
-			commentStore.add('file.ts', 10, 10, 'fix this');
+			commentStore.add('file.ts', 'new', 10, 10, 'fix this');
 			const result = await commentStore.submit();
 
 			expect(fetch).toHaveBeenCalledWith('/api/submit', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					comments: [{ file: 'file.ts', start_line: 10, end_line: 10, body: 'fix this' }]
+					comments: [{ file: 'file.ts', side: 'new', start_line: 10, end_line: 10, body: 'fix this' }]
 				})
 			});
 			expect(result.comment_count).toBe(1);
@@ -166,7 +187,7 @@ describe('commentStore', () => {
 				})
 			);
 
-			commentStore.add('file.ts', 1, 1, 'fix');
+			commentStore.add('file.ts', 'new', 1, 1, 'fix');
 			await commentStore.submit();
 
 			const call = vi.mocked(fetch).mock.calls[0];
@@ -182,7 +203,7 @@ describe('commentStore', () => {
 				vi.fn().mockResolvedValue({ ok: false, status: 500 })
 			);
 
-			commentStore.add('file.ts', 1, 1, 'test');
+			commentStore.add('file.ts', 'new', 1, 1, 'test');
 
 			await expect(commentStore.submit()).rejects.toThrow('Submit failed: 500');
 			expect(commentStore.submitted).toBe(false);

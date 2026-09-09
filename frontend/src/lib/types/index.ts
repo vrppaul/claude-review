@@ -1,4 +1,6 @@
 export type LineType = "context" | "add" | "delete";
+/** Which version of the file a line belongs to. Removed lines are "old". */
+export type LineSide = "old" | "new";
 export type FileStatus = "modified" | "added" | "deleted" | "renamed";
 export type ReviewMode = "diff" | "files" | "transcript";
 export type ContentViewMode = "raw" | "preview" | "side-by-side";
@@ -31,6 +33,7 @@ export interface DiffResponse {
 export interface Comment {
   id: string;
   file: string;
+  side: LineSide;
   start_line: number;
   end_line: number;
   body: string;
