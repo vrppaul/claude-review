@@ -50,9 +50,9 @@ describe('diffStore', () => {
 		expect(diffStore.selectedFile?.path).toBe('src/a.ts');
 	});
 
-	it('selectFile changes the selected file', () => {
+	it('records the file scrolled into view', () => {
 		diffStore.setFiles(mockFiles, 'diff');
-		diffStore.selectFile('src/b.ts');
+		diffStore.markInView('src/b.ts');
 
 		expect(diffStore.selectedPath).toBe('src/b.ts');
 		expect(diffStore.selectedFile?.path).toBe('src/b.ts');

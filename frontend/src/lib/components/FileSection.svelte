@@ -5,6 +5,7 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { detectLanguage } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
+	import { registerSection } from '$lib/utils/scroll';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';
@@ -31,9 +32,24 @@
 	const commentCount = $derived(commentStore.getForFile(file.path).length);
 	const collapsed = $derived(diffStore.isCollapsed(file.path));
 	const viewed = $derived(diffStore.isViewed(file.path));
+
+	// Rough height so the browser can leave an off-screen file undrawn without
+	// the scrollbar lurching once it renders for real. One row plus the header.
+	const rowCount = $derived(file.hunks.reduce((n, hunk) => n + hunk.lines.length, 0));
+	const estimatedHeight = $derived(collapsed ? 41 : 41 + Math.max(rowCount, 1) * 21);
+
+	let element: HTMLElement | undefined = $state();
+
+	$effect(() => (element ? registerSection(file.path, element) : undefined));
 </script>
 
-<section data-testid="file-section" data-path={file.path} class="border-b border-base-300">
+<section
+	bind:this={element}
+	data-testid="file-section"
+	data-path={file.path}
+	class="cr-section border-b border-base-300"
+	style="contain-intrinsic-size: auto {estimatedHeight}px"
+>
 	<div
 		class="sticky top-0 z-10 flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2"
 	>

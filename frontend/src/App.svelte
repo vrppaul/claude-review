@@ -47,9 +47,7 @@
 	<ThemeToggle />
 	<div class="flex h-screen pb-14">
 		<FileList />
-		{#if diffStore.selectedFile}
-			<DiffView file={diffStore.selectedFile} />
-		{/if}
+		<DiffView />
 	</div>
 	<SubmitBar />
 {/if}

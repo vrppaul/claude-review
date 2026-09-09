@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 import uvicorn
-from playwright.async_api import Page
+from playwright.async_api import Locator, Page
 
 from claude_review.domain.models import ReviewMode
 from claude_review.presentation.app import create_app
@@ -45,6 +45,19 @@ async def _start_server(diff_files, state, mode=ReviewMode.DIFF) -> AsyncGenerat
 
     server.should_exit = True
     await task
+
+
+def _section(page: Page, path_suffix: str) -> Locator:
+    """One file's section in the stream.
+
+    Every file is on screen at once, so a locator has to say which file it
+    means — otherwise it matches the same control in each of them.
+    """
+    return page.locator(f'[data-testid="file-section"][data-path$="{path_suffix}"]')
+
+
+def _first_gutter(page: Page, path_suffix: str) -> Locator:
+    return _section(page, path_suffix).get_by_test_id("line-gutter").first
 
 
 async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
@@ -117,12 +130,10 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    first_cell = page.get_by_test_id("line-gutter").first
-    later_cell = page.get_by_test_id("line-gutter").nth(4)
-
-    await first_cell.dispatch_event("mousedown")
-    await later_cell.dispatch_event("mouseenter")
-    await page.get_by_test_id("raw-view").dispatch_event("mouseup")
+    gutters = _section(page, "main.py").get_by_test_id("line-gutter")
+    await gutters.first.dispatch_event("mousedown")
+    await gutters.nth(4).dispatch_event("mouseenter")
+    await _section(page, "main.py").get_by_test_id("raw-view").dispatch_event("mouseup")
 
     await page.get_by_test_id("comment-input").fill("Refactor this range")
     await page.get_by_test_id("save-comment").click()
@@ -142,24 +153,20 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    file_buttons = await page.get_by_test_id("file-item").all()
-    assert len(file_buttons) >= 2
+    assert len(await page.get_by_test_id("file-item").all()) >= 2
 
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Comment on file 1")
-
-    await file_buttons[1].click()
-    await page.get_by_test_id("line-gutter").first.wait_for()
-
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Comment on file 2")
+    # Both files are already on screen, so neither comment needs navigation
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Comment on main")
+    await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "Comment on new file")
 
     await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
 
     assert state.result is not None
-    assert "Comment on file 1" in state.result
-    assert "Comment on file 2" in state.result
+    assert "main.py" in state.result
+    assert "new_file.ts" in state.result
+    # Each comment is filed under the file it was left on, not both under one
+    assert state.result.index("Comment on main") < state.result.index("new_file.ts")
 
 
 async def test_empty_submit_button_disabled(server_url: ServerFixture, page: Page) -> None:
@@ -352,16 +359,14 @@ async def test_markdown_file_shows_view_toggle(files_mode_server: ServerFixture,
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    toggle = page.get_by_test_id("content-view-toggle")
+    plan = _section(page, "plan.md")
+    toggle = plan.get_by_test_id("content-view-toggle")
     await toggle.wait_for()
     assert await toggle.is_visible()
 
-    raw_btn = page.get_by_test_id("view-mode-raw")
-    preview_btn = page.get_by_test_id("view-mode-preview")
-    sbs_btn = page.get_by_test_id("view-mode-side-by-side")
-    assert await raw_btn.is_visible()
-    assert await preview_btn.is_visible()
-    assert await sbs_btn.is_visible()
+    assert await plan.get_by_test_id("view-mode-raw").is_visible()
+    assert await plan.get_by_test_id("view-mode-preview").is_visible()
+    assert await plan.get_by_test_id("view-mode-side-by-side").is_visible()
 
 
 async def test_markdown_preview_renders_content(files_mode_server: ServerFixture, page: Page) -> None:
@@ -370,13 +375,12 @@ async def test_markdown_preview_renders_content(files_mode_server: ServerFixture
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("view-mode-preview").click()
-    preview = page.get_by_test_id("preview-view")
-    await preview.wait_for()
+    plan = _section(page, "plan.md")
+    await plan.get_by_test_id("view-mode-preview").click()
+    await plan.get_by_test_id("preview-view").wait_for()
 
-    content = page.get_by_test_id("markdown-content")
     # plan.md contains "# My Plan" which should render as an h1
-    heading = content.locator("h1")
+    heading = plan.get_by_test_id("markdown-content").locator("h1")
     await heading.wait_for()
     assert await heading.text_content() == "My Plan"
 
@@ -387,19 +391,16 @@ async def test_side_by_side_shows_both_panes(files_mode_server: ServerFixture, p
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("view-mode-side-by-side").click()
-    sbs = page.get_by_test_id("side-by-side-view")
-    await sbs.wait_for()
+    plan = _section(page, "plan.md")
+    await plan.get_by_test_id("view-mode-side-by-side").click()
+    await plan.get_by_test_id("side-by-side-view").wait_for()
 
     # Left pane: raw view with line gutters
-    raw_view = page.get_by_test_id("raw-view")
-    assert await raw_view.is_visible()
-    gutters = await page.get_by_test_id("line-gutter").all()
-    assert len(gutters) > 0
+    assert await plan.get_by_test_id("raw-view").is_visible()
+    assert len(await plan.get_by_test_id("line-gutter").all()) > 0
 
     # Right pane: rendered markdown
-    md_content = page.get_by_test_id("markdown-content")
-    assert await md_content.is_visible()
+    assert await plan.get_by_test_id("markdown-content").first.is_visible()
 
 
 async def test_commenting_works_in_side_by_side(files_mode_server: ServerFixture, page: Page) -> None:
@@ -408,11 +409,11 @@ async def test_commenting_works_in_side_by_side(files_mode_server: ServerFixture
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("view-mode-side-by-side").click()
-    await page.get_by_test_id("side-by-side-view").wait_for()
+    plan = _section(page, "plan.md")
+    await plan.get_by_test_id("view-mode-side-by-side").click()
+    await plan.get_by_test_id("side-by-side-view").wait_for()
 
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Side-by-side comment")
+    await _click_line_and_comment(page, _first_gutter(page, "plan.md"), "Side-by-side comment")
 
     await page.get_by_test_id("quick-submit").click()
     await page.wait_for_selector("text=Review submitted")
@@ -427,18 +428,12 @@ async def test_view_mode_persists_across_file_navigation(files_mode_server: Serv
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    # Switch first file to preview
-    await page.get_by_test_id("view-mode-preview").click()
-    await page.get_by_test_id("preview-view").wait_for()
+    # The choice is one setting for the whole review, so switching it on one
+    # markdown file applies to every other one in the stream
+    await _section(page, "plan.md").get_by_test_id("view-mode-preview").click()
 
-    # Navigate to second file
-    file_buttons = await page.get_by_test_id("file-item").all()
-    assert len(file_buttons) >= 2
-    await file_buttons[1].click()
-
-    # Preview mode should persist
-    await page.get_by_test_id("preview-view").wait_for()
-    assert await page.get_by_test_id("preview-view").is_visible()
+    await _section(page, "plan.md").get_by_test_id("preview-view").wait_for()
+    assert await _section(page, "notes.md").get_by_test_id("preview-view").is_visible()
 
 
 async def test_preview_shows_comment_badge(files_mode_server: ServerFixture, page: Page) -> None:
@@ -448,14 +443,14 @@ async def test_preview_shows_comment_badge(files_mode_server: ServerFixture, pag
     await page.get_by_test_id("sidebar").wait_for()
 
     # Add a comment in raw mode
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Needs work")
+    await _click_line_and_comment(page, _first_gutter(page, "plan.md"), "Needs work")
 
     # Switch to preview — badge should show
-    await page.get_by_test_id("view-mode-preview").click()
-    await page.get_by_test_id("preview-view").wait_for()
+    plan = _section(page, "plan.md")
+    await plan.get_by_test_id("view-mode-preview").click()
+    await plan.get_by_test_id("preview-view").wait_for()
 
-    badge = page.get_by_test_id("preview-comment-badge")
+    badge = plan.get_by_test_id("preview-comment-badge")
     await badge.wait_for()
     badge_text = await badge.text_content()
     assert badge_text is not None
@@ -546,3 +541,45 @@ async def test_transcript_mode_comment_and_submit(transcript_mode_server: Server
     assert state.result is not None
     assert "Transcript Review" in state.result
     assert "Wrong approach" in state.result
+
+
+async def test_every_file_is_on_screen_at_once(server_url: ServerFixture, page: Page) -> None:
+    """The diff reads as one stream: no file has to be selected to be seen."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    sections = page.get_by_test_id("file-section")
+    await sections.first.wait_for()
+
+    file_count = len(await page.get_by_test_id("file-item").all())
+    assert await sections.count() == file_count
+
+
+async def test_folding_a_file_hides_its_lines(server_url: ServerFixture, page: Page) -> None:
+    """A file can be folded away without leaving the stream."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    main = _section(page, "main.py")
+    await main.get_by_test_id("raw-view").wait_for()
+
+    await main.get_by_test_id("collapse-file").click()
+    await main.get_by_test_id("raw-view").wait_for(state="detached")
+
+    # The other files are untouched
+    assert await _section(page, "new_file.ts").get_by_test_id("raw-view").is_visible()
+
+
+async def test_marking_a_file_viewed_folds_it(server_url: ServerFixture, page: Page) -> None:
+    """Marking a file done folds it, the way a long review needs."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    main = _section(page, "main.py")
+    await main.get_by_test_id("raw-view").wait_for()
+
+    await main.get_by_test_id("viewed-toggle").check()
+    await main.get_by_test_id("raw-view").wait_for(state="detached")

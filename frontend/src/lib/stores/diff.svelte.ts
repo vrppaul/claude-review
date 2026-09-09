@@ -68,7 +68,8 @@ export const diffStore = {
     collapsed.clear();
   },
 
-  selectFile(path: string) {
+  /** Record which file the reader has scrolled to. */
+  markInView(path: string) {
     selectedPath = path;
   },
 

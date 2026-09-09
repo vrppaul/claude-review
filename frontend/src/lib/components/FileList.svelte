@@ -3,6 +3,7 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
+	import { scrollToFile } from '$lib/utils/scroll';
 
 	const statusBadge: Record<FileStatus, { label: string; class: string }> = {
 		modified: { label: 'M', class: 'badge-warning' },
@@ -89,7 +90,7 @@
 				class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs"
 				class:btn-active={diffStore.selectedPath === node.file.path}
 				style="padding-left: {depth * 12 + 8}px"
-				onclick={() => diffStore.selectFile(node.file!.path)}
+				onclick={() => scrollToFile(node.file!.path)}
 			>
 				<span class="badge badge-xs {badge.class}">{badge.label}</span>
 				<span class="truncate flex-1">{node.name}</span>
@@ -124,7 +125,7 @@
 			data-testid="file-item"
 			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs"
 			class:btn-active={diffStore.selectedPath === file.path}
-			onclick={() => diffStore.selectFile(file.path)}
+			onclick={() => scrollToFile(file.path)}
 		>
 			<span class="truncate flex-1">{file.path}</span>
 			{#if fileComments.length > 0}

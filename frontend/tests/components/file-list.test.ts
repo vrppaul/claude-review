@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
+import { registerSection } from '$lib/utils/scroll';
 import { commentStore } from '$lib/stores/comments.svelte';
 import type { DiffFile } from '$lib/types';
 
@@ -95,15 +96,18 @@ describe('FileList', () => {
 		expect(items).toHaveLength(2);
 	});
 
-	it('clicking a file item selects it', async () => {
+	it('takes the reader to the file it names', async () => {
 		diffStore.setFiles(diffFiles, 'diff');
+		const section = document.createElement('div');
+		const scrollIntoView = vi.fn();
+		section.scrollIntoView = scrollIntoView;
+		const unregister = registerSection('src/utils.ts', section);
 
 		const { getAllByTestId } = render(FileList);
-		const items = getAllByTestId('file-item');
+		await userEvent.click(getAllByTestId('file-item')[1]);
 
-		await userEvent.click(items[1]);
-
-		expect(diffStore.selectedPath).toBe('src/utils.ts');
+		expect(scrollIntoView).toHaveBeenCalled();
+		unregister();
 	});
 
 	it('shows mode badge', () => {

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import { scrollToComment } from '$lib/utils/scroll';
 	import ReviewModal from './ReviewModal.svelte';
 
 	let submitting = $state(false);
@@ -29,12 +30,12 @@
 		currentCommentIdx = (currentCommentIdx + direction + commentStore.count) % commentStore.count;
 		const comment = commentStore.comments[currentCommentIdx];
 
-		diffStore.selectFile(comment.file);
+		// A folded file has no comment to scroll to, so open it first
+		if (diffStore.isCollapsed(comment.file)) {
+			diffStore.toggleCollapsed(comment.file);
+		}
 
-		requestAnimationFrame(() => {
-			const el = document.getElementById(comment.id);
-			el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		});
+		requestAnimationFrame(() => scrollToComment(comment.id));
 	}
 
 	onMount(() => {

@@ -190,3 +190,12 @@
 .hljs-strong {
   font-weight: 600;
 }
+
+/*
+ * Off-screen files are left undrawn. Unlike a virtual list this keeps every
+ * row in the document, so find-in-page, anchors and text selection across
+ * files all still work.
+ */
+.cr-section {
+  content-visibility: auto;
+}
