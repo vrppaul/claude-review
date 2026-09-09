@@ -4,15 +4,23 @@ import type {
   LineSide,
   SubmitResponse,
 } from "$lib/types";
+import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
 
 let comments = $state<Comment[]>([]);
 let reviewBody = $state("");
 let submitted = $state(false);
 
 let nextId = 0;
+// What the draft is tied to, so it is not restored onto another review
+let draftTitle = $state<string | null>(null);
 
 function generateId(): string {
   return `comment-${++nextId}`;
+}
+
+function remember(): void {
+  if (draftTitle === null) return;
+  saveDraft({ title: draftTitle, comments, reviewBody });
 }
 
 export const commentStore = {
@@ -34,6 +42,24 @@ export const commentStore = {
 
   setReviewBody(text: string) {
     reviewBody = text;
+    remember();
+  },
+
+  /**
+   * Pick up an unsent review of the same thing, and keep saving from now on.
+   *
+   * Returns how many comments came back, so the reader can be told rather
+   * than left to wonder where they came from.
+   */
+  restore(title: string): number {
+    draftTitle = title;
+    const draft = loadDraft(title);
+    if (!draft) return 0;
+
+    comments = draft.comments;
+    reviewBody = draft.reviewBody ?? "";
+    nextId = comments.length;
+    return comments.length;
   },
 
   add(
@@ -54,6 +80,7 @@ export const commentStore = {
       body,
     };
     comments = [...comments, comment];
+    remember();
     return comment.id;
   },
 
@@ -61,10 +88,12 @@ export const commentStore = {
     comments = comments.map((c) =>
       c.id === id ? { ...c, body, severity: severity ?? c.severity } : c,
     );
+    remember();
   },
 
   remove(id: string) {
     comments = comments.filter((c) => c.id !== id);
+    remember();
   },
 
   getForFile(file: string): Comment[] {
@@ -83,6 +112,7 @@ export const commentStore = {
     reviewBody = "";
     submitted = false;
     nextId = 0;
+    draftTitle = null;
   },
 
   async submit(): Promise<SubmitResponse> {
@@ -113,6 +143,8 @@ export const commentStore = {
 
     const result: SubmitResponse = await response.json();
     submitted = true;
+    // The review has left; keeping it would greet the next one as unsent work
+    clearDraft();
     return result;
   },
 };

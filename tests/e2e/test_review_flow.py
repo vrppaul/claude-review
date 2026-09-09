@@ -775,3 +775,22 @@ async def test_ignoring_whitespace_retakes_the_diff(server_url: ServerFixture, p
     # Nothing in the fixture is whitespace-only, so the review is unchanged —
     # what matters is that it came back rather than emptying out
     assert await page.get_by_test_id("file-section").count() == before
+
+
+async def test_comments_survive_a_reload(server_url: ServerFixture, page: Page) -> None:
+    """A stray reload should not cost an hour of reading."""
+    url, state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Written before the reload")
+
+    await page.reload()
+    await page.get_by_test_id("restored-notice").wait_for()
+    await page.wait_for_selector("text=Written before the reload")
+
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("submitted-banner").wait_for()
+
+    assert state.result is not None
+    assert "Written before the reload" in state.result
