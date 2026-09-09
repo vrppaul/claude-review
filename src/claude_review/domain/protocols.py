@@ -21,3 +21,7 @@ class GitRepositoryProtocol(Protocol):
         If ignore_whitespace: leave out changes that only alter whitespace.
         """
         ...
+
+    async def status(self, path: Path) -> str:
+        """Return what has changed in the working tree, one line per path."""
+        ...

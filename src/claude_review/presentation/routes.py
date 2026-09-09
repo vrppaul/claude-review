@@ -47,6 +47,7 @@ from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
+from claude_review.services.tree_watcher_service import TreeWatcherService
 
 log = structlog.get_logger()
 
@@ -390,8 +391,13 @@ async def retake_diff(
     if root is None:
         raise HTTPException(status_code=404, detail="No repository to retake the diff from")
 
-    files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base)
+    git = GitRepository()
+    files = await DiffService(git_repository=git).get_diff(root, base=base)
     http_request.app.state.diff_files = files
+    # Read after the diff, not before: a file saved in between then belongs to
+    # the tree the diff was taken at, and the reader is not told about a
+    # change that is already on their screen.
+    state.tree = await TreeWatcherService(git_repository=git).read(root)
     state.push({"type": "diff", "round": state.round})
     log.info("diff_retaken", file_count=len(files), round=state.round)
 

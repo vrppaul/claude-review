@@ -816,3 +816,25 @@
 .cr-picker-on {
   background: var(--cr-mark-tint);
 }
+
+/*
+ * Something the review has to say about itself, across the top of the
+ * reading area. Amber while the code on screen is out of date, and the
+ * mark's own colour once it has been brought up to date — the first is the
+ * tree moving, the second is the reader's doing.
+ */
+.cr-notice {
+  color: var(--color-base-content);
+}
+.cr-notice-moved {
+  background: color-mix(in srgb, var(--cr-syn-string) 14%, transparent);
+}
+.cr-notice-moved svg {
+  color: var(--cr-syn-string);
+}
+.cr-notice-taken {
+  background: color-mix(in srgb, var(--cr-mark) 10%, transparent);
+}
+.cr-notice-taken svg {
+  color: var(--cr-mark);
+}

@@ -31,6 +31,13 @@ let diffLayout = $state<DiffLayout>(
   readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
 );
 let ignoreWhitespace = $state(readFlag("ignore-whitespace"));
+// How many files have changed since this diff was taken. Zero means there
+// is nothing to say: either nothing has moved, or the reader has dismissed
+// it until something does.
+let movedFiles = $state(0);
+// What the last retake did to the threads hanging on the diff, until the
+// reader looks away from it
+let retaken = $state<{ followed: number; outdated: number } | null>(null);
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
 // a folded file can still be unread, and a viewed one can be reopened.
@@ -57,6 +64,52 @@ export const diffStore = {
   /** What is under review — which repository, and against what. */
   get agent(): AgentStatus {
     return agent;
+  },
+
+  /** How many files have moved on since this diff was taken. */
+  get movedFiles(): number {
+    return movedFiles;
+  },
+
+  /** What the last retake did to the threads, if it is still worth saying. */
+  get retaken(): { followed: number; outdated: number } | null {
+    return retaken;
+  },
+
+  noteTreeMoved(files: number) {
+    movedFiles = files;
+  },
+
+  /** Dismissed until the tree moves again, so a long edit does not nag. */
+  dismissMoved() {
+    movedFiles = 0;
+  },
+
+  noteRetaken(result: { followed: number; outdated: number }) {
+    retaken = result;
+    movedFiles = 0;
+  },
+
+  dismissRetaken() {
+    retaken = null;
+  },
+
+  /**
+   * Take the diff again, at the reader's word.
+   *
+   * The same act the agent performs with `claude-review round`, and it goes
+   * the same way: the server retakes it and every open review is told to
+   * fetch, so a browser keeps its own view of what is folded.
+   */
+  async retake(): Promise<void> {
+    const response = await fetch("/api/round", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!response.ok) {
+      throw new Error(`Could not take the diff again: ${response.status}`);
+    }
   },
 
   get title(): string {
@@ -153,6 +206,8 @@ export const diffStore = {
     ignoreWhitespace = readFlag("ignore-whitespace");
     title = "";
     agent = { model: null, context: null, at: null };
+    movedFiles = 0;
+    retaken = null;
     viewed.clear();
     collapsed.clear();
   },

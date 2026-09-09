@@ -44,6 +44,10 @@ class ServerState:
         # What the agent has said about itself. Empty until it says anything;
         # a review reloaded mid-conversation reads it back from here.
         self.agent = AgentStatus()
+        # The working tree as it stood when the diff on screen was taken, as
+        # `git status --porcelain` lines. The watcher compares against this,
+        # so retaking the diff is what settles it.
+        self.tree: frozenset[str] = frozenset()
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1

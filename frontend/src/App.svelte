@@ -9,6 +9,7 @@
 	import { markTab } from '$lib/utils/tab';
 	import AgentPanel from '$lib/components/AgentPanel.svelte';
 	import FileList from '$lib/components/FileList.svelte';
+	import DiffNotice from '$lib/components/DiffNotice.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
 	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
@@ -61,6 +62,10 @@
 				context: typeof message.context === 'string' ? message.context : null,
 				at: typeof message.at === 'number' ? message.at : null
 			});
+		} else if (message.type === 'changed' && typeof message.files === 'number') {
+			// Said, never acted on: swapping the diff under a half-written
+			// comment would orphan it
+			diffStore.noteTreeMoved(message.files);
 		} else if (message.type === 'round' && typeof message.number === 'number') {
 			reviewStore.setRound(message.number);
 		} else if (message.type === 'diff') {
@@ -69,6 +74,7 @@
 			// one whose lines are gone says so.
 			void diffStore.fetchDiff().then(() => {
 				const moved = commentStore.reanchorAll(diffStore.files);
+				diffStore.noteRetaken(moved);
 				// The conversation is about code that has just changed under it,
 				// so the panel says where one lot of answers stops applying
 				panelStore.note(retaken(moved));
@@ -123,6 +129,7 @@
 		</div>
 	{/if}
 		<SubmitBar />
+		<DiffNotice />
 		<div class="flex min-h-0 flex-1">
 			<FileList />
 			<DiffView />

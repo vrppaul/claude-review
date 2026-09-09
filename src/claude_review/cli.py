@@ -25,6 +25,7 @@ from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.tree_watcher_service import TreeWatcherService
 
 log = structlog.get_logger()
 
@@ -82,6 +83,10 @@ async def _serve(
     state = ServerState(shutdown_event=asyncio.Event())
     app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root, base=base)
 
+    watcher = TreeWatcherService(git_repository=GitRepository())
+    if root is not None:
+        state.tree = await watcher.read(root)
+
     # Bind before handing the socket to uvicorn: a port clash then surfaces here
     # as an OSError we can explain, instead of uvicorn calling sys.exit() from
     # inside the event loop and printing a traceback.
@@ -121,9 +126,22 @@ async def _serve(
         server.should_exit = True
         log.info("server_shutting_down")
 
+    async def watch_tree() -> None:
+        """Say when the tree stops matching the diff. Never act on it: the
+        reader decides when to take the diff again."""
+        if root is None:
+            return
+        async for moved in watcher.changes(root, taken_at=lambda: state.tree, stop=state.shutdown_event):
+            state.push({"type": "changed", "files": moved})
+
+    # A task rather than a third thing to gather: the watcher has no end of
+    # its own, and the review is over when the server is, not when the tree
+    # stops moving.
+    watching = asyncio.create_task(watch_tree())
     try:
         await asyncio.gather(server.serve(sockets=[sock]), wait_for_shutdown())
     finally:
+        watching.cancel()
         sock.close()
 
     return state.result or ""

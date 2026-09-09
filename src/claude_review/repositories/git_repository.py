@@ -79,6 +79,15 @@ class GitRepository:
             return None
         return found.strip() or None
 
+    async def status(self, path: Path) -> str:
+        """What git says has changed, one line per path.
+
+        `--porcelain` is the stable form: it does not change with the user's
+        config or git's version, which matters because this is compared
+        against itself twice a second.
+        """
+        return await self._run(path, ["git", "status", "--porcelain"])
+
     async def top_level(self, path: Path) -> Path | None:
         """The root of the repository containing ``path``.
 
