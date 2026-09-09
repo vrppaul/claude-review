@@ -57,6 +57,7 @@ const textFiles: DiffFile[] = [
 describe('FileList', () => {
 	beforeEach(() => {
 		commentStore.clear();
+		diffStore.clear();
 	});
 
 	it('shows file count in header', () => {

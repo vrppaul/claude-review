@@ -2,11 +2,12 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from claude_review.domain.exceptions import FileWindowError
 from claude_review.domain.models import Comment, DiffFile, ReviewMode
 from claude_review.presentation.dependencies import (
+    get_diff_base,
     get_diff_files,
     get_repo_root,
     get_review_mode,
@@ -20,6 +21,8 @@ from claude_review.presentation.schemas import (
     SubmitResponse,
 )
 from claude_review.presentation.state import ServerState
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
@@ -31,10 +34,25 @@ router = APIRouter(prefix="/api")
 
 @router.get("/diff")
 async def get_diff(
+    request: Request,
+    ignore_whitespace: bool = Query(default=False),
     diff_files: list[DiffFile] = Depends(get_diff_files),
     mode: ReviewMode = Depends(get_review_mode),
     title: str = Depends(get_review_title),
+    root: Path | None = Depends(get_repo_root),
+    base: str | None = Depends(get_diff_base),
 ) -> DiffResponse:
+    """Serve the review's content.
+
+    Retaking the diff is the one thing this does beyond serving what was
+    loaded at startup: ignoring whitespace has to come from git, since only
+    git knows which hunks vanish once whitespace stops counting.
+    """
+    if ignore_whitespace and root is not None:
+        diff_files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base, ignore_whitespace=True)
+        # Keep submission in step: a comment is looked up against these files
+        request.app.state.diff_files = diff_files
+
     return DiffResponse(files=diff_files, mode=mode, title=title)
 
 

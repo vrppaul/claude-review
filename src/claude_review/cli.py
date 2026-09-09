@@ -57,11 +57,12 @@ async def _serve(
     title: str,
     *,
     root: Path | None = None,
+    base: str | None = None,
     open_browser: bool = True,
 ) -> str:
     """Start the review server and return formatted review markdown."""
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root)
+    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root, base=base)
 
     # Bind before handing the socket to uvicorn: a port clash then surfaces here
     # as an OSError we can explain, instead of uvicorn calling sys.exit() from
@@ -198,6 +199,7 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
             ctx.obj["port"],
             _diff_title(repo_path, base),
             root=repo_path,
+            base=base,
             open_browser=ctx.obj["open_browser"],
         )
 

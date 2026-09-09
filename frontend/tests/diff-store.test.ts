@@ -145,3 +145,39 @@ describe('diffStore', () => {
 		expect(diffStore.contentViewMode).toBe('raw');
 	});
 });
+
+describe('retaking the diff', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		vi.unstubAllGlobals();
+	});
+
+	it('asks git to leave whitespace-only changes out', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ files: [], mode: 'diff', title: 'repo' })
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		await diffStore.setIgnoreWhitespace(true);
+
+		expect(fetchMock).toHaveBeenCalledWith('/api/diff?ignore_whitespace=true');
+		expect(diffStore.ignoreWhitespace).toBe(true);
+	});
+
+	it('keeps the files already worked through', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve({ files: [], mode: 'diff', title: 'repo' })
+			})
+		);
+		diffStore.setViewed('src/a.ts', true);
+
+		await diffStore.setIgnoreWhitespace(true);
+
+		// Retaking the diff must not undo a reader's progress through it
+		expect(diffStore.isViewed('src/a.ts')).toBe(true);
+	});
+});

@@ -21,13 +21,23 @@ class GitRepository:
     without modifying the user's actual staging area.
     """
 
-    async def get_raw_diff(self, path: Path, base: str | None = None) -> str:
+    async def get_raw_diff(
+        self,
+        path: Path,
+        base: str | None = None,
+        *,
+        ignore_whitespace: bool = False,
+    ) -> str:
         """Return unified diff of all changes including untracked files.
 
         Creates a temporary git index, stages everything there, and diffs
         against a base ref. When base is None, diffs against HEAD (uncommitted
         changes only). When base is provided, diffs from that commit to the
         current working tree. The real index is untouched.
+
+        With ignore_whitespace, git leaves out changes that only alter
+        whitespace — a reindented block stops hiding the one line that
+        actually changed inside it.
         """
         fd, tmp_index = tempfile.mkstemp(suffix=".git-index")
         os.close(fd)
@@ -42,6 +52,8 @@ class GitRepository:
             diff_cmd = ["git", "diff", "--cached"]
             if base is not None:
                 diff_cmd = ["git", "diff", base, "--cached"]
+            if ignore_whitespace:
+                diff_cmd.append("-w")
             return await self._run(path, diff_cmd, env=env)
         finally:
             with contextlib.suppress(FileNotFoundError):

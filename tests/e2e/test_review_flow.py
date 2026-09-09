@@ -760,3 +760,18 @@ async def test_a_suggestion_reaches_claude_as_a_replacement(server_url: ServerFi
     assert state.result is not None
     assert "```suggestion" in state.result
     assert "Return the greeting we agreed on" in state.result
+
+
+async def test_ignoring_whitespace_retakes_the_diff(server_url: ServerFixture, page: Page) -> None:
+    """The toggle asks git again rather than filtering what is already loaded."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    before = await page.get_by_test_id("file-section").count()
+    await page.get_by_test_id("ignore-whitespace").check()
+    await page.wait_for_timeout(300)
+
+    # Nothing in the fixture is whitespace-only, so the review is unchanged —
+    # what matters is that it came back rather than emptying out
+    assert await page.get_by_test_id("file-section").count() == before

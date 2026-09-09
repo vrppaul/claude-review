@@ -14,6 +14,7 @@ let mode = $state<ReviewMode>("diff");
 let contentViewMode = $state<ContentViewMode>("raw");
 let title = $state("");
 let diffLayout = $state<DiffLayout>("unified");
+let ignoreWhitespace = $state(false);
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
 // a folded file can still be unread, and a viewed one can be reopened.
@@ -49,6 +50,22 @@ export const diffStore = {
   setDiffLayout(next: DiffLayout) {
     diffLayout = next;
   },
+
+  /** Whether whitespace-only changes are left out of the diff. */
+  get ignoreWhitespace(): boolean {
+    return ignoreWhitespace;
+  },
+
+  /**
+   * Retake the diff with whitespace counted or not.
+   *
+   * Only git can answer this: which hunks vanish once whitespace stops
+   * counting is not something the browser can work out from what it has.
+   */
+  async setIgnoreWhitespace(next: boolean) {
+    ignoreWhitespace = next;
+    await this.fetchDiff();
+  },
   get viewedCount(): number {
     return viewed.size;
   },
@@ -80,8 +97,6 @@ export const diffStore = {
     mode = newMode;
     title = newTitle;
     selectedPath = newFiles.length > 0 ? newFiles[0].path : null;
-    viewed.clear();
-    collapsed.clear();
   },
 
   /** Record which file the reader has scrolled to. */
@@ -99,13 +114,15 @@ export const diffStore = {
     mode = "diff";
     contentViewMode = "raw";
     diffLayout = "unified";
+    ignoreWhitespace = false;
     title = "";
     viewed.clear();
     collapsed.clear();
   },
 
   async fetchDiff() {
-    const response = await fetch("/api/diff");
+    const query = ignoreWhitespace ? "?ignore_whitespace=true" : "";
+    const response = await fetch(`/api/diff${query}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch diff: ${response.status}`);
     }

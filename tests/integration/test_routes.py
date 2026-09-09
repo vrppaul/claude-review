@@ -17,8 +17,11 @@ from claude_review.domain.models import (
 )
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
+from tests.helpers import git
 
 
 @pytest.fixture
@@ -470,3 +473,53 @@ async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -
     response = await client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
 
     assert response.status_code == 404
+
+
+async def test_ignoring_whitespace_leaves_the_real_change_visible(
+    tmp_git_repo: Path, server_state: ServerState
+) -> None:
+    """A reindented block should stop hiding the line that actually changed."""
+    (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n  c = 3\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add")
+    # Reindent every line, and change one of them for real
+    (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n    c = 3\n")
+
+    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        plain = _changed_lines((await client.get("/api/diff")).json())
+        ignored = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "true"})).json())
+
+    # Reindenting three lines buries the one that changed among six others
+    assert len(plain) == 6
+    assert ignored == ["  b = 2", "    b = 99"]
+
+
+def _changed_lines(payload: dict) -> list[str]:
+    return [
+        line["content"]
+        for f in payload["files"]
+        for hunk in f["hunks"]
+        for line in hunk["lines"]
+        if line["type"] in ("add", "delete")
+    ]
+
+
+async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Path, server_state: ServerState) -> None:
+    """A file whose only change is indentation disappears from the review."""
+    (tmp_git_repo / "app.py").write_text("def f():\n    return 1\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add")
+    (tmp_git_repo / "app.py").write_text("def f():\n        return 1\n")
+
+    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        plain = (await client.get("/api/diff")).json()
+        ignored = (await client.get("/api/diff", params={"ignore_whitespace": "true"})).json()
+
+    assert any(f["path"] == "app.py" for f in plain["files"])
+    assert not any(f["path"] == "app.py" and f["hunks"] for f in ignored["files"])

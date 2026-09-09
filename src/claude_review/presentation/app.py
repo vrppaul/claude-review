@@ -16,6 +16,7 @@ def create_app(
     mode: ReviewMode,
     title: str = "",
     root: Path | None = None,
+    base: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Claude Review")
 
@@ -28,6 +29,9 @@ def create_app(
     # The tree that expanding a hunk's context may read from. None in modes
     # whose content did not come from a repository.
     app.state.repo_root = root
+    # What the diff was taken against, so the server can retake it — with
+    # whitespace ignored, or after the files change
+    app.state.diff_base = base
 
     app.include_router(router)
 

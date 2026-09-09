@@ -16,9 +16,15 @@ class DiffService:
     def __init__(self, git_repository: GitRepositoryProtocol) -> None:
         self._git = git_repository
 
-    async def get_diff(self, path: Path, base: str | None = None) -> list[DiffFile]:
+    async def get_diff(
+        self,
+        path: Path,
+        base: str | None = None,
+        *,
+        ignore_whitespace: bool = False,
+    ) -> list[DiffFile]:
         """Get parsed diff for the given repository path."""
-        raw = await self._git.get_raw_diff(path, base=base)
+        raw = await self._git.get_raw_diff(path, base=base, ignore_whitespace=ignore_whitespace)
         if not raw.strip():
             return []
         return self._parse_diff(raw)

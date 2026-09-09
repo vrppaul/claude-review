@@ -43,6 +43,22 @@
 	<div class="flex-1"></div>
 
 	{#if diffStore.mode === 'diff'}
+		<label class="cr-chip">
+			<input
+				data-testid="ignore-whitespace"
+				type="checkbox"
+				checked={diffStore.ignoreWhitespace}
+				onchange={(e) => diffStore.setIgnoreWhitespace(e.currentTarget.checked)}
+			/>
+			<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+				{#if diffStore.ignoreWhitespace}
+					<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
+				{:else}
+					<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1" />
+				{/if}
+			</svg>
+			Ignore whitespace
+		</label>
 		<DiffLayoutToggle />
 	{/if}
 
