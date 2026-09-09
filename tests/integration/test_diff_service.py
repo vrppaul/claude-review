@@ -293,3 +293,63 @@ async def test_content_change_reports_no_mode_change(tmp_git_repo: Path, diff_se
 
     assert by_path["initial.txt"].old_mode is None
     assert by_path["initial.txt"].new_mode is None
+
+
+async def test_renamed_file_is_listed_under_its_new_path(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A rename that also edits the file reports where the file is now."""
+    original = tmp_git_repo / "old_name.txt"
+    original.write_text("line one\nline two\nline three\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add file")
+
+    git(tmp_git_repo, "mv", "old_name.txt", "new_name.txt")
+    (tmp_git_repo / "new_name.txt").write_text("line one\nline two changed\nline three\n")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    paths = {f.path for f in files}
+
+    assert "new_name.txt" in paths
+    assert "old_name.txt" not in paths
+
+
+async def test_pure_rename_is_listed_under_its_new_path(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A rename with no content change has no diff markers to read the path from."""
+    (tmp_git_repo / "before.txt").write_text("unchanged content\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add file")
+    git(tmp_git_repo, "mv", "before.txt", "after.txt")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert "after.txt" in by_path
+    assert by_path["after.txt"].status == FileStatus.RENAMED
+
+
+async def test_binary_name_containing_a_header_separator(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A binary file has no markers, so its name must survive the header split."""
+    (tmp_git_repo / "x b").mkdir()
+    (tmp_git_repo / "x b" / "y.bin").write_bytes(b"\x00\x01\x02\xff\xfe")
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert "x b/y.bin" in by_path
+    assert by_path["x b/y.bin"].is_binary
+
+
+async def test_mode_only_name_containing_a_header_separator(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A permission change has no markers either."""
+    directory = tmp_git_repo / "x b"
+    directory.mkdir()
+    script = directory / "mode.txt"
+    script.write_text("content\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add file")
+    script.chmod(0o755)
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert "x b/mode.txt" in by_path
+    assert by_path["x b/mode.txt"].new_mode == "100755"

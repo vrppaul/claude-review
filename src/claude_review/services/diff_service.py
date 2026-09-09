@@ -75,16 +75,27 @@ class DiffService:
 
         The "a/x b/x" header holds both paths on one line with nothing but a
         space between them, so a name containing " b/" splits it wrongly. The
-        "+++"/"---" markers carry exactly one path each and are preferred;
-        the "a/x b/x" line is only the fallback for chunks that have neither,
-        such as binary files and mode-only changes.
+        markers carry exactly one path each and are preferred, in the order
+        they answer "where is this file now":
+
+        1. "+++" names the file after the change. A rename emits "--- a/old"
+           and "+++ b/new", so the "+++" pass has to finish before the "---"
+           one starts, or the file is reported under a path git already moved.
+        2. "---" covers a deletion, where "+++" is /dev/null.
+        3. "rename to" covers a rename that changed no content, which emits
+           no markers at all.
         """
         for line in lines:
             if line.startswith("+++ ") and not line.startswith("+++ /dev/null"):
                 return self._strip_prefix(self._read_marker_path(line[4:]))
-            # A deleted file has "+++ /dev/null", so its name lives on the "---" side
+
+        for line in lines:
             if line.startswith("--- ") and not line.startswith("--- /dev/null"):
                 return self._strip_prefix(self._read_marker_path(line[4:]))
+
+        for line in lines:
+            if line.startswith("rename to "):
+                return self._read_marker_path(line.removeprefix("rename to "))
 
         return self._extract_header_path(lines[0])
 
@@ -103,10 +114,21 @@ class DiffService:
         return path
 
     def _extract_header_path(self, header_line: str) -> str | None:
-        """Extract the new path from the "a/x b/x" header line."""
+        """Extract the path from the "a/x b/x" header line.
+
+        Only chunks with no markers and no rename reach here — binary files
+        and permission changes — and for those the two halves name the same
+        file. So the split is the one that makes them equal, which a name
+        containing " b/" no longer defeats.
+        """
         quoted = re.match(r'("(?:[^"\\]|\\.)*") ("(?:[^"\\]|\\.)*")$', header_line)
         if quoted:
             return self._strip_prefix(self._unquote(quoted.group(2)))
+
+        if header_line.startswith("a/"):
+            for i in range(2, len(header_line)):
+                if header_line.startswith(" b/", i) and header_line[2:i] == header_line[i + 3 :]:
+                    return header_line[2:i]
 
         match = re.match(r"a/(.+?) b/(.+)", header_line)
         if match:
