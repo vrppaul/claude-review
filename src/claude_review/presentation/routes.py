@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 
 from claude_review.domain.exceptions import FileWindowError
 from claude_review.domain.models import Comment, DiffFile, ReviewMode
@@ -76,10 +76,35 @@ async def get_file_window(
     return FileWindowResponse(start=window.start, lines=window.lines, total=window.total)
 
 
-@router.post("/heartbeat")
-async def heartbeat(state: ServerState = Depends(get_state)) -> dict[str, str]:
-    state.last_heartbeat = asyncio.get_running_loop().time()
-    return {"status": "ok"}
+@router.websocket("/session")
+async def session(websocket: WebSocket) -> None:
+    """Hold the review open for as long as the browser has it on screen.
+
+    The socket is the signal: while one is open the review is being read,
+    and when the last one closes the server winds down. It carries server
+    pushes in the other direction too.
+    """
+    state: ServerState = websocket.app.state.server
+    await websocket.accept()
+    now = asyncio.get_running_loop().time()
+    state.connected(now)
+    outbox = state.listen()
+
+    async def forward() -> None:
+        while True:
+            await websocket.send_json(await outbox.get())
+
+    pump = asyncio.create_task(forward())
+    try:
+        while True:
+            # Nothing is expected from the browser yet; this waits for the close
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        pump.cancel()
+        state.stop_listening(outbox)
+        state.disconnected(asyncio.get_running_loop().time())
 
 
 @router.post("/submit")

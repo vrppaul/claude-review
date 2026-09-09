@@ -24,7 +24,9 @@ from claude_review.services.transcript_service import TranscriptService
 
 log = structlog.get_logger()
 
-HEARTBEAT_TIMEOUT = 10.0
+# How long the review may have no browser attached before the server winds
+# down. A reload drops the socket and takes it again within a moment.
+DISCONNECT_GRACE = 3.0
 
 
 def _configure_logging(*, verbose: bool = False) -> None:
@@ -89,12 +91,10 @@ async def _serve(
             await asyncio.to_thread(_open_browser, url)
 
         while not state.shutdown_event.is_set():
-            await asyncio.sleep(1.0)
-            if state.last_heartbeat is not None:
-                now = asyncio.get_running_loop().time()
-                if now - state.last_heartbeat > HEARTBEAT_TIMEOUT:
-                    log.info("heartbeat_timeout", last_heartbeat_age=round(now - state.last_heartbeat, 1))
-                    break
+            await asyncio.sleep(0.5)
+            if state.browser_gone(asyncio.get_running_loop().time(), DISCONNECT_GRACE):
+                log.info("browser_closed")
+                break
 
         server.should_exit = True
         log.info("server_shutting_down")

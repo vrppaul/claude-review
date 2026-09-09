@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { openSession } from '$lib/stores/session.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
@@ -25,11 +26,9 @@
 				loading = false;
 			});
 
-		// Heartbeat so server knows browser is still open
-		const interval = setInterval(() => {
-			fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
-		}, 3000);
-		return () => clearInterval(interval);
+		// Holding this open is what tells the server the review is still on
+		// screen; a poll is throttled to a crawl in a background tab.
+		return openSession(() => {});
 	});
 </script>
 

@@ -196,17 +196,6 @@ async def test_submit_stores_result_in_state(client: AsyncClient, server_state: 
     assert "fix this" in server_state.result
 
 
-async def test_heartbeat_updates_state(client: AsyncClient, server_state: ServerState) -> None:
-    """POST /api/heartbeat records a timestamp in state."""
-    assert server_state.last_heartbeat is None
-
-    response = await client.post("/api/heartbeat")
-
-    assert response.status_code == 200
-    assert server_state.last_heartbeat is not None
-    assert server_state.last_heartbeat > 0
-
-
 async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
     """POST /api/submit with invalid comment data returns 422."""
     # Empty body
