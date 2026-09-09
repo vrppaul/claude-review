@@ -340,16 +340,29 @@ export const commentStore = {
    * Called after a round is answered and the diff retaken: a thread whose
    * lines survived follows them, and one whose lines are gone is marked
    * rather than left pointing at a line that has become something else.
+   *
+   * Says how many did each, because that is what the reader stands to lose
+   * and the only part of a retake they cannot see at a glance.
    */
-  reanchorAll(files: DiffFile[]) {
-    comments = comments.map((comment) => ({
-      ...comment,
-      ...reanchor(
-        comment,
-        files.find((f) => f.path === comment.file)?.hunks ?? null,
-      ),
-    }));
+  reanchorAll(files: DiffFile[]): { followed: number; outdated: number } {
+    let followed = 0;
+    let outdated = 0;
+
+    comments = comments.map((comment) => {
+      const moved = {
+        ...comment,
+        ...reanchor(
+          comment,
+          files.find((f) => f.path === comment.file)?.hunks ?? null,
+        ),
+      };
+      if (moved.outdated && !comment.outdated) outdated += 1;
+      else if (moved.start_line !== comment.start_line) followed += 1;
+      return moved;
+    });
+
     remember();
+    return { followed, outdated };
   },
 
   getForFile(file: string): Comment[] {

@@ -5,6 +5,7 @@ import { reviewStore } from "$lib/stores/review.svelte";
 import { readChoice, readFlag, writeChoice } from "$lib/utils/preferences";
 
 import type {
+  AgentStatus,
   ContentViewMode,
   DiffFile,
   DiffLayout,
@@ -23,6 +24,9 @@ let contentViewMode = $state<ContentViewMode>(
   ),
 );
 let title = $state("");
+// What the agent last reported about itself. A push is gone once sent, so a
+// review opened mid-conversation has to read it back with the diff.
+let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 let diffLayout = $state<DiffLayout>(
   readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
 );
@@ -51,6 +55,10 @@ export const diffStore = {
     return contentViewMode;
   },
   /** What is under review — which repository, and against what. */
+  get agent(): AgentStatus {
+    return agent;
+  },
+
   get title(): string {
     return title;
   },
@@ -144,6 +152,7 @@ export const diffStore = {
     );
     ignoreWhitespace = readFlag("ignore-whitespace");
     title = "";
+    agent = { model: null, context: null, at: null };
     viewed.clear();
     collapsed.clear();
   },
@@ -156,6 +165,7 @@ export const diffStore = {
     }
     const data: DiffResponse = await response.json();
     this.setFiles(data.files, data.mode, data.title);
+    agent = data.agent ?? { model: null, context: null, at: null };
     // A review reloaded in the middle of a round has to learn where it is
     reviewStore.setRound(data.round ?? 1);
     if (data.answerer_attached) reviewStore.attachAnswerer();

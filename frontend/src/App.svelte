@@ -4,8 +4,10 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { openSession } from '$lib/stores/session.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
+	import { panelStore } from '$lib/stores/panel.svelte';
 	import { soundStore } from '$lib/stores/sound.svelte';
 	import { markTab } from '$lib/utils/tab';
+	import AgentPanel from '$lib/components/AgentPanel.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
@@ -19,8 +21,12 @@
 		diffStore
 			.fetchDiff()
 			.then(() => {
-				// An unsent review of the same thing is picked up where it stopped
+				// An unsent review of the same thing is picked up where it stopped,
+				// the conversation in the panel with it
 				restored = commentStore.restore(diffStore.title);
+				panelStore.restore(diffStore.title);
+				panelStore.report(diffStore.agent);
+				if (reviewStore.canSendRound) panelStore.offer();
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : 'Failed to load diff';
@@ -45,20 +51,43 @@
 			soundStore.announce();
 		} else if (message.type === 'answerer') {
 			reviewStore.attachAnswerer();
+			panelStore.offer();
+		} else if (message.type === 'chat' && typeof message.text === 'string') {
+			panelStore.receive(String(message.message_id), message.text);
+			soundStore.announce();
+		} else if (message.type === 'status') {
+			panelStore.report({
+				model: typeof message.model === 'string' ? message.model : null,
+				context: typeof message.context === 'string' ? message.context : null,
+				at: typeof message.at === 'number' ? message.at : null
+			});
 		} else if (message.type === 'round' && typeof message.number === 'number') {
 			reviewStore.setRound(message.number);
 		} else if (message.type === 'diff') {
 			// The work a round asked for has landed. Take the diff again and
 			// move the threads onto it: one whose lines survived follows them,
 			// one whose lines are gone says so.
-			void diffStore.fetchDiff().then(() => commentStore.reanchorAll(diffStore.files));
+			void diffStore.fetchDiff().then(() => {
+				const moved = commentStore.reanchorAll(diffStore.files);
+				// The conversation is about code that has just changed under it,
+				// so the panel says where one lot of answers stops applying
+				panelStore.note(retaken(moved));
+			});
 		}
 	}
 
-	// An answer can arrive while the review is in a background tab, where the
-	// dot beside the thread cannot be seen
+	/** What a retaken diff did to the threads hanging on it. */
+	function retaken({ followed, outdated }: { followed: number; outdated: number }): string {
+		const parts = [`diff retaken · ${diffStore.files.length} files`];
+		if (followed > 0) parts.push(`${followed} threads followed their lines`);
+		if (outdated > 0) parts.push(`${outdated} outdated`);
+		return parts.join(' · ');
+	}
+
+	// An answer can arrive while the review is in a background tab, where
+	// neither the dot beside the thread nor the panel can be seen
 	$effect(() => {
-		markTab(commentStore.unreadCount, diffStore.title || 'Claude Review');
+		markTab(commentStore.unreadCount + panelStore.unread, diffStore.title || 'Claude Review');
 	});
 </script>
 
@@ -97,6 +126,9 @@
 		<div class="flex min-h-0 flex-1">
 			<FileList />
 			<DiffView />
+			{#if panelStore.open}
+				<AgentPanel />
+			{/if}
 		</div>
 	</div>
 {/if}

@@ -1,12 +1,12 @@
-import type { Comment } from "$lib/types";
+import type { Comment, PanelTurn } from "$lib/types";
 
 const STORAGE_KEY = "claude-review:draft";
 // What shape the stored draft is in. A comment has grown turns, a resolved
 // mark, the lines it was written against and the questions still waiting for
-// an answer. The number is here so an older draft can be brought up to the
-// current shape — never so it can be thrown away: a draft is an hour of
-// somebody's reading.
-const SHAPE = 4;
+// an answer; the review has grown a conversation in the agent panel. The
+// number is here so an older draft can be brought up to the current shape —
+// never so it can be thrown away: a draft is an hour of somebody's reading.
+const SHAPE = 5;
 
 export interface Draft {
   version: number;
@@ -16,6 +16,28 @@ export interface Draft {
   reviewBody: string;
   /** Threads already sent, and the round each went out in. */
   sent: [string, number][];
+  /** What was said in the agent panel, which outlives a reload like the rest. */
+  panel: PanelTurn[];
+}
+
+/**
+ * The draft as it stands, so that one writer does not erase another's half.
+ *
+ * The threads and the panel conversation are kept by different stores and
+ * saved at different moments. Each hands over its own slice and this merges
+ * it into what is already there.
+ */
+let current: Draft | null = null;
+
+function blank(title: string): Draft {
+  return {
+    version: SHAPE,
+    title,
+    comments: [],
+    reviewBody: "",
+    sent: [],
+    panel: [],
+  };
 }
 
 /**
@@ -26,12 +48,19 @@ export interface Draft {
  * tied to what was being reviewed: opening a different review does not
  * inherit it.
  */
-export function saveDraft(draft: Omit<Draft, "version">): void {
+export function saveDraft(
+  part: Partial<Omit<Draft, "version">> & { title: string },
+): void {
+  // Nothing is written on top of a draft this page has not read: a panel
+  // message saved before the threads were restored would otherwise store an
+  // empty comment list over an hour of somebody's reading.
+  const base =
+    current?.title === part.title
+      ? current
+      : (loadDraft(part.title) ?? blank(part.title));
+  current = { ...base, ...part, version: SHAPE };
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...draft, version: SHAPE }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
   } catch {
     // Private windows and blocked site data both throw; the review still works
   }
@@ -49,6 +78,8 @@ function upgrade(draft: Draft): Draft {
     ...draft,
     version: SHAPE,
     reviewBody: draft.reviewBody ?? "",
+    // The panel came after threads did; an older draft simply has nothing said
+    panel: Array.isArray(draft.panel) ? draft.panel : [],
     // Before rounds were numbered a sent thread was only an id
     sent: (Array.isArray(draft.sent) ? draft.sent : []).map((entry) =>
       Array.isArray(entry) ? entry : [entry as unknown as string, 1],
@@ -75,13 +106,15 @@ export function loadDraft(title: string): Draft | null {
 
     const draft: Draft = JSON.parse(stored);
     if (draft.title !== title || !Array.isArray(draft.comments)) return null;
-    return draft.version === SHAPE ? draft : upgrade(draft);
+    current = draft.version === SHAPE ? draft : upgrade(draft);
+    return current;
   } catch {
     return null;
   }
 }
 
 export function clearDraft(): void {
+  current = null;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {

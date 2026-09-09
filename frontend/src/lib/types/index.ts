@@ -38,6 +38,20 @@ export interface DiffResponse {
   title: string;
   round: number;
   answerer_attached: boolean;
+  agent: AgentStatus;
+}
+
+/**
+ * What the agent has said about itself.
+ *
+ * None of it can be measured from this side, so every field is empty until
+ * the agent reports, and the panel says when it last did.
+ */
+export interface AgentStatus {
+  model: string | null;
+  context: string | null;
+  /** When it was reported, in epoch milliseconds. */
+  at: number | null;
 }
 
 /** Who wrote a turn: the reader, or whoever answers for the change. */
@@ -110,4 +124,27 @@ export interface SubmitResponse {
   comment_count: number;
   round: number;
   ended: boolean;
+}
+
+/** Who speaks in the panel. An event is the review itself saying so. */
+export type PanelSpeaker = TurnAuthor | "event";
+
+/**
+ * One turn of the panel conversation.
+ *
+ * The reader's turns keep the id the message was sent under, so an answer
+ * that names it lands under the right one — several can be in flight, and
+ * the reader goes on reading while the agent writes.
+ */
+export interface PanelTurn {
+  id: string;
+  author: PanelSpeaker;
+  body: string;
+  at: number;
+  /** Threads this message pointed at, by id. */
+  threads?: string[];
+  /** Which message an answer belongs to. */
+  answers?: string;
+  /** Taken back before it was answered. */
+  cancelled?: boolean;
 }

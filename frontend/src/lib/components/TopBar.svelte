@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { scrollToComment } from '$lib/utils/scroll';
 	import DiffLayoutToggle from './DiffLayoutToggle.svelte';
@@ -120,6 +121,23 @@
 			End review
 		</button>
 	{/if}
+	<button
+		data-testid="toggle-panel"
+		class="cr-chip"
+		aria-pressed={panelStore.open}
+		title="The agent panel — talk about the review, not one line of it"
+		onclick={() => panelStore.toggle()}
+	>
+		<span
+			class="h-1.5 w-1.5 rounded-full"
+			style="background: {inRounds ? 'var(--cr-add-edge)' : 'var(--color-base-300)'}"
+		></span>
+		Agent
+		{#if panelStore.unread > 0}
+			<span data-testid="panel-unread" style="color: var(--cr-mark)">●</span>
+		{/if}
+	</button>
+
 	<button
 		class="btn btn-primary btn-sm"
 		data-testid="quick-submit"
