@@ -2,14 +2,18 @@
 
 import asyncio
 import logging
+import socket
 import sys
 import webbrowser
+from collections.abc import Coroutine
 from pathlib import Path
+from typing import Any
 
 import click
 import structlog
 import uvicorn
 
+from claude_review.domain.exceptions import PortUnavailableError
 from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
@@ -57,7 +61,13 @@ async def _serve(
     state = ServerState(shutdown_event=asyncio.Event())
     app = create_app(diff_files=diff_files, state=state, mode=mode)
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    # Bind before handing the socket to uvicorn: a port clash then surfaces here
+    # as an OSError we can explain, instead of uvicorn calling sys.exit() from
+    # inside the event loop and printing a traceback.
+    sock = _bind(port)
+    url = f"http://127.0.0.1:{sock.getsockname()[1]}"
+
+    config = uvicorn.Config(app, log_level="error")
     server = uvicorn.Server(config)
 
     async def wait_for_shutdown() -> None:
@@ -70,8 +80,6 @@ async def _serve(
             server.should_exit = True
             return
 
-        actual_port = server.servers[0].sockets[0].getsockname()[1]
-        url = f"http://127.0.0.1:{actual_port}"
         log.info("server_started", url=url)
 
         if open_browser:
@@ -88,9 +96,30 @@ async def _serve(
         server.should_exit = True
         log.info("server_shutting_down")
 
-    await asyncio.gather(server.serve(), wait_for_shutdown())
+    try:
+        await asyncio.gather(server.serve(sockets=[sock]), wait_for_shutdown())
+    finally:
+        sock.close()
 
     return state.result or ""
+
+
+def _bind(port: int) -> socket.socket:
+    """Take the loopback port the server will listen on.
+
+    Raises:
+        PortUnavailableError: If the port is already taken.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except OSError as e:
+        sock.close()
+        msg = f"port {port} is already in use — pass a different --port, or omit it to pick a free one"
+        raise PortUnavailableError(msg) from e
+    sock.listen(128)
+    return sock
 
 
 def _open_browser(url: str) -> None:
@@ -104,7 +133,20 @@ def _print_result(result: str) -> None:
         sys.stdout.write("\n")
 
 
+def _run_review(session: Coroutine[Any, Any, str]) -> None:
+    """Run a review session and print its result.
+
+    A port clash becomes a ClickException so the user gets one line of
+    explanation rather than a traceback out of the event loop.
+    """
+    try:
+        _print_result(asyncio.run(session))
+    except PortUnavailableError as e:
+        raise click.ClickException(str(e)) from e
+
+
 @click.group()
+@click.version_option(package_name="claude-review")
 @click.option("--port", default=0, type=int, help="Port to run the server on.")
 @click.option("--no-open", is_flag=True, help="Don't open the browser automatically.")
 @click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
@@ -135,7 +177,7 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
         log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.DIFF)
         return await _serve(diff_files, ReviewMode.DIFF, ctx.obj["port"], open_browser=ctx.obj["open_browser"])
 
-    _print_result(asyncio.run(_run()))
+    _run_review(_run())
 
 
 @main.command("files")
@@ -149,8 +191,7 @@ def files_cmd(ctx: click.Context, paths: tuple[Path, ...]) -> None:
         sys.stderr.write("No content to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.FILES)
-    result = asyncio.run(_serve(diff_files, ReviewMode.FILES, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))
-    _print_result(result)
+    _run_review(_serve(diff_files, ReviewMode.FILES, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))
 
 
 @main.command("transcript")
@@ -164,7 +205,4 @@ def transcript_cmd(ctx: click.Context, path: Path) -> None:
         sys.stderr.write("No messages to review.\n")
         return
     log.info("content_loaded", file_count=len(diff_files), mode=ReviewMode.TRANSCRIPT)
-    result = asyncio.run(
-        _serve(diff_files, ReviewMode.TRANSCRIPT, ctx.obj["port"], open_browser=ctx.obj["open_browser"])
-    )
-    _print_result(result)
+    _run_review(_serve(diff_files, ReviewMode.TRANSCRIPT, ctx.obj["port"], open_browser=ctx.obj["open_browser"]))

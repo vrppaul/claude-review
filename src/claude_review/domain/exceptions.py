@@ -3,3 +3,7 @@
 
 class GitError(Exception):
     """Raised when a git operation fails."""
+
+
+class PortUnavailableError(Exception):
+    """Raised when the review server cannot take the requested port."""
