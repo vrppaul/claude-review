@@ -40,8 +40,10 @@
 {#if commentStore.submitted}
 	<div
 		data-testid="submitted-banner"
-		class="flex h-12 shrink-0 items-center justify-center border-b border-base-300 bg-success px-4 text-success-content"
+		class="flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 bg-base-200 px-4"
 	>
+		<svg class="h-4 w-4" viewBox="0 0 12 12" fill="currentColor" style="color: var(--cr-mark)"
+			aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg>
 		<p class="font-semibold">Review sent. You can close this tab.</p>
 	</div>
 {:else}

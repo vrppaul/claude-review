@@ -105,8 +105,15 @@ describe('toContextLines', () => {
 		const lines = toContextLines(5, ['a', 'b']);
 
 		expect(lines).toEqual([
-			{ type: 'context', old_no: null, new_no: 5, content: 'a' },
-			{ type: 'context', old_no: null, new_no: 6, content: 'b' }
+			{ type: 'context', old_no: 5, new_no: 5, content: 'a' },
+			{ type: 'context', old_no: 6, new_no: 6, content: 'b' }
 		]);
+	});
+
+	it('numbers both gutters, like every other context line', () => {
+		// The old side runs two behind by this point in the file
+		const lines = toContextLines(10, ['a'], -2);
+
+		expect(lines[0]).toEqual({ type: 'context', old_no: 8, new_no: 10, content: 'a' });
 	});
 });

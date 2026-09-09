@@ -9,14 +9,15 @@
 	let atFile = $state(-1);
 
 	const shortcuts: { keys: string; does: string }[] = [
-		{ keys: 'j / k', does: 'Move down or up a line' },
-		{ keys: 'Enter', does: 'Comment on the line you are on' },
-		{ keys: '] / [', does: 'Go to the next or previous file' },
-		{ keys: 'n / p', does: 'Go to the next or previous comment' },
-		{ keys: 'v', does: 'Mark the file you are in as viewed' },
-		{ keys: 'u', does: 'Fold or unfold the file you are in' },
-		{ keys: 'Ctrl+Shift+Enter', does: 'Send the review to Claude' },
-		{ keys: '?', does: 'Show this list' }
+		{ keys: 'j / k', does: 'Down / up a line' },
+		{ keys: 'Enter', does: 'Comment on this line' },
+		{ keys: '] / [', does: 'Next / previous file' },
+		{ keys: 'n / p', does: 'Next / previous comment' },
+		{ keys: 'v', does: 'Mark this file viewed' },
+		{ keys: 'u', does: 'Fold or unfold this file' },
+		{ keys: 'Ctrl+Shift+Enter', does: 'Send the review' },
+		{ keys: '?', does: 'Show this list' },
+		{ keys: 'Esc', does: 'Close it' }
 	];
 
 	function stepFile(direction: 1 | -1) {
@@ -86,12 +87,12 @@
 		onclick={(e) => e.target === e.currentTarget && (showHelp = false)}
 		onkeydown={(e) => e.key === 'Escape' && (showHelp = false)}
 	>
-		<div class="cr-dialog w-full max-w-sm rounded-lg bg-base-100 p-6">
+		<div class="cr-dialog w-full max-w-md rounded-lg bg-base-100 p-6">
 			<h3 id="shortcuts-title" class="mb-4 text-lg font-semibold">Keyboard</h3>
 			<dl data-testid="shortcuts-list" class="space-y-2">
 				{#each shortcuts as shortcut (shortcut.keys)}
 					<div class="flex items-baseline gap-4">
-						<dt class="w-36 shrink-0 font-mono text-xs" style="color: var(--cr-mark)">
+						<dt class="w-40 shrink-0 font-mono text-xs" style="color: var(--cr-mark)">
 							{shortcut.keys}
 						</dt>
 						<dd class="text-sm">{shortcut.does}</dd>

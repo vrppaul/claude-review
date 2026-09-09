@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { wordRanges, markRanges, applyWordMarks } from '$lib/utils/word-diff';
+import { splitSuggestions } from '$lib/utils/suggestion';
 import type { DiffLine } from '$lib/types';
 
 describe('wordRanges', () => {
@@ -146,3 +147,24 @@ describe('applyWordMarks', () => {
 function pick(text: string, ranges: [number, number][]): string[] {
 	return ranges.map(([start, end]) => text.slice(start, end));
 }
+
+describe('splitSuggestions', () => {
+	it('separates a suggested replacement from what was written', () => {
+		const parts = splitSuggestions('Use the constant\n\n```suggestion\nx = LIMIT\n```');
+
+		expect(parts).toEqual([
+			{ kind: 'prose', text: 'Use the constant' },
+			{ kind: 'suggestion', text: 'x = LIMIT' }
+		]);
+	});
+
+	it('keeps a comment with no suggestion whole', () => {
+		expect(splitSuggestions('Just a note')).toEqual([{ kind: 'prose', text: 'Just a note' }]);
+	});
+
+	it('keeps a multi-line suggestion together', () => {
+		const parts = splitSuggestions('```suggestion\nif x:\n    return 1\n```');
+
+		expect(parts).toEqual([{ kind: 'suggestion', text: 'if x:\n    return 1' }]);
+	});
+});

@@ -45,6 +45,19 @@
 
 	let textareaEl: HTMLTextAreaElement;
 
+	/** Grow with the text: a suggestion inserts several lines at once, and a
+	 * fixed box scrolls them out of sight with nothing to say so. */
+	function fitToText() {
+		if (!textareaEl) return;
+		textareaEl.style.height = 'auto';
+		textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 480)}px`;
+	}
+
+	$effect(() => {
+		void body;
+		fitToText();
+	});
+
 	onMount(() => {
 		textareaEl?.focus();
 		// Commenting on a line near the bottom of the window opened the composer

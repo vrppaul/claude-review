@@ -62,11 +62,21 @@ export function withRevealed(
   };
 }
 
-/** Turn fetched text into context lines numbered from `start`. */
-export function toContextLines(start: number, lines: string[]): DiffLine[] {
+/**
+ * Turn fetched text into context lines numbered from `start`.
+ *
+ * `oldOffset` is how far the old numbering runs behind the new one at this
+ * point in the file, so a revealed line carries a number in both gutters
+ * like every other context line around it.
+ */
+export function toContextLines(
+  start: number,
+  lines: string[],
+  oldOffset = 0,
+): DiffLine[] {
   return lines.map((content, offset) => ({
     type: "context" as const,
-    old_no: null,
+    old_no: start + offset + oldOffset,
     new_no: start + offset,
     content,
   }));

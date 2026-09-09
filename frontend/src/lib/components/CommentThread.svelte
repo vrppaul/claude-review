@@ -3,6 +3,7 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { discussionStore } from '$lib/stores/discussion.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
+	import { splitSuggestions } from '$lib/utils/suggestion';
 	import CommentBox from './CommentBox.svelte';
 
 	interface Props {
@@ -57,7 +58,9 @@
 					{label}
 				</span>
 				{#if comment.severity !== 'note'}
-					<span data-testid="comment-severity" class="cr-severity">{comment.severity}</span>
+					<span data-testid="comment-severity" class="cr-severity cr-severity-{comment.severity}"
+						>{comment.severity}</span
+					>
 				{/if}
 				<div class="flex-1"></div>
 				<div
@@ -86,7 +89,15 @@
 					</button>
 				</div>
 			</div>
-			<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
+			{#each splitSuggestions(comment.body) as part, i (i)}
+				{#if part.kind === 'suggestion'}
+					<pre
+						data-testid="comment-suggestion"
+						class="mt-2 overflow-x-auto rounded bg-base-100 p-3 font-mono text-xs">{part.text}</pre>
+				{:else}
+					<p class="cr-comment-body mt-1 whitespace-pre-wrap">{part.text}</p>
+				{/if}
+			{/each}
 
 			{#if asking}
 				<div class="mt-3 space-y-2 border-t border-base-300 pt-3">

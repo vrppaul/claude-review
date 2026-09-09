@@ -72,13 +72,20 @@
 					</h4>
 					<ul class="space-y-2">
 						{#each commentStore.comments as comment (comment.id)}
-							<li class="rounded bg-base-200 px-3 py-2">
-								<div data-testid="modal-comment-ref" class="cr-comment-ref font-mono text-xs">
-									{comment.file} · {lineRangeLabel(
-										comment.side,
-										comment.start_line,
-										comment.end_line
-									)}
+							<li class="cr-comment rounded-r px-3 py-2">
+								<div class="flex items-baseline gap-2">
+									<span data-testid="modal-comment-ref" class="cr-comment-ref font-mono text-xs">
+										{comment.file} · {lineRangeLabel(
+											comment.side,
+											comment.start_line,
+											comment.end_line
+										)}
+									</span>
+									{#if comment.severity !== 'note'}
+										<span class="cr-severity cr-severity-{comment.severity}">
+											{comment.severity}
+										</span>
+									{/if}
 								</div>
 								<p class="cr-comment-body mt-1 whitespace-pre-wrap">{comment.body}</p>
 							</li>

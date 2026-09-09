@@ -110,7 +110,7 @@
 			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs {viewed
 				? 'opacity-45'
 				: ''}"
-			class:btn-active={diffStore.selectedPath === file.path}
+			class:cr-current={diffStore.selectedPath === file.path}
 			style="padding-left: {depth * 12 + 8}px"
 			onclick={() => scrollToFile(file.path)}
 		>
@@ -123,7 +123,8 @@
 			{#if viewed}
 				<svg
 					data-testid="file-viewed-mark"
-					class="h-3 w-3 text-success"
+					class="h-3 w-3"
+					style="color: var(--cr-mark)"
 					viewBox="0 0 12 12"
 					fill="currentColor"
 					aria-label="Viewed"

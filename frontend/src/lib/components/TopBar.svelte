@@ -31,6 +31,7 @@
 	class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4"
 >
 	<span class="font-semibold">Review</span>
+	<span class="cr-muted hidden text-xs lg:inline">? for keys</span>
 	{#if diffStore.title}
 		<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
 			{diffStore.title}
@@ -113,6 +114,5 @@
 		{/if}
 	</button>
 
-	<span class="cr-muted hidden text-xs lg:inline">Press ? for keys</span>
 	<ThemeToggle />
 </header>

@@ -30,7 +30,13 @@ export const expansionStore = {
    * Newly fetched lines go before the ones already there, since a gap is
    * always widened upward from the hunk below it.
    */
-  async reveal(path: string, hunkIndex: number, start: number, end: number) {
+  async reveal(
+    path: string,
+    hunkIndex: number,
+    start: number,
+    end: number,
+    oldOffset = 0,
+  ) {
     const params = new URLSearchParams({
       path,
       start: String(start),
@@ -45,7 +51,7 @@ export const expansionStore = {
     const forPath = revealed.get(path) ?? new SvelteMap<number, DiffLine[]>();
     const existing = forPath.get(hunkIndex) ?? [];
     forPath.set(hunkIndex, [
-      ...toContextLines(window.start, window.lines),
+      ...toContextLines(window.start, window.lines, oldOffset),
       ...existing,
     ]);
     revealed.set(path, forPath);
