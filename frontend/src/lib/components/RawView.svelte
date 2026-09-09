@@ -2,7 +2,7 @@
 	import type { DiffFile, DiffLine } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
-	import { highlightLine } from '$lib/utils/highlight';
+	import { highlightFile } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -16,6 +16,8 @@
 
 	const isDiffMode = $derived(diffStore.mode === 'diff');
 	const colSpan = $derived(isDiffMode ? 4 : 2);
+	// Markup per hunk per line, computed once per file rather than per row
+	const highlighted = $derived(highlightFile(file, language));
 	const modeChange = $derived(
 		file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null
 	);
@@ -142,7 +144,7 @@
 								</td>
 							{/if}
 							<td class="px-2 whitespace-pre-wrap break-all {isDiffMode && line.type === 'add' ? 'bg-success/5' : isDiffMode && line.type === 'delete' ? 'bg-error/5' : 'bg-base-100'}">
-								{@html highlightLine(line.content, language)}
+								{@html highlighted[hunkIdx][lineIdx]}
 							</td>
 						</tr>
 

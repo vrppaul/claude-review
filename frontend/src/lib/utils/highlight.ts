@@ -1,4 +1,7 @@
 import hljs from "highlight.js/lib/core";
+
+import type { DiffFile, DiffLine } from "$lib/types";
+
 export { hljs };
 
 // Register common languages
@@ -62,16 +65,113 @@ export function detectLanguage(filePath: string): string | null {
   return EXT_TO_LANG[ext] ?? null;
 }
 
-export function highlightLine(
-  content: string,
+/**
+ * Highlight every row of a file, returning the markup per hunk per line.
+ *
+ * Highlighting row by row cannot see a construct that spans lines — a
+ * docstring, a block comment, a template literal — and colours each
+ * continuation as if it began a fresh statement. So each hunk is highlighted
+ * as a document instead.
+ *
+ * A hunk holds two versions of the same region interleaved, and only one of
+ * them is real code at a time: a removed line may open a string that the line
+ * replacing it never opens. Each side is therefore assembled and highlighted
+ * on its own, and every row takes the markup from the side it belongs to.
+ * Hunks are highlighted separately because the gaps between them are not part
+ * of the file, so state must not carry across one.
+ */
+export function highlightFile(
+  file: DiffFile,
   language: string | null,
-): string {
-  if (!language || !content.trim()) return escapeHtml(content);
+): string[][] {
+  return file.hunks.map((hunk) => highlightHunk(hunk.lines, language));
+}
+
+function highlightHunk(lines: DiffLine[], language: string | null): string[] {
+  if (!language) return lines.map((line) => escapeHtml(line.content));
+
+  const hasRemovals = lines.some((line) => line.type === "delete");
+  const newSide = sideLines(lines, "add", language);
+  const oldSide = hasRemovals ? sideLines(lines, "delete", language) : newSide;
+
+  let oldAt = 0;
+  let newAt = 0;
+  return lines.map((line) => {
+    if (line.type === "delete")
+      return oldSide[oldAt++] ?? escapeHtml(line.content);
+    if (line.type === "add")
+      return newSide[newAt++] ?? escapeHtml(line.content);
+    // Context belongs to both versions, so it advances both readers
+    const html = newSide[newAt] ?? escapeHtml(line.content);
+    oldAt++;
+    newAt++;
+    return html;
+  });
+}
+
+/** Highlight one version of a hunk: its context plus the lines exclusive to that side. */
+function sideLines(
+  lines: DiffLine[],
+  exclusive: DiffLine["type"],
+  language: string,
+): string[] {
+  const text = lines
+    .filter((line) => line.type === "context" || line.type === exclusive)
+    .map((line) => line.content)
+    .join("\n");
+
   try {
-    return hljs.highlight(content, { language, ignoreIllegals: true }).value;
+    return splitHighlighted(
+      hljs.highlight(text, { language, ignoreIllegals: true }).value,
+    );
   } catch {
-    return escapeHtml(content);
+    return text.split("\n").map(escapeHtml);
   }
+}
+
+/**
+ * Cut highlighted markup into one string per line.
+ *
+ * A span may run across a newline, so every span still open at a break is
+ * closed before the line ends and reopened at the start of the next one —
+ * otherwise each line would be invalid markup on its own.
+ */
+function splitHighlighted(html: string): string[] {
+  const lines: string[] = [];
+  const open: string[] = [];
+  let current = "";
+  let i = 0;
+
+  while (i < html.length) {
+    const char = html[i];
+
+    if (char === "<") {
+      const close = html.indexOf(">", i);
+      if (close === -1) {
+        current += html.slice(i);
+        break;
+      }
+      const tag = html.slice(i, close + 1);
+      if (tag.startsWith("</")) open.pop();
+      else if (!tag.endsWith("/>")) open.push(tag);
+      current += tag;
+      i = close + 1;
+      continue;
+    }
+
+    if (char === "\n") {
+      lines.push(current + "</span>".repeat(open.length));
+      current = open.join("");
+      i += 1;
+      continue;
+    }
+
+    current += char;
+    i += 1;
+  }
+
+  lines.push(current + "</span>".repeat(open.length));
+  return lines;
 }
 
 function escapeHtml(text: string): string {
