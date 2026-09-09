@@ -255,11 +255,13 @@ def main(ctx: click.Context, port: int, no_open: bool, verbose: bool) -> None:
     help="How long to wait before reporting that nothing was asked.",
 )
 def wait_cmd(port: int, seconds: float) -> None:
-    """Wait for the reader to ask about a comment thread.
+    """Wait for whatever the reader hands over next.
 
-    Prints one JSON object and exits, so a caller can loop: a question to
-    answer, "timeout" if nothing was asked, or "closed" once the review is
-    over. Answer with `claude-review reply`.
+    Prints one JSON object and exits, so a caller can loop: a "question"
+    about a thread, answered with `claude-review reply`; a "message" from
+    the agent panel, answered with `claude-review say`; a "round" of the
+    review; a "cancel" taking a message back; "timeout" if nothing was said,
+    or "closed" once the review is over.
     """
     body = _call(
         f"http://127.0.0.1:{port}/api/events?wait_seconds={seconds}",
@@ -289,6 +291,49 @@ def reply_cmd(port: int, thread: str, question: str | None, text: str) -> None:
     _call(
         f"http://127.0.0.1:{port}/api/reply",
         payload={"thread_id": thread, "question_id": question, "text": text},
+    )
+
+
+@main.command("say")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--message", required=True, type=str, help="Message being answered, from the event.")
+@click.argument("text", required=True, type=str)
+def say_cmd(port: int, message: str, text: str) -> None:
+    """Answer something the reader typed in the agent panel.
+
+    The panel is where the review is discussed rather than any one line of
+    it. Naming the message is what puts the answer under it: several can be
+    waiting, and the reader is still reading while you write.
+    """
+    _call(
+        f"http://127.0.0.1:{port}/api/say",
+        payload={"message_id": message, "text": text},
+    )
+
+
+@main.command("status")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--model", type=str, default=None, help="Which model is answering.")
+@click.option(
+    "--context",
+    type=str,
+    default=None,
+    help='How much of the context window is spent, in your own words (e.g. "53% of 1M").',
+)
+def status_cmd(port: int, model: str | None, context: str | None) -> None:
+    """Say what only this side can know, for the panel to show.
+
+    The review can measure what handing it over costs, because it holds the
+    diff. It cannot see into another process, so the model and the context
+    are quoted from here, with the time they were said beside them. Say
+    nothing and the panel shows nothing rather than a number that is a guess.
+    """
+    if model is None and context is None:
+        msg = "nothing to report — pass --model, --context, or both"
+        raise click.ClickException(msg)
+    _call(
+        f"http://127.0.0.1:{port}/api/status",
+        payload={"model": model, "context": context},
     )
 
 

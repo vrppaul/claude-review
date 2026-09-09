@@ -228,6 +228,82 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
         server.wait(timeout=10)
 
 
+def test_a_panel_message_and_its_answer_travel_between_processes(tmp_git_repo: Path) -> None:
+    """The panel reaches the same agent the threads do, over the same queue."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+
+        with connect(f"ws://127.0.0.1:{port}/api/session") as review:
+            waiting = subprocess.Popen(
+                [sys.executable, "-m", "claude_review", "wait", "--port", str(port), "--seconds", "20"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            time.sleep(1.0)
+
+            _post(port, "/api/message", {"message_id": "panel-1", "text": "Run the tests and say what fails."})
+
+            handed = json.loads(waiting.communicate(timeout=30)[0])
+            assert handed["type"] == "message"
+            assert handed["message"]["text"] == "Run the tests and say what fails."
+
+            answer = _run_cli("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
+            assert answer.returncode == 0
+
+            assert _next_push(review, "chat") == {
+                "type": "chat",
+                "message_id": "panel-1",
+                "text": "One failed; fixed and green.",
+            }
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+
+def test_the_agent_reports_what_the_review_cannot_measure(tmp_git_repo: Path) -> None:
+    """Which model, and how much context is left, come from the agent alone."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+
+        with connect(f"ws://127.0.0.1:{port}/api/session") as review:
+            reported = _run_cli("status", "--port", str(port), "--model", "opus-5", "--context", "53% of 1M")
+            assert reported.returncode == 0
+
+            pushed = _next_push(review, "status")
+            assert pushed["model"] == "opus-5"
+            assert pushed["context"] == "53% of 1M"
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+
+def test_reporting_nothing_is_refused_rather_than_sent(tmp_git_repo: Path) -> None:
+    """An empty report would tell the panel to show blanks it already shows."""
+    result = _run_cli("status", "--port", "1")
+
+    assert result.returncode != 0
+    assert "nothing to report" in result.stderr
+
+
 def test_waiting_reports_when_nothing_was_asked(tmp_git_repo: Path) -> None:
     """A caller in a loop needs to be told, not left hanging."""
     (tmp_git_repo / "initial.txt").write_text("changed\n")

@@ -97,3 +97,12 @@ def test_round_subcommand_in_help() -> None:
     result = runner.invoke(main, ["--help"])
 
     assert "round" in result.output
+
+
+def test_the_panel_commands_are_in_help() -> None:
+    """An agent driving the review has to find them without being told."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--help"])
+
+    assert "say" in result.output
+    assert "status" in result.output
