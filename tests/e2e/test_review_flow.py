@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -795,3 +796,64 @@ async def test_comments_survive_a_reload(server_url: ServerFixture, page: Page) 
 
     assert state.result is not None
     assert "Written before the reload" in state.result
+
+
+async def test_a_question_asked_in_a_thread_is_answered_in_it(server_url: ServerFixture, page: Page) -> None:
+    """The whole round trip: asked in the browser, answered from outside it."""
+    url, _state = server_url
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Why the shorter greeting?")
+
+    await page.get_by_test_id("ask-claude").click()
+    await page.get_by_test_id("ask-input").fill("Was the old one used anywhere else?")
+    await page.get_by_test_id("send-question").click()
+    await page.get_by_test_id("awaiting-answer").wait_for()
+
+    # Whoever is answering picks the question up out of band
+    port = int(url.rsplit(":", 1)[1])
+    asked = await _take_question(port)
+    assert asked["question"]["body"] == "Was the old one used anywhere else?"
+    assert asked["question"]["quote"] == ["def hello():"]
+
+    await _send_reply(port, asked["question"]["thread_id"], "No, it was the only caller.")
+
+    answer = page.get_by_test_id("thread-answer")
+    await answer.wait_for()
+    assert (await answer.text_content()).strip() == "No, it was the only caller."
+
+
+async def _take_question(port: int) -> dict:
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "claude_review",
+        "wait",
+        "--port",
+        str(port),
+        "--seconds",
+        "10",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await proc.communicate()
+    return json.loads(stdout)
+
+
+async def _send_reply(port: int, thread_id: str, text: str) -> None:
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "claude_review",
+        "reply",
+        "--port",
+        str(port),
+        "--thread",
+        thread_id,
+        text,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    assert proc.returncode == 0, stderr.decode()
