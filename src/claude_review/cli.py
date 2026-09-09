@@ -5,6 +5,7 @@ import json
 import logging
 import socket
 import sys
+import urllib.error
 import urllib.request
 import webbrowser
 from collections.abc import Coroutine
@@ -46,12 +47,18 @@ def _configure_logging(*, verbose: bool = False) -> None:
     )
 
 
-async def _load_diff(repo_path: Path, base: str | None = None) -> list[DiffFile]:
-    """Load diff files from a git repository."""
+async def _load_diff(repo_path: Path, base: str | None = None) -> tuple[list[DiffFile], Path]:
+    """Load diff files from a git repository, and say where its root is.
+
+    Git reports paths relative to the repository root rather than to the
+    directory it was run in, so anything that resolves those paths later —
+    expanding a hunk's context — has to be told the root, not the argument.
+    """
     git_repo = GitRepository()
     diff_service = DiffService(git_repository=git_repo)
     log.info("loading_diff", path=str(repo_path), base=base)
-    return await diff_service.get_diff(repo_path, base=base)
+    files = await diff_service.get_diff(repo_path, base=base)
+    return files, await git_repo.top_level(repo_path) or repo_path
 
 
 async def _serve(
@@ -93,6 +100,10 @@ async def _serve(
 
         if open_browser:
             await asyncio.to_thread(_open_browser, url)
+        else:
+            # Nothing else will say where the review is
+            sys.stderr.write(f"Review ready at {url}\n")
+            sys.stderr.flush()
 
         while not state.shutdown_event.is_set():
             await asyncio.sleep(0.5)
@@ -142,6 +153,32 @@ def _files_title(paths: list[Path]) -> str:
 
 def _transcript_title(path: Path) -> str:
     return f"Conversation {path.stem}"
+
+
+def _call(url: str, *, payload: dict | None = None, timeout: float = 10.0) -> str:
+    """Talk to a review server, and explain it plainly when that fails.
+
+    These commands are driven from a loop, where a traceback out of urllib
+    says nothing about what went wrong or what to do next.
+    """
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode() if payload is not None else None,
+        headers={"Content-Type": "application/json"} if payload is not None else {},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read().decode()
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace").strip()
+        msg = f"the review refused this ({e.code}): {detail or e.reason}"
+        raise click.ClickException(msg) from e
+    except urllib.error.URLError as e:
+        msg = f"no review is listening there: {e.reason}"
+        raise click.ClickException(msg) from e
+    except TimeoutError as e:
+        msg = "the review did not answer in time"
+        raise click.ClickException(msg) from e
 
 
 def _open_browser(url: str) -> None:
@@ -196,12 +233,12 @@ def wait_cmd(port: int, seconds: float) -> None:
     answer, "timeout" if nothing was asked, or "closed" once the review is
     over. Answer with `claude-review reply`.
     """
-    with urllib.request.urlopen(
+    body = _call(
         f"http://127.0.0.1:{port}/api/events?wait_seconds={seconds}",
         timeout=seconds + 10,
-    ) as response:
-        sys.stdout.write(response.read().decode())
-        sys.stdout.write("\n")
+    )
+    sys.stdout.write(body)
+    sys.stdout.write("\n")
 
 
 @main.command("reply")
@@ -210,14 +247,10 @@ def wait_cmd(port: int, seconds: float) -> None:
 @click.argument("text", required=True, type=str)
 def reply_cmd(port: int, thread: str, text: str) -> None:
     """Answer a question the reader asked about a comment thread."""
-    payload = json.dumps({"thread_id": thread, "text": text}).encode()
-    request = urllib.request.Request(
+    _call(
         f"http://127.0.0.1:{port}/api/reply",
-        data=payload,
-        headers={"Content-Type": "application/json"},
+        payload={"thread_id": thread, "text": text},
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        response.read()
 
 
 @main.command("diff")
@@ -231,7 +264,7 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
     repo_path = (path or Path(".")).resolve()
 
     async def _run() -> str:
-        diff_files = await _load_diff(repo_path, base=base)
+        diff_files, root = await _load_diff(repo_path, base=base)
         if not diff_files:
             sys.stderr.write("No changes found.\n")
             return ""
@@ -241,7 +274,7 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
             ReviewMode.DIFF,
             ctx.obj["port"],
             _diff_title(repo_path, base),
-            root=repo_path,
+            root=root,
             base=base,
             open_browser=ctx.obj["open_browser"],
         )

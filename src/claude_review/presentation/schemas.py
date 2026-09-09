@@ -22,7 +22,10 @@ class DiffResponse(BaseModel):
 class CommentInput(BaseModel):
     """A single comment in the submit request."""
 
-    file: str = Field(min_length=1)
+    # A newline in a path would let a filename write its own heading in the
+    # review — a whole fabricated section, blocker and all, in what the agent
+    # reads. Git quotes such names, and the parser faithfully decodes them.
+    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
     side: LineSide
     severity: CommentSeverity
     start_line: int = Field(ge=1)

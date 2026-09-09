@@ -79,6 +79,19 @@ class GitRepository:
             return None
         return found.strip() or None
 
+    async def top_level(self, path: Path) -> Path | None:
+        """The root of the repository containing ``path``.
+
+        Git reports diff paths relative to this, not to whatever directory
+        the command was run from, so anything resolving those paths has to
+        start here or it looks for `sub/a.py` inside `sub/`.
+        """
+        try:
+            found = await self._run(path, ["git", "rev-parse", "--show-toplevel"])
+        except GitError:
+            return None
+        return Path(found.strip()) if found.strip() else None
+
     async def _has_commits(self, path: Path) -> bool:
         try:
             proc = await asyncio.create_subprocess_exec(

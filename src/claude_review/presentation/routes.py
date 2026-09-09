@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from claude_review.domain.exceptions import FileWindowError
 from claude_review.domain.models import Comment, DiffFile, ReviewMode, ThreadQuestion
@@ -37,7 +37,6 @@ router = APIRouter(prefix="/api")
 
 @router.get("/diff")
 async def get_diff(
-    request: Request,
     ignore_whitespace: bool = Query(default=False),
     diff_files: list[DiffFile] = Depends(get_diff_files),
     mode: ReviewMode = Depends(get_review_mode),
@@ -53,8 +52,6 @@ async def get_diff(
     """
     if ignore_whitespace and root is not None:
         diff_files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base, ignore_whitespace=True)
-        # Keep submission in step: a comment is looked up against these files
-        request.app.state.diff_files = diff_files
 
     return DiffResponse(files=diff_files, mode=mode, title=title)
 
@@ -65,13 +62,14 @@ async def get_file_window(
     start: int = Query(ge=1),
     end: int = Query(ge=1),
     root: Path | None = Depends(get_repo_root),
+    diff_files: list[DiffFile] = Depends(get_diff_files),
 ) -> FileWindowResponse:
     """Serve lines a hunk left out, so the reader can widen its context."""
     if root is None:
         raise HTTPException(status_code=404, detail="No repository to read from")
 
     try:
-        window = FileWindowService().read_window(root, path, start, end)
+        window = await FileWindowService().read_window(root, path, start, end, allowed=[f.path for f in diff_files])
     except FileWindowError as e:
         log.warning("file_window_refused", path=path, reason=str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -115,14 +113,23 @@ async def next_event(
     and blocking until there is something to do is exactly its shape.
     Returning "timeout" lets the caller decide whether to keep waiting.
     """
-    try:
-        question = await asyncio.wait_for(state.questions.get(), timeout=wait_seconds)
-    except TimeoutError:
-        return EventResponse(type="timeout")
-
     if state.shutdown_event.is_set():
         return EventResponse(type="closed")
-    return EventResponse(type="question", question=question)
+
+    asked = asyncio.ensure_future(state.questions.get())
+    closed = asyncio.ensure_future(state.shutdown_event.wait())
+    try:
+        done, _ = await asyncio.wait({asked, closed}, timeout=wait_seconds, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for pending in (asked, closed):
+            if not pending.done():
+                pending.cancel()
+
+    if asked in done:
+        return EventResponse(type="question", question=asked.result())
+    if closed in done:
+        return EventResponse(type="closed")
+    return EventResponse(type="timeout")
 
 
 @router.post("/reply")

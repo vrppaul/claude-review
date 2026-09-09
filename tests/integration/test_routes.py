@@ -132,8 +132,8 @@ async def test_submit_with_comments_returns_formatted_markdown(
     assert response.status_code == 200
     data = response.json()
     assert data["comment_count"] == 2
-    assert "### src/handler.ts:42" in data["markdown"]
-    assert "### src/handler.ts:67-70" in data["markdown"]
+    assert "### `src/handler.ts`:42" in data["markdown"]
+    assert "### `src/handler.ts`:67-70" in data["markdown"]
     assert "Wrong null check" in data["markdown"]
     assert "Add max retry" in data["markdown"]
 
@@ -266,7 +266,7 @@ async def test_submit_with_body_and_comments(client: AsyncClient) -> None:
     assert data["comment_count"] == 2
     # Body appears before inline comment
     body_pos = data["markdown"].index("Generally good")
-    inline_pos = data["markdown"].index("### x.py:1")
+    inline_pos = data["markdown"].index("### `x.py`:1")
     assert body_pos < inline_pos
 
 
@@ -328,7 +328,7 @@ async def test_files_mode_review_round_trip(
     assert response.status_code == 200
     result = response.json()
     assert result["comment_count"] == 1
-    assert f"### {file_path}:3" in result["markdown"]
+    assert f"### `{file_path}`:3" in result["markdown"]
     assert "Needs more detail" in result["markdown"]
     assert server_state.shutdown_event.is_set()
 
@@ -425,8 +425,9 @@ async def repo_backed_client(mock_diff_files: list[DiffFile], server_state: Serv
     """A client whose server can read files, as diff mode's can."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 31)))
+    reviewed = [f.model_copy(update={"path": "src/app.py"}) for f in mock_diff_files]
     app = create_app(
-        diff_files=mock_diff_files,
+        diff_files=reviewed,
         state=server_state,
         mode=ReviewMode.DIFF,
         title="test-repo: uncommitted changes",
@@ -512,3 +513,22 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
 
     assert any(f["path"] == "app.py" for f in plain["files"])
     assert not any(f["path"] == "app.py" and f["hunks"] for f in ignored["files"])
+
+
+async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, server_state: ServerState) -> None:
+    """It is a way of looking at the diff, not a door that shuts behind you."""
+    (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add")
+    (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n")
+
+    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
+        full = _changed_lines((await client.get("/api/diff")).json())
+        ignored = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "true"})).json())
+        back = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "false"})).json())
+
+    assert len(ignored) < len(full)
+    assert back == full

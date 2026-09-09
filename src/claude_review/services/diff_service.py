@@ -102,6 +102,8 @@ class DiffService:
         for line in lines:
             if line.startswith("rename to "):
                 return self._read_marker_path(line.removeprefix("rename to "))
+            if line.startswith("copy to "):
+                return self._read_marker_path(line.removeprefix("copy to "))
 
         return self._extract_header_path(lines[0])
 
@@ -182,6 +184,9 @@ class DiffService:
                 return FileStatus.DELETED
             if line.startswith("rename from"):
                 return FileStatus.RENAMED
+            # A copy leaves the original in place, so what is new here is a file
+            if line.startswith("copy from"):
+                return FileStatus.ADDED
         return FileStatus.MODIFIED
 
     def _detect_mode_change(self, header: list[str]) -> tuple[str | None, str | None]:

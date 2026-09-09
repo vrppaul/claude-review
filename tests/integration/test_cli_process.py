@@ -240,3 +240,89 @@ def _post(port: int, path: str, payload: dict) -> None:
     )
     with urllib.request.urlopen(request, timeout=10) as response:
         response.read()
+
+
+def test_expanding_context_works_from_a_subdirectory(tmp_git_repo: Path) -> None:
+    """Git reports paths from the repository root, whatever directory it ran in."""
+    nested = tmp_git_repo / "sub"
+    nested.mkdir()
+    (nested / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 41)))
+    subprocess.run(["git", "add", "."], cwd=tmp_git_repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add"], cwd=tmp_git_repo, check=True, capture_output=True)
+    (nested / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 40)) + "changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff"],
+        cwd=nested,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/file-window?path=sub/app.py&start=1&end=3",
+            headers={"Host": f"127.0.0.1:{port}"},
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            window = json.loads(response.read())
+
+        assert window["lines"] == ["line 1", "line 2", "line 3"]
+    finally:
+        server.kill()
+        server.wait(timeout=10)
+
+
+def test_the_url_is_printed_when_no_browser_is_opened(tmp_git_repo: Path) -> None:
+    """Otherwise there is nothing on screen saying where the review is."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+        time.sleep(0.5)
+        server.kill()
+        _, stderr = server.communicate(timeout=10)
+
+        assert f"http://127.0.0.1:{port}" in stderr
+    finally:
+        if server.poll() is None:
+            server.kill()
+
+
+def test_waiting_on_a_server_that_is_not_there_explains_itself(tmp_path: Path) -> None:
+    """These commands run in a loop, where a traceback says nothing useful."""
+    result = _run_cli("wait", "--port", str(_free_port()), "--seconds", "1")
+
+    assert result.returncode != 0
+    assert "Traceback" not in result.stderr
+    assert "no review is listening" in result.stderr
+
+
+def test_replying_to_a_thread_that_is_refused_explains_itself(tmp_git_repo: Path) -> None:
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_server(port)
+        result = _run_cli("reply", "--port", str(port), "--thread", "x" * 500, "hello")
+
+        assert result.returncode != 0
+        assert "Traceback" not in result.stderr
+        assert "refused" in result.stderr
+    finally:
+        server.kill()
+        server.wait(timeout=10)

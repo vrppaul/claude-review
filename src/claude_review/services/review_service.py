@@ -25,7 +25,7 @@ class ReviewService:
 
         for comment in comments:
             line_ref = self._format_line_ref(comment)
-            parts.append(f"### {comment.file}:{line_ref}{self._format_severity(comment)}\n{comment.body}\n")
+            parts.append(f"### `{comment.file}`:{line_ref}{self._format_severity(comment)}\n{comment.body}\n")
 
         return ReviewResult(
             markdown="\n".join(parts),

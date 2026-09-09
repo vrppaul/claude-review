@@ -353,3 +353,19 @@ async def test_mode_only_name_containing_a_header_separator(tmp_git_repo: Path, 
 
     assert "x b/mode.txt" in by_path
     assert by_path["x b/mode.txt"].new_mode == "100755"
+
+
+async def test_a_copied_file_is_shown_as_a_new_one(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """A copy leaves the original in place, so what is new here is a file."""
+    original = tmp_git_repo / "original.txt"
+    original.write_text("".join(f"line {i}\n" for i in range(1, 30)))
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add")
+    git(tmp_git_repo, "config", "diff.renames", "copies")
+    (tmp_git_repo / "copy.txt").write_text(original.read_text())
+
+    files = await diff_service.get_diff(tmp_git_repo)
+    by_path = {f.path: f for f in files}
+
+    assert "copy.txt" in by_path
+    assert by_path["copy.txt"].status == FileStatus.ADDED

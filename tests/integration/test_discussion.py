@@ -128,3 +128,25 @@ def test_an_answer_reaches_the_review_on_screen(state: ServerState) -> None:
             "thread_id": "comment-1",
             "text": "Because it moved up",
         }
+
+
+async def test_the_waiter_is_told_when_the_review_ends(client: AsyncClient, state: ServerState) -> None:
+    """Otherwise the answering loop spins until the server process dies."""
+
+    async def end_the_review() -> None:
+        await asyncio.sleep(0.2)
+        state.shutdown_event.set()
+
+    ending = asyncio.create_task(end_the_review())
+    event = (await client.get("/api/events", params={"wait_seconds": 10})).json()
+    await ending
+
+    assert event["type"] == "closed"
+
+
+async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient, state: ServerState) -> None:
+    state.shutdown_event.set()
+
+    event = (await client.get("/api/events", params={"wait_seconds": 10})).json()
+
+    assert event["type"] == "closed"
