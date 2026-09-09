@@ -1,88 +1,192 @@
 @import "tailwindcss";
-@import "highlight.js/styles/github.css";
-@import "highlight.js/styles/github-dark.css";
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
 
-/* Make hljs backgrounds transparent so they don't override diff row colors */
+/*
+ * Palette for a reading instrument.
+ *
+ * Two rules shape it. Green and red belong to the diff and nothing else, so
+ * the syntax colors below deliberately avoid both hues — a green string
+ * inside a removed line reads as a contradiction. And change is marked at
+ * the edge of a row rather than washed across it, so highlighted code stays
+ * legible on top of it.
+ */
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code",
+    Menlo, Consolas, monospace;
+}
+
+:root {
+  --cr-code-size: 0.8125rem;
+  --cr-code-leading: 1.55;
+  /* Comments outrank the code they annotate: they are what the review produces */
+  --cr-comment-size: 0.9375rem;
+  --cr-comment-leading: 1.6;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-base-100: #12161c;
+  --color-base-200: #171c25;
+  --color-base-300: #232b37;
+  --color-base-content: #d9e1ec;
+  --color-neutral: #232b37;
+  --color-neutral-content: #d9e1ec;
+  --color-primary: #5b8def;
+  --color-primary-content: #0b111c;
+  --color-secondary: #c792ea;
+  --color-secondary-content: #14101c;
+  --color-accent: #5b8def;
+  --color-accent-content: #0b111c;
+  --color-info: #5b8def;
+  --color-info-content: #0b111c;
+  --color-success: #4fb865;
+  --color-success-content: #08150c;
+  --color-warning: #e0a458;
+  --color-warning-content: #1c1408;
+  --color-error: #f2545b;
+  --color-error-content: #1c0a0c;
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.375rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  --cr-add-edge: #3f9d54;
+  --cr-add-tint: rgb(79 184 101 / 0.09);
+  --cr-del-edge: #cf4249;
+  --cr-del-tint: rgb(242 84 91 / 0.09);
+  --cr-mark: #5b8def;
+  --cr-mark-tint: rgb(91 141 239 / 0.14);
+  --cr-gutter-fg: #66748a;
+
+  --cr-syn-keyword: #c792ea;
+  --cr-syn-string: #e0a458;
+  --cr-syn-comment: #6c7a8c;
+  --cr-syn-number: #7fd3f7;
+  --cr-syn-type: #7fd3f7;
+  --cr-syn-function: #82aaff;
+  --cr-syn-variable: #d9e1ec;
+  --cr-syn-meta: #c792ea;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f4f7fa;
+  --color-base-300: #dde4ec;
+  --color-base-content: #1b2430;
+  --color-neutral: #dde4ec;
+  --color-neutral-content: #1b2430;
+  --color-primary: #2c6bd9;
+  --color-primary-content: #ffffff;
+  --color-secondary: #7c3fbf;
+  --color-secondary-content: #ffffff;
+  --color-accent: #2c6bd9;
+  --color-accent-content: #ffffff;
+  --color-info: #2c6bd9;
+  --color-info-content: #ffffff;
+  --color-success: #1f8b3a;
+  --color-success-content: #ffffff;
+  --color-warning: #9a6410;
+  --color-warning-content: #ffffff;
+  --color-error: #c8323c;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.375rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.375rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  --cr-add-edge: #2f9e4f;
+  --cr-add-tint: rgb(31 139 58 / 0.08);
+  --cr-del-edge: #d24049;
+  --cr-del-tint: rgb(200 50 60 / 0.08);
+  --cr-mark: #2c6bd9;
+  --cr-mark-tint: rgb(44 107 217 / 0.12);
+  --cr-gutter-fg: #8593a4;
+
+  --cr-syn-keyword: #8250df;
+  --cr-syn-string: #8a5a00;
+  --cr-syn-comment: #6e7a88;
+  --cr-syn-number: #0b6e99;
+  --cr-syn-type: #0b6e99;
+  --cr-syn-function: #2c6bd9;
+  --cr-syn-variable: #1b2430;
+  --cr-syn-meta: #8250df;
+}
+
+/*
+ * Syntax colors come from the palette above rather than a vendored theme, so
+ * both themes stay in step and neither borrows green or red from the diff.
+ */
 .hljs {
   background: transparent;
+  color: var(--cr-syn-variable);
 }
-
-/* Dark theme: override light hljs tokens with github-dark colors */
-:root[data-theme="dark"] .hljs {
-  color: #c9d1d9;
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section {
+  color: var(--cr-syn-keyword);
 }
-:root[data-theme="dark"] .hljs-keyword {
-  color: #ff7b72;
+.hljs-string,
+.hljs-regexp,
+.hljs-symbol,
+.hljs-quote,
+.hljs-addition {
+  color: var(--cr-syn-string);
 }
-:root[data-theme="dark"] .hljs-string {
-  color: #a5d6ff;
+.hljs-comment,
+.hljs-doctag {
+  color: var(--cr-syn-comment);
+  font-style: italic;
 }
-:root[data-theme="dark"] .hljs-comment,
-:root[data-theme="dark"] .hljs-doctag {
-  color: #8b949e;
+.hljs-number,
+.hljs-bullet {
+  color: var(--cr-syn-number);
 }
-:root[data-theme="dark"] .hljs-number,
-:root[data-theme="dark"] .hljs-literal {
-  color: #79c0ff;
+.hljs-type,
+.hljs-built_in,
+.hljs-class .hljs-title,
+.hljs-tag {
+  color: var(--cr-syn-type);
 }
-:root[data-theme="dark"] .hljs-built_in,
-:root[data-theme="dark"] .hljs-type {
-  color: #ffa657;
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-name {
+  color: var(--cr-syn-function);
 }
-:root[data-theme="dark"] .hljs-title,
-:root[data-theme="dark"] .hljs-title\.class_,
-:root[data-theme="dark"] .hljs-title\.function_ {
-  color: #d2a8ff;
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params,
+.hljs-property {
+  color: var(--cr-syn-variable);
 }
-:root[data-theme="dark"] .hljs-attr,
-:root[data-theme="dark"] .hljs-variable {
-  color: #79c0ff;
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-deletion {
+  color: var(--cr-syn-meta);
 }
-:root[data-theme="dark"] .hljs-params {
-  color: #c9d1d9;
+.hljs-emphasis {
+  font-style: italic;
 }
-:root[data-theme="dark"] .hljs-meta,
-:root[data-theme="dark"] .hljs-selector-tag {
-  color: #ff7b72;
-}
-
-/* Light theme: ensure light tokens apply */
-:root[data-theme="light"] .hljs {
-  color: #24292e;
-}
-:root[data-theme="light"] .hljs-keyword {
-  color: #d73a49;
-}
-:root[data-theme="light"] .hljs-string {
-  color: #032f62;
-}
-:root[data-theme="light"] .hljs-comment,
-:root[data-theme="light"] .hljs-doctag {
-  color: #6a737d;
-}
-:root[data-theme="light"] .hljs-number,
-:root[data-theme="light"] .hljs-literal {
-  color: #005cc5;
-}
-:root[data-theme="light"] .hljs-built_in,
-:root[data-theme="light"] .hljs-type {
-  color: #e36209;
-}
-:root[data-theme="light"] .hljs-title,
-:root[data-theme="light"] .hljs-title\.class_,
-:root[data-theme="light"] .hljs-title\.function_ {
-  color: #6f42c1;
-}
-:root[data-theme="light"] .hljs-attr,
-:root[data-theme="light"] .hljs-variable {
-  color: #005cc5;
-}
-:root[data-theme="light"] .hljs-params {
-  color: #24292e;
-}
-:root[data-theme="light"] .hljs-meta,
-:root[data-theme="light"] .hljs-selector-tag {
-  color: #d73a49;
+.hljs-strong {
+  font-weight: 600;
 }
