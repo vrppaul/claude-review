@@ -510,7 +510,7 @@ claude-review wait --port &lt;port&gt;</pre>
 			></textarea>
 			<div class="mt-2 flex items-center gap-2">
 				<button data-testid="mention-thread" class="btn btn-ghost btn-xs" onclick={openPicker}>
-					@ thread
+					@ thread or file
 				</button>
 				<span class="cr-faint hidden text-xs lg:inline">Ctrl+Enter sends</span>
 				<div class="flex-1"></div>
