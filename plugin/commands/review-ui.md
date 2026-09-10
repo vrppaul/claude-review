@@ -83,6 +83,8 @@ waiting on it:
    something. This prints the round, a line per thread and the panel in
    short. It is an index on purpose: `claude-review context --thread
    comment-4` gets that one thread in full, with its lines and every turn.
+   `--json` is the same thing for a program to read rather than a person —
+   worth it when you mean to count or filter rather than to catch up.
 
 3. Loop until the review is over:
    ```bash
@@ -150,6 +152,11 @@ waiting on it:
    thread the reader answers, settles or removes, drawn as yours rather than
    as one of their marks, and it does not count as their unsent work.
 
+   `--side old` hangs it on a line the change removed, which is the one place
+   the reader cannot always write themselves: under a narrower base the left
+   of the diff belongs to that base, so their gutters are shut there. Yours
+   is anchored in the review's own diff and is not.
+
 7. Say what you are doing, while you are doing it:
    ```bash
    claude-review progress --port 8765 --message <message_id> \
@@ -192,3 +199,7 @@ waiting on it:
 While you work, the review says when the working tree has moved on and
 offers the user a "Retake" of its own. It never swaps the diff by itself, so
 nothing you change under a half-written comment throws it away.
+
+The server says nothing on its own: `claude-review --verbose <command>` puts
+its diagnostic log on stderr, which is the way to see what it is doing when
+a review behaves oddly. Leave it off otherwise — the quiet is deliberate.
