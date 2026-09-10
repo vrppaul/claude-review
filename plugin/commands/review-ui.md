@@ -63,9 +63,11 @@ waiting on it:
    ```bash
    setsid nohup claude-review --port 8765 --no-open diff > /tmp/review.log 2>&1 &
    ```
-   `setsid nohup`, rather than a bare `&`: started without it, the review
-   dies with the shell that started it, and the next command you run takes
-   the review down with it. The URL is printed to that log.
+   Detached, rather than a bare `&`: started in the shell's own session, the
+   review dies with that shell, and the next command you run takes the review
+   down with it. `setsid` is the one that holds; where there is none — macOS
+   ships no `setsid` — `nohup … &` on its own is the fallback. The URL is
+   printed to that log.
 
    If the port is taken the command says so; pick another. (Without `--port`
    the review picks one from the repository and the base ref, so reopening
