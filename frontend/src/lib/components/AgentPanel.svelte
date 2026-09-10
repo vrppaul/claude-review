@@ -213,6 +213,41 @@
 	});
 </script>
 
+{#snippet workUnderWay()}
+	<!-- What is being done, in its own words, replaced as it changes -->
+	{#if panelStore.progress?.text}
+		<p data-testid="panel-progress" class="cr-progress text-sm">
+			{panelStore.progress.text}
+		</p>
+	{/if}
+	{#if panelStore.progress && panelStore.progress.steps.length > 0}
+		<!-- Branches of the same work, drawn hanging off it -->
+		<ul data-testid="progress-steps" class="cr-branches">
+			{#each panelStore.progress.steps as step (step.text)}
+				<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
+					{#if step.done}
+						<svg class="cr-branch-mark" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"
+							><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg
+						>
+					{:else}
+						<span class="cr-branch-mark"><span class="cr-dot"></span></span>
+					{/if}
+					<span>{step.text}</span>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+	{#if panelStore.progress && panelStore.progress.files.length > 0}
+		<div class="flex flex-wrap gap-1">
+			{#each panelStore.progress.files as path (path)}
+				<button data-testid="progress-file" class="cr-thread-chip" onclick={() => showFile(path)}>
+					{path.split('/').pop()}
+				</button>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
 <aside
 	data-testid="agent-panel"
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
@@ -285,7 +320,10 @@
 		onscroll={onScroll}
 		class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
 	>
-		{#if panelStore.turns.length === 0}
+		<!-- Work showing outranks the empty state: an agent doing something
+			before anybody has said anything is exactly the case a reader has
+			no other way of seeing. -->
+		{#if panelStore.turns.length === 0 && !panelStore.progress}
 			{#if attached}
 				<div
 					data-testid="panel-empty"
@@ -410,46 +448,23 @@ claude-review wait --port &lt;port&gt;</pre>
 								Stop
 							</button>
 						</div>
-						{#if panelStore.progress}
-							<!-- What is being done, in its own words, replaced as it changes -->
-							{#if panelStore.progress.text}
-								<p data-testid="panel-progress" class="cr-progress text-sm">
-									{panelStore.progress.text}
-								</p>
-							{/if}
-							{#if panelStore.progress.steps.length > 0}
-								<!-- Branches of the same work, drawn hanging off it -->
-								<ul data-testid="progress-steps" class="cr-branches">
-									{#each panelStore.progress.steps as step (step.text)}
-										<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
-											{#if step.done}
-												<svg
-													class="cr-branch-mark"
-													viewBox="0 0 12 12"
-													fill="currentColor"
-													aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg>
-											{:else}
-												<span class="cr-branch-mark"><span class="cr-dot"></span></span>
-											{/if}
-											<span>{step.text}</span>
-										</li>
-									{/each}
-								</ul>
-							{/if}
-							{#if panelStore.progress.files.length > 0}
-								<div class="flex flex-wrap gap-1">
-									{#each panelStore.progress.files as path (path)}
-										<button
-											data-testid="progress-file"
-											class="cr-thread-chip"
-											onclick={() => showFile(path)}
-										>
-											{path.split('/').pop()}
-										</button>
-									{/each}
-								</div>
-							{/if}
-						{/if}
+						{@render workUnderWay()}
+					</div>
+				{:else if panelStore.progress}
+					<!-- Work nobody is waiting on: what a round asked for, or what
+						the agent took on itself. Without a row of its own it could not
+						be shown at all, and a reader watching a silent panel cannot
+						tell work from a hang. -->
+					<div data-testid="panel-work" class="cr-answer flex flex-col gap-2">
+						<div class="flex items-center gap-3">
+							<span class="cr-who"><strong>Author</strong></span>
+							<span class="flex items-center gap-1">
+								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
+							</span>
+							<div class="flex-1"></div>
+							<span class="cr-faint text-xs">working {since(panelStore.progress.at)}</span>
+						</div>
+						{@render workUnderWay()}
 					</div>
 				{/if}
 			</div>

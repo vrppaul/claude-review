@@ -137,6 +137,14 @@ export interface SubmitResponse {
 export interface Progress {
   text: string;
   files: string[];
+  /**
+   * Which message the work is for, when it is for one.
+   *
+   * Absent is not a gap: work started after a round, or on the agent's own
+   * account, belongs to no message — and is exactly the work a reader has
+   * no other way of seeing.
+   */
+  messageId?: string;
   /** What the work has branched into: checks, subagents, files in hand. */
   steps: ProgressStep[];
   at: number;

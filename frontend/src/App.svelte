@@ -69,6 +69,7 @@
 			soundStore.announce();
 		} else if (message.type === 'progress' && typeof message.text === 'string') {
 			panelStore.reportProgress(
+				typeof message.message_id === 'string' ? message.message_id : undefined,
 				message.text,
 				Array.isArray(message.files) ? message.files.map(String) : [],
 				Array.isArray(message.steps)

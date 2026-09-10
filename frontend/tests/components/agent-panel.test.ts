@@ -186,7 +186,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Fix the scroll');
 		await user.click(getByTestId('send-message'));
 
-		panelStore.reportProgress('rewriting the answer handler', [
+		panelStore.reportProgress(undefined, 'rewriting the answer handler', [
 			'src/lib/components/AgentPanel.svelte'
 		]);
 		await tick();
@@ -203,7 +203,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Find every caller');
 		await user.click(getByTestId('send-message'));
 
-		panelStore.reportProgress('looking for other callers', [], [
+		panelStore.reportProgress(undefined, 'looking for other callers', [], [
 			{ text: 'ran the panel tests', done: true },
 			{ text: 'three subagents out, one back', done: false }
 		]);
@@ -214,14 +214,37 @@ describe('the agent panel', () => {
 		expect(steps.textContent).toContain('three subagents out, one back');
 	});
 
-	it('takes the line away once something is said', async () => {
+	it('takes the line away once the message it was about is answered', async () => {
 		okFetch();
 		await panelStore.send('Fix the scroll', []);
-		panelStore.reportProgress('rewriting it', [], []);
+		const asked = panelStore.turns[0].id;
+		panelStore.reportProgress(asked, 'rewriting it', [], []);
+
+		panelStore.receive(asked, 'Done, and green.');
+
+		expect(panelStore.progress).toBeNull();
+	});
+
+	it('leaves work that is not what was answered still showing', async () => {
+		okFetch();
+		await panelStore.send('Fix the scroll', []);
+		// Work of the agent's own — four reviewers reading, a round being
+		// worked through — belongs to no message and outlives any answer
+		panelStore.reportProgress(undefined, 'four cold reviewers reading', [], []);
 
 		panelStore.receive(panelStore.turns[0].id, 'Done, and green.');
 
-		expect(panelStore.progress).toBeNull();
+		expect(panelStore.progress?.text).toBe('four cold reviewers reading');
+	});
+
+	it('shows work nobody is waiting on, in a row of its own', async () => {
+		const { getByTestId } = render(AgentPanel);
+
+		panelStore.reportProgress(undefined, 'taking the diff again', [], []);
+		await tick();
+
+		expect(getByTestId('panel-work')).toBeTruthy();
+		expect(getByTestId('panel-progress').textContent).toContain('taking the diff again');
 	});
 
 	it('lets the agent speak first, with a file worth opening at it', async () => {

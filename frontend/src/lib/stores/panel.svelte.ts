@@ -194,19 +194,34 @@ export const panelStore = {
    * Say what is being done, replacing whatever was being said before.
    *
    * Whole every time: this is the state of the work, and a state that
-   * arrives in pieces is a log with extra steps.
+   * arrives in pieces is a log with extra steps. Naming a message is what
+   * lets the answer to it put the line out; work for no message is the
+   * agent's own, and only an empty one ends that.
    */
-  reportProgress(text: string, files: string[], steps: ProgressStep[] = []) {
+  reportProgress(
+    messageId: string | undefined,
+    text: string,
+    files: string[],
+    steps: ProgressStep[] = [],
+  ) {
     progress =
       text.trim() === "" && steps.length === 0
         ? null
-        : { text, files, steps, at: Date.now() };
+        : { messageId, text, files, steps, at: Date.now() };
   },
 
   /** Take what was said and put it under what it answers, if anything. */
   receive(messageId: string | undefined, text: string, files: string[] = []) {
-    // Something was said, so whatever was being done is done
-    progress = null;
+    // An answer ends the work it answers, and nothing else. Work for another
+    // message, or for none — a round being worked through, agents still
+    // reading — carries on, and saying so is the only way the reader sees it.
+    if (
+      progress &&
+      progress.messageId !== undefined &&
+      progress.messageId === messageId
+    ) {
+      progress = null;
+    }
     turns = [
       ...turns,
       {
