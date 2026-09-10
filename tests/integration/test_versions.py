@@ -179,7 +179,9 @@ async def test_a_ref_whose_name_begins_with_a_dash_is_never_a_base(
 
     assert [v for v in offered if v["label"].startswith("-")] == []
     assert asked.status_code == 400
-    assert not Path("/tmp/claude-review-should-not-exist").exists()
+    # Off the loop: touching the filesystem from an async test blocks it, and
+    # what this asserts is precisely that nothing touched the filesystem
+    assert not await asyncio.to_thread(Path("/tmp/claude-review-should-not-exist").exists)
 
 
 async def test_a_repository_with_nothing_committed_still_offers_its_bases(
