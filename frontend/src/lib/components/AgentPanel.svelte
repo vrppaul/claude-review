@@ -14,6 +14,11 @@
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
 	let composer = $state<HTMLTextAreaElement | null>(null);
+	let stream = $state<HTMLElement | null>(null);
+	// Whether the reader is at the foot of the conversation. A turn landing
+	// while they are reading an older one must not pull the panel out from
+	// under them, so only the foot follows.
+	let atFoot = $state(true);
 
 	// The thread picker, opened by typing @ and closed by taking one or by
 	// typing past it. `query` is what has been typed since the @.
@@ -65,6 +70,25 @@
 		}
 		return '';
 	}
+
+	/** Near enough to the bottom that the conversation should keep following. */
+	function onScroll() {
+		if (!stream) return;
+		atFoot = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80;
+	}
+
+	// A new turn is the point of the panel, so it is brought into view. The
+	// count is what this watches: it changes exactly when something is said.
+	$effect(() => {
+		const said = panelStore.turns.length;
+		if (said === 0 || !stream || !atFoot) return;
+		const shown = stream;
+		requestAnimationFrame(() => {
+			// Asked again: the reader may have scrolled away in the frame it
+			// took the turn to be laid out
+			if (atFoot) shown.scrollTop = shown.scrollHeight;
+		});
+	});
 
 	// A clock only while something is waiting on it
 	$effect(() => {
@@ -146,6 +170,8 @@
 		if (!text || sending || !attached) return;
 		sending = true;
 		failed = null;
+		// Sending is a deliberate act: it always brings you back to the foot
+		atFoot = true;
 		try {
 			await panelStore.send(text, pointed);
 			draft = '';
@@ -258,7 +284,12 @@
 		{/if}
 	</div>
 
-	<div data-testid="panel-turns" class="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+	<div
+		data-testid="panel-turns"
+		bind:this={stream}
+		onscroll={onScroll}
+		class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+	>
 		{#if panelStore.turns.length === 0}
 			{#if attached}
 				<div

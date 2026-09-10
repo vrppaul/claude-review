@@ -124,6 +124,46 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-cancelled')).toBeTruthy();
 	});
 
+	/** jsdom lays nothing out, so the panel is given a height to scroll in. */
+	function givenTall(element: HTMLElement, { visible = 100, total = 500 } = {}) {
+		Object.defineProperty(element, 'clientHeight', { value: visible, configurable: true });
+		Object.defineProperty(element, 'scrollHeight', { value: total, configurable: true });
+	}
+
+	function painted(): Promise<void> {
+		return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+	}
+
+	it('brings a new turn into view', async () => {
+		okFetch();
+		const { getByTestId } = render(AgentPanel);
+		const stream = getByTestId('panel-turns');
+		givenTall(stream);
+
+		await panelStore.send('Run the tests', []);
+		panelStore.receive(panelStore.turns[0].id, 'One failed; fixed and green.');
+		await painted();
+
+		expect(stream.scrollTop).toBe(500);
+	});
+
+	it('leaves the reader where they are reading', async () => {
+		okFetch();
+		await panelStore.send('Run the tests', []);
+
+		const { getByTestId } = render(AgentPanel);
+		const stream = getByTestId('panel-turns');
+		givenTall(stream);
+		// Scrolled up into what was said earlier
+		stream.scrollTop = 0;
+		stream.dispatchEvent(new Event('scroll'));
+
+		panelStore.receive(panelStore.turns[0].id, 'One failed; fixed and green.');
+		await painted();
+
+		expect(stream.scrollTop).toBe(0);
+	});
+
 	it('tells the review it can weigh apart from the context only the agent knows', () => {
 		panelStore.report({ model: 'opus-5', context: '53% of 1M', at: Date.now() });
 
