@@ -287,6 +287,18 @@
   border-left: 2px solid var(--cr-mark);
   background: var(--cr-mark-tint);
 }
+/*
+ * The box being written in, told apart from the lines it is about.
+ *
+ * Both are the reader's own mark, so both carry the mark colour — but the
+ * tint belongs to the lines they picked, and a box washed in the same tint
+ * directly under them reads as one patch with a hole in it. The composer
+ * keeps the edge and stands on the page's own surface, which is the same
+ * rule the diff rows follow: mark the edge, do not wash the middle.
+ */
+.cr-composing {
+  background: var(--color-base-200);
+}
 .cr-comment-body {
   font-family: var(--font-sans);
   font-size: var(--cr-comment-size);

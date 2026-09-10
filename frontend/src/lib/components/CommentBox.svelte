@@ -117,7 +117,7 @@
 	}
 </script>
 
-<div class={nested ? "space-y-2" : "cr-comment space-y-3 rounded-r px-4 py-3"}>
+<div class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}>
 	<div class="flex items-center gap-3">
 		{#if label}
 			<span class="cr-comment-ref font-mono text-xs">{label}</span>
