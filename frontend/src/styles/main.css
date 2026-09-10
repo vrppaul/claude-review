@@ -894,21 +894,27 @@
 }
 
 /*
- * A file somebody else brought into view.
+ * A file says "here" when somebody else's message brings the reader to it.
  *
- * The page has jumped without the reader doing anything, so the file says
- * "here" for a moment; without it they are left working out what they are
- * looking at.
+ * Drawn as an outline rather than a wash: the file header is opaque and
+ * every changed row paints its own background, so a tint underneath them
+ * was invisible exactly where the eye lands. An outline is painted after
+ * every descendant, and pulled inside the edge so the scroll container
+ * cannot clip it.
  */
 .cr-marked {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
   animation: cr-mark-file 2s ease-out 1;
 }
 @keyframes cr-mark-file {
   0%,
   35% {
+    outline-color: var(--cr-mark);
     background: var(--cr-mark-tint);
   }
   100% {
+    outline-color: transparent;
     background: transparent;
   }
 }

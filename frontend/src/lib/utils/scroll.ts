@@ -26,21 +26,78 @@ export function scrollToFile(path: string): void {
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
 const MARKED_FOR = 2000;
+// A smooth scroll that never ends — a scroll container that cannot reach the
+// file, a tab put in the background mid-flight — must not swallow the mark
+const SETTLE_WITHIN = 2000;
+
+// What is marked, so a second showing can take the mark off the first rather
+// than leave it lit, and so the first one's timer cannot put it out
+let marked: {
+  element: HTMLElement;
+  timer: ReturnType<typeof setTimeout>;
+} | null = null;
+// Which showing is the current one: an earlier scroll may still be settling
+// when another arrives, and only the last one asked for is worth marking
+let showing = 0;
+
+function unmark(): void {
+  if (!marked) return;
+  clearTimeout(marked.timer);
+  marked.element.classList.remove("cr-marked");
+  marked = null;
+}
 
 /**
- * Bring a file into view and mark it for a moment.
+ * Call back once an element has stopped moving.
+ *
+ * Where the element actually is, rather than which element is doing the
+ * scrolling: a section sits inside whatever container the layout gives it,
+ * and asking the element itself works wherever it ends up.
+ */
+function whenSettled(element: HTMLElement, then: () => void): void {
+  const startedAt = performance.now();
+  let previous = Number.NaN;
+  let still = 0;
+
+  const look = () => {
+    const top = element.getBoundingClientRect().top;
+    still = top === previous ? still + 1 : 0;
+    previous = top;
+
+    if (still >= 2 || performance.now() - startedAt > SETTLE_WITHIN) {
+      then();
+      return;
+    }
+    requestAnimationFrame(look);
+  };
+  requestAnimationFrame(look);
+}
+
+/**
+ * Bring a file into view and mark it once it gets there.
  *
  * Somebody else moved this screen, so the file has to say "here" when it
- * arrives: a page that has jumped somewhere without a word leaves the
- * reader working out what they are looking at.
+ * arrives: a page that has jumped somewhere without a word leaves the reader
+ * working out what they are looking at. The mark waits for the scroll to
+ * stop — across sixty files a smooth scroll outlasts the mark itself, and
+ * the reader would arrive to a file that had already finished saying so.
  */
 export function showFile(path: string): void {
   const section = sections.get(path);
   if (!section) return;
 
+  const mine = ++showing;
+  unmark();
   section.scrollIntoView({ behavior: "smooth", block: "start" });
-  section.classList.add("cr-marked");
-  setTimeout(() => section.classList.remove("cr-marked"), MARKED_FOR);
+
+  whenSettled(section, () => {
+    if (mine !== showing) return;
+    section.classList.add("cr-marked");
+    marked = {
+      element: section,
+      timer: setTimeout(unmark, MARKED_FOR),
+    };
+  });
 }
 
 /**
