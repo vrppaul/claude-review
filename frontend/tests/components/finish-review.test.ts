@@ -1,41 +1,62 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
-import ReviewModal from '$lib/components/ReviewModal.svelte';
+import FinishReview from '$lib/components/FinishReview.svelte';
+import { reviewStore } from '$lib/stores/review.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 
-describe('ReviewModal', () => {
+/** The count as it reads, without the template's line breaks. */
+function count(element: HTMLElement): string {
+	return element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+}
+
+const props = {
+	submitting: false,
+	onSubmit: vi.fn(),
+	onSendRound: vi.fn(),
+	onEnd: vi.fn(),
+	onClose: vi.fn()
+};
+
+describe('finishing a review', () => {
 	beforeEach(() => {
 		commentStore.clear();
+		reviewStore.clear();
 	});
 
 	it('shows inline comment count when comments exist', () => {
 		commentStore.add('file.ts', 'new', 1, 1, 'fix this');
 		commentStore.add('file.ts', 'new', 5, 5, 'and this');
 
-		const { getByText } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
-		expect(getByText('2 inline comments')).toBeTruthy();
+		expect(count(getByTestId('finish-count'))).toBe('2 comments');
 	});
 
 	it('shows singular label for one comment', () => {
 		commentStore.add('file.ts', 'new', 1, 1, 'fix');
 
-		const { getByText } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
-		expect(getByText('1 inline comment')).toBeTruthy();
+		expect(count(getByTestId('finish-count'))).toBe('1 comment');
 	});
 
-	it('hides comment list when no inline comments', () => {
-		const { queryByText } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+	it('says a summary alone is a review when nothing is written', () => {
+		const { queryByTestId, getByText } = render(FinishReview, { props });
 
-		expect(queryByText('inline comment')).toBeNull();
+		expect(queryByTestId('finish-comment')).toBeNull();
+		expect(getByText(/A summary on its own is a review too/)).toBeTruthy();
+	});
+
+	it('counts what is still unsent once rounds are being sent', () => {
+		reviewStore.attachAnswerer();
+		commentStore.add('file.ts', 'new', 1, 1, 'fix');
+
+		const { getByTestId } = render(FinishReview, { props });
+
+		expect(count(getByTestId('finish-count'))).toBe('1 unsent of 1');
+		expect(getByTestId('modal-submit').textContent).toContain('Send round');
+		expect(getByTestId('end-review')).toBeTruthy();
 	});
 
 	it('shows each comment in full before it is sent', () => {
@@ -44,9 +65,7 @@ describe('ReviewModal', () => {
 			'instants and drop a session that was alive when it started.';
 		commentStore.add('src/app.ts', 'new', 42, 42, long);
 
-		const { getByText, getByTestId } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+		const { getByText, getByTestId } = render(FinishReview, { props });
 
 		// The last screen before sending is the wrong place to truncate
 		expect(getByText(long)).toBeTruthy();
@@ -54,18 +73,14 @@ describe('ReviewModal', () => {
 	});
 
 	it('disables submit when no content', () => {
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
 		const btn = getByTestId('modal-submit') as HTMLButtonElement;
 		expect(btn.disabled).toBe(true);
 	});
 
 	it('enables submit when review body is typed', async () => {
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose: vi.fn() }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
 		await userEvent.type(getByTestId('review-body'), 'General feedback');
 
@@ -77,38 +92,33 @@ describe('ReviewModal', () => {
 		const onSubmit = vi.fn();
 		commentStore.add('file.ts', 'new', 1, 1, 'fix');
 
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit, onClose: vi.fn() }
-		});
+		const { getByTestId } = render(FinishReview, { props: { ...props, onSubmit } });
 
 		await userEvent.click(getByTestId('modal-submit'));
 
 		expect(onSubmit).toHaveBeenCalled();
 	});
 
-	it('calls onClose when Cancel is clicked', async () => {
+	it('closes on a click anywhere else, leaving the review where it was', async () => {
 		const onClose = vi.fn();
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit: vi.fn(), onClose }
-		});
+		const { getByTestId } = render(FinishReview, { props: { ...props, onClose } });
 
-		await userEvent.click(getByTestId('cancel-modal'));
+		await userEvent.click(getByTestId('finish-backdrop'));
 
 		expect(onClose).toHaveBeenCalled();
 	});
 });
 
-describe('ReviewModal line references', () => {
+describe('the line a comment sits on, before it is sent', () => {
 	beforeEach(() => {
 		commentStore.clear();
+		reviewStore.clear();
 	});
 
 	it('marks a comment that sits on a removed line', () => {
 		commentStore.add('src/app.ts', 'old', 42, 42, 'why was this dropped');
 
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit: () => {}, onClose: () => {} }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
 		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
 			'src/app.ts · Removed line 42'
@@ -118,9 +128,7 @@ describe('ReviewModal line references', () => {
 	it('leaves a comment on the current version unmarked', () => {
 		commentStore.add('src/app.ts', 'new', 42, 47, 'tighten this');
 
-		const { getByTestId } = render(ReviewModal, {
-			props: { onSubmit: () => {}, onClose: () => {} }
-		});
+		const { getByTestId } = render(FinishReview, { props });
 
 		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
 			'src/app.ts · Lines 42-47'

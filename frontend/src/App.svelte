@@ -181,6 +181,19 @@
 		<div class="flex min-h-0 flex-1">
 			{#if diffStore.sidebarOpen}
 				<FileList />
+			{:else}
+				<!-- Where the tree was, so the way back is where it went -->
+				<button
+					data-testid="show-sidebar"
+					class="cr-tree-rail"
+					title="Bring the file tree back"
+					aria-label="Bring the file tree back"
+					onclick={() => diffStore.toggleSidebar()}
+				>
+					<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+						<path d="M4.5 2L8 6l-3.5 4z" />
+					</svg>
+				</button>
 			{/if}
 			<DiffView />
 			{#if panelStore.open}

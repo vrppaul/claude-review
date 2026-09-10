@@ -62,6 +62,16 @@ def _first_gutter(page: Page, path_suffix: str) -> Locator:
     return _section(page, path_suffix).get_by_test_id("line-gutter").first
 
 
+async def _send(page: Page) -> None:
+    """Send what has been written: open the finishing pane, then send from it.
+
+    One button in the header opens what used to be three: it shows what is
+    about to go, takes a summary, and holds both ways out.
+    """
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("modal-submit").click()
+
+
 async def _click_line_and_comment(page: Page, line_locator, text: str) -> None:
     """Helper: click a line gutter and add a comment."""
     await line_locator.click()
@@ -119,7 +129,7 @@ async def test_review_flow_add_comment_and_submit(server_url: ServerFixture, pag
     line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "This needs fixing")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -141,7 +151,7 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
     await page.get_by_test_id("save-comment").click()
     await page.wait_for_selector("text=Refactor this range")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -161,7 +171,7 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Comment on main")
     await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "Comment on new file")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -171,14 +181,16 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     assert state.result.index("Comment on main") < state.result.index("new_file.ts")
 
 
-async def test_empty_submit_button_disabled(server_url: ServerFixture, page: Page) -> None:
-    """Submit with no comments — button should be disabled."""
+async def test_nothing_written_cannot_be_sent(server_url: ServerFixture, page: Page) -> None:
+    """The door opens on an empty review — a summary alone is one — but
+    sending is refused until something has been written."""
     url, _state = server_url
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    submit_btn = page.get_by_test_id("quick-submit")
-    assert await submit_btn.is_disabled()
+    await page.get_by_test_id("quick-submit").click()
+
+    assert await page.get_by_test_id("modal-submit").is_disabled()
 
 
 # --- Review body tests ---
@@ -190,7 +202,7 @@ async def test_review_body_only_via_modal(server_url: ServerFixture, page: Page)
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("finish-review").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.get_by_test_id("review-body").wait_for()
 
     modal_textarea = page.get_by_test_id("review-body")
@@ -212,8 +224,8 @@ async def test_review_body_with_inline_comment_via_modal(server_url: ServerFixtu
     line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Fix this line")
 
-    await page.get_by_test_id("finish-review").click()
-    await page.wait_for_selector("text=1 inline comment")
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("finish-comment").wait_for()
 
     modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Generally good.")
@@ -232,7 +244,8 @@ async def test_nothing_written_means_nothing_to_send(server_url: ServerFixture, 
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    assert await page.get_by_test_id("quick-submit").is_disabled()
+    await page.get_by_test_id("quick-submit").click()
+    assert await page.get_by_test_id("modal-submit").is_disabled()
 
     await page.keyboard.press("Control+Shift+Enter")
     assert state.result is None
@@ -244,11 +257,10 @@ async def test_a_summary_on_its_own_is_a_review(server_url: ServerFixture, page:
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("finish-review").click()
+    await page.get_by_test_id("quick-submit").click()
     await page.get_by_test_id("review-body").fill("The shape is right; the naming needs work.")
-    await page.keyboard.press("Escape")
 
-    submit = page.get_by_test_id("quick-submit")
+    submit = page.get_by_test_id("modal-submit")
     assert not await submit.is_disabled()
 
     await submit.click()
@@ -264,17 +276,17 @@ async def test_modal_esc_closes_and_preserves_body(server_url: ServerFixture, pa
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    # Open modal and type
-    await page.get_by_test_id("finish-review").click()
+    # Open it and type
+    await page.get_by_test_id("quick-submit").click()
     modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Draft feedback")
 
     # Close with Esc
     await page.keyboard.press("Escape")
-    await page.get_by_test_id("finish-review").wait_for()
+    await page.get_by_test_id("finish-review").wait_for(state="detached")
 
     # Reopen — text should still be there
-    await page.get_by_test_id("finish-review").click()
+    await page.get_by_test_id("quick-submit").click()
     modal_textarea = page.get_by_test_id("review-body")
     assert await modal_textarea.input_value() == "Draft feedback"
 
@@ -329,7 +341,7 @@ async def test_files_mode_comment_and_submit(files_mode_server: ServerFixture, p
     line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Plan needs more detail")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -353,7 +365,7 @@ async def test_files_mode_comments_across_multiple_files(files_mode_server: Serv
     line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Comment on notes")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -426,7 +438,7 @@ async def test_commenting_works_in_side_by_side(files_mode_server: ServerFixture
 
     await _click_line_and_comment(page, _first_gutter(page, "plan.md"), "Side-by-side comment")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -545,7 +557,7 @@ async def test_transcript_mode_comment_and_submit(transcript_mode_server: Server
     line_cell = page.get_by_test_id("line-gutter").first
     await _click_line_and_comment(page, line_cell, "Wrong approach")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -674,7 +686,7 @@ async def test_comment_left_in_split_layout_reaches_claude(server_url: ServerFix
 
     await _click_line_and_comment(page, main.get_by_test_id("line-gutter").first, "Split comment")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -696,6 +708,7 @@ async def test_a_comment_can_be_left_without_a_mouse(server_url: ServerFixture, 
     await page.wait_for_selector("text=Typed, not clicked")
 
     await page.keyboard.press("Control+Shift+Enter")
+    await page.get_by_test_id("modal-submit").click()
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -767,7 +780,7 @@ async def test_a_suggestion_reaches_claude_as_a_replacement(server_url: ServerFi
     await page.get_by_test_id("suggest-change").click()
 
     await page.get_by_test_id("save-comment").click()
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -802,7 +815,7 @@ async def test_comments_survive_a_reload(server_url: ServerFixture, page: Page) 
     await page.get_by_test_id("restored-notice").wait_for()
     await page.wait_for_selector("text=Written before the reload")
 
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
     assert state.result is not None
@@ -818,7 +831,7 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(server_url: Server
 
     # Asking is only offered while something is waiting to answer
     waiting = asyncio.create_task(_take_question(port, seconds=15))
-    await page.get_by_test_id("end-review").wait_for()
+    await page.get_by_test_id("panel-input").wait_for()
 
     await _first_gutter(page, "main.py").click()
     await page.get_by_test_id("comment-input").fill("Was the old greeting used anywhere else?")
@@ -852,10 +865,10 @@ async def test_a_round_is_sent_without_ending_the_review(server_url: ServerFixtu
 
     # An agent waiting on the review is what makes a round worth offering
     waiting = asyncio.create_task(_take_question(port, seconds=15))
-    await page.get_by_test_id("end-review").wait_for()
+    await page.get_by_test_id("panel-input").wait_for()
 
     await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
 
     handed_over = await waiting
     assert handed_over["type"] == "round"
@@ -865,6 +878,7 @@ async def test_a_round_is_sent_without_ending_the_review(server_url: ServerFixtu
     assert not state.shutdown_event.is_set()
     await page.wait_for_selector("text=Shorten this greeting")
 
+    await page.get_by_test_id("quick-submit").click()
     await page.get_by_test_id("end-review").click()
     await page.get_by_test_id("submitted-banner").wait_for()
     assert state.shutdown_event.is_set()
@@ -878,15 +892,15 @@ async def test_a_second_round_carries_only_what_is_new(server_url: ServerFixture
     await page.get_by_test_id("sidebar").wait_for()
 
     first = asyncio.create_task(_take_question(port, seconds=15))
-    await page.get_by_test_id("end-review").wait_for()
+    await page.get_by_test_id("panel-input").wait_for()
 
     await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
     await first
 
     second = asyncio.create_task(_take_question(port, seconds=15))
     await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "And name this properly")
-    await page.get_by_test_id("quick-submit").click()
+    await _send(page)
 
     round_two = await second
     assert "round 2" in round_two["round"]["markdown"]

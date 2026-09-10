@@ -49,14 +49,7 @@ describe('SubmitBar', () => {
 		expect(count.textContent).toMatch(/\bcomment\b/);
 	});
 
-	it('disables quick submit when no inline comments', () => {
-		const { getByTestId } = render(SubmitBar);
-
-		const btn = getByTestId('quick-submit') as HTMLButtonElement;
-		expect(btn.disabled).toBe(true);
-	});
-
-	it('enables quick submit when inline comments exist', () => {
+	it('names the round it is about to send', () => {
 		commentStore.add('test.py', 'new', 1, 1, 'fix');
 
 		const { getByTestId } = render(SubmitBar);
@@ -65,11 +58,10 @@ describe('SubmitBar', () => {
 		expect(btn.disabled).toBe(false);
 	});
 
-	it('finish review button is always enabled', () => {
+	it('opens even with nothing written, because a summary alone is a review', () => {
 		const { getByTestId } = render(SubmitBar);
 
-		const btn = getByTestId('finish-review') as HTMLButtonElement;
-		expect(btn.disabled).toBe(false);
+		expect((getByTestId('quick-submit') as HTMLButtonElement).disabled).toBe(false);
 	});
 });
 
@@ -109,14 +101,17 @@ describe('the review header', () => {
 		expect(queryByTestId('next-comment')).toBeTruthy();
 	});
 
-	it('puts the file tree away and brings it back', async () => {
+	it('opens one door to everything that ends a round', async () => {
 		const user = userEvent.setup({ delay: null });
+		commentStore.add('test.py', 'new', 1, 1, 'fix');
 
 		const { getByTestId } = render(SubmitBar);
-		expect(diffStore.sidebarOpen).toBe(true);
+		await user.click(getByTestId('quick-submit'));
 
-		await user.click(getByTestId('toggle-sidebar'));
-
-		expect(diffStore.sidebarOpen).toBe(false);
+		// What was written, a summary, and the two ways out — all in one place
+		expect(getByTestId('finish-review')).toBeTruthy();
+		expect(getByTestId('finish-comment')).toBeTruthy();
+		expect(getByTestId('review-body')).toBeTruthy();
+		expect(getByTestId('modal-submit')).toBeTruthy();
 	});
 });

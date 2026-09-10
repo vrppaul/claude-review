@@ -180,7 +180,7 @@
 
 <aside
 	data-testid="sidebar"
-	class="relative shrink-0 overflow-y-auto border-r border-base-300 bg-base-100"
+	class="relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
 	style="width: {diffStore.sidebarWidth}px"
 >
 	<!-- The reader's own width, dragged or stepped with the arrow keys -->
@@ -201,9 +201,21 @@
 				onWidth: (px) => diffStore.setSidebarWidth(px)
 			})}
 	></button>
-	<div class="p-3">
-		<div class="mb-2 flex items-baseline gap-2">
+	<div class="min-h-0 flex-1 overflow-y-auto p-3">
+		<div class="mb-2 flex items-center gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
+			<div class="flex-1"></div>
+			<button
+				data-testid="hide-sidebar"
+				class="btn btn-ghost btn-xs px-1"
+				title="Put the tree away"
+				aria-label="Put the file tree away"
+				onclick={() => diffStore.toggleSidebar()}
+			>
+				<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+					<path d="M7.5 2L4 6l3.5 4z" />
+				</svg>
+			</button>
 		</div>
 
 		<input

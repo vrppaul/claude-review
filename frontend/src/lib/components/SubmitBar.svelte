@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import ReviewModal from './ReviewModal.svelte';
+	import FinishReview from './FinishReview.svelte';
 	import TopBar from './TopBar.svelte';
 
 	let submitting = $state(false);
@@ -44,10 +44,9 @@
 	onMount(() => {
 		function onKeydown(e: KeyboardEvent) {
 			if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
-				if (showModal) return; // the modal handles its own shortcut
-				if (!commentStore.hasUnsent) return; // match the button's disabled state
+				if (showModal) return; // the popover handles its own shortcut
 				e.preventDefault();
-				handleSubmit();
+				showModal = true;
 			}
 		}
 		window.addEventListener('keydown', onKeydown);
@@ -65,16 +64,17 @@
 		<p class="font-semibold">Review sent. You can close this tab.</p>
 	</div>
 {:else}
-	<TopBar
-		{submitting}
-		{error}
-		onSubmit={handleSubmit}
-		onSendRound={handleSendRound}
-		onEnd={handleEnd}
-		onOpenModal={() => (showModal = true)}
-	/>
+	<div class="relative">
+	<TopBar {submitting} {error} onOpenModal={() => (showModal = true)} />
 
 	{#if showModal}
-		<ReviewModal onSubmit={handleSubmit} onClose={() => (showModal = false)} />
+		<FinishReview
+			{submitting}
+			onSubmit={handleSubmit}
+			onSendRound={handleSendRound}
+			onEnd={handleEnd}
+			onClose={() => (showModal = false)}
+		/>
 	{/if}
+	</div>
 {/if}

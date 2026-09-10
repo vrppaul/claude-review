@@ -11,13 +11,10 @@
 	interface Props {
 		submitting: boolean;
 		error: string | null;
-		onSubmit: () => void;
-		onSendRound: () => void;
-		onEnd: () => void;
 		onOpenModal: () => void;
 	}
 
-	let { submitting, error, onSubmit, onSendRound, onEnd, onOpenModal }: Props = $props();
+	let { submitting, error, onOpenModal }: Props = $props();
 
 	// A round is only worth offering while something is there to work through
 	// it; on its own, sending is the end of the review
@@ -113,27 +110,6 @@
 		</div>
 	{/if}
 
-	<button class="btn btn-ghost btn-sm" data-testid="finish-review" onclick={onOpenModal}>
-		Add a summary
-	</button>
-	{#if inRounds}
-		<button class="btn btn-outline btn-sm" data-testid="end-review" onclick={onEnd}>
-			End review
-		</button>
-	{/if}
-	<button
-		data-testid="toggle-sidebar"
-		class="cr-chip"
-		aria-pressed={diffStore.sidebarOpen}
-		title="The file tree"
-		onclick={() => diffStore.toggleSidebar()}
-	>
-		<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-			<path d="M1.5 2h9v1.4h-9zM1.5 5.3h9v1.4h-9zM1.5 8.6h5.5V10H1.5z" />
-		</svg>
-		Files
-	</button>
-
 	<button
 		data-testid="toggle-panel"
 		class="cr-chip"
@@ -151,11 +127,12 @@
 		{/if}
 	</button>
 
+	<!-- One door: what has been written, a summary, and the two ways out -->
 	<button
 		class="btn btn-primary btn-sm"
 		data-testid="quick-submit"
-		disabled={!commentStore.hasUnsent || submitting}
-		onclick={inRounds ? onSendRound : onSubmit}
+		disabled={submitting}
+		onclick={onOpenModal}
 		title="Ctrl+Shift+Enter"
 	>
 		{#if submitting}
@@ -164,8 +141,11 @@
 		{:else if inRounds}
 			Send round {reviewStore.round}
 		{:else}
-			Send review
+			Finish review
 		{/if}
+		<svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+			<path d="M2 4l4 4 4-4z" />
+		</svg>
 	</button>
 
 	<ThemeToggle />
