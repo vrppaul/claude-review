@@ -30,6 +30,12 @@ Review current git changes in a GitHub-style diff view.
 
 Shows all uncommitted changes (tracked, staged, and untracked) with two-column line numbers, add/delete highlighting, and a file tree sidebar.
 
+The header says what is under review and what it is being compared against — and that second half is a control. Read the same working tree against the base the review opened with, against an earlier round of it, or against any branch or tag; each says how many files it would show.
+
+![choosing what the working tree is read against](docs/base-picker.png)
+
+Nothing about the review changes with it: a thread stays anchored where it was written, and one a narrower base cannot draw is counted, listed, and one click away.
+
 ### Files mode
 
 Review any text files — plans, docs, configs, source code.
