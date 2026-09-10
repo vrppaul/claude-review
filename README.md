@@ -81,6 +81,9 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - The whole diff as one stream — every file on screen, the sidebar navigates by scrolling
 - Unified or split layout, with what changed inside a replaced line marked word by word
 - Show the lines a hunk left out, or leave whitespace-only changes out entirely
+- Read the same working tree against something else — the base the review
+  opened with, an earlier round of it, or any branch or tag. A file the round
+  rewrote loses the tick that said you had read it
 - Fold a file away, mark it viewed, filter the tree by path; drag the tree
   narrower or put it away entirely
 - Syntax highlighting that reads a hunk whole, so a docstring stays a docstring

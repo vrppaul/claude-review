@@ -5,12 +5,29 @@ tests. Remove items when done — don't check them off.
 
 ## Left from the overhaul
 
-- [ ] `feat(review)`: say what a round changed, and let a version be chosen.
-      One shape covers three old items: mark the files a round touched (and
-      drop their "viewed" tick, which currently survives a retake), snapshot
-      the working tree at each round as a git object, and let the header
-      pick a base — a ref, or a round. The design was settled with Pavel and
-      is written down in the `project-diff-versions-handover` memory.
+- [ ] `feat(ui)`: mark where a thread would be, in the file it belongs to.
+      The bar lists the threads a narrower base cannot draw and takes the
+      reader to any of them, so none is stranded — but inside a file that is
+      on screen, one hanging on lines this base leaves out shows nothing at
+      all. A dashed stub at the top of that file was drawn on the canvas.
+- [ ] `feat(cli)`: say what is still waiting on this side. `context` prints
+      the whole review as an index; what an agent actually needs between
+      turns is the short list — questions asked and not answered, panel
+      messages taken and not closed — so it can check itself rather than
+      leave a message hanging with a Stop button on it. Found by leaving one
+      hanging: answering "first" without naming the message never closes it.
+
+- [ ] `perf(review)`: a retake stages the working tree three times — once to
+      ask what changed, once for the diff itself, once to write the new mark.
+      `_everything_staged` was built to serve several questions from one
+      staging and this call site asks three separately, on the path the
+      reader is waiting on. Startup pays it twice for the same reason.
+
+- [ ] `test(ui)`: the base picker has no component test — the filter, the
+      three sections, the loading and empty states, the error line, and
+      whether a row says its size or its age. Nor do the marks it produces:
+      the dot in the tree, the chip in the file header, "Show what changed".
+
 - [ ] `feat(ui)`: let a turn be deleted. A comment can be removed and a
       thread resolved, but a reply — the reader's or the author's — stays
       whatever it says. A duplicate answer has no way out of the thread.

@@ -1,5 +1,58 @@
 # Changelog
 
+## [1.4.0] - 2026-09-10
+
+A round leaves a mark, so the review can be asked what has changed since it.
+
+### Added
+- **Choose what the working tree is read against** — the second half of the
+  header's title became a control: the base this review opened with, an
+  earlier round of it, or any branch or tag. What it changes is what is
+  drawn, never what the review holds. The right-hand side of the diff is
+  always the working tree, so every thread stays anchored where it was
+  written, and one this base cannot draw is hidden and counted rather than
+  moved or marked outdated
+- **A round leaves a mark** — the tree the diff was taken from is written as
+  a real git object each time it is taken. The work under review is
+  uncommitted, so between two rounds there may be no commit to go back to.
+  The objects live in a store belonging to the review, which goes with it:
+  the repository gains nothing, and a restarted server keeps only the refs
+- **A retake says what changed** — which files moved since the last one, and
+  from which round they are counted. `claude-review round` returns the same
+  list, so an agent that came back to a review it left reads those files
+  again rather than all of them
+
+### Fixed
+- **A file the agent rewrote kept its "viewed" tick** through the retake, so
+  a reader walked past code that had changed under them. The tick now comes
+  off exactly the files the round moved, and the file is unfolded with it —
+  left folded, it reads as read
+- **A file the agent pointed at barely said so.** The mark was a background
+  behind an opaque file header and rows that paint their own, so it showed
+  where nobody was looking. It is an outline now, painted after every
+  descendant — and it waits for the scroll to stop, because across sixty
+  files a smooth scroll outlasted the mark itself. Shown twice running, it
+  flashes twice
+- **The notice that the working tree had moved on was said once and lost.**
+  It lived only in a push, so a review reloaded at that moment never heard
+  it, and one opened later never learned the tree had moved before it
+  arrived — the "Retake" it offers went with it. The diff now says how far
+  the tree has drifted, so a review that has just loaded knows; what the
+  reader waves away stays away until something else moves
+- **Work nobody was waiting on could not be shown at all.** The progress line
+  was drawn only under an unanswered message and put out by any answer, so
+  what an agent did on its own account — working through a round, reading
+  with subagents — left the panel looking idle. It now has a row of its own,
+  and an answer ends only the work it answers
+- **The box being written in and the lines it was about wore one colour.**
+  Both are the reader's own mark, but a composer washed in the same tint as
+  the rows directly above it read as one patch. The tint now belongs to the
+  lines; the composer keeps the edge and stands on the page's own surface
+- **The `@@` marker stayed in the middle of the code** once the lines it hid
+  had been revealed, announcing a jump where the code ran on unbroken. It
+  now belongs to the gap it marks and goes with it — including at the top of
+  a file whose first hunk starts at line 1
+
 ## [1.3.0] - 2026-09-09
 
 The review gains a second conversation: one about the change as a whole,
