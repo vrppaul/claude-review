@@ -13,6 +13,15 @@ tests. Remove items when done — don't check them off.
       thread resolved, but a reply — the reader's or the author's — stays
       whatever it says. A duplicate answer has no way out of the thread.
 
+## Bugs
+
+- [ ] `fix(server)`: a review nobody ever opened lives forever. The server
+      winds down when the last browser leaves, and "leaves" needs one to
+      have arrived: `_ever_connected` never turns true, so a `--no-open`
+      review whose URL is never opened holds its port and ~35 MB until the
+      machine is rebooted. Twelve of them were found running at once. Give
+      an unopened review a deadline of its own.
+
 ## Infrastructure
 
 - [ ] Submit to the official Claude Code plugin marketplace
