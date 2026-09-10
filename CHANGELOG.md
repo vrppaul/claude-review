@@ -27,6 +27,13 @@ with the agent that wrote it.
   diff was taken. It never swaps the diff by itself: doing that under a
   half-written comment orphans it. After a retake, the bar says what became
   of the threads and offers a way to the one that lost its lines
+- **The author can point at a line** — `claude-review point --file --lines`
+  raises a thread on the code, for what a paragraph elsewhere would bury:
+  where the agent did something other than what was asked, and why. It is an
+  ordinary thread from there on, drawn in its own colour because the marks in
+  a review are the reader's, and it never counts as their unsent work
+- **The file tree can be dragged narrower or put away**, and the panel's
+  width is the reader's in the same way
 - **`claude-review say`** answers a panel message by name, and
   **`claude-review status --model --context`** reports what only the agent
   can know. `claude-review wait` now also yields `message` and `cancel`
@@ -34,6 +41,8 @@ with the agent that wrote it.
 ### Changed
 - The panel's conversation, its width and whether it is open live in the
   draft and the reader's preferences, so a reload keeps all three
+- "Diff retaken" takes itself away after twelve seconds: it reports something
+  that has already happened and wants no answer
 
 ## [1.2.0] - 2026-09-09
 

@@ -81,7 +81,8 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - The whole diff as one stream — every file on screen, the sidebar navigates by scrolling
 - Unified or split layout, with what changed inside a replaced line marked word by word
 - Show the lines a hunk left out, or leave whitespace-only changes out entirely
-- Fold a file away, mark it viewed, filter the tree by path
+- Fold a file away, mark it viewed, filter the tree by path; drag the tree
+  narrower or put it away entirely
 - Syntax highlighting that reads a hunk whole, so a docstring stays a docstring
 - Light and dark, remembered, following the system until you choose
 
@@ -110,6 +111,9 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
   message
 - Two numbers, told apart: what handing the review over costs, and how much
   context the agent says it has left
+- The agent can point at a line itself: a thread in its own colour, on the
+  code rather than in a paragraph elsewhere, which you answer or settle like
+  any other
 - Stop a message the agent is still working on — a request, not a kill
 - When the working tree moves on, the review says so and offers to take the
   diff again. It never swaps it under a half-written comment
@@ -134,6 +138,7 @@ claude-review wait --port 8765             # wait for a question, a message or a
 claude-review reply --port 8765 --thread <id> --question <id> "..."   # answer in a thread
 claude-review say --port 8765 --message <id> "..."                    # answer in the panel
 claude-review status --port 8765 --model opus-5 --context "53% of 1M" # what only the agent knows
+claude-review point --port 8765 --file a.py --lines 42-47 "..."       # raise a thread on a line
 claude-review round --port 8765            # retake the diff after a round
 claude-review --port 8080 diff             # shared options before subcommand
 claude-review --no-open diff               # don't open browser automatically

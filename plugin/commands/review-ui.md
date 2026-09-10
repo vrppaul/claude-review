@@ -81,7 +81,7 @@ waiting on it:
      threads it points at come with it, in the same shape as a question.
    - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
      user has sent a round. Address it as you would a finished review, then
-     retake the diff (step 5) and keep waiting.
+     retake the diff (step 6) and keep waiting.
    - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.
@@ -111,7 +111,17 @@ waiting on it:
    Report it when it changes, not on every turn. Say nothing and the panel
    shows nothing, which is better than a number that is a guess.
 
-5. After making the changes a round asked for, show them:
+5. Point at a line, when what you have to say belongs on the code:
+   ```bash
+   claude-review point --port 8765 --file src/x.py --lines 118-130 \
+     --severity question "I kept the old name here: renaming it broke two callers."
+   ```
+   Use it for what a paragraph in the panel would bury — where you did
+   something other than what was asked, and why. It becomes an ordinary
+   thread the reader answers, settles or removes, drawn as yours rather than
+   as one of their marks, and it does not count as their unsent work.
+
+6. After making the changes a round asked for, show them:
    ```bash
    claude-review round --port 8765
    ```
@@ -119,7 +129,7 @@ waiting on it:
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against.
 
-6. A review the user ends prints its last round on the background command's
+7. A review the user ends prints its last round on the background command's
    output, as it normally would. That ends the loop.
 
 While you work, the review says when the working tree has moved on and
