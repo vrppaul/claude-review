@@ -133,6 +133,11 @@ class Comment(BaseModel):
     end_line: int
     body: str
     turns: list[Turn] = []
+    # Who opened it. The author may point at a line too — "here I did it
+    # differently from what you asked" belongs on the line, not in a
+    # paragraph elsewhere. The reader then works with it as with their own,
+    # but it is not theirs and is never drawn as if it were.
+    raised_by: TurnAuthor = TurnAuthor.READER
     # Settled, by the reader who opened it. Travels with the review, because
     # an agent reading a settled thread should not act on it again.
     resolved: bool = False

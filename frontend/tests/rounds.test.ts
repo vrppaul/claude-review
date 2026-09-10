@@ -110,6 +110,7 @@ describe('a thread meeting a diff that has been taken again', () => {
 			end_line: end,
 			body: 'why',
 			turns: [],
+			raised_by: 'reader',
 			resolved: false,
 			outdated: false,
 			quote,

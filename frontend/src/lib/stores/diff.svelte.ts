@@ -2,7 +2,12 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { expansionStore } from "$lib/stores/expansions.svelte";
 import { reviewStore } from "$lib/stores/review.svelte";
-import { readChoice, readFlag, writeChoice } from "$lib/utils/preferences";
+import {
+  readChoice,
+  readFlag,
+  readNumber,
+  writeChoice,
+} from "$lib/utils/preferences";
 
 import type {
   AgentStatus,
@@ -31,6 +36,13 @@ let diffLayout = $state<DiffLayout>(
   readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
 );
 let ignoreWhitespace = $state(readFlag("ignore-whitespace"));
+// What the file tree may take. Narrower than the floor and a path is
+// unreadable; wider than the ceiling and it is taking the room from what it
+// is a table of contents for.
+let sidebarWidth = $state(
+  readNumber("sidebar-width", { min: 160, max: 560, fallback: 240 }),
+);
+let sidebarOpen = $state(readFlag("sidebar-open", true));
 // How many files have changed since this diff was taken. Zero means there
 // is nothing to say: either nothing has moved, or the reader has dismissed
 // it until something does.
@@ -64,6 +76,25 @@ export const diffStore = {
   /** What is under review — which repository, and against what. */
   get agent(): AgentStatus {
     return agent;
+  },
+
+  get sidebarWidth(): number {
+    return sidebarWidth;
+  },
+
+  /** Whether the file tree is on screen. Put away, it gives its room back. */
+  get sidebarOpen(): boolean {
+    return sidebarOpen;
+  },
+
+  setSidebarWidth(next: number) {
+    sidebarWidth = Math.min(560, Math.max(160, Math.round(next)));
+    writeChoice("sidebar-width", sidebarWidth);
+  },
+
+  toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    writeChoice("sidebar-open", sidebarOpen);
   },
 
   /** How many files have moved on since this diff was taken. */
@@ -204,6 +235,12 @@ export const diffStore = {
       "unified",
     );
     ignoreWhitespace = readFlag("ignore-whitespace");
+    sidebarWidth = readNumber("sidebar-width", {
+      min: 160,
+      max: 560,
+      fallback: 240,
+    });
+    sidebarOpen = readFlag("sidebar-open", true);
     title = "";
     agent = { model: null, context: null, at: null };
     movedFiles = 0;

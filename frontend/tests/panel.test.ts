@@ -180,6 +180,30 @@ describe('the panel talks to the agent about the review', () => {
 		expect(formatWeight(640)).toBe('~640');
 	});
 
+	it('takes a thread the author raised without calling it the reader\'s work', () => {
+		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I did this differently', 'note', [
+			'y = 3'
+		]);
+
+		expect(commentStore.count).toBe(1);
+		expect(commentStore.comments[0].raised_by).toBe('author');
+		// Already sent: the reader did not write it, so it is not theirs to send
+		expect(commentStore.unsentCount).toBe(0);
+		expect(commentStore.hasUnsent).toBe(false);
+	});
+
+	it('sends a raised thread on once the reader has answered in it', async () => {
+		const fetchMock = okFetch();
+		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I did this differently', 'note', []);
+
+		commentStore.addTurn('raised-1', 'reader', 'Fine, but rename it');
+		await commentStore.submit(false);
+
+		const [carried] = sent(fetchMock).comments;
+		expect(carried.raised_by).toBe('author');
+		expect(carried.turns[0].body).toBe('Fine, but rename it');
+	});
+
 	it('remembers how wide the reader made it, within what the layout can take', () => {
 		panelStore.setWidth(5000);
 		expect(panelStore.width).toBe(720);

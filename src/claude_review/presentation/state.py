@@ -48,6 +48,14 @@ class ServerState:
         # `git status --porcelain` lines. The watcher compares against this,
         # so retaking the diff is what settles it.
         self.tree: frozenset[str] = frozenset()
+        # Threads the author has raised. Numbered apart from the reader's,
+        # whose ids are minted in the browser, so the two cannot collide.
+        self._raised = 0
+
+    def raise_id(self) -> str:
+        """The id of the next thread the author raises."""
+        self._raised += 1
+        return f"raised-{self._raised}"
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1

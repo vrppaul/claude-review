@@ -958,6 +958,54 @@ async def test_the_review_says_when_the_tree_moves_under_it(server_url: ServerFi
     assert await notice.count() == 0
 
 
+async def test_a_thread_the_author_raises_lands_on_the_line(server_url: ServerFixture, page: Page) -> None:
+    """What belongs on the code goes on the code, and says whose it is."""
+    url, _state = server_url
+    port = int(url.rsplit(":", 1)[1])
+    await page.goto(url)
+    await page.get_by_test_id("sidebar").wait_for()
+
+    # Attaching is what shows the panel; nothing has to be asked of it here
+    waiting = asyncio.create_task(_take_question(port, seconds=3))
+    await page.get_by_test_id("panel-input").wait_for()
+
+    raised = await _point(port, "main.py", "1", "I kept the old name; renaming it broke two callers.")
+    assert raised["thread_id"] == "raised-1"
+
+    thread = page.locator(f"#{raised['thread_id']}")
+    await thread.wait_for()
+    assert "I kept the old name" in await thread.text_content()
+    # Drawn as the author's, and not counted as the reader's unsent work
+    await page.get_by_test_id("comment-raised").wait_for()
+    assert "0 unsent" in await page.get_by_test_id("comment-count").text_content()
+
+    # And the panel says where it went
+    await page.get_by_test_id("panel-thread-ref").wait_for()
+
+    assert (await waiting)["type"] == "timeout"
+
+
+async def _point(port: int, path: str, lines: str, body: str) -> dict:
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "claude_review",
+        "point",
+        "--port",
+        str(port),
+        "--file",
+        path,
+        "--lines",
+        lines,
+        body,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    assert proc.returncode == 0, stderr.decode()
+    return json.loads(stdout)
+
+
 async def _say(port: int, message_id: str, text: str) -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,

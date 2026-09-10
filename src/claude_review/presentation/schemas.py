@@ -52,6 +52,9 @@ class CommentInput(BaseModel):
     end_line: int = Field(ge=1)
     body: str = Field(min_length=1, max_length=50_000)
     turns: list[TurnInput] = Field(default_factory=list, max_length=200)
+    # Who opened the thread. The browser sends it back so a thread the author
+    # raised is not read as something the reader wrote.
+    raised_by: TurnAuthor = TurnAuthor.READER
     resolved: bool = False
     outdated: bool = False
     # What the thread was written against, kept for when those lines are gone
@@ -138,6 +141,34 @@ class MessageRequest(BaseModel):
     message_id: str = Field(min_length=1, max_length=200)
     text: str = Field(min_length=1, max_length=50_000)
     threads: list[ThreadInput] = Field(default_factory=list, max_length=50)
+
+
+class PointRequest(BaseModel):
+    """Request body for POST /api/point — the author raising a thread.
+
+    The same anchor a reader's comment carries, because it becomes exactly
+    that: a thread on a line, which the reader answers, settles or removes.
+    """
+
+    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
+    side: LineSide = LineSide.NEW
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    body: str = Field(min_length=1, max_length=50_000)
+    severity: CommentSeverity = CommentSeverity.NOTE
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> PointRequest:
+        if self.start_line > self.end_line:
+            msg = "start_line must be <= end_line"
+            raise ValueError(msg)
+        return self
+
+
+class PointResponse(BaseModel):
+    """Response for POST /api/point — which thread was raised."""
+
+    thread_id: str
 
 
 class SayRequest(BaseModel):

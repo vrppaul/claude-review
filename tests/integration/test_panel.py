@@ -135,6 +135,46 @@ async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> 
     assert second["cancel"]["message_id"] == "panel-1"
 
 
+async def test_the_author_can_raise_a_thread_on_a_line(client: AsyncClient, state: ServerState) -> None:
+    """What belongs on the code goes on the code, not into the panel."""
+    listener = state.listen()
+
+    response = await client.post(
+        "/api/point",
+        json={
+            "file": "src/a.py",
+            "side": "new",
+            "start_line": 42,
+            "end_line": 44,
+            "body": "I did this differently from what was asked, because...",
+            "severity": "question",
+        },
+    )
+
+    assert response.json()["thread_id"] == "raised-1"
+    pushed = listener.get_nowait()
+    assert pushed["type"] == "point"
+    assert pushed["file"] == "src/a.py"
+    assert pushed["start_line"] == 42
+    assert pushed["severity"] == "question"
+
+
+async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
+    """The browser mints its own ids; two sides must not collide."""
+    first = await client.post("/api/point", json={"file": "a.py", "start_line": 1, "end_line": 1, "body": "one"})
+    second = await client.post("/api/point", json={"file": "a.py", "start_line": 2, "end_line": 2, "body": "two"})
+
+    assert first.json()["thread_id"] == "raised-1"
+    assert second.json()["thread_id"] == "raised-2"
+
+
+async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
+    """A thread that ends before it starts hangs on nothing."""
+    response = await client.post("/api/point", json={"file": "a.py", "start_line": 9, "end_line": 2, "body": "nowhere"})
+
+    assert response.status_code == 422
+
+
 async def test_the_agent_says_what_only_the_agent_knows(client: AsyncClient, state: ServerState) -> None:
     """Model and context cannot be measured here, so they are reported."""
     listener = state.listen()

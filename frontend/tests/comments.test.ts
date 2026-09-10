@@ -159,6 +159,7 @@ describe('commentStore', () => {
 							end_line: 10,
 							body: 'fix this',
 							turns: [],
+							raised_by: 'reader',
 							resolved: false,
 							outdated: false,
 							quote: []

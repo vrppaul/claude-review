@@ -427,3 +427,22 @@ def test_the_first_round_is_not_numbered() -> None:
     result = service.format_review(comments, round_number=1)
 
     assert result.markdown.startswith("## Code Review Comments\n")
+
+
+def test_a_thread_the_author_raised_reads_as_the_authors_own_words() -> None:
+    """Otherwise the agent is handed its own note back as an instruction."""
+    comment = Comment(
+        file="src/a.py",
+        side=LineSide.NEW,
+        severity=CommentSeverity.NOTE,
+        start_line=42,
+        end_line=42,
+        body="I renamed this rather than deleting it",
+        raised_by=TurnAuthor.AUTHOR,
+        turns=[Turn(author=TurnAuthor.READER, body="Good, but call it `head`")],
+    )
+
+    markdown = ReviewService().format_review([comment]).markdown
+
+    assert "> **You:** I renamed this rather than deleting it" in markdown
+    assert "> **Reviewer:** Good, but call it `head`" in markdown

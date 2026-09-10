@@ -329,6 +329,62 @@ def say_cmd(port: int, message: str, text: str) -> None:
     )
 
 
+@main.command("point")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--file", "path", required=True, type=str, help="File the thread hangs on, as the diff names it.")
+@click.option("--lines", required=True, type=str, help='Line or range it is about, e.g. "42" or "42-47".')
+@click.option(
+    "--side",
+    type=click.Choice(["new", "old"]),
+    default="new",
+    help="Which version of the file: the new one, or the lines the change removed.",
+)
+@click.option(
+    "--severity",
+    type=click.Choice(["note", "question", "blocker"]),
+    default="note",
+    help="How it is meant to be taken.",
+)
+@click.argument("body", required=True, type=str)
+def point_cmd(port: int, path: str, lines: str, side: str, severity: str, body: str) -> None:
+    """Raise a thread on a line of the review, from this side.
+
+    For what belongs on the code rather than in the panel: where you did
+    something other than what was asked, and why. The reader reads it as an
+    ordinary thread — answers it, settles it, removes it — but it is drawn
+    as yours, and it is not counted as their unsent work.
+    """
+    start, end = _line_range(lines)
+    body_text = _call(
+        f"http://127.0.0.1:{port}/api/point",
+        payload={
+            "file": path,
+            "side": side,
+            "start_line": start,
+            "end_line": end,
+            "body": body,
+            "severity": severity,
+        },
+    )
+    sys.stdout.write(body_text)
+    sys.stdout.write("\n")
+
+
+def _line_range(lines: str) -> tuple[int, int]:
+    """Read "42" or "42-47" as the span a thread hangs on."""
+    start, _, end = lines.partition("-")
+    try:
+        first = int(start)
+        last = int(end) if end else first
+    except ValueError:
+        msg = f'--lines wants a line or a range, like "42" or "42-47", not "{lines}"'
+        raise click.ClickException(msg) from None
+    if first < 1 or last < first:
+        msg = f'--lines runs backwards or starts below 1: "{lines}"'
+        raise click.ClickException(msg)
+    return first, last
+
+
 @main.command("status")
 @click.option("--port", required=True, type=int, help="Port the review is served on.")
 @click.option("--model", type=str, default=None, help="Which model is answering.")

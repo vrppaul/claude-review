@@ -33,6 +33,8 @@ from claude_review.presentation.schemas import (
     EventResponse,
     FileWindowResponse,
     MessageRequest,
+    PointRequest,
+    PointResponse,
     ReplyRequest,
     RoundResponse,
     SayRequest,
@@ -245,6 +247,35 @@ async def say_in_panel(
     return {"status": "sent"}
 
 
+@router.post("/point")
+async def raise_a_thread(
+    request: PointRequest,
+    state: ServerState = Depends(get_state),
+) -> PointResponse:
+    """Put a thread on a line, from the side that wrote the change.
+
+    "Here I did it differently from what you asked" belongs on the line it
+    is about, not in a paragraph somewhere else. What arrives is an ordinary
+    thread: the reader answers it, settles it or removes it. It is drawn as
+    the author's, though, and it is never counted as the reader's own work.
+    """
+    thread_id = state.raise_id()
+    state.push(
+        {
+            "type": "point",
+            "thread_id": thread_id,
+            "file": request.file,
+            "side": str(request.side),
+            "start_line": request.start_line,
+            "end_line": request.end_line,
+            "body": request.body,
+            "severity": str(request.severity),
+        }
+    )
+    log.info("thread_raised", thread_id=thread_id, file=request.file)
+    return PointResponse(thread_id=thread_id)
+
+
 @router.post("/cancel")
 async def cancel_panel_message(
     request: CancelRequest,
@@ -369,6 +400,7 @@ def _to_comment(comment: CommentInput) -> Comment:
         end_line=comment.end_line,
         body=comment.body,
         turns=[Turn(author=t.author, body=t.body, round=t.round) for t in comment.turns],
+        raised_by=comment.raised_by,
         resolved=comment.resolved,
         outdated=comment.outdated,
         quote=comment.quote,

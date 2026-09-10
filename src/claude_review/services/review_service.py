@@ -51,7 +51,13 @@ class ReviewService:
         if comment.outdated and comment.quote:
             pieces.append(self._format_quote(comment.quote))
 
-        pieces.append(comment.body)
+        # A thread the author raised opens with the author speaking, so it
+        # is quoted like any other turn: the reader's reply below it then
+        # reads as a reply rather than as the whole thread.
+        if comment.raised_by == TurnAuthor.AUTHOR:
+            pieces.append(self._format_turn(Turn(author=TurnAuthor.AUTHOR, body=comment.body, round=1)))
+        else:
+            pieces.append(comment.body)
         pieces.extend(self._format_turn(turn) for turn in comment.turns)
 
         return "\n".join(pieces) + "\n"

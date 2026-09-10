@@ -71,6 +71,7 @@ function payload(comment: Comment): CommentPayload {
       body,
       round,
     })),
+    raised_by: comment.raised_by,
     resolved: comment.resolved,
     outdated: comment.outdated,
     quote: comment.quote,
@@ -173,6 +174,7 @@ export const commentStore = {
       end_line: endLine,
       body,
       turns: [],
+      raised_by: "reader",
       resolved: false,
       outdated: false,
       quote,
@@ -185,6 +187,49 @@ export const commentStore = {
     comments = [...comments, comment];
     remember();
     return comment.id;
+  },
+
+  /**
+   * Take a thread the author raised and put it on the diff.
+   *
+   * It arrives already sent: the reader has not written it, so it must not
+   * swell "unsent" or travel back to the side that wrote it. The moment
+   * they answer or edit it, it stops being sent — as any thread does — and
+   * goes with the next round, so the reply arrives with what it replies to.
+   */
+  raise(
+    id: string,
+    file: string,
+    side: LineSide,
+    startLine: number,
+    endLine: number,
+    body: string,
+    severity: CommentSeverity,
+    quote: string[],
+  ): string {
+    const comment: Comment = {
+      id,
+      file,
+      side,
+      severity,
+      start_line: startLine,
+      end_line: endLine,
+      body,
+      turns: [],
+      raised_by: "author",
+      resolved: false,
+      outdated: false,
+      quote,
+      awaiting: [],
+      collapsed: false,
+      unread: true,
+      round: reviewStore.round,
+      at: Date.now(),
+    };
+    comments = [...comments, comment];
+    sent.set(id, reviewStore.round);
+    remember();
+    return id;
   },
 
   update(id: string, body: string, severity?: CommentSeverity) {

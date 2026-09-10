@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { userEvent } from '@testing-library/user-event';
 import { render } from '@testing-library/svelte';
 import SubmitBar from '$lib/components/SubmitBar.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
@@ -106,5 +107,16 @@ describe('the review header', () => {
 		await rerender({});
 
 		expect(queryByTestId('next-comment')).toBeTruthy();
+	});
+
+	it('puts the file tree away and brings it back', async () => {
+		const user = userEvent.setup({ delay: null });
+
+		const { getByTestId } = render(SubmitBar);
+		expect(diffStore.sidebarOpen).toBe(true);
+
+		await user.click(getByTestId('toggle-sidebar'));
+
+		expect(diffStore.sidebarOpen).toBe(false);
 	});
 });

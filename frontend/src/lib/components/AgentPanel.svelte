@@ -5,6 +5,7 @@
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { scrollToComment } from '$lib/utils/scroll';
+	import { dragEdge, stepEdge } from '$lib/utils/resize';
 	import { threadsIn, threadToken } from '$lib/utils/thread-token';
 	import { formatWeight } from '$lib/utils/weight';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -192,30 +193,12 @@
 		}
 	}
 
-	/** Drag the panel's edge, or step it with the arrow keys. */
-	function onGrab(event: PointerEvent & { currentTarget: HTMLElement }) {
-		event.currentTarget.setPointerCapture(event.pointerId);
-		const startX = event.clientX;
-		const startWidth = panelStore.width;
-		const handle = event.currentTarget;
-
-		function move(moved: PointerEvent) {
-			panelStore.setWidth(startWidth + (startX - moved.clientX));
-		}
-		function release() {
-			handle.removeEventListener('pointermove', move);
-			handle.removeEventListener('pointerup', release);
-		}
-		handle.addEventListener('pointermove', move);
-		handle.addEventListener('pointerup', release);
-	}
-
-	function onResizeKey(event: KeyboardEvent) {
-		if (event.key === 'ArrowLeft') panelStore.setWidth(panelStore.width + 24);
-		else if (event.key === 'ArrowRight') panelStore.setWidth(panelStore.width - 24);
-		else return;
-		event.preventDefault();
-	}
+	/** The panel is on the right, so dragging left is what widens it. */
+	const sizing = $derived({
+		width: panelStore.width,
+		grows: 'left' as const,
+		onWidth: (px: number) => panelStore.setWidth(px)
+	});
 </script>
 
 <aside
@@ -228,8 +211,8 @@
 		data-testid="panel-resize"
 		class="cr-panel-grip"
 		aria-label="Resize the panel"
-		onpointerdown={onGrab}
-		onkeydown={onResizeKey}
+		onpointerdown={(e) => dragEdge(e, sizing)}
+		onkeydown={(e) => stepEdge(e, sizing)}
 	></button>
 
 	<header
@@ -332,9 +315,20 @@ claude-review wait --port &lt;port&gt;</pre>
 			<div class="flex flex-col gap-3">
 				{#each panelStore.turns as turn (turn.id)}
 					{#if turn.author === 'event'}
+						{@const raised = commentStore.comments.find((c) => c.id === turn.threads?.[0])}
 						<div data-testid="panel-event" class="cr-round-mark">
 							<span></span>
-							<span class="cr-faint text-xs">{turn.body}</span>
+							{#if raised}
+								<button
+									data-testid="panel-thread-ref"
+									class="cr-thread-chip"
+									onclick={() => scrollToComment(raised.id, raised.file)}
+								>
+									{turn.body}
+								</button>
+							{:else}
+								<span class="cr-faint text-xs">{turn.body}</span>
+							{/if}
 							<span></span>
 						</div>
 					{:else if turn.author === 'reader'}

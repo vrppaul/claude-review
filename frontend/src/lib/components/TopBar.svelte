@@ -122,6 +122,19 @@
 		</button>
 	{/if}
 	<button
+		data-testid="toggle-sidebar"
+		class="cr-chip"
+		aria-pressed={diffStore.sidebarOpen}
+		title="The file tree"
+		onclick={() => diffStore.toggleSidebar()}
+	>
+		<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+			<path d="M1.5 2h9v1.4h-9zM1.5 5.3h9v1.4h-9zM1.5 8.6h5.5V10H1.5z" />
+		</svg>
+		Files
+	</button>
+
+	<button
 		data-testid="toggle-panel"
 		class="cr-chip"
 		aria-pressed={panelStore.open}

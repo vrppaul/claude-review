@@ -216,10 +216,16 @@ export const panelStore = {
    * middle of the conversation, and an answer written before it was written
    * about different code.
    */
-  note(body: string) {
+  note(body: string, threads: string[] = []) {
     turns = [
       ...turns,
-      { id: `event-${++nextEvent}`, author: "event", body, at: Date.now() },
+      {
+        id: `event-${++nextEvent}`,
+        author: "event",
+        body,
+        at: Date.now(),
+        threads,
+      },
     ];
     remember();
   },

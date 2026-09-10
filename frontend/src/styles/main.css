@@ -66,6 +66,7 @@
   --cr-del-tint: rgb(242 84 91 / 0.09);
   --cr-mark: #5b8def;
   --cr-mark-tint: rgb(91 141 239 / 0.14);
+  --cr-raised-edge: #a68dd8;
   --cr-gutter-fg: #7c8a9e;
   --cr-muted: #98a5b6;
   --cr-faint: #7a8798;
@@ -119,6 +120,7 @@
   --cr-del-tint: rgb(200 50 60 / 0.08);
   --cr-mark: #2c6bd9;
   --cr-mark-tint: rgb(44 107 217 / 0.12);
+  --cr-raised-edge: #6b4bb8;
   --cr-gutter-fg: #5d6a7a;
   --cr-muted: #4c5866;
   --cr-faint: #5d6a7a;
@@ -837,4 +839,44 @@
 }
 .cr-notice-taken svg {
   color: var(--cr-mark);
+}
+
+/*
+ * A thread the author raised.
+ *
+ * Not the reader's mark colour: the marks in a review are theirs, and one
+ * that arrived from the other side has to say so before it is read. Violet
+ * is unspoken for here — the diff owns green and red, the reader owns blue,
+ * and the tree notice owns amber.
+ */
+.cr-raised {
+  background: color-mix(in srgb, var(--cr-raised-edge) 12%, transparent);
+  border-left-color: var(--cr-raised-edge);
+}
+.cr-raised .cr-comment-ref {
+  color: var(--cr-raised-edge);
+}
+.cr-raised .cr-field {
+  border-color: color-mix(in srgb, var(--cr-raised-edge) 35%, transparent);
+}
+.cr-raised .cr-tie {
+  border-color: color-mix(in srgb, var(--cr-raised-edge) 42%, transparent);
+}
+.cr-raised-tag {
+  color: var(--cr-raised-edge);
+}
+
+/* The file tree's own edge, mirroring the panel's */
+.cr-tree-grip {
+  position: absolute;
+  inset-block: 0;
+  right: -3px;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 10;
+}
+.cr-tree-grip:hover,
+.cr-tree-grip:focus-visible {
+  background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
+  outline: none;
 }

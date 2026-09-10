@@ -67,6 +67,21 @@ describe('when the tree moves under the review', () => {
 		expect(text(getByTestId('diff-retaken'))).toContain('1 is outdated');
 	});
 
+	it('takes the retaken bar away on its own', async () => {
+		vi.useFakeTimers();
+		try {
+			diffStore.noteRetaken({ followed: 1, outdated: 0 });
+			const { queryByTestId } = render(DiffNotice);
+			expect(queryByTestId('diff-retaken')).toBeTruthy();
+
+			await vi.advanceTimersByTimeAsync(12_000);
+
+			expect(queryByTestId('diff-retaken')).toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('offers a way to the thread that lost its lines', () => {
 		commentStore.add('a.py', 'new', 1, 1, 'this one');
 		commentStore.comments[0].outdated = true;

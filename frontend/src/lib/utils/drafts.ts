@@ -2,11 +2,12 @@ import type { Comment, PanelTurn } from "$lib/types";
 
 const STORAGE_KEY = "claude-review:draft";
 // What shape the stored draft is in. A comment has grown turns, a resolved
-// mark, the lines it was written against and the questions still waiting for
-// an answer; the review has grown a conversation in the agent panel. The
-// number is here so an older draft can be brought up to the current shape —
-// never so it can be thrown away: a draft is an hour of somebody's reading.
-const SHAPE = 5;
+// mark, the lines it was written against, the questions still waiting for an
+// answer, and who raised it; the review has grown a conversation in the
+// agent panel. The number is here so an older draft can be brought up to the
+// current shape — never so it can be thrown away: a draft is an hour of
+// somebody's reading.
+const SHAPE = 6;
 
 export interface Draft {
   version: number;
@@ -87,6 +88,8 @@ function upgrade(draft: Draft): Draft {
     comments: draft.comments.map((comment) => ({
       ...comment,
       turns: comment.turns ?? [],
+      // Threads were all the reader's before the author could raise one
+      raised_by: comment.raised_by ?? "reader",
       resolved: comment.resolved ?? false,
       outdated: comment.outdated ?? false,
       quote: comment.quote ?? [],

@@ -28,6 +28,26 @@ function matchesAt(
   return quote.every((text, offset) => lines[at + offset]?.content === text);
 }
 
+/**
+ * The lines a thread hangs on, as the diff on screen has them.
+ *
+ * A thread the reader opens keeps what they selected. One raised from
+ * outside the browser has only numbers, so the lines are read off the diff
+ * here — without them the thread cannot follow its code when it moves, or
+ * say what it was written against when the code is gone.
+ */
+export function quoteFrom(
+  hunks: DiffHunk[] | null,
+  side: LineSide,
+  startLine: number,
+  endLine: number,
+): string[] {
+  if (!hunks) return [];
+  return linesOfSide(hunks, side)
+    .filter((line) => line.no >= startLine && line.no <= endLine)
+    .map((line) => line.content);
+}
+
 export interface Anchor {
   start_line: number;
   end_line: number;

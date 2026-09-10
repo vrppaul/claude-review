@@ -7,6 +7,7 @@
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { soundStore } from '$lib/stores/sound.svelte';
 	import { markTab } from '$lib/utils/tab';
+	import { quoteFrom } from '$lib/utils/reanchor';
 	import AgentPanel from '$lib/components/AgentPanel.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffNotice from '$lib/components/DiffNotice.svelte';
@@ -62,6 +63,8 @@
 				context: typeof message.context === 'string' ? message.context : null,
 				at: typeof message.at === 'number' ? message.at : null
 			});
+		} else if (message.type === 'point' && typeof message.body === 'string') {
+			raise(message);
 		} else if (message.type === 'changed' && typeof message.files === 'number') {
 			// Said, never acted on: swapping the diff under a half-written
 			// comment would orphan it
@@ -80,6 +83,38 @@
 				panelStore.note(retaken(moved));
 			});
 		}
+	}
+
+	/**
+	 * Put a thread the author raised onto the diff, and say so in the panel.
+	 *
+	 * It arrives as numbers, so the lines themselves are read off the diff on
+	 * screen: without them the thread cannot follow its code when it moves.
+	 */
+	function raise(message: { type: string; [key: string]: unknown }) {
+		const file = String(message.file);
+		const side = message.side === 'old' ? 'old' : 'new';
+		const start = Number(message.start_line);
+		const end = Number(message.end_line);
+		const severity =
+			message.severity === 'question' || message.severity === 'blocker'
+				? message.severity
+				: 'note';
+
+		const id = commentStore.raise(
+			String(message.thread_id),
+			file,
+			side,
+			start,
+			end,
+			String(message.body),
+			severity,
+			quoteFrom(diffStore.files.find((f) => f.path === file)?.hunks ?? null, side, start, end)
+		);
+		panelStore.note(`pointed at ${file.split('/').pop()} ${start}${end !== start ? `-${end}` : ''}`, [
+			id
+		]);
+		soundStore.announce();
 	}
 
 	/** What a retaken diff did to the threads hanging on it. */
@@ -131,7 +166,9 @@
 		<SubmitBar />
 		<DiffNotice />
 		<div class="flex min-h-0 flex-1">
-			<FileList />
+			{#if diffStore.sidebarOpen}
+				<FileList />
+			{/if}
 			<DiffView />
 			{#if panelStore.open}
 				<AgentPanel />

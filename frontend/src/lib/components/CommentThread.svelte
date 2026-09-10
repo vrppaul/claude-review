@@ -79,8 +79,12 @@
 	});
 
 	// Who spoke last: after an answer there is nothing new to hand over until
-	// the reader says something
-	const lastWord = $derived(comment.turns.at(-1)?.author ?? 'reader');
+	// the reader says something. On a thread the author raised, the opening
+	// is already the author's word.
+	const lastWord = $derived(comment.turns.at(-1)?.author ?? comment.raised_by);
+	// A thread the author raised is not one of the reader's marks, and is
+	// not drawn as if it were
+	const raised = $derived(comment.raised_by === 'author');
 
 	function waitingFor(exchange: Exchange): number | null {
 		const asked = comment.awaiting.find((w) => w.id === exchange.id);
@@ -142,7 +146,11 @@
 		<!-- Folded, by hand or by settling it. Either way it opens to be read. -->
 		<div
 			data-testid={comment.resolved ? 'resolved-thread' : 'folded-thread'}
-			class="{comment.resolved ? 'cr-resolved' : 'cr-folded'} flex max-w-[96ch] items-center gap-3
+			class="{comment.resolved
+				? 'cr-resolved'
+				: comment.raised_by === 'author'
+					? 'cr-folded cr-raised'
+					: 'cr-folded'} flex max-w-[96ch] items-center gap-3
 			rounded-r px-4 py-2"
 		>
 			{#if comment.resolved}
@@ -200,9 +208,9 @@
 		<!-- Looking at the thread is what makes its answer read -->
 		<div
 			class="cr-comment group rounded-r px-4 py-3 {comment.outdated ? 'cr-stale' : ''} {sentIn !==
-			undefined
+				undefined && !raised
 				? 'cr-sent'
-				: ''}"
+				: ''} {raised ? 'cr-raised' : ''}"
 			role="presentation"
 			onclick={() => commentStore.markRead(comment.id)}
 		>
@@ -256,7 +264,9 @@
 					</span>
 				{/if}
 				<div class="flex-1"></div>
-				{#if sentIn !== undefined}
+				{#if raised}
+					<span data-testid="comment-raised" class="cr-severity cr-raised-tag">from the author</span>
+				{:else if sentIn !== undefined}
 					<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 				{/if}
 				<div
@@ -317,7 +327,9 @@
 					{/if}
 					<div class="cr-exchange">
 						<div>
-							{#if comment.turns.length > 0}
+							{#if index === 0 && raised}
+								<p class="cr-who"><strong>Author</strong> {said(exchange.at)}</p>
+							{:else if comment.turns.length > 0}
 								<p class="cr-who"><strong>You</strong> {said(exchange.at)}</p>
 							{/if}
 							{#each splitSuggestions(exchange.asked) as part, i (i)}

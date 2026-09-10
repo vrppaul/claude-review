@@ -5,11 +5,23 @@
 
 	let failed = $state<string | null>(null);
 
+	// How long the retaken bar stands. Long enough to read twice, short
+	// enough that it is not still there when the reader looks up again — it
+	// reports something that already happened and needs no answer.
+	const SHOWN_FOR = 12_000;
+
 	const moved = $derived(diffStore.movedFiles);
 	const retaken = $derived(diffStore.retaken);
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
 	// what it was written against, and that is what "show it" goes to.
 	const stranded = $derived(commentStore.comments.find((comment) => comment.outdated));
+
+	// Each retake starts the clock afresh: what it says is about that one
+	$effect(() => {
+		if (!diffStore.retaken) return;
+		const timer = setTimeout(() => diffStore.dismissRetaken(), SHOWN_FOR);
+		return () => clearTimeout(timer);
+	});
 
 	async function retake() {
 		failed = null;

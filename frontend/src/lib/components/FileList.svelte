@@ -5,6 +5,7 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { scrollToFile } from '$lib/utils/scroll';
+	import { dragEdge, stepEdge } from '$lib/utils/resize';
 
 	// A letter in the change's own colour, rather than a filled disc: the file
 	// name is what the eye should land on in this list.
@@ -179,8 +180,27 @@
 
 <aside
 	data-testid="sidebar"
-	class="w-60 shrink-0 overflow-y-auto border-r border-base-300 bg-base-100 lg:w-72 2xl:w-88"
+	class="relative shrink-0 overflow-y-auto border-r border-base-300 bg-base-100"
+	style="width: {diffStore.sidebarWidth}px"
 >
+	<!-- The reader's own width, dragged or stepped with the arrow keys -->
+	<button
+		data-testid="sidebar-resize"
+		class="cr-tree-grip"
+		aria-label="Resize the file tree"
+		onpointerdown={(e) =>
+			dragEdge(e, {
+				width: diffStore.sidebarWidth,
+				grows: 'right',
+				onWidth: (px) => diffStore.setSidebarWidth(px)
+			})}
+		onkeydown={(e) =>
+			stepEdge(e, {
+				width: diffStore.sidebarWidth,
+				grows: 'right',
+				onWidth: (px) => diffStore.setSidebarWidth(px)
+			})}
+	></button>
 	<div class="p-3">
 		<div class="mb-2 flex items-baseline gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>

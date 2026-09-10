@@ -91,6 +91,8 @@ export interface Comment {
   end_line: number;
   body: string;
   turns: Turn[];
+  /** Who opened it. The author may point at a line too. */
+  raised_by: TurnAuthor;
   resolved: boolean;
   outdated: boolean;
   /** The lines it was written against, kept for when they are gone. */
