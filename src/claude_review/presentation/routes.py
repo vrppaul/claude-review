@@ -6,7 +6,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from claude_review.domain.exceptions import FileWindowError
+from claude_review.domain.exceptions import FileWindowError, UnknownVersionError
 from claude_review.domain.models import (
     Comment,
     DiffFile,
@@ -24,6 +24,7 @@ from claude_review.domain.models import (
 from claude_review.presentation.dependencies import (
     get_diff_base,
     get_diff_files,
+    get_objects,
     get_repo_root,
     get_review_mode,
     get_review_title,
@@ -50,6 +51,7 @@ from claude_review.presentation.schemas import (
     SubmitRequest,
     SubmitResponse,
     ThreadInput,
+    VersionsResponse,
 )
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -58,6 +60,7 @@ from claude_review.services.file_window_service import FileWindowService
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
 from claude_review.services.tree_watcher_service import TreeWatcherService
+from claude_review.services.version_service import REVIEW_KEY, VersionService
 
 log = structlog.get_logger()
 
@@ -67,30 +70,80 @@ router = APIRouter(prefix="/api")
 @router.get("/diff")
 async def get_diff(
     ignore_whitespace: bool = Query(default=False),
+    base: str | None = Query(default=None, max_length=200),
     diff_files: list[DiffFile] = Depends(get_diff_files),
     mode: ReviewMode = Depends(get_review_mode),
     title: str = Depends(get_review_title),
     root: Path | None = Depends(get_repo_root),
-    base: str | None = Depends(get_diff_base),
+    review_base: str | None = Depends(get_diff_base),
+    objects: Path | None = Depends(get_objects),
     state: ServerState = Depends(get_state),
 ) -> DiffResponse:
     """Serve the review's content.
 
-    Retaking the diff is the one thing this does beyond serving what was
-    loaded at startup: ignoring whitespace has to come from git, since only
-    git knows which hunks vanish once whitespace stops counting.
+    Two things make this ask git rather than serve what was loaded at
+    startup. Ignoring whitespace has to come from git, since only git knows
+    which hunks vanish once whitespace stops counting. And a base names one
+    of the versions on offer: the same working tree, read against something
+    else.
+
+    What the review holds is left alone either way. A base is a way of
+    looking, not a change to what is under review — the threads are anchored
+    to the diff this server loaded, and that is the one it keeps.
     """
-    if ignore_whitespace and root is not None:
-        diff_files = await DiffService(git_repository=GitRepository()).get_diff(root, base=base, ignore_whitespace=True)
+    git = GitRepository(objects=objects)
+    versions = VersionService(git_repository=git)
+    taken_against = review_base
+
+    if base is not None:
+        if root is None:
+            raise HTTPException(status_code=404, detail="This review is not compared against anything")
+        try:
+            taken_against = await versions.resolve(root, base, review_base=review_base, snapshots=state.snapshots)
+        except UnknownVersionError as e:
+            log.warning("version_refused", base=base, reason=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    if root is not None and (ignore_whitespace or base is not None):
+        diff_files = await DiffService(git_repository=git).get_diff(
+            root, base=taken_against, ignore_whitespace=ignore_whitespace
+        )
+
+    moved = await TreeWatcherService(git_repository=git).drift(root, state.tree) if root is not None else 0
 
     return DiffResponse(
         files=diff_files,
         mode=mode,
         title=title,
+        # `or str(root)`: a repository at the filesystem root has no name, and
+        # an empty subject takes the base control off the header with it
+        subject=(root.name or str(root)) if root is not None else None,
+        phrase=versions.phrase_of(base or REVIEW_KEY, review_base=review_base) if root is not None else None,
         round=state.round,
         answerer_attached=state.answerer_attached,
         agent=state.agent,
+        moved=moved,
     )
+
+
+@router.get("/versions")
+async def offered_versions(
+    root: Path | None = Depends(get_repo_root),
+    review_base: str | None = Depends(get_diff_base),
+    objects: Path | None = Depends(get_objects),
+    state: ServerState = Depends(get_state),
+) -> VersionsResponse:
+    """Say what the working tree can be compared against.
+
+    A review of files or a transcript is compared against nothing at all, and
+    says so with an empty list rather than an error: there is no failure
+    here, only nothing to choose between.
+    """
+    if root is None:
+        return VersionsResponse(versions=[])
+
+    versions = VersionService(git_repository=GitRepository(objects=objects))
+    return VersionsResponse(versions=await versions.offer(root, review_base=review_base, snapshots=state.snapshots))
 
 
 @router.get("/context")
@@ -586,27 +639,41 @@ async def retake_diff(
     state: ServerState = Depends(get_state),
     root: Path | None = Depends(get_repo_root),
     base: str | None = Depends(get_diff_base),
+    objects: Path | None = Depends(get_objects),
 ) -> RoundResponse:
     """Take the diff again, after the work a round asked for.
 
     The reviews on screen are told to reload it rather than being handed the
     files: a browser has its own view of the diff — which files are folded,
     whether whitespace counts — and asking it to fetch keeps that one path.
+
+    They are also told which files moved, which is not a nicety: a file the
+    reader had ticked off keeps its tick through a retake, so without this
+    they walk past code the agent rewrote under them.
     """
     if root is None:
         raise HTTPException(status_code=404, detail="No repository to retake the diff from")
 
-    git = GitRepository()
+    git = GitRepository(objects=objects)
+    versions = VersionService(git_repository=git)
+    # Asked before the new tree is written down, while the last mark is
+    # still the one the diff on screen was taken at
+    read_at = versions.began(state.snapshots, state.round)
+    changed = await versions.changed_since(root, read_at)
+
     files = await DiffService(git_repository=git).get_diff(root, base=base)
     http_request.app.state.diff_files = files
     # Read after the diff, not before: a file saved in between then belongs to
     # the tree the diff was taken at, and the reader is not told about a
     # change that is already on their screen.
     state.tree = await TreeWatcherService(git_repository=git).read(root)
-    state.push({"type": "diff", "round": state.round})
-    log.info("diff_retaken", file_count=len(files), round=state.round)
+    if (mark := await versions.take(root, round_number=state.round)) is not None:
+        state.snapshots.append(mark)
+    since = read_at.round if read_at is not None else None
+    state.push({"type": "diff", "round": state.round, "changed": changed, "since": since})
+    log.info("diff_retaken", file_count=len(files), round=state.round, changed=len(changed or []))
 
-    return RoundResponse(file_count=len(files), round=state.round)
+    return RoundResponse(file_count=len(files), round=state.round, changed=changed, since=since)
 
 
 @router.post("/end")

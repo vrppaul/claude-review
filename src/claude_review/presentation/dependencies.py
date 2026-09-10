@@ -28,3 +28,7 @@ def get_repo_root(request: Request) -> Path | None:
 
 def get_diff_base(request: Request) -> str | None:
     return request.app.state.diff_base
+
+
+def get_objects(request: Request) -> Path | None:
+    return request.app.state.objects

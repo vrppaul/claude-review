@@ -36,9 +36,36 @@ export interface DiffResponse {
   files: DiffFile[];
   mode: ReviewMode;
   title: string;
+  /** What is under review, and what it is compared against: two halves the
+   * header draws itself, because the second one is a control. */
+  subject: string | null;
+  phrase: string | null;
   round: number;
   answerer_attached: boolean;
   agent: AgentStatus;
+  /** How many files have moved on since this diff was taken. */
+  moved: number;
+}
+
+/** Where a base came from, so a menu can group them. */
+export type VersionKind = "review" | "round" | "ref";
+
+/**
+ * One base the working tree can be compared against.
+ *
+ * Two names for it, both written by the server: `label` is what a menu row
+ * calls it, `phrase` what the header says while it is the one in force —
+ * because "uncommitted changes" is not "changes since" anything.
+ */
+export interface ReviewVersion {
+  key: string;
+  kind: VersionKind;
+  label: string;
+  phrase: string;
+  /** When the round was read, or the ref last moved, in epoch milliseconds. */
+  at: number | null;
+  /** How many files it would show, when git was cheap enough to ask. */
+  changed: number | null;
 }
 
 /**

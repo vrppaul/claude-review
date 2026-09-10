@@ -18,6 +18,7 @@ def create_app(
     title: str = "",
     root: Path | None = None,
     base: str | None = None,
+    objects: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Claude Review")
 
@@ -33,6 +34,11 @@ def create_app(
     # What the diff was taken against, so the server can retake it — with
     # whitespace ignored, or after the files change
     app.state.diff_base = base
+    # Where this review keeps the trees it writes down. It belongs to the
+    # review and goes with it, which is what keeps them out of the
+    # repository under review. None: a review that leaves no marks, and so
+    # cannot offer its own rounds as bases.
+    app.state.objects = objects
 
     app.add_middleware(SecurityHeaders)
     # Outermost, so it runs first: this server answers its own page and nothing else

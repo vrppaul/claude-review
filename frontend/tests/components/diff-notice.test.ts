@@ -30,6 +30,28 @@ describe('when the tree moves under the review', () => {
 		expect(getByTestId('retake-diff')).toBeTruthy();
 	});
 
+	it('does not say again what the reader has already waved away', () => {
+		diffStore.noteTreeMoved(3);
+		diffStore.dismissMoved();
+
+		// The same count arriving again — a reload, or the next diff fetched
+		// for another base — is the same news, already dismissed
+		diffStore.noteTreeMoved(3);
+		const { queryByTestId } = render(DiffNotice);
+
+		expect(queryByTestId('tree-moved')).toBeNull();
+	});
+
+	it('says so again once more files move', () => {
+		diffStore.noteTreeMoved(3);
+		diffStore.dismissMoved();
+
+		diffStore.noteTreeMoved(4);
+		const { getByTestId } = render(DiffNotice);
+
+		expect(text(getByTestId('tree-moved'))).toContain('4 files have changed');
+	});
+
 	it('says nothing while nothing has moved', () => {
 		const { queryByTestId } = render(DiffNotice);
 
@@ -90,5 +112,49 @@ describe('when the tree moves under the review', () => {
 		const { getByTestId } = render(DiffNotice);
 
 		expect(getByTestId('show-outdated')).toBeTruthy();
+	});
+});
+
+describe('threads the base on screen cannot draw', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		diffStore.clear();
+		commentStore.clear();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('lists them, so a count is not the end of the road', async () => {
+		const user = userEvent.setup({ delay: null });
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						files: [],
+						mode: 'diff',
+						title: '',
+						subject: 'repo',
+						phrase: 'changes since round 1',
+						round: 1,
+						answerer_attached: false,
+						agent: { model: null, context: null, at: null },
+						moved: 0
+					})
+			})
+		);
+		await diffStore.setBase('round:1');
+		commentStore.add('elsewhere.py', 'new', 12, 12, 'this one is not on this screen');
+
+		const { getByTestId } = render(DiffNotice);
+		expect(text(getByTestId('narrowed-to'))).toContain('1 thread is not on this screen');
+
+		await user.click(getByTestId('list-off-screen'));
+
+		expect(text(getByTestId('off-screen-list'))).toContain('this one is not on this screen');
+		expect(text(getByTestId('off-screen-list'))).toContain('elsewhere.py');
 	});
 });

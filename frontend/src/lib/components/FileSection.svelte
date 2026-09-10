@@ -83,6 +83,17 @@
 		</button>
 
 		<span class="font-mono text-sm font-semibold">{file.path}</span>
+		{#if !diffStore.narrowed && diffStore.isChanged(file.path)}
+			<button
+				data-testid="file-changed-since"
+				class="cr-chip"
+				style="background: var(--cr-mark-tint); color: var(--cr-mark)"
+				title="Show only what changed since then"
+				onclick={() => void diffStore.setBase(`round:${diffStore.changedSince}`).catch(() => undefined)}
+			>
+				changed since round {diffStore.changedSince}
+			</button>
+		{/if}
 
 		{#if isDiffMode}
 			<span class="cr-muted text-xs">{file.status}</span>

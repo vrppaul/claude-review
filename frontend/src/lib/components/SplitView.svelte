@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine, LineSide } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { diffStore } from '$lib/stores/diff.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
@@ -26,7 +27,9 @@
 			applyWordMarks(shown.hunks[i].lines, hunkHtml)
 		)
 	);
-	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
+	const commentsByRow = $derived(
+		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
+	);
 	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
 	const hunkOffsets = $derived(
 		shown.hunks.reduce<number[]>((acc, hunk, i) => {
@@ -35,7 +38,7 @@
 		}, [])
 	);
 
-	const selection = createLineSelection();
+	const selection = createLineSelection(() => !diffStore.narrowed);
 
 	$effect(() => {
 		void file.path;
@@ -177,6 +180,10 @@
 										class="cr-gutter-button"
 										tabindex="-1"
 										aria-label="Comment on removed line {cell.line.old_no ?? ''}"
+										disabled={diffStore.narrowed}
+										title={diffStore.narrowed
+											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
+											: undefined}
 										onmousedown={() =>
 											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
 										onkeydown={(e) =>

@@ -262,3 +262,55 @@ class ThreadReply(BaseModel):
     thread_id: str
     text: str
     question_id: str | None = None
+
+
+class TreeSnapshot(BaseModel):
+    """The working tree as one taking of the diff saw it.
+
+    The work under review is uncommitted, so between two rounds there may be
+    no commit at all — nothing to go back to unless a mark is left. Every
+    time the diff is taken, the tree it showed is written as a git object
+    and remembered here, which is what lets a later round be asked what has
+    changed since.
+    """
+
+    round: int
+    tree: str
+    at: int
+
+
+class GitRef(BaseModel):
+    """A branch or a tag, and when whatever it points at was committed."""
+
+    name: str
+    at: int
+
+
+class VersionKind(StrEnum):
+    """Where a base came from, so a menu can group them.
+
+    Three answers to one question — what is the working tree being compared
+    against: what the review opened with, a tree one of its rounds was read
+    at, or a ref that was there all along.
+    """
+
+    REVIEW = auto()
+    ROUND = auto()
+    REF = auto()
+
+
+class ReviewVersion(BaseModel):
+    """One base the working tree can be compared against.
+
+    Two names for it: `label` is what a menu row calls it, `phrase` what the
+    header says while it is the one in force. Both are written here rather
+    than assembled in the browser, because "uncommitted changes" is not
+    "changes since" anything.
+    """
+
+    key: str
+    kind: VersionKind
+    label: str
+    phrase: str
+    at: int | None = None
+    changed: int | None = None

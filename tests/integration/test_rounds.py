@@ -15,6 +15,8 @@ from httpx import ASGITransport, AsyncClient
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.version_service import VersionService
 from tests.helpers import git
 
 LOCAL_ORIGIN = "http://127.0.0.1:8000"
@@ -155,3 +157,64 @@ async def test_the_review_learns_that_someone_is_there_to_answer(client: AsyncCl
     await client.get("/api/events?wait_seconds=0.1", headers=LOCAL_HEADERS)
 
     assert state.answerer_attached
+
+
+async def test_a_retake_names_the_files_that_changed_since_the_last_one(
+    tmp_git_repo: Path, state: ServerState, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """A file the agent rewrote must not keep the tick that says it was read."""
+    store = tmp_path_factory.mktemp("review-objects")
+    (tmp_git_repo / "answered.py").write_text("as it was\n")
+    (tmp_git_repo / "untouched.py").write_text("as it was\n")
+    versions = VersionService(git_repository=GitRepository(objects=store))
+    state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
+
+    app = create_app(diff_files=[], state=state, mode=ReviewMode.DIFF, root=tmp_git_repo, base=None, objects=store)
+    listener = state.listen()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
+        (tmp_git_repo / "answered.py").write_text("as the round asked\n")
+        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+
+    assert listener.get_nowait() == {"type": "diff", "round": 1, "changed": ["answered.py"], "since": 1}
+
+
+async def test_a_retake_is_measured_from_where_the_round_began(
+    tmp_git_repo: Path, state: ServerState, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Twice through the loop in one round, and the count still means what it says.
+
+    The agent may take the diff again several times while one round is being
+    written. Measuring each from the take before it would leave "3 files have
+    changed since round 1" opening a screen of five: the base the reader is
+    offered for round 1 is where round 1 began, so the count is taken from
+    there too.
+    """
+    store = tmp_path_factory.mktemp("review-objects")
+    (tmp_git_repo / "first.py").write_text("one\n")
+    versions = VersionService(git_repository=GitRepository(objects=store))
+    state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
+
+    app = create_app(diff_files=[], state=state, mode=ReviewMode.DIFF, root=tmp_git_repo, base=None, objects=store)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
+        (tmp_git_repo / "first.py").write_text("two\n")
+        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+
+        listener = state.listen()
+        (tmp_git_repo / "second.py").write_text("only this one now\n")
+        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+
+    told = listener.get_nowait()
+    assert told["since"] == 1
+    assert sorted(told["changed"]) == ["first.py", "second.py"]
+
+
+async def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
+    tmp_git_repo: Path, state: ServerState
+) -> None:
+    """Without a mark to compare against, the review must not claim nothing moved."""
+    app = create_app(diff_files=[], state=state, mode=ReviewMode.DIFF, root=tmp_git_repo, base=None)
+    listener = state.listen()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
+        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+
+    assert listener.get_nowait() == {"type": "diff", "round": 1, "changed": None, "since": None}

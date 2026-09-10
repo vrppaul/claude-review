@@ -121,6 +121,16 @@
 				>
 			{/if}
 			<span class="flex-1 truncate">{name}</span>
+			{#if !diffStore.narrowed && diffStore.isChanged(file.path)}
+				<!-- The same fact the file header spells out, where there is no
+					room to spell it -->
+				<span
+					data-testid="file-changed-mark"
+					class="h-1.5 w-1.5 shrink-0 rounded-full"
+					style="background: var(--cr-mark)"
+					title="Changed since round {diffStore.changedSince}"
+				></span>
+			{/if}
 			{#if viewed}
 				<svg
 					data-testid="file-viewed-mark"

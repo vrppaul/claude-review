@@ -1,16 +1,19 @@
 """CLI entry point for claude-review."""
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
+import shutil
 import socket
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +30,7 @@ from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
 from claude_review.services.tree_watcher_service import TreeWatcherService
+from claude_review.services.version_service import VersionService
 
 log = structlog.get_logger()
 
@@ -69,6 +73,28 @@ async def _load_diff(repo_path: Path, base: str | None = None) -> tuple[list[Dif
     return files, await git_repo.top_level(repo_path) or repo_path
 
 
+@contextlib.contextmanager
+def _object_store(root: Path | None) -> Iterator[Path | None]:
+    """Lend the review a store of its own for the trees it writes down.
+
+    Its own, so the blob staging writes for every untracked file never
+    reaches the repository under review. Removed here rather than where the
+    serving ends, because a review can fail to start after the first tree is
+    already written — a port already taken is the ordinary way — and a
+    directory holding a copy of every untracked file would be left behind
+    each time it happened.
+    """
+    if root is None:
+        yield None
+        return
+
+    store = Path(tempfile.mkdtemp(suffix=".claude-review-objects"))
+    try:
+        yield store
+    finally:
+        shutil.rmtree(store, ignore_errors=True)
+
+
 async def _serve(
     diff_files: list[DiffFile],
     mode: ReviewMode,
@@ -81,12 +107,45 @@ async def _serve(
     may_fall_back: bool = False,
 ) -> str:
     """Start the review server and return formatted review markdown."""
-    state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root, base=base)
+    with _object_store(root) as objects:
+        return await _serve_review(
+            diff_files,
+            mode,
+            port,
+            title,
+            root=root,
+            base=base,
+            objects=objects,
+            open_browser=open_browser,
+            may_fall_back=may_fall_back,
+        )
 
-    watcher = TreeWatcherService(git_repository=GitRepository())
+
+async def _serve_review(
+    diff_files: list[DiffFile],
+    mode: ReviewMode,
+    port: int,
+    title: str,
+    *,
+    root: Path | None,
+    base: str | None,
+    objects: Path | None,
+    open_browser: bool,
+    may_fall_back: bool,
+) -> str:
+    """Hold the review open until it ends, and return what it produced."""
+    state = ServerState(shutdown_event=asyncio.Event())
+    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root, base=base, objects=objects)
+
+    git_repo = GitRepository(objects=objects)
+    watcher = TreeWatcherService(git_repository=git_repo)
     if root is not None:
         state.tree = await watcher.read(root)
+        # The tree this review opened on: the first base a later round can
+        # ask to be compared against
+        opened_at = await VersionService(git_repository=git_repo).take(root, round_number=state.round)
+        if opened_at is not None:
+            state.snapshots.append(opened_at)
 
     # Bind before handing the socket to uvicorn: a port clash then surfaces here
     # as an OSError we can explain, instead of uvicorn calling sys.exit() from

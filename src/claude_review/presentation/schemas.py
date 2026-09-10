@@ -11,6 +11,7 @@ from claude_review.domain.models import (
     PanelEntry,
     PanelMessage,
     ReviewMode,
+    ReviewVersion,
     RoundSubmission,
     ThreadContext,
     ThreadQuestion,
@@ -24,10 +25,18 @@ class DiffResponse(BaseModel):
     files: list[DiffFile]
     mode: ReviewMode
     title: str
+    # What is under review, and what it is being compared against, as two
+    # halves the header draws itself: the second one is a control now. The
+    # title keeps both together — an unsent draft is stored under it.
+    subject: str | None = None
+    phrase: str | None = None
     # Which round is being written, and whether anything is there to answer
     # it. A review reloaded mid-round has to learn both from somewhere.
     round: int = 1
     answerer_attached: bool = False
+    # How many files have moved on since this diff was taken. A push says it
+    # once; this is how a review that was reloaded, or opened late, finds out.
+    moved: int = 0
     # What the agent last said about itself, so a reloaded review does not
     # lose the model and the context along with the pushes it missed
     agent: AgentStatus = AgentStatus()
@@ -90,11 +99,25 @@ class SubmitResponse(BaseModel):
     ended: bool
 
 
+class VersionsResponse(BaseModel):
+    """Response for GET /api/versions — what the working tree can be read against."""
+
+    versions: list[ReviewVersion]
+
+
 class RoundResponse(BaseModel):
-    """Response for POST /api/round — the diff taken again."""
+    """Response for POST /api/round — the diff taken again.
+
+    The files that changed are named, so an agent that has come back to a
+    review it left knows which ones to read again rather than all of them,
+    and `since` says which round they are counted from. Both are None when
+    this review kept no tree to compare against.
+    """
 
     file_count: int
     round: int
+    changed: list[str] | None = None
+    since: int | None = None
 
 
 class FileWindowResponse(BaseModel):

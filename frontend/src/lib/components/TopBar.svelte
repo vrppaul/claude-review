@@ -4,6 +4,7 @@
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { scrollToComment } from '$lib/utils/scroll';
+	import BasePicker from './BasePicker.svelte';
 	import DiffLayoutToggle from './DiffLayoutToggle.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
@@ -38,7 +39,16 @@
 >
 	<span class="font-semibold">Review</span>
 	<span class="cr-muted hidden text-xs lg:inline">? for keys</span>
-	{#if diffStore.title}
+	<!-- What is under review, and what it is compared against: one sentence,
+		whose second half is the control that changes it -->
+	{#if diffStore.subject}
+		<div class="flex min-w-0 items-center gap-1">
+			<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
+				{diffStore.subject}:
+			</span>
+			<BasePicker />
+		</div>
+	{:else if diffStore.title}
 		<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
 			{diffStore.title}
 		</span>

@@ -97,17 +97,35 @@
 		} else if (message.type === 'round' && typeof message.number === 'number') {
 			reviewStore.setRound(message.number);
 		} else if (message.type === 'diff') {
-			// The work a round asked for has landed. Take the diff again and
-			// move the threads onto it: one whose lines survived follows them,
-			// one whose lines are gone says so.
-			void diffStore.fetchDiff().then(() => {
-				const moved = commentStore.reanchorAll(diffStore.files);
-				diffStore.noteRetaken(moved);
-				// The conversation is about code that has just changed under it,
-				// so the panel says where one lot of answers stops applying
-				panelStore.note(retaken(moved));
+			landed(
+				Array.isArray(message.changed) ? message.changed.map(String) : null,
+				typeof message.since === 'number' ? message.since : null
+			).catch((e) => {
+				// A round landing half-applied is worse than not at all: the code
+				// under the reader has moved and their threads have not
+				panelStore.note(
+					`the diff could not be taken again — ${e instanceof Error ? e.message : 'reload the review'}`
+				);
 			});
 		}
+	}
+
+	/**
+	 * Take in the work a round asked for, now it has landed.
+	 *
+	 * The threads move onto the review's own diff — one whose lines survived
+	 * follows them, one whose lines are gone says so — and that diff is the
+	 * one they are anchored in, whatever narrower base is being read on
+	 * screen. Which files changed is what takes the tick off the ones the
+	 * agent rewrote.
+	 */
+	async function landed(changed: string[] | null, since: number | null) {
+		const anchors = await diffStore.takeAgain();
+		const moved = commentStore.reanchorAll(anchors);
+		diffStore.noteRetaken(moved, changed, since);
+		// The conversation is about code that has just changed under it, so
+		// the panel says where one lot of answers stops applying
+		panelStore.note(retaken(moved));
 	}
 
 	/**
@@ -167,7 +185,7 @@
 			<span>{error}</span>
 		</div>
 	</div>
-{:else if diffStore.files.length === 0}
+{:else if diffStore.files.length === 0 && !diffStore.narrowed}
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="alert alert-info max-w-md">
 			<span>No changes found.</span>

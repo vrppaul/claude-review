@@ -11,3 +11,7 @@ class PortUnavailableError(Exception):
 
 class FileWindowError(Exception):
     """Raised when a requested window of file content cannot be served."""
+
+
+class UnknownVersionError(Exception):
+    """Raised when a base is asked for that this review never offered."""

@@ -40,6 +40,16 @@ class TreeWatcherService:
             log.warning("tree_status_failed", path=str(root))
             return frozenset()
 
+    async def drift(self, root: Path, taken_at: frozenset[str]) -> int:
+        """How many files have moved since the diff on screen was taken.
+
+        The watcher says this once, to whoever is listening at the time. A
+        review reloaded at that moment hears nothing, and one opened later
+        never learns the tree moved before it arrived — so it has to be
+        answerable on demand as well as pushable.
+        """
+        return len(_paths(await self.read(root) ^ taken_at))
+
     async def changes(
         self,
         root: Path,

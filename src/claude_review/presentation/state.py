@@ -10,6 +10,7 @@ from claude_review.domain.models import (
     RoundSubmission,
     ThreadContext,
     ThreadQuestion,
+    TreeSnapshot,
 )
 
 
@@ -59,6 +60,10 @@ class ServerState:
         self.threads: list[ThreadContext] = []
         # What has been said in the panel, both halves, in order
         self.panel: list[PanelEntry] = []
+        # The tree behind every diff this review has taken, oldest first. The
+        # last one is what is on screen; the first of each round is a base
+        # the reader can go back to.
+        self.snapshots: list[TreeSnapshot] = []
 
     def raise_id(self) -> str:
         """The id of the next thread the author raises."""

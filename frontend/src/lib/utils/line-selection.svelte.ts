@@ -18,7 +18,18 @@ export function getLineNumber(line: DiffLine): number {
   return line.new_no ?? line.old_no ?? 0;
 }
 
-export function createLineSelection() {
+/**
+ * Track what the reader is selecting, and what they may select.
+ *
+ * `mayCommentOnRemoved` is the one thing that varies: under a narrower base
+ * the left-hand side of the diff belongs to that base, not to the review, so
+ * a thread written on a removed line there would be anchored in somebody
+ * else's numbering — and hidden the moment it was saved, because that is
+ * what the drawing rule does with it.
+ */
+export function createLineSelection(
+  mayCommentOnRemoved: () => boolean = () => true,
+) {
   let commentingAt = $state<LineRange | null>(null);
   let dragSide = $state<LineSide | null>(null);
   let dragStart = $state<number | null>(null);
@@ -46,6 +57,7 @@ export function createLineSelection() {
     handleMouseDown(line: DiffLine, index: number) {
       const lineNo = getLineNumber(line);
       if (lineNo === 0) return;
+      if (lineSide(line) === "old" && !mayCommentOnRemoved()) return;
       dragSide = lineSide(line);
       dragStart = lineNo;
       dragEnd = lineNo;
@@ -91,6 +103,7 @@ export function createLineSelection() {
     commentOnLine(line: DiffLine, index: number) {
       const lineNo = getLineNumber(line);
       if (lineNo === 0) return;
+      if (lineSide(line) === "old" && !mayCommentOnRemoved()) return;
       dragging = false;
       commentingAt = {
         side: lineSide(line),

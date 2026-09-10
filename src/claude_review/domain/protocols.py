@@ -3,6 +3,8 @@
 from pathlib import Path
 from typing import Protocol
 
+from claude_review.domain.models import GitRef
+
 
 class GitRepositoryProtocol(Protocol):
     """Protocol for git operations."""
@@ -24,4 +26,16 @@ class GitRepositoryProtocol(Protocol):
 
     async def status(self, path: Path) -> str:
         """Return what has changed in the working tree, one line per path."""
+        ...
+
+    async def snapshot(self, path: Path) -> str:
+        """Write the working tree as it stands and return the tree's id."""
+        ...
+
+    async def changed_since(self, path: Path, bases: list[str]) -> dict[str, list[str]]:
+        """Return, for each base, the paths that differ from the working tree."""
+        ...
+
+    async def list_refs(self, path: Path) -> list[GitRef]:
+        """Return the branches and tags that can be used as a base."""
         ...

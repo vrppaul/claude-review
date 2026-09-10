@@ -34,7 +34,9 @@
 		)
 	);
 	// Comments indexed by the row they belong to, rather than scanned per line
-	const commentsByRow = $derived(indexByRow(commentStore.comments, file.path));
+	const commentsByRow = $derived(
+		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
+	);
 	const modeChange = $derived(
 		file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null
 	);
@@ -49,7 +51,7 @@
 					? 'Permission change only'
 					: 'No content changes'
 	);
-	const selection = createLineSelection();
+	const selection = createLineSelection(() => !diffStore.narrowed);
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks
 	const hunkOffsets = $derived(
@@ -203,6 +205,10 @@
 									data-testid="line-gutter"
 									class="cr-gutter-button"
 									aria-label="Comment on line {line.new_no ?? line.old_no ?? ''}"
+									disabled={line.type === 'delete' && diffStore.narrowed}
+									title={line.type === 'delete' && diffStore.narrowed
+										? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
+										: undefined}
 									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
 									onkeydown={(e) => commentOnKey(e, line, flatIdx)}
 								>
