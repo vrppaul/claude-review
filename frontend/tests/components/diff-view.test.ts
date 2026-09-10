@@ -26,6 +26,26 @@ const diffFile: DiffFile = {
 	]
 };
 
+/** The same change, further down a file, with lines hidden above it. */
+const jumpingFile: DiffFile = {
+	path: 'src/later.ts',
+	status: 'modified',
+	is_binary: false,
+	old_mode: null,
+	new_mode: null,
+	hunks: [
+		{
+			header: '@@ -30,3 +30,4 @@',
+			old_start: 30,
+			new_start: 30,
+			lines: [
+				{ type: 'context', old_no: 30, new_no: 30, content: 'const x = 1;' },
+				{ type: 'add', old_no: null, new_no: 31, content: 'const y = 3;' }
+			]
+		}
+	]
+};
+
 const textFile: DiffFile = {
 	path: '/tmp/plan.md',
 	status: 'added',
@@ -98,12 +118,23 @@ describe('DiffView', () => {
 		expect(gutters[1].textContent?.trim()).toBe('2');
 	});
 
-	it('shows hunk header in diff mode', () => {
+	it('marks where the diff jumps, and says how far', () => {
+		diffStore.setFiles([jumpingFile], 'diff');
+
+		const { getByText, getByTestId } = render(DiffView);
+
+		expect(getByText('@@ -30,3 +30,4 @@')).toBeTruthy();
+		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
+	});
+
+	it('leaves the marker out where the code runs on unbroken', () => {
 		diffStore.setFiles([diffFile], 'diff');
 
-		const { getByText } = render(DiffView);
+		const { queryByTestId } = render(DiffView);
 
-		expect(getByText('@@ -1,3 +1,4 @@')).toBeTruthy();
+		// The hunk starts at line 1: nothing is hidden above it, so there is
+		// no jump for a marker to announce
+		expect(queryByTestId('hunk-header')).toBeNull();
 	});
 
 	it('hides hunk header in files mode', () => {

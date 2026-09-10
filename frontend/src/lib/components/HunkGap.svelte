@@ -7,9 +7,10 @@
 		path: string;
 		hunks: DiffHunk[];
 		index: number;
+		header: string;
 	}
 
-	let { path, hunks, index }: Props = $props();
+	let { path, hunks, index, header }: Props = $props();
 
 	let failed = $state<string | null>(null);
 	let loading = $state(false);
@@ -41,7 +42,18 @@
 	}
 </script>
 
+<!-- The jump and what it says are one thing: with nothing hidden above this
+	hunk the code runs on unbroken, and a marker saying otherwise is a line of
+	punctuation in the middle of a sentence. -->
 {#if hidden > 0}
+	{#if header}
+		<div
+			data-testid="hunk-header"
+			class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs"
+		>
+			{header}
+		</div>
+	{/if}
 	<div data-testid="hunk-gap" class="flex items-center border-y border-base-300 bg-base-200">
 		<button
 			data-testid="expand-context"

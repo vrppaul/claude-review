@@ -134,4 +134,29 @@ describe('widening the context around a hunk', () => {
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
+
+	it('takes the jump marker away once nothing is hidden any more', async () => {
+		const user = userEvent.setup();
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						start: 1,
+						lines: Array.from({ length: 29 }, (_, i) => `line ${i + 1}`),
+						total: 40
+					})
+			})
+		);
+		const { getByTestId, queryByTestId } = render(FileSection, { props: { file } });
+		expect(getByTestId('hunk-header')).toBeTruthy();
+
+		await user.click(getByTestId('expand-context'));
+
+		// The code now runs from the top of the file into the hunk without a
+		// break, and a marker saying otherwise is punctuation mid-sentence
+		expect(queryByTestId('hunk-header')).toBeNull();
+		expect(queryByTestId('hunk-gap')).toBeNull();
+	});
 });

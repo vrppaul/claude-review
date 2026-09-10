@@ -139,14 +139,7 @@
 <div data-testid="split-view">
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
-			<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
-			{#if hunk.header}
-				<div
-					class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs"
-				>
-					{hunk.header}
-				</div>
-			{/if}
+			<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} header={hunk.header} />
 
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<!-- Fixed layout with both content columns unsized: the two halves

@@ -153,12 +153,7 @@
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode}
-				<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} />
-			{/if}
-			{#if isDiffMode && hunk.header}
-				<div class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
-					{hunk.header}
-				</div>
+				<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} header={hunk.header} />
 			{/if}
 
 			<!-- Fixed layout so every hunk's gutters line up: the automatic
