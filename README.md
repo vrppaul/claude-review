@@ -114,6 +114,11 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - The agent can point at a line itself: a thread in its own colour, on the
   code rather than in a paragraph elsewhere, which you answer or settle like
   any other
+- Watch what the agent is doing while it does it: a live line saying which
+  files are in hand, replaced as it changes and gone when the work is
+- The agent can speak first — work finished while you were reading arrives
+  with a dot on the header chip, a count in the tab title and an optional tick
+- Jump to a file the agent names, or be taken there and shown it
 - Stop a message the agent is still working on — a request, not a kill
 - When the working tree moves on, the review says so and offers to take the
   diff again. It never swaps it under a half-written comment
@@ -139,6 +144,8 @@ claude-review reply --port 8765 --thread <id> --question <id> "..."   # answer i
 claude-review say --port 8765 --message <id> "..."                    # answer in the panel
 claude-review status --port 8765 --model opus-5 --context "53% of 1M" # what only the agent knows
 claude-review point --port 8765 --file a.py --lines 42-47 "..."       # raise a thread on a line
+claude-review progress --port 8765 --message <id> --file a.py "..."   # what you are doing now
+claude-review show --port 8765 --file a.py                            # take the reader to a file
 claude-review round --port 8765            # retake the diff after a round
 claude-review --port 8080 diff             # shared options before subcommand
 claude-review --no-open diff               # don't open browser automatically

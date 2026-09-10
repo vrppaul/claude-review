@@ -35,9 +35,11 @@ from claude_review.presentation.schemas import (
     MessageRequest,
     PointRequest,
     PointResponse,
+    ProgressRequest,
     ReplyRequest,
     RoundResponse,
     SayRequest,
+    ShowRequest,
     StatusRequest,
     SubmitRequest,
     SubmitResponse,
@@ -241,10 +243,60 @@ async def say_in_panel(
     request: SayRequest,
     state: ServerState = Depends(get_state),
 ) -> dict[str, str]:
-    """Push the agent's answer into the panel of a review still open."""
-    state.push({"type": "chat", "message_id": request.message_id, "text": request.text})
-    log.info("panel_answer", message_id=request.message_id)
+    """Push what the agent has to say into a review still open.
+
+    An answer names the message it answers. A message that names nothing is
+    the agent speaking first, which is worth as much: work finished while
+    the reader was reading is news they would otherwise have to ask for.
+    """
+    state.push(
+        {
+            "type": "chat",
+            "message_id": request.message_id,
+            "text": request.text,
+            "files": request.files,
+        }
+    )
+    log.info("panel_answer", message_id=request.message_id, unprompted=request.message_id is None)
     return {"status": "sent"}
+
+
+@router.post("/progress")
+async def report_progress(
+    request: ProgressRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Say what is being done, while it is being done.
+
+    Waiting says only that something is happening. This says what: which
+    files are being touched and what is being made of them. It replaces
+    whatever was showing — the state of the work, not a log of it — and an
+    empty one takes the line away.
+    """
+    state.push(
+        {
+            "type": "progress",
+            "message_id": request.message_id,
+            "text": request.text,
+            "files": request.files,
+        }
+    )
+    return {"status": "noted"}
+
+
+@router.post("/show")
+async def show_a_file(
+    request: ShowRequest,
+    state: ServerState = Depends(get_state),
+) -> dict[str, str]:
+    """Take the reader to a file, and mark it for a moment when they arrive.
+
+    The only thing here that moves somebody else's screen, so it is only
+    ever sent when they asked to be taken somewhere.
+    """
+    state.push({"type": "show", "file": request.file})
+    log.info("file_shown", file=request.file)
+    return {"status": "shown"}
 
 
 @router.post("/point")

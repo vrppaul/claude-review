@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
@@ -162,6 +163,43 @@ describe('the agent panel', () => {
 		await painted();
 
 		expect(stream.scrollTop).toBe(0);
+	});
+
+	it('says what is being done, not only that something is', async () => {
+		const user = userEvent.setup({ delay: null });
+		okFetch();
+
+		const { getByTestId, getAllByTestId } = render(AgentPanel);
+		await user.type(getByTestId('panel-input'), 'Fix the scroll');
+		await user.click(getByTestId('send-message'));
+
+		panelStore.reportProgress('rewriting the answer handler', [
+			'src/lib/components/AgentPanel.svelte'
+		]);
+		await tick();
+
+		expect(getByTestId('panel-progress').textContent).toContain('rewriting the answer handler');
+		expect(getAllByTestId('progress-file')[0].textContent).toContain('AgentPanel.svelte');
+	});
+
+	it('takes the line away once something is said', async () => {
+		okFetch();
+		await panelStore.send('Fix the scroll', []);
+		panelStore.reportProgress('rewriting it', []);
+
+		panelStore.receive(panelStore.turns[0].id, 'Done, and green.');
+
+		expect(panelStore.progress).toBeNull();
+	});
+
+	it('lets the agent speak first, with a file worth opening at it', async () => {
+		const { getByTestId } = render(AgentPanel);
+
+		panelStore.receive(undefined, 'Tests are green again.', ['src/claude_review/cli.py']);
+		await tick();
+
+		expect(getByTestId('panel-answer').textContent).toContain('Tests are green again.');
+		expect(getByTestId('answer-file').textContent).toContain('cli.py');
 	});
 
 	it('tells the review it can weigh apart from the context only the agent knows', () => {

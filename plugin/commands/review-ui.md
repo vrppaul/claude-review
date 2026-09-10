@@ -81,7 +81,7 @@ waiting on it:
      threads it points at come with it, in the same shape as a question.
    - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
      user has sent a round. Address it as you would a finished review, then
-     retake the diff (step 6) and keep waiting.
+     retake the diff (step 7) and keep waiting.
    - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.
@@ -121,7 +121,26 @@ waiting on it:
    thread the reader answers, settles or removes, drawn as yours rather than
    as one of their marks, and it does not count as their unsent work.
 
-6. After making the changes a round asked for, show them:
+6. Say what you are doing, while you are doing it:
+   ```bash
+   claude-review progress --port 8765 --message <message_id> \
+     --file src/a.py --file src/b.py "rewriting the answer handler"
+   ```
+   Waiting says only that something is happening; this says what. Send it
+   again to change it — it replaces what was showing rather than adding to
+   it — and it goes away on its own when you answer. The files become chips
+   the reader can jump by.
+
+   Two more, for what a paragraph cannot do:
+   ```bash
+   claude-review say --port 8765 --file src/a.py "Renamed it here."
+   claude-review show --port 8765 --file src/a.py
+   ```
+   `say --file` offers a jump the reader takes when they want it. `show`
+   takes them there and marks the file for a moment — it moves somebody
+   else's screen, so send it only when they asked to be shown something.
+
+7. After making the changes a round asked for, show them:
    ```bash
    claude-review round --port 8765
    ```
@@ -129,7 +148,7 @@ waiting on it:
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against.
 
-7. A review the user ends prints its last round on the background command's
+8. A review the user ends prints its last round on the background command's
    output, as it normally would. That ends the loop.
 
 While you work, the review says when the working tree has moved on and

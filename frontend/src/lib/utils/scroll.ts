@@ -23,6 +23,26 @@ export function scrollToFile(path: string): void {
   sections.get(path)?.scrollIntoView({ block: "start" });
 }
 
+// Long enough to find what was pointed at, short enough not to become part
+// of how the file looks
+const MARKED_FOR = 2000;
+
+/**
+ * Bring a file into view and mark it for a moment.
+ *
+ * Somebody else moved this screen, so the file has to say "here" when it
+ * arrives: a page that has jumped somewhere without a word leaves the
+ * reader working out what they are looking at.
+ */
+export function showFile(path: string): void {
+  const section = sections.get(path);
+  if (!section) return;
+
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  section.classList.add("cr-marked");
+  setTimeout(() => section.classList.remove("cr-marked"), MARKED_FOR);
+}
+
 /**
  * Bring a comment into view, building its file first if need be.
  *

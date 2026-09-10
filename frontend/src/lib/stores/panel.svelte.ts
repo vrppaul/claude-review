@@ -10,7 +10,7 @@
  * to review" has no meaning outside a thread.
  */
 
-import type { AgentStatus, Comment, PanelTurn } from "$lib/types";
+import type { AgentStatus, Comment, PanelTurn, Progress } from "$lib/types";
 
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
@@ -41,6 +41,9 @@ let width = $state(
   }),
 );
 let agent = $state<AgentStatus>({ model: null, context: null, at: null });
+// What the agent says it is doing. Ephemeral by nature: it is the state of
+// the work, so it is never stored and never outlives the work itself.
+let progress = $state<Progress | null>(null);
 // Answers that landed while the panel was shut, so the header can say so
 let unread = $state(0);
 // Whether the reader has ever said whether they want the panel. Until they
@@ -119,6 +122,9 @@ export const panelStore = {
   get working(): PanelTurn | undefined {
     return working;
   },
+  get progress(): Progress | null {
+    return progress;
+  },
   /** What handing this review over costs, as far as this side can tell. */
   get weight(): number {
     return reviewWeight(diffStore.files, commentStore.comments);
@@ -174,6 +180,8 @@ export const panelStore = {
         threads: threads.map((thread) => thread.id),
       },
     ];
+    // A new question, so whatever was being done for the last one is history
+    progress = null;
     remember();
 
     const response = await fetch("/api/message", {
@@ -193,8 +201,15 @@ export const panelStore = {
     }
   },
 
-  /** Take the answer that came back and put it under what it answers. */
-  receive(messageId: string, text: string) {
+  /** Say what is being done, replacing whatever was being said before. */
+  reportProgress(text: string, files: string[]) {
+    progress = text.trim() === "" ? null : { text, files, at: Date.now() };
+  },
+
+  /** Take what was said and put it under what it answers, if anything. */
+  receive(messageId: string | undefined, text: string, files: string[] = []) {
+    // Something was said, so whatever was being done is done
+    progress = null;
     turns = [
       ...turns,
       {
@@ -203,6 +218,7 @@ export const panelStore = {
         body: text,
         at: Date.now(),
         answers: messageId,
+        files,
       },
     ];
     if (!open) unread += 1;
@@ -261,6 +277,7 @@ export const panelStore = {
 
   clear() {
     turns = [];
+    progress = null;
     agent = { model: null, context: null, at: null };
     unread = 0;
     nextMessage = 0;

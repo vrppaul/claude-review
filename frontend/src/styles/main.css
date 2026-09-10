@@ -880,3 +880,35 @@
   background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
   outline: none;
 }
+
+/*
+ * What the agent is doing, while it does it.
+ *
+ * Quieter than what it says, because it is not something said: it is the
+ * state of the work, and it will be gone by the time the answer arrives.
+ */
+.cr-progress {
+  color: var(--cr-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/*
+ * A file somebody else brought into view.
+ *
+ * The page has jumped without the reader doing anything, so the file says
+ * "here" for a moment; without it they are left working out what they are
+ * looking at.
+ */
+.cr-marked {
+  animation: cr-mark-file 2s ease-out 1;
+}
+@keyframes cr-mark-file {
+  0%,
+  35% {
+    background: var(--cr-mark-tint);
+  }
+  100% {
+    background: transparent;
+  }
+}

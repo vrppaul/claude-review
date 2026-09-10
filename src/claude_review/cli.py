@@ -314,19 +314,69 @@ def reply_cmd(port: int, thread: str, question: str | None, text: str) -> None:
 
 @main.command("say")
 @click.option("--port", required=True, type=int, help="Port the review is served on.")
-@click.option("--message", required=True, type=str, help="Message being answered, from the event.")
+@click.option(
+    "--message",
+    type=str,
+    default=None,
+    help="Message being answered, from the event. Omitted, this is you speaking first.",
+)
+@click.option(
+    "--file",
+    "files",
+    multiple=True,
+    help="A file worth opening at what you said. Repeatable; each becomes a chip the reader can jump by.",
+)
 @click.argument("text", required=True, type=str)
-def say_cmd(port: int, message: str, text: str) -> None:
-    """Answer something the reader typed in the agent panel.
+def say_cmd(port: int, message: str | None, files: tuple[str, ...], text: str) -> None:
+    """Say something in the agent panel.
 
     The panel is where the review is discussed rather than any one line of
-    it. Naming the message is what puts the answer under it: several can be
-    waiting, and the reader is still reading while you write.
+    it. Naming the message is what puts an answer under it: several can be
+    waiting, and the reader is still reading while you write. Name nothing
+    and you are speaking first — worth doing when you have finished
+    something they are waiting on.
     """
     _call(
         f"http://127.0.0.1:{port}/api/say",
-        payload={"message_id": message, "text": text},
+        payload={"message_id": message, "text": text, "files": list(files)},
     )
+
+
+@main.command("progress")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--message", type=str, default=None, help="Message being worked on, from the event.")
+@click.option("--file", "files", multiple=True, help="A file being worked on. Repeatable.")
+@click.option("--done", is_flag=True, help="Take the line away: the work is finished.")
+@click.argument("text", required=False, type=str, default="")
+def progress_cmd(port: int, message: str | None, files: tuple[str, ...], done: bool, text: str) -> None:
+    """Say what you are doing, while you are doing it.
+
+    Waiting says only that something is happening; this says what. Send it
+    again to change it — it replaces what was showing rather than adding to
+    it, because it is the state of the work and not a log of it. Send it
+    with --done, or answer, and the line goes away.
+    """
+    _call(
+        f"http://127.0.0.1:{port}/api/progress",
+        payload={
+            "message_id": message,
+            "text": "" if done else text,
+            "files": [] if done else list(files),
+        },
+    )
+
+
+@main.command("show")
+@click.option("--port", required=True, type=int, help="Port the review is served on.")
+@click.option("--file", "path", required=True, type=str, help="File to bring into view, as the diff names it.")
+def show_cmd(port: int, path: str) -> None:
+    """Take the reader to a file, and mark it for a moment when they arrive.
+
+    This moves somebody else's screen, so send it only when they asked to be
+    taken somewhere. To offer a jump rather than make one, hang the file off
+    what you say instead: `say --file <path>`.
+    """
+    _call(f"http://127.0.0.1:{port}/api/show", payload={"file": path})
 
 
 @main.command("point")

@@ -32,6 +32,18 @@ with the agent that wrote it.
   where the agent did something other than what was asked, and why. It is an
   ordinary thread from there on, drawn in its own colour because the marks in
   a review are the reader's, and it never counts as their unsent work
+- **Progress, while the work is happening** — `claude-review progress` puts a
+  live line under the waiting turn: what is being done and which files are in
+  hand, replaced as it changes and gone when the answer lands. The files are
+  chips the reader can jump by
+- **The agent can speak first** — `claude-review say` without `--message` is
+  an unprompted message, so work finished while the reader was reading
+  arrives on its own, with the dot, the tab count and the optional tick that
+  answers already have
+- **Jump to a file, or be taken to one** — `say --file` offers the jump;
+  `claude-review show --file` takes the reader there and marks the file for a
+  moment. The only thing here that moves somebody else's screen, and only
+  when they asked
 - **The file tree can be dragged narrower or put away**, and the panel's
   width is the reader's in the same way
 - **`claude-review say`** answers a panel message by name, and

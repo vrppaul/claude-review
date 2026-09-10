@@ -119,7 +119,7 @@ async def test_an_answer_lands_in_the_panel_of_a_review_still_open(client: Async
     while not listener.empty():
         heard.append(listener.get_nowait())
 
-    assert heard == [{"type": "chat", "message_id": "panel-1", "text": "One failed; fixed and green."}]
+    assert heard == [{"type": "chat", "message_id": "panel-1", "text": "One failed; fixed and green.", "files": []}]
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:
@@ -173,6 +173,41 @@ async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     response = await client.post("/api/point", json={"file": "a.py", "start_line": 9, "end_line": 2, "body": "nowhere"})
 
     assert response.status_code == 422
+
+
+async def test_the_agent_may_speak_first(client: AsyncClient, state: ServerState) -> None:
+    """Work finished while the reader reads is news they should not have to ask for."""
+    listener = state.listen()
+
+    await client.post("/api/say", json={"text": "Tests are green again.", "files": ["src/cli.py"]})
+
+    pushed = listener.get_nowait()
+    assert pushed["message_id"] is None
+    assert pushed["files"] == ["src/cli.py"]
+
+
+async def test_what_is_being_done_is_said_while_it_is_done(client: AsyncClient, state: ServerState) -> None:
+    """Waiting says only that something is happening; this says what."""
+    listener = state.listen()
+
+    await client.post(
+        "/api/progress",
+        json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
+    )
+
+    pushed = listener.get_nowait()
+    assert pushed["type"] == "progress"
+    assert pushed["text"] == "rewriting the answer handler"
+    assert pushed["files"] == ["a.ts", "b.ts"]
+
+
+async def test_a_file_can_be_brought_into_view_when_asked(client: AsyncClient, state: ServerState) -> None:
+    """The one thing here that moves the reader's own screen."""
+    listener = state.listen()
+
+    await client.post("/api/show", json={"file": "src/a.py"})
+
+    assert listener.get_nowait() == {"type": "show", "file": "src/a.py"}
 
 
 async def test_the_agent_says_what_only_the_agent_knows(client: AsyncClient, state: ServerState) -> None:

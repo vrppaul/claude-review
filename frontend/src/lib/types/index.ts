@@ -128,6 +128,18 @@ export interface SubmitResponse {
   ended: boolean;
 }
 
+/**
+ * What the agent is doing right now.
+ *
+ * Not a turn and not kept: it is the state of work in progress, replaced
+ * whenever it changes and gone when the work is.
+ */
+export interface Progress {
+  text: string;
+  files: string[];
+  at: number;
+}
+
 /** Who speaks in the panel. An event is the review itself saying so. */
 export type PanelSpeaker = TurnAuthor | "event";
 
@@ -145,6 +157,8 @@ export interface PanelTurn {
   at: number;
   /** Threads this message pointed at, by id. */
   threads?: string[];
+  /** Files worth opening at what was said. */
+  files?: string[];
   /** Which message an answer belongs to. */
   answers?: string;
   /** Taken back before it was answered. */

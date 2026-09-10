@@ -4,7 +4,7 @@
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
-	import { scrollToComment } from '$lib/utils/scroll';
+	import { scrollToComment, showFile } from '$lib/utils/scroll';
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
 	import { threadsIn, threadToken } from '$lib/utils/thread-token';
 	import { formatWeight } from '$lib/utils/weight';
@@ -364,25 +364,59 @@ claude-review wait --port &lt;port&gt;</pre>
 						<div data-testid="panel-answer" class="cr-answer">
 							<p class="cr-who"><strong>Author</strong> {said(turn.at)}</p>
 							<MarkdownRenderer text={turn.body} dense />
+							{#if turn.files && turn.files.length > 0}
+								<div class="mt-2 flex flex-wrap gap-1">
+									{#each turn.files as path (path)}
+										<button
+											data-testid="answer-file"
+											class="cr-thread-chip"
+											onclick={() => showFile(path)}
+										>
+											{path.split('/').pop()}
+										</button>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/if}
 				{/each}
 
 				{#if working}
-					<div data-testid="panel-working" class="cr-answer flex items-center gap-3">
-						<span class="cr-who"><strong>Author</strong></span>
-						<span class="flex items-center gap-1">
-							<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
-						</span>
-						<div class="flex-1"></div>
-						<span class="cr-faint text-xs">working {since(working.at)}</span>
-						<button
-							data-testid="stop-message"
-							class="btn btn-outline btn-xs"
-							onclick={() => stop(working.id)}
-						>
-							Stop
-						</button>
+					<div data-testid="panel-working" class="cr-answer flex flex-col gap-2">
+						<div class="flex items-center gap-3">
+							<span class="cr-who"><strong>Author</strong></span>
+							<span class="flex items-center gap-1">
+								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
+							</span>
+							<div class="flex-1"></div>
+							<span class="cr-faint text-xs">working {since(working.at)}</span>
+							<button
+								data-testid="stop-message"
+								class="btn btn-outline btn-xs"
+								onclick={() => stop(working.id)}
+							>
+								Stop
+							</button>
+						</div>
+						{#if panelStore.progress}
+							<!-- What is being done, in its own words, replaced as it changes -->
+							<p data-testid="panel-progress" class="cr-progress text-sm">
+								{panelStore.progress.text}
+							</p>
+							{#if panelStore.progress.files.length > 0}
+								<div class="flex flex-wrap gap-1">
+									{#each panelStore.progress.files as path (path)}
+										<button
+											data-testid="progress-file"
+											class="cr-thread-chip"
+											onclick={() => showFile(path)}
+										>
+											{path.split('/').pop()}
+										</button>
+									{/each}
+								</div>
+							{/if}
+						{/if}
 					</div>
 				{/if}
 			</div>

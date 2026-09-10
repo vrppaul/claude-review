@@ -172,10 +172,41 @@ class PointResponse(BaseModel):
 
 
 class SayRequest(BaseModel):
-    """Request body for POST /api/say — the agent answering the panel."""
+    """Request body for POST /api/say — the agent speaking in the panel.
 
-    message_id: str = Field(min_length=1, max_length=200)
+    Usually an answer, and then it names what it answers. It may also be the
+    agent speaking first — having finished something, or having found
+    something worth saying — and then there is nothing to name.
+    """
+
+    message_id: str | None = Field(default=None, max_length=200)
     text: str = Field(min_length=1, max_length=50_000)
+    # Files worth opening at what was said. They travel as chips under the
+    # turn, so the reader jumps rather than searches.
+    files: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ProgressRequest(BaseModel):
+    """Request body for POST /api/progress — what is being done right now.
+
+    It replaces whatever was showing rather than adding to it: this is the
+    state of the work, not a log of it. Sent empty, it says the work is over
+    and the line goes away.
+    """
+
+    message_id: str | None = Field(default=None, max_length=200)
+    text: str = Field(default="", max_length=500)
+    files: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ShowRequest(BaseModel):
+    """Request body for POST /api/show — bring a file into view.
+
+    The one thing here that moves the reader's screen, so it is only ever
+    sent when they asked to be taken somewhere.
+    """
+
+    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
 
 
 class CancelRequest(BaseModel):

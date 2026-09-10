@@ -264,6 +264,7 @@ def test_a_panel_message_and_its_answer_travel_between_processes(tmp_git_repo: P
                 "type": "chat",
                 "message_id": "panel-1",
                 "text": "One failed; fixed and green.",
+                "files": [],
             }
     finally:
         server.kill()

@@ -8,6 +8,7 @@
 	import { soundStore } from '$lib/stores/sound.svelte';
 	import { markTab } from '$lib/utils/tab';
 	import { quoteFrom } from '$lib/utils/reanchor';
+	import { showFile } from '$lib/utils/scroll';
 	import AgentPanel from '$lib/components/AgentPanel.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import DiffNotice from '$lib/components/DiffNotice.svelte';
@@ -55,8 +56,20 @@
 			reviewStore.attachAnswerer();
 			panelStore.offer();
 		} else if (message.type === 'chat' && typeof message.text === 'string') {
-			panelStore.receive(String(message.message_id), message.text);
+			panelStore.receive(
+				typeof message.message_id === 'string' ? message.message_id : undefined,
+				message.text,
+				Array.isArray(message.files) ? message.files.map(String) : []
+			);
 			soundStore.announce();
+		} else if (message.type === 'progress' && typeof message.text === 'string') {
+			panelStore.reportProgress(
+				message.text,
+				Array.isArray(message.files) ? message.files.map(String) : []
+			);
+		} else if (message.type === 'show' && typeof message.file === 'string') {
+			// Asked for: the agent does not move this screen on its own
+			showFile(message.file);
 		} else if (message.type === 'status') {
 			panelStore.report({
 				model: typeof message.model === 'string' ? message.model : null,
