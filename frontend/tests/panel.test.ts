@@ -204,6 +204,18 @@ describe('the panel talks to the agent about the review', () => {
 		expect(carried.turns[0].body).toBe('Fine, but rename it');
 	});
 
+	it('hands over a raised thread as the author\'s own words', async () => {
+		const fetchMock = okFetch();
+		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I kept the old name', 'note', []);
+		commentStore.addTurn('raised-1', 'reader', 'Why?');
+
+		await commentStore.ask('raised-1');
+
+		const asked = sent(fetchMock);
+		expect(asked.body).toBe('Why?');
+		expect(asked.history[0]).toMatchObject({ author: 'author', body: 'I kept the old name' });
+	});
+
 	it('remembers how wide the reader made it, within what the layout can take', () => {
 		panelStore.setWidth(5000);
 		expect(panelStore.width).toBe(720);

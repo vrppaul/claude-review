@@ -272,10 +272,12 @@ export const commentStore = {
     const last = comment.turns.at(-1);
     const asksLastTurn = last?.author === "reader";
     // The comment that opened the thread is a turn like any other, and the
-    // first thing whoever answers needs to read
+    // first thing whoever answers needs to read — named by whoever wrote it,
+    // or an agent reading the history is handed its own words as the
+    // reader's instruction.
     const opening: Turn = {
       id: comment.id,
-      author: "reader",
+      author: comment.raised_by,
       body: comment.body,
       round: comment.round,
     };
