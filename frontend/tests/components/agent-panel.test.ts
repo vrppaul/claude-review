@@ -94,6 +94,19 @@ describe('the agent panel', () => {
 		expect(getByTestId('pointed-thread').textContent).toContain('routes.py');
 	});
 
+	it('points at a file nobody has commented on', async () => {
+		const user = userEvent.setup({ delay: null });
+		okFetch();
+
+		const { getByTestId, getAllByTestId } = render(AgentPanel);
+		await user.type(getByTestId('panel-input'), 'What is in @');
+		await user.click(getAllByTestId('file-option')[0]);
+
+		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe(
+			'What is in @src/routes.py '
+		);
+	});
+
 	it('sends the thread the message points at', async () => {
 		const user = userEvent.setup({ delay: null });
 		const fetchMock = okFetch();
@@ -182,10 +195,29 @@ describe('the agent panel', () => {
 		expect(getAllByTestId('progress-file')[0].textContent).toContain('AgentPanel.svelte');
 	});
 
+	it('draws what the work branched into, and what is finished', async () => {
+		const user = userEvent.setup({ delay: null });
+		okFetch();
+
+		const { getByTestId, getAllByTestId } = render(AgentPanel);
+		await user.type(getByTestId('panel-input'), 'Find every caller');
+		await user.click(getByTestId('send-message'));
+
+		panelStore.reportProgress('looking for other callers', [], [
+			{ text: 'ran the panel tests', done: true },
+			{ text: 'three subagents out, one back', done: false }
+		]);
+		await tick();
+
+		const steps = getAllByTestId('progress-steps')[0];
+		expect(steps.textContent).toContain('ran the panel tests');
+		expect(steps.textContent).toContain('three subagents out, one back');
+	});
+
 	it('takes the line away once something is said', async () => {
 		okFetch();
 		await panelStore.send('Fix the scroll', []);
-		panelStore.reportProgress('rewriting it', []);
+		panelStore.reportProgress('rewriting it', [], []);
 
 		panelStore.receive(panelStore.turns[0].id, 'Done, and green.');
 

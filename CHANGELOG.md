@@ -34,8 +34,10 @@ with the agent that wrote it.
   a review are the reader's, and it never counts as their unsent work
 - **Progress, while the work is happening** — `claude-review progress` puts a
   live line under the waiting turn: what is being done and which files are in
-  hand, replaced as it changes and gone when the answer lands. The files are
-  chips the reader can jump by
+  hand, replaced as it changes and gone when the answer lands. `--did` and
+  `--step` are drawn as branches of the work, so three subagents read as
+  three branches rather than as a sentence about three subagents; the files
+  are chips the reader can jump by
 - **The agent can speak first** — `claude-review say` without `--message` is
   an unprompted message, so work finished while the reader was reading
   arrives on its own, with the dot, the tab count and the optional tick that
@@ -44,6 +46,19 @@ with the agent that wrote it.
   `claude-review show --file` takes the reader there and marks the file for a
   moment. The only thing here that moves somebody else's screen, and only
   when they asked
+- **Catching up** — `claude-review context` says what a review already
+  holds: the round, a line per thread, the panel in short. `wait` hands over
+  what happens next and never what already happened, so an agent restarted
+  mid-review used to know nothing. An index on purpose; `--thread <id>` gets
+  one thread in full
+- **The round survives a restarted server** — the review on screen says where
+  it had got to when it connects, and never downwards, so a server that came
+  back believing it was round one stops numbering the next round wrongly
+- **A thread raised on a line that is not in the diff is refused**, with what
+  the review does have. It used to be accepted and shown hanging on nothing
+- **`@` points at any file**, not only at what already has a thread
+- **`c` talks to the agent, `f` shows or hides the tree** — the panel was the
+  one thing in the review that needed a mouse
 - **The file tree can be dragged narrower or put away**, and the panel's
   width is the reader's in the same way
 - **`claude-review say`** answers a panel message by name, and

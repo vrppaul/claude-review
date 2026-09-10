@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Comment } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { diffStore } from '$lib/stores/diff.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
@@ -33,11 +34,22 @@
 	// token deleted like a word takes its reference with it
 	const pointed = $derived(threadsIn(draft, commentStore.comments));
 
-	const candidates = $derived(
-		commentStore.comments.filter((comment) =>
-			`${comment.file} ${comment.body}`.toLowerCase().includes(query.toLowerCase())
-		)
-	);
+	// Threads first — most questions are about something already commented on
+	// — and then the files themselves, so a file nobody has marked can be
+	// pointed at too. The agent can name any file; the reader should be able
+	// to as well.
+	const candidates = $derived([
+		...commentStore.comments
+			.filter((comment) => matches(`${comment.file} ${comment.body}`))
+			.map((comment) => ({ kind: 'thread' as const, comment, path: comment.file })),
+		...diffStore.files
+			.filter((file) => matches(file.path))
+			.map((file) => ({ kind: 'file' as const, comment: undefined, path: file.path }))
+	]);
+
+	function matches(against: string): boolean {
+		return against.toLowerCase().includes(query.toLowerCase());
+	}
 
 	// When the agent last said anything, so silence can be read as silence
 	const lastAnswer = $derived(
@@ -115,14 +127,14 @@
 		highlighted = 0;
 	}
 
-	/** Put the thread's token where the @ was, and carry on typing. */
-	function take(comment: Comment) {
+	/** Put the token where the @ was, and carry on typing. */
+	function take(pick: { comment?: Comment; path: string }) {
 		const field = composer;
 		if (!field) return;
 		const caret = field.selectionStart;
 		const before = draft.slice(0, caret).replace(/@[^\s@]*$/, '');
 		const after = draft.slice(caret);
-		const token = `${threadToken(comment)} `;
+		const token = `${pick.comment ? threadToken(pick.comment) : `@${pick.path}`} `;
 		draft = `${before}${token}${after}`;
 		picking = false;
 		field.focus();
@@ -400,9 +412,30 @@ claude-review wait --port &lt;port&gt;</pre>
 						</div>
 						{#if panelStore.progress}
 							<!-- What is being done, in its own words, replaced as it changes -->
-							<p data-testid="panel-progress" class="cr-progress text-sm">
-								{panelStore.progress.text}
-							</p>
+							{#if panelStore.progress.text}
+								<p data-testid="panel-progress" class="cr-progress text-sm">
+									{panelStore.progress.text}
+								</p>
+							{/if}
+							{#if panelStore.progress.steps.length > 0}
+								<!-- Branches of the same work, drawn hanging off it -->
+								<ul data-testid="progress-steps" class="cr-branches">
+									{#each panelStore.progress.steps as step (step.text)}
+										<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
+											{#if step.done}
+												<svg
+													class="cr-branch-mark"
+													viewBox="0 0 12 12"
+													fill="currentColor"
+													aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg>
+											{:else}
+												<span class="cr-branch-mark"><span class="cr-dot"></span></span>
+											{/if}
+											<span>{step.text}</span>
+										</li>
+									{/each}
+								</ul>
+							{/if}
 							{#if panelStore.progress.files.length > 0}
 								<div class="flex flex-wrap gap-1">
 									{#each panelStore.progress.files as path (path)}
@@ -426,16 +459,24 @@ claude-review wait --port &lt;port&gt;</pre>
 	<div class="relative shrink-0 border-t border-base-300 px-3 py-2">
 		{#if picking && candidates.length > 0}
 			<div data-testid="thread-picker" class="cr-picker">
-				{#each candidates as comment, index (comment.id)}
+				{#each candidates as pick, index (pick.comment?.id ?? pick.path)}
 					<button
-						data-testid="thread-option"
+						data-testid={pick.comment ? 'thread-option' : 'file-option'}
 						class="cr-picker-row {index === highlighted ? 'cr-picker-on' : ''}"
-						onclick={() => take(comment)}
+						onclick={() => take(pick)}
 					>
-						<span class="cr-comment-ref block truncate font-mono text-xs">{label(comment)}</span>
-						<span class="cr-muted block truncate text-sm">
-							{comment.body}{threadState(comment) ? ` · ${threadState(comment)}` : ''}
+						<span class="cr-comment-ref block truncate font-mono text-xs">
+							{pick.comment ? label(pick.comment) : pick.path}
 						</span>
+						{#if pick.comment}
+							<span class="cr-muted block truncate text-sm">
+								{pick.comment.body}{threadState(pick.comment)
+									? ` · ${threadState(pick.comment)}`
+									: ''}
+							</span>
+						{:else}
+							<span class="cr-faint block truncate text-sm">file</span>
+						{/if}
 					</button>
 				{/each}
 			</div>

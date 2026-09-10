@@ -5,8 +5,10 @@ import asyncio
 from claude_review.domain.models import (
     AgentStatus,
     PanelCancel,
+    PanelEntry,
     PanelMessage,
     RoundSubmission,
+    ThreadContext,
     ThreadQuestion,
 )
 
@@ -51,6 +53,12 @@ class ServerState:
         # Threads the author has raised. Numbered apart from the reader's,
         # whose ids are minted in the browser, so the two cannot collide.
         self._raised = 0
+        # What the review holds, as the browser last described it. The
+        # threads are the reader's unsent work and live in their browser; an
+        # agent that attaches later has no other way to learn they exist.
+        self.threads: list[ThreadContext] = []
+        # What has been said in the panel, both halves, in order
+        self.panel: list[PanelEntry] = []
 
     def raise_id(self) -> str:
         """The id of the next thread the author raises."""

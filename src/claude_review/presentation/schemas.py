@@ -8,9 +8,11 @@ from claude_review.domain.models import (
     DiffFile,
     LineSide,
     PanelCancel,
+    PanelEntry,
     PanelMessage,
     ReviewMode,
     RoundSubmission,
+    ThreadContext,
     ThreadQuestion,
     TurnAuthor,
 )
@@ -133,6 +135,39 @@ class ThreadInput(BaseModel):
     quote: list[str] = Field(default_factory=list, max_length=200)
     body: str = Field(min_length=1, max_length=50_000)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
+    severity: CommentSeverity = CommentSeverity.NOTE
+    resolved: bool = False
+    outdated: bool = False
+    raised_by: TurnAuthor = TurnAuthor.READER
+
+
+class SessionHello(BaseModel):
+    """What the browser says on connecting, and whenever its threads change.
+
+    The review on screen is the only side that knows what has been written
+    in it — the threads are unsent work — and the only side that survives a
+    server restarted mid-review. So it says both, and neither costs anybody
+    anything: this never leaves the machine until an agent asks for it.
+    """
+
+    round: int | None = Field(default=None, ge=1)
+    threads: list[ThreadInput] = Field(default_factory=list, max_length=500)
+
+
+class ContextResponse(BaseModel):
+    """Response for GET /api/context — the review as it stands.
+
+    An index, not the contents: one line's worth per thread, and the panel
+    in short. Whoever wants a thread in full asks for that thread.
+    """
+
+    title: str
+    round: int
+    file_count: int
+    answerer_attached: bool
+    agent: AgentStatus
+    threads: list[ThreadContext]
+    panel: list[PanelEntry]
 
 
 class MessageRequest(BaseModel):
@@ -186,6 +221,13 @@ class SayRequest(BaseModel):
     files: list[str] = Field(default_factory=list, max_length=20)
 
 
+class ProgressStep(BaseModel):
+    """One branch of the work: something being done, or something done."""
+
+    text: str = Field(min_length=1, max_length=200)
+    done: bool = False
+
+
 class ProgressRequest(BaseModel):
     """Request body for POST /api/progress — what is being done right now.
 
@@ -197,6 +239,9 @@ class ProgressRequest(BaseModel):
     message_id: str | None = Field(default=None, max_length=200)
     text: str = Field(default="", max_length=500)
     files: list[str] = Field(default_factory=list, max_length=20)
+    # What the work has branched into: subagents, checks, files being
+    # rewritten. Sent whole every time, because this is a state and not a log.
+    steps: list[ProgressStep] = Field(default_factory=list, max_length=20)
 
 
 class ShowRequest(BaseModel):

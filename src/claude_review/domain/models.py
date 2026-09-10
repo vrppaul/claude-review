@@ -173,6 +173,12 @@ class ThreadContext(BaseModel):
     # What was already said in this thread, so an answer to the third
     # question is not written as if it were the first
     history: list[Turn] = []
+    # How it is meant to be taken, and whether it is still live. A blocker
+    # and a settled note are different instructions.
+    severity: CommentSeverity = CommentSeverity.NOTE
+    resolved: bool = False
+    outdated: bool = False
+    raised_by: TurnAuthor = TurnAuthor.READER
 
 
 class ThreadQuestion(ThreadContext):
@@ -220,6 +226,21 @@ class PanelCancel(BaseModel):
     """
 
     message_id: str
+
+
+class PanelEntry(BaseModel):
+    """One thing said in the panel, kept so a later agent can catch up.
+
+    The reader's browser remembers the whole conversation across a reload;
+    the agent may be a different process by then and remembers nothing. The
+    server saw both halves go past, so it is the one that can say what was
+    already discussed.
+    """
+
+    message_id: str | None = None
+    author: TurnAuthor
+    text: str
+    at: int
 
 
 class RoundSubmission(BaseModel):

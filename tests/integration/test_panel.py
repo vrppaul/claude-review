@@ -17,6 +17,8 @@ from claude_review.domain.models import (
     FileStatus,
     LineType,
     ReviewMode,
+    ThreadContext,
+    Turn,
 )
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
@@ -144,8 +146,8 @@ async def test_the_author_can_raise_a_thread_on_a_line(client: AsyncClient, stat
         json={
             "file": "src/a.py",
             "side": "new",
-            "start_line": 42,
-            "end_line": 44,
+            "start_line": 1,
+            "end_line": 1,
             "body": "I did this differently from what was asked, because...",
             "severity": "question",
         },
@@ -155,14 +157,14 @@ async def test_the_author_can_raise_a_thread_on_a_line(client: AsyncClient, stat
     pushed = listener.get_nowait()
     assert pushed["type"] == "point"
     assert pushed["file"] == "src/a.py"
-    assert pushed["start_line"] == 42
+    assert pushed["start_line"] == 1
     assert pushed["severity"] == "question"
 
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
-    first = await client.post("/api/point", json={"file": "a.py", "start_line": 1, "end_line": 1, "body": "one"})
-    second = await client.post("/api/point", json={"file": "a.py", "start_line": 2, "end_line": 2, "body": "two"})
+    first = await client.post("/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "one"})
+    second = await client.post("/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "two"})
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
@@ -170,9 +172,41 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
 
 async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     """A thread that ends before it starts hangs on nothing."""
-    response = await client.post("/api/point", json={"file": "a.py", "start_line": 9, "end_line": 2, "body": "nowhere"})
+    response = await client.post(
+        "/api/point", json={"file": "src/a.py", "start_line": 9, "end_line": 2, "body": "nowhere"}
+    )
 
     assert response.status_code == 422
+
+
+async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
+    """Silently accepting it shows the reader a thread about nothing."""
+    response = await client.post(
+        "/api/point", json={"file": "src/elsewhere.py", "start_line": 1, "end_line": 1, "body": "here"}
+    )
+
+    assert response.status_code == 404
+    assert "not in this review" in response.json()["detail"]
+    assert "src/a.py" in response.json()["detail"]
+
+
+async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
+    """The quote would come back empty and go outdated at the next retake."""
+    response = await client.post(
+        "/api/point", json={"file": "src/a.py", "start_line": 900, "end_line": 900, "body": "far away"}
+    )
+
+    assert response.status_code == 422
+    assert "does not show new line 900" in response.json()["detail"]
+
+
+async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClient) -> None:
+    """The check is a guard, not a hurdle: what is on screen goes through."""
+    response = await client.post(
+        "/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "this line"}
+    )
+
+    assert response.status_code == 200
 
 
 async def test_the_agent_may_speak_first(client: AsyncClient, state: ServerState) -> None:
@@ -199,6 +233,25 @@ async def test_what_is_being_done_is_said_while_it_is_done(client: AsyncClient, 
     assert pushed["type"] == "progress"
     assert pushed["text"] == "rewriting the answer handler"
     assert pushed["files"] == ["a.ts", "b.ts"]
+
+
+async def test_work_that_branched_is_reported_as_branches(client: AsyncClient, state: ServerState) -> None:
+    """Three subagents are three branches, not a sentence about three subagents."""
+    listener = state.listen()
+
+    await client.post(
+        "/api/progress",
+        json={
+            "text": "looking for other callers",
+            "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
+        },
+    )
+
+    pushed = listener.get_nowait()
+    assert pushed["steps"] == [
+        {"text": "ran the tests", "done": True},
+        {"text": "three subagents out", "done": False},
+    ]
 
 
 async def test_a_file_can_be_brought_into_view_when_asked(client: AsyncClient, state: ServerState) -> None:
@@ -238,3 +291,48 @@ async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncCl
     diff = (await client.get("/api/diff")).json()
 
     assert diff["agent"] == {"model": None, "context": None, "at": None}
+
+
+THREAD_INDEX = {
+    "thread_id": "comment-1",
+    "file": "src/a.py",
+    "side": "new",
+    "start_line": 1,
+    "end_line": 1,
+    "quote": ["x = 1"],
+    "body": "Why did you drop the None check?",
+    "history": [{"author": "author", "body": "It moved to the caller.", "round": 1}],
+    "severity": "question",
+}
+
+
+async def test_an_agent_arriving_late_is_told_what_the_review_holds(client: AsyncClient, state: ServerState) -> None:
+    """`events` hands over what happens next, never what already happened."""
+    state.threads = [_to_context(THREAD_INDEX)]
+    await client.post("/api/message", json=MESSAGE)
+    await client.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed."})
+
+    seen = (await client.get("/api/context")).json()
+
+    assert seen["round"] == 1
+    assert seen["file_count"] == 1
+    assert [t["thread_id"] for t in seen["threads"]] == ["comment-1"]
+    assert [(e["author"], e["text"]) for e in seen["panel"]] == [
+        ("reader", "Run the tests and say what fails."),
+        ("author", "One failed; fixed."),
+    ]
+
+
+async def test_one_thread_can_be_asked_for_on_its_own(client: AsyncClient, state: ServerState) -> None:
+    """An index is for choosing what to read; this is the reading."""
+    state.threads = [_to_context(THREAD_INDEX), _to_context({**THREAD_INDEX, "thread_id": "comment-2"})]
+
+    seen = (await client.get("/api/context?thread=comment-2")).json()
+
+    assert [t["thread_id"] for t in seen["threads"]] == ["comment-2"]
+    # Nothing about the panel: it was not what was asked for
+    assert seen["panel"] == []
+
+
+def _to_context(raw: dict) -> ThreadContext:
+    return ThreadContext.model_validate({**raw, "history": [Turn.model_validate(t) for t in raw.get("history", [])]})

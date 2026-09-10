@@ -12,6 +12,8 @@ import { SvelteMap } from "svelte/reactivity";
 
 import { reviewStore } from "$lib/stores/review.svelte";
 import { reanchor } from "$lib/utils/reanchor";
+import { threadOnTheWire } from "$lib/utils/thread-wire";
+import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
 
 let comments = $state<Comment[]>([]);
@@ -45,6 +47,10 @@ function idNumber(id: string): number {
 function remember(): void {
   if (draftTitle === null) return;
   saveDraft({ title: draftTitle, comments, reviewBody, sent: [...sent] });
+  // The threads are unsent work and live only here. An agent that attaches
+  // later has no other way to learn they exist, so the server is kept up to
+  // date — it costs nothing until somebody asks it for them.
+  tellServer();
 }
 
 function replace(id: string, change: (comment: Comment) => Comment): void {
@@ -105,6 +111,11 @@ export const commentStore = {
   get unreadCount(): number {
     return comments.filter((c) => c.unread).length;
   },
+  /** Every thread as the other side is told about it. */
+  get onTheWire() {
+    return comments.map(threadOnTheWire);
+  },
+
   /** Threads that have been discussed, newest answer first. */
   get answered(): Comment[] {
     return comments.filter((c) => c.turns.length > 0);
@@ -144,6 +155,19 @@ export const commentStore = {
       (highest, c) => Math.max(highest, idNumber(c.id)),
       0,
     );
+    // A round the server has forgotten is still written all over the draft:
+    // every thread knows the round it was written in, and every sent thread
+    // the round it went out in. A restarted server comes back at round one
+    // and would number the next round wrongly for everyone.
+    const written = comments.reduce(
+      (highest, c) => Math.max(highest, c.round),
+      1,
+    );
+    const posted = [...sent.values()].reduce(
+      (highest, round) => Math.max(highest, round + 1),
+      1,
+    );
+    reviewStore.setRound(Math.max(reviewStore.round, written, posted));
     // Turn ids are handed out the same way, and a restored thread already
     // holds some: carrying on from zero would mint one twice
     nextTurnId = comments

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { panelStore } from '$lib/stores/panel.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { currentSectionPath, isTypingTarget, moveByLine } from '$lib/utils/keyboard';
 	import { scrollToComment, scrollToFile } from '$lib/utils/scroll';
@@ -14,9 +15,11 @@
 		{ keys: '] / [', does: 'Next / previous file' },
 		{ keys: 'n / p', does: 'Next / previous comment' },
 		{ keys: 'a', does: 'Next unread reply' },
+		{ keys: 'c', does: 'Talk to the agent' },
+		{ keys: 'f', does: 'Show or hide the file tree' },
 		{ keys: 'v', does: 'Mark this file viewed' },
 		{ keys: 'u', does: 'Fold or unfold this file' },
-		{ keys: 'Ctrl+Shift+Enter', does: 'Send the review' },
+		{ keys: 'Ctrl+Shift+Enter', does: 'Finish the review' },
 		{ keys: '?', does: 'Show this list' },
 		{ keys: 'Esc', does: 'Close it' }
 	];
@@ -50,6 +53,19 @@
 		});
 	}
 
+	/**
+	 * Open the panel and put the cursor in it.
+	 *
+	 * Everything else in this review can be done from the keyboard; talking
+	 * to the agent should not be the one thing that needs a mouse.
+	 */
+	function talkToAgent() {
+		panelStore.setOpen(true);
+		requestAnimationFrame(() =>
+			document.querySelector<HTMLTextAreaElement>('[data-testid="panel-input"]')?.focus()
+		);
+	}
+
 	function actOnCurrentFile(act: (path: string) => void) {
 		const path = currentSectionPath() ?? diffStore.selectedPath;
 		if (path) act(path);
@@ -72,6 +88,8 @@
 			a: stepUnread,
 			n: () => stepComment(1),
 			p: () => stepComment(-1),
+			c: talkToAgent,
+			f: () => diffStore.toggleSidebar(),
 			v: () => actOnCurrentFile((path) => diffStore.toggleViewed(path)),
 			u: () => actOnCurrentFile((path) => diffStore.toggleCollapsed(path)),
 			'?': () => (showHelp = !showHelp)

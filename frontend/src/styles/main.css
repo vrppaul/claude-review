@@ -940,3 +940,50 @@
 .cr-finish-row:hover {
   background: var(--cr-mark-tint);
 }
+
+/*
+ * The branches of a piece of work, hanging off the line that spawned them.
+ *
+ * Three subagents read as three branches rather than as a sentence about
+ * three subagents: the rail says they belong to the same thing, and each
+ * one says for itself whether it is still running.
+ */
+.cr-branches {
+  margin: 0.125rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 30%, transparent);
+  margin-left: 0.3125rem;
+}
+.cr-branch {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  padding: 0.0625rem 0 0.0625rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--cr-muted);
+}
+/* The tick that joins a branch to the rail */
+.cr-branch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6875rem;
+  width: 0.5rem;
+  height: 1.5px;
+  background: color-mix(in srgb, var(--cr-mark) 30%, transparent);
+}
+.cr-branch-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  color: var(--cr-add-edge);
+}
+.cr-branch-done {
+  color: var(--cr-faint);
+}

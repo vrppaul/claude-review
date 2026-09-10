@@ -90,3 +90,31 @@ def test_the_server_can_push_to_an_open_review(client: TestClient, state: Server
         state.push({"type": "reload"})
 
         assert websocket.receive_json() == {"type": "reload"}
+
+
+def test_a_review_still_open_says_which_round_it_is_on(client: TestClient, state: ServerState) -> None:
+    """A restarted server comes back at round one; the browser knows better."""
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        socket.send_text('{"round": 4}')
+
+    assert state.round == 4
+
+
+def test_a_browser_opened_fresh_does_not_drag_the_review_back(client: TestClient, state: ServerState) -> None:
+    """One reader starting at round one must not undo the rounds already sent."""
+    state.round = 3
+
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        socket.send_text('{"round": 1}')
+
+    assert state.round == 3
+
+
+def test_anything_else_on_the_socket_is_ignored(client: TestClient, state: ServerState) -> None:
+    """The socket is a lifeline first; nonsense on it must not break it."""
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        socket.send_text("not json at all")
+        socket.send_text('{"round": "later"}')
+        socket.send_text('{"round": 2}')
+
+    assert state.round == 2

@@ -10,12 +10,19 @@
  * to review" has no meaning outside a thread.
  */
 
-import type { AgentStatus, Comment, PanelTurn, Progress } from "$lib/types";
+import type {
+  AgentStatus,
+  Comment,
+  PanelTurn,
+  Progress,
+  ProgressStep,
+} from "$lib/types";
 
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
 import { loadDraft, saveDraft } from "$lib/utils/drafts";
 import { readChoice, readNumber, writeChoice } from "$lib/utils/preferences";
+import { threadOnTheWire } from "$lib/utils/thread-wire";
 import { reviewWeight } from "$lib/utils/weight";
 
 // What the panel may take of the window. Below the floor there is no room
@@ -83,24 +90,6 @@ function highest(saved: PanelTurn[], prefix: string): number {
 function remember(): void {
   if (!diffStore.title) return;
   saveDraft({ title: diffStore.title, panel: turns });
-}
-
-/** The thread as whoever answers is told about it, quote and turns and all. */
-function wire(comment: Comment) {
-  return {
-    thread_id: comment.id,
-    file: comment.file,
-    side: comment.side,
-    start_line: comment.start_line,
-    end_line: comment.end_line,
-    quote: comment.quote,
-    body: comment.body,
-    history: comment.turns.map(({ author, body, round }) => ({
-      author,
-      body,
-      round,
-    })),
-  };
 }
 
 export const panelStore = {
@@ -190,7 +179,7 @@ export const panelStore = {
       body: JSON.stringify({
         message_id: id,
         text,
-        threads: threads.map(wire),
+        threads: threads.map(threadOnTheWire),
       }),
     });
 
@@ -201,9 +190,17 @@ export const panelStore = {
     }
   },
 
-  /** Say what is being done, replacing whatever was being said before. */
-  reportProgress(text: string, files: string[]) {
-    progress = text.trim() === "" ? null : { text, files, at: Date.now() };
+  /**
+   * Say what is being done, replacing whatever was being said before.
+   *
+   * Whole every time: this is the state of the work, and a state that
+   * arrives in pieces is a log with extra steps.
+   */
+  reportProgress(text: string, files: string[], steps: ProgressStep[] = []) {
+    progress =
+      text.trim() === "" && steps.length === 0
+        ? null
+        : { text, files, steps, at: Date.now() };
   },
 
   /** Take what was said and put it under what it answers, if anything. */

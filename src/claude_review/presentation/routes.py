@@ -4,18 +4,22 @@ from pathlib import Path
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
 from claude_review.domain.exceptions import FileWindowError
 from claude_review.domain.models import (
     Comment,
     DiffFile,
+    LineSide,
     PanelCancel,
+    PanelEntry,
     PanelMessage,
     ReviewMode,
     RoundSubmission,
     ThreadContext,
     ThreadQuestion,
     Turn,
+    TurnAuthor,
 )
 from claude_review.presentation.dependencies import (
     get_diff_base,
@@ -29,6 +33,7 @@ from claude_review.presentation.schemas import (
     AskRequest,
     CancelRequest,
     CommentInput,
+    ContextResponse,
     DiffResponse,
     EventResponse,
     FileWindowResponse,
@@ -39,6 +44,7 @@ from claude_review.presentation.schemas import (
     ReplyRequest,
     RoundResponse,
     SayRequest,
+    SessionHello,
     ShowRequest,
     StatusRequest,
     SubmitRequest,
@@ -84,6 +90,35 @@ async def get_diff(
         round=state.round,
         answerer_attached=state.answerer_attached,
         agent=state.agent,
+    )
+
+
+@router.get("/context")
+async def review_context(
+    thread: str | None = Query(default=None, max_length=200),
+    state: ServerState = Depends(get_state),
+    title: str = Depends(get_review_title),
+    diff_files: list[DiffFile] = Depends(get_diff_files),
+) -> ContextResponse:
+    """Say what this review holds, for an agent that has just arrived.
+
+    An agent restarted mid-review knows nothing: `events` hands over what
+    happens next, never what already happened. Everything here has passed
+    through this server, so it can say what was asked, what was answered and
+    what is still open — as an index, because handing over the whole review
+    unasked is how a catch-up costs more than the work.
+
+    Naming a thread returns that one alone, in full.
+    """
+    threads = [t for t in state.threads if thread is None or t.thread_id == thread]
+    return ContextResponse(
+        title=title,
+        round=state.round,
+        file_count=len(diff_files),
+        answerer_attached=state.answerer_attached,
+        agent=state.agent,
+        threads=threads,
+        panel=[] if thread is not None else state.panel,
     )
 
 
@@ -220,6 +255,14 @@ async def take_panel_message(
             threads=[_to_thread(t) for t in request.threads],
         )
     )
+    state.panel.append(
+        PanelEntry(
+            message_id=request.message_id,
+            author=TurnAuthor.READER,
+            text=request.text,
+            at=int(time.time() * 1000),
+        )
+    )
     log.info("panel_message", message_id=request.message_id, threads=len(request.threads))
     return {"status": "sent"}
 
@@ -235,7 +278,43 @@ def _to_thread(thread: ThreadInput) -> ThreadContext:
         quote=thread.quote,
         body=thread.body,
         history=[Turn(author=t.author, body=t.body, round=t.round) for t in thread.history],
+        severity=thread.severity,
+        resolved=thread.resolved,
+        outdated=thread.outdated,
+        raised_by=thread.raised_by,
     )
+
+
+def _refuse_a_thread_hung_on_nothing(request: PointRequest, diff_files: list[DiffFile]) -> None:
+    """Check that the lines a thread is about are on screen to be read.
+
+    Raises:
+        HTTPException: if the file is not under review, or those lines of it
+            are not among the ones the diff shows.
+    """
+    shown = next((f for f in diff_files if f.path == request.file), None)
+    if shown is None:
+        listed = ", ".join(f.path for f in diff_files[:5])
+        msg = f"{request.file} is not in this review. It has: {listed}"
+        raise HTTPException(status_code=404, detail=msg)
+
+    wanted = request.side
+    on_screen = {
+        line.old_no if wanted == LineSide.OLD else line.new_no
+        for hunk in shown.hunks
+        for line in hunk.lines
+        if (line.old_no if wanted == LineSide.OLD else line.new_no) is not None
+    }
+    missing = [no for no in range(request.start_line, request.end_line + 1) if no not in on_screen]
+    if missing:
+        side = "removed" if wanted == LineSide.OLD else "new"
+        msg = f"{request.file} does not show {side} line{'s' if len(missing) > 1 else ''} {_span(missing)}"
+        raise HTTPException(status_code=422, detail=msg)
+
+
+def _span(numbers: list[int]) -> str:
+    """Name the missing lines the way a person would: "12", or "12-19"."""
+    return str(numbers[0]) if len(numbers) == 1 else f"{numbers[0]}-{numbers[-1]}"
 
 
 @router.post("/say")
@@ -256,6 +335,14 @@ async def say_in_panel(
             "text": request.text,
             "files": request.files,
         }
+    )
+    state.panel.append(
+        PanelEntry(
+            message_id=request.message_id,
+            author=TurnAuthor.AUTHOR,
+            text=request.text,
+            at=int(time.time() * 1000),
+        )
     )
     log.info("panel_answer", message_id=request.message_id, unprompted=request.message_id is None)
     return {"status": "sent"}
@@ -279,6 +366,7 @@ async def report_progress(
             "message_id": request.message_id,
             "text": request.text,
             "files": request.files,
+            "steps": [step.model_dump() for step in request.steps],
         }
     )
     return {"status": "noted"}
@@ -303,6 +391,7 @@ async def show_a_file(
 async def raise_a_thread(
     request: PointRequest,
     state: ServerState = Depends(get_state),
+    diff_files: list[DiffFile] = Depends(get_diff_files),
 ) -> PointResponse:
     """Put a thread on a line, from the side that wrote the change.
 
@@ -310,7 +399,12 @@ async def raise_a_thread(
     is about, not in a paragraph somewhere else. What arrives is an ordinary
     thread: the reader answers it, settles it or removes it. It is drawn as
     the author's, though, and it is never counted as the reader's own work.
+
+    The anchor is checked against the diff on screen, because a thread hung
+    where nothing is shows the reader an empty quote and goes outdated on
+    the next retake — and whoever raised it has no way of knowing.
     """
+    _refuse_a_thread_hung_on_nothing(request, diff_files)
     thread_id = state.raise_id()
     state.push(
         {
@@ -387,14 +481,41 @@ async def session(websocket: WebSocket) -> None:
     pump = asyncio.create_task(forward())
     try:
         while True:
-            # Nothing is expected from the browser yet; this waits for the close
-            await websocket.receive_text()
+            # The browser says where the review had got to, and otherwise
+            # this waits for the close
+            _catch_up(state, await websocket.receive_text())
     except WebSocketDisconnect:
         pass
     finally:
         pump.cancel()
         state.stop_listening(outbox)
         state.disconnected(asyncio.get_running_loop().time())
+
+
+def _catch_up(state: ServerState, said: str) -> None:
+    """Take what the browser knows and this server does not.
+
+    Two things. The round: a server restarted mid-review comes back
+    believing it is round one and would number the next round wrongly for
+    everyone reading it — so the browser says where it had got to, and never
+    downwards, because one reader opening fresh must not drag the review
+    back to the beginning. And the threads: they are unsent work, held in
+    that browser, and an agent attaching later has no other way to learn
+    they exist.
+    """
+    try:
+        heard = SessionHello.model_validate_json(said)
+    except ValidationError:
+        # The socket is a lifeline first; nonsense on it is not worth
+        # dropping a review over
+        return
+
+    if heard.round is not None and heard.round > state.round:
+        log.info("round_caught_up", was=state.round, now=heard.round)
+        state.round = heard.round
+
+    if heard.threads:
+        state.threads = [_to_thread(t) for t in heard.threads]
 
 
 @router.post("/submit")

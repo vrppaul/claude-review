@@ -137,7 +137,15 @@ export interface SubmitResponse {
 export interface Progress {
   text: string;
   files: string[];
+  /** What the work has branched into: checks, subagents, files in hand. */
+  steps: ProgressStep[];
   at: number;
+}
+
+/** One branch of the work: under way, or finished. */
+export interface ProgressStep {
+  text: string;
+  done: boolean;
 }
 
 /** Who speaks in the panel. An event is the review itself saying so. */

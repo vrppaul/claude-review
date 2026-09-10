@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import { openSession } from '$lib/stores/session.svelte';
+	import { openSession, tellServer } from '$lib/stores/session.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { soundStore } from '$lib/stores/sound.svelte';
@@ -30,6 +30,8 @@
 				panelStore.restore(diffStore.title);
 				panelStore.report(diffStore.agent);
 				if (reviewStore.canSendRound) panelStore.offer();
+				// The draft may know a later round than a restarted server does
+				tellServer();
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : 'Failed to load diff';
@@ -40,7 +42,10 @@
 
 		// Holding this open is what tells the server the review is still on
 		// screen; a poll is throttled to a crawl in a background tab.
-		return openSession(handle);
+		return openSession(handle, () => ({
+			round: reviewStore.round,
+			threads: commentStore.onTheWire
+		}));
 	});
 
 	/** What the server has to say while the review is open. */
@@ -65,7 +70,13 @@
 		} else if (message.type === 'progress' && typeof message.text === 'string') {
 			panelStore.reportProgress(
 				message.text,
-				Array.isArray(message.files) ? message.files.map(String) : []
+				Array.isArray(message.files) ? message.files.map(String) : [],
+				Array.isArray(message.steps)
+					? message.steps.map((step) => ({
+							text: String((step as { text: unknown }).text),
+							done: (step as { done: unknown }).done === true
+						}))
+					: []
 			);
 		} else if (message.type === 'show' && typeof message.file === 'string') {
 			// Asked for: the agent does not move this screen on its own

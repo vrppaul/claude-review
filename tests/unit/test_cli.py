@@ -4,7 +4,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from claude_review.cli import _diff_title, _files_title, _stable_port, _transcript_title, main
+from claude_review.cli import (
+    _diff_title,
+    _files_title,
+    _render_context,
+    _stable_port,
+    _transcript_title,
+    main,
+)
 
 
 def test_help_shows_usage() -> None:
@@ -106,3 +113,59 @@ def test_the_panel_commands_are_in_help() -> None:
 
     assert "say" in result.output
     assert "status" in result.output
+
+
+SEEN = {
+    "title": "claude-review: uncommitted changes",
+    "round": 3,
+    "file_count": 7,
+    "answerer_attached": True,
+    "agent": {"model": "opus-5", "context": "45% of 1M", "at": 1},
+    "threads": [
+        {
+            "thread_id": "comment-4",
+            "file": "src/routes.py",
+            "side": "new",
+            "start_line": 118,
+            "end_line": 130,
+            "quote": ["    return event"],
+            "body": "Does a round overtake a question?\nAnd if it does, what then?",
+            "history": [{"author": "author", "body": "It cannot: one queue.", "round": 2}],
+            "severity": "question",
+            "resolved": False,
+            "outdated": False,
+            "raised_by": "reader",
+        }
+    ],
+    "panel": [{"message_id": "panel-1", "author": "reader", "text": "Run the tests", "at": 1}],
+}
+
+
+def test_catching_up_costs_a_line_a_thread() -> None:
+    """An index is what makes catching up cheaper than being handed the review."""
+    printed = _render_context(SEEN, whole=False)
+
+    assert "round 3 · 7 files" in printed
+    assert "1 threads, 1 open · panel: 1 messages" in printed
+    assert "comment-4  src/routes.py:118-130  question · 1 turns" in printed
+    # The first line of the comment, and not the second
+    assert "Does a round overtake a question?" in printed
+    assert "And if it does" not in printed
+    # Nor what was said in the thread: that is what asking for it is for
+    assert "one queue" not in printed
+
+
+def test_a_thread_asked_for_by_name_comes_in_full() -> None:
+    """The index is for choosing what to read; this is the reading."""
+    printed = _render_context({**SEEN, "threads": SEEN["threads"]}, whole=True)
+
+    assert "And if it does, what then?" in printed
+    assert "author: It cannot: one queue." in printed
+    assert "lines:     return event" in printed
+
+
+def test_a_review_nobody_answers_says_so() -> None:
+    """Because it changes what the agent should do next, or whether it can."""
+    printed = _render_context({**SEEN, "answerer_attached": False}, whole=False)
+
+    assert "nobody answering" in printed
