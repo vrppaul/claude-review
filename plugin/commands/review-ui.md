@@ -96,10 +96,21 @@ somebody who is waiting.
    ```bash
    claude-review wait --port 8765 --seconds 25
    ```
-   It prints one JSON object and exits. Run it in a loop, in the background,
-   so an event reaches you rather than you going back to look: a single call
-   per turn also works, but the review is unattended between them, and that
-   is the silence the first rule is about.
+   It prints one JSON object and exits. One call per turn leaves the review
+   unattended between them — the silence the first rule is about — and a bare
+   backgrounded `wait` comes back on the first timeout twenty-five seconds
+   later. What holds is a detached loop that swallows timeouts and prints
+   every real event:
+   ```bash
+   while :; do
+     out=$(claude-review wait --port 8765 --seconds 25) || break
+     case "$out" in *'"type":"timeout"'*) continue ;; esac
+     printf '%s\n' "$out"
+   done
+   ```
+   Start it in the background and read what it prints. If what wakes you is a
+   background command *finishing* rather than printing, put `break` after the
+   `printf` and start the loop again after each event.
    - `{"type": "question", "question": {...}}` — answer it (step 6), then
      wait again. The question carries `thread_id` and `question_id`, the
      file, the line range, `quote` — the lines it is about — and `history`,
@@ -166,11 +177,15 @@ somebody who is waiting.
      --file src/a.py --file src/b.py "rewriting the answer handler"
    ```
    Waiting says only that something is happening; this says what. Send it
-   again to change it — it replaces what was showing rather than adding to
-   it — and it goes away on its own when you answer, or at once with
-   `--done`. `--did` and `--step` are drawn as branches of the work, so three
-   subagents read as three branches rather than as a sentence about three
-   subagents; the files become chips the reader can jump by.
+   again to change it — it replaces what was showing rather than adding to it.
+   `--did` and `--step` are drawn as branches of the work, so three subagents
+   read as three branches rather than as a sentence about three subagents;
+   the files become chips the reader can jump by.
+
+   It goes away when you answer the message it names, so a line started
+   without `--message` has nothing to clear it — send `--done` the moment the
+   work finishes. A spinner left running is the hang the third rule is about,
+   with your name on it.
 
    `--message` is optional here too: work you started for a round, or on
    your own, is worth showing under the same line. Send one whenever what
@@ -186,10 +201,14 @@ somebody who is waiting.
    takes them there and marks the file for a moment — it moves somebody
    else's screen, so send it only when they asked to be shown something.
 
-9. After making the changes a round asked for, show them:
+9. After making the changes a round asked for, put the work line out and
+   show them:
    ```bash
+   claude-review progress --port 8765 --done
    claude-review round --port 8765
    ```
+   `--done` first, or the new diff lands under a spinner still saying what you
+   were doing to the old one.
    The open review reloads the diff and moves its threads onto it: one whose
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against. What comes back names the

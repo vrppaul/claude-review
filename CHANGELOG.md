@@ -10,6 +10,15 @@
   happen: the address is said either way, and a machine with no browser to
   open loses nothing but the window.
 
+### Changed
+- **The skill says how to hold the loop open, and how to put the work line
+  out.** Waiting "in a loop, in the background" had two obvious readings and
+  both are wrong — one returns on the first timeout, the other blocks the
+  turn — so the four lines that work are written down. And a progress line
+  started without a message had nothing that would clear it: `--done` is now
+  named as the way, before a round as well as at the end, so a retake does
+  not land under a spinner describing the diff it replaced.
+
 ## [1.4.1] - 2026-09-11
 
 ### Changed
