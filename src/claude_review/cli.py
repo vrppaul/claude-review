@@ -170,12 +170,15 @@ async def _serve_review(
 
         log.info("server_started", url=url)
 
+        # Said either way. Opening a window and saying where the review is are
+        # two different jobs, and tying them together meant that anything
+        # starting a review for somebody else had to refuse the window to
+        # learn the address — so nobody's browser ever opened.
+        sys.stderr.write(f"Review ready at {url}\n")
+        sys.stderr.flush()
+
         if open_browser:
             await asyncio.to_thread(_open_browser, url)
-        else:
-            # Nothing else will say where the review is
-            sys.stderr.write(f"Review ready at {url}\n")
-            sys.stderr.flush()
 
         while not state.shutdown_event.is_set():
             await asyncio.sleep(0.5)
@@ -286,7 +289,16 @@ def _call(url: str, *, payload: dict | None = None, timeout: float = 10.0) -> st
 
 
 def _open_browser(url: str) -> None:
-    webbrowser.open_new(url)
+    """Open the review, and let it go if there is nothing to open it with.
+
+    A machine with no browser — over ssh, in a container, in CI — must not
+    lose its review over the attempt. The address has already been printed,
+    which is the way in either way.
+    """
+    try:
+        webbrowser.open_new(url)
+    except webbrowser.Error:
+        log.info("no_browser", url=url)
 
 
 def _print_result(result: str) -> None:

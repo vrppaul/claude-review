@@ -1,6 +1,6 @@
 [project]
 name = "claude-review"
-version = "1.4.1"
+version = "1.4.2"
 description = "Browser-based code review tool for Claude Code"
 readme = "README.md"
 license = "MIT"

@@ -61,16 +61,19 @@ somebody who is waiting.
    reader read the same working tree against a branch, a tag or an earlier
    round of this review.
 
-3. Start it in the background, and give the user the URL:
+3. Start it in the background. It opens in their browser by itself:
    ```bash
-   setsid nohup claude-review --port 8765 --no-open diff > /tmp/review.log 2>&1 &
+   setsid nohup claude-review --port 8765 diff > /tmp/review.log 2>&1 &
    ```
    Detached, rather than a bare `&`: started in the shell's own session, the
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS
-   ships no `setsid` — `nohup … &` on its own is the fallback. The URL is
-   printed to that log; hand it to the user, since `--no-open` means nothing
-   opens by itself.
+   ships no `setsid` — `nohup … &` on its own is the fallback.
+
+   The address is printed to that log whether or not a window opened. Read it
+   and give it to them anyway: over ssh or in a container there is nothing to
+   open, and a tab closed by accident needs the way back. Pass `--no-open`
+   only when you know a window would be wrong.
 
    If the port is taken the command says so; pick another. (Without `--port`
    the review picks one from the repository and the base ref, so reopening

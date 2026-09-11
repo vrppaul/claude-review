@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.2] - 2026-09-11
+
+### Fixed
+- **The review opens in the browser again when an agent starts it.** The
+  address was printed only when the browser was *not* being opened, so
+  anything starting a review for somebody else had to pass `--no-open` to
+  learn where it was — and the window stopped opening for everybody. Both now
+  happen: the address is said either way, and a machine with no browser to
+  open loses nothing but the window.
+
 ## [1.4.1] - 2026-09-11
 
 ### Changed

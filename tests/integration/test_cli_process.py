@@ -5,6 +5,7 @@ covers: what the user sees in a terminal when the server cannot start.
 """
 
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -420,3 +421,33 @@ def test_replying_to_a_thread_that_is_refused_explains_itself(tmp_git_repo: Path
     finally:
         server.kill()
         server.wait(timeout=10)
+
+
+def test_the_address_is_printed_whether_or_not_a_browser_opens(tmp_git_repo: Path) -> None:
+    """Opening a window and saying where the review is are two different jobs.
+
+    Said only in the "do not open" branch, the address was unreachable to
+    anything that started the review for somebody else — so every agent
+    passed `--no-open` to get it, and nobody's browser ever opened.
+    """
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        # No browser to find, which is the machine this has to work on
+        env={**os.environ, "BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""},
+    )
+    try:
+        _wait_for_server(port)
+        with connect(f"ws://127.0.0.1:{port}/api/session"):
+            pass
+        _, said = server.communicate(timeout=20)
+    finally:
+        if server.poll() is None:
+            server.kill()
+
+    assert f"http://127.0.0.1:{port}" in said
