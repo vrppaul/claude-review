@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.1] - 2026-09-11
+
+### Changed
+- **The skill tells an agent to stay attached, rather than offering it as an
+  afterthought.** Running the review and waiting on its output was the
+  documented default, with the conversation behind a "skip this unless
+  asked" — so a reader got an "Ask now" button on every thread, a panel, and
+  an offer of a round, with nothing on the other end of any of them. The
+  background loop is the flow now; the one-shot run is the exception at the
+  end, for a review nobody means to talk through
+
 ## [1.4.0] - 2026-09-10
 
 A round leaves a mark, so the review can be asked what has changed since it.

@@ -1,10 +1,23 @@
 ---
 name: review-ui
-description: Open a browser-based review UI to comment on current git changes, with markdown preview
+description: Open a review in the browser and stay attached to it — the user comments on a diff, files or a transcript, asks about any of it while they read, and sends rounds you answer without the review ending
 user-invocable: true
 ---
 
-Open the claude-review diff viewer in the browser so the user can review code changes and leave inline comments. Markdown files and transcripts support Raw, Preview, and Side-by-side view modes.
+Open the claude-review viewer so the user can read a change and mark it up.
+
+It is a conversation, not a form. Every thread can be asked about while they
+are still reading, the panel on the right takes what no single line covers,
+and a round sends what they have written **without ending the review** — you
+answer, make the changes, take the diff again, and they carry on from where
+they were. None of that works unless something is there to answer, so the
+review runs in the background and you stay in its loop.
+
+Waiting on it in the foreground is the other shape, and it is right only
+when there is nothing to talk about — it is at the end of this file. Do not
+start there: a review nobody is attached to shows the user an "Ask now"
+button on every thread and a panel that says, when they finally click,
+that nobody is listening.
 
 Usage:
 - `/review-ui` — review current git changes
@@ -13,6 +26,19 @@ Usage:
 - `/review-ui plan` — review the current plan file
 - `/review-ui transcript` — review the current conversation as a transcript
 
+## Three rules while a review is open
+
+**Answer questions as they arrive.** A thread that goes quiet for ten
+minutes reads as a hang, and the reader is sitting in front of it.
+
+**Leave the changes for the round.** Work through what the review asks when
+a round arrives, not the moment a question hints at it.
+
+**Say what you are doing while you do it** (step 8). Everything you do to
+their code, the reader should be able to watch happening. A silent agent and
+a hung one look the same from a browser, and the difference matters to
+somebody who is waiting.
+
 ## Steps
 
 1. Install or upgrade `claude-review` to the latest version:
@@ -20,48 +46,24 @@ Usage:
    uv tool install --upgrade claude-review
    ```
 
-2. Determine the mode:
-   - If the argument is `plan`: run `claude-review files <plan-file-path>` (find the plan file path in the "Plan File Info" section of your system prompt).
-   - If the argument is `transcript`: run `claude-review transcript <path-to-jsonl>` (find the JSONL at `~/.claude/projects/<project-dir-hash>/<session-id>.jsonl`).
-   - Otherwise it's a diff review. Translate the argument to a `claude-review diff` command:
-     - No argument → `claude-review diff`
-     - `diff` → `claude-review diff`
-     - `diff --base HEAD~3` → `claude-review diff --base HEAD~3`
+2. Work out what is being reviewed:
+   - `plan` → `claude-review files <plan-file-path>` (the path is in the
+     "Plan File Info" section of your system prompt).
+   - `transcript` → `claude-review transcript <path-to-jsonl>` (the JSONL is
+     at `~/.claude/projects/<project-dir-hash>/<session-id>.jsonl`).
+   - Anything else is a diff review. Translate the argument into a `--base`:
+     - No argument, or `diff` → `claude-review diff`
      - `last 3 commits` → `claude-review diff --base HEAD~3`
      - `two last commits` → `claude-review diff --base HEAD~2`
      - `since v0.5.0` → `claude-review diff --base v0.5.0`
-     - Any natural language describing a commit range → figure out the git ref and pass it as `--base`
+     - Any natural language describing a commit range → work out the git ref
+       and pass it as `--base`
 
-When it finishes, the user's review comments will be printed to stdout. Read them carefully and address each comment by making the requested changes.
+   The base is a starting point, not a commitment: the header lets the
+   reader read the same working tree against a branch, a tag or an earlier
+   round of this review.
 
-## Talking through the review: threads, the panel, and rounds (optional)
-
-Skip this unless the user asks for it, or has asked a question in a thread
-before. It changes nothing about the flow above; it adds a second half.
-
-Every thread in the review UI has an "Ask now" button, and the composer
-offers it beside "Add to review". A question left there waits for you to
-pick it up, and your answer appears in that thread while the user keeps
-reading. The **agent panel** on the right is the same conversation for
-everything a thread is not about — the plan, the tests, a file nobody
-commented on — and what is typed there goes at once. Once you are waiting,
-the review also offers to send a **round** rather than to end: the user
-sends what they have written, you answer and make the changes, the diff is
-taken again, and the review carries on.
-
-Three rules while the review is open. **Answer questions as they arrive** — a
-thread that goes quiet for ten minutes reads as a hang, and the reader is
-sitting in front of it. **Leave the changes for the round**: work through
-what the review asks when a round arrives, not the moment a question hints
-at it. And **say what you are doing while you do it** (step 7): everything
-you do to their code, the reader should be able to watch happening. A silent
-agent and a hung one look the same from a browser, and the difference
-matters to somebody who is waiting.
-
-To be available for that, run the review in the background instead of
-waiting on it:
-
-1. Start it in the background on a port you choose, and open the URL yourself:
+3. Start it in the background, and give the user the URL:
    ```bash
    setsid nohup claude-review --port 8765 --no-open diff > /tmp/review.log 2>&1 &
    ```
@@ -69,14 +71,15 @@ waiting on it:
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS
    ships no `setsid` — `nohup … &` on its own is the fallback. The URL is
-   printed to that log.
+   printed to that log; hand it to the user, since `--no-open` means nothing
+   opens by itself.
 
    If the port is taken the command says so; pick another. (Without `--port`
    the review picks one from the repository and the base ref, so reopening
    the same review comes back to the same address — and to the draft left
    in it.)
 
-2. Catch up, if this review was already under way when you arrived:
+4. Catch up, if this review was already under way when you arrived:
    ```bash
    claude-review context --port 8765
    ```
@@ -88,30 +91,38 @@ waiting on it:
    `--json` is the same thing for a program to read rather than a person —
    worth it when you mean to count or filter rather than to catch up.
 
-3. Loop until the review is over:
+5. Stay in the loop until the review is over:
    ```bash
    claude-review wait --port 8765 --seconds 25
    ```
-   It prints one JSON object and exits:
-   - `{"type": "question", "question": {...}}` — answer it, then wait again.
-     The question carries `thread_id` and `question_id`, the file, the line
-     range, `quote` — the lines it is about — and `history`, everything
-     already said in that thread, starting with the comment that opened it.
+   It prints one JSON object and exits. Run it in a loop, in the background,
+   so an event reaches you rather than you going back to look: a single call
+   per turn also works, but the review is unattended between them, and that
+   is the silence the first rule is about.
+   - `{"type": "question", "question": {...}}` — answer it (step 6), then
+     wait again. The question carries `thread_id` and `question_id`, the
+     file, the line range, `quote` — the lines it is about — and `history`,
+     everything already said in that thread, starting with the comment that
+     opened it.
    - `{"type": "message", "message": {"message_id": "panel-1", "text": "...",
      "threads": [...]}}` — the user has said something in the agent panel,
      which is about the review rather than about one line: the plan, the
-     tests, a file nobody commented on. Answer it with `say` (step 5). Any
+     tests, a file nobody commented on. Answer it with `say` (step 7). Any
      threads it points at come with it, in the same shape as a question.
    - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
-     user has sent a round. Address it as you would a finished review, then
-     retake the diff (step 8) and keep waiting.
+     user has sent a round. The markdown is the review itself; address it as
+     you would a finished one, then take the diff again (step 9) and keep
+     waiting.
    - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.
    - `{"type": "timeout"}` — nothing was asked; wait again.
-   - `{"type": "closed"}` — the review is over. Stop.
+   - `{"type": "closed"}` — the review is over. Stop looping. The last round
+     reached you as its own event just before this one; the background
+     process also writes it to its log on the way out, which is where to
+     look if you were not waiting at the time.
 
-4. Answer in the thread it belongs to, naming the question:
+6. Answer in the thread it belongs to, naming the question:
    ```bash
    claude-review reply --port 8765 --thread <thread_id> --question <question_id> "..."
    ```
@@ -121,13 +132,17 @@ waiting on it:
    way, what you considered and rejected. That context is the reason to route
    the question to you rather than to a fresh session.
 
-5. Answer a panel message, naming the message:
+7. Answer a panel message, naming the message:
    ```bash
    claude-review say --port 8765 --message <message_id> "..."
    ```
    The panel is one conversation, so the answer lands under the message it
-   names. Optionally, say what only you can know about yourself — the panel
-   shows it beside the review's own weight, with the time it was said:
+   names — and naming it is also what closes it: a message answered without
+   its id goes on showing as worked on, with a Stop button, however much you
+   have written about it elsewhere.
+
+   Optionally, say what only you can know about yourself — the panel shows it
+   beside the review's own weight, with the time it was said:
    ```bash
    claude-review status --port 8765 --model opus-5 --context "53% of 1M"
    ```
@@ -144,22 +159,7 @@ waiting on it:
    otherwise have to come and ask for. It arrives with a dot on the header
    chip and a count in the tab title, so it reaches them in another tab.
 
-6. Point at a line, when what you have to say belongs on the code:
-   ```bash
-   claude-review point --port 8765 --file src/x.py --lines 118-130 \
-     --severity question "I kept the old name here: renaming it broke two callers."
-   ```
-   Use it for what a paragraph in the panel would bury — where you did
-   something other than what was asked, and why. It becomes an ordinary
-   thread the reader answers, settles or removes, drawn as yours rather than
-   as one of their marks, and it does not count as their unsent work.
-
-   `--side old` hangs it on a line the change removed, which is the one place
-   the reader cannot always write themselves: under a narrower base the left
-   of the diff belongs to that base, so their gutters are shut there. Yours
-   is anchored in the review's own diff and is not.
-
-7. Say what you are doing, while you are doing it:
+8. Say what you are doing, while you are doing it:
    ```bash
    claude-review progress --port 8765 --message <message_id> \
      --file src/a.py --file src/b.py "rewriting the answer handler"
@@ -173,8 +173,8 @@ waiting on it:
 
    `--message` is optional here too: work you started for a round, or on
    your own, is worth showing under the same line. Send one whenever what
-   you are doing changes — this is the rule about being watchable, and it is
-   the only thing that makes a long silence readable as work.
+   you are doing changes — this is the third rule, and it is the only thing
+   that makes a long silence readable as work.
 
    Two more, for what a paragraph cannot do:
    ```bash
@@ -185,18 +185,30 @@ waiting on it:
    takes them there and marks the file for a moment — it moves somebody
    else's screen, so send it only when they asked to be shown something.
 
-8. After making the changes a round asked for, show them:
+9. After making the changes a round asked for, show them:
    ```bash
    claude-review round --port 8765
    ```
    The open review reloads the diff and moves its threads onto it: one whose
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against. What comes back names the
-   files that changed since the last round — read those again rather than the
-   whole diff, and the user can put the same list on screen alone.
+   files that changed since the round began — read those again rather than
+   the whole diff, and the reader can put that same list on screen alone.
 
-9. A review the user ends prints its last round on the background command's
-   output, as it normally would. That ends the loop.
+10. Point at a line, when what you have to say belongs on the code:
+    ```bash
+    claude-review point --port 8765 --file src/x.py --lines 118-130 \
+      --severity question "I kept the old name here: renaming it broke two callers."
+    ```
+    Use it for what a paragraph in the panel would bury — where you did
+    something other than what was asked, and why. It becomes an ordinary
+    thread the reader answers, settles or removes, drawn as yours rather than
+    as one of their marks, and it does not count as their unsent work.
+
+    `--side old` hangs it on a line the change removed, which is the one place
+    the reader cannot always write themselves: under a narrower base the left
+    of the diff belongs to that base, so their gutters are shut there. Yours
+    is anchored in the review's own diff and is not.
 
 While you work, the review says when the working tree has moved on and
 offers the user a "Retake" of its own. It never swaps the diff by itself, so
@@ -205,3 +217,19 @@ nothing you change under a half-written comment throws it away.
 The server says nothing on its own: `claude-review --verbose <command>` puts
 its diagnostic log on stderr, which is the way to see what it is doing when
 a review behaves oddly. Leave it off otherwise — the quiet is deliberate.
+
+## When there is nothing to talk about
+
+A review you will not be attached to is one command, and it blocks until the
+user sends it:
+
+```bash
+claude-review diff
+```
+
+The review is printed to stdout when they send it; read it and address each
+comment. Everything above still exists on their screen — the "Ask now"
+button, the panel, the offer of a round — but nothing answers, and the panel
+says so when they look. So choose this only for a review you know will be
+one-way: a quick look at a small change, or a machine with no way to keep a
+process alive.
