@@ -5,6 +5,7 @@ import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import type { DiffFile } from '$lib/types';
+import { newComment } from '../new-comment';
 
 const file: DiffFile = {
 	path: 'src/core/session.py',
@@ -87,7 +88,7 @@ describe('FileSection', () => {
 	});
 
 	it('shows how many comments the file carries', () => {
-		commentStore.add('src/core/session.py', 'new', 2, 2, 'rename this');
+		commentStore.add(newComment({ file: 'src/core/session.py', side: 'new', startLine: 2, endLine: 2, body: 'rename this' }));
 
 		const { getByTestId } = render(FileSection, { props: { file } });
 

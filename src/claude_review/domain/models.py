@@ -1,6 +1,7 @@
 """Domain models for claude-review."""
 
 from enum import StrEnum, auto
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -112,6 +113,8 @@ class Turn(BaseModel):
     author: TurnAuthor
     body: str
     round: int = 1
+    # Screenshots pasted with it, as files whoever answers can open
+    images: list[Path] = []
 
 
 class Comment(BaseModel):
@@ -132,6 +135,8 @@ class Comment(BaseModel):
     start_line: int
     end_line: int
     body: str
+    # Screenshots pasted with the comment that opened the thread
+    images: list[Path] = []
     turns: list[Turn] = []
     # Who opened it. The author may point at a line too — "here I did it
     # differently from what you asked" belongs on the line, not in a
@@ -170,6 +175,8 @@ class ThreadContext(BaseModel):
     end_line: int
     quote: list[str] = []
     body: str
+    # Screenshots pasted with the body: the comment, or the question asked
+    images: list[Path] = []
     # What was already said in this thread, so an answer to the third
     # question is not written as if it were the first
     history: list[Turn] = []
@@ -201,6 +208,8 @@ class PanelMessage(BaseModel):
     message_id: str
     text: str
     threads: list[ThreadContext] = []
+    # Images the reader pasted, as files the agent can open
+    images: list[Path] = []
 
 
 class AgentStatus(BaseModel):
@@ -241,6 +250,7 @@ class PanelEntry(BaseModel):
     author: TurnAuthor
     text: str
     at: int
+    images: list[Path] = []
 
 
 class RoundSubmission(BaseModel):
@@ -314,3 +324,39 @@ class ReviewVersion(BaseModel):
     phrase: str
     at: int | None = None
     changed: int | None = None
+
+
+class ReviewWorkspace(BaseModel):
+    """Where a review writes, so nothing of it lands in the repository under review."""
+
+    # Where the trees written down at every take of the diff are kept. None
+    # in a review whose content did not come from a repository: it leaves no
+    # marks, and so cannot offer its own rounds as bases.
+    objects: Path | None
+    # Where the images the reader pastes into the panel are kept
+    images: Path
+
+
+class StoredImage(BaseModel):
+    """An image the reader pasted, written into the review's workspace."""
+
+    image_id: str
+    path: Path
+    media_type: str
+    size: int
+
+
+class ImageLedger(BaseModel):
+    """What one review keeps of the images pasted into it.
+
+    Held beside the rest of the review's state rather than read back off the
+    disk: the ledger is what says an id exists, so no path is ever built from
+    one, and the running total is what keeps the review under its limit
+    without counting the directory on every upload.
+    """
+
+    kept: dict[str, StoredImage] = {}
+    # Images that went out with a message. The agent may still be about to
+    # open them, so they stay until the review ends.
+    sent: set[str] = set()
+    held_bytes: int = 0

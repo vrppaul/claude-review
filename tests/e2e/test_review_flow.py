@@ -10,7 +10,7 @@ import pytest
 import uvicorn
 from playwright.async_api import Locator, Page
 
-from claude_review.domain.models import ReviewMode
+from claude_review.domain.models import ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -25,9 +25,11 @@ ServerFixture = tuple[str, ServerState]
 # --- Shared helpers ---
 
 
-async def _start_server(diff_files, state, mode=ReviewMode.DIFF) -> AsyncGenerator[ServerFixture]:
+async def _start_server(
+    diff_files, state, workspace: ReviewWorkspace, mode=ReviewMode.DIFF
+) -> AsyncGenerator[ServerFixture]:
     """Start a uvicorn server and yield (url, state)."""
-    app = create_app(diff_files=diff_files, state=state, mode=mode)
+    app = create_app(diff_files=diff_files, state=state, mode=mode, workspace=workspace)
     # Match the CLI: the default picks uvicorn's older websockets integration
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
     server = uvicorn.Server(config)
@@ -103,14 +105,14 @@ def e2e_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def server_url(e2e_repo: Path) -> AsyncGenerator[ServerFixture]:
+async def server_url(e2e_repo: Path, workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
     """Start a real server against the e2e repo and yield its URL."""
     git_repo = GitRepository()
     diff_service = DiffService(git_repository=git_repo)
     diff_files = await diff_service.get_diff(e2e_repo)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, ReviewMode.DIFF):
+    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.DIFF):
         yield fixture
 
 
@@ -305,12 +307,12 @@ def text_files(tmp_path: Path) -> list[Path]:
 
 
 @pytest.fixture
-async def files_mode_server(text_files: list[Path]) -> AsyncGenerator[ServerFixture]:
+async def files_mode_server(text_files: list[Path], workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
     """Start a real server in files mode."""
     diff_files = TextFileService().read_files(text_files)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, ReviewMode.FILES):
+    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.FILES):
         yield fixture
 
 
@@ -523,12 +525,12 @@ def transcript_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def transcript_mode_server(transcript_file: Path) -> AsyncGenerator[ServerFixture]:
+async def transcript_mode_server(transcript_file: Path, workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
     """Start a real server in transcript mode."""
     diff_files = TranscriptService().parse(transcript_file)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, ReviewMode.TRANSCRIPT):
+    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.TRANSCRIPT):
         yield fixture
 
 

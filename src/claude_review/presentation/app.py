@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.domain.models import DiffFile, ReviewMode, ReviewWorkspace
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
 from claude_review.presentation.routes import router
 from claude_review.presentation.state import ServerState
@@ -15,10 +15,10 @@ def create_app(
     diff_files: list[DiffFile],
     state: ServerState,
     mode: ReviewMode,
+    workspace: ReviewWorkspace,
     title: str = "",
     root: Path | None = None,
     base: str | None = None,
-    objects: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Claude Review")
 
@@ -34,11 +34,10 @@ def create_app(
     # What the diff was taken against, so the server can retake it — with
     # whitespace ignored, or after the files change
     app.state.diff_base = base
-    # Where this review keeps the trees it writes down. It belongs to the
-    # review and goes with it, which is what keeps them out of the
-    # repository under review. None: a review that leaves no marks, and so
-    # cannot offer its own rounds as bases.
-    app.state.objects = objects
+    # The directory this review owns: the trees it writes down and the
+    # images pasted into it. It goes with the review, which is what keeps
+    # both out of the repository under review.
+    app.state.workspace = workspace
 
     app.add_middleware(SecurityHeaders)
     # Outermost, so it runs first: this server answers its own page and nothing else

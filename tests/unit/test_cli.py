@@ -137,7 +137,7 @@ SEEN = {
             "raised_by": "reader",
         }
     ],
-    "panel": [{"message_id": "panel-1", "author": "reader", "text": "Run the tests", "at": 1}],
+    "panel": [{"message_id": "panel-1", "author": "reader", "text": "Run the tests", "at": 1, "images": []}],
 }
 
 
@@ -169,3 +169,14 @@ def test_a_review_nobody_answers_says_so() -> None:
     printed = _render_context({**SEEN, "answerer_attached": False}, whole=False)
 
     assert "nobody answering" in printed
+
+
+def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
+    """The words alone would leave "look at this" pointing at nothing."""
+    image = "/tmp/tmp0a1b.claude-review/images/0a1b.png"
+    said = {"message_id": "panel-1", "author": "reader", "text": "", "at": 1, "images": [image]}
+
+    printed = _render_context({**SEEN, "panel": [said]}, whole=False)
+
+    assert "you: (image)" in printed
+    assert f"image: {image}" in printed

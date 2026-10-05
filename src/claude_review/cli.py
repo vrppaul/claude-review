@@ -22,7 +22,7 @@ import structlog
 import uvicorn
 
 from claude_review.domain.exceptions import PortUnavailableError
-from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.domain.models import DiffFile, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -42,6 +42,10 @@ DISCONNECT_GRACE = 3.0
 # below the ephemeral range the kernel hands out.
 STABLE_PORT_FLOOR = 40_000
 STABLE_PORT_CEILING = 60_000
+
+# What a review's own temporary directories are called, so they can be told apart in /tmp
+OBJECTS_SUFFIX = ".claude-review-objects"
+IMAGES_SUFFIX = ".claude-review-images"
 
 
 def _configure_logging(*, verbose: bool = False) -> None:
@@ -74,25 +78,37 @@ async def _load_diff(repo_path: Path, base: str | None = None) -> tuple[list[Dif
 
 
 @contextlib.contextmanager
-def _object_store(root: Path | None) -> Iterator[Path | None]:
-    """Lend the review a store of its own for the trees it writes down.
+def _workspace(root: Path | None) -> Iterator[ReviewWorkspace]:
+    """Lend the review the directories it writes to while it runs.
 
-    Its own, so the blob staging writes for every untracked file never
-    reaches the repository under review. Removed here rather than where the
-    serving ends, because a review can fail to start after the first tree is
-    already written — a port already taken is the ordinary way — and a
-    directory holding a copy of every untracked file would be left behind
-    each time it happened.
+    Two, because they outlive the review differently. The trees written at
+    every round go with it: the blob staging writes a copy of every untracked
+    file, and it must neither reach the repository under review nor be left
+    behind. They are removed here rather than where the serving ends, because
+    a review can fail to start after the first tree is already written — a
+    port already taken is the ordinary way.
+
+    The images pasted into it stay. The last round names them, and the agent
+    reads it only once the review has ended; the system clears its temporary
+    directory on its own schedule, which is long enough for that.
     """
-    if root is None:
-        yield None
-        return
-
-    store = Path(tempfile.mkdtemp(suffix=".claude-review-objects"))
+    images = Path(tempfile.mkdtemp(suffix=IMAGES_SUFFIX))
+    objects = Path(tempfile.mkdtemp(suffix=OBJECTS_SUFFIX)) if root is not None else None
     try:
-        yield store
+        yield ReviewWorkspace(objects=objects, images=images)
     finally:
-        shutil.rmtree(store, ignore_errors=True)
+        if objects is not None:
+            shutil.rmtree(objects, ignore_errors=True)
+        _leave_images(images)
+
+
+def _leave_images(images: Path) -> None:
+    """Leave what was pasted for the agent, and say where; leave nothing if nothing was."""
+    if any(images.iterdir()):
+        sys.stderr.write(f"Images pasted in this review stay in {images} until the system clears its temporary files\n")
+        sys.stderr.flush()
+    else:
+        images.rmdir()
 
 
 async def _serve(
@@ -107,7 +123,7 @@ async def _serve(
     may_fall_back: bool = False,
 ) -> str:
     """Start the review server and return formatted review markdown."""
-    with _object_store(root) as objects:
+    with _workspace(root) as workspace:
         return await _serve_review(
             diff_files,
             mode,
@@ -115,7 +131,7 @@ async def _serve(
             title,
             root=root,
             base=base,
-            objects=objects,
+            workspace=workspace,
             open_browser=open_browser,
             may_fall_back=may_fall_back,
         )
@@ -129,15 +145,23 @@ async def _serve_review(
     *,
     root: Path | None,
     base: str | None,
-    objects: Path | None,
+    workspace: ReviewWorkspace,
     open_browser: bool,
     may_fall_back: bool,
 ) -> str:
     """Hold the review open until it ends, and return what it produced."""
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=diff_files, state=state, mode=mode, title=title, root=root, base=base, objects=objects)
+    app = create_app(
+        diff_files=diff_files,
+        state=state,
+        mode=mode,
+        title=title,
+        workspace=workspace,
+        root=root,
+        base=base,
+    )
 
-    git_repo = GitRepository(objects=objects)
+    git_repo = GitRepository(objects=workspace.objects)
     watcher = TreeWatcherService(git_repository=git_repo)
     if root is not None:
         state.tree = await watcher.read(root)
@@ -439,7 +463,9 @@ def _render_context(seen: dict, *, whole: bool) -> str:
         lines.append("panel:")
         for entry in seen["panel"]:
             who = "you" if entry["author"] == "reader" else "me"
-            lines.append(f"  {who}: {_gist(entry['text'])}")
+            # A message can be an image alone, and an empty line says nothing
+            lines.append(f"  {who}: {_gist(entry['text']) or '(image)'}")
+            lines.extend(f"    image: {path}" for path in entry["images"])
 
     return "\n".join(lines) + "\n"
 

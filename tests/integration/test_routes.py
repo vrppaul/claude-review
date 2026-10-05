@@ -14,6 +14,7 @@ from claude_review.domain.models import (
     FileStatus,
     LineType,
     ReviewMode,
+    ReviewWorkspace,
 )
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
@@ -54,11 +55,12 @@ def server_state() -> ServerState:
 
 
 @pytest.fixture
-async def client(mock_diff_files: list[DiffFile], server_state: ServerState):
+async def client(mock_diff_files: list[DiffFile], server_state: ServerState, workspace: ReviewWorkspace):
     app = create_app(
         diff_files=mock_diff_files,
         state=server_state,
         mode=ReviewMode.DIFF,
+        workspace=workspace,
         title="test-repo: uncommitted changes",
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
@@ -282,10 +284,10 @@ def plan_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def files_mode_client(plan_file: Path, server_state: ServerState):
+async def files_mode_client(plan_file: Path, server_state: ServerState, workspace: ReviewWorkspace):
     """Client backed by a real text file loaded through TextFileService."""
     diff_files = TextFileService().read_files([plan_file])
-    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.FILES)
+    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.FILES, workspace=workspace)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
@@ -357,10 +359,10 @@ def transcript_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def transcript_mode_client(transcript_file: Path, server_state: ServerState):
+async def transcript_mode_client(transcript_file: Path, server_state: ServerState, workspace: ReviewWorkspace):
     """Client backed by a real transcript file loaded through TranscriptService."""
     diff_files = TranscriptService().parse(transcript_file)
-    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.TRANSCRIPT)
+    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.TRANSCRIPT, workspace=workspace)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
@@ -421,7 +423,9 @@ async def test_diff_response_says_what_is_under_review(client: AsyncClient) -> N
 
 
 @pytest.fixture
-async def repo_backed_client(mock_diff_files: list[DiffFile], server_state: ServerState, tmp_path: Path):
+async def repo_backed_client(
+    mock_diff_files: list[DiffFile], server_state: ServerState, tmp_path: Path, workspace: ReviewWorkspace
+):
     """A client whose server can read files, as diff mode's can."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 31)))
@@ -430,6 +434,7 @@ async def repo_backed_client(mock_diff_files: list[DiffFile], server_state: Serv
         diff_files=reviewed,
         state=server_state,
         mode=ReviewMode.DIFF,
+        workspace=workspace,
         title="test-repo: uncommitted changes",
         root=tmp_path,
     )
@@ -466,7 +471,7 @@ async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -
 
 
 async def test_ignoring_whitespace_leaves_the_real_change_visible(
-    tmp_git_repo: Path, server_state: ServerState
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
 ) -> None:
     """A reindented block should stop hiding the line that actually changed."""
     (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n  c = 3\n")
@@ -476,7 +481,7 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(
     (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n    c = 3\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = _changed_lines((await client.get("/api/diff")).json())
@@ -497,7 +502,9 @@ def _changed_lines(payload: dict) -> list[str]:
     ]
 
 
-async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Path, server_state: ServerState) -> None:
+async def test_ignoring_whitespace_drops_a_reindent_only_change(
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
+) -> None:
     """A file whose only change is indentation disappears from the review."""
     (tmp_git_repo / "app.py").write_text("def f():\n    return 1\n")
     git(tmp_git_repo, "add", ".")
@@ -505,7 +512,7 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
     (tmp_git_repo / "app.py").write_text("def f():\n        return 1\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = (await client.get("/api/diff")).json()
@@ -515,7 +522,9 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
     assert not any(f["path"] == "app.py" and f["hunks"] for f in ignored["files"])
 
 
-async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, server_state: ServerState) -> None:
+async def test_ignoring_whitespace_can_be_turned_back_off(
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
+) -> None:
     """It is a way of looking at the diff, not a door that shuts behind you."""
     (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n")
     git(tmp_git_repo, "add", ".")
@@ -523,7 +532,7 @@ async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, se
     (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, root=tmp_git_repo)
+    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         full = _changed_lines((await client.get("/api/diff")).json())

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from playwright.async_api import Page, async_playwright
 
+from claude_review.domain.models import ReviewWorkspace
 from tests.helpers import git
 
 E2E_TIMEOUT_MS = 5_000
@@ -23,6 +24,18 @@ def tmp_git_repo(tmp_path: Path) -> Path:
     git(tmp_path, "commit", "-m", "initial")
 
     return tmp_path
+
+
+@pytest.fixture
+def workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspace:
+    """The directory a review owns, laid out as for one that leaves no marks."""
+    return ReviewWorkspace(objects=None, images=tmp_path_factory.mktemp("images"))
+
+
+@pytest.fixture
+def marking_workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspace:
+    """The directory a review of a repository owns, with room for its marks."""
+    return ReviewWorkspace(objects=tmp_path_factory.mktemp("objects"), images=tmp_path_factory.mktemp("images"))
 
 
 @pytest.fixture

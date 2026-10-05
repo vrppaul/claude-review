@@ -5,6 +5,7 @@ import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import type { DiffFile } from '$lib/types';
+import { newComment } from '../new-comment';
 
 const file: DiffFile = {
 	path: 'src/app.ts',
@@ -90,7 +91,7 @@ describe('split layout', () => {
 	});
 
 	it('keeps a comment made in one layout visible in the other', async () => {
-		commentStore.add('src/app.ts', 'new', 2, 2, 'tighten this');
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 2, endLine: 2, body: 'tighten this' }));
 		diffStore.setDiffLayout('split');
 
 		const { getByText } = render(FileSection, { props: { file } });

@@ -96,20 +96,38 @@
 			.map((line) => line.content);
 	});
 
-	function handleSaveComment(body: string, severity: CommentSeverity) {
+	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
-		commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
+		commentStore.add({
+			file: file.path,
+			side,
+			startLine: line,
+			endLine,
+			body,
+			severity,
+			quote: selectedText ?? [],
+			images
+		});
 		selection.clearCommenting();
 	}
 
 	/** Write the comment and hand it straight to whoever is answering. */
-	async function handleAskComment(body: string, severity: CommentSeverity) {
+	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		const id = commentStore.add(file.path, side, line, endLine, body, severity, selectedText ?? []);
+		const id = commentStore.add({
+			file: file.path,
+			side,
+			startLine: line,
+			endLine,
+			body,
+			severity,
+			quote: selectedText ?? [],
+			images
+		});
 		selection.clearCommenting();
 		try {
 			await commentStore.ask(id);

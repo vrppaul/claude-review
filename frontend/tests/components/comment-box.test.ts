@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { fireEvent, render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
+import { diffStore } from '$lib/stores/diff.svelte';
 
 describe('CommentBox', () => {
 	it('calls onSave with trimmed text when Comment button is clicked', async () => {
@@ -14,7 +15,7 @@ describe('CommentBox', () => {
 		await userEvent.type(input, '  Fix this  ');
 		await userEvent.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Fix this', 'note');
+		expect(onSave).toHaveBeenCalledWith('Fix this', 'note', []);
 	});
 
 	it('disables Comment button when input is empty', () => {
@@ -131,7 +132,7 @@ describe('how a comment is meant', () => {
 		await user.type(getByTestId('comment-input'), 'Reads well');
 		await user.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Reads well', 'note');
+		expect(onSave).toHaveBeenCalledWith('Reads well', 'note', []);
 	});
 
 	it('can be marked as a question', async () => {
@@ -145,7 +146,7 @@ describe('how a comment is meant', () => {
 		await user.type(getByTestId('comment-input'), 'Is this reachable?');
 		await user.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Is this reachable?', 'question');
+		expect(onSave).toHaveBeenCalledWith('Is this reachable?', 'question', []);
 	});
 
 	it('reopens for editing with the mark it was saved under', async () => {
@@ -154,5 +155,96 @@ describe('how a comment is meant', () => {
 		});
 
 		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
+	});
+});
+
+describe('images in a comment', () => {
+	const LIMITS = { max_image_bytes: 10 * 1024 * 1024, max_images_per_message: 10 };
+
+	function screenshot(): File {
+		return new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'screen.png', {
+			type: 'image/png'
+		});
+	}
+
+	function imageFetch(imageId: string) {
+		const mock = vi.fn((url: string) =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve(url === '/api/images' ? { image_id: imageId } : {})
+			})
+		);
+		vi.stubGlobal('fetch', mock);
+		return mock;
+	}
+
+	beforeEach(() => {
+		diffStore.clear();
+		diffStore.setImageLimits(LIMITS);
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('saves a pasted screenshot as the whole comment', async () => {
+		imageFetch('4f.png');
+		const onSave = vi.fn();
+		const { getByTestId, findByTestId } = render(CommentBox, {
+			props: { onSave, onCancel: vi.fn(), startLine: 5 }
+		});
+
+		await fireEvent.paste(getByTestId('comment-input'), {
+			clipboardData: { files: [screenshot()] }
+		});
+		await findByTestId('attached-image');
+		await userEvent.click(getByTestId('save-comment'));
+
+		expect(onSave).toHaveBeenCalledWith('', 'note', ['4f.png']);
+	});
+
+	it('lets the server drop what was pasted when the field closes unsent', async () => {
+		// Cancel, a click on another line, a folded thread: each closes the field
+		const fetchMock = imageFetch('4f.png');
+		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), startLine: 5 }
+		});
+
+		await fireEvent.paste(getByTestId('comment-input'), {
+			clipboardData: { files: [screenshot()] }
+		});
+		await findByTestId('attached-image');
+		unmount();
+
+		const [url, init] = fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit];
+		expect(url).toBe('/api/images/4f.png');
+		expect(init.method).toBe('DELETE');
+	});
+
+	it('keeps what was pasted once the comment is saved', async () => {
+		const fetchMock = imageFetch('4f.png');
+		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), startLine: 5 }
+		});
+
+		await fireEvent.paste(getByTestId('comment-input'), {
+			clipboardData: { files: [screenshot()] }
+		});
+		await findByTestId('attached-image');
+		await userEvent.click(getByTestId('save-comment'));
+		unmount();
+
+		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/images']);
+	});
+
+	it('leaves the images a comment already had when an edit closes unsent', async () => {
+		const fetchMock = imageFetch('4f.png');
+		const { unmount } = render(CommentBox, {
+			props: { onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'This', initialImages: ['kept.png'] }
+		});
+
+		unmount();
+
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

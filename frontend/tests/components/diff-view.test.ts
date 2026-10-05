@@ -5,6 +5,7 @@ import DiffView from '$lib/components/DiffView.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import type { DiffFile } from '$lib/types';
+import { newComment } from '../new-comment';
 
 const diffFile: DiffFile = {
 	path: 'src/handler.ts',
@@ -270,7 +271,7 @@ describe('DiffView', () => {
 			]
 		};
 		diffStore.setFiles([mdFile], 'files');
-		commentStore.add('docs/readme.md', 'new', 1, 1, 'Fix this heading');
+		commentStore.add(newComment({ file: 'docs/readme.md', side: 'new', startLine: 1, endLine: 1, body: 'Fix this heading' }));
 
 		const { getByTestId } = render(DiffView);
 
@@ -370,7 +371,7 @@ describe('comment anchoring across diff sides', () => {
 	it('shows a comment on a removed line only once', () => {
 		// The fixture replaces line 2, so old line 2 and new line 2 both exist.
 		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
 
 		const { getAllByText } = render(DiffView);
 
@@ -379,7 +380,7 @@ describe('comment anchoring across diff sides', () => {
 
 	it('labels a comment on a removed line as removed', () => {
 		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
 
 		const { getByTestId } = render(DiffView);
 
@@ -388,8 +389,8 @@ describe('comment anchoring across diff sides', () => {
 
 	it('shows both sides of a replaced line as separate comments', () => {
 		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add('src/handler.ts', 'old', 2, 2, 'the old one');
-		commentStore.add('src/handler.ts', 'new', 2, 2, 'the new one');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'the old one' }));
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'the new one' }));
 
 		const { getAllByText } = render(DiffView);
 
@@ -463,7 +464,7 @@ describe('editing a comment', () => {
 	it('keeps the removed wording when the comment is reopened for editing', async () => {
 		const user = userEvent.setup();
 		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add('src/handler.ts', 'old', 2, 2, 'why was this dropped');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
 
 		const { getByText, getByTestId } = render(DiffView);
 		await user.click(getByText('Edit'));
@@ -538,7 +539,7 @@ describe('showing how a comment is meant', () => {
 	});
 
 	it('marks a blocker as one', () => {
-		commentStore.add('src/handler.ts', 'new', 2, 2, 'This drops the lock', 'blocker');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'This drops the lock', severity: 'blocker' }));
 
 		const { getByTestId } = render(DiffView);
 
@@ -546,7 +547,7 @@ describe('showing how a comment is meant', () => {
 	});
 
 	it('says nothing on an ordinary note', () => {
-		commentStore.add('src/handler.ts', 'new', 2, 2, 'Reads well');
+		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Reads well' }));
 
 		const { queryByTestId } = render(DiffView);
 

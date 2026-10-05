@@ -4,6 +4,7 @@ import asyncio
 
 from claude_review.domain.models import (
     AgentStatus,
+    ImageLedger,
     PanelCancel,
     PanelEntry,
     PanelMessage,
@@ -64,6 +65,9 @@ class ServerState:
         # last one is what is on screen; the first of each round is a base
         # the reader can go back to.
         self.snapshots: list[TreeSnapshot] = []
+        # The images pasted into the panel: which exist, which went out with
+        # a message, and how much they weigh together
+        self.images = ImageLedger()
 
     def raise_id(self) -> str:
         """The id of the next thread the author raises."""

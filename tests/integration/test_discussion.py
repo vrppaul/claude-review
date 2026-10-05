@@ -18,6 +18,7 @@ from claude_review.domain.models import (
     FileStatus,
     LineType,
     ReviewMode,
+    ReviewWorkspace,
 )
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
@@ -62,8 +63,8 @@ def _files() -> list[DiffFile]:
 
 
 @pytest.fixture
-async def client(state: ServerState):
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+async def client(state: ServerState, workspace: ReviewWorkspace):
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
@@ -126,9 +127,9 @@ async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> N
     assert event["question"]["question_id"] == "turn-2"
 
 
-def test_an_answer_says_which_question_it_answers(state: ServerState) -> None:
+def test_an_answer_says_which_question_it_answers(state: ServerState, workspace: ReviewWorkspace) -> None:
     """Without it the browser files the answer under whatever was asked last."""
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
     client = TestClient(app, base_url=LOCAL_ORIGIN)
 
     with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
@@ -145,9 +146,9 @@ def test_an_answer_says_which_question_it_answers(state: ServerState) -> None:
         }
 
 
-def test_an_answer_that_names_no_question_still_arrives(state: ServerState) -> None:
+def test_an_answer_that_names_no_question_still_arrives(state: ServerState, workspace: ReviewWorkspace) -> None:
     """A person answering by hand should not have to quote an id."""
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
     client = TestClient(app, base_url=LOCAL_ORIGIN)
 
     with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
@@ -156,8 +157,8 @@ def test_an_answer_that_names_no_question_still_arrives(state: ServerState) -> N
         assert socket.receive_json()["question_id"] is None
 
 
-def test_an_answer_reaches_the_review_on_screen(state: ServerState) -> None:
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+def test_an_answer_reaches_the_review_on_screen(state: ServerState, workspace: ReviewWorkspace) -> None:
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
     client = TestClient(app, base_url=LOCAL_ORIGIN)
 
     with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:

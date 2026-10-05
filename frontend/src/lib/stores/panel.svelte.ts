@@ -13,6 +13,7 @@
 import type {
   AgentStatus,
   Comment,
+  Composer,
   PanelTurn,
   Progress,
   ProgressStep,
@@ -20,8 +21,10 @@ import type {
 
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
-import { loadDraft, saveDraft } from "$lib/utils/drafts";
+import { emptyComposer, loadDraft, saveDraft } from "$lib/utils/drafts";
+import { ImageAttachments } from "$lib/utils/image-attachments.svelte";
 import { readChoice, readNumber, writeChoice } from "$lib/utils/preferences";
+import { refusalOf } from "$lib/utils/refusal";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 import { reviewWeight } from "$lib/utils/weight";
 
@@ -58,6 +61,12 @@ let unread = $state(0);
 // otherwise: an empty panel beside a review nobody is answering is 380
 // pixels of nothing.
 let chosen = stored !== "unset";
+// The message being written: its words and the images pasted into it. Held
+// here rather than in the panel, and saved with the draft, so hiding the
+// panel or reloading the page loses neither — and no image is left on the
+// server with nothing on screen pointing at it.
+let composerText = $state("");
+const attachments = new ImageAttachments([], rememberComposer);
 let nextMessage = 0;
 let nextEvent = 0;
 
@@ -92,6 +101,15 @@ function remember(): void {
   saveDraft({ title: diffStore.title, panel: turns });
 }
 
+function rememberComposer(): void {
+  if (!diffStore.title) return;
+  const composer: Composer = {
+    text: composerText,
+    images: $state.snapshot(attachments.images),
+  };
+  saveDraft({ title: diffStore.title, composer });
+}
+
 export const panelStore = {
   get turns(): PanelTurn[] {
     return turns;
@@ -113,6 +131,13 @@ export const panelStore = {
   },
   get progress(): Progress | null {
     return progress;
+  },
+  get composerText(): string {
+    return composerText;
+  },
+  /** The images pasted into the message being written. */
+  get attachments(): ImageAttachments {
+    return attachments;
   },
   /** What handing this review over costs, as far as this side can tell. */
   get weight(): number {
@@ -140,24 +165,37 @@ export const panelStore = {
     writeChoice("panel-width", width);
   },
 
-  /** Pick the conversation up where a reload left it. */
+  /** Pick the conversation, and the message half-written, up where a reload left them. */
   restore(title: string) {
-    const saved = loadDraft(title)?.panel ?? [];
+    const draft = loadDraft(title);
+    const saved = draft?.panel ?? [];
     turns = saved;
+    const composer = draft?.composer ?? emptyComposer();
+    composerText = composer.text;
+    attachments.reset(composer.images);
     // Past the highest id already handed out, so an answer cannot land under
     // a message that only shares its number
     nextMessage = highest(saved, "panel-");
     nextEvent = Math.max(highest(saved, "answer-"), highest(saved, "event-"));
   },
 
+  setComposerText(text: string) {
+    composerText = text;
+    rememberComposer();
+  },
+
   /**
-   * Say something to the agent, and go on reading.
+   * Send the message being written, and go on reading.
    *
    * The threads travel with the message rather than only their ids: they
    * are unsent work, held in this browser, and the server has never seen
-   * them.
+   * them. Images are the other way round: the server already keeps them,
+   * so only their ids go.
    */
-  async send(text: string, threads: Comment[]): Promise<void> {
+  async send(threads: Comment[]): Promise<void> {
+    const written = composerText;
+    const text = written.trim();
+    const images = $state.snapshot(attachments.images);
     const id = `panel-${++nextMessage}`;
     turns = [
       ...turns,
@@ -167,6 +205,7 @@ export const panelStore = {
         body: text,
         at: Date.now(),
         threads: threads.map((thread) => thread.id),
+        images,
       },
     ];
     // A new question, so whatever was being done for the last one is history
@@ -180,14 +219,22 @@ export const panelStore = {
         message_id: id,
         text,
         threads: threads.map(threadOnTheWire),
+        images,
       }),
     });
 
     if (!response.ok) {
       turns = turns.filter((turn) => turn.id !== id);
       remember();
-      throw new Error(`Could not send: ${response.status}`);
+      throw new Error(await refusalOf(response, "Could not send"));
     }
+
+    // What was written or pasted while this was on its way belongs to the
+    // next message, so only what went is cleared
+    if (composerText.startsWith(written)) {
+      composerText = composerText.slice(written.length).trimStart();
+    }
+    attachments.release(images);
   },
 
   /**
@@ -292,6 +339,8 @@ export const panelStore = {
     progress = null;
     agent = { model: null, context: null, at: null };
     unread = 0;
+    composerText = "";
+    attachments.reset([]);
     nextMessage = 0;
     nextEvent = 0;
   },

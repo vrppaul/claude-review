@@ -45,6 +45,13 @@ export interface DiffResponse {
   agent: AgentStatus;
   /** How many files have moved on since this diff was taken. */
   moved: number;
+  /** What the server takes in images, so the browser checks before uploading. */
+  image_limits: ImageLimits;
+}
+
+export interface ImageLimits {
+  max_image_bytes: number;
+  max_images_per_message: number;
 }
 
 /** Where a base came from, so a menu can group them. */
@@ -94,6 +101,24 @@ export interface Turn {
   id?: string;
   /** Which question this answer belongs to. */
   answers?: string;
+  /** Screenshots the reader pasted with it, by the id the server kept them under. */
+  images: string[];
+}
+
+/** What is said in a thread after the comment that opened it, as it is written. */
+export type NewTurn = Pick<Turn, "author" | "body" | "images">;
+
+/** A comment as the reader writes it, before it has an id and a place in time. */
+export interface NewComment {
+  file: string;
+  side: LineSide;
+  startLine: number;
+  endLine: number;
+  body: string;
+  severity: CommentSeverity;
+  /** The lines it is written against, kept for when they are gone. */
+  quote: string[];
+  images: string[];
 }
 
 /** A question handed over and not answered yet. */
@@ -117,6 +142,8 @@ export interface Comment {
   start_line: number;
   end_line: number;
   body: string;
+  /** Screenshots pasted with the comment, by the id the server kept them under. */
+  images: string[];
   turns: Turn[];
   /** Who opened it. The author may point at a line too. */
   raised_by: TurnAuthor;
@@ -140,7 +167,10 @@ export interface Comment {
 export type CommentPayload = Omit<
   Comment,
   "id" | "awaiting" | "unread" | "collapsed" | "round" | "at" | "turns"
-> & { turns: Omit<Turn, "at" | "id" | "answers">[] };
+> & { turns: TurnPayload[] };
+
+/** A turn as it goes back: what was said, with the images as ids. */
+export type TurnPayload = Omit<Turn, "at" | "id" | "answers">;
 
 export interface SubmitRequest {
   comments: CommentPayload[];
@@ -202,8 +232,17 @@ export interface PanelTurn {
   threads?: string[];
   /** Files worth opening at what was said. */
   files?: string[];
+  /** Images the reader attached, by the id the server kept them under. */
+  images?: string[];
   /** Which message an answer belongs to. */
   answers?: string;
   /** Taken back before it was answered. */
   cancelled?: boolean;
+}
+
+/** The panel message being written: its words and the images pasted into it. */
+export interface Composer {
+  text: string;
+  /** Ids the server kept the images under. */
+  images: string[];
 }

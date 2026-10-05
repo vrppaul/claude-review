@@ -1,10 +1,7 @@
 """Service for formatting review comments into markdown."""
 
 from claude_review.domain.models import Comment, CommentSeverity, LineSide, ReviewResult, Turn, TurnAuthor
-
-# What each side is called in the output. The agent reading this wrote the
-# change, so its own turns are addressed to it as "You".
-TURN_LABELS = {TurnAuthor.AUTHOR: "You", TurnAuthor.READER: "Reviewer"}
+from claude_review.services.thread_markdown import format_opening, format_turn
 
 
 class ReviewService:
@@ -55,26 +52,13 @@ class ReviewService:
         # is quoted like any other turn: the reader's reply below it then
         # reads as a reply rather than as the whole thread.
         if comment.raised_by == TurnAuthor.AUTHOR:
-            pieces.append(self._format_turn(Turn(author=TurnAuthor.AUTHOR, body=comment.body, round=1)))
+            opening = Turn(author=TurnAuthor.AUTHOR, body=comment.body, round=1, images=comment.images)
+            pieces.append(format_turn(opening))
         else:
-            pieces.append(comment.body)
-        pieces.extend(self._format_turn(turn) for turn in comment.turns)
+            pieces.append(format_opening(comment.body, comment.images))
+        pieces.extend(format_turn(turn) for turn in comment.turns)
 
         return "\n".join(pieces) + "\n"
-
-    def _format_turn(self, turn: Turn) -> str:
-        """Quote a turn under the comment it belongs to, named by its author.
-
-        A blockquote keeps the conversation apart from the comment that
-        opened it, so the instruction and the discussion of it do not read
-        as one paragraph.
-        """
-        label = f"> **{TURN_LABELS[turn.author]}:**"
-        if "\n" not in turn.body:
-            return f"{label} {turn.body}"
-        # A quoted block needs the marker on every line, blank ones included
-        quoted = "\n".join(f"> {line}" if line else ">" for line in turn.body.splitlines())
-        return f"{label}\n{quoted}"
 
     def _format_quote(self, quote: list[str]) -> str:
         """Carry the lines a comment was written against.

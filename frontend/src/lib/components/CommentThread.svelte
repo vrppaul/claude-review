@@ -7,6 +7,7 @@
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
+	import SaidImages from './SaidImages.svelte';
 
 	interface Props {
 		comment: Comment;
@@ -39,6 +40,7 @@
 		asked: string;
 		round: number;
 		at: number | undefined;
+		images: string[];
 		answers: Turn[];
 	}
 
@@ -56,6 +58,7 @@
 			asked: comment.body,
 			round: comment.round,
 			at: comment.at,
+			images: comment.images,
 			answers: []
 		};
 		const list: Exchange[] = [opening];
@@ -67,6 +70,7 @@
 					asked: turn.body,
 					round: turn.round,
 					at: turn.at,
+					images: turn.images,
 					answers: []
 				});
 			} else {
@@ -99,8 +103,8 @@
 		return () => clearInterval(timer);
 	});
 
-	function handleSave(body: string, severity: CommentSeverity) {
-		commentStore.update(comment.id, body, severity);
+	function handleSave(body: string, severity: CommentSeverity, images: string[]) {
+		commentStore.update(comment.id, body, severity, images);
 		editing = false;
 	}
 
@@ -110,13 +114,13 @@
 		commentStore.setCollapsed(comment.id, true);
 	}
 
-	function reply(body: string) {
-		commentStore.addTurn(comment.id, 'reader', body);
+	function reply(body: string, images: string[]) {
+		commentStore.addTurn(comment.id, { author: 'reader', body, images });
 		replying = false;
 	}
 
-	async function replyAndAsk(body: string) {
-		commentStore.addTurn(comment.id, 'reader', body);
+	async function replyAndAsk(body: string, images: string[]) {
+		commentStore.addTurn(comment.id, { author: 'reader', body, images });
 		replying = false;
 		await handOver();
 	}
@@ -138,6 +142,7 @@
 			onCancel={() => (editing = false)}
 			initialBody={comment.body}
 			initialSeverity={comment.severity}
+			initialImages={comment.images}
 			side={comment.side}
 			startLine={comment.start_line}
 			endLine={comment.end_line}
@@ -183,7 +188,7 @@
 				onclick={() => commentStore.setCollapsed(comment.id, false)}
 			>
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">{label}</span>
-				<span class="cr-muted truncate text-sm">{comment.body}</span>
+				<span class="cr-muted truncate text-sm">{comment.body || 'an image'}</span>
 				{#if comment.turns.length > 0}
 					<span class="cr-faint shrink-0 text-xs">
 						{comment.turns.length}
@@ -346,6 +351,7 @@
 									<MarkdownRenderer text={part.text} dense />
 								{/if}
 							{/each}
+							<SaidImages images={exchange.images} />
 						</div>
 
 						{#each exchange.answers as answer, i (i)}
@@ -404,8 +410,10 @@
 			{#if replying}
 				<div class="mt-3">
 					<CommentBox
-						onSave={(body) => reply(body)}
-						onAsk={reviewStore.canSendRound ? (body) => replyAndAsk(body) : undefined}
+						onSave={(body, _severity, images) => reply(body, images)}
+						onAsk={reviewStore.canSendRound
+							? (body, _severity, images) => replyAndAsk(body, images)
+							: undefined}
 						onCancel={() => (replying = false)}
 						severityPicker={false}
 						nested

@@ -6,7 +6,8 @@ import { reviewStore } from '$lib/stores/review.svelte';
 import { loadDraft } from '$lib/utils/drafts';
 import { threadsIn, threadToken } from '$lib/utils/thread-token';
 import { formatWeight, reviewWeight } from '$lib/utils/weight';
-import type { DiffFile } from '$lib/types';
+import type { Comment, DiffFile } from '$lib/types';
+import { newComment } from './new-comment';
 
 const TITLE = 'claude-review: uncommitted changes';
 
@@ -39,6 +40,12 @@ function sent(mock: ReturnType<typeof vi.fn>, call = 0) {
 	return JSON.parse(mock.mock.calls[call][1].body);
 }
 
+/** Write a message in the panel and send it, the way the composer does. */
+function say(text: string, threads: Comment[] = []): Promise<void> {
+	panelStore.setComposerText(text);
+	return panelStore.send(threads);
+}
+
 describe('the panel talks to the agent about the review', () => {
 	beforeEach(() => {
 		localStorage.clear();
@@ -58,7 +65,7 @@ describe('the panel talks to the agent about the review', () => {
 	it('sends what was typed at once, without waiting for a round', async () => {
 		const fetchMock = okFetch();
 
-		await panelStore.send('Run the tests and say what fails.', []);
+		await say('Run the tests and say what fails.');
 
 		expect(fetchMock.mock.calls[0][0]).toBe('/api/message');
 		expect(sent(fetchMock).text).toBe('Run the tests and say what fails.');
@@ -67,13 +74,13 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('carries the whole thread a message points at, not only its id', async () => {
 		const fetchMock = okFetch();
-		const id = commentStore.add('src/routes.py', 'new', 2, 2, 'Why catch here?', 'question', [
+		const id = commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'Why catch here?', severity: 'question', quote: [
 			'y = 3'
-		]);
-		commentStore.addTurn(id, 'author', 'Because the caller cannot.');
+		] }));
+		commentStore.addTurn(id, { author: 'author', body: 'Because the caller cannot.', images: [] });
 		const thread = commentStore.comments[0];
 
-		await panelStore.send(`Look at ${threadToken(thread)} again`, [thread]);
+		await say(`Look at ${threadToken(thread)} again`, [thread]);
 
 		const [carried] = sent(fetchMock).threads;
 		expect(carried.thread_id).toBe(id);
@@ -83,7 +90,7 @@ describe('the panel talks to the agent about the review', () => {
 	});
 
 	it('reads the references back from the words, so deleting one drops it', () => {
-		commentStore.add('src/routes.py', 'new', 2, 2, 'Why catch here?');
+		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'Why catch here?' }));
 		const thread = commentStore.comments[0];
 
 		expect(threadsIn(`Look at ${threadToken(thread)} again`, commentStore.comments)).toHaveLength(
@@ -93,7 +100,7 @@ describe('the panel talks to the agent about the review', () => {
 	});
 
 	it('does not mistake one range for a longer one that starts the same', () => {
-		commentStore.add('src/routes.py', 'new', 1, 2, 'the short one');
+		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 1, endLine: 2, body: 'the short one' }));
 		const short = commentStore.comments[0];
 
 		expect(threadsIn('@src/routes.py:1-20 is the other one', [short])).toHaveLength(0);
@@ -101,7 +108,7 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('puts an answer under the message it names', async () => {
 		okFetch();
-		await panelStore.send('What did the round change?', []);
+		await say('What did the round change?');
 
 		panelStore.receive(panelStore.turns[0].id, 'Two files; both green.');
 
@@ -111,14 +118,14 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('waits visibly until the answer lands', async () => {
 		okFetch();
-		await panelStore.send('Run the tests', []);
+		await say('Run the tests');
 
 		expect(panelStore.working?.body).toBe('Run the tests');
 	});
 
 	it('stops waiting once the reader takes a message back', async () => {
 		const fetchMock = okFetch();
-		await panelStore.send('Never mind this one', []);
+		await say('Never mind this one');
 
 		await panelStore.cancel(panelStore.turns[0].id);
 
@@ -129,7 +136,7 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('keeps the conversation across a reload', async () => {
 		okFetch();
-		await panelStore.send('Where did the None check go?', []);
+		await say('Where did the None check go?');
 		panelStore.receive(panelStore.turns[0].id, 'Into the caller.');
 
 		panelStore.clear();
@@ -143,11 +150,11 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('does not hand the same message id out twice after a reload', async () => {
 		okFetch();
-		await panelStore.send('first', []);
+		await say('first');
 		panelStore.clear();
 		panelStore.restore(TITLE);
 
-		await panelStore.send('second', []);
+		await say('second');
 
 		const ids = panelStore.turns.map((t) => t.id);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -155,9 +162,9 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('never writes the panel over the threads in the draft', async () => {
 		okFetch();
-		commentStore.add('src/routes.py', 'new', 2, 2, 'an hour of reading');
+		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'an hour of reading' }));
 
-		await panelStore.send('and a message', []);
+		await say('and a message');
 
 		expect(loadDraft(TITLE)?.comments).toHaveLength(1);
 		expect(loadDraft(TITLE)?.panel).toHaveLength(1);
@@ -166,12 +173,12 @@ describe('the panel talks to the agent about the review', () => {
 	it('takes a failed send back off the conversation', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
 
-		await expect(panelStore.send('into the void', [])).rejects.toThrow();
+		await expect(say('into the void')).rejects.toThrow();
 		expect(panelStore.turns).toHaveLength(0);
 	});
 
 	it('weighs the review from what is on screen, and says so roughly', () => {
-		commentStore.add('src/routes.py', 'new', 2, 2, 'x'.repeat(400));
+		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'x'.repeat(400) }));
 
 		expect(panelStore.weight).toBe(
 			reviewWeight(diffStore.files, commentStore.comments)
@@ -196,7 +203,7 @@ describe('the panel talks to the agent about the review', () => {
 		const fetchMock = okFetch();
 		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I did this differently', 'note', []);
 
-		commentStore.addTurn('raised-1', 'reader', 'Fine, but rename it');
+		commentStore.addTurn('raised-1', { author: 'reader', body: 'Fine, but rename it', images: [] });
 		await commentStore.submit(false);
 
 		const [carried] = sent(fetchMock).comments;
@@ -207,7 +214,7 @@ describe('the panel talks to the agent about the review', () => {
 	it('hands over a raised thread as the author\'s own words', async () => {
 		const fetchMock = okFetch();
 		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I kept the old name', 'note', []);
-		commentStore.addTurn('raised-1', 'reader', 'Why?');
+		commentStore.addTurn('raised-1', { author: 'reader', body: 'Why?', images: [] });
 
 		await commentStore.ask('raised-1');
 

@@ -3,6 +3,8 @@
 These test the formatting of comments into markdown for Claude.
 """
 
+from pathlib import Path
+
 import pytest
 
 from claude_review.domain.models import Comment, CommentSeverity, LineSide, Turn, TurnAuthor
@@ -446,3 +448,43 @@ def test_a_thread_the_author_raised_reads_as_the_authors_own_words() -> None:
 
     assert "> **You:** I renamed this rather than deleting it" in markdown
     assert "> **Reviewer:** Good, but call it `head`" in markdown
+
+
+def test_images_are_named_as_files_to_open() -> None:
+    """The agent reads files, so a screenshot in a thread is a path under what it came with."""
+    opening = Path("/review/images/opening.png")
+    reply = Path("/review/images/reply.png")
+    comments = [
+        Comment(
+            file="src/handler.ts",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=42,
+            end_line=42,
+            body="",
+            images=[opening],
+            turns=[Turn(author=TurnAuthor.READER, body="Still like this", images=[reply])],
+        )
+    ]
+
+    markdown = _service().format_review(comments).markdown
+
+    assert f"Image: {opening}" in markdown
+    assert f"> **Reviewer:**\n> Still like this\n> Image: {reply}" in markdown
+
+
+def test_a_comment_reaches_the_agent_as_written() -> None:
+    """Line endings and a trailing newline are the reader's, not the formatter's."""
+    body = "first\r\nsecond\n"
+    comments = [
+        Comment(
+            file="src/handler.ts",
+            side=LineSide.NEW,
+            severity=CommentSeverity.NOTE,
+            start_line=1,
+            end_line=1,
+            body=body,
+        )
+    ]
+
+    assert body in _service().format_review(comments).markdown

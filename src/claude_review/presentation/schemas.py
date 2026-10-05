@@ -1,5 +1,7 @@
 """Pydantic request/response schemas for the API."""
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field, model_validator
 
 from claude_review.domain.models import (
@@ -17,6 +19,35 @@ from claude_review.domain.models import (
     ThreadQuestion,
     TurnAuthor,
 )
+from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
+
+# Ids handed out by POST /api/images, as many as one thing said may carry
+ImageIds = Annotated[
+    list[Annotated[str, Field(min_length=1, max_length=200)]],
+    Field(max_length=MAX_IMAGES_PER_MESSAGE),
+]
+
+
+def _require_words_or_images(words: str, images: list[str]) -> None:
+    """A screenshot can be the whole of what is said, but something has to be.
+
+    Raises:
+        ValueError: if there are neither words nor images.
+    """
+    if not words.strip() and not images:
+        msg = "needs text or an image"
+        raise ValueError(msg)
+
+
+class ImageLimits(BaseModel):
+    """The limits the browser checks before uploading an image.
+
+    Told by the server rather than repeated in the browser, so the two
+    cannot drift apart.
+    """
+
+    max_image_bytes: int = MAX_IMAGE_BYTES
+    max_images_per_message: int = MAX_IMAGES_PER_MESSAGE
 
 
 class DiffResponse(BaseModel):
@@ -40,14 +71,22 @@ class DiffResponse(BaseModel):
     # What the agent last said about itself, so a reloaded review does not
     # lose the model and the context along with the pushes it missed
     agent: AgentStatus = AgentStatus()
+    # What the browser checks before uploading an image
+    image_limits: ImageLimits = ImageLimits()
 
 
 class TurnInput(BaseModel):
     """One turn of a thread, as the browser sends it back."""
 
     author: TurnAuthor
-    body: str = Field(min_length=1, max_length=50_000)
+    body: str = Field(max_length=50_000)
     round: int = Field(default=1, ge=1)
+    images: ImageIds = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def says_something(self) -> TurnInput:
+        _require_words_or_images(self.body, self.images)
+        return self
 
 
 class CommentInput(BaseModel):
@@ -61,7 +100,8 @@ class CommentInput(BaseModel):
     severity: CommentSeverity
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
-    body: str = Field(min_length=1, max_length=50_000)
+    body: str = Field(max_length=50_000)
+    images: ImageIds = Field(default_factory=list)
     turns: list[TurnInput] = Field(default_factory=list, max_length=200)
     # Who opened the thread. The browser sends it back so a thread the author
     # raised is not read as something the reader wrote.
@@ -76,6 +116,11 @@ class CommentInput(BaseModel):
         if self.start_line > self.end_line:
             msg = "start_line must be <= end_line"
             raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def says_something(self) -> CommentInput:
+        _require_words_or_images(self.body, self.images)
         return self
 
 
@@ -138,8 +183,14 @@ class AskRequest(BaseModel):
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
     quote: list[str] = Field(default_factory=list, max_length=200)
-    body: str = Field(min_length=1, max_length=50_000)
+    body: str = Field(max_length=50_000)
+    images: ImageIds = Field(default_factory=list)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def says_something(self) -> AskRequest:
+        _require_words_or_images(self.body, self.images)
+        return self
 
 
 class ThreadInput(BaseModel):
@@ -156,12 +207,18 @@ class ThreadInput(BaseModel):
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
     quote: list[str] = Field(default_factory=list, max_length=200)
-    body: str = Field(min_length=1, max_length=50_000)
+    body: str = Field(max_length=50_000)
+    images: ImageIds = Field(default_factory=list)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
     severity: CommentSeverity = CommentSeverity.NOTE
     resolved: bool = False
     outdated: bool = False
     raised_by: TurnAuthor = TurnAuthor.READER
+
+    @model_validator(mode="after")
+    def says_something(self) -> ThreadInput:
+        _require_words_or_images(self.body, self.images)
+        return self
 
 
 class SessionHello(BaseModel):
@@ -197,8 +254,22 @@ class MessageRequest(BaseModel):
     """Request body for POST /api/message — the reader typing in the panel."""
 
     message_id: str = Field(min_length=1, max_length=200)
-    text: str = Field(min_length=1, max_length=50_000)
+    # May be empty when an image is attached: a screenshot can be the whole
+    # question
+    text: str = Field(default="", max_length=50_000)
     threads: list[ThreadInput] = Field(default_factory=list, max_length=50)
+    images: ImageIds = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def says_something(self) -> MessageRequest:
+        _require_words_or_images(self.text, self.images)
+        return self
+
+
+class ImageResponse(BaseModel):
+    """Response for POST /api/images — what the image is kept under."""
+
+    image_id: str
 
 
 class PointRequest(BaseModel):

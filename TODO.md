@@ -47,6 +47,10 @@ tests. Remove items when done — don't check them off.
 ## Infrastructure
 
 - [ ] Submit to the official Claude Code plugin marketplace
+- [ ] Move file reading out of `FileWindowService` and `TextFileService` into
+      `repositories/`, behind protocols, the way `ImageService` keeps policy
+      and `DirectoryImageStore` touches the disk. Both services read files
+      themselves today, and `TextFileService` does it synchronously.
 
 ## Testing
 

@@ -3,6 +3,7 @@ import { commentStore } from '$lib/stores/comments.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
 import { reanchor } from '$lib/utils/reanchor';
 import type { Comment, DiffHunk } from '$lib/types';
+import { newComment } from './new-comment';
 
 function sentPayload(mock: ReturnType<typeof vi.fn>, call = 0) {
 	return JSON.parse(mock.mock.calls[call][1].body);
@@ -30,7 +31,7 @@ describe('sending a round rather than ending the review', () => {
 
 	it('keeps the threads on screen', async () => {
 		okFetch();
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 
 		await commentStore.submit(false);
 
@@ -40,10 +41,10 @@ describe('sending a round rather than ending the review', () => {
 
 	it('carries what is new since the last round, not the review again', async () => {
 		const fetchMock = okFetch();
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 		await commentStore.submit(false);
 
-		commentStore.add('b.py', 'new', 2, 2, 'and this');
+		commentStore.add(newComment({ file: 'b.py', side: 'new', startLine: 2, endLine: 2, body: 'and this' }));
 		await commentStore.submit(false);
 
 		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.file)).toEqual(['b.py']);
@@ -51,11 +52,11 @@ describe('sending a round rather than ending the review', () => {
 
 	it('sends a thread again once something has been said in it', async () => {
 		const fetchMock = okFetch();
-		const id = commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		const id = commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 		await commentStore.submit(false);
 
 		commentStore.receiveReply(id, 'Tightened');
-		commentStore.addTurn(id, 'reader', 'Still reads oddly');
+		commentStore.addTurn(id, { author: 'reader', body: 'Still reads oddly', images: [] });
 		await commentStore.submit(false);
 
 		const again = sentPayload(fetchMock, 1).comments[0];
@@ -65,11 +66,11 @@ describe('sending a round rather than ending the review', () => {
 
 	it('does not resend a thread just because it was answered', async () => {
 		const fetchMock = okFetch();
-		const id = commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		const id = commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 		await commentStore.submit(false);
 
 		commentStore.receiveReply(id, 'Tightened');
-		commentStore.add('b.py', 'new', 2, 2, 'and this');
+		commentStore.add(newComment({ file: 'b.py', side: 'new', startLine: 2, endLine: 2, body: 'and this' }));
 		await commentStore.submit(false);
 
 		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.file)).toEqual(['b.py']);
@@ -77,7 +78,7 @@ describe('sending a round rather than ending the review', () => {
 
 	it('counts up so the next round says which one it is', async () => {
 		okFetch(2);
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 
 		await commentStore.submit(false);
 
@@ -109,6 +110,7 @@ describe('a thread meeting a diff that has been taken again', () => {
 			start_line: start,
 			end_line: end,
 			body: 'why',
+			images: [],
 			turns: [],
 			raised_by: 'reader',
 			resolved: false,

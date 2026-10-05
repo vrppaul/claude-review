@@ -121,16 +121,23 @@ somebody who is waiting.
      wait again. The question carries `thread_id` and `question_id`, the
      file, the line range, `quote` — the lines it is about — and `history`,
      everything already said in that thread, starting with the comment that
-     opened it.
+     opened it. The question and every turn of the history may carry
+     `images`, absolute paths to screenshots the reader pasted; the question
+     text may be empty when a screenshot is all there is.
    - `{"type": "message", "message": {"message_id": "panel-1", "text": "...",
-     "threads": [...]}}` — the user has said something in the agent panel,
-     which is about the review rather than about one line: the plan, the
-     tests, a file nobody commented on. Answer it with `say` (step 7). Any
-     threads it points at come with it, in the same shape as a question.
+     "threads": [...], "images": [...]}}` — the user has said something in
+     the agent panel, which is about the review rather than about one line:
+     the plan, the tests, a file nobody commented on. Answer it with `say`
+     (step 7). Any threads it points at come with it, in the same shape as a
+     question. `images` are absolute paths to screenshots they attached, and
+     the text may be empty when an image is the whole question: open each
+     with your file reader before answering. They outlive the review in
+     the system's temporary directory, so the last round's are still there.
    - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
      user has sent a round. The markdown is the review itself; address it as
      you would a finished one, then take the diff again (step 9) and keep
-     waiting.
+     waiting. An `Image: /path` line under a comment or a turn is a
+     screenshot pasted there: open it before answering what it came with.
    - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.

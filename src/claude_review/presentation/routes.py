@@ -4,9 +4,18 @@ from pathlib import Path
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from pydantic import ValidationError
+from starlette.requests import ClientDisconnect
 
-from claude_review.domain.exceptions import FileWindowError, UnknownVersionError
+from claude_review.domain.exceptions import (
+    FileWindowError,
+    ImageAlreadySentError,
+    ImageRefusedError,
+    ImageTooLargeError,
+    UnknownImageError,
+    UnknownVersionError,
+)
 from claude_review.domain.models import (
     Comment,
     DiffFile,
@@ -24,11 +33,13 @@ from claude_review.domain.models import (
 from claude_review.presentation.dependencies import (
     get_diff_base,
     get_diff_files,
+    get_image_service,
     get_objects,
     get_repo_root,
     get_review_mode,
     get_review_title,
     get_state,
+    image_service_for,
 )
 from claude_review.presentation.schemas import (
     AskRequest,
@@ -38,6 +49,8 @@ from claude_review.presentation.schemas import (
     DiffResponse,
     EventResponse,
     FileWindowResponse,
+    ImageLimits,
+    ImageResponse,
     MessageRequest,
     PointRequest,
     PointResponse,
@@ -51,12 +64,14 @@ from claude_review.presentation.schemas import (
     SubmitRequest,
     SubmitResponse,
     ThreadInput,
+    TurnInput,
     VersionsResponse,
 )
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
+from claude_review.services.image_service import MAX_IMAGE_BYTES, ImageService
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
 from claude_review.services.tree_watcher_service import TreeWatcherService
@@ -123,6 +138,7 @@ async def get_diff(
         answerer_attached=state.answerer_attached,
         agent=state.agent,
         moved=moved,
+        image_limits=ImageLimits(),
     )
 
 
@@ -200,6 +216,7 @@ async def get_file_window(
 async def ask_about_thread(
     request: AskRequest,
     state: ServerState = Depends(get_state),
+    image_service: ImageService = Depends(get_image_service),
 ) -> dict[str, str]:
     """Take a question about one thread, for whoever is answering to pick up.
 
@@ -216,7 +233,8 @@ async def ask_about_thread(
             end_line=request.end_line,
             quote=request.quote,
             body=request.body,
-            history=[Turn(author=t.author, body=t.body, round=t.round) for t in request.history],
+            images=_hand_over_kept(request.images, image_service),
+            history=[_to_turn(turn, image_service) for turn in request.history],
         )
     )
     log.info("thread_question", thread_id=request.thread_id, file=request.file)
@@ -294,6 +312,7 @@ async def reply_to_thread(
 async def take_panel_message(
     request: MessageRequest,
     state: ServerState = Depends(get_state),
+    image_service: ImageService = Depends(get_image_service),
 ) -> dict[str, str]:
     """Take what the reader typed in the panel, for the agent to pick up.
 
@@ -301,11 +320,21 @@ async def take_panel_message(
     because a message about the plan or the tests belongs to no thread and
     has nothing to wait for.
     """
+    # Pasted a moment ago, so an image this review does not keep is a fault
+    # to report, not a screenshot to leave out quietly. Checked before any
+    # is handed over, so a refused message leaves none of them kept for good.
+    try:
+        image_service.require(request.images)
+    except UnknownImageError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    handed = image_service.hand_over(request.images).paths
+
     state.events.put_nowait(
         PanelMessage(
             message_id=request.message_id,
             text=request.text,
-            threads=[_to_thread(t) for t in request.threads],
+            threads=[_to_thread(thread, image_service) for thread in request.threads],
+            images=handed,
         )
     )
     state.panel.append(
@@ -314,13 +343,115 @@ async def take_panel_message(
             author=TurnAuthor.READER,
             text=request.text,
             at=int(time.time() * 1000),
+            images=handed,
         )
     )
-    log.info("panel_message", message_id=request.message_id, threads=len(request.threads))
+    log.info("panel_message", message_id=request.message_id, threads=len(request.threads), images=len(handed))
     return {"status": "sent"}
 
 
-def _to_thread(thread: ThreadInput) -> ThreadContext:
+@router.post("/images")
+async def keep_an_image(
+    http_request: Request,
+    image_service: ImageService = Depends(get_image_service),
+) -> ImageResponse:
+    """Keep an image the reader is about to send, and say what it is called.
+
+    Taken on its own, before the message: the reader sees it attached while
+    still writing, and the message then carries an id rather than the bytes.
+    The body is the image itself rather than a form, so there is nothing to
+    parse.
+    """
+    content = await _read_capped(http_request, limit=MAX_IMAGE_BYTES)
+    try:
+        stored = await image_service.keep(content)
+    except ImageRefusedError as e:
+        log.warning("image_refused", reason=str(e))
+        status = 413 if isinstance(e, ImageTooLargeError) else 422
+        raise HTTPException(status_code=status, detail=str(e)) from e
+
+    log.info("image_kept", image_id=stored.image_id, size=stored.size)
+    return ImageResponse(image_id=stored.image_id)
+
+
+async def _read_capped(http_request: Request, *, limit: int) -> bytes:
+    """Read a body, stopping as soon as it runs past the limit.
+
+    Past it is enough to know it is too big, and the rest is never held.
+
+    Raises:
+        HTTPException: if the browser went away mid-upload.
+    """
+    received = bytearray()
+    try:
+        async for chunk in http_request.stream():
+            received.extend(chunk)
+            if len(received) > limit:
+                break
+    except ClientDisconnect as e:
+        raise HTTPException(status_code=400, detail="The upload was cut off") from e
+    return bytes(received)
+
+
+@router.get("/images/{image_id}")
+async def serve_an_image(
+    image_id: str,
+    image_service: ImageService = Depends(get_image_service),
+) -> FileResponse:
+    """Hand back an image this review keeps, to be drawn in the panel."""
+    stored = image_service.find(image_id)
+    if stored is None:
+        raise HTTPException(status_code=404, detail="No such image in this review")
+    return FileResponse(stored.path, media_type=stored.media_type)
+
+
+@router.delete("/images/{image_id}")
+async def discard_an_image(
+    image_id: str,
+    image_service: ImageService = Depends(get_image_service),
+) -> dict[str, str]:
+    """Drop an image the reader took off the message before sending it.
+
+    One that went out with a message stays: the agent may still be about to
+    open it, and nothing on this side knows when it has.
+    """
+    try:
+        await image_service.discard(image_id)
+    except UnknownImageError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ImageAlreadySentError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except OSError as e:
+        # The ledger has let it go; the file goes with the workspace at the end
+        log.warning("image_left_behind", image_id=image_id, reason=str(e))
+
+    log.info("image_discarded", image_id=image_id)
+    return {"status": "discarded"}
+
+
+def _hand_over_kept(image_ids: list[str], image_service: ImageService) -> list[Path]:
+    """Hand over the images a thread names that this review still keeps.
+
+    A thread outlives a restart of the server in the reader's draft, and the
+    screenshots in it do not: one that is gone drops out, rather than holding
+    up the question or the round it travels in — but not without a trace.
+    """
+    handover = image_service.hand_over(image_ids)
+    if handover.missing:
+        log.info("images_dropped", missing=handover.missing)
+    return handover.paths
+
+
+def _to_turn(turn: TurnInput, image_service: ImageService) -> Turn:
+    return Turn(
+        author=turn.author,
+        body=turn.body,
+        round=turn.round,
+        images=_hand_over_kept(turn.images, image_service),
+    )
+
+
+def _to_thread(thread: ThreadInput, image_service: ImageService) -> ThreadContext:
     """Take a thread a message points at off the wire, turns and all."""
     return ThreadContext(
         thread_id=thread.thread_id,
@@ -330,7 +461,8 @@ def _to_thread(thread: ThreadInput) -> ThreadContext:
         end_line=thread.end_line,
         quote=thread.quote,
         body=thread.body,
-        history=[Turn(author=t.author, body=t.body, round=t.round) for t in thread.history],
+        images=_hand_over_kept(thread.images, image_service),
+        history=[_to_turn(turn, image_service) for turn in thread.history],
         severity=thread.severity,
         resolved=thread.resolved,
         outdated=thread.outdated,
@@ -522,6 +654,7 @@ async def session(websocket: WebSocket) -> None:
     pushes in the other direction too.
     """
     state: ServerState = websocket.app.state.server
+    image_service = image_service_for(websocket.app)
     await websocket.accept()
     now = asyncio.get_running_loop().time()
     state.connected(now)
@@ -536,7 +669,7 @@ async def session(websocket: WebSocket) -> None:
         while True:
             # The browser says where the review had got to, and otherwise
             # this waits for the close
-            _catch_up(state, await websocket.receive_text())
+            _catch_up(state, image_service, await websocket.receive_text())
     except WebSocketDisconnect:
         pass
     finally:
@@ -545,7 +678,7 @@ async def session(websocket: WebSocket) -> None:
         state.disconnected(asyncio.get_running_loop().time())
 
 
-def _catch_up(state: ServerState, said: str) -> None:
+def _catch_up(state: ServerState, image_service: ImageService, said: str) -> None:
     """Take what the browser knows and this server does not.
 
     Two things. The round: a server restarted mid-review comes back
@@ -568,7 +701,7 @@ def _catch_up(state: ServerState, said: str) -> None:
         state.round = heard.round
 
     if heard.threads:
-        state.threads = [_to_thread(t) for t in heard.threads]
+        state.threads = [_to_thread(thread, image_service) for thread in heard.threads]
 
 
 @router.post("/submit")
@@ -577,6 +710,7 @@ async def submit_review(
     state: ServerState = Depends(get_state),
     mode: ReviewMode = Depends(get_review_mode),
     diff_files: list[DiffFile] = Depends(get_diff_files),
+    image_service: ImageService = Depends(get_image_service),
 ) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.
 
@@ -587,7 +721,7 @@ async def submit_review(
     if state.shutdown_event.is_set():
         raise HTTPException(status_code=409, detail="Review already submitted")
 
-    comments = [_to_comment(c) for c in request.comments]
+    comments = [_to_comment(comment, image_service) for comment in request.comments]
     sent_round = state.round
 
     if mode == ReviewMode.TRANSCRIPT:
@@ -616,7 +750,7 @@ async def submit_review(
     )
 
 
-def _to_comment(comment: CommentInput) -> Comment:
+def _to_comment(comment: CommentInput, image_service: ImageService) -> Comment:
     """Take a thread off the wire, turns and all."""
     return Comment(
         file=comment.file,
@@ -625,7 +759,8 @@ def _to_comment(comment: CommentInput) -> Comment:
         start_line=comment.start_line,
         end_line=comment.end_line,
         body=comment.body,
-        turns=[Turn(author=t.author, body=t.body, round=t.round) for t in comment.turns],
+        images=_hand_over_kept(comment.images, image_service),
+        turns=[_to_turn(turn, image_service) for turn in comment.turns],
         raised_by=comment.raised_by,
         resolved=comment.resolved,
         outdated=comment.outdated,

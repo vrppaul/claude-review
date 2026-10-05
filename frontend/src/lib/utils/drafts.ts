@@ -1,13 +1,13 @@
-import type { Comment, PanelTurn } from "$lib/types";
+import type { Comment, Composer, PanelTurn } from "$lib/types";
 
 const STORAGE_KEY = "claude-review:draft";
 // What shape the stored draft is in. A comment has grown turns, a resolved
 // mark, the lines it was written against, the questions still waiting for an
 // answer, and who raised it; the review has grown a conversation in the
-// agent panel. The number is here so an older draft can be brought up to the
-// current shape — never so it can be thrown away: a draft is an hour of
-// somebody's reading.
-const SHAPE = 6;
+// agent panel, and the message being written there. The number is here so an
+// older draft can be brought up to the current shape — never so it can be
+// thrown away: a draft is an hour of somebody's reading.
+const SHAPE = 7;
 
 export interface Draft {
   version: number;
@@ -19,6 +19,8 @@ export interface Draft {
   sent: [string, number][];
   /** What was said in the agent panel, which outlives a reload like the rest. */
   panel: PanelTurn[];
+  /** What is being written in the panel, not yet sent. */
+  composer: Composer;
 }
 
 /**
@@ -38,7 +40,12 @@ function blank(title: string): Draft {
     reviewBody: "",
     sent: [],
     panel: [],
+    composer: emptyComposer(),
   };
+}
+
+export function emptyComposer(): Composer {
+  return { text: "", images: [] };
 }
 
 /**
@@ -81,13 +88,20 @@ function upgrade(draft: Draft): Draft {
     reviewBody: draft.reviewBody ?? "",
     // The panel came after threads did; an older draft simply has nothing said
     panel: Array.isArray(draft.panel) ? draft.panel : [],
+    // The panel kept nothing half-written until it could hold images
+    composer: draft.composer ?? emptyComposer(),
     // Before rounds were numbered a sent thread was only an id
     sent: (Array.isArray(draft.sent) ? draft.sent : []).map((entry) =>
       Array.isArray(entry) ? entry : [entry as unknown as string, 1],
     ),
     comments: draft.comments.map((comment) => ({
       ...comment,
-      turns: comment.turns ?? [],
+      // Comments were words alone until images could be pasted into them
+      images: comment.images ?? [],
+      turns: (comment.turns ?? []).map((turn) => ({
+        ...turn,
+        images: turn.images ?? [],
+      })),
       // Threads were all the reader's before the author could raise one
       raised_by: comment.raised_by ?? "reader",
       resolved: comment.resolved ?? false,

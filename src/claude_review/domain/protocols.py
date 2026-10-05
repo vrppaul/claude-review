@@ -39,3 +39,15 @@ class GitRepositoryProtocol(Protocol):
     async def list_refs(self, path: Path) -> list[GitRef]:
         """Return the branches and tags that can be used as a base."""
         ...
+
+
+class ImageStoreProtocol(Protocol):
+    """Protocol for where a review keeps the images pasted into it."""
+
+    async def write(self, name: str, content: bytes) -> Path:
+        """Write an image under a name the review chose, and return its path."""
+        ...
+
+    async def remove(self, name: str) -> None:
+        """Remove an image, if it is there."""
+        ...

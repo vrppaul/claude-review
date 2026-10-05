@@ -17,6 +17,7 @@ from claude_review.domain.models import (
     FileStatus,
     LineType,
     ReviewMode,
+    ReviewWorkspace,
     ThreadContext,
     Turn,
 )
@@ -71,8 +72,8 @@ def _files() -> list[DiffFile]:
 
 
 @pytest.fixture
-async def client(state: ServerState):
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF)
+async def client(state: ServerState, workspace: ReviewWorkspace):
+    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 

@@ -9,9 +9,10 @@
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
 	import { threadsIn, threadToken } from '$lib/utils/thread-token';
 	import { formatWeight } from '$lib/utils/weight';
+	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
+	import SaidImages from './SaidImages.svelte';
 
-	let draft = $state('');
 	let sending = $state(false);
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
@@ -30,9 +31,14 @@
 
 	const attached = $derived(reviewStore.canSendRound);
 	const working = $derived(panelStore.working);
+	// The message being written lives in the store, so hiding the panel or
+	// reloading the page does not lose it
+	const draft = $derived(panelStore.composerText);
 	// Threads this message points at, read back from the text every time: a
 	// token deleted like a word takes its reference with it
 	const pointed = $derived(threadsIn(draft, commentStore.comments));
+	// A screenshot can be the whole question, so words are not required
+	const sayable = $derived(draft.trim().length > 0 || panelStore.attachments.images.length > 0);
 
 	// Threads first — most questions are about something already commented on
 	// — and then the files themselves, so a file nobody has marked can be
@@ -120,7 +126,7 @@
 	/** Watch what is being typed for an @ that has not been finished yet. */
 	function onInput(event: Event & { currentTarget: HTMLTextAreaElement }) {
 		const field = event.currentTarget;
-		draft = field.value;
+		panelStore.setComposerText(field.value);
 		const opening = /@([^\s@]*)$/.exec(field.value.slice(0, field.selectionStart));
 		picking = opening !== null;
 		query = opening?.[1] ?? '';
@@ -135,7 +141,7 @@
 		const before = draft.slice(0, caret).replace(/@[^\s@]*$/, '');
 		const after = draft.slice(caret);
 		const token = `${pick.comment ? threadToken(pick.comment) : `@${pick.path}`} `;
-		draft = `${before}${token}${after}`;
+		panelStore.setComposerText(`${before}${token}${after}`);
 		picking = false;
 		field.focus();
 		requestAnimationFrame(() => {
@@ -146,7 +152,7 @@
 
 	/** Take a thread out of the message by taking its token out of the words. */
 	function drop(comment: Comment) {
-		draft = draft.split(threadToken(comment)).join('').replace(/ {2,}/g, ' ');
+		panelStore.setComposerText(draft.split(threadToken(comment)).join('').replace(/ {2,}/g, ' '));
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -178,16 +184,28 @@
 		}
 	}
 
+	async function onPaste(event: ClipboardEvent) {
+		const refusal = await panelStore.attachments.takePaste(event, diffStore.imageLimits);
+		if (refusal) failed = refusal;
+	}
+
+	/**
+	 * An image that cannot be drawn: most often a review restarted under the
+	 * draft, but a file the browser cannot decode looks the same from here.
+	 */
+	function onImageLost(imageId: string) {
+		panelStore.attachments.forget(imageId);
+		failed = 'An image could not be shown and was taken off the message';
+	}
+
 	async function send() {
-		const text = draft.trim();
-		if (!text || sending || !attached) return;
+		if (!sayable || sending || panelStore.attachments.uploading > 0 || !attached) return;
 		sending = true;
 		failed = null;
 		// Sending is a deliberate act: it always brings you back to the foot
 		atFoot = true;
 		try {
-			await panelStore.send(text, pointed);
-			draft = '';
+			await panelStore.send(pointed);
 			picking = false;
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not send';
@@ -399,7 +417,10 @@ claude-review wait --port &lt;port&gt;</pre>
 							class="cr-panel-said rounded-r px-3 py-2 {turn.cancelled ? 'opacity-60' : ''}"
 						>
 							<p class="cr-who"><strong>You</strong> {said(turn.at)}</p>
-							<MarkdownRenderer text={turn.body} dense />
+							{#if turn.body}
+								<MarkdownRenderer text={turn.body} dense />
+							{/if}
+							<SaidImages images={turn.images ?? []} />
 							{#if turn.threads && turn.threads.length > 0}
 								<div class="mt-2 flex flex-wrap gap-1">
 									{#each turn.threads as id (id)}
@@ -525,15 +546,21 @@ claude-review wait --port &lt;port&gt;</pre>
 					{/each}
 				</div>
 			{/if}
+			<AttachedImages
+				attachments={panelStore.attachments}
+				disabled={sending}
+				onLost={onImageLost}
+			/>
 			<textarea
 				data-testid="panel-input"
 				bind:this={composer}
 				class="cr-field cr-comment-body w-full resize-y rounded px-3 py-2"
 				rows="2"
-				placeholder="Ask about anything…"
+				placeholder="Ask about anything, or paste a screenshot…"
 				value={draft}
 				oninput={onInput}
 				onkeydown={onKeydown}
+				onpaste={onPaste}
 			></textarea>
 			<div class="mt-2 flex items-center gap-2">
 				<button data-testid="mention-thread" class="btn btn-ghost btn-xs" onclick={openPicker}>
@@ -547,7 +574,7 @@ claude-review wait --port &lt;port&gt;</pre>
 				<button
 					data-testid="send-message"
 					class="btn btn-primary btn-xs"
-					disabled={draft.trim().length === 0 || sending}
+					disabled={!sayable || sending || panelStore.attachments.uploading > 0}
 					onclick={send}
 				>
 					{sending ? 'Sending' : 'Send'}

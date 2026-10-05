@@ -6,21 +6,10 @@ blockquotes — because Claude won't have the transcript in context when it
 reads the review output.
 """
 
-from claude_review.domain.models import Comment, DiffFile, ReviewResult, Turn, TurnAuthor
+from claude_review.domain.models import Comment, DiffFile, ReviewResult
+from claude_review.services.thread_markdown import format_opening, format_turn
 
 CONTEXT_LINES = 2
-
-# The agent reading this wrote the change, so its own turns are "You"
-TURN_LABELS = {TurnAuthor.AUTHOR: "You", TurnAuthor.READER: "Reviewer"}
-
-
-def _format_turn(turn: Turn) -> str:
-    """Quote one turn of a thread under the comment that opened it."""
-    label = f"> **{TURN_LABELS[turn.author]}:**"
-    if "\n" not in turn.body:
-        return f"{label} {turn.body}"
-    quoted = "\n".join(f"> {line}" if line else ">" for line in turn.body.splitlines())
-    return f"{label}\n{quoted}"
 
 
 class TranscriptReviewService:
@@ -53,7 +42,7 @@ class TranscriptReviewService:
 
         for comment in comments:
             context = self._get_context(files_by_path, comment)
-            said = "\n".join([comment.body, *(_format_turn(turn) for turn in comment.turns)])
+            said = "\n".join([format_opening(comment.body, comment.images), *map(format_turn, comment.turns)])
             parts.append(f"{context}\n{said}\n" if context else f"{said}\n")
 
         return ReviewResult(

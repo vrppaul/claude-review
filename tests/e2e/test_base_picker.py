@@ -13,7 +13,7 @@ import pytest
 import uvicorn
 from playwright.async_api import Page
 
-from claude_review.domain.models import ReviewMode
+from claude_review.domain.models import ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -45,11 +45,9 @@ def picker_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def review(picker_repo: Path, tmp_path: Path) -> AsyncGenerator[tuple[str, ServerState]]:
+async def review(picker_repo: Path, marking_workspace: ReviewWorkspace) -> AsyncGenerator[tuple[str, ServerState]]:
     """A review that has already been through one round."""
-    objects = tmp_path / "objects"
-    objects.mkdir()
-    git_repo = GitRepository(objects=objects)
+    git_repo = GitRepository(objects=marking_workspace.objects)
     state = ServerState(shutdown_event=asyncio.Event())
 
     mark = await VersionService(git_repository=git_repo).take(picker_repo, round_number=1)
@@ -59,7 +57,9 @@ async def review(picker_repo: Path, tmp_path: Path) -> AsyncGenerator[tuple[str,
     (picker_repo / "read.py").write_text("first pass\nsecond pass\nand what round 1 asked for\n")
 
     diff_files = await DiffService(git_repository=git_repo).get_diff(picker_repo)
-    app = create_app(diff_files=diff_files, state=state, mode=ReviewMode.DIFF, root=picker_repo, objects=objects)
+    app = create_app(
+        diff_files=diff_files, state=state, mode=ReviewMode.DIFF, workspace=marking_workspace, root=picker_repo
+    )
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
     server = uvicorn.Server(config)
     task = asyncio.create_task(server.serve())

@@ -118,6 +118,9 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
   file nobody commented on. It reaches the same agent that answers the threads
 - Point at a thread with `@`, and its lines, comment and turns travel with the
   message
+- Paste a screenshot with Ctrl+V — in the panel or in any comment, reply or
+  edit. The agent gets a path it can open: in the message, in the question,
+  and as an `Image:` line in the round. A screenshot can be the whole message
 - Two numbers, told apart: what handing the review over costs, and how much
   context the agent says it has left
 - The agent can point at a line itself: a thread in its own colour, on the

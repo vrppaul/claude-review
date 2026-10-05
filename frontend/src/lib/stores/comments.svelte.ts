@@ -4,15 +4,16 @@ import type {
   CommentSeverity,
   DiffFile,
   LineSide,
+  NewComment,
+  NewTurn,
   SubmitResponse,
   Turn,
-  TurnAuthor,
 } from "$lib/types";
 import { SvelteMap } from "svelte/reactivity";
 
 import { reviewStore } from "$lib/stores/review.svelte";
 import { reanchor } from "$lib/utils/reanchor";
-import { threadOnTheWire } from "$lib/utils/thread-wire";
+import { threadOnTheWire, turnOnTheWire } from "$lib/utils/thread-wire";
 import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
 
@@ -71,12 +72,9 @@ function payload(comment: Comment): CommentPayload {
     start_line: comment.start_line,
     end_line: comment.end_line,
     body: comment.body,
+    images: comment.images,
     // The clock belongs to reading the thread, not to what it says
-    turns: comment.turns.map(({ author, body, round }) => ({
-      author,
-      body,
-      round,
-    })),
+    turns: comment.turns.map(turnOnTheWire),
     raised_by: comment.raised_by,
     resolved: comment.resolved,
     outdated: comment.outdated,
@@ -180,15 +178,16 @@ export const commentStore = {
     return comments.length;
   },
 
-  add(
-    file: string,
-    side: LineSide,
-    startLine: number,
-    endLine: number,
-    body: string,
-    severity: CommentSeverity = "note",
-    quote: string[] = [],
-  ) {
+  add({
+    file,
+    side,
+    startLine,
+    endLine,
+    body,
+    severity,
+    quote,
+    images,
+  }: NewComment): string {
     const comment: Comment = {
       id: generateId(),
       file,
@@ -197,6 +196,7 @@ export const commentStore = {
       start_line: startLine,
       end_line: endLine,
       body,
+      images,
       turns: [],
       raised_by: "reader",
       resolved: false,
@@ -239,6 +239,7 @@ export const commentStore = {
       start_line: startLine,
       end_line: endLine,
       body,
+      images: [],
       turns: [],
       raised_by: "author",
       resolved: false,
@@ -256,9 +257,14 @@ export const commentStore = {
     return id;
   },
 
-  update(id: string, body: string, severity?: CommentSeverity) {
+  update(
+    id: string,
+    body: string,
+    severity: CommentSeverity,
+    images: string[],
+  ) {
     sent.delete(id);
-    replace(id, (c) => ({ ...c, body, severity: severity ?? c.severity }));
+    replace(id, (c) => ({ ...c, body, severity, images }));
   },
 
   remove(id: string) {
@@ -268,13 +274,14 @@ export const commentStore = {
   },
 
   /** Add what someone said to a thread. */
-  addTurn(id: string, author: TurnAuthor, body: string) {
+  addTurn(id: string, { author, body, images }: NewTurn) {
     const turn: Turn = {
       id: generateTurnId(),
       author,
       body,
       round: reviewStore.round,
       at: Date.now(),
+      images,
     };
     sent.delete(id);
     replace(id, (c) => ({ ...c, turns: [...c.turns, turn] }));
@@ -304,9 +311,11 @@ export const commentStore = {
       author: comment.raised_by,
       body: comment.body,
       round: comment.round,
+      images: comment.images,
     };
     const questionId = asksLastTurn ? (last.id ?? comment.id) : comment.id;
     const question = asksLastTurn ? last.body : comment.body;
+    const questionImages = asksLastTurn ? last.images : comment.images;
     const history = asksLastTurn
       ? [opening, ...comment.turns.slice(0, -1)]
       : comment.turns;
@@ -328,11 +337,8 @@ export const commentStore = {
         end_line: comment.end_line,
         quote: comment.quote,
         body: question,
-        history: history.map(({ author, body, round }) => ({
-          author,
-          body,
-          round,
-        })),
+        images: questionImages,
+        history: history.map(turnOnTheWire),
       }),
     });
 
@@ -364,6 +370,7 @@ export const commentStore = {
       round: reviewStore.round,
       at: Date.now(),
       answers,
+      images: [],
     };
     // Not marked unsent: the answer came from the side that reads the rounds,
     // so sending it back would only repeat what they wrote

@@ -1,9 +1,12 @@
 from pathlib import Path
 
 from fastapi import Request
+from starlette.applications import Starlette
 
 from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.presentation.state import ServerState
+from claude_review.repositories.image_store import DirectoryImageStore
+from claude_review.services.image_service import ImageService
 
 
 def get_state(request: Request) -> ServerState:
@@ -31,4 +34,14 @@ def get_diff_base(request: Request) -> str | None:
 
 
 def get_objects(request: Request) -> Path | None:
-    return request.app.state.objects
+    return request.app.state.workspace.objects
+
+
+def image_service_for(app: Starlette) -> ImageService:
+    """The image service of one review, for a route or for the session socket."""
+    store = DirectoryImageStore(app.state.workspace.images)
+    return ImageService(store, app.state.server.images)
+
+
+def get_image_service(request: Request) -> ImageService:
+    return image_service_for(request.app)

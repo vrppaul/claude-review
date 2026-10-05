@@ -4,6 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import FinishReview from '$lib/components/FinishReview.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
+import { newComment } from '../new-comment';
 
 /** The count as it reads, without the template's line breaks. */
 function count(element: HTMLElement): string {
@@ -25,8 +26,8 @@ describe('finishing a review', () => {
 	});
 
 	it('shows inline comment count when comments exist', () => {
-		commentStore.add('file.ts', 'new', 1, 1, 'fix this');
-		commentStore.add('file.ts', 'new', 5, 5, 'and this');
+		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix this' }));
+		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 5, endLine: 5, body: 'and this' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
@@ -34,7 +35,7 @@ describe('finishing a review', () => {
 	});
 
 	it('shows singular label for one comment', () => {
-		commentStore.add('file.ts', 'new', 1, 1, 'fix');
+		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
@@ -50,7 +51,7 @@ describe('finishing a review', () => {
 
 	it('counts what is still unsent once rounds are being sent', () => {
 		reviewStore.attachAnswerer();
-		commentStore.add('file.ts', 'new', 1, 1, 'fix');
+		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
@@ -63,7 +64,7 @@ describe('finishing a review', () => {
 		const long =
 			'This reads the clock twice per call, so a sweep can see two different ' +
 			'instants and drop a session that was alive when it started.';
-		commentStore.add('src/app.ts', 'new', 42, 42, long);
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 42, endLine: 42, body: long }));
 
 		const { getByText, getByTestId } = render(FinishReview, { props });
 
@@ -90,7 +91,7 @@ describe('finishing a review', () => {
 
 	it('calls onSubmit when submit button is clicked', async () => {
 		const onSubmit = vi.fn();
-		commentStore.add('file.ts', 'new', 1, 1, 'fix');
+		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props: { ...props, onSubmit } });
 
@@ -116,7 +117,7 @@ describe('the line a comment sits on, before it is sent', () => {
 	});
 
 	it('marks a comment that sits on a removed line', () => {
-		commentStore.add('src/app.ts', 'old', 42, 42, 'why was this dropped');
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'old', startLine: 42, endLine: 42, body: 'why was this dropped' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
@@ -126,7 +127,7 @@ describe('the line a comment sits on, before it is sent', () => {
 	});
 
 	it('leaves a comment on the current version unmarked', () => {
-		commentStore.add('src/app.ts', 'new', 42, 47, 'tighten this');
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 42, endLine: 47, body: 'tighten this' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 

@@ -1,20 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { diffStore } from '$lib/stores/diff.svelte';
 	import type { CommentSeverity, LineSide } from '$lib/types';
+	import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
+	import AttachedImages from './AttachedImages.svelte';
 
 	const SUGGESTION_FENCE = '```suggestion';
 
 	interface Props {
-		onSave: (body: string, severity: CommentSeverity) => void;
+		onSave: (body: string, severity: CommentSeverity, images: string[]) => void;
 		/** Hand this one over now, rather than with the rest of the review. */
-		onAsk?: (body: string, severity: CommentSeverity) => void;
+		onAsk?: (body: string, severity: CommentSeverity, images: string[]) => void;
 		onCancel: () => void;
 		side?: LineSide;
 		startLine?: number;
 		endLine?: number;
 		initialBody?: string;
 		initialSeverity?: CommentSeverity;
+		/** Images already on the comment being edited. */
+		initialImages?: string[];
 		/** The lines being commented on, so a suggestion can start from them. */
 		suggestFrom?: string[];
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
@@ -32,6 +37,7 @@
 		endLine,
 		initialBody = '',
 		initialSeverity = 'note',
+		initialImages = [],
 		suggestFrom,
 		severityPicker = true,
 		nested = false
@@ -51,6 +57,23 @@
 	let body = $state(initialBody);
 	// svelte-ignore state_referenced_locally — same
 	let severity = $state<CommentSeverity>(initialSeverity);
+	// svelte-ignore state_referenced_locally — same
+	const attachments = new ImageAttachments([...initialImages]);
+	let failed = $state<string | null>(null);
+	// Whether what was written went somewhere. A field closed any other way —
+	// Cancel, a click on another line, a folded thread, another file — lets
+	// the server drop what was pasted into it.
+	let handedOver = false;
+
+	$effect(() => () => {
+		if (!handedOver) attachments.abandon();
+	});
+
+	// A screenshot can be the whole comment, so words are not required; an
+	// image still on its way is waited for
+	const sayable = $derived(
+		(body.trim().length > 0 || attachments.images.length > 0) && attachments.uploading === 0
+	);
 
 	let textareaEl: HTMLTextAreaElement;
 
@@ -75,7 +98,21 @@
 	});
 
 	function save() {
-		if (body.trim()) onSave(body.trim(), severity);
+		if (!sayable) return;
+		handedOver = true;
+		onSave(body.trim(), severity, $state.snapshot(attachments.images));
+	}
+
+	async function onPaste(event: ClipboardEvent) {
+		failed = null;
+		const refusal = await attachments.takePaste(event, diffStore.imageLimits);
+		if (refusal) failed = refusal;
+	}
+
+	/** An image that cannot be drawn, taken off with a note rather than left broken. */
+	function onImageLost(imageId: string) {
+		attachments.forget(imageId);
+		failed = 'An image could not be shown and was taken off the comment';
 	}
 
 	/**
@@ -85,7 +122,9 @@
 	 * marked as a note would say two different things about the same words.
 	 */
 	function ask() {
-		if (body.trim()) onAsk?.(body.trim(), 'question');
+		if (!sayable || !onAsk) return;
+		handedOver = true;
+		onAsk(body.trim(), 'question', $state.snapshot(attachments.images));
 	}
 
 	/**
@@ -145,7 +184,12 @@
 		placeholder="What should change here?"
 		bind:value={body}
 		onkeydown={handleKeydown}
+		onpaste={onPaste}
 	></textarea>
+	<AttachedImages {attachments} onLost={onImageLost} />
+	{#if failed}
+		<p data-testid="comment-error" class="text-xs text-error">{failed}</p>
+	{/if}
 	<div class="flex items-center gap-2">
 		{#if suggestFrom && suggestFrom.length > 0}
 			<button
@@ -162,14 +206,14 @@
 			Cancel
 		</button>
 		{#if onAsk}
-			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!body.trim()} onclick={ask}>
+			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>
 				Ask now
 			</button>
 		{/if}
 		<button
 			class="btn btn-primary btn-xs"
 			data-testid="save-comment"
-			disabled={!body.trim()}
+			disabled={!sayable}
 			onclick={save}
 		>
 			Add to review

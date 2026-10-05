@@ -4,6 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
+import { newComment } from '../new-comment';
 
 /** The rendered sentence, without the template's line breaks. */
 function text(element: HTMLElement): string {
@@ -105,7 +106,7 @@ describe('when the tree moves under the review', () => {
 	});
 
 	it('offers a way to the thread that lost its lines', () => {
-		commentStore.add('a.py', 'new', 1, 1, 'this one');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'this one' }));
 		commentStore.comments[0].outdated = true;
 		diffStore.noteRetaken({ followed: 0, outdated: 1 });
 
@@ -147,7 +148,7 @@ describe('threads the base on screen cannot draw', () => {
 			})
 		);
 		await diffStore.setBase('round:1');
-		commentStore.add('elsewhere.py', 'new', 12, 12, 'this one is not on this screen');
+		commentStore.add(newComment({ file: 'elsewhere.py', side: 'new', startLine: 12, endLine: 12, body: 'this one is not on this screen' }));
 
 		const { getByTestId } = render(DiffNotice);
 		expect(text(getByTestId('narrowed-to'))).toContain('1 thread is not on this screen');

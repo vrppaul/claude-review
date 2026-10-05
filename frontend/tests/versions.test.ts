@@ -36,6 +36,7 @@ function thread(over: Partial<Comment> = {}): Comment {
 		start_line: 1,
 		end_line: 1,
 		body: 'reads oddly',
+		images: [],
 		turns: [],
 		raised_by: 'reader',
 		resolved: false,

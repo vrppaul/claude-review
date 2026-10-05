@@ -15,6 +15,7 @@ import type {
   DiffFile,
   DiffLayout,
   DiffResponse,
+  ImageLimits,
   ReviewMode,
   ReviewVersion,
 } from "$lib/types";
@@ -47,6 +48,10 @@ let phrase = $state("");
 // What the agent last reported about itself. A push is gone once sent, so a
 // review opened mid-conversation has to read it back with the diff.
 let agent = $state<AgentStatus>({ model: null, context: null, at: null });
+// What the server takes in pasted images. Null until the first diff arrives,
+// and nothing can be pasted before then: the panel waits for the agent, and
+// the agent is announced with the diff.
+let imageLimits = $state<ImageLimits | null>(null);
 let diffLayout = $state<DiffLayout>(
   readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
 );
@@ -110,6 +115,7 @@ function apply(data: DiffResponse): void {
   subject = data.subject ?? null;
   phrase = data.phrase ?? "";
   agent = data.agent ?? { model: null, context: null, at: null };
+  diffStore.setImageLimits(data.image_limits);
   // Said with the diff as well as pushed: a review reloaded while the tree
   // was moving heard the push and lost it, and one opened later never heard
   // it at all
@@ -138,6 +144,13 @@ export const diffStore = {
   /** What is under review — which repository, and against what. */
   get agent(): AgentStatus {
     return agent;
+  },
+  get imageLimits(): ImageLimits | null {
+    return imageLimits;
+  },
+
+  setImageLimits(limits: ImageLimits) {
+    imageLimits = limits;
   },
 
   get sidebarWidth(): number {
@@ -365,6 +378,7 @@ export const diffStore = {
     base = REVIEW;
     versions = [];
     agent = { model: null, context: null, at: null };
+    imageLimits = null;
     movedFiles = 0;
     dismissedMoved = 0;
     retaken = null;

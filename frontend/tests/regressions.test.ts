@@ -5,6 +5,7 @@ import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { isTypingTarget } from '$lib/utils/keyboard';
 import type { DiffFile } from '$lib/types';
+import { newComment } from './new-comment';
 
 const file: DiffFile = {
 	path: 'src/app.ts',
@@ -36,7 +37,7 @@ describe('a comment on an unchanged line in the split layout', () => {
 
 	it('is shown once, not once per column', () => {
 		// An unchanged line is the same line on both sides of the row
-		commentStore.add('src/app.ts', 'new', 1, 1, 'name this');
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 1, endLine: 1, body: 'name this' }));
 		diffStore.setDiffLayout('split');
 
 		const { getAllByText } = render(FileSection, { props: { file } });
@@ -45,8 +46,8 @@ describe('a comment on an unchanged line in the split layout', () => {
 	});
 
 	it('still shows a comment on each side of a replacement', () => {
-		commentStore.add('src/app.ts', 'old', 2, 2, 'why gone');
-		commentStore.add('src/app.ts', 'new', 2, 2, 'why this');
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'old', startLine: 2, endLine: 2, body: 'why gone' }));
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 2, endLine: 2, body: 'why this' }));
 		diffStore.setDiffLayout('split');
 
 		const { getAllByText } = render(FileSection, { props: { file } });
@@ -86,13 +87,13 @@ describe('comment ids after a draft comes back', () => {
 
 	it('never hands out an id a restored comment already has', () => {
 		commentStore.restore('repo: uncommitted changes');
-		const first = commentStore.add('a.ts', 'new', 1, 1, 'one');
-		commentStore.add('a.ts', 'new', 2, 2, 'two');
+		const first = commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 1, endLine: 1, body: 'one' }));
+		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 2, endLine: 2, body: 'two' }));
 		commentStore.remove(first);
 
 		commentStore.clear();
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.ts', 'new', 3, 3, 'three');
+		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 3, endLine: 3, body: 'three' }));
 
 		const ids = commentStore.comments.map((c) => c.id);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -106,8 +107,8 @@ describe('stepping through comments', () => {
 	});
 
 	it('keeps one position, so two controls cannot disagree', () => {
-		commentStore.add('a.ts', 'new', 1, 1, 'one');
-		commentStore.add('a.ts', 'new', 2, 2, 'two');
+		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 1, endLine: 1, body: 'one' }));
+		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 2, endLine: 2, body: 'two' }));
 
 		expect(commentStore.step(1)?.body).toBe('one');
 		expect(commentStore.step(1)?.body).toBe('two');
@@ -115,7 +116,7 @@ describe('stepping through comments', () => {
 	});
 
 	it('wraps around rather than stopping at the end', () => {
-		commentStore.add('a.ts', 'new', 1, 1, 'one');
+		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 1, endLine: 1, body: 'one' }));
 
 		expect(commentStore.step(1)?.body).toBe('one');
 		expect(commentStore.step(1)?.body).toBe('one');

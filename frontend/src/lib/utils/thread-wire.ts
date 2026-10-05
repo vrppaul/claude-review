@@ -1,4 +1,4 @@
-import type { Comment } from "$lib/types";
+import type { Comment, Turn, TurnPayload } from "$lib/types";
 
 /**
  * A thread as the other side is told about it.
@@ -17,14 +17,21 @@ export function threadOnTheWire(comment: Comment) {
     end_line: comment.end_line,
     quote: comment.quote,
     body: comment.body,
-    history: comment.turns.map(({ author, body, round }) => ({
-      author,
-      body,
-      round,
-    })),
+    images: comment.images,
+    history: comment.turns.map(turnOnTheWire),
     severity: comment.severity,
     resolved: comment.resolved,
     outdated: comment.outdated,
     raised_by: comment.raised_by,
   };
+}
+
+/** A turn as the other side is told about it: what was said, not when. */
+export function turnOnTheWire({
+  author,
+  body,
+  round,
+  images,
+}: Turn): TurnPayload {
+  return { author, body, round, images };
 }

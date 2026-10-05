@@ -2,7 +2,31 @@
 
 ## [Unreleased]
 
+### Added
+- **Screenshots in the agent panel.** Paste an image into the field with
+  Ctrl+V. It goes to the server as soon as it is pasted and shows under the
+  field; the message hands the agent absolute paths it can open, and
+  `context` lists them too. An image can be the whole message. PNG, JPEG, GIF
+  and WebP, recognised by their bytes, up to 10 MB each, ten to a message and
+  200 MB to a review — limits the server tells the browser, which checks them
+  before uploading. The message being written, images and all, is kept with
+  the draft, so hiding the panel or reloading the page loses nothing. An
+  image taken off before sending is removed from the server; one the server
+  no longer has, after a restart, is taken off with a note instead of drawn
+  broken.
+- **Screenshots in threads too.** The same Ctrl+V works in every comment
+  field: a new comment, a reply, an edit. The agent finds the paths in an
+  "Ask now" question and its history, and as an `Image:` line under the
+  comment or turn in a round. Cancelling a comment drops what was pasted into
+  it; an image that did not survive a restart of the server drops out of the
+  round instead of holding it up.
+
 ### Changed
+- **What a review writes stays out of the repository under review.** The
+  trees taken at every round go when the review ends. The images pasted into
+  it stay in the system's temporary directory, because the last round names
+  them and the agent reads it after the review has ended; the review says
+  where they are on the way out.
 - **The agent panel waits for the agent instead of asking for setup.** Until
   the agent's first `wait`, the panel showed the commands for attaching one
   by hand, which read as a task left to the reader — while the agent that

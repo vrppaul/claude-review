@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { loadDraft, saveDraft, clearDraft } from '$lib/utils/drafts';
+import { newComment } from './new-comment';
 
 describe('an unsent review', () => {
 	beforeEach(() => {
@@ -10,7 +11,7 @@ describe('an unsent review', () => {
 
 	it('survives a reload of the same review', () => {
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 		commentStore.setReviewBody('Overall fine');
 
 		commentStore.clear();
@@ -23,7 +24,7 @@ describe('an unsent review', () => {
 
 	it('is not handed to a different review', () => {
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 
 		commentStore.clear();
 		const count = commentStore.restore('other-repo: changes since v1');
@@ -41,7 +42,7 @@ describe('an unsent review', () => {
 			})
 		);
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.py', 'new', 1, 1, 'tighten this');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'tighten this' }));
 
 		await commentStore.submit();
 		commentStore.clear();
@@ -52,12 +53,12 @@ describe('an unsent review', () => {
 
 	it('keeps ids apart from the ones restored with it', () => {
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.py', 'new', 1, 1, 'first');
-		commentStore.add('a.py', 'new', 2, 2, 'second');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'first' }));
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 2, endLine: 2, body: 'second' }));
 
 		commentStore.clear();
 		commentStore.restore('repo: uncommitted changes');
-		commentStore.add('a.py', 'new', 3, 3, 'third');
+		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 3, endLine: 3, body: 'third' }));
 
 		const ids = commentStore.comments.map((c) => c.id);
 		expect(new Set(ids).size).toBe(3);
@@ -69,7 +70,7 @@ describe('an unsent review', () => {
 		});
 
 		commentStore.restore('repo: uncommitted changes');
-		expect(() => commentStore.add('a.py', 'new', 1, 1, 'still fine')).not.toThrow();
+		expect(() => commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'still fine' }))).not.toThrow();
 		expect(commentStore.count).toBe(1);
 
 		setItem.mockRestore();
