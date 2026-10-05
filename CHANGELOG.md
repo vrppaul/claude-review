@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.0] - 2026-10-05
 
 ### Added
 - **A guide to the review, from a card in the bottom left.** The first review
