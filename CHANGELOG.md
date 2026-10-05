@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **A guide to the review, from a card in the bottom left.** The first review
+  ever opened offers a tour: a light moves over the review while the card
+  says what each part is for. It waits for you to comment on a line, shows
+  the two ways a comment can go, and where it went, and tells a round from
+  the end of a review. Steps with nothing on screen to show are passed over,
+  so the same tour fits files and transcripts, and a review with no agent.
+  A reader back from an older release is told what is new — only the
+  newest entry they have not seen, with a picture (a file, or a drawing in
+  the theme) and a link to the release on GitHub; nothing written since,
+  nothing said. Both are a line away in the `?` list. What was seen is kept in a
+  cookie, shared by every review on the machine whatever its port.
 - **Screenshots in the agent panel.** Paste an image into the field with
   Ctrl+V. It goes to the server as soon as it is pasted and shows under the
   field; the message hands the agent absolute paths it can open, and

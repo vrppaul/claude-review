@@ -73,6 +73,10 @@ class DiffResponse(BaseModel):
     agent: AgentStatus = AgentStatus()
     # What the browser checks before uploading an image
     image_limits: ImageLimits = ImageLimits()
+    # Which release is serving the review, so the browser can tell a reader
+    # what changed since the one they last saw. "Release" rather than
+    # "version": a version here is a base the diff is read against.
+    release: str
 
 
 class TurnInput(BaseModel):

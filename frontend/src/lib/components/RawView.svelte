@@ -220,7 +220,7 @@
 								class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none"
 							>
 								<button
-									data-testid="line-gutter"
+									data-testid="line-gutter" data-tour="line-number"
 									class="cr-gutter-button"
 									aria-label="Comment on line {line.new_no ?? line.old_no ?? ''}"
 									disabled={line.type === 'delete' && diffStore.narrowed}
@@ -251,6 +251,7 @@
 									{/each}
 									{#if showCommentBox}
 										<CommentBox
+											kind="new"
 											onSave={handleSaveComment}
 											onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
 											onCancel={() => selection.clearCommenting()}

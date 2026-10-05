@@ -267,7 +267,7 @@
 {/snippet}
 
 <aside
-	data-testid="agent-panel"
+	data-testid="agent-panel" data-tour="agent-panel"
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
 	style="width: {panelStore.width}px"
 >

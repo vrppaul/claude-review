@@ -146,6 +146,7 @@
 {#snippet composer()}
 	<div class="px-3 py-2">
 		<CommentBox
+			kind="new"
 			onSave={handleSaveComment}
 			onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
 			onCancel={() => selection.clearCommenting()}
@@ -233,7 +234,7 @@
 								{#if row.right}
 									{@const cell = row.right}
 									<button
-										data-testid="line-gutter"
+										data-testid="line-gutter" data-tour="line-number"
 										class="cr-gutter-button"
 										aria-label="Comment on line {cell.line.new_no ?? ''}"
 										onmousedown={() =>

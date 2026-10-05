@@ -3,10 +3,10 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
+	import { guideStore } from '$lib/stores/guide.svelte';
 	import { currentSectionPath, isTypingTarget, moveByLine } from '$lib/utils/keyboard';
 	import { scrollToComment, scrollToFile } from '$lib/utils/scroll';
 
-	let showHelp = $state(false);
 	let atFile = $state(-1);
 
 	const shortcuts: { keys: string; does: string }[] = [
@@ -23,6 +23,17 @@
 		{ keys: '?', does: 'Show this list' },
 		{ keys: 'Esc', does: 'Close it' }
 	];
+
+	/** Leave the list for the tour, which needs the review uncovered. */
+	function takeTour() {
+		guideStore.setHelpOpen(false);
+		guideStore.startTour();
+	}
+
+	function readNews() {
+		guideStore.setHelpOpen(false);
+		guideStore.showNews();
+	}
 
 	function stepFile(direction: 1 | -1) {
 		const files = diffStore.files;
@@ -75,8 +86,8 @@
 		if (event.metaKey || event.ctrlKey || event.altKey) return;
 		if (isTypingTarget(event.target)) return;
 
-		if (showHelp && event.key === 'Escape') {
-			showHelp = false;
+		if (guideStore.helpOpen && event.key === 'Escape') {
+			guideStore.setHelpOpen(false);
 			return;
 		}
 
@@ -92,7 +103,7 @@
 			f: () => diffStore.toggleSidebar(),
 			v: () => actOnCurrentFile((path) => diffStore.toggleViewed(path)),
 			u: () => actOnCurrentFile((path) => diffStore.toggleCollapsed(path)),
-			'?': () => (showHelp = !showHelp)
+			'?': () => guideStore.setHelpOpen(!guideStore.helpOpen)
 		};
 
 		const act = handled[event.key];
@@ -107,19 +118,38 @@
 	});
 </script>
 
-{#if showHelp}
+{#if guideStore.helpOpen}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
 		role="dialog"
 		aria-modal="true"
-		aria-labelledby="shortcuts-title"
+		aria-label="Getting around, and the keyboard"
 		tabindex="-1"
 		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
-		onclick={(e) => e.target === e.currentTarget && (showHelp = false)}
-		onkeydown={(e) => e.key === 'Escape' && (showHelp = false)}
+		onclick={(e) => e.target === e.currentTarget && guideStore.setHelpOpen(false)}
+		onkeydown={(e) => e.key === 'Escape' && guideStore.setHelpOpen(false)}
 	>
 		<div class="cr-dialog w-full max-w-md rounded-lg bg-base-100 p-6">
-			<h3 id="shortcuts-title" class="mb-4 text-lg font-semibold">Keyboard</h3>
+			<!-- The way back to the tour and the news, once their card is put away -->
+			<div class="mb-5 flex flex-col gap-1">
+				<button data-testid="take-tour" class="cr-guide-entry cr-guide-entry-lead" onclick={takeTour}>
+					<svg class="cr-guide-compass" viewBox="0 0 20 20" aria-hidden="true">
+						<circle cx="10" cy="10" r="7.5"></circle>
+						<path d="M12.8 7.2l-1.7 3.9-3.9 1.7 1.7-3.9z"></path>
+					</svg>
+					<span class="flex-1 text-left">Take the tour again</span>
+					<span class="cr-faint text-xs">{guideStore.stepCount} stops</span>
+				</button>
+				{#if guideStore.latestNews}
+					<button data-testid="read-news" class="cr-guide-entry" onclick={readNews}>
+						<svg class="cr-guide-plus" viewBox="0 0 20 20" aria-hidden="true">
+							<path d="M10 3v14M3 10h14"></path>
+						</svg>
+						<span class="flex-1 text-left">What's new in {guideStore.latestNews.release}</span>
+					</button>
+				{/if}
+			</div>
+			<h3 class="mb-4 text-lg font-semibold">Keyboard</h3>
 			<dl data-testid="shortcuts-list" class="space-y-2">
 				{#each shortcuts as shortcut (shortcut.keys)}
 					<div class="flex items-baseline gap-4">

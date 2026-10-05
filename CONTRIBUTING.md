@@ -78,6 +78,7 @@ See [AGENTS.md](AGENTS.md) for the full conventions reference.
    - `pyproject.toml` — Python package version
    - `plugin/.claude-plugin/plugin.json` — plugin marketplace version
    - `CHANGELOG.md` — release notes
+   - `frontend/src/lib/guide/news.ts` — what a returning reader is told about this release, if anything (optional; no entry, no card)
 2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 3. Commit: `chore: release vX.Y.Z`
 4. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), and publishes to PyPI via trusted publishing. The workflow fails if the tag doesn't match the `pyproject.toml` version or if `plugin.json` is out of sync.

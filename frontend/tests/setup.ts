@@ -1,4 +1,4 @@
-/** jsdom implements neither of these; components under test rely on both. */
+/** jsdom implements none of these; components under test rely on them. */
 import { vi } from 'vitest';
 
 /**
@@ -36,3 +36,12 @@ globalThis.IntersectionObserver =
 if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();
 }
+
+/** Never reports: jsdom has no layout, so nothing it watches ever changes size. */
+class SilentResizeObserver implements ResizeObserver {
+	observe = vi.fn();
+	unobserve = vi.fn();
+	disconnect = vi.fn();
+}
+
+globalThis.ResizeObserver = SilentResizeObserver as unknown as typeof ResizeObserver;

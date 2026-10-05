@@ -47,6 +47,8 @@ export interface DiffResponse {
   moved: number;
   /** What the server takes in images, so the browser checks before uploading. */
   image_limits: ImageLimits;
+  /** Which release serves the review, so a reader can be told what is new. */
+  release: string;
 }
 
 export interface ImageLimits {
@@ -238,6 +240,15 @@ export interface PanelTurn {
   answers?: string;
   /** Taken back before it was answered. */
   cancelled?: boolean;
+}
+
+/** Which comment field: one on a line, a reply in a thread, or an edit. */
+export type CommentKind = "new" | "reply" | "edit";
+
+/** What happened to a comment field, for whoever follows along. */
+export interface CommentFieldEvent {
+  type: "opened" | "added" | "asked" | "closed";
+  kind: CommentKind;
 }
 
 /** The panel message being written: its words and the images pasted into it. */

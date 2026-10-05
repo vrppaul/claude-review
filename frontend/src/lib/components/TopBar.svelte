@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { commentStore } from '$lib/stores/comments.svelte';
+	import { guideStore } from '$lib/stores/guide.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
@@ -38,7 +39,15 @@
 	class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4"
 >
 	<span class="font-semibold">Review</span>
-	<span class="cr-muted hidden text-xs lg:inline">? for keys</span>
+	<!-- The ? key may belong to a browser extension, so the list has a button too -->
+	<button
+		data-testid="open-help"
+		class="cr-chip"
+		title="The tour, what is new, and the keys (?)"
+		onclick={() => guideStore.setHelpOpen(true)}
+	>
+		<kbd class="cr-guide-key">?</kbd> Help
+	</button>
 	<!-- What is under review, and what it is compared against: one sentence,
 		whose second half is the control that changes it -->
 	{#if diffStore.subject}
@@ -84,7 +93,7 @@
 		<RepliesMenu />
 	{/if}
 
-	<span data-testid="comment-count" class="cr-muted text-sm">
+	<span data-testid="comment-count" data-tour="unsent-count" class="cr-muted text-sm">
 		{#if inRounds}
 			{commentStore.unsentCount} unsent · {commentStore.count}
 		{:else}
@@ -121,7 +130,7 @@
 	{/if}
 
 	<button
-		data-testid="toggle-panel"
+		data-testid="toggle-panel" data-tour="agent-panel-toggle"
 		class="cr-chip"
 		aria-pressed={panelStore.open}
 		title="The agent panel — talk about the review, not one line of it"
@@ -140,7 +149,7 @@
 	<!-- One door: what has been written, a summary, and the two ways out -->
 	<button
 		class="btn btn-primary btn-sm"
-		data-testid="quick-submit"
+		data-testid="quick-submit" data-tour="send"
 		disabled={submitting}
 		onclick={onOpenModal}
 		title="Ctrl+Shift+Enter"

@@ -1075,3 +1075,21 @@ async def _send_reply(port: int, thread_id: str, question_id: str, text: str) ->
     )
     _, stderr = await proc.communicate()
     assert proc.returncode == 0, stderr.decode()
+
+
+async def test_a_first_review_is_welcomed_and_shown_around(server_url: ServerFixture, page: Page) -> None:
+    """Somebody who has never opened a review is offered the tour, once."""
+    url, _state = server_url
+    await page.context.clear_cookies()
+    await page.goto(url)
+    await page.get_by_test_id("guide-welcome").wait_for()
+
+    await page.get_by_test_id("guide-start").click()
+    await page.get_by_test_id("guide-tour").wait_for()
+    await page.get_by_test_id("tour-spotlight").wait_for()
+    await page.get_by_test_id("guide-skip").click()
+
+    # Seen once, remembered for every review on this machine
+    await page.reload()
+    await page.get_by_test_id("sidebar").wait_for()
+    assert await page.get_by_test_id("guide-welcome").count() == 0

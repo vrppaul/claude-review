@@ -189,7 +189,7 @@
 {/snippet}
 
 <aside
-	data-testid="sidebar"
+	data-testid="sidebar" data-tour="file-tree"
 	class="relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
 	style="width: {diffStore.sidebarWidth}px"
 >

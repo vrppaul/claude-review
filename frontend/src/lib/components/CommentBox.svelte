@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
-	import type { CommentSeverity, LineSide } from '$lib/types';
+	import { commentFields } from '$lib/stores/comment-fields';
+	import type { CommentKind, CommentSeverity, LineSide } from '$lib/types';
 	import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import AttachedImages from './AttachedImages.svelte';
@@ -9,6 +10,8 @@
 	const SUGGESTION_FENCE = '```suggestion';
 
 	interface Props {
+		/** A comment on a line, a reply in a thread, or an edit of a comment. */
+		kind: CommentKind;
 		onSave: (body: string, severity: CommentSeverity, images: string[]) => void;
 		/** Hand this one over now, rather than with the rest of the review. */
 		onAsk?: (body: string, severity: CommentSeverity, images: string[]) => void;
@@ -29,6 +32,7 @@
 	}
 
 	let {
+		kind,
 		onSave,
 		onAsk,
 		onCancel,
@@ -66,7 +70,9 @@
 	let handedOver = false;
 
 	$effect(() => () => {
-		if (!handedOver) attachments.abandon();
+		if (handedOver) return;
+		attachments.abandon();
+		commentFields.report({ type: 'closed', kind });
 	});
 
 	// A screenshot can be the whole comment, so words are not required; an
@@ -95,12 +101,14 @@
 		// Commenting on a line near the bottom of the window opened the composer
 		// mostly below it: focused, but with its buttons out of sight.
 		textareaEl?.scrollIntoView({ block: 'nearest' });
+		commentFields.report({ type: 'opened', kind });
 	});
 
 	function save() {
 		if (!sayable) return;
 		handedOver = true;
 		onSave(body.trim(), severity, $state.snapshot(attachments.images));
+		commentFields.report({ type: 'added', kind });
 	}
 
 	async function onPaste(event: ClipboardEvent) {
@@ -125,6 +133,7 @@
 		if (!sayable || !onAsk) return;
 		handedOver = true;
 		onAsk(body.trim(), 'question', $state.snapshot(attachments.images));
+		commentFields.report({ type: 'asked', kind });
 	}
 
 	/**
@@ -156,7 +165,10 @@
 	}
 </script>
 
-<div class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}>
+<div
+	class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}
+	data-tour={kind === 'new' ? 'comment-field' : undefined}
+>
 	<div class="flex items-center gap-3">
 		{#if label}
 			<span class="cr-comment-ref font-mono text-xs">{label}</span>

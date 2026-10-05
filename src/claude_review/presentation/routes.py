@@ -35,6 +35,7 @@ from claude_review.presentation.dependencies import (
     get_diff_files,
     get_image_service,
     get_objects,
+    get_release,
     get_repo_root,
     get_review_mode,
     get_review_title,
@@ -93,6 +94,7 @@ async def get_diff(
     review_base: str | None = Depends(get_diff_base),
     objects: Path | None = Depends(get_objects),
     state: ServerState = Depends(get_state),
+    release: str = Depends(get_release),
 ) -> DiffResponse:
     """Serve the review's content.
 
@@ -139,6 +141,7 @@ async def get_diff(
         agent=state.agent,
         moved=moved,
         image_limits=ImageLimits(),
+        release=release,
     )
 
 

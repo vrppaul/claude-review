@@ -15,6 +15,8 @@
 	import DiffView from '$lib/components/DiffView.svelte';
 	import SubmitBar from '$lib/components/SubmitBar.svelte';
 	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
+	import Guide from '$lib/components/Guide.svelte';
+	import { guideStore } from '$lib/stores/guide.svelte';
 
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -32,6 +34,8 @@
 				if (reviewStore.canSendRound) panelStore.offer();
 				// The draft may know a later round than a restarted server does
 				tellServer();
+				// A first review is welcomed; a newer release says what changed
+				guideStore.open(diffStore.release);
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : 'Failed to load diff';
@@ -193,6 +197,7 @@
 	</div>
 {:else}
 	<KeyboardShortcuts />
+	<Guide />
 	<div class="flex h-screen flex-col">
 	{#if restored > 0}
 		<div
@@ -214,7 +219,7 @@
 			{:else}
 				<!-- Where the tree was, so the way back is where it went -->
 				<button
-					data-testid="show-sidebar"
+					data-testid="show-sidebar" data-tour="file-tree"
 					class="cr-tree-rail"
 					title="Bring the file tree back"
 					aria-label="Bring the file tree back"

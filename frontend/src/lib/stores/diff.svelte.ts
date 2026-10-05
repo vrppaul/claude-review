@@ -52,6 +52,8 @@ let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 // and nothing can be pasted before then: the panel waits for the agent, and
 // the agent is announced with the diff.
 let imageLimits = $state<ImageLimits | null>(null);
+// Which release serves this review; empty until the first diff arrives
+let release = $state("");
 let diffLayout = $state<DiffLayout>(
   readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
 );
@@ -116,6 +118,7 @@ function apply(data: DiffResponse): void {
   phrase = data.phrase ?? "";
   agent = data.agent ?? { model: null, context: null, at: null };
   diffStore.setImageLimits(data.image_limits);
+  release = data.release;
   // Said with the diff as well as pushed: a review reloaded while the tree
   // was moving heard the push and lost it, and one opened later never heard
   // it at all
@@ -147,6 +150,9 @@ export const diffStore = {
   },
   get imageLimits(): ImageLimits | null {
     return imageLimits;
+  },
+  get release(): string {
+    return release;
   },
 
   setImageLimits(limits: ImageLimits) {
@@ -379,6 +385,7 @@ export const diffStore = {
     versions = [];
     agent = { model: null, context: null, at: null };
     imageLimits = null;
+    release = "";
     movedFiles = 0;
     dismissedMoved = 0;
     retaken = null;

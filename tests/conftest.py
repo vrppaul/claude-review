@@ -1,6 +1,7 @@
 """Shared fixtures for tests."""
 
 from collections.abc import AsyncGenerator
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,8 @@ from claude_review.domain.models import ReviewWorkspace
 from tests.helpers import git
 
 E2E_TIMEOUT_MS = 5_000
+# The cookie that says which release a reader has already been shown around
+SEEN_RELEASE_COOKIE = "claude-review-seen"
 
 
 @pytest.fixture
@@ -43,7 +46,13 @@ async def page() -> AsyncGenerator[Page]:
     """Async Playwright page with centralized timeout."""
     async with async_playwright() as p:
         browser = await p.chromium.launch()
-        pg = await browser.new_page()
+        context = await browser.new_context()
+        # A reader who has seen this release, so no welcome or news card sits
+        # over what a test clicks; the test of the welcome takes it away
+        await context.add_cookies(
+            [{"name": SEEN_RELEASE_COOKIE, "value": version("claude-review"), "url": "http://127.0.0.1"}]
+        )
+        pg = await context.new_page()
         pg.set_default_timeout(E2E_TIMEOUT_MS)
         yield pg
         await browser.close()

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -541,3 +542,10 @@ async def test_ignoring_whitespace_can_be_turned_back_off(
 
     assert len(ignored) < len(full)
     assert back == full
+
+
+async def test_the_diff_says_which_release_serves_it(client: AsyncClient) -> None:
+    """So the browser can tell a reader what changed since the release they last saw."""
+    response = await client.get("/api/diff")
+
+    assert response.json()["release"] == version("claude-review")

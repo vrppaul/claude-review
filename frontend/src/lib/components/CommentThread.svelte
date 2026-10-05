@@ -138,6 +138,7 @@
 <div id={comment.id} class="px-3 py-2">
 	{#if editing}
 		<CommentBox
+			kind="edit"
 			onSave={handleSave}
 			onCancel={() => (editing = false)}
 			initialBody={comment.body}
@@ -360,7 +361,7 @@
 									<span class="cr-tie" aria-hidden="true"></span>
 								{/if}
 								<div
-									data-testid="thread-answer"
+									data-testid="thread-answer" data-tour="answer"
 									class="cr-answer {comment.unread && i === exchange.answers.length - 1
 										? 'cr-answer-new'
 										: ''}"
@@ -376,7 +377,7 @@
 								{#if exchange.answers.length === 0}
 									<span class="cr-tie" aria-hidden="true"></span>
 								{/if}
-								<div data-testid="awaiting-answer" class="cr-answer flex items-center gap-3">
+								<div data-testid="awaiting-answer" data-tour="awaited-answer" class="cr-answer flex items-center gap-3">
 									<span class="cr-who"><strong>Author</strong></span>
 									<span class="flex items-center gap-1">
 										<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"
@@ -410,6 +411,7 @@
 			{#if replying}
 				<div class="mt-3">
 					<CommentBox
+						kind="reply"
 						onSave={(body, _severity, images) => reply(body, images)}
 						onAsk={reviewStore.canSendRound
 							? (body, _severity, images) => replyAndAsk(body, images)

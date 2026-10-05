@@ -136,6 +136,12 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - When the working tree moves on, the review says so and offers to take the
   diff again. It never swaps it under a half-written comment
 
+**Finding your way**
+
+- A first review offers a short tour from a card in the bottom left: what you
+  are reading, where comments go and how Claude answers them
+- After an update, the same card says what is new; both are in the `?` list
+
 **Keyboard**
 
 - `j` / `k` between lines, `Enter` to comment, `]` / `[` between files
