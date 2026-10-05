@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **The agent panel waits for the agent instead of asking for setup.** Until
+  the agent's first `wait`, the panel showed the commands for attaching one
+  by hand, which read as a task left to the reader — while the agent that
+  opened the review was seconds from attaching. It now says it is waiting,
+  and keeps the commands folded under "Started the review yourself?". The
+  skill closes the gap from the other side: the loop starts in the very next
+  call after the server.
+
 ## [1.4.2] - 2026-09-11
 
 ### Fixed

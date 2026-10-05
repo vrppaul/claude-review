@@ -80,6 +80,12 @@ somebody who is waiting.
    the same review comes back to the same address — and to the draft left
    in it.)
 
+   The reader is in the review from the moment it opens, and until your
+   first `wait` the panel tells them the agent has not joined yet. So start
+   the loop from step 5 in your very next call, before reading the log or
+   catching up: `wait` hands over only what happens after it, and nothing
+   that step 4 prints goes away while you listen.
+
 4. Catch up, if this review was already under way when you arrived:
    ```bash
    claude-review context --port 8765

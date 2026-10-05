@@ -275,7 +275,7 @@
 				: 'var(--color-base-300)'}"
 		></span>
 		<span class="text-sm font-semibold {attached ? '' : 'cr-muted'}">
-			{attached ? 'Agent' : 'No agent attached'}
+			{attached ? 'Agent' : 'Waiting for the agent'}
 		</span>
 		{#if panelStore.agent.model}
 			<span data-testid="agent-model" class="cr-faint font-mono text-xs">
@@ -348,17 +348,29 @@
 					</p>
 				</div>
 			{:else}
+				<!-- Before the agent's first wait this is what the reader sees, and
+					an agent that opened the review is seconds away from it. So the
+					state reads as waiting; how to attach one by hand is only for
+					whoever started the review themselves. -->
 				<div
 					data-testid="panel-unattached"
 					class="flex h-full flex-col items-center justify-center gap-3 px-4 text-center"
 				>
 					<p class="cr-faint text-sm leading-relaxed">
-						This review runs in the foreground, so nothing is waiting to answer. Start it in the
-						background and keep the answering half in a loop:
+						The agent joins once it starts listening. Comments you write meanwhile are kept.
 					</p>
-					<pre
-						class="cr-code cr-muted w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2 text-left">claude-review --no-open diff &
+					<details data-testid="panel-attach-by-hand" class="w-full text-left">
+						<summary class="cr-faint cursor-pointer text-center text-xs">
+							Started the review yourself?
+						</summary>
+						<p class="cr-faint mt-2 text-xs leading-relaxed">
+							Nothing answers a review run in the foreground. Start it in the background and keep
+							the listening half in a loop:
+						</p>
+						<pre
+							class="cr-code cr-muted mt-2 w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2">claude-review --no-open diff &
 claude-review wait --port &lt;port&gt;</pre>
+					</details>
 				</div>
 			{/if}
 		{:else}
@@ -543,7 +555,7 @@ claude-review wait --port &lt;port&gt;</pre>
 			</div>
 		{:else}
 			<p data-testid="panel-read-only" class="cr-faint py-1 text-center text-xs">
-				The panel is read-only until someone is listening.
+				You can write here once the agent is listening.
 			</p>
 		{/if}
 	</div>

@@ -67,6 +67,16 @@ describe('the agent panel', () => {
 		expect(queryByTestId('panel-input')).toBeNull();
 	});
 
+	it('keeps the commands for attaching by hand folded away', () => {
+		reviewStore.clear();
+
+		const { getByTestId } = render(AgentPanel);
+
+		// An agent that opened the review is about to attach; the reader
+		// should not be met with setup instructions meant for somebody else
+		expect((getByTestId('panel-attach-by-hand') as HTMLDetailsElement).open).toBe(false);
+	});
+
 	it('sends what was typed and empties the field', async () => {
 		const user = userEvent.setup({ delay: null });
 		const fetchMock = okFetch();
