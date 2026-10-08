@@ -12,7 +12,11 @@ from claude_review.domain.models import (
     ThreadContext,
     ThreadQuestion,
     TreeSnapshot,
+    TreeState,
 )
+
+# How the threads the author raises are named, apart from the browser's own
+RAISED_PREFIX = "raised-"
 
 
 class ServerState:
@@ -48,10 +52,9 @@ class ServerState:
         # What the agent has said about itself. Empty until it says anything;
         # a review reloaded mid-conversation reads it back from here.
         self.agent = AgentStatus()
-        # The working tree as it stood when the diff on screen was taken, as
-        # `git status --porcelain` lines. The watcher compares against this,
-        # so retaking the diff is what settles it.
-        self.tree: frozenset[str] = frozenset()
+        # The working tree as it stood when the diff on screen was taken. The
+        # watcher compares against this, so retaking the diff is what settles it.
+        self.tree: TreeState = frozenset()
         # Threads the author has raised. Numbered apart from the reader's,
         # whose ids are minted in the browser, so the two cannot collide.
         self._raised = 0
@@ -68,11 +71,22 @@ class ServerState:
         # The images pasted into the panel: which exist, which went out with
         # a message, and how much they weigh together
         self.images = ImageLedger()
+        # Held while the diff is taken again, so two retakes never interleave
+        self.retaking = asyncio.Lock()
 
     def raise_id(self) -> str:
         """The id of the next thread the author raises."""
         self._raised += 1
-        return f"raised-{self._raised}"
+        return f"{RAISED_PREFIX}{self._raised}"
+
+    def hold_threads(self, threads: list[ThreadContext]) -> None:
+        """Take the threads the browser holds, and never hand out an id one of them has.
+
+        A server restarted mid-review starts counting again from nothing, while
+        the browser still holds the threads the author raised before it.
+        """
+        self.threads = threads
+        self._raised = max([self._raised, *(_raised_number(thread.thread_id) for thread in threads)])
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1
@@ -114,3 +128,9 @@ class ServerState:
         """Send a message to every open review."""
         for queue in self._listeners:
             queue.put_nowait(message)
+
+
+def _raised_number(thread_id: str) -> int:
+    """The number in an id this server handed out, or 0 for any other id."""
+    number = thread_id.removeprefix(RAISED_PREFIX)
+    return int(number) if thread_id.startswith(RAISED_PREFIX) and number.isdigit() else 0

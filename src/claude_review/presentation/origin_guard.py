@@ -21,29 +21,43 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import PlainTextResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]", "::1"})
+# Loopback names, as a Host header writes them: an IPv6 address always in brackets
+LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
+
+# What a browser sends as the Origin of a page that has none of its own: a
+# sandboxed frame, a file opened from disk
+OPAQUE_ORIGIN = "null"
+
+WEB_SCHEMES = frozenset({"http", "https"})
+
+# The close code for a handshake refused on policy grounds (RFC 6455, 7.4.1)
+POLICY_VIOLATION = 1008
 
 
 def is_local_host(value: str | None) -> bool:
     """Whether a Host header names this machine over loopback."""
     if not value:
         return False
-    host = value.rsplit(":", 1)[0] if not value.startswith("[") else value.split("]")[0] + "]"
+    host = value.split("]")[0] + "]" if value.startswith("[") else value.rsplit(":", 1)[0]
     return host in LOCAL_HOSTS
 
 
-def is_local_origin(value: str | None) -> bool:
-    """Whether an Origin header names a page served from loopback.
+def is_own_page(origin: str | None, host: str) -> bool:
+    """Whether a request comes from the page this server serves, or from no page at all.
+
+    Same origin means the same port too. Loopback is not one page: a dev
+    server, a notebook, anything a package starts is another origin on the
+    same machine, and its page must not read this one or end it.
 
     A missing Origin is allowed: a command-line client sends none, and only
     browsers — the thing being defended against — always do.
     """
-    if value is None:
+    if origin is None:
         return True
-    if value == "null":
+    if origin == OPAQUE_ORIGIN:
         return False
-    parsed = urlsplit(value)
-    return parsed.scheme in ("http", "https") and is_local_host(parsed.netloc)
+    parsed = urlsplit(origin)
+    return parsed.scheme in WEB_SCHEMES and parsed.netloc.lower() == host.lower()
 
 
 # The page loads nothing from anywhere else, so it can say so. This is
@@ -102,7 +116,8 @@ class LocalOriginOnly:
             return
 
         headers = Headers(scope=scope)
-        allowed = is_local_host(headers.get("host")) and is_local_origin(headers.get("origin"))
+        host = headers.get("host")
+        allowed = host is not None and is_local_host(host) and is_own_page(headers.get("origin"), host)
         if allowed:
             await self.app(scope, receive, send)
             return
@@ -115,4 +130,4 @@ class LocalOriginOnly:
 
 async def _reject_socket(send: Send) -> None:
     """Close the handshake before it becomes a socket."""
-    await send({"type": "websocket.close", "code": 1008})
+    await send({"type": "websocket.close", "code": POLICY_VIOLATION})

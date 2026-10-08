@@ -9,7 +9,7 @@
 
 import type { CommentRoute, TourStep } from "$lib/guide/tour";
 import type { CommentFieldEvent } from "$lib/types";
-import { stepsFor } from "$lib/guide/tour";
+import { TOUR_STEPS, stepsFor } from "$lib/guide/tour";
 import { RELEASE_NEWS, type ReleaseNews } from "$lib/guide/news";
 import { latestNews, unseenNews } from "$lib/guide/news-choice";
 import { reviewStore } from "$lib/stores/review.svelte";
@@ -27,7 +27,9 @@ let card = $state<GuideCard | null>(null);
 let helpOpen = $state(false);
 let news = $state<ReleaseNews | undefined>(undefined);
 let touring = $state(false);
-let stepIndex = $state(0);
+// The step on screen, by name: the tour's steps change when an agent joins
+// or leaves, and a position would then point at a different step
+let stepId = $state<string | null>(null);
 let route = $state<CommentRoute>("review");
 let release = $state<string | null>(null);
 // Comment fields on a line open right now, so a step asking for one that is
@@ -38,6 +40,7 @@ let openNewComments = 0;
 let isOnPage: (targets: string[]) => boolean = () => true;
 
 const steps = $derived(stepsFor({ attached: reviewStore.canSendRound, route }));
+const stepIndex = $derived(indexOfStep(steps, stepId));
 
 /** Remember this release as seen, so the card does not come back. */
 function settle(): void {
@@ -75,7 +78,28 @@ function landFrom(index: number, direction: 1 | -1): void {
     touring = false;
     return;
   }
-  stepIndex = candidate;
+  stepId = steps[candidate].id;
+}
+
+/**
+ * Where a step stands in this tour.
+ *
+ * A step this tour no longer has — an agent joined, or left — is stood in
+ * for by the nearest step before it in the whole tour that it still has:
+ * saving a comment becomes choosing where it goes, the last word becomes
+ * the round or the end.
+ */
+function indexOfStep(shown: TourStep[], id: string | null): number {
+  const at = shown.findIndex((step) => step.id === id);
+  if (at !== -1 || id === null) return Math.max(at, 0);
+  const inWholeTour = TOUR_STEPS.findIndex((step) => step.id === id);
+  for (let earlier = inWholeTour - 1; earlier >= 0; earlier -= 1) {
+    const standIn = shown.findIndex(
+      (step) => step.id === TOUR_STEPS[earlier].id,
+    );
+    if (standIn !== -1) return standIn;
+  }
+  return 0;
 }
 
 /** The steps this tour shows, in order: those with something on the page. */
@@ -228,7 +252,7 @@ export const guideStore = {
     helpOpen = false;
     news = undefined;
     touring = false;
-    stepIndex = 0;
+    stepId = null;
     route = "review";
     release = null;
     openNewComments = 0;

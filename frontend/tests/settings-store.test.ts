@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import type { ReaderSettings } from '$lib/types';
 
@@ -38,9 +38,6 @@ describe('the reader settings', () => {
 		settingsStore.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('come from the server, the same in every review', async () => {
 		serving({ ...NEW_READER, diff_layout: 'split', theme: 'dark' }, true);

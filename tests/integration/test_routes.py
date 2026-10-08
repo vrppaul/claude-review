@@ -607,3 +607,24 @@ async def test_the_diff_says_which_release_serves_it(client: AsyncClient) -> Non
     response = await client.get("/api/diff")
 
     assert response.json()["release"] == version("claude-review")
+
+
+async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_hold(
+    server_state: ServerState, tmp_git_repo: Path, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> None:
+    """Read against another base, the diff on screen holds files the review's own does not."""
+    (tmp_git_repo / ".env").write_text("SECRET=hunter2\n")
+    app = create_app(
+        diff_files=[],
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        reader_files=reader_files,
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as http:
+        tracked = await http.get("/api/file-window", params={"path": "initial.txt", "start": 1, "end": 1})
+        untracked = await http.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
+
+    assert tracked.json()["lines"] == ["initial content"]
+    assert untracked.status_code == 400

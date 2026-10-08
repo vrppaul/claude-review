@@ -110,6 +110,25 @@ function rememberComposer(): void {
   saveDraft({ title: diffStore.title, composer });
 }
 
+/**
+ * Take a message that never reached the agent off the conversation.
+ *
+ * The work it put out of sight comes back, unless news of other work has
+ * arrived since.
+ */
+function takeBack(id: string, progressBefore: Progress | null): void {
+  turns = turns.filter((turn) => turn.id !== id);
+  if (progress === null) progress = progressBefore;
+  remember();
+}
+
+function markCancelled(messageId: string, cancelled: boolean): void {
+  turns = turns.map((turn) =>
+    turn.id === messageId ? { ...turn, cancelled } : turn,
+  );
+  remember();
+}
+
 export const panelStore = {
   get turns(): PanelTurn[] {
     return turns;
@@ -209,23 +228,29 @@ export const panelStore = {
       },
     ];
     // A new question, so whatever was being done for the last one is history
+    const progressBefore = progress;
     progress = null;
     remember();
 
-    const response = await fetch("/api/message", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message_id: id,
-        text,
-        threads: threads.map(threadOnTheWire),
-        images,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message_id: id,
+          text,
+          threads: threads.map(threadOnTheWire),
+          images,
+        }),
+      });
+    } catch (error) {
+      takeBack(id, progressBefore);
+      throw error;
+    }
 
     if (!response.ok) {
-      turns = turns.filter((turn) => turn.id !== id);
-      remember();
+      takeBack(id, progressBefore);
       throw new Error(await refusalOf(response, "Could not send"));
     }
 
@@ -313,18 +338,23 @@ export const panelStore = {
    * has said they are no longer interested.
    */
   async cancel(messageId: string): Promise<void> {
-    turns = turns.map((turn) =>
-      turn.id === messageId ? { ...turn, cancelled: true } : turn,
-    );
-    remember();
+    markCancelled(messageId, true);
 
-    const response = await fetch("/api/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message_id: messageId }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+    } catch (error) {
+      markCancelled(messageId, false);
+      throw error;
+    }
 
     if (!response.ok) {
+      // Never heard, so the agent is still on it and the panel still waits
+      markCancelled(messageId, false);
       throw new Error(`Could not stop it: ${response.status}`);
     }
   },

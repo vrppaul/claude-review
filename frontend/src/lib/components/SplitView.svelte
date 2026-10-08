@@ -198,9 +198,12 @@
 							>
 								{#if row.left}
 									{@const cell = row.left}
+									<!-- One keyboard stop per row: the new side's number, or this
+										one when the row has nothing on the new side -->
 									<button
+										data-testid={row.right ? 'old-line-gutter' : 'line-gutter'}
 										class="cr-gutter-button"
-										tabindex="-1"
+										tabindex={row.right ? -1 : 0}
 										aria-label="Comment on removed line {cell.line.old_no ?? ''}"
 										disabled={diffStore.narrowed}
 										title={diffStore.narrowed

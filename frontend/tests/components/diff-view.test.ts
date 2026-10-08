@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
+import { settingsStore } from '$lib/stores/settings.svelte';
 import type { DiffFile } from '$lib/types';
 import { newComment } from '../new-comment';
 
@@ -440,6 +441,18 @@ describe('files with no lines to show', () => {
 		const { getByTestId } = render(DiffView);
 
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
+	});
+
+	it('keeps a permission change in sight when the diff reads across two columns', () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }));
+		diffStore.setDiffLayout('split');
+		diffStore.setFiles([{ ...diffFile, old_mode: '100644', new_mode: '100755' }], 'diff');
+
+		const { getByTestId } = render(DiffView);
+
+		expect(getByTestId('split-view')).toBeTruthy();
+		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
+		settingsStore.clear();
 	});
 
 	it('does not claim an empty panel for a file that has hunks', () => {

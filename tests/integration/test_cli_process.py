@@ -176,7 +176,8 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
                 stderr=subprocess.PIPE,
                 text=True,
             )
-            time.sleep(1.0)
+            # Said to the review the moment the agent starts waiting on it
+            _next_push(review, "answerer")
 
             _post(
                 port,
@@ -192,6 +193,9 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
                     "thread_id": "comment-1",
                     "question_id": "comment-1",
                     "body": "Why this rather than the constant?",
+                    "severity": "question",
+                    "resolved": False,
+                    "raised_by": "reader",
                 },
             )
 
@@ -252,7 +256,8 @@ def test_a_panel_message_and_its_answer_travel_between_processes(tmp_git_repo: P
                 stderr=subprocess.PIPE,
                 text=True,
             )
-            time.sleep(1.0)
+            # Said to the review the moment the agent starts waiting on it
+            _next_push(review, "answerer")
 
             _post(port, "/api/message", {"message_id": "panel-1", "text": "Run the tests and say what fails."})
 
@@ -453,3 +458,72 @@ def test_the_address_is_printed_whether_or_not_a_browser_opens(tmp_git_repo: Pat
             server.kill()
 
     assert f"http://127.0.0.1:{port}" in said
+
+
+def test_an_agent_waiting_when_the_reader_closes_the_review_hears_it_closed(tmp_git_repo: Path) -> None:
+    """Closing the tab ends the review for the agent too, at once, not when its wait runs out."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    waiting = None
+    try:
+        _wait_for_server(port)
+        waiting = subprocess.Popen(
+            [sys.executable, "-m", "claude_review", "wait", "--port", str(port), "--seconds", "120"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        with connect(f"ws://127.0.0.1:{port}/api/session"):
+            pass
+
+        said, _ = waiting.communicate(timeout=30)
+        assert json.loads(said)["type"] == "closed"
+        server.wait(timeout=30)
+    finally:
+        for process in (waiting, server):
+            if process is not None and process.poll() is None:
+                process.kill()
+                process.wait(timeout=10)
+
+
+def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
+    tmp_git_repo: Path, tmp_path: Path
+) -> None:
+    """`kill` is how a detached review is stopped; it must not skip the way out."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    temporary = tmp_path / "temporary"
+    temporary.mkdir()
+    port = _free_port()
+
+    server = subprocess.Popen(
+        [sys.executable, "-m", "claude_review", "--port", str(port), "--no-open", "diff", str(tmp_git_repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env={**os.environ, "TMPDIR": str(temporary)},
+    )
+    try:
+        _wait_for_server(port)
+        round_sent = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/submit",
+            data=json.dumps({"comments": [], "body": "Rename the helper.", "end": False}).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(round_sent, timeout=10).close()
+
+        server.terminate()
+        printed, _ = server.communicate(timeout=30)
+
+        assert "Rename the helper." in printed
+        assert not list(temporary.glob("*.claude-review-objects"))
+    finally:
+        if server.poll() is None:
+            server.kill()
+            server.wait(timeout=10)

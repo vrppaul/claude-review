@@ -63,6 +63,11 @@ function isUnsent(comment: Comment): boolean {
   return !sent.has(comment.id);
 }
 
+/** When the agent last answered in a thread; 0 for a thread it never answered. */
+function lastAnsweredAt(comment: Comment): number {
+  return comment.turns.findLast((turn) => turn.author === "author")?.at ?? 0;
+}
+
 function payload(comment: Comment): CommentPayload {
   return {
     anchor: comment.anchor,
@@ -110,7 +115,9 @@ export const commentStore = {
 
   /** Threads that have been discussed, newest answer first. */
   get answered(): Comment[] {
-    return comments.filter((c) => c.turns.length > 0);
+    return comments
+      .filter((comment) => comment.turns.length > 0)
+      .sort((first, second) => lastAnsweredAt(second) - lastAnsweredAt(first));
   },
 
   /** Step to the next or previous comment, and say which it is. */
@@ -306,6 +313,9 @@ export const commentStore = {
         body: question,
         images: questionImages,
         history: history.map(turnOnTheWire),
+        severity: comment.severity,
+        resolved: comment.resolved,
+        raised_by: comment.raised_by,
       }),
     });
 
@@ -430,6 +440,7 @@ export const commentStore = {
     reviewBody = "";
     submitted = false;
     nextId = 0;
+    nextTurnId = 0;
     cursor = -1;
     draftTitle = null;
     sent.clear();

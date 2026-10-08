@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
@@ -99,5 +99,39 @@ describe('FileSection', () => {
 		const { queryByTestId } = render(FileSection, { props: { file } });
 
 		expect(queryByTestId('section-comment-count')).toBeNull();
+	});
+});
+
+describe('a file the last round rewrote', () => {
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+		diffStore.setFiles([file], 'diff');
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, ['src/core/session.py'], 2);
+	});
+
+	it('shows only what changed since that round when asked', async () => {
+		const user = userEvent.setup({ delay: null });
+		const asked = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ files: [file], mode: 'diff', title: '', phrase: 'changes since round 2' })
+		});
+		vi.stubGlobal('fetch', asked);
+		const { getByTestId } = render(FileSection, { props: { file } });
+
+		await user.click(getByTestId('file-changed-since'));
+
+		expect(asked.mock.calls[0][0]).toBe('/api/diff?base=round%3A2');
+		await vi.waitFor(() => expect(diffStore.base).toBe('round:2'));
+	});
+
+	it('says so when that round cannot be shown', async () => {
+		const user = userEvent.setup({ delay: null });
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+		const { getByTestId, findByTestId } = render(FileSection, { props: { file } });
+
+		await user.click(getByTestId('file-changed-since'));
+
+		expect((await findByTestId('changed-since-error')).textContent).toContain('400');
 	});
 });

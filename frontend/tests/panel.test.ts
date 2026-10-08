@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { panelStore } from '$lib/stores/panel.svelte';
@@ -60,9 +60,6 @@ describe('the panel talks to the agent about the review', () => {
 		panelStore.restore(TITLE);
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('sends what was typed at once, without waiting for a round', async () => {
 		const fetchMock = okFetch();
@@ -177,6 +174,33 @@ describe('the panel talks to the agent about the review', () => {
 
 		await expect(say('into the void')).rejects.toThrow();
 		expect(panelStore.turns).toHaveLength(0);
+	});
+
+	it('still waits on a message the server did not hear taken back', async () => {
+		okFetch();
+		await say('Keep this one');
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+		await expect(panelStore.cancel(panelStore.turns[0].id)).rejects.toThrow();
+
+		expect(panelStore.turns[0].cancelled).toBeFalsy();
+		expect(panelStore.working?.body).toBe('Keep this one');
+	});
+
+	it('takes a send that never reached the server back off the conversation', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+		await expect(say('into the void')).rejects.toThrow();
+		expect(panelStore.turns).toHaveLength(0);
+	});
+
+	it('goes on showing the work under way when a new message fails to go', async () => {
+		panelStore.reportProgress(undefined, 'Running the tests', ['tests/test_a.py']);
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+		await expect(say('and this?')).rejects.toThrow();
+
+		expect(panelStore.progress?.text).toBe('Running the tests');
 	});
 
 	it('weighs the review from what is on screen, and says so roughly', () => {

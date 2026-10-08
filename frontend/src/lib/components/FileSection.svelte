@@ -7,6 +7,7 @@
 	import { isRenderable } from '$lib/utils/renderable';
 	import { registerSection, whenNearViewport } from '$lib/utils/scroll';
 	import ContentViewToggle from './ContentViewToggle.svelte';
+	import FileNotes from './FileNotes.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';
 	import SplitView from './SplitView.svelte';
@@ -38,6 +39,18 @@
 	// the scrollbar lurching once it renders for real. One row plus the header.
 	const rowCount = $derived(file.hunks.reduce((n, hunk) => n + hunk.lines.length, 0));
 	const estimatedHeight = $derived(collapsed ? 41 : 41 + Math.max(rowCount, 1) * 21);
+
+	let changedSinceFailed = $state<string | null>(null);
+
+	async function showChangesSince() {
+		changedSinceFailed = null;
+		try {
+			await diffStore.showChangesSinceRetake();
+		} catch (error) {
+			changedSinceFailed =
+				error instanceof Error ? error.message : 'Could not take the diff against that round';
+		}
+	}
 
 	let element: HTMLElement | undefined = $state();
 	// Rows are built when the file comes within reach, and kept from then on
@@ -89,10 +102,13 @@
 				class="cr-chip"
 				style="background: var(--cr-mark-tint); color: var(--cr-mark)"
 				title="Show only what changed since then"
-				onclick={() => void diffStore.setBase(`round:${diffStore.changedSince}`).catch(() => undefined)}
+				onclick={showChangesSince}
 			>
 				changed since round {diffStore.changedSince}
 			</button>
+			{#if changedSinceFailed}
+				<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
+			{/if}
 		{/if}
 
 		{#if isDiffMode}
@@ -135,6 +151,7 @@
 
 	{#if !collapsed}
 		{#if built}
+			<FileNotes {file} />
 			{#if viewMode === 'preview'}
 				<PreviewView {file} />
 			{:else if viewMode === 'side-by-side'}

@@ -176,6 +176,8 @@ async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> Non
         "question_id": "comment-1",
         "body": "",
         "images": [image_id],
+        "resolved": False,
+        "raised_by": "reader",
     }
 
     await client.post("/api/ask", json=question)

@@ -20,6 +20,11 @@ let retryDelay = 500;
 // Said again on every reconnection, because a reconnection may be to a
 // server that has just come up knowing nothing
 let greeting: (() => unknown) | null = null;
+// What arrives before the review has restored its draft. Handed over once it
+// has: a reply or a raised thread taken in first would be overwritten by the
+// draft, or find no thread to land in.
+let held: ServerMessage[] | null = [];
+let deliver: ((message: ServerMessage) => void) | null = null;
 
 /** Connect, and keep reconnecting if the socket drops while the page lives. */
 export function openSession(
@@ -27,6 +32,8 @@ export function openSession(
   hello?: () => unknown,
 ): () => void {
   greeting = hello ?? null;
+  deliver = onMessage;
+  held = [];
   let closedByUs = false;
 
   const connect = () => {
@@ -39,11 +46,10 @@ export function openSession(
       tellServer();
     });
     socket.addEventListener("message", (event) => {
-      try {
-        onMessage(JSON.parse(event.data));
-      } catch {
-        // A message we cannot read is not worth breaking the review over
-      }
+      const message = decode(event.data);
+      if (message === null) return;
+      if (held !== null) held.push(message);
+      else onMessage(message);
     });
     socket.addEventListener("close", () => {
       if (closedByUs) return;
@@ -58,11 +64,48 @@ export function openSession(
   return () => {
     closedByUs = true;
     greeting = null;
+    deliver = null;
+    held = [];
     if (telling !== null) clearTimeout(telling);
     telling = null;
     socket?.close();
     socket = null;
   };
+}
+
+/** Hand over what arrived while the draft was being restored, and everything from now on. */
+export function dispatchHeld(): void {
+  const waiting = held ?? [];
+  held = null;
+  for (const message of waiting) deliver?.(message);
+}
+
+/**
+ * A message from the server, or null when it is not one this page can read.
+ *
+ * Only the reading is forgiven: a fault in whatever handles a message is a
+ * fault, and is left to surface.
+ */
+function decode(data: unknown): ServerMessage | null {
+  try {
+    const parsed: unknown = JSON.parse(String(data));
+    if (isServerMessage(parsed)) return parsed;
+  } catch {
+    // Reported below with everything else that cannot be read
+  }
+  console.warn(
+    "claude-review: a message from the server could not be read",
+    data,
+  );
+  return null;
+}
+
+function isServerMessage(value: unknown): value is ServerMessage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { type?: unknown }).type === "string"
+  );
 }
 
 // Typing a summary saves the draft on every keystroke, and each save is a

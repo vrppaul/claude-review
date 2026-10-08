@@ -3,7 +3,7 @@
 	import type { Anchor } from '$lib/types';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import { openSession, tellServer } from '$lib/stores/session.svelte';
+	import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -41,6 +41,8 @@
 				if (reviewStore.canSendRound) panelStore.offer();
 				// The draft may know a later round than a restarted server does
 				tellServer();
+				// Only now is there a draft for what the server said meanwhile to land in
+				dispatchHeld();
 				// A first review is welcomed; a newer release says what changed
 				void guideStore.open(diffStore.release);
 			})

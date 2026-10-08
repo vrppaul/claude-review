@@ -26,8 +26,8 @@ class GitRepositoryProtocol(Protocol):
         """
         ...
 
-    async def status(self, path: Path) -> str:
-        """Return what has changed in the working tree, one line per path."""
+    async def changed_paths(self, path: Path) -> list[str]:
+        """Return every path where the working tree differs from HEAD, untracked files included."""
         ...
 
     async def snapshot(self, path: Path) -> str:
@@ -40,6 +40,14 @@ class GitRepositoryProtocol(Protocol):
 
     async def list_refs(self, path: Path) -> list[GitRef]:
         """Return the branches and tags that can be used as a base."""
+        ...
+
+
+class TrackedPathsProtocol(Protocol):
+    """Protocol for asking whether the repository keeps a file."""
+
+    async def is_tracked(self, root: Path, relative_path: str) -> bool:
+        """Whether the repository tracks the file at this path."""
         ...
 
 

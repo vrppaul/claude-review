@@ -6,7 +6,9 @@ import pytest
 from click.testing import CliRunner
 
 from claude_review.cli import (
+    _diff_seed,
     _diff_title,
+    _files_seed,
     _files_title,
     _reader_files,
     _render_context,
@@ -66,9 +68,12 @@ def test_diff_title_names_the_repository_and_the_range() -> None:
     assert _diff_title(Path("/home/pavel/projects/claude-review"), "HEAD~3") == ("claude-review: changes since HEAD~3")
 
 
-def test_files_title_counts_what_was_opened() -> None:
-    assert _files_title([Path("plan.md")]) == "1 file"
-    assert _files_title([Path("a.md"), Path("b.py")]) == "2 files"
+def test_files_title_names_what_was_opened() -> None:
+    assert _files_title([Path("docs/plan.md")]) == "plan.md"
+    assert _files_title([Path("b.py"), Path("a.md")]) == "a.md, b.py"
+    assert (
+        _files_title([Path(name) for name in ("e.md", "d.md", "c.md", "b.md", "a.md")]) == "a.md, b.md, c.md + 2 more"
+    )
 
 
 def test_transcript_title_names_the_conversation() -> None:
@@ -77,25 +82,38 @@ def test_transcript_title_names_the_conversation() -> None:
 
 def test_reopening_the_same_review_lands_on_the_same_port() -> None:
     """The port is the origin, and the origin is where a draft is kept."""
-    first = _stable_port(Path("/home/dev/project"), "HEAD~3")
-    again = _stable_port(Path("/home/dev/project"), "HEAD~3")
+    first = _stable_port(_diff_seed(Path("/home/dev/project"), "HEAD~3"))
+    again = _stable_port(_diff_seed(Path("/home/dev/project"), "HEAD~3"))
 
     assert first == again
 
 
 def test_a_different_review_gets_a_different_port() -> None:
     """Two repositories reopened side by side must not share a draft."""
-    project = _stable_port(Path("/home/dev/project"), None)
-    other = _stable_port(Path("/home/dev/other"), None)
-    since_a_tag = _stable_port(Path("/home/dev/project"), "v1.0.0")
+    project = _stable_port(_diff_seed(Path("/home/dev/project"), None))
+    other = _stable_port(_diff_seed(Path("/home/dev/other"), None))
+    since_a_tag = _stable_port(_diff_seed(Path("/home/dev/project"), "v1.0.0"))
 
     assert project != other
     assert project != since_a_tag
 
 
+def test_the_same_files_in_another_order_are_the_same_review() -> None:
+    assert _files_seed([Path("/docs/a.md"), Path("/docs/b.md")]) == _files_seed(
+        [Path("/docs/b.md"), Path("/docs/a.md")]
+    )
+
+
+def test_files_that_start_alike_are_a_different_review() -> None:
+    """Same first file, same count: still another set of files, and another draft."""
+    assert _files_seed([Path("/docs/a.md"), Path("/docs/b.md")]) != _files_seed(
+        [Path("/docs/a.md"), Path("/docs/c.md")]
+    )
+
+
 def test_a_derived_port_stays_out_of_the_way() -> None:
     """High enough to be free of well-known services and of ephemeral ports."""
-    port = _stable_port(Path("/home/dev/project"), None)
+    port = _stable_port(_diff_seed(Path("/home/dev/project"), None))
 
     assert 40000 <= port <= 60000
 

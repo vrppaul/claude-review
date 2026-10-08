@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import socket
 import sys
 import tempfile
@@ -43,6 +44,14 @@ DISCONNECT_GRACE = 3.0
 # below the ephemeral range the kernel hands out.
 STABLE_PORT_FLOOR = 40_000
 STABLE_PORT_CEILING = 60_000
+# How much of a review's digest becomes its port
+PORT_DIGEST_BYTES = 4
+
+# How many files a files review names in its title before it counts the rest
+FILES_NAMED_IN_TITLE = 3
+
+# What stops a review the way closing it does: Ctrl+C, and `kill`
+STOP_SIGNALS = (signal.SIGINT, signal.SIGTERM)
 
 # What a review's own temporary directories are called, so they can be told apart in /tmp
 OBJECTS_SUFFIX = ".claude-review-objects"
@@ -213,7 +222,7 @@ async def _serve_review(
     # The default picks uvicorn's older websockets integration, which warns on
     # every connection with websockets 14 and later
     config = uvicorn.Config(app, log_level="error", ws="websockets-sansio")
-    server = uvicorn.Server(config)
+    server = ReviewServer(config)
 
     async def wait_for_shutdown() -> None:
         for _ in range(100):  # 5 second startup timeout
@@ -241,7 +250,8 @@ async def _serve_review(
             await asyncio.sleep(0.5)
             if state.browser_gone(asyncio.get_running_loop().time(), DISCONNECT_GRACE):
                 log.info("browser_closed")
-                break
+                # Ended for everyone, an agent waiting on it included
+                state.shutdown_event.set()
 
         server.should_exit = True
         log.info("server_shutting_down")
@@ -259,12 +269,40 @@ async def _serve_review(
     # stops moving.
     watching = asyncio.create_task(watch_tree())
     try:
-        await asyncio.gather(server.serve(sockets=[sock]), wait_for_shutdown())
+        with _stopped_by_signals(state.shutdown_event):
+            await asyncio.gather(server.serve(sockets=[sock]), wait_for_shutdown())
     finally:
         watching.cancel()
         sock.close()
 
     return state.result or ""
+
+
+class ReviewServer(uvicorn.Server):
+    """uvicorn, leaving the signals to the review.
+
+    uvicorn raises a signal it caught again once it has stopped, with the
+    default handler back in place, and that ends the process before the
+    review's own way out has run: its directories are left behind and the
+    last round is never printed.
+    """
+
+    @contextlib.contextmanager
+    def capture_signals(self) -> Iterator[None]:
+        yield
+
+
+@contextlib.contextmanager
+def _stopped_by_signals(stop: asyncio.Event) -> Iterator[None]:
+    """End the review on Ctrl+C or `kill` the way closing it ends it."""
+    loop = asyncio.get_running_loop()
+    for stop_signal in STOP_SIGNALS:
+        loop.add_signal_handler(stop_signal, stop.set)
+    try:
+        yield
+    finally:
+        for stop_signal in STOP_SIGNALS:
+            loop.remove_signal_handler(stop_signal)
 
 
 def _bind(port: int, *, may_fall_back: bool = False) -> socket.socket:
@@ -291,17 +329,33 @@ def _bind(port: int, *, may_fall_back: bool = False) -> socket.socket:
     return sock
 
 
-def _stable_port(root: Path, base: str | None) -> int:
+def _stable_port(seed: str) -> int:
     """Work out which port this review should come back on.
 
     A review reopened on the same thing should land on the same origin: an
     unsent draft lives in the browser's storage, which is keyed by origin,
     so a fresh port every time throws away the comments of whoever closed
-    the tab and opened the review again.
+    the tab and opened the review again. The seed says what "the same
+    thing" is.
     """
-    seed = f"{root.resolve()}\n{base or ''}".encode()
     span = STABLE_PORT_CEILING - STABLE_PORT_FLOOR
-    return STABLE_PORT_FLOOR + int.from_bytes(hashlib.blake2s(seed, digest_size=4).digest()) % span
+    digest = hashlib.blake2s(seed.encode(), digest_size=PORT_DIGEST_BYTES).digest()
+    return STABLE_PORT_FLOOR + int.from_bytes(digest) % span
+
+
+def _diff_seed(root: Path, base: str | None) -> str:
+    """A diff is the same review again when it is the same repository against the same base."""
+    return f"{root.resolve()}\n{base or ''}"
+
+
+def _files_seed(paths: list[Path]) -> str:
+    """Files are the same review again when they are the same files, in whatever order."""
+    return "\n".join(sorted(str(path.resolve()) for path in paths))
+
+
+def _transcript_seed(path: Path) -> str:
+    """A transcript is the same review again when it is the same conversation file."""
+    return f"{path.resolve()}\ntranscript"
 
 
 def _diff_title(repo_path: Path, base: str | None) -> str:
@@ -312,7 +366,14 @@ def _diff_title(repo_path: Path, base: str | None) -> str:
 
 
 def _files_title(paths: list[Path]) -> str:
-    return f"{len(paths)} file{'' if len(paths) == 1 else 's'}"
+    """Name the files under review, so two sets of them are told apart.
+
+    The title is also what an unsent draft is kept under.
+    """
+    names = sorted(path.name for path in paths)
+    named = ", ".join(names[:FILES_NAMED_IN_TITLE])
+    unnamed = len(names) - FILES_NAMED_IN_TITLE
+    return f"{named} + {unnamed} more" if unnamed > 0 else named
 
 
 def _transcript_title(path: Path) -> str:
@@ -733,7 +794,7 @@ def diff_cmd(ctx: click.Context, path: Path | None, base: str | None) -> None:
         return await _serve(
             diff_files,
             ReviewMode.DIFF,
-            asked_for or _stable_port(root, base),
+            asked_for or _stable_port(_diff_seed(root, base)),
             _diff_title(repo_path, base),
             root=root,
             base=base,
@@ -760,7 +821,7 @@ def files_cmd(ctx: click.Context, paths: tuple[Path, ...]) -> None:
         _serve(
             diff_files,
             ReviewMode.FILES,
-            asked_for or _stable_port(paths[0], f"files:{len(paths)}"),
+            asked_for or _stable_port(_files_seed(list(paths))),
             _files_title(list(paths)),
             open_browser=ctx.obj["open_browser"],
             may_fall_back=not asked_for,
@@ -784,7 +845,7 @@ def transcript_cmd(ctx: click.Context, path: Path) -> None:
         _serve(
             diff_files,
             ReviewMode.TRANSCRIPT,
-            asked_for or _stable_port(path, "transcript"),
+            asked_for or _stable_port(_transcript_seed(path)),
             _transcript_title(path),
             open_browser=ctx.obj["open_browser"],
             may_fall_back=not asked_for,

@@ -39,20 +39,6 @@
 	const commentsByRow = $derived(
 		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
 	);
-	const modeChange = $derived(
-		file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null
-	);
-	// A file can change without producing lines: binary content, or a bare
-	// permission change. Say which, rather than showing an empty panel.
-	const emptyReason = $derived(
-		file.hunks.length > 0
-			? null
-			: file.is_binary
-				? 'Binary file — no preview'
-				: modeChange
-					? 'Permission change only'
-					: 'No content changes'
-	);
 	const selection = createLineSelection(() => !diffStore.narrowed);
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks
@@ -160,21 +146,6 @@
 </script>
 
 <div data-testid="raw-view">
-	{#if modeChange}
-		<div
-			data-testid="mode-change-note"
-			class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs"
-		>
-			Permission changed: {modeChange}
-		</div>
-	{/if}
-
-	{#if emptyReason}
-		<div data-testid="empty-file-note" class="cr-muted px-4 py-8 text-center text-sm">
-			{emptyReason}
-		</div>
-	{/if}
-
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode}
@@ -211,6 +182,7 @@
 							{#if isDiffMode}
 								<td class="cr-gutter w-12 p-0 text-right select-none">
 									<button
+										data-testid="old-line-gutter"
 										class="cr-gutter-button"
 										tabindex="-1"
 										aria-label="Comment on line {line.old_no ?? ''}"

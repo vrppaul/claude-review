@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
@@ -34,9 +34,6 @@ describe('widening the context around a hunk', () => {
 		diffStore.setFiles([file], 'diff');
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('offers to show the lines the diff left out', () => {
 		const { getByTestId } = render(FileSection, { props: { file } });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
@@ -18,9 +18,6 @@ describe('when the tree moves under the review', () => {
 		commentStore.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('says so, and leaves the taking to the reader', () => {
 		diffStore.noteTreeMoved(3);
@@ -123,9 +120,6 @@ describe('threads the base on screen cannot draw', () => {
 		commentStore.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('lists them, so a count is not the end of the road', async () => {
 		const user = userEvent.setup({ delay: null });
@@ -157,4 +151,53 @@ describe('threads the base on screen cannot draw', () => {
 		expect(text(getByTestId('off-screen-list'))).toContain('this one is not on this screen');
 		expect(text(getByTestId('off-screen-list'))).toContain('elsewhere.py');
 	});
+
+	it('lists them once, even while a retake is being reported', async () => {
+		const user = userEvent.setup({ delay: null });
+		serveNarrowed();
+		await diffStore.setBase('round:1');
+		commentStore.add(newComment({ file: 'elsewhere.py', body: 'not on this screen' }));
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, [], 1);
+
+		const { getByTestId, getAllByTestId } = render(DiffNotice);
+		await user.click(getByTestId('list-off-screen'));
+
+		expect(getAllByTestId('off-screen-list')).toHaveLength(1);
+	});
+
+	it('starts folded on the next narrowed base, whatever was open on the last', async () => {
+		const user = userEvent.setup({ delay: null });
+		serveNarrowed();
+		await diffStore.setBase('round:1');
+		commentStore.add(newComment({ file: 'elsewhere.py', body: 'not on this screen' }));
+		const { getByTestId, queryByTestId } = render(DiffNotice);
+		await user.click(getByTestId('list-off-screen'));
+
+		await diffStore.setBase('review');
+		await diffStore.setBase('round:1');
+		await new Promise((settle) => setTimeout(settle));
+
+		expect(queryByTestId('off-screen-list')).toBeNull();
+	});
 });
+
+/** The server answering every diff with an empty one, compared against round 1. */
+function serveNarrowed() {
+	vi.stubGlobal(
+		'fetch',
+		vi.fn().mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					files: [],
+					mode: 'diff',
+					title: '',
+					phrase: 'changes since round 1',
+					round: 1,
+					answerer_attached: false,
+					agent: { model: null, context: null, at: null },
+					moved: 0
+				})
+		})
+	);
+}

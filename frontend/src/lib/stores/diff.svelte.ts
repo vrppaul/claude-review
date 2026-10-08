@@ -23,6 +23,8 @@ import type {
 
 /** The review's own base: what it was opened against, and the diff it keeps. */
 const REVIEW = "review";
+/** How the server names the base a round of this review was read at. */
+const ROUND_PREFIX = "round:";
 
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
@@ -38,6 +40,10 @@ let title = $state("");
 // Which base the diff on screen was taken against, and everything it could
 // be taken against instead
 let base = $state(REVIEW);
+// Which base the reader last asked for. Set the moment they ask, so a diff
+// taken again while theirs is on its way — a round landing — is taken
+// against what they picked, not against what is still on screen.
+let requestedBase = REVIEW;
 let versions = $state<ReviewVersion[]>([]);
 // What the header says the diff on screen is. It comes with the diff rather
 // than out of the version list, so the header can speak before it knows
@@ -102,13 +108,31 @@ async function read(query: string): Promise<DiffResponse> {
   return response.json();
 }
 
-// Which fetch is the current one. Two can be in flight — a round landing
-// while the reader picks a base — and the one that started last is the one
-// they asked for, whatever order the answers come back in.
+// Which request is the latest. Two can be in flight — a round landing while
+// the reader picks a base — and only the latest is drawn, whatever order the
+// answers come back in.
 let asking = 0;
+
+/**
+ * Take the diff against the base the reader asked for, and put it on screen.
+ *
+ * Only the answer to the latest request is drawn, whatever order the
+ * answers come back in.
+ */
+async function take(): Promise<void> {
+  const mine = ++asking;
+  const against = requestedBase;
+  const data = await read(asked(against));
+  if (mine !== asking) return;
+  base = against;
+  apply(data);
+}
 
 /** Put a diff that has arrived on screen, with everything that came with it. */
 function apply(data: DiffResponse): void {
+  // Revealed lines sit above hunks counted by position, and a new diff
+  // counts them afresh: a round, a base, whitespace all renumber them
+  expansionStore.clear();
   diffStore.setFiles(data.files, data.mode, data.title);
   phrase = data.phrase ?? "";
   agent = data.agent ?? { model: null, context: null, at: null };
@@ -300,10 +324,7 @@ export const diffStore = {
    */
   async setIgnoreWhitespace(next: boolean) {
     await settingsStore.change({ ignore_whitespace: next });
-    // Hunks are renumbered and re-indexed by the retake, so lines revealed
-    // against the old ones would be shown under the wrong numbers
-    expansionStore.clear();
-    await this.fetchDiff();
+    await take();
   },
   get viewedCount(): number {
     return viewed.size;
@@ -368,6 +389,7 @@ export const diffStore = {
     title = "";
     phrase = "";
     base = REVIEW;
+    requestedBase = REVIEW;
     versions = [];
     agent = { model: null, context: null, at: null };
     imageLimits = null;
@@ -428,19 +450,29 @@ export const diffStore = {
    * for good.
    */
   async setBase(key: string) {
-    const mine = ++asking;
-    const data = await read(asked(key));
-    if (mine !== asking) return;
-    expansionStore.clear();
-    base = key;
-    apply(data);
+    requestedBase = key;
+    try {
+      await take();
+    } catch (error) {
+      // A base that cannot be taken is not asked for again by the next retake
+      if (requestedBase === key) requestedBase = base;
+      throw error;
+    }
   },
 
   async fetchDiff() {
-    const mine = ++asking;
-    const data = await read(asked(base));
-    if (mine !== asking) return;
-    apply(data);
+    await take();
+  },
+
+  /** Read only what changed since the round the last retake was counted from. */
+  async showChangesSinceRetake() {
+    if (changedSince === null) return;
+    await this.setBase(`${ROUND_PREFIX}${changedSince}`);
+  },
+
+  /** Put the review's own diff back, with every thread it holds. */
+  async showWholeReview() {
+    await this.setBase(REVIEW);
   },
 };
 

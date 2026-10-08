@@ -14,6 +14,7 @@ from claude_review.domain.models import (
     LineAnchor,
     LineSide,
     LineType,
+    TurnAuthor,
 )
 from claude_review.services.transcript_review_service import TranscriptReviewService
 
@@ -250,3 +251,36 @@ def test_range_comment_includes_full_range_in_blockquote() -> None:
     assert "> line 4" in result.markdown
     assert "> line 5" in result.markdown
     assert "Refactor this" in result.markdown
+
+
+def test_how_a_thread_is_meant_to_be_taken_is_said() -> None:
+    """A blocker, a settled note and one written against words since gone are different instructions."""
+    files = [_make_message("user-1", ["hello world"])]
+    comments = [
+        Comment(
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, outdated=True),
+            severity=CommentSeverity.BLOCKER,
+            body="Fix it",
+            resolved=True,
+        )
+    ]
+
+    markdown = _service().format_review(comments, None, files).markdown
+
+    assert "blocker, resolved, outdated" in markdown
+
+
+def test_a_thread_the_agent_raised_opens_with_the_agent_speaking() -> None:
+    files = [_make_message("assistant-1", ["I chose JWT"])]
+    comments = [
+        Comment(
+            anchor=LineAnchor(file="assistant-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="I kept the old flow on purpose",
+            raised_by=TurnAuthor.AUTHOR,
+        )
+    ]
+
+    markdown = _service().format_review(comments, None, files).markdown
+
+    assert "> **You:** I kept the old flow on purpose" in markdown

@@ -99,3 +99,42 @@ describe('split layout', () => {
 		expect(getByText('tighten this')).toBeTruthy();
 	});
 });
+
+describe('reaching every row from the keyboard in two columns', () => {
+	const removal: DiffFile = {
+		path: 'src/gone.ts',
+		status: 'modified',
+		hunks: [
+			{
+				header: '@@ -1,3 +1,2 @@',
+				old_start: 1,
+				new_start: 1,
+				lines: [
+					{ type: 'context', old_no: 1, new_no: 1, content: 'const a = 1;' },
+					{ type: 'delete', old_no: 2, new_no: null, content: 'const b = 2;' },
+					{ type: 'context', old_no: 3, new_no: 2, content: 'const c = 3;' }
+				]
+			}
+		],
+		is_binary: false,
+		old_mode: null,
+		new_mode: null
+	};
+
+	beforeEach(() => {
+		diffStore.clear();
+		commentStore.clear();
+		diffStore.setFiles([removal], 'diff');
+		diffStore.setDiffLayout('split');
+	});
+
+	it('stops once on every row, a removed line with nothing beside it included', () => {
+		const { getAllByTestId } = render(FileSection, { props: { file: removal } });
+
+		const stops = getAllByTestId('line-gutter');
+
+		expect(stops.map((stop) => stop.textContent?.trim())).toEqual(['1', '2', '2']);
+		expect(stops[1].getAttribute('aria-label')).toBe('Comment on removed line 2');
+		expect(stops.every((stop) => stop.tabIndex === 0)).toBe(true);
+	});
+});

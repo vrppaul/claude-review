@@ -72,7 +72,6 @@ describe('diffStore', () => {
 		expect(diffStore.files).toHaveLength(2);
 		expect(fetch).toHaveBeenCalledWith('/api/diff');
 
-		vi.unstubAllGlobals();
 	});
 
 	it('fetchDiff throws on non-ok response', async () => {
@@ -86,7 +85,6 @@ describe('diffStore', () => {
 
 		await expect(diffStore.fetchDiff()).rejects.toThrow('Failed to fetch diff: 500');
 
-		vi.unstubAllGlobals();
 	});
 
 	it('mode defaults to diff', () => {
@@ -119,7 +117,6 @@ describe('diffStore', () => {
 
 		expect(diffStore.mode).toBe('files');
 
-		vi.unstubAllGlobals();
 	});
 
 	it('setFiles with transcript mode updates the mode', () => {
@@ -149,7 +146,6 @@ describe('diffStore', () => {
 describe('retaking the diff', () => {
 	beforeEach(() => {
 		diffStore.clear();
-		vi.unstubAllGlobals();
 	});
 
 	it('asks git to leave whitespace-only changes out', async () => {
@@ -199,7 +195,6 @@ describe('the choices a reader makes about how a review is drawn', () => {
 			'/api/settings',
 			expect.objectContaining({ method: 'PUT', body: JSON.stringify({ diff_layout: 'split' }) })
 		);
-		vi.unstubAllGlobals();
 	});
 
 	it('remembers how a markdown file is shown', () => {

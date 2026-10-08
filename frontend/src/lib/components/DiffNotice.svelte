@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment } from '$lib/types';
+	import type { Comment, DiffFile } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { anchorShortPlace, revealThread } from '$lib/anchors/views';
@@ -20,14 +20,17 @@
 	const offScreen = $derived(
 		commentStore.comments.filter((c) => !isDrawn(c, diffStore.files, { removedLines: false }))
 	);
-	let listing = $state(false);
+	// The diff the list of them was opened over. Every diff taken after it —
+	// another base, a retake — starts folded, so the list is never left open
+	// from a screen the reader has left.
+	let listedOver = $state.raw<DiffFile[] | null>(null);
+	const listing = $derived(listedOver === diffStore.files);
 
 	/** Take the reader back to the whole diff, and to the thread they picked. */
 	async function goTo(comment: Comment) {
 		failed = null;
 		try {
-			await diffStore.setBase('review');
-			listing = false;
+			await diffStore.showWholeReview();
 			revealThread(comment);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not take the whole diff again';
@@ -61,7 +64,7 @@
 	async function showWhatChanged() {
 		failed = null;
 		try {
-			await diffStore.setBase(`round:${diffStore.changedSince}`);
+			await diffStore.showChangesSinceRetake();
 			diffStore.dismissRetaken();
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not take the diff against that round';
@@ -71,7 +74,7 @@
 	async function showEverything() {
 		failed = null;
 		try {
-			await diffStore.setBase('review');
+			await diffStore.showWholeReview();
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not take the whole diff again';
 		}
@@ -181,31 +184,6 @@
 		</button>
 	</div>
 
-	{#if listing}
-		<!-- Where they are, so a count is not the end of the road. Picking one
-			puts the whole diff back and goes to it: it is anchored there, and
-			that is the only screen that can draw it. -->
-		<div
-			data-testid="off-screen-list"
-			class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5"
-		>
-			{#each offScreen as comment (comment.id)}
-				<button
-					data-testid="off-screen-thread"
-					class="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-base-200"
-					onclick={() => goTo(comment)}
-				>
-					<span class="cr-comment-ref shrink-0 font-mono text-xs">
-						{anchorShortPlace(comment.anchor)}
-					</span>
-					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{comment.body}</span>
-				</button>
-			{/each}
-			<p class="cr-faint px-2 pt-1 text-xs">
-				They are still in the review, and still go out with the round.
-			</p>
-		</div>
-	{/if}
 {/if}
 
 {#if diffStore.narrowed}
@@ -252,7 +230,7 @@
 				data-testid="list-off-screen"
 				class="btn btn-ghost btn-xs"
 				aria-expanded={listing}
-				onclick={() => (listing = !listing)}
+				onclick={() => (listedOver = listing ? null : diffStore.files)}
 			>
 				{listing ? 'Hide them' : 'List them'}
 			</button>

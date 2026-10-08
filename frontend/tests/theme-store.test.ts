@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import { themeStore } from '$lib/stores/theme.svelte';
@@ -27,9 +27,6 @@ describe('themeStore', () => {
 		themeStore.reset();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('follows the system until the reader chooses otherwise', () => {
 		expect(themeStore.theme).toBe('system');

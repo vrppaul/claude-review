@@ -45,7 +45,6 @@ build-backend = "hatchling.build"
 target-version = "py314"
 line-length = 120
 src = ["src"]
-fix = true
 exclude = [
     ".git",
     ".venv",
@@ -97,14 +96,6 @@ known-first-party = ["claude_review"]
 
 [tool.ty.environment]
 python-version = "3.14"
-
-[tool.ty.rules]
-possibly-missing-attribute = "warn"
-no-matching-overload = "warn"
-invalid-assignment = "warn"
-invalid-return-type = "warn"
-invalid-argument-type = "warn"
-missing-argument = "warn"
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]

@@ -10,6 +10,9 @@ from pydantic import BaseModel, ValidationError
 
 log = structlog.get_logger()
 
+# What every record is written in, whatever the machine's locale says
+RECORD_ENCODING = "utf-8"
+
 
 class JsonRecordStore[Record: BaseModel]:
     """Keeps one record as a JSON file, replaced whole on every write.
@@ -25,7 +28,7 @@ class JsonRecordStore[Record: BaseModel]:
 
     async def read(self) -> Record | None:
         try:
-            text = await asyncio.to_thread(self._path.read_text)
+            text = await asyncio.to_thread(self._path.read_text, encoding=RECORD_ENCODING)
         except FileNotFoundError:
             return None
         except (OSError, UnicodeDecodeError) as e:
@@ -48,7 +51,7 @@ class JsonRecordStore[Record: BaseModel]:
         # stays on one file system
         handle, written = tempfile.mkstemp(dir=self._path.parent, prefix=f".{self._path.name}.")
         try:
-            with os.fdopen(handle, "w") as file:
+            with os.fdopen(handle, "w", encoding=RECORD_ENCODING) as file:
                 file.write(text)
             Path(written).replace(self._path)
         except BaseException:

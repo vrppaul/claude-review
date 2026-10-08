@@ -10,23 +10,38 @@ import asyncio
 import contextlib
 from pathlib import Path
 
+from claude_review.domain.models import TreeState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.tree_watcher_service import TreeWatcherService
+from tests.helpers import git
+
+POLL_SECONDS = 0.02
+# Long enough for a change to be seen however busy the machine is
+REPORT_TIMEOUT_SECONDS = 5
+# Enough polls to have seen a change had there been one
+QUIET_POLLS = 25
 
 
 def _watcher() -> TreeWatcherService:
-    return TreeWatcherService(git_repository=GitRepository(), poll_seconds=0.02)
+    return TreeWatcherService(git_repository=GitRepository(), poll_seconds=POLL_SECONDS)
 
 
-async def _first(watcher: TreeWatcherService, root: Path, taken_at: frozenset[str], stop: asyncio.Event) -> int | None:
+async def _first(
+    watcher: TreeWatcherService, root: Path, taken_at: TreeState, *, give_up_after: float = REPORT_TIMEOUT_SECONDS
+) -> int | None:
     """How many files the watcher reports moving, or nothing before it gives up."""
-    changes = watcher.changes(root, taken_at=lambda: taken_at, stop=stop)
+    changes = watcher.changes(root, taken_at=lambda: taken_at, stop=asyncio.Event())
     try:
-        return await asyncio.wait_for(anext(changes), timeout=5)
+        return await asyncio.wait_for(anext(changes), timeout=give_up_after)
     except TimeoutError:
         return None
     finally:
         await changes.aclose()
+
+
+async def _quiet(watcher: TreeWatcherService, root: Path, taken_at: TreeState) -> bool:
+    """Whether the watcher stays silent for as many polls as it takes to notice anything."""
+    return await _first(watcher, root, taken_at, give_up_after=POLL_SECONDS * QUIET_POLLS) is None
 
 
 async def test_a_file_changed_after_the_diff_is_reported(tmp_git_repo: Path) -> None:
@@ -36,7 +51,7 @@ async def test_a_file_changed_after_the_diff_is_reported(tmp_git_repo: Path) -> 
 
     (tmp_git_repo / "initial.txt").write_text("changed under the reader\n")
 
-    assert await _first(watcher, tmp_git_repo, taken_at, asyncio.Event()) == 1
+    assert await _first(watcher, tmp_git_repo, taken_at) == 1
 
 
 async def test_every_file_that_moved_is_counted_once(tmp_git_repo: Path) -> None:
@@ -47,7 +62,7 @@ async def test_every_file_that_moved_is_counted_once(tmp_git_repo: Path) -> None
     (tmp_git_repo / "initial.txt").write_text("one\n")
     (tmp_git_repo / "second.txt").write_text("two\n")
 
-    assert await _first(watcher, tmp_git_repo, taken_at, asyncio.Event()) == 2
+    assert await _first(watcher, tmp_git_repo, taken_at) == 2
 
 
 async def test_a_tree_that_has_not_moved_is_not_reported(tmp_git_repo: Path) -> None:
@@ -55,7 +70,7 @@ async def test_a_tree_that_has_not_moved_is_not_reported(tmp_git_repo: Path) -> 
     watcher = _watcher()
     taken_at = await watcher.read(tmp_git_repo)
 
-    assert await _first(watcher, tmp_git_repo, taken_at, asyncio.Event()) is None
+    assert await _quiet(watcher, tmp_git_repo, taken_at)
 
 
 async def test_a_change_is_reported_once_rather_than_every_poll(tmp_git_repo: Path) -> None:
@@ -77,3 +92,36 @@ async def test_a_change_is_reported_once_rather_than_every_poll(tmp_git_repo: Pa
             await second
     finally:
         await changes.aclose()
+
+
+async def test_a_file_changed_again_is_reported(tmp_git_repo: Path) -> None:
+    """The agent rewriting a file already in the diff is the change that matters most."""
+    (tmp_git_repo / "initial.txt").write_text("first rewrite\n")
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+
+    (tmp_git_repo / "initial.txt").write_text("second rewrite, longer than the first\n")
+
+    assert await _first(watcher, tmp_git_repo, taken_at) == 1
+
+
+async def test_a_new_file_in_a_new_directory_is_reported(tmp_git_repo: Path) -> None:
+    (tmp_git_repo / "notes").mkdir()
+    (tmp_git_repo / "notes" / "one.md").write_text("one\n")
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+
+    (tmp_git_repo / "notes" / "two.md").write_text("two\n")
+
+    assert await _first(watcher, tmp_git_repo, taken_at) == 1
+
+
+async def test_staging_a_change_moves_nothing(tmp_git_repo: Path) -> None:
+    """The diff on screen already holds the change; the index is not what is reviewed."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+
+    git(tmp_git_repo, "add", "initial.txt")
+
+    assert await _quiet(watcher, tmp_git_repo, taken_at)

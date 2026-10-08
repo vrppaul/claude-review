@@ -49,9 +49,6 @@ function pageWith(...names: string[]) {
 }
 
 describe('which release a reader has seen', () => {
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('compares releases number by number', () => {
 		expect(isNewer('1.10.0', '1.9.3')).toBe(true);
@@ -116,9 +113,6 @@ describe('what the guide shows a reader arriving', () => {
 		guideStore.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('welcomes somebody who has never opened a review', async () => {
 		guideServer(null);
@@ -170,9 +164,6 @@ describe('the news card', () => {
 		guideStore.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('links to the release on GitHub even when there is nothing else to list', async () => {
 		guideServer('1.4.2');
@@ -206,7 +197,6 @@ describe('the tour', () => {
 
 	afterEach(() => {
 		guideStore.endTour();
-		vi.unstubAllGlobals();
 	});
 
 	it('points only at places the review actually marks', () => {
@@ -229,6 +219,28 @@ describe('the tour', () => {
 		expect(seen).toContain('round-or-end');
 		expect(seen).not.toContain('comment-save');
 		expect(seen).not.toContain('finish');
+	});
+
+	it('stays on the same part of the tour when an agent joins in the middle of it', () => {
+		guideStore.startTour();
+		while (guideStore.step && guideStore.step.id !== 'comment-save') guideStore.next();
+		expect(guideStore.step?.id).toBe('comment-save');
+
+		reviewStore.attachAnswerer();
+
+		// With an agent there, saving a comment is one of the ways it can go
+		expect(guideStore.step?.id).toBe('comment-route');
+	});
+
+	it('stays at the end of the tour when an agent joins on its last step', () => {
+		guideStore.startTour();
+		while (guideStore.step && guideStore.step.id !== 'finish') guideStore.next();
+		expect(guideStore.step?.id).toBe('finish');
+
+		reviewStore.attachAnswerer();
+
+		expect(guideStore.step?.id).toBe('round-or-end');
+		expect(guideStore.isLastStep).toBe(true);
 	});
 
 	it('passes over a step with nothing on screen to show', () => {

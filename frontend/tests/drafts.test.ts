@@ -48,7 +48,6 @@ describe('an unsent review', () => {
 		commentStore.clear();
 
 		expect(commentStore.restore('repo: uncommitted changes')).toBe(0);
-		vi.unstubAllGlobals();
 	});
 
 	it('keeps ids apart from the ones restored with it', () => {

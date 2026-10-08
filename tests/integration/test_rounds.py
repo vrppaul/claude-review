@@ -26,7 +26,7 @@ from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.version_service import VersionService
-from tests.helpers import git
+from tests.helpers import git, until_an_agent_waits
 
 LOCAL_ORIGIN = "http://127.0.0.1:8000"
 LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
@@ -86,7 +86,7 @@ async def test_sending_without_saying_otherwise_ends_the_review(client: AsyncCli
 
 async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
     waiting = asyncio.ensure_future(client.get("/api/events?wait_seconds=5", headers=LOCAL_HEADERS))
-    await asyncio.sleep(0.05)
+    await until_an_agent_waits(client, LOCAL_HEADERS)
 
     await client.post("/api/submit", json={"comments": [A_COMMENT], "end": False}, headers=LOCAL_HEADERS)
     event = (await waiting).json()
@@ -131,7 +131,7 @@ async def test_ending_the_review_closes_it(client: AsyncClient, state: ServerSta
 
 async def test_a_waiting_agent_is_told_the_review_ended(client: AsyncClient) -> None:
     waiting = asyncio.ensure_future(client.get("/api/events?wait_seconds=5", headers=LOCAL_HEADERS))
-    await asyncio.sleep(0.05)
+    await until_an_agent_waits(client, LOCAL_HEADERS)
 
     await client.post("/api/end", json={}, headers=LOCAL_HEADERS)
 
@@ -184,7 +184,9 @@ async def test_a_retake_names_the_files_that_changed_since_the_last_one(
     (tmp_git_repo / "answered.py").write_text("as it was\n")
     (tmp_git_repo / "untouched.py").write_text("as it was\n")
     versions = VersionService(git_repository=GitRepository(objects=marking_workspace.objects))
-    state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
+    opened_at = await versions.take(tmp_git_repo, round_number=1)
+    assert opened_at is not None
+    state.snapshots.append(opened_at)
 
     app = create_app(
         diff_files=[],
@@ -216,7 +218,9 @@ async def test_a_retake_is_measured_from_where_the_round_began(
     """
     (tmp_git_repo / "first.py").write_text("one\n")
     versions = VersionService(git_repository=GitRepository(objects=marking_workspace.objects))
-    state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
+    opened_at = await versions.take(tmp_git_repo, round_number=1)
+    assert opened_at is not None
+    state.snapshots.append(opened_at)
 
     app = create_app(
         diff_files=[],

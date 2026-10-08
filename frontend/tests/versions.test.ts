@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { isDrawn } from '$lib/utils/placement';
 import { createLineSelection } from '$lib/utils/line-selection.svelte';
@@ -71,9 +71,6 @@ describe('what a round changed', () => {
 		localStorage.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('takes the tick off a file the round rewrote, and leaves the others alone', () => {
 		diffStore.setFiles([file('rewritten.py', []), file('untouched.py', [])], 'diff');
@@ -114,9 +111,6 @@ describe('reading the same tree against something else', () => {
 		localStorage.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('asks for the diff against the base it was given', async () => {
 		const fetchMock = served(['answered.py'], 'changes since round 1');
@@ -145,6 +139,44 @@ describe('reading the same tree against something else', () => {
 		await expect(diffStore.setBase('round:9')).rejects.toThrow();
 
 		expect(diffStore.narrowed).toBe(false);
+		const fetchMock = served(['answered.py']);
+		await diffStore.fetchDiff();
+		expect(fetchMock.mock.calls[0][0]).toBe('/api/diff');
+	});
+
+	it('keeps the base the reader picked when a round lands while it loads', async () => {
+		const answers: ((value: unknown) => void)[] = [];
+		const asked: string[] = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn((url: string) => {
+				asked.push(url);
+				return new Promise((resolve) => answers.push(resolve));
+			})
+		);
+		const diffAnswer = (phrase: string) => ({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					files: [file('answered.py', [{ old_no: 1, new_no: 1 }])],
+					mode: 'diff',
+					title: 'repo',
+					phrase,
+					round: 1,
+					answerer_attached: false,
+					agent: { model: null, context: null, at: null }
+				})
+		});
+
+		const picking = diffStore.setBase('round:1');
+		const landing = diffStore.fetchDiff();
+		answers[1](diffAnswer('changes since round 1'));
+		answers[0](diffAnswer('changes since round 1'));
+		await Promise.all([picking, landing]);
+
+		expect(asked[1]).toBe('/api/diff?base=round%3A1');
+		expect(diffStore.base).toBe('round:1');
+		expect(diffStore.narrowed).toBe(true);
 	});
 });
 
@@ -178,9 +210,6 @@ describe('a base that is not the review\'s own', () => {
 		localStorage.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		served(['answered.py'], 'changes since round 1');

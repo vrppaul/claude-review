@@ -13,9 +13,19 @@ from claude_review.domain.exceptions import FileWindowError
 from claude_review.services.file_window_service import FileWindowService
 
 
+class TrackedPaths:
+    """A repository that tracks the paths it is given and nothing else."""
+
+    def __init__(self, tracked: set[str]) -> None:
+        self._tracked = tracked
+
+    async def is_tracked(self, root: Path, relative_path: str) -> bool:
+        return relative_path in self._tracked
+
+
 @pytest.fixture
 def service() -> FileWindowService:
-    return FileWindowService()
+    return FileWindowService(TrackedPaths({"docs/guide.md"}))
 
 
 @pytest.fixture
@@ -27,7 +37,7 @@ def root(tmp_path: Path) -> Path:
 
 async def test_reads_the_requested_lines(service: FileWindowService, root: Path) -> None:
     """Lines are returned by their number in the file, counting from one."""
-    window = await service.read_window(root, "src/app.py", start=3, end=5)
+    window = await service.read_window(root, "src/app.py", start=3, end=5, in_review=frozenset({"src/app.py"}))
 
     assert window.lines == ["line 3", "line 4", "line 5"]
     assert window.start == 3
@@ -35,13 +45,13 @@ async def test_reads_the_requested_lines(service: FileWindowService, root: Path)
 
 async def test_reports_how_long_the_file_is(service: FileWindowService, root: Path) -> None:
     """The caller needs the total to know how much is left below the last hunk."""
-    window = await service.read_window(root, "src/app.py", start=1, end=2)
+    window = await service.read_window(root, "src/app.py", start=1, end=2, in_review=frozenset({"src/app.py"}))
 
     assert window.total == 20
 
 
 async def test_clamps_a_window_that_runs_past_the_end(service: FileWindowService, root: Path) -> None:
-    window = await service.read_window(root, "src/app.py", start=19, end=100)
+    window = await service.read_window(root, "src/app.py", start=19, end=100, in_review=frozenset({"src/app.py"}))
 
     assert window.lines == ["line 19", "line 20"]
 
@@ -51,12 +61,12 @@ async def test_refuses_a_path_outside_the_repository(service: FileWindowService,
     (root.parent / "secret.txt").write_text("private\n")
 
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "../secret.txt", start=1, end=1)
+        await service.read_window(root, "../secret.txt", start=1, end=1, in_review=frozenset({"../secret.txt"}))
 
 
 async def test_refuses_an_absolute_path(service: FileWindowService, root: Path) -> None:
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "/etc/passwd", start=1, end=1)
+        await service.read_window(root, "/etc/passwd", start=1, end=1, in_review=frozenset({"/etc/passwd"}))
 
 
 async def test_refuses_a_symlink_that_leaves_the_repository(service: FileWindowService, root: Path) -> None:
@@ -65,24 +75,24 @@ async def test_refuses_a_symlink_that_leaves_the_repository(service: FileWindowS
     (root / "link.txt").symlink_to(outside)
 
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "link.txt", start=1, end=1)
+        await service.read_window(root, "link.txt", start=1, end=1, in_review=frozenset({"link.txt"}))
 
 
 async def test_reports_a_missing_file(service: FileWindowService, root: Path) -> None:
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "src/gone.py", start=1, end=1)
+        await service.read_window(root, "src/gone.py", start=1, end=1, in_review=frozenset({"src/gone.py"}))
 
 
 async def test_reports_a_file_that_is_not_text(service: FileWindowService, root: Path) -> None:
     (root / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe")
 
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "logo.png", start=1, end=1)
+        await service.read_window(root, "logo.png", start=1, end=1, in_review=frozenset({"logo.png"}))
 
 
 async def test_refuses_a_start_line_below_one(service: FileWindowService, root: Path) -> None:
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "src/app.py", start=0, end=3)
+        await service.read_window(root, "src/app.py", start=0, end=3, in_review=frozenset({"src/app.py"}))
 
 
 async def test_only_files_in_the_review_can_be_read(service: FileWindowService, root: Path) -> None:
@@ -91,18 +101,18 @@ async def test_only_files_in_the_review_can_be_read(service: FileWindowService, 
     (root / ".env").write_text("SECRET=hunter2\n")
 
     with pytest.raises(FileWindowError):
-        await service.read_window(root, ".env", start=1, end=1, allowed=["src/app.py"])
+        await service.read_window(root, ".env", start=1, end=1, in_review=frozenset({"src/app.py"}))
 
 
 async def test_a_file_in_the_review_is_served(service: FileWindowService, root: Path) -> None:
-    window = await service.read_window(root, "src/app.py", start=1, end=2, allowed=["src/app.py"])
+    window = await service.read_window(root, "src/app.py", start=1, end=2, in_review=frozenset({"src/app.py"}))
 
     assert window.lines == ["line 1", "line 2"]
 
 
 async def test_a_path_with_a_null_byte_is_refused_not_crashed(service: FileWindowService, root: Path) -> None:
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "src/a\x00b.py", start=1, end=1)
+        await service.read_window(root, "src/a\x00b.py", start=1, end=1, in_review=frozenset({"src/a\x00b.py"}))
 
 
 async def test_a_file_too_large_to_expand_is_refused(service: FileWindowService, root: Path) -> None:
@@ -113,13 +123,13 @@ async def test_a_file_too_large_to_expand_is_refused(service: FileWindowService,
     big.write_bytes(b"x\n" * (MAX_FILE_BYTES // 2 + 10))
 
     with pytest.raises(FileWindowError):
-        await service.read_window(root, "generated.txt", start=1, end=2)
+        await service.read_window(root, "generated.txt", start=1, end=2, in_review=frozenset({"generated.txt"}))
 
 
 async def test_an_error_does_not_name_the_server_s_own_paths(service: FileWindowService, root: Path) -> None:
     """The message goes to the browser, so it says what was asked for."""
     try:
-        await service.read_window(root, "src/gone.py", start=1, end=1)
+        await service.read_window(root, "src/gone.py", start=1, end=1, in_review=frozenset({"src/gone.py"}))
     except FileWindowError as e:
         assert str(root) not in str(e)
         assert "src/gone.py" in str(e)
@@ -127,12 +137,24 @@ async def test_an_error_does_not_name_the_server_s_own_paths(service: FileWindow
         pytest.fail("expected the read to be refused")
 
 
-async def test_reading_a_window_does_not_depend_on_the_file_size(service: FileWindowService, root: Path) -> None:
-    """A window near the top of a long file costs the top of the file, not all of it."""
+async def test_a_window_near_the_top_of_a_long_file_still_says_how_long_it_is(
+    service: FileWindowService, root: Path
+) -> None:
+    """The reader is told how far the file goes, so the gap below a hunk can say so."""
     long_file = root / "long.txt"
     long_file.write_text("".join(f"line {i}\n" for i in range(1, 200_001)))
 
-    window = await service.read_window(root, "long.txt", start=2, end=4)
+    window = await service.read_window(root, "long.txt", start=2, end=4, in_review=frozenset({"long.txt"}))
 
     assert window.lines == ["line 2", "line 3", "line 4"]
     assert window.total == 200_000
+
+
+async def test_a_tracked_file_another_base_shows_can_be_widened(service: FileWindowService, root: Path) -> None:
+    """Read against a branch, the diff holds files the review's own diff does not."""
+    (root / "docs").mkdir()
+    (root / "docs" / "guide.md").write_text("one\ntwo\n")
+
+    window = await service.read_window(root, "docs/guide.md", start=1, end=2, in_review=frozenset({"src/app.py"}))
+
+    assert window.lines == ["one", "two"]

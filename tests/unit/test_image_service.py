@@ -90,15 +90,39 @@ async def test_an_image_over_its_limit_is_refused(service: ImageService) -> None
         await service.keep(PNG + b"\x00" * MAX_IMAGE_BYTES)
 
 
-async def test_two_uploads_at_once_cannot_overshoot_the_review(
-    service: ImageService, monkeypatch: pytest.MonkeyPatch
+class HeldImageStore(MemoryImageStore):
+    """A store whose writes wait until the test lets them land, as a slow disk does."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.writing = asyncio.Event()
+        self.released = asyncio.Event()
+
+    async def write(self, name: str, content: bytes) -> Path:
+        self.writing.set()
+        await self.released.wait()
+        return await super().write(name, content)
+
+
+# Long enough for an upload that is not held to finish however busy the machine is
+SETTLED_SECONDS = 1
+
+
+async def test_an_upload_while_another_is_still_writing_cannot_overshoot_the_review(
+    ledger: ImageLedger, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The second is measured against the first before either is written."""
+    """The second is measured against the first before the first has landed."""
     monkeypatch.setattr(image_service, "MAX_REVIEW_BYTES", len(PNG) + 1)
+    store = HeldImageStore()
+    service = ImageService(store, ledger)
+    first = asyncio.create_task(service.keep(PNG))
+    await store.writing.wait()
 
-    outcomes = await asyncio.gather(service.keep(PNG), service.keep(PNG), return_exceptions=True)
+    with pytest.raises(ImageTooLargeError):
+        await asyncio.wait_for(service.keep(PNG), timeout=SETTLED_SECONDS)
 
-    assert sum(isinstance(outcome, ImageTooLargeError) for outcome in outcomes) == 1
+    store.released.set()
+    await first
 
 
 async def test_handing_over_names_the_files_and_keeps_them(service: ImageService, ledger: ImageLedger) -> None:
@@ -177,3 +201,21 @@ async def test_requiring_names_the_images_the_review_does_not_keep(service: Imag
     with pytest.raises(UnknownImageError, match=r"gone\.png"):
         service.require([stored.image_id, "gone.png"])
     assert ledger.sent == set()
+
+
+class StuckImageStore(MemoryImageStore):
+    """A store whose files cannot be removed, the way a read-only disk refuses."""
+
+    async def remove(self, name: str) -> None:
+        raise PermissionError(name)
+
+
+async def test_an_image_that_cannot_be_removed_is_still_counted(ledger: ImageLedger) -> None:
+    """What is on the disk is what the review holds, whatever the reader took off the message."""
+    service = ImageService(StuckImageStore(), ledger)
+    stored = await service.keep(PNG)
+
+    await service.discard(stored.image_id)
+
+    assert service.find(stored.image_id) == stored
+    assert ledger.held_bytes == len(PNG)

@@ -21,7 +21,6 @@ async function nextFrame() {
 describe('the light over a tour step', () => {
 	afterEach(() => {
 		document.body.innerHTML = '';
-		vi.restoreAllMocks();
 	});
 
 	it('follows what it lights without setting itself up again on every move', async () => {

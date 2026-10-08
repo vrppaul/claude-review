@@ -45,6 +45,9 @@ QUESTION = {
     "thread_id": "comment-1",
     "question_id": "comment-1",
     "body": "Why did you drop the None check?",
+    "severity": "note",
+    "resolved": False,
+    "raised_by": "reader",
 }
 
 

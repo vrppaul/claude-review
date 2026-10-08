@@ -143,3 +143,42 @@ def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:
     followed = AnchorService(files).follow(_anchor(["}"], 9, 9))
 
     assert followed.start_line == 10
+
+
+def test_a_range_is_followed_only_where_its_lines_stand_together() -> None:
+    """Two hunks sit side by side in the diff, not in the file: the end of one
+    and the start of the next are forty lines apart."""
+    hunks = [
+        DiffHunk(
+            header="@@ -9,2 +9,2 @@", old_start=9, new_start=9, lines=[_context(9, 9, "a"), _context(10, 10, "end")]
+        ),
+        DiffHunk(
+            header="@@ -50,2 +50,2 @@",
+            old_start=50,
+            new_start=50,
+            lines=[_context(50, 50, "start"), _context(51, 51, "b")],
+        ),
+    ]
+    files = [DiffFile(path="a.py", status=FileStatus.MODIFIED, hunks=hunks)]
+
+    followed = AnchorService(files).follow(_anchor(["end", "start"], 1, 2))
+
+    assert followed.outdated
+    assert (followed.start_line, followed.end_line) == (1, 2)
+
+
+def test_a_range_with_one_line_rewritten_is_outdated() -> None:
+    files = [_file("a.py", [_context(1, 1, RUN), _added(2, "    return 2")])]
+
+    followed = AnchorService(files).follow(_anchor([RUN, RETURN], 1, 2))
+
+    assert followed.outdated
+
+
+def test_a_quote_as_near_to_two_places_follows_the_earlier() -> None:
+    """Nothing tells the two apart, so the choice is at least the same every time."""
+    files = [_file("a.py", [_context(n, n, "}" if n in (3, 7) else f"line {n}") for n in range(1, 10)])]
+
+    followed = AnchorService(files).follow(_anchor(["}"], 5, 5))
+
+    assert followed.start_line == 3

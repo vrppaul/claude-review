@@ -139,6 +139,39 @@ describe('commentStore', () => {
 		});
 	});
 
+	describe('answered threads', () => {
+		it('come newest answer first', () => {
+			vi.useFakeTimers();
+			const older = commentStore.add(newComment({ body: 'asked first' }));
+			const newer = commentStore.add(newComment({ body: 'asked second' }));
+
+			vi.setSystemTime(1_000);
+			commentStore.receiveReply(older, 'answered first');
+			vi.setSystemTime(2_000);
+			commentStore.receiveReply(newer, 'answered last');
+			vi.useRealTimers();
+
+			expect(commentStore.answered.map((comment) => comment.body)).toEqual([
+				'asked second',
+				'asked first'
+			]);
+		});
+	});
+
+	describe('ask', () => {
+		it('says how the thread is meant to be taken', async () => {
+			const sent = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+			vi.stubGlobal('fetch', sent);
+
+			const id = commentStore.add(newComment({ body: 'This must go', severity: 'blocker' }));
+			commentStore.setResolved(id, true);
+			await commentStore.ask(id);
+
+			const asked = JSON.parse(sent.mock.calls[0][1].body);
+			expect(asked).toMatchObject({ severity: 'blocker', resolved: true, raised_by: 'reader' });
+		});
+	});
+
 	describe('submit', () => {
 		it('sends correct payload and sets submitted', async () => {
 			vi.stubGlobal(
@@ -181,7 +214,6 @@ describe('commentStore', () => {
 			expect(result.comment_count).toBe(1);
 			expect(commentStore.submitted).toBe(true);
 
-			vi.unstubAllGlobals();
 		});
 
 		it('includes body in payload when review body is set', async () => {
@@ -200,7 +232,6 @@ describe('commentStore', () => {
 			const payload = JSON.parse(call[1]!.body as string);
 			expect(payload.body).toBe('General feedback');
 
-			vi.unstubAllGlobals();
 		});
 
 		it('omits body from payload when review body is empty', async () => {
@@ -219,7 +250,6 @@ describe('commentStore', () => {
 			const payload = JSON.parse(call[1]!.body as string);
 			expect(payload.body).toBeUndefined();
 
-			vi.unstubAllGlobals();
 		});
 
 		it('throws on non-ok response and does not set submitted', async () => {
@@ -233,7 +263,6 @@ describe('commentStore', () => {
 			await expect(commentStore.submit()).rejects.toThrow('Submit failed: 500');
 			expect(commentStore.submitted).toBe(false);
 
-			vi.unstubAllGlobals();
 		});
 	});
 });

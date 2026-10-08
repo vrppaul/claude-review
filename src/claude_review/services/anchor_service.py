@@ -155,14 +155,25 @@ def _find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | No
     """Where the quoted lines stand together, nearest to where they were.
 
     A short quote — a closing brace, `return None` — stands in many places,
-    and the one nearest the old numbers is the one that moved least.
+    and the one nearest the old numbers is the one that moved least; of two
+    as near, the earlier, so the choice is the same every time.
     """
-    starts = [
-        start
-        for start in range(len(lines) - len(quote) + 1)
-        if all(lines[start + offset].content == text for offset, text in enumerate(quote))
-    ]
+    starts = [start for start in range(len(lines) - len(quote) + 1) if _stands_at(lines, quote, start)]
     return min(starts, key=lambda start: abs(lines[start].number - near), default=None)
+
+
+def _stands_at(lines: list[SideLine], quote: list[str], start: int) -> bool:
+    """Whether the quote is the file's own run of lines from `start`.
+
+    Neighbours in the list are not always neighbours in the file: the last
+    line of one hunk is followed by the first of the next, however far apart
+    the two stand.
+    """
+    first = lines[start].number
+    return all(
+        lines[start + offset].content == text and lines[start + offset].number == first + offset
+        for offset, text in enumerate(quote)
+    )
 
 
 def _span(start: int, end: int) -> str:

@@ -1,5 +1,28 @@
 /** jsdom implements none of these; components under test rely on them. */
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
+import { commentStore } from '$lib/stores/comments.svelte';
+import { diffStore } from '$lib/stores/diff.svelte';
+import { expansionStore } from '$lib/stores/expansions.svelte';
+import { guideStore } from '$lib/stores/guide.svelte';
+import { panelStore } from '$lib/stores/panel.svelte';
+import { reviewStore } from '$lib/stores/review.svelte';
+import { settingsStore } from '$lib/stores/settings.svelte';
+import { clearDraft } from '$lib/utils/drafts';
+
+// Every test starts from a page opened fresh: the stores live for the whole
+// file, and what one test leaves in them — or in storage, or in the draft the
+// page holds — would otherwise be the next test's starting point
+beforeEach(() => {
+	localStorage.clear();
+	clearDraft();
+	commentStore.clear();
+	diffStore.clear();
+	expansionStore.clear();
+	guideStore.clear();
+	panelStore.clear();
+	reviewStore.clear();
+	settingsStore.clear();
+});
 
 /**
  * Reports everything as visible straight away. jsdom has no layout, so a real
@@ -28,8 +51,8 @@ class ImmediateIntersectionObserver implements IntersectionObserver {
 	takeRecords = vi.fn(() => []);
 }
 
-// Assigned rather than stubbed: a test that calls vi.unstubAllGlobals()
-// to drop its own fetch mock would otherwise take this away with it.
+// Assigned rather than stubbed: every test's stubs are dropped after it,
+// and this would go with them.
 globalThis.IntersectionObserver =
 	ImmediateIntersectionObserver as unknown as typeof IntersectionObserver;
 

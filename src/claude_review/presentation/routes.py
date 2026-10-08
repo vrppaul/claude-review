@@ -259,7 +259,9 @@ async def get_file_window(
         raise HTTPException(status_code=404, detail="No repository to read from")
 
     try:
-        window = await FileWindowService().read_window(root, path, start, end, allowed=[f.path for f in diff_files])
+        window = await FileWindowService(GitRepository()).read_window(
+            root, path, start, end, in_review=frozenset(file.path for file in diff_files)
+        )
     except FileWindowError as e:
         log.warning("file_window_refused", path=path, reason=str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -279,6 +281,13 @@ async def ask_about_thread(
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
+    # Pasted a moment ago, so one this review does not keep is a fault to
+    # report; only the turns before it may have outlived a restart
+    try:
+        image_service.require(request.images)
+    except UnknownImageError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
     anchor = _to_anchor(request.anchor)
     where = anchors.where(anchor)
     state.events.put_nowait(
@@ -288,8 +297,11 @@ async def ask_about_thread(
             anchor=anchor,
             where=where,
             body=request.body,
-            images=_hand_over_kept(request.images, image_service),
+            images=image_service.hand_over(request.images).paths,
             history=[_to_turn(turn, image_service) for turn in request.history],
+            severity=request.severity,
+            resolved=request.resolved,
+            raised_by=request.raised_by,
         )
     )
     log.info("thread_question", thread_id=request.thread_id, where=where)
@@ -477,9 +489,6 @@ async def discard_an_image(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ImageAlreadySentError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
-    except OSError as e:
-        # The ledger has let it go; the file goes with the workspace at the end
-        log.warning("image_left_behind", image_id=image_id, reason=str(e))
 
     log.info("image_discarded", image_id=image_id)
     return {"status": "discarded"}
@@ -751,8 +760,8 @@ def _catch_up(state: ServerState, image_service: ImageService, anchors: AnchorSe
         log.info("round_caught_up", was=state.round, now=heard.round)
         state.round = heard.round
 
-    if heard.threads:
-        state.threads = [_to_thread(thread, image_service, anchors) for thread in heard.threads]
+    if heard.threads is not None:
+        state.hold_threads([_to_thread(thread, image_service, anchors) for thread in heard.threads])
 
 
 @router.post("/submit")
@@ -838,24 +847,29 @@ async def retake_diff(
 
     git = GitRepository(objects=objects)
     versions = VersionService(git_repository=git)
-    # Asked before the new tree is written down, while the last mark is
-    # still the one the diff on screen was taken at
-    read_at = versions.began(state.snapshots, state.round)
-    changed = await versions.changed_since(root, read_at)
+    # One retake at a time, each about one round: a round sent while git is
+    # working must not tag this retake's mark with the round after it
+    async with state.retaking:
+        round_number = state.round
+        # Asked before the new tree is written down, while the last mark is
+        # still the one the diff on screen was taken at
+        read_at = versions.began(state.snapshots, round_number)
+        changed = await versions.changed_since(root, read_at)
 
-    files = await DiffService(git_repository=git).get_diff(root, base=base)
-    http_request.app.state.diff_files = files
-    # Read after the diff, not before: a file saved in between then belongs to
-    # the tree the diff was taken at, and the reader is not told about a
-    # change that is already on their screen.
-    state.tree = await TreeWatcherService(git_repository=git).read(root)
-    if (mark := await versions.take(root, round_number=state.round)) is not None:
-        state.snapshots.append(mark)
+        files = await DiffService(git_repository=git).get_diff(root, base=base)
+        http_request.app.state.diff_files = files
+        # Read after the diff, not before: a file saved in between then belongs
+        # to the tree the diff was taken at, and the reader is not told about a
+        # change that is already on their screen.
+        state.tree = await TreeWatcherService(git_repository=git).read(root)
+        if (mark := await versions.take(root, round_number=round_number)) is not None:
+            state.snapshots.append(mark)
+
     since = read_at.round if read_at is not None else None
-    state.push({"type": "diff", "round": state.round, "changed": changed, "since": since})
-    log.info("diff_retaken", file_count=len(files), round=state.round, changed=len(changed or []))
+    state.push({"type": "diff", "round": round_number, "changed": changed, "since": since})
+    log.info("diff_retaken", file_count=len(files), round=round_number, changed=len(changed or []))
 
-    return RoundResponse(file_count=len(files), round=state.round, changed=changed, since=since)
+    return RoundResponse(file_count=len(files), round=round_number, changed=changed, since=since)
 
 
 @router.post("/end")

@@ -2,17 +2,11 @@
 	import { Marked, type Tokens } from 'marked';
 	import { markedHighlight } from 'marked-highlight';
 	import { hljs } from '$lib/utils/highlight';
+	import { escapeMarkup, isSafeDestination } from '$lib/utils/safe-markup';
 
-	function escapeHtml(text: string): string {
-		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-	}
-
-	/** Schemes a link may use. Anything else — javascript:, data: — is not a
-	 * destination, it is code, and a previewed file must not run any. */
-	const SAFE_SCHEME = /^(?:https?:|mailto:|#|\/|\.{0,2}\/|[^a-z]|[a-z][a-z0-9+.-]*[^a-z0-9+.:-])/i;
-
-	function isSafeHref(href: string): boolean {
-		return SAFE_SCHEME.test(href.trim());
+	/** A title attribute, or nothing when the destination has no title. */
+	function titleAttribute(title: string | null | undefined): string {
+		return title ? ` title="${escapeMarkup(title)}"` : '';
 	}
 
 	// Single shared instance — Marked is stateless once configured
@@ -39,18 +33,16 @@
 				 * publishing it.
 				 */
 				html(token: Tokens.HTML | Tokens.Tag) {
-					return escapeHtml(token.text);
+					return escapeMarkup(token.text);
 				},
 				link(token: Tokens.Link) {
 					const text = this.parser.parseInline(token.tokens);
-					if (!isSafeHref(token.href)) return text;
-					const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-					return `<a href="${escapeHtml(token.href)}"${title}>${text}</a>`;
+					if (!isSafeDestination(token.href)) return text;
+					return `<a href="${escapeMarkup(token.href)}"${titleAttribute(token.title)}>${text}</a>`;
 				},
 				image(token: Tokens.Image) {
-					if (!isSafeHref(token.href)) return escapeHtml(token.text);
-					const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-					return `<img src="${escapeHtml(token.href)}" alt="${escapeHtml(token.text)}"${title} />`;
+					if (!isSafeDestination(token.href)) return escapeMarkup(token.text);
+					return `<img src="${escapeMarkup(token.href)}" alt="${escapeMarkup(token.text)}"${titleAttribute(token.title)} />`;
 				}
 			}
 		}

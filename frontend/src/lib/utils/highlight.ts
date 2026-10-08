@@ -1,6 +1,7 @@
 import hljs from "highlight.js/lib/core";
 
 import type { DiffFile, DiffLine } from "$lib/types";
+import { escapeMarkup } from "$lib/utils/safe-markup";
 
 export { hljs };
 
@@ -88,7 +89,7 @@ export function highlightFile(
 }
 
 function highlightHunk(lines: DiffLine[], language: string | null): string[] {
-  if (!language) return lines.map((line) => escapeHtml(line.content));
+  if (!language) return lines.map((line) => escapeMarkup(line.content));
 
   const hasRemovals = lines.some((line) => line.type === "delete");
   const newSide = sideLines(lines, "add", language);
@@ -98,11 +99,11 @@ function highlightHunk(lines: DiffLine[], language: string | null): string[] {
   let newAt = 0;
   return lines.map((line) => {
     if (line.type === "delete")
-      return oldSide[oldAt++] ?? escapeHtml(line.content);
+      return oldSide[oldAt++] ?? escapeMarkup(line.content);
     if (line.type === "add")
-      return newSide[newAt++] ?? escapeHtml(line.content);
+      return newSide[newAt++] ?? escapeMarkup(line.content);
     // Context belongs to both versions, so it advances both readers
-    const html = newSide[newAt] ?? escapeHtml(line.content);
+    const html = newSide[newAt] ?? escapeMarkup(line.content);
     oldAt++;
     newAt++;
     return html;
@@ -125,7 +126,7 @@ function sideLines(
       hljs.highlight(text, { language, ignoreIllegals: true }).value,
     );
   } catch {
-    return text.split("\n").map(escapeHtml);
+    return text.split("\n").map(escapeMarkup);
   }
 }
 
@@ -172,11 +173,4 @@ function splitHighlighted(html: string): string[] {
 
   lines.push(current + "</span>".repeat(open.length));
   return lines;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

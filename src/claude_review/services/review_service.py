@@ -1,8 +1,8 @@
 """Service for formatting review comments into markdown."""
 
-from claude_review.domain.models import Comment, CommentSeverity, ReviewResult, Turn, TurnAuthor
+from claude_review.domain.models import Comment, ReviewResult
 from claude_review.services.anchor_service import AnchorService
-from claude_review.services.thread_markdown import format_opening, format_turn
+from claude_review.services.thread_markdown import format_conversation, thread_tags
 
 
 class ReviewService:
@@ -52,15 +52,7 @@ class ReviewService:
         if comment.anchor.outdated and comment.anchor.quote:
             pieces.append(self._format_quote(comment.anchor.quote))
 
-        # A thread the author raised opens with the author speaking, so it
-        # is quoted like any other turn: the reader's reply below it then
-        # reads as a reply rather than as the whole thread.
-        if comment.raised_by == TurnAuthor.AUTHOR:
-            opening = Turn(author=TurnAuthor.AUTHOR, body=comment.body, round=1, images=comment.images)
-            pieces.append(format_turn(opening))
-        else:
-            pieces.append(format_opening(comment.body, comment.images))
-        pieces.extend(format_turn(turn) for turn in comment.turns)
+        pieces.extend(format_conversation(comment))
 
         return "\n".join(pieces) + "\n"
 
@@ -74,18 +66,5 @@ class ReviewService:
         return f"Written against these lines, which have since changed:\n\n```\n{lines}\n```\n"
 
     def _format_tags(self, comment: Comment) -> str:
-        """Name what is not ordinary about a comment.
-
-        A question wants an answer before anything changes and a blocker has
-        to be dealt with, which are different instructions from "here is an
-        observation" — and only worth saying when they differ from it. The
-        same goes for a thread that is settled or hanging on lines that moved.
-        """
-        tags = []
-        if comment.severity != CommentSeverity.NOTE:
-            tags.append(str(comment.severity))
-        if comment.resolved:
-            tags.append("resolved")
-        if comment.anchor.outdated:
-            tags.append("outdated")
+        tags = thread_tags(comment)
         return f" — {', '.join(tags)}" if tags else ""

@@ -10,6 +10,7 @@ review's ledger; where the bytes go is the store's business.
 import uuid
 from pathlib import Path
 
+import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.exceptions import (
@@ -20,6 +21,8 @@ from claude_review.domain.exceptions import (
 )
 from claude_review.domain.models import ImageLedger, StoredImage
 from claude_review.domain.protocols import ImageStoreProtocol
+
+log = structlog.get_logger()
 
 BYTES_PER_MEGABYTE = 1024 * 1024
 
@@ -185,9 +188,14 @@ class ImageService:
             msg = "That image was already sent"
             raise ImageAlreadySentError(msg)
 
+        try:
+            await self._store.remove(image_id)
+        except OSError as e:
+            # Still on the disk, so still counted: the ledger says what is there
+            log.warning("image_left_behind", image_id=image_id, reason=str(e))
+            return
         del self._ledger.kept[image_id]
         self._ledger.held_bytes -= stored.size
-        await self._store.remove(image_id)
 
 
 def recognise(content: bytes) -> ImageFormat | None:

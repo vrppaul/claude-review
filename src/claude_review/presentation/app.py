@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from claude_review.domain.models import DiffFile, GuideState, ReaderFiles, ReaderSettings, ReviewMode, ReviewWorkspace
+from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.dependencies import reader_record_service
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
 from claude_review.presentation.routes import router
@@ -46,6 +47,7 @@ def create_app(
     app.state.settings = reader_record_service(reader_files.settings, ReaderSettings)
     app.state.guide = reader_record_service(reader_files.guide, GuideState)
 
+    app.add_middleware(BodySizeLimit)
     app.add_middleware(SecurityHeaders)
     # Outermost, so it runs first: this server answers its own page and nothing else
     app.add_middleware(LocalOriginOnly)

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
@@ -178,9 +178,6 @@ describe('images in a comment', () => {
 		diffStore.setImageLimits(LIMITS);
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('saves a pasted screenshot as the whole comment', async () => {
 		imageFetch('4f.png');
@@ -245,9 +242,6 @@ describe('images in a comment', () => {
 });
 
 describe('what a comment field says happened to it', () => {
-	afterEach(() => {
-		vi.restoreAllMocks();
-	});
 
 	it('says it opened, and what became of it, naming which kind of field it is', async () => {
 		const report = vi.spyOn(commentFields, 'report');

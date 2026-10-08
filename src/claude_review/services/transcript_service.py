@@ -7,10 +7,11 @@ thinking blocks, and system/command messages are excluded.
 
 import json
 import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 
@@ -18,8 +19,40 @@ from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus
 # as user entries with XML tags.  These aren't real user input — filter them out.
 _SYSTEM_TAG_RE = re.compile(r"^<(command-|local-command-|system-reminder|bash-)")
 
+# The entry types that are one side of the conversation
+CONVERSATION_ROLES = frozenset({"user", "assistant"})
+# The content blocks that call a tool or carry its result, which end a turn
+TOOL_BLOCKS = frozenset({"tool_use", "tool_result"})
+TEXT_BLOCK = "text"
 
-class Turn(BaseModel):
+
+class ContentBlock(BaseModel):
+    """One block of a message: text, thinking, a tool call or its result."""
+
+    type: str
+    text: str | None = None
+
+
+class EntryMessage(BaseModel):
+    """What one entry says: plain text from the user, or blocks."""
+
+    content: str | list[ContentBlock] | None = None
+
+
+class TranscriptEntry(BaseModel):
+    """One line of a Claude Code transcript; whatever it carries besides is ignored."""
+
+    type: str
+    message: EntryMessage | None = None
+    timestamp: str = ""
+    # Written in the user's name by the tool itself: a skill's instructions, a
+    # pasted image's note, a subagent's report
+    is_meta: bool = Field(default=False, alias="isMeta")
+    # A subagent's own conversation, run beside the main one
+    is_sidechain: bool = Field(default=False, alias="isSidechain")
+
+
+class ConversationTurn(BaseModel):
     """A single conversation turn after merging consecutive entries."""
 
     role: str
@@ -47,7 +80,8 @@ class TranscriptService:
         of content blocks — only ``text`` blocks are extracted, ``thinking``
         and ``tool_use`` blocks are skipped.  Entries with ``type`` other
         than ``user``/``assistant`` (e.g. ``permission-mode``, ``attachment``)
-        are ignored entirely.
+        are ignored entirely, and so are entries the tool wrote in the
+        user's name and a subagent's side conversation.
 
         Consecutive same-role text entries are merged into a single turn.
         Tool calls act as turn boundaries.  Returns newest turns first.
@@ -55,19 +89,19 @@ class TranscriptService:
         Raises:
             ValueError: If the file cannot be parsed.
         """
-        entries = self._read_jsonl(path)
-        turns = self._merge_turns(entries)
+        turns = self._merge_turns(self._read_jsonl(path))
+        labels = _labels(turns)
+        return [
+            self._build_diff_file(label, self._split_lines(turn.text))
+            for turn, label in reversed(list(zip(turns, labels, strict=True)))
+        ]
 
-        result: list[DiffFile] = []
-        for i, turn in enumerate(reversed(turns), start=1):
-            lines = self._split_lines(turn.text)
-            label = self._format_label(turn.role, i, turn.timestamp)
-            result.append(self._build_diff_file(label, lines))
+    def _read_jsonl(self, path: Path) -> list[TranscriptEntry]:
+        """Read the conversation's entries, one JSON object per line.
 
-        return result
-
-    def _read_jsonl(self, path: Path) -> list[dict]:
-        """Read JSONL file, one JSON object per line."""
+        An entry whose shape this does not know is left out rather than read
+        wrongly: the transcript's format belongs to another program.
+        """
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
@@ -75,99 +109,54 @@ class TranscriptService:
             raise ValueError(msg) from e
 
         entries = []
-        for i, line in enumerate(text.splitlines(), start=1):
-            line = line.strip()
-            if not line:
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            if not line.strip():
                 continue
             try:
-                entries.append(json.loads(line))
+                raw = json.loads(line)
             except json.JSONDecodeError as e:
-                msg = f"Invalid JSON on line {i}: {e}"
+                msg = f"Invalid JSON on line {line_number}: {e}"
                 raise ValueError(msg) from e
+            try:
+                entries.append(TranscriptEntry.model_validate(raw))
+            except ValidationError:
+                continue
         return entries
 
-    def _merge_turns(self, entries: list[dict]) -> list[Turn]:
+    def _merge_turns(self, entries: list[TranscriptEntry]) -> list[ConversationTurn]:
         """Merge consecutive same-role text entries into turns.
 
         Tool calls and results act as turn boundaries — text before
         and after a tool call become separate turns even if the role
         is the same.
         """
-        turns: list[Turn] = []
+        turns: list[ConversationTurn] = []
         last_had_tools = False
 
         for entry in entries:
-            entry_type = entry.get("type")
-            if entry_type not in ("user", "assistant"):
+            if entry.type not in CONVERSATION_ROLES or entry.is_meta or entry.is_sidechain:
                 continue
 
-            has_tools = self._has_tool_blocks(entry)
-            text = self._extract_text(entry)
+            has_tools = _has_tool_blocks(entry)
+            text = _extract_text(entry)
 
             if has_tools:
                 last_had_tools = True
-                if not text:
-                    continue
-                turns.append(Turn(role=entry_type, text=text, timestamp=entry.get("timestamp", "")))
+                if text:
+                    turns.append(ConversationTurn(role=entry.type, text=text, timestamp=entry.timestamp))
                 continue
 
             if not text:
                 continue
 
-            timestamp = entry.get("timestamp", "")
-
-            if turns and turns[-1].role == entry_type and not last_had_tools:
-                turns[-1] = Turn(role=entry_type, text=turns[-1].text + "\n" + text, timestamp=turns[-1].timestamp)
+            if turns and turns[-1].role == entry.type and not last_had_tools:
+                turns[-1] = turns[-1].model_copy(update={"text": f"{turns[-1].text}\n{text}"})
             else:
-                turns.append(Turn(role=entry_type, text=text, timestamp=timestamp))
+                turns.append(ConversationTurn(role=entry.type, text=text, timestamp=entry.timestamp))
 
             last_had_tools = False
 
         return turns
-
-    def _has_tool_blocks(self, entry: dict) -> bool:
-        """Check if an entry contains tool_use or tool_result blocks."""
-        content = entry.get("message", {}).get("content")
-        if not isinstance(content, list):
-            return False
-        return any(isinstance(b, dict) and b.get("type") in ("tool_use", "tool_result") for b in content)
-
-    def _extract_text(self, entry: dict) -> str:
-        """Extract human-readable text from a JSONL entry.
-
-        Skips tool_use, tool_result, thinking blocks, and system/command messages.
-        """
-        content = entry.get("message", {}).get("content")
-
-        if isinstance(content, str):
-            text = content.strip()
-            if _SYSTEM_TAG_RE.match(text):
-                return ""
-            return text
-
-        if not isinstance(content, list):
-            return ""
-
-        parts = []
-        for block in content:
-            if isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text", "").strip()
-                if text and not _SYSTEM_TAG_RE.match(text):
-                    parts.append(text)
-        return "\n".join(parts)
-
-    def _format_label(self, role: str, index: int, timestamp: str) -> str:
-        """Format sidebar label: 'user (18:05:44) #1' or 'assistant (18:06:01) #2'."""
-        time_str = ""
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp)
-                local_dt = dt.astimezone()
-                time_str = f" ({local_dt:%H:%M:%S})"
-            except ValueError:
-                pass
-        # Index suffix ensures uniqueness for the store
-        return f"{role}{time_str} #{index}"
 
     def _split_lines(self, text: str) -> list[str]:
         """Split text into lines, stripping a single trailing empty line."""
@@ -189,3 +178,50 @@ class TranscriptService:
             lines=diff_lines,
         )
         return DiffFile(path=path, status=FileStatus.ADDED, hunks=[hunk])
+
+
+def _has_tool_blocks(entry: TranscriptEntry) -> bool:
+    """Whether an entry calls a tool or carries a tool's result."""
+    content = entry.message.content if entry.message else None
+    return isinstance(content, list) and any(block.type in TOOL_BLOCKS for block in content)
+
+
+def _extract_text(entry: TranscriptEntry) -> str:
+    """The human-readable text of an entry, without system and command messages."""
+    content = entry.message.content if entry.message else None
+
+    if isinstance(content, str):
+        text = content.strip()
+        return "" if _SYSTEM_TAG_RE.match(text) else text
+
+    if content is None:
+        return ""
+
+    said = [(block.text or "").strip() for block in content if block.type == TEXT_BLOCK]
+    return "\n".join(text for text in said if text and not _SYSTEM_TAG_RE.match(text))
+
+
+def _labels(turns: list[ConversationTurn]) -> list[str]:
+    """Name each turn by who spoke and when: 'user (18:05:44)'.
+
+    The name is what threads and the unsent draft hang on, so it never
+    depends on how much of the conversation came after: two turns in the
+    same second are told apart by their order, counted from the start.
+    """
+    seen: Counter[str] = Counter()
+    labels = []
+    for turn in turns:
+        label = f"{turn.role}{_said_at(turn.timestamp)}"
+        seen[label] += 1
+        labels.append(label if seen[label] == 1 else f"{label} #{seen[label]}")
+    return labels
+
+
+def _said_at(timestamp: str) -> str:
+    """When a turn was said, in local time, or nothing when the entry does not say."""
+    if not timestamp:
+        return ""
+    try:
+        return f" ({datetime.fromisoformat(timestamp).astimezone():%H:%M:%S})"
+    except ValueError:
+        return ""

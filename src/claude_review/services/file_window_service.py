@@ -6,13 +6,13 @@ opens a file it was not told about up front — hence the checks below.
 """
 
 import asyncio
-from collections.abc import Iterable
 from itertools import islice
 from pathlib import Path
 
 from pydantic import BaseModel
 
 from claude_review.domain.exceptions import FileWindowError
+from claude_review.domain.protocols import TrackedPathsProtocol
 
 MAX_WINDOW_LINES = 2000
 
@@ -33,6 +33,9 @@ class FileWindow(BaseModel):
 class FileWindowService:
     """Reads line ranges out of files inside one repository."""
 
+    def __init__(self, git_repository: TrackedPathsProtocol) -> None:
+        self._git = git_repository
+
     async def read_window(
         self,
         root: Path,
@@ -40,35 +43,37 @@ class FileWindowService:
         start: int,
         end: int,
         *,
-        allowed: Iterable[str] | None = None,
+        in_review: frozenset[str],
     ) -> FileWindow:
         """Read lines ``start`` to ``end`` inclusive, counting from one.
 
         A window running past the end of the file is clamped rather than
         refused, since the caller cannot know the length before asking.
 
-        ``allowed``, when given, is the set of paths the review covers. The
-        UI never asks for anything else, and refusing the rest keeps the
-        review from being a way to read the whole repository.
+        Only a file the review holds, or one the repository tracks, can be
+        read. Read against another base, the diff on screen holds files the
+        review's own does not; but nothing the repository leaves out — a
+        `.env`, a build directory — is ever a file the reader widens.
 
         Raises:
             FileWindowError: If the range is not sensible, or the path does
-                not name a readable text file the review covers.
+                not name a readable text file the review may show.
         """
         if start < 1 or end < start:
             msg = f"not a line range: {start}-{end}"
             raise FileWindowError(msg)
 
-        if allowed is not None and relative_path not in set(allowed):
+        if relative_path not in in_review and not await self._git.is_tracked(root, relative_path):
             msg = f"not a file in this review: {relative_path}"
             raise FileWindowError(msg)
 
-        path = self._resolve_inside(root, relative_path)
-        # Reading blocks, and the server has a socket to keep answering on
-        return await asyncio.to_thread(self._read_window, path, relative_path, start, end)
+        # Resolving links and reading both block, and the server has a socket
+        # to keep answering on
+        return await asyncio.to_thread(self._read_window, root, relative_path, start, end)
 
-    def _read_window(self, path: Path, named: str, start: int, end: int) -> FileWindow:
+    def _read_window(self, root: Path, named: str, start: int, end: int) -> FileWindow:
         """Read the wanted lines without holding the whole file in memory."""
+        path = self._resolve_inside(root, named)
         self._check_readable(path, named)
 
         wanted = min(end - start + 1, MAX_WINDOW_LINES)

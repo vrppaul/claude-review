@@ -14,6 +14,7 @@ from pathlib import Path
 import structlog
 
 from claude_review.domain.exceptions import GitError
+from claude_review.domain.models import PathState, TreeState
 from claude_review.domain.protocols import GitRepositoryProtocol
 
 log = structlog.get_logger()
@@ -30,17 +31,20 @@ class TreeWatcherService:
         self._git = git_repository
         self._poll_seconds = poll_seconds
 
-    async def read(self, root: Path) -> frozenset[str]:
-        """Take the tree as it stands, as a set of lines to compare later."""
+    async def read(self, root: Path) -> TreeState:
+        """Take the tree as it stands, to compare against later."""
         try:
-            return frozenset(line for line in (await self._git.status(root)).splitlines() if line)
+            paths = await self._git.changed_paths(root)
         except GitError:
             # A repository mid-rebase answers nothing useful; asking again in
             # half a second is better than treating that as a change
             log.warning("tree_status_failed", path=str(root))
             return frozenset()
+        # Reading every file's size and time blocks, and the server has a
+        # socket to keep answering on
+        return await asyncio.to_thread(_tree_state, root, paths)
 
-    async def drift(self, root: Path, taken_at: frozenset[str]) -> int:
+    async def drift(self, root: Path, taken_at: TreeState) -> int:
         """How many files have moved since the diff on screen was taken.
 
         The watcher says this once, to whoever is listening at the time. A
@@ -54,7 +58,7 @@ class TreeWatcherService:
         self,
         root: Path,
         *,
-        taken_at: Callable[[], frozenset[str]],
+        taken_at: Callable[[], TreeState],
         stop: asyncio.Event,
     ) -> AsyncGenerator[int]:
         """Yield how many files have moved, each time the tree moves again.
@@ -64,7 +68,7 @@ class TreeWatcherService:
         been told. `taken_at` is asked afresh every time, so retaking the diff
         settles the tree without the watcher being restarted.
         """
-        told: frozenset[str] | None = None
+        told: TreeState | None = None
 
         while not stop.is_set():
             await asyncio.sleep(self._poll_seconds)
@@ -87,11 +91,22 @@ class TreeWatcherService:
             yield len(moved)
 
 
-def _paths(lines: frozenset[str]) -> set[str]:
-    """The paths in porcelain lines, so a file counts once however it changed.
+def _paths(tree: TreeState) -> set[str]:
+    """The paths in a comparison, so a file counts once however it changed.
 
-    A line is two status letters, a space, then the path — and a file whose
-    status changed appears on both sides of the comparison with different
-    letters.
+    A file that changed again is on both sides of it, with different sizes or
+    times.
     """
-    return {line[3:] for line in lines}
+    return {state.path for state in tree}
+
+
+def _tree_state(root: Path, paths: list[str]) -> TreeState:
+    return frozenset(_path_state(root, path) for path in paths)
+
+
+def _path_state(root: Path, path: str) -> PathState:
+    try:
+        found = (root / path).stat()
+    except OSError:
+        return PathState(path=path, modified_ns=None, size=None)
+    return PathState(path=path, modified_ns=found.st_mtime_ns, size=found.st_size)

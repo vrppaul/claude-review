@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { userEvent } from '@testing-library/user-event';
 import { render } from '@testing-library/svelte';
 import TopBar from '$lib/components/TopBar.svelte';
@@ -34,9 +34,6 @@ describe('the settings', () => {
 		await diffStore.fetchDiff();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('keep the choices made once out of the header, behind the gear', async () => {
 		const user = userEvent.setup();

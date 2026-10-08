@@ -260,19 +260,22 @@
 .cr-sign {
   vertical-align: top;
 }
-/* The rule at the row's edge can be light; the glyphs beside it are text */
+/* The rule at the row's edge can be light; the glyphs beside it are text.
+   A split row tints each side's gutter cell itself, so there the gutter
+   carries the change class rather than sitting inside it. */
 .cr-row-add .cr-gutter,
 .cr-row-add .cr-sign,
-.cr-cell-add .cr-gutter {
+.cr-gutter.cr-cell-add {
   color: var(--cr-add-text);
 }
 .cr-row-del .cr-gutter,
 .cr-row-del .cr-sign,
-.cr-cell-del .cr-gutter {
+.cr-gutter.cr-cell-del {
   color: var(--cr-del-text);
 }
 .cr-row-marked .cr-gutter,
-.cr-row-marked .cr-sign {
+.cr-row-marked .cr-sign,
+.cr-gutter.cr-cell-marked {
   color: var(--cr-mark);
 }
 

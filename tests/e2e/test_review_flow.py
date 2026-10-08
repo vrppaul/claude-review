@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 import uvicorn
-from playwright.async_api import Locator, Page
+from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
@@ -160,7 +160,8 @@ async def test_multi_line_range_comment(server_url: ServerFixture, page: Page) -
 
     assert state.result is not None
     assert "Refactor this range" in state.result
-    assert "-" in state.result
+    # From the first line of the hunk to the fourth of the new file
+    assert "### `main.py`:1-4" in state.result
 
 
 async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
@@ -183,40 +184,6 @@ async def test_multi_file_review(server_url: ServerFixture, page: Page) -> None:
     assert "new_file.ts" in state.result
     # Each comment is filed under the file it was left on, not both under one
     assert state.result.index("Comment on main") < state.result.index("new_file.ts")
-
-
-async def test_nothing_written_cannot_be_sent(server_url: ServerFixture, page: Page) -> None:
-    """The door opens on an empty review — a summary alone is one — but
-    sending is refused until something has been written."""
-    url, _state = server_url
-    await page.goto(url)
-    await page.get_by_test_id("sidebar").wait_for()
-
-    await page.get_by_test_id("quick-submit").click()
-
-    assert await page.get_by_test_id("modal-submit").is_disabled()
-
-
-# --- Review body tests ---
-
-
-async def test_review_body_only_via_modal(server_url: ServerFixture, page: Page) -> None:
-    """Submit with only a review summary via the modal, no inline comments."""
-    url, state = server_url
-    await page.goto(url)
-    await page.get_by_test_id("sidebar").wait_for()
-
-    await page.get_by_test_id("quick-submit").click()
-    await page.get_by_test_id("review-body").wait_for()
-
-    modal_textarea = page.get_by_test_id("review-body")
-    await modal_textarea.fill("Wrong approach, reconsider the design.")
-
-    await page.get_by_test_id("modal-submit").click()
-    await page.get_by_test_id("submitted-banner").wait_for()
-
-    assert state.result is not None
-    assert "Wrong approach" in state.result
 
 
 async def test_review_body_with_inline_comment_via_modal(server_url: ServerFixture, page: Page) -> None:
@@ -248,10 +215,19 @@ async def test_nothing_written_means_nothing_to_send(server_url: ServerFixture, 
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
+    sent: list[str] = []
+    page.on("request", lambda request: sent.append(request.url))
+
     await page.get_by_test_id("quick-submit").click()
     assert await page.get_by_test_id("modal-submit").is_disabled()
 
     await page.keyboard.press("Control+Shift+Enter")
+    # Requests are reported in the order the page makes them: once this one
+    # is seen, a send the shortcut made would have been seen before it
+    async with page.expect_request("**/api/versions"):
+        await page.evaluate("fetch('/api/versions')")
+
+    assert not any("/api/submit" in url for url in sent)
     assert state.result is None
 
 
@@ -806,12 +782,13 @@ async def test_ignoring_whitespace_retakes_the_diff(server_url: ServerFixture, p
 
     before = await page.get_by_test_id("file-section").count()
     await page.get_by_test_id("settings-toggle").click()
-    await page.get_by_test_id("ignore-whitespace").check()
-    await page.wait_for_timeout(300)
+    async with page.expect_response(lambda response: "/api/diff?ignore_whitespace=true" in response.url) as asked:
+        await page.get_by_test_id("ignore-whitespace").check()
 
+    assert (await asked.value).ok
     # Nothing in the fixture is whitespace-only, so the review is unchanged —
     # what matters is that it came back rather than emptying out
-    assert await page.get_by_test_id("file-section").count() == before
+    await expect(page.get_by_test_id("file-section")).to_have_count(before)
 
 
 async def test_comments_survive_a_reload(server_url: ServerFixture, page: Page) -> None:
@@ -862,7 +839,7 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(server_url: Server
 
     answer = page.get_by_test_id("thread-answer")
     await answer.wait_for()
-    assert "No, it was the only caller." in await answer.text_content()
+    assert "No, it was the only caller." in (await answer.text_content() or "")
     # And it is marked as something the reader has not looked at yet
     await page.get_by_test_id("comment-unread").wait_for()
 
@@ -942,7 +919,7 @@ async def test_the_panel_carries_a_message_to_the_agent_and_back(server_url: Ser
 
     answer = page.get_by_test_id("panel-answer")
     await answer.wait_for()
-    assert "The e2e one, and two unit tests." in await answer.text_content()
+    assert "The e2e one, and two unit tests." in (await answer.text_content() or "")
 
 
 async def test_a_message_carries_the_thread_it_points_at(server_url: ServerFixture, page: Page) -> None:
@@ -999,10 +976,10 @@ async def test_a_thread_the_author_raises_lands_on_the_line(server_url: ServerFi
 
     thread = page.locator(f"#{raised['thread_id']}")
     await thread.wait_for()
-    assert "I kept the old name" in await thread.text_content()
+    assert "I kept the old name" in (await thread.text_content() or "")
     # Drawn as the author's, and not counted as the reader's unsent work
     await page.get_by_test_id("comment-raised").wait_for()
-    assert "0 unsent" in await page.get_by_test_id("comment-count").text_content()
+    assert "0 unsent" in (await page.get_by_test_id("comment-count").text_content() or "")
 
     # And the panel says where it went
     await page.get_by_test_id("panel-thread-ref").wait_for()

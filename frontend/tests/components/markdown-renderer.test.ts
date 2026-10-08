@@ -95,6 +95,69 @@ describe('a previewed file is read, not run', () => {
 		);
 	});
 
+	it('still renders a relative link written without a leading dot', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[readme](README.md)\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe(
+			'README.md'
+		);
+	});
+
+	it('keeps an image description inside its own attribute', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '![chart" onerror="alert(1)](./chart.png)\n' }
+		});
+
+		const image = getByTestId('markdown-content').querySelector('img');
+		expect(image?.getAttribute('onerror')).toBeNull();
+		expect(image?.getAttribute('alt')).toBe('chart" onerror="alert(1)');
+	});
+
+	it('keeps a link title inside its own attribute', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: `[docs](./docs.md 'say "hi" onmouseover="alert(1)"')\n` }
+		});
+
+		const link = getByTestId('markdown-content').querySelector('a');
+		expect(link?.getAttribute('onmouseover')).toBeNull();
+		expect(link?.getAttribute('title')).toBe('say "hi" onmouseover="alert(1)"');
+	});
+
+	it('keeps a link destination inside its own attribute', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[docs](<./docs.md" onmouseover="alert(1)>)\n' }
+		});
+
+		const link = getByTestId('markdown-content').querySelector('a');
+		expect(link?.getAttribute('onmouseover')).toBeNull();
+	});
+
+	it('leaves a link whose code hides behind a tab as text', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[click me](<java\tscript:alert(1)>)\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('a')).toBeNull();
+	});
+
+	it('leaves a link whose code hides behind a control character as text', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '[click me](<\u0001javascript:alert(1)>)\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('a')).toBeNull();
+	});
+
+	it('does not load an image the file carries inline', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '![pixel](data:image/png;base64,AAAA)\n' }
+		});
+
+		expect(getByTestId('markdown-content').querySelector('img')).toBeNull();
+	});
+
 	it('keeps code blocks escaped rather than double-escaped', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
 			props: { text: '```js\nconst a = 1 < 2 && 3 > 2;\n```\n' }

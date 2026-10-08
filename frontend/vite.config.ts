@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { svelteTesting } from '@testing-library/svelte/vite';
-import tailwindcss from '@tailwindcss/vite';
-import { resolve } from 'path';
+import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { svelteTesting } from "@testing-library/svelte/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [
@@ -17,20 +17,24 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/lib'),
+      $lib: resolve(__dirname, "src/lib"),
     },
   },
 
   build: {
-    outDir: resolve(__dirname, '../src/claude_review/static/dist'),
+    outDir: resolve(__dirname, "../src/claude_review/static/dist"),
     emptyOutDir: true,
     sourcemap: false, // maps ship in the PyPI wheel and would triple its size
   },
 
   test: {
-    environment: 'jsdom',
-    include: ['tests/**/*.test.ts'],
-    setupFiles: ['./tests/setup.ts'],
+    environment: "jsdom",
+    include: ["tests/**/*.test.ts"],
+    setupFiles: ["./tests/setup.ts"],
+    // A stub or a spy left behind by a test that failed half way would answer
+    // the next test's calls; each test starts from the real globals
+    unstubGlobals: true,
+    restoreMocks: true,
     // Typing into a component is simulated keystroke by keystroke, and the
     // files run in parallel: on a busy machine the default five seconds is
     // not slack, it is a coin toss

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
 import { lineAnchor } from '$lib/anchors/line';
@@ -25,9 +25,6 @@ describe('sending a round rather than ending the review', () => {
 		localStorage.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('keeps the threads on screen', async () => {
 		okFetch();
@@ -92,9 +89,6 @@ describe('a thread meeting a diff that has been taken again', () => {
 		localStorage.clear();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	/** The server answering with where each thread now hangs, in the order asked. */
 	function followedTo(anchors: Anchor[]) {

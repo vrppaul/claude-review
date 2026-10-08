@@ -23,6 +23,7 @@ from claude_review.domain.models import (
 )
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
+from tests.helpers import until_an_agent_waits
 
 LOCAL_ORIGIN = "http://127.0.0.1:8000"
 # The test client hardcodes "testserver" as the Host for sockets whatever
@@ -40,6 +41,9 @@ QUESTION = {
     "thread_id": "comment-1",
     "question_id": "comment-1",
     "body": "Why did you drop the None check?",
+    "severity": "note",
+    "resolved": False,
+    "raised_by": "reader",
 }
 
 
@@ -93,6 +97,32 @@ async def test_the_answerer_is_handed_the_question(client: AsyncClient) -> None:
     # The quoted lines travel with it, since the answerer may not have the file
     assert event["question"]["anchor"]["quote"] == ["    return now - self.started_at > timeout"]
     assert event["question"]["where"] == "`src/a.py`:42"
+
+
+async def test_a_question_says_how_its_thread_is_meant_to_be_taken(client: AsyncClient) -> None:
+    """A blocker and a settled note are different instructions, whichever turn is asked about."""
+    await client.post("/api/ask", json={**QUESTION, "severity": "blocker", "resolved": True, "raised_by": "author"})
+
+    question = (await client.get("/api/events", params={"wait_seconds": 5})).json()["question"]
+
+    assert (question["severity"], question["resolved"], question["raised_by"]) == ("blocker", True, "author")
+
+
+async def test_a_question_naming_an_image_the_review_does_not_keep_is_refused(client: AsyncClient) -> None:
+    """Pasted a moment ago, so a missing one is a fault, not a screenshot lost to a restart."""
+    response = await client.post("/api/ask", json={**QUESTION, "images": ["gone.png"]})
+
+    assert response.status_code == 422
+
+
+async def test_an_image_earlier_in_the_thread_that_did_not_survive_a_restart_is_left_out(
+    client: AsyncClient,
+) -> None:
+    history = [{"author": "reader", "body": "See this", "images": ["gone.png"]}]
+
+    response = await client.post("/api/ask", json={**QUESTION, "history": history})
+
+    assert response.status_code == 200
 
 
 async def test_waiting_with_nothing_to_do_says_so(client: AsyncClient) -> None:
@@ -192,16 +222,12 @@ def test_an_answer_reaches_the_review_on_screen(
 
 async def test_the_waiter_is_told_when_the_review_ends(client: AsyncClient, state: ServerState) -> None:
     """Otherwise the answering loop spins until the server process dies."""
+    waiting = asyncio.ensure_future(client.get("/api/events", params={"wait_seconds": 10}))
+    await until_an_agent_waits(client)
 
-    async def end_the_review() -> None:
-        await asyncio.sleep(0.2)
-        state.shutdown_event.set()
+    state.shutdown_event.set()
 
-    ending = asyncio.create_task(end_the_review())
-    event = (await client.get("/api/events", params={"wait_seconds": 10})).json()
-    await ending
-
-    assert event["type"] == "closed"
+    assert (await waiting).json()["type"] == "closed"
 
 
 async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient, state: ServerState) -> None:

@@ -3,6 +3,7 @@ import { render } from '@testing-library/svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
+import { expansionStore } from '$lib/stores/expansions.svelte';
 import { isTypingTarget } from '$lib/utils/keyboard';
 import type { DiffFile } from '$lib/types';
 import { newComment } from './new-comment';
@@ -128,21 +129,45 @@ describe('stepping through comments', () => {
 });
 
 describe('retaking the diff', () => {
-	it('drops lines revealed against the hunks it replaces', async () => {
-		const { expansionStore } = await import('$lib/stores/expansions.svelte');
+	/** A server that answers the file window and the diff, each for what it is. */
+	function serveWindowAndDiff() {
 		vi.stubGlobal(
 			'fetch',
-			vi.fn().mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({ files: [], mode: 'diff', title: 'repo' })
-			})
+			vi.fn((url: string) =>
+				Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve(
+							url.startsWith('/api/file-window')
+								? { start: 1, lines: ['one', 'two'], total: 40 }
+								: { files: [], mode: 'diff', title: 'repo' }
+						)
+				})
+			)
 		);
+	}
+
+	beforeEach(() => {
 		diffStore.clear();
-		await expansionStore.reveal('a.ts', 0, 1, 2).catch(() => {});
+		expansionStore.clear();
+		serveWindowAndDiff();
+	});
+
+	it('drops lines revealed against hunks a round replaced', async () => {
+		await expansionStore.reveal('a.ts', 0, 1, 2);
+		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
+
+		await diffStore.fetchDiff();
+
+		expect(expansionStore.revealedCount('a.ts', 0)).toBe(0);
+	});
+
+	it('drops lines revealed against hunks whitespace renumbered', async () => {
+		await expansionStore.reveal('a.ts', 0, 1, 2);
+		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
 
 		await diffStore.setIgnoreWhitespace(true);
 
 		expect(expansionStore.revealedCount('a.ts', 0)).toBe(0);
-		vi.unstubAllGlobals();
 	});
 });

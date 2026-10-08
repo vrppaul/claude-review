@@ -23,7 +23,6 @@ describe('being taken to a file somebody else pointed at', () => {
 	});
 
 	afterEach(() => {
-		vi.unstubAllGlobals();
 		vi.useRealTimers();
 	});
 

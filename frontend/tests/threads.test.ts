@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
@@ -44,9 +44,6 @@ describe('a thread is a conversation', () => {
 		diffStore.setFiles([file], 'diff');
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('asks from the composer, where the comment is written', async () => {
 		const user = userEvent.setup({ delay: null });
@@ -218,9 +215,6 @@ describe('images in a thread', () => {
 		diffStore.setFiles([file], 'diff');
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('hands the agent the images of the question and of everything said before it', async () => {
 		const fetchMock = okFetch();

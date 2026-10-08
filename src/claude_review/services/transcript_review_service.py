@@ -7,7 +7,7 @@ reads the review output.
 """
 
 from claude_review.domain.models import Comment, DiffFile, ReviewResult
-from claude_review.services.thread_markdown import format_opening, format_turn
+from claude_review.services.thread_markdown import format_conversation, thread_tags
 
 CONTEXT_LINES = 2
 
@@ -42,7 +42,8 @@ class TranscriptReviewService:
 
         for comment in comments:
             context = self._get_context(files_by_path, comment)
-            said = "\n".join([format_opening(comment.body, comment.images), *map(format_turn, comment.turns)])
+            tags = thread_tags(comment)
+            said = "\n".join([*([f"_{', '.join(tags)}_"] if tags else []), *format_conversation(comment)])
             parts.append(f"{context}\n{said}\n" if context else f"{said}\n")
 
         return ReviewResult(

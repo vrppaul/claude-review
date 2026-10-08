@@ -87,6 +87,9 @@ class DiffResponse(BaseModel):
 # not a review any more, and the requests that carry them stay bounded.
 MAX_THREADS = 500
 
+# The most files one thing the agent says may hang off it, as chips
+MAX_FILES_NAMED = 20
+
 # A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
 MAX_RELEASE_LENGTH = 50
 
@@ -96,12 +99,18 @@ MAX_RELEASE_LENGTH = 50
 # decodes them.
 SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
 
+# The longest path a file system here hands out
+MAX_PATH_LENGTH = 4096
+
+# A file as the diff names it: one line, never markup
+FilePath = Annotated[str, Field(min_length=1, max_length=MAX_PATH_LENGTH, pattern=SAFE_PATH)]
+
 
 class LineAnchorInput(BaseModel):
     """Lines a thread hangs on, as the browser sends them."""
 
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
-    file: str = Field(min_length=1, pattern=SAFE_PATH)
+    file: FilePath
     side: LineSide
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
@@ -157,7 +166,7 @@ class CommentInput(BaseModel):
 class SubmitRequest(BaseModel):
     """Request body for POST /api/submit."""
 
-    comments: list[CommentInput]
+    comments: list[CommentInput] = Field(max_length=MAX_THREADS)
     body: str | None = Field(default=None, max_length=50_000)
     # Whether this send is the last one. False sends a round and leaves the
     # review open, which only makes sense while something is answering it.
@@ -212,6 +221,11 @@ class AskRequest(BaseModel):
     body: str = Field(max_length=50_000)
     images: ImageIds = Field(default_factory=list)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
+    # How the thread is meant to be taken: a question about a blocker is not
+    # a question about a settled note
+    severity: CommentSeverity
+    resolved: bool
+    raised_by: TurnAuthor
 
     @model_validator(mode="after")
     def says_something(self) -> AskRequest:
@@ -252,7 +266,9 @@ class SessionHello(BaseModel):
     """
 
     round: int | None = Field(default=None, ge=1)
-    threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS)
+    # None when the browser said nothing about them; an empty list when it
+    # holds none — the last one was deleted
+    threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
 
 class ContextResponse(BaseModel):
@@ -300,7 +316,7 @@ class PointRequest(BaseModel):
     that: a thread on a line, which the reader answers, settles or removes.
     """
 
-    file: str = Field(min_length=1, pattern=SAFE_PATH)
+    file: FilePath
     side: LineSide = LineSide.NEW
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
@@ -350,7 +366,7 @@ class SayRequest(BaseModel):
     text: str = Field(min_length=1, max_length=50_000)
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
-    files: list[str] = Field(default_factory=list, max_length=20)
+    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
 
 
 class ProgressStep(BaseModel):
@@ -370,7 +386,7 @@ class ProgressRequest(BaseModel):
 
     message_id: str | None = Field(default=None, max_length=200)
     text: str = Field(default="", max_length=500)
-    files: list[str] = Field(default_factory=list, max_length=20)
+    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
     steps: list[ProgressStep] = Field(default_factory=list, max_length=20)
@@ -383,7 +399,7 @@ class ShowRequest(BaseModel):
     sent when they asked to be taken somewhere.
     """
 
-    file: str = Field(min_length=1, pattern=SAFE_PATH)
+    file: FilePath
 
 
 class CancelRequest(BaseModel):

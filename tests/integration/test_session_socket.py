@@ -127,3 +127,33 @@ def test_anything_else_on_the_socket_is_ignored(client: TestClient, state: Serve
         socket.send_text('{"round": 2}')
 
     assert state.round == 2
+
+
+def test_threads_the_reader_deleted_are_forgotten(client: TestClient) -> None:
+    """Deleting the last thread leaves nothing to tell an agent about, and that is what it is told."""
+    thread = {
+        "thread_id": "comment-1",
+        "anchor": {"kind": "line", "file": "a.py", "side": "new", "start_line": 1, "end_line": 1},
+        "body": "Why one?",
+    }
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        socket.send_json({"threads": [thread]})
+        socket.send_json({"threads": []})
+
+    assert client.get("/api/context").json()["threads"] == []
+
+
+def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(client: TestClient) -> None:
+    """The browser still holds the agent's threads from before the restart."""
+    thread = {
+        "thread_id": "raised-3",
+        "anchor": {"kind": "line", "file": "a.py", "side": "new", "start_line": 1, "end_line": 1},
+        "body": "Kept it on purpose",
+        "raised_by": "author",
+    }
+    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+        socket.send_json({"threads": [thread]})
+
+    raised = client.post("/api/point", json={"file": "a.py", "start_line": 1, "end_line": 1, "body": "And this"})
+
+    assert raised.json()["thread_id"] == "raised-4"

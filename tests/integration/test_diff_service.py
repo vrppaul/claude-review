@@ -369,3 +369,39 @@ async def test_a_copied_file_is_shown_as_a_new_one(tmp_git_repo: Path, diff_serv
 
     assert "copy.txt" in by_path
     assert by_path["copy.txt"].status == FileStatus.ADDED
+
+
+async def test_a_file_that_is_not_utf8_is_still_shown(tmp_git_repo: Path, diff_service: DiffService) -> None:
+    """One file in another encoding costs its own odd characters, not the whole review."""
+    (tmp_git_repo / "legacy.txt").write_bytes("café au lait\n".encode("latin-1"))
+
+    [legacy] = [f for f in await diff_service.get_diff(tmp_git_repo) if f.path == "legacy.txt"]
+
+    assert legacy.hunks[0].lines[0].content.startswith("caf")
+
+
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [
+        ("diff.mnemonicPrefix", "true"),
+        ("diff.noprefix", "true"),
+        ("color.diff", "always"),
+        ("color.ui", "always"),
+        ("diff.relative", "true"),
+        # A diff tool of the reader's own, which must not stand in for git's format
+        ("diff.external", "false"),
+        ("core.quotePath", "false"),
+    ],
+)
+async def test_the_readers_git_settings_do_not_change_what_is_shown(
+    tmp_git_repo: Path, diff_service: DiffService, setting: str, value: str
+) -> None:
+    (tmp_git_repo / "a").mkdir()
+    (tmp_git_repo / "a" / "inside.py").write_text("x = 1\n")
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    git(tmp_git_repo, "config", setting, value)
+
+    files = await diff_service.get_diff(tmp_git_repo)
+
+    assert {f.path for f in files} == {"a/inside.py", "initial.txt"}
+    assert all(f.hunks for f in files)

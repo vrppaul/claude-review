@@ -184,22 +184,25 @@ async def test_an_annotated_tag_is_offered_like_any_other(
 
 
 async def test_a_ref_whose_name_begins_with_a_dash_is_never_a_base(
-    tmp_git_repo: Path, state: ServerState, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles
+    tmp_git_repo: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    state: ServerState,
+    marking_workspace: ReviewWorkspace,
+    reader_files: ReaderFiles,
 ) -> None:
     """Git allows the name, and `git diff` would read it as an option."""
-    git(tmp_git_repo, "update-ref", "refs/heads/--output=/tmp/claude-review-should-not-exist", "HEAD")
+    target = tmp_path_factory.mktemp("outside") / "written-by-git"
+    git(tmp_git_repo, "update-ref", f"refs/heads/--output={target}", "HEAD")
 
     async with _client(state, tmp_git_repo, marking_workspace, reader_files=reader_files) as client:
         offered = (await client.get("/api/versions", headers=LOCAL_HEADERS)).json()["versions"]
-        asked = await client.get(
-            "/api/diff?base=ref:--output=/tmp/claude-review-should-not-exist", headers=LOCAL_HEADERS
-        )
+        asked = await client.get("/api/diff", params={"base": f"ref:--output={target}"}, headers=LOCAL_HEADERS)
 
     assert [v for v in offered if v["label"].startswith("-")] == []
     assert asked.status_code == 400
     # Off the loop: touching the filesystem from an async test blocks it, and
     # what this asserts is precisely that nothing touched the filesystem
-    assert not await asyncio.to_thread(Path("/tmp/claude-review-should-not-exist").exists)
+    assert not await asyncio.to_thread(target.exists)
 
 
 async def test_a_repository_with_nothing_committed_still_offers_its_bases(

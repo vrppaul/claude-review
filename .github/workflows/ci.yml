@@ -19,7 +19,7 @@ jobs:
       - run: uv sync --no-install-project
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
-      - run: uv run ty check src/
+      - run: uv run ty check src/ tests/
 
   test-python:
     runs-on: ubuntu-latest

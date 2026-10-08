@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from claude_review.domain.models import DiffFile
 from claude_review.services.transcript_service import TranscriptService
 
 
@@ -54,6 +55,11 @@ def _assistant_tool_use(name: str) -> dict:
         "message": {"role": "assistant", "content": [{"type": "tool_use", "name": name, "input": {}}]},
         "timestamp": "",
     }
+
+
+def _turn_texts(turns: list[DiffFile]) -> list[list[str]]:
+    """Every line of every turn, newest turn first."""
+    return [[line.content for hunk in turn.hunks for line in hunk.lines] for turn in turns]
 
 
 def _user_tool_result() -> dict:
@@ -260,3 +266,46 @@ class TestParse:
 
         with pytest.raises(ValueError, match="Invalid JSON"):
             service.parse(f)
+
+
+class TestWhatIsATurn:
+    def test_text_the_tool_put_in_the_users_name_is_not_a_turn(
+        self, service: TranscriptService, tmp_path: Path
+    ) -> None:
+        """A skill's instructions, a pasted image's note, a subagent's report:
+        written for the model, not by the user."""
+        injected = {**_user("Base directory for this skill: /skills/review"), "isMeta": True}
+        transcript = _write_jsonl(tmp_path, [_user("Review this"), injected])
+
+        assert _turn_texts(service.parse(transcript)) == [["Review this"]]
+
+    def test_a_side_conversation_is_not_part_of_the_transcript(
+        self, service: TranscriptService, tmp_path: Path
+    ) -> None:
+        side = {**_assistant("subagent musing"), "isSidechain": True}
+        transcript = _write_jsonl(tmp_path, [_user("Review this"), side])
+
+        assert _turn_texts(service.parse(transcript)) == [["Review this"]]
+
+
+class TestLabels:
+    def test_a_turn_keeps_its_name_as_the_conversation_grows(self, service: TranscriptService, tmp_path: Path) -> None:
+        """Threads and the unsent draft hang on these names; a live session keeps growing."""
+        earlier = [_user("first", ts="2026-04-04T18:05:00.000Z"), _assistant("answer", ts="2026-04-04T18:05:00.000Z")]
+        before = {r.hunks[0].lines[0].content: r.path for r in service.parse(_write_jsonl(tmp_path, earlier))}
+
+        grown = [*earlier, _user("second", ts="2026-04-04T18:06:00.000Z")]
+        after = {r.hunks[0].lines[0].content: r.path for r in service.parse(_write_jsonl(tmp_path, grown))}
+
+        assert after["first"] == before["first"]
+        assert after["answer"] == before["answer"]
+
+    def test_two_turns_in_the_same_second_are_told_apart(self, service: TranscriptService, tmp_path: Path) -> None:
+        same_second = "2026-04-04T18:05:00.000Z"
+        transcript = _write_jsonl(
+            tmp_path, [_user("a", ts=same_second), _assistant("b", ts=same_second), _user("c", ts=same_second)]
+        )
+
+        paths = [r.path for r in service.parse(transcript)]
+
+        assert len(set(paths)) == 3

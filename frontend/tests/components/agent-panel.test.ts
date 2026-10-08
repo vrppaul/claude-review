@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
@@ -77,9 +77,6 @@ describe('the agent panel', () => {
 		reviewStore.attachAnswerer();
 	});
 
-	afterEach(() => {
-		vi.unstubAllGlobals();
-	});
 
 	it('says what it is for before anything has been said', () => {
 		const { getByTestId } = render(AgentPanel);

@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ReviewMode(StrEnum):
@@ -300,6 +300,26 @@ class ThreadReply(BaseModel):
     thread_id: str
     text: str
     question_id: str | None = None
+
+
+class PathState(BaseModel):
+    """One path where the working tree differs from HEAD, as the disk has it now.
+
+    Git says only that a path differs, and that stays true through every
+    later edit of it; its size and modification time say when its content
+    changed again.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    path: str
+    # None when nothing is on the disk at the path: it was deleted
+    modified_ns: int | None
+    size: int | None
+
+
+# The working tree as one taking of the diff left it
+type TreeState = frozenset[PathState]
 
 
 class TreeSnapshot(BaseModel):
