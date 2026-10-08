@@ -1,23 +1,24 @@
-import type { Comment, Turn, TurnPayload } from "$lib/types";
+import type { Comment, ThreadPayload, Turn, TurnPayload } from "$lib/types";
 
 /**
  * A thread as the other side is told about it.
  *
- * One shape for both errands: a message pointing at a thread, and the
- * review telling the server what it holds. Both are the same fact — what
- * this thread is and what has been said in it — and an agent should not
- * have to learn it twice.
+ * One shape for every errand: a round, a question, a message pointing at a
+ * thread, and the review telling the server what it holds. Each is the same
+ * fact — what this thread is and what has been said in it — and an agent
+ * should not have to learn it twice.
  */
-export function threadOnTheWire(comment: Comment) {
+export function threadOnTheWire(comment: Comment): ThreadPayload {
   return {
     thread_id: comment.id,
     anchor: comment.anchor,
+    severity: comment.severity,
     body: comment.body,
     images: comment.images,
-    history: comment.turns.map(turnOnTheWire),
-    severity: comment.severity,
-    resolved: comment.resolved,
+    // The clock belongs to reading the thread, not to what it says
+    turns: comment.turns.map(turnOnTheWire),
     raised_by: comment.raised_by,
+    resolved: comment.resolved,
   };
 }
 

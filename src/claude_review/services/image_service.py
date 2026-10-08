@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from claude_review.domain.exceptions import (
     ImageAlreadySentError,
     ImageRefusedError,
+    ImagesNotKeptError,
     ImageTooLargeError,
     UnknownImageError,
 )
@@ -159,16 +160,37 @@ class ImageService:
         """The image kept under an id, or None if this review keeps none."""
         return self._ledger.kept.get(image_id)
 
+    def kept(self, image_id: str) -> StoredImage:
+        """The image kept under an id.
+
+        Raises:
+            UnknownImageError: if this review keeps no such image.
+        """
+        stored = self.find(image_id)
+        if stored is None:
+            msg = f"No such image in this review: {image_id}"
+            raise UnknownImageError(msg)
+        return stored
+
     def require(self, image_ids: list[str]) -> None:
         """Check that this review keeps every one of the images.
 
         Raises:
-            UnknownImageError: naming the ones it does not keep.
+            ImagesNotKeptError: naming the ones it does not keep.
         """
         missing = [image_id for image_id in image_ids if image_id not in self._ledger.kept]
         if missing:
             msg = f"No such image in this review: {', '.join(missing)}"
-            raise UnknownImageError(msg)
+            raise ImagesNotKeptError(msg)
+
+    def paths_of(self, image_ids: list[str]) -> list[Path]:
+        """The files the images are, once each, every one of which this review must keep.
+
+        Raises:
+            ImagesNotKeptError: naming the ones it does not keep.
+        """
+        self.require(image_ids)
+        return [self._ledger.kept[image_id].path for image_id in dict.fromkeys(image_ids)]
 
     def hand_over(self, image_ids: list[str]) -> ImageHandover:
         """Name the files the images are, and keep them for the agent.
@@ -192,10 +214,7 @@ class ImageService:
             UnknownImageError: if this review keeps no such image.
             ImageAlreadySentError: if it went out with a message.
         """
-        stored = self._ledger.kept.get(image_id)
-        if stored is None:
-            msg = f"No such image in this review: {image_id}"
-            raise UnknownImageError(msg)
+        stored = self.kept(image_id)
         if image_id in self._ledger.sent:
             msg = "That image was already sent"
             raise ImageAlreadySentError(msg)

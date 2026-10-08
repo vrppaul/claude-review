@@ -12,6 +12,7 @@ import {
 
 import type {
   AgentStatus,
+  ChangesSince,
   ContentViewMode,
   DiffFile,
   DiffLayout,
@@ -19,6 +20,7 @@ import type {
   ImageLimits,
   ReviewMode,
   ReviewVersion,
+  VersionsResponse,
 } from "$lib/types";
 
 /** The review's own base: what it was opened against, and the diff it keeps. */
@@ -134,16 +136,17 @@ function apply(data: DiffResponse): void {
   // counts them afresh: a round, a base, whitespace all renumber them
   expansionStore.clear();
   diffStore.setFiles(data.files, data.mode, data.title);
+  // None when the review is compared against nothing: files, a transcript
   phrase = data.phrase ?? "";
-  agent = data.agent ?? { model: null, context: null, at: null };
+  agent = data.agent;
   diffStore.setImageLimits(data.image_limits);
   release = data.release;
   // Said with the diff as well as pushed: a review reloaded while the tree
   // was moving heard the push and lost it, and one opened later never heard
   // it at all
-  diffStore.noteTreeMoved(data.moved ?? 0);
+  diffStore.noteTreeMoved(data.moved);
   // A review reloaded in the middle of a round has to learn where it is
-  reviewStore.setRound(data.round ?? 1);
+  reviewStore.setRound(data.round);
   if (data.answerer_attached) reviewStore.attachAnswerer();
 }
 
@@ -220,24 +223,22 @@ export const diffStore = {
   /**
    * Note what a retake did, and take the tick off what it rewrote.
    *
-   * `changed` is not `[]`: an empty list says nothing moved, while nothing
-   * at all says there was no way to tell — and then no tick can be trusted,
-   * so they all go. A file that loses its tick is unfolded with it, or it
-   * would sit there closed and read as read.
+   * No `changes` is not no change: it says there was no way to tell — and
+   * then no tick can be trusted, so they all go. A file that loses its tick
+   * is unfolded with it, or it would sit there closed and read as read.
    */
   noteRetaken(
     result: { followed: number; outdated: number },
-    changed: string[] | null = null,
-    since: number | null = null,
+    changes: ChangesSince | null,
   ) {
     retaken = result;
     movedFiles = 0;
     dismissedMoved = 0;
-    changedSince = since;
+    changedSince = changes?.since_round ?? null;
     changedFiles.clear();
-    knownChanged = changed !== null;
+    knownChanged = changes !== null;
 
-    if (changed === null) {
+    if (changes === null) {
       // Nothing is known about what moved, so nothing can keep its tick — and
       // a file that loses its tick is unfolded with it, or the whole review
       // sits closed and reads as read
@@ -245,7 +246,7 @@ export const diffStore = {
       collapsed.clear();
       return;
     }
-    for (const path of changed) {
+    for (const path of changes.paths) {
       changedFiles.add(path);
       viewed.delete(path);
       collapsed.delete(path);
@@ -433,7 +434,8 @@ export const diffStore = {
     if (!response.ok) {
       throw new Error(`Failed to fetch versions: ${response.status}`);
     }
-    versions = (await response.json()).versions;
+    const offered: VersionsResponse = await response.json();
+    versions = offered.versions;
   },
 
   /**

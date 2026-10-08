@@ -102,7 +102,7 @@ function drawCommentField() {
 
 /** A thread whose question is with the agent, not answered yet. */
 async function drawAwaitedQuestion() {
-	fakeServer().answer('POST /api/ask', { status: 'asked' });
+	fakeServer().answer('POST /api/ask', null);
 	const id = commentStore.add(newComment({ file: FILE.path, body: 'Why 3?' }));
 	await commentStore.ask(id);
 	render(CommentThread, { props: { comment: commentStore.comments[0] } });

@@ -69,7 +69,7 @@ describe('the panel talks to the agent about the review', () => {
 						thread_id: id,
 						anchor: { quote: ['y = 3'] },
 						body: 'Why catch here?',
-						history: [{ body: 'Because the caller cannot.' }]
+						turns: [{ body: 'Because the caller cannot.' }]
 					}
 				]
 			}

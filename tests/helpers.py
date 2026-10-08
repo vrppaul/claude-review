@@ -11,8 +11,10 @@ import queue
 import subprocess
 import threading
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Coroutine, Iterator, Mapping
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlencode
 
 import uvicorn
 from fastapi import FastAPI
@@ -20,9 +22,10 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel, ConfigDict
 from starlette.testclient import WebSocketTestSession
+from starlette.types import Message
 
 from claude_review.domain.models import (
-    Comment,
+    AnchorKind,
     CommentSeverity,
     DiffFile,
     DiffHunk,
@@ -34,11 +37,14 @@ from claude_review.domain.models import (
     ReaderFiles,
     ReviewMode,
     ReviewWorkspace,
+    Thread,
     Turn,
     TurnAuthor,
 )
+from claude_review.domain.protocols import Clock
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
+from claude_review.repositories.system_clock import SystemClock
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -53,6 +59,9 @@ LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": LOCAL_HOST}
 LOOPBACK = "127.0.0.1"
 # Any free port, as the kernel hands one out
 ANY_PORT = 0
+# What a request handed straight to the app says it speaks
+ASGI_VERSION = "3.0"
+HTTP_VERSION = "1.1"
 
 SESSION_ROUTE = "/api/session"
 DIFF_ROUTE = "/api/diff"
@@ -64,6 +73,15 @@ REVIEWED_FILE = "src/a.py"
 REVIEWED_LINE = "x = 1"
 # A hunk header, for hunks whose header nothing reads
 HUNK_HEADER = "@@ -1 +1 @@"
+
+# The id the browser gives the first thread it mints, and the one a test
+# names when it holds only one
+FIRST_THREAD_ID = "comment-1"
+# The round a review opens on
+FIRST_ROUND = 1
+
+# A PNG as far as anything here reads one: its signature, and enough after it to be a file
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
 # How long a test waits for something it has set going before giving up on it
 SETTLE_SECONDS = 5.0
@@ -132,18 +150,20 @@ def line_anchor(
     )
 
 
-def comment(
+def thread(
     anchor: LineAnchor,
     body: str,
     *,
+    thread_id: str = FIRST_THREAD_ID,
     severity: CommentSeverity = CommentSeverity.NOTE,
     turns: list[Turn] | None = None,
     images: list[Path] | None = None,
     raised_by: TurnAuthor = TurnAuthor.READER,
     resolved: bool = False,
-) -> Comment:
+) -> Thread:
     """A thread as the reader sends it: an ordinary note unless it says otherwise."""
-    return Comment(
+    return Thread(
+        thread_id=thread_id,
         anchor=anchor,
         severity=severity,
         body=body,
@@ -152,6 +172,60 @@ def comment(
         raised_by=raised_by,
         resolved=resolved,
     )
+
+
+def line_on_the_wire(
+    file: str, start_line: int, end_line: int | None = None, *, side: LineSide = LineSide.NEW
+) -> dict[str, object]:
+    """Lines of one side of a file, as the page names them; a single line unless an end is given."""
+    return {
+        "kind": AnchorKind.LINE,
+        "file": file,
+        "side": side,
+        "start_line": start_line,
+        "end_line": end_line or start_line,
+    }
+
+
+def turn_on_the_wire(
+    author: TurnAuthor, body: str, *, round_number: int = FIRST_ROUND, images: list[str] | None = None
+) -> dict[str, object]:
+    """One turn of a thread as the page sends it back, images named by their ids."""
+    return {"author": author, "body": body, "round": round_number, "images": images or []}
+
+
+def thread_on_the_wire(
+    anchor: dict[str, object],
+    body: str,
+    *,
+    thread_id: str = FIRST_THREAD_ID,
+    severity: CommentSeverity = CommentSeverity.NOTE,
+    images: list[str] | None = None,
+    turns: list[dict[str, object]] | None = None,
+    raised_by: TurnAuthor = TurnAuthor.READER,
+    resolved: bool = False,
+) -> dict[str, object]:
+    """A thread as the page sends it: the reader's own ordinary note unless it says otherwise."""
+    return {
+        "thread_id": thread_id,
+        "anchor": anchor,
+        "severity": severity,
+        "body": body,
+        "images": images or [],
+        "turns": turns or [],
+        "raised_by": raised_by,
+        "resolved": resolved,
+    }
+
+
+class FixedClock:
+    """A clock that always says the same moment, so a test can say when things happened."""
+
+    def __init__(self, moment: int) -> None:
+        self._moment = moment
+
+    def now(self) -> int:
+        return self._moment
 
 
 class ReviewFactory:
@@ -177,6 +251,7 @@ class ReviewFactory:
         base: str | None = None,
         title: str = "",
         keeps_marks: bool = True,
+        clock: Clock | None = None,
     ) -> FastAPI:
         writes_marks = root is not None and keeps_marks
         return create_app(
@@ -185,6 +260,7 @@ class ReviewFactory:
             mode=mode,
             workspace=self._marking_workspace if writes_marks else self._workspace,
             reader_files=self._reader_files,
+            clock=clock or SystemClock(),
             title=title,
             root=root,
             base=base,
@@ -226,6 +302,18 @@ def next_push(socket: WebSocketTestSession, kind: str) -> dict:
     while (remaining := deadline - time.monotonic()) > 0:
         pushed = _receive_within(socket, remaining)
         if pushed["type"] == kind:
+            return pushed
+    failure = f"no {kind} push arrived"
+    raise AssertionError(failure)
+
+
+def pushes_until(socket: WebSocketTestSession, kind: str) -> list[dict]:
+    """Everything the server pushes, up to and including the first push of one kind."""
+    deadline = time.monotonic() + SETTLE_SECONDS
+    pushed: list[dict] = []
+    while (remaining := deadline - time.monotonic()) > 0:
+        pushed.append(_receive_within(socket, remaining))
+        if pushed[-1]["type"] == kind:
             return pushed
     failure = f"no {kind} push arrived"
     raise AssertionError(failure)
@@ -289,6 +377,49 @@ async def until_an_agent_waits(client: AsyncClient, headers: dict[str, str] | No
         await asyncio.sleep(LOOK_EVERY_SECONDS)
     failure = "no agent started waiting on the review"
     raise AssertionError(failure)
+
+
+class CallerThatLeaves:
+    """An agent's poll for events whose caller goes away while it waits, as a killed `wait` does.
+
+    Played against the app directly, the way a server hands it a request:
+    the test clients run the app inside the request, so cancelling one
+    cancels the other, while a real server lets a handler whose caller left
+    run on.
+    """
+
+    def __init__(self) -> None:
+        self._asked = False
+        self.gone = asyncio.Event()
+
+    async def receive(self) -> Message:
+        """The request, then nothing until the caller goes away."""
+        if not self._asked:
+            self._asked = True
+            return {"type": "http.request", "body": b"", "more_body": False}
+        await self.gone.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(self, message: Message) -> None:
+        """Whatever is answered goes nowhere: nobody is there to read it."""
+
+    def poll(self, app: FastAPI, wait_seconds: float) -> Coroutine[Any, Any, None]:
+        """Ask the review for its next event, as this caller."""
+        scope = {
+            "type": "http",
+            "asgi": {"version": ASGI_VERSION},
+            "http_version": HTTP_VERSION,
+            "method": "GET",
+            "scheme": "http",
+            "path": EVENTS_ROUTE,
+            "raw_path": EVENTS_ROUTE.encode(),
+            "query_string": urlencode({"wait_seconds": wait_seconds}).encode(),
+            "root_path": "",
+            "headers": [(b"host", LOCAL_HOST.encode())],
+            "client": (LOOPBACK, ANY_PORT),
+            "server": (LOOPBACK, ANY_PORT),
+        }
+        return app(scope, self.receive, self.send)
 
 
 async def review_has_ended(client: AsyncClient) -> bool:

@@ -50,7 +50,7 @@ describe('what a round changed', () => {
 		diffStore.setViewed('rewritten.py', true);
 		diffStore.setViewed('untouched.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, ['rewritten.py'], 2);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, paths: ['rewritten.py'] });
 
 		expect(diffStore.isViewed('rewritten.py')).toBe(false);
 		expect(diffStore.isViewed('untouched.py')).toBe(true);
@@ -62,7 +62,7 @@ describe('what a round changed', () => {
 		diffStore.setFiles([diffFile({ path: 'rewritten.py' })], 'diff');
 		diffStore.setViewed('rewritten.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, ['rewritten.py'], 2);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, paths: ['rewritten.py'] });
 
 		expect(diffStore.isCollapsed('rewritten.py')).toBe(false);
 	});
@@ -72,7 +72,7 @@ describe('what a round changed', () => {
 		diffStore.setViewed('a.py', true);
 		diffStore.setViewed('b.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null, null);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null);
 
 		expect(diffStore.viewedCount).toBe(0);
 	});
@@ -176,7 +176,7 @@ describe('a base that is not the review\'s own', () => {
 		diffStore.setViewed('a.py', true);
 		diffStore.setViewed('b.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null, 2);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null);
 
 		expect(diffStore.isCollapsed('a.py')).toBe(false);
 		expect(diffStore.isCollapsed('b.py')).toBe(false);

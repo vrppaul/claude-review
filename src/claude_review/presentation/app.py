@@ -3,14 +3,20 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from claude_review.domain.exceptions import ReviewError
 from claude_review.domain.models import DiffFile, GuideState, ReaderFiles, ReaderSettings, ReviewMode, ReviewWorkspace
+from claude_review.domain.protocols import Clock
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.dependencies import reader_record_service
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
+from claude_review.presentation.refusals import answer_refusal
 from claude_review.presentation.routes import router
 from claude_review.presentation.state import ServerState
 
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
+
+# What the review calls itself, in its API description
+API_TITLE = "Claude Review"
 
 
 def create_app(
@@ -19,11 +25,12 @@ def create_app(
     mode: ReviewMode,
     workspace: ReviewWorkspace,
     reader_files: ReaderFiles,
+    clock: Clock,
     title: str = "",
     root: Path | None = None,
     base: str | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="Claude Review")
+    app = FastAPI(title=API_TITLE)
 
     app.state.diff_files = diff_files
     app.state.server = state
@@ -41,6 +48,8 @@ def create_app(
     # images pasted into it. It goes with the review, which is what keeps
     # both out of the repository under review.
     app.state.workspace = workspace
+    # What everything the review dates is dated by
+    app.state.clock = clock
     # What every review on the machine remembers about its reader, kept
     # outside any one of them. One service each for the review's lifetime, so
     # changes arriving together are made one after the other.
@@ -53,6 +62,8 @@ def create_app(
     app.add_middleware(LocalOriginOnly)
 
     app.include_router(router)
+    # Whatever a route refuses is answered here, by its kind
+    app.add_exception_handler(ReviewError, answer_refusal)
 
     if STATIC_DIR.exists():
         app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

@@ -6,6 +6,7 @@
  * and the message itself carries only ids.
  */
 
+import type { ImageResponse } from "$lib/types";
 import { refusalOf } from "$lib/utils/refusal";
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
@@ -42,7 +43,7 @@ export async function uploadImage(image: Blob): Promise<string> {
   if (!response.ok) {
     throw new Error(await refusalOf(response, "Could not attach the image"));
   }
-  const kept: { image_id: string } = await response.json();
+  const kept: ImageResponse = await response.json();
   return kept.image_id;
 }
 

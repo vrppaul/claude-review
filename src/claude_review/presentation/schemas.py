@@ -1,35 +1,52 @@
 """Pydantic request/response schemas for the API."""
 
-from typing import Annotated, Literal
+from enum import StrEnum, auto
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from claude_review.domain.models import (
     AgentStatus,
     Anchor,
-    AnchorKind,
+    ChangesSince,
     CommentSeverity,
     DiffFile,
     DiffLayout,
+    FilePath,
     GuideState,
-    LineSide,
     PanelCancel,
     PanelEntry,
     PanelMessage,
     ReaderSettings,
     ReviewMode,
+    ReviewModel,
     ReviewVersion,
     RoundSubmission,
     Theme,
-    ThreadContext,
+    Thread,
     ThreadQuestion,
     TurnAuthor,
 )
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
+# The most one thing said may hold: a comment, a turn, a panel message
+MAX_TEXT_LENGTH = 50_000
+
+# The longest id a request may name: a thread, a question, a message, an
+# image, a base
+MAX_ID_LENGTH = 200
+
+# How long an agent's poll for events waits when it does not say: long enough
+# that a loop of polls costs nothing, short enough to stay under the timeouts
+# of whatever runs the command
+DEFAULT_WAIT_SECONDS = 25.0
+# The longest one poll may wait, so a caller that asks for more is told so
+# rather than left holding a connection for good
+MAX_WAIT_SECONDS = 600.0
+
 # Ids handed out by POST /api/images, as many as one thing said may carry
 ImageIds = Annotated[
-    list[Annotated[str, Field(min_length=1, max_length=200)]],
+    list[Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH)]],
     Field(max_length=MAX_IMAGES_PER_MESSAGE),
 ]
 
@@ -45,7 +62,7 @@ def _require_words_or_images(words: str, images: list[str]) -> None:
         raise ValueError(msg)
 
 
-class ImageLimits(BaseModel):
+class ImageLimits(ReviewModel):
     """The limits the browser checks before uploading an image.
 
     Told by the server rather than repeated in the browser, so the two
@@ -56,7 +73,7 @@ class ImageLimits(BaseModel):
     max_images_per_message: int = MAX_IMAGES_PER_MESSAGE
 
 
-class DiffResponse(BaseModel):
+class DiffResponse(ReviewModel):
     """Response for GET /api/diff."""
 
     files: list[DiffFile]
@@ -83,6 +100,12 @@ class DiffResponse(BaseModel):
     release: str
 
 
+# The most turns one thread carries
+MAX_TURNS = 200
+
+# The most threads one panel message may point at
+MAX_THREADS_IN_MESSAGE = 50
+
 # The most threads one review hands over at once. A review with more is
 # not a review any more, and the requests that carry them stay bounded.
 MAX_THREADS = 500
@@ -93,87 +116,56 @@ MAX_FILES_NAMED = 20
 # A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
 MAX_RELEASE_LENGTH = 50
 
-# What a file path may hold. A newline in one would let a filename write its
-# own heading in the review — a whole fabricated section, blocker and all, in
-# what the agent reads. Git quotes such names, and the parser faithfully
-# decodes them.
-SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
 
-# The longest path a file system here hands out
-MAX_PATH_LENGTH = 4096
+class SaysSomething(ReviewModel):
+    """Something said: words, screenshots, or both — but never neither."""
 
-# A file as the diff names it: one line, never markup
-FilePath = Annotated[str, Field(min_length=1, max_length=MAX_PATH_LENGTH, pattern=SAFE_PATH)]
-
-
-class LineAnchorInput(BaseModel):
-    """Lines a thread hangs on, as the browser sends them."""
-
-    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
-    file: FilePath
-    side: LineSide
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
-    # What the thread was written against, kept for when those lines are gone
-    quote: list[str] = Field(default_factory=list, max_length=200)
-    outdated: bool = False
+    body: str = Field(max_length=MAX_TEXT_LENGTH)
+    images: ImageIds = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def start_before_end(self) -> LineAnchorInput:
-        if self.start_line > self.end_line:
-            msg = "start_line must be <= end_line"
-            raise ValueError(msg)
+    def says_something(self) -> Self:
+        _require_words_or_images(self.body, self.images)
         return self
 
 
-# One input per kind of `Anchor`
-type AnchorInput = LineAnchorInput
-
-
-class TurnInput(BaseModel):
+class TurnInput(SaysSomething):
     """One turn of a thread, as the browser sends it back."""
 
     author: TurnAuthor
-    body: str = Field(max_length=50_000)
-    round: int = Field(default=1, ge=1)
-    images: ImageIds = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def says_something(self) -> TurnInput:
-        _require_words_or_images(self.body, self.images)
-        return self
+    round: int = Field(ge=1)
 
 
-class CommentInput(BaseModel):
-    """A single comment in the submit request."""
+class ThreadInput(SaysSomething):
+    """A thread as the browser holds it, turns and all.
 
-    anchor: AnchorInput
+    The browser holds the threads — they are unsent work, and never reach
+    this side until a round is — so whatever is about one sends it along,
+    as it stands right now: a round, a question, a panel message, the
+    review saying what it holds.
+    """
+
+    thread_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    anchor: Anchor
     severity: CommentSeverity
-    body: str = Field(max_length=50_000)
-    images: ImageIds = Field(default_factory=list)
-    turns: list[TurnInput] = Field(default_factory=list, max_length=200)
-    # Who opened the thread. The browser sends it back so a thread the author
-    # raised is not read as something the reader wrote.
-    raised_by: TurnAuthor = TurnAuthor.READER
-    resolved: bool = False
-
-    @model_validator(mode="after")
-    def says_something(self) -> CommentInput:
-        _require_words_or_images(self.body, self.images)
-        return self
+    turns: list[TurnInput] = Field(default_factory=list, max_length=MAX_TURNS)
+    # Who opened it. Sent back so a thread the author raised is not read as
+    # something the reader wrote.
+    raised_by: TurnAuthor
+    resolved: bool
 
 
-class SubmitRequest(BaseModel):
+class SubmitRequest(ReviewModel):
     """Request body for POST /api/submit."""
 
-    comments: list[CommentInput] = Field(max_length=MAX_THREADS)
-    body: str | None = Field(default=None, max_length=50_000)
+    threads: list[ThreadInput] = Field(max_length=MAX_THREADS)
+    body: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
     # Whether this send is the last one. False sends a round and leaves the
     # review open, which only makes sense while something is answering it.
-    end: bool = True
+    end: bool
 
 
-class SubmitResponse(BaseModel):
+class SubmitResponse(ReviewModel):
     """Response for POST /api/submit."""
 
     markdown: str
@@ -183,28 +175,26 @@ class SubmitResponse(BaseModel):
     ended: bool
 
 
-class VersionsResponse(BaseModel):
+class VersionsResponse(ReviewModel):
     """Response for GET /api/versions — what the working tree can be read against."""
 
     versions: list[ReviewVersion]
 
 
-class RoundResponse(BaseModel):
+class RoundResponse(ReviewModel):
     """Response for POST /api/round — the diff taken again.
 
     The files that changed are named, so an agent that has come back to a
-    review it left knows which ones to read again rather than all of them,
-    and `since` says which round they are counted from. Both are None when
-    this review kept no tree to compare against.
+    review it left knows which ones to read again rather than all of them.
+    None when this review kept no tree to compare against.
     """
 
     file_count: int
     round: int
-    changed: list[str] | None = None
-    since: int | None = None
+    changes: ChangesSince | None
 
 
-class FileWindowResponse(BaseModel):
+class FileWindowResponse(ReviewModel):
     """Response for GET /api/file-window."""
 
     start: int
@@ -212,51 +202,19 @@ class FileWindowResponse(BaseModel):
     total: int
 
 
-class AskRequest(BaseModel):
-    """Request body for POST /api/ask — the reader asking about a thread."""
+class AskRequest(ReviewModel):
+    """Request body for POST /api/ask — the reader asking in a thread.
 
-    thread_id: str = Field(min_length=1, max_length=200)
-    question_id: str = Field(min_length=1, max_length=200)
-    anchor: AnchorInput
-    body: str = Field(max_length=50_000)
-    images: ImageIds = Field(default_factory=list)
-    history: list[TurnInput] = Field(default_factory=list, max_length=200)
-    # How the thread is meant to be taken: a question about a blocker is not
-    # a question about a settled note
-    severity: CommentSeverity
-    resolved: bool
-    raised_by: TurnAuthor
-
-    @model_validator(mode="after")
-    def says_something(self) -> AskRequest:
-        _require_words_or_images(self.body, self.images)
-        return self
-
-
-class ThreadInput(BaseModel):
-    """A thread as the browser hands it over, for a panel message to carry.
-
-    The browser holds the threads — they are unsent work, and never reach
-    this side until a round is — so a message pointing at one sends it
-    along. What arrives is the thread as it stands right now.
+    The whole thread goes, as it stands: what is asked is the reader's last
+    word in it, or the comment that opened it, and the server works that
+    out rather than being told it twice.
     """
 
-    thread_id: str = Field(min_length=1, max_length=200)
-    anchor: AnchorInput
-    body: str = Field(max_length=50_000)
-    images: ImageIds = Field(default_factory=list)
-    history: list[TurnInput] = Field(default_factory=list, max_length=200)
-    severity: CommentSeverity = CommentSeverity.NOTE
-    resolved: bool = False
-    raised_by: TurnAuthor = TurnAuthor.READER
-
-    @model_validator(mode="after")
-    def says_something(self) -> ThreadInput:
-        _require_words_or_images(self.body, self.images)
-        return self
+    question_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    thread: ThreadInput
 
 
-class SessionHello(BaseModel):
+class SessionHello(ReviewModel):
     """What the browser says on connecting, and whenever its threads change.
 
     The review on screen is the only side that knows what has been written
@@ -271,7 +229,7 @@ class SessionHello(BaseModel):
     threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
 
-class ContextResponse(BaseModel):
+class ContextResponse(ReviewModel):
     """Response for GET /api/context — the review as it stands.
 
     An index, not the contents: one line's worth per thread, and the panel
@@ -283,18 +241,18 @@ class ContextResponse(BaseModel):
     file_count: int
     answerer_attached: bool
     agent: AgentStatus
-    threads: list[ThreadContext]
+    threads: list[Thread]
     panel: list[PanelEntry]
 
 
-class MessageRequest(BaseModel):
+class MessageRequest(ReviewModel):
     """Request body for POST /api/message — the reader typing in the panel."""
 
-    message_id: str = Field(min_length=1, max_length=200)
+    message_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
     # May be empty when an image is attached: a screenshot can be the whole
     # question
-    text: str = Field(default="", max_length=50_000)
-    threads: list[ThreadInput] = Field(default_factory=list, max_length=50)
+    text: str = Field(default="", max_length=MAX_TEXT_LENGTH)
+    threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
     images: ImageIds = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -303,35 +261,25 @@ class MessageRequest(BaseModel):
         return self
 
 
-class ImageResponse(BaseModel):
+class ImageResponse(ReviewModel):
     """Response for POST /api/images — what the image is kept under."""
 
     image_id: str
 
 
-class PointRequest(BaseModel):
+class PointRequest(ReviewModel):
     """Request body for POST /api/point — the author raising a thread.
 
     The same anchor a reader's comment carries, because it becomes exactly
     that: a thread on a line, which the reader answers, settles or removes.
     """
 
-    file: FilePath
-    side: LineSide = LineSide.NEW
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
-    body: str = Field(min_length=1, max_length=50_000)
-    severity: CommentSeverity = CommentSeverity.NOTE
-
-    @model_validator(mode="after")
-    def start_before_end(self) -> PointRequest:
-        if self.start_line > self.end_line:
-            msg = "start_line must be <= end_line"
-            raise ValueError(msg)
-        return self
+    anchor: Anchor
+    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    severity: CommentSeverity
 
 
-class FollowRequest(BaseModel):
+class FollowRequest(ReviewModel):
     """Request body for POST /api/anchors/follow — where these are now.
 
     The browser holds the threads, and the server holds the diff they hang
@@ -339,22 +287,22 @@ class FollowRequest(BaseModel):
     each one back moved onto the diff as it now stands, in the same order.
     """
 
-    anchors: list[AnchorInput] = Field(max_length=MAX_THREADS)
+    anchors: list[Anchor] = Field(max_length=MAX_THREADS)
 
 
-class FollowResponse(BaseModel):
+class FollowResponse(ReviewModel):
     """Response for POST /api/anchors/follow, one anchor per one asked about."""
 
     anchors: list[Anchor]
 
 
-class PointResponse(BaseModel):
+class PointResponse(ReviewModel):
     """Response for POST /api/point — which thread was raised."""
 
     thread_id: str
 
 
-class SayRequest(BaseModel):
+class SayRequest(ReviewModel):
     """Request body for POST /api/say — the agent speaking in the panel.
 
     Usually an answer, and then it names what it answers. It may also be the
@@ -362,21 +310,32 @@ class SayRequest(BaseModel):
     something worth saying — and then there is nothing to name.
     """
 
-    message_id: str | None = Field(default=None, max_length=200)
-    text: str = Field(min_length=1, max_length=50_000)
+    message_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
+    text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
 
 
-class ProgressStep(BaseModel):
+# The longest one branch of the work may be said in: a line, not a report
+MAX_STEP_LENGTH = 200
+
+# The longest what is being done may be said in. It is a state that replaces
+# itself, not a log, so a line or two is all it ever needs.
+MAX_PROGRESS_LENGTH = 500
+
+# The most branches the work is shown as at once
+MAX_PROGRESS_STEPS = 20
+
+
+class ProgressStep(ReviewModel):
     """One branch of the work: something being done, or something done."""
 
-    text: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=MAX_STEP_LENGTH)
     done: bool = False
 
 
-class ProgressRequest(BaseModel):
+class ProgressRequest(ReviewModel):
     """Request body for POST /api/progress — what is being done right now.
 
     It replaces whatever was showing rather than adding to it: this is the
@@ -384,15 +343,15 @@ class ProgressRequest(BaseModel):
     and the line goes away.
     """
 
-    message_id: str | None = Field(default=None, max_length=200)
-    text: str = Field(default="", max_length=500)
+    message_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
+    text: str = Field(default="", max_length=MAX_PROGRESS_LENGTH)
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
-    steps: list[ProgressStep] = Field(default_factory=list, max_length=20)
+    steps: list[ProgressStep] = Field(default_factory=list, max_length=MAX_PROGRESS_STEPS)
 
 
-class ShowRequest(BaseModel):
+class ShowRequest(ReviewModel):
     """Request body for POST /api/show — bring a file into view.
 
     The one thing here that moves the reader's screen, so it is only ever
@@ -402,44 +361,93 @@ class ShowRequest(BaseModel):
     file: FilePath
 
 
-class CancelRequest(BaseModel):
+class CancelRequest(ReviewModel):
     """Request body for POST /api/cancel — the reader taking it back."""
 
-    message_id: str = Field(min_length=1, max_length=200)
+    message_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
 
 
-class StatusRequest(BaseModel):
+# The longest the agent may say which model it is, or how full its context is
+MAX_STATUS_LENGTH = 200
+
+
+class StatusRequest(ReviewModel):
     """Request body for POST /api/status — what only the agent knows.
 
     Both are free text on purpose: how an agent measures its own context is
     its business, and this side only repeats it with a time beside it.
     """
 
-    model: str | None = Field(default=None, max_length=200)
-    context: str | None = Field(default=None, max_length=200)
+    model: str | None = Field(default=None, max_length=MAX_STATUS_LENGTH)
+    context: str | None = Field(default=None, max_length=MAX_STATUS_LENGTH)
 
 
-class ReplyRequest(BaseModel):
+class ReplyRequest(ReviewModel):
     """Request body for POST /api/reply — the answer coming back."""
 
-    thread_id: str = Field(min_length=1, max_length=200)
-    text: str = Field(min_length=1, max_length=50_000)
+    thread_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Which question is being answered. Omitted, the answer goes to the
     # oldest question in that thread still waiting for one.
-    question_id: str | None = Field(default=None, max_length=200)
+    question_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
 
 
-class EventResponse(BaseModel):
-    """Response for GET /api/events, the long poll an answerer waits on."""
+class EventKind(StrEnum):
+    """What GET /api/events can answer, as the `type` the agent's loop reads.
 
-    type: str
-    question: ThreadQuestion | None = None
-    round: RoundSubmission | None = None
-    message: PanelMessage | None = None
-    cancel: PanelCancel | None = None
+    QUESTION — a question asked in one thread.
+    ROUND — a round of the review, sent.
+    MESSAGE — something typed in the agent panel.
+    CANCEL — a panel message taken back.
+    TIMEOUT — nothing was handed over in the time asked for.
+    CLOSED — the review is over, and nothing handed over is left.
+    """
+
+    QUESTION = auto()
+    ROUND = auto()
+    MESSAGE = auto()
+    CANCEL = auto()
+    TIMEOUT = auto()
+    CLOSED = auto()
 
 
-class SettingsResponse(BaseModel):
+class QuestionEvent(ReviewModel):
+    type: Literal[EventKind.QUESTION] = EventKind.QUESTION
+    question: ThreadQuestion
+
+
+class RoundEvent(ReviewModel):
+    type: Literal[EventKind.ROUND] = EventKind.ROUND
+    round: RoundSubmission
+
+
+class MessageEvent(ReviewModel):
+    type: Literal[EventKind.MESSAGE] = EventKind.MESSAGE
+    message: PanelMessage
+
+
+class CancelEvent(ReviewModel):
+    type: Literal[EventKind.CANCEL] = EventKind.CANCEL
+    cancel: PanelCancel
+
+
+class TimeoutEvent(ReviewModel):
+    type: Literal[EventKind.TIMEOUT] = EventKind.TIMEOUT
+
+
+class ClosedEvent(ReviewModel):
+    type: Literal[EventKind.CLOSED] = EventKind.CLOSED
+
+
+# Response for GET /api/events, the long poll an answerer waits on: one kind
+# of event, carrying only what that kind is
+type EventResponse = Annotated[
+    QuestionEvent | RoundEvent | MessageEvent | CancelEvent | TimeoutEvent | ClosedEvent,
+    Field(discriminator="type"),
+]
+
+
+class SettingsResponse(ReviewModel):
     """Response for GET /api/settings."""
 
     settings: ReaderSettings
@@ -448,7 +456,7 @@ class SettingsResponse(BaseModel):
     stored: bool
 
 
-class SettingsChange(BaseModel):
+class SettingsChange(ReviewModel):
     """Request body for PUT /api/settings — the choices being changed, and only those."""
 
     model_config = ConfigDict(extra="forbid")
@@ -459,16 +467,137 @@ class SettingsChange(BaseModel):
     sound_on_replies: bool | None = None
 
 
-class GuideResponse(BaseModel):
+class GuideResponse(ReviewModel):
     """Response for GET /api/guide."""
 
     guide: GuideState
     stored: bool
 
 
-class GuideChange(BaseModel):
+class GuideChange(ReviewModel):
     """Request body for PUT /api/guide."""
 
     model_config = ConfigDict(extra="forbid")
 
     seen_release: str = Field(min_length=1, max_length=MAX_RELEASE_LENGTH)
+
+
+class PushKind(StrEnum):
+    """What the server pushes down the session socket, as the `type` the browser reads.
+
+    REPLY — an answer in a thread.
+    ANSWERER — whether anything is waiting to answer.
+    CHAT — the agent speaking in the panel.
+    PROGRESS — what the agent is doing right now.
+    SHOW — bring a file into view.
+    STATUS — what the agent said about itself.
+    POINT — a thread the agent raised on a line.
+    CHANGED — the working tree moved away from the diff on screen.
+    ROUND — the round now being written.
+    DIFF — the diff was taken again.
+    """
+
+    REPLY = auto()
+    ANSWERER = auto()
+    CHAT = auto()
+    PROGRESS = auto()
+    SHOW = auto()
+    STATUS = auto()
+    POINT = auto()
+    CHANGED = auto()
+    ROUND = auto()
+    DIFF = auto()
+
+
+class ReplyPush(ReviewModel):
+    """An answer to one thread, and which question in it, when the answer says."""
+
+    type: Literal[PushKind.REPLY] = PushKind.REPLY
+    thread_id: str
+    question_id: str | None
+    text: str
+
+
+class AnswererPush(ReviewModel):
+    type: Literal[PushKind.ANSWERER] = PushKind.ANSWERER
+    attached: bool
+
+
+class ChatPush(ReviewModel):
+    """The agent speaking in the panel: an answer to a message, or nothing answered at all."""
+
+    type: Literal[PushKind.CHAT] = PushKind.CHAT
+    message_id: str | None
+    text: str
+    files: list[FilePath]
+
+
+class ProgressPush(ReviewModel):
+    """What the agent is doing right now, whole: it replaces whatever was showing."""
+
+    type: Literal[PushKind.PROGRESS] = PushKind.PROGRESS
+    message_id: str | None
+    text: str
+    files: list[FilePath]
+    steps: list[ProgressStep]
+
+    def says_nothing(self) -> bool:
+        """Whether this says the work is over, rather than what it is."""
+        return not self.text.strip() and not self.steps
+
+
+class ShowPush(ReviewModel):
+    type: Literal[PushKind.SHOW] = PushKind.SHOW
+    file: FilePath
+
+
+class StatusPush(ReviewModel):
+    type: Literal[PushKind.STATUS] = PushKind.STATUS
+    agent: AgentStatus
+
+
+class PointPush(ReviewModel):
+    """A thread the agent raised, quoted from the diff it was checked against."""
+
+    type: Literal[PushKind.POINT] = PushKind.POINT
+    thread_id: str
+    anchor: Anchor
+    body: str
+    severity: CommentSeverity
+
+
+class ChangedPush(ReviewModel):
+    """How many files have moved since the diff on screen was taken. Said, never acted on."""
+
+    type: Literal[PushKind.CHANGED] = PushKind.CHANGED
+    moved_count: int
+
+
+class RoundPush(ReviewModel):
+    """The round now being written, after one was sent and the review stayed open."""
+
+    type: Literal[PushKind.ROUND] = PushKind.ROUND
+    number: int
+
+
+class DiffPush(ReviewModel):
+    """The diff was taken again: fetch it, and which files changed since the round began."""
+
+    type: Literal[PushKind.DIFF] = PushKind.DIFF
+    changes: ChangesSince | None
+
+
+# What the server pushes down the session socket, told apart by `type`
+type ServerPush = Annotated[
+    ReplyPush
+    | AnswererPush
+    | ChatPush
+    | ProgressPush
+    | ShowPush
+    | StatusPush
+    | PointPush
+    | ChangedPush
+    | RoundPush
+    | DiffPush,
+    Field(discriminator="type"),
+]

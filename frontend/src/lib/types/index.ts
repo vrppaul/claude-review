@@ -1,97 +1,44 @@
-export type LineType = "context" | "add" | "delete";
-/** Which version of the file a line belongs to. Removed lines are "old". */
-export type LineSide = "old" | "new";
-/** How the reader means a comment to be taken. */
-export type CommentSeverity = "note" | "question" | "blocker";
-export type FileStatus = "modified" | "added" | "deleted" | "renamed";
-export type ReviewMode = "diff" | "files" | "transcript";
-export type ContentViewMode = "raw" | "preview" | "side-by-side";
-/** Whether a diff reads down one column or across two. */
-export type DiffLayout = "unified" | "split";
-/** How the review is coloured: as the system says, or always light or dark. */
-export type Theme = "system" | "light" | "dark";
-
-/** How this reader reads a review, kept by the server for every review. */
-export interface ReaderSettings {
-  theme: Theme;
-  diff_layout: DiffLayout;
-  /** Leave out changes that only alter whitespace. */
-  ignore_whitespace: boolean;
-  /** A tick when an answer arrives while the review is in a background tab. */
-  sound_on_replies: boolean;
-}
-
-/** What the review remembers of having shown this reader around. */
-export interface GuideState {
-  /** The release whose news the reader was last shown. */
-  seen_release: string | null;
-}
-
-export interface DiffLine {
-  type: LineType;
-  old_no: number | null;
-  new_no: number | null;
-  content: string;
-}
-
-export interface DiffHunk {
-  header: string;
-  old_start: number;
-  new_start: number;
-  lines: DiffLine[];
-}
-
-export interface DiffFile {
-  path: string;
-  status: FileStatus;
-  hunks: DiffHunk[];
-  is_binary: boolean;
-  old_mode: string | null;
-  new_mode: string | null;
-}
-
-export interface DiffResponse {
-  files: DiffFile[];
-  mode: ReviewMode;
-  title: string;
-  /** What the diff is compared against; null when it is not compared against anything. */
-  phrase: string | null;
-  round: number;
-  answerer_attached: boolean;
-  agent: AgentStatus;
-  /** How many files have moved on since this diff was taken. */
-  moved: number;
-  /** What the server takes in images, so the browser checks before uploading. */
-  image_limits: ImageLimits;
-  /** Which release serves the review, so a reader can be told what is new. */
-  release: string;
-}
-
-export interface ImageLimits {
-  max_image_bytes: number;
-  max_images_per_message: number;
-}
-
-/** Where a base came from, so a menu can group them. */
-export type VersionKind = "review" | "round" | "ref";
+import type { components } from "./api";
 
 /**
- * One base the working tree can be compared against.
- *
- * Two names for it, both written by the server: `label` is what a menu row
- * calls it, `phrase` what the header says while it is the one in force —
- * because "uncommitted changes" is not "changes since" anything.
+ * What the server says it sends and takes, generated from its own schemas
+ * by `pnpm api:types`. Named here once, so the rest of the browser imports
+ * a word rather than a path into the generated file.
  */
-export interface ReviewVersion {
-  key: string;
-  kind: VersionKind;
-  label: string;
-  phrase: string;
-  /** When the round was read, or the ref last moved, in epoch milliseconds. */
-  at: number | null;
-  /** How many files it would show, when git was cheap enough to ask. */
-  changed: number | null;
-}
+type Schemas = components["schemas"];
+
+export type LineType = Schemas["LineType"];
+/** Which version of the file a line belongs to. Removed lines are "old". */
+export type LineSide = Schemas["LineSide"];
+/** How the reader means a comment to be taken. */
+export type CommentSeverity = Schemas["CommentSeverity"];
+export type FileStatus = Schemas["FileStatus"];
+export type ReviewMode = Schemas["ReviewMode"];
+export type ContentViewMode = "raw" | "preview" | "side-by-side";
+/** Whether a diff reads down one column or across two. */
+export type DiffLayout = Schemas["DiffLayout"];
+/** How the review is coloured: as the system says, or always light or dark. */
+export type Theme = Schemas["Theme"];
+
+/** How this reader reads a review, kept by the server for every review. */
+export type ReaderSettings = Schemas["ReaderSettings"];
+/** What the review remembers of having shown this reader around. */
+export type GuideState = Schemas["GuideState"];
+
+export type DiffLine = Schemas["DiffLine"];
+export type DiffHunk = Schemas["DiffHunk"];
+export type DiffFile = Schemas["DiffFile"];
+export type DiffResponse = Schemas["DiffResponse"];
+/** What the server takes in images, so the browser checks before uploading. */
+export type ImageLimits = Schemas["ImageLimits"];
+
+/** Where a base came from, so a menu can group them. */
+export type VersionKind = Schemas["VersionKind"];
+/**
+ * One base the working tree can be compared against: `label` is what a menu
+ * row calls it, `phrase` what the header says while it is the one in force.
+ */
+export type ReviewVersion = Schemas["ReviewVersion"];
 
 /**
  * What the agent has said about itself.
@@ -99,15 +46,10 @@ export interface ReviewVersion {
  * None of it can be measured from this side, so every field is empty until
  * the agent reports, and the panel says when it last did.
  */
-export interface AgentStatus {
-  model: string | null;
-  context: string | null;
-  /** When it was reported, in epoch milliseconds. */
-  at: number | null;
-}
+export type AgentStatus = Schemas["AgentStatus"];
 
 /** Who wrote a turn: the reader, or whoever answers for the change. */
-export type TurnAuthor = "reader" | "author";
+export type TurnAuthor = Schemas["TurnAuthor"];
 
 export interface Turn {
   author: TurnAuthor;
@@ -126,28 +68,16 @@ export interface Turn {
 /** What is said in a thread after the comment that opened it, as it is written. */
 export type NewTurn = Pick<Turn, "author" | "body" | "images">;
 
+/**
+ * Everything a thread can hang on; `$lib/anchors` names and finds each kind.
+ * Held as the server writes it, quote and all; one sent back may leave the
+ * quote out, and the server fills it in.
+ */
+export type Anchor = Schemas["Anchor-Output"];
 /** What a thread can hang on. */
-export type AnchorKind = "line";
-
-/** What every kind of anchor has, whatever it hangs on. */
-export interface AnchorBase {
-  /** What it said when the anchor was made, kept for when it is gone. */
-  quote: string[];
-  /** What it was made on is gone from what the review now holds. */
-  outdated: boolean;
-}
-
+export type AnchorKind = Anchor["kind"];
 /** Lines of one side of a file in the review's own diff. */
-export interface LineAnchor extends AnchorBase {
-  kind: "line";
-  file: string;
-  side: LineSide;
-  start_line: number;
-  end_line: number;
-}
-
-/** Everything a thread can hang on; `$lib/anchors` names and finds each kind. */
-export type Anchor = LineAnchor;
+export type LineAnchor = Extract<Anchor, { kind: "line" }>;
 
 /** A comment as the reader writes it, before it has an id and a place in time. */
 export interface NewComment {
@@ -193,27 +123,45 @@ export interface Comment {
   at: number;
 }
 
-/** A thread as it goes back: what was said, not how it was read. */
-export type CommentPayload = Omit<
-  Comment,
-  "id" | "awaiting" | "unread" | "collapsed" | "round" | "at" | "turns"
-> & { turns: TurnPayload[] };
-
+/**
+ * A thread as the other side is told about it: what was said, not how it
+ * was read. One shape wherever a thread travels — a round, a question, a
+ * panel message, the review saying what it holds.
+ */
+export type ThreadPayload = Schemas["ThreadInput"];
 /** A turn as it goes back: what was said, with the images as ids. */
-export type TurnPayload = Omit<Turn, "at" | "id" | "answers">;
-
-export interface SubmitRequest {
-  comments: CommentPayload[];
-  body?: string;
-  end?: boolean;
-}
-
-export interface SubmitResponse {
-  markdown: string;
-  comment_count: number;
-  round: number;
-  ended: boolean;
-}
+export type TurnPayload = Schemas["TurnInput"];
+export type SubmitRequest = Schemas["SubmitRequest"];
+/**
+ * A question asked in a thread. The whole thread goes, and the server
+ * works out what is asked: the reader's last word, or the opening comment.
+ */
+export type AskRequest = Schemas["AskRequest"];
+export type SubmitResponse = Schemas["SubmitResponse"];
+export type MessageRequest = Schemas["MessageRequest"];
+export type CancelRequest = Schemas["CancelRequest"];
+/** Where each anchor asked about now hangs on the diff, in the order asked. */
+export type FollowRequest = Schemas["FollowRequest"];
+export type FollowResponse = Schemas["FollowResponse"];
+export type FileWindowResponse = Schemas["FileWindowResponse"];
+export type VersionsResponse = Schemas["VersionsResponse"];
+/** The diff taken again: how many files, which round, and what changed since it began. */
+export type RoundResponse = Schemas["RoundResponse"];
+export type ImageResponse = Schemas["ImageResponse"];
+/** The reader's choices, and whether any were kept yet. */
+export type SettingsResponse = Schemas["SettingsResponse"];
+/** The choices being changed, and only those. */
+export type SettingsChange = Schemas["SettingsChange"];
+/** How far the reader has been shown around, and whether that was kept yet. */
+export type GuideResponse = Schemas["GuideResponse"];
+export type GuideChange = Schemas["GuideChange"];
+/** What the review says over its socket, on connecting and whenever its threads change. */
+export type SessionHello = Schemas["SessionHello"];
+/** What the server pushes down the socket, told apart by `type`. */
+export type ServerPush = Schemas["ServerPush"];
+export type PointPush = Schemas["PointPush"];
+/** Which files changed since a round began, and which round that was. */
+export type ChangesSince = Schemas["ChangesSince"];
 
 /**
  * What the agent is doing right now.
@@ -238,10 +186,7 @@ export interface Progress {
 }
 
 /** One branch of the work: under way, or finished. */
-export interface ProgressStep {
-  text: string;
-  done: boolean;
-}
+export type ProgressStep = Schemas["ProgressStep-Output"];
 
 /** Who speaks in the panel. An event is the review itself saying so. */
 export type PanelSpeaker = TurnAuthor | "event";

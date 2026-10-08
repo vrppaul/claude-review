@@ -59,7 +59,7 @@ describe('when the tree moves under the review', () => {
 	it('takes the diff again when the reader asks for it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
-		server.answer('POST /api/round', { file_count: 1, round: 2, changed: [], since: 1 });
+		server.answer('POST /api/round', { file_count: 1, round: 2, changes: { since_round: 1, paths: [] } });
 		diffStore.noteTreeMoved(1);
 
 		const { getByTestId } = render(DiffNotice);
@@ -79,7 +79,7 @@ describe('when the tree moves under the review', () => {
 	});
 
 	it('says what a retake did to the threads', () => {
-		diffStore.noteRetaken({ followed: 2, outdated: 1 });
+		diffStore.noteRetaken({ followed: 2, outdated: 1 }, null);
 
 		const { getByTestId } = render(DiffNotice);
 
@@ -90,7 +90,7 @@ describe('when the tree moves under the review', () => {
 	it('takes the retaken bar away on its own', async () => {
 		vi.useFakeTimers();
 		try {
-			diffStore.noteRetaken({ followed: 1, outdated: 0 });
+			diffStore.noteRetaken({ followed: 1, outdated: 0 }, null);
 			const { queryByTestId } = render(DiffNotice);
 			expect(queryByTestId('diff-retaken')).toBeTruthy();
 
@@ -105,7 +105,7 @@ describe('when the tree moves under the review', () => {
 	it('offers a way to the thread that lost its lines', () => {
 		commentStore.add(newComment({ file: 'a.py', body: 'this one' }));
 		commentStore.comments[0].anchor.outdated = true;
-		diffStore.noteRetaken({ followed: 0, outdated: 1 });
+		diffStore.noteRetaken({ followed: 0, outdated: 1 }, null);
 
 		const { getByTestId } = render(DiffNotice);
 
@@ -137,7 +137,7 @@ describe('threads the base on screen cannot draw', () => {
 		serveNarrowed();
 		await diffStore.setBase('round:1');
 		commentStore.add(newComment({ file: 'elsewhere.py', body: 'not on this screen' }));
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, [], 1);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 1, paths: [] });
 
 		const { getByTestId, getAllByTestId } = render(DiffNotice);
 		await user.click(getByTestId('list-off-screen'));

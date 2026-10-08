@@ -13,26 +13,26 @@
  * the only side that still knows better.
  */
 
-export type ServerMessage = { type: string; [key: string]: unknown };
+import type { ServerPush, SessionHello } from "$lib/types";
 
 let socket: WebSocket | null = null;
 let retryDelay = 500;
 // Said again on every reconnection, because a reconnection may be to a
 // server that has just come up knowing nothing
-let greeting: (() => unknown) | null = null;
+let greeting: (() => SessionHello) | null = null;
 // What arrives before the review has restored its draft. Handed over once it
 // has: a reply or a raised thread taken in first would be overwritten by the
 // draft, or find no thread to land in.
-let held: ServerMessage[] | null = [];
-let deliver: ((message: ServerMessage) => void) | null = null;
+let held: ServerPush[] | null = [];
+let deliver: ((push: ServerPush) => void) | null = null;
 
 /** Connect, and keep reconnecting if the socket drops while the page lives. */
 export function openSession(
-  onMessage: (message: ServerMessage) => void,
-  hello?: () => unknown,
+  onPush: (push: ServerPush) => void,
+  hello?: () => SessionHello,
 ): () => void {
   greeting = hello ?? null;
-  deliver = onMessage;
+  deliver = onPush;
   held = [];
   let closedByUs = false;
 
@@ -46,10 +46,10 @@ export function openSession(
       tellServer();
     });
     socket.addEventListener("message", (event) => {
-      const message = decode(event.data);
-      if (message === null) return;
-      if (held !== null) held.push(message);
-      else onMessage(message);
+      const push = decode(event.data);
+      if (push === null) return;
+      if (held !== null) held.push(push);
+      else onPush(push);
     });
     socket.addEventListener("close", () => {
       if (closedByUs) return;
@@ -77,30 +77,29 @@ export function openSession(
 export function dispatchHeld(): void {
   const waiting = held ?? [];
   held = null;
-  for (const message of waiting) deliver?.(message);
+  for (const push of waiting) deliver?.(push);
 }
 
 /**
- * A message from the server, or null when it is not one this page can read.
+ * A push from the server, or null when it is not one this page can read.
  *
- * Only the reading is forgiven: a fault in whatever handles a message is a
- * fault, and is left to surface.
+ * The shape is the server's own, generated from its schemas, so only the
+ * envelope is checked here; a kind this page does not know is reported by
+ * whatever dispatches it. Only the reading is forgiven: a fault in whatever
+ * handles a push is a fault, and is left to surface.
  */
-function decode(data: unknown): ServerMessage | null {
+function decode(data: unknown): ServerPush | null {
   try {
     const parsed: unknown = JSON.parse(String(data));
-    if (isServerMessage(parsed)) return parsed;
+    if (isServerPush(parsed)) return parsed;
   } catch {
     // Reported below with everything else that cannot be read
   }
-  console.warn(
-    "claude-review: a message from the server could not be read",
-    data,
-  );
+  console.warn("claude-review: a push from the server could not be read", data);
   return null;
 }
 
-function isServerMessage(value: unknown): value is ServerMessage {
+function isServerPush(value: unknown): value is ServerPush {
   return (
     typeof value === "object" &&
     value !== null &&

@@ -1,13 +1,7 @@
 import { SvelteMap } from "svelte/reactivity";
 
-import type { DiffLine } from "$lib/types";
+import type { DiffLine, FileWindowResponse } from "$lib/types";
 import { toContextLines } from "$lib/utils/expansions";
-
-interface FileWindow {
-  start: number;
-  lines: string[];
-  total: number;
-}
 
 /** Revealed lines, keyed by file path and then by the gap above a hunk. */
 const revealed = new SvelteMap<string, SvelteMap<number, DiffLine[]>>();
@@ -47,7 +41,7 @@ export const expansionStore = {
       throw new Error(`Could not read ${path}: ${response.status}`);
     }
 
-    const window: FileWindow = await response.json();
+    const window: FileWindowResponse = await response.json();
     const forPath = revealed.get(path) ?? new SvelteMap<number, DiffLine[]>();
     const existing = forPath.get(hunkIndex) ?? [];
     forPath.set(hunkIndex, [

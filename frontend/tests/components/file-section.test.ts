@@ -89,7 +89,7 @@ describe('a file in the review', () => {
 describe('a file the last round rewrote', () => {
 	beforeEach(() => {
 		diffStore.setFiles([file], 'diff');
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, ['src/core/session.py'], 2);
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, paths: ['src/core/session.py'] });
 	});
 
 	it('shows only what changed since that round when asked', async () => {

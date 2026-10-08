@@ -17,7 +17,7 @@ const file = diffFile({
 /** A server taking every question about a thread. */
 function answering(): FakeServer {
 	const server = fakeServer();
-	server.answer('POST /api/ask', { status: 'asked' });
+	server.answer('POST /api/ask', null);
 	return server;
 }
 
@@ -44,8 +44,10 @@ describe('a thread is a conversation', () => {
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
 			{
-				body: 'Where did 2 go?',
-				anchor: { quote: ['const y = 3;'], side: 'new', start_line: 2 }
+				thread: {
+					body: 'Where did 2 go?',
+					anchor: { quote: ['const y = 3;'], side: 'new', start_line: 2 }
+				}
 			}
 		]);
 	});
@@ -155,8 +157,31 @@ describe('a thread is a conversation', () => {
 		await commentStore.ask(id);
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
-			{ body: 'And where did 2 go?', history: [{ body: 'Why 3?' }] }
+			{ thread: { body: 'Why 3?', turns: [{ body: 'And where did 2 go?' }] } }
 		]);
+	});
+
+	it('names the reply it asks when the reader said the last word', async () => {
+		const server = answering();
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
+		commentStore.receiveReply(id, 'Because of the retry path');
+		commentStore.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
+		const reply = commentStore.comments[0].turns[1].id;
+
+		await commentStore.ask(id);
+
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([{ question_id: reply }]);
+		expect(commentStore.comments[0].awaiting.map((waiting) => waiting.id)).toEqual([reply]);
+	});
+
+	it('names the thread itself when the agent said the last word', async () => {
+		const server = answering();
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
+		commentStore.receiveReply(id, 'Because of the retry path');
+
+		await commentStore.ask(id);
+
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([{ question_id: id }]);
 	});
 
 	it('renders what an answer wrote as markdown', async () => {
@@ -209,7 +234,7 @@ describe('images in a thread', () => {
 		await commentStore.ask(id);
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
-			{ images: ['reply.png'], history: [{ images: ['opening.png'] }] }
+			{ thread: { images: ['opening.png'], turns: [{ images: ['reply.png'] }] } }
 		]);
 	});
 

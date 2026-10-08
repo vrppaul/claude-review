@@ -24,18 +24,16 @@ from tests.helpers import (
     diff_file,
     git,
     http_client,
+    line_on_the_wire,
     removed_line,
     review_has_ended,
+    thread_on_the_wire,
     until_an_agent_waits,
 )
 
 REVIEW_TITLE = "test-repo: uncommitted changes"
 
-A_NOTE = {
-    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-    "severity": "note",
-    "body": "fix this",
-}
+A_NOTE = thread_on_the_wire(line_on_the_wire("x.py", 1), "fix this")
 
 
 def _handler_change(path: str = "src/handler.ts") -> list[DiffFile]:
@@ -98,18 +96,11 @@ async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: As
     response = await client.post(
         "/api/submit",
         json={
-            "comments": [
-                {
-                    "anchor": {"file": "src/handler.ts", "side": "new", "start_line": 42, "end_line": 42},
-                    "severity": "note",
-                    "body": "Wrong null check",
-                },
-                {
-                    "anchor": {"file": "src/handler.ts", "side": "new", "start_line": 67, "end_line": 70},
-                    "severity": "note",
-                    "body": "Add max retry",
-                },
-            ]
+            "threads": [
+                thread_on_the_wire(line_on_the_wire("src/handler.ts", 42), "Wrong null check", thread_id="comment-1"),
+                thread_on_the_wire(line_on_the_wire("src/handler.ts", 67, 70), "Add max retry", thread_id="comment-2"),
+            ],
+            "end": True,
         },
     )
 
@@ -123,21 +114,21 @@ async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: As
 
 
 async def test_a_review_sent_with_nothing_in_it_says_nothing(client: AsyncClient) -> None:
-    response = await client.post("/api/submit", json={"comments": []})
+    response = await client.post("/api/submit", json={"threads": [], "end": True})
 
     assert response.status_code == 200
     assert (response.json()["comment_count"], response.json()["markdown"]) == (0, "")
 
 
 async def test_sending_the_review_ends_it(client: AsyncClient) -> None:
-    await client.post("/api/submit", json={"comments": [A_NOTE]})
+    await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
 
     assert await review_has_ended(client)
 
 
 async def test_a_review_can_be_sent_only_once(client: AsyncClient) -> None:
-    first = await client.post("/api/submit", json={"comments": [A_NOTE]})
-    second = await client.post("/api/submit", json={"comments": [A_NOTE]})
+    first = await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
+    second = await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
 
     assert first.status_code == 200
     assert second.status_code == 409
@@ -148,7 +139,7 @@ async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_
     waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT))
     await until_an_agent_waits(client)
 
-    await client.post("/api/submit", json={"comments": [A_NOTE]})
+    await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
     handed_over = (await waiting).json()
 
     assert handed_over["type"] == "round"
@@ -159,26 +150,28 @@ async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_
 @pytest.mark.parametrize(
     "anchor",
     [
-        {"file": "x.py", "side": "new", "start_line": 10, "end_line": 5},
-        {"file": "x.py", "side": "new", "start_line": 0, "end_line": 1},
+        line_on_the_wire("x.py", 10, 5),
+        line_on_the_wire("x.py", 0, 1),
     ],
     ids=["ends-before-it-starts", "line-zero"],
 )
 async def test_a_comment_on_no_line_is_refused(client: AsyncClient, anchor: dict[str, object]) -> None:
-    response = await client.post("/api/submit", json={"comments": [{**A_NOTE, "anchor": anchor}]})
+    response = await client.post("/api/submit", json={"threads": [{**A_NOTE, "anchor": anchor}], "end": True})
 
     assert response.status_code == 422
 
 
 async def test_a_comment_that_says_nothing_is_refused(client: AsyncClient) -> None:
-    response = await client.post("/api/submit", json={"comments": [{**A_NOTE, "body": ""}]})
+    response = await client.post("/api/submit", json={"threads": [{**A_NOTE, "body": ""}], "end": True})
 
     assert response.status_code == 422
 
 
 async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
     """Wrong direction altogether is said in one paragraph, not on a line."""
-    response = await client.post("/api/submit", json={"comments": [], "body": "Wrong approach, reconsider the design."})
+    response = await client.post(
+        "/api/submit", json={"threads": [], "body": "Wrong approach, reconsider the design.", "end": True}
+    )
 
     assert response.status_code == 200
     assert response.json()["comment_count"] == 1
@@ -189,7 +182,7 @@ async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
 async def test_the_summary_comes_before_the_comments(client: AsyncClient) -> None:
     response = await client.post(
         "/api/submit",
-        json={"comments": [{**A_NOTE, "body": "Fix this"}], "body": "Generally good, one issue."},
+        json={"threads": [{**A_NOTE, "body": "Fix this"}], "body": "Generally good, one issue.", "end": True},
     )
 
     markdown = response.json()["markdown"]
@@ -230,15 +223,7 @@ async def test_a_comment_on_a_line_of_a_file_reaches_the_agent_under_that_line(
     # Line 3 is "Step one"
     response = await files_mode_client.post(
         "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": file_path, "side": "new", "start_line": 3, "end_line": 3},
-                    "severity": "note",
-                    "body": "Needs more detail",
-                },
-            ]
-        },
+        json={"threads": [thread_on_the_wire(line_on_the_wire(file_path, 3), "Needs more detail")], "end": True},
     )
 
     assert response.status_code == 200
@@ -298,13 +283,8 @@ async def test_a_comment_on_a_message_reaches_the_agent_with_the_message_quoted(
     response = await transcript_mode_client.post(
         "/api/submit",
         json={
-            "comments": [
-                {
-                    "anchor": {"file": user_message["path"], "side": "new", "start_line": 1, "end_line": 1},
-                    "severity": "note",
-                    "body": "Wrong approach",
-                },
-            ]
+            "threads": [thread_on_the_wire(line_on_the_wire(user_message["path"], 1), "Wrong approach")],
+            "end": True,
         },
     )
 
@@ -439,4 +419,4 @@ async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_h
         untracked = await client.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
 
     assert tracked.json()["lines"] == ["initial content"]
-    assert untracked.status_code == 400
+    assert untracked.status_code == 404

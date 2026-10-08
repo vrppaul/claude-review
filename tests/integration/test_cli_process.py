@@ -26,7 +26,8 @@ from websockets.sync.client import ClientConnection, connect
 from websockets.typing import Origin
 
 from claude_review.cli import DISCONNECT_GRACE
-from tests.helpers import ANY_PORT, LOOPBACK, git
+from claude_review.domain.models import CommentSeverity
+from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
 
 # The command line, as the user runs it, from the interpreter running the tests
 COMMAND_LINE = [sys.executable, "-m", "claude_review"]
@@ -334,13 +335,12 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
             port,
             "/api/ask",
             {
-                "anchor": {"file": "initial.txt", "side": "new", "start_line": 1, "end_line": 1, "quote": ["changed"]},
-                "thread_id": "comment-1",
-                "question_id": "comment-1",
-                "body": "Why this rather than the constant?",
-                "severity": "question",
-                "resolved": False,
-                "raised_by": "reader",
+                "question_id": FIRST_THREAD_ID,
+                "thread": thread_on_the_wire(
+                    {**line_on_the_wire("initial.txt", 1), "quote": ["changed"]},
+                    "Why this rather than the constant?",
+                    severity=CommentSeverity.QUESTION,
+                ),
             },
         )
 
@@ -353,17 +353,17 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
             "--port",
             str(port),
             "--thread",
-            "comment-1",
+            FIRST_THREAD_ID,
             "--question",
-            "comment-1",
+            FIRST_THREAD_ID,
             "Because the constant moved to config",
         )
         assert answer.returncode == 0
 
         assert _next_push(review_socket, "reply") == {
             "type": "reply",
-            "thread_id": "comment-1",
-            "question_id": "comment-1",
+            "thread_id": FIRST_THREAD_ID,
+            "question_id": FIRST_THREAD_ID,
             "text": "Because the constant moved to config",
         }
 
@@ -404,7 +404,22 @@ def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cl
         assert reported.returncode == 0
 
         pushed = _next_push(review_socket, "status")
-        assert (pushed["model"], pushed["context"]) == ("opus-5", "53% of 1M")
+        assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
+
+
+def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """What belongs on the code goes on the code, from the command the agent runs."""
+    cli.review(changed_repo, port)
+
+    with _session(port) as review_socket:
+        raised = cli.run("point", "--port", str(port), "--file", "initial.txt", "--lines", "1", "Kept it on purpose")
+        assert raised.returncode == 0
+
+        pushed = _next_push(review_socket, "point")
+        assert (pushed["anchor"]["file"], pushed["anchor"]["start_line"]) == ("initial.txt", 1)
+        assert pushed["body"] == "Kept it on purpose"
 
 
 def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
@@ -416,7 +431,7 @@ def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     with _session(port) as review_socket:
         (changed_repo / "initial.txt").write_text("changed again, by somebody else\n")
 
-        assert _next_push(review_socket, "changed") == {"type": "changed", "files": 1}
+        assert _next_push(review_socket, "changed") == {"type": "changed", "moved_count": 1}
 
 
 def test_reporting_nothing_is_refused_rather_than_sent(cli: CliProcesses) -> None:
@@ -497,7 +512,7 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
     )
     review.wait_for_address()
 
-    _post(port, "/api/submit", {"comments": [], "body": "Rename the helper.", "end": False})
+    _post(port, "/api/submit", {"threads": [], "body": "Rename the helper.", "end": False})
     review.terminate()
 
     assert "Rename the helper." in review.printed()

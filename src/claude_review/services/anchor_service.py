@@ -1,8 +1,10 @@
 """What a thread hangs on, and finding it again after the code has moved.
 
-Every kind of anchor answers three questions: what does it say, where is it
-now, and how is its place named. A handler per kind answers them, and the
-rest of the review asks this service instead of looking inside an anchor.
+Every kind of anchor answers two questions that need what the review holds:
+what does it say, and where is it now. A handler per kind answers them, and
+the rest of the review asks this service instead of looking inside an
+anchor. How a place is named needs nothing but the anchor, which says it
+itself.
 """
 
 from typing import assert_never
@@ -84,15 +86,6 @@ class LineAnchorHandler:
             }
         )
 
-    def where(self, anchor: LineAnchor) -> str:
-        """The place as the review writes it: "`a.py`:42-47", or "… (removed)".
-
-        A removed line exists only in the file as it was, so its number is
-        said to belong there, or it would be read against the current file.
-        """
-        removed = " (removed)" if anchor.side == LineSide.OLD else ""
-        return f"`{anchor.file}`:{_span(anchor.start_line, anchor.end_line)}{removed}"
-
     def _lines_of(self, file: DiffFile, side: LineSide) -> list[SideLine]:
         known = self._side_lines[side]
         if file.path not in known:
@@ -110,7 +103,8 @@ class AnchorService:
         """The anchor with what it is about read off what the review holds.
 
         Raises:
-            AnchorRefusedError: if nothing the review holds is where it points.
+            UnknownAnchorFileError: if the review holds no such file.
+            AnchorLinesNotShownError: if the diff does not show those lines.
         """
         match anchor:
             case LineAnchor():
@@ -123,14 +117,6 @@ class AnchorService:
         match anchor:
             case LineAnchor():
                 return self._lines.follow(anchor)
-            case _:
-                assert_never(anchor)
-
-    def where(self, anchor: Anchor) -> str:
-        """The anchor's place, named the same way wherever it is told."""
-        match anchor:
-            case LineAnchor():
-                return self._lines.where(anchor)
             case _:
                 assert_never(anchor)
 

@@ -1,13 +1,12 @@
 """Service for what a review's diff can be compared against."""
 
-import time
 from pathlib import Path
 
 import structlog
 
 from claude_review.domain.exceptions import GitError, UnknownVersionError
-from claude_review.domain.models import ReviewVersion, TreeSnapshot, VersionKind
-from claude_review.domain.protocols import GitRepositoryProtocol
+from claude_review.domain.models import ChangesSince, ReviewVersion, TreeSnapshot, VersionKind
+from claude_review.domain.protocols import Clock, GitRepositoryProtocol
 
 log = structlog.get_logger()
 
@@ -30,8 +29,9 @@ class VersionService:
     the review its versions, never the review itself.
     """
 
-    def __init__(self, git_repository: GitRepositoryProtocol) -> None:
+    def __init__(self, git_repository: GitRepositoryProtocol, clock: Clock) -> None:
         self._git = git_repository
+        self._clock = clock
 
     async def take(self, path: Path, *, round_number: int) -> TreeSnapshot | None:
         """Write down the tree the diff has just been taken from."""
@@ -40,9 +40,9 @@ class VersionService:
         except GitError as e:
             log.warning("snapshot_refused", round=round_number, reason=str(e))
             return None
-        return TreeSnapshot(round=round_number, tree=tree, at=int(time.time() * 1000))
+        return TreeSnapshot(round=round_number, tree=tree, at=self._clock.now())
 
-    async def changed_since(self, path: Path, snapshot: TreeSnapshot | None) -> list[str] | None:
+    async def changed_since(self, path: Path, snapshot: TreeSnapshot | None) -> ChangesSince | None:
         """Which files have moved since a mark was left, if it can be said.
 
         None is not an empty list: one says nothing has changed, the other
@@ -52,10 +52,11 @@ class VersionService:
         if snapshot is None:
             return None
         try:
-            return (await self._git.changed_since(path, [snapshot.tree])).get(snapshot.tree)
+            paths = (await self._git.changed_since(path, [snapshot.tree])).get(snapshot.tree)
         except GitError as e:
             log.warning("changed_since_refused", tree=snapshot.tree, reason=str(e))
             return None
+        return ChangesSince(since_round=snapshot.round, paths=paths) if paths is not None else None
 
     def began(self, snapshots: list[TreeSnapshot], round_number: int) -> TreeSnapshot | None:
         """The mark a round is measured from, and offered as a base.
@@ -122,7 +123,7 @@ class VersionService:
                 kind=VersionKind.REF,
                 label=ref.name,
                 phrase=self.phrase_of(f"{REF_PREFIX}{ref.name}", review_base=None),
-                at=ref.at * 1000,
+                at=ref.at,
             )
             for ref in await self._git.list_refs(path)
         ]

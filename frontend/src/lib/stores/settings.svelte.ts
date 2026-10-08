@@ -9,7 +9,13 @@
  * before its first paint, long before the server could answer.
  */
 
-import type { DiffLayout, ReaderSettings, Theme } from "$lib/types";
+import type {
+  DiffLayout,
+  ReaderSettings,
+  SettingsChange,
+  SettingsResponse,
+  Theme,
+} from "$lib/types";
 import {
   forget,
   readChoice,
@@ -59,7 +65,7 @@ function sameSettings(one: ReaderSettings, other: ReaderSettings): boolean {
   );
 }
 
-async function keep(changes: Partial<ReaderSettings>): Promise<ReaderSettings> {
+async function keep(changes: SettingsChange): Promise<ReaderSettings> {
   const response = await fetch("/api/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -87,8 +93,7 @@ export const settingsStore = {
     try {
       const response = await fetch("/api/settings");
       if (!response.ok) return;
-      const kept: { settings: ReaderSettings; stored: boolean } =
-        await response.json();
+      const kept: SettingsResponse = await response.json();
       const local = keptInThisBrowser();
       settings =
         kept.stored || sameSettings(local, NEW_READER)

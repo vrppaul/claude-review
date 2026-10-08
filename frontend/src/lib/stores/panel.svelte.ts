@@ -12,8 +12,10 @@
 
 import type {
   AgentStatus,
+  CancelRequest,
   Comment,
   Composer,
+  MessageRequest,
   PanelTurn,
   Progress,
   ProgressStep,
@@ -22,6 +24,7 @@ import type {
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
 import { emptyComposer, loadDraft, saveDraft } from "$lib/utils/drafts";
+import { IdSequence } from "$lib/utils/ids";
 import { ImageAttachments } from "$lib/utils/image-attachments.svelte";
 import { readChoice, readNumber, writeChoice } from "$lib/utils/preferences";
 import { refusalOf } from "$lib/utils/refusal";
@@ -67,8 +70,9 @@ let chosen = stored !== "unset";
 // server with nothing on screen pointing at it.
 let composerText = $state("");
 const attachments = new ImageAttachments([], rememberComposer);
-let nextMessage = 0;
-let nextEvent = 0;
+const messageIds = new IdSequence("panel-");
+const answerIds = new IdSequence("answer-");
+const eventIds = new IdSequence("event-");
 
 /**
  * The message the agent is still working on.
@@ -81,20 +85,6 @@ const working = $derived.by(() => {
   if (!last || last.cancelled) return undefined;
   return turns.some((turn) => turn.answers === last.id) ? undefined : last;
 });
-
-/** The largest number already handed out under a prefix. */
-function highest(saved: PanelTurn[], prefix: string): number {
-  return saved.reduce(
-    (largest, turn) =>
-      turn.id.startsWith(prefix)
-        ? Math.max(
-            largest,
-            Number.parseInt(turn.id.slice(prefix.length), 10) || 0,
-          )
-        : largest,
-    0,
-  );
-}
 
 function remember(): void {
   if (!diffStore.title) return;
@@ -194,8 +184,10 @@ export const panelStore = {
     attachments.reset(composer.images);
     // Past the highest id already handed out, so an answer cannot land under
     // a message that only shares its number
-    nextMessage = highest(saved, "panel-");
-    nextEvent = Math.max(highest(saved, "answer-"), highest(saved, "event-"));
+    const savedIds = saved.map((turn) => turn.id);
+    messageIds.continuePast(savedIds);
+    answerIds.continuePast(savedIds);
+    eventIds.continuePast(savedIds);
   },
 
   setComposerText(text: string) {
@@ -215,7 +207,7 @@ export const panelStore = {
     const written = composerText;
     const text = written.trim();
     const images = $state.snapshot(attachments.images);
-    const id = `panel-${++nextMessage}`;
+    const id = messageIds.next();
     turns = [
       ...turns,
       {
@@ -234,15 +226,16 @@ export const panelStore = {
 
     let response: Response;
     try {
+      const request: MessageRequest = {
+        message_id: id,
+        text,
+        threads: threads.map(threadOnTheWire),
+        images,
+      };
       response = await fetch("/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message_id: id,
-          text,
-          threads: threads.map(threadOnTheWire),
-          images,
-        }),
+        body: JSON.stringify(request),
       });
     } catch (error) {
       takeBack(id, progressBefore);
@@ -297,7 +290,7 @@ export const panelStore = {
     turns = [
       ...turns,
       {
-        id: `answer-${++nextEvent}`,
+        id: answerIds.next(),
         author: "author",
         body: text,
         at: Date.now(),
@@ -320,7 +313,7 @@ export const panelStore = {
     turns = [
       ...turns,
       {
-        id: `event-${++nextEvent}`,
+        id: eventIds.next(),
         author: "event",
         body,
         at: Date.now(),
@@ -342,10 +335,11 @@ export const panelStore = {
 
     let response: Response;
     try {
+      const request: CancelRequest = { message_id: messageId };
       response = await fetch("/api/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message_id: messageId }),
+        body: JSON.stringify(request),
       });
     } catch (error) {
       markCancelled(messageId, false);
@@ -371,7 +365,8 @@ export const panelStore = {
     unread = 0;
     composerText = "";
     attachments.reset([]);
-    nextMessage = 0;
-    nextEvent = 0;
+    messageIds.reset();
+    answerIds.reset();
+    eventIds.reset();
   },
 };

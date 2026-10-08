@@ -17,6 +17,8 @@ log = structlog.get_logger()
 
 GIT_TIMEOUT = 30.0
 REF_LIMIT = 50
+# Git dates a ref in seconds, and the review says every time in milliseconds
+MILLISECONDS_PER_SECOND = 1000
 # Where the path starts in an entry of `git status --porcelain`
 PORCELAIN_PATH_START = 3
 
@@ -172,7 +174,8 @@ class GitRepository:
             # reach `git diff` as an option — `--output=` writes a file — so it
             # is not offered at all.
             if name and not name.startswith("-") and at.isdigit():
-                refs.append(GitRef(name=name, at=int(at)))
+                # Git says seconds; the review says every time in milliseconds
+                refs.append(GitRef(name=name, at=int(at) * MILLISECONDS_PER_SECOND))
         return refs
 
     @contextlib.asynccontextmanager

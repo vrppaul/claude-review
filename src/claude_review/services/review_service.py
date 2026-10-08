@@ -1,24 +1,20 @@
 """Service for formatting review comments into markdown."""
 
-from claude_review.domain.models import Comment, ReviewResult
-from claude_review.services.anchor_service import AnchorService
+from claude_review.domain.models import ReviewResult, Thread
 from claude_review.services.thread_markdown import format_conversation, thread_tags
 
 
 class ReviewService:
     """Formats review threads into markdown for whoever answers the review."""
 
-    def __init__(self, anchors: AnchorService) -> None:
-        self._anchors = anchors
-
-    def format_review(self, comments: list[Comment], body: str | None = None, round_number: int = 1) -> ReviewResult:
-        """Convert comments and optional review body into formatted markdown.
+    def format_review(self, threads: list[Thread], body: str | None, round_number: int) -> ReviewResult:
+        """Convert threads and optional review body into formatted markdown.
 
         The body (review summary) appears as a paragraph before inline comments,
         matching GitHub's PR review style.
         """
         has_body = bool(body and body.strip())
-        count = len(comments) + (1 if has_body else 0)
+        count = len(threads) + (1 if has_body else 0)
 
         if count == 0:
             return ReviewResult(markdown="", comment_count=0)
@@ -28,7 +24,7 @@ class ReviewService:
         if has_body:
             parts.append(f"{body}\n")
 
-        parts.extend(self._format_comment(comment) for comment in comments)
+        parts.extend(self._format_thread(thread) for thread in threads)
 
         return ReviewResult(
             markdown="\n".join(parts),
@@ -45,14 +41,14 @@ class ReviewService:
             return "## Code Review Comments"
         return f"## Code Review Comments — round {round_number}"
 
-    def _format_comment(self, comment: Comment) -> str:
+    def _format_thread(self, thread: Thread) -> str:
         """Render one thread: its anchor, what was said, and by whom."""
-        pieces = [f"### {self._anchors.where(comment.anchor)}{self._format_tags(comment)}"]
+        pieces = [f"### {thread.where}{self._format_tags(thread)}"]
 
-        if comment.anchor.outdated and comment.anchor.quote:
-            pieces.append(self._format_quote(comment.anchor.quote))
+        if thread.anchor.outdated and thread.anchor.quote:
+            pieces.append(self._format_quote(thread.anchor.quote))
 
-        pieces.extend(format_conversation(comment))
+        pieces.extend(format_conversation(thread))
 
         return "\n".join(pieces) + "\n"
 
@@ -65,6 +61,6 @@ class ReviewService:
         lines = "\n".join(quote)
         return f"Written against these lines, which have since changed:\n\n```\n{lines}\n```\n"
 
-    def _format_tags(self, comment: Comment) -> str:
-        tags = thread_tags(comment)
+    def _format_tags(self, thread: Thread) -> str:
+        tags = thread_tags(thread)
         return f" — {', '.join(tags)}" if tags else ""

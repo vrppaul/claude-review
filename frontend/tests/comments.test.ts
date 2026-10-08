@@ -156,14 +156,14 @@ describe('answered threads', () => {
 describe('asking about a thread', () => {
 	it('says how the thread is meant to be taken', async () => {
 		const server = fakeServer();
-		server.answer('POST /api/ask', { status: 'asked' });
+		server.answer('POST /api/ask', null);
 
 		const id = commentStore.add(newComment({ body: 'This must go', severity: 'blocker' }));
 		commentStore.setResolved(id, true);
 		await commentStore.ask(id);
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
-			{ severity: 'blocker', resolved: true, raised_by: 'reader' }
+			{ thread: { severity: 'blocker', resolved: true, raised_by: 'reader' } }
 		]);
 	});
 });
@@ -198,13 +198,13 @@ describe('a thread the author raised', () => {
 		await commentStore.submit(false);
 
 		expect(server.bodiesSentTo('POST /api/submit')).toMatchObject([
-			{ comments: [{ raised_by: 'author', turns: [{ body: 'Fine, but rename it' }] }] }
+			{ threads: [{ raised_by: 'author', turns: [{ body: 'Fine, but rename it' }] }] }
 		]);
 	});
 
 	it('is handed over as the author\'s own words', async () => {
 		const server = fakeServer();
-		server.answer('POST /api/ask', { status: 'asked' });
+		server.answer('POST /api/ask', null);
 		commentStore.raise(
 			'raised-1',
 			lineAnchor('src/routes.py', 'new', 2, 2, []),
@@ -216,7 +216,13 @@ describe('a thread the author raised', () => {
 		await commentStore.ask('raised-1');
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
-			{ body: 'Why?', history: [{ author: 'author', body: 'I kept the old name' }] }
+			{
+				thread: {
+					raised_by: 'author',
+					body: 'I kept the old name',
+					turns: [{ author: 'reader', body: 'Why?' }]
+				}
+			}
 		]);
 	});
 });
@@ -257,8 +263,9 @@ describe('ending the review', () => {
 				path: '/api/submit',
 				query: {},
 				body: {
-					comments: [
+					threads: [
 						{
+							thread_id: 'comment-1',
 							anchor: {
 								kind: 'line',
 								file: 'file.ts',

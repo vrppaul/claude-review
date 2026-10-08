@@ -7,12 +7,13 @@ that would show something.
 
 from claude_review.domain.models import TreeSnapshot, VersionKind
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.version_service import VersionService
 
 
 def _service() -> VersionService:
     """Sorting the marks a review has left asks git nothing."""
-    return VersionService(git_repository=GitRepository())
+    return VersionService(git_repository=GitRepository(), clock=SystemClock())
 
 
 def test_every_round_that_has_a_mark_is_on_offer() -> None:

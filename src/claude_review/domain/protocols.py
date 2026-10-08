@@ -5,7 +5,15 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
-from claude_review.domain.models import GitRef
+from claude_review.domain.models import EpochMillis, GitRef
+
+
+class Clock(Protocol):
+    """Where the review reads the time, so whatever it dates can be dated by a clock a test sets."""
+
+    def now(self) -> EpochMillis:
+        """The moment now, in epoch milliseconds."""
+        ...
 
 
 class GitRepositoryProtocol(Protocol):

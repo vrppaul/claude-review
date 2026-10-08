@@ -46,6 +46,25 @@ jobs:
       - run: pnpm --dir frontend lint
       - run: pnpm --dir frontend test
 
+  # The browser's types are generated from the server's schemas; a schema
+  # changed without regenerating them fails here rather than in a browser
+  api-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 10
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm --dir frontend install --frozen-lockfile
+      - run: uv sync
+      - run: pnpm --dir frontend api:check
+
   test-e2e:
     runs-on: ubuntu-latest
     steps:

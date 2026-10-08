@@ -4,6 +4,8 @@ import svelte from 'eslint-plugin-svelte';
 import svelteConfig from './svelte.config.js';
 
 export default tseslint.config(
+	// Generated from the server by `pnpm api:types`
+	{ ignores: ['src/lib/types/api.ts'] },
 	eslint.configs.recommended,
 	...tseslint.configs.recommended,
 	...svelte.configs.recommended,

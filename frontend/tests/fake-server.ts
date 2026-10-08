@@ -8,40 +8,38 @@
  */
 import { vi } from 'vitest';
 import type {
-	Anchor,
 	DiffResponse,
+	FileWindowResponse,
+	FollowResponse,
+	GuideResponse,
 	GuideState,
+	ImageResponse,
 	ReaderSettings,
-	ReviewVersion,
-	SubmitResponse
+	RoundResponse,
+	SettingsResponse,
+	SubmitResponse,
+	VersionsResponse
 } from '$lib/types';
 
-/** What a route says when it did what it was asked and has nothing to add. */
-interface Done {
-	status: string;
-}
+/** What a route answers when it did what it was asked and has nothing to add: no body at all. */
+type Done = null;
 
 /** What each route answers with when it does what was asked, as the server sends it. */
 export interface Replies {
 	'GET /api/diff': DiffResponse;
-	'GET /api/versions': { versions: ReviewVersion[] };
-	'GET /api/file-window': { start: number; lines: string[]; total: number };
-	'GET /api/settings': { settings: ReaderSettings; stored: boolean };
+	'GET /api/versions': VersionsResponse;
+	'GET /api/file-window': FileWindowResponse;
+	'GET /api/settings': SettingsResponse;
 	'PUT /api/settings': ReaderSettings;
-	'GET /api/guide': { guide: GuideState; stored: boolean };
+	'GET /api/guide': GuideResponse;
 	'PUT /api/guide': GuideState;
-	'POST /api/images': { image_id: string };
+	'POST /api/images': ImageResponse;
 	'POST /api/ask': Done;
 	'POST /api/message': Done;
 	'POST /api/cancel': Done;
-	'POST /api/anchors/follow': { anchors: Anchor[] };
+	'POST /api/anchors/follow': FollowResponse;
 	'POST /api/submit': SubmitResponse;
-	'POST /api/round': {
-		file_count: number;
-		round: number;
-		changed: string[] | null;
-		since: number | null;
-	};
+	'POST /api/round': RoundResponse;
 	'POST /api/end': Done;
 }
 
@@ -57,6 +55,8 @@ export interface ReceivedRequest {
 }
 
 const OK = 200;
+// What a route answers when it did what was asked and has nothing to add
+const NO_CONTENT = 204;
 const NOT_FOUND = 404;
 // What FastAPI says of a route it does not have
 const NOT_FOUND_DETAIL = 'Not Found';
@@ -107,7 +107,7 @@ export class HeldReplies<R extends Route> implements Holder {
 		if (!held) {
 			throw new Error(`Only ${this.waiting.length} requests are waiting, not ${position + 1}`);
 		}
-		held.respond(jsonResponse(OK, reply));
+		held.respond(replyResponse(reply));
 	}
 }
 
@@ -162,7 +162,7 @@ export class FakeServer {
 
 		switch (answer.kind) {
 			case 'reply':
-				return Promise.resolve(jsonResponse(OK, answer.reply(request)));
+				return Promise.resolve(replyResponse(answer.reply(request)));
 			case 'refuse':
 				return Promise.resolve(jsonResponse(answer.status, { detail: answer.detail }));
 			case 'drop':
@@ -200,8 +200,8 @@ export function keepingSettings(server: FakeServer, settings: ReaderSettings = N
 
 /** A server taking every message sent from the agent panel, and every one taken back. */
 export function listeningToThePanel(server: FakeServer = fakeServer()): FakeServer {
-	server.answer('POST /api/message', { status: 'sent' });
-	server.answer('POST /api/cancel', { status: 'cancelled' });
+	server.answer('POST /api/message', null);
+	server.answer('POST /api/cancel', null);
 	return server;
 }
 
@@ -226,6 +226,11 @@ function parsedBody(body: RequestInit['body']): unknown {
 	} catch {
 		return body;
 	}
+}
+
+/** A route doing what it was asked: what it says, or nothing at all when it has nothing to add. */
+function replyResponse(reply: unknown): Response {
+	return reply === null ? new Response(null, { status: NO_CONTENT }) : jsonResponse(OK, reply);
 }
 
 function jsonResponse(status: number, body: unknown): Response {

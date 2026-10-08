@@ -5,15 +5,12 @@ import asyncio
 from claude_review.domain.models import (
     AgentStatus,
     ImageLedger,
-    PanelCancel,
     PanelEntry,
-    PanelMessage,
-    RoundSubmission,
-    ThreadContext,
-    ThreadQuestion,
     TreeSnapshot,
     TreeState,
 )
+from claude_review.presentation.agent_inbox import AgentInbox
+from claude_review.presentation.schemas import AnswererPush, ProgressPush, ServerPush, ThreadInput
 
 # How the threads the author raises are named, apart from the browser's own
 RAISED_PREFIX = "raised-"
@@ -35,14 +32,11 @@ class ServerState:
         self._open_sockets = 0
         self._ever_connected = False
         self._alone_since: float | None = None
-        self._listeners: set[asyncio.Queue[dict]] = set()
+        self._listeners: set[asyncio.Queue[ServerPush]] = set()
         # What the reader has handed over and nobody has taken yet: questions
         # about a thread, rounds of the review itself, and what was typed in
-        # the panel. One queue rather than several, so they are answered in
-        # the order they were sent — an answer written after a round must not
-        # arrive before it. A queue rather than a callback: asking and
-        # answering are separate processes.
-        self.events: asyncio.Queue[ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel] = asyncio.Queue()
+        # the panel. Read out once the review is over, too, until nothing is left.
+        self.inbox = AgentInbox(closed=shutdown_event)
         # Which round is being written. It goes up when one is sent and the
         # review stays open.
         self.round = 1
@@ -52,6 +46,9 @@ class ServerState:
         # What the agent has said about itself. Empty until it says anything;
         # a review reloaded mid-conversation reads it back from here.
         self.agent = AgentStatus()
+        # What the agent is doing right now, if anything. A push is gone once
+        # sent, so a review opened or reloaded mid-work is told it from here.
+        self._progress: ProgressPush | None = None
         # The working tree as it stood when the diff on screen was taken. The
         # watcher compares against this, so retaking the diff is what settles it.
         self.tree: TreeState = frozenset()
@@ -61,7 +58,10 @@ class ServerState:
         # What the review holds, as the browser last described it. The
         # threads are the reader's unsent work and live in their browser; an
         # agent that attaches later has no other way to learn they exist.
-        self.threads: list[ThreadContext] = []
+        # Kept as the browser said them, images by their ids: they are handed
+        # over only to an agent that reads them, so an image in a comment
+        # nobody has read yet can still be taken off.
+        self.threads: list[ThreadInput] = []
         # What has been said in the panel, both halves, in order
         self.panel: list[PanelEntry] = []
         # The tree behind every diff this review has taken, oldest first. The
@@ -79,7 +79,7 @@ class ServerState:
         self._raised += 1
         return f"{RAISED_PREFIX}{self._raised}"
 
-    def hold_threads(self, threads: list[ThreadContext]) -> None:
+    def hold_threads(self, threads: list[ThreadInput]) -> None:
         """Take the threads the browser holds, and never hand out an id one of them has.
 
         A server restarted mid-review starts counting again from nothing, while
@@ -113,21 +113,33 @@ class ServerState:
         if self.answerer_attached:
             return
         self.answerer_attached = True
-        self.push({"type": "answerer", "attached": True})
+        self.push(AnswererPush(attached=True))
 
-    def listen(self) -> asyncio.Queue[dict]:
-        """Register a socket to receive what the server pushes."""
-        queue: asyncio.Queue[dict] = asyncio.Queue()
+    def report_progress(self, progress: ProgressPush) -> None:
+        """Say what the agent is doing, to every review open now and every one opened later."""
+        self._progress = None if progress.says_nothing() else progress
+        self.push(progress)
+
+    def answered(self, message_id: str | None) -> None:
+        """Note an answer: it ends the work done for the message it answers, and nothing else."""
+        if self._progress is not None and message_id is not None and self._progress.message_id == message_id:
+            self._progress = None
+
+    def listen(self) -> asyncio.Queue[ServerPush]:
+        """Register a socket to receive what the server pushes, starting with the work under way."""
+        queue: asyncio.Queue[ServerPush] = asyncio.Queue()
+        if self._progress is not None:
+            queue.put_nowait(self._progress)
         self._listeners.add(queue)
         return queue
 
-    def stop_listening(self, queue: asyncio.Queue[dict]) -> None:
+    def stop_listening(self, queue: asyncio.Queue[ServerPush]) -> None:
         self._listeners.discard(queue)
 
-    def push(self, message: dict) -> None:
-        """Send a message to every open review."""
+    def push(self, push: ServerPush) -> None:
+        """Send a push to every open review."""
         for queue in self._listeners:
-            queue.put_nowait(message)
+            queue.put_nowait(push)
 
 
 def _raised_number(thread_id: str) -> int:

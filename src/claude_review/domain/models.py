@@ -2,9 +2,21 @@
 
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+
+
+class ReviewModel(BaseModel):
+    """What every model of a review has in common: written out, it carries every field.
+
+    A field with a default may be left out by whoever sends one, but the
+    review always writes it, so the schema of what it writes says so — and
+    the browser's types, generated from that schema, do not call such a
+    field maybe missing.
+    """
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
 
 class ReviewMode(StrEnum):
@@ -50,7 +62,7 @@ class FileStatus(StrEnum):
     RENAMED = auto()
 
 
-class DiffLine(BaseModel):
+class DiffLine(ReviewModel):
     """A single line in a diff hunk."""
 
     type: LineType
@@ -59,7 +71,7 @@ class DiffLine(BaseModel):
     content: str
 
 
-class DiffHunk(BaseModel):
+class DiffHunk(ReviewModel):
     """A contiguous block of changes in a file."""
 
     header: str
@@ -68,7 +80,7 @@ class DiffHunk(BaseModel):
     lines: list[DiffLine]
 
 
-class DiffFile(BaseModel):
+class DiffFile(ReviewModel):
     """A file that has been changed.
 
     A file can change without producing hunks: binary content has no lines to
@@ -117,7 +129,27 @@ class AnchorKind(StrEnum):
     LINE = auto()
 
 
-class AnchorBase(BaseModel):
+# What a file path may hold. A newline in one would let a filename write its
+# own heading in the review — a whole fabricated section, blocker and all, in
+# what the agent reads. Git quotes such names, and the parser faithfully
+# decodes them.
+SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
+
+# The longest path a file system here hands out
+MAX_PATH_LENGTH = 4096
+
+# A file as the review names it: one line, never markup
+FilePath = Annotated[str, Field(min_length=1, max_length=MAX_PATH_LENGTH, pattern=SAFE_PATH)]
+
+# A moment, in milliseconds since the epoch: the one unit the review says
+# every time in, so the browser reads them all the same way
+EpochMillis = Annotated[int, Field(ge=0)]
+
+# The most lines an anchor keeps of what it was written against
+MAX_QUOTE_LINES = 200
+
+
+class AnchorBase(ReviewModel):
     """What every kind of anchor has, whatever it hangs on.
 
     Where it hangs goes stale as the work moves things; what it said when it
@@ -125,7 +157,7 @@ class AnchorBase(BaseModel):
     about once that place is gone.
     """
 
-    quote: list[str] = []
+    quote: list[str] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
     # What it was made on is gone from what the review now holds
     outdated: bool = False
 
@@ -138,17 +170,35 @@ class LineAnchor(AnchorBase):
     """
 
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
-    file: str
+    file: FilePath
     side: LineSide
-    start_line: int
-    end_line: int
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> Self:
+        if self.start_line > self.end_line:
+            msg = "start_line must be <= end_line"
+            raise ValueError(msg)
+        return self
+
+    def where(self) -> str:
+        """The place as the review writes it: "`a.py`:42-47", or "… (removed)".
+
+        A removed line exists only in the file as it was, so its number is
+        said to belong there, or it would be read against the current file.
+        """
+        removed = " (removed)" if self.side == LineSide.OLD else ""
+        span = str(self.start_line) if self.start_line == self.end_line else f"{self.start_line}-{self.end_line}"
+        return f"`{self.file}`:{span}{removed}"
 
 
-# Everything a thread can hang on; `AnchorService` answers for each kind
+# Everything a thread can hang on, told apart by `kind`; `AnchorService`
+# answers for each kind
 type Anchor = LineAnchor
 
 
-class Turn(BaseModel):
+class Turn(ReviewModel):
     """One thing said in a thread after the comment that opened it."""
 
     author: TurnAuthor
@@ -158,15 +208,19 @@ class Turn(BaseModel):
     images: list[Path] = []
 
 
-class Comment(BaseModel):
-    """A thread hanging on something the reader reads.
+class Thread(ReviewModel):
+    """A thread hanging on something the reader reads, and everything said in it.
 
-    The comment that opened the thread stays in `body`, and everything said
-    afterwards is a turn. Keeping the opening separate is not ceremony: it is
-    what the anchor, the severity and the whole comment are about, and a
-    review with nothing discussed is still only a body.
+    The comment that opened it stays in `body`, and everything said
+    afterwards is a turn. Keeping the opening apart is not ceremony: it is
+    what the anchor, the severity and the whole thread are about, and a
+    review with nothing discussed is still only bodies.
+
+    It carries the quoted lines as well as what was said, because the agent
+    that answers may be reading it without the file in front of it.
     """
 
+    thread_id: str
     anchor: Anchor
     severity: CommentSeverity
     body: str
@@ -177,54 +231,41 @@ class Comment(BaseModel):
     # differently from what you asked" belongs on the line, not in a
     # paragraph elsewhere. The reader then works with it as with their own,
     # but it is not theirs and is never drawn as if it were.
-    raised_by: TurnAuthor = TurnAuthor.READER
+    raised_by: TurnAuthor
     # Settled, by the reader who opened it. Travels with the review, because
     # an agent reading a settled thread should not act on it again.
-    resolved: bool = False
+    resolved: bool
+
+    @computed_field
+    @property
+    def where(self) -> str:
+        """The place, named the way the review names it everywhere it is told."""
+        return self.anchor.where()
 
 
-class ReviewResult(BaseModel):
+class ReviewResult(ReviewModel):
     """Formatted review output."""
 
     markdown: str
     comment_count: int
 
 
-class ThreadContext(BaseModel):
-    """One thread, as whoever answers is told about it.
-
-    It carries the quoted lines as well as what was said, because the agent
-    that answers may be reading this without the file in front of it. The
-    same shape serves a question asked in the thread and a thread a panel
-    message points at: one way of being told what is being discussed.
-    """
-
-    thread_id: str
-    anchor: Anchor
-    # The place, named the way the review names it everywhere it is told
-    where: str
-    body: str
-    # Screenshots pasted with the body: the comment, or the question asked
-    images: list[Path] = []
-    # What was already said in this thread, so an answer to the third
-    # question is not written as if it were the first
-    history: list[Turn] = []
-    # How it is meant to be taken, and whether it is still live. A blocker
-    # and a settled note are different instructions.
-    severity: CommentSeverity = CommentSeverity.NOTE
-    resolved: bool = False
-    raised_by: TurnAuthor = TurnAuthor.READER
-
-
-class ThreadQuestion(ThreadContext):
-    """Something the reader asked about one comment thread."""
+class ThreadQuestion(ReviewModel):
+    """Something the reader asked in one thread, with the whole thread around it."""
 
     # Which question in that thread. A thread can have more than one waiting
     # at a time, and an answer has to say which it belongs to.
     question_id: str
+    # What is asked: the reader's last word in the thread, or the comment
+    # that opened it
+    body: str
+    images: list[Path] = []
+    # Everything said in the thread so far, the question included, so an
+    # answer to the third question is not written as if it were the first
+    thread: Thread
 
 
-class PanelMessage(BaseModel):
+class PanelMessage(ReviewModel):
     """Something the reader typed in the agent panel.
 
     A thread is about one line; this is about everything else — the plan,
@@ -235,12 +276,12 @@ class PanelMessage(BaseModel):
 
     message_id: str
     text: str
-    threads: list[ThreadContext] = []
+    threads: list[Thread] = []
     # Images the reader pasted, as files the agent can open
     images: list[Path] = []
 
 
-class AgentStatus(BaseModel):
+class AgentStatus(ReviewModel):
     """What the agent has said about itself.
 
     Nothing here can be measured from this side — the agent lives in another
@@ -250,12 +291,12 @@ class AgentStatus(BaseModel):
 
     model: str | None = None
     context: str | None = None
-    # When it last reported, in epoch milliseconds, so the panel can say how
-    # old the numbers are rather than presenting them as current
-    at: int | None = None
+    # When it last reported, so the panel can say how old the numbers are
+    # rather than presenting them as current
+    at: EpochMillis | None = None
 
 
-class PanelCancel(BaseModel):
+class PanelCancel(ReviewModel):
     """The reader withdrawing a panel message before it was answered.
 
     A request, not a kill: it goes onto the same queue as everything else,
@@ -265,7 +306,7 @@ class PanelCancel(BaseModel):
     message_id: str
 
 
-class PanelEntry(BaseModel):
+class PanelEntry(ReviewModel):
     """One thing said in the panel, kept so a later agent can catch up.
 
     The reader's browser remembers the whole conversation across a reload;
@@ -277,11 +318,11 @@ class PanelEntry(BaseModel):
     message_id: str | None = None
     author: TurnAuthor
     text: str
-    at: int
+    at: EpochMillis
     images: list[Path] = []
 
 
-class RoundSubmission(BaseModel):
+class RoundSubmission(ReviewModel):
     """One round of a review, on its way to whoever answers it.
 
     A round is everything written since the last one was sent. The review
@@ -294,15 +335,19 @@ class RoundSubmission(BaseModel):
     comment_count: int
 
 
-class ThreadReply(BaseModel):
-    """An answer to one thread, on its way back to the browser."""
-
-    thread_id: str
-    text: str
-    question_id: str | None = None
+# Everything the reader hands over for the agent to pick up, in one queue so
+# they are answered in the order they were sent
+type AgentEvent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel
 
 
-class PathState(BaseModel):
+class ChangesSince(ReviewModel):
+    """Which files changed since a round began, so they are read again rather than all of them."""
+
+    since_round: int
+    paths: list[str]
+
+
+class PathState(ReviewModel):
     """One path where the working tree differs from HEAD, as the disk has it now.
 
     Git says only that a path differs, and that stays true through every
@@ -322,7 +367,7 @@ class PathState(BaseModel):
 type TreeState = frozenset[PathState]
 
 
-class TreeSnapshot(BaseModel):
+class TreeSnapshot(ReviewModel):
     """The working tree as one taking of the diff saw it.
 
     The work under review is uncommitted, so between two rounds there may be
@@ -334,14 +379,14 @@ class TreeSnapshot(BaseModel):
 
     round: int
     tree: str
-    at: int
+    at: EpochMillis
 
 
-class GitRef(BaseModel):
+class GitRef(ReviewModel):
     """A branch or a tag, and when whatever it points at was committed."""
 
     name: str
-    at: int
+    at: EpochMillis
 
 
 class VersionKind(StrEnum):
@@ -357,7 +402,7 @@ class VersionKind(StrEnum):
     REF = auto()
 
 
-class ReviewVersion(BaseModel):
+class ReviewVersion(ReviewModel):
     """One base the working tree can be compared against.
 
     Two names for it: `label` is what a menu row calls it, `phrase` what the
@@ -370,11 +415,11 @@ class ReviewVersion(BaseModel):
     kind: VersionKind
     label: str
     phrase: str
-    at: int | None = None
+    at: EpochMillis | None = None
     changed: int | None = None
 
 
-class ReviewWorkspace(BaseModel):
+class ReviewWorkspace(ReviewModel):
     """Where a review writes, so nothing of it lands in the repository under review."""
 
     # Where the trees written down at every take of the diff are kept. None
@@ -400,7 +445,7 @@ class DiffLayout(StrEnum):
     SPLIT = auto()
 
 
-class ReaderSettings(BaseModel):
+class ReaderSettings(ReviewModel):
     """How this reader reads a review, the same in every review on the machine.
 
     Each field holds what a reader who has never chosen gets.
@@ -414,14 +459,14 @@ class ReaderSettings(BaseModel):
     sound_on_replies: bool = False
 
 
-class GuideState(BaseModel):
+class GuideState(ReviewModel):
     """What the review remembers of having shown this reader around."""
 
     # The release whose news the reader was last shown
     seen_release: str | None = None
 
 
-class ReaderFiles(BaseModel):
+class ReaderFiles(ReviewModel):
     """Where what a review remembers about its reader is kept, for every review.
 
     Two files for two kinds of thing: what the reader chose, kept with their
@@ -434,7 +479,7 @@ class ReaderFiles(BaseModel):
     guide: Path
 
 
-class StoredImage(BaseModel):
+class StoredImage(ReviewModel):
     """An image the reader pasted, written into the review's workspace."""
 
     image_id: str
@@ -443,7 +488,7 @@ class StoredImage(BaseModel):
     size: int
 
 
-class ImageLedger(BaseModel):
+class ImageLedger(ReviewModel):
     """What one review keeps of the images pasted into it.
 
     Held beside the rest of the review's state rather than read back off the

@@ -16,6 +16,8 @@ from claude_review.cli import (
     _transcript_title,
     main,
 )
+from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
+from tests.helpers import line_anchor, thread
 
 
 def test_help_shows_usage() -> None:
@@ -141,24 +143,15 @@ SEEN = {
     "file_count": 7,
     "answerer_attached": True,
     "agent": {"model": "opus-5", "context": "45% of 1M", "at": 1},
+    # A thread as the server tells it, so this reads what the agent is handed
     "threads": [
-        {
-            "anchor": {
-                "file": "src/routes.py",
-                "side": "new",
-                "start_line": 118,
-                "end_line": 130,
-                "quote": ["    return event"],
-                "outdated": False,
-            },
-            "thread_id": "comment-4",
-            "where": "`src/routes.py`:118-130",
-            "body": "Does a round overtake a question?\nAnd if it does, what then?",
-            "history": [{"author": "author", "body": "It cannot: one queue.", "round": 2}],
-            "severity": "question",
-            "resolved": False,
-            "raised_by": "reader",
-        }
+        thread(
+            line_anchor("src/routes.py", 118, 130, quote=["    return event"]),
+            "Does a round overtake a question?\nAnd if it does, what then?",
+            thread_id="comment-4",
+            severity=CommentSeverity.QUESTION,
+            turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2)],
+        ).model_dump(mode="json")
     ],
     "panel": [{"message_id": "panel-1", "author": "reader", "text": "Run the tests", "at": 1, "images": []}],
 }

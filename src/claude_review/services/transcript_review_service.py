@@ -6,7 +6,7 @@ blockquotes — because Claude won't have the transcript in context when it
 reads the review output.
 """
 
-from claude_review.domain.models import Comment, DiffFile, ReviewResult
+from claude_review.domain.models import DiffFile, ReviewResult, Thread
 from claude_review.services.thread_markdown import format_conversation, thread_tags
 
 CONTEXT_LINES = 2
@@ -17,10 +17,10 @@ class TranscriptReviewService:
 
     def format_review(
         self,
-        comments: list[Comment],
+        threads: list[Thread],
         body: str | None,
         diff_files: list[DiffFile],
-        round_number: int = 1,
+        round_number: int,
     ) -> ReviewResult:
         """Convert comments and optional body into formatted markdown.
 
@@ -28,7 +28,7 @@ class TranscriptReviewService:
         around the commented region, followed by the comment body.
         """
         has_body = bool(body and body.strip())
-        count = len(comments) + (1 if has_body else 0)
+        count = len(threads) + (1 if has_body else 0)
 
         if count == 0:
             return ReviewResult(markdown="", comment_count=0)
@@ -40,10 +40,10 @@ class TranscriptReviewService:
         if has_body:
             parts.append(f"{body}\n")
 
-        for comment in comments:
-            context = self._get_context(files_by_path, comment)
-            tags = thread_tags(comment)
-            said = "\n".join([*([f"_{', '.join(tags)}_"] if tags else []), *format_conversation(comment)])
+        for thread in threads:
+            context = self._get_context(files_by_path, thread)
+            tags = thread_tags(thread)
+            said = "\n".join([*([f"_{', '.join(tags)}_"] if tags else []), *format_conversation(thread)])
             parts.append(f"{context}\n{said}\n" if context else f"{said}\n")
 
         return ReviewResult(
@@ -54,10 +54,10 @@ class TranscriptReviewService:
     def _get_context(
         self,
         files_by_path: dict[str, DiffFile],
-        comment: Comment,
+        thread: Thread,
     ) -> str:
         """Extract blockquoted context (±CONTEXT_LINES) around the commented range."""
-        anchor = comment.anchor
+        anchor = thread.anchor
         file = files_by_path.get(anchor.file)
         if not file:
             return ""

@@ -1,10 +1,13 @@
 import type {
   Anchor,
+  AskRequest,
   Comment,
-  CommentPayload,
   CommentSeverity,
+  FollowRequest,
+  FollowResponse,
   NewComment,
   NewTurn,
+  SubmitRequest,
   SubmitResponse,
   Turn,
 } from "$lib/types";
@@ -12,16 +15,17 @@ import { SvelteMap } from "svelte/reactivity";
 
 import { anchorPlace } from "$lib/anchors/views";
 import { reviewStore } from "$lib/stores/review.svelte";
-import { threadOnTheWire, turnOnTheWire } from "$lib/utils/thread-wire";
+import { threadOnTheWire } from "$lib/utils/thread-wire";
 import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
+import { IdSequence } from "$lib/utils/ids";
 
 let comments = $state<Comment[]>([]);
 let reviewBody = $state("");
 let submitted = $state(false);
 
-let nextId = 0;
-let nextTurnId = 0;
+const commentIds = new IdSequence("comment-");
+const turnIds = new IdSequence("turn-");
 // What the draft is tied to, so it is not restored onto another review
 let draftTitle = $state<string | null>(null);
 // Where the reader is in the list, shared by every control that steps it
@@ -30,19 +34,6 @@ let cursor = $state(-1);
 // new since the last one, not the whole review again — and the reader can
 // see which of what is on screen the answering side has already read.
 const sent = new SvelteMap<string, number>();
-
-function generateId(): string {
-  return `comment-${++nextId}`;
-}
-
-function generateTurnId(): string {
-  return `turn-${++nextTurnId}`;
-}
-
-function idNumber(id: string): number {
-  const parsed = Number.parseInt(id.replace("comment-", ""), 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
 
 function remember(): void {
   if (draftTitle === null) return;
@@ -68,17 +59,14 @@ function lastAnsweredAt(comment: Comment): number {
   return comment.turns.findLast((turn) => turn.author === "author")?.at ?? 0;
 }
 
-function payload(comment: Comment): CommentPayload {
-  return {
-    anchor: comment.anchor,
-    severity: comment.severity,
-    body: comment.body,
-    images: comment.images,
-    // The clock belongs to reading the thread, not to what it says
-    turns: comment.turns.map(turnOnTheWire),
-    raised_by: comment.raised_by,
-    resolved: comment.resolved,
-  };
+/**
+ * Which question asking in a thread puts: the reader's reply when theirs is
+ * the last word, and otherwise the thread itself, by its opening comment.
+ * The server reads the question out of the thread by the same rule.
+ */
+function questionIdOf(comment: Comment): string {
+  const last = comment.turns.at(-1);
+  return last?.author === "reader" ? (last.id ?? comment.id) : comment.id;
 }
 
 export const commentStore = {
@@ -147,12 +135,9 @@ export const commentStore = {
     reviewBody = draft.reviewBody ?? "";
     sent.clear();
     for (const [id, round] of draft.sent ?? []) sent.set(id, round);
-    // Past the highest id in the draft, not past its length: deleting a
-    // comment before saving would otherwise hand its id out a second time,
-    // and two comments sharing an id edit and delete as one.
-    nextId = comments.reduce(
-      (highest, c) => Math.max(highest, idNumber(c.id)),
-      0,
+    commentIds.continuePast(comments.map((comment) => comment.id));
+    turnIds.continuePast(
+      comments.flatMap((comment) => comment.turns).map((turn) => turn.id),
     );
     // A round the server has forgotten is still written all over the draft:
     // every thread knows the round it was written in, and every sent thread
@@ -167,21 +152,12 @@ export const commentStore = {
       1,
     );
     reviewStore.setRound(Math.max(reviewStore.round, written, posted));
-    // Turn ids are handed out the same way, and a restored thread already
-    // holds some: carrying on from zero would mint one twice
-    nextTurnId = comments
-      .flatMap((c) => c.turns)
-      .reduce(
-        (highest, turn) =>
-          Math.max(highest, Number.parseInt(turn.id?.slice(5) ?? "0", 10) || 0),
-        0,
-      );
     return comments.length;
   },
 
   add({ anchor, body, severity, images }: NewComment): string {
     const comment: Comment = {
-      id: generateId(),
+      id: commentIds.next(),
       anchor,
       severity,
       body,
@@ -254,7 +230,7 @@ export const commentStore = {
   /** Add what someone said to a thread. */
   addTurn(id: string, { author, body, images }: NewTurn) {
     const turn: Turn = {
-      id: generateTurnId(),
+      id: turnIds.next(),
       author,
       body,
       round: reviewStore.round,
@@ -268,55 +244,30 @@ export const commentStore = {
   /**
    * Hand a thread over to whoever is answering, and carry on reading.
    *
-   * The question is whatever was said last in the thread: the comment that
-   * opened it, or the reply just written. It goes with an id and with
-   * everything said before it, so an answer to the second question does not
-   * arrive as an answer to the third — and does not have to guess what the
-   * thread was about.
+   * The whole thread goes, as it stands, and the server reads the question
+   * out of it: the reply just written, or the comment that opened it. It
+   * goes with an id, so an answer to the second question does not arrive as
+   * an answer to the third — and with everything said, so it does not have
+   * to guess what the thread was about.
    */
   async ask(id: string) {
     const comment = comments.find((c) => c.id === id);
     if (!comment) return;
 
-    const last = comment.turns.at(-1);
-    const asksLastTurn = last?.author === "reader";
-    // The comment that opened the thread is a turn like any other, and the
-    // first thing whoever answers needs to read — named by whoever wrote it,
-    // or an agent reading the history is handed its own words as the
-    // reader's instruction.
-    const opening: Turn = {
-      id: comment.id,
-      author: comment.raised_by,
-      body: comment.body,
-      round: comment.round,
-      images: comment.images,
-    };
-    const questionId = asksLastTurn ? (last.id ?? comment.id) : comment.id;
-    const question = asksLastTurn ? last.body : comment.body;
-    const questionImages = asksLastTurn ? last.images : comment.images;
-    const history = asksLastTurn
-      ? [opening, ...comment.turns.slice(0, -1)]
-      : comment.turns;
-
-    replace(id, (c) => ({
-      ...c,
-      awaiting: [...c.awaiting, { id: questionId, at: Date.now() }],
+    const questionId = questionIdOf(comment);
+    replace(id, (asked) => ({
+      ...asked,
+      awaiting: [...asked.awaiting, { id: questionId, at: Date.now() }],
     }));
 
+    const request: AskRequest = {
+      question_id: questionId,
+      thread: threadOnTheWire(comment),
+    };
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        thread_id: comment.id,
-        question_id: questionId,
-        anchor: comment.anchor,
-        body: question,
-        images: questionImages,
-        history: history.map(turnOnTheWire),
-        severity: comment.severity,
-        resolved: comment.resolved,
-        raised_by: comment.raised_by,
-      }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -341,7 +292,7 @@ export const commentStore = {
 
     const answers = questionId ?? comment.awaiting[0]?.id;
     const turn: Turn = {
-      id: generateTurnId(),
+      id: turnIds.next(),
       author: "author",
       body: text,
       round: reviewStore.round,
@@ -402,15 +353,18 @@ export const commentStore = {
    */
   async follow(): Promise<{ followed: number; outdated: number }> {
     const asked = comments.map((comment) => comment.id);
+    const request: FollowRequest = {
+      anchors: comments.map((comment) => comment.anchor),
+    };
     const response = await fetch("/api/anchors/follow", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ anchors: comments.map((c) => c.anchor) }),
+      body: JSON.stringify(request),
     });
     if (!response.ok) {
       throw new Error(`Could not move the threads: ${response.status}`);
     }
-    const { anchors }: { anchors: Anchor[] } = await response.json();
+    const { anchors }: FollowResponse = await response.json();
     const movedTo: Record<string, Anchor> = Object.fromEntries(
       asked.map((id, index) => [id, anchors[index]]),
     );
@@ -439,8 +393,8 @@ export const commentStore = {
     comments = [];
     reviewBody = "";
     submitted = false;
-    nextId = 0;
-    nextTurnId = 0;
+    commentIds.reset();
+    turnIds.reset();
     cursor = -1;
     draftTitle = null;
     sent.clear();
@@ -456,14 +410,15 @@ export const commentStore = {
     const trimmedBody = reviewBody.trim();
     const unsent = comments.filter(isUnsent);
 
+    const request: SubmitRequest = {
+      threads: unsent.map(threadOnTheWire),
+      ...(trimmedBody ? { body: trimmedBody } : {}),
+      end,
+    };
     const response = await fetch("/api/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        comments: unsent.map(payload),
-        ...(trimmedBody ? { body: trimmedBody } : {}),
-        end,
-      }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -483,7 +438,7 @@ export const commentStore = {
     // stay, and only what happens next is new.
     for (const comment of unsent) sent.set(comment.id, result.round);
     reviewBody = "";
-    reviewStore.setRound((result.round ?? reviewStore.round) + 1);
+    reviewStore.setRound(result.round + 1);
     remember();
     return result;
   },

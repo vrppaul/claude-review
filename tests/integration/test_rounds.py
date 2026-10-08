@@ -7,11 +7,13 @@ changed, retakes the diff, and reading continues.
 """
 
 import asyncio
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+from claude_review.domain.models import CommentSeverity, TurnAuthor
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -22,40 +24,47 @@ from tests.helpers import (
     ReviewFactory,
     git,
     http_client,
+    line_on_the_wire,
     next_push,
     open_session,
     page_client,
     review_has_ended,
+    thread_on_the_wire,
+    turn_on_the_wire,
     until_an_agent_waits,
 )
 
-A_COMMENT = {
-    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1},
-    "severity": "note",
-    "body": "Still reads oddly.",
-}
+A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
 
 
 async def test_a_round_does_not_end_the_review(client: AsyncClient) -> None:
-    response = await client.post("/api/submit", json={"comments": [A_COMMENT], "end": False}, headers=LOCAL_HEADERS)
+    response = await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
 
     assert response.json()["ended"] is False
     assert not await review_has_ended(client)
 
 
-async def test_sending_without_saying_otherwise_ends_the_review(client: AsyncClient) -> None:
-    """The plain flow is unchanged: one send, and the review is over."""
-    response = await client.post("/api/submit", json={"comments": [A_COMMENT]}, headers=LOCAL_HEADERS)
+async def test_the_last_send_ends_the_review(client: AsyncClient) -> None:
+    """The plain flow: one send, and the review is over."""
+    response = await client.post("/api/submit", json={"threads": [A_THREAD], "end": True}, headers=LOCAL_HEADERS)
 
     assert response.json()["ended"] is True
     assert await review_has_ended(client)
+
+
+async def test_a_send_has_to_say_whether_it_is_the_last(client: AsyncClient) -> None:
+    """Guessed, it would end a review the reader meant to keep, or keep one they meant to end."""
+    response = await client.post("/api/submit", json={"threads": [A_THREAD]}, headers=LOCAL_HEADERS)
+
+    assert response.status_code == 422
+    assert not await review_has_ended(client)
 
 
 async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
     waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS))
     await until_an_agent_waits(client, LOCAL_HEADERS)
 
-    await client.post("/api/submit", json={"comments": [A_COMMENT], "end": False}, headers=LOCAL_HEADERS)
+    await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
     event = (await waiting).json()
 
     assert event["type"] == "round"
@@ -64,24 +73,25 @@ async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
 
 
 async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None:
-    await client.post("/api/submit", json={"comments": [A_COMMENT], "end": False}, headers=LOCAL_HEADERS)
-    second = await client.post("/api/submit", json={"comments": [A_COMMENT], "end": False}, headers=LOCAL_HEADERS)
+    await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
+    second = await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
 
     assert second.json()["markdown"].startswith("## Code Review Comments — round 2")
 
 
 async def test_a_thread_reaches_the_agent_with_what_was_said_in_it(client: AsyncClient) -> None:
-    comment = {
-        **A_COMMENT,
-        "severity": "question",
-        "turns": [
-            {"author": "author", "body": "Deliberate: two tabs are one reader."},
-            {"author": "reader", "body": "Then say so in the docstring."},
+    discussed = thread_on_the_wire(
+        line_on_the_wire(REVIEWED_FILE, 1),
+        "Still reads oddly.",
+        severity=CommentSeverity.QUESTION,
+        turns=[
+            turn_on_the_wire(TurnAuthor.AUTHOR, "Deliberate: two tabs are one reader."),
+            turn_on_the_wire(TurnAuthor.READER, "Then say so in the docstring."),
         ],
-        "resolved": True,
-    }
+        resolved=True,
+    )
 
-    response = await client.post("/api/submit", json={"comments": [comment]}, headers=LOCAL_HEADERS)
+    response = await client.post("/api/submit", json={"threads": [discussed], "end": True}, headers=LOCAL_HEADERS)
     markdown = response.json()["markdown"]
 
     assert "> **You:** Deliberate: two tabs are one reader." in markdown
@@ -92,7 +102,7 @@ async def test_a_thread_reaches_the_agent_with_what_was_said_in_it(client: Async
 async def test_ending_the_review_closes_it(client: AsyncClient) -> None:
     response = await client.post("/api/end", json={}, headers=LOCAL_HEADERS)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.NO_CONTENT
     assert await review_has_ended(client)
 
 
@@ -150,7 +160,10 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
         with open_session(review_page) as socket:
             review_page.post("/api/round", json={})
 
-            assert next_push(socket, "diff") == {"type": "diff", "round": 1, "changed": ["answered.py"], "since": 1}
+            assert next_push(socket, "diff") == {
+                "type": "diff",
+                "changes": {"since_round": 1, "paths": ["answered.py"]},
+            }
 
 
 def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
@@ -174,8 +187,8 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
             review_page.post("/api/round", json={})
             told = next_push(socket, "diff")
 
-    assert told["since"] == 1
-    assert sorted(told["changed"]) == ["first.py", "second.py"]
+    assert told["changes"]["since_round"] == 1
+    assert sorted(told["changes"]["paths"]) == ["first.py", "second.py"]
 
 
 def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
@@ -188,7 +201,7 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
     ):
         review_page.post("/api/round", json={})
 
-        assert next_push(socket, "diff") == {"type": "diff", "round": 1, "changed": None, "since": None}
+        assert next_push(socket, "diff") == {"type": "diff", "changes": None}
 
 
 async def test_after_a_retake_each_thread_is_told_where_its_lines_went(

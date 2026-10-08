@@ -11,7 +11,12 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import FileWindowError
+from claude_review.domain.exceptions import (
+    FileNotInReviewError,
+    FileUnreadableError,
+    LineRangeError,
+    PathOutsideRepositoryError,
+)
 from claude_review.domain.protocols import TrackedPathsProtocol
 
 MAX_WINDOW_LINES = 2000
@@ -56,24 +61,30 @@ class FileWindowService:
         `.env`, a build directory — is ever a file the reader widens.
 
         Raises:
-            FileWindowError: If the range is not sensible, or the path does
-                not name a readable text file the review may show.
+            LineRangeError: if the range runs backwards or below line one.
+            PathOutsideRepositoryError: if the path does not name a place
+                inside the repository.
+            FileNotInReviewError: if the review neither holds nor tracks the
+                file, or nothing readable is there.
+            FileUnreadableError: if the file is not text, or too large to read.
         """
         if start < 1 or end < start:
             msg = f"not a line range: {start}-{end}"
-            raise FileWindowError(msg)
+            raise LineRangeError(msg)
+
+        # Resolving links and reading both block, and the server has a socket
+        # to keep answering on. A path that leaves the repository is refused
+        # as that, before anything is asked about the file it names.
+        path = await asyncio.to_thread(self._resolve_inside, root, relative_path)
 
         if relative_path not in in_review and not await self._git.is_tracked(root, relative_path):
             msg = f"not a file in this review: {relative_path}"
-            raise FileWindowError(msg)
+            raise FileNotInReviewError(msg)
 
-        # Resolving links and reading both block, and the server has a socket
-        # to keep answering on
-        return await asyncio.to_thread(self._read_window, root, relative_path, start, end)
+        return await asyncio.to_thread(self._read_window, path, relative_path, start, end)
 
-    def _read_window(self, root: Path, named: str, start: int, end: int) -> FileWindow:
+    def _read_window(self, path: Path, named: str, start: int, end: int) -> FileWindow:
         """Read the wanted lines without holding the whole file in memory."""
-        path = self._resolve_inside(root, named)
         self._check_readable(path, named)
 
         wanted = min(end - start + 1, MAX_WINDOW_LINES)
@@ -83,17 +94,17 @@ class FileWindowService:
                 total = start - 1 + len(window) + sum(1 for _ in handle)
         except (OSError, UnicodeDecodeError) as e:
             msg = f"cannot read as text: {named}"
-            raise FileWindowError(msg) from e
+            raise FileUnreadableError(msg) from e
 
         return FileWindow(start=start, lines=window, total=total)
 
     def _check_readable(self, path: Path, named: str) -> None:
         if not path.is_file():
             msg = f"not a readable file: {named}"
-            raise FileWindowError(msg)
+            raise FileNotInReviewError(msg)
         if path.stat().st_size > MAX_FILE_BYTES:
             msg = f"too large to expand: {named}"
-            raise FileWindowError(msg)
+            raise FileUnreadableError(msg)
 
     def _resolve_inside(self, root: Path, relative_path: str) -> Path:
         """Resolve a path and refuse anything that leaves the repository.
@@ -105,7 +116,7 @@ class FileWindowService:
         candidate = Path(relative_path)
         if candidate.is_absolute():
             msg = f"path must be relative to the repository: {relative_path}"
-            raise FileWindowError(msg)
+            raise PathOutsideRepositoryError(msg)
 
         try:
             resolved = (root / candidate).resolve()
@@ -113,9 +124,9 @@ class FileWindowService:
         except (ValueError, OSError) as e:
             # A NUL byte, or a path the filesystem will not even look at
             msg = f"not a usable path: {relative_path}"
-            raise FileWindowError(msg) from e
+            raise PathOutsideRepositoryError(msg) from e
 
         if not inside:
             msg = f"path leaves the repository: {relative_path}"
-            raise FileWindowError(msg)
+            raise PathOutsideRepositoryError(msg)
         return resolved

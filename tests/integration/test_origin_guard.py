@@ -53,7 +53,7 @@ async def test_a_page_on_another_site_cannot_read_the_diff(client: AsyncClient) 
 async def test_a_page_on_another_site_cannot_end_the_review(client: AsyncClient) -> None:
     response = await client.post(
         "/api/submit",
-        json={"comments": []},
+        json={"threads": [], "end": True},
         headers={"Origin": "https://attacker.example"},
     )
 

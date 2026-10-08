@@ -128,7 +128,7 @@ def test_quoting_a_removed_line_the_diff_does_not_show_says_removed() -> None:
     ],
 )
 def test_a_place_is_named_the_way_the_review_names_it(anchor: LineAnchor, said: str) -> None:
-    assert AnchorService([]).where(anchor) == said
+    assert anchor.where() == said
 
 
 def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from claude_review.domain.models import Comment, CommentSeverity, Turn, TurnAuthor
+from claude_review.domain.models import CommentSeverity, Thread, Turn, TurnAuthor
 
 # The agent reading this wrote the change, so its own turns are addressed to
 # it as "You"
@@ -35,7 +35,7 @@ def image_lines(images: list[Path]) -> list[str]:
     return [f"Image: {path}" for path in images]
 
 
-def thread_tags(comment: Comment) -> list[str]:
+def thread_tags(thread: Thread) -> list[str]:
     """What is not ordinary about a thread, and nothing when it is.
 
     A question wants an answer before anything changes and a blocker has to
@@ -43,23 +43,23 @@ def thread_tags(comment: Comment) -> list[str]:
     observation" — and only worth saying when they differ from it. The same
     goes for a thread that is settled or hanging on lines that moved.
     """
-    tags = [str(comment.severity)] if comment.severity != CommentSeverity.NOTE else []
-    if comment.resolved:
+    tags = [str(thread.severity)] if thread.severity != CommentSeverity.NOTE else []
+    if thread.resolved:
         tags.append("resolved")
-    if comment.anchor.outdated:
+    if thread.anchor.outdated:
         tags.append("outdated")
     return tags
 
 
-def format_conversation(comment: Comment) -> list[str]:
+def format_conversation(thread: Thread) -> list[str]:
     """Everything said in a thread, the comment that opened it first.
 
     A thread the author raised opens with the author speaking, so it is
     quoted like any other turn: the reader's reply below it then reads as a
     reply rather than as the whole thread.
     """
-    if comment.raised_by == TurnAuthor.AUTHOR:
-        opening = format_turn(Turn(author=TurnAuthor.AUTHOR, body=comment.body, round=1, images=comment.images))
+    if thread.raised_by == TurnAuthor.AUTHOR:
+        opening = format_turn(Turn(author=TurnAuthor.AUTHOR, body=thread.body, round=1, images=thread.images))
     else:
-        opening = format_opening(comment.body, comment.images)
-    return [opening, *(format_turn(turn) for turn in comment.turns)]
+        opening = format_opening(thread.body, thread.images)
+    return [opening, *(format_turn(turn) for turn in thread.turns)]

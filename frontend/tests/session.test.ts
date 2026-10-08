@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-	dispatchHeld,
-	openSession,
-	tellServer,
-	type ServerMessage
-} from '$lib/stores/session.svelte';
+import type { ServerPush } from '$lib/types';
+import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
 
 // The session says hello at most this often, however often there is news
 const HELLO_AT_MOST_EVERY = 1000;
@@ -90,8 +86,8 @@ describe('the session socket', () => {
 	});
 
 	it('holds what arrives before the draft is restored, then hands it over in order', () => {
-		const heard: ServerMessage[] = [];
-		const close = openSession((message) => heard.push(message));
+		const heard: ServerPush[] = [];
+		const close = openSession((push) => heard.push(push));
 		const socket = latestSocket();
 
 		socket.emit('message', JSON.stringify({ type: 'reply', text: 'first' }));
@@ -101,14 +97,14 @@ describe('the session socket', () => {
 		dispatchHeld();
 		socket.emit('message', JSON.stringify({ type: 'show', file: 'a.py' }));
 
-		expect(heard.map((message) => message.type)).toEqual(['reply', 'chat', 'show']);
+		expect(heard.map((push) => push.type)).toEqual(['reply', 'chat', 'show']);
 		close();
 	});
 
 	it('passes over what it cannot read and keeps listening', () => {
-		const heard: ServerMessage[] = [];
+		const heard: ServerPush[] = [];
 		const warn = vi.spyOn(console, 'warn').mockImplementation(ignore);
-		const close = openSession((message) => heard.push(message));
+		const close = openSession((push) => heard.push(push));
 		dispatchHeld();
 		const socket = latestSocket();
 
@@ -116,7 +112,7 @@ describe('the session socket', () => {
 		socket.emit('message', JSON.stringify({ text: 'no type' }));
 		socket.emit('message', JSON.stringify({ type: 'reply', text: 'fine' }));
 
-		expect(heard.map((message) => message.type)).toEqual(['reply']);
+		expect(heard.map((push) => push.type)).toEqual(['reply']);
 		expect(warn).toHaveBeenCalledTimes(2);
 		close();
 	});
@@ -198,23 +194,23 @@ describe('the session socket', () => {
 
 	it('says hello on every connection, to a server that may have just come up', () => {
 		const review = { round: 3 };
-		const close = openSession(ignore, () => ({ type: 'hello', round: review.round }));
+		const close = openSession(ignore, () => ({ round: review.round }));
 
 		latestSocket().accept();
-		expect(latestSocket().said).toEqual([{ type: 'hello', round: 3 }]);
+		expect(latestSocket().said).toEqual([{ round: 3 }]);
 
 		latestSocket().drop();
 		vi.advanceTimersByTime(FIRST_RETRY);
 		latestSocket().accept();
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
-		expect(latestSocket().said).toEqual([{ type: 'hello', round: 3 }]);
+		expect(latestSocket().said).toEqual([{ round: 3 }]);
 		close();
 	});
 
 	it('tells the server what changed at most once a second, ending on the latest', () => {
 		const review = { round: 1 };
-		const close = openSession(ignore, () => ({ type: 'hello', round: review.round }));
+		const close = openSession(ignore, () => ({ round: review.round }));
 		const socket = latestSocket();
 		socket.accept();
 
@@ -222,19 +218,19 @@ describe('the session socket', () => {
 		tellServer();
 		review.round = 3;
 		tellServer();
-		expect(socket.said).toEqual([{ type: 'hello', round: 1 }]);
+		expect(socket.said).toEqual([{ round: 1 }]);
 
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
 		expect(socket.said).toEqual([
-			{ type: 'hello', round: 1 },
-			{ type: 'hello', round: 3 }
+			{ round: 1 },
+			{ round: 3 }
 		]);
 		close();
 	});
 
 	it('says nothing before the connection is open', () => {
-		const close = openSession(ignore, () => ({ type: 'hello' }));
+		const close = openSession(ignore, () => ({ round: 1 }));
 
 		tellServer();
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);

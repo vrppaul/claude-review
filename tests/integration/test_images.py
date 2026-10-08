@@ -8,17 +8,29 @@ rules themselves are tested without a server in test_image_service.
 
 import asyncio
 from collections.abc import AsyncIterator
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import ReviewMode, ReviewWorkspace
+from claude_review.domain.models import ReviewMode, ReviewWorkspace, TurnAuthor
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
-from tests.helpers import DIFF_ROUTE, EVENTS_ROUTE, REVIEWED_FILE, WAIT_FOR_EVENT, ReviewFactory, http_client
+from tests.helpers import (
+    DIFF_ROUTE,
+    EVENTS_ROUTE,
+    FIRST_THREAD_ID,
+    PNG,
+    REVIEWED_FILE,
+    WAIT_FOR_EVENT,
+    ReviewFactory,
+    http_client,
+    line_on_the_wire,
+    thread_on_the_wire,
+    turn_on_the_wire,
+)
 
 # The bytes each format starts with, and enough after them to be a file
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
 GIF = b"GIF89a" + b"\x00" * 32
 WEBP = b"RIFF\x24\x00\x00\x00WEBPVP8 " + b"\x00" * 16
@@ -30,18 +42,7 @@ LARGEST_IMAGES_A_REVIEW_HOLDS = MAX_REVIEW_BYTES // MAX_IMAGE_BYTES
 # One image past what one thing said may carry
 ONE_TOO_MANY = MAX_IMAGES_PER_MESSAGE + 1
 
-THREAD_COMMENT = {
-    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1},
-    "severity": "note",
-    "body": "Looks off",
-}
-A_QUESTION = {
-    **THREAD_COMMENT,
-    "thread_id": "comment-1",
-    "question_id": "comment-1",
-    "resolved": False,
-    "raised_by": "reader",
-}
+A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Looks off")
 
 
 @pytest.fixture
@@ -99,30 +100,31 @@ async def test_a_review_full_of_images_takes_no_more(client: AsyncClient) -> Non
     assert response.status_code == 413
 
 
-@pytest.mark.parametrize(
-    ("route", "payload"),
-    [
-        ("/api/message", {"message_id": "panel-1", "text": "These"}),
-        ("/api/ask", A_QUESTION),
-    ],
-    ids=["message", "ask"],
-)
-async def test_one_thing_said_carries_no_more_images_than_it_may(
-    client: AsyncClient, route: str, payload: dict[str, object]
-) -> None:
+async def test_a_message_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
     """More than a handful is a gallery. The image is one the review keeps, so the count alone is refused."""
     image_id = await _upload(client, PNG)
 
-    response = await client.post(route, json={**payload, "images": [image_id] * ONE_TOO_MANY})
+    response = await client.post(
+        "/api/message", json={"message_id": "panel-1", "text": "These", "images": [image_id] * ONE_TOO_MANY}
+    )
+
+    assert response.status_code == 422
+
+
+async def test_a_question_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
+    image_id = await _upload(client, PNG)
+    crowded = {**A_THREAD, "images": [image_id] * ONE_TOO_MANY}
+
+    response = await client.post("/api/ask", json={"question_id": FIRST_THREAD_ID, "thread": crowded})
 
     assert response.status_code == 422
 
 
 async def test_a_thread_in_a_round_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
-    crowded = {**THREAD_COMMENT, "images": [image_id] * ONE_TOO_MANY}
+    crowded = {**A_THREAD, "images": [image_id] * ONE_TOO_MANY}
 
-    response = await client.post("/api/submit", json={"comments": [crowded]})
+    response = await client.post("/api/submit", json={"threads": [crowded], "end": True})
 
     assert response.status_code == 422
 
@@ -153,7 +155,7 @@ async def test_an_image_can_be_the_whole_message(client: AsyncClient) -> None:
 
     response = await client.post("/api/message", json={"message_id": "panel-1", "images": [image_id]})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 async def test_a_message_with_neither_words_nor_images_is_refused(client: AsyncClient) -> None:
@@ -175,6 +177,13 @@ async def test_an_image_never_kept_is_not_there(client: AsyncClient) -> None:
     assert (await client.delete(f"/api/images/{NEVER_KEPT}")).status_code == 404
 
 
+async def test_a_refusal_says_why(client: AsyncClient) -> None:
+    """Said in the shape every refusal takes, so the browser and the commands read one."""
+    response = await client.delete(f"/api/images/{NEVER_KEPT}")
+
+    assert NEVER_KEPT in response.json()["detail"]
+
+
 async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClient) -> None:
     """An agent arriving late finds the screenshot along with the words."""
     image_id = await _upload(client, PNG)
@@ -192,7 +201,7 @@ async def test_an_image_taken_off_before_sending_is_removed(client: AsyncClient,
 
     response = await client.delete(f"/api/images/{image_id}")
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.NO_CONTENT
     assert await _files_in(workspace.images) == []
 
 
@@ -217,14 +226,14 @@ async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
 async def test_a_round_names_the_images_in_its_threads(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
 
-    response = await client.post("/api/submit", json={"comments": [{**THREAD_COMMENT, "images": [image_id]}]})
+    response = await client.post("/api/submit", json={"threads": [{**A_THREAD, "images": [image_id]}], "end": True})
 
     assert f"/{image_id}" in response.json()["markdown"]
 
 
 async def test_an_image_lost_from_a_thread_does_not_hold_up_the_round(client: AsyncClient) -> None:
     """A thread outlives a restart in the reader's draft; its screenshots do not."""
-    response = await client.post("/api/submit", json={"comments": [{**THREAD_COMMENT, "images": [NEVER_KEPT]}]})
+    response = await client.post("/api/submit", json={"threads": [{**A_THREAD, "images": [NEVER_KEPT]}], "end": True})
 
     assert response.status_code == 200
     assert NEVER_KEPT not in response.json()["markdown"]
@@ -233,8 +242,23 @@ async def test_an_image_lost_from_a_thread_does_not_hold_up_the_round(client: As
 async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
 
-    await client.post("/api/ask", json={**A_QUESTION, "body": "", "images": [image_id]})
+    pictured = {**A_THREAD, "body": "", "images": [image_id]}
+
+    await client.post("/api/ask", json={"question_id": FIRST_THREAD_ID, "thread": pictured})
     event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["question"]["images"]
     assert Path(path).name == image_id
+
+
+async def test_a_question_asked_in_a_reply_hands_the_agent_the_images_of_that_reply(client: AsyncClient) -> None:
+    image_id = await _upload(client, PNG)
+    reply = turn_on_the_wire(TurnAuthor.READER, "Still like this", images=[image_id])
+
+    await client.post("/api/ask", json={"question_id": "turn-1", "thread": {**A_THREAD, "turns": [reply]}})
+    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+
+    [path] = event["question"]["images"]
+    assert Path(path).name == image_id
+    # Asked, so handed over: the agent may open it at any time from now on
+    assert (await client.delete(f"/api/images/{image_id}")).status_code == 409

@@ -1,4 +1,11 @@
-"""Domain exceptions for claude-review."""
+"""Domain exceptions for claude-review.
+
+Everything the review refuses is a `ReviewError` of one of five kinds, and
+the kind is what whoever asked is told: what they named is not here, what
+they sent cannot be read as a request, what they sent is not acceptable,
+or too large, or at odds with where the review stands. The specific error
+says why, in words the asker can act on.
+"""
 
 
 class GitError(Exception):
@@ -9,37 +16,89 @@ class PortUnavailableError(Exception):
     """Raised when the review server cannot take the requested port."""
 
 
-class FileWindowError(Exception):
-    """Raised when a requested window of file content cannot be served."""
+class ReviewError(Exception):
+    """Raised when the review will not do what it was asked; the message says why."""
 
 
-class UnknownVersionError(Exception):
+class NotFoundError(ReviewError):
+    """Raised when what a request names is not in this review."""
+
+
+class BadRequestError(ReviewError):
+    """Raised when a request asks for something no review could serve."""
+
+
+class RefusedError(ReviewError):
+    """Raised when a request is understood, and what it carries is not acceptable."""
+
+
+class TooLargeError(RefusedError):
+    """Raised when what a request carries is more than the review takes."""
+
+
+class ConflictError(ReviewError):
+    """Raised when a request is at odds with where the review already stands."""
+
+
+class NoRepositoryError(NotFoundError):
+    """Raised when a review whose content did not come from a repository is asked for git's help."""
+
+
+class UnknownThreadError(NotFoundError):
+    """Raised when a thread is named that the review does not hold."""
+
+
+class ReviewEndedError(ConflictError):
+    """Raised when a review that has ended is sent more."""
+
+
+class LineRangeError(BadRequestError):
+    """Raised when lines are asked for that no file could have: a range that runs backwards."""
+
+
+class PathOutsideRepositoryError(BadRequestError):
+    """Raised when a path is not one inside the repository under review."""
+
+
+class FileNotInReviewError(NotFoundError):
+    """Raised when a file is asked for that the review neither holds nor tracks, or that is not there."""
+
+
+class FileUnreadableError(RefusedError):
+    """Raised when a file the review holds cannot be read as text, or is too large to read."""
+
+
+class UnknownVersionError(BadRequestError):
     """Raised when a base is asked for that this review never offered."""
 
 
-class AnchorRefusedError(Exception):
-    """Raised when something is asked to hang where nothing is on screen."""
-
-
-class UnknownAnchorFileError(AnchorRefusedError):
+class UnknownAnchorFileError(NotFoundError):
     """Raised when an anchor names a file this review does not hold."""
 
 
-class AnchorLinesNotShownError(AnchorRefusedError):
+class AnchorLinesNotShownError(RefusedError):
     """Raised when an anchor names lines of a file that the diff does not show."""
 
 
-class ImageRefusedError(Exception):
+class ImageRefusedError(RefusedError):
     """Raised when an upload is not an image this review can keep."""
 
 
-class ImageTooLargeError(ImageRefusedError):
+class ImageTooLargeError(TooLargeError):
     """Raised when an upload would take an image, or the review, past its limit."""
 
 
-class UnknownImageError(Exception):
-    """Raised when an image is named that this review does not keep."""
+class ImagesNotKeptError(RefusedError):
+    """Raised when something sent names images this review does not keep."""
 
 
-class ImageAlreadySentError(Exception):
+class UnknownImageError(NotFoundError):
+    """Raised when an image is asked for that this review does not keep."""
+
+
+class ImageAlreadySentError(ConflictError):
     """Raised when an image that went out with a message is asked to be removed."""
+
+
+class UploadCutOffError(BadRequestError):
+    """Raised when the browser went away in the middle of an upload."""

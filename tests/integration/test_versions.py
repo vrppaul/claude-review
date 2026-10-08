@@ -7,15 +7,22 @@ which is the question a round leaves behind.
 """
 
 import asyncio
+import time
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import ReviewMode
-from tests.helpers import DIFF_ROUTE, LOCAL_HEADERS, ReviewFactory, git, http_client
+from tests.helpers import DIFF_ROUTE, LOCAL_HEADERS, FixedClock, ReviewFactory, git, http_client
 
 VERSIONS_ROUTE = "/api/versions"
+
+# A moment on the review's clock, in epoch milliseconds
+A_MOMENT = 1_791_000_000_000
+MILLISECONDS_PER_SECOND = 1000
+# How far a commit made during the test may be from now, generously
+AN_HOUR_IN_MILLISECONDS = 60 * 60 * MILLISECONDS_PER_SECOND
 
 
 async def _mark(client: AsyncClient) -> None:
@@ -24,7 +31,7 @@ async def _mark(client: AsyncClient) -> None:
 
 
 async def _begin_next_round(client: AsyncClient) -> None:
-    await client.post("/api/submit", json={"comments": [], "end": False}, headers=LOCAL_HEADERS)
+    await client.post("/api/submit", json={"threads": [], "end": False}, headers=LOCAL_HEADERS)
 
 
 async def _offered(client: AsyncClient) -> list[dict]:
@@ -44,6 +51,30 @@ async def test_the_review_and_its_rounds_are_on_offer(tmp_git_repo: Path, review
 
     assert [version["key"] for version in offered] == ["review", "round:1"]
     assert [version["phrase"] for version in offered] == ["uncommitted changes", "changes since round 1"]
+
+
+async def test_a_round_is_dated_when_it_was_read(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    async with http_client(reviews.app([], root=tmp_git_repo, clock=FixedClock(A_MOMENT))) as client:
+        (tmp_git_repo / "work.py").write_text("first\n")
+        await _mark(client)
+        await _begin_next_round(client)
+        (tmp_git_repo / "work.py").write_text("second\n")
+        await _mark(client)
+
+        by_key = {version["key"]: version for version in await _offered(client)}
+
+    assert by_key["round:1"]["at"] == A_MOMENT
+
+
+async def test_a_branch_is_dated_in_the_same_unit_as_everything_else(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Epoch milliseconds, like every other time the review says; git says seconds."""
+    git(tmp_git_repo, "branch", "earlier")
+    async with http_client(reviews.app([], root=tmp_git_repo)) as client:
+        by_label = {version["label"]: version for version in await _offered(client) if version["kind"] == "ref"}
+
+    assert abs(by_label["earlier"]["at"] - time.time() * MILLISECONDS_PER_SECOND) < AN_HOUR_IN_MILLISECONDS
 
 
 async def test_the_review_says_how_many_files_a_base_would_show(tmp_git_repo: Path, reviews: ReviewFactory) -> None:

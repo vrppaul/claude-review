@@ -24,10 +24,12 @@ import structlog
 import uvicorn
 
 from claude_review.domain.exceptions import PortUnavailableError
-from claude_review.domain.models import DiffFile, ReaderFiles, ReviewMode, ReviewWorkspace
+from claude_review.domain.models import AnchorKind, DiffFile, ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
+from claude_review.presentation.schemas import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, ChangedPush
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
@@ -192,6 +194,7 @@ async def _serve_review(
 ) -> str:
     """Hold the review open until it ends, and return what it produced."""
     state = ServerState(shutdown_event=asyncio.Event())
+    clock = SystemClock()
     app = create_app(
         diff_files=diff_files,
         state=state,
@@ -199,6 +202,7 @@ async def _serve_review(
         title=title,
         workspace=workspace,
         reader_files=_reader_files(),
+        clock=clock,
         root=root,
         base=base,
     )
@@ -209,7 +213,7 @@ async def _serve_review(
         state.tree = await watcher.read(root)
         # The tree this review opened on: the first base a later round can
         # ask to be compared against
-        opened_at = await VersionService(git_repository=git_repo).take(root, round_number=state.round)
+        opened_at = await VersionService(git_repository=git_repo, clock=clock).take(root, round_number=state.round)
         if opened_at is not None:
             state.snapshots.append(opened_at)
 
@@ -262,7 +266,7 @@ async def _serve_review(
         if root is None:
             return
         async for moved in watcher.changes(root, taken_at=lambda: state.tree, stop=state.shutdown_event):
-            state.push({"type": "changed", "files": moved})
+            state.push(ChangedPush(moved_count=moved))
 
     # A task rather than a third thing to gather: the watcher has no end of
     # its own, and the review is over when the server is, not when the tree
@@ -458,8 +462,8 @@ def main(ctx: click.Context, port: int, no_open: bool, verbose: bool) -> None:
 @click.option("--port", required=True, type=int, help="Port the review is served on.")
 @click.option(
     "--seconds",
-    default=25.0,
-    type=float,
+    default=DEFAULT_WAIT_SECONDS,
+    type=click.FloatRange(min=0, min_open=True, max=MAX_WAIT_SECONDS),
     help="How long to wait before reporting that nothing was asked.",
 )
 def wait_cmd(port: int, seconds: float) -> None:
@@ -547,7 +551,7 @@ def _render_context(seen: dict, *, whole: bool) -> str:
         lines.append(f"{thread['thread_id']}  {thread['where']}  {_marks(thread)}")
         lines.append(_indent(thread["body"], whole=whole))
         lines.extend(
-            _indent(turn["body"], whole=True, who=turn["author"]) for turn in (thread["history"] if whole else [])
+            _indent(turn["body"], whole=True, who=turn["author"]) for turn in (thread["turns"] if whole else [])
         )
         if whole and thread["anchor"]["quote"]:
             lines.append(_indent("\n".join(thread["anchor"]["quote"]), whole=True, who="lines"))
@@ -573,8 +577,8 @@ def _marks(thread: dict) -> str:
         marks.append("resolved")
     if thread["anchor"]["outdated"]:
         marks.append("outdated")
-    if thread["history"]:
-        marks.append(f"{len(thread['history'])} turns")
+    if thread["turns"]:
+        marks.append(f"{len(thread['turns'])} turns")
     return " · ".join(marks)
 
 
@@ -707,10 +711,7 @@ def point_cmd(port: int, path: str, lines: str, side: str, severity: str, body: 
     body_text = _call(
         f"http://127.0.0.1:{port}/api/point",
         payload={
-            "file": path,
-            "side": side,
-            "start_line": start,
-            "end_line": end,
+            "anchor": {"kind": AnchorKind.LINE, "file": path, "side": side, "start_line": start, "end_line": end},
             "body": body,
             "severity": severity,
         },

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Anchor } from '$lib/types';
+	import type { ChangesSince, PointPush, ServerPush } from '$lib/types';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
@@ -66,65 +66,64 @@
 	});
 
 	/** What the server has to say while the review is open. */
-	function handle(message: { type: string; [key: string]: unknown }) {
-		if (message.type === 'reply' && typeof message.text === 'string') {
-			commentStore.receiveReply(
-				String(message.thread_id),
-				message.text,
-				typeof message.question_id === 'string' ? message.question_id : undefined
-			);
-			soundStore.announce();
-		} else if (message.type === 'answerer') {
-			reviewStore.attachAnswerer();
-			panelStore.offer();
-		} else if (message.type === 'chat' && typeof message.text === 'string') {
-			panelStore.receive(
-				typeof message.message_id === 'string' ? message.message_id : undefined,
-				message.text,
-				Array.isArray(message.files) ? message.files.map(String) : []
-			);
-			soundStore.announce();
-		} else if (message.type === 'progress' && typeof message.text === 'string') {
-			panelStore.reportProgress(
-				typeof message.message_id === 'string' ? message.message_id : undefined,
-				message.text,
-				Array.isArray(message.files) ? message.files.map(String) : [],
-				Array.isArray(message.steps)
-					? message.steps.map((step) => ({
-							text: String((step as { text: unknown }).text),
-							done: (step as { done: unknown }).done === true
-						}))
-					: []
-			);
-		} else if (message.type === 'show' && typeof message.file === 'string') {
-			// Asked for: the agent does not move this screen on its own
-			showFile(message.file);
-		} else if (message.type === 'status') {
-			panelStore.report({
-				model: typeof message.model === 'string' ? message.model : null,
-				context: typeof message.context === 'string' ? message.context : null,
-				at: typeof message.at === 'number' ? message.at : null
-			});
-		} else if (message.type === 'point' && typeof message.body === 'string' && message.anchor) {
-			raise(message);
-		} else if (message.type === 'changed' && typeof message.files === 'number') {
-			// Said, never acted on: swapping the diff under a half-written
-			// comment would orphan it
-			diffStore.noteTreeMoved(message.files);
-		} else if (message.type === 'round' && typeof message.number === 'number') {
-			reviewStore.setRound(message.number);
-		} else if (message.type === 'diff') {
-			landed(
-				Array.isArray(message.changed) ? message.changed.map(String) : null,
-				typeof message.since === 'number' ? message.since : null
-			).catch((e) => {
-				// A round landing half-applied is worse than not at all: the code
-				// under the reader has moved and their threads have not
-				panelStore.note(
-					`the diff could not be taken again — ${e instanceof Error ? e.message : 'reload the review'}`
-				);
-			});
+	function handle(push: ServerPush) {
+		switch (push.type) {
+			case 'reply':
+				// The wire says null where the store says nothing was named
+				commentStore.receiveReply(push.thread_id, push.text, push.question_id ?? undefined);
+				soundStore.announce();
+				return;
+			case 'answerer':
+				if (!push.attached) return;
+				reviewStore.attachAnswerer();
+				panelStore.offer();
+				return;
+			case 'chat':
+				panelStore.receive(push.message_id ?? undefined, push.text, push.files);
+				soundStore.announce();
+				return;
+			case 'progress':
+				panelStore.reportProgress(push.message_id ?? undefined, push.text, push.files, push.steps);
+				return;
+			case 'show':
+				// Asked for: the agent does not move this screen on its own
+				showFile(push.file);
+				return;
+			case 'status':
+				panelStore.report(push.agent);
+				return;
+			case 'point':
+				raise(push);
+				return;
+			case 'changed':
+				// Said, never acted on: swapping the diff under a half-written
+				// comment would orphan it
+				diffStore.noteTreeMoved(push.moved_count);
+				return;
+			case 'round':
+				reviewStore.setRound(push.number);
+				return;
+			case 'diff':
+				landed(push.changes).catch((e) => {
+					// A round landing half-applied is worse than not at all: the code
+					// under the reader has moved and their threads have not
+					panelStore.note(
+						`the diff could not be taken again — ${e instanceof Error ? e.message : 'reload the review'}`
+					);
+				});
+				return;
+			default:
+				unknown(push);
 		}
+	}
+
+	/**
+	 * A push of a kind this page does not know: from a newer server, or one
+	 * this page forgot to handle. The types say it cannot happen; this says so
+	 * when it does.
+	 */
+	function unknown(push: never) {
+		console.warn('claude-review: the server pushed something this page does not know', push);
 	}
 
 	/**
@@ -139,26 +138,20 @@
 	 * thread left on old numbers would be kept that way in the draft, while a
 	 * diff that failed to arrive comes back with a reload.
 	 */
-	async function landed(changed: string[] | null, since: number | null) {
+	async function landed(changes: ChangesSince | null) {
 		const moved = await commentStore.follow();
 		await diffStore.fetchDiff();
-		diffStore.noteRetaken(moved, changed, since);
+		diffStore.noteRetaken(moved, changes);
 		// The conversation is about code that has just changed under it, so
 		// the panel says where one lot of answers stops applying
 		panelStore.note(retaken(moved));
 	}
 
 	/** Put a thread the author raised onto the diff, and say so in the panel. */
-	function raise(message: { type: string; [key: string]: unknown }) {
+	function raise(push: PointPush) {
 		// The server quoted it from the diff it checked the lines against
-		const anchor = message.anchor as Anchor;
-		const severity =
-			message.severity === 'question' || message.severity === 'blocker'
-				? message.severity
-				: 'note';
-
-		const id = commentStore.raise(String(message.thread_id), anchor, String(message.body), severity);
-		panelStore.note(`pointed at ${anchorShortPlace(anchor)}`, [id]);
+		const id = commentStore.raise(push.thread_id, push.anchor, push.body, push.severity);
+		panelStore.note(`pointed at ${anchorShortPlace(push.anchor)}`, [id]);
 		soundStore.announce();
 	}
 

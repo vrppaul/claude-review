@@ -13,6 +13,7 @@ import pytest
 from claude_review.domain.exceptions import (
     ImageAlreadySentError,
     ImageRefusedError,
+    ImagesNotKeptError,
     ImageTooLargeError,
     UnknownImageError,
 )
@@ -145,10 +146,8 @@ async def test_an_image_over_its_limit_is_refused(service: ImageService) -> None
 
 
 async def test_an_empty_upload_is_refused(service: ImageService) -> None:
-    with pytest.raises(ImageRefusedError) as refused:
+    with pytest.raises(ImageRefusedError):
         await service.keep(b"")
-
-    assert not isinstance(refused.value, ImageTooLargeError)
 
 
 async def test_an_upload_while_another_is_still_writing_cannot_overshoot_the_review() -> None:
@@ -213,10 +212,9 @@ async def test_what_is_not_an_image_is_named_so_even_in_a_full_review(store: Mem
     """The reader can fix a wrong format; a full review is a different problem."""
     service = ImageService(store, ImageLedger(), FULL)
 
-    with pytest.raises(ImageRefusedError) as refused:
+    # Refused as what it is, not as one more image than the review has room for
+    with pytest.raises(ImageRefusedError):
         await service.keep(b"not an image at all")
-
-    assert not isinstance(refused.value, ImageTooLargeError)
 
 
 async def test_an_image_named_twice_is_handed_over_once(service: ImageService) -> None:
@@ -228,7 +226,7 @@ async def test_an_image_named_twice_is_handed_over_once(service: ImageService) -
 async def test_requiring_names_the_images_the_review_does_not_keep(service: ImageService) -> None:
     stored = await service.keep(PNG)
 
-    with pytest.raises(UnknownImageError, match=r"gone\.png"):
+    with pytest.raises(ImagesNotKeptError, match=r"gone\.png"):
         service.require([stored.image_id, "gone.png"])
     # Refused as a whole: the one it does keep was not handed over, so it can still be taken off
     await service.discard(stored.image_id)

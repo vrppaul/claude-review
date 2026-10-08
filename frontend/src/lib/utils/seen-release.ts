@@ -6,7 +6,7 @@
  * this browser is handed over once.
  */
 
-import type { GuideState } from "$lib/types";
+import type { GuideChange, GuideResponse } from "$lib/types";
 
 const LEGACY_COOKIE = "claude-review-seen";
 
@@ -36,7 +36,7 @@ export async function readSeenRelease(): Promise<string | null> {
   if (!response.ok) {
     throw new Error(`Could not read what was shown: ${response.status}`);
   }
-  const kept: { guide: GuideState; stored: boolean } = await response.json();
+  const kept: GuideResponse = await response.json();
   if (kept.stored) return kept.guide.seen_release;
 
   const handedOver = legacyCookie();
@@ -47,10 +47,11 @@ export async function readSeenRelease(): Promise<string | null> {
 }
 
 export async function writeSeenRelease(release: string): Promise<void> {
+  const change: GuideChange = { seen_release: release };
   const response = await fetch("/api/guide", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ seen_release: release }),
+    body: JSON.stringify(change),
   });
   if (!response.ok) {
     throw new Error(`Could not remember what was shown: ${response.status}`);

@@ -327,7 +327,7 @@ describe('the agent panel', () => {
 		await user.click(getByTestId('send-message'));
 		await paste(getByTestId('panel-input'), screenshot());
 		await vi.waitFor(() => expect(getAllByTestId('attached-image')).toHaveLength(2));
-		messages.answer(0, { status: 'sent' });
+		messages.answer(0, null);
 
 		await vi.waitFor(() => expect(getAllByTestId('attached-image')).toHaveLength(1));
 		expect(getByTestId('attached-image').getAttribute('src')).toBe('/api/images/2.png');
@@ -425,7 +425,7 @@ describe('the agent panel', () => {
 		panelStore.setComposerText('Fix this');
 		const sending = panelStore.send([]);
 		panelStore.setComposerText('Fix this and the next one');
-		messages.answer(0, { status: 'sent' });
+		messages.answer(0, null);
 		await sending;
 
 		expect(panelStore.turns.at(-1)?.body).toBe('Fix this');

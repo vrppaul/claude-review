@@ -7,25 +7,25 @@ server what only the page knows: which round it had got to, and the threads
 it holds. The server tells the page what happened since.
 """
 
+from http import HTTPStatus
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
+from claude_review.domain.models import CommentSeverity, TurnAuthor
 from tests.helpers import (
     CONTEXT_ROUTE,
+    PNG,
     REVIEWED_FILE,
+    line_on_the_wire,
     next_push,
     open_session,
+    thread_on_the_wire,
     until_the_review_holds_threads,
     until_the_review_is_on_round,
 )
 
-A_COMMENT = {
-    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1},
-    "severity": "note",
-    "body": "Still reads oddly.",
-}
-
-ON_THE_LINE = {"kind": "line", "file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1}
-A_THREAD = {"thread_id": "comment-1", "anchor": ON_THE_LINE, "body": "Why one?"}
+A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why one?")
 
 SHOWN = {"type": "show", "file": REVIEWED_FILE}
 
@@ -54,7 +54,7 @@ def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(revi
         socket.send_json({"round": 4})
         until_the_review_is_on_round(review_page, 4)
 
-        sent = review_page.post("/api/submit", json={"comments": [A_COMMENT], "end": False}).json()
+        sent = review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False}).json()
 
         assert sent["markdown"].startswith("## Code Review Comments — round 4")
         assert next_push(socket, "round") == {"type": "round", "number": 5}
@@ -90,7 +90,7 @@ def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None
 
 def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_page: TestClient) -> None:
     """An agent arriving late reads where each thread is the way the review writes it."""
-    ranged = {**A_THREAD, "thread_id": "comment-2", "anchor": {**ON_THE_LINE, "start_line": 3, "end_line": 5}}
+    ranged = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 3, 5), "Why these?", thread_id="comment-2")
 
     with open_session(review_page) as socket:
         socket.send_json({"threads": [A_THREAD, ranged]})
@@ -100,6 +100,39 @@ def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_
         ("comment-1", f"`{REVIEWED_FILE}`:1"),
         ("comment-2", f"`{REVIEWED_FILE}`:3-5"),
     ]
+
+
+def test_an_image_in_a_thread_no_agent_has_read_can_still_be_taken_off(review_page: TestClient) -> None:
+    """Telling the server what the review holds is not handing it to anybody."""
+    image_id = review_page.post("/api/images", content=PNG).json()["image_id"]
+    pictured = {**A_THREAD, "images": [image_id]}
+
+    with open_session(review_page) as socket:
+        # Said in one breath, so once the round has landed the thread has too
+        socket.send_json({"round": 2, "threads": [pictured]})
+        until_the_review_is_on_round(review_page, 2)
+
+    assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.NO_CONTENT
+
+
+def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestClient) -> None:
+    """Read, so handed over: the agent may open it at any time from now on."""
+    image_id = review_page.post("/api/images", content=PNG).json()["image_id"]
+    pictured = {**A_THREAD, "images": [image_id]}
+
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [pictured]})
+        [held] = until_the_review_holds_threads(review_page, 1)
+
+    assert [Path(path).name for path in held["images"]] == [image_id]
+    assert review_page.delete(f"/api/images/{image_id}").status_code == 409
+
+
+def test_a_thread_the_review_does_not_hold_is_not_found(review_page: TestClient) -> None:
+    """An empty answer would read as a thread with nothing in it."""
+    response = review_page.get(CONTEXT_ROUTE, params={"thread": "comment-404"})
+
+    assert response.status_code == 404
 
 
 def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> None:
@@ -115,11 +148,16 @@ def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> No
 
 def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_page: TestClient) -> None:
     """The browser still holds the agent's threads from before the restart."""
-    raised_before = {**A_THREAD, "thread_id": "raised-3", "body": "Kept it on purpose", "raised_by": "author"}
+    raised_before = thread_on_the_wire(
+        line_on_the_wire(REVIEWED_FILE, 1), "Kept it on purpose", thread_id="raised-3", raised_by=TurnAuthor.AUTHOR
+    )
     with open_session(review_page) as socket:
         socket.send_json({"threads": [raised_before]})
         until_the_review_holds_threads(review_page, 1)
 
-    raised = review_page.post("/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "And"})
+    raised = review_page.post(
+        "/api/point",
+        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+    )
 
     assert raised.json()["thread_id"] == "raised-4"

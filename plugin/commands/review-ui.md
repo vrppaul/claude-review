@@ -95,8 +95,9 @@ somebody who is waiting.
    something. This prints the round, a line per thread and the panel in
    short. It is an index on purpose: `claude-review context --thread
    comment-4` gets that one thread in full, with its lines and every turn.
-   `--json` is the same thing for a program to read rather than a person —
-   worth it when you mean to count or filter rather than to catch up.
+   `--json` is the same thing for a program to read rather than a person,
+   its threads in the same shape as a question's `thread` — worth it when
+   you mean to count or filter rather than to catch up.
 
 5. Stay in the loop until the review is over:
    ```bash
@@ -117,20 +118,25 @@ somebody who is waiting.
    Start it in the background and read what it prints. If what wakes you is a
    background command *finishing* rather than printing, put `break` after the
    `printf` and start the loop again after each event.
-   - `{"type": "question", "question": {...}}` — answer it (step 6), then
-     wait again. The question carries `thread_id` and `question_id`,
-     `where` — the place as the review names it — and `anchor`, the file,
-     side and line range with `quote`, the lines it is about; and `history`,
-     everything already said in that thread, starting with the comment that
-     opened it. The question and every turn of the history may carry
-     `images`, absolute paths to screenshots the reader pasted; the question
-     text may be empty when a screenshot is all there is.
+   - `{"type": "question", "question": {"question_id": "...", "body": "...",
+     "images": [...], "thread": {...}}}` — answer it (step 6), then wait
+     again. `body` and `images` are what is asked: the user's last reply in
+     the thread, or the comment that opened it when they have said nothing
+     since. `thread` is the whole thread it was asked in: `thread_id`;
+     `where`, the place as the review names it; `anchor`, the file, side and
+     line range with `quote`, the lines it is about; `body` and `images`, the
+     comment that opened it; `turns`, everything said since, each with its
+     `author`, `body`, `round` and `images` — a question asked in a reply is
+     the last of them; and `severity`, `resolved` and `raised_by`, which is
+     `author` on a thread you opened yourself. Every `images` holds absolute
+     paths to screenshots the reader pasted, and the text beside it may be
+     empty when a screenshot is all there is.
    - `{"type": "message", "message": {"message_id": "panel-1", "text": "...",
      "threads": [...], "images": [...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:
      the plan, the tests, a file nobody commented on. Answer it with `say`
-     (step 7). Any threads it points at come with it, in the same shape as a
-     question. `images` are absolute paths to screenshots they attached, and
+     (step 7). Any threads it points at come with it, in the same shape as
+     a question's `thread`. `images` are absolute paths to screenshots they attached, and
      the text may be empty when an image is the whole question: open each
      with your file reader before answering. They outlive the review in
      the system's temporary directory, so the last round's are still there.

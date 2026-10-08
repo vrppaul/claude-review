@@ -8,42 +8,47 @@ same queue, so an answer written after a round arrives after it.
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+from claude_review.domain.models import CommentSeverity, LineSide, TurnAuthor
 from tests.helpers import (
     CONTEXT_ROUTE,
     DIFF_ROUTE,
     EVENTS_ROUTE,
+    FIRST_THREAD_ID,
     REVIEWED_FILE,
     REVIEWED_LINE,
     WAIT_FOR_EVENT,
+    FixedClock,
+    ReviewFactory,
+    http_client,
+    line_on_the_wire,
     next_push,
+    one_line_file,
     open_session,
+    pushes_until,
+    thread_on_the_wire,
+    turn_on_the_wire,
     until_the_review_holds_threads,
 )
 
 MESSAGE = {"message_id": "panel-1", "text": "Run the tests and say what fails."}
 
-THREAD = {
-    "anchor": {
-        "file": REVIEWED_FILE,
-        "side": "new",
-        "start_line": 42,
-        "end_line": 42,
-        "quote": ["    return now - self.started_at > timeout"],
-    },
-    "thread_id": "comment-1",
-    "body": "Why did you drop the None check?",
-    "history": [{"author": "reader", "body": "Why did you drop the None check?", "round": 1}],
-}
+# A moment on the review's clock, in epoch milliseconds
+A_MOMENT = 1_791_000_000_000
 
-QUESTION = {
-    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 42, "end_line": 42, "quote": []},
-    "thread_id": "comment-1",
-    "question_id": "comment-1",
-    "body": "Why did you drop the None check?",
-    "severity": "note",
-    "resolved": False,
-    "raised_by": "reader",
-}
+THREAD = thread_on_the_wire(
+    {**line_on_the_wire(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
+    "Why did you drop the None check?",
+    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.")],
+)
+
+QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
+
+POINT_ROUTE = "/api/point"
+
+
+def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
+    """A thread the author raises, as its command sends it: an ordinary note."""
+    return {"anchor": anchor, "body": body, "severity": CommentSeverity.NOTE}
 
 
 async def test_a_message_reaches_whoever_is_waiting(client: AsyncClient) -> None:
@@ -66,13 +71,13 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
     [thread] = event["message"]["threads"]
     assert thread["thread_id"] == "comment-1"
     assert thread["anchor"]["quote"] == ["    return now - self.started_at > timeout"]
-    assert thread["history"][0]["body"] == "Why did you drop the None check?"
+    assert thread["turns"][0]["body"] == "It moved to the caller."
 
 
 async def test_questions_rounds_and_messages_keep_one_order(client: AsyncClient) -> None:
     """One queue, so an answer cannot overtake the round it belongs to."""
     await client.post("/api/ask", json=QUESTION)
-    await client.post("/api/submit", json={"comments": [], "end": False})
+    await client.post("/api/submit", json={"threads": [], "end": False})
     await client.post("/api/message", json=MESSAGE)
 
     handed_in_order = ["question", "round", "message"]
@@ -112,14 +117,11 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
     """What belongs on the code goes on the code, not into the panel."""
     with open_session(review_page) as socket:
         response = review_page.post(
-            "/api/point",
+            POINT_ROUTE,
             json={
-                "file": REVIEWED_FILE,
-                "side": "new",
-                "start_line": 1,
-                "end_line": 1,
+                "anchor": line_on_the_wire(REVIEWED_FILE, 1),
                 "body": "I did this differently from what was asked, because...",
-                "severity": "question",
+                "severity": CommentSeverity.QUESTION,
             },
         )
         pushed = next_push(socket, "point")
@@ -134,10 +136,8 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
-    first = await client.post("/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "one"})
-    second = await client.post(
-        "/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "two"}
-    )
+    first = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "one"))
+    second = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "two"))
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
@@ -145,18 +145,14 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
 
 async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     """A thread that ends before it starts hangs on nothing."""
-    response = await client.post(
-        "/api/point", json={"file": REVIEWED_FILE, "start_line": 9, "end_line": 2, "body": "nowhere"}
-    )
+    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 9, 2), "nowhere"))
 
     assert response.status_code == 422
 
 
 async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
     """Silently accepting it shows the reader a thread about nothing."""
-    response = await client.post(
-        "/api/point", json={"file": "src/elsewhere.py", "start_line": 1, "end_line": 1, "body": "here"}
-    )
+    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire("src/elsewhere.py", 1), "here"))
 
     assert response.status_code == 404
     assert "not in this review" in response.json()["detail"]
@@ -166,8 +162,7 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
 async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: AsyncClient) -> None:
     """An unchanged line has an old number too, but nothing was removed there to talk about."""
     response = await client.post(
-        "/api/point",
-        json={"file": REVIEWED_FILE, "side": "old", "start_line": 1, "end_line": 1, "body": "this one"},
+        POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1, side=LineSide.OLD), "this one")
     )
 
     assert response.status_code == 422
@@ -176,9 +171,7 @@ async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: 
 
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
     """The quote would come back empty and go outdated at the next retake."""
-    response = await client.post(
-        "/api/point", json={"file": REVIEWED_FILE, "start_line": 900, "end_line": 900, "body": "far away"}
-    )
+    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 900), "far away"))
 
     assert response.status_code == 422
     assert "does not show new line 900" in response.json()["detail"]
@@ -186,9 +179,7 @@ async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: Asyn
 
 async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClient) -> None:
     """The check is a guard, not a hurdle: what is on screen goes through."""
-    response = await client.post(
-        "/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "this line"}
-    )
+    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "this line"))
 
     assert response.status_code == 200
 
@@ -234,6 +225,40 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
     ]
 
 
+def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(review_page: TestClient) -> None:
+    """A push is gone once sent, and a reload must not lose the line saying what the agent is doing."""
+    review_page.post("/api/progress", json={"text": "rewriting the answer handler", "files": ["a.ts"]})
+
+    with open_session(review_page) as socket:
+        pushed = next_push(socket, "progress")
+
+    assert pushed["text"] == "rewriting the answer handler"
+    assert pushed["files"] == ["a.ts"]
+
+
+def test_work_that_was_answered_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
+    """The answer ends the work it answers; a reload must not bring the line back."""
+    review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
+    review_page.post("/api/say", json={"message_id": "panel-1", "text": "It retries twice."})
+
+    with open_session(review_page) as socket:
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+        pushed = pushes_until(socket, "show")
+
+    assert "progress" not in [push["type"] for push in pushed]
+
+
+def test_work_said_to_be_over_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
+    review_page.post("/api/progress", json={"text": "reading the handler"})
+    review_page.post("/api/progress", json={"text": ""})
+
+    with open_session(review_page) as socket:
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+        pushed = pushes_until(socket, "show")
+
+    assert "progress" not in [push["type"] for push in pushed]
+
+
 def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> None:
     """The one thing here that moves the reader's own screen."""
     with open_session(review_page) as socket:
@@ -248,7 +273,7 @@ def test_the_agent_says_what_only_the_agent_knows(review_page: TestClient) -> No
         review_page.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
         pushed = next_push(socket, "status")
 
-    assert (pushed["model"], pushed["context"]) == ("opus-5", "53% of 1M")
+    assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
 
 
 async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) -> None:
@@ -262,6 +287,24 @@ async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) ->
     assert diff["agent"]["at"] is not None
 
 
+async def test_a_status_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
+    """The panel says how old the numbers are, so the date is the review's own clock."""
+    async with http_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
+        await client.post("/api/status", json={"model": "opus-5"})
+        diff = (await client.get(DIFF_ROUTE)).json()
+
+    assert diff["agent"]["at"] == A_MOMENT
+
+
+async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: ReviewFactory) -> None:
+    async with http_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
+        await client.post("/api/message", json=MESSAGE)
+        await client.post("/api/say", json={"message_id": MESSAGE["message_id"], "text": "Two fail."})
+        panel = (await client.get(CONTEXT_ROUTE)).json()["panel"]
+
+    assert [entry["at"] for entry in panel] == [A_MOMENT, A_MOMENT]
+
+
 async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncClient) -> None:
     """A number nobody sent is a lie; the panel shows it as unknown."""
     diff = (await client.get(DIFF_ROUTE)).json()
@@ -269,13 +312,12 @@ async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncCl
     assert diff["agent"] == {"model": None, "context": None, "at": None}
 
 
-A_DISCUSSED_THREAD = {
-    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1, "quote": [REVIEWED_LINE]},
-    "thread_id": "comment-1",
-    "body": "Why did you drop the None check?",
-    "history": [{"author": "author", "body": "It moved to the caller.", "round": 1}],
-    "severity": "question",
-}
+A_DISCUSSED_THREAD = thread_on_the_wire(
+    {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]},
+    "Why did you drop the None check?",
+    severity=CommentSeverity.QUESTION,
+    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.")],
+)
 
 
 def test_an_agent_arriving_late_is_told_what_the_review_holds(review_page: TestClient) -> None:

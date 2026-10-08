@@ -47,7 +47,7 @@ describe('sending a round rather than ending the review', () => {
 		await commentStore.submit(false);
 
 		expect(server.bodiesSentTo('POST /api/submit')[1]).toMatchObject({
-			comments: [{ anchor: { file: 'b.py' } }]
+			threads: [{ anchor: { file: 'b.py' } }]
 		});
 	});
 
@@ -61,7 +61,7 @@ describe('sending a round rather than ending the review', () => {
 		await commentStore.submit(false);
 
 		expect(server.bodiesSentTo('POST /api/submit')[1]).toMatchObject({
-			comments: [
+			threads: [
 				{
 					anchor: { file: 'a.py' },
 					turns: [{ body: 'Tightened' }, { body: 'Still reads oddly' }]
@@ -80,7 +80,7 @@ describe('sending a round rather than ending the review', () => {
 		await commentStore.submit(false);
 
 		expect(server.bodiesSentTo('POST /api/submit')[1]).toMatchObject({
-			comments: [{ anchor: { file: 'b.py' } }]
+			threads: [{ anchor: { file: 'b.py' } }]
 		});
 	});
 

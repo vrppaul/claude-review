@@ -23,6 +23,8 @@ cd frontend && pnpm build            # Build frontend (outputs to src/claude_rev
 cd frontend && pnpm test             # Run frontend tests
 cd frontend && pnpm lint             # Lint frontend
 cd frontend && pnpm check            # Type check frontend
+cd frontend && pnpm api:types        # Regenerate src/lib/types/api.ts from the server's schemas
+cd frontend && pnpm api:check        # Fail if api.ts no longer matches the server (CI runs this)
 ```
 
 All Python commands use `uv` — never use pip or manually activate a virtualenv. Use `uv init` to initialize, `uv add` to add dependencies (NEVER specify a version — let uv resolve), `uv run` to execute anything.
@@ -50,10 +52,10 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 
 DDD-lite with clean layer separation:
 
-- **domain/** — Pydantic models (DiffFile, Comment, ReviewResult). No I/O, no framework imports.
+- **domain/** — Pydantic models (DiffFile, Thread, ReviewResult). No I/O, no framework imports.
 - **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
-- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly.
+- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `AgentInbox` (`agent_inbox.py`); what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
 
 Dependencies flow inward: presentation → services → domain, repositories → domain
 
@@ -84,7 +86,8 @@ async def submit_review(
 - **TDD**: write tests BEFORE implementation. Tests encode functional requirements, not implementation details.
 - **Test what the user cares about**: "diff shows all changed files", not "parse_hunk returns a list"
 - **Modules**: `__init__.py` must be empty — no code, no re-exports, nothing
-- **Error handling**: specific exceptions, not generic `Exception`
+- **Error handling**: specific exceptions, not generic `Exception`. Whatever the review refuses is a `ReviewError` of one kind (`NotFoundError`, `BadRequestError`, `RefusedError` ⊃ `TooLargeError`, `ConflictError`, in `domain/exceptions.py`); routes raise it and never catch it or raise `HTTPException` — `presentation/refusals.py` is the one table from kind to status
+- **Time**: every moment the review says is `EpochMillis`, read from an injected `Clock` (`get_clock` in routes, `FixedClock` in tests) — never `time.time()` in a route or service
 - **Python deps**: add via `uv add` (never specify version), never pip, never manually edit pyproject.toml deps
 - **JS deps**: add via `pnpm add` / `pnpm add -D` (never specify version), never manually edit package.json deps
 - **TODO/Changelog**: track in `TODO.md` / `CHANGELOG.md`
@@ -92,6 +95,7 @@ async def submit_review(
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations
+- **Wire types**: the browser's types for what crosses the wire come from `frontend/src/lib/types/api.ts`, generated from the server's OpenAPI (`presentation/api_schema.py`, which also describes the session socket). Change a schema → run `pnpm api:types`; never edit `api.ts` by hand. `types/index.ts` names the generated schemas for the rest of the browser
 - **Test selectors**: use `data-testid` attributes for targeting elements to interact with (click, type, check disabled). Use `getByText` / `text=` only for asserting visible content the user sees. Never use CSS class selectors in tests. Add `data-testid` to every new button, input, textarea, and container.
 
 ## Boundaries

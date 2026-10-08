@@ -737,13 +737,13 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(diff_review: Runni
 
     asked = await waiting
     assert asked["question"]["body"] == "Was the old greeting used anywhere else?"
-    assert asked["question"]["anchor"]["quote"] == ["def hello():"]
+    assert asked["question"]["thread"]["anchor"]["quote"] == ["def hello():"]
 
     await _agent(
         diff_review,
         "reply",
         "--thread",
-        asked["question"]["thread_id"],
+        asked["question"]["thread"]["thread_id"],
         "--question",
         asked["question"]["question_id"],
         "No, it was the only caller.",

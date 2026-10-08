@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi import Request
 from pydantic import BaseModel
-from starlette.applications import Starlette
 
 from claude_review.domain.models import DiffFile, GuideState, ReaderSettings, ReviewMode
+from claude_review.domain.protocols import Clock
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
@@ -40,27 +40,23 @@ def get_diff_base(request: Request) -> str | None:
     return request.app.state.diff_base
 
 
+def get_clock(request: Request) -> Clock:
+    return request.app.state.clock
+
+
 def get_objects(request: Request) -> Path | None:
     return request.app.state.workspace.objects
 
 
-def anchor_service_for(app: Starlette) -> AnchorService:
-    """The anchors of one review, read against its own diff, for a route or the session socket."""
-    return AnchorService(app.state.diff_files)
-
-
 def get_anchor_service(request: Request) -> AnchorService:
-    return anchor_service_for(request.app)
-
-
-def image_service_for(app: Starlette) -> ImageService:
-    """The image service of one review, for a route or for the session socket."""
-    store = DirectoryImageStore(app.state.workspace.images)
-    return ImageService(store, app.state.server.images, REVIEW_IMAGE_QUOTA)
+    """The anchors of one review, read against its own diff as it stands now."""
+    return AnchorService(request.app.state.diff_files)
 
 
 def get_image_service(request: Request) -> ImageService:
-    return image_service_for(request.app)
+    """The image service of one review."""
+    store = DirectoryImageStore(request.app.state.workspace.images)
+    return ImageService(store, request.app.state.server.images, REVIEW_IMAGE_QUOTA)
 
 
 def reader_record_service[Record: BaseModel](path: Path, record_type: type[Record]) -> ReaderRecordService[Record]:
