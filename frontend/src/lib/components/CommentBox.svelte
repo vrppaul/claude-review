@@ -2,9 +2,8 @@
 	import { onMount } from 'svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentFields } from '$lib/stores/comment-fields';
-	import type { CommentKind, CommentSeverity, LineSide } from '$lib/types';
+	import type { CommentKind, CommentSeverity } from '$lib/types';
 	import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
 	import AttachedImages from './AttachedImages.svelte';
 
 	const SUGGESTION_FENCE = '```suggestion';
@@ -16,9 +15,8 @@
 		/** Hand this one over now, rather than with the rest of the review. */
 		onAsk?: (body: string, severity: CommentSeverity, images: string[]) => void;
 		onCancel: () => void;
-		side?: LineSide;
-		startLine?: number;
-		endLine?: number;
+		/** Where the comment hangs, said above the field: "Line 42". */
+		label?: string;
 		initialBody?: string;
 		initialSeverity?: CommentSeverity;
 		/** Images already on the comment being edited. */
@@ -36,9 +34,7 @@
 		onSave,
 		onAsk,
 		onCancel,
-		side,
-		startLine,
-		endLine,
+		label,
 		initialBody = '',
 		initialSeverity = 'note',
 		initialImages = [],
@@ -52,10 +48,6 @@
 		{ value: 'question', label: 'Question' },
 		{ value: 'blocker', label: 'Blocker' }
 	];
-
-	const label = $derived(
-		startLine == null ? null : lineRangeLabel(side ?? 'new', startLine, endLine ?? startLine)
-	);
 
 	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
 	let body = $state(initialBody);

@@ -10,7 +10,16 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode, ReviewWorkspace
+from claude_review.domain.models import (
+    DiffFile,
+    DiffHunk,
+    DiffLine,
+    FileStatus,
+    LineType,
+    ReaderFiles,
+    ReviewMode,
+    ReviewWorkspace,
+)
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 
@@ -27,7 +36,7 @@ def state() -> ServerState:
 
 
 @pytest.fixture
-def client(state: ServerState, workspace: ReviewWorkspace) -> TestClient:
+def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles) -> TestClient:
     files = [
         DiffFile(
             path="a.py",
@@ -43,7 +52,7 @@ def client(state: ServerState, workspace: ReviewWorkspace) -> TestClient:
         )
     ]
     return TestClient(
-        create_app(diff_files=files, state=state, mode=ReviewMode.DIFF, workspace=workspace),
+        create_app(diff_files=files, state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files),
         base_url=LOCAL_ORIGIN,
     )
 

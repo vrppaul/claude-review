@@ -10,7 +10,7 @@ import pytest
 import uvicorn
 from playwright.async_api import Locator, Page
 
-from claude_review.domain.models import ReviewMode, ReviewWorkspace
+from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -26,10 +26,10 @@ ServerFixture = tuple[str, ServerState]
 
 
 async def _start_server(
-    diff_files, state, workspace: ReviewWorkspace, mode=ReviewMode.DIFF
+    diff_files, state, workspace: ReviewWorkspace, reader_files: ReaderFiles, mode=ReviewMode.DIFF
 ) -> AsyncGenerator[ServerFixture]:
     """Start a uvicorn server and yield (url, state)."""
-    app = create_app(diff_files=diff_files, state=state, mode=mode, workspace=workspace)
+    app = create_app(diff_files=diff_files, state=state, mode=mode, workspace=workspace, reader_files=reader_files)
     # Match the CLI: the default picks uvicorn's older websockets integration
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
     server = uvicorn.Server(config)
@@ -105,14 +105,16 @@ def e2e_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def server_url(e2e_repo: Path, workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
+async def server_url(
+    e2e_repo: Path, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> AsyncGenerator[ServerFixture]:
     """Start a real server against the e2e repo and yield its URL."""
     git_repo = GitRepository()
     diff_service = DiffService(git_repository=git_repo)
     diff_files = await diff_service.get_diff(e2e_repo)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.DIFF):
+    async for fixture in _start_server(diff_files, state, workspace, reader_files, ReviewMode.DIFF):
         yield fixture
 
 
@@ -307,12 +309,14 @@ def text_files(tmp_path: Path) -> list[Path]:
 
 
 @pytest.fixture
-async def files_mode_server(text_files: list[Path], workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
+async def files_mode_server(
+    text_files: list[Path], workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> AsyncGenerator[ServerFixture]:
     """Start a real server in files mode."""
     diff_files = TextFileService().read_files(text_files)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.FILES):
+    async for fixture in _start_server(diff_files, state, workspace, reader_files, ReviewMode.FILES):
         yield fixture
 
 
@@ -525,12 +529,14 @@ def transcript_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def transcript_mode_server(transcript_file: Path, workspace: ReviewWorkspace) -> AsyncGenerator[ServerFixture]:
+async def transcript_mode_server(
+    transcript_file: Path, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> AsyncGenerator[ServerFixture]:
     """Start a real server in transcript mode."""
     diff_files = TranscriptService().parse(transcript_file)
     state = ServerState(shutdown_event=asyncio.Event())
 
-    async for fixture in _start_server(diff_files, state, workspace, ReviewMode.TRANSCRIPT):
+    async for fixture in _start_server(diff_files, state, workspace, reader_files, ReviewMode.TRANSCRIPT):
         yield fixture
 
 
@@ -669,6 +675,7 @@ async def test_split_layout_faces_the_two_versions(server_url: ServerFixture, pa
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
+    await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("layout-split").click()
 
     main = _section(page, "main.py")
@@ -682,6 +689,7 @@ async def test_comment_left_in_split_layout_reaches_claude(server_url: ServerFix
     await page.goto(url)
     await page.get_by_test_id("sidebar").wait_for()
 
+    await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("layout-split").click()
     main = _section(page, "main.py")
     await main.get_by_test_id("split-view").wait_for()
@@ -797,6 +805,7 @@ async def test_ignoring_whitespace_retakes_the_diff(server_url: ServerFixture, p
     await page.get_by_test_id("sidebar").wait_for()
 
     before = await page.get_by_test_id("file-section").count()
+    await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("ignore-whitespace").check()
     await page.wait_for_timeout(300)
 
@@ -842,7 +851,7 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(server_url: Server
 
     asked = await waiting
     assert asked["question"]["body"] == "Was the old greeting used anywhere else?"
-    assert asked["question"]["quote"] == ["def hello():"]
+    assert asked["question"]["anchor"]["quote"] == ["def hello():"]
 
     await _send_reply(
         port,
@@ -955,7 +964,7 @@ async def test_a_message_carries_the_thread_it_points_at(server_url: ServerFixtu
     handed_over = await waiting
     [thread] = handed_over["message"]["threads"]
     assert thread["body"] == "Is this greeting used?"
-    assert thread["quote"] == ["def hello():"]
+    assert thread["anchor"]["quote"] == ["def hello():"]
 
 
 async def test_the_review_says_when_the_tree_moves_under_it(server_url: ServerFixture, page: Page) -> None:
@@ -1077,10 +1086,12 @@ async def _send_reply(port: int, thread_id: str, question_id: str, text: str) ->
     assert proc.returncode == 0, stderr.decode()
 
 
-async def test_a_first_review_is_welcomed_and_shown_around(server_url: ServerFixture, page: Page) -> None:
+async def test_a_first_review_is_welcomed_and_shown_around(
+    server_url: ServerFixture, reader_files: ReaderFiles, page: Page
+) -> None:
     """Somebody who has never opened a review is offered the tour, once."""
     url, _state = server_url
-    await page.context.clear_cookies()
+    reader_files.guide.unlink()
     await page.goto(url)
     await page.get_by_test_id("guide-welcome").wait_for()
 

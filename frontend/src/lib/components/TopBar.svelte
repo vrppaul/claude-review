@@ -4,11 +4,10 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
-	import { scrollToComment } from '$lib/utils/scroll';
+	import { revealThread } from '$lib/anchors/views';
 	import BasePicker from './BasePicker.svelte';
-	import DiffLayoutToggle from './DiffLayoutToggle.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
-	import ThemeToggle from './ThemeToggle.svelte';
+	import SettingsMenu from './SettingsMenu.svelte';
 
 	interface Props {
 		submitting: boolean;
@@ -26,11 +25,7 @@
 		const comment = commentStore.step(direction);
 		if (!comment) return;
 
-		// A folded file has no comment on screen to move to, so open it first
-		if (diffStore.isCollapsed(comment.file)) {
-			diffStore.toggleCollapsed(comment.file);
-		}
-		requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
+		revealThread(comment);
 	}
 </script>
 
@@ -48,15 +43,27 @@
 	>
 		<kbd class="cr-guide-key">?</kbd> Help
 	</button>
-	<!-- What is under review, and what it is compared against: one sentence,
-		whose second half is the control that changes it -->
-	{#if diffStore.subject}
-		<div class="flex min-w-0 items-center gap-1">
-			<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
-				{diffStore.subject}:
+	<!-- What the diff is compared against, as a control. The repository it is
+		of is in the tab's title; the header has room only for what changes. -->
+	{#if diffStore.phrase}
+		<BasePicker />
+		{#if diffStore.ignoreWhitespace}
+			<!-- Said here as well as in the settings, because it hides changes -->
+			<span data-testid="whitespace-hidden" class="cr-chip text-base-content">
+				No whitespace
+				<button
+					data-testid="show-whitespace"
+					class="btn btn-ghost btn-xs px-1"
+					aria-label="Show whitespace changes again"
+					title="Show whitespace changes again"
+					onclick={() => diffStore.setIgnoreWhitespace(false)}
+				>
+					<svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+						<path d="M3 3l6 6M9 3l-6 6" />
+					</svg>
+				</button>
 			</span>
-			<BasePicker />
-		</div>
+		{/if}
 	{:else if diffStore.title}
 		<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
 			{diffStore.title}
@@ -64,26 +71,6 @@
 	{/if}
 
 	<div class="flex-1"></div>
-
-	{#if diffStore.mode === 'diff'}
-		<label class="cr-chip">
-			<input
-				data-testid="ignore-whitespace"
-				type="checkbox"
-				checked={diffStore.ignoreWhitespace}
-				onchange={(e) => diffStore.setIgnoreWhitespace(e.currentTarget.checked)}
-			/>
-			<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-				{#if diffStore.ignoreWhitespace}
-					<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
-				{:else}
-					<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1" />
-				{/if}
-			</svg>
-			Ignore whitespace
-		</label>
-		<DiffLayoutToggle />
-	{/if}
 
 	{#if error}
 		<span data-testid="submit-error" class="text-sm text-error">{error}</span>
@@ -167,5 +154,5 @@
 		</svg>
 	</button>
 
-	<ThemeToggle />
+	<SettingsMenu />
 </header>

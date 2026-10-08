@@ -1,11 +1,15 @@
 """Service for formatting review comments into markdown."""
 
-from claude_review.domain.models import Comment, CommentSeverity, LineSide, ReviewResult, Turn, TurnAuthor
+from claude_review.domain.models import Comment, CommentSeverity, ReviewResult, Turn, TurnAuthor
+from claude_review.services.anchor_service import AnchorService
 from claude_review.services.thread_markdown import format_opening, format_turn
 
 
 class ReviewService:
     """Formats review threads into markdown for whoever answers the review."""
+
+    def __init__(self, anchors: AnchorService) -> None:
+        self._anchors = anchors
 
     def format_review(self, comments: list[Comment], body: str | None = None, round_number: int = 1) -> ReviewResult:
         """Convert comments and optional review body into formatted markdown.
@@ -43,10 +47,10 @@ class ReviewService:
 
     def _format_comment(self, comment: Comment) -> str:
         """Render one thread: its anchor, what was said, and by whom."""
-        pieces = [f"### `{comment.file}`:{self._format_line_ref(comment)}{self._format_tags(comment)}"]
+        pieces = [f"### {self._anchors.where(comment.anchor)}{self._format_tags(comment)}"]
 
-        if comment.outdated and comment.quote:
-            pieces.append(self._format_quote(comment.quote))
+        if comment.anchor.outdated and comment.anchor.quote:
+            pieces.append(self._format_quote(comment.anchor.quote))
 
         # A thread the author raised opens with the author speaking, so it
         # is quoted like any other turn: the reader's reply below it then
@@ -82,20 +86,6 @@ class ReviewService:
             tags.append(str(comment.severity))
         if comment.resolved:
             tags.append("resolved")
-        if comment.outdated:
+        if comment.anchor.outdated:
             tags.append("outdated")
         return f" — {', '.join(tags)}" if tags else ""
-
-    def _format_line_ref(self, comment: Comment) -> str:
-        """Format line reference: '42', '42-47', or '42 (removed)'.
-
-        A comment on the old side points at a line the change deleted, so the
-        number refers to the file as it was — saying so keeps the reader from
-        opening that line in the current file and reading something unrelated.
-        """
-        span = str(comment.start_line)
-        if comment.start_line != comment.end_line:
-            span = f"{comment.start_line}-{comment.end_line}"
-        if comment.side == LineSide.OLD:
-            return f"{span} (removed)"
-        return span

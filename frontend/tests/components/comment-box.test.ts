@@ -10,7 +10,7 @@ describe('CommentBox', () => {
 	it('calls onSave with trimmed text when Comment button is clicked', async () => {
 		const onSave = vi.fn();
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave, onCancel: vi.fn(), startLine: 5 }
+			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }
 		});
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
@@ -40,17 +40,9 @@ describe('CommentBox', () => {
 		expect(onCancel).toHaveBeenCalled();
 	});
 
-	it('shows line label for single line', () => {
+	it('says where the comment hangs', () => {
 		const { getByText } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 42, endLine: 42 }
-		});
-
-		expect(getByText('Line 42')).toBeTruthy();
-	});
-
-	it('shows line range label for multi-line', () => {
-		const { getByText } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 10, endLine: 15 }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' }
 		});
 
 		expect(getByText('Lines 10-15')).toBeTruthy();
@@ -74,8 +66,7 @@ describe('suggesting a replacement', () => {
 				kind: 'new',
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
-				startLine: 3,
-				endLine: 4,
+				label: 'Lines 3',
 				suggestFrom: ['    if x:', '        return 1']
 			}
 		});
@@ -93,7 +84,7 @@ describe('suggesting a replacement', () => {
 				kind: 'new',
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
-				startLine: 3,
+				label: 'Line 3',
 				suggestFrom: ['x = 1']
 			}
 		});
@@ -107,7 +98,7 @@ describe('suggesting a replacement', () => {
 
 	it('offers nothing to suggest when no lines were given', () => {
 		const { queryByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 3 }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' }
 		});
 
 		expect(queryByTestId('suggest-change')).toBeNull();
@@ -116,7 +107,7 @@ describe('suggesting a replacement', () => {
 	it('will not start a second suggestion in one comment', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 3, suggestFrom: ['x = 1'] }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3', suggestFrom: ['x = 1'] }
 		});
 
 		await user.click(getByTestId('suggest-change'));
@@ -130,7 +121,7 @@ describe('how a comment is meant', () => {
 		const user = userEvent.setup();
 		const onSave = vi.fn();
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave, onCancel: vi.fn(), startLine: 1 }
+			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' }
 		});
 
 		await user.type(getByTestId('comment-input'), 'Reads well');
@@ -143,7 +134,7 @@ describe('how a comment is meant', () => {
 		const user = userEvent.setup();
 		const onSave = vi.fn();
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave, onCancel: vi.fn(), startLine: 1 }
+			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' }
 		});
 
 		await user.click(getByTestId('severity-question'));
@@ -155,7 +146,7 @@ describe('how a comment is meant', () => {
 
 	it('reopens for editing with the mark it was saved under', async () => {
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 1, initialSeverity: 'blocker' }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1', initialSeverity: 'blocker' }
 		});
 
 		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
@@ -195,7 +186,7 @@ describe('images in a comment', () => {
 		imageFetch('4f.png');
 		const onSave = vi.fn();
 		const { getByTestId, findByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave, onCancel: vi.fn(), startLine: 5 }
+			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }
 		});
 
 		await fireEvent.paste(getByTestId('comment-input'), {
@@ -211,7 +202,7 @@ describe('images in a comment', () => {
 		// Cancel, a click on another line, a folded thread: each closes the field
 		const fetchMock = imageFetch('4f.png');
 		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 5 }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }
 		});
 
 		await fireEvent.paste(getByTestId('comment-input'), {
@@ -228,7 +219,7 @@ describe('images in a comment', () => {
 	it('keeps what was pasted once the comment is saved', async () => {
 		const fetchMock = imageFetch('4f.png');
 		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 5 }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }
 		});
 
 		await fireEvent.paste(getByTestId('comment-input'), {
@@ -261,7 +252,7 @@ describe('what a comment field says happened to it', () => {
 	it('says it opened, and what became of it, naming which kind of field it is', async () => {
 		const report = vi.spyOn(commentFields, 'report');
 		const { getByTestId } = render(CommentBox, {
-			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), startLine: 5 }
+			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }
 		});
 
 		await userEvent.type(getByTestId('comment-input'), 'Fix this');

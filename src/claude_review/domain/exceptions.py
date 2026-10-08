@@ -17,6 +17,18 @@ class UnknownVersionError(Exception):
     """Raised when a base is asked for that this review never offered."""
 
 
+class AnchorRefusedError(Exception):
+    """Raised when something is asked to hang where nothing is on screen."""
+
+
+class UnknownAnchorFileError(AnchorRefusedError):
+    """Raised when an anchor names a file this review does not hold."""
+
+
+class AnchorLinesNotShownError(AnchorRefusedError):
+    """Raised when an anchor names lines of a file that the diff does not show."""
+
+
 class ImageRefusedError(Exception):
     """Raised when an upload is not an image this review can keep."""
 

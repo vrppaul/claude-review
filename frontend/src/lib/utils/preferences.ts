@@ -1,10 +1,10 @@
 /**
  * The choices a reader makes about how a review is drawn.
  *
- * Which layout, whether whitespace counts, how a markdown file is shown:
- * none of these belong to a particular review, they are how this person
- * reads. Kept beside the theme, in the browser's own storage, and read back
- * before the first paint of the diff.
+ * How a markdown file is shown, how wide the panels are: none of these
+ * belong to a particular review, they are how this person reads this page.
+ * Kept in the browser's own storage, which belongs to one port; what should
+ * follow the reader into every review lives in `stores/settings.svelte.ts`.
  */
 
 function key(name: string): string {
@@ -65,5 +65,14 @@ export function writeChoice(
     localStorage.setItem(key(name), stored);
   } catch {
     // The choice still applies to this tab, it just will not be remembered
+  }
+}
+
+/** Drop a stored choice that something else now keeps. */
+export function forget(name: string): void {
+  try {
+    localStorage.removeItem(key(name));
+  } catch {
+    // Blocked site data: there is nothing stored to drop
   }
 }

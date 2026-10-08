@@ -11,17 +11,12 @@ import type { Comment, Turn, TurnPayload } from "$lib/types";
 export function threadOnTheWire(comment: Comment) {
   return {
     thread_id: comment.id,
-    file: comment.file,
-    side: comment.side,
-    start_line: comment.start_line,
-    end_line: comment.end_line,
-    quote: comment.quote,
+    anchor: comment.anchor,
     body: comment.body,
     images: comment.images,
     history: comment.turns.map(turnOnTheWire),
     severity: comment.severity,
     resolved: comment.resolved,
-    outdated: comment.outdated,
     raised_by: comment.raised_by,
   };
 }

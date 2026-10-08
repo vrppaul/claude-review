@@ -115,7 +115,7 @@
 			>
 		</div>
 		<p class="cr-guide-body">
-			A short walk through one review: what you are reading, where comments go, and how Claude
+			A short walk through one review: what you are reading, where comments go, and how the agent
 			answers them. {guideStore.stepCount} stops, about two minutes.
 		</p>
 		<div class="flex items-center gap-2">

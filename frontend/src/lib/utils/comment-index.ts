@@ -16,9 +16,10 @@ export function indexByRow(
 ): Map<string, Comment[]> {
   const index = new Map<string, Comment[]>();
   for (const comment of comments) {
-    if (comment.file !== file) continue;
-    if (comment.side === "old" && !removedLines) continue;
-    const key = `${comment.side}:${comment.end_line}`;
+    const { anchor } = comment;
+    if (anchor.file !== file) continue;
+    if (anchor.side === "old" && !removedLines) continue;
+    const key = `${anchor.side}:${anchor.end_line}`;
     const existing = index.get(key);
     if (existing) existing.push(comment);
     else index.set(key, [comment]);

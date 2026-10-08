@@ -188,10 +188,18 @@ describe('the choices a reader makes about how a review is drawn', () => {
 		diffStore.clear();
 	});
 
-	it('remembers the layout', () => {
+	it('keeps the layout with the reader\'s settings, for every review', () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+		vi.stubGlobal('fetch', fetchMock);
+
 		diffStore.setDiffLayout('split');
 
-		expect(localStorage.getItem('claude-review:layout')).toBe('split');
+		expect(diffStore.diffLayout).toBe('split');
+		expect(fetchMock).toHaveBeenCalledWith(
+			'/api/settings',
+			expect.objectContaining({ method: 'PUT', body: JSON.stringify({ diff_layout: 'split' }) })
+		);
+		vi.unstubAllGlobals();
 	});
 
 	it('remembers how a markdown file is shown', () => {
@@ -208,11 +216,4 @@ describe('the choices a reader makes about how a review is drawn', () => {
 		expect(diffStore.diffLayout).toBe('split');
 	});
 
-	it('ignores a stored choice that is no longer a choice', () => {
-		localStorage.setItem('claude-review:layout', 'three-columns');
-
-		diffStore.clear();
-
-		expect(diffStore.diffLayout).toBe('unified');
-	});
 });

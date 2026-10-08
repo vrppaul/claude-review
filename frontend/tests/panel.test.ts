@@ -4,7 +4,9 @@ import { diffStore } from '$lib/stores/diff.svelte';
 import { panelStore } from '$lib/stores/panel.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
 import { loadDraft } from '$lib/utils/drafts';
-import { threadsIn, threadToken } from '$lib/utils/thread-token';
+import { threadsIn } from '$lib/utils/thread-token';
+import { anchorToken } from '$lib/anchors/views';
+import { lineAnchor } from '$lib/anchors/line';
 import { formatWeight, reviewWeight } from '$lib/utils/weight';
 import type { Comment, DiffFile } from '$lib/types';
 import { newComment } from './new-comment';
@@ -80,11 +82,11 @@ describe('the panel talks to the agent about the review', () => {
 		commentStore.addTurn(id, { author: 'author', body: 'Because the caller cannot.', images: [] });
 		const thread = commentStore.comments[0];
 
-		await say(`Look at ${threadToken(thread)} again`, [thread]);
+		await say(`Look at ${anchorToken(thread.anchor)} again`, [thread]);
 
 		const [carried] = sent(fetchMock).threads;
 		expect(carried.thread_id).toBe(id);
-		expect(carried.quote).toEqual(['y = 3']);
+		expect(carried.anchor.quote).toEqual(['y = 3']);
 		expect(carried.body).toBe('Why catch here?');
 		expect(carried.history[0].body).toBe('Because the caller cannot.');
 	});
@@ -93,7 +95,7 @@ describe('the panel talks to the agent about the review', () => {
 		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'Why catch here?' }));
 		const thread = commentStore.comments[0];
 
-		expect(threadsIn(`Look at ${threadToken(thread)} again`, commentStore.comments)).toHaveLength(
+		expect(threadsIn(`Look at ${anchorToken(thread.anchor)} again`, commentStore.comments)).toHaveLength(
 			1
 		);
 		expect(threadsIn('Look at it again', commentStore.comments)).toHaveLength(0);
@@ -188,9 +190,12 @@ describe('the panel talks to the agent about the review', () => {
 	});
 
 	it('takes a thread the author raised without calling it the reader\'s work', () => {
-		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I did this differently', 'note', [
-			'y = 3'
-		]);
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']),
+			'I did this differently',
+			'note'
+		);
 
 		expect(commentStore.count).toBe(1);
 		expect(commentStore.comments[0].raised_by).toBe('author');
@@ -201,7 +206,12 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('sends a raised thread on once the reader has answered in it', async () => {
 		const fetchMock = okFetch();
-		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I did this differently', 'note', []);
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, []),
+			'I did this differently',
+			'note'
+		);
 
 		commentStore.addTurn('raised-1', { author: 'reader', body: 'Fine, but rename it', images: [] });
 		await commentStore.submit(false);
@@ -213,7 +223,12 @@ describe('the panel talks to the agent about the review', () => {
 
 	it('hands over a raised thread as the author\'s own words', async () => {
 		const fetchMock = okFetch();
-		commentStore.raise('raised-1', 'src/routes.py', 'new', 2, 2, 'I kept the old name', 'note', []);
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, []),
+			'I kept the old name',
+			'note'
+		);
 		commentStore.addTurn('raised-1', { author: 'reader', body: 'Why?', images: [] });
 
 		await commentStore.ask('raised-1');

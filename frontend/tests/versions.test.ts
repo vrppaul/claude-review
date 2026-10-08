@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { isDrawn } from '$lib/utils/placement';
 import { createLineSelection } from '$lib/utils/line-selection.svelte';
-import type { Comment, DiffFile } from '$lib/types';
+import type { Comment, DiffFile, LineAnchor } from '$lib/types';
+import { lineAnchor } from '$lib/anchors/line';
 
 function file(path: string, lines: { old_no: number | null; new_no: number | null }[]): DiffFile {
 	return {
@@ -27,27 +28,21 @@ function file(path: string, lines: { old_no: number | null; new_no: number | nul
 	};
 }
 
-function thread(over: Partial<Comment> = {}): Comment {
+function thread(at: Partial<LineAnchor> = {}): Comment {
 	return {
 		id: 'c1',
-		file: 'a.py',
-		side: 'new',
+		anchor: { ...lineAnchor('a.py', 'new', 1, 1, []), ...at },
 		severity: 'note',
-		start_line: 1,
-		end_line: 1,
 		body: 'reads oddly',
 		images: [],
 		turns: [],
 		raised_by: 'reader',
 		resolved: false,
-		outdated: false,
-		quote: [],
 		awaiting: [],
 		collapsed: false,
 		unread: false,
 		round: 1,
-		at: 0,
-		...over
+		at: 0
 	};
 }
 
@@ -60,7 +55,6 @@ function served(paths: string[], phrase = 'uncommitted changes') {
 				files: paths.map((p) => file(p, [{ old_no: 1, new_no: 1 }])),
 				mode: 'diff',
 				title: 'claude-review: uncommitted changes',
-				subject: 'claude-review',
 				phrase,
 				round: 1,
 				answerer_attached: false,
@@ -151,19 +145,6 @@ describe('reading the same tree against something else', () => {
 		await expect(diffStore.setBase('round:9')).rejects.toThrow();
 
 		expect(diffStore.narrowed).toBe(false);
-	});
-
-	it("fetches the review's own diff for the threads when a round lands", async () => {
-		served(['answered.py'], 'changes since round 1');
-		await diffStore.setBase('round:1');
-
-		const fetchMock = served(['answered.py']);
-		await diffStore.takeAgain();
-
-		expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
-			'/api/diff?base=round%3A1',
-			'/api/diff'
-		]);
 	});
 });
 

@@ -7,18 +7,7 @@
  * and the count are enough when the thread is on screen.
  */
 
-const STORAGE_KEY = "claude-review:reply-sound";
-
-function readStored(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "on";
-  } catch {
-    // Private mode and blocked site data both throw; silence is the default
-    return false;
-  }
-}
-
-let enabled = $state(readStored());
+import { settingsStore } from "$lib/stores/settings.svelte";
 
 function tick(): void {
   const Sound = window.AudioContext ?? window.webkitAudioContext;
@@ -42,21 +31,16 @@ function tick(): void {
 
 export const soundStore = {
   get enabled(): boolean {
-    return enabled;
+    return settingsStore.settings.sound_on_replies;
   },
 
-  toggle() {
-    enabled = !enabled;
-    try {
-      localStorage.setItem(STORAGE_KEY, enabled ? "on" : "off");
-    } catch {
-      // The choice still applies to this tab, it just will not be remembered
-    }
+  setEnabled(enabled: boolean) {
+    void settingsStore.change({ sound_on_replies: enabled });
   },
 
   /** Say that an answer landed, if the reader asked to be told out loud. */
   announce() {
-    if (!enabled || !document.hidden) return;
+    if (!settingsStore.settings.sound_on_replies || !document.hidden) return;
     try {
       tick();
     } catch {

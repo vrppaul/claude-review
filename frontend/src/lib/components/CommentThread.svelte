@@ -3,7 +3,7 @@
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
+	import { anchorLabel, anchorSide } from '$lib/anchors/views';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -19,14 +19,15 @@
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
 
-	const label = $derived(lineRangeLabel(comment.side, comment.start_line, comment.end_line));
+	const label = $derived(anchorLabel(comment.anchor));
 	// Which round it went out in, if it has. What is still unsent keeps the
 	// mark colour; what has gone reads as already read by the other side.
 	const sentIn = $derived(commentStore.sentInRound(comment.id));
 	// In a diff, the same line number exists on both sides, so the thread says
 	// which one it hangs on in the diff's own signs
+	const side = $derived(anchorSide(comment.anchor));
 	const sign = $derived(
-		diffStore.mode !== 'diff' ? '' : comment.side === 'old' ? '−' : '+'
+		diffStore.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+'
 	);
 
 	/** When a turn was said, to the minute — a thread is read, not audited. */
@@ -144,9 +145,7 @@
 			initialBody={comment.body}
 			initialSeverity={comment.severity}
 			initialImages={comment.images}
-			side={comment.side}
-			startLine={comment.start_line}
-			endLine={comment.end_line}
+			{label}
 		/>
 	{:else if comment.collapsed}
 		<!-- Folded, by hand or by settling it. Either way it opens to be read. -->
@@ -213,7 +212,7 @@
 	{:else}
 		<!-- Looking at the thread is what makes its answer read -->
 		<div
-			class="cr-comment group rounded-r px-4 py-3 {comment.outdated ? 'cr-stale' : ''} {sentIn !==
+			class="cr-comment group rounded-r px-4 py-3 {comment.anchor.outdated ? 'cr-stale' : ''} {sentIn !==
 				undefined && !raised
 				? 'cr-sent'
 				: ''} {raised ? 'cr-raised' : ''}"
@@ -240,8 +239,8 @@
 				{#if sign}
 					<span
 						data-testid="comment-side"
-						class="font-mono text-xs {comment.side === 'old' ? 'cr-sign-del' : 'cr-sign-add'}"
-						title={comment.side === 'old' ? 'on the line this change removed' : 'on the new line'}
+						class="font-mono text-xs {side === 'old' ? 'cr-sign-del' : 'cr-sign-add'}"
+						title={side === 'old' ? 'on the line this change removed' : 'on the new line'}
 					>
 						{sign}
 					</span>
@@ -254,7 +253,7 @@
 						>{comment.severity}</span
 					>
 				{/if}
-				{#if comment.outdated}
+				{#if comment.anchor.outdated}
 					<span data-testid="comment-outdated" class="cr-severity cr-muted">outdated</span>
 				{/if}
 				{#if comment.resolved}
@@ -312,10 +311,10 @@
 				</div>
 			</div>
 
-			{#if comment.outdated && comment.quote.length > 0}
+			{#if comment.anchor.outdated && comment.anchor.quote.length > 0}
 				<div data-testid="stale-quote" class="cr-stale-quote mb-3 rounded-r px-3 py-2">
 					<p class="cr-muted mb-1 text-xs">what it was written against</p>
-					{#each comment.quote as line, i (i)}
+					{#each comment.anchor.quote as line, i (i)}
 						<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
 					{/each}
 				</div>
@@ -341,7 +340,7 @@
 							{#each splitSuggestions(exchange.asked) as part, i (i)}
 								{#if part.kind === 'suggestion'}
 									<div data-testid="comment-suggestion" class="cr-suggestion mt-2 overflow-x-auto">
-										{#each comment.quote as line, q (q)}
+										{#each comment.anchor.quote as line, q (q)}
 											<div class="cr-sugg-row cr-sugg-del"><span class="cr-sugg-sign">−</span>{line}</div>
 										{/each}
 										{#each part.text.split('\n') as line, a (a)}

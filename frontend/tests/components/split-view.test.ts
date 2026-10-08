@@ -86,8 +86,8 @@ describe('split layout', () => {
 		await user.type(getByTestId('comment-input'), 'why did this go');
 		await user.click(getByTestId('save-comment'));
 
-		expect(commentStore.comments[0].side).toBe('old');
-		expect(commentStore.comments[0].start_line).toBe(2);
+		expect(commentStore.comments[0].anchor.side).toBe('old');
+		expect(commentStore.comments[0].anchor.start_line).toBe(2);
 	});
 
 	it('keeps a comment made in one layout visible in the other', async () => {

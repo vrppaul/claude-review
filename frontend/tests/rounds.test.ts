@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
-import { reanchor } from '$lib/utils/reanchor';
-import type { Comment, DiffHunk } from '$lib/types';
+import { lineAnchor } from '$lib/anchors/line';
+import type { Anchor, Comment } from '$lib/types';
 import { newComment } from './new-comment';
 
 function sentPayload(mock: ReturnType<typeof vi.fn>, call = 0) {
@@ -47,7 +47,7 @@ describe('sending a round rather than ending the review', () => {
 		commentStore.add(newComment({ file: 'b.py', side: 'new', startLine: 2, endLine: 2, body: 'and this' }));
 		await commentStore.submit(false);
 
-		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.file)).toEqual(['b.py']);
+		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.anchor.file)).toEqual(['b.py']);
 	});
 
 	it('sends a thread again once something has been said in it', async () => {
@@ -60,7 +60,7 @@ describe('sending a round rather than ending the review', () => {
 		await commentStore.submit(false);
 
 		const again = sentPayload(fetchMock, 1).comments[0];
-		expect(again.file).toBe('a.py');
+		expect(again.anchor.file).toBe('a.py');
 		expect(again.turns).toHaveLength(2);
 	});
 
@@ -73,7 +73,7 @@ describe('sending a round rather than ending the review', () => {
 		commentStore.add(newComment({ file: 'b.py', side: 'new', startLine: 2, endLine: 2, body: 'and this' }));
 		await commentStore.submit(false);
 
-		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.file)).toEqual(['b.py']);
+		expect(sentPayload(fetchMock, 1).comments.map((c: Comment) => c.anchor.file)).toEqual(['b.py']);
 	});
 
 	it('counts up so the next round says which one it is', async () => {
@@ -87,71 +87,62 @@ describe('sending a round rather than ending the review', () => {
 });
 
 describe('a thread meeting a diff that has been taken again', () => {
-	const hunks: DiffHunk[] = [
-		{
-			header: '@@ -1,3 +1,4 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: 1, new_no: 1, content: 'import os' },
-				{ type: 'add', old_no: null, new_no: 2, content: 'import sys' },
-				{ type: 'context', old_no: 2, new_no: 3, content: 'def run():' },
-				{ type: 'context', old_no: 3, new_no: 4, content: '    return 1' }
-			]
-		}
-	];
+	beforeEach(() => {
+		commentStore.clear();
+		localStorage.clear();
+	});
 
-	function comment(quote: string[], start: number, end: number): Comment {
-		return {
-			id: 'comment-1',
-			file: 'a.py',
-			side: 'new',
-			severity: 'note',
-			start_line: start,
-			end_line: end,
-			body: 'why',
-			images: [],
-			turns: [],
-			raised_by: 'reader',
-			resolved: false,
-			outdated: false,
-			quote,
-			awaiting: [],
-			collapsed: false,
-			unread: false,
-			round: 1,
-			at: 0
-		};
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	/** The server answering with where each thread now hangs, in the order asked. */
+	function followedTo(anchors: Anchor[]) {
+		const mock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ anchors }) });
+		vi.stubGlobal('fetch', mock);
+		return mock;
 	}
 
-	it('follows the lines it was written about when they move', () => {
-		const moved = reanchor(comment(['def run():'], 2, 2), hunks);
+	it('asks the server where every thread now hangs', async () => {
+		const fetchMock = followedTo([lineAnchor('a.py', 'new', 2, 2, ['def run():'])]);
+		commentStore.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));
 
-		expect(moved).toEqual({ start_line: 3, end_line: 3, outdated: false });
+		await commentStore.follow();
+
+		expect(fetchMock.mock.calls[0][0]).toBe('/api/anchors/follow');
+		expect(sentPayload(fetchMock).anchors[0].quote).toEqual(['def run():']);
 	});
 
-	it('keeps a range together', () => {
-		const moved = reanchor(comment(['def run():', '    return 1'], 2, 3), hunks);
+	it('moves a thread to where its lines went, and counts it', async () => {
+		followedTo([lineAnchor('a.py', 'new', 3, 3, ['def run():'])]);
+		commentStore.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));
 
-		expect(moved).toEqual({ start_line: 3, end_line: 4, outdated: false });
+		const moved = await commentStore.follow();
+
+		expect(commentStore.comments[0].anchor.start_line).toBe(3);
+		expect(moved).toEqual({ followed: 1, outdated: 0 });
 	});
 
-	it('says so when the lines are gone rather than pointing at their replacement', () => {
-		const gone = reanchor(comment(['def walk():'], 2, 2), hunks);
+	it('counts a thread whose lines are gone as outdated, not as followed', async () => {
+		followedTo([{ ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), outdated: true }]);
+		commentStore.add(newComment({ file: 'a.py', startLine: 2, quote: ['def walk():'] }));
 
-		expect(gone.outdated).toBe(true);
-		expect(gone.start_line).toBe(2);
+		const moved = await commentStore.follow();
+
+		expect(commentStore.comments[0].anchor.outdated).toBe(true);
+		expect(moved).toEqual({ followed: 0, outdated: 1 });
 	});
 
-	it('marks a thread whose whole file has left the diff', () => {
-		const gone = reanchor(comment(['def run():'], 2, 2), null);
+	it('leaves a thread written while the answer was on its way where it is', async () => {
+		let answer: (value: unknown) => void = () => undefined;
+		vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise((resolve) => (answer = resolve))));
+		commentStore.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));
 
-		expect(gone.outdated).toBe(true);
-	});
+		const following = commentStore.follow();
+		commentStore.add(newComment({ file: 'a.py', startLine: 9, quote: ['late'] }));
+		answer({ ok: true, json: () => Promise.resolve({ anchors: [lineAnchor('a.py', 'new', 3, 3, ['def run():'])] }) });
+		await following;
 
-	it('leaves a thread that never kept its lines where it is', () => {
-		const kept = reanchor(comment([], 2, 2), hunks);
-
-		expect(kept).toEqual({ start_line: 2, end_line: 2, outdated: false });
+		expect(commentStore.comments.map((c) => c.anchor.start_line)).toEqual([3, 9]);
 	});
 });

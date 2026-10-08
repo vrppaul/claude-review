@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.models import Comment, CommentSeverity, LineSide, Turn, TurnAuthor
+from claude_review.domain.models import Comment, CommentSeverity, LineAnchor, LineSide, Turn, TurnAuthor
+from claude_review.services.anchor_service import AnchorService
 from claude_review.services.review_service import ReviewService
 
 
@@ -16,11 +17,8 @@ def test_single_comment_formats_with_file_and_line() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/handler.ts",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/handler.ts", side=LineSide.NEW, start_line=42, end_line=42),
             severity=CommentSeverity.NOTE,
-            start_line=42,
-            end_line=42,
             body="Wrong null check",
         )
     ]
@@ -37,11 +35,8 @@ def test_multiline_comment_formats_as_range() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/utils.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/utils.py", side=LineSide.NEW, start_line=10, end_line=15),
             severity=CommentSeverity.NOTE,
-            start_line=10,
-            end_line=15,
             body="Refactor this block",
         )
     ]
@@ -57,17 +52,18 @@ def test_multiple_comments_across_files() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix A"
-        ),
-        Comment(
-            file="src/b.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=5, end_line=5, body="Fix B"
-        ),
-        Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=20,
-            end_line=25,
+            body="Fix A",
+        ),
+        Comment(
+            anchor=LineAnchor(file="src/b.py", side=LineSide.NEW, start_line=5, end_line=5),
+            severity=CommentSeverity.NOTE,
+            body="Fix B",
+        ),
+        Comment(
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=20, end_line=25),
+            severity=CommentSeverity.NOTE,
             body="Fix A again",
         ),
     ]
@@ -104,7 +100,11 @@ def test_result_starts_with_header() -> None:
     """Non-empty review starts with ## Code Review Comments."""
     service = _service()
     comments = [
-        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+        Comment(
+            anchor=LineAnchor(file="x.py", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="note",
+        )
     ]
 
     result = service.format_review(comments)
@@ -128,11 +128,8 @@ def test_body_with_inline_comments_appears_first() -> None:
     service = _service()
     comments = [
         Comment(
-            file="x.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="x.py", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body="Fix this line",
         )
     ]
@@ -149,7 +146,11 @@ def test_empty_body_treated_as_no_body() -> None:
     """Empty string body is ignored, same as None."""
     service = _service()
     comments = [
-        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+        Comment(
+            anchor=LineAnchor(file="x.py", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="note",
+        )
     ]
 
     result = service.format_review(comments, body="")
@@ -161,7 +162,11 @@ def test_whitespace_only_body_treated_as_no_body() -> None:
     """Whitespace-only body is ignored, same as empty."""
     service = _service()
     comments = [
-        Comment(file="x.py", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+        Comment(
+            anchor=LineAnchor(file="x.py", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="note",
+        )
     ]
 
     result = service.format_review(comments, body="   \n  ")
@@ -180,7 +185,7 @@ def test_no_body_no_comments_produces_empty() -> None:
 
 
 def _service() -> ReviewService:
-    return ReviewService()
+    return ReviewService(AnchorService([]))
 
 
 def test_comment_on_a_removed_line_says_so() -> None:
@@ -188,11 +193,8 @@ def test_comment_on_a_removed_line_says_so() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.OLD,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.OLD, start_line=42, end_line=42),
             severity=CommentSeverity.NOTE,
-            start_line=42,
-            end_line=42,
             body="Why drop this?",
         )
     ]
@@ -207,11 +209,8 @@ def test_removed_range_is_marked_once() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.OLD,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.OLD, start_line=10, end_line=14),
             severity=CommentSeverity.NOTE,
-            start_line=10,
-            end_line=14,
             body="Restore this",
         )
     ]
@@ -226,19 +225,13 @@ def test_same_line_number_on_both_sides_stays_distinguishable() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.OLD,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.OLD, start_line=42, end_line=42),
             severity=CommentSeverity.NOTE,
-            start_line=42,
-            end_line=42,
             body="The old one",
         ),
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=42, end_line=42),
             severity=CommentSeverity.NOTE,
-            start_line=42,
-            end_line=42,
             body="The new one",
         ),
     ]
@@ -255,11 +248,8 @@ def test_a_question_is_marked_as_one() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=4, end_line=4),
             severity=CommentSeverity.QUESTION,
-            start_line=4,
-            end_line=4,
             body="Is this reachable?",
         )
     ]
@@ -273,11 +263,8 @@ def test_a_blocker_is_marked_as_one() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=4, end_line=4),
             severity=CommentSeverity.BLOCKER,
-            start_line=4,
-            end_line=4,
             body="This drops the lock",
         )
     ]
@@ -292,11 +279,8 @@ def test_an_ordinary_note_is_left_unmarked() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=4, end_line=4),
             severity=CommentSeverity.NOTE,
-            start_line=4,
-            end_line=4,
             body="Reads well",
         )
     ]
@@ -330,11 +314,8 @@ def test_an_answered_thread_carries_the_conversation() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/state.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/state.py", side=LineSide.NEW, start_line=60, end_line=64),
             severity=CommentSeverity.QUESTION,
-            start_line=60,
-            end_line=64,
             body="Every open review gets this push. Deliberate?",
             turns=[
                 Turn(author=TurnAuthor.AUTHOR, body="Deliberate: two tabs are one reader."),
@@ -355,11 +336,8 @@ def test_a_settled_thread_says_it_is_settled() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/state.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/state.py", side=LineSide.NEW, start_line=60, end_line=60),
             severity=CommentSeverity.QUESTION,
-            start_line=60,
-            end_line=60,
             body="Deliberate?",
             resolved=True,
         )
@@ -375,14 +353,16 @@ def test_a_comment_whose_lines_moved_carries_what_it_was_written_against() -> No
     service = _service()
     comments = [
         Comment(
-            file="src/routes.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(
+                file="src/routes.py",
+                side=LineSide.NEW,
+                start_line=104,
+                end_line=105,
+                outdated=True,
+                quote=["asked = ensure_future(state.questions.get())", "closed = ensure_future(state.wait())"],
+            ),
             severity=CommentSeverity.NOTE,
-            start_line=104,
-            end_line=105,
             body="Two mechanisms for one review.",
-            outdated=True,
-            quote=["asked = ensure_future(state.questions.get())", "closed = ensure_future(state.wait())"],
         )
     ]
 
@@ -398,11 +378,8 @@ def test_a_later_round_says_which_round_it_is() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body="Still reads oddly.",
         )
     ]
@@ -417,11 +394,8 @@ def test_the_first_round_is_not_numbered() -> None:
     service = _service()
     comments = [
         Comment(
-            file="src/a.py",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body="Fine.",
         )
     ]
@@ -434,17 +408,14 @@ def test_the_first_round_is_not_numbered() -> None:
 def test_a_thread_the_author_raised_reads_as_the_authors_own_words() -> None:
     """Otherwise the agent is handed its own note back as an instruction."""
     comment = Comment(
-        file="src/a.py",
-        side=LineSide.NEW,
+        anchor=LineAnchor(file="src/a.py", side=LineSide.NEW, start_line=42, end_line=42),
         severity=CommentSeverity.NOTE,
-        start_line=42,
-        end_line=42,
         body="I renamed this rather than deleting it",
         raised_by=TurnAuthor.AUTHOR,
         turns=[Turn(author=TurnAuthor.READER, body="Good, but call it `head`")],
     )
 
-    markdown = ReviewService().format_review([comment]).markdown
+    markdown = _service().format_review([comment]).markdown
 
     assert "> **You:** I renamed this rather than deleting it" in markdown
     assert "> **Reviewer:** Good, but call it `head`" in markdown
@@ -456,11 +427,8 @@ def test_images_are_named_as_files_to_open() -> None:
     reply = Path("/review/images/reply.png")
     comments = [
         Comment(
-            file="src/handler.ts",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/handler.ts", side=LineSide.NEW, start_line=42, end_line=42),
             severity=CommentSeverity.NOTE,
-            start_line=42,
-            end_line=42,
             body="",
             images=[opening],
             turns=[Turn(author=TurnAuthor.READER, body="Still like this", images=[reply])],
@@ -478,11 +446,8 @@ def test_a_comment_reaches_the_agent_as_written() -> None:
     body = "first\r\nsecond\n"
     comments = [
         Comment(
-            file="src/handler.ts",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="src/handler.ts", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body=body,
         )
     ]

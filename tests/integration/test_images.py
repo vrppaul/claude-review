@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from claude_review.domain.models import ReviewMode, ReviewWorkspace
+from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
@@ -23,9 +23,9 @@ NEVER_KEPT = f"{'0' * 32}.png"
 
 
 @pytest.fixture
-async def client(workspace: ReviewWorkspace):
+async def client(workspace: ReviewWorkspace, reader_files: ReaderFiles):
     state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=[], state=state, mode=ReviewMode.FILES, workspace=workspace)
+    app = create_app(diff_files=[], state=state, mode=ReviewMode.FILES, workspace=workspace, reader_files=reader_files)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
@@ -146,11 +146,8 @@ async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
 
 
 THREAD_COMMENT = {
-    "file": "src/a.py",
-    "side": "new",
+    "anchor": {"file": "src/a.py", "side": "new", "start_line": 1, "end_line": 1},
     "severity": "note",
-    "start_line": 1,
-    "end_line": 1,
     "body": "Looks off",
 }
 

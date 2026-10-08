@@ -2,6 +2,7 @@
 
 from enum import StrEnum, auto
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -107,6 +108,46 @@ class TurnAuthor(StrEnum):
     AUTHOR = auto()
 
 
+class AnchorKind(StrEnum):
+    """What a thread can hang on.
+
+    LINE — lines of one side of a file in the review's own diff.
+    """
+
+    LINE = auto()
+
+
+class AnchorBase(BaseModel):
+    """What every kind of anchor has, whatever it hangs on.
+
+    Where it hangs goes stale as the work moves things; what it said when it
+    was made is what finds its place again, and what says what the thread was
+    about once that place is gone.
+    """
+
+    quote: list[str] = []
+    # What it was made on is gone from what the review now holds
+    outdated: bool = False
+
+
+class LineAnchor(AnchorBase):
+    """Lines of one side of a file in the review's own diff.
+
+    Line numbers are only meaningful together with the side: a hunk that
+    replaces a line has both an old line 42 and a new line 42.
+    """
+
+    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
+    file: str
+    side: LineSide
+    start_line: int
+    end_line: int
+
+
+# Everything a thread can hang on; `AnchorService` answers for each kind
+type Anchor = LineAnchor
+
+
 class Turn(BaseModel):
     """One thing said in a thread after the comment that opened it."""
 
@@ -118,10 +159,7 @@ class Turn(BaseModel):
 
 
 class Comment(BaseModel):
-    """A thread hanging on a line or range of one side of the diff.
-
-    Line numbers are only meaningful together with the side: a hunk that
-    replaces a line has both an old line 42 and a new line 42.
+    """A thread hanging on something the reader reads.
 
     The comment that opened the thread stays in `body`, and everything said
     afterwards is a turn. Keeping the opening separate is not ceremony: it is
@@ -129,11 +167,8 @@ class Comment(BaseModel):
     review with nothing discussed is still only a body.
     """
 
-    file: str
-    side: LineSide
+    anchor: Anchor
     severity: CommentSeverity
-    start_line: int
-    end_line: int
     body: str
     # Screenshots pasted with the comment that opened the thread
     images: list[Path] = []
@@ -146,10 +181,6 @@ class Comment(BaseModel):
     # Settled, by the reader who opened it. Travels with the review, because
     # an agent reading a settled thread should not act on it again.
     resolved: bool = False
-    # The lines it hung on are gone from the current diff. Then the anchor
-    # says nothing useful and `quote` is what the thread is about.
-    outdated: bool = False
-    quote: list[str] = []
 
 
 class ReviewResult(BaseModel):
@@ -169,11 +200,9 @@ class ThreadContext(BaseModel):
     """
 
     thread_id: str
-    file: str
-    side: LineSide
-    start_line: int
-    end_line: int
-    quote: list[str] = []
+    anchor: Anchor
+    # The place, named the way the review names it everywhere it is told
+    where: str
     body: str
     # Screenshots pasted with the body: the comment, or the question asked
     images: list[Path] = []
@@ -184,7 +213,6 @@ class ThreadContext(BaseModel):
     # and a settled note are different instructions.
     severity: CommentSeverity = CommentSeverity.NOTE
     resolved: bool = False
-    outdated: bool = False
     raised_by: TurnAuthor = TurnAuthor.READER
 
 
@@ -335,6 +363,55 @@ class ReviewWorkspace(BaseModel):
     objects: Path | None
     # Where the images the reader pastes into the panel are kept
     images: Path
+
+
+class Theme(StrEnum):
+    """How the review is coloured: as the system says, or always light or dark."""
+
+    SYSTEM = auto()
+    LIGHT = auto()
+    DARK = auto()
+
+
+class DiffLayout(StrEnum):
+    """Whether a diff reads down one column or across two."""
+
+    UNIFIED = auto()
+    SPLIT = auto()
+
+
+class ReaderSettings(BaseModel):
+    """How this reader reads a review, the same in every review on the machine.
+
+    Each field holds what a reader who has never chosen gets.
+    """
+
+    theme: Theme = Theme.SYSTEM
+    diff_layout: DiffLayout = DiffLayout.UNIFIED
+    # Leave out changes that only alter whitespace
+    ignore_whitespace: bool = False
+    # A tick when an answer arrives while the review is in a background tab
+    sound_on_replies: bool = False
+
+
+class GuideState(BaseModel):
+    """What the review remembers of having shown this reader around."""
+
+    # The release whose news the reader was last shown
+    seen_release: str | None = None
+
+
+class ReaderFiles(BaseModel):
+    """Where what a review remembers about its reader is kept, for every review.
+
+    Two files for two kinds of thing: what the reader chose, kept with their
+    configuration, and what the review noticed, kept with other programs'
+    state. Configuration is often kept in git, where a release number
+    changing with every upgrade would be noise.
+    """
+
+    settings: Path
+    guide: Path
 
 
 class StoredImage(BaseModel):

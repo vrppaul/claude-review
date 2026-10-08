@@ -38,10 +38,10 @@ export const RELEASE_NEWS: ReleaseNews[] = [
   {
     release: "1.5.0",
     title: "Paste a screenshot anywhere you write",
-    body: "Ctrl+V puts an image into the panel, or into any comment, reply or edit. Claude gets it as a file it can open, and an image can be the whole question.",
+    body: "Ctrl+V puts an image into the panel, or into any comment, reply or edit. The agent gets it as a file it can open, and an image can be the whole question.",
     also: [
       "A short tour of the review, from the ? list whenever you want it.",
-      "The panel waits for Claude to join instead of showing you setup commands.",
+      "The panel waits for the agent to join instead of showing you setup commands.",
     ],
     illustration: { kind: "drawing", name: "pasted-screenshot" },
   },

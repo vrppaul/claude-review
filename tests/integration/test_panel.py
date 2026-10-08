@@ -16,6 +16,7 @@ from claude_review.domain.models import (
     DiffLine,
     FileStatus,
     LineType,
+    ReaderFiles,
     ReviewMode,
     ReviewWorkspace,
     ThreadContext,
@@ -27,24 +28,22 @@ from claude_review.presentation.state import ServerState
 MESSAGE = {"message_id": "panel-1", "text": "Run the tests and say what fails."}
 
 THREAD = {
+    "anchor": {
+        "file": "src/a.py",
+        "side": "new",
+        "start_line": 42,
+        "end_line": 42,
+        "quote": ["    return now - self.started_at > timeout"],
+    },
     "thread_id": "comment-1",
-    "file": "src/a.py",
-    "side": "new",
-    "start_line": 42,
-    "end_line": 42,
-    "quote": ["    return now - self.started_at > timeout"],
     "body": "Why did you drop the None check?",
     "history": [{"author": "reader", "body": "Why did you drop the None check?", "round": 1}],
 }
 
 QUESTION = {
+    "anchor": {"file": "src/a.py", "side": "new", "start_line": 42, "end_line": 42, "quote": []},
     "thread_id": "comment-1",
     "question_id": "comment-1",
-    "file": "src/a.py",
-    "side": "new",
-    "start_line": 42,
-    "end_line": 42,
-    "quote": [],
     "body": "Why did you drop the None check?",
 }
 
@@ -72,8 +71,10 @@ def _files() -> list[DiffFile]:
 
 
 @pytest.fixture
-async def client(state: ServerState, workspace: ReviewWorkspace):
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
+async def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles):
+    app = create_app(
+        diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
@@ -97,7 +98,7 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
 
     [thread] = event["message"]["threads"]
     assert thread["thread_id"] == "comment-1"
-    assert thread["quote"] == ["    return now - self.started_at > timeout"]
+    assert thread["anchor"]["quote"] == ["    return now - self.started_at > timeout"]
     assert thread["history"][0]["body"] == "Why did you drop the None check?"
 
 
@@ -157,8 +158,10 @@ async def test_the_author_can_raise_a_thread_on_a_line(client: AsyncClient, stat
     assert response.json()["thread_id"] == "raised-1"
     pushed = listener.get_nowait()
     assert pushed["type"] == "point"
-    assert pushed["file"] == "src/a.py"
-    assert pushed["start_line"] == 1
+    assert pushed["anchor"]["file"] == "src/a.py"
+    assert pushed["anchor"]["start_line"] == 1
+    # Quoted from the diff, so the thread can follow its line when it moves
+    assert pushed["anchor"]["quote"] == ["x = 1"]
     assert pushed["severity"] == "question"
 
 
@@ -189,6 +192,17 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
     assert response.status_code == 404
     assert "not in this review" in response.json()["detail"]
     assert "src/a.py" in response.json()["detail"]
+
+
+async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: AsyncClient) -> None:
+    """An unchanged line has an old number too, but nothing was removed there to talk about."""
+    response = await client.post(
+        "/api/point",
+        json={"file": "src/a.py", "side": "old", "start_line": 1, "end_line": 1, "body": "this one"},
+    )
+
+    assert response.status_code == 422
+    assert "does not show removed line 1" in response.json()["detail"]
 
 
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
@@ -295,12 +309,9 @@ async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncCl
 
 
 THREAD_INDEX = {
+    "anchor": {"file": "src/a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["x = 1"]},
     "thread_id": "comment-1",
-    "file": "src/a.py",
-    "side": "new",
-    "start_line": 1,
-    "end_line": 1,
-    "quote": ["x = 1"],
+    "where": "`src/a.py`:1",
     "body": "Why did you drop the None check?",
     "history": [{"author": "author", "body": "It moved to the caller.", "round": 1}],
     "severity": "question",

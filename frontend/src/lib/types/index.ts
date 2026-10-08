@@ -8,6 +8,24 @@ export type ReviewMode = "diff" | "files" | "transcript";
 export type ContentViewMode = "raw" | "preview" | "side-by-side";
 /** Whether a diff reads down one column or across two. */
 export type DiffLayout = "unified" | "split";
+/** How the review is coloured: as the system says, or always light or dark. */
+export type Theme = "system" | "light" | "dark";
+
+/** How this reader reads a review, kept by the server for every review. */
+export interface ReaderSettings {
+  theme: Theme;
+  diff_layout: DiffLayout;
+  /** Leave out changes that only alter whitespace. */
+  ignore_whitespace: boolean;
+  /** A tick when an answer arrives while the review is in a background tab. */
+  sound_on_replies: boolean;
+}
+
+/** What the review remembers of having shown this reader around. */
+export interface GuideState {
+  /** The release whose news the reader was last shown. */
+  seen_release: string | null;
+}
 
 export interface DiffLine {
   type: LineType;
@@ -36,9 +54,7 @@ export interface DiffResponse {
   files: DiffFile[];
   mode: ReviewMode;
   title: string;
-  /** What is under review, and what it is compared against: two halves the
-   * header draws itself, because the second one is a control. */
-  subject: string | null;
+  /** What the diff is compared against; null when it is not compared against anything. */
   phrase: string | null;
   round: number;
   answerer_attached: boolean;
@@ -110,16 +126,34 @@ export interface Turn {
 /** What is said in a thread after the comment that opened it, as it is written. */
 export type NewTurn = Pick<Turn, "author" | "body" | "images">;
 
-/** A comment as the reader writes it, before it has an id and a place in time. */
-export interface NewComment {
+/** What a thread can hang on. */
+export type AnchorKind = "line";
+
+/** What every kind of anchor has, whatever it hangs on. */
+export interface AnchorBase {
+  /** What it said when the anchor was made, kept for when it is gone. */
+  quote: string[];
+  /** What it was made on is gone from what the review now holds. */
+  outdated: boolean;
+}
+
+/** Lines of one side of a file in the review's own diff. */
+export interface LineAnchor extends AnchorBase {
+  kind: "line";
   file: string;
   side: LineSide;
-  startLine: number;
-  endLine: number;
+  start_line: number;
+  end_line: number;
+}
+
+/** Everything a thread can hang on; `$lib/anchors` names and finds each kind. */
+export type Anchor = LineAnchor;
+
+/** A comment as the reader writes it, before it has an id and a place in time. */
+export interface NewComment {
+  anchor: Anchor;
   body: string;
   severity: CommentSeverity;
-  /** The lines it is written against, kept for when they are gone. */
-  quote: string[];
   images: string[];
 }
 
@@ -130,7 +164,7 @@ export interface Awaited {
 }
 
 /**
- * A thread hanging on a line or range.
+ * A thread hanging on something the reader reads.
  *
  * The comment that opened it stays in `body`; everything said afterwards is
  * a turn. The last four fields never leave the browser — they are how the
@@ -138,11 +172,8 @@ export interface Awaited {
  */
 export interface Comment {
   id: string;
-  file: string;
-  side: LineSide;
+  anchor: Anchor;
   severity: CommentSeverity;
-  start_line: number;
-  end_line: number;
   body: string;
   /** Screenshots pasted with the comment, by the id the server kept them under. */
   images: string[];
@@ -150,9 +181,6 @@ export interface Comment {
   /** Who opened it. The author may point at a line too. */
   raised_by: TurnAuthor;
   resolved: boolean;
-  outdated: boolean;
-  /** The lines it was written against, kept for when they are gone. */
-  quote: string[];
   /** Questions with the author and not answered yet, oldest first. */
   awaiting: Awaited[];
   /** Folded away by the reader, to get its space back without settling it. */

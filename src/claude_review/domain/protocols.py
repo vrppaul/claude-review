@@ -3,6 +3,8 @@
 from pathlib import Path
 from typing import Protocol
 
+from pydantic import BaseModel
+
 from claude_review.domain.models import GitRef
 
 
@@ -50,4 +52,16 @@ class ImageStoreProtocol(Protocol):
 
     async def remove(self, name: str) -> None:
         """Remove an image, if it is there."""
+        ...
+
+
+class RecordStoreProtocol[Record: BaseModel](Protocol):
+    """Protocol for where one record about the reader is kept between reviews."""
+
+    async def read(self) -> Record | None:
+        """The record as last written, or None when none has been."""
+        ...
+
+    async def write(self, record: Record) -> None:
+        """Replace the record whole."""
         ...

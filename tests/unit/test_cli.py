@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from claude_review.cli import (
     _diff_title,
     _files_title,
+    _reader_files,
     _render_context,
     _stable_port,
     _transcript_title,
@@ -123,17 +125,20 @@ SEEN = {
     "agent": {"model": "opus-5", "context": "45% of 1M", "at": 1},
     "threads": [
         {
+            "anchor": {
+                "file": "src/routes.py",
+                "side": "new",
+                "start_line": 118,
+                "end_line": 130,
+                "quote": ["    return event"],
+                "outdated": False,
+            },
             "thread_id": "comment-4",
-            "file": "src/routes.py",
-            "side": "new",
-            "start_line": 118,
-            "end_line": 130,
-            "quote": ["    return event"],
+            "where": "`src/routes.py`:118-130",
             "body": "Does a round overtake a question?\nAnd if it does, what then?",
             "history": [{"author": "author", "body": "It cannot: one queue.", "round": 2}],
             "severity": "question",
             "resolved": False,
-            "outdated": False,
             "raised_by": "reader",
         }
     ],
@@ -147,7 +152,7 @@ def test_catching_up_costs_a_line_a_thread() -> None:
 
     assert "round 3 · 7 files" in printed
     assert "1 threads, 1 open · panel: 1 messages" in printed
-    assert "comment-4  src/routes.py:118-130  question · 1 turns" in printed
+    assert "comment-4  `src/routes.py`:118-130  question · 1 turns" in printed
     # The first line of the comment, and not the second
     assert "Does a round overtake a question?" in printed
     assert "And if it does" not in printed
@@ -180,3 +185,26 @@ def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
 
     assert "you: (image)" in printed
     assert f"image: {image}" in printed
+
+
+def test_the_reader_files_follow_the_base_directories_the_environment_names(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+
+    files = _reader_files()
+
+    assert files.settings == tmp_path / "config" / "claude-review" / "settings.json"
+    assert files.guide == tmp_path / "state" / "claude-review" / "guide.json"
+
+
+def test_a_relative_base_directory_is_ignored_for_the_home_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A relative one would point somewhere different from every directory a review starts in."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", "config")
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
+
+    files = _reader_files()
+
+    assert files.settings == Path.home() / ".config" / "claude-review" / "settings.json"
+    assert files.guide == Path.home() / ".local" / "state" / "claude-review" / "guide.json"

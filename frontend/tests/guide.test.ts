@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import Guide from '$lib/components/Guide.svelte';
@@ -20,8 +20,23 @@ const SOURCES = import.meta.glob('../src/**/*.svelte', {
 	eager: true
 }) as Record<string, string>;
 
-function forgetCookie() {
-	document.cookie = 'claude-review-seen=; path=/; max-age=0';
+/** A server remembering which release this reader was shown, as `/api/guide` does. */
+function guideServer(seen: string | null) {
+	const server = { seen, stored: seen !== null };
+	vi.stubGlobal(
+		'fetch',
+		vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+			if (init?.method === 'PUT') {
+				server.seen = JSON.parse(String(init.body)).seen_release;
+				server.stored = true;
+			}
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ guide: { seen_release: server.seen }, stored: server.stored })
+			});
+		})
+	);
+	return server;
 }
 
 function entry(release: string, also: string[] = []): ReleaseNews {
@@ -34,7 +49,9 @@ function pageWith(...names: string[]) {
 }
 
 describe('which release a reader has seen', () => {
-	afterEach(forgetCookie);
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
 
 	it('compares releases number by number', () => {
 		expect(isNewer('1.10.0', '1.9.3')).toBe(true);
@@ -48,10 +65,21 @@ describe('which release a reader has seen', () => {
 		expect(isNewer('1.4.3.dev0', '1.4.2')).toBe(true);
 	});
 
-	it('remembers it in a cookie, which every port of 127.0.0.1 shares', () => {
-		expect(readSeenRelease()).toBeNull();
-		writeSeenRelease('1.5.0');
-		expect(readSeenRelease()).toBe('1.5.0');
+	it('is kept by the server, for every review on the machine', async () => {
+		guideServer(null);
+
+		expect(await readSeenRelease()).toBeNull();
+		await writeSeenRelease('1.5.0');
+		expect(await readSeenRelease()).toBe('1.5.0');
+	});
+
+	it('takes over the cookie an older release kept it in, once', async () => {
+		document.cookie = 'claude-review-seen=1.4.2; path=/';
+		const server = guideServer(null);
+
+		expect(await readSeenRelease()).toBe('1.4.2');
+		expect(server.seen).toBe('1.4.2');
+		expect(document.cookie).not.toContain('claude-review-seen');
 	});
 });
 
@@ -85,53 +113,70 @@ describe('which news a returning reader is shown', () => {
 
 describe('what the guide shows a reader arriving', () => {
 	beforeEach(() => {
-		forgetCookie();
 		guideStore.clear();
 	});
 
-	it('welcomes somebody who has never opened a review', () => {
-		guideStore.open('1.5.0');
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('welcomes somebody who has never opened a review', async () => {
+		guideServer(null);
+
+		await guideStore.open('1.5.0');
 
 		expect(guideStore.card).toBe('welcome');
 	});
 
-	it('tells somebody back from an older release what changed', () => {
-		writeSeenRelease('1.4.2');
+	it('tells somebody back from an older release what changed', async () => {
+		guideServer('1.4.2');
 
-		guideStore.open('1.5.0');
+		await guideStore.open('1.5.0');
 
 		expect(guideStore.card).toBe('news');
 		expect(guideStore.news?.release).toBe('1.5.0');
 	});
 
-	it('says nothing about a release with nothing written since, and remembers it', () => {
-		writeSeenRelease('1.5.0');
+	it('says nothing about a release with nothing written since, and remembers it', async () => {
+		const server = guideServer('1.5.0');
 
-		guideStore.open('1.5.1');
+		await guideStore.open('1.5.1');
 
 		expect(guideStore.card).toBeNull();
-		expect(readSeenRelease()).toBe('1.5.1');
+		await vi.waitFor(() => expect(server.seen).toBe('1.5.1'));
 	});
 
-	it('puts the card away for good once it is closed', () => {
-		guideStore.open('1.5.0');
+	it('puts the card away for good once it is closed', async () => {
+		const server = guideServer(null);
+		await guideStore.open('1.5.0');
 
 		guideStore.dismiss();
 
 		expect(guideStore.card).toBeNull();
-		expect(readSeenRelease()).toBe('1.5.0');
+		await vi.waitFor(() => expect(server.seen).toBe('1.5.0'));
+	});
+
+	it('shows nothing rather than welcome somebody twice when the server cannot say', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+		await guideStore.open('1.5.0');
+
+		expect(guideStore.card).toBeNull();
 	});
 });
 
 describe('the news card', () => {
 	beforeEach(() => {
-		forgetCookie();
 		guideStore.clear();
 	});
 
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	it('links to the release on GitHub even when there is nothing else to list', async () => {
-		writeSeenRelease('1.4.2');
-		guideStore.open('1.5.0');
+		guideServer('1.4.2');
+		await guideStore.open('1.5.0');
 
 		const { getByTestId } = render(Guide);
 		await tick();
@@ -154,13 +199,14 @@ describe('the news card', () => {
 
 describe('the tour', () => {
 	beforeEach(() => {
-		forgetCookie();
+		guideServer(null);
 		guideStore.clear();
 		reviewStore.clear();
 	});
 
 	afterEach(() => {
 		guideStore.endTour();
+		vi.unstubAllGlobals();
 	});
 
 	it('points only at places the review actually marks', () => {

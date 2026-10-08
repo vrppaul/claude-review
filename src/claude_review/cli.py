@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import json
 import logging
+import os
 import shutil
 import socket
 import sys
@@ -22,7 +23,7 @@ import structlog
 import uvicorn
 
 from claude_review.domain.exceptions import PortUnavailableError
-from claude_review.domain.models import DiffFile, ReviewMode, ReviewWorkspace
+from claude_review.domain.models import DiffFile, ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -46,6 +47,17 @@ STABLE_PORT_CEILING = 60_000
 # What a review's own temporary directories are called, so they can be told apart in /tmp
 OBJECTS_SUFFIX = ".claude-review-objects"
 IMAGES_SUFFIX = ".claude-review-images"
+
+# Where every review on the machine keeps what it remembers about its reader,
+# by the XDG base directory rules: the reader's choices with configuration,
+# what the review noticed with state
+CONFIG_HOME_VARIABLE = "XDG_CONFIG_HOME"
+STATE_HOME_VARIABLE = "XDG_STATE_HOME"
+CONFIG_HOME_FALLBACK = Path(".config")
+STATE_HOME_FALLBACK = Path(".local") / "state"
+READER_DIRECTORY = "claude-review"
+SETTINGS_FILE = "settings.json"
+GUIDE_FILE = "guide.json"
 
 
 def _configure_logging(*, verbose: bool = False) -> None:
@@ -75,6 +87,26 @@ async def _load_diff(repo_path: Path, base: str | None = None) -> tuple[list[Dif
     log.info("loading_diff", path=str(repo_path), base=base)
     files = await diff_service.get_diff(repo_path, base=base)
     return files, await git_repo.top_level(repo_path) or repo_path
+
+
+def _reader_files() -> ReaderFiles:
+    """Where this machine's reviews keep what they remember about their reader."""
+    config = _base_directory(CONFIG_HOME_VARIABLE, CONFIG_HOME_FALLBACK)
+    state = _base_directory(STATE_HOME_VARIABLE, STATE_HOME_FALLBACK)
+    return ReaderFiles(
+        settings=config / READER_DIRECTORY / SETTINGS_FILE,
+        guide=state / READER_DIRECTORY / GUIDE_FILE,
+    )
+
+
+def _base_directory(variable: str, fallback: Path) -> Path:
+    """A base directory the environment names, or its usual place in the home directory.
+
+    The rules ignore a relative path in the variable: it would point somewhere
+    different from every directory a review is started in.
+    """
+    named = os.environ.get(variable, "")
+    return Path(named) if Path(named).is_absolute() else Path.home() / fallback
 
 
 @contextlib.contextmanager
@@ -157,6 +189,7 @@ async def _serve_review(
         mode=mode,
         title=title,
         workspace=workspace,
+        reader_files=_reader_files(),
         root=root,
         base=base,
     )
@@ -445,18 +478,18 @@ def _render_context(seen: dict, *, whole: bool) -> str:
 
     threads = seen["threads"]
     if not whole:
-        open_ones = sum(1 for t in threads if not t["resolved"] and not t["outdated"])
+        open_ones = sum(1 for t in threads if not t["resolved"] and not t["anchor"]["outdated"])
         lines.append(f"{len(threads)} threads, {open_ones} open · panel: {len(seen['panel'])} messages")
 
     for thread in threads:
         lines.append("")
-        lines.append(f"{thread['thread_id']}  {_anchor(thread)}  {_marks(thread)}")
+        lines.append(f"{thread['thread_id']}  {thread['where']}  {_marks(thread)}")
         lines.append(_indent(thread["body"], whole=whole))
         lines.extend(
             _indent(turn["body"], whole=True, who=turn["author"]) for turn in (thread["history"] if whole else [])
         )
-        if whole and thread["quote"]:
-            lines.append(_indent("\n".join(thread["quote"]), whole=True, who="lines"))
+        if whole and thread["anchor"]["quote"]:
+            lines.append(_indent("\n".join(thread["anchor"]["quote"]), whole=True, who="lines"))
 
     if seen["panel"] and not whole:
         lines.append("")
@@ -470,14 +503,6 @@ def _render_context(seen: dict, *, whole: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _anchor(thread: dict) -> str:
-    """Where a thread hangs, the way the review itself says it."""
-    span = str(thread["start_line"])
-    if thread["end_line"] != thread["start_line"]:
-        span = f"{span}-{thread['end_line']}"
-    return f"{thread['file']}:{span}{' (removed)' if thread['side'] == 'old' else ''}"
-
-
 def _marks(thread: dict) -> str:
     """What is not ordinary about a thread, and nothing when it is."""
     marks = [thread["severity"]] if thread["severity"] != "note" else []
@@ -485,7 +510,7 @@ def _marks(thread: dict) -> str:
         marks.append("yours")
     if thread["resolved"]:
         marks.append("resolved")
-    if thread["outdated"]:
+    if thread["anchor"]["outdated"]:
         marks.append("outdated")
     if thread["history"]:
         marks.append(f"{len(thread['history'])} turns")

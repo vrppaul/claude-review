@@ -11,6 +11,7 @@ from claude_review.domain.models import (
     DiffHunk,
     DiffLine,
     FileStatus,
+    LineAnchor,
     LineSide,
     LineType,
 )
@@ -45,7 +46,9 @@ def test_heading_is_transcript_review() -> None:
     files = [_make_message("user-1", ["hello"])]
     comments = [
         Comment(
-            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Bad idea"
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="Bad idea",
         )
     ]
 
@@ -59,11 +62,8 @@ def test_single_comment_with_context() -> None:
     files = [_make_message("user-1", ["line one", "line two", "line three", "line four", "line five"])]
     comments = [
         Comment(
-            file="user-1",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=3, end_line=3),
             severity=CommentSeverity.NOTE,
-            start_line=3,
-            end_line=3,
             body="This is wrong",
         )
     ]
@@ -84,7 +84,9 @@ def test_context_at_start_of_message() -> None:
     files = [_make_message("user-1", ["first line", "second line"])]
     comments = [
         Comment(
-            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix this"
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="Fix this",
         )
     ]
 
@@ -100,7 +102,9 @@ def test_context_at_end_of_message() -> None:
     files = [_make_message("user-1", ["first", "second", "last"])]
     comments = [
         Comment(
-            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=3, end_line=3, body="Fix last"
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=3, end_line=3),
+            severity=CommentSeverity.NOTE,
+            body="Fix last",
         )
     ]
 
@@ -116,11 +120,8 @@ def test_body_appears_before_comments() -> None:
     files = [_make_message("user-1", ["hello"])]
     comments = [
         Comment(
-            file="user-1",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body="Inline note",
         )
     ]
@@ -137,7 +138,11 @@ def test_empty_body_treated_as_no_body() -> None:
     """Empty string body is ignored."""
     files = [_make_message("user-1", ["hello"])]
     comments = [
-        Comment(file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+        Comment(
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="note",
+        )
     ]
 
     result = _service().format_review(comments, "", files)
@@ -161,19 +166,13 @@ def test_multiple_comments_each_get_blockquote() -> None:
     ]
     comments = [
         Comment(
-            file="user-1",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=1,
             body="Wrong approach",
         ),
         Comment(
-            file="assistant-2",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="assistant-2", side=LineSide.NEW, start_line=1, end_line=2),
             severity=CommentSeverity.NOTE,
-            start_line=1,
-            end_line=2,
             body="Don't use JWT",
         ),
     ]
@@ -192,7 +191,9 @@ def test_no_line_numbers_or_headings_in_output() -> None:
     files = [_make_message("user-1", ["hello world"])]
     comments = [
         Comment(
-            file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="Fix it"
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="Fix it",
         )
     ]
 
@@ -206,7 +207,11 @@ def test_whitespace_only_body_treated_as_no_body() -> None:
     """Whitespace-only body is ignored, same as empty."""
     files = [_make_message("user-1", ["hello"])]
     comments = [
-        Comment(file="user-1", side=LineSide.NEW, severity=CommentSeverity.NOTE, start_line=1, end_line=1, body="note")
+        Comment(
+            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
+            severity=CommentSeverity.NOTE,
+            body="note",
+        )
     ]
 
     result = _service().format_review(comments, "   \n  ", files)
@@ -230,11 +235,8 @@ def test_range_comment_includes_full_range_in_blockquote() -> None:
     ]
     comments = [
         Comment(
-            file="assistant-2",
-            side=LineSide.NEW,
+            anchor=LineAnchor(file="assistant-2", side=LineSide.NEW, start_line=2, end_line=4),
             severity=CommentSeverity.NOTE,
-            start_line=2,
-            end_line=4,
             body="Refactor this",
         )
     ]

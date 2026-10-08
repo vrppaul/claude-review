@@ -5,7 +5,8 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { guideStore } from '$lib/stores/guide.svelte';
 	import { currentSectionPath, isTypingTarget, moveByLine } from '$lib/utils/keyboard';
-	import { scrollToComment, scrollToFile } from '$lib/utils/scroll';
+	import { scrollToFile } from '$lib/utils/scroll';
+	import { revealThread } from '$lib/anchors/views';
 
 	let atFile = $state(-1);
 
@@ -48,20 +49,15 @@
 
 	function stepComment(direction: 1 | -1) {
 		const comment = commentStore.step(direction);
-		if (!comment) return;
-		if (diffStore.isCollapsed(comment.file)) diffStore.toggleCollapsed(comment.file);
-		requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
+		if (comment) revealThread(comment);
 	}
 
 	/** Go to the oldest thread carrying an answer nobody has looked at. */
 	function stepUnread() {
 		const comment = commentStore.unread[0];
 		if (!comment) return;
-		if (diffStore.isCollapsed(comment.file)) diffStore.toggleCollapsed(comment.file);
-		requestAnimationFrame(() => {
-			scrollToComment(comment.id, comment.file);
-			commentStore.markRead(comment.id);
-		});
+		revealThread(comment);
+		commentStore.markRead(comment.id);
 	}
 
 	/**

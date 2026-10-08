@@ -41,7 +41,10 @@ const steps = $derived(stepsFor({ attached: reviewStore.canSendRound, route }));
 
 /** Remember this release as seen, so the card does not come back. */
 function settle(): void {
-  if (release) writeSeenRelease(release);
+  if (!release) return;
+  writeSeenRelease(release).catch(() => {
+    // Not remembered this time: the card comes back with the next review
+  });
 }
 
 function shows(step: TourStep): boolean {
@@ -138,9 +141,14 @@ export const guideStore = {
   },
 
   /** Decide what to show a reader arriving at a review served by this release. */
-  open(serving: string) {
+  async open(serving: string) {
     release = serving;
-    const seen = readSeenRelease();
+    let seen: string | null;
+    try {
+      seen = await readSeenRelease();
+    } catch {
+      return;
+    }
     if (seen === null) {
       card = "welcome";
       return;

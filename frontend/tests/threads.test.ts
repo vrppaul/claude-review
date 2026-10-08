@@ -59,9 +59,9 @@ describe('a thread is a conversation', () => {
 
 		const asked = JSON.parse(fetchMock.mock.calls[0][1].body);
 		expect(asked.body).toBe('Where did 2 go?');
-		expect(asked.quote).toEqual(['const y = 3;']);
-		expect(asked.side).toBe('new');
-		expect(asked.start_line).toBe(2);
+		expect(asked.anchor.quote).toEqual(['const y = 3;']);
+		expect(asked.anchor.side).toBe('new');
+		expect(asked.anchor.start_line).toBe(2);
 	});
 
 	it('marks a comment asked about as a question', async () => {

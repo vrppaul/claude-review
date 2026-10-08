@@ -120,8 +120,9 @@ somebody who is waiting.
    background command *finishing* rather than printing, put `break` after the
    `printf` and start the loop again after each event.
    - `{"type": "question", "question": {...}}` — answer it (step 6), then
-     wait again. The question carries `thread_id` and `question_id`, the
-     file, the line range, `quote` — the lines it is about — and `history`,
+     wait again. The question carries `thread_id` and `question_id`,
+     `where` — the place as the review names it — and `anchor`, the file,
+     side and line range with `quote`, the lines it is about; and `history`,
      everything already said in that thread, starting with the comment that
      opened it. The question and every turn of the history may carry
      `images`, absolute paths to screenshots the reader pasted; the question

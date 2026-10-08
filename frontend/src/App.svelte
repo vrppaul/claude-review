@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Anchor } from '$lib/types';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { openSession, tellServer } from '$lib/stores/session.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
+	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { soundStore } from '$lib/stores/sound.svelte';
+	import { themeStore } from '$lib/stores/theme.svelte';
 	import { markTab } from '$lib/utils/tab';
-	import { quoteFrom } from '$lib/utils/reanchor';
+	import { anchorShortPlace } from '$lib/anchors/views';
 	import { showFile } from '$lib/utils/scroll';
 	import AgentPanel from '$lib/components/AgentPanel.svelte';
 	import FileList from '$lib/components/FileList.svelte';
@@ -23,8 +26,12 @@
 	let restored = $state(0);
 
 	onMount(() => {
-		diffStore
-			.fetchDiff()
+		const stopTheme = themeStore.start();
+		// The reader's settings first: whether whitespace counts decides which
+		// diff is asked for
+		settingsStore
+			.load()
+			.then(() => diffStore.fetchDiff())
 			.then(() => {
 				// An unsent review of the same thing is picked up where it stopped,
 				// the conversation in the panel with it
@@ -35,7 +42,7 @@
 				// The draft may know a later round than a restarted server does
 				tellServer();
 				// A first review is welcomed; a newer release says what changed
-				guideStore.open(diffStore.release);
+				void guideStore.open(diffStore.release);
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : 'Failed to load diff';
@@ -46,10 +53,14 @@
 
 		// Holding this open is what tells the server the review is still on
 		// screen; a poll is throttled to a crawl in a background tab.
-		return openSession(handle, () => ({
+		const closeSession = openSession(handle, () => ({
 			round: reviewStore.round,
 			threads: commentStore.onTheWire
 		}));
+		return () => {
+			closeSession();
+			stopTheme();
+		};
 	});
 
 	/** What the server has to say while the review is open. */
@@ -92,7 +103,7 @@
 				context: typeof message.context === 'string' ? message.context : null,
 				at: typeof message.at === 'number' ? message.at : null
 			});
-		} else if (message.type === 'point' && typeof message.body === 'string') {
+		} else if (message.type === 'point' && typeof message.body === 'string' && message.anchor) {
 			raise(message);
 		} else if (message.type === 'changed' && typeof message.files === 'number') {
 			// Said, never acted on: swapping the diff under a half-written
@@ -118,49 +129,34 @@
 	 * Take in the work a round asked for, now it has landed.
 	 *
 	 * The threads move onto the review's own diff — one whose lines survived
-	 * follows them, one whose lines are gone says so — and that diff is the
-	 * one they are anchored in, whatever narrower base is being read on
-	 * screen. Which files changed is what takes the tick off the ones the
-	 * agent rewrote.
+	 * follows them, one whose lines are gone says so — whatever narrower base
+	 * is being read on screen. Which files changed is what takes the tick off
+	 * the ones the agent rewrote.
+	 *
+	 * The threads go first: the server already holds the new diff, and a
+	 * thread left on old numbers would be kept that way in the draft, while a
+	 * diff that failed to arrive comes back with a reload.
 	 */
 	async function landed(changed: string[] | null, since: number | null) {
-		const anchors = await diffStore.takeAgain();
-		const moved = commentStore.reanchorAll(anchors);
+		const moved = await commentStore.follow();
+		await diffStore.fetchDiff();
 		diffStore.noteRetaken(moved, changed, since);
 		// The conversation is about code that has just changed under it, so
 		// the panel says where one lot of answers stops applying
 		panelStore.note(retaken(moved));
 	}
 
-	/**
-	 * Put a thread the author raised onto the diff, and say so in the panel.
-	 *
-	 * It arrives as numbers, so the lines themselves are read off the diff on
-	 * screen: without them the thread cannot follow its code when it moves.
-	 */
+	/** Put a thread the author raised onto the diff, and say so in the panel. */
 	function raise(message: { type: string; [key: string]: unknown }) {
-		const file = String(message.file);
-		const side = message.side === 'old' ? 'old' : 'new';
-		const start = Number(message.start_line);
-		const end = Number(message.end_line);
+		// The server quoted it from the diff it checked the lines against
+		const anchor = message.anchor as Anchor;
 		const severity =
 			message.severity === 'question' || message.severity === 'blocker'
 				? message.severity
 				: 'note';
 
-		const id = commentStore.raise(
-			String(message.thread_id),
-			file,
-			side,
-			start,
-			end,
-			String(message.body),
-			severity,
-			quoteFrom(diffStore.files.find((f) => f.path === file)?.hunks ?? null, side, start, end)
-		);
-		panelStore.note(`pointed at ${file.split('/').pop()} ${start}${end !== start ? `-${end}` : ''}`, [
-			id
-		]);
+		const id = commentStore.raise(String(message.thread_id), anchor, String(message.body), severity);
+		panelStore.note(`pointed at ${anchorShortPlace(anchor)}`, [id]);
 		soundStore.announce();
 	}
 

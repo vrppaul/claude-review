@@ -30,7 +30,7 @@ Review current git changes in a GitHub-style diff view.
 
 Shows all uncommitted changes (tracked, staged, and untracked) with two-column line numbers, add/delete highlighting, and a file tree sidebar.
 
-The header says what is under review and what it is being compared against — and that second half is a control. Read the same working tree against the base the review opened with, against an earlier round of it, or against any branch or tag; each says how many files it would show.
+The header says what the working tree is being compared against, and that is a control. Read the same working tree against the base the review opened with, against an earlier round of it, or against any branch or tag; each says how many files it would show.
 
 ![choosing what the working tree is read against](docs/base-picker.png)
 
@@ -93,7 +93,12 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - Fold a file away, mark it viewed, filter the tree by path; drag the tree
   narrower or put it away entirely
 - Syntax highlighting that reads a hunk whole, so a docstring stays a docstring
-- Light and dark, remembered, following the system until you choose
+- Light and dark, following the system until you choose
+- Layout, whitespace, theme and the reply tick live behind the gear in the
+  header, and every review on the machine starts from them: they are kept in
+  `$XDG_CONFIG_HOME/claude-review/settings.json` (by default `~/.config/`),
+  and which release's news you have seen in
+  `$XDG_STATE_HOME/claude-review/guide.json` (by default `~/.local/state/`)
 
 **Commenting**
 
@@ -139,7 +144,7 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 **Finding your way**
 
 - A first review offers a short tour from a card in the bottom left: what you
-  are reading, where comments go and how Claude answers them
+  are reading, where comments go and how the agent answers them
 - After an update, the same card says what is new; both are in the `?` list
 
 **Keyboard**

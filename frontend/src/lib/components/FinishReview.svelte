@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
-	import { scrollToComment } from '$lib/utils/scroll';
+	import type { Comment } from '$lib/types';
+	import { anchorPlace, revealThread } from '$lib/anchors/views';
 
 	interface Props {
 		submitting: boolean;
@@ -38,9 +38,9 @@
 		}
 	}
 
-	function jump(id: string, file: string) {
+	function jump(comment: Comment) {
 		onClose();
-		scrollToComment(id, file);
+		revealThread(comment);
 	}
 </script>
 
@@ -90,15 +90,11 @@
 							class="cr-finish-row w-full rounded px-2 py-1.5 text-left {sent !== undefined
 								? 'opacity-55'
 								: ''}"
-							onclick={() => jump(comment.id, comment.file)}
+							onclick={() => jump(comment)}
 						>
 							<span class="flex items-baseline gap-2">
 								<span data-testid="modal-comment-ref" class="cr-comment-ref font-mono text-xs">
-									{comment.file} · {lineRangeLabel(
-										comment.side,
-										comment.start_line,
-										comment.end_line
-									)}
+									{anchorPlace(comment.anchor)}
 								</span>
 								{#if comment.severity !== 'note'}
 									<span class="cr-severity cr-severity-{comment.severity}">{comment.severity}</span>

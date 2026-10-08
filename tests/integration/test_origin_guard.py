@@ -19,6 +19,7 @@ from claude_review.domain.models import (
     DiffLine,
     FileStatus,
     LineType,
+    ReaderFiles,
     ReviewMode,
     ReviewWorkspace,
 )
@@ -51,8 +52,10 @@ def _files() -> list[DiffFile]:
 
 
 @pytest.fixture
-async def client(state: ServerState, workspace: ReviewWorkspace):
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
+async def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles):
+    app = create_app(
+        diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
         yield ac
 
@@ -95,10 +98,16 @@ async def test_a_command_line_client_has_no_origin_and_is_allowed(client: AsyncC
     assert response.status_code == 200
 
 
-def test_a_page_on_another_site_cannot_open_the_session_socket(state: ServerState, workspace: ReviewWorkspace) -> None:
+def test_a_page_on_another_site_cannot_open_the_session_socket(
+    state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> None:
     """Without this the page could read what the server pushes, and end the
     review by connecting and disconnecting once."""
-    client = TestClient(create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace))
+    client = TestClient(
+        create_app(
+            diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
+        )
+    )
 
     # Starlette raises when the handshake is refused before it becomes a socket
     with (
@@ -108,9 +117,15 @@ def test_a_page_on_another_site_cannot_open_the_session_socket(state: ServerStat
         pass
 
 
-def test_a_refused_socket_does_not_count_as_a_reader_leaving(state: ServerState, workspace: ReviewWorkspace) -> None:
+def test_a_refused_socket_does_not_count_as_a_reader_leaving(
+    state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> None:
     """A refused handshake must not make the server think the review closed."""
-    client = TestClient(create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace))
+    client = TestClient(
+        create_app(
+            diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
+        )
+    )
 
     with (
         pytest.raises(WebSocketDisconnect),

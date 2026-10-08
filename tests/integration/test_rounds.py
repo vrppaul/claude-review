@@ -12,7 +12,16 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, ReviewMode, ReviewWorkspace
+from claude_review.domain.models import (
+    DiffFile,
+    DiffHunk,
+    DiffLine,
+    FileStatus,
+    LineType,
+    ReaderFiles,
+    ReviewMode,
+    ReviewWorkspace,
+)
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -23,11 +32,8 @@ LOCAL_ORIGIN = "http://127.0.0.1:8000"
 LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
 
 A_COMMENT = {
-    "file": "src/a.py",
-    "side": "new",
+    "anchor": {"file": "src/a.py", "side": "new", "start_line": 1, "end_line": 1},
     "severity": "note",
-    "start_line": 1,
-    "end_line": 1,
     "body": "Still reads oddly.",
 }
 
@@ -55,8 +61,10 @@ def state() -> ServerState:
 
 
 @pytest.fixture
-async def client(state: ServerState, workspace: ReviewWorkspace):
-    app = create_app(diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace)
+async def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles):
+    app = create_app(
+        diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as ac:
         yield ac
 
@@ -131,10 +139,16 @@ async def test_a_waiting_agent_is_told_the_review_ended(client: AsyncClient) -> 
 
 
 async def test_retaking_the_diff_serves_what_changed_since(
-    tmp_git_repo: Path, state: ServerState, workspace: ReviewWorkspace
+    tmp_git_repo: Path, state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     app = create_app(
-        diff_files=[], state=state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo, base=None
+        diff_files=[],
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        base=None,
+        reader_files=reader_files,
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
@@ -164,7 +178,7 @@ async def test_the_review_learns_that_someone_is_there_to_answer(client: AsyncCl
 
 
 async def test_a_retake_names_the_files_that_changed_since_the_last_one(
-    tmp_git_repo: Path, state: ServerState, marking_workspace: ReviewWorkspace
+    tmp_git_repo: Path, state: ServerState, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """A file the agent rewrote must not keep the tick that says it was read."""
     (tmp_git_repo / "answered.py").write_text("as it was\n")
@@ -173,7 +187,13 @@ async def test_a_retake_names_the_files_that_changed_since_the_last_one(
     state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
 
     app = create_app(
-        diff_files=[], state=state, mode=ReviewMode.DIFF, workspace=marking_workspace, root=tmp_git_repo, base=None
+        diff_files=[],
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=marking_workspace,
+        root=tmp_git_repo,
+        base=None,
+        reader_files=reader_files,
     )
     listener = state.listen()
     async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
@@ -184,7 +204,7 @@ async def test_a_retake_names_the_files_that_changed_since_the_last_one(
 
 
 async def test_a_retake_is_measured_from_where_the_round_began(
-    tmp_git_repo: Path, state: ServerState, marking_workspace: ReviewWorkspace
+    tmp_git_repo: Path, state: ServerState, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """Twice through the loop in one round, and the count still means what it says.
 
@@ -199,7 +219,13 @@ async def test_a_retake_is_measured_from_where_the_round_began(
     state.snapshots.append(await versions.take(tmp_git_repo, round_number=1))
 
     app = create_app(
-        diff_files=[], state=state, mode=ReviewMode.DIFF, workspace=marking_workspace, root=tmp_git_repo, base=None
+        diff_files=[],
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=marking_workspace,
+        root=tmp_git_repo,
+        base=None,
+        reader_files=reader_files,
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
         (tmp_git_repo / "first.py").write_text("two\n")
@@ -215,14 +241,47 @@ async def test_a_retake_is_measured_from_where_the_round_began(
 
 
 async def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
-    tmp_git_repo: Path, state: ServerState, workspace: ReviewWorkspace
+    tmp_git_repo: Path, state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """Without a mark to compare against, the review must not claim nothing moved."""
     app = create_app(
-        diff_files=[], state=state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo, base=None
+        diff_files=[],
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        base=None,
+        reader_files=reader_files,
     )
     listener = state.listen()
     async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
         await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
 
     assert listener.get_nowait() == {"type": "diff", "round": 1, "changed": None, "since": None}
+
+
+async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
+    tmp_git_repo: Path, state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> None:
+    """The browser holds the threads and the server holds the diff they hang on."""
+    (tmp_git_repo / "a.py").write_text("def run():\n    return 1\n")
+    app = create_app(
+        diff_files=[],
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        base=None,
+        reader_files=reader_files,
+    )
+    on_run = {"file": "a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["def run():"]}
+    on_walk = {**on_run, "quote": ["def walk():"]}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client:
+        (tmp_git_repo / "a.py").write_text("import sys\ndef run():\n    return 1\n")
+        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+        response = await client.post("/api/anchors/follow", json={"anchors": [on_run, on_walk]}, headers=LOCAL_HEADERS)
+
+    followed, gone = response.json()["anchors"]
+    assert (followed["start_line"], followed["outdated"]) == (2, False)
+    assert (gone["start_line"], gone["outdated"]) == (1, True)

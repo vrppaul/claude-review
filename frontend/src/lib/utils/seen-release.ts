@@ -1,30 +1,60 @@
 /**
  * Which release of the review this reader has already been shown.
  *
- * A cookie rather than local storage: every review runs on a port of its
- * own, and local storage belongs to one port, so the welcome would come
- * back with every new repository. A cookie for 127.0.0.1 is shared by all
- * of them.
+ * Kept by the server with what the review remembers about its reader, so
+ * every review on the machine knows it. It used to be a cookie; one still in
+ * this browser is handed over once.
  */
 
-const COOKIE_NAME = "claude-review-seen";
-// Long enough that nobody is welcomed twice; a year is the most a browser keeps
-const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
+import type { GuideState } from "$lib/types";
+
+const LEGACY_COOKIE = "claude-review-seen";
 
 // The numbered part of a Python release: 1.5.0 out of 1.5.0rc1 or 1.4.3.dev0
 const RELEASE_NUMBERS = /^\d+(?:\.\d+)*/;
 
-/** The release last seen, or null for somebody who has never opened a review. */
-export function readSeenRelease(): string | null {
-  const prefix = `${COOKIE_NAME}=`;
+function legacyCookie(): string | null {
+  const prefix = `${LEGACY_COOKIE}=`;
   const found = document.cookie
     .split("; ")
     .find((part) => part.startsWith(prefix));
   return found ? decodeURIComponent(found.slice(prefix.length)) : null;
 }
 
-export function writeSeenRelease(release: string): void {
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(release)}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Strict`;
+function forgetLegacyCookie(): void {
+  document.cookie = `${LEGACY_COOKIE}=; path=/; max-age=0`;
+}
+
+/**
+ * The release last seen, or null for somebody who has never opened a review.
+ *
+ * Throws when the server cannot say: a reader who cannot be told apart from
+ * a newcomer is better left unwelcomed than welcomed twice.
+ */
+export async function readSeenRelease(): Promise<string | null> {
+  const response = await fetch("/api/guide");
+  if (!response.ok) {
+    throw new Error(`Could not read what was shown: ${response.status}`);
+  }
+  const kept: { guide: GuideState; stored: boolean } = await response.json();
+  if (kept.stored) return kept.guide.seen_release;
+
+  const handedOver = legacyCookie();
+  if (handedOver === null) return null;
+  await writeSeenRelease(handedOver);
+  forgetLegacyCookie();
+  return handedOver;
+}
+
+export async function writeSeenRelease(release: string): Promise<void> {
+  const response = await fetch("/api/guide", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seen_release: release }),
+  });
+  if (!response.ok) {
+    throw new Error(`Could not remember what was shown: ${response.status}`);
+  }
 }
 
 /**

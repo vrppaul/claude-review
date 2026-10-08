@@ -56,7 +56,8 @@ class TranscriptReviewService:
         comment: Comment,
     ) -> str:
         """Extract blockquoted context (±CONTEXT_LINES) around the commented range."""
-        file = files_by_path.get(comment.file)
+        anchor = comment.anchor
+        file = files_by_path.get(anchor.file)
         if not file:
             return ""
 
@@ -64,8 +65,8 @@ class TranscriptReviewService:
         if not all_lines:
             return ""
 
-        start = max(0, comment.start_line - 1 - CONTEXT_LINES)
-        end = min(len(all_lines), comment.end_line + CONTEXT_LINES)
+        start = max(0, anchor.start_line - 1 - CONTEXT_LINES)
+        end = min(len(all_lines), anchor.end_line + CONTEXT_LINES)
 
         quoted = [f"> {line.content}" for line in all_lines[start:end]]
         return "\n".join(quoted)

@@ -9,20 +9,25 @@ from pydantic import ValidationError
 from starlette.requests import ClientDisconnect
 
 from claude_review.domain.exceptions import (
+    AnchorLinesNotShownError,
     FileWindowError,
     ImageAlreadySentError,
     ImageRefusedError,
     ImageTooLargeError,
+    UnknownAnchorFileError,
     UnknownImageError,
     UnknownVersionError,
 )
 from claude_review.domain.models import (
+    Anchor,
     Comment,
     DiffFile,
-    LineSide,
+    GuideState,
+    LineAnchor,
     PanelCancel,
     PanelEntry,
     PanelMessage,
+    ReaderSettings,
     ReviewMode,
     RoundSubmission,
     ThreadContext,
@@ -31,18 +36,23 @@ from claude_review.domain.models import (
     TurnAuthor,
 )
 from claude_review.presentation.dependencies import (
+    anchor_service_for,
+    get_anchor_service,
     get_diff_base,
     get_diff_files,
+    get_guide_service,
     get_image_service,
     get_objects,
     get_release,
     get_repo_root,
     get_review_mode,
     get_review_title,
+    get_settings_service,
     get_state,
     image_service_for,
 )
 from claude_review.presentation.schemas import (
+    AnchorInput,
     AskRequest,
     CancelRequest,
     CommentInput,
@@ -50,6 +60,10 @@ from claude_review.presentation.schemas import (
     DiffResponse,
     EventResponse,
     FileWindowResponse,
+    FollowRequest,
+    FollowResponse,
+    GuideChange,
+    GuideResponse,
     ImageLimits,
     ImageResponse,
     MessageRequest,
@@ -60,6 +74,8 @@ from claude_review.presentation.schemas import (
     RoundResponse,
     SayRequest,
     SessionHello,
+    SettingsChange,
+    SettingsResponse,
     ShowRequest,
     StatusRequest,
     SubmitRequest,
@@ -70,9 +86,11 @@ from claude_review.presentation.schemas import (
 )
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.anchor_service import AnchorService
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
 from claude_review.services.image_service import MAX_IMAGE_BYTES, ImageService
+from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
 from claude_review.services.tree_watcher_service import TreeWatcherService
@@ -132,9 +150,6 @@ async def get_diff(
         files=diff_files,
         mode=mode,
         title=title,
-        # `or str(root)`: a repository at the filesystem root has no name, and
-        # an empty subject takes the base control off the header with it
-        subject=(root.name or str(root)) if root is not None else None,
         phrase=versions.phrase_of(base or REVIEW_KEY, review_base=review_base) if root is not None else None,
         round=state.round,
         answerer_attached=state.answerer_attached,
@@ -163,6 +178,43 @@ async def offered_versions(
 
     versions = VersionService(git_repository=GitRepository(objects=objects))
     return VersionsResponse(versions=await versions.offer(root, review_base=review_base, snapshots=state.snapshots))
+
+
+@router.get("/settings")
+async def reader_settings(
+    settings: ReaderRecordService[ReaderSettings] = Depends(get_settings_service),
+) -> SettingsResponse:
+    """Say how this reader reads, as chosen in any review on this machine."""
+    kept = await settings.read()
+    return SettingsResponse(settings=kept or ReaderSettings(), stored=kept is not None)
+
+
+@router.put("/settings")
+async def change_reader_settings(
+    request: SettingsChange,
+    settings: ReaderRecordService[ReaderSettings] = Depends(get_settings_service),
+) -> ReaderSettings:
+    """Keep a choice the reader made, for this review and every later one."""
+    # A choice sent as null is a choice not sent
+    changed = await settings.change(request.model_dump(exclude_none=True))
+    log.info("settings_changed", changed=sorted(request.model_fields_set))
+    return changed
+
+
+@router.get("/guide")
+async def guide_state(guide: ReaderRecordService[GuideState] = Depends(get_guide_service)) -> GuideResponse:
+    """Say how far this reader has been shown around, in any review on this machine."""
+    kept = await guide.read()
+    return GuideResponse(guide=kept or GuideState(), stored=kept is not None)
+
+
+@router.put("/guide")
+async def change_guide_state(
+    request: GuideChange,
+    guide: ReaderRecordService[GuideState] = Depends(get_guide_service),
+) -> GuideState:
+    """Remember what the reader has now been shown."""
+    return await guide.change(request.model_dump(exclude_unset=True))
 
 
 @router.get("/context")
@@ -220,27 +272,27 @@ async def ask_about_thread(
     request: AskRequest,
     state: ServerState = Depends(get_state),
     image_service: ImageService = Depends(get_image_service),
+    anchors: AnchorService = Depends(get_anchor_service),
 ) -> dict[str, str]:
     """Take a question about one thread, for whoever is answering to pick up.
 
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
+    anchor = _to_anchor(request.anchor)
+    where = anchors.where(anchor)
     state.events.put_nowait(
         ThreadQuestion(
             thread_id=request.thread_id,
             question_id=request.question_id,
-            file=request.file,
-            side=request.side,
-            start_line=request.start_line,
-            end_line=request.end_line,
-            quote=request.quote,
+            anchor=anchor,
+            where=where,
             body=request.body,
             images=_hand_over_kept(request.images, image_service),
             history=[_to_turn(turn, image_service) for turn in request.history],
         )
     )
-    log.info("thread_question", thread_id=request.thread_id, file=request.file)
+    log.info("thread_question", thread_id=request.thread_id, where=where)
     return {"status": "asked"}
 
 
@@ -316,6 +368,7 @@ async def take_panel_message(
     request: MessageRequest,
     state: ServerState = Depends(get_state),
     image_service: ImageService = Depends(get_image_service),
+    anchors: AnchorService = Depends(get_anchor_service),
 ) -> dict[str, str]:
     """Take what the reader typed in the panel, for the agent to pick up.
 
@@ -336,7 +389,7 @@ async def take_panel_message(
         PanelMessage(
             message_id=request.message_id,
             text=request.text,
-            threads=[_to_thread(thread, image_service) for thread in request.threads],
+            threads=[_to_thread(thread, image_service, anchors) for thread in request.threads],
             images=handed,
         )
     )
@@ -454,55 +507,25 @@ def _to_turn(turn: TurnInput, image_service: ImageService) -> Turn:
     )
 
 
-def _to_thread(thread: ThreadInput, image_service: ImageService) -> ThreadContext:
+def _to_thread(thread: ThreadInput, image_service: ImageService, anchors: AnchorService) -> ThreadContext:
     """Take a thread a message points at off the wire, turns and all."""
+    anchor = _to_anchor(thread.anchor)
     return ThreadContext(
         thread_id=thread.thread_id,
-        file=thread.file,
-        side=thread.side,
-        start_line=thread.start_line,
-        end_line=thread.end_line,
-        quote=thread.quote,
+        anchor=anchor,
+        where=anchors.where(anchor),
         body=thread.body,
         images=_hand_over_kept(thread.images, image_service),
         history=[_to_turn(turn, image_service) for turn in thread.history],
         severity=thread.severity,
         resolved=thread.resolved,
-        outdated=thread.outdated,
         raised_by=thread.raised_by,
     )
 
 
-def _refuse_a_thread_hung_on_nothing(request: PointRequest, diff_files: list[DiffFile]) -> None:
-    """Check that the lines a thread is about are on screen to be read.
-
-    Raises:
-        HTTPException: if the file is not under review, or those lines of it
-            are not among the ones the diff shows.
-    """
-    shown = next((f for f in diff_files if f.path == request.file), None)
-    if shown is None:
-        listed = ", ".join(f.path for f in diff_files[:5])
-        msg = f"{request.file} is not in this review. It has: {listed}"
-        raise HTTPException(status_code=404, detail=msg)
-
-    wanted = request.side
-    on_screen = {
-        line.old_no if wanted == LineSide.OLD else line.new_no
-        for hunk in shown.hunks
-        for line in hunk.lines
-        if (line.old_no if wanted == LineSide.OLD else line.new_no) is not None
-    }
-    missing = [no for no in range(request.start_line, request.end_line + 1) if no not in on_screen]
-    if missing:
-        side = "removed" if wanted == LineSide.OLD else "new"
-        msg = f"{request.file} does not show {side} line{'s' if len(missing) > 1 else ''} {_span(missing)}"
-        raise HTTPException(status_code=422, detail=msg)
-
-
-def _span(numbers: list[int]) -> str:
-    """Name the missing lines the way a person would: "12", or "12-19"."""
-    return str(numbers[0]) if len(numbers) == 1 else f"{numbers[0]}-{numbers[-1]}"
+def _to_anchor(anchor: AnchorInput) -> Anchor:
+    """Take what a thread hangs on off the wire."""
+    return LineAnchor.model_validate(anchor.model_dump())
 
 
 @router.post("/say")
@@ -579,7 +602,7 @@ async def show_a_file(
 async def raise_a_thread(
     request: PointRequest,
     state: ServerState = Depends(get_state),
-    diff_files: list[DiffFile] = Depends(get_diff_files),
+    anchors: AnchorService = Depends(get_anchor_service),
 ) -> PointResponse:
     """Put a thread on a line, from the side that wrote the change.
 
@@ -592,22 +615,45 @@ async def raise_a_thread(
     where nothing is shows the reader an empty quote and goes outdated on
     the next retake — and whoever raised it has no way of knowing.
     """
-    _refuse_a_thread_hung_on_nothing(request, diff_files)
+    asked_for = LineAnchor(
+        file=request.file, side=request.side, start_line=request.start_line, end_line=request.end_line
+    )
+    try:
+        # Quoted here, from the diff the anchor will be followed through: the
+        # lines are what let the thread find its code again when it moves
+        anchor = anchors.quote(asked_for)
+    except UnknownAnchorFileError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except AnchorLinesNotShownError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
     thread_id = state.raise_id()
     state.push(
         {
             "type": "point",
             "thread_id": thread_id,
-            "file": request.file,
-            "side": str(request.side),
-            "start_line": request.start_line,
-            "end_line": request.end_line,
+            "anchor": anchor.model_dump(mode="json"),
             "body": request.body,
             "severity": str(request.severity),
         }
     )
-    log.info("thread_raised", thread_id=thread_id, file=request.file)
+    log.info("thread_raised", thread_id=thread_id, where=anchors.where(anchor))
     return PointResponse(thread_id=thread_id)
+
+
+@router.post("/anchors/follow")
+async def follow_anchors(
+    request: FollowRequest,
+    anchors: AnchorService = Depends(get_anchor_service),
+) -> FollowResponse:
+    """Say where each anchor is in the review's diff as it now stands.
+
+    The browser holds the threads and the server holds the diff, so after a
+    round the threads come here to be moved: one whose lines survived follows
+    them, one whose lines are gone is marked outdated and keeps its quote.
+    The rule lives here, once, for everything that hangs on the diff.
+    """
+    return FollowResponse(anchors=[anchors.follow(_to_anchor(anchor)) for anchor in request.anchors])
 
 
 @router.post("/cancel")
@@ -672,7 +718,9 @@ async def session(websocket: WebSocket) -> None:
         while True:
             # The browser says where the review had got to, and otherwise
             # this waits for the close
-            _catch_up(state, image_service, await websocket.receive_text())
+            # Anchors are read against the diff as it is when the message
+            # arrives: a round retakes it while the socket stays open
+            _catch_up(state, image_service, anchor_service_for(websocket.app), await websocket.receive_text())
     except WebSocketDisconnect:
         pass
     finally:
@@ -681,7 +729,7 @@ async def session(websocket: WebSocket) -> None:
         state.disconnected(asyncio.get_running_loop().time())
 
 
-def _catch_up(state: ServerState, image_service: ImageService, said: str) -> None:
+def _catch_up(state: ServerState, image_service: ImageService, anchors: AnchorService, said: str) -> None:
     """Take what the browser knows and this server does not.
 
     Two things. The round: a server restarted mid-review comes back
@@ -704,7 +752,7 @@ def _catch_up(state: ServerState, image_service: ImageService, said: str) -> Non
         state.round = heard.round
 
     if heard.threads:
-        state.threads = [_to_thread(thread, image_service) for thread in heard.threads]
+        state.threads = [_to_thread(thread, image_service, anchors) for thread in heard.threads]
 
 
 @router.post("/submit")
@@ -714,6 +762,7 @@ async def submit_review(
     mode: ReviewMode = Depends(get_review_mode),
     diff_files: list[DiffFile] = Depends(get_diff_files),
     image_service: ImageService = Depends(get_image_service),
+    anchors: AnchorService = Depends(get_anchor_service),
 ) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.
 
@@ -730,7 +779,7 @@ async def submit_review(
     if mode == ReviewMode.TRANSCRIPT:
         result = TranscriptReviewService().format_review(comments, request.body, diff_files, round_number=sent_round)
     else:
-        result = ReviewService().format_review(comments, body=request.body, round_number=sent_round)
+        result = ReviewService(anchors).format_review(comments, body=request.body, round_number=sent_round)
 
     state.result = result.markdown
     state.events.put_nowait(
@@ -756,18 +805,13 @@ async def submit_review(
 def _to_comment(comment: CommentInput, image_service: ImageService) -> Comment:
     """Take a thread off the wire, turns and all."""
     return Comment(
-        file=comment.file,
-        side=comment.side,
+        anchor=_to_anchor(comment.anchor),
         severity=comment.severity,
-        start_line=comment.start_line,
-        end_line=comment.end_line,
         body=comment.body,
         images=_hand_over_kept(comment.images, image_service),
         turns=[_to_turn(turn, image_service) for turn in comment.turns],
         raised_by=comment.raised_by,
         resolved=comment.resolved,
-        outdated=comment.outdated,
-        quote=comment.quote,
     )
 
 

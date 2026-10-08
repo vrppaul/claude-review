@@ -1,10 +1,7 @@
 <script lang="ts">
 	import type { Comment } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { soundStore } from '$lib/stores/sound.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
-	import { scrollToComment } from '$lib/utils/scroll';
+	import { anchorShortPlace, revealThread } from '$lib/anchors/views';
 
 	let open = $state(false);
 	let container = $state<HTMLElement>();
@@ -22,11 +19,8 @@
 
 	function goTo(comment: Comment) {
 		open = false;
-		if (diffStore.isCollapsed(comment.file)) diffStore.toggleCollapsed(comment.file);
-		requestAnimationFrame(() => {
-			scrollToComment(comment.id, comment.file);
-			commentStore.markRead(comment.id);
-		});
+		revealThread(comment);
+		commentStore.markRead(comment.id);
 	}
 
 	function onWindowClick(event: MouseEvent) {
@@ -102,8 +96,7 @@
 							<span class="font-mono text-xs {comment.unread ? '' : 'cr-muted'}"
 								style={comment.unread ? 'color: var(--cr-mark)' : ''}
 							>
-								{comment.file.split('/').pop()}
-								{lineRangeLabel(comment.side, comment.start_line, comment.end_line)}
+								{anchorShortPlace(comment.anchor)}
 							</span>
 						</span>
 						<span class="cr-muted block truncate text-sm">{lastAnswer(comment)}</span>
@@ -115,26 +108,6 @@
 				</p>
 			{/each}
 
-			<div class="flex items-center border-t border-base-300 px-3 py-2">
-				<label class="cr-chip">
-					<input
-						data-testid="reply-sound"
-						type="checkbox"
-						checked={soundStore.enabled}
-						onchange={() => soundStore.toggle()}
-					/>
-					<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-						{#if soundStore.enabled}
-							<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
-						{:else}
-							<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1" />
-						{/if}
-					</svg>
-					Tick on a new reply
-				</label>
-				<div class="flex-1"></div>
-				<span class="cr-faint text-xs">only in a background tab</span>
-			</div>
 		</div>
 	{/if}
 </div>

@@ -27,7 +27,7 @@ export function reviewWeight(files: DiffFile[], comments: Comment[]): number {
   for (const comment of comments) {
     characters += comment.body.length;
     for (const turn of comment.turns) characters += turn.body.length;
-    for (const line of comment.quote) characters += line.length;
+    for (const line of comment.anchor.quote) characters += line.length;
   }
 
   return Math.round(characters / CHARS_PER_TOKEN);

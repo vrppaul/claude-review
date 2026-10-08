@@ -182,13 +182,15 @@ def test_a_question_and_its_answer_travel_between_processes(tmp_git_repo: Path) 
                 port,
                 "/api/ask",
                 {
+                    "anchor": {
+                        "file": "initial.txt",
+                        "side": "new",
+                        "start_line": 1,
+                        "end_line": 1,
+                        "quote": ["changed"],
+                    },
                     "thread_id": "comment-1",
                     "question_id": "comment-1",
-                    "file": "initial.txt",
-                    "side": "new",
-                    "start_line": 1,
-                    "end_line": 1,
-                    "quote": ["changed"],
                     "body": "Why this rather than the constant?",
                 },
             )

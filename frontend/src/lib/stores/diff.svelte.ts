@@ -2,6 +2,7 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { expansionStore } from "$lib/stores/expansions.svelte";
 import { reviewStore } from "$lib/stores/review.svelte";
+import { settingsStore } from "$lib/stores/settings.svelte";
 import {
   readChoice,
   readFlag,
@@ -34,9 +35,6 @@ let contentViewMode = $state<ContentViewMode>(
   ),
 );
 let title = $state("");
-// What is under review, apart from what it is compared against. The header
-// says the second half itself, because that half is a control now.
-let subject = $state<string | null>(null);
 // Which base the diff on screen was taken against, and everything it could
 // be taken against instead
 let base = $state(REVIEW);
@@ -54,10 +52,6 @@ let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 let imageLimits = $state<ImageLimits | null>(null);
 // Which release serves this review; empty until the first diff arrives
 let release = $state("");
-let diffLayout = $state<DiffLayout>(
-  readChoice<DiffLayout>("layout", ["unified", "split"], "unified"),
-);
-let ignoreWhitespace = $state(readFlag("ignore-whitespace"));
 // What the file tree may take. Narrower than the floor and a path is
 // unreadable; wider than the ceiling and it is taking the room from what it
 // is a table of contents for.
@@ -92,7 +86,9 @@ const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 /** What the diff is asked for: whose whitespace, and against what. */
 function asked(against: string): string {
   const params = new URLSearchParams();
-  if (ignoreWhitespace) params.set("ignore_whitespace", "true");
+  if (settingsStore.settings.ignore_whitespace) {
+    params.set("ignore_whitespace", "true");
+  }
   if (against !== REVIEW) params.set("base", against);
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -114,7 +110,6 @@ let asking = 0;
 /** Put a diff that has arrived on screen, with everything that came with it. */
 function apply(data: DiffResponse): void {
   diffStore.setFiles(data.files, data.mode, data.title);
-  subject = data.subject ?? null;
   phrase = data.phrase ?? "";
   agent = data.agent ?? { model: null, context: null, at: null };
   diffStore.setImageLimits(data.image_limits);
@@ -285,17 +280,16 @@ export const diffStore = {
   },
   /** Whether a diff reads down one column or across two. */
   get diffLayout(): DiffLayout {
-    return diffLayout;
+    return settingsStore.settings.diff_layout;
   },
 
   setDiffLayout(next: DiffLayout) {
-    diffLayout = next;
-    writeChoice("layout", next);
+    void settingsStore.change({ diff_layout: next });
   },
 
   /** Whether whitespace-only changes are left out of the diff. */
   get ignoreWhitespace(): boolean {
-    return ignoreWhitespace;
+    return settingsStore.settings.ignore_whitespace;
   },
 
   /**
@@ -305,8 +299,7 @@ export const diffStore = {
    * counting is not something the browser can work out from what it has.
    */
   async setIgnoreWhitespace(next: boolean) {
-    ignoreWhitespace = next;
-    writeChoice("ignore-whitespace", next);
+    await settingsStore.change({ ignore_whitespace: next });
     // Hunks are renumbered and re-indexed by the retake, so lines revealed
     // against the old ones would be shown under the wrong numbers
     expansionStore.clear();
@@ -366,12 +359,6 @@ export const diffStore = {
       ["raw", "preview", "side-by-side"],
       "raw",
     );
-    diffLayout = readChoice<DiffLayout>(
-      "layout",
-      ["unified", "split"],
-      "unified",
-    );
-    ignoreWhitespace = readFlag("ignore-whitespace");
     sidebarWidth = readNumber("sidebar-width", {
       min: 160,
       max: 560,
@@ -379,7 +366,6 @@ export const diffStore = {
     });
     sidebarOpen = readFlag("sidebar-open", true);
     title = "";
-    subject = null;
     phrase = "";
     base = REVIEW;
     versions = [];
@@ -394,11 +380,6 @@ export const diffStore = {
     changedFiles.clear();
     viewed.clear();
     collapsed.clear();
-  },
-
-  /** What is under review, without what it is compared against. */
-  get subject(): string | null {
-    return subject;
   },
 
   /** Which base the diff on screen was taken against. */
@@ -453,21 +434,6 @@ export const diffStore = {
     expansionStore.clear();
     base = key;
     apply(data);
-  },
-
-  /**
-   * Take the diff again after a round, and hand back the review's own files.
-   *
-   * A thread is anchored in the review's diff and nowhere else, so a review
-   * being read against a narrower base fetches that one too: moving threads
-   * onto whatever a narrower base happens to show would rewrite every anchor
-   * into somebody else's numbering.
-   */
-  async takeAgain(): Promise<DiffFile[]> {
-    await this.fetchDiff();
-    if (base === REVIEW) return files;
-    return (await read(ignoreWhitespace ? "?ignore_whitespace=true" : ""))
-      .files;
   },
 
   async fetchDiff() {

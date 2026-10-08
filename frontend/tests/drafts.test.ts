@@ -122,4 +122,42 @@ describe('a draft written by an older version', () => {
 		expect(draft?.comments[0].awaiting).toEqual([]);
 		expect(draft?.sent).toEqual([]);
 	});
+
+	it('keeps where each thread hung, and what it was written against', () => {
+		localStorage.setItem(
+			'claude-review:draft',
+			JSON.stringify({
+				version: 7,
+				title: 'repo: uncommitted changes',
+				comments: [
+					{
+						id: 'comment-1',
+						file: 'a.py',
+						side: 'old',
+						severity: 'question',
+						start_line: 4,
+						end_line: 6,
+						body: 'why did this go',
+						quote: ['a', 'b', 'c'],
+						outdated: true
+					}
+				],
+				reviewBody: ''
+			})
+		);
+
+		const [comment] = loadDraft('repo: uncommitted changes')?.comments ?? [];
+
+		expect(comment.anchor).toEqual({
+			kind: 'line',
+			file: 'a.py',
+			side: 'old',
+			start_line: 4,
+			end_line: 6,
+			quote: ['a', 'b', 'c'],
+			outdated: true
+		});
+		expect(Object.keys(comment)).not.toContain('start_line');
+		expect(Object.keys(comment)).not.toContain('quote');
+	});
 });

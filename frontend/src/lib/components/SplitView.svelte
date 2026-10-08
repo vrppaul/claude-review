@@ -5,6 +5,8 @@
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
+	import { lineRangeLabel } from '$lib/utils/line-label';
+	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { createLineSelection } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
@@ -74,19 +76,26 @@
 			.map((line) => line.content);
 	});
 
+	/** Where the comment being written hangs, said above its field. */
+	const commentingLabel = $derived(
+		selection.commentingAt
+			? lineRangeLabel(
+					selection.commentingAt.side,
+					selection.commentingAt.line,
+					selection.commentingAt.endLine
+				)
+			: undefined
+	);
+
 	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
 		commentStore.add({
-			file: file.path,
-			side,
-			startLine: line,
-			endLine,
+			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
-			quote: selectedText ?? [],
 			images
 		});
 		selection.clearCommenting();
@@ -97,13 +106,9 @@
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
 		const id = commentStore.add({
-			file: file.path,
-			side,
-			startLine: line,
-			endLine,
+			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
-			quote: selectedText ?? [],
 			images
 		});
 		selection.clearCommenting();
@@ -150,9 +155,7 @@
 			onSave={handleSaveComment}
 			onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
 			onCancel={() => selection.clearCommenting()}
-			side={selection.commentingAt?.side}
-			startLine={selection.commentingAt?.line}
-			endLine={selection.commentingAt?.endLine}
+			label={commentingLabel}
 			suggestFrom={selectedText}
 		/>
 	</div>

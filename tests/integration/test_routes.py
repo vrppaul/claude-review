@@ -14,6 +14,7 @@ from claude_review.domain.models import (
     DiffLine,
     FileStatus,
     LineType,
+    ReaderFiles,
     ReviewMode,
     ReviewWorkspace,
 )
@@ -56,13 +57,16 @@ def server_state() -> ServerState:
 
 
 @pytest.fixture
-async def client(mock_diff_files: list[DiffFile], server_state: ServerState, workspace: ReviewWorkspace):
+async def client(
+    mock_diff_files: list[DiffFile], server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+):
     app = create_app(
         diff_files=mock_diff_files,
         state=server_state,
         mode=ReviewMode.DIFF,
         workspace=workspace,
         title="test-repo: uncommitted changes",
+        reader_files=reader_files,
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
@@ -113,19 +117,13 @@ async def test_submit_with_comments_returns_formatted_markdown(
         json={
             "comments": [
                 {
-                    "file": "src/handler.ts",
-                    "side": "new",
+                    "anchor": {"file": "src/handler.ts", "side": "new", "start_line": 42, "end_line": 42},
                     "severity": "note",
-                    "start_line": 42,
-                    "end_line": 42,
                     "body": "Wrong null check",
                 },
                 {
-                    "file": "src/handler.ts",
-                    "side": "new",
+                    "anchor": {"file": "src/handler.ts", "side": "new", "start_line": 67, "end_line": 70},
                     "severity": "note",
-                    "start_line": 67,
-                    "end_line": 70,
                     "body": "Add max retry",
                 },
             ]
@@ -159,7 +157,11 @@ async def test_submit_triggers_shutdown_signal(client: AsyncClient, server_state
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 1, "end_line": 1, "body": "note"}
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+                    "severity": "note",
+                    "body": "note",
+                }
             ]
         },
     )
@@ -171,7 +173,11 @@ async def test_double_submit_returns_409(client: AsyncClient) -> None:
     """Second submit returns 409 Conflict."""
     payload = {
         "comments": [
-            {"file": "x.py", "side": "new", "severity": "note", "start_line": 1, "end_line": 1, "body": "note"}
+            {
+                "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+                "severity": "note",
+                "body": "note",
+            }
         ]
     }
 
@@ -190,7 +196,11 @@ async def test_submit_stores_result_in_state(client: AsyncClient, server_state: 
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 1, "end_line": 1, "body": "fix this"}
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+                    "severity": "note",
+                    "body": "fix this",
+                }
             ]
         },
     )
@@ -206,7 +216,11 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 1, "end_line": 1, "body": ""}
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+                    "severity": "note",
+                    "body": "",
+                }
             ]
         },
     )
@@ -217,7 +231,11 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 10, "end_line": 5, "body": "note"}
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 10, "end_line": 5},
+                    "severity": "note",
+                    "body": "note",
+                }
             ]
         },
     )
@@ -228,7 +246,11 @@ async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 0, "end_line": 1, "body": "note"}
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 0, "end_line": 1},
+                    "severity": "note",
+                    "body": "note",
+                }
             ]
         },
     )
@@ -258,7 +280,11 @@ async def test_submit_with_body_and_comments(client: AsyncClient) -> None:
         "/api/submit",
         json={
             "comments": [
-                {"file": "x.py", "side": "new", "severity": "note", "start_line": 1, "end_line": 1, "body": "Fix this"},
+                {
+                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+                    "severity": "note",
+                    "body": "Fix this",
+                },
             ],
             "body": "Generally good, one issue.",
         },
@@ -285,10 +311,14 @@ def plan_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def files_mode_client(plan_file: Path, server_state: ServerState, workspace: ReviewWorkspace):
+async def files_mode_client(
+    plan_file: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+):
     """Client backed by a real text file loaded through TextFileService."""
     diff_files = TextFileService().read_files([plan_file])
-    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.FILES, workspace=workspace)
+    app = create_app(
+        diff_files=diff_files, state=server_state, mode=ReviewMode.FILES, workspace=workspace, reader_files=reader_files
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
@@ -317,11 +347,8 @@ async def test_files_mode_review_round_trip(
         json={
             "comments": [
                 {
-                    "file": file_path,
-                    "side": "new",
+                    "anchor": {"file": file_path, "side": "new", "start_line": 3, "end_line": 3},
                     "severity": "note",
-                    "start_line": 3,
-                    "end_line": 3,
                     "body": "Needs more detail",
                 },
             ]
@@ -360,10 +387,18 @@ def transcript_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def transcript_mode_client(transcript_file: Path, server_state: ServerState, workspace: ReviewWorkspace):
+async def transcript_mode_client(
+    transcript_file: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
+):
     """Client backed by a real transcript file loaded through TranscriptService."""
     diff_files = TranscriptService().parse(transcript_file)
-    app = create_app(diff_files=diff_files, state=server_state, mode=ReviewMode.TRANSCRIPT, workspace=workspace)
+    app = create_app(
+        diff_files=diff_files,
+        state=server_state,
+        mode=ReviewMode.TRANSCRIPT,
+        workspace=workspace,
+        reader_files=reader_files,
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
         yield c
 
@@ -395,11 +430,8 @@ async def test_transcript_mode_review_round_trip(
         json={
             "comments": [
                 {
-                    "file": user_file["path"],
-                    "side": "new",
+                    "anchor": {"file": user_file["path"], "side": "new", "start_line": 1, "end_line": 1},
                     "severity": "note",
-                    "start_line": 1,
-                    "end_line": 1,
                     "body": "Wrong approach",
                 },
             ]
@@ -425,7 +457,11 @@ async def test_diff_response_says_what_is_under_review(client: AsyncClient) -> N
 
 @pytest.fixture
 async def repo_backed_client(
-    mock_diff_files: list[DiffFile], server_state: ServerState, tmp_path: Path, workspace: ReviewWorkspace
+    mock_diff_files: list[DiffFile],
+    server_state: ServerState,
+    tmp_path: Path,
+    workspace: ReviewWorkspace,
+    reader_files: ReaderFiles,
 ):
     """A client whose server can read files, as diff mode's can."""
     (tmp_path / "src").mkdir()
@@ -438,6 +474,7 @@ async def repo_backed_client(
         workspace=workspace,
         title="test-repo: uncommitted changes",
         root=tmp_path,
+        reader_files=reader_files,
     )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as ac:
@@ -472,7 +509,7 @@ async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -
 
 
 async def test_ignoring_whitespace_leaves_the_real_change_visible(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """A reindented block should stop hiding the line that actually changed."""
     (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n  c = 3\n")
@@ -482,7 +519,14 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(
     (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n    c = 3\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
+    app = create_app(
+        diff_files=files,
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        reader_files=reader_files,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = _changed_lines((await client.get("/api/diff")).json())
@@ -504,7 +548,7 @@ def _changed_lines(payload: dict) -> list[str]:
 
 
 async def test_ignoring_whitespace_drops_a_reindent_only_change(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """A file whose only change is indentation disappears from the review."""
     (tmp_git_repo / "app.py").write_text("def f():\n    return 1\n")
@@ -513,7 +557,14 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(
     (tmp_git_repo / "app.py").write_text("def f():\n        return 1\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
+    app = create_app(
+        diff_files=files,
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        reader_files=reader_files,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         plain = (await client.get("/api/diff")).json()
@@ -524,7 +575,7 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(
 
 
 async def test_ignoring_whitespace_can_be_turned_back_off(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace
+    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
 ) -> None:
     """It is a way of looking at the diff, not a door that shuts behind you."""
     (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n")
@@ -533,7 +584,14 @@ async def test_ignoring_whitespace_can_be_turned_back_off(
     (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n")
 
     files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(diff_files=files, state=server_state, mode=ReviewMode.DIFF, workspace=workspace, root=tmp_git_repo)
+    app = create_app(
+        diff_files=files,
+        state=server_state,
+        mode=ReviewMode.DIFF,
+        workspace=workspace,
+        root=tmp_git_repo,
+        reader_files=reader_files,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
         full = _changed_lines((await client.get("/api/diff")).json())

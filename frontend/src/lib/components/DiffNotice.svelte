@@ -2,9 +2,8 @@
 	import type { Comment } from '$lib/types';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { diffStore } from '$lib/stores/diff.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
+	import { anchorShortPlace, revealThread } from '$lib/anchors/views';
 	import { isDrawn } from '$lib/utils/placement';
-	import { scrollToComment } from '$lib/utils/scroll';
 
 	let failed = $state<string | null>(null);
 
@@ -29,14 +28,14 @@
 		try {
 			await diffStore.setBase('review');
 			listing = false;
-			requestAnimationFrame(() => scrollToComment(comment.id, comment.file));
+			revealThread(comment);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not take the whole diff again';
 		}
 	}
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
 	// what it was written against, and that is what "show it" goes to.
-	const stranded = $derived(commentStore.comments.find((comment) => comment.outdated));
+	const stranded = $derived(commentStore.comments.find((comment) => comment.anchor.outdated));
 
 	// Each retake starts the clock afresh: what it says is about that one
 	$effect(() => {
@@ -168,7 +167,7 @@
 			<button
 				data-testid="show-outdated"
 				class="btn btn-ghost btn-xs"
-				onclick={() => scrollToComment(stranded.id, stranded.file)}
+				onclick={() => revealThread(stranded)}
 			>
 				Show it
 			</button>
@@ -197,8 +196,7 @@
 					onclick={() => goTo(comment)}
 				>
 					<span class="cr-comment-ref shrink-0 font-mono text-xs">
-						{comment.file.split('/').pop()}
-						{lineRangeLabel(comment.side, comment.start_line, comment.end_line)}
+						{anchorShortPlace(comment.anchor)}
 					</span>
 					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{comment.body}</span>
 				</button>
@@ -279,8 +277,7 @@
 					onclick={() => goTo(comment)}
 				>
 					<span class="cr-comment-ref shrink-0 font-mono text-xs">
-						{comment.file.split('/').pop()}
-						{lineRangeLabel(comment.side, comment.start_line, comment.end_line)}
+						{anchorShortPlace(comment.anchor)}
 					</span>
 					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{comment.body}</span>
 				</button>

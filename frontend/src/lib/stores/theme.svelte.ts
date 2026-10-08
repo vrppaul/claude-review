@@ -1,86 +1,64 @@
-export type Theme = "system" | "light" | "dark";
+import type { Theme } from "$lib/types";
+import { settingsStore } from "$lib/stores/settings.svelte";
+
 export type ResolvedTheme = "light" | "dark";
 
-/** Shared with the inline script in index.html — keep both in step. */
-export const THEME_STORAGE_KEY = "claude-review:theme";
-
-const ORDER: Theme[] = ["system", "light", "dark"];
+const SYSTEM_PREFERS_DARK = "(prefers-color-scheme: dark)";
 
 function systemTheme(): ResolvedTheme {
   // Absent in jsdom and in browsers old enough not to matter here
   if (typeof window.matchMedia !== "function") return "dark";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia(SYSTEM_PREFERS_DARK).matches ? "dark" : "light";
 }
 
-function readStored(): Theme {
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === "light" || stored === "dark" || stored === "system") {
-      return stored;
-    }
-  } catch {
-    // Private mode and blocked site data both throw; the default is fine
-  }
-  return "system";
-}
-
-function persist(theme: Theme): void {
-  try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // The choice still applies to this tab, it just will not be remembered
-  }
-}
-
-let theme = $state<Theme>(readStored());
 let system = $state<ResolvedTheme>(systemTheme());
 
-const resolved = $derived<ResolvedTheme>(theme === "system" ? system : theme);
+const resolved = $derived<ResolvedTheme>(
+  settingsStore.settings.theme === "system"
+    ? system
+    : settingsStore.settings.theme,
+);
 
 function apply(): void {
   document.documentElement.setAttribute("data-theme", resolved);
 }
 
+/** The theme the reader chose, applied to the page, and the system's when that is the choice. */
 export const themeStore = {
   get theme(): Theme {
-    return theme;
+    return settingsStore.settings.theme;
   },
   get resolved(): ResolvedTheme {
     return resolved;
   },
 
   set(next: Theme) {
-    theme = next;
-    persist(next);
-    apply();
-  },
-
-  cycle() {
-    this.set(ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]);
+    void settingsStore.change({ theme: next });
   },
 
   /**
-   * Apply the current choice and keep following the system while it is the
-   * choice. Returns a teardown for the listener.
+   * Apply the theme whenever it changes — chosen here, read from the server,
+   * or followed from the system. Returns a teardown.
    */
   start(): () => void {
-    apply();
-    if (typeof window.matchMedia !== "function") return () => {};
+    const stopApplying = $effect.root(() => {
+      $effect(apply);
+    });
+    if (typeof window.matchMedia !== "function") return stopApplying;
 
-    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const query = window.matchMedia(SYSTEM_PREFERS_DARK);
     const onChange = (e: MediaQueryListEvent) => {
       system = e.matches ? "dark" : "light";
-      apply();
     };
     query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
+    return () => {
+      stopApplying();
+      query.removeEventListener("change", onChange);
+    };
   },
 
-  /** Test seam: restore the state a fresh page load would have. */
+  /** Test seam: read the system's preference afresh. */
   reset() {
-    theme = readStored();
     system = systemTheme();
   },
 };

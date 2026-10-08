@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
+import type { LineSide } from '$lib/types';
+import { indexByRow } from '$lib/utils/comment-index';
 import { newComment } from './new-comment';
+
+/** The threads drawn under one row of a file. */
+function threadsOn(file: string, side: LineSide, line: number) {
+	return indexByRow(commentStore.comments, file).get(`${side}:${line}`) ?? [];
+}
 
 describe('commentStore', () => {
 	beforeEach(() => {
@@ -18,9 +25,7 @@ describe('commentStore', () => {
 		expect(id).toBeTruthy();
 		expect(commentStore.count).toBe(1);
 		expect(commentStore.comments[0]).toMatchObject({
-			file: 'file.ts',
-			start_line: 10,
-			end_line: 10,
+			anchor: { file: 'file.ts', start_line: 10, end_line: 10 },
 			body: 'fix this'
 		});
 	});
@@ -28,16 +33,16 @@ describe('commentStore', () => {
 	it('adds multi-line comment', () => {
 		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 15, body: 'refactor this block' }));
 
-		expect(commentStore.comments[0].start_line).toBe(10);
-		expect(commentStore.comments[0].end_line).toBe(15);
+		expect(commentStore.comments[0].anchor.start_line).toBe(10);
+		expect(commentStore.comments[0].anchor.end_line).toBe(15);
 	});
 
 	it('keeps comments on the two sides of the same line number apart', () => {
 		commentStore.add(newComment({ file: 'file.ts', side: 'old', startLine: 42, endLine: 42, body: 'about the removed line' }));
 		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 42, endLine: 42, body: 'about the replacement' }));
 
-		const removed = commentStore.getForLine('file.ts', 'old', 42);
-		const added = commentStore.getForLine('file.ts', 'new', 42);
+		const removed = threadsOn('file.ts', 'old', 42);
+		const added = threadsOn('file.ts', 'new', 42);
 
 		expect(removed).toHaveLength(1);
 		expect(removed[0].body).toBe('about the removed line');
@@ -48,9 +53,9 @@ describe('commentStore', () => {
 	it('sends the side to the server so line numbers stay unambiguous', () => {
 		commentStore.add(newComment({ file: 'file.ts', side: 'old', startLine: 7, endLine: 9, body: 'why was this dropped' }));
 
-		expect(commentStore.comments[0].side).toBe('old');
-		expect(commentStore.comments[0].start_line).toBe(7);
-		expect(commentStore.comments[0].end_line).toBe(9);
+		expect(commentStore.comments[0].anchor.side).toBe('old');
+		expect(commentStore.comments[0].anchor.start_line).toBe(7);
+		expect(commentStore.comments[0].anchor.end_line).toBe(9);
 	});
 
 	it('updates a comment body', () => {
@@ -77,18 +82,18 @@ describe('commentStore', () => {
 		expect(commentStore.getForFile('c.ts')).toHaveLength(0);
 	});
 
-	it('getForLine returns comments anchored at their end line only', () => {
+	it('a thread is drawn under the last line of its range only', () => {
 		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 15, body: 'range comment' }));
 		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 20, endLine: 20, body: 'single line' }));
 
 		// Range comment only renders at end_line (15), not at start or middle
-		expect(commentStore.getForLine('file.ts', 'new', 10)).toHaveLength(0);
-		expect(commentStore.getForLine('file.ts', 'new', 12)).toHaveLength(0);
-		expect(commentStore.getForLine('file.ts', 'new', 15)).toHaveLength(1);
+		expect(threadsOn('file.ts', 'new', 10)).toHaveLength(0);
+		expect(threadsOn('file.ts', 'new', 12)).toHaveLength(0);
+		expect(threadsOn('file.ts', 'new', 15)).toHaveLength(1);
 		// Outside range
-		expect(commentStore.getForLine('file.ts', 'new', 16)).toHaveLength(0);
+		expect(threadsOn('file.ts', 'new', 16)).toHaveLength(0);
 		// Single line comment at line 20
-		expect(commentStore.getForLine('file.ts', 'new', 20)).toHaveLength(1);
+		expect(threadsOn('file.ts', 'new', 20)).toHaveLength(1);
 	});
 
 	it('clear resets everything', () => {
@@ -153,18 +158,21 @@ describe('commentStore', () => {
 				body: JSON.stringify({
 					comments: [
 						{
-							file: 'file.ts',
-							side: 'new',
+							anchor: {
+								kind: 'line',
+								file: 'file.ts',
+								side: 'new',
+								start_line: 10,
+								end_line: 10,
+								quote: [],
+								outdated: false
+							},
 							severity: 'note',
-							start_line: 10,
-							end_line: 10,
 							body: 'fix this',
 							images: [],
 							turns: [],
 							raised_by: 'reader',
-							resolved: false,
-							outdated: false,
-							quote: []
+							resolved: false
 						}
 					],
 					end: true

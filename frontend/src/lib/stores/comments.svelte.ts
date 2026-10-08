@@ -1,9 +1,8 @@
 import type {
+  Anchor,
   Comment,
   CommentPayload,
   CommentSeverity,
-  DiffFile,
-  LineSide,
   NewComment,
   NewTurn,
   SubmitResponse,
@@ -11,8 +10,8 @@ import type {
 } from "$lib/types";
 import { SvelteMap } from "svelte/reactivity";
 
+import { anchorPlace } from "$lib/anchors/views";
 import { reviewStore } from "$lib/stores/review.svelte";
-import { reanchor } from "$lib/utils/reanchor";
 import { threadOnTheWire, turnOnTheWire } from "$lib/utils/thread-wire";
 import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
@@ -66,19 +65,14 @@ function isUnsent(comment: Comment): boolean {
 
 function payload(comment: Comment): CommentPayload {
   return {
-    file: comment.file,
-    side: comment.side,
+    anchor: comment.anchor,
     severity: comment.severity,
-    start_line: comment.start_line,
-    end_line: comment.end_line,
     body: comment.body,
     images: comment.images,
     // The clock belongs to reading the thread, not to what it says
     turns: comment.turns.map(turnOnTheWire),
     raised_by: comment.raised_by,
     resolved: comment.resolved,
-    outdated: comment.outdated,
-    quote: comment.quote,
   };
 }
 
@@ -178,30 +172,16 @@ export const commentStore = {
     return comments.length;
   },
 
-  add({
-    file,
-    side,
-    startLine,
-    endLine,
-    body,
-    severity,
-    quote,
-    images,
-  }: NewComment): string {
+  add({ anchor, body, severity, images }: NewComment): string {
     const comment: Comment = {
       id: generateId(),
-      file,
-      side,
+      anchor,
       severity,
-      start_line: startLine,
-      end_line: endLine,
       body,
       images,
       turns: [],
       raised_by: "reader",
       resolved: false,
-      outdated: false,
-      quote,
       awaiting: [],
       collapsed: false,
       unread: false,
@@ -223,28 +203,19 @@ export const commentStore = {
    */
   raise(
     id: string,
-    file: string,
-    side: LineSide,
-    startLine: number,
-    endLine: number,
+    anchor: Anchor,
     body: string,
     severity: CommentSeverity,
-    quote: string[],
   ): string {
     const comment: Comment = {
       id,
-      file,
-      side,
+      anchor,
       severity,
-      start_line: startLine,
-      end_line: endLine,
       body,
       images: [],
       turns: [],
       raised_by: "author",
       resolved: false,
-      outdated: false,
-      quote,
       awaiting: [],
       collapsed: false,
       unread: true,
@@ -331,11 +302,7 @@ export const commentStore = {
       body: JSON.stringify({
         thread_id: comment.id,
         question_id: questionId,
-        file: comment.file,
-        side: comment.side,
-        start_line: comment.start_line,
-        end_line: comment.end_line,
-        quote: comment.quote,
+        anchor: comment.anchor,
         body: question,
         images: questionImages,
         history: history.map(turnOnTheWire),
@@ -415,28 +382,39 @@ export const commentStore = {
   /**
    * Move every thread onto the diff as it now stands.
    *
-   * Called after a round is answered and the diff retaken: a thread whose
-   * lines survived follows them, and one whose lines are gone is marked
-   * rather than left pointing at a line that has become something else.
+   * Called after a round is answered and the diff retaken. The server holds
+   * that diff, so it says where each thread now hangs: one whose lines
+   * survived follows them, and one whose lines are gone is marked rather than
+   * left pointing at a line that has become something else.
    *
    * Says how many did each, because that is what the reader stands to lose
    * and the only part of a retake they cannot see at a glance.
    */
-  reanchorAll(files: DiffFile[]): { followed: number; outdated: number } {
+  async follow(): Promise<{ followed: number; outdated: number }> {
+    const asked = comments.map((comment) => comment.id);
+    const response = await fetch("/api/anchors/follow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anchors: comments.map((c) => c.anchor) }),
+    });
+    if (!response.ok) {
+      throw new Error(`Could not move the threads: ${response.status}`);
+    }
+    const { anchors }: { anchors: Anchor[] } = await response.json();
+    const movedTo: Record<string, Anchor> = Object.fromEntries(
+      asked.map((id, index) => [id, anchors[index]]),
+    );
+
     let followed = 0;
     let outdated = 0;
-
     comments = comments.map((comment) => {
-      const moved = {
-        ...comment,
-        ...reanchor(
-          comment,
-          files.find((f) => f.path === comment.file)?.hunks ?? null,
-        ),
-      };
-      if (moved.outdated && !comment.outdated) outdated += 1;
-      else if (moved.start_line !== comment.start_line) followed += 1;
-      return moved;
+      const moved = movedTo[comment.id];
+      // Written while the answer was on its way, so already on the new diff
+      if (!moved) return comment;
+      if (moved.outdated && !comment.anchor.outdated) outdated += 1;
+      else if (anchorPlace(moved) !== anchorPlace(comment.anchor))
+        followed += 1;
+      return { ...comment, anchor: moved };
     });
 
     remember();
@@ -444,14 +422,7 @@ export const commentStore = {
   },
 
   getForFile(file: string): Comment[] {
-    return comments.filter((c) => c.file === file);
-  },
-
-  /** Comments anchored to the end of their range on this exact row. */
-  getForLine(file: string, side: LineSide, line: number): Comment[] {
-    return comments.filter(
-      (c) => c.file === file && c.side === side && c.end_line === line,
-    );
+    return comments.filter((c) => c.anchor.file === file);
   },
 
   clear() {

@@ -1,13 +1,14 @@
-import type { Comment, Composer, PanelTurn } from "$lib/types";
+import type { Comment, Composer, LineSide, PanelTurn } from "$lib/types";
 
 const STORAGE_KEY = "claude-review:draft";
 // What shape the stored draft is in. A comment has grown turns, a resolved
 // mark, the lines it was written against, the questions still waiting for an
 // answer, and who raised it; the review has grown a conversation in the
-// agent panel, and the message being written there. The number is here so an
-// older draft can be brought up to the current shape — never so it can be
-// thrown away: a draft is an hour of somebody's reading.
-const SHAPE = 7;
+// agent panel, and the message being written there; and what a thread hangs
+// on has moved into an anchor of its own. The number is here so an older
+// draft can be brought up to the current shape — never so it can be thrown
+// away: a draft is an hour of somebody's reading.
+const SHAPE = 8;
 
 export interface Draft {
   version: number;
@@ -74,6 +75,36 @@ export function saveDraft(
   }
 }
 
+/** A thread as drafts kept it before it hung on an anchor. */
+interface FlatComment extends Omit<Comment, "anchor"> {
+  file: string;
+  side: LineSide;
+  start_line: number;
+  end_line: number;
+  // Missing from drafts written before quotes and outdated marks were kept
+  quote?: string[];
+  outdated?: boolean;
+}
+
+/** A stored thread in the current shape, whichever shape it was kept in. */
+function anchored(stored: Comment | FlatComment): Comment {
+  if ("anchor" in stored) return stored;
+  const { file, side, start_line, end_line, quote, outdated, ...comment } =
+    stored;
+  return {
+    ...comment,
+    anchor: {
+      kind: "line",
+      file,
+      side,
+      start_line,
+      end_line,
+      quote: quote ?? [],
+      outdated: outdated ?? false,
+    },
+  };
+}
+
 /**
  * Bring a draft written by an older version up to the current shape.
  *
@@ -94,8 +125,8 @@ function upgrade(draft: Draft): Draft {
     sent: (Array.isArray(draft.sent) ? draft.sent : []).map((entry) =>
       Array.isArray(entry) ? entry : [entry as unknown as string, 1],
     ),
-    comments: draft.comments.map((comment) => ({
-      ...comment,
+    comments: (draft.comments as (Comment | FlatComment)[]).map((comment) => ({
+      ...anchored(comment),
       // Comments were words alone until images could be pasted into them
       images: comment.images ?? [],
       turns: (comment.turns ?? []).map((turn) => ({
@@ -105,8 +136,6 @@ function upgrade(draft: Draft): Draft {
       // Threads were all the reader's before the author could raise one
       raised_by: comment.raised_by ?? "reader",
       resolved: comment.resolved ?? false,
-      outdated: comment.outdated ?? false,
-      quote: comment.quote ?? [],
       awaiting: comment.awaiting ?? [],
       collapsed: comment.collapsed ?? false,
       unread: comment.unread ?? false,

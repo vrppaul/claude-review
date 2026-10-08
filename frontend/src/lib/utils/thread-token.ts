@@ -1,7 +1,5 @@
-import type { Comment } from "$lib/types";
-
 /**
- * How a thread is written into a panel message.
+ * How a panel message points at threads.
  *
  * The token is the reference: one word in the text, deleted like any other
  * word, and read back at the moment of sending. Nothing is kept beside the
@@ -9,9 +7,9 @@ import type { Comment } from "$lib/types";
  * and editing the message cannot leave a reference behind that the words no
  * longer mention.
  */
-export function threadToken(comment: Comment): string {
-  return `@${comment.file}:${comment.start_line}-${comment.end_line}`;
-}
+
+import type { Comment } from "$lib/types";
+import { anchorToken } from "$lib/anchors/views";
 
 /**
  * Whether a message mentions this thread.
@@ -31,5 +29,7 @@ function mentions(text: string, token: string): boolean {
 
 /** The threads a message points at, as its text stands right now. */
 export function threadsIn(text: string, comments: Comment[]): Comment[] {
-  return comments.filter((comment) => mentions(text, threadToken(comment)));
+  return comments.filter((comment) =>
+    mentions(text, anchorToken(comment.anchor)),
+  );
 }

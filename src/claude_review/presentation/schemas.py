@@ -1,20 +1,26 @@
 """Pydantic request/response schemas for the API."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from claude_review.domain.models import (
     AgentStatus,
+    Anchor,
+    AnchorKind,
     CommentSeverity,
     DiffFile,
+    DiffLayout,
+    GuideState,
     LineSide,
     PanelCancel,
     PanelEntry,
     PanelMessage,
+    ReaderSettings,
     ReviewMode,
     ReviewVersion,
     RoundSubmission,
+    Theme,
     ThreadContext,
     ThreadQuestion,
     TurnAuthor,
@@ -56,10 +62,8 @@ class DiffResponse(BaseModel):
     files: list[DiffFile]
     mode: ReviewMode
     title: str
-    # What is under review, and what it is being compared against, as two
-    # halves the header draws itself: the second one is a control now. The
-    # title keeps both together — an unsent draft is stored under it.
-    subject: str | None = None
+    # What the diff is compared against, as the header's control says it.
+    # None in a review whose content did not come from a repository.
     phrase: str | None = None
     # Which round is being written, and whether anything is there to answer
     # it. A review reloaded mid-round has to learn both from somewhere.
@@ -79,6 +83,44 @@ class DiffResponse(BaseModel):
     release: str
 
 
+# The most threads one review hands over at once. A review with more is
+# not a review any more, and the requests that carry them stay bounded.
+MAX_THREADS = 500
+
+# A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
+MAX_RELEASE_LENGTH = 50
+
+# What a file path may hold. A newline in one would let a filename write its
+# own heading in the review — a whole fabricated section, blocker and all, in
+# what the agent reads. Git quotes such names, and the parser faithfully
+# decodes them.
+SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
+
+
+class LineAnchorInput(BaseModel):
+    """Lines a thread hangs on, as the browser sends them."""
+
+    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
+    file: str = Field(min_length=1, pattern=SAFE_PATH)
+    side: LineSide
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    # What the thread was written against, kept for when those lines are gone
+    quote: list[str] = Field(default_factory=list, max_length=200)
+    outdated: bool = False
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> LineAnchorInput:
+        if self.start_line > self.end_line:
+            msg = "start_line must be <= end_line"
+            raise ValueError(msg)
+        return self
+
+
+# One input per kind of `Anchor`
+type AnchorInput = LineAnchorInput
+
+
 class TurnInput(BaseModel):
     """One turn of a thread, as the browser sends it back."""
 
@@ -96,14 +138,8 @@ class TurnInput(BaseModel):
 class CommentInput(BaseModel):
     """A single comment in the submit request."""
 
-    # A newline in a path would let a filename write its own heading in the
-    # review — a whole fabricated section, blocker and all, in what the agent
-    # reads. Git quotes such names, and the parser faithfully decodes them.
-    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
-    side: LineSide
+    anchor: AnchorInput
     severity: CommentSeverity
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
     body: str = Field(max_length=50_000)
     images: ImageIds = Field(default_factory=list)
     turns: list[TurnInput] = Field(default_factory=list, max_length=200)
@@ -111,16 +147,6 @@ class CommentInput(BaseModel):
     # raised is not read as something the reader wrote.
     raised_by: TurnAuthor = TurnAuthor.READER
     resolved: bool = False
-    outdated: bool = False
-    # What the thread was written against, kept for when those lines are gone
-    quote: list[str] = Field(default_factory=list, max_length=200)
-
-    @model_validator(mode="after")
-    def start_before_end(self) -> CommentInput:
-        if self.start_line > self.end_line:
-            msg = "start_line must be <= end_line"
-            raise ValueError(msg)
-        return self
 
     @model_validator(mode="after")
     def says_something(self) -> CommentInput:
@@ -182,11 +208,7 @@ class AskRequest(BaseModel):
 
     thread_id: str = Field(min_length=1, max_length=200)
     question_id: str = Field(min_length=1, max_length=200)
-    file: str = Field(min_length=1)
-    side: LineSide
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
-    quote: list[str] = Field(default_factory=list, max_length=200)
+    anchor: AnchorInput
     body: str = Field(max_length=50_000)
     images: ImageIds = Field(default_factory=list)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
@@ -206,17 +228,12 @@ class ThreadInput(BaseModel):
     """
 
     thread_id: str = Field(min_length=1, max_length=200)
-    file: str = Field(min_length=1)
-    side: LineSide
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
-    quote: list[str] = Field(default_factory=list, max_length=200)
+    anchor: AnchorInput
     body: str = Field(max_length=50_000)
     images: ImageIds = Field(default_factory=list)
     history: list[TurnInput] = Field(default_factory=list, max_length=200)
     severity: CommentSeverity = CommentSeverity.NOTE
     resolved: bool = False
-    outdated: bool = False
     raised_by: TurnAuthor = TurnAuthor.READER
 
     @model_validator(mode="after")
@@ -235,7 +252,7 @@ class SessionHello(BaseModel):
     """
 
     round: int | None = Field(default=None, ge=1)
-    threads: list[ThreadInput] = Field(default_factory=list, max_length=500)
+    threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS)
 
 
 class ContextResponse(BaseModel):
@@ -283,7 +300,7 @@ class PointRequest(BaseModel):
     that: a thread on a line, which the reader answers, settles or removes.
     """
 
-    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
+    file: str = Field(min_length=1, pattern=SAFE_PATH)
     side: LineSide = LineSide.NEW
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
@@ -296,6 +313,23 @@ class PointRequest(BaseModel):
             msg = "start_line must be <= end_line"
             raise ValueError(msg)
         return self
+
+
+class FollowRequest(BaseModel):
+    """Request body for POST /api/anchors/follow — where these are now.
+
+    The browser holds the threads, and the server holds the diff they hang
+    on: after a round the browser sends what its threads hang on, and gets
+    each one back moved onto the diff as it now stands, in the same order.
+    """
+
+    anchors: list[AnchorInput] = Field(max_length=MAX_THREADS)
+
+
+class FollowResponse(BaseModel):
+    """Response for POST /api/anchors/follow, one anchor per one asked about."""
+
+    anchors: list[Anchor]
 
 
 class PointResponse(BaseModel):
@@ -349,7 +383,7 @@ class ShowRequest(BaseModel):
     sent when they asked to be taken somewhere.
     """
 
-    file: str = Field(min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$")
+    file: str = Field(min_length=1, pattern=SAFE_PATH)
 
 
 class CancelRequest(BaseModel):
@@ -387,3 +421,38 @@ class EventResponse(BaseModel):
     round: RoundSubmission | None = None
     message: PanelMessage | None = None
     cancel: PanelCancel | None = None
+
+
+class SettingsResponse(BaseModel):
+    """Response for GET /api/settings."""
+
+    settings: ReaderSettings
+    # Whether anything has been kept yet. A browser still holding choices
+    # made before they moved to the server hands them over once, when not.
+    stored: bool
+
+
+class SettingsChange(BaseModel):
+    """Request body for PUT /api/settings — the choices being changed, and only those."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    theme: Theme | None = None
+    diff_layout: DiffLayout | None = None
+    ignore_whitespace: bool | None = None
+    sound_on_replies: bool | None = None
+
+
+class GuideResponse(BaseModel):
+    """Response for GET /api/guide."""
+
+    guide: GuideState
+    stored: bool
+
+
+class GuideChange(BaseModel):
+    """Request body for PUT /api/guide."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seen_release: str = Field(min_length=1, max_length=MAX_RELEASE_LENGTH)

@@ -6,8 +6,8 @@
     <title>Claude Review</title>
     <script>
       // Runs before first paint so the page never shows the wrong theme first.
-      // The few lines duplicated from theme.svelte.ts are the point: a module
-      // import is deferred, and the deferral is what causes the flash.
+      // It reads the theme stores/settings.svelte.ts caches for this port: a
+      // module import is deferred, and the deferral is what causes the flash.
       (function () {
         var resolved = "dark";
         try {

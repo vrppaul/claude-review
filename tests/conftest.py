@@ -7,12 +7,10 @@ from pathlib import Path
 import pytest
 from playwright.async_api import Page, async_playwright
 
-from claude_review.domain.models import ReviewWorkspace
+from claude_review.domain.models import GuideState, ReaderFiles, ReviewWorkspace
 from tests.helpers import git
 
 E2E_TIMEOUT_MS = 5_000
-# The cookie that says which release a reader has already been shown around
-SEEN_RELEASE_COOKIE = "claude-review-seen"
 
 
 @pytest.fixture
@@ -42,16 +40,24 @@ def marking_workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspa
 
 
 @pytest.fixture
+def reader_files(tmp_path_factory: pytest.TempPathFactory) -> ReaderFiles:
+    """What the reviews remember about their reader, kept apart for each test.
+
+    The reader has seen this release, so no welcome or news card sits over
+    what a test clicks; the test of the welcome takes that away.
+    """
+    directory = tmp_path_factory.mktemp("reader")
+    files = ReaderFiles(settings=directory / "settings.json", guide=directory / "guide.json")
+    files.guide.write_text(GuideState(seen_release=version("claude-review")).model_dump_json())
+    return files
+
+
+@pytest.fixture
 async def page() -> AsyncGenerator[Page]:
     """Async Playwright page with centralized timeout."""
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         context = await browser.new_context()
-        # A reader who has seen this release, so no welcome or news card sits
-        # over what a test clicks; the test of the welcome takes it away
-        await context.add_cookies(
-            [{"name": SEEN_RELEASE_COOKIE, "value": version("claude-review"), "url": "http://127.0.0.1"}]
-        )
         pg = await context.new_page()
         pg.set_default_timeout(E2E_TIMEOUT_MS)
         yield pg

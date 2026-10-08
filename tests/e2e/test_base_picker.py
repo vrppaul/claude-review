@@ -13,7 +13,7 @@ import pytest
 import uvicorn
 from playwright.async_api import Page
 
-from claude_review.domain.models import ReviewMode, ReviewWorkspace
+from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
@@ -45,7 +45,9 @@ def picker_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def review(picker_repo: Path, marking_workspace: ReviewWorkspace) -> AsyncGenerator[tuple[str, ServerState]]:
+async def review(
+    picker_repo: Path, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles
+) -> AsyncGenerator[tuple[str, ServerState]]:
     """A review that has already been through one round."""
     git_repo = GitRepository(objects=marking_workspace.objects)
     state = ServerState(shutdown_event=asyncio.Event())
@@ -58,7 +60,14 @@ async def review(picker_repo: Path, marking_workspace: ReviewWorkspace) -> Async
 
     diff_files = await DiffService(git_repository=git_repo).get_diff(picker_repo)
     app = create_app(
-        diff_files=diff_files, state=state, mode=ReviewMode.DIFF, workspace=marking_workspace, root=picker_repo
+        diff_files=diff_files,
+        state=state,
+        mode=ReviewMode.DIFF,
+        workspace=marking_workspace,
+        root=picker_repo,
+        reader_files=reader_files,
+        # As the CLI names it: the repository, and what it is compared against
+        title=f"{picker_repo.name}: uncommitted changes",
     )
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
     server = uvicorn.Server(config)
@@ -76,14 +85,15 @@ async def review(picker_repo: Path, marking_workspace: ReviewWorkspace) -> Async
     await task
 
 
-async def test_the_header_says_what_is_under_review_and_against_what(
+async def test_the_review_says_what_is_under_review_and_against_what(
     review: tuple[str, ServerState], page: Page
 ) -> None:
+    """The repository in the tab's title; the base, a control, in the header."""
     url, _ = review
     await page.goto(url)
 
     await page.wait_for_selector('[data-testid="base-picker"]')
-    assert "repo" in await _said(page, "review-title")
+    assert "repo: uncommitted changes" in await page.title()
     assert "uncommitted changes" in await _said(page, "base-picker")
 
 

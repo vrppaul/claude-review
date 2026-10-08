@@ -19,16 +19,16 @@ export function isDrawn(
   files: DiffFile[],
   { removedLines = true }: { removedLines?: boolean } = {},
 ): boolean {
-  if (comment.side === "old" && !removedLines) return false;
+  const { anchor } = comment;
+  if (anchor.side === "old" && !removedLines) return false;
 
-  const file = files.find((f) => f.path === comment.file);
+  const file = files.find((f) => f.path === anchor.file);
   if (!file) return false;
 
   return file.hunks.some((hunk) =>
     hunk.lines.some(
       (line) =>
-        (comment.side === "old" ? line.old_no : line.new_no) ===
-        comment.end_line,
+        (anchor.side === "old" ? line.old_no : line.new_no) === anchor.end_line,
     ),
   );
 }

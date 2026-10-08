@@ -107,7 +107,7 @@ describe('when the tree moves under the review', () => {
 
 	it('offers a way to the thread that lost its lines', () => {
 		commentStore.add(newComment({ file: 'a.py', side: 'new', startLine: 1, endLine: 1, body: 'this one' }));
-		commentStore.comments[0].outdated = true;
+		commentStore.comments[0].anchor.outdated = true;
 		diffStore.noteRetaken({ followed: 0, outdated: 1 });
 
 		const { getByTestId } = render(DiffNotice);
@@ -138,7 +138,6 @@ describe('threads the base on screen cannot draw', () => {
 						files: [],
 						mode: 'diff',
 						title: '',
-						subject: 'repo',
 						phrase: 'changes since round 1',
 						round: 1,
 						answerer_attached: false,

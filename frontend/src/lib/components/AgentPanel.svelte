@@ -4,10 +4,10 @@
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { reviewStore } from '$lib/stores/review.svelte';
-	import { lineRangeLabel } from '$lib/utils/line-label';
-	import { scrollToComment, showFile } from '$lib/utils/scroll';
+	import { anchorShortPlace, anchorToken, revealThread } from '$lib/anchors/views';
+	import { showFile } from '$lib/utils/scroll';
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
-	import { threadsIn, threadToken } from '$lib/utils/thread-token';
+	import { threadsIn } from '$lib/utils/thread-token';
 	import { formatWeight } from '$lib/utils/weight';
 	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -44,13 +44,14 @@
 	// — and then the files themselves, so a file nobody has marked can be
 	// pointed at too. The agent can name any file; the reader should be able
 	// to as well.
-	const candidates = $derived([
+	type Candidate = { kind: 'thread'; comment: Comment } | { kind: 'file'; path: string };
+	const candidates = $derived<Candidate[]>([
 		...commentStore.comments
-			.filter((comment) => matches(`${comment.file} ${comment.body}`))
-			.map((comment) => ({ kind: 'thread' as const, comment, path: comment.file })),
+			.filter((comment) => matches(`${anchorToken(comment.anchor)} ${comment.body}`))
+			.map((comment) => ({ kind: 'thread' as const, comment })),
 		...diffStore.files
 			.filter((file) => matches(file.path))
-			.map((file) => ({ kind: 'file' as const, comment: undefined, path: file.path }))
+			.map((file) => ({ kind: 'file' as const, path: file.path }))
 	]);
 
 	function matches(against: string): boolean {
@@ -75,14 +76,9 @@
 		return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
 
-	function label(comment: Comment): string {
-		const file = comment.file.split('/').pop() ?? comment.file;
-		return `${file} ${lineRangeLabel(comment.side, comment.start_line, comment.end_line)}`;
-	}
-
 	/** What a thread is in, so the picker says whether it is still live. */
 	function threadState(comment: Comment): string {
-		if (comment.outdated) return 'outdated';
+		if (comment.anchor.outdated) return 'outdated';
 		if (comment.resolved) return 'resolved';
 		if (comment.turns.length > 0) {
 			return `${comment.turns.length} ${comment.turns.length === 1 ? 'turn' : 'turns'}`;
@@ -134,13 +130,13 @@
 	}
 
 	/** Put the token where the @ was, and carry on typing. */
-	function take(pick: { comment?: Comment; path: string }) {
+	function take(pick: Candidate) {
 		const field = composer;
 		if (!field) return;
 		const caret = field.selectionStart;
 		const before = draft.slice(0, caret).replace(/@[^\s@]*$/, '');
 		const after = draft.slice(caret);
-		const token = `${pick.comment ? threadToken(pick.comment) : `@${pick.path}`} `;
+		const token = `${pick.kind === 'thread' ? anchorToken(pick.comment.anchor) : `@${pick.path}`} `;
 		panelStore.setComposerText(`${before}${token}${after}`);
 		picking = false;
 		field.focus();
@@ -152,7 +148,9 @@
 
 	/** Take a thread out of the message by taking its token out of the words. */
 	function drop(comment: Comment) {
-		panelStore.setComposerText(draft.split(threadToken(comment)).join('').replace(/ {2,}/g, ' '));
+		panelStore.setComposerText(
+			draft.split(anchorToken(comment.anchor)).join('').replace(/ {2,}/g, ' ')
+		);
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -402,7 +400,7 @@ claude-review wait --port &lt;port&gt;</pre>
 								<button
 									data-testid="panel-thread-ref"
 									class="cr-thread-chip"
-									onclick={() => scrollToComment(raised.id, raised.file)}
+									onclick={() => revealThread(raised)}
 								>
 									{turn.body}
 								</button>
@@ -429,9 +427,9 @@ claude-review wait --port &lt;port&gt;</pre>
 											<button
 												data-testid="panel-thread-ref"
 												class="cr-thread-chip"
-												onclick={() => scrollToComment(thread.id, thread.file)}
+												onclick={() => revealThread(thread)}
 											>
-												{label(thread)}
+												{anchorShortPlace(thread.anchor)}
 											</button>
 										{/if}
 									{/each}
@@ -507,16 +505,16 @@ claude-review wait --port &lt;port&gt;</pre>
 	<div class="relative shrink-0 border-t border-base-300 px-3 py-2">
 		{#if picking && candidates.length > 0}
 			<div data-testid="thread-picker" class="cr-picker">
-				{#each candidates as pick, index (pick.comment?.id ?? pick.path)}
+				{#each candidates as pick, index (pick.kind === 'thread' ? pick.comment.id : pick.path)}
 					<button
-						data-testid={pick.comment ? 'thread-option' : 'file-option'}
+						data-testid={pick.kind === 'thread' ? 'thread-option' : 'file-option'}
 						class="cr-picker-row {index === highlighted ? 'cr-picker-on' : ''}"
 						onclick={() => take(pick)}
 					>
 						<span class="cr-comment-ref block truncate font-mono text-xs">
-							{pick.comment ? label(pick.comment) : pick.path}
+							{pick.kind === 'thread' ? anchorShortPlace(pick.comment.anchor) : pick.path}
 						</span>
-						{#if pick.comment}
+						{#if pick.kind === 'thread'}
 							<span class="cr-muted block truncate text-sm">
 								{pick.comment.body}{threadState(pick.comment)
 									? ` · ${threadState(pick.comment)}`
@@ -535,7 +533,7 @@ claude-review wait --port &lt;port&gt;</pre>
 				<div class="mb-2 flex flex-wrap gap-1">
 					{#each pointed as comment (comment.id)}
 						<span data-testid="pointed-thread" class="cr-thread-chip">
-							{label(comment)}
+							{anchorShortPlace(comment.anchor)}
 							<button
 								data-testid="drop-thread"
 								class="px-1"
