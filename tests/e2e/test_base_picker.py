@@ -5,21 +5,13 @@ The header's second half is a control now. What it changes is what is drawn
 these tests watch both halves: the diff narrows, and the way back is there.
 """
 
-import asyncio
-from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import pytest
-import uvicorn
+from httpx import AsyncClient
 from playwright.async_api import Page
 
-from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
-from claude_review.presentation.app import create_app
-from claude_review.presentation.state import ServerState
-from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.diff_service import DiffService
-from claude_review.services.version_service import VersionService
-from tests.helpers import git
+from tests.helpers import ReviewServers, RunningReview, git
 
 
 async def _said(page: Page, testid: str) -> str:
@@ -45,68 +37,38 @@ def picker_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def review(
-    picker_repo: Path, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles
-) -> AsyncGenerator[tuple[str, ServerState]]:
+async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review that has already been through one round."""
-    git_repo = GitRepository(objects=marking_workspace.objects)
-    state = ServerState(shutdown_event=asyncio.Event())
-
-    mark = await VersionService(git_repository=git_repo).take(picker_repo, round_number=1)
-    assert mark is not None
-    state.snapshots.append(mark)
-    # The work that answers round 1, done after its tree was written down
-    (picker_repo / "read.py").write_text("first pass\nsecond pass\nand what round 1 asked for\n")
-
-    diff_files = await DiffService(git_repository=git_repo).get_diff(picker_repo)
-    app = create_app(
-        diff_files=diff_files,
-        state=state,
-        mode=ReviewMode.DIFF,
-        workspace=marking_workspace,
-        root=picker_repo,
-        reader_files=reader_files,
-        # As the CLI names it: the repository, and what it is compared against
-        title=f"{picker_repo.name}: uncommitted changes",
-    )
-    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", ws="websockets-sansio")
-    server = uvicorn.Server(config)
-    task = asyncio.create_task(server.serve())
-
-    for _ in range(50):
-        await asyncio.sleep(0.1)
-        if server.started:
-            break
-    assert server.started, "Server failed to start within 5 seconds"
-
-    yield f"http://127.0.0.1:{server.servers[0].sockets[0].getsockname()[1]}", state
-
-    server.should_exit = True
-    await task
+    # As the command line names it: the repository, and what it is compared against
+    started = await servers.start([], root=picker_repo, title=f"{picker_repo.name}: uncommitted changes")
+    async with AsyncClient(base_url=started.url) as agent:
+        # The diff taken, and with it the tree round 1 began from written down
+        await agent.post("/api/round", json={})
+        # The work that answers round 1, done after its tree was written down
+        (picker_repo / "read.py").write_text("first pass\nsecond pass\nand what round 1 asked for\n")
+        # Taken again after the work, as the agent does: this is the diff on screen
+        await agent.post("/api/round", json={})
+    return started
 
 
-async def test_the_review_says_what_is_under_review_and_against_what(
-    review: tuple[str, ServerState], page: Page
-) -> None:
+async def test_the_review_says_what_is_under_review_and_against_what(review: RunningReview, page: Page) -> None:
     """The repository in the tab's title; the base, a control, in the header."""
-    url, _ = review
-    await page.goto(url)
+    await page.goto(review.url)
 
     await page.wait_for_selector('[data-testid="base-picker"]')
     assert "repo: uncommitted changes" in await page.title()
     assert "uncommitted changes" in await _said(page, "base-picker")
 
 
-async def test_a_round_can_be_read_against_and_left_again(review: tuple[str, ServerState], page: Page) -> None:
+async def test_a_round_can_be_read_against_and_left_again(review: RunningReview, page: Page) -> None:
     """The whole point: what the agent did about round 1, and the way back."""
-    url, _ = review
-    await page.goto(url)
+    await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
     assert await page.locator('[data-testid="file-item"]').count() == 2
 
     await page.click('[data-testid="base-picker"]')
     await page.wait_for_selector('[data-testid="base-list"]')
-    await page.click('[data-testid="base-option"]:has-text("round 1")')
+    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
 
     await page.wait_for_selector('[data-testid="narrowed-to"]')
     assert "changes since round 1" in await _said(page, "narrowed-to")
@@ -118,12 +80,9 @@ async def test_a_round_can_be_read_against_and_left_again(review: tuple[str, Ser
     assert await page.locator('[data-testid="file-item"]').count() == 2
 
 
-async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(
-    review: tuple[str, ServerState], page: Page
-) -> None:
+async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(review: RunningReview, page: Page) -> None:
     """It is anchored to the review's own diff, which a narrower base has not moved."""
-    url, _ = review
-    await page.goto(url)
+    await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
 
     section = page.locator('[data-testid="file-section"][data-path$="untouched.py"]')
@@ -133,7 +92,7 @@ async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(
     await page.wait_for_selector("text=nobody has been back to this one")
 
     await page.click('[data-testid="base-picker"]')
-    await page.click('[data-testid="base-option"]:has-text("round 1")')
+    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
     await page.wait_for_selector('[data-testid="narrowed-to"]')
 
     assert "1 thread is not on this screen" in await _said(page, "narrowed-to")

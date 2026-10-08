@@ -8,6 +8,14 @@ from claude_review.domain.exceptions import GitError
 from claude_review.repositories.git_repository import GitRepository
 from tests.helpers import git
 
+# Enough untracked files that a stray blob per file would be plain to see
+GENERATED_FILES = 20
+
+
+def _object_count(objects: Path) -> int:
+    """How many objects a repository holds, loose or packed."""
+    return sum(1 for written in objects.rglob("*") if written.is_file())
+
 
 async def test_git_error_on_non_git_directory(tmp_path: Path) -> None:
     """Running against a non-git directory raises GitError."""
@@ -29,15 +37,15 @@ async def test_reading_a_diff_leaves_no_objects_behind(tmp_git_repo: Path) -> No
     """Staging writes a blob per untracked file; none of them belong in the repo."""
     build = tmp_git_repo / "build"
     build.mkdir()
-    for i in range(20):
-        (build / f"gen_{i}.txt").write_text(f"unique {i}\n")
+    for generated in range(GENERATED_FILES):
+        (build / f"gen_{generated}.txt").write_text(f"unique {generated}\n")
 
     objects = tmp_git_repo / ".git" / "objects"
-    before = sum(1 for _ in objects.rglob("*") if _.is_file())
+    before = _object_count(objects)
 
     diff = await GitRepository().get_raw_diff(tmp_git_repo)
 
-    after = sum(1 for _ in objects.rglob("*") if _.is_file())
+    after = _object_count(objects)
     assert "gen_0.txt" in diff, "the untracked files should still be in the review"
     assert after == before
 
@@ -93,11 +101,11 @@ async def test_a_snapshot_leaves_the_repository_alone(
     store = tmp_path_factory.mktemp("review-objects")
     (tmp_git_repo / "generated.txt").write_text("noise\n")
     objects = tmp_git_repo / ".git" / "objects"
-    before = sum(1 for _ in objects.rglob("*") if _.is_file())
+    before = _object_count(objects)
 
     await GitRepository(objects=store).snapshot(tmp_git_repo)
 
-    after = sum(1 for _ in objects.rglob("*") if _.is_file())
+    after = _object_count(objects)
     assert after == before
 
 

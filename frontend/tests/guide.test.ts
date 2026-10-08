@@ -1,41 +1,60 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/svelte';
+import { userEvent } from '@testing-library/user-event';
 import { tick } from 'svelte';
+import AgentPanel from '$lib/components/AgentPanel.svelte';
+import CommentBox from '$lib/components/CommentBox.svelte';
+import CommentThread from '$lib/components/CommentThread.svelte';
+import DiffView from '$lib/components/DiffView.svelte';
+import FileList from '$lib/components/FileList.svelte';
 import Guide from '$lib/components/Guide.svelte';
 import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
 import TopBar from '$lib/components/TopBar.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { latestNews, unseenNews } from '$lib/guide/news-choice';
-import { TOUR_STEPS } from '$lib/guide/tour';
+import { TOUR_TARGETS, type TourTarget } from '$lib/guide/tour';
+import { commentStore } from '$lib/stores/comments.svelte';
+import { diffStore } from '$lib/stores/diff.svelte';
 import { guideStore } from '$lib/stores/guide.svelte';
 import { commentFields } from '$lib/stores/comment-fields';
 import { reviewStore } from '$lib/stores/review.svelte';
+import type { GuideState } from '$lib/types';
 import { isNewer, readSeenRelease, writeSeenRelease } from '$lib/utils/seen-release';
+import { addedLine, diffFile, diffResponse, hunk } from './diff';
+import { fakeServer, SERVER_ERROR, type FakeServer, type ReceivedRequest } from './fake-server';
+import { newComment } from './new-comment';
 
-// Every component's source, to check the tour points only at places that exist
-const SOURCES = import.meta.glob('../src/**/*.svelte', {
-	query: '?raw',
-	import: 'default',
-	eager: true
-}) as Record<string, string>;
+const HEADER = { submitting: false, error: null, onOpenModal: ignore };
+const FILE = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(1, 'y = 3')])] });
+
+/** What `/api/guide` keeps for this reader: the release they were last shown. */
+class GuideMemory {
+	private seen: string | null;
+	private stored: boolean;
+
+	constructor(seen: string | null) {
+		this.seen = seen;
+		this.stored = seen !== null;
+	}
+
+	read(): { guide: GuideState; stored: boolean } {
+		return { guide: { seen_release: this.seen }, stored: this.stored };
+	}
+
+	write(request: ReceivedRequest): GuideState {
+		this.seen = (request.body as GuideState).seen_release;
+		this.stored = true;
+		return { seen_release: this.seen };
+	}
+}
 
 /** A server remembering which release this reader was shown, as `/api/guide` does. */
-function guideServer(seen: string | null) {
-	const server = { seen, stored: seen !== null };
-	vi.stubGlobal(
-		'fetch',
-		vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
-			if (init?.method === 'PUT') {
-				server.seen = JSON.parse(String(init.body)).seen_release;
-				server.stored = true;
-			}
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve({ guide: { seen_release: server.seen }, stored: server.stored })
-			});
-		})
-	);
+function guideServer(seen: string | null): FakeServer {
+	const server = fakeServer();
+	const memory = new GuideMemory(seen);
+	server.answerWith('GET /api/guide', () => memory.read());
+	server.answerWith('PUT /api/guide', (request) => memory.write(request));
 	return server;
 }
 
@@ -47,6 +66,73 @@ function entry(release: string, also: string[] = []): ReleaseNews {
 function pageWith(...names: string[]) {
 	guideStore.readPageWith((targets) => targets.some((target) => names.includes(target)));
 }
+
+function ignore() {}
+
+/** The header of a review an agent is attached to, once its diff has arrived. */
+async function drawHeader() {
+	fakeServer().answer('GET /api/diff', diffResponse({ files: [FILE], answerer_attached: true }));
+	await diffStore.fetchDiff();
+	render(TopBar, { props: HEADER });
+}
+
+/** The header, with the list of bases it can be read against open. */
+async function drawBaseList() {
+	const server = fakeServer();
+	server.answer('GET /api/diff', diffResponse({ files: [FILE] }));
+	server.answer('GET /api/versions', { versions: [] });
+	await diffStore.fetchDiff();
+	render(TopBar, { props: HEADER });
+	await userEvent.click(screen.getByTestId('base-picker'));
+}
+
+function drawFileTree() {
+	diffStore.setFiles([FILE], 'diff');
+	render(FileList);
+}
+
+function drawDiff() {
+	diffStore.setFiles([FILE], 'diff');
+	render(DiffView);
+}
+
+function drawCommentField() {
+	render(CommentBox, { props: { kind: 'new', onSave: ignore, onCancel: ignore } });
+}
+
+/** A thread whose question is with the agent, not answered yet. */
+async function drawAwaitedQuestion() {
+	fakeServer().answer('POST /api/ask', { status: 'asked' });
+	const id = commentStore.add(newComment({ file: FILE.path, body: 'Why 3?' }));
+	await commentStore.ask(id);
+	render(CommentThread, { props: { comment: commentStore.comments[0] } });
+}
+
+function drawAnswer() {
+	const id = commentStore.add(newComment({ file: FILE.path, body: 'Why 3?' }));
+	commentStore.receiveReply(id, 'It was 2 before the retry path');
+	render(CommentThread, { props: { comment: commentStore.comments[0] } });
+}
+
+function drawAgentPanel() {
+	reviewStore.attachAnswerer();
+	render(AgentPanel);
+}
+
+/** How to draw the part of the review that holds each place the tour points at. */
+const DRAWING: Record<TourTarget, () => void | Promise<void>> = {
+	'review-base': drawHeader,
+	'review-base-list': drawBaseList,
+	'file-tree': drawFileTree,
+	'line-number': drawDiff,
+	'comment-field': drawCommentField,
+	'unsent-count': drawHeader,
+	'awaited-answer': drawAwaitedQuestion,
+	answer: drawAnswer,
+	'agent-panel': drawAgentPanel,
+	'agent-panel-toggle': drawHeader,
+	send: drawHeader
+};
 
 describe('which release a reader has seen', () => {
 
@@ -75,7 +161,7 @@ describe('which release a reader has seen', () => {
 		const server = guideServer(null);
 
 		expect(await readSeenRelease()).toBe('1.4.2');
-		expect(server.seen).toBe('1.4.2');
+		expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.4.2' }]);
 		expect(document.cookie).not.toContain('claude-review-seen');
 	});
 });
@@ -109,10 +195,6 @@ describe('which news a returning reader is shown', () => {
 });
 
 describe('what the guide shows a reader arriving', () => {
-	beforeEach(() => {
-		guideStore.clear();
-	});
-
 
 	it('welcomes somebody who has never opened a review', async () => {
 		guideServer(null);
@@ -137,7 +219,9 @@ describe('what the guide shows a reader arriving', () => {
 		await guideStore.open('1.5.1');
 
 		expect(guideStore.card).toBeNull();
-		await vi.waitFor(() => expect(server.seen).toBe('1.5.1'));
+		await vi.waitFor(() =>
+			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.1' }])
+		);
 	});
 
 	it('puts the card away for good once it is closed', async () => {
@@ -147,11 +231,13 @@ describe('what the guide shows a reader arriving', () => {
 		guideStore.dismiss();
 
 		expect(guideStore.card).toBeNull();
-		await vi.waitFor(() => expect(server.seen).toBe('1.5.0'));
+		await vi.waitFor(() =>
+			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.0' }])
+		);
 	});
 
 	it('shows nothing rather than welcome somebody twice when the server cannot say', async () => {
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+		fakeServer().refuse('GET /api/guide', SERVER_ERROR);
 
 		await guideStore.open('1.5.0');
 
@@ -160,10 +246,6 @@ describe('what the guide shows a reader arriving', () => {
 });
 
 describe('the news card', () => {
-	beforeEach(() => {
-		guideStore.clear();
-	});
-
 
 	it('links to the release on GitHub even when there is nothing else to list', async () => {
 		guideServer('1.4.2');
@@ -188,22 +270,17 @@ describe('the news card', () => {
 	});
 });
 
+describe('every place the tour points at', () => {
+	it.each(TOUR_TARGETS)('is drawn by the review: %s', async (target) => {
+		await DRAWING[target]();
+
+		expect(document.querySelector(`[data-tour="${target}"]`)).not.toBeNull();
+	});
+});
+
 describe('the tour', () => {
 	beforeEach(() => {
 		guideServer(null);
-		guideStore.clear();
-		reviewStore.clear();
-	});
-
-	afterEach(() => {
-		guideStore.endTour();
-	});
-
-	it('points only at places the review actually marks', () => {
-		const everywhere = Object.values(SOURCES).join('\n');
-		for (const name of TOUR_STEPS.flatMap((step) => step.targets)) {
-			expect(everywhere, name).toMatch(new RegExp(`data-tour=(?:"${name}"|\\{[^}]*'${name}'[^}]*\\})`));
-		}
 	});
 
 	it('takes the steps a review with an agent has, and leaves out the others', () => {
@@ -347,9 +424,7 @@ describe('the tour', () => {
 		guideStore.startTour();
 		render(Guide);
 		await tick();
-		guideStore.readPageWith((targets) =>
-			targets.some((target) => ['file-tree', 'line-number', 'comment-field'].includes(target))
-		);
+		pageWith('file-tree', 'line-number', 'comment-field');
 		guideStore.next();
 
 		commentFields.report({ type: 'opened', kind: 'new' });
@@ -361,15 +436,9 @@ describe('the tour', () => {
 });
 
 describe('the ? list', () => {
-	beforeEach(() => {
-		guideStore.clear();
-	});
-
 	it('opens from a button too, for whoever has ? taken by a browser extension', async () => {
 		const { getByTestId, queryByTestId } = render(KeyboardShortcuts);
-		const { getByTestId: inHeader } = render(TopBar, {
-			props: { submitting: false, error: null, onOpenModal: () => {} }
-		});
+		const { getByTestId: inHeader } = render(TopBar, { props: HEADER });
 		expect(queryByTestId('shortcuts-list')).toBeNull();
 
 		inHeader('open-help').click();

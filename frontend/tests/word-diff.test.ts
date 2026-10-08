@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { wordRanges, markRanges, applyWordMarks } from '$lib/utils/word-diff';
 import { splitSuggestions } from '$lib/utils/suggestion';
-import type { DiffLine } from '$lib/types';
+import { addedLine, contextLine, removedLine } from './diff';
 
-describe('wordRanges', () => {
+describe('the words a changed line marks', () => {
 	it('marks only the part of the line that actually changed', () => {
 		const { removed, added } = wordRanges('const timeout = 10;', 'const timeout = 30;');
 
@@ -70,7 +70,7 @@ describe('wordRanges', () => {
 	});
 });
 
-describe('markRanges', () => {
+describe('marking words in highlighted code', () => {
 	it('wraps a range of plain text', () => {
 		expect(markRanges('abcdef', [[2, 4]])).toBe('ab<span class="cr-word">cd</span>ef');
 	});
@@ -92,20 +92,16 @@ describe('markRanges', () => {
 		);
 	});
 
-	it('returns the markup untouched when there is nothing to mark', () => {
+	it('leaves the markup as it was when there is nothing to mark', () => {
 		const html = '<span class="hljs-keyword">def</span> f():';
 
 		expect(markRanges(html, [])).toBe(html);
 	});
 });
 
-describe('applyWordMarks', () => {
-	function line(type: DiffLine['type'], content: string): DiffLine {
-		return { type, old_no: null, new_no: null, content };
-	}
-
+describe('word marks across a hunk', () => {
 	it('pairs a removal with the addition that replaced it', () => {
-		const lines = [line('delete', 'timeout = 10'), line('add', 'timeout = 30')];
+		const lines = [removedLine(1, 'timeout = 10'), addedLine(1, 'timeout = 30')];
 		const html = ['timeout = 10', 'timeout = 30'];
 
 		const marked = applyWordMarks(lines, html);
@@ -115,7 +111,7 @@ describe('applyWordMarks', () => {
 	});
 
 	it('leaves an addition with no counterpart alone', () => {
-		const lines = [line('add', 'brand new line')];
+		const lines = [addedLine(1, 'brand new line')];
 		const html = ['brand new line'];
 
 		expect(applyWordMarks(lines, html)).toEqual(['brand new line']);
@@ -123,10 +119,10 @@ describe('applyWordMarks', () => {
 
 	it('pairs each removal with the addition opposite it in the run', () => {
 		const lines = [
-			line('delete', 'a = 1'),
-			line('delete', 'b = 2'),
-			line('add', 'a = 9'),
-			line('add', 'b = 8')
+			removedLine(1, 'a = 1'),
+			removedLine(2, 'b = 2'),
+			addedLine(1, 'a = 9'),
+			addedLine(2, 'b = 8')
 		];
 		const html = ['a = 1', 'b = 2', 'a = 9', 'b = 8'];
 
@@ -137,7 +133,7 @@ describe('applyWordMarks', () => {
 	});
 
 	it('leaves context lines untouched', () => {
-		const lines = [line('context', 'unchanged'), line('delete', 'x = 1'), line('add', 'x = 2')];
+		const lines = [contextLine(1, 1, 'unchanged'), removedLine(2, 'x = 1'), addedLine(2, 'x = 2')];
 		const html = ['unchanged', 'x = 1', 'x = 2'];
 
 		expect(applyWordMarks(lines, html)[0]).toBe('unchanged');
@@ -148,7 +144,7 @@ function pick(text: string, ranges: [number, number][]): string[] {
 	return ranges.map(([start, end]) => text.slice(start, end));
 }
 
-describe('splitSuggestions', () => {
+describe('a suggested replacement in a comment', () => {
 	it('separates a suggested replacement from what was written', () => {
 		const parts = splitSuggestions('Use the constant\n\n```suggestion\nx = LIMIT\n```');
 

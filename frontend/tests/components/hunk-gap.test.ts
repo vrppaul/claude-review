@@ -1,39 +1,30 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
-import { commentStore } from '$lib/stores/comments.svelte';
-import { expansionStore } from '$lib/stores/expansions.svelte';
 import type { DiffFile } from '$lib/types';
+import { addedLine, diffFile, hunk, removedLine } from '../diff';
+import { BAD_REQUEST, fakeServer } from '../fake-server';
 
-const file: DiffFile = {
+/** How many lines long the file is, as the server says when it hands a window of it. */
+const FILE_LENGTH = 40;
+
+const file = diffFile({
 	path: 'src/app.py',
-	status: 'modified',
 	hunks: [
-		{
+		hunk([removedLine(30, 'x = 1'), addedLine(30, 'x = 2')], {
 			header: '@@ -30,2 +30,2 @@',
 			old_start: 30,
-			new_start: 30,
-			lines: [
-				{ type: 'delete', old_no: 30, new_no: null, content: 'x = 1' },
-				{ type: 'add', old_no: null, new_no: 30, content: 'x = 2' }
-			]
-		}
-	],
-	is_binary: false,
-	old_mode: null,
-	new_mode: null
-};
+			new_start: 30
+		})
+	]
+});
 
 describe('widening the context around a hunk', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
-		expansionStore.clear();
 		diffStore.setFiles([file], 'diff');
 	});
-
 
 	it('offers to show the lines the diff left out', () => {
 		const { getByTestId } = render(FileSection, { props: { file } });
@@ -43,13 +34,11 @@ describe('widening the context around a hunk', () => {
 
 	it('reads the lines and shows them above the hunk', async () => {
 		const user = userEvent.setup();
-		vi.stubGlobal(
-			'fetch',
-			vi.fn().mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({ start: 10, lines: ['before one', 'before two'], total: 40 })
-			})
-		);
+		fakeServer().answer('GET /api/file-window', {
+			start: 10,
+			lines: ['before one', 'before two'],
+			total: FILE_LENGTH
+		});
 
 		const { getByTestId, getByText } = render(FileSection, { props: { file } });
 		await user.click(getByTestId('expand-context'));
@@ -60,28 +49,21 @@ describe('widening the context around a hunk', () => {
 
 	it('takes a gap this small in one go', async () => {
 		const user = userEvent.setup();
-		const fetchMock = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ start: 10, lines: [], total: 40 })
-		});
-		vi.stubGlobal('fetch', fetchMock);
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 1, lines: [], total: FILE_LENGTH });
 
 		const { getByTestId } = render(FileSection, { props: { file } });
 		await user.click(getByTestId('expand-context'));
 
-		const url = fetchMock.mock.calls[0][0] as string;
-		expect(url).toContain('path=src%2Fapp.py');
-		expect(url).toContain('start=1');
-		expect(url).toContain('end=29');
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/app.py', start: '1', end: '29' } }
+		]);
 	});
 
 	it('reveals a large gap a piece at a time', async () => {
 		const user = userEvent.setup();
-		const fetchMock = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ start: 481, lines: [], total: 900 })
-		});
-		vi.stubGlobal('fetch', fetchMock);
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 481, lines: [], total: 900 });
 
 		const distant: DiffFile = {
 			...file,
@@ -95,14 +77,14 @@ describe('widening the context around a hunk', () => {
 
 		await user.click(getByTestId('expand-context'));
 
-		const url = fetchMock.mock.calls[0][0] as string;
-		expect(url).toContain('start=481');
-		expect(url).toContain('end=500');
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/long.py', start: '481', end: '500' } }
+		]);
 	});
 
 	it('says so when the file could not be read', async () => {
 		const user = userEvent.setup();
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+		fakeServer().refuse('GET /api/file-window', BAD_REQUEST);
 
 		const { getByTestId } = render(FileSection, { props: { file } });
 		await user.click(getByTestId('expand-context'));
@@ -134,18 +116,12 @@ describe('widening the context around a hunk', () => {
 
 	it('takes the jump marker away once nothing is hidden any more', async () => {
 		const user = userEvent.setup();
-		vi.stubGlobal(
-			'fetch',
-			vi.fn().mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						start: 1,
-						lines: Array.from({ length: 29 }, (_, i) => `line ${i + 1}`),
-						total: 40
-					})
-			})
-		);
+		// Every one of the 29 lines above the hunk
+		fakeServer().answer('GET /api/file-window', {
+			start: 1,
+			lines: Array.from({ length: 29 }, (_, offset) => `line ${offset + 1}`),
+			total: FILE_LENGTH
+		});
 		const { getByTestId, queryByTestId } = render(FileSection, { props: { file } });
 		expect(getByTestId('hunk-header')).toBeTruthy();
 

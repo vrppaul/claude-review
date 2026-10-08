@@ -1,159 +1,125 @@
-"""The socket that keeps a review alive.
+"""The socket a review on screen holds open.
 
-The browser holds it open while the review is on screen; the server winds
-down shortly after the last one closes. A poll could not do this, because a
-background tab has its timers throttled to about once a minute.
+The browser holds it while the review is on screen, and the server winds
+down shortly after the last one closes — tested against the real process in
+test_cli_process, since only the process ends. Over it the page tells the
+server what only the page knows: which round it had got to, and the threads
+it holds. The server tells the page what happened since.
 """
 
-import asyncio
-
-import pytest
 from fastapi.testclient import TestClient
 
-from claude_review.domain.models import (
-    DiffFile,
-    DiffHunk,
-    DiffLine,
-    FileStatus,
-    LineType,
-    ReaderFiles,
-    ReviewMode,
-    ReviewWorkspace,
+from tests.helpers import (
+    CONTEXT_ROUTE,
+    REVIEWED_FILE,
+    next_push,
+    open_session,
+    until_the_review_holds_threads,
+    until_the_review_is_on_round,
 )
-from claude_review.presentation.app import create_app
-from claude_review.presentation.state import ServerState
 
-GRACE = 3.0
-LOCAL_ORIGIN = "http://127.0.0.1:8000"
-# The test client hardcodes "testserver" as the Host for sockets whatever
-# its base URL, so the review's own page has to be stated outright
-LOCAL_HEADERS = {"Origin": LOCAL_ORIGIN, "Host": "127.0.0.1:8000"}
+A_COMMENT = {
+    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1},
+    "severity": "note",
+    "body": "Still reads oddly.",
+}
 
+ON_THE_LINE = {"kind": "line", "file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1}
+A_THREAD = {"thread_id": "comment-1", "anchor": ON_THE_LINE, "body": "Why one?"}
 
-@pytest.fixture
-def state() -> ServerState:
-    return ServerState(shutdown_event=asyncio.Event())
+SHOWN = {"type": "show", "file": REVIEWED_FILE}
 
 
-@pytest.fixture
-def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles) -> TestClient:
-    files = [
-        DiffFile(
-            path="a.py",
-            status=FileStatus.MODIFIED,
-            hunks=[
-                DiffHunk(
-                    header="@@ -1 +1 @@",
-                    old_start=1,
-                    new_start=1,
-                    lines=[DiffLine(type=LineType.CONTEXT, old_no=1, new_no=1, content="x = 1")],
-                )
-            ],
-        )
-    ]
-    return TestClient(
-        create_app(diff_files=files, state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files),
-        base_url=LOCAL_ORIGIN,
-    )
+def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClient) -> None:
+    """Two tabs are one reader, and either may be the one they are looking at."""
+    with open_session(review_page) as first, open_session(review_page) as second:
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+
+        assert next_push(first, "show") == SHOWN
+        assert next_push(second, "show") == SHOWN
 
 
-def test_the_review_is_alive_while_a_browser_holds_the_socket(client: TestClient, state: ServerState) -> None:
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS):
-        assert not state.browser_gone(now=1000.0, grace=GRACE)
-
-
-def test_the_review_winds_down_once_the_last_browser_leaves(client: TestClient, state: ServerState) -> None:
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS):
-        pass
-
-    # The loop clock the server read on disconnect is monotonic and far below
-    # this, so any grace period has long since passed
-    assert state.browser_gone(now=1e12, grace=GRACE)
-
-
-def test_a_reload_is_not_the_reader_leaving(state: ServerState) -> None:
-    """A reload drops the socket and takes it again within a moment."""
-    state.connected(now=100.0)
-    state.disconnected(now=100.2)
-
-    assert not state.browser_gone(now=100.4, grace=GRACE)
-    assert state.browser_gone(now=110.0, grace=GRACE)
-
-
-def test_a_server_nobody_has_opened_yet_keeps_waiting(state: ServerState) -> None:
-    """Starting without a browser is normal; it is not an abandoned review."""
-    assert not state.browser_gone(now=1e9, grace=GRACE)
-
-
-def test_a_second_tab_keeps_the_review_alive(state: ServerState) -> None:
-    state.connected(now=100.0)
-    state.connected(now=101.0)
-    state.disconnected(now=102.0)
-
-    assert not state.browser_gone(now=200.0, grace=GRACE)
-
-
-def test_the_server_can_push_to_an_open_review(client: TestClient, state: ServerState) -> None:
-    """The socket carries messages the other way too."""
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as websocket:
-        state.push({"type": "reload"})
-
-        assert websocket.receive_json() == {"type": "reload"}
-
-
-def test_a_review_still_open_says_which_round_it_is_on(client: TestClient, state: ServerState) -> None:
+def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) -> None:
     """A restarted server comes back at round one; the browser knows better."""
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
-        socket.send_text('{"round": 4}')
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 4})
+        until_the_review_is_on_round(review_page, 4)
 
-    assert state.round == 4
+    assert review_page.get(CONTEXT_ROUTE).json()["round"] == 4
 
 
-def test_a_browser_opened_fresh_does_not_drag_the_review_back(client: TestClient, state: ServerState) -> None:
+def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(review_page: TestClient) -> None:
+    """Numbered from the browser's count, not the restarted server's, and the count moves on."""
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 4})
+        until_the_review_is_on_round(review_page, 4)
+
+        sent = review_page.post("/api/submit", json={"comments": [A_COMMENT], "end": False}).json()
+
+        assert sent["markdown"].startswith("## Code Review Comments — round 4")
+        assert next_push(socket, "round") == {"type": "round", "number": 5}
+
+
+def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestClient) -> None:
     """One reader starting at round one must not undo the rounds already sent."""
-    state.round = 3
+    with open_session(review_page) as reading:
+        reading.send_json({"round": 3})
+        until_the_review_is_on_round(review_page, 3)
 
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
-        socket.send_text('{"round": 1}')
+    with open_session(review_page) as fresh:
+        fresh.send_json({"round": 1})
+        # Taken in the order it was said, so once this lands the round has been heard
+        fresh.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
 
-    assert state.round == 3
+    assert review_page.get(CONTEXT_ROUTE).json()["round"] == 3
 
 
-def test_anything_else_on_the_socket_is_ignored(client: TestClient, state: ServerState) -> None:
+def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None:
     """The socket is a lifeline first; nonsense on it must not break it."""
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
+    with open_session(review_page) as socket:
         socket.send_text("not json at all")
         socket.send_text('{"round": "later"}')
         socket.send_text('{"round": 2}')
+        until_the_review_is_on_round(review_page, 2)
 
-    assert state.round == 2
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+
+        assert next_push(socket, "show") == SHOWN
 
 
-def test_threads_the_reader_deleted_are_forgotten(client: TestClient) -> None:
+def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_page: TestClient) -> None:
+    """An agent arriving late reads where each thread is the way the review writes it."""
+    ranged = {**A_THREAD, "thread_id": "comment-2", "anchor": {**ON_THE_LINE, "start_line": 3, "end_line": 5}}
+
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD, ranged]})
+        held = until_the_review_holds_threads(review_page, 2)
+
+    assert [(thread["thread_id"], thread["where"]) for thread in held] == [
+        ("comment-1", f"`{REVIEWED_FILE}`:1"),
+        ("comment-2", f"`{REVIEWED_FILE}`:3-5"),
+    ]
+
+
+def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> None:
     """Deleting the last thread leaves nothing to tell an agent about, and that is what it is told."""
-    thread = {
-        "thread_id": "comment-1",
-        "anchor": {"kind": "line", "file": "a.py", "side": "new", "start_line": 1, "end_line": 1},
-        "body": "Why one?",
-    }
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
-        socket.send_json({"threads": [thread]})
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
+
         socket.send_json({"threads": []})
 
-    assert client.get("/api/context").json()["threads"] == []
+        assert until_the_review_holds_threads(review_page, 0) == []
 
 
-def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(client: TestClient) -> None:
+def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_page: TestClient) -> None:
     """The browser still holds the agent's threads from before the restart."""
-    thread = {
-        "thread_id": "raised-3",
-        "anchor": {"kind": "line", "file": "a.py", "side": "new", "start_line": 1, "end_line": 1},
-        "body": "Kept it on purpose",
-        "raised_by": "author",
-    }
-    with client.websocket_connect("/api/session", headers=LOCAL_HEADERS) as socket:
-        socket.send_json({"threads": [thread]})
+    raised_before = {**A_THREAD, "thread_id": "raised-3", "body": "Kept it on purpose", "raised_by": "author"}
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [raised_before]})
+        until_the_review_holds_threads(review_page, 1)
 
-    raised = client.post("/api/point", json={"file": "a.py", "start_line": 1, "end_line": 1, "body": "And this"})
+    raised = review_page.post("/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "And"})
 
     assert raised.json()["thread_id"] == "raised-4"

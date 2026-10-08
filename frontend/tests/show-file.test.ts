@@ -1,11 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { registerSection, showFile } from '$lib/utils/scroll';
 
-/** Let the settling watch run: it looks once a frame until nothing moves. */
-async function frames(count = 6): Promise<void> {
-	for (let i = 0; i < count; i += 1) {
+// Enough frames for the settling watch, which looks once a frame until
+// nothing has moved for two of them
+const FRAMES_TO_SETTLE = 6;
+// A moment into a scroll that is still on its way
+const FRAMES_WHILE_MOVING = 2;
+
+/** Let the settling watch run. */
+async function frames(count = FRAMES_TO_SETTLE): Promise<void> {
+	for (let frame = 0; frame < count; frame += 1) {
 		await new Promise((resolve) => requestAnimationFrame(resolve));
 	}
+}
+
+function isMarked(section: HTMLElement): boolean {
+	return section.hasAttribute('data-marked');
 }
 
 function section(path: string): HTMLElement {
@@ -17,13 +27,7 @@ function section(path: string): HTMLElement {
 
 describe('being taken to a file somebody else pointed at', () => {
 	beforeEach(() => {
-		vi.stubGlobal('scrollIntoView', vi.fn());
-		Element.prototype.scrollIntoView = vi.fn();
 		document.body.innerHTML = '';
-	});
-
-	afterEach(() => {
-		vi.useRealTimers();
 	});
 
 	it('does not mark the file until the scroll has stopped', async () => {
@@ -32,12 +36,12 @@ describe('being taken to a file somebody else pointed at', () => {
 		moving.getBoundingClientRect = () => ({ top }) as DOMRect;
 
 		showFile('a.py');
-		await frames(2);
-		expect(moving.classList.contains('cr-marked')).toBe(false);
+		await frames(FRAMES_WHILE_MOVING);
+		expect(isMarked(moving)).toBe(false);
 
 		top = 0;
 		await frames();
-		expect(moving.classList.contains('cr-marked')).toBe(true);
+		expect(isMarked(moving)).toBe(true);
 	});
 
 	it('marks the file again when it is shown twice running', async () => {
@@ -46,12 +50,12 @@ describe('being taken to a file somebody else pointed at', () => {
 
 		showFile('a.py');
 		await frames();
-		expect(shown.classList.contains('cr-marked')).toBe(true);
+		expect(isMarked(shown)).toBe(true);
 
 		showFile('a.py');
-		expect(shown.classList.contains('cr-marked')).toBe(false);
+		expect(isMarked(shown)).toBe(false);
 		await frames();
-		expect(shown.classList.contains('cr-marked')).toBe(true);
+		expect(isMarked(shown)).toBe(true);
 	});
 
 	it('marks only the file asked for last', async () => {
@@ -64,8 +68,8 @@ describe('being taken to a file somebody else pointed at', () => {
 		showFile('b.py');
 		await frames();
 
-		expect(first.classList.contains('cr-marked')).toBe(false);
-		expect(second.classList.contains('cr-marked')).toBe(true);
+		expect(isMarked(first)).toBe(false);
+		expect(isMarked(second)).toBe(true);
 	});
 
 	it('says nothing about a file the review does not hold', () => {

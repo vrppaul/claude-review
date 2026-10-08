@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 
-describe('MarkdownRenderer', () => {
+describe('markdown, previewed', () => {
 	it('renders headings as HTML', () => {
 		const { getByTestId } = render(MarkdownRenderer, { props: { text: '# Hello World' } });
 
@@ -60,7 +60,7 @@ describe('a previewed file is read, not run', () => {
 
 	it('does not render a script tag from the file under review', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: '<script>window.pwned = 1<\/script>\n' }
+			props: { text: '<script>window.pwned = 1</script>\n' }
 		});
 
 		expect(getByTestId('markdown-content').querySelector('script')).toBeNull();

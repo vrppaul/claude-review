@@ -10,7 +10,7 @@ from claude_review.presentation.state import ServerState
 from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.services.anchor_service import AnchorService
-from claude_review.services.image_service import ImageService
+from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecordService
 
 PACKAGE_NAME = "claude-review"
@@ -56,7 +56,7 @@ def get_anchor_service(request: Request) -> AnchorService:
 def image_service_for(app: Starlette) -> ImageService:
     """The image service of one review, for a route or for the session socket."""
     store = DirectoryImageStore(app.state.workspace.images)
-    return ImageService(store, app.state.server.images)
+    return ImageService(store, app.state.server.images, REVIEW_IMAGE_QUOTA)
 
 
 def get_image_service(request: Request) -> ImageService:

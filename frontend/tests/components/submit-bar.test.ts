@@ -4,34 +4,19 @@ import { render } from '@testing-library/svelte';
 import SubmitBar from '$lib/components/SubmitBar.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
-import type { DiffFile } from '$lib/types';
+import { contextLine, diffFile, hunk } from '../diff';
 import { newComment } from '../new-comment';
 
-const mockFile: DiffFile = {
-	path: 'test.py',
-	status: 'modified',
-	is_binary: false,
-	old_mode: null,
-	new_mode: null,
-	hunks: [
-		{
-			header: '@@ -1 +1 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [{ type: 'context', old_no: 1, new_no: 1, content: 'hello' }]
-		}
-	]
-};
+const file = diffFile({ path: 'test.py', hunks: [hunk([contextLine(1, 1, 'hello')])] });
 
-describe('SubmitBar', () => {
+describe('sending the review', () => {
 	beforeEach(() => {
-		commentStore.clear();
-		diffStore.setFiles([mockFile], 'diff');
+		diffStore.setFiles([file], 'diff');
 	});
 
-	it('shows comment count', () => {
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 2, endLine: 2, body: 'fix2' }));
+	it('counts the comments written', () => {
+		commentStore.add(newComment({ file: 'test.py', body: 'fix' }));
+		commentStore.add(newComment({ file: 'test.py', startLine: 2, body: 'fix2' }));
 
 		const { getByTestId } = render(SubmitBar);
 		const count = getByTestId('comment-count');
@@ -40,8 +25,8 @@ describe('SubmitBar', () => {
 		expect(count.textContent).toContain('comments');
 	});
 
-	it('shows singular label for one comment', () => {
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+	it('says one comment, not one comments', () => {
+		commentStore.add(newComment({ file: 'test.py', body: 'fix' }));
 
 		const { getByTestId } = render(SubmitBar);
 		const count = getByTestId('comment-count');
@@ -50,13 +35,12 @@ describe('SubmitBar', () => {
 		expect(count.textContent).toMatch(/\bcomment\b/);
 	});
 
-	it('names the round it is about to send', () => {
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+	it('can be opened once something is written', () => {
+		commentStore.add(newComment({ file: 'test.py', body: 'fix' }));
 
 		const { getByTestId } = render(SubmitBar);
 
-		const btn = getByTestId('quick-submit') as HTMLButtonElement;
-		expect(btn.disabled).toBe(false);
+		expect((getByTestId('quick-submit') as HTMLButtonElement).disabled).toBe(false);
 	});
 
 	it('opens even with nothing written, because a summary alone is a review', () => {
@@ -67,13 +51,8 @@ describe('SubmitBar', () => {
 });
 
 describe('the review header', () => {
-	beforeEach(() => {
-		commentStore.clear();
-		diffStore.clear();
-	});
-
 	it('says what is under review', () => {
-		diffStore.setFiles([mockFile], 'diff', 'claude-review: uncommitted changes');
+		diffStore.setFiles([file], 'diff', 'claude-review: uncommitted changes');
 
 		const { getByTestId } = render(SubmitBar);
 
@@ -83,7 +62,7 @@ describe('the review header', () => {
 	});
 
 	it('leaves the title out when the server sent none', () => {
-		diffStore.setFiles([mockFile], 'diff');
+		diffStore.setFiles([file], 'diff');
 
 		const { queryByTestId } = render(SubmitBar);
 
@@ -91,12 +70,12 @@ describe('the review header', () => {
 	});
 
 	it('offers comment navigation only once there is a comment', async () => {
-		diffStore.setFiles([mockFile], 'diff');
+		diffStore.setFiles([file], 'diff');
 
 		const { queryByTestId, rerender } = render(SubmitBar);
 		expect(queryByTestId('next-comment')).toBeNull();
 
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+		commentStore.add(newComment({ file: 'test.py', body: 'fix' }));
 		await rerender({});
 
 		expect(queryByTestId('next-comment')).toBeTruthy();
@@ -104,7 +83,7 @@ describe('the review header', () => {
 
 	it('opens one door to everything that ends a round', async () => {
 		const user = userEvent.setup({ delay: null });
-		commentStore.add(newComment({ file: 'test.py', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+		commentStore.add(newComment({ file: 'test.py', body: 'fix' }));
 
 		const { getByTestId } = render(SubmitBar);
 		await user.click(getByTestId('quick-submit'));

@@ -19,21 +19,21 @@ def service() -> TextFileService:
 class TestReadFiles:
     def test_file_content_is_preserved_line_by_line(self, service: TextFileService, tmp_path: Path) -> None:
         """Every line of the original file is present and in order."""
-        f = tmp_path / "plan.md"
+        text_file = tmp_path / "plan.md"
         original = "# Title\n\nStep 1\nStep 2\n"
-        f.write_text(original)
+        text_file.write_text(original)
 
-        result = service.read_files([f])
+        result = service.read_files([text_file])
         content = [line.content for line in result[0].hunks[0].lines]
 
         assert content == ["# Title", "", "Step 1", "Step 2"]
 
     def test_every_line_has_a_commentable_line_number(self, service: TextFileService, tmp_path: Path) -> None:
         """Each line gets a sequential line number starting at 1."""
-        f = tmp_path / "doc.md"
-        f.write_text("first\nsecond\nthird\n")
+        text_file = tmp_path / "doc.md"
+        text_file.write_text("first\nsecond\nthird\n")
 
-        result = service.read_files([f])
+        result = service.read_files([text_file])
         line_numbers = [line.new_no for line in result[0].hunks[0].lines]
 
         assert line_numbers == [1, 2, 3]
@@ -51,13 +51,13 @@ class TestReadFiles:
 
     def test_file_path_is_absolute_for_unambiguous_comments(self, service: TextFileService, tmp_path: Path) -> None:
         """Comments reference the resolved absolute path."""
-        f = tmp_path / "sub" / "plan.md"
-        f.parent.mkdir()
-        f.write_text("content\n")
+        text_file = tmp_path / "sub" / "plan.md"
+        text_file.parent.mkdir()
+        text_file.write_text("content\n")
 
-        result = service.read_files([f])
+        result = service.read_files([text_file])
 
-        assert result[0].path == str(f.resolve())
+        assert result[0].path == str(text_file.resolve())
 
     def test_empty_files_are_excluded(self, service: TextFileService, tmp_path: Path) -> None:
         """Empty files have nothing to review, so they are skipped."""
@@ -76,28 +76,28 @@ class TestReadFiles:
 
     def test_duplicate_paths_are_loaded_once(self, service: TextFileService, tmp_path: Path) -> None:
         """Passing the same file twice does not create duplicate entries."""
-        f = tmp_path / "plan.md"
-        f.write_text("content\n")
+        text_file = tmp_path / "plan.md"
+        text_file.write_text("content\n")
 
-        result = service.read_files([f, f])
+        result = service.read_files([text_file, text_file])
 
         assert len(result) == 1
 
     def test_trailing_newline_does_not_create_phantom_line(self, service: TextFileService, tmp_path: Path) -> None:
         """Files ending with \\n don't get an extra empty line."""
-        f = tmp_path / "doc.md"
-        f.write_text("line one\nline two\n")
+        text_file = tmp_path / "doc.md"
+        text_file.write_text("line one\nline two\n")
 
-        result = service.read_files([f])
+        result = service.read_files([text_file])
 
         assert len(result[0].hunks[0].lines) == 2
 
     def test_file_without_trailing_newline(self, service: TextFileService, tmp_path: Path) -> None:
         """Files not ending with \\n are handled identically."""
-        f = tmp_path / "doc.md"
-        f.write_text("line one\nline two")
+        text_file = tmp_path / "doc.md"
+        text_file.write_text("line one\nline two")
 
-        result = service.read_files([f])
+        result = service.read_files([text_file])
 
         assert len(result[0].hunks[0].lines) == 2
         assert result[0].hunks[0].lines[-1].content == "line two"

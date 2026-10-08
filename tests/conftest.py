@@ -1,16 +1,15 @@
 """Shared fixtures for tests."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator, Iterator
 from importlib.metadata import version
 from pathlib import Path
 
 import pytest
-from playwright.async_api import Page, async_playwright
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from claude_review.domain.models import GuideState, ReaderFiles, ReviewWorkspace
-from tests.helpers import git
-
-E2E_TIMEOUT_MS = 5_000
+from tests.helpers import ReviewFactory, git, http_client, one_line_file, page_client
 
 
 @pytest.fixture
@@ -53,12 +52,20 @@ def reader_files(tmp_path_factory: pytest.TempPathFactory) -> ReaderFiles:
 
 
 @pytest.fixture
-async def page() -> AsyncGenerator[Page]:
-    """Async Playwright page with centralized timeout."""
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        context = await browser.new_context()
-        pg = await context.new_page()
-        pg.set_default_timeout(E2E_TIMEOUT_MS)
-        yield pg
-        await browser.close()
+def reviews(workspace: ReviewWorkspace, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles) -> ReviewFactory:
+    """Builds the reviews a test needs, all sharing this test's directories and reader."""
+    return ReviewFactory(workspace=workspace, marking_workspace=marking_workspace, reader_files=reader_files)
+
+
+@pytest.fixture
+async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
+    """An agent's way into a review of one file with one line in it."""
+    async with http_client(reviews.app([one_line_file()])) as agent:
+        yield agent
+
+
+@pytest.fixture
+def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
+    """The review's own page, socket and all, on a review of one file with one line in it."""
+    with page_client(reviews.app([one_line_file()])) as page:
+        yield page

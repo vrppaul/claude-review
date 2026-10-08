@@ -9,6 +9,26 @@
  * fits a diff, a plan and a transcript, with an agent attached or without.
  */
 
+/**
+ * Every place the tour can point at, by the `data-tour` name a component
+ * marks it with. A step can name nothing else.
+ */
+export const TOUR_TARGETS = [
+  "review-base",
+  "review-base-list",
+  "file-tree",
+  "line-number",
+  "comment-field",
+  "unsent-count",
+  "awaited-answer",
+  "answer",
+  "agent-panel",
+  "agent-panel-toggle",
+  "send",
+] as const;
+
+export type TourTarget = (typeof TOUR_TARGETS)[number];
+
 /** Where a comment went when the reader chose. */
 export type CommentRoute = "review" | "ask";
 
@@ -41,7 +61,7 @@ export type WaitsFor =
 export interface TourStep {
   id: string;
   /** Elements to light, by `data-tour` name; the light covers those on screen. */
-  targets: string[];
+  targets: TourTarget[];
   title: string;
   body: string;
   fork?: ForkOption[];

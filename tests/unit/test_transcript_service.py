@@ -20,24 +20,24 @@ def service() -> TranscriptService:
 
 def _write_jsonl(path: Path, entries: list[dict]) -> Path:
     """Write entries as JSONL (one JSON object per line)."""
-    f = path / "conversation.jsonl"
-    f.write_text("\n".join(json.dumps(e) for e in entries))
-    return f
+    conversation = path / "conversation.jsonl"
+    conversation.write_text("\n".join(json.dumps(entry) for entry in entries))
+    return conversation
 
 
-def _user(content: str, ts: str = "") -> dict:
-    return {"type": "user", "message": {"role": "user", "content": content}, "timestamp": ts}
+def _user(content: str, timestamp: str = "") -> dict:
+    return {"type": "user", "message": {"role": "user", "content": content}, "timestamp": timestamp}
 
 
 def _user_blocks(blocks: list[dict]) -> dict:
     return {"type": "user", "message": {"role": "user", "content": blocks}, "timestamp": ""}
 
 
-def _assistant(text: str, ts: str = "") -> dict:
+def _assistant(text: str, timestamp: str = "") -> dict:
     return {
         "type": "assistant",
         "message": {"role": "assistant", "content": [{"type": "text", "text": text}]},
-        "timestamp": ts,
+        "timestamp": timestamp,
     }
 
 
@@ -68,15 +68,15 @@ def _user_tool_result() -> dict:
 
 class TestParse:
     def test_single_message(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(tmp_path, [_user("hello world")])
-        result = service.parse(f)
+        conversation = _write_jsonl(tmp_path, [_user("hello world")])
+        result = service.parse(conversation)
 
         assert len(result) == 1
         assert "user" in result[0].path
 
     def test_newest_messages_first(self, service: TranscriptService, tmp_path: Path) -> None:
         """Messages are reversed — newest turn appears first in sidebar."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user("first question"),
@@ -85,16 +85,14 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
-        contents = [result[i].hunks[0].lines[0].content for i in range(3)]
+        result = service.parse(conversation)
+        contents = [message.hunks[0].lines[0].content for message in result]
 
-        assert contents[0] == "second question"
-        assert contents[1] == "first answer"
-        assert contents[2] == "first question"
+        assert contents == ["second question", "first answer", "first question"]
 
     def test_consecutive_same_role_merged(self, service: TranscriptService, tmp_path: Path) -> None:
         """Consecutive text entries from same role merge into one turn."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user("do something"),
@@ -103,7 +101,7 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
 
         assert len(result) == 2
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
@@ -111,7 +109,7 @@ class TestParse:
         assert "part two" in content
 
     def test_thinking_and_tool_use_excluded(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user("question"),
@@ -121,7 +119,7 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         assert len(result) == 2
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "my answer" in content
@@ -129,7 +127,7 @@ class TestParse:
 
     def test_tool_calls_break_turns(self, service: TranscriptService, tmp_path: Path) -> None:
         """Text separated by tool calls becomes separate turns."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user("question"),
@@ -140,7 +138,7 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
 
         assert len(result) == 3
         # Newest first
@@ -149,7 +147,7 @@ class TestParse:
         assert result[2].hunks[0].lines[0].content == "question"
 
     def test_system_command_messages_excluded(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user("real question"),
@@ -159,7 +157,7 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
 
         assert len(result) == 2
         user_content = "\n".join(line.content for line in result[1].hunks[0].lines)
@@ -167,7 +165,7 @@ class TestParse:
         assert "command" not in user_content
 
     def test_non_message_entries_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 {"type": "permission-mode", "permissionMode": "default"},
@@ -177,27 +175,27 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         assert len(result) == 2
 
     def test_content_preserved_line_by_line(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(tmp_path, [_user("line one\nline two\nline three")])
+        conversation = _write_jsonl(tmp_path, [_user("line one\nline two\nline three")])
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         content = [line.content for line in result[0].hunks[0].lines]
 
         assert content == ["line one", "line two", "line three"]
 
     def test_every_line_has_commentable_line_number(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(tmp_path, [_assistant("first\nsecond\nthird")])
+        conversation = _write_jsonl(tmp_path, [_assistant("first\nsecond\nthird")])
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         numbers = [line.new_no for line in result[0].hunks[0].lines]
 
         assert numbers == [1, 2, 3]
 
     def test_empty_messages_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 _user(""),
@@ -205,35 +203,35 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         assert len(result) == 1
 
     def test_timestamp_in_label(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = _write_jsonl(tmp_path, [_user("hello", ts="2026-04-04T18:05:44.342Z")])
+        conversation = _write_jsonl(tmp_path, [_user("hello", timestamp="2026-04-04T18:05:44.342Z")])
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         assert "user" in result[0].path
         assert ")" in result[0].path
 
     def test_labels_are_unique(self, service: TranscriptService, tmp_path: Path) -> None:
         """Each turn gets a unique path so the store can select by path."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
-                _user("a", ts="2026-04-04T18:05:00.000Z"),
-                _assistant("b", ts="2026-04-04T18:05:00.000Z"),
-                _user("c", ts="2026-04-04T18:05:00.000Z"),
+                _user("a", timestamp="2026-04-04T18:05:00.000Z"),
+                _assistant("b", timestamp="2026-04-04T18:05:00.000Z"),
+                _user("c", timestamp="2026-04-04T18:05:00.000Z"),
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
         paths = [r.path for r in result]
 
         assert len(paths) == len(set(paths))
 
     def test_no_visible_messages_produces_empty_result(self, service: TranscriptService, tmp_path: Path) -> None:
         """JSONL with only non-message entries produces no turns."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 {"type": "permission-mode", "permissionMode": "default"},
@@ -241,13 +239,13 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
 
         assert len(result) == 0
 
     def test_malformed_content_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
         """Entries with null or non-standard content are skipped, not crashed on."""
-        f = _write_jsonl(
+        conversation = _write_jsonl(
             tmp_path,
             [
                 {"type": "user", "message": {"role": "user", "content": None}, "timestamp": ""},
@@ -255,17 +253,17 @@ class TestParse:
             ],
         )
 
-        result = service.parse(f)
+        result = service.parse(conversation)
 
         assert len(result) == 1
         assert result[0].hunks[0].lines[0].content == "real answer"
 
     def test_invalid_jsonl_raises_error(self, service: TranscriptService, tmp_path: Path) -> None:
-        f = tmp_path / "conversation.jsonl"
-        f.write_text("not json\n")
+        conversation = tmp_path / "conversation.jsonl"
+        conversation.write_text("not json\n")
 
         with pytest.raises(ValueError, match="Invalid JSON"):
-            service.parse(f)
+            service.parse(conversation)
 
 
 class TestWhatIsATurn:
@@ -291,10 +289,13 @@ class TestWhatIsATurn:
 class TestLabels:
     def test_a_turn_keeps_its_name_as_the_conversation_grows(self, service: TranscriptService, tmp_path: Path) -> None:
         """Threads and the unsent draft hang on these names; a live session keeps growing."""
-        earlier = [_user("first", ts="2026-04-04T18:05:00.000Z"), _assistant("answer", ts="2026-04-04T18:05:00.000Z")]
+        earlier = [
+            _user("first", timestamp="2026-04-04T18:05:00.000Z"),
+            _assistant("answer", timestamp="2026-04-04T18:05:00.000Z"),
+        ]
         before = {r.hunks[0].lines[0].content: r.path for r in service.parse(_write_jsonl(tmp_path, earlier))}
 
-        grown = [*earlier, _user("second", ts="2026-04-04T18:06:00.000Z")]
+        grown = [*earlier, _user("second", timestamp="2026-04-04T18:06:00.000Z")]
         after = {r.hunks[0].lines[0].content: r.path for r in service.parse(_write_jsonl(tmp_path, grown))}
 
         assert after["first"] == before["first"]
@@ -303,7 +304,12 @@ class TestLabels:
     def test_two_turns_in_the_same_second_are_told_apart(self, service: TranscriptService, tmp_path: Path) -> None:
         same_second = "2026-04-04T18:05:00.000Z"
         transcript = _write_jsonl(
-            tmp_path, [_user("a", ts=same_second), _assistant("b", ts=same_second), _user("c", ts=same_second)]
+            tmp_path,
+            [
+                _user("a", timestamp=same_second),
+                _assistant("b", timestamp=same_second),
+                _user("c", timestamp=same_second),
+            ],
         )
 
         paths = [r.path for r in service.parse(transcript)]

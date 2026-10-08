@@ -13,6 +13,16 @@ function placeAt(name: string, rect: { left: number; top: number; width: number;
 	return element;
 }
 
+/** A resize observer that remembers everything it was asked to watch. */
+class WatchingResizeObserver implements ResizeObserver {
+	static watched: Element[] = [];
+	observe = (element: Element) => {
+		WatchingResizeObserver.watched.push(element);
+	};
+	unobserve = vi.fn();
+	disconnect = vi.fn();
+}
+
 async function nextFrame() {
 	await new Promise((resolve) => requestAnimationFrame(resolve));
 	await tick();
@@ -41,18 +51,12 @@ describe('the light over a tour step', () => {
 
 	it('watches the size of what it lights, which grows as a comment is typed', async () => {
 		const lit = placeAt('comment-field', { left: 0, top: 0, width: 300, height: 80 });
-		const watched: Element[] = [];
-		const silent = globalThis.ResizeObserver;
-		globalThis.ResizeObserver = class {
-			observe = (element: Element) => watched.push(element);
-			unobserve = vi.fn();
-			disconnect = vi.fn();
-		} as unknown as typeof ResizeObserver;
+		WatchingResizeObserver.watched = [];
+		vi.stubGlobal('ResizeObserver', WatchingResizeObserver);
 
 		render(TourSpotlight, { props: { targets: ['comment-field'] } });
 		await tick();
-		globalThis.ResizeObserver = silent;
 
-		expect(watched).toContain(lit);
+		expect(WatchingResizeObserver.watched).toContain(lit);
 	});
 });

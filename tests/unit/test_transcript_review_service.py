@@ -4,22 +4,12 @@ These test the formatting of transcript review comments into
 self-contained markdown that includes context from the conversation.
 """
 
-from claude_review.domain.models import (
-    Comment,
-    CommentSeverity,
-    DiffFile,
-    DiffHunk,
-    DiffLine,
-    FileStatus,
-    LineAnchor,
-    LineSide,
-    LineType,
-    TurnAuthor,
-)
+from claude_review.domain.models import CommentSeverity, DiffFile, DiffHunk, DiffLine, FileStatus, LineType, TurnAuthor
 from claude_review.services.transcript_review_service import TranscriptReviewService
+from tests.helpers import comment, line_anchor
 
 
-def _make_message(path: str, lines: list[str]) -> DiffFile:
+def _message(path: str, lines: list[str]) -> DiffFile:
     """Build a DiffFile representing a transcript message."""
     return DiffFile(
         path=path,
@@ -30,8 +20,8 @@ def _make_message(path: str, lines: list[str]) -> DiffFile:
                 old_start=0,
                 new_start=1,
                 lines=[
-                    DiffLine(type=LineType.CONTEXT, old_no=None, new_no=i, content=line)
-                    for i, line in enumerate(lines, start=1)
+                    DiffLine(type=LineType.CONTEXT, new_no=line_number, content=line)
+                    for line_number, line in enumerate(lines, start=1)
                 ],
             )
         ],
@@ -42,32 +32,20 @@ def _service() -> TranscriptReviewService:
     return TranscriptReviewService()
 
 
-def test_heading_is_transcript_review() -> None:
+def test_a_review_of_a_conversation_is_headed_as_one() -> None:
     """Non-empty review starts with ## Transcript Review."""
-    files = [_make_message("user-1", ["hello"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="Bad idea",
-        )
-    ]
+    files = [_message("user-1", ["hello"])]
+    comments = [comment(line_anchor("user-1", 1), "Bad idea")]
 
     result = _service().format_review(comments, None, files)
 
     assert result.markdown.startswith("## Transcript Review")
 
 
-def test_single_comment_with_context() -> None:
+def test_a_comment_quotes_the_lines_around_it() -> None:
     """Comment includes blockquote of surrounding lines."""
-    files = [_make_message("user-1", ["line one", "line two", "line three", "line four", "line five"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=3, end_line=3),
-            severity=CommentSeverity.NOTE,
-            body="This is wrong",
-        )
-    ]
+    files = [_message("user-1", ["line one", "line two", "line three", "line four", "line five"])]
+    comments = [comment(line_anchor("user-1", 3), "This is wrong")]
 
     result = _service().format_review(comments, None, files)
 
@@ -80,16 +58,10 @@ def test_single_comment_with_context() -> None:
     assert result.comment_count == 1
 
 
-def test_context_at_start_of_message() -> None:
+def test_a_comment_on_the_first_line_quotes_from_the_start() -> None:
     """Comment on line 1 doesn't crash — context starts at beginning."""
-    files = [_make_message("user-1", ["first line", "second line"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="Fix this",
-        )
-    ]
+    files = [_message("user-1", ["first line", "second line"])]
+    comments = [comment(line_anchor("user-1", 1), "Fix this")]
 
     result = _service().format_review(comments, None, files)
 
@@ -98,16 +70,10 @@ def test_context_at_start_of_message() -> None:
     assert "Fix this" in result.markdown
 
 
-def test_context_at_end_of_message() -> None:
+def test_a_comment_on_the_last_line_quotes_to_the_end() -> None:
     """Comment on last line doesn't crash — context ends at message boundary."""
-    files = [_make_message("user-1", ["first", "second", "last"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=3, end_line=3),
-            severity=CommentSeverity.NOTE,
-            body="Fix last",
-        )
-    ]
+    files = [_message("user-1", ["first", "second", "last"])]
+    comments = [comment(line_anchor("user-1", 3), "Fix last")]
 
     result = _service().format_review(comments, None, files)
 
@@ -116,16 +82,10 @@ def test_context_at_end_of_message() -> None:
     assert "Fix last" in result.markdown
 
 
-def test_body_appears_before_comments() -> None:
+def test_the_summary_comes_before_the_comments() -> None:
     """Body text appears before inline comments."""
-    files = [_make_message("user-1", ["hello"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="Inline note",
-        )
-    ]
+    files = [_message("user-1", ["hello"])]
+    comments = [comment(line_anchor("user-1", 1), "Inline note")]
 
     result = _service().format_review(comments, "General feedback here.", files)
 
@@ -135,23 +95,17 @@ def test_body_appears_before_comments() -> None:
     assert body_pos < inline_pos
 
 
-def test_empty_body_treated_as_no_body() -> None:
+def test_an_empty_summary_is_no_summary() -> None:
     """Empty string body is ignored."""
-    files = [_make_message("user-1", ["hello"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="note",
-        )
-    ]
+    files = [_message("user-1", ["hello"])]
+    comments = [comment(line_anchor("user-1", 1), "note")]
 
     result = _service().format_review(comments, "", files)
 
     assert result.comment_count == 1
 
 
-def test_empty_review_produces_minimal_output() -> None:
+def test_a_review_with_nothing_in_it_says_nothing() -> None:
     """Zero comments and no body produces empty result."""
     result = _service().format_review([], None, [])
 
@@ -159,23 +113,15 @@ def test_empty_review_produces_minimal_output() -> None:
     assert result.markdown == ""
 
 
-def test_multiple_comments_each_get_blockquote() -> None:
+def test_each_comment_quotes_its_own_message() -> None:
     """Each comment gets its own blockquote context block."""
     files = [
-        _make_message("user-1", ["question about auth"]),
-        _make_message("assistant-2", ["def authenticate(token):", "    return jwt.decode(token)"]),
+        _message("user-1", ["question about auth"]),
+        _message("assistant-2", ["def authenticate(token):", "    return jwt.decode(token)"]),
     ]
     comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="Wrong approach",
-        ),
-        Comment(
-            anchor=LineAnchor(file="assistant-2", side=LineSide.NEW, start_line=1, end_line=2),
-            severity=CommentSeverity.NOTE,
-            body="Don't use JWT",
-        ),
+        comment(line_anchor("user-1", 1), "Wrong approach"),
+        comment(line_anchor("assistant-2", 1, 2), "Don't use JWT"),
     ]
 
     result = _service().format_review(comments, None, files)
@@ -187,16 +133,10 @@ def test_multiple_comments_each_get_blockquote() -> None:
     assert result.comment_count == 2
 
 
-def test_no_line_numbers_or_headings_in_output() -> None:
+def test_a_conversation_is_quoted_not_numbered() -> None:
     """Output has no ### headings, no line numbers — just blockquotes and comments."""
-    files = [_make_message("user-1", ["hello world"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="Fix it",
-        )
-    ]
+    files = [_message("user-1", ["hello world"])]
+    comments = [comment(line_anchor("user-1", 1), "Fix it")]
 
     result = _service().format_review(comments, None, files)
 
@@ -204,26 +144,20 @@ def test_no_line_numbers_or_headings_in_output() -> None:
     assert ":1" not in result.markdown
 
 
-def test_whitespace_only_body_treated_as_no_body() -> None:
+def test_a_summary_of_only_whitespace_is_no_summary() -> None:
     """Whitespace-only body is ignored, same as empty."""
-    files = [_make_message("user-1", ["hello"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="note",
-        )
-    ]
+    files = [_message("user-1", ["hello"])]
+    comments = [comment(line_anchor("user-1", 1), "note")]
 
     result = _service().format_review(comments, "   \n  ", files)
 
     assert result.comment_count == 1
 
 
-def test_range_comment_includes_full_range_in_blockquote() -> None:
+def test_a_comment_on_several_lines_quotes_them_all() -> None:
     """A comment on lines 2-4 includes those lines in the blockquote."""
     files = [
-        _make_message(
+        _message(
             "assistant-2",
             [
                 "line 1",
@@ -234,13 +168,7 @@ def test_range_comment_includes_full_range_in_blockquote() -> None:
             ],
         )
     ]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="assistant-2", side=LineSide.NEW, start_line=2, end_line=4),
-            severity=CommentSeverity.NOTE,
-            body="Refactor this",
-        )
-    ]
+    comments = [comment(line_anchor("assistant-2", 2, 4), "Refactor this")]
 
     result = _service().format_review(comments, None, files)
 
@@ -255,14 +183,9 @@ def test_range_comment_includes_full_range_in_blockquote() -> None:
 
 def test_how_a_thread_is_meant_to_be_taken_is_said() -> None:
     """A blocker, a settled note and one written against words since gone are different instructions."""
-    files = [_make_message("user-1", ["hello world"])]
+    files = [_message("user-1", ["hello world"])]
     comments = [
-        Comment(
-            anchor=LineAnchor(file="user-1", side=LineSide.NEW, start_line=1, end_line=1, outdated=True),
-            severity=CommentSeverity.BLOCKER,
-            body="Fix it",
-            resolved=True,
-        )
+        comment(line_anchor("user-1", 1, outdated=True), "Fix it", severity=CommentSeverity.BLOCKER, resolved=True)
     ]
 
     markdown = _service().format_review(comments, None, files).markdown
@@ -271,15 +194,8 @@ def test_how_a_thread_is_meant_to_be_taken_is_said() -> None:
 
 
 def test_a_thread_the_agent_raised_opens_with_the_agent_speaking() -> None:
-    files = [_make_message("assistant-1", ["I chose JWT"])]
-    comments = [
-        Comment(
-            anchor=LineAnchor(file="assistant-1", side=LineSide.NEW, start_line=1, end_line=1),
-            severity=CommentSeverity.NOTE,
-            body="I kept the old flow on purpose",
-            raised_by=TurnAuthor.AUTHOR,
-        )
-    ]
+    files = [_message("assistant-1", ["I chose JWT"])]
+    comments = [comment(line_anchor("assistant-1", 1), "I kept the old flow on purpose", raised_by=TurnAuthor.AUTHOR)]
 
     markdown = _service().format_review(comments, None, files).markdown
 

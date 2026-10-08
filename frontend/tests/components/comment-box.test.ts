@@ -1,13 +1,14 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/svelte';
+import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentFields } from '$lib/stores/comment-fields';
 import { tick } from 'svelte';
+import { IMAGE_LIMITS, KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
 
-describe('CommentBox', () => {
-	it('calls onSave with trimmed text when Comment button is clicked', async () => {
+describe('a comment field', () => {
+	it('saves what was written, without the spaces around it', async () => {
 		const onSave = vi.fn();
 		const { getByTestId } = render(CommentBox, {
 			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }
@@ -20,16 +21,15 @@ describe('CommentBox', () => {
 		expect(onSave).toHaveBeenCalledWith('Fix this', 'note', []);
 	});
 
-	it('disables Comment button when input is empty', () => {
+	it('cannot save an empty comment', () => {
 		const { getByTestId } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn() }
 		});
 
-		const btn = getByTestId('save-comment') as HTMLButtonElement;
-		expect(btn.disabled).toBe(true);
+		expect((getByTestId('save-comment') as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it('calls onCancel when Cancel is clicked', async () => {
+	it('closes when the reader cancels', async () => {
 		const onCancel = vi.fn();
 		const { getByTestId } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel }
@@ -48,7 +48,7 @@ describe('CommentBox', () => {
 		expect(getByText('Lines 10-15')).toBeTruthy();
 	});
 
-	it('populates textarea with initialBody', () => {
+	it('reopens with what the comment already says', () => {
 		const { getByTestId } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'existing text' }
 		});
@@ -154,95 +154,68 @@ describe('how a comment is meant', () => {
 });
 
 describe('images in a comment', () => {
-	const LIMITS = { max_image_bytes: 10 * 1024 * 1024, max_images_per_message: 10 };
-
-	function screenshot(): File {
-		return new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'screen.png', {
-			type: 'image/png'
-		});
-	}
-
-	function imageFetch(imageId: string) {
-		const mock = vi.fn((url: string) =>
-			Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve(url === '/api/images' ? { image_id: imageId } : {})
-			})
-		);
-		vi.stubGlobal('fetch', mock);
-		return mock;
-	}
-
 	beforeEach(() => {
-		diffStore.clear();
-		diffStore.setImageLimits(LIMITS);
+		diffStore.setImageLimits(IMAGE_LIMITS);
 	});
 
-
 	it('saves a pasted screenshot as the whole comment', async () => {
-		imageFetch('4f.png');
+		keepingImages();
 		const onSave = vi.fn();
 		const { getByTestId, findByTestId } = render(CommentBox, {
 			props: { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }
 		});
 
-		await fireEvent.paste(getByTestId('comment-input'), {
-			clipboardData: { files: [screenshot()] }
-		});
+		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
 		await userEvent.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('', 'note', ['4f.png']);
+		expect(onSave).toHaveBeenCalledWith('', 'note', [KEPT_AS]);
 	});
 
 	it('lets the server drop what was pasted when the field closes unsent', async () => {
 		// Cancel, a click on another line, a folded thread: each closes the field
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages();
 		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }
 		});
 
-		await fireEvent.paste(getByTestId('comment-input'), {
-			clipboardData: { files: [screenshot()] }
-		});
+		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
 		unmount();
 
-		const [url, init] = fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit];
-		expect(url).toBe('/api/images/4f.png');
-		expect(init.method).toBe('DELETE');
+		expect(server.requests.at(-1)).toMatchObject({
+			method: 'DELETE',
+			path: `/api/images/${KEPT_AS}`
+		});
 	});
 
 	it('keeps what was pasted once the comment is saved', async () => {
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages();
 		const { getByTestId, findByTestId, unmount } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }
 		});
 
-		await fireEvent.paste(getByTestId('comment-input'), {
-			clipboardData: { files: [screenshot()] }
-		});
+		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
 		await userEvent.click(getByTestId('save-comment'));
 		unmount();
 
-		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/images']);
+		expect(server.requests).toMatchObject([{ method: 'POST', path: '/api/images' }]);
 	});
 
 	it('leaves the images a comment already had when an edit closes unsent', async () => {
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages();
 		const { unmount } = render(CommentBox, {
 			props: { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'This', initialImages: ['kept.png'] }
 		});
 
 		unmount();
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(server.requests).toEqual([]);
 	});
 });
 
 describe('what a comment field says happened to it', () => {
-
 	it('says it opened, and what became of it, naming which kind of field it is', async () => {
 		const report = vi.spyOn(commentFields, 'report');
 		const { getByTestId } = render(CommentBox, {

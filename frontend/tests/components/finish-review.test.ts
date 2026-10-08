@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FinishReview from '$lib/components/FinishReview.svelte';
@@ -6,8 +6,8 @@ import { reviewStore } from '$lib/stores/review.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { newComment } from '../new-comment';
 
-/** The count as it reads, without the template's line breaks. */
-function count(element: HTMLElement): string {
+/** What an element says, without the template's line breaks. */
+function said(element: HTMLElement): string {
 	return element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
@@ -20,26 +20,21 @@ const props = {
 };
 
 describe('finishing a review', () => {
-	beforeEach(() => {
-		commentStore.clear();
-		reviewStore.clear();
-	});
-
-	it('shows inline comment count when comments exist', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix this' }));
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 5, endLine: 5, body: 'and this' }));
+	it('counts the comments about to go', () => {
+		commentStore.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix this' }));
+		commentStore.add(newComment({ file: 'file.ts', startLine: 5, body: 'and this' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
-		expect(count(getByTestId('finish-count'))).toBe('2 comments');
+		expect(said(getByTestId('finish-count'))).toBe('2 comments');
 	});
 
-	it('shows singular label for one comment', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+	it('says one comment, not one comments', () => {
+		commentStore.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
-		expect(count(getByTestId('finish-count'))).toBe('1 comment');
+		expect(said(getByTestId('finish-count'))).toBe('1 comment');
 	});
 
 	it('says a summary alone is a review when nothing is written', () => {
@@ -51,11 +46,11 @@ describe('finishing a review', () => {
 
 	it('counts what is still unsent once rounds are being sent', () => {
 		reviewStore.attachAnswerer();
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+		commentStore.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props });
 
-		expect(count(getByTestId('finish-count'))).toBe('1 unsent of 1');
+		expect(said(getByTestId('finish-count'))).toBe('1 unsent of 1');
 		expect(getByTestId('modal-submit').textContent).toContain('Send round');
 		expect(getByTestId('end-review')).toBeTruthy();
 	});
@@ -64,7 +59,7 @@ describe('finishing a review', () => {
 		const long =
 			'This reads the clock twice per call, so a sweep can see two different ' +
 			'instants and drop a session that was alive when it started.';
-		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 42, endLine: 42, body: long }));
+		commentStore.add(newComment({ file: 'src/app.ts', startLine: 42, body: long }));
 
 		const { getByText, getByTestId } = render(FinishReview, { props });
 
@@ -73,25 +68,23 @@ describe('finishing a review', () => {
 		expect(getByTestId('modal-comment-ref').textContent).toContain('src/app.ts');
 	});
 
-	it('disables submit when no content', () => {
+	it('cannot be sent with nothing written', () => {
 		const { getByTestId } = render(FinishReview, { props });
 
-		const btn = getByTestId('modal-submit') as HTMLButtonElement;
-		expect(btn.disabled).toBe(true);
+		expect((getByTestId('modal-submit') as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it('enables submit when review body is typed', async () => {
+	it('can be sent with only a summary', async () => {
 		const { getByTestId } = render(FinishReview, { props });
 
 		await userEvent.type(getByTestId('review-body'), 'General feedback');
 
-		const btn = getByTestId('modal-submit') as HTMLButtonElement;
-		expect(btn.disabled).toBe(false);
+		expect((getByTestId('modal-submit') as HTMLButtonElement).disabled).toBe(false);
 	});
 
-	it('calls onSubmit when submit button is clicked', async () => {
+	it('sends the review when asked', async () => {
 		const onSubmit = vi.fn();
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
+		commentStore.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
 
 		const { getByTestId } = render(FinishReview, { props: { ...props, onSubmit } });
 
@@ -111,28 +104,23 @@ describe('finishing a review', () => {
 });
 
 describe('the line a comment sits on, before it is sent', () => {
-	beforeEach(() => {
-		commentStore.clear();
-		reviewStore.clear();
-	});
-
 	it('marks a comment that sits on a removed line', () => {
-		commentStore.add(newComment({ file: 'src/app.ts', side: 'old', startLine: 42, endLine: 42, body: 'why was this dropped' }));
+		commentStore.add(
+			newComment({ file: 'src/app.ts', side: 'old', startLine: 42, body: 'why was this dropped' })
+		);
 
 		const { getByTestId } = render(FinishReview, { props });
 
-		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-			'src/app.ts · Removed line 42'
-		);
+		expect(said(getByTestId('modal-comment-ref'))).toBe('src/app.ts · Removed line 42');
 	});
 
 	it('leaves a comment on the current version unmarked', () => {
-		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 42, endLine: 47, body: 'tighten this' }));
+		commentStore.add(
+			newComment({ file: 'src/app.ts', startLine: 42, endLine: 47, body: 'tighten this' })
+		);
 
 		const { getByTestId } = render(FinishReview, { props });
 
-		expect(getByTestId('modal-comment-ref').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-			'src/app.ts · Lines 42-47'
-		);
+		expect(said(getByTestId('modal-comment-ref'))).toBe('src/app.ts · Lines 42-47');
 	});
 });

@@ -25,6 +25,7 @@
 			{:else}
 				<a data-testid="said-image" href={imageUrl(imageId)} target="_blank" rel="noopener noreferrer">
 					<img
+						data-testid="said-image-picture"
 						src={imageUrl(imageId)}
 						alt="Sent with this message"
 						class="cr-image-thumb"

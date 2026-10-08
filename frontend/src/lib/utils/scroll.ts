@@ -44,6 +44,7 @@ function unmark(): void {
   if (!marked) return;
   clearTimeout(marked.timer);
   marked.element.classList.remove("cr-marked");
+  delete marked.element.dataset.marked;
   marked = null;
 }
 
@@ -92,7 +93,10 @@ export function showFile(path: string): void {
 
   whenSettled(section, () => {
     if (mine !== showing) return;
+    // The class draws the mark; the attribute says it is there to whatever
+    // reads the page rather than its styles
     section.classList.add("cr-marked");
+    section.dataset.marked = "";
     marked = {
       element: section,
       timer: setTimeout(unmark, MARKED_FOR),

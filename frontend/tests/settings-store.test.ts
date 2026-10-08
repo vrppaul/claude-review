@@ -1,44 +1,30 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import type { ReaderSettings } from '$lib/types';
+import {
+	fakeServer,
+	keepingSettings,
+	NEW_READER,
+	SERVER_ERROR,
+	type FakeServer
+} from './fake-server';
 
-const NEW_READER: ReaderSettings = {
-	theme: 'system',
-	diff_layout: 'unified',
-	ignore_whitespace: false,
-	sound_on_replies: false
-};
+// The names this browser kept choices under before the server kept them.
+// The theme's is also where the first paint reads it, before the server answers.
+const THEME_KEPT_HERE = 'claude-review:theme';
+const LAYOUT_KEPT_HERE = 'claude-review:layout';
+const WHITESPACE_KEPT_HERE = 'claude-review:ignore-whitespace';
+const SOUND_KEPT_HERE = 'claude-review:reply-sound';
 
-/** A server holding these settings, or none, answering a read and echoing a change. */
-function serving(settings: ReaderSettings, stored: boolean) {
-	const mock = vi.fn().mockImplementation((_url: string, init?: RequestInit) =>
-		Promise.resolve({
-			ok: true,
-			json: () =>
-				Promise.resolve(
-					init?.method === 'PUT'
-						? { ...settings, ...JSON.parse(String(init.body)) }
-						: { settings, stored }
-				)
-		})
-	);
-	vi.stubGlobal('fetch', mock);
-	return mock;
-}
-
-function changesSent(mock: ReturnType<typeof vi.fn>): unknown[] {
-	return mock.mock.calls
-		.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')
-		.map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+/** A server holding these settings, or none, and taking every change on top of them. */
+function serving(settings: ReaderSettings, stored: boolean): FakeServer {
+	const server = fakeServer();
+	server.answer('GET /api/settings', { settings, stored });
+	keepingSettings(server, settings);
+	return server;
 }
 
 describe('the reader settings', () => {
-	beforeEach(() => {
-		localStorage.clear();
-		settingsStore.clear();
-	});
-
-
 	it('come from the server, the same in every review', async () => {
 		serving({ ...NEW_READER, diff_layout: 'split', theme: 'dark' }, true);
 
@@ -49,60 +35,100 @@ describe('the reader settings', () => {
 	});
 
 	it('take over what this browser kept before the server did, once', async () => {
-		localStorage.setItem('claude-review:layout', 'split');
-		localStorage.setItem('claude-review:reply-sound', 'on');
-		const fetchMock = serving(NEW_READER, false);
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
+		localStorage.setItem(SOUND_KEPT_HERE, 'on');
+		const server = serving(NEW_READER, false);
 
 		await settingsStore.load();
 
-		expect(changesSent(fetchMock)).toEqual([
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
 			{ theme: 'system', diff_layout: 'split', ignore_whitespace: false, sound_on_replies: true }
 		]);
 		expect(settingsStore.settings.diff_layout).toBe('split');
 		// Dropped, so another review does not hand over stale copies later
-		expect(localStorage.getItem('claude-review:layout')).toBeNull();
-		expect(localStorage.getItem('claude-review:reply-sound')).toBeNull();
+		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBeNull();
+		expect(localStorage.getItem(SOUND_KEPT_HERE)).toBeNull();
+	});
+
+	it('take over a theme this browser kept, when the server has nothing stored', async () => {
+		localStorage.setItem(THEME_KEPT_HERE, 'dark');
+		const server = serving(NEW_READER, false);
+
+		await settingsStore.load();
+
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NEW_READER, theme: 'dark' }]);
+		expect(settingsStore.settings.theme).toBe('dark');
+		expect(localStorage.getItem(THEME_KEPT_HERE)).toBe('dark');
+	});
+
+	it('keep what this browser kept for next time when the server would not take it', async () => {
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
+		localStorage.setItem(WHITESPACE_KEPT_HERE, 'on');
+		const server = serving(NEW_READER, false);
+		server.refuse('PUT /api/settings', SERVER_ERROR);
+
+		await settingsStore.load();
+
+		expect(server.bodiesSentTo('PUT /api/settings')).toHaveLength(1);
+		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBe('split');
+		expect(localStorage.getItem(WHITESPACE_KEPT_HERE)).toBe('on');
+	});
+
+	it('stay as a new reader has them, handing nothing over, when the server cannot say', async () => {
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
+		const server = serving(NEW_READER, false);
+		server.refuse('GET /api/settings', SERVER_ERROR);
+
+		await settingsStore.load();
+
+		expect(settingsStore.settings).toEqual(NEW_READER);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
+		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBe('split');
 	});
 
 	it('leave out a choice this browser kept that is no longer a choice', async () => {
-		localStorage.setItem('claude-review:layout', 'three-columns');
-		localStorage.setItem('claude-review:ignore-whitespace', 'on');
-		const fetchMock = serving(NEW_READER, false);
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'three-columns');
+		localStorage.setItem(WHITESPACE_KEPT_HERE, 'on');
+		const server = serving(NEW_READER, false);
 
 		await settingsStore.load();
 
-		expect(changesSent(fetchMock)).toEqual([{ ...NEW_READER, ignore_whitespace: true }]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
+			{ ...NEW_READER, ignore_whitespace: true }
+		]);
 	});
 
 	it('hand nothing over when this browser kept nothing', async () => {
-		const fetchMock = serving(NEW_READER, false);
+		const server = serving(NEW_READER, false);
 
 		await settingsStore.load();
 
-		expect(changesSent(fetchMock)).toEqual([]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
 	});
 
 	it('take nothing over once the server has settings of its own', async () => {
-		localStorage.setItem('claude-review:layout', 'split');
-		const fetchMock = serving(NEW_READER, true);
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
+		const server = serving(NEW_READER, true);
 
 		await settingsStore.load();
 
-		expect(changesSent(fetchMock)).toEqual([]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
 		expect(settingsStore.settings.diff_layout).toBe('unified');
 	});
 
 	it('apply a change at once and send only what changed', async () => {
-		const fetchMock = serving(NEW_READER, true);
+		const server = serving(NEW_READER, true);
 
 		await settingsStore.change({ ignore_whitespace: true });
 
 		expect(settingsStore.settings.ignore_whitespace).toBe(true);
-		expect(changesSent(fetchMock)).toEqual([{ ignore_whitespace: true }]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ignore_whitespace: true }]);
 	});
 
-	it('keep reading with what the tab has when the server cannot say', async () => {
-		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('gone')));
+	it('keep reading with what the tab has when the server cannot be reached', async () => {
+		const server = fakeServer();
+		server.drop('GET /api/settings');
+		server.drop('PUT /api/settings');
 
 		await settingsStore.load();
 		await settingsStore.change({ diff_layout: 'split' });

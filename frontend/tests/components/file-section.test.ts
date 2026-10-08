@@ -4,33 +4,17 @@ import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
-import type { DiffFile } from '$lib/types';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { BAD_REQUEST, fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 
-const file: DiffFile = {
+const file = diffFile({
 	path: 'src/core/session.py',
-	status: 'modified',
-	hunks: [
-		{
-			header: '@@ -1,3 +1,3 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: 1, new_no: 1, content: 'import os' },
-				{ type: 'delete', old_no: 2, new_no: null, content: 'x = 1' },
-				{ type: 'add', old_no: null, new_no: 2, content: 'x = 2' }
-			]
-		}
-	],
-	is_binary: false,
-	old_mode: null,
-	new_mode: null
-};
+	hunks: [hunk([contextLine(1, 1, 'import os'), removedLine(2, 'x = 1'), addedLine(2, 'x = 2')])]
+});
 
-describe('FileSection', () => {
+describe('a file in the review', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
 		diffStore.setFiles([file], 'diff');
 	});
 
@@ -88,7 +72,7 @@ describe('FileSection', () => {
 	});
 
 	it('shows how many comments the file carries', () => {
-		commentStore.add(newComment({ file: 'src/core/session.py', side: 'new', startLine: 2, endLine: 2, body: 'rename this' }));
+		commentStore.add(newComment({ file: 'src/core/session.py', startLine: 2, body: 'rename this' }));
 
 		const { getByTestId } = render(FileSection, { props: { file } });
 
@@ -104,34 +88,29 @@ describe('FileSection', () => {
 
 describe('a file the last round rewrote', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
 		diffStore.setFiles([file], 'diff');
 		diffStore.noteRetaken({ followed: 0, outdated: 0 }, ['src/core/session.py'], 2);
 	});
 
 	it('shows only what changed since that round when asked', async () => {
 		const user = userEvent.setup({ delay: null });
-		const asked = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ files: [file], mode: 'diff', title: '', phrase: 'changes since round 2' })
-		});
-		vi.stubGlobal('fetch', asked);
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse({ files: [file], phrase: 'changes since round 2' }));
 		const { getByTestId } = render(FileSection, { props: { file } });
 
 		await user.click(getByTestId('file-changed-since'));
 
-		expect(asked.mock.calls[0][0]).toBe('/api/diff?base=round%3A2');
+		expect(server.requests).toMatchObject([{ path: '/api/diff', query: { base: 'round:2' } }]);
 		await vi.waitFor(() => expect(diffStore.base).toBe('round:2'));
 	});
 
 	it('says so when that round cannot be shown', async () => {
 		const user = userEvent.setup({ delay: null });
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+		fakeServer().refuse('GET /api/diff', BAD_REQUEST);
 		const { getByTestId, findByTestId } = render(FileSection, { props: { file } });
 
 		await user.click(getByTestId('file-changed-since'));
 
-		expect((await findByTestId('changed-since-error')).textContent).toContain('400');
+		expect((await findByTestId('changed-since-error')).textContent).toContain(String(BAD_REQUEST));
 	});
 });

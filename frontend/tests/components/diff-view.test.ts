@@ -1,107 +1,72 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { describe, it, expect } from 'vitest';
+import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
-import { settingsStore } from '$lib/stores/settings.svelte';
-import type { DiffFile } from '$lib/types';
+import { addedLine, contextLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
+import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 
-const diffFile: DiffFile = {
+const changedFile = diffFile({
 	path: 'src/handler.ts',
-	status: 'modified',
-	is_binary: false,
-	old_mode: null,
-	new_mode: null,
 	hunks: [
-		{
-			header: '@@ -1,3 +1,4 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: 1, new_no: 1, content: 'const x = 1;' },
-				{ type: 'delete', old_no: 2, new_no: null, content: 'const y = 2;' },
-				{ type: 'add', old_no: null, new_no: 2, content: 'const y = 3;' }
-			]
-		}
+		hunk([
+			contextLine(1, 1, 'const x = 1;'),
+			removedLine(2, 'const y = 2;'),
+			addedLine(2, 'const y = 3;')
+		])
 	]
-};
+});
 
 /** The same change, further down a file, with lines hidden above it. */
-const jumpingFile: DiffFile = {
+const jumpingFile = diffFile({
 	path: 'src/later.ts',
-	status: 'modified',
-	is_binary: false,
-	old_mode: null,
-	new_mode: null,
 	hunks: [
-		{
+		hunk([contextLine(30, 30, 'const x = 1;'), addedLine(31, 'const y = 3;')], {
 			header: '@@ -30,3 +30,4 @@',
 			old_start: 30,
-			new_start: 30,
-			lines: [
-				{ type: 'context', old_no: 30, new_no: 30, content: 'const x = 1;' },
-				{ type: 'add', old_no: null, new_no: 31, content: 'const y = 3;' }
-			]
-		}
+			new_start: 30
+		})
 	]
-};
+});
 
-const textFile: DiffFile = {
-	path: '/tmp/plan.md',
+const secondFile = diffFile({
+	path: 'src/other.ts',
 	status: 'added',
-	is_binary: false,
-	old_mode: null,
-	new_mode: null,
-	hunks: [
-		{
-			header: '',
-			old_start: 0,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: null, new_no: 1, content: '# My Plan' },
-				{ type: 'context', old_no: null, new_no: 2, content: 'Step one' }
-			]
-		}
-	]
-};
+	hunks: [hunk([addedLine(1, 'export const x = 1;')], { old_start: 0 })]
+});
 
-describe('DiffView', () => {
-	beforeEach(() => {
-		// The reader's view choices outlive a review now, so a test about
-		// defaults has to start without one stored
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-	});
+const plan = wholeFile('/tmp/plan.md', '# My Plan', 'Step one');
+const readme = wholeFile('docs/readme.md', '# Hello');
 
-	it('shows file path in header', () => {
-		diffStore.setFiles([diffFile], 'diff');
+describe('a diff on screen', () => {
+	it('names each file', () => {
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { getByText } = render(DiffView);
 
 		expect(getByText('src/handler.ts')).toBeTruthy();
 	});
 
-	it('shows file status badge in diff mode', () => {
-		diffStore.setFiles([diffFile], 'diff');
+	it('says how each file changed', () => {
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { getByText } = render(DiffView);
 
 		expect(getByText('modified')).toBeTruthy();
 	});
 
-	it('hides file status badge in files mode', () => {
-		diffStore.setFiles([textFile], 'files');
+	it('says nothing of a change when the files are read whole', () => {
+		diffStore.setFiles([plan], 'files');
 
 		const { queryByText } = render(DiffView);
 
 		expect(queryByText('added')).toBeNull();
 	});
 
-	it('renders line content', () => {
-		diffStore.setFiles([diffFile], 'diff');
+	it('shows what each line says', () => {
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { getByTestId } = render(DiffView);
 
@@ -109,15 +74,15 @@ describe('DiffView', () => {
 		expect(getByTestId('diff-view').textContent).toContain('const x = 1;');
 	});
 
-	it('renders line gutters for commenting', () => {
-		diffStore.setFiles([textFile], 'files');
+	it('numbers every line, to comment on', () => {
+		diffStore.setFiles([plan], 'files');
 
 		const { getAllByTestId } = render(DiffView);
 
-		const gutters = getAllByTestId('line-gutter');
-		expect(gutters).toHaveLength(2);
-		expect(gutters[0].textContent?.trim()).toBe('1');
-		expect(gutters[1].textContent?.trim()).toBe('2');
+		expect(getAllByTestId('line-gutter').map((gutter) => gutter.textContent?.trim())).toEqual([
+			'1',
+			'2'
+		]);
 	});
 
 	it('marks where the diff jumps, and says how far', () => {
@@ -130,7 +95,7 @@ describe('DiffView', () => {
 	});
 
 	it('leaves the marker out where the code runs on unbroken', () => {
-		diffStore.setFiles([diffFile], 'diff');
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { queryByTestId } = render(DiffView);
 
@@ -139,35 +104,19 @@ describe('DiffView', () => {
 		expect(queryByTestId('hunk-header')).toBeNull();
 	});
 
-	it('hides hunk header in files mode', () => {
-		diffStore.setFiles([textFile], 'files');
+	it('marks no jumps in a file read whole', () => {
+		diffStore.setFiles([plan], 'files');
 
-		const { queryByText } = render(DiffView);
+		const { queryByTestId } = render(DiffView);
 
-		// Empty header should not render
-		expect(queryByText('@@ ')).toBeNull();
+		expect(queryByTestId('hunk-header')).toBeNull();
 	});
 
-	it('renders transcript message content', () => {
-		const transcriptFile: DiffFile = {
-			path: 'user-1',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [
-						{ type: 'context', old_no: null, new_no: 1, content: 'can you refactor auth?' },
-						{ type: 'context', old_no: null, new_no: 2, content: 'use JWT instead' }
-					]
-				}
-			]
-		};
-		diffStore.setFiles([transcriptFile], 'transcript');
+	it('shows what a transcript message says', () => {
+		diffStore.setFiles(
+			[wholeFile('user-1', 'can you refactor auth?', 'use JWT instead')],
+			'transcript'
+		);
 
 		const { getByTestId } = render(DiffView);
 
@@ -175,77 +124,51 @@ describe('DiffView', () => {
 		expect(getByTestId('diff-view').textContent).toContain('use JWT instead');
 	});
 
-	it('shows content view toggle for markdown files', () => {
-		const mdFile: DiffFile = {
-			path: 'docs/readme.md',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
-				}
-			]
-		};
-		diffStore.setFiles([mdFile], 'files');
+	it('says nothing of a change in a transcript', () => {
+		diffStore.setFiles([wholeFile('assistant-2', 'response')], 'transcript');
+
+		const { queryByText } = render(DiffView);
+
+		expect(queryByText('added')).toBeNull();
+	});
+});
+
+describe('how a markdown file is shown', () => {
+	it('can be chosen for a markdown file', () => {
+		diffStore.setFiles([readme], 'files');
 
 		const { getByTestId } = render(DiffView);
 
 		expect(getByTestId('content-view-toggle')).toBeTruthy();
 	});
 
-	it('hides content view toggle for non-markdown files', () => {
-		diffStore.setFiles([diffFile], 'diff');
+	it('is not offered for code', () => {
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { queryByTestId } = render(DiffView);
 
 		expect(queryByTestId('content-view-toggle')).toBeNull();
 	});
 
-	it('shows content view toggle in transcript mode', () => {
-		const transcriptFile: DiffFile = {
-			path: 'assistant (14:30) #1',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Response' }]
-				}
-			]
-		};
-		diffStore.setFiles([transcriptFile], 'transcript');
+	it('can be chosen for a transcript message', () => {
+		diffStore.setFiles([wholeFile('assistant (14:30) #1', '# Response')], 'transcript');
 
 		const { getByTestId } = render(DiffView);
 
 		expect(getByTestId('content-view-toggle')).toBeTruthy();
 	});
 
-	it('switches to preview mode when toggle is clicked', async () => {
-		const mdFile: DiffFile = {
-			path: 'docs/readme.md',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
-				}
-			]
-		};
-		diffStore.setFiles([mdFile], 'files');
+	it('is the raw text until the reader picks another way', () => {
+		diffStore.setFiles([readme], 'files');
+
+		const { getByTestId, queryByTestId } = render(DiffView);
+
+		expect(getByTestId('raw-view')).toBeTruthy();
+		expect(queryByTestId('preview-view')).toBeNull();
+	});
+
+	it('is the preview once the reader picks it', async () => {
+		diffStore.setFiles([readme], 'files');
 
 		const { getByTestId, queryByTestId } = render(DiffView);
 
@@ -255,24 +178,9 @@ describe('DiffView', () => {
 		expect(queryByTestId('raw-view')).toBeNull();
 	});
 
-	it('preview mode shows comment badge when comments exist', async () => {
-		const mdFile: DiffFile = {
-			path: 'docs/readme.md',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
-				}
-			]
-		};
-		diffStore.setFiles([mdFile], 'files');
-		commentStore.add(newComment({ file: 'docs/readme.md', side: 'new', startLine: 1, endLine: 1, body: 'Fix this heading' }));
+	it('says in the preview that comments are on the raw text', async () => {
+		diffStore.setFiles([readme], 'files');
+		commentStore.add(newComment({ file: 'docs/readme.md', startLine: 1, body: 'Fix this heading' }));
 
 		const { getByTestId } = render(DiffView);
 
@@ -283,47 +191,8 @@ describe('DiffView', () => {
 		expect(badge.textContent).toContain('switch to Raw');
 	});
 
-	it('shows raw view by default for markdown files', () => {
-		const mdFile: DiffFile = {
-			path: 'docs/readme.md',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
-				}
-			]
-		};
-		diffStore.setFiles([mdFile], 'files');
-
-		const { getByTestId, queryByTestId } = render(DiffView);
-
-		expect(getByTestId('raw-view')).toBeTruthy();
-		expect(queryByTestId('preview-view')).toBeNull();
-	});
-
-	it('switches to side-by-side mode when toggle is clicked', async () => {
-		const mdFile: DiffFile = {
-			path: 'docs/readme.md',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Hello' }]
-				}
-			]
-		};
-		diffStore.setFiles([mdFile], 'files');
+	it('is both side by side once the reader picks that', async () => {
+		diffStore.setFiles([readme], 'files');
 
 		const { getByTestId, queryByTestId } = render(DiffView);
 
@@ -335,44 +204,15 @@ describe('DiffView', () => {
 		expect(getByTestId('markdown-content')).toBeTruthy();
 		expect(queryByTestId('preview-view')).toBeNull();
 	});
-
-	it('hides status badge in transcript mode', () => {
-		const transcriptFile: DiffFile = {
-			path: 'assistant-2',
-			status: 'added',
-			is_binary: false,
-			old_mode: null,
-			new_mode: null,
-			hunks: [
-				{
-					header: '',
-					old_start: 0,
-					new_start: 1,
-					lines: [{ type: 'context', old_no: null, new_no: 1, content: 'response' }]
-				}
-			]
-		};
-		diffStore.setFiles([transcriptFile], 'transcript');
-
-		const { queryByText } = render(DiffView);
-
-		expect(queryByText('added')).toBeNull();
-	});
 });
 
 describe('comment anchoring across diff sides', () => {
-	beforeEach(() => {
-		// The reader's view choices outlive a review now, so a test about
-		// defaults has to start without one stored
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-	});
-
 	it('shows a comment on a removed line only once', () => {
 		// The fixture replaces line 2, so old line 2 and new line 2 both exist.
-		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(
+			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
+		);
 
 		const { getAllByText } = render(DiffView);
 
@@ -380,8 +220,10 @@ describe('comment anchoring across diff sides', () => {
 	});
 
 	it('labels a comment on a removed line as removed', () => {
-		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(
+			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
+		);
 
 		const { getByTestId } = render(DiffView);
 
@@ -389,9 +231,13 @@ describe('comment anchoring across diff sides', () => {
 	});
 
 	it('shows both sides of a replaced line as separate comments', () => {
-		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'the old one' }));
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'the new one' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(
+			newComment({ file: changedFile.path, side: 'old', startLine: 2, body: 'the old one' })
+		);
+		commentStore.add(
+			newComment({ file: changedFile.path, side: 'new', startLine: 2, body: 'the new one' })
+		);
 
 		const { getAllByText } = render(DiffView);
 
@@ -401,31 +247,13 @@ describe('comment anchoring across diff sides', () => {
 });
 
 describe('files with no lines to show', () => {
-	beforeEach(() => {
-		// The reader's view choices outlive a review now, so a test about
-		// defaults has to start without one stored
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-	});
+	const binaryFile = diffFile({ path: 'docs/logo.png', status: 'added', is_binary: true });
 
-	const binaryFile: DiffFile = {
-		path: 'docs/logo.png',
-		status: 'added',
-		hunks: [],
-		is_binary: true,
-		old_mode: null,
-		new_mode: null
-	};
-
-	const modeOnlyFile: DiffFile = {
+	const modeOnlyFile = diffFile({
 		path: 'scripts/run.sh',
-		status: 'modified',
-		hunks: [],
-		is_binary: false,
 		old_mode: '100644',
 		new_mode: '100755'
-	};
+	});
 
 	it('explains why a binary file shows nothing', () => {
 		diffStore.setFiles([binaryFile], 'diff');
@@ -444,19 +272,18 @@ describe('files with no lines to show', () => {
 	});
 
 	it('keeps a permission change in sight when the diff reads across two columns', () => {
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }));
+		keepingSettings(fakeServer());
 		diffStore.setDiffLayout('split');
-		diffStore.setFiles([{ ...diffFile, old_mode: '100644', new_mode: '100755' }], 'diff');
+		diffStore.setFiles([{ ...changedFile, old_mode: '100644', new_mode: '100755' }], 'diff');
 
 		const { getByTestId } = render(DiffView);
 
 		expect(getByTestId('split-view')).toBeTruthy();
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
-		settingsStore.clear();
 	});
 
 	it('does not claim an empty panel for a file that has hunks', () => {
-		diffStore.setFiles([diffFile], 'diff');
+		diffStore.setFiles([changedFile], 'diff');
 
 		const { queryByTestId } = render(DiffView);
 
@@ -466,21 +293,15 @@ describe('files with no lines to show', () => {
 });
 
 describe('editing a comment', () => {
-	beforeEach(() => {
-		// The reader's view choices outlive a review now, so a test about
-		// defaults has to start without one stored
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-	});
-
 	it('keeps the removed wording when the comment is reopened for editing', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles([diffFile], 'diff');
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, endLine: 2, body: 'why was this dropped' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(
+			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
+		);
 
 		const { getByText, getByTestId } = render(DiffView);
-		await user.click(getByText('Edit'));
+		await user.click(getByTestId('edit-comment'));
 
 		expect(getByTestId('comment-input')).toBeTruthy();
 		expect(getByText('Removed line 2')).toBeTruthy();
@@ -488,32 +309,8 @@ describe('editing a comment', () => {
 });
 
 describe('the diff as one stream', () => {
-	beforeEach(() => {
-		// The reader's view choices outlive a review now, so a test about
-		// defaults has to start without one stored
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-	});
-
-	const second: DiffFile = {
-		path: 'src/other.ts',
-		status: 'added',
-		hunks: [
-			{
-				header: '@@ -0,0 +1,1 @@',
-				old_start: 0,
-				new_start: 1,
-				lines: [{ type: 'add', old_no: null, new_no: 1, content: 'export const x = 1;' }]
-			}
-		],
-		is_binary: false,
-		old_mode: null,
-		new_mode: null
-	};
-
 	it('shows every file at once instead of one at a time', () => {
-		diffStore.setFiles([diffFile, second], 'diff');
+		diffStore.setFiles([changedFile, secondFile], 'diff');
 
 		const { getAllByTestId } = render(DiffView);
 
@@ -521,23 +318,22 @@ describe('the diff as one stream', () => {
 	});
 
 	it('keeps the files in the order the diff gave them', () => {
-		diffStore.setFiles([diffFile, second], 'diff');
+		diffStore.setFiles([changedFile, secondFile], 'diff');
 
 		const { getAllByTestId } = render(DiffView);
-		const paths = getAllByTestId('file-section').map((el) => el.dataset.path);
+		const paths = getAllByTestId('file-section').map((section) => section.dataset.path);
 
 		expect(paths).toEqual(['src/handler.ts', 'src/other.ts']);
 	});
 
 	it('lets a comment be left on any file without switching to it first', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles([diffFile, second], 'diff');
+		diffStore.setFiles([changedFile, secondFile], 'diff');
 
 		const { getAllByTestId, getByTestId } = render(DiffView);
-		const secondSection = getAllByTestId('file-section')[1];
-		const gutter = secondSection.querySelector('[data-testid="line-gutter"]')!;
+		const [, second] = getAllByTestId('file-section');
 
-		await user.click(gutter);
+		await user.click(within(second).getAllByTestId('line-gutter')[0]);
 		await user.click(document.body);
 
 		expect(getByTestId('comment-input')).toBeTruthy();
@@ -545,14 +341,16 @@ describe('the diff as one stream', () => {
 });
 
 describe('showing how a comment is meant', () => {
-	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
-		diffStore.setFiles([diffFile], 'diff');
-	});
-
 	it('marks a blocker as one', () => {
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'This drops the lock', severity: 'blocker' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(
+			newComment({
+				file: 'src/handler.ts',
+				startLine: 2,
+				body: 'This drops the lock',
+				severity: 'blocker'
+			})
+		);
 
 		const { getByTestId } = render(DiffView);
 
@@ -560,7 +358,8 @@ describe('showing how a comment is meant', () => {
 	});
 
 	it('says nothing on an ordinary note', () => {
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Reads well' }));
+		diffStore.setFiles([changedFile], 'diff');
+		commentStore.add(newComment({ file: 'src/handler.ts', startLine: 2, body: 'Reads well' }));
 
 		const { queryByTestId } = render(DiffView);
 

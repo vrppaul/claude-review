@@ -185,7 +185,7 @@
 							(row.left && hunkOffsets[hunkIdx] + row.left.index === boxAt) ||
 							(row.right && hunkOffsets[hunkIdx] + row.right.index === boxAt)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<tr class="cr-side-del">
+						<tr data-testid="split-row" class="cr-side-del">
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(
@@ -219,6 +219,7 @@
 								{/if}
 							</td>
 							<td
+								data-testid="split-old-code"
 								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(
 									row.left,
 									'delete'
@@ -252,7 +253,10 @@
 									</button>
 								{/if}
 							</td>
-							<td class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'add')}">
+							<td
+								data-testid="split-new-code"
+								class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'add')}"
+							>
 								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}
 							</td>
 						</tr>

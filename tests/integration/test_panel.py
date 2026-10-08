@@ -5,31 +5,26 @@ tests, a file nobody commented on — and it reaches the same agent, over the
 same queue, so an answer written after a round arrives after it.
 """
 
-import asyncio
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
-import pytest
-from httpx import ASGITransport, AsyncClient
-
-from claude_review.domain.models import (
-    DiffFile,
-    DiffHunk,
-    DiffLine,
-    FileStatus,
-    LineType,
-    ReaderFiles,
-    ReviewMode,
-    ReviewWorkspace,
-    ThreadContext,
-    Turn,
+from tests.helpers import (
+    CONTEXT_ROUTE,
+    DIFF_ROUTE,
+    EVENTS_ROUTE,
+    REVIEWED_FILE,
+    REVIEWED_LINE,
+    WAIT_FOR_EVENT,
+    next_push,
+    open_session,
+    until_the_review_holds_threads,
 )
-from claude_review.presentation.app import create_app
-from claude_review.presentation.state import ServerState
 
 MESSAGE = {"message_id": "panel-1", "text": "Run the tests and say what fails."}
 
 THREAD = {
     "anchor": {
-        "file": "src/a.py",
+        "file": REVIEWED_FILE,
         "side": "new",
         "start_line": 42,
         "end_line": 42,
@@ -41,7 +36,7 @@ THREAD = {
 }
 
 QUESTION = {
-    "anchor": {"file": "src/a.py", "side": "new", "start_line": 42, "end_line": 42, "quote": []},
+    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 42, "end_line": 42, "quote": []},
     "thread_id": "comment-1",
     "question_id": "comment-1",
     "body": "Why did you drop the None check?",
@@ -51,42 +46,11 @@ QUESTION = {
 }
 
 
-@pytest.fixture
-def state() -> ServerState:
-    return ServerState(shutdown_event=asyncio.Event())
-
-
-def _files() -> list[DiffFile]:
-    return [
-        DiffFile(
-            path="src/a.py",
-            status=FileStatus.MODIFIED,
-            hunks=[
-                DiffHunk(
-                    header="@@ -1 +1 @@",
-                    old_start=1,
-                    new_start=1,
-                    lines=[DiffLine(type=LineType.CONTEXT, old_no=1, new_no=1, content="x = 1")],
-                )
-            ],
-        )
-    ]
-
-
-@pytest.fixture
-async def client(state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles):
-    app = create_app(
-        diff_files=_files(), state=state, mode=ReviewMode.DIFF, workspace=workspace, reader_files=reader_files
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
-        yield ac
-
-
 async def test_a_message_reaches_whoever_is_waiting(client: AsyncClient) -> None:
     """What is typed in the panel is handed over as its own kind of event."""
     await client.post("/api/message", json=MESSAGE)
 
-    event = (await client.get("/api/events?wait_seconds=1")).json()
+    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert event["type"] == "message"
     assert event["message"]["text"] == "Run the tests and say what fails."
@@ -97,7 +61,7 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
     """A chip is a reference; what travels is the thread it refers to."""
     await client.post("/api/message", json={**MESSAGE, "threads": [THREAD]})
 
-    event = (await client.get("/api/events?wait_seconds=1")).json()
+    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [thread] = event["message"]["threads"]
     assert thread["thread_id"] == "comment-1"
@@ -111,22 +75,24 @@ async def test_questions_rounds_and_messages_keep_one_order(client: AsyncClient)
     await client.post("/api/submit", json={"comments": [], "end": False})
     await client.post("/api/message", json=MESSAGE)
 
-    kinds = [(await client.get("/api/events?wait_seconds=1")).json()["type"] for _ in range(3)]
+    handed_in_order = ["question", "round", "message"]
 
-    assert kinds == ["question", "round", "message"]
+    taken = [(await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["type"] for _ in handed_in_order]
+
+    assert taken == handed_in_order
 
 
-async def test_an_answer_lands_in_the_panel_of_a_review_still_open(client: AsyncClient, state: ServerState) -> None:
+def test_an_answer_lands_in_the_panel_of_a_review_still_open(review_page: TestClient) -> None:
     """The answer comes back down the socket every review already holds."""
-    heard: list[dict] = []
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed and green."})
 
-    await client.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed and green."})
-
-    while not listener.empty():
-        heard.append(listener.get_nowait())
-
-    assert heard == [{"type": "chat", "message_id": "panel-1", "text": "One failed; fixed and green.", "files": []}]
+        assert next_push(socket, "chat") == {
+            "type": "chat",
+            "message_id": "panel-1",
+            "text": "One failed; fixed and green.",
+            "files": [],
+        }
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:
@@ -134,44 +100,44 @@ async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> 
     await client.post("/api/message", json=MESSAGE)
     await client.post("/api/cancel", json={"message_id": "panel-1"})
 
-    first = (await client.get("/api/events?wait_seconds=1")).json()
-    second = (await client.get("/api/events?wait_seconds=1")).json()
+    first = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    second = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert first["type"] == "message"
     assert second["type"] == "cancel"
     assert second["cancel"]["message_id"] == "panel-1"
 
 
-async def test_the_author_can_raise_a_thread_on_a_line(client: AsyncClient, state: ServerState) -> None:
+def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> None:
     """What belongs on the code goes on the code, not into the panel."""
-    listener = state.listen()
-
-    response = await client.post(
-        "/api/point",
-        json={
-            "file": "src/a.py",
-            "side": "new",
-            "start_line": 1,
-            "end_line": 1,
-            "body": "I did this differently from what was asked, because...",
-            "severity": "question",
-        },
-    )
+    with open_session(review_page) as socket:
+        response = review_page.post(
+            "/api/point",
+            json={
+                "file": REVIEWED_FILE,
+                "side": "new",
+                "start_line": 1,
+                "end_line": 1,
+                "body": "I did this differently from what was asked, because...",
+                "severity": "question",
+            },
+        )
+        pushed = next_push(socket, "point")
 
     assert response.json()["thread_id"] == "raised-1"
-    pushed = listener.get_nowait()
-    assert pushed["type"] == "point"
-    assert pushed["anchor"]["file"] == "src/a.py"
-    assert pushed["anchor"]["start_line"] == 1
+    assert pushed["thread_id"] == "raised-1"
+    assert (pushed["anchor"]["file"], pushed["anchor"]["start_line"]) == (REVIEWED_FILE, 1)
     # Quoted from the diff, so the thread can follow its line when it moves
-    assert pushed["anchor"]["quote"] == ["x = 1"]
+    assert pushed["anchor"]["quote"] == [REVIEWED_LINE]
     assert pushed["severity"] == "question"
 
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
-    first = await client.post("/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "one"})
-    second = await client.post("/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "two"})
+    first = await client.post("/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "one"})
+    second = await client.post(
+        "/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "two"}
+    )
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
@@ -180,7 +146,7 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
 async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     """A thread that ends before it starts hangs on nothing."""
     response = await client.post(
-        "/api/point", json={"file": "src/a.py", "start_line": 9, "end_line": 2, "body": "nowhere"}
+        "/api/point", json={"file": REVIEWED_FILE, "start_line": 9, "end_line": 2, "body": "nowhere"}
     )
 
     assert response.status_code == 422
@@ -194,14 +160,14 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
 
     assert response.status_code == 404
     assert "not in this review" in response.json()["detail"]
-    assert "src/a.py" in response.json()["detail"]
+    assert REVIEWED_FILE in response.json()["detail"]
 
 
 async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: AsyncClient) -> None:
     """An unchanged line has an old number too, but nothing was removed there to talk about."""
     response = await client.post(
         "/api/point",
-        json={"file": "src/a.py", "side": "old", "start_line": 1, "end_line": 1, "body": "this one"},
+        json={"file": REVIEWED_FILE, "side": "old", "start_line": 1, "end_line": 1, "body": "this one"},
     )
 
     assert response.status_code == 422
@@ -211,7 +177,7 @@ async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: 
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
     """The quote would come back empty and go outdated at the next retake."""
     response = await client.post(
-        "/api/point", json={"file": "src/a.py", "start_line": 900, "end_line": 900, "body": "far away"}
+        "/api/point", json={"file": REVIEWED_FILE, "start_line": 900, "end_line": 900, "body": "far away"}
     )
 
     assert response.status_code == 422
@@ -221,83 +187,75 @@ async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: Asyn
 async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClient) -> None:
     """The check is a guard, not a hurdle: what is on screen goes through."""
     response = await client.post(
-        "/api/point", json={"file": "src/a.py", "start_line": 1, "end_line": 1, "body": "this line"}
+        "/api/point", json={"file": REVIEWED_FILE, "start_line": 1, "end_line": 1, "body": "this line"}
     )
 
     assert response.status_code == 200
 
 
-async def test_the_agent_may_speak_first(client: AsyncClient, state: ServerState) -> None:
+def test_the_agent_may_speak_first(review_page: TestClient) -> None:
     """Work finished while the reader reads is news they should not have to ask for."""
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post("/api/say", json={"text": "Tests are green again.", "files": ["src/cli.py"]})
+        pushed = next_push(socket, "chat")
 
-    await client.post("/api/say", json={"text": "Tests are green again.", "files": ["src/cli.py"]})
-
-    pushed = listener.get_nowait()
     assert pushed["message_id"] is None
     assert pushed["files"] == ["src/cli.py"]
 
 
-async def test_what_is_being_done_is_said_while_it_is_done(client: AsyncClient, state: ServerState) -> None:
+def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) -> None:
     """Waiting says only that something is happening; this says what."""
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post(
+            "/api/progress",
+            json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
+        )
+        pushed = next_push(socket, "progress")
 
-    await client.post(
-        "/api/progress",
-        json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
-    )
-
-    pushed = listener.get_nowait()
-    assert pushed["type"] == "progress"
     assert pushed["text"] == "rewriting the answer handler"
     assert pushed["files"] == ["a.ts", "b.ts"]
 
 
-async def test_work_that_branched_is_reported_as_branches(client: AsyncClient, state: ServerState) -> None:
+def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> None:
     """Three subagents are three branches, not a sentence about three subagents."""
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post(
+            "/api/progress",
+            json={
+                "text": "looking for other callers",
+                "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
+            },
+        )
+        pushed = next_push(socket, "progress")
 
-    await client.post(
-        "/api/progress",
-        json={
-            "text": "looking for other callers",
-            "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
-        },
-    )
-
-    pushed = listener.get_nowait()
     assert pushed["steps"] == [
         {"text": "ran the tests", "done": True},
         {"text": "three subagents out", "done": False},
     ]
 
 
-async def test_a_file_can_be_brought_into_view_when_asked(client: AsyncClient, state: ServerState) -> None:
+def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> None:
     """The one thing here that moves the reader's own screen."""
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-    await client.post("/api/show", json={"file": "src/a.py"})
-
-    assert listener.get_nowait() == {"type": "show", "file": "src/a.py"}
+        assert next_push(socket, "show") == {"type": "show", "file": REVIEWED_FILE}
 
 
-async def test_the_agent_says_what_only_the_agent_knows(client: AsyncClient, state: ServerState) -> None:
+def test_the_agent_says_what_only_the_agent_knows(review_page: TestClient) -> None:
     """Model and context cannot be measured here, so they are reported."""
-    listener = state.listen()
+    with open_session(review_page) as socket:
+        review_page.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
+        pushed = next_push(socket, "status")
 
-    await client.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
-
-    pushed = listener.get_nowait()
-    assert pushed["type"] == "status"
-    assert pushed["model"] == "opus-5"
-    assert pushed["context"] == "53% of 1M"
+    assert (pushed["model"], pushed["context"]) == ("opus-5", "53% of 1M")
 
 
 async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) -> None:
     """A push is gone once sent; the review has to get it from somewhere."""
     await client.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
 
-    diff = (await client.get("/api/diff")).json()
+    diff = (await client.get(DIFF_ROUTE)).json()
 
     assert diff["agent"]["model"] == "opus-5"
     assert diff["agent"]["context"] == "53% of 1M"
@@ -306,48 +264,47 @@ async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) ->
 
 async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncClient) -> None:
     """A number nobody sent is a lie; the panel shows it as unknown."""
-    diff = (await client.get("/api/diff")).json()
+    diff = (await client.get(DIFF_ROUTE)).json()
 
     assert diff["agent"] == {"model": None, "context": None, "at": None}
 
 
-THREAD_INDEX = {
-    "anchor": {"file": "src/a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["x = 1"]},
+A_DISCUSSED_THREAD = {
+    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1, "quote": [REVIEWED_LINE]},
     "thread_id": "comment-1",
-    "where": "`src/a.py`:1",
     "body": "Why did you drop the None check?",
     "history": [{"author": "author", "body": "It moved to the caller.", "round": 1}],
     "severity": "question",
 }
 
 
-async def test_an_agent_arriving_late_is_told_what_the_review_holds(client: AsyncClient, state: ServerState) -> None:
+def test_an_agent_arriving_late_is_told_what_the_review_holds(review_page: TestClient) -> None:
     """`events` hands over what happens next, never what already happened."""
-    state.threads = [_to_context(THREAD_INDEX)]
-    await client.post("/api/message", json=MESSAGE)
-    await client.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed."})
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_DISCUSSED_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
+    review_page.post("/api/message", json=MESSAGE)
+    review_page.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed."})
 
-    seen = (await client.get("/api/context")).json()
+    seen = review_page.get(CONTEXT_ROUTE).json()
 
     assert seen["round"] == 1
     assert seen["file_count"] == 1
-    assert [t["thread_id"] for t in seen["threads"]] == ["comment-1"]
-    assert [(e["author"], e["text"]) for e in seen["panel"]] == [
+    assert [thread["thread_id"] for thread in seen["threads"]] == ["comment-1"]
+    assert [(entry["author"], entry["text"]) for entry in seen["panel"]] == [
         ("reader", "Run the tests and say what fails."),
         ("author", "One failed; fixed."),
     ]
 
 
-async def test_one_thread_can_be_asked_for_on_its_own(client: AsyncClient, state: ServerState) -> None:
+def test_one_thread_can_be_asked_for_on_its_own(review_page: TestClient) -> None:
     """An index is for choosing what to read; this is the reading."""
-    state.threads = [_to_context(THREAD_INDEX), _to_context({**THREAD_INDEX, "thread_id": "comment-2"})]
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_DISCUSSED_THREAD, {**A_DISCUSSED_THREAD, "thread_id": "comment-2"}]})
+        until_the_review_holds_threads(review_page, 2)
 
-    seen = (await client.get("/api/context?thread=comment-2")).json()
+    seen = review_page.get(CONTEXT_ROUTE, params={"thread": "comment-2"}).json()
 
-    assert [t["thread_id"] for t in seen["threads"]] == ["comment-2"]
+    assert [thread["thread_id"] for thread in seen["threads"]] == ["comment-2"]
     # Nothing about the panel: it was not what was asked for
     assert seen["panel"] == []
-
-
-def _to_context(raw: dict) -> ThreadContext:
-    return ThreadContext.model_validate({**raw, "history": [Turn.model_validate(t) for t in raw.get("history", [])]})

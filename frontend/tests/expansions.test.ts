@@ -6,87 +6,82 @@ import {
 	toContextLines,
 	EXPAND_STEP
 } from '$lib/utils/expansions';
-import type { DiffFile, DiffHunk, DiffLine } from '$lib/types';
+import type { DiffHunk } from '$lib/types';
+import { contextLine, diffFile, hunk } from './diff';
 
-function hunk(newStart: number, count: number): DiffHunk {
-	const lines: DiffLine[] = Array.from({ length: count }, (_, i) => ({
-		type: 'context',
-		old_no: newStart + i,
-		new_no: newStart + i,
-		content: `line ${newStart + i}`
-	}));
-	return { header: '', old_start: newStart, new_start: newStart, lines };
+/** A hunk of `count` unchanged lines from `newStart` on, numbered the same on both sides. */
+function unchangedHunk(newStart: number, count: number): DiffHunk {
+	const lines = Array.from({ length: count }, (_, offset) =>
+		contextLine(newStart + offset, newStart + offset, `line ${newStart + offset}`)
+	);
+	return hunk(lines, { header: '', old_start: newStart, new_start: newStart });
 }
 
-describe('hiddenAbove', () => {
+describe('how many lines a gap above a hunk hides', () => {
 	it('counts the lines the diff left out before the first hunk', () => {
-		expect(hiddenAbove([hunk(10, 3)], 0, 0)).toBe(9);
+		expect(hiddenAbove([unchangedHunk(10, 3)], 0, 0)).toBe(9);
 	});
 
 	it('counts nothing when a hunk starts at the top of the file', () => {
-		expect(hiddenAbove([hunk(1, 3)], 0, 0)).toBe(0);
+		expect(hiddenAbove([unchangedHunk(1, 3)], 0, 0)).toBe(0);
 	});
 
 	it('counts the lines between two hunks', () => {
 		// First hunk covers 1-3, second starts at 20
-		expect(hiddenAbove([hunk(1, 3), hunk(20, 2)], 1, 0)).toBe(16);
+		expect(hiddenAbove([unchangedHunk(1, 3), unchangedHunk(20, 2)], 1, 0)).toBe(16);
 	});
 
 	it('shrinks as lines are revealed', () => {
-		expect(hiddenAbove([hunk(1, 3), hunk(20, 2)], 1, 6)).toBe(10);
+		expect(hiddenAbove([unchangedHunk(1, 3), unchangedHunk(20, 2)], 1, 6)).toBe(10);
 	});
 
 	it('never goes below zero', () => {
-		expect(hiddenAbove([hunk(1, 3), hunk(20, 2)], 1, 99)).toBe(0);
+		expect(hiddenAbove([unchangedHunk(1, 3), unchangedHunk(20, 2)], 1, 99)).toBe(0);
 	});
 });
 
-describe('nextWindow', () => {
+describe('which lines the next reveal asks for', () => {
 	it('asks for the lines just above the hunk', () => {
-		expect(nextWindow([hunk(100, 2)], 0, 0)).toEqual({
+		expect(nextWindow([unchangedHunk(100, 2)], 0, 0)).toEqual({
 			start: 100 - EXPAND_STEP,
 			end: 99
 		});
 	});
 
 	it('continues from where the last reveal stopped', () => {
-		expect(nextWindow([hunk(100, 2)], 0, EXPAND_STEP)).toEqual({
+		expect(nextWindow([unchangedHunk(100, 2)], 0, EXPAND_STEP)).toEqual({
 			start: 100 - 2 * EXPAND_STEP,
 			end: 99 - EXPAND_STEP
 		});
 	});
 
 	it('takes a small gap in one go rather than in pieces', () => {
-		expect(nextWindow([hunk(1, 3), hunk(12, 2)], 1, 0)).toEqual({ start: 4, end: 11 });
+		expect(nextWindow([unchangedHunk(1, 3), unchangedHunk(12, 2)], 1, 0)).toEqual({
+			start: 4,
+			end: 11
+		});
 	});
 
 	it('never asks for a line before the first', () => {
-		const window = nextWindow([hunk(5, 2)], 0, 0);
+		const window = nextWindow([unchangedHunk(5, 2)], 0, 0);
 
 		expect(window).toEqual({ start: 1, end: 4 });
 	});
 
 	it('reports nothing left when the gap is closed', () => {
-		expect(nextWindow([hunk(1, 3)], 0, 0)).toBeNull();
+		expect(nextWindow([unchangedHunk(1, 3)], 0, 0)).toBeNull();
 	});
 });
 
-describe('withRevealed', () => {
-	const file: DiffFile = {
-		path: 'a.py',
-		status: 'modified',
-		hunks: [hunk(10, 2)],
-		is_binary: false,
-		old_mode: null,
-		new_mode: null
-	};
+describe('revealed lines in the file shown', () => {
+	const file = diffFile({ path: 'a.py', hunks: [unchangedHunk(10, 2)] });
 
 	it('puts revealed lines inside the hunk they sit above', () => {
 		const revealed = new Map([[0, toContextLines(8, ['line 8', 'line 9'])]]);
 
 		const shown = withRevealed(file, revealed);
 
-		expect(shown.hunks[0].lines.map((l) => l.new_no)).toEqual([8, 9, 10, 11]);
+		expect(shown.hunks[0].lines.map((line) => line.new_no)).toEqual([8, 9, 10, 11]);
 	});
 
 	it('leaves the file alone when nothing has been revealed', () => {
@@ -100,7 +95,7 @@ describe('withRevealed', () => {
 	});
 });
 
-describe('toContextLines', () => {
+describe('lines read from the file', () => {
 	it('numbers lines from where the window started', () => {
 		const lines = toContextLines(5, ['a', 'b']);
 

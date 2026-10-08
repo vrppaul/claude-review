@@ -1,74 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { registerSection } from '$lib/utils/scroll';
-import { commentStore } from '$lib/stores/comments.svelte';
-import type { DiffFile } from '$lib/types';
+import { addedLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
 
-const diffFiles: DiffFile[] = [
-	{
+const diffFiles = [
+	diffFile({
 		path: 'src/handler.ts',
-		status: 'modified',
-		is_binary: false,
-		old_mode: null,
-		new_mode: null,
-		hunks: [
-			{
-				header: '@@ -1,2 +1,3 @@',
-				old_start: 1,
-				new_start: 1,
-				lines: [
-					{ type: 'add', old_no: null, new_no: 1, content: 'new line' },
-					{ type: 'delete', old_no: 1, new_no: null, content: 'old line' }
-				]
-			}
-		]
-	},
-	{
-		path: 'src/utils.ts',
-		status: 'added',
-		is_binary: false,
-		old_mode: null,
-		new_mode: null,
-		hunks: []
-	}
+		hunks: [hunk([addedLine(1, 'new line'), removedLine(1, 'old line')])]
+	}),
+	diffFile({ path: 'src/utils.ts', status: 'added' })
 ];
 
-const textFiles: DiffFile[] = [
-	{
-		path: '/tmp/plan.md',
-		status: 'added',
-		is_binary: false,
-		old_mode: null,
-		new_mode: null,
-		hunks: [
-			{
-				header: '',
-				old_start: 0,
-				new_start: 1,
-				lines: [{ type: 'context', old_no: null, new_no: 1, content: '# Plan' }]
-			}
-		]
-	}
-];
-
-describe('FileList', () => {
-	beforeEach(() => {
-		commentStore.clear();
-		diffStore.clear();
-	});
-
-	it('shows file count in header', () => {
-		diffStore.setFiles(diffFiles, 'diff');
-
-		const { getByTestId } = render(FileList);
-		const header = getByTestId('sidebar-heading');
-
-		expect(header?.textContent).toContain('2');
-	});
-
+describe('the file tree', () => {
 	it('counts what is being reviewed, in words', () => {
 		diffStore.setFiles(diffFiles, 'diff');
 
@@ -78,7 +24,7 @@ describe('FileList', () => {
 	});
 
 	it('names plain files as files rather than changes', () => {
-		diffStore.setFiles(textFiles, 'files');
+		diffStore.setFiles([wholeFile('/tmp/plan.md', '# Plan')], 'files');
 
 		const { getByTestId } = render(FileList);
 
@@ -94,7 +40,7 @@ describe('FileList', () => {
 		expect(getByTestId('sidebar-heading').textContent).toBe('2 changed files · 1 viewed');
 	});
 
-	it('renders file items', () => {
+	it('lists every file', () => {
 		diffStore.setFiles(diffFiles, 'diff');
 
 		const { getAllByTestId } = render(FileList);
@@ -126,55 +72,17 @@ describe('FileList', () => {
 		expect(getAllByTestId('file-viewed-mark')).toHaveLength(1);
 	});
 
-	it('shows "Messages" header in transcript mode', () => {
-		const transcriptFiles: DiffFile[] = [
-			{
-				path: 'user-1',
-				status: 'added',
-				is_binary: false,
-				old_mode: null,
-				new_mode: null,
-				hunks: [
-					{
-						header: '',
-						old_start: 0,
-						new_start: 1,
-						lines: [{ type: 'context', old_no: null, new_no: 1, content: 'hello' }]
-					}
-				]
-			},
-			{
-				path: 'assistant-2',
-				status: 'added',
-				is_binary: false,
-				old_mode: null,
-				new_mode: null,
-				hunks: [
-					{
-						header: '',
-						old_start: 0,
-						new_start: 1,
-						lines: [{ type: 'context', old_no: null, new_no: 1, content: 'hi' }]
-					}
-				]
-			}
-		];
-		diffStore.setFiles(transcriptFiles, 'transcript');
+	it('counts a transcript in messages', () => {
+		diffStore.setFiles([wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')], 'transcript');
 
-		const { getByTestId, getAllByTestId, getByText } = render(FileList);
-		const header = getByTestId('sidebar').querySelector('h2');
+		const { getByTestId, getAllByTestId } = render(FileList);
 
-		expect(header?.textContent).toBe('2 messages');
+		expect(getByTestId('sidebar-heading').textContent).toBe('2 messages');
 		expect(getAllByTestId('file-item')).toHaveLength(2);
 	});
 });
 
 describe('finding a file in a long review', () => {
-	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
-	});
-
 	it('narrows the list to paths that match', async () => {
 		const user = userEvent.setup();
 		diffStore.setFiles(diffFiles, 'diff');

@@ -7,27 +7,47 @@ rules themselves are tested without a server in test_image_service.
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from claude_review.domain.models import ReaderFiles, ReviewMode, ReviewWorkspace
-from claude_review.presentation.app import create_app
-from claude_review.presentation.state import ServerState
-from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
+from claude_review.domain.models import ReviewMode, ReviewWorkspace
+from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
+from tests.helpers import DIFF_ROUTE, EVENTS_ROUTE, REVIEWED_FILE, WAIT_FOR_EVENT, ReviewFactory, http_client
 
-# The eight bytes every PNG starts with, and enough after them to be a file
+# The bytes each format starts with, and enough after them to be a file
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+GIF = b"GIF89a" + b"\x00" * 32
+WEBP = b"RIFF\x24\x00\x00\x00WEBPVP8 " + b"\x00" * 16
 NEVER_KEPT = f"{'0' * 32}.png"
+# The largest image the review takes, a PNG to the last byte
+LARGEST_IMAGE = PNG + b"\x00" * (MAX_IMAGE_BYTES - len(PNG))
+# How many of the largest images fill a review to its limit
+LARGEST_IMAGES_A_REVIEW_HOLDS = MAX_REVIEW_BYTES // MAX_IMAGE_BYTES
+# One image past what one thing said may carry
+ONE_TOO_MANY = MAX_IMAGES_PER_MESSAGE + 1
+
+THREAD_COMMENT = {
+    "anchor": {"file": REVIEWED_FILE, "side": "new", "start_line": 1, "end_line": 1},
+    "severity": "note",
+    "body": "Looks off",
+}
+A_QUESTION = {
+    **THREAD_COMMENT,
+    "thread_id": "comment-1",
+    "question_id": "comment-1",
+    "resolved": False,
+    "raised_by": "reader",
+}
 
 
 @pytest.fixture
-async def client(workspace: ReviewWorkspace, reader_files: ReaderFiles):
-    state = ServerState(shutdown_event=asyncio.Event())
-    app = create_app(diff_files=[], state=state, mode=ReviewMode.FILES, workspace=workspace, reader_files=reader_files)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as ac:
-        yield ac
+async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
+    async with http_client(reviews.app([], mode=ReviewMode.FILES)) as agent:
+        yield agent
 
 
 async def _upload(client: AsyncClient, content: bytes) -> str:
@@ -58,6 +78,55 @@ async def test_what_is_not_an_image_is_refused(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("content", [JPEG, GIF, WEBP], ids=["jpeg", "gif", "webp"])
+async def test_every_format_a_browser_pastes_is_kept(client: AsyncClient, content: bytes) -> None:
+    image_id = await _upload(client, content)
+
+    assert (await client.get(f"/api/images/{image_id}")).content == content
+
+
+async def test_an_empty_upload_is_refused(client: AsyncClient) -> None:
+    assert (await client.post("/api/images", content=b"")).status_code == 422
+
+
+async def test_a_review_full_of_images_takes_no_more(client: AsyncClient) -> None:
+    """Pasting and removing in a loop would otherwise fill the disk the review lives on."""
+    for _ in range(LARGEST_IMAGES_A_REVIEW_HOLDS):
+        await _upload(client, LARGEST_IMAGE)
+
+    response = await client.post("/api/images", content=PNG)
+
+    assert response.status_code == 413
+
+
+@pytest.mark.parametrize(
+    ("route", "payload"),
+    [
+        ("/api/message", {"message_id": "panel-1", "text": "These"}),
+        ("/api/ask", A_QUESTION),
+    ],
+    ids=["message", "ask"],
+)
+async def test_one_thing_said_carries_no_more_images_than_it_may(
+    client: AsyncClient, route: str, payload: dict[str, object]
+) -> None:
+    """More than a handful is a gallery. The image is one the review keeps, so the count alone is refused."""
+    image_id = await _upload(client, PNG)
+
+    response = await client.post(route, json={**payload, "images": [image_id] * ONE_TOO_MANY})
+
+    assert response.status_code == 422
+
+
+async def test_a_thread_in_a_round_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
+    image_id = await _upload(client, PNG)
+    crowded = {**THREAD_COMMENT, "images": [image_id] * ONE_TOO_MANY}
+
+    response = await client.post("/api/submit", json={"comments": [crowded]})
+
+    assert response.status_code == 422
+
+
 async def test_an_image_too_large_is_refused_before_it_is_written(
     client: AsyncClient, workspace: ReviewWorkspace
 ) -> None:
@@ -72,7 +141,7 @@ async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient)
     image_id = await _upload(client, PNG)
     await client.post("/api/message", json={"message_id": "panel-1", "text": "This", "images": [image_id]})
 
-    event = (await client.get("/api/events?wait_seconds=1")).json()
+    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["message"]["images"]
     assert Path(path).is_absolute()
@@ -140,16 +209,9 @@ async def test_an_image_already_sent_stays(client: AsyncClient) -> None:
 
 async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
     """So it checks them before uploading rather than repeating the numbers."""
-    limits = (await client.get("/api/diff")).json()["image_limits"]
+    limits = (await client.get(DIFF_ROUTE)).json()["image_limits"]
 
     assert limits == {"max_image_bytes": MAX_IMAGE_BYTES, "max_images_per_message": MAX_IMAGES_PER_MESSAGE}
-
-
-THREAD_COMMENT = {
-    "anchor": {"file": "src/a.py", "side": "new", "start_line": 1, "end_line": 1},
-    "severity": "note",
-    "body": "Looks off",
-}
 
 
 async def test_a_round_names_the_images_in_its_threads(client: AsyncClient) -> None:
@@ -170,18 +232,9 @@ async def test_an_image_lost_from_a_thread_does_not_hold_up_the_round(client: As
 
 async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
-    question = {
-        **THREAD_COMMENT,
-        "thread_id": "comment-1",
-        "question_id": "comment-1",
-        "body": "",
-        "images": [image_id],
-        "resolved": False,
-        "raised_by": "reader",
-    }
 
-    await client.post("/api/ask", json=question)
-    event = (await client.get("/api/events?wait_seconds=1")).json()
+    await client.post("/api/ask", json={**A_QUESTION, "body": "", "images": [image_id]})
+    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["question"]["images"]
     assert Path(path).name == image_id

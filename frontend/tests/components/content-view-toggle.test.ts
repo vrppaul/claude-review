@@ -1,15 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ContentViewToggle from '$lib/components/ContentViewToggle.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 
-describe('ContentViewToggle', () => {
-	beforeEach(() => {
-		diffStore.clear();
-	});
-
-	it('renders all three mode buttons', () => {
+describe('choosing how a markdown file is shown', () => {
+	it('offers the raw text, the preview, and both side by side', () => {
 		const { getByTestId } = render(ContentViewToggle);
 
 		expect(getByTestId('view-mode-raw')).toBeTruthy();
@@ -24,7 +20,7 @@ describe('ContentViewToggle', () => {
 		expect(getByTestId('view-mode-preview').getAttribute('aria-pressed')).toBe('false');
 	});
 
-	it('clicking preview updates the store', async () => {
+	it('shows the preview once it is picked', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ContentViewToggle);
 
@@ -33,7 +29,7 @@ describe('ContentViewToggle', () => {
 		expect(diffStore.contentViewMode).toBe('preview');
 	});
 
-	it('clicking side-by-side updates the store', async () => {
+	it('shows both side by side once that is picked', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ContentViewToggle);
 

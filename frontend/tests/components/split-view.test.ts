@@ -1,37 +1,42 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
-import type { DiffFile } from '$lib/types';
+import { addedLine, contextLine, diffFile, hunk, removedLine } from '../diff';
+import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 
-const file: DiffFile = {
+const file = diffFile({
 	path: 'src/app.ts',
-	status: 'modified',
 	hunks: [
-		{
-			header: '@@ -1,3 +1,3 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: 1, new_no: 1, content: 'const a = 1;' },
-				{ type: 'delete', old_no: 2, new_no: null, content: 'const b = 2;' },
-				{ type: 'add', old_no: null, new_no: 2, content: 'const b = 3;' },
-				{ type: 'add', old_no: null, new_no: 3, content: 'const c = 4;' }
-			]
-		}
-	],
-	is_binary: false,
-	old_mode: null,
-	new_mode: null
-};
+		hunk([
+			contextLine(1, 1, 'const a = 1;'),
+			removedLine(2, 'const b = 2;'),
+			addedLine(2, 'const b = 3;'),
+			addedLine(3, 'const c = 4;')
+		])
+	]
+});
+
+/** The row of the two columns that holds this text, on either side. */
+function rowHolding(text: string): HTMLElement {
+	const row = screen
+		.getAllByTestId('split-row')
+		.find((candidate) => candidate.textContent?.includes(text));
+	if (!row) throw new Error(`No row holds ${text}`);
+	return row;
+}
+
+/** Read the diff across two columns, as the reader chose in the settings. */
+function inTwoColumns() {
+	keepingSettings(fakeServer());
+	diffStore.setDiffLayout('split');
+}
 
 describe('split layout', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
 		diffStore.setFiles([file], 'diff');
 	});
 
@@ -43,7 +48,7 @@ describe('split layout', () => {
 	});
 
 	it('faces the old version against the new one', () => {
-		diffStore.setDiffLayout('split');
+		inTwoColumns();
 
 		const { getByTestId, queryByTestId } = render(FileSection, { props: { file } });
 
@@ -52,80 +57,84 @@ describe('split layout', () => {
 	});
 
 	it('shows both versions of a replaced line on one row', () => {
-		diffStore.setDiffLayout('split');
+		inTwoColumns();
 
-		const { getByTestId } = render(FileSection, { props: { file } });
-		const rows = getByTestId('split-view').querySelectorAll('tbody > tr');
-		const replaced = rows[1].textContent ?? '';
+		render(FileSection, { props: { file } });
+		const replaced = rowHolding('const b = 2;');
 
-		expect(replaced).toContain('const b = 2;');
-		expect(replaced).toContain('const b = 3;');
+		expect(within(replaced).getByTestId('split-old-code').textContent).toContain('const b = 2;');
+		expect(within(replaced).getByTestId('split-new-code').textContent).toContain('const b = 3;');
 	});
 
 	it('leaves the old side of a pure insertion empty', () => {
-		diffStore.setDiffLayout('split');
+		inTwoColumns();
 
-		const { getByTestId } = render(FileSection, { props: { file } });
-		const cells = getByTestId('split-view').querySelectorAll('tbody > tr')[2].querySelectorAll('td');
+		render(FileSection, { props: { file } });
+		const inserted = rowHolding('const c = 4;');
 
-		expect(cells[1].textContent?.trim()).toBe('');
-		expect(cells[3].textContent).toContain('const c = 4;');
+		expect(within(inserted).getByTestId('split-old-code').textContent?.trim()).toBe('');
+		expect(within(inserted).getByTestId('split-new-code').textContent).toContain('const c = 4;');
 	});
 
 	it('files a comment left on the old side as a removal', async () => {
 		const user = userEvent.setup();
-		diffStore.setDiffLayout('split');
+		inTwoColumns();
 
 		const { getByTestId } = render(FileSection, { props: { file } });
-		const oldGutter = getByTestId('split-view')
-			.querySelectorAll('tbody > tr')[1]
-			.querySelector('button')!;
-
-		await user.click(oldGutter);
+		await user.click(within(rowHolding('const b = 2;')).getByTestId('old-line-gutter'));
 		await user.click(document.body);
 		await user.type(getByTestId('comment-input'), 'why did this go');
 		await user.click(getByTestId('save-comment'));
 
-		expect(commentStore.comments[0].anchor.side).toBe('old');
-		expect(commentStore.comments[0].anchor.start_line).toBe(2);
+		expect(commentStore.comments[0].anchor).toMatchObject({ side: 'old', start_line: 2 });
 	});
 
-	it('keeps a comment made in one layout visible in the other', async () => {
-		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 2, endLine: 2, body: 'tighten this' }));
-		diffStore.setDiffLayout('split');
+	it('keeps a comment made in one layout visible in the other', () => {
+		commentStore.add(newComment({ file: 'src/app.ts', startLine: 2, body: 'tighten this' }));
+		inTwoColumns();
 
 		const { getByText } = render(FileSection, { props: { file } });
 
 		expect(getByText('tighten this')).toBeTruthy();
 	});
+
+	it('shows a comment on an unchanged line once, not once per column', () => {
+		// An unchanged line is the same line on both sides of the row
+		commentStore.add(newComment({ file: 'src/app.ts', startLine: 1, body: 'name this' }));
+		inTwoColumns();
+
+		const { getAllByText } = render(FileSection, { props: { file } });
+
+		expect(getAllByText('name this')).toHaveLength(1);
+	});
+
+	it('still shows a comment on each side of a replacement', () => {
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'old', startLine: 2, body: 'why gone' }));
+		commentStore.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 2, body: 'why this' }));
+		inTwoColumns();
+
+		const { getAllByText } = render(FileSection, { props: { file } });
+
+		expect(getAllByText('why gone')).toHaveLength(1);
+		expect(getAllByText('why this')).toHaveLength(1);
+	});
 });
 
 describe('reaching every row from the keyboard in two columns', () => {
-	const removal: DiffFile = {
+	const removal = diffFile({
 		path: 'src/gone.ts',
-		status: 'modified',
 		hunks: [
-			{
-				header: '@@ -1,3 +1,2 @@',
-				old_start: 1,
-				new_start: 1,
-				lines: [
-					{ type: 'context', old_no: 1, new_no: 1, content: 'const a = 1;' },
-					{ type: 'delete', old_no: 2, new_no: null, content: 'const b = 2;' },
-					{ type: 'context', old_no: 3, new_no: 2, content: 'const c = 3;' }
-				]
-			}
-		],
-		is_binary: false,
-		old_mode: null,
-		new_mode: null
-	};
+			hunk([
+				contextLine(1, 1, 'const a = 1;'),
+				removedLine(2, 'const b = 2;'),
+				contextLine(3, 2, 'const c = 3;')
+			])
+		]
+	});
 
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
 		diffStore.setFiles([removal], 'diff');
-		diffStore.setDiffLayout('split');
+		inTwoColumns();
 	});
 
 	it('stops once on every row, a removed line with nothing beside it included', () => {

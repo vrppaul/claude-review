@@ -1,39 +1,24 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { userEvent } from '@testing-library/user-event';
 import { render } from '@testing-library/svelte';
 import TopBar from '$lib/components/TopBar.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
+import { diffResponse } from '../diff';
+import { fakeServer, keepingSettings } from '../fake-server';
 
-const HEADER = { submitting: false, error: null, onOpenModal: () => {} };
+const HEADER = { submitting: false, error: null, onOpenModal: ignore };
 
-/** A server that answers the diff of one repository, and takes any setting. */
-function serveRepository() {
-	vi.stubGlobal(
-		'fetch',
-		vi.fn().mockResolvedValue({
-			ok: true,
-			json: () =>
-				Promise.resolve({
-					files: [],
-					mode: 'diff',
-					title: 'repo: uncommitted changes',
-					phrase: 'uncommitted changes',
-					release: '1.5.0'
-				})
-		})
-	);
-}
+function ignore() {}
 
 describe('the settings', () => {
 	beforeEach(async () => {
-		localStorage.clear();
-		settingsStore.clear();
-		diffStore.clear();
-		serveRepository();
+		// A server that answers the diff of one repository, and takes any setting
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse());
+		keepingSettings(server);
 		await diffStore.fetchDiff();
 	});
-
 
 	it('keep the choices made once out of the header, behind the gear', async () => {
 		const user = userEvent.setup();

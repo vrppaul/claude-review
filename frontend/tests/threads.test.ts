@@ -1,69 +1,58 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
-import type { DiffFile } from '$lib/types';
+import { addedLine, contextLine, diffFile, hunk } from './diff';
+import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 
-const file: DiffFile = {
+const file = diffFile({
 	path: 'src/handler.ts',
-	status: 'modified',
-	hunks: [
-		{
-			header: '@@ -1,2 +1,2 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [
-				{ type: 'context', old_no: 1, new_no: 1, content: 'const x = 1;' },
-				{ type: 'add', old_no: null, new_no: 2, content: 'const y = 3;' }
-			]
-		}
-	],
-	is_binary: false,
-	old_mode: null,
-	new_mode: null
-};
+	hunks: [hunk([contextLine(1, 1, 'const x = 1;'), addedLine(2, 'const y = 3;')])]
+});
 
-function okFetch() {
-	const mock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
-	vi.stubGlobal('fetch', mock);
-	return mock;
+/** A server taking every question about a thread. */
+function answering(): FakeServer {
+	const server = fakeServer();
+	server.answer('POST /api/ask', { status: 'asked' });
+	return server;
+}
+
+/** A comment on the added line of the file. */
+function onTheAddedLine(body: string, images: string[] = []) {
+	return newComment({ file: 'src/handler.ts', startLine: 2, body, images, quote: ['const y = 3;'] });
 }
 
 describe('a thread is a conversation', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
-		reviewStore.clear();
 		// Asking is only offered while something is there to answer
 		reviewStore.attachAnswerer();
-		localStorage.clear();
 		diffStore.setFiles([file], 'diff');
 	});
 
-
 	it('asks from the composer, where the comment is written', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = okFetch();
+		const server = answering();
 
 		const { getByTestId, getAllByTestId } = render(DiffView);
 		await user.click(getAllByTestId('line-gutter')[1]);
 		await user.type(getByTestId('comment-input'), 'Where did 2 go?');
 		await user.click(getByTestId('ask-now'));
 
-		const asked = JSON.parse(fetchMock.mock.calls[0][1].body);
-		expect(asked.body).toBe('Where did 2 go?');
-		expect(asked.anchor.quote).toEqual(['const y = 3;']);
-		expect(asked.anchor.side).toBe('new');
-		expect(asked.anchor.start_line).toBe(2);
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
+			{
+				body: 'Where did 2 go?',
+				anchor: { quote: ['const y = 3;'], side: 'new', start_line: 2 }
+			}
+		]);
 	});
 
 	it('marks a comment asked about as a question', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
+		answering();
 
 		const { getByTestId, getAllByTestId } = render(DiffView);
 		await user.click(getAllByTestId('line-gutter')[1]);
@@ -75,8 +64,8 @@ describe('a thread is a conversation', () => {
 
 	it('says it is waiting rather than looking like nothing happened', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?', severity: 'note', quote: ['const y = 3;'] }));
+		answering();
+		commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { getByTestId } = render(DiffView);
 		await user.click(getByTestId('ask-now-thread'));
@@ -85,7 +74,7 @@ describe('a thread is a conversation', () => {
 	});
 
 	it('shows the answer in the thread it belongs to', async () => {
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { getByTestId, rerender } = render(DiffView);
 		commentStore.receiveReply(id, 'It moved into the config default');
@@ -95,7 +84,7 @@ describe('a thread is a conversation', () => {
 	});
 
 	it('marks a thread with an answer nobody has looked at', () => {
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		commentStore.receiveReply(id, 'It moved into the config default');
 
@@ -105,13 +94,13 @@ describe('a thread is a conversation', () => {
 	});
 
 	it('keeps every turn rather than overwriting the last one', () => {
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		commentStore.receiveReply(id, 'Because of the retry path');
 		commentStore.addTurn(id, { author: 'reader', body: 'Then say so in the docstring', images: [] });
 		commentStore.receiveReply(id, 'Added');
 
-		expect(commentStore.comments[0].turns.map((t) => t.author)).toEqual([
+		expect(commentStore.comments[0].turns.map((turn) => turn.author)).toEqual([
 			'author',
 			'reader',
 			'author'
@@ -119,8 +108,9 @@ describe('a thread is a conversation', () => {
 	});
 
 	it('does not offer to ask when nothing is there to answer', async () => {
+		// Nobody attached: the review can only be sent whole
 		reviewStore.clear();
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { queryByTestId } = render(DiffView);
 
@@ -128,8 +118,8 @@ describe('a thread is a conversation', () => {
 	});
 
 	it('puts an answer under the question it answers, not under the last one', async () => {
-		okFetch();
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		answering();
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		await commentStore.ask(id);
 		commentStore.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
@@ -138,14 +128,14 @@ describe('a thread is a conversation', () => {
 		// The first answer arrives after the second question was already asked
 		commentStore.receiveReply(id, 'Because of the retry path');
 
-		const answer = commentStore.comments[0].turns.find((t) => t.author === 'author');
+		const answer = commentStore.comments[0].turns.find((turn) => turn.author === 'author');
 		expect(answer?.answers).toBe(id);
 		expect(commentStore.comments[0].awaiting).toHaveLength(1);
 	});
 
 	it('believes an answer that names its question', async () => {
-		okFetch();
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		answering();
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 		await commentStore.ask(id);
 		commentStore.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
 		await commentStore.ask(id);
@@ -154,23 +144,23 @@ describe('a thread is a conversation', () => {
 		commentStore.receiveReply(id, 'Into the config default', second);
 
 		expect(commentStore.comments[0].turns.at(-1)?.answers).toBe(second);
-		expect(commentStore.comments[0].awaiting.map((w) => w.id)).toEqual([id]);
+		expect(commentStore.comments[0].awaiting.map((waiting) => waiting.id)).toEqual([id]);
 	});
 
 	it('hands over the comment that opened the thread, not only the replies', async () => {
-		const fetchMock = okFetch();
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const server = answering();
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 		commentStore.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
 
 		await commentStore.ask(id);
 
-		const asked = JSON.parse(fetchMock.mock.calls[0][1].body);
-		expect(asked.body).toBe('And where did 2 go?');
-		expect(asked.history.map((t: { body: string }) => t.body)).toEqual(['Why 3?']);
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
+			{ body: 'And where did 2 go?', history: [{ body: 'Why 3?' }] }
+		]);
 	});
 
 	it('renders what an answer wrote as markdown', async () => {
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { getAllByTestId, rerender } = render(DiffView);
 		commentStore.receiveReply(id, 'Look at\n\n```python\nreturn 1\n```');
@@ -182,8 +172,8 @@ describe('a thread is a conversation', () => {
 
 	it('does not leave a thread waiting when the question could not be sent', async () => {
 		const user = userEvent.setup({ delay: null });
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-		commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		fakeServer().refuse('POST /api/ask', SERVER_ERROR);
+		commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { getByTestId, queryByTestId } = render(DiffView);
 		await user.click(getByTestId('ask-now-thread'));
@@ -194,7 +184,7 @@ describe('a thread is a conversation', () => {
 
 	it('a settled thread gives back its space and says so on the way out', async () => {
 		const user = userEvent.setup({ delay: null });
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Why 3?' }));
+		const id = commentStore.add(onTheAddedLine('Why 3?'));
 
 		const { getByTestId } = render(DiffView);
 		await user.click(getByTestId('resolve-comment'));
@@ -207,29 +197,24 @@ describe('a thread is a conversation', () => {
 
 describe('images in a thread', () => {
 	beforeEach(() => {
-		diffStore.clear();
-		commentStore.clear();
-		reviewStore.clear();
 		reviewStore.attachAnswerer();
-		localStorage.clear();
 		diffStore.setFiles([file], 'diff');
 	});
 
-
 	it('hands the agent the images of the question and of everything said before it', async () => {
-		const fetchMock = okFetch();
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Looks off', severity: 'note', quote: [], images: ['opening.png'] }));
+		const server = answering();
+		const id = commentStore.add(onTheAddedLine('Looks off', ['opening.png']));
 		commentStore.addTurn(id, { author: 'reader', body: 'Here it is again', images: ['reply.png'] });
 
 		await commentStore.ask(id);
 
-		const asked = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
-		expect(asked.images).toEqual(['reply.png']);
-		expect(asked.history[0].images).toEqual(['opening.png']);
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
+			{ images: ['reply.png'], history: [{ images: ['opening.png'] }] }
+		]);
 	});
 
 	it('draws the images of the comment and of each reply', () => {
-		const id = commentStore.add(newComment({ file: 'src/handler.ts', side: 'new', startLine: 2, endLine: 2, body: 'Looks off', severity: 'note', quote: [], images: ['opening.png'] }));
+		const id = commentStore.add(onTheAddedLine('Looks off', ['opening.png']));
 		commentStore.addTurn(id, { author: 'reader', body: 'Here it is again', images: ['reply.png'] });
 
 		const { getAllByTestId } = render(DiffView);

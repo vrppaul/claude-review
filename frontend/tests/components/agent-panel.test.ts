@@ -7,55 +7,26 @@ import { commentStore } from '$lib/stores/comments.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { panelStore } from '$lib/stores/panel.svelte';
 import { reviewStore } from '$lib/stores/review.svelte';
-import type { Comment, DiffFile } from '$lib/types';
+import type { Comment } from '$lib/types';
+import { addedLine, diffFile, hunk } from '../diff';
+import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
+import {
+	IMAGE_LIMITS,
+	KEPT_AS,
+	keepingImages,
+	oversizedScreenshot,
+	paste,
+	screenshot
+} from '../pasted-images';
 
 const TITLE = 'claude-review: uncommitted changes';
+// jsdom lays nothing out, so the panel is given a height to scroll in: this
+// much on screen out of this much said
+const VISIBLE_HEIGHT = 100;
+const FULL_HEIGHT = 500;
 
-const file: DiffFile = {
-	path: 'src/routes.py',
-	status: 'modified',
-	hunks: [
-		{
-			header: '@@ -1,2 +1,2 @@',
-			old_start: 1,
-			new_start: 1,
-			lines: [{ type: 'add', old_no: null, new_no: 2, content: 'y = 3' }]
-		}
-	],
-	is_binary: false,
-	old_mode: null,
-	new_mode: null
-};
-
-function okFetch() {
-	const mock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
-	vi.stubGlobal('fetch', mock);
-	return mock;
-}
-
-/** A fetch that keeps an image under `imageId` and accepts everything else. */
-function imageFetch(imageId: string) {
-	const mock = vi.fn((url: string) =>
-		Promise.resolve({
-			ok: true,
-			json: () => Promise.resolve(url === '/api/images' ? { image_id: imageId } : {})
-		})
-	);
-	vi.stubGlobal('fetch', mock);
-	return mock;
-}
-
-function paste(field: HTMLElement, image: File) {
-	return fireEvent.paste(field, { clipboardData: { files: [image] } });
-}
-
-// What the server says it takes, as the diff response carries it
-const LIMITS = { max_image_bytes: 10 * 1024 * 1024, max_images_per_message: 10 };
-
-function screenshot(): File {
-	return new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'screen.png', { type: 'image/png' });
-}
+const file = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(2, 'y = 3')])] });
 
 /** Write a message in the panel and send it, the way the composer does. */
 function say(text: string, threads: Comment[] = []): Promise<void> {
@@ -63,20 +34,23 @@ function say(text: string, threads: Comment[] = []): Promise<void> {
 	return panelStore.send(threads);
 }
 
+function givenTall(element: HTMLElement) {
+	Object.defineProperty(element, 'clientHeight', { value: VISIBLE_HEIGHT, configurable: true });
+	Object.defineProperty(element, 'scrollHeight', { value: FULL_HEIGHT, configurable: true });
+}
+
+function painted(): Promise<void> {
+	return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 describe('the agent panel', () => {
 	beforeEach(() => {
-		localStorage.clear();
-		diffStore.clear();
-		commentStore.clear();
-		reviewStore.clear();
-		panelStore.clear();
 		diffStore.setFiles([file], 'diff', TITLE);
-		diffStore.setImageLimits(LIMITS);
+		diffStore.setImageLimits(IMAGE_LIMITS);
 		commentStore.restore(TITLE);
 		panelStore.restore(TITLE);
 		reviewStore.attachAnswerer();
 	});
-
 
 	it('says what it is for before anything has been said', () => {
 		const { getByTestId } = render(AgentPanel);
@@ -86,6 +60,7 @@ describe('the agent panel', () => {
 	});
 
 	it('offers nothing to type into when nobody is listening', () => {
+		// Nobody attached after all
 		reviewStore.clear();
 
 		const { getByTestId, queryByTestId } = render(AgentPanel);
@@ -96,6 +71,7 @@ describe('the agent panel', () => {
 	});
 
 	it('keeps the commands for attaching by hand folded away', () => {
+		// Nobody attached after all
 		reviewStore.clear();
 
 		const { getByTestId } = render(AgentPanel);
@@ -107,20 +83,19 @@ describe('the agent panel', () => {
 
 	it('sends what was typed and empties the field', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = okFetch();
+		const server = listeningToThePanel();
 
 		const { getByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Run the tests');
 		await user.click(getByTestId('send-message'));
 
-		expect(JSON.parse(fetchMock.mock.calls[0][1].body).text).toBe('Run the tests');
+		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ text: 'Run the tests' }]);
 		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('');
 	});
 
 	it('points at a thread by picking it, not by retyping which line it was', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
-		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'Why catch here?' }));
+		commentStore.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
 
 		const { getByTestId, getAllByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Look at @');
@@ -134,7 +109,6 @@ describe('the agent panel', () => {
 
 	it('points at a file nobody has commented on', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
 
 		const { getByTestId, getAllByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'What is in @');
@@ -147,8 +121,8 @@ describe('the agent panel', () => {
 
 	it('sends the thread the message points at', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = okFetch();
-		commentStore.add(newComment({ file: 'src/routes.py', side: 'new', startLine: 2, endLine: 2, body: 'Why catch here?' }));
+		const server = listeningToThePanel();
+		commentStore.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
 
 		const { getByTestId, getAllByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Look at @');
@@ -156,14 +130,14 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'again');
 		await user.click(getByTestId('send-message'));
 
-		const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-		expect(body.threads).toHaveLength(1);
-		expect(body.threads[0].body).toBe('Why catch here?');
+		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([
+			{ threads: [{ body: 'Why catch here?' }] }
+		]);
 	});
 
 	it('offers to stop a message the agent is still working on', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = okFetch();
+		const server = listeningToThePanel();
 
 		const { getByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Never mind');
@@ -172,22 +146,14 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-working')).toBeTruthy();
 		await user.click(getByTestId('stop-message'));
 
-		expect(fetchMock.mock.calls[1][0]).toBe('/api/cancel');
+		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([
+			{ message_id: panelStore.turns[0].id }
+		]);
 		expect(getByTestId('panel-cancelled')).toBeTruthy();
 	});
 
-	/** jsdom lays nothing out, so the panel is given a height to scroll in. */
-	function givenTall(element: HTMLElement, { visible = 100, total = 500 } = {}) {
-		Object.defineProperty(element, 'clientHeight', { value: visible, configurable: true });
-		Object.defineProperty(element, 'scrollHeight', { value: total, configurable: true });
-	}
-
-	function painted(): Promise<void> {
-		return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-	}
-
 	it('brings a new turn into view', async () => {
-		okFetch();
+		listeningToThePanel();
 		const { getByTestId } = render(AgentPanel);
 		const stream = getByTestId('panel-turns');
 		givenTall(stream);
@@ -196,11 +162,11 @@ describe('the agent panel', () => {
 		panelStore.receive(panelStore.turns[0].id, 'One failed; fixed and green.');
 		await painted();
 
-		expect(stream.scrollTop).toBe(500);
+		expect(stream.scrollTop).toBe(FULL_HEIGHT);
 	});
 
 	it('leaves the reader where they are reading', async () => {
-		okFetch();
+		listeningToThePanel();
 		await say('Run the tests');
 
 		const { getByTestId } = render(AgentPanel);
@@ -218,7 +184,7 @@ describe('the agent panel', () => {
 
 	it('says what is being done, not only that something is', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
+		listeningToThePanel();
 
 		const { getByTestId, getAllByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Fix the scroll');
@@ -235,7 +201,7 @@ describe('the agent panel', () => {
 
 	it('draws what the work branched into, and what is finished', async () => {
 		const user = userEvent.setup({ delay: null });
-		okFetch();
+		listeningToThePanel();
 
 		const { getByTestId, getAllByTestId } = render(AgentPanel);
 		await user.type(getByTestId('panel-input'), 'Find every caller');
@@ -253,7 +219,7 @@ describe('the agent panel', () => {
 	});
 
 	it('takes the line away once the message it was about is answered', async () => {
-		okFetch();
+		listeningToThePanel();
 		await say('Fix the scroll');
 		const asked = panelStore.turns[0].id;
 		panelStore.reportProgress(asked, 'rewriting it', [], []);
@@ -264,7 +230,7 @@ describe('the agent panel', () => {
 	});
 
 	it('leaves work that is not what was answered still showing', async () => {
-		okFetch();
+		listeningToThePanel();
 		await say('Fix the scroll');
 		// Work of the agent's own — four reviewers reading, a round being
 		// worked through — belongs to no message and outlives any answer
@@ -315,24 +281,23 @@ describe('the agent panel', () => {
 
 	it('sends a pasted screenshot, by the id the server kept it under', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages(listeningToThePanel());
 
 		const { getByTestId, findByTestId, queryByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
-		expect((await findByTestId('attached-image')).getAttribute('src')).toBe('/api/images/4f.png');
+		expect((await findByTestId('attached-image')).getAttribute('src')).toBe(`/api/images/${KEPT_AS}`);
 		// An image alone is a message: a screenshot can be the whole question
 		await user.click(getByTestId('send-message'));
 
-		const [upload, message] = fetchMock.mock.calls as unknown as [string, RequestInit][];
-		expect(upload[0]).toBe('/api/images');
-		expect(JSON.parse(message[1].body as string).images).toEqual(['4f.png']);
+		expect(server.requestsTo('POST /api/images')).toHaveLength(1);
+		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ images: [KEPT_AS] }]);
 		expect(queryByTestId('attached-images')).toBeNull();
-		expect(getByTestId('said-image').getAttribute('href')).toBe('/api/images/4f.png');
+		expect(getByTestId('said-image').getAttribute('href')).toBe(`/api/images/${KEPT_AS}`);
 	});
 
 	it('takes an image off the message, and off the server', async () => {
 		const user = userEvent.setup({ delay: null });
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages(listeningToThePanel());
 
 		const { getByTestId, findByTestId, queryByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -340,29 +305,21 @@ describe('the agent panel', () => {
 
 		expect(queryByTestId('attached-images')).toBeNull();
 		expect((getByTestId('send-message') as HTMLButtonElement).disabled).toBe(true);
-		const [url, init] = fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit];
-		expect(url).toBe('/api/images/4f.png');
-		expect(init.method).toBe('DELETE');
+		expect(server.requests.at(-1)).toMatchObject({
+			method: 'DELETE',
+			path: `/api/images/${KEPT_AS}`
+		});
 	});
 
 	it('keeps an image pasted while the last message was still on its way', async () => {
 		const user = userEvent.setup({ delay: null });
-		let deliver: () => void = () => {};
-		let uploads = 0;
-		vi.stubGlobal(
-			'fetch',
-			vi.fn((url: string) => {
-				if (url === '/api/images') {
-					uploads += 1;
-					const imageId = `${uploads}.png`;
-					return Promise.resolve({ ok: true, json: () => Promise.resolve({ image_id: imageId }) });
-				}
-				// The message is held until the second image has landed
-				return new Promise((resolve) => {
-					deliver = () => resolve({ ok: true, json: () => Promise.resolve({}) });
-				});
-			})
-		);
+		const server = fakeServer();
+		// Each image kept under its number: the first pasted is 1.png
+		server.answerWith('POST /api/images', () => ({
+			image_id: `${server.requestsTo('POST /api/images').length}.png`
+		}));
+		// The message is held until the second image has landed
+		const messages = server.hold('POST /api/message');
 
 		const { getByTestId, findByTestId, getAllByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -370,7 +327,7 @@ describe('the agent panel', () => {
 		await user.click(getByTestId('send-message'));
 		await paste(getByTestId('panel-input'), screenshot());
 		await vi.waitFor(() => expect(getAllByTestId('attached-image')).toHaveLength(2));
-		deliver();
+		messages.answer(0, { status: 'sent' });
 
 		await vi.waitFor(() => expect(getAllByTestId('attached-image')).toHaveLength(1));
 		expect(getByTestId('attached-image').getAttribute('src')).toBe('/api/images/2.png');
@@ -378,27 +335,20 @@ describe('the agent panel', () => {
 
 	it('says an image is gone rather than drawing a broken one', async () => {
 		const user = userEvent.setup({ delay: null });
-		imageFetch('4f.png');
+		keepingImages(listeningToThePanel());
 
 		const { getByTestId, findByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
 		await findByTestId('attached-image');
 		await user.click(getByTestId('send-message'));
 		// What a restarted review does to an image the old one kept
-		await fireEvent.error(getByTestId('said-image').querySelector('img') as HTMLImageElement);
+		await fireEvent.error(getByTestId('said-image-picture'));
 
 		expect(getByTestId('lost-image').textContent).toContain('can no longer be shown');
 	});
 
 	it('says why an image was refused', async () => {
-		vi.stubGlobal(
-			'fetch',
-			vi.fn().mockResolvedValue({
-				ok: false,
-				status: 422,
-				json: () => Promise.resolve({ detail: 'The image is over 10 MB' })
-			})
-		);
+		fakeServer().refuse('POST /api/images', UNPROCESSABLE, 'The image is over 10 MB');
 
 		const { getByTestId, findByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -407,7 +357,7 @@ describe('the agent panel', () => {
 	});
 
 	it('keeps a half-written message and its images through a reload', async () => {
-		imageFetch('4f.png');
+		keepingImages(listeningToThePanel());
 		const { getByTestId, findByTestId, unmount } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
 		await findByTestId('attached-image');
@@ -419,11 +369,13 @@ describe('the agent panel', () => {
 		const reloaded = render(AgentPanel);
 
 		expect((reloaded.getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('Look at this');
-		expect(reloaded.getByTestId('attached-image').getAttribute('src')).toBe('/api/images/4f.png');
+		expect(reloaded.getByTestId('attached-image').getAttribute('src')).toBe(
+			`/api/images/${KEPT_AS}`
+		);
 	});
 
 	it('takes an image the server lost off the message, and says so', async () => {
-		imageFetch('4f.png');
+		keepingImages(listeningToThePanel());
 
 		const { getByTestId, findByTestId, queryByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -434,21 +386,18 @@ describe('the agent panel', () => {
 	});
 
 	it('refuses an image over the limit without uploading it', async () => {
-		const fetchMock = imageFetch('4f.png');
-		const huge = new File([new Uint8Array(LIMITS.max_image_bytes + 1)], 'huge.png', {
-			type: 'image/png'
-		});
+		const server = keepingImages(listeningToThePanel());
 
 		const { getByTestId, findByTestId } = render(AgentPanel);
-		await paste(getByTestId('panel-input'), huge);
+		await paste(getByTestId('panel-input'), oversizedScreenshot());
 
 		expect((await findByTestId('panel-error')).textContent).toContain('over 10 MB');
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(server.requests).toEqual([]);
 	});
 
 	it('refuses an image past what one message takes', async () => {
-		imageFetch('4f.png');
-		diffStore.setImageLimits({ ...LIMITS, max_images_per_message: 1 });
+		keepingImages(listeningToThePanel());
+		diffStore.setImageLimits({ ...IMAGE_LIMITS, max_images_per_message: 1 });
 
 		const { getByTestId, findByTestId, getAllByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -460,32 +409,23 @@ describe('the agent panel', () => {
 	});
 
 	it('leaves a paste of plain text to the field', async () => {
-		const fetchMock = imageFetch('4f.png');
+		const server = keepingImages(listeningToThePanel());
 
 		const { getByTestId, queryByTestId } = render(AgentPanel);
-		await fireEvent.paste(getByTestId('panel-input'), { clipboardData: { files: [] } });
+		await paste(getByTestId('panel-input'));
 
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(server.requests).toEqual([]);
 		expect(queryByTestId('attached-images')).toBeNull();
 	});
 
 	it('keeps what was typed while the last message was on its way', async () => {
-		let deliver: () => void = () => {};
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(
-				() =>
-					new Promise((resolve) => {
-						deliver = () => resolve({ ok: true, json: () => Promise.resolve({}) });
-					})
-			)
-		);
+		const messages = fakeServer().hold('POST /api/message');
 
 		const { getByTestId } = render(AgentPanel);
 		panelStore.setComposerText('Fix this');
 		const sending = panelStore.send([]);
 		panelStore.setComposerText('Fix this and the next one');
-		deliver();
+		messages.answer(0, { status: 'sent' });
 		await sending;
 
 		expect(panelStore.turns.at(-1)?.body).toBe('Fix this');
@@ -493,18 +433,13 @@ describe('the agent panel', () => {
 	});
 
 	it('does not let an image too large to send take the place of one that fits', async () => {
-		imageFetch('4f.png');
-		diffStore.setImageLimits({ ...LIMITS, max_images_per_message: 1 });
-		const huge = new File([new Uint8Array(LIMITS.max_image_bytes + 1)], 'huge.png', {
-			type: 'image/png'
-		});
+		keepingImages(listeningToThePanel());
+		diffStore.setImageLimits({ ...IMAGE_LIMITS, max_images_per_message: 1 });
 
 		const { getByTestId, findByTestId } = render(AgentPanel);
-		await fireEvent.paste(getByTestId('panel-input'), {
-			clipboardData: { files: [huge, screenshot()] }
-		});
+		await paste(getByTestId('panel-input'), oversizedScreenshot(), screenshot());
 
 		expect((await findByTestId('panel-error')).textContent).toContain('over 10 MB');
-		expect(getByTestId('attached-image').getAttribute('src')).toBe('/api/images/4f.png');
+		expect(getByTestId('attached-image').getAttribute('src')).toBe(`/api/images/${KEPT_AS}`);
 	});
 });

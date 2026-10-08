@@ -1,32 +1,40 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushSync } from 'svelte';
-import { settingsStore } from '$lib/stores/settings.svelte';
 import { themeStore } from '$lib/stores/theme.svelte';
+import { fakeServer, keepingSettings, type FakeServer } from './fake-server';
 
-function stubSystem(prefersDark: boolean, listeners: ((e: MediaQueryListEvent) => void)[] = []) {
-	vi.stubGlobal(
-		'matchMedia',
-		vi.fn().mockImplementation((query: string) => ({
-			matches: query.includes('dark') ? prefersDark : !prefersDark,
-			addEventListener: (_: string, fn: (e: MediaQueryListEvent) => void) => listeners.push(fn),
-			removeEventListener: () => {}
-		}))
-	);
-}
+type SystemListener = (event: MediaQueryListEvent) => void;
 
 /** Where the page reads the theme before its first paint: see index.html. */
 const FIRST_PAINT_CACHE = 'claude-review:theme';
 
-describe('themeStore', () => {
+/** A system that prefers dark or light, telling `listeners` when that changes. */
+function stubSystem(prefersDark: boolean, listeners: SystemListener[] = []) {
+	vi.stubGlobal(
+		'matchMedia',
+		vi.fn().mockImplementation((query: string) => ({
+			matches: query.includes('dark') ? prefersDark : !prefersDark,
+			addEventListener: (_kind: string, listener: SystemListener) => listeners.push(listener),
+			removeEventListener: vi.fn()
+		}))
+	);
+}
+
+/** The system changing its mind about dark. */
+function systemFlips(listeners: SystemListener[], prefersDark: boolean) {
+	for (const listener of listeners) listener({ matches: prefersDark } as MediaQueryListEvent);
+}
+
+describe('the theme', () => {
+	let server: FakeServer;
+
 	beforeEach(() => {
-		localStorage.clear();
 		document.documentElement.removeAttribute('data-theme');
 		stubSystem(true);
-		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }));
-		settingsStore.clear();
+		server = fakeServer();
+		keepingSettings(server);
 		themeStore.reset();
 	});
-
 
 	it('follows the system until the reader chooses otherwise', () => {
 		expect(themeStore.theme).toBe('system');
@@ -40,24 +48,21 @@ describe('themeStore', () => {
 		flushSync();
 
 		expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-		expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-			'/api/settings',
-			expect.objectContaining({ method: 'PUT', body: JSON.stringify({ theme: 'light' }) })
-		);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ theme: 'light' }]);
 		// And for this port's next first paint, before the server can answer
 		expect(localStorage.getItem(FIRST_PAINT_CACHE)).toBe('light');
 		stop();
 	});
 
 	it('reacts when the system flips while following it', () => {
-		const listeners: ((e: MediaQueryListEvent) => void)[] = [];
+		const listeners: SystemListener[] = [];
 		stubSystem(true, listeners);
 		themeStore.reset();
 		const stop = themeStore.start();
 		flushSync();
 
 		expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-		listeners.forEach((fn) => fn({ matches: false } as MediaQueryListEvent));
+		systemFlips(listeners, false);
 		flushSync();
 
 		expect(document.documentElement.getAttribute('data-theme')).toBe('light');
@@ -65,13 +70,13 @@ describe('themeStore', () => {
 	});
 
 	it('ignores a system flip once a theme has been chosen', () => {
-		const listeners: ((e: MediaQueryListEvent) => void)[] = [];
+		const listeners: SystemListener[] = [];
 		stubSystem(true, listeners);
 		themeStore.reset();
 		const stop = themeStore.start();
 		themeStore.set('dark');
 
-		listeners.forEach((fn) => fn({ matches: false } as MediaQueryListEvent));
+		systemFlips(listeners, false);
 		flushSync();
 
 		expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
@@ -79,7 +84,7 @@ describe('themeStore', () => {
 	});
 
 	it('still applies a theme when site data is blocked', () => {
-		const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
 			throw new Error('blocked');
 		});
 		const stop = themeStore.start();
@@ -88,7 +93,6 @@ describe('themeStore', () => {
 		flushSync();
 		expect(document.documentElement.getAttribute('data-theme')).toBe('light');
 
-		setItem.mockRestore();
 		stop();
 	});
 });

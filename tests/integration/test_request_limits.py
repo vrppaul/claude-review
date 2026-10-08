@@ -5,33 +5,16 @@ only after the body has been read and parsed. So the body itself has a cap
 too, checked as it arrives.
 """
 
-import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from claude_review.domain.models import DiffFile, FileStatus, ReaderFiles, ReviewMode, ReviewWorkspace
-from claude_review.presentation.app import create_app
 from claude_review.presentation.body_limit import MAX_REQUEST_BYTES
 from claude_review.presentation.schemas import MAX_THREADS
-from claude_review.presentation.state import ServerState
 
 # Big enough to be read in several pieces, as a socket delivers a large body
 CHUNK_BYTES = 1024 * 1024
-
-
-@pytest.fixture
-async def client(workspace: ReviewWorkspace, reader_files: ReaderFiles) -> AsyncIterator[AsyncClient]:
-    app = create_app(
-        diff_files=[DiffFile(path="a.py", status=FileStatus.MODIFIED, hunks=[])],
-        state=ServerState(shutdown_event=asyncio.Event()),
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        reader_files=reader_files,
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as http:
-        yield http
 
 
 async def _oversized_body() -> AsyncIterator[bytes]:
@@ -62,7 +45,7 @@ async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClie
     comment = {
         "anchor": {"kind": "line", "file": "a.py", "side": "new", "start_line": 1, "end_line": 1},
         "severity": "note",
-        "body": "x",
+        "body": "One of too many.",
     }
 
     response = await client.post("/api/submit", json={"comments": [comment] * (MAX_THREADS + 1), "end": False})

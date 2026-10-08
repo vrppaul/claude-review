@@ -1,194 +1,262 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { commentStore } from '$lib/stores/comments.svelte';
+import { lineAnchor } from '$lib/anchors/line';
 import type { LineSide } from '$lib/types';
 import { indexByRow } from '$lib/utils/comment-index';
+import { fakeServer, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
+
+/** What the server says to a review that went, whatever it held. */
+const ENDED = { markdown: '## Comments', comment_count: 1, round: 1, ended: true };
 
 /** The threads drawn under one row of a file. */
 function threadsOn(file: string, side: LineSide, line: number) {
 	return indexByRow(commentStore.comments, file).get(`${side}:${line}`) ?? [];
 }
 
-describe('commentStore', () => {
-	beforeEach(() => {
-		commentStore.clear();
-	});
-
-	it('starts with zero comments', () => {
+describe('the comments of a review', () => {
+	it('start with nothing written', () => {
 		expect(commentStore.count).toBe(0);
 		expect(commentStore.comments).toEqual([]);
 	});
 
-	it('adds a comment with generated id', () => {
-		const id = commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 10, body: 'fix this' }));
+	it('keep a comment where it was written, under an id of its own', () => {
+		const id = commentStore.add(newComment({ file: 'file.ts', startLine: 10, body: 'fix this' }));
 
 		expect(id).toBeTruthy();
 		expect(commentStore.count).toBe(1);
 		expect(commentStore.comments[0]).toMatchObject({
+			id,
 			anchor: { file: 'file.ts', start_line: 10, end_line: 10 },
 			body: 'fix this'
 		});
 	});
 
-	it('adds multi-line comment', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 15, body: 'refactor this block' }));
+	it('keep a comment on a range of lines', () => {
+		commentStore.add(newComment({ startLine: 10, endLine: 15, body: 'refactor this block' }));
 
-		expect(commentStore.comments[0].anchor.start_line).toBe(10);
-		expect(commentStore.comments[0].anchor.end_line).toBe(15);
+		expect(commentStore.comments[0].anchor).toMatchObject({ start_line: 10, end_line: 15 });
 	});
 
-	it('keeps comments on the two sides of the same line number apart', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'old', startLine: 42, endLine: 42, body: 'about the removed line' }));
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 42, endLine: 42, body: 'about the replacement' }));
+	it('keep comments on the two sides of the same line number apart', () => {
+		commentStore.add(newComment({ side: 'old', startLine: 42, body: 'about the removed line' }));
+		commentStore.add(newComment({ side: 'new', startLine: 42, body: 'about the replacement' }));
 
 		const removed = threadsOn('file.ts', 'old', 42);
 		const added = threadsOn('file.ts', 'new', 42);
 
-		expect(removed).toHaveLength(1);
-		expect(removed[0].body).toBe('about the removed line');
-		expect(added).toHaveLength(1);
-		expect(added[0].body).toBe('about the replacement');
+		expect(removed.map((comment) => comment.body)).toEqual(['about the removed line']);
+		expect(added.map((comment) => comment.body)).toEqual(['about the replacement']);
 	});
 
-	it('sends the side to the server so line numbers stay unambiguous', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'old', startLine: 7, endLine: 9, body: 'why was this dropped' }));
+	it('remember which side of the diff a comment is on, so line numbers stay unambiguous', () => {
+		commentStore.add(
+			newComment({ side: 'old', startLine: 7, endLine: 9, body: 'why was this dropped' })
+		);
 
-		expect(commentStore.comments[0].anchor.side).toBe('old');
-		expect(commentStore.comments[0].anchor.start_line).toBe(7);
-		expect(commentStore.comments[0].anchor.end_line).toBe(9);
+		expect(commentStore.comments[0].anchor).toMatchObject({
+			side: 'old',
+			start_line: 7,
+			end_line: 9
+		});
 	});
 
-	it('updates a comment body', () => {
-		const id = commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'original' }));
+	it('take an edit to a comment', () => {
+		const id = commentStore.add(newComment({ body: 'original' }));
+
 		commentStore.update(id, 'updated', 'note', []);
 
 		expect(commentStore.comments[0].body).toBe('updated');
 	});
 
-	it('removes a comment', () => {
-		const id = commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'to delete' }));
+	it('forget a deleted comment', () => {
+		const id = commentStore.add(newComment({ body: 'to delete' }));
+
 		commentStore.remove(id);
 
 		expect(commentStore.count).toBe(0);
 	});
 
-	it('filters comments by file', () => {
-		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 1, endLine: 1, body: 'comment A' }));
-		commentStore.add(newComment({ file: 'b.ts', side: 'new', startLine: 1, endLine: 1, body: 'comment B' }));
-		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 5, endLine: 5, body: 'comment A2' }));
+	it('are found by the file they are on', () => {
+		commentStore.add(newComment({ file: 'a.ts', startLine: 1, body: 'comment A' }));
+		commentStore.add(newComment({ file: 'b.ts', startLine: 1, body: 'comment B' }));
+		commentStore.add(newComment({ file: 'a.ts', startLine: 5, body: 'comment A2' }));
 
-		expect(commentStore.getForFile('a.ts')).toHaveLength(2);
+		expect(commentStore.getForFile('a.ts').map((comment) => comment.body)).toEqual([
+			'comment A',
+			'comment A2'
+		]);
 		expect(commentStore.getForFile('b.ts')).toHaveLength(1);
 		expect(commentStore.getForFile('c.ts')).toHaveLength(0);
 	});
 
-	it('a thread is drawn under the last line of its range only', () => {
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 15, body: 'range comment' }));
-		commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 20, endLine: 20, body: 'single line' }));
+	it('draw a thread under the last line of its range only', () => {
+		commentStore.add(newComment({ startLine: 10, endLine: 15, body: 'range comment' }));
+		commentStore.add(newComment({ startLine: 20, body: 'single line' }));
 
-		// Range comment only renders at end_line (15), not at start or middle
 		expect(threadsOn('file.ts', 'new', 10)).toHaveLength(0);
 		expect(threadsOn('file.ts', 'new', 12)).toHaveLength(0);
 		expect(threadsOn('file.ts', 'new', 15)).toHaveLength(1);
-		// Outside range
 		expect(threadsOn('file.ts', 'new', 16)).toHaveLength(0);
-		// Single line comment at line 20
 		expect(threadsOn('file.ts', 'new', 20)).toHaveLength(1);
 	});
+});
 
-	it('clear resets everything', () => {
-		commentStore.add(newComment({ file: 'a.ts', side: 'new', startLine: 1, endLine: 1, body: 'x' }));
-		commentStore.add(newComment({ file: 'b.ts', side: 'new', startLine: 2, endLine: 2, body: 'y' }));
-		commentStore.setReviewBody('some summary');
-		commentStore.clear();
-
-		expect(commentStore.count).toBe(0);
+describe('the summary of a review', () => {
+	it('starts empty', () => {
 		expect(commentStore.reviewBody).toBe('');
-		expect(commentStore.submitted).toBe(false);
 	});
 
-	describe('reviewBody', () => {
-		it('starts empty', () => {
-			expect(commentStore.reviewBody).toBe('');
-		});
+	it('is kept as it is written', () => {
+		commentStore.setReviewBody('Wrong approach');
 
-		it('setReviewBody updates the body', () => {
-			commentStore.setReviewBody('Wrong approach');
-
-			expect(commentStore.reviewBody).toBe('Wrong approach');
-		});
-
-		it('hasContent is true with only review body', () => {
-			expect(commentStore.hasContent).toBe(false);
-
-			commentStore.setReviewBody('Some feedback');
-
-			expect(commentStore.hasContent).toBe(true);
-		});
-
-		it('hasContent is true with only inline comments', () => {
-			commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
-
-			expect(commentStore.hasContent).toBe(true);
-		});
-
-		it('whitespace-only body does not count as content', () => {
-			commentStore.setReviewBody('   \n  ');
-
-			expect(commentStore.hasContent).toBe(false);
-		});
+		expect(commentStore.reviewBody).toBe('Wrong approach');
 	});
 
-	describe('answered threads', () => {
-		it('come newest answer first', () => {
-			vi.useFakeTimers();
-			const older = commentStore.add(newComment({ body: 'asked first' }));
-			const newer = commentStore.add(newComment({ body: 'asked second' }));
+	it('is something to send on its own', () => {
+		expect(commentStore.hasContent).toBe(false);
 
-			vi.setSystemTime(1_000);
-			commentStore.receiveReply(older, 'answered first');
-			vi.setSystemTime(2_000);
-			commentStore.receiveReply(newer, 'answered last');
-			vi.useRealTimers();
+		commentStore.setReviewBody('Some feedback');
 
-			expect(commentStore.answered.map((comment) => comment.body)).toEqual([
-				'asked second',
-				'asked first'
-			]);
-		});
+		expect(commentStore.hasContent).toBe(true);
 	});
 
-	describe('ask', () => {
-		it('says how the thread is meant to be taken', async () => {
-			const sent = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
-			vi.stubGlobal('fetch', sent);
+	it('is not needed when there are comments to send', () => {
+		commentStore.add(newComment({ body: 'fix' }));
 
-			const id = commentStore.add(newComment({ body: 'This must go', severity: 'blocker' }));
-			commentStore.setResolved(id, true);
-			await commentStore.ask(id);
-
-			const asked = JSON.parse(sent.mock.calls[0][1].body);
-			expect(asked).toMatchObject({ severity: 'blocker', resolved: true, raised_by: 'reader' });
-		});
+		expect(commentStore.hasContent).toBe(true);
 	});
 
-	describe('submit', () => {
-		it('sends correct payload and sets submitted', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn().mockResolvedValue({
-					ok: true,
-					json: () => Promise.resolve({ markdown: '## Comments', comment_count: 1 })
-				})
-			);
+	it('is nothing to send when it is only blank', () => {
+		commentStore.setReviewBody('   \n  ');
 
-			commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 10, endLine: 10, body: 'fix this' }));
-			const result = await commentStore.submit();
+		expect(commentStore.hasContent).toBe(false);
+	});
+});
 
-			expect(fetch).toHaveBeenCalledWith('/api/submit', {
+describe('answered threads', () => {
+	it('come newest answer first', () => {
+		vi.useFakeTimers();
+		const older = commentStore.add(newComment({ body: 'asked first' }));
+		const newer = commentStore.add(newComment({ body: 'asked second' }));
+
+		vi.setSystemTime(1_000);
+		commentStore.receiveReply(older, 'answered first');
+		vi.setSystemTime(2_000);
+		commentStore.receiveReply(newer, 'answered last');
+		vi.useRealTimers();
+
+		expect(commentStore.answered.map((comment) => comment.body)).toEqual([
+			'asked second',
+			'asked first'
+		]);
+	});
+});
+
+describe('asking about a thread', () => {
+	it('says how the thread is meant to be taken', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/ask', { status: 'asked' });
+
+		const id = commentStore.add(newComment({ body: 'This must go', severity: 'blocker' }));
+		commentStore.setResolved(id, true);
+		await commentStore.ask(id);
+
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
+			{ severity: 'blocker', resolved: true, raised_by: 'reader' }
+		]);
+	});
+});
+
+describe('a thread the author raised', () => {
+	it('is not counted as the reader\'s work', () => {
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']),
+			'I did this differently',
+			'note'
+		);
+
+		expect(commentStore.count).toBe(1);
+		expect(commentStore.comments[0].raised_by).toBe('author');
+		// Already sent: the reader did not write it, so it is not theirs to send
+		expect(commentStore.unsentCount).toBe(0);
+		expect(commentStore.hasUnsent).toBe(false);
+	});
+
+	it('goes with the next round once the reader has answered in it', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/submit', { ...ENDED, ended: false });
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, []),
+			'I did this differently',
+			'note'
+		);
+
+		commentStore.addTurn('raised-1', { author: 'reader', body: 'Fine, but rename it', images: [] });
+		await commentStore.submit(false);
+
+		expect(server.bodiesSentTo('POST /api/submit')).toMatchObject([
+			{ comments: [{ raised_by: 'author', turns: [{ body: 'Fine, but rename it' }] }] }
+		]);
+	});
+
+	it('is handed over as the author\'s own words', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/ask', { status: 'asked' });
+		commentStore.raise(
+			'raised-1',
+			lineAnchor('src/routes.py', 'new', 2, 2, []),
+			'I kept the old name',
+			'note'
+		);
+		commentStore.addTurn('raised-1', { author: 'reader', body: 'Why?', images: [] });
+
+		await commentStore.ask('raised-1');
+
+		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
+			{ body: 'Why?', history: [{ author: 'author', body: 'I kept the old name' }] }
+		]);
+	});
+});
+
+describe('stepping through comments', () => {
+	it('keeps one position, so two controls cannot disagree', () => {
+		commentStore.add(newComment({ startLine: 1, body: 'one' }));
+		commentStore.add(newComment({ startLine: 2, body: 'two' }));
+
+		expect(commentStore.step(1)?.body).toBe('one');
+		expect(commentStore.step(1)?.body).toBe('two');
+		expect(commentStore.step(-1)?.body).toBe('one');
+	});
+
+	it('wraps around rather than stopping at the end', () => {
+		commentStore.add(newComment({ body: 'one' }));
+
+		expect(commentStore.step(1)?.body).toBe('one');
+		expect(commentStore.step(1)?.body).toBe('one');
+	});
+
+	it('has nothing to step to when there are no comments', () => {
+		expect(commentStore.step(1)).toBeUndefined();
+	});
+});
+
+describe('ending the review', () => {
+	it('sends every comment as it was written', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/submit', ENDED);
+
+		commentStore.add(newComment({ file: 'file.ts', startLine: 10, body: 'fix this' }));
+		const result = await commentStore.submit();
+
+		expect(server.requests).toEqual([
+			{
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
+				path: '/api/submit',
+				query: {},
+				body: {
 					comments: [
 						{
 							anchor: {
@@ -209,60 +277,40 @@ describe('commentStore', () => {
 						}
 					],
 					end: true
-				})
-			});
-			expect(result.comment_count).toBe(1);
-			expect(commentStore.submitted).toBe(true);
+				}
+			}
+		]);
+		expect(result.comment_count).toBe(1);
+		expect(commentStore.submitted).toBe(true);
+	});
 
-		});
+	it('sends the summary with the comments', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/submit', ENDED);
 
-		it('includes body in payload when review body is set', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn().mockResolvedValue({
-					ok: true,
-					json: () => Promise.resolve({ markdown: '## Comments', comment_count: 1 })
-				})
-			);
+		commentStore.setReviewBody('General feedback');
+		await commentStore.submit();
 
-			commentStore.setReviewBody('General feedback');
-			await commentStore.submit();
+		expect(server.bodiesSentTo('POST /api/submit')).toMatchObject([{ body: 'General feedback' }]);
+	});
 
-			const call = vi.mocked(fetch).mock.calls[0];
-			const payload = JSON.parse(call[1]!.body as string);
-			expect(payload.body).toBe('General feedback');
+	it('leaves the summary out when none was written', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/submit', ENDED);
 
-		});
+		commentStore.add(newComment({ body: 'fix' }));
+		await commentStore.submit();
 
-		it('omits body from payload when review body is empty', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn().mockResolvedValue({
-					ok: true,
-					json: () => Promise.resolve({ markdown: '## Comments', comment_count: 1 })
-				})
-			);
+		expect(server.bodiesSentTo('POST /api/submit')[0]).not.toHaveProperty('body');
+	});
 
-			commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'fix' }));
-			await commentStore.submit();
+	it('stays open when the server refuses it', async () => {
+		const server = fakeServer();
+		server.refuse('POST /api/submit', SERVER_ERROR);
 
-			const call = vi.mocked(fetch).mock.calls[0];
-			const payload = JSON.parse(call[1]!.body as string);
-			expect(payload.body).toBeUndefined();
+		commentStore.add(newComment({ body: 'test' }));
 
-		});
-
-		it('throws on non-ok response and does not set submitted', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn().mockResolvedValue({ ok: false, status: 500 })
-			);
-
-			commentStore.add(newComment({ file: 'file.ts', side: 'new', startLine: 1, endLine: 1, body: 'test' }));
-
-			await expect(commentStore.submit()).rejects.toThrow('Submit failed: 500');
-			expect(commentStore.submitted).toBe(false);
-
-		});
+		await expect(commentStore.submit()).rejects.toThrow(`Submit failed: ${SERVER_ERROR}`);
+		expect(commentStore.submitted).toBe(false);
 	});
 });

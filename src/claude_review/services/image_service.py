@@ -41,6 +41,17 @@ MAX_REVIEW_BYTES = MAX_REVIEW_MEGABYTES * BYTES_PER_MEGABYTE
 MAX_IMAGES_PER_MESSAGE = 10
 
 
+class ImageQuota(BaseModel):
+    """How much one review may keep: each image on its own, and all of them together."""
+
+    image_bytes: int
+    review_bytes: int
+
+
+# What every review is held to
+REVIEW_IMAGE_QUOTA = ImageQuota(image_bytes=MAX_IMAGE_BYTES, review_bytes=MAX_REVIEW_BYTES)
+
+
 class ImageHandover(BaseModel):
     """The files a set of image ids names, and the ids this review does not keep.
 
@@ -98,9 +109,10 @@ IMAGE_FORMATS = (
 class ImageService:
     """Keeps, finds, hands over and discards the images of one review."""
 
-    def __init__(self, store: ImageStoreProtocol, ledger: ImageLedger) -> None:
+    def __init__(self, store: ImageStoreProtocol, ledger: ImageLedger, quota: ImageQuota) -> None:
         self._store = store
         self._ledger = ledger
+        self._quota = quota
 
     async def keep(self, content: bytes) -> StoredImage:
         """Write an image into the review's workspace.
@@ -115,16 +127,16 @@ class ImageService:
             msg = "The upload is empty"
             raise ImageRefusedError(msg)
         size = len(content)
-        if size > MAX_IMAGE_BYTES:
-            msg = f"The image is over {MAX_IMAGE_MEGABYTES} MB"
+        if size > self._quota.image_bytes:
+            msg = f"The image is over {_in_megabytes(self._quota.image_bytes)}"
             raise ImageTooLargeError(msg)
         image_format = recognise(content)
         if image_format is None:
             accepted = ", ".join(known.extension.lstrip(".") for known in IMAGE_FORMATS)
             msg = f"Not an image this review keeps. It takes: {accepted}"
             raise ImageRefusedError(msg)
-        if self._ledger.held_bytes + size > MAX_REVIEW_BYTES:
-            msg = f"This review already keeps {MAX_REVIEW_MEGABYTES} MB of images"
+        if self._ledger.held_bytes + size > self._quota.review_bytes:
+            msg = f"This review already keeps {_in_megabytes(self._quota.review_bytes)} of images"
             raise ImageTooLargeError(msg)
 
         # Reserved before the write is awaited, so an upload arriving in the
@@ -196,6 +208,11 @@ class ImageService:
             return
         del self._ledger.kept[image_id]
         self._ledger.held_bytes -= stored.size
+
+
+def _in_megabytes(byte_count: int) -> str:
+    """A limit as the reader is told it, in whole megabytes."""
+    return f"{byte_count // BYTES_PER_MEGABYTE} MB"
 
 
 def recognise(content: bytes) -> ImageFormat | None:

@@ -2,116 +2,99 @@
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 from importlib.metadata import version
 from pathlib import Path
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from claude_review.domain.models import (
-    DiffFile,
-    DiffHunk,
-    DiffLine,
-    FileStatus,
-    LineType,
-    ReaderFiles,
-    ReviewMode,
-    ReviewWorkspace,
-)
-from claude_review.presentation.app import create_app
-from claude_review.presentation.state import ServerState
+from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
-from tests.helpers import git
+from tests.helpers import (
+    DIFF_ROUTE,
+    EVENTS_ROUTE,
+    WAIT_FOR_EVENT,
+    ReviewFactory,
+    added_line,
+    context_line,
+    diff_file,
+    git,
+    http_client,
+    removed_line,
+    review_has_ended,
+    until_an_agent_waits,
+)
+
+REVIEW_TITLE = "test-repo: uncommitted changes"
+
+A_NOTE = {
+    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
+    "severity": "note",
+    "body": "fix this",
+}
 
 
-@pytest.fixture
-def mock_diff_files() -> list[DiffFile]:
+def _handler_change(path: str = "src/handler.ts") -> list[DiffFile]:
+    """One file with a line replaced and one added, between two that stayed."""
     return [
-        DiffFile(
-            path="src/handler.ts",
-            status=FileStatus.MODIFIED,
-            hunks=[
-                DiffHunk(
-                    header="@@ -1,3 +1,4 @@",
-                    old_start=1,
-                    new_start=1,
-                    lines=[
-                        DiffLine(type=LineType.CONTEXT, old_no=1, new_no=1, content="const x = 1;"),
-                        DiffLine(type=LineType.DELETE, old_no=2, new_no=None, content="const y = 2;"),
-                        DiffLine(type=LineType.ADD, old_no=None, new_no=2, content="const y = 3;"),
-                        DiffLine(type=LineType.ADD, old_no=None, new_no=3, content="const z = 4;"),
-                        DiffLine(type=LineType.CONTEXT, old_no=3, new_no=4, content="export { x };"),
-                    ],
-                )
+        diff_file(
+            path,
+            [
+                context_line(1, 1, "const x = 1;"),
+                removed_line(2, "const y = 2;"),
+                added_line(2, "const y = 3;"),
+                added_line(3, "const z = 4;"),
+                context_line(3, 4, "export { x };"),
             ],
         )
     ]
 
 
 @pytest.fixture
-def server_state() -> ServerState:
-    return ServerState(shutdown_event=asyncio.Event())
+async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
+    async with http_client(reviews.app(_handler_change(), title=REVIEW_TITLE)) as agent:
+        yield agent
 
 
-@pytest.fixture
-async def client(
-    mock_diff_files: list[DiffFile], server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-):
-    app = create_app(
-        diff_files=mock_diff_files,
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        title="test-repo: uncommitted changes",
-        reader_files=reader_files,
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
-        yield c
+async def _changed_lines(client: AsyncClient, *, ignore_whitespace: bool) -> list[str]:
+    """What the diff shows as added or removed, with whitespace counted or not."""
+    served = (await client.get(DIFF_ROUTE, params={"ignore_whitespace": ignore_whitespace})).json()
+    return [
+        line["content"]
+        for changed in served["files"]
+        for hunk in changed["hunks"]
+        for line in hunk["lines"]
+        if line["type"] in ("add", "delete")
+    ]
 
 
-async def test_get_diff_returns_files_json(client: AsyncClient) -> None:
-    """GET /api/diff returns diff data matching the schema."""
-    response = await client.get("/api/diff")
+async def test_the_diff_serves_every_file_with_its_lines(client: AsyncClient) -> None:
+    response = await client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
-    data = response.json()
-    assert "files" in data
-    assert data["mode"] == "diff"
-    assert len(data["files"]) == 1
-    assert data["files"][0]["path"] == "src/handler.ts"
-    assert data["files"][0]["status"] == "modified"
-    assert len(data["files"][0]["hunks"]) == 1
-    assert len(data["files"][0]["hunks"][0]["lines"]) == 5
+    served = response.json()
+    assert served["mode"] == "diff"
+    [handler] = served["files"]
+    assert (handler["path"], handler["status"]) == ("src/handler.ts", "modified")
+    [hunk] = handler["hunks"]
+    assert len(hunk["lines"]) == 5
 
 
-async def test_get_diff_line_types_correct(client: AsyncClient) -> None:
-    """Lines in the response have correct types and line numbers."""
-    response = await client.get("/api/diff")
-    lines = response.json()["files"][0]["hunks"][0]["lines"]
+async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient) -> None:
+    """A line kept, a line removed and a line added each carry the numbers of the sides they are on."""
+    lines = (await client.get(DIFF_ROUTE)).json()["files"][0]["hunks"][0]["lines"]
 
-    context = lines[0]
-    assert context["type"] == "context"
-    assert context["old_no"] == 1
-    assert context["new_no"] == 1
-
-    delete = lines[1]
-    assert delete["type"] == "delete"
-    assert delete["old_no"] == 2
-    assert delete["new_no"] is None
-
-    add = lines[2]
-    assert add["type"] == "add"
-    assert add["old_no"] is None
-    assert add["new_no"] == 2
+    kept, removed, added = lines[:3]
+    assert (kept["type"], kept["old_no"], kept["new_no"]) == ("context", 1, 1)
+    assert (removed["type"], removed["old_no"], removed["new_no"]) == ("delete", 2, None)
+    assert (added["type"], added["old_no"], added["new_no"]) == ("add", None, 2)
 
 
-async def test_submit_with_comments_returns_formatted_markdown(
-    client: AsyncClient,
-) -> None:
-    """POST /api/submit returns formatted review markdown."""
+async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
     response = await client.post(
         "/api/submit",
         json={
@@ -131,217 +114,120 @@ async def test_submit_with_comments_returns_formatted_markdown(
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["comment_count"] == 2
-    assert "### `src/handler.ts`:42" in data["markdown"]
-    assert "### `src/handler.ts`:67-70" in data["markdown"]
-    assert "Wrong null check" in data["markdown"]
-    assert "Add max retry" in data["markdown"]
+    sent = response.json()
+    assert sent["comment_count"] == 2
+    assert "### `src/handler.ts`:42" in sent["markdown"]
+    assert "### `src/handler.ts`:67-70" in sent["markdown"]
+    assert "Wrong null check" in sent["markdown"]
+    assert "Add max retry" in sent["markdown"]
 
 
-async def test_submit_with_empty_comments(client: AsyncClient) -> None:
-    """POST /api/submit with no comments returns clean response."""
+async def test_a_review_sent_with_nothing_in_it_says_nothing(client: AsyncClient) -> None:
     response = await client.post("/api/submit", json={"comments": []})
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["comment_count"] == 0
-    assert data["markdown"] == ""
+    assert (response.json()["comment_count"], response.json()["markdown"]) == (0, "")
 
 
-async def test_submit_triggers_shutdown_signal(client: AsyncClient, server_state: ServerState) -> None:
-    """POST /api/submit sets the shutdown event."""
-    assert not server_state.shutdown_event.is_set()
+async def test_sending_the_review_ends_it(client: AsyncClient) -> None:
+    await client.post("/api/submit", json={"comments": [A_NOTE]})
 
-    await client.post(
-        "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-                    "severity": "note",
-                    "body": "note",
-                }
-            ]
-        },
-    )
-
-    assert server_state.shutdown_event.is_set()
+    assert await review_has_ended(client)
 
 
-async def test_double_submit_returns_409(client: AsyncClient) -> None:
-    """Second submit returns 409 Conflict."""
-    payload = {
-        "comments": [
-            {
-                "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-                "severity": "note",
-                "body": "note",
-            }
-        ]
-    }
+async def test_a_review_can_be_sent_only_once(client: AsyncClient) -> None:
+    first = await client.post("/api/submit", json={"comments": [A_NOTE]})
+    second = await client.post("/api/submit", json={"comments": [A_NOTE]})
 
-    first = await client.post("/api/submit", json=payload)
     assert first.status_code == 200
-
-    second = await client.post("/api/submit", json=payload)
     assert second.status_code == 409
 
 
-async def test_submit_stores_result_in_state(client: AsyncClient, server_state: ServerState) -> None:
-    """POST /api/submit stores formatted markdown in state.result."""
-    assert server_state.result is None
+async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_end(client: AsyncClient) -> None:
+    """What was handed over outranks the review ending, or the last round would be dropped for it."""
+    waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT))
+    await until_an_agent_waits(client)
 
-    await client.post(
-        "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-                    "severity": "note",
-                    "body": "fix this",
-                }
-            ]
-        },
-    )
+    await client.post("/api/submit", json={"comments": [A_NOTE]})
+    handed_over = (await waiting).json()
 
-    assert server_state.result is not None
-    assert "fix this" in server_state.result
+    assert handed_over["type"] == "round"
+    assert "fix this" in handed_over["round"]["markdown"]
+    assert await review_has_ended(client)
 
 
-async def test_submit_rejects_invalid_comment(client: AsyncClient) -> None:
-    """POST /api/submit with invalid comment data returns 422."""
-    # Empty body
-    response = await client.post(
-        "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-                    "severity": "note",
-                    "body": "",
-                }
-            ]
-        },
-    )
-    assert response.status_code == 422
+@pytest.mark.parametrize(
+    "anchor",
+    [
+        {"file": "x.py", "side": "new", "start_line": 10, "end_line": 5},
+        {"file": "x.py", "side": "new", "start_line": 0, "end_line": 1},
+    ],
+    ids=["ends-before-it-starts", "line-zero"],
+)
+async def test_a_comment_on_no_line_is_refused(client: AsyncClient, anchor: dict[str, object]) -> None:
+    response = await client.post("/api/submit", json={"comments": [{**A_NOTE, "anchor": anchor}]})
 
-    # start_line > end_line
-    response = await client.post(
-        "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 10, "end_line": 5},
-                    "severity": "note",
-                    "body": "note",
-                }
-            ]
-        },
-    )
-    assert response.status_code == 422
-
-    # Negative line number
-    response = await client.post(
-        "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 0, "end_line": 1},
-                    "severity": "note",
-                    "body": "note",
-                }
-            ]
-        },
-    )
     assert response.status_code == 422
 
 
-# --- Review body tests ---
+async def test_a_comment_that_says_nothing_is_refused(client: AsyncClient) -> None:
+    response = await client.post("/api/submit", json={"comments": [{**A_NOTE, "body": ""}]})
+
+    assert response.status_code == 422
 
 
-async def test_submit_with_body_only(client: AsyncClient, server_state: ServerState) -> None:
-    """Submit with review body but no inline comments."""
-    response = await client.post(
-        "/api/submit",
-        json={"comments": [], "body": "Wrong approach, reconsider the design."},
-    )
+async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
+    """Wrong direction altogether is said in one paragraph, not on a line."""
+    response = await client.post("/api/submit", json={"comments": [], "body": "Wrong approach, reconsider the design."})
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["comment_count"] == 1
-    assert "Wrong approach" in data["markdown"]
-    assert server_state.shutdown_event.is_set()
+    assert response.json()["comment_count"] == 1
+    assert "Wrong approach" in response.json()["markdown"]
+    assert await review_has_ended(client)
 
 
-async def test_submit_with_body_and_comments(client: AsyncClient) -> None:
-    """Submit with both review body and inline comments."""
+async def test_the_summary_comes_before_the_comments(client: AsyncClient) -> None:
     response = await client.post(
         "/api/submit",
-        json={
-            "comments": [
-                {
-                    "anchor": {"file": "x.py", "side": "new", "start_line": 1, "end_line": 1},
-                    "severity": "note",
-                    "body": "Fix this",
-                },
-            ],
-            "body": "Generally good, one issue.",
-        },
+        json={"comments": [{**A_NOTE, "body": "Fix this"}], "body": "Generally good, one issue."},
     )
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["comment_count"] == 2
-    # Body appears before inline comment
-    body_pos = data["markdown"].index("Generally good")
-    inline_pos = data["markdown"].index("### `x.py`:1")
-    assert body_pos < inline_pos
-
-
-# --- Files mode tests ---
+    markdown = response.json()["markdown"]
+    assert response.json()["comment_count"] == 2
+    assert markdown.index("Generally good") < markdown.index("### `x.py`:1")
 
 
 @pytest.fixture
 def plan_file(tmp_path: Path) -> Path:
     """A real text file for files-mode integration tests."""
-    f = tmp_path / "plan.md"
-    f.write_text("# My Plan\n\nStep one\nStep two\n")
-    return f
+    plan = tmp_path / "plan.md"
+    plan.write_text("# My Plan\n\nStep one\nStep two\n")
+    return plan
 
 
 @pytest.fixture
-async def files_mode_client(
-    plan_file: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-):
+async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real text file loaded through TextFileService."""
-    diff_files = TextFileService().read_files([plan_file])
-    app = create_app(
-        diff_files=diff_files, state=server_state, mode=ReviewMode.FILES, workspace=workspace, reader_files=reader_files
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
-        yield c
+    files = TextFileService().read_files([plan_file])
+    async with http_client(reviews.app(files, mode=ReviewMode.FILES)) as agent:
+        yield agent
 
 
-async def test_files_mode_api_reports_mode(files_mode_client: AsyncClient) -> None:
-    """The API tells the frontend which mode to render."""
-    response = await files_mode_client.get("/api/diff")
+async def test_a_review_of_files_tells_the_page_it_is_one(files_mode_client: AsyncClient) -> None:
+    """The page draws files differently from a diff, so it is told which it has."""
+    response = await files_mode_client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
     assert response.json()["mode"] == "files"
 
 
-async def test_files_mode_review_round_trip(
+async def test_a_comment_on_a_line_of_a_file_reaches_the_agent_under_that_line(
     files_mode_client: AsyncClient,
-    plan_file: Path,
-    server_state: ServerState,
 ) -> None:
-    """Load a text file, comment on a specific line, submit — verify output."""
-    # Get the file path as the service resolved it
-    data = (await files_mode_client.get("/api/diff")).json()
-    file_path = data["files"][0]["path"]
+    """Load a text file, comment on a specific line, send — and the review ends with it."""
+    file_path = (await files_mode_client.get(DIFF_ROUTE)).json()["files"][0]["path"]
 
-    # Comment on line 3 ("Step one")
+    # Line 3 is "Step one"
     response = await files_mode_client.post(
         "/api/submit",
         json={
@@ -356,81 +242,65 @@ async def test_files_mode_review_round_trip(
     )
 
     assert response.status_code == 200
-    result = response.json()
-    assert result["comment_count"] == 1
-    assert f"### `{file_path}`:3" in result["markdown"]
-    assert "Needs more detail" in result["markdown"]
-    assert server_state.shutdown_event.is_set()
-
-
-# --- Transcript mode tests ---
+    sent = response.json()
+    assert sent["comment_count"] == 1
+    assert f"### `{file_path}`:3" in sent["markdown"]
+    assert "Needs more detail" in sent["markdown"]
+    assert await review_has_ended(files_mode_client)
 
 
 @pytest.fixture
 def transcript_file(tmp_path: Path) -> Path:
     """A JSONL conversation file for transcript-mode integration tests."""
-    f = tmp_path / "conversation.jsonl"
-    lines = [
-        json.dumps({"type": "user", "message": {"role": "user", "content": "can you refactor the auth module?"}}),
-        json.dumps(
-            {
-                "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
-                },
-            }
-        ),
+    conversation = tmp_path / "conversation.jsonl"
+    entries = [
+        {"type": "user", "message": {"role": "user", "content": "can you refactor the auth module?"}},
+        {
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
+            },
+        },
     ]
-    f.write_text("\n".join(lines))
-    return f
+    conversation.write_text("\n".join(json.dumps(entry) for entry in entries))
+    return conversation
 
 
 @pytest.fixture
-async def transcript_mode_client(
-    transcript_file: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-):
+async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real transcript file loaded through TranscriptService."""
-    diff_files = TranscriptService().parse(transcript_file)
-    app = create_app(
-        diff_files=diff_files,
-        state=server_state,
-        mode=ReviewMode.TRANSCRIPT,
-        workspace=workspace,
-        reader_files=reader_files,
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as c:
-        yield c
+    messages = TranscriptService().parse(transcript_file)
+    async with http_client(reviews.app(messages, mode=ReviewMode.TRANSCRIPT)) as agent:
+        yield agent
 
 
-async def test_transcript_mode_api_reports_mode(transcript_mode_client: AsyncClient) -> None:
-    """The API tells the frontend which mode to render."""
-    response = await transcript_mode_client.get("/api/diff")
+async def test_a_review_of_a_conversation_serves_its_messages_newest_first(
+    transcript_mode_client: AsyncClient,
+) -> None:
+    response = await transcript_mode_client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["mode"] == "transcript"
-    assert len(data["files"]) == 2
-    # Newest first
-    assert "assistant" in data["files"][0]["path"]
-    assert "user" in data["files"][1]["path"]
+    served = response.json()
+    assert served["mode"] == "transcript"
+    newest, oldest = served["files"]
+    assert "assistant" in newest["path"]
+    assert "user" in oldest["path"]
 
 
-async def test_transcript_mode_review_round_trip(
+async def test_a_comment_on_a_message_reaches_the_agent_with_the_message_quoted(
     transcript_mode_client: AsyncClient,
-    server_state: ServerState,
 ) -> None:
-    """Load transcript, comment on a message, submit — verify self-contained output."""
-    data = (await transcript_mode_client.get("/api/diff")).json()
-    # Find the user message (newest-first, so it's second)
-    user_file = next(f for f in data["files"] if "user" in f["path"])
+    """The agent may no longer hold the conversation, so the review quotes it."""
+    served = (await transcript_mode_client.get(DIFF_ROUTE)).json()
+    user_message = next(message for message in served["files"] if "user" in message["path"])
 
     response = await transcript_mode_client.post(
         "/api/submit",
         json={
             "comments": [
                 {
-                    "anchor": {"file": user_file["path"], "side": "new", "start_line": 1, "end_line": 1},
+                    "anchor": {"file": user_message["path"], "side": "new", "start_line": 1, "end_line": 1},
                     "severity": "note",
                     "body": "Wrong approach",
                 },
@@ -439,46 +309,29 @@ async def test_transcript_mode_review_round_trip(
     )
 
     assert response.status_code == 200
-    result = response.json()
-    assert result["comment_count"] == 1
-    assert "## Transcript Review" in result["markdown"]
-    assert "> can you refactor the auth module?" in result["markdown"]
-    assert "Wrong approach" in result["markdown"]
-    assert server_state.shutdown_event.is_set()
+    sent = response.json()
+    assert sent["comment_count"] == 1
+    assert "## Transcript Review" in sent["markdown"]
+    assert "> can you refactor the auth module?" in sent["markdown"]
+    assert "Wrong approach" in sent["markdown"]
+    assert await review_has_ended(transcript_mode_client)
 
 
-async def test_diff_response_says_what_is_under_review(client: AsyncClient) -> None:
+async def test_the_diff_says_what_is_under_review(client: AsyncClient) -> None:
     """The UI can name the thing being reviewed, not just list its files."""
-    response = await client.get("/api/diff")
+    response = await client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
-    assert response.json()["title"] == "test-repo: uncommitted changes"
+    assert response.json()["title"] == REVIEW_TITLE
 
 
 @pytest.fixture
-async def repo_backed_client(
-    mock_diff_files: list[DiffFile],
-    server_state: ServerState,
-    tmp_path: Path,
-    workspace: ReviewWorkspace,
-    reader_files: ReaderFiles,
-):
+async def repo_backed_client(tmp_path: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """A client whose server can read files, as diff mode's can."""
     (tmp_path / "src").mkdir()
-    (tmp_path / "src" / "app.py").write_text("".join(f"line {i}\n" for i in range(1, 31)))
-    reviewed = [f.model_copy(update={"path": "src/app.py"}) for f in mock_diff_files]
-    app = create_app(
-        diff_files=reviewed,
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        title="test-repo: uncommitted changes",
-        root=tmp_path,
-        reader_files=reader_files,
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as ac:
-        yield ac
+    (tmp_path / "src" / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 31)))
+    async with http_client(reviews.app(_handler_change("src/app.py"), root=tmp_path, title=REVIEW_TITLE)) as agent:
+        yield agent
 
 
 async def test_file_window_serves_lines_the_diff_left_out(repo_backed_client: AsyncClient) -> None:
@@ -508,123 +361,82 @@ async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -
     assert response.status_code == 404
 
 
-async def test_ignoring_whitespace_leaves_the_real_change_visible(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-) -> None:
-    """A reindented block should stop hiding the line that actually changed."""
-    (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n  c = 3\n")
-    git(tmp_git_repo, "add", ".")
-    git(tmp_git_repo, "commit", "-m", "add")
-    # Reindent every line, and change one of them for real
-    (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n    c = 3\n")
+async def _committed_then_changed(repo: Path, committed: str, changed: str) -> list[DiffFile]:
+    """The diff of app.py, committed as one text and then rewritten as another."""
+    (repo / "app.py").write_text(committed)
+    git(repo, "add", ".")
+    git(repo, "commit", "-m", "add")
+    (repo / "app.py").write_text(changed)
+    return await DiffService(git_repository=GitRepository()).get_diff(repo)
 
-    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(
-        diff_files=files,
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        root=tmp_git_repo,
-        reader_files=reader_files,
+
+async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """A reindented block should stop hiding the line that actually changed."""
+    # Every line reindented, and one of them changed for real
+    files = await _committed_then_changed(
+        tmp_git_repo,
+        "def f():\n  a = 1\n  b = 2\n  c = 3\n",
+        "def f():\n    a = 1\n    b = 99\n    c = 3\n",
     )
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
-        plain = _changed_lines((await client.get("/api/diff")).json())
-        ignored = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "true"})).json())
+    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+        plain = await _changed_lines(client, ignore_whitespace=False)
+        ignored = await _changed_lines(client, ignore_whitespace=True)
 
     # Reindenting three lines buries the one that changed among six others
     assert len(plain) == 6
     assert ignored == ["  b = 2", "    b = 99"]
 
 
-def _changed_lines(payload: dict) -> list[str]:
-    return [
+async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """A file whose only change is indentation disappears from the review."""
+    files = await _committed_then_changed(tmp_git_repo, "def f():\n    return 1\n", "def f():\n        return 1\n")
+
+    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+        plain = (await client.get(DIFF_ROUTE)).json()
+        ignored = (await client.get(DIFF_ROUTE, params={"ignore_whitespace": True})).json()
+
+    assert any(served["path"] == "app.py" for served in plain["files"])
+    assert not any(served["path"] == "app.py" and served["hunks"] for served in ignored["files"])
+
+
+async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """It is a way of looking at the diff, not a door that shuts behind you."""
+    files = await _committed_then_changed(
+        tmp_git_repo, "def f():\n  a = 1\n  b = 2\n", "def f():\n    a = 1\n    b = 99\n"
+    )
+
+    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+        full = (await client.get(DIFF_ROUTE)).json()
+        ignored = await _changed_lines(client, ignore_whitespace=True)
+        back = await _changed_lines(client, ignore_whitespace=False)
+
+    assert len(ignored) < len(back)
+    assert back == [
         line["content"]
-        for f in payload["files"]
-        for hunk in f["hunks"]
+        for served in full["files"]
+        for hunk in served["hunks"]
         for line in hunk["lines"]
         if line["type"] in ("add", "delete")
     ]
 
 
-async def test_ignoring_whitespace_drops_a_reindent_only_change(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-) -> None:
-    """A file whose only change is indentation disappears from the review."""
-    (tmp_git_repo / "app.py").write_text("def f():\n    return 1\n")
-    git(tmp_git_repo, "add", ".")
-    git(tmp_git_repo, "commit", "-m", "add")
-    (tmp_git_repo / "app.py").write_text("def f():\n        return 1\n")
-
-    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(
-        diff_files=files,
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        root=tmp_git_repo,
-        reader_files=reader_files,
-    )
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
-        plain = (await client.get("/api/diff")).json()
-        ignored = (await client.get("/api/diff", params={"ignore_whitespace": "true"})).json()
-
-    assert any(f["path"] == "app.py" for f in plain["files"])
-    assert not any(f["path"] == "app.py" and f["hunks"] for f in ignored["files"])
-
-
-async def test_ignoring_whitespace_can_be_turned_back_off(
-    tmp_git_repo: Path, server_state: ServerState, workspace: ReviewWorkspace, reader_files: ReaderFiles
-) -> None:
-    """It is a way of looking at the diff, not a door that shuts behind you."""
-    (tmp_git_repo / "app.py").write_text("def f():\n  a = 1\n  b = 2\n")
-    git(tmp_git_repo, "add", ".")
-    git(tmp_git_repo, "commit", "-m", "add")
-    (tmp_git_repo / "app.py").write_text("def f():\n    a = 1\n    b = 99\n")
-
-    files = await DiffService(git_repository=GitRepository()).get_diff(tmp_git_repo)
-    app = create_app(
-        diff_files=files,
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        root=tmp_git_repo,
-        reader_files=reader_files,
-    )
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
-        full = _changed_lines((await client.get("/api/diff")).json())
-        ignored = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "true"})).json())
-        back = _changed_lines((await client.get("/api/diff", params={"ignore_whitespace": "false"})).json())
-
-    assert len(ignored) < len(full)
-    assert back == full
-
-
 async def test_the_diff_says_which_release_serves_it(client: AsyncClient) -> None:
     """So the browser can tell a reader what changed since the release they last saw."""
-    response = await client.get("/api/diff")
+    response = await client.get(DIFF_ROUTE)
 
     assert response.json()["release"] == version("claude-review")
 
 
 async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_hold(
-    server_state: ServerState, tmp_git_repo: Path, workspace: ReviewWorkspace, reader_files: ReaderFiles
+    tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
     """Read against another base, the diff on screen holds files the review's own does not."""
     (tmp_git_repo / ".env").write_text("SECRET=hunter2\n")
-    app = create_app(
-        diff_files=[],
-        state=server_state,
-        mode=ReviewMode.DIFF,
-        workspace=workspace,
-        root=tmp_git_repo,
-        reader_files=reader_files,
-    )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as http:
-        tracked = await http.get("/api/file-window", params={"path": "initial.txt", "start": 1, "end": 1})
-        untracked = await http.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
+
+    async with http_client(reviews.app([], root=tmp_git_repo)) as client:
+        tracked = await client.get("/api/file-window", params={"path": "initial.txt", "start": 1, "end": 1})
+        untracked = await client.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
 
     assert tracked.json()["lines"] == ["initial content"]
     assert untracked.status_code == 400
