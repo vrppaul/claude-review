@@ -270,7 +270,7 @@
 				{/if}
 				<div class="flex-1"></div>
 				{#if raised}
-					<span data-testid="comment-raised" class="cr-severity cr-raised-tag">from the author</span>
+					<span data-testid="comment-raised" class="cr-severity cr-raised-tag">from the agent</span>
 				{:else if sentIn !== undefined}
 					<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 				{/if}
@@ -333,7 +333,7 @@
 					<div class="cr-exchange">
 						<div>
 							{#if index === 0 && raised}
-								<p class="cr-who"><strong>Author</strong> {said(exchange.at)}</p>
+								<p class="cr-who"><strong>Agent</strong> {said(exchange.at)}</p>
 							{:else if comment.turns.length > 0}
 								<p class="cr-who"><strong>You</strong> {said(exchange.at)}</p>
 							{/if}
@@ -365,7 +365,7 @@
 										? 'cr-answer-new'
 										: ''}"
 								>
-									<p class="cr-who"><strong>Author</strong> {said(answer.at)}</p>
+									<p class="cr-who"><strong>Agent</strong> {said(answer.at)}</p>
 									<MarkdownRenderer text={answer.body} dense />
 								</div>
 							</div>
@@ -377,7 +377,7 @@
 									<span class="cr-tie" aria-hidden="true"></span>
 								{/if}
 								<div data-testid="awaiting-answer" data-tour="awaited-answer" class="cr-answer flex items-center gap-3">
-									<span class="cr-who"><strong>Author</strong></span>
+									<span class="cr-who"><strong>Agent</strong></span>
 									<span class="flex items-center gap-1">
 										<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"
 										></span>

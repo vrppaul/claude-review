@@ -100,7 +100,7 @@
 									<span class="cr-severity cr-severity-{comment.severity}">{comment.severity}</span>
 								{/if}
 								{#if comment.raised_by === 'author'}
-									<span class="cr-severity cr-raised-tag">author</span>
+									<span class="cr-severity cr-raised-tag">agent</span>
 								{/if}
 								{#if comment.resolved}
 									<span class="cr-severity cr-muted">resolved</span>

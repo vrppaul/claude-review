@@ -443,7 +443,7 @@ claude-review wait --port &lt;port&gt;</pre>
 						</div>
 					{:else}
 						<div data-testid="panel-answer" class="cr-answer">
-							<p class="cr-who"><strong>Author</strong> {said(turn.at)}</p>
+							<p class="cr-who"><strong>Agent</strong> {said(turn.at)}</p>
 							<MarkdownRenderer text={turn.body} dense />
 							{#if turn.files && turn.files.length > 0}
 								<div class="mt-2 flex flex-wrap gap-1">
@@ -465,7 +465,7 @@ claude-review wait --port &lt;port&gt;</pre>
 				{#if working}
 					<div data-testid="panel-working" class="cr-answer flex flex-col gap-2">
 						<div class="flex items-center gap-3">
-							<span class="cr-who"><strong>Author</strong></span>
+							<span class="cr-who"><strong>Agent</strong></span>
 							<span class="flex items-center gap-1">
 								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
 							</span>
@@ -488,7 +488,7 @@ claude-review wait --port &lt;port&gt;</pre>
 						tell work from a hang. -->
 					<div data-testid="panel-work" class="cr-answer flex flex-col gap-2">
 						<div class="flex items-center gap-3">
-							<span class="cr-who"><strong>Author</strong></span>
+							<span class="cr-who"><strong>Agent</strong></span>
 							<span class="flex items-center gap-1">
 								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
 							</span>
