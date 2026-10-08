@@ -16,7 +16,14 @@
 import type { ServerPush, SessionHello } from "$lib/types";
 
 let socket: WebSocket | null = null;
-let retryDelay = 500;
+/** How long the first attempt to reconnect waits, in milliseconds. */
+export const FIRST_RETRY = 500;
+/** How much longer each attempt waits than the one before. */
+export const RETRY_GROWTH = 2;
+/** The longest any attempt waits: the server may simply be slow to come back. */
+export const LONGEST_RETRY = 5000;
+
+let retryDelay = FIRST_RETRY;
 // Said again on every reconnection, because a reconnection may be to a
 // server that has just come up knowing nothing
 let greeting: (() => SessionHello) | null = null;
@@ -42,7 +49,7 @@ export function openSession(
     socket = new WebSocket(`${protocol}://${location.host}/api/session`);
 
     socket.addEventListener("open", () => {
-      retryDelay = 500;
+      retryDelay = FIRST_RETRY;
       tellServer();
     });
     socket.addEventListener("message", (event) => {
@@ -55,7 +62,7 @@ export function openSession(
       if (closedByUs) return;
       // The server may simply be slow to come back; back off rather than spin
       setTimeout(connect, retryDelay);
-      retryDelay = Math.min(retryDelay * 2, 5000);
+      retryDelay = Math.min(retryDelay * RETRY_GROWTH, LONGEST_RETRY);
     });
   };
 
@@ -83,10 +90,9 @@ export function dispatchHeld(): void {
 /**
  * A push from the server, or null when it is not one this page can read.
  *
- * The shape is the server's own, generated from its schemas, so only the
- * envelope is checked here; a kind this page does not know is reported by
- * whatever dispatches it. Only the reading is forgiven: a fault in whatever
- * handles a push is a fault, and is left to surface.
+ * A push of a kind this page does not know is reported and passed over.
+ * Only the reading is forgiven: a fault in whatever handles a push is a
+ * fault, and is left to surface.
  */
 function decode(data: unknown): ServerPush | null {
   try {
@@ -99,18 +105,40 @@ function decode(data: unknown): ServerPush | null {
   return null;
 }
 
+/**
+ * Every kind of push this page knows. Keyed by the generated union's own
+ * kinds, so the compiler refuses a kind left out or one the server never
+ * sends.
+ */
+const PUSH_KINDS: Record<ServerPush["type"], true> = {
+  reply: true,
+  answerer: true,
+  chat: true,
+  progress: true,
+  show: true,
+  status: true,
+  point: true,
+  changed: true,
+  round: true,
+  diff: true,
+};
+
+/**
+ * Whether a message is a push of a kind this page knows. Only the kind is
+ * checked: the rest of its shape is the server's own, generated from its
+ * schemas, and a server and page of different releases differ in kinds
+ * first.
+ */
 function isServerPush(value: unknown): value is ServerPush {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as { type?: unknown }).type === "string"
-  );
+  if (typeof value !== "object" || value === null) return false;
+  const kind = (value as { type?: unknown }).type;
+  return typeof kind === "string" && Object.hasOwn(PUSH_KINDS, kind);
 }
 
 // Typing a summary saves the draft on every keystroke, and each save is a
 // reason to tell the server what the review now holds. Once a second is
 // often enough for something nobody reads until they ask for it.
-const AT_MOST_EVERY = 1000;
+export const HELLO_AT_MOST_EVERY = 1000;
 let toldAt = 0;
 let telling: ReturnType<typeof setTimeout> | null = null;
 
@@ -124,7 +152,7 @@ let telling: ReturnType<typeof setTimeout> | null = null;
 export function tellServer(): void {
   if (!greeting || socket?.readyState !== WebSocket.OPEN) return;
 
-  const due = toldAt + AT_MOST_EVERY - Date.now();
+  const due = toldAt + HELLO_AT_MOST_EVERY - Date.now();
   if (due > 0) {
     // Trailing rather than dropped: the last state is the one that matters
     if (telling === null) {

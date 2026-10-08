@@ -61,7 +61,7 @@ describe('a thread is a conversation', () => {
 		await user.type(getByTestId('comment-input'), 'Where did 2 go?');
 		await user.click(getByTestId('ask-now'));
 
-		expect(commentStore.comments[0].severity).toBe('question');
+		expect(getByTestId('comment-severity').textContent).toContain('question');
 	});
 
 	it('says it is waiting rather than looking like nothing happened', async () => {

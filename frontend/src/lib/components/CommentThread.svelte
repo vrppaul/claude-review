@@ -67,7 +67,7 @@
 		for (const turn of comment.turns) {
 			if (turn.author === 'reader') {
 				list.push({
-					id: turn.id ?? `${comment.id}-${list.length}`,
+					id: turn.id,
 					asked: turn.body,
 					round: turn.round,
 					at: turn.at,

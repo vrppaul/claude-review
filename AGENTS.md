@@ -23,8 +23,8 @@ cd frontend && pnpm build            # Build frontend (outputs to src/claude_rev
 cd frontend && pnpm test             # Run frontend tests
 cd frontend && pnpm lint             # Lint frontend
 cd frontend && pnpm check            # Type check frontend
-cd frontend && pnpm api:types        # Regenerate src/lib/types/api.ts from the server's schemas
-cd frontend && pnpm api:check        # Fail if api.ts no longer matches the server (CI runs this)
+cd frontend && pnpm api:types        # Regenerate src/lib/types/generated/ from the server's schemas
+cd frontend && pnpm api:check        # Fail if the generated types no longer match the server (CI runs this)
 ```
 
 All Python commands use `uv` — never use pip or manually activate a virtualenv. Use `uv init` to initialize, `uv add` to add dependencies (NEVER specify a version — let uv resolve), `uv run` to execute anything.
@@ -95,7 +95,7 @@ async def submit_review(
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations
-- **Wire types**: the browser's types for what crosses the wire come from `frontend/src/lib/types/api.ts`, generated from the server's OpenAPI (`presentation/api_schema.py`, which also describes the session socket). Change a schema → run `pnpm api:types`; never edit `api.ts` by hand. `types/index.ts` names the generated schemas for the rest of the browser
+- **Wire types**: the browser's types for what crosses the wire are generated from the server's schemas into `frontend/src/lib/types/generated/` — `http.ts` from the routes' OpenAPI, `socket.ts` from a document of the session socket's messages (`presentation/api_schema.py` writes both). Change a schema → run `pnpm api:types`; never edit the generated files by hand. `types/index.ts` names the generated schemas for the rest of the browser
 - **Test selectors**: use `data-testid` attributes for targeting elements to interact with (click, type, check disabled). Use `getByText` / `text=` only for asserting visible content the user sees. Never use CSS class selectors in tests. Add `data-testid` to every new button, input, textarea, and container.
 
 ## Boundaries

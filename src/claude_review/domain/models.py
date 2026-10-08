@@ -8,12 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 
 
 class ReviewModel(BaseModel):
-    """What every model of a review has in common: written out, it carries every field.
+    """A model that crosses the wire: written out, it carries every field.
 
     A field with a default may be left out by whoever sends one, but the
     review always writes it, so the schema of what it writes says so — and
     the browser's types, generated from that schema, do not call such a
-    field maybe missing.
+    field maybe missing. Models that never leave the server are plain.
     """
 
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
@@ -243,7 +243,7 @@ class Thread(ReviewModel):
         return self.anchor.where()
 
 
-class ReviewResult(ReviewModel):
+class ReviewResult(BaseModel):
     """Formatted review output."""
 
     markdown: str
@@ -347,7 +347,7 @@ class ChangesSince(ReviewModel):
     paths: list[str]
 
 
-class PathState(ReviewModel):
+class PathState(BaseModel):
     """One path where the working tree differs from HEAD, as the disk has it now.
 
     Git says only that a path differs, and that stays true through every
@@ -367,7 +367,7 @@ class PathState(ReviewModel):
 type TreeState = frozenset[PathState]
 
 
-class TreeSnapshot(ReviewModel):
+class TreeSnapshot(BaseModel):
     """The working tree as one taking of the diff saw it.
 
     The work under review is uncommitted, so between two rounds there may be
@@ -382,7 +382,7 @@ class TreeSnapshot(ReviewModel):
     at: EpochMillis
 
 
-class GitRef(ReviewModel):
+class GitRef(BaseModel):
     """A branch or a tag, and when whatever it points at was committed."""
 
     name: str
@@ -419,7 +419,7 @@ class ReviewVersion(ReviewModel):
     changed: int | None = None
 
 
-class ReviewWorkspace(ReviewModel):
+class ReviewWorkspace(BaseModel):
     """Where a review writes, so nothing of it lands in the repository under review."""
 
     # Where the trees written down at every take of the diff are kept. None
@@ -466,7 +466,7 @@ class GuideState(ReviewModel):
     seen_release: str | None = None
 
 
-class ReaderFiles(ReviewModel):
+class ReaderFiles(BaseModel):
     """Where what a review remembers about its reader is kept, for every review.
 
     Two files for two kinds of thing: what the reader chose, kept with their
@@ -479,7 +479,7 @@ class ReaderFiles(ReviewModel):
     guide: Path
 
 
-class StoredImage(ReviewModel):
+class StoredImage(BaseModel):
     """An image the reader pasted, written into the review's workspace."""
 
     image_id: str
@@ -488,7 +488,7 @@ class StoredImage(ReviewModel):
     size: int
 
 
-class ImageLedger(ReviewModel):
+class ImageLedger(BaseModel):
     """What one review keeps of the images pasted into it.
 
     Held beside the rest of the review's state rather than read back off the

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
+from claude_review.presentation.schemas import PushKind
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -85,8 +86,8 @@ async def test_a_thread_reaches_the_agent_with_what_was_said_in_it(client: Async
         "Still reads oddly.",
         severity=CommentSeverity.QUESTION,
         turns=[
-            turn_on_the_wire(TurnAuthor.AUTHOR, "Deliberate: two tabs are one reader."),
-            turn_on_the_wire(TurnAuthor.READER, "Then say so in the docstring."),
+            turn_on_the_wire(TurnAuthor.AUTHOR, "Deliberate: two tabs are one reader.", turn_id="turn-1"),
+            turn_on_the_wire(TurnAuthor.READER, "Then say so in the docstring.", turn_id="turn-2"),
         ],
         resolved=True,
     )
@@ -140,7 +141,7 @@ def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClie
         before = review_page.get(DIFF_ROUTE).json()["answerer_attached"]
         review_page.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
-        assert next_push(socket, "answerer") == {"type": "answerer", "attached": True}
+        assert next_push(socket, PushKind.ANSWERER) == {"type": "answerer", "attached": True}
 
     assert before is False
     # And a review opened only now learns it too
@@ -160,7 +161,7 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
         with open_session(review_page) as socket:
             review_page.post("/api/round", json={})
 
-            assert next_push(socket, "diff") == {
+            assert next_push(socket, PushKind.DIFF) == {
                 "type": "diff",
                 "changes": {"since_round": 1, "paths": ["answered.py"]},
             }
@@ -185,7 +186,7 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
         with open_session(review_page) as socket:
             (tmp_git_repo / "second.py").write_text("only this one now\n")
             review_page.post("/api/round", json={})
-            told = next_push(socket, "diff")
+            told = next_push(socket, PushKind.DIFF)
 
     assert told["changes"]["since_round"] == 1
     assert sorted(told["changes"]["paths"]) == ["first.py", "second.py"]
@@ -201,7 +202,7 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
     ):
         review_page.post("/api/round", json={})
 
-        assert next_push(socket, "diff") == {"type": "diff", "changes": None}
+        assert next_push(socket, PushKind.DIFF) == {"type": "diff", "changes": None}
 
 
 async def test_after_a_retake_each_thread_is_told_where_its_lines_went(

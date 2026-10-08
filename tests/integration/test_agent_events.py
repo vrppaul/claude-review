@@ -25,7 +25,7 @@ from tests.helpers import (
 )
 
 A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
-A_MESSAGE = {"message_id": "panel-1", "text": "Is the retry still needed?"}
+A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
 
 # Far longer than the test waits for anything, so a poll that is still
 # waiting when the test looks is one that never noticed its caller leave
@@ -47,11 +47,15 @@ async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews
         event = (await agent.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event["type"] == "message"
-    assert event["message"]["text"] == A_MESSAGE["text"]
+    assert event["message"]["text"] == A_MESSAGE["body"]
 
 
 async def test_the_last_round_reaches_an_agent_that_asks_after_the_review_ended(client: AsyncClient) -> None:
-    """Sent as the last act, it is the agent's to read before it hears the review is over."""
+    """Sent as the last act, it is the agent's to read before it hears the review is over.
+
+    This holds for as long as the server is up; the process stops a moment
+    later and writes out what was never taken (test_cli_process).
+    """
     await client.post("/api/submit", json={"threads": [A_THREAD], "end": True}, headers=LOCAL_HEADERS)
 
     first = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()

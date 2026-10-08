@@ -1,14 +1,15 @@
 /** Screenshots a reader pastes into a comment or a panel message. */
 import { fireEvent } from '@testing-library/svelte';
-import type { ImageLimits } from '$lib/types';
+import type { SendLimits } from '$lib/types';
 import { fakeServer, type FakeServer } from './fake-server';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 
-/** What the server takes in pasted images, as the diff response carries it. */
-export const IMAGE_LIMITS: ImageLimits = {
+/** What the server takes, as the diff response carries it. */
+export const SEND_LIMITS: SendLimits = {
 	max_image_bytes: 10 * BYTES_PER_MEGABYTE,
-	max_images_per_message: 10
+	max_images_per_message: 10,
+	max_quoted_lines: 200
 };
 
 /** The id the server keeps a pasted screenshot under. */
@@ -25,7 +26,7 @@ export function screenshot(): File {
 
 /** A screenshot one byte past what the server takes. */
 export function oversizedScreenshot(): File {
-	return new File([new Uint8Array(IMAGE_LIMITS.max_image_bytes + 1)], 'huge.png', { type: PNG });
+	return new File([new Uint8Array(SEND_LIMITS.max_image_bytes + 1)], 'huge.png', { type: PNG });
 }
 
 /** Paste these files into a field, as Ctrl+V does with them on the clipboard. */

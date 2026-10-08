@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 import uvicorn
+from anyio import EndOfStream
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
@@ -30,6 +31,7 @@ from claude_review.domain.models import (
     DiffFile,
     DiffHunk,
     DiffLine,
+    EpochMillis,
     FileStatus,
     LineAnchor,
     LineSide,
@@ -43,6 +45,7 @@ from claude_review.domain.models import (
 )
 from claude_review.domain.protocols import Clock
 from claude_review.presentation.app import create_app
+from claude_review.presentation.schemas import PushKind
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.system_clock import SystemClock
 
@@ -67,6 +70,12 @@ SESSION_ROUTE = "/api/session"
 DIFF_ROUTE = "/api/diff"
 CONTEXT_ROUTE = "/api/context"
 EVENTS_ROUTE = "/api/events"
+
+
+def thread_route(thread_id: str) -> str:
+    """Where one thread the review holds is read in full."""
+    return f"{CONTEXT_ROUTE}/threads/{thread_id}"
+
 
 # The file most reviews here hold, and the one line it shows
 REVIEWED_FILE = "src/a.py"
@@ -188,10 +197,15 @@ def line_on_the_wire(
 
 
 def turn_on_the_wire(
-    author: TurnAuthor, body: str, *, round_number: int = FIRST_ROUND, images: list[str] | None = None
+    author: TurnAuthor,
+    body: str,
+    *,
+    turn_id: str,
+    round_number: int = FIRST_ROUND,
+    images: list[str] | None = None,
 ) -> dict[str, object]:
-    """One turn of a thread as the page sends it back, images named by their ids."""
-    return {"author": author, "body": body, "round": round_number, "images": images or []}
+    """One turn of a thread as the page sends it back, by the id the page gave it, images named by theirs."""
+    return {"turn_id": turn_id, "author": author, "body": body, "round": round_number, "images": images or []}
 
 
 def thread_on_the_wire(
@@ -221,10 +235,10 @@ def thread_on_the_wire(
 class FixedClock:
     """A clock that always says the same moment, so a test can say when things happened."""
 
-    def __init__(self, moment: int) -> None:
+    def __init__(self, moment: EpochMillis) -> None:
         self._moment = moment
 
-    def now(self) -> int:
+    def now(self) -> EpochMillis:
         return self._moment
 
 
@@ -290,7 +304,7 @@ def open_session(client: TestClient, headers: Mapping[str, str] | None = None) -
     return client.websocket_connect(SESSION_ROUTE, headers=dict(headers or {}))
 
 
-def next_push(socket: WebSocketTestSession, kind: str) -> dict:
+def next_push(socket: WebSocketTestSession, kind: PushKind) -> dict:
     """Read what the server pushes until a push of one kind arrives.
 
     The socket carries more than any one test is about — a review is told
@@ -307,7 +321,7 @@ def next_push(socket: WebSocketTestSession, kind: str) -> dict:
     raise AssertionError(failure)
 
 
-def pushes_until(socket: WebSocketTestSession, kind: str) -> list[dict]:
+def pushes_until(socket: WebSocketTestSession, kind: PushKind) -> list[dict]:
     """Everything the server pushes, up to and including the first push of one kind."""
     deadline = time.monotonic() + SETTLE_SECONDS
     pushed: list[dict] = []
@@ -335,7 +349,12 @@ def _receive_within(socket: WebSocketTestSession, seconds: float) -> dict:
 
 
 def _receive_into(socket: WebSocketTestSession, received: queue.Queue[dict]) -> None:
-    received.put(socket.receive_json())
+    try:
+        received.put(socket.receive_json())
+    except EndOfStream:
+        # The socket closed while this waited, a test having given up on it:
+        # nothing more will come
+        return
 
 
 def until_the_review_is_on_round(client: TestClient, round_number: int) -> None:

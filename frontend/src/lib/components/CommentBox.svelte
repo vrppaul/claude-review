@@ -105,7 +105,7 @@
 
 	async function onPaste(event: ClipboardEvent) {
 		failed = null;
-		const refusal = await attachments.takePaste(event, diffStore.imageLimits);
+		const refusal = await attachments.takePaste(event, diffStore.limits);
 		if (refusal) failed = refusal;
 	}
 

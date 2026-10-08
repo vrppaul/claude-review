@@ -121,13 +121,33 @@ export interface paths {
          *     happens next, never what already happened. Everything here has passed
          *     through this server, so it can say what was asked, what was answered and
          *     what is still open — as an index, because handing over the whole review
-         *     unasked is how a catch-up costs more than the work.
-         *
-         *     Naming a thread returns that one alone, in full, and naming one the
-         *     review does not hold is not found. The threads read here are handed
-         *     over, their images with them: the agent may open those from now on.
+         *     unasked is how a catch-up costs more than the work. A thread is read in
+         *     full from its own route.
          */
         get: operations["review_context_api_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/context/threads/{thread_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Thread
+         * @description Hand over one thread the review holds, in full: every turn, its lines, its images.
+         *
+         *     Read, so handed over: the agent may open its images from now on, and
+         *     the reader can no longer take them off.
+         */
+        get: operations["read_thread_api_context_threads__thread_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -544,26 +564,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * The session socket
-         * @description A websocket, described here and never served as a route.
-         */
-        post: operations["session_socket_api_session_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -642,23 +642,14 @@ export interface components {
             /** End Line */
             end_line: number;
         };
-        /** AnswererPush */
-        AnswererPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "answerer";
-            /** Attached */
-            attached: boolean;
-        };
         /**
          * AskRequest
          * @description Request body for POST /api/ask — the reader asking in a thread.
          *
-         *     The whole thread goes, as it stands: what is asked is the reader's last
-         *     word in it, or the comment that opened it, and the server works that
-         *     out rather than being told it twice.
+         *     The whole thread goes, as it stands. `question_id` names what is asked:
+         *     the thread's own id for the comment that opened it, or the id of one of
+         *     the reader's turns in it. The browser decides which; the server only
+         *     finds it.
          */
         AskRequest: {
             /** Question Id */
@@ -683,19 +674,6 @@ export interface components {
             message_id: string;
         };
         /**
-         * ChangedPush
-         * @description How many files have moved since the diff on screen was taken. Said, never acted on.
-         */
-        ChangedPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "changed";
-            /** Moved Count */
-            moved_count: number;
-        };
-        /**
          * ChangesSince
          * @description Which files changed since a round began, so they are read again rather than all of them.
          */
@@ -704,23 +682,6 @@ export interface components {
             since_round: number;
             /** Paths */
             paths: string[];
-        };
-        /**
-         * ChatPush
-         * @description The agent speaking in the panel: an answer to a message, or nothing answered at all.
-         */
-        ChatPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "chat";
-            /** Message Id */
-            message_id: string | null;
-            /** Text */
-            text: string;
-            /** Files */
-            files: string[];
         };
         /** ClosedEvent */
         ClosedEvent: {
@@ -745,7 +706,7 @@ export interface components {
          * @description Response for GET /api/context — the review as it stands.
          *
          *     An index, not the contents: one line's worth per thread, and the panel
-         *     in short. Whoever wants a thread in full asks for that thread.
+         *     in short. Whoever wants a thread in full reads that thread.
          */
         ContextResponse: {
             /** Title */
@@ -758,7 +719,7 @@ export interface components {
             answerer_attached: boolean;
             agent: components["schemas"]["AgentStatus"];
             /** Threads */
-            threads: components["schemas"]["Thread"][];
+            threads: components["schemas"]["ThreadSummary"][];
             /** Panel */
             panel: components["schemas"]["PanelEntry"][];
         };
@@ -820,18 +781,6 @@ export interface components {
             content: string;
         };
         /**
-         * DiffPush
-         * @description The diff was taken again: fetch it, and which files changed since the round began.
-         */
-        DiffPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "diff";
-            changes: components["schemas"]["ChangesSince"] | null;
-        };
-        /**
          * DiffResponse
          * @description Response for GET /api/diff.
          */
@@ -863,10 +812,11 @@ export interface components {
             /**
              * @default {
              *       "max_image_bytes": 10485760,
-             *       "max_images_per_message": 10
+             *       "max_images_per_message": 10,
+             *       "max_quoted_lines": 200
              *     }
              */
-            image_limits: components["schemas"]["ImageLimits"];
+            limits: components["schemas"]["SendLimits"];
             /** Release */
             release: string;
         };
@@ -940,25 +890,6 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
-         * ImageLimits
-         * @description The limits the browser checks before uploading an image.
-         *
-         *     Told by the server rather than repeated in the browser, so the two
-         *     cannot drift apart.
-         */
-        ImageLimits: {
-            /**
-             * Max Image Bytes
-             * @default 10485760
-             */
-            max_image_bytes: number;
-            /**
-             * Max Images Per Message
-             * @default 10
-             */
-            max_images_per_message: number;
-        };
-        /**
          * ImageResponse
          * @description Response for POST /api/images — what the image is kept under.
          */
@@ -995,19 +926,22 @@ export interface components {
         /**
          * MessageRequest
          * @description Request body for POST /api/message — the reader typing in the panel.
+         *
+         *     Words, screenshots or both, like anything else said: a screenshot can be
+         *     the whole question.
          */
         MessageRequest: {
-            /** Message Id */
-            message_id: string;
             /**
-             * Text
+             * Body
              * @default
              */
-            text: string;
-            /** Threads */
-            threads?: components["schemas"]["ThreadInput"][];
+            body: string;
             /** Images */
             images?: string[];
+            /** Message Id */
+            message_id: string;
+            /** Threads */
+            threads?: components["schemas"]["ThreadInput"][];
         };
         /**
          * PanelCancel
@@ -1069,23 +1003,6 @@ export interface components {
             images: string[];
         };
         /**
-         * PointPush
-         * @description A thread the agent raised, quoted from the diff it was checked against.
-         */
-        PointPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "point";
-            /** Thread Id */
-            thread_id: string;
-            anchor: components["schemas"]["Anchor-Output"];
-            /** Body */
-            body: string;
-            severity: components["schemas"]["CommentSeverity"];
-        };
-        /**
          * PointRequest
          * @description Request body for POST /api/point — the author raising a thread.
          *
@@ -1107,25 +1024,6 @@ export interface components {
             thread_id: string;
         };
         /**
-         * ProgressPush
-         * @description What the agent is doing right now, whole: it replaces whatever was showing.
-         */
-        ProgressPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "progress";
-            /** Message Id */
-            message_id: string | null;
-            /** Text */
-            text: string;
-            /** Files */
-            files: string[];
-            /** Steps */
-            steps: components["schemas"]["ProgressStep-Output"][];
-        };
-        /**
          * ProgressRequest
          * @description Request body for POST /api/progress — what is being done right now.
          *
@@ -1144,26 +1042,13 @@ export interface components {
             /** Files */
             files?: string[];
             /** Steps */
-            steps?: components["schemas"]["ProgressStep-Input"][];
+            steps?: components["schemas"]["ProgressStep"][];
         };
         /**
          * ProgressStep
          * @description One branch of the work: something being done, or something done.
          */
-        "ProgressStep-Input": {
-            /** Text */
-            text: string;
-            /**
-             * Done
-             * @default false
-             */
-            done: boolean;
-        };
-        /**
-         * ProgressStep
-         * @description One branch of the work: something being done, or something done.
-         */
-        "ProgressStep-Output": {
+        ProgressStep: {
             /** Text */
             text: string;
             /**
@@ -1202,23 +1087,6 @@ export interface components {
              * @default false
              */
             sound_on_replies: boolean;
-        };
-        /**
-         * ReplyPush
-         * @description An answer to one thread, and which question in it, when the answer says.
-         */
-        ReplyPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "reply";
-            /** Thread Id */
-            thread_id: string;
-            /** Question Id */
-            question_id: string | null;
-            /** Text */
-            text: string;
         };
         /**
          * ReplyRequest
@@ -1274,19 +1142,6 @@ export interface components {
             round: components["schemas"]["RoundSubmission"];
         };
         /**
-         * RoundPush
-         * @description The round now being written, after one was sent and the review stayed open.
-         */
-        RoundPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "round";
-            /** Number */
-            number: number;
-        };
-        /**
          * RoundResponse
          * @description Response for POST /api/round — the diff taken again.
          *
@@ -1333,21 +1188,30 @@ export interface components {
             /** Files */
             files?: string[];
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"];
         /**
-         * SessionHello
-         * @description What the browser says on connecting, and whenever its threads change.
+         * SendLimits
+         * @description The limits the browser checks before it sends: an image, or the lines a comment covers.
          *
-         *     The review on screen is the only side that knows what has been written
-         *     in it — the threads are unsent work — and the only side that survives a
-         *     server restarted mid-review. So it says both, and neither costs anybody
-         *     anything: this never leaves the machine until an agent asks for it.
+         *     Told by the server rather than repeated in the browser, so the two
+         *     cannot drift apart — and a comment the server would refuse is never
+         *     written in the first place.
          */
-        SessionHello: {
-            /** Round */
-            round?: number | null;
-            /** Threads */
-            threads?: components["schemas"]["ThreadInput"][] | null;
+        SendLimits: {
+            /**
+             * Max Image Bytes
+             * @default 10485760
+             */
+            max_image_bytes: number;
+            /**
+             * Max Images Per Message
+             * @default 10
+             */
+            max_images_per_message: number;
+            /**
+             * Max Quoted Lines
+             * @default 200
+             */
+            max_quoted_lines: number;
         };
         /**
          * SettingsChange
@@ -1370,16 +1234,6 @@ export interface components {
             /** Stored */
             stored: boolean;
         };
-        /** ShowPush */
-        ShowPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "show";
-            /** File */
-            file: string;
-        };
         /**
          * ShowRequest
          * @description Request body for POST /api/show — bring a file into view.
@@ -1390,15 +1244,6 @@ export interface components {
         ShowRequest: {
             /** File */
             file: string;
-        };
-        /** StatusPush */
-        StatusPush: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "status";
-            agent: components["schemas"]["AgentStatus"];
         };
         /**
          * StatusRequest
@@ -1523,6 +1368,30 @@ export interface components {
             images: string[];
             thread: components["schemas"]["Thread"];
         };
+        /**
+         * ThreadSummary
+         * @description One line's worth of a thread: enough to choose what to read, and nothing handed over.
+         *
+         *     No images and no turns: those are what reading the thread in full is
+         *     for, and handing out an image's path is what keeps it from being taken
+         *     off a comment nobody has sent yet.
+         */
+        ThreadSummary: {
+            /** Thread Id */
+            thread_id: string;
+            /** Where */
+            where: string;
+            severity: components["schemas"]["CommentSeverity"];
+            /** Body */
+            body: string;
+            raised_by: components["schemas"]["TurnAuthor"];
+            /** Resolved */
+            resolved: boolean;
+            /** Outdated */
+            outdated: boolean;
+            /** Turn Count */
+            turn_count: number;
+        };
         /** TimeoutEvent */
         TimeoutEvent: {
             /**
@@ -1568,6 +1437,8 @@ export interface components {
             body: string;
             /** Images */
             images?: string[];
+            /** Turn Id */
+            turn_id: string;
             author: components["schemas"]["TurnAuthor"];
             /** Round */
             round: number;
@@ -1772,9 +1643,7 @@ export interface operations {
     };
     review_context_api_context_get: {
         parameters: {
-            query?: {
-                thread?: string | null;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -1788,6 +1657,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContextResponse"];
+                };
+            };
+        };
+    };
+    read_thread_api_context_threads__thread_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Thread"];
                 };
             };
             /** @description Validation Error */
@@ -2327,39 +2218,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    session_socket_api_session_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SessionHello"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServerPush"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };

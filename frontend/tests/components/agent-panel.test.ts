@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { work } from '../agent-work';
 import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
@@ -12,7 +13,7 @@ import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
 import {
-	IMAGE_LIMITS,
+	SEND_LIMITS,
 	KEPT_AS,
 	keepingImages,
 	oversizedScreenshot,
@@ -46,7 +47,7 @@ function painted(): Promise<void> {
 describe('the agent panel', () => {
 	beforeEach(() => {
 		diffStore.setFiles([file], 'diff', TITLE);
-		diffStore.setImageLimits(IMAGE_LIMITS);
+		diffStore.setLimits(SEND_LIMITS);
 		commentStore.restore(TITLE);
 		panelStore.restore(TITLE);
 		reviewStore.attachAnswerer();
@@ -89,7 +90,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Run the tests');
 		await user.click(getByTestId('send-message'));
 
-		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ text: 'Run the tests' }]);
+		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ body: 'Run the tests' }]);
 		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('');
 	});
 
@@ -190,9 +191,9 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Fix the scroll');
 		await user.click(getByTestId('send-message'));
 
-		panelStore.reportProgress(undefined, 'rewriting the answer handler', [
-			'src/lib/components/AgentPanel.svelte'
-		]);
+		panelStore.showWork(
+			work({ text: 'rewriting the answer handler', files: ['src/lib/components/AgentPanel.svelte'] })
+		);
 		await tick();
 
 		expect(getByTestId('panel-progress').textContent).toContain('rewriting the answer handler');
@@ -207,10 +208,15 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Find every caller');
 		await user.click(getByTestId('send-message'));
 
-		panelStore.reportProgress(undefined, 'looking for other callers', [], [
-			{ text: 'ran the panel tests', done: true },
-			{ text: 'three subagents out, one back', done: false }
-		]);
+		panelStore.showWork(
+			work({
+				text: 'looking for other callers',
+				steps: [
+					{ text: 'ran the panel tests', done: true },
+					{ text: 'three subagents out, one back', done: false }
+				]
+			})
+		);
 		await tick();
 
 		const steps = getAllByTestId('progress-steps')[0];
@@ -218,33 +224,21 @@ describe('the agent panel', () => {
 		expect(steps.textContent).toContain('three subagents out, one back');
 	});
 
-	it('takes the line away once the message it was about is answered', async () => {
-		listeningToThePanel();
-		await say('Fix the scroll');
-		const asked = panelStore.turns[0].id;
-		panelStore.reportProgress(asked, 'rewriting it', [], []);
+	it('takes the line away when the server says the work is over', async () => {
+		const { queryByTestId } = render(AgentPanel);
+		panelStore.showWork(work({ text: 'rewriting it' }));
+		await tick();
 
-		panelStore.receive(asked, 'Done, and green.');
+		panelStore.showWork(null);
+		await tick();
 
-		expect(panelStore.progress).toBeNull();
-	});
-
-	it('leaves work that is not what was answered still showing', async () => {
-		listeningToThePanel();
-		await say('Fix the scroll');
-		// Work of the agent's own — four reviewers reading, a round being
-		// worked through — belongs to no message and outlives any answer
-		panelStore.reportProgress(undefined, 'four cold reviewers reading', [], []);
-
-		panelStore.receive(panelStore.turns[0].id, 'Done, and green.');
-
-		expect(panelStore.progress?.text).toBe('four cold reviewers reading');
+		expect(queryByTestId('panel-progress')).toBeNull();
 	});
 
 	it('shows work nobody is waiting on, in a row of its own', async () => {
 		const { getByTestId } = render(AgentPanel);
 
-		panelStore.reportProgress(undefined, 'taking the diff again', [], []);
+		panelStore.showWork(work({ text: 'taking the diff again' }));
 		await tick();
 
 		expect(getByTestId('panel-work')).toBeTruthy();
@@ -397,7 +391,7 @@ describe('the agent panel', () => {
 
 	it('refuses an image past what one message takes', async () => {
 		keepingImages(listeningToThePanel());
-		diffStore.setImageLimits({ ...IMAGE_LIMITS, max_images_per_message: 1 });
+		diffStore.setLimits({ ...SEND_LIMITS, max_images_per_message: 1 });
 
 		const { getByTestId, findByTestId, getAllByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), screenshot());
@@ -434,7 +428,7 @@ describe('the agent panel', () => {
 
 	it('does not let an image too large to send take the place of one that fits', async () => {
 		keepingImages(listeningToThePanel());
-		diffStore.setImageLimits({ ...IMAGE_LIMITS, max_images_per_message: 1 });
+		diffStore.setLimits({ ...SEND_LIMITS, max_images_per_message: 1 });
 
 		const { getByTestId, findByTestId } = render(AgentPanel);
 		await paste(getByTestId('panel-input'), oversizedScreenshot(), screenshot());

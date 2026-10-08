@@ -12,11 +12,13 @@ from claude_review.cli import (
     _files_title,
     _reader_files,
     _render_context,
+    _render_thread,
     _stable_port,
     _transcript_title,
     main,
 )
-from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
+from claude_review.domain.models import AgentStatus, CommentSeverity, PanelEntry, Turn, TurnAuthor
+from claude_review.presentation.schemas import ContextResponse, ThreadSummary
 from tests.helpers import line_anchor, thread
 
 
@@ -137,29 +139,29 @@ def test_the_panel_commands_are_in_help() -> None:
     assert "status" in result.output
 
 
-SEEN = {
-    "title": "claude-review: uncommitted changes",
-    "round": 3,
-    "file_count": 7,
-    "answerer_attached": True,
-    "agent": {"model": "opus-5", "context": "45% of 1M", "at": 1},
-    # A thread as the server tells it, so this reads what the agent is handed
-    "threads": [
-        thread(
-            line_anchor("src/routes.py", 118, 130, quote=["    return event"]),
-            "Does a round overtake a question?\nAnd if it does, what then?",
-            thread_id="comment-4",
-            severity=CommentSeverity.QUESTION,
-            turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2)],
-        ).model_dump(mode="json")
-    ],
-    "panel": [{"message_id": "panel-1", "author": "reader", "text": "Run the tests", "at": 1, "images": []}],
-}
+# A thread as the server holds it, so this reads what the agent is handed
+DISCUSSED = thread(
+    line_anchor("src/routes.py", 118, 130, quote=["    return event"]),
+    "Does a round overtake a question?\nAnd if it does, what then?",
+    thread_id="comment-4",
+    severity=CommentSeverity.QUESTION,
+    turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2)],
+)
+
+SEEN = ContextResponse(
+    title="claude-review: uncommitted changes",
+    round=3,
+    file_count=7,
+    answerer_attached=True,
+    agent=AgentStatus(model="opus-5", context="45% of 1M", at=1),
+    threads=[ThreadSummary.of(DISCUSSED)],
+    panel=[PanelEntry(message_id="panel-1", author=TurnAuthor.READER, text="Run the tests", at=1)],
+)
 
 
 def test_catching_up_costs_a_line_a_thread() -> None:
     """An index is what makes catching up cheaper than being handed the review."""
-    printed = _render_context(SEEN, whole=False)
+    printed = _render_context(SEEN)
 
     assert "round 3 · 7 files" in printed
     assert "1 threads, 1 open · panel: 1 messages" in printed
@@ -167,14 +169,13 @@ def test_catching_up_costs_a_line_a_thread() -> None:
     # The first line of the comment, and not the second
     assert "Does a round overtake a question?" in printed
     assert "And if it does" not in printed
-    # Nor what was said in the thread: that is what asking for it is for
-    assert "one queue" not in printed
 
 
 def test_a_thread_asked_for_by_name_comes_in_full() -> None:
     """The index is for choosing what to read; this is the reading."""
-    printed = _render_context({**SEEN, "threads": SEEN["threads"]}, whole=True)
+    printed = _render_thread(DISCUSSED)
 
+    assert "comment-4  `src/routes.py`:118-130  question · 1 turns" in printed
     assert "And if it does, what then?" in printed
     assert "author: It cannot: one queue." in printed
     assert "lines:     return event" in printed
@@ -182,17 +183,17 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
 
 def test_a_review_nobody_answers_says_so() -> None:
     """Because it changes what the agent should do next, or whether it can."""
-    printed = _render_context({**SEEN, "answerer_attached": False}, whole=False)
+    printed = _render_context(SEEN.model_copy(update={"answerer_attached": False}))
 
     assert "nobody answering" in printed
 
 
 def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
     """The words alone would leave "look at this" pointing at nothing."""
-    image = "/tmp/tmp0a1b.claude-review/images/0a1b.png"
-    said = {"message_id": "panel-1", "author": "reader", "text": "", "at": 1, "images": [image]}
+    image = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
+    said = PanelEntry(message_id="panel-1", author=TurnAuthor.READER, text="", at=1, images=[image])
 
-    printed = _render_context({**SEEN, "panel": [said]}, whole=False)
+    printed = _render_context(SEEN.model_copy(update={"panel": [said]}))
 
     assert "you: (image)" in printed
     assert f"image: {image}" in printed

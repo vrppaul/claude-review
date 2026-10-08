@@ -1,14 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ServerPush } from '$lib/types';
-import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
+import {
+	dispatchHeld,
+	FIRST_RETRY,
+	HELLO_AT_MOST_EVERY,
+	LONGEST_RETRY,
+	openSession,
+	RETRY_GROWTH,
+	tellServer
+} from '$lib/stores/session.svelte';
 
-// The session says hello at most this often, however often there is news
-const HELLO_AT_MOST_EVERY = 1000;
-// How long it waits before the first attempt to reconnect, doubling after
-// each one that fails, up to the longest
-const FIRST_RETRY = 500;
-const SECOND_RETRY = 2 * FIRST_RETRY;
-const LONGEST_RETRY = 5000;
+// Pushes as the server sends them
+const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, text: 'first' };
+const A_CHAT: ServerPush = { type: 'chat', message_id: null, text: 'second', files: [] };
+const A_SHOW: ServerPush = { type: 'show', file: 'a.py' };
+
+// The second attempt to reconnect waits longer than the first
+const SECOND_RETRY = RETRY_GROWTH * FIRST_RETRY;
 
 type Listener = (event: { data?: string }) => void;
 
@@ -90,14 +98,14 @@ describe('the session socket', () => {
 		const close = openSession((push) => heard.push(push));
 		const socket = latestSocket();
 
-		socket.emit('message', JSON.stringify({ type: 'reply', text: 'first' }));
-		socket.emit('message', JSON.stringify({ type: 'chat', text: 'second' }));
+		socket.emit('message', JSON.stringify(A_REPLY));
+		socket.emit('message', JSON.stringify(A_CHAT));
 		expect(heard).toEqual([]);
 
 		dispatchHeld();
-		socket.emit('message', JSON.stringify({ type: 'show', file: 'a.py' }));
+		socket.emit('message', JSON.stringify(A_SHOW));
 
-		expect(heard.map((push) => push.type)).toEqual(['reply', 'chat', 'show']);
+		expect(heard).toEqual([A_REPLY, A_CHAT, A_SHOW]);
 		close();
 	});
 
@@ -110,10 +118,11 @@ describe('the session socket', () => {
 
 		socket.emit('message', 'not json');
 		socket.emit('message', JSON.stringify({ text: 'no type' }));
-		socket.emit('message', JSON.stringify({ type: 'reply', text: 'fine' }));
+		socket.emit('message', JSON.stringify({ type: 'teleport', to: 'elsewhere' }));
+		socket.emit('message', JSON.stringify(A_REPLY));
 
-		expect(heard.map((push) => push.type)).toEqual(['reply']);
-		expect(warn).toHaveBeenCalledTimes(2);
+		expect(heard).toEqual([A_REPLY]);
+		expect(warn).toHaveBeenCalledTimes(3);
 		close();
 	});
 
@@ -124,7 +133,7 @@ describe('the session socket', () => {
 		dispatchHeld();
 		const socket = latestSocket();
 
-		expect(() => socket.emit('message', JSON.stringify({ type: 'reply' }))).toThrow(
+		expect(() => socket.emit('message', JSON.stringify(A_REPLY))).toThrow(
 			'handler broke'
 		);
 		close();
@@ -153,7 +162,7 @@ describe('the session socket', () => {
 		latestSocket().accept();
 
 		// 0.5, 1, 2 and 4 seconds, and then the longest wait rather than 8
-		for (let wait = FIRST_RETRY; wait < LONGEST_RETRY; wait *= 2) {
+		for (let wait = FIRST_RETRY; wait < LONGEST_RETRY; wait *= RETRY_GROWTH) {
 			latestSocket().drop();
 			vi.advanceTimersByTime(wait);
 		}
@@ -194,23 +203,23 @@ describe('the session socket', () => {
 
 	it('says hello on every connection, to a server that may have just come up', () => {
 		const review = { round: 3 };
-		const close = openSession(ignore, () => ({ round: review.round }));
+		const close = openSession(ignore, () => ({ round: review.round, threads: null }));
 
 		latestSocket().accept();
-		expect(latestSocket().said).toEqual([{ round: 3 }]);
+		expect(latestSocket().said).toEqual([{ round: 3, threads: null }]);
 
 		latestSocket().drop();
 		vi.advanceTimersByTime(FIRST_RETRY);
 		latestSocket().accept();
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
-		expect(latestSocket().said).toEqual([{ round: 3 }]);
+		expect(latestSocket().said).toEqual([{ round: 3, threads: null }]);
 		close();
 	});
 
 	it('tells the server what changed at most once a second, ending on the latest', () => {
 		const review = { round: 1 };
-		const close = openSession(ignore, () => ({ round: review.round }));
+		const close = openSession(ignore, () => ({ round: review.round, threads: null }));
 		const socket = latestSocket();
 		socket.accept();
 
@@ -218,19 +227,19 @@ describe('the session socket', () => {
 		tellServer();
 		review.round = 3;
 		tellServer();
-		expect(socket.said).toEqual([{ round: 1 }]);
+		expect(socket.said).toEqual([{ round: 1, threads: null }]);
 
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
 		expect(socket.said).toEqual([
-			{ round: 1 },
-			{ round: 3 }
+			{ round: 1, threads: null },
+			{ round: 3, threads: null }
 		]);
 		close();
 	});
 
 	it('says nothing before the connection is open', () => {
-		const close = openSession(ignore, () => ({ round: 1 }));
+		const close = openSession(ignore, () => ({ round: 1, threads: null }));
 
 		tellServer();
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);

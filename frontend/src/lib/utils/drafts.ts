@@ -1,14 +1,17 @@
-import type { Comment, Composer, LineSide, PanelTurn } from "$lib/types";
+import type { Comment, Composer, LineSide, PanelTurn, Turn } from "$lib/types";
+
+import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 
 const STORAGE_KEY = "claude-review:draft";
 // What shape the stored draft is in. A comment has grown turns, a resolved
 // mark, the lines it was written against, the questions still waiting for an
 // answer, and who raised it; the review has grown a conversation in the
 // agent panel, and the message being written there; and what a thread hangs
-// on has moved into an anchor of its own. The number is here so an older
+// on has moved into an anchor of its own, and every turn carries an id a
+// question can name. The number is here so an older
 // draft can be brought up to the current shape — never so it can be thrown
 // away: a draft is an hour of somebody's reading.
-const SHAPE = 8;
+const SHAPE = 9;
 
 export interface Draft {
   version: number;
@@ -22,6 +25,14 @@ export interface Draft {
   panel: PanelTurn[];
   /** What is being written in the panel, not yet sent. */
   composer: Composer;
+  /** How many thread and turn ids have been handed out, deleted ones included. */
+  issued: IssuedIds;
+}
+
+/** How many ids of each kind the review has handed out. */
+export interface IssuedIds {
+  comments: number;
+  turns: number;
 }
 
 /**
@@ -42,6 +53,7 @@ function blank(title: string): Draft {
     sent: [],
     panel: [],
     composer: emptyComposer(),
+    issued: { comments: 0, turns: 0 },
   };
 }
 
@@ -86,6 +98,12 @@ interface FlatComment extends Omit<Comment, "anchor"> {
   outdated?: boolean;
 }
 
+/** A turn as drafts kept it before every turn carried an id. */
+type KeptTurn = Omit<Turn, "id" | "images"> & {
+  id?: string;
+  images?: string[];
+};
+
 /** A stored thread in the current shape, whichever shape it was kept in. */
 function anchored(stored: Comment | FlatComment): Comment {
   if ("anchor" in stored) return stored;
@@ -113,6 +131,35 @@ function anchored(stored: Comment | FlatComment): Comment {
  * would be losing work to a version number.
  */
 function upgrade(draft: Draft): Draft {
+  const kept = draft.comments as (Comment | FlatComment)[];
+  // A turn that came without an id gets one past every id the draft holds,
+  // the way the review hands them out
+  const turnIds = new IdSequence(TURN_ID_PREFIX);
+  turnIds.continuePast(
+    kept.flatMap((comment) => turnsOf(comment)).map((turn) => turn.id),
+  );
+  const comments = kept.map((comment) => ({
+    ...anchored(comment),
+    // Comments were words alone until images could be pasted into them
+    images: comment.images ?? [],
+    turns: turnsOf(comment).map((turn) => ({
+      ...turn,
+      id: turn.id ?? turnIds.next(),
+      images: turn.images ?? [],
+    })),
+    // Threads were all the reader's before the author could raise one
+    raised_by: comment.raised_by ?? "reader",
+    resolved: comment.resolved ?? false,
+    awaiting: comment.awaiting ?? [],
+    collapsed: comment.collapsed ?? false,
+    unread: comment.unread ?? false,
+    round: comment.round ?? 1,
+    at: comment.at ?? 0,
+  }));
+  // Before the draft kept how many were handed out, the ids it holds are all
+  // there is to go on
+  const commentIds = new IdSequence(COMMENT_ID_PREFIX);
+  commentIds.continuePast(kept.map((comment) => comment.id));
   return {
     ...draft,
     version: SHAPE,
@@ -125,24 +172,14 @@ function upgrade(draft: Draft): Draft {
     sent: (Array.isArray(draft.sent) ? draft.sent : []).map((entry) =>
       Array.isArray(entry) ? entry : [entry as unknown as string, 1],
     ),
-    comments: (draft.comments as (Comment | FlatComment)[]).map((comment) => ({
-      ...anchored(comment),
-      // Comments were words alone until images could be pasted into them
-      images: comment.images ?? [],
-      turns: (comment.turns ?? []).map((turn) => ({
-        ...turn,
-        images: turn.images ?? [],
-      })),
-      // Threads were all the reader's before the author could raise one
-      raised_by: comment.raised_by ?? "reader",
-      resolved: comment.resolved ?? false,
-      awaiting: comment.awaiting ?? [],
-      collapsed: comment.collapsed ?? false,
-      unread: comment.unread ?? false,
-      round: comment.round ?? 1,
-      at: comment.at ?? 0,
-    })),
+    comments,
+    issued: { comments: commentIds.issued, turns: turnIds.issued },
   };
+}
+
+/** The turns a stored thread holds, as they were kept; none before threads had turns. */
+function turnsOf(comment: Comment | FlatComment): KeptTurn[] {
+  return (comment.turns as KeptTurn[] | undefined) ?? [];
 }
 
 export function loadDraft(title: string): Draft | null {

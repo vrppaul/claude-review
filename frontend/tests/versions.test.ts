@@ -154,7 +154,10 @@ describe('a base that is not the review\'s own', () => {
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
 		await diffStore.setBase('round:1');
-		const selection = createLineSelection(() => !diffStore.narrowed);
+		const selection = createLineSelection({
+			mayCommentOnRemoved: () => !diffStore.narrowed,
+			longestRange: () => null
+		});
 
 		selection.handleMouseDown(removedLine(17, 'gone'), 0);
 
@@ -164,7 +167,10 @@ describe('a base that is not the review\'s own', () => {
 	it('takes a thread on a line of the working tree, which every base shares', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
 		await diffStore.setBase('round:1');
-		const selection = createLineSelection(() => !diffStore.narrowed);
+		const selection = createLineSelection({
+			mayCommentOnRemoved: () => !diffStore.narrowed,
+			longestRange: () => null
+		});
 
 		selection.commentOnLine(contextLine(17, 17, 'here'), 0);
 

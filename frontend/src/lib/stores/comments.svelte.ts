@@ -3,6 +3,7 @@ import type {
   AskRequest,
   Comment,
   CommentSeverity,
+  FollowOutcome,
   FollowRequest,
   FollowResponse,
   NewComment,
@@ -18,14 +19,14 @@ import { reviewStore } from "$lib/stores/review.svelte";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
-import { IdSequence } from "$lib/utils/ids";
+import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 
 let comments = $state<Comment[]>([]);
 let reviewBody = $state("");
 let submitted = $state(false);
 
-const commentIds = new IdSequence("comment-");
-const turnIds = new IdSequence("turn-");
+const commentIds = new IdSequence(COMMENT_ID_PREFIX);
+const turnIds = new IdSequence(TURN_ID_PREFIX);
 // What the draft is tied to, so it is not restored onto another review
 let draftTitle = $state<string | null>(null);
 // Where the reader is in the list, shared by every control that steps it
@@ -37,7 +38,13 @@ const sent = new SvelteMap<string, number>();
 
 function remember(): void {
   if (draftTitle === null) return;
-  saveDraft({ title: draftTitle, comments, reviewBody, sent: [...sent] });
+  saveDraft({
+    title: draftTitle,
+    comments,
+    reviewBody,
+    sent: [...sent],
+    issued: { comments: commentIds.issued, turns: turnIds.issued },
+  });
   // The threads are unsent work and live only here. An agent that attaches
   // later has no other way to learn they exist, so the server is kept up to
   // date — it costs nothing until somebody asks it for them.
@@ -62,11 +69,12 @@ function lastAnsweredAt(comment: Comment): number {
 /**
  * Which question asking in a thread puts: the reader's reply when theirs is
  * the last word, and otherwise the thread itself, by its opening comment.
- * The server reads the question out of the thread by the same rule.
+ * Decided here alone: the server finds what the id names, and asks nothing
+ * else of it.
  */
 function questionIdOf(comment: Comment): string {
   const last = comment.turns.at(-1);
-  return last?.author === "reader" ? (last.id ?? comment.id) : comment.id;
+  return last?.author === "reader" ? last.id : comment.id;
 }
 
 export const commentStore = {
@@ -135,10 +143,8 @@ export const commentStore = {
     reviewBody = draft.reviewBody ?? "";
     sent.clear();
     for (const [id, round] of draft.sent ?? []) sent.set(id, round);
-    commentIds.continuePast(comments.map((comment) => comment.id));
-    turnIds.continuePast(
-      comments.flatMap((comment) => comment.turns).map((turn) => turn.id),
-    );
+    commentIds.continueFrom(draft.issued.comments);
+    turnIds.continueFrom(draft.issued.turns);
     // A round the server has forgotten is still written all over the draft:
     // every thread knows the round it was written in, and every sent thread
     // the round it went out in. A restarted server comes back at round one
@@ -351,7 +357,7 @@ export const commentStore = {
    * Says how many did each, because that is what the reader stands to lose
    * and the only part of a retake they cannot see at a glance.
    */
-  async follow(): Promise<{ followed: number; outdated: number }> {
+  async follow(): Promise<FollowOutcome> {
     const asked = comments.map((comment) => comment.id);
     const request: FollowRequest = {
       anchors: comments.map((comment) => comment.anchor),

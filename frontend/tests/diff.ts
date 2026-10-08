@@ -1,6 +1,6 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
 import type { DiffFile, DiffHunk, DiffLine, DiffResponse } from '$lib/types';
-import { IMAGE_LIMITS } from './pasted-images';
+import { SEND_LIMITS } from './pasted-images';
 
 /** A file as the diff carries it: modified, text, with no lines unless given some. */
 export function diffFile(given: Partial<DiffFile> = {}): DiffFile {
@@ -64,7 +64,7 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },
 		moved: 0,
-		image_limits: IMAGE_LIMITS,
+		limits: SEND_LIMITS,
 		release: '1.5.0',
 		...given
 	};

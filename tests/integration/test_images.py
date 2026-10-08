@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import ReviewMode, ReviewWorkspace, TurnAuthor
+from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, ReviewWorkspace, TurnAuthor
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
     DIFF_ROUTE,
@@ -105,7 +105,7 @@ async def test_a_message_carries_no_more_images_than_it_may(client: AsyncClient)
     image_id = await _upload(client, PNG)
 
     response = await client.post(
-        "/api/message", json={"message_id": "panel-1", "text": "These", "images": [image_id] * ONE_TOO_MANY}
+        "/api/message", json={"message_id": "panel-1", "body": "These", "images": [image_id] * ONE_TOO_MANY}
     )
 
     assert response.status_code == 422
@@ -141,7 +141,7 @@ async def test_an_image_too_large_is_refused_before_it_is_written(
 async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient) -> None:
     """The agent reads files, so the image travels as a path to one."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "text": "This", "images": [image_id]})
+    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
 
     event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
@@ -159,13 +159,13 @@ async def test_an_image_can_be_the_whole_message(client: AsyncClient) -> None:
 
 
 async def test_a_message_with_neither_words_nor_images_is_refused(client: AsyncClient) -> None:
-    response = await client.post("/api/message", json={"message_id": "panel-1", "text": "  "})
+    response = await client.post("/api/message", json={"message_id": "panel-1", "body": "  "})
 
     assert response.status_code == 422
 
 
 async def test_a_message_naming_an_image_never_kept_is_refused(client: AsyncClient) -> None:
-    message = {"message_id": "panel-1", "text": "This", "images": [NEVER_KEPT]}
+    message = {"message_id": "panel-1", "body": "This", "images": [NEVER_KEPT]}
 
     response = await client.post("/api/message", json=message)
 
@@ -187,7 +187,7 @@ async def test_a_refusal_says_why(client: AsyncClient) -> None:
 async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClient) -> None:
     """An agent arriving late finds the screenshot along with the words."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "text": "This", "images": [image_id]})
+    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
 
     context = (await client.get("/api/context")).json()
 
@@ -217,10 +217,14 @@ async def test_an_image_already_sent_stays(client: AsyncClient) -> None:
 
 
 async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
-    """So it checks them before uploading rather than repeating the numbers."""
-    limits = (await client.get(DIFF_ROUTE)).json()["image_limits"]
+    """So it checks them before sending rather than repeating the numbers."""
+    limits = (await client.get(DIFF_ROUTE)).json()["limits"]
 
-    assert limits == {"max_image_bytes": MAX_IMAGE_BYTES, "max_images_per_message": MAX_IMAGES_PER_MESSAGE}
+    assert limits == {
+        "max_image_bytes": MAX_IMAGE_BYTES,
+        "max_images_per_message": MAX_IMAGES_PER_MESSAGE,
+        "max_quoted_lines": MAX_QUOTE_LINES,
+    }
 
 
 async def test_a_round_names_the_images_in_its_threads(client: AsyncClient) -> None:
@@ -253,7 +257,7 @@ async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> Non
 
 async def test_a_question_asked_in_a_reply_hands_the_agent_the_images_of_that_reply(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
-    reply = turn_on_the_wire(TurnAuthor.READER, "Still like this", images=[image_id])
+    reply = turn_on_the_wire(TurnAuthor.READER, "Still like this", turn_id="turn-1", images=[image_id])
 
     await client.post("/api/ask", json={"question_id": "turn-1", "thread": {**A_THREAD, "turns": [reply]}})
     event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()

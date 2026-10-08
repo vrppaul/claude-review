@@ -3,13 +3,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from claude_review.domain.exceptions import ReviewError
 from claude_review.domain.models import DiffFile, GuideState, ReaderFiles, ReaderSettings, ReviewMode, ReviewWorkspace
 from claude_review.domain.protocols import Clock
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.dependencies import reader_record_service
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
-from claude_review.presentation.refusals import answer_refusal
+from claude_review.presentation.refusals import answer_refusals
 from claude_review.presentation.routes import router
 from claude_review.presentation.state import ServerState
 
@@ -63,7 +62,7 @@ def create_app(
 
     app.include_router(router)
     # Whatever a route refuses is answered here, by its kind
-    app.add_exception_handler(ReviewError, answer_refusal)
+    answer_refusals(app)
 
     if STATIC_DIR.exists():
         app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

@@ -95,9 +95,12 @@ somebody who is waiting.
    something. This prints the round, a line per thread and the panel in
    short. It is an index on purpose: `claude-review context --thread
    comment-4` gets that one thread in full, with its lines and every turn.
-   `--json` is the same thing for a program to read rather than a person,
-   its threads in the same shape as a question's `thread` — worth it when
-   you mean to count or filter rather than to catch up.
+   `--json` is the same thing for a program to read rather than a person —
+   worth it when you mean to count or filter rather than to catch up. The
+   index lists each thread in short (`thread_id`, `where`, `severity`,
+   `body`, `turn_count`, …); with `--thread` it is that thread in the same
+   shape as a question's `thread`. Reading a thread in full hands its
+   images over to you; the index hands over nothing.
 
 5. Stay in the loop until the review is over:
    ```bash
@@ -152,7 +155,10 @@ somebody who is waiting.
    - `{"type": "closed"}` — the review is over. Stop looping. The last round
      reached you as its own event just before this one; the background
      process also writes it to its log on the way out, which is where to
-     look if you were not waiting at the time.
+     look if you were not waiting at the time. Anything else you never took
+     — a question, a panel message — follows it there, under "Left unread
+     when the review ended": the server stops a moment after the review
+     ends, so a `wait` may find nobody listening rather than `closed`.
 
 6. Answer in the thread it belongs to, naming the question:
    ```bash

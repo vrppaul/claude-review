@@ -24,13 +24,29 @@ import structlog
 import uvicorn
 
 from claude_review.domain.exceptions import PortUnavailableError
-from claude_review.domain.models import AnchorKind, DiffFile, ReaderFiles, ReviewMode, ReviewWorkspace
+from claude_review.domain.models import (
+    AnchorKind,
+    CommentSeverity,
+    DiffFile,
+    ReaderFiles,
+    ReviewMode,
+    ReviewWorkspace,
+    Thread,
+    TurnAuthor,
+)
 from claude_review.presentation.app import create_app
-from claude_review.presentation.schemas import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, ChangedPush
+from claude_review.presentation.schemas import (
+    DEFAULT_WAIT_SECONDS,
+    MAX_WAIT_SECONDS,
+    ChangedPush,
+    ContextResponse,
+    ThreadSummary,
+)
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.diff_service import DiffService
+from claude_review.services.exit_report import exit_report
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
 from claude_review.services.tree_watcher_service import TreeWatcherService
@@ -279,7 +295,7 @@ async def _serve_review(
         watching.cancel()
         sock.close()
 
-    return state.result or ""
+    return exit_report(state.last_round, state.inbox.drain())
 
 
 class ReviewServer(uvicorn.Server):
@@ -521,64 +537,65 @@ def context_cmd(port: int, thread: str | None, as_json: bool) -> None:
     handing over the whole review unasked would cost more than the work.
     Name a thread to get that one in full.
     """
-    query = f"?thread={urllib.parse.quote(thread)}" if thread else ""
-    body = _call(f"http://127.0.0.1:{port}/api/context{query}")
+    route = f"/api/context/threads/{urllib.parse.quote(thread, safe='')}" if thread else "/api/context"
+    body = _call(f"http://127.0.0.1:{port}{route}")
     if as_json:
         sys.stdout.write(body)
         sys.stdout.write("\n")
         return
-    sys.stdout.write(_render_context(json.loads(body), whole=thread is not None))
+    if thread:
+        sys.stdout.write(_render_thread(Thread.model_validate_json(body)))
+    else:
+        sys.stdout.write(_render_context(ContextResponse.model_validate_json(body)))
 
 
-def _render_context(seen: dict, *, whole: bool) -> str:
-    """Lay the review out for reading, in as few lines as it can be said.
-
-    One line per thread, the panel in short. A thread asked for by name is
-    the exception: then everything about it is wanted.
-    """
+def _render_context(seen: ContextResponse) -> str:
+    """Lay the review out for reading, in as few lines as it can be said: one per thread, the panel in short."""
     lines = [
-        f"{seen['title']} · round {seen['round']} · {seen['file_count']} files"
-        f"{'' if seen['answerer_attached'] else ' · nobody answering'}"
+        f"{seen.title} · round {seen.round} · {seen.file_count} files"
+        f"{'' if seen.answerer_attached else ' · nobody answering'}"
     ]
+    open_count = sum(1 for summary in seen.threads if not summary.resolved and not summary.outdated)
+    lines.append(f"{len(seen.threads)} threads, {open_count} open · panel: {len(seen.panel)} messages")
 
-    threads = seen["threads"]
-    if not whole:
-        open_ones = sum(1 for t in threads if not t["resolved"] and not t["anchor"]["outdated"])
-        lines.append(f"{len(threads)} threads, {open_ones} open · panel: {len(seen['panel'])} messages")
-
-    for thread in threads:
+    for summary in seen.threads:
         lines.append("")
-        lines.append(f"{thread['thread_id']}  {thread['where']}  {_marks(thread)}")
-        lines.append(_indent(thread["body"], whole=whole))
-        lines.extend(
-            _indent(turn["body"], whole=True, who=turn["author"]) for turn in (thread["turns"] if whole else [])
-        )
-        if whole and thread["anchor"]["quote"]:
-            lines.append(_indent("\n".join(thread["anchor"]["quote"]), whole=True, who="lines"))
+        lines.append(f"{summary.thread_id}  {summary.where}  {_marks(summary)}")
+        lines.append(_indent(summary.body, whole=False))
 
-    if seen["panel"] and not whole:
+    if seen.panel:
         lines.append("")
         lines.append("panel:")
-        for entry in seen["panel"]:
-            who = "you" if entry["author"] == "reader" else "me"
+        for entry in seen.panel:
+            who = "you" if entry.author == TurnAuthor.READER else "me"
             # A message can be an image alone, and an empty line says nothing
-            lines.append(f"  {who}: {_gist(entry['text']) or '(image)'}")
-            lines.extend(f"    image: {path}" for path in entry["images"])
+            lines.append(f"  {who}: {_gist(entry.text) or '(image)'}")
+            lines.extend(f"    image: {path}" for path in entry.images)
 
     return "\n".join(lines) + "\n"
 
 
-def _marks(thread: dict) -> str:
+def _render_thread(thread: Thread) -> str:
+    """One thread in full: everything said in it, and the lines it hangs on."""
+    lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of(thread))}"]
+    lines.append(_indent(thread.body, whole=True))
+    lines.extend(_indent(turn.body, whole=True, who=turn.author) for turn in thread.turns)
+    if thread.anchor.quote:
+        lines.append(_indent("\n".join(thread.anchor.quote), whole=True, who="lines"))
+    return "\n".join(lines) + "\n"
+
+
+def _marks(summary: ThreadSummary) -> str:
     """What is not ordinary about a thread, and nothing when it is."""
-    marks = [thread["severity"]] if thread["severity"] != "note" else []
-    if thread["raised_by"] == "author":
+    marks: list[str] = [summary.severity] if summary.severity != CommentSeverity.NOTE else []
+    if summary.raised_by == TurnAuthor.AUTHOR:
         marks.append("yours")
-    if thread["resolved"]:
+    if summary.resolved:
         marks.append("resolved")
-    if thread["anchor"]["outdated"]:
+    if summary.outdated:
         marks.append("outdated")
-    if thread["turns"]:
-        marks.append(f"{len(thread['turns'])} turns")
+    if summary.turn_count:
+        marks.append(f"{summary.turn_count} turns")
     return " · ".join(marks)
 
 

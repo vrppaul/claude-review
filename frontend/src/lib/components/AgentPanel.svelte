@@ -183,7 +183,7 @@
 	}
 
 	async function onPaste(event: ClipboardEvent) {
-		const refusal = await panelStore.attachments.takePaste(event, diffStore.imageLimits);
+		const refusal = await panelStore.attachments.takePaste(event, diffStore.limits);
 		if (refusal) failed = refusal;
 	}
 

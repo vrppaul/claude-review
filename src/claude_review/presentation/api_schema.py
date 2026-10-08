@@ -1,46 +1,84 @@
-"""The review's API as one OpenAPI document, for the browser's types to be generated from.
+"""What crosses the wire, written down for the browser's types to be generated from.
 
-The routes describe themselves. The session socket does not — OpenAPI has no
-words for a websocket — so this document alone describes it as a route of
-its own: what the browser says on it is the body, what the server pushes is
-the answer. Described that way, its schemas are named by the same hand as
-everything else, and the browser reads one source for both.
+Two documents, because two things cross it. The routes describe themselves
+as OpenAPI. The session socket is not HTTP, and OpenAPI has no words for it:
+what the browser says on it is read by the server, and what the server
+pushes is written by it, so the two are described each in its own
+direction, in a document of their own that holds nothing but their schemas.
 
-Run as a module, it prints the document: `python -m claude_review.presentation.api_schema`.
+Run as a module, it prints one: `python -m claude_review.presentation.api_schema http`
+or `... api_schema socket`.
 """
 
 import json
 import sys
+from collections.abc import Callable
+from typing import Any, NamedTuple
 
-from fastapi import APIRouter, FastAPI
+from fastapi import FastAPI
+from pydantic import TypeAdapter
+from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
 from claude_review.presentation.routes import router
 from claude_review.presentation.schemas import ServerPush, SessionHello
 
-# Where the socket is served, and where this document describes it
-SESSION_ROUTE = "/api/session"
-
-socket_description = APIRouter()
-
-
-@socket_description.post(
-    SESSION_ROUTE,
-    summary="The session socket",
-    description="A websocket, described here and never served as a route.",
-    response_model=ServerPush,
-)
-async def session_socket(hello: SessionHello) -> None:
-    """What the browser says on the socket, and what the server pushes down it."""
+# The OpenAPI version both documents are written in
+OPENAPI_VERSION = "3.1.0"
+SOCKET_TITLE = f"{API_TITLE} session socket"
+# The socket document has no version of its own; it changes with the server
+SOCKET_VERSION = "1"
+# Where OpenAPI keeps named schemas, as a reference into the document spells it
+SCHEMA_REFERENCE = "#/components/schemas/{model}"
 
 
-def api_schema() -> dict:
-    """The OpenAPI document: every route, and what travels on the socket."""
+class SocketMessage(NamedTuple):
+    """One kind of message on the socket, as pydantic is asked to describe it."""
+
+    # Its name in the document, which is the name of its type
+    name: str
+    # Read by the server, or written by it: a field with a default may be
+    # left out of the one, and is always there in the other
+    direction: JsonSchemaMode
+    adapter: TypeAdapter[Any]
+
+
+SOCKET_MESSAGES = [
+    SocketMessage("SessionHello", "validation", TypeAdapter(SessionHello)),
+    SocketMessage("ServerPush", "serialization", TypeAdapter(ServerPush)),
+]
+
+
+class MissingSocketSchemaError(Exception):
+    """Raised when a socket message is not described under its own name."""
+
+
+def http_document() -> dict[str, Any]:
+    """Every route the review serves, as OpenAPI."""
     app = FastAPI(title=API_TITLE)
     app.include_router(router)
-    app.include_router(socket_description)
     return app.openapi()
 
 
+def socket_document() -> dict[str, Any]:
+    """What travels on the session socket, as the schemas of an OpenAPI document with no paths."""
+    _, definitions = TypeAdapter.json_schemas(SOCKET_MESSAGES, ref_template=SCHEMA_REFERENCE)
+    schemas = definitions["$defs"]
+    missing = [message.name for message in SOCKET_MESSAGES if message.name not in schemas]
+    if missing:
+        msg = f"not described under their own names: {', '.join(missing)}"
+        raise MissingSocketSchemaError(msg)
+    return {
+        "openapi": OPENAPI_VERSION,
+        "info": {"title": SOCKET_TITLE, "version": SOCKET_VERSION},
+        "paths": {},
+        "components": {"schemas": schemas},
+    }
+
+
+# Each document by the name it is asked for
+DOCUMENTS: dict[str, Callable[[], dict[str, Any]]] = {"http": http_document, "socket": socket_document}
+
+
 if __name__ == "__main__":
-    json.dump(api_schema(), sys.stdout, indent=2)
+    json.dump(DOCUMENTS[sys.argv[1]](), sys.stdout, indent=2)

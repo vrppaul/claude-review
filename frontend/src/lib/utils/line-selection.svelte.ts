@@ -18,18 +18,38 @@ export function getLineNumber(line: DiffLine): number {
   return line.new_no ?? line.old_no ?? 0;
 }
 
+/** What the reader may select, asked afresh each time it matters. */
+export interface SelectionRules {
+  /**
+   * Whether a removed line may be commented on. Under a narrower base the
+   * left-hand side of the diff belongs to that base, not to the review, so a
+   * thread written on a removed line there would be anchored in somebody
+   * else's numbering — and hidden the moment it was saved, because that is
+   * what the drawing rule does with it.
+   */
+  mayCommentOnRemoved: () => boolean;
+  /**
+   * The most lines one comment may cover, as the server says; null before it
+   * has. A comment quotes every line it covers, and the server refuses a
+   * quote longer than this — so a drag simply stops there.
+   */
+  longestRange: () => number | null;
+}
+
 /**
- * Track what the reader is selecting, and what they may select.
- *
- * `mayCommentOnRemoved` is the one thing that varies: under a narrower base
- * the left-hand side of the diff belongs to that base, not to the review, so
- * a thread written on a removed line there would be anchored in somebody
- * else's numbering — and hidden the moment it was saved, because that is
- * what the drawing rule does with it.
+ * Where a drag from `start` toward `toward` may reach: all the way, or as
+ * far as the longest range allows in that direction.
  */
-export function createLineSelection(
-  mayCommentOnRemoved: () => boolean = () => true,
-) {
+function reach(start: number, toward: number, longest: number | null): number {
+  if (longest === null) return toward;
+  const furthest = longest - 1;
+  return toward >= start
+    ? Math.min(toward, start + furthest)
+    : Math.max(toward, start - furthest);
+}
+
+/** Track what the reader is selecting, within what they may select. */
+export function createLineSelection(rules: SelectionRules) {
   let commentingAt = $state<LineRange | null>(null);
   let dragSide = $state<LineSide | null>(null);
   let dragStart = $state<number | null>(null);
@@ -57,7 +77,7 @@ export function createLineSelection(
     handleMouseDown(line: DiffLine, index: number) {
       const lineNo = getLineNumber(line);
       if (lineNo === 0) return;
-      if (lineSide(line) === "old" && !mayCommentOnRemoved()) return;
+      if (lineSide(line) === "old" && !rules.mayCommentOnRemoved()) return;
       dragSide = lineSide(line);
       dragStart = lineNo;
       dragEnd = lineNo;
@@ -71,11 +91,13 @@ export function createLineSelection(
       // places, so dragging across the other side must not extend the range.
       if (lineSide(line) !== dragSide) return;
       const lineNo = getLineNumber(line);
-      if (lineNo === 0) return;
-      dragEnd = lineNo;
+      if (lineNo === 0 || dragStart === null) return;
+      dragEnd = reach(dragStart, lineNo, rules.longestRange());
       // The composer opens under the row the cursor is on, so this follows the
-      // drag back up rather than staying at the furthest point it reached
-      dragAnchorIndex = index;
+      // drag back up rather than staying at the furthest point it reached —
+      // unless the cursor is past where the drag may reach, and then it stays
+      // under the last row the drag still covered
+      if (dragEnd === lineNo) dragAnchorIndex = index;
     },
 
     handleMouseUp() {
@@ -103,7 +125,7 @@ export function createLineSelection(
     commentOnLine(line: DiffLine, index: number) {
       const lineNo = getLineNumber(line);
       if (lineNo === 0) return;
-      if (lineSide(line) === "old" && !mayCommentOnRemoved()) return;
+      if (lineSide(line) === "old" && !rules.mayCommentOnRemoved()) return;
       dragging = false;
       commentingAt = {
         side: lineSide(line),

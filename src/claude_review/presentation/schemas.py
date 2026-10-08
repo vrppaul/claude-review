@@ -3,15 +3,18 @@
 from enum import StrEnum, auto
 from typing import Annotated, Literal, Self
 
-from pydantic import ConfigDict, Field, model_validator
+import structlog
+from pydantic import ConfigDict, Field, ValidationError, ValidatorFunctionWrapHandler, field_validator, model_validator
 
 from claude_review.domain.models import (
+    MAX_QUOTE_LINES,
     AgentStatus,
     Anchor,
     ChangesSince,
     CommentSeverity,
     DiffFile,
     DiffLayout,
+    EpochMillis,
     FilePath,
     GuideState,
     PanelCancel,
@@ -28,6 +31,8 @@ from claude_review.domain.models import (
     TurnAuthor,
 )
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
+
+log = structlog.get_logger()
 
 # The most one thing said may hold: a comment, a turn, a panel message
 MAX_TEXT_LENGTH = 50_000
@@ -51,26 +56,18 @@ ImageIds = Annotated[
 ]
 
 
-def _require_words_or_images(words: str, images: list[str]) -> None:
-    """A screenshot can be the whole of what is said, but something has to be.
-
-    Raises:
-        ValueError: if there are neither words nor images.
-    """
-    if not words.strip() and not images:
-        msg = "needs text or an image"
-        raise ValueError(msg)
-
-
-class ImageLimits(ReviewModel):
-    """The limits the browser checks before uploading an image.
+class SendLimits(ReviewModel):
+    """The limits the browser checks before it sends: an image, or the lines a comment covers.
 
     Told by the server rather than repeated in the browser, so the two
-    cannot drift apart.
+    cannot drift apart — and a comment the server would refuse is never
+    written in the first place.
     """
 
     max_image_bytes: int = MAX_IMAGE_BYTES
     max_images_per_message: int = MAX_IMAGES_PER_MESSAGE
+    # A comment quotes every line it covers, and the quote is capped
+    max_quoted_lines: int = MAX_QUOTE_LINES
 
 
 class DiffResponse(ReviewModel):
@@ -93,7 +90,7 @@ class DiffResponse(ReviewModel):
     # lose the model and the context along with the pushes it missed
     agent: AgentStatus = AgentStatus()
     # What the browser checks before uploading an image
-    image_limits: ImageLimits = ImageLimits()
+    limits: SendLimits = SendLimits()
     # Which release is serving the review, so the browser can tell a reader
     # what changed since the one they last saw. "Release" rather than
     # "version": a version here is a base the diff is read against.
@@ -125,13 +122,18 @@ class SaysSomething(ReviewModel):
 
     @model_validator(mode="after")
     def says_something(self) -> Self:
-        _require_words_or_images(self.body, self.images)
+        """A screenshot can be the whole of what is said, but something has to be."""
+        if not self.body.strip() and not self.images:
+            msg = "needs text or an image"
+            raise ValueError(msg)
         return self
 
 
 class TurnInput(SaysSomething):
     """One turn of a thread, as the browser sends it back."""
 
+    # The id the browser gave it, which is what a question asked in it names
+    turn_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
     author: TurnAuthor
     round: int = Field(ge=1)
 
@@ -205,9 +207,10 @@ class FileWindowResponse(ReviewModel):
 class AskRequest(ReviewModel):
     """Request body for POST /api/ask — the reader asking in a thread.
 
-    The whole thread goes, as it stands: what is asked is the reader's last
-    word in it, or the comment that opened it, and the server works that
-    out rather than being told it twice.
+    The whole thread goes, as it stands. `question_id` names what is asked:
+    the thread's own id for the comment that opened it, or the id of one of
+    the reader's turns in it. The browser decides which; the server only
+    finds it.
     """
 
     question_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
@@ -228,12 +231,65 @@ class SessionHello(ReviewModel):
     # holds none — the last one was deleted
     threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
+    @field_validator("threads", mode="wrap")
+    @classmethod
+    def leave_out_unreadable_threads(
+        cls, threads: object, read: ValidatorFunctionWrapHandler
+    ) -> list[ThreadInput] | None:
+        """Read the threads one by one, and leave out any this server cannot read.
+
+        One thread out of bounds would otherwise cost the whole hello: the
+        round, and every other thread with it, lost without a trace. A round
+        sent with that thread is refused, so the reader hears of it there.
+        """
+        if not isinstance(threads, list):
+            return read(threads)
+        readable: list[ThreadInput] = []
+        for thread in threads:
+            try:
+                readable.append(ThreadInput.model_validate(thread))
+            except ValidationError as error:
+                log.warning("thread_left_out", errors=error.error_count())
+        return read(readable)
+
+
+class ThreadSummary(ReviewModel):
+    """One line's worth of a thread: enough to choose what to read, and nothing handed over.
+
+    No images and no turns: those are what reading the thread in full is
+    for, and handing out an image's path is what keeps it from being taken
+    off a comment nobody has sent yet.
+    """
+
+    thread_id: str
+    where: str
+    severity: CommentSeverity
+    body: str
+    raised_by: TurnAuthor
+    resolved: bool
+    outdated: bool
+    turn_count: int
+
+    @classmethod
+    def of(cls, thread: ThreadInput | Thread) -> Self:
+        """The summary of a thread, as the browser holds it or as the agent is handed it."""
+        return cls(
+            thread_id=thread.thread_id,
+            where=thread.anchor.where(),
+            severity=thread.severity,
+            body=thread.body,
+            raised_by=thread.raised_by,
+            resolved=thread.resolved,
+            outdated=thread.anchor.outdated,
+            turn_count=len(thread.turns),
+        )
+
 
 class ContextResponse(ReviewModel):
     """Response for GET /api/context — the review as it stands.
 
     An index, not the contents: one line's worth per thread, and the panel
-    in short. Whoever wants a thread in full asks for that thread.
+    in short. Whoever wants a thread in full reads that thread.
     """
 
     title: str
@@ -241,24 +297,20 @@ class ContextResponse(ReviewModel):
     file_count: int
     answerer_attached: bool
     agent: AgentStatus
-    threads: list[Thread]
+    threads: list[ThreadSummary]
     panel: list[PanelEntry]
 
 
-class MessageRequest(ReviewModel):
-    """Request body for POST /api/message — the reader typing in the panel."""
+class MessageRequest(SaysSomething):
+    """Request body for POST /api/message — the reader typing in the panel.
+
+    Words, screenshots or both, like anything else said: a screenshot can be
+    the whole question.
+    """
 
     message_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
-    # May be empty when an image is attached: a screenshot can be the whole
-    # question
-    text: str = Field(default="", max_length=MAX_TEXT_LENGTH)
+    body: str = Field(default="", max_length=MAX_TEXT_LENGTH)
     threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
-    images: ImageIds = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def says_something(self) -> MessageRequest:
-        _require_words_or_images(self.text, self.images)
-        return self
 
 
 class ImageResponse(ReviewModel):
@@ -349,6 +401,28 @@ class ProgressRequest(ReviewModel):
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
     steps: list[ProgressStep] = Field(default_factory=list, max_length=MAX_PROGRESS_STEPS)
+
+    def says_nothing(self) -> bool:
+        """Whether this says the work is over, rather than what it is."""
+        return not self.text.strip() and not self.steps
+
+
+class AgentWork(ReviewModel):
+    """What the agent is doing right now, whole: it replaces whatever was showing.
+
+    The server alone decides when it ends — an empty report, the answer to
+    the message it was for, or the reader asking something new — and says
+    so, so every review on screen, and every one opened later, shows the same.
+    """
+
+    # Which message the work is for; None for work on the agent's own
+    # account — a round being worked through, reviewers still reading
+    message_id: str | None
+    text: str
+    files: list[FilePath]
+    steps: list[ProgressStep]
+    # When it was reported, so a review reloaded later says how long it has gone on
+    at: EpochMillis
 
 
 class ShowRequest(ReviewModel):
@@ -509,7 +583,13 @@ class PushKind(StrEnum):
     DIFF = auto()
 
 
-class ReplyPush(ReviewModel):
+class Push(ReviewModel):
+    """What every push is: said once and never changed, though several sockets queue the same one."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ReplyPush(Push):
     """An answer to one thread, and which question in it, when the answer says."""
 
     type: Literal[PushKind.REPLY] = PushKind.REPLY
@@ -518,12 +598,12 @@ class ReplyPush(ReviewModel):
     text: str
 
 
-class AnswererPush(ReviewModel):
+class AnswererPush(Push):
     type: Literal[PushKind.ANSWERER] = PushKind.ANSWERER
     attached: bool
 
 
-class ChatPush(ReviewModel):
+class ChatPush(Push):
     """The agent speaking in the panel: an answer to a message, or nothing answered at all."""
 
     type: Literal[PushKind.CHAT] = PushKind.CHAT
@@ -532,31 +612,24 @@ class ChatPush(ReviewModel):
     files: list[FilePath]
 
 
-class ProgressPush(ReviewModel):
-    """What the agent is doing right now, whole: it replaces whatever was showing."""
+class ProgressPush(Push):
+    """What the agent is doing now, or None: the work is over and its line goes away."""
 
     type: Literal[PushKind.PROGRESS] = PushKind.PROGRESS
-    message_id: str | None
-    text: str
-    files: list[FilePath]
-    steps: list[ProgressStep]
-
-    def says_nothing(self) -> bool:
-        """Whether this says the work is over, rather than what it is."""
-        return not self.text.strip() and not self.steps
+    work: AgentWork | None
 
 
-class ShowPush(ReviewModel):
+class ShowPush(Push):
     type: Literal[PushKind.SHOW] = PushKind.SHOW
     file: FilePath
 
 
-class StatusPush(ReviewModel):
+class StatusPush(Push):
     type: Literal[PushKind.STATUS] = PushKind.STATUS
     agent: AgentStatus
 
 
-class PointPush(ReviewModel):
+class PointPush(Push):
     """A thread the agent raised, quoted from the diff it was checked against."""
 
     type: Literal[PushKind.POINT] = PushKind.POINT
@@ -566,21 +639,21 @@ class PointPush(ReviewModel):
     severity: CommentSeverity
 
 
-class ChangedPush(ReviewModel):
+class ChangedPush(Push):
     """How many files have moved since the diff on screen was taken. Said, never acted on."""
 
     type: Literal[PushKind.CHANGED] = PushKind.CHANGED
     moved_count: int
 
 
-class RoundPush(ReviewModel):
+class RoundPush(Push):
     """The round now being written, after one was sent and the review stayed open."""
 
     type: Literal[PushKind.ROUND] = PushKind.ROUND
     number: int
 
 
-class DiffPush(ReviewModel):
+class DiffPush(Push):
     """The diff was taken again: fetch it, and which files changed since the round began."""
 
     type: Literal[PushKind.DIFF] = PushKind.DIFF

@@ -183,15 +183,6 @@ class ImageService:
             msg = f"No such image in this review: {', '.join(missing)}"
             raise ImagesNotKeptError(msg)
 
-    def paths_of(self, image_ids: list[str]) -> list[Path]:
-        """The files the images are, once each, every one of which this review must keep.
-
-        Raises:
-            ImagesNotKeptError: naming the ones it does not keep.
-        """
-        self.require(image_ids)
-        return [self._ledger.kept[image_id].path for image_id in dict.fromkeys(image_ids)]
-
     def hand_over(self, image_ids: list[str]) -> ImageHandover:
         """Name the files the images are, and keep them for the agent.
 

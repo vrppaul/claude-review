@@ -12,13 +12,12 @@
 
 import type {
   AgentStatus,
+  AgentWork,
   CancelRequest,
   Comment,
   Composer,
   MessageRequest,
   PanelTurn,
-  Progress,
-  ProgressStep,
 } from "$lib/types";
 
 import { commentStore } from "$lib/stores/comments.svelte";
@@ -56,7 +55,7 @@ let width = $state(
 let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 // What the agent says it is doing. Ephemeral by nature: it is the state of
 // the work, so it is never stored and never outlives the work itself.
-let progress = $state<Progress | null>(null);
+let progress = $state<AgentWork | null>(null);
 // Answers that landed while the panel was shut, so the header can say so
 let unread = $state(0);
 // Whether the reader has ever said whether they want the panel. Until they
@@ -100,15 +99,9 @@ function rememberComposer(): void {
   saveDraft({ title: diffStore.title, composer });
 }
 
-/**
- * Take a message that never reached the agent off the conversation.
- *
- * The work it put out of sight comes back, unless news of other work has
- * arrived since.
- */
-function takeBack(id: string, progressBefore: Progress | null): void {
+/** Take a message that never reached the agent off the conversation. */
+function takeBack(id: string): void {
   turns = turns.filter((turn) => turn.id !== id);
-  if (progress === null) progress = progressBefore;
   remember();
 }
 
@@ -138,7 +131,7 @@ export const panelStore = {
   get working(): PanelTurn | undefined {
     return working;
   },
-  get progress(): Progress | null {
+  get progress(): AgentWork | null {
     return progress;
   },
   get composerText(): string {
@@ -219,16 +212,13 @@ export const panelStore = {
         images,
       },
     ];
-    // A new question, so whatever was being done for the last one is history
-    const progressBefore = progress;
-    progress = null;
     remember();
 
     let response: Response;
     try {
       const request: MessageRequest = {
         message_id: id,
-        text,
+        body: text,
         threads: threads.map(threadOnTheWire),
         images,
       };
@@ -238,12 +228,12 @@ export const panelStore = {
         body: JSON.stringify(request),
       });
     } catch (error) {
-      takeBack(id, progressBefore);
+      takeBack(id);
       throw error;
     }
 
     if (!response.ok) {
-      takeBack(id, progressBefore);
+      takeBack(id);
       throw new Error(await refusalOf(response, "Could not send"));
     }
 
@@ -256,37 +246,17 @@ export const panelStore = {
   },
 
   /**
-   * Say what is being done, replacing whatever was being said before.
-   *
-   * Whole every time: this is the state of the work, and a state that
-   * arrives in pieces is a log with extra steps. Naming a message is what
-   * lets the answer to it put the line out; work for no message is the
-   * agent's own, and only an empty one ends that.
+   * Show what the server says the agent is doing, or nothing once it says
+   * the work is over. Whole every time: this is the state of the work, and
+   * whether it is over is the server's to say — a new message, an answer to
+   * the one it was for, an empty report — so every tab shows the same.
    */
-  reportProgress(
-    messageId: string | undefined,
-    text: string,
-    files: string[],
-    steps: ProgressStep[] = [],
-  ) {
-    progress =
-      text.trim() === "" && steps.length === 0
-        ? null
-        : { messageId, text, files, steps, at: Date.now() };
+  showWork(work: AgentWork | null) {
+    progress = work;
   },
 
   /** Take what was said and put it under what it answers, if anything. */
   receive(messageId: string | undefined, text: string, files: string[] = []) {
-    // An answer ends the work it answers, and nothing else. Work for another
-    // message, or for none — a round being worked through, agents still
-    // reading — carries on, and saying so is the only way the reader sees it.
-    if (
-      progress &&
-      progress.messageId !== undefined &&
-      progress.messageId === messageId
-    ) {
-      progress = null;
-    }
     turns = [
       ...turns,
       {

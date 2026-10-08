@@ -5,7 +5,7 @@ import CommentBox from '$lib/components/CommentBox.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { commentFields } from '$lib/stores/comment-fields';
 import { tick } from 'svelte';
-import { IMAGE_LIMITS, KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
+import { SEND_LIMITS, KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
 
 describe('a comment field', () => {
 	it('saves what was written, without the spaces around it', async () => {
@@ -155,7 +155,7 @@ describe('how a comment is meant', () => {
 
 describe('images in a comment', () => {
 	beforeEach(() => {
-		diffStore.setImageLimits(IMAGE_LIMITS);
+		diffStore.setLimits(SEND_LIMITS);
 	});
 
 	it('saves a pasted screenshot as the whole comment', async () => {

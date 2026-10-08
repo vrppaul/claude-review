@@ -1,4 +1,4 @@
-import type { Comment, ThreadPayload, Turn, TurnPayload } from "$lib/types";
+import type { Comment, ThreadInput, Turn, TurnInput } from "$lib/types";
 
 /**
  * A thread as the other side is told about it.
@@ -8,7 +8,7 @@ import type { Comment, ThreadPayload, Turn, TurnPayload } from "$lib/types";
  * fact — what this thread is and what has been said in it — and an agent
  * should not have to learn it twice.
  */
-export function threadOnTheWire(comment: Comment): ThreadPayload {
+export function threadOnTheWire(comment: Comment): ThreadInput {
   return {
     thread_id: comment.id,
     anchor: comment.anchor,
@@ -22,12 +22,13 @@ export function threadOnTheWire(comment: Comment): ThreadPayload {
   };
 }
 
-/** A turn as the other side is told about it: what was said, not when. */
+/** A turn as the other side is told about it: what was said and by whom, not when. */
 export function turnOnTheWire({
+  id,
   author,
   body,
   round,
   images,
-}: Turn): TurnPayload {
-  return { author, body, round, images };
+}: Turn): TurnInput {
+  return { turn_id: id, author, body, round, images };
 }

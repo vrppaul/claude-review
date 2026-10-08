@@ -4,16 +4,16 @@ from pathlib import Path
 from typing import assert_never
 
 import structlog
-from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from starlette.requests import ClientDisconnect
 
 from claude_review.domain.exceptions import (
     NoRepositoryError,
+    QuestionNotInThreadError,
     ReviewEndedError,
     UnknownThreadError,
-    UploadCutOffError,
 )
 from claude_review.domain.models import (
     AgentEvent,
@@ -32,7 +32,6 @@ from claude_review.domain.models import (
     TurnAuthor,
 )
 from claude_review.domain.protocols import Clock
-from claude_review.presentation.agent_inbox import Silence
 from claude_review.presentation.dependencies import (
     get_anchor_service,
     get_clock,
@@ -48,10 +47,12 @@ from claude_review.presentation.dependencies import (
     get_settings_service,
     get_state,
 )
+from claude_review.presentation.refusals import UploadCutOffError
 from claude_review.presentation.schemas import (
     DEFAULT_WAIT_SECONDS,
     MAX_ID_LENGTH,
     MAX_WAIT_SECONDS,
+    AgentWork,
     AskRequest,
     CancelEvent,
     CancelRequest,
@@ -66,14 +67,12 @@ from claude_review.presentation.schemas import (
     FollowResponse,
     GuideChange,
     GuideResponse,
-    ImageLimits,
     ImageResponse,
     MessageEvent,
     MessageRequest,
     PointPush,
     PointRequest,
     PointResponse,
-    ProgressPush,
     ProgressRequest,
     QuestionEvent,
     ReplyPush,
@@ -82,7 +81,7 @@ from claude_review.presentation.schemas import (
     RoundPush,
     RoundResponse,
     SayRequest,
-    SaysSomething,
+    SendLimits,
     ServerPush,
     SessionHello,
     SettingsChange,
@@ -94,12 +93,14 @@ from claude_review.presentation.schemas import (
     SubmitRequest,
     SubmitResponse,
     ThreadInput,
+    ThreadSummary,
     TimeoutEvent,
     TurnInput,
     VersionsResponse,
 )
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.agent_inbox import Silence
 from claude_review.services.anchor_service import AnchorService
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
@@ -167,7 +168,7 @@ async def get_diff(
         answerer_attached=state.answerer_attached,
         agent=state.agent,
         moved=moved,
-        image_limits=ImageLimits(),
+        limits=SendLimits(),
         release=release,
     )
 
@@ -232,11 +233,9 @@ async def change_guide_state(
 
 @router.get("/context")
 async def review_context(
-    thread: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
     state: ServerState = Depends(get_state),
     title: str = Depends(get_review_title),
     diff_files: list[DiffFile] = Depends(get_diff_files),
-    image_service: ImageService = Depends(get_image_service),
 ) -> ContextResponse:
     """Say what this review holds, for an agent that has just arrived.
 
@@ -244,25 +243,36 @@ async def review_context(
     happens next, never what already happened. Everything here has passed
     through this server, so it can say what was asked, what was answered and
     what is still open — as an index, because handing over the whole review
-    unasked is how a catch-up costs more than the work.
-
-    Naming a thread returns that one alone, in full, and naming one the
-    review does not hold is not found. The threads read here are handed
-    over, their images with them: the agent may open those from now on.
+    unasked is how a catch-up costs more than the work. A thread is read in
+    full from its own route.
     """
-    asked_for = [held for held in state.threads if thread is None or held.thread_id == thread]
-    if thread is not None and not asked_for:
-        msg = f"No thread {thread} in this review"
-        raise UnknownThreadError(msg)
     return ContextResponse(
         title=title,
         round=state.round,
         file_count=len(diff_files),
         answerer_attached=state.answerer_attached,
         agent=state.agent,
-        threads=[_hand_over_thread(held, image_service) for held in asked_for],
-        panel=[] if thread is not None else state.panel,
+        threads=[ThreadSummary.of(held) for held in state.threads],
+        panel=state.panel,
     )
+
+
+@router.get("/context/threads/{thread_id}")
+async def read_thread(
+    thread_id: str = PathParameter(max_length=MAX_ID_LENGTH),
+    state: ServerState = Depends(get_state),
+    image_service: ImageService = Depends(get_image_service),
+) -> Thread:
+    """Hand over one thread the review holds, in full: every turn, its lines, its images.
+
+    Read, so handed over: the agent may open its images from now on, and
+    the reader can no longer take them off.
+    """
+    held = next((thread for thread in state.threads if thread.thread_id == thread_id), None)
+    if held is None:
+        msg = f"No thread {thread_id} in this review"
+        raise UnknownThreadError(msg)
+    return _hand_over_thread(held, image_service)
 
 
 @router.get("/file-window")
@@ -296,29 +306,38 @@ async def ask_about_thread(
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
-    asked = _asked_in(request.thread)
-    # Pasted a moment ago, so one this review does not keep is a fault to
-    # report; only what was said before it may have outlived a restart.
-    # Checked before any is handed over, so a refused question leaves none of
-    # them kept for good — and handed over once, with the thread they are in.
-    asked_images = image_service.paths_of(asked.images)
-    thread = _hand_over_thread(request.thread, image_service)
+    position = _asked_position(request)
+    given = request.thread
+    asked_in = given if position is None else given.turns[position]
+    # The last thing said was pasted a moment ago, so an image this review
+    # does not keep is a fault to report — checked before any is handed
+    # over, so a refused question leaves none of them kept for good. Asked
+    # again later, what was said may predate a restart, and a screenshot
+    # it lost is only left out.
+    if asked_in is (given.turns[-1] if given.turns else given):
+        image_service.require(asked_in.images)
+
+    thread = _hand_over_thread(given, image_service)
+    asked = thread if position is None else thread.turns[position]
     state.inbox.hand_in(
-        ThreadQuestion(question_id=request.question_id, body=asked.body, images=asked_images, thread=thread)
+        ThreadQuestion(question_id=request.question_id, body=asked.body, images=asked.images, thread=thread)
     )
     log.info("thread_question", thread_id=thread.thread_id, where=thread.where)
 
 
-def _asked_in(thread: ThreadInput) -> SaysSomething:
-    """What a question in a thread asks: the reader's last word, or the comment that opened it.
+def _asked_position(request: AskRequest) -> int | None:
+    """Where in its thread a question is asked: None for the comment that opened it, else the turn's place.
 
-    A reply the reader has just written is what they want answered. With
-    nothing said since the opening, or with the agent having spoken last,
-    asking is asking about the thread itself — and the comment that opened
-    it is what the thread is about.
+    Raises:
+        QuestionNotInThreadError: if it names neither the opening nor a turn the reader wrote.
     """
-    last = thread.turns[-1] if thread.turns else None
-    return last if last is not None and last.author == TurnAuthor.READER else thread
+    if request.question_id == request.thread.thread_id:
+        return None
+    for position, turn in enumerate(request.thread.turns):
+        if turn.turn_id == request.question_id and turn.author == TurnAuthor.READER:
+            return position
+    msg = f"{request.question_id} is not something the reader said in {request.thread.thread_id}"
+    raise QuestionNotInThreadError(msg)
 
 
 @router.get("/events")
@@ -397,11 +416,12 @@ async def take_panel_message(
     # is handed over, so a refused message leaves none of them kept for good.
     image_service.require(request.images)
     handed = image_service.hand_over(request.images).paths
+    state.message_arrived()
 
     state.inbox.hand_in(
         PanelMessage(
             message_id=request.message_id,
-            text=request.text,
+            text=request.body,
             threads=[_hand_over_thread(thread, image_service) for thread in request.threads],
             images=handed,
         )
@@ -410,7 +430,7 @@ async def take_panel_message(
         PanelEntry(
             message_id=request.message_id,
             author=TurnAuthor.READER,
-            text=request.text,
+            text=request.body,
             at=clock.now(),
             images=handed,
         )
@@ -551,6 +571,7 @@ async def say_in_panel(
 async def report_progress(
     request: ProgressRequest,
     state: ServerState = Depends(get_state),
+    clock: Clock = Depends(get_clock),
 ) -> None:
     """Say what is being done, while it is being done.
 
@@ -559,8 +580,16 @@ async def report_progress(
     whatever was showing — the state of the work, not a log of it — and an
     empty one takes the line away.
     """
-    state.report_progress(
-        ProgressPush(message_id=request.message_id, text=request.text, files=request.files, steps=request.steps)
+    state.report_work(
+        None
+        if request.says_nothing()
+        else AgentWork(
+            message_id=request.message_id,
+            text=request.text,
+            files=request.files,
+            steps=request.steps,
+            at=clock.now(),
+        )
     )
 
 
@@ -743,10 +772,8 @@ async def submit_review(
     else:
         result = ReviewService().format_review(threads, body=request.body, round_number=sent_round)
 
-    state.result = result.markdown
-    state.inbox.hand_in(
-        RoundSubmission(number=sent_round, markdown=result.markdown, comment_count=result.comment_count)
-    )
+    state.last_round = RoundSubmission(number=sent_round, markdown=result.markdown, comment_count=result.comment_count)
+    state.inbox.hand_in(state.last_round)
 
     if request.end:
         state.shutdown_event.set()

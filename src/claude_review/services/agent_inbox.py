@@ -4,7 +4,6 @@ import asyncio
 from collections import deque
 from collections.abc import Awaitable
 from enum import StrEnum, auto
-from typing import Any
 
 from claude_review.domain.models import AgentEvent
 
@@ -61,7 +60,7 @@ class AgentInbox:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + within
         leaving = asyncio.ensure_future(caller_left)
-        closing = asyncio.ensure_future(self._closed.wait())
+        closing = asyncio.ensure_future(self._until_closed())
         try:
             while True:
                 if leaving.done():
@@ -78,13 +77,23 @@ class AgentInbox:
             leaving.cancel()
             closing.cancel()
 
+    def drain(self) -> list[AgentEvent]:
+        """Take everything nobody took, in the order it was handed over: the review is over."""
+        left = list(self._waiting)
+        self._waiting.clear()
+        self._filled.clear()
+        return left
+
     def _next(self) -> AgentEvent:
         event = self._waiting.popleft()
         if not self._waiting:
             self._filled.clear()
         return event
 
-    async def _until_something_changes(self, seconds: float, *watched: asyncio.Future[Any]) -> None:
+    async def _until_closed(self) -> None:
+        await self._closed.wait()
+
+    async def _until_something_changes(self, seconds: float, *watched: asyncio.Future[None]) -> None:
         """Sleep until something arrives, one of the watched finishes, or time is up.
 
         Two polls may wake for one arrival; the one that finds it gone goes

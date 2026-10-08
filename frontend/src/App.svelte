@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ChangesSince, PointPush, ServerPush } from '$lib/types';
+	import type { ChangesSince, FollowOutcome, PointPush, ServerPush } from '$lib/types';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
@@ -83,7 +83,7 @@
 				soundStore.announce();
 				return;
 			case 'progress':
-				panelStore.reportProgress(push.message_id ?? undefined, push.text, push.files, push.steps);
+				panelStore.showWork(push.work);
 				return;
 			case 'show':
 				// Asked for: the agent does not move this screen on its own
@@ -118,9 +118,9 @@
 	}
 
 	/**
-	 * A push of a kind this page does not know: from a newer server, or one
-	 * this page forgot to handle. The types say it cannot happen; this says so
-	 * when it does.
+	 * A push of a kind this page does not handle. The session passes over
+	 * kinds it does not know, and the compiler refuses a known kind left out
+	 * of the switch above, so this only says so if both are ever wrong.
 	 */
 	function unknown(push: never) {
 		console.warn('claude-review: the server pushed something this page does not know', push);
@@ -156,7 +156,7 @@
 	}
 
 	/** What a retaken diff did to the threads hanging on it. */
-	function retaken({ followed, outdated }: { followed: number; outdated: number }): string {
+	function retaken({ followed, outdated }: FollowOutcome): string {
 		const parts = [`diff retaken · ${diffStore.files.length} files`];
 		if (followed > 0) parts.push(`${followed} threads followed their lines`);
 		if (outdated > 0) parts.push(`${outdated} outdated`);

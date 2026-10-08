@@ -7,7 +7,7 @@
  * the agent will be able to open.
  */
 
-import type { ImageLimits } from "$lib/types";
+import type { SendLimits } from "$lib/types";
 import { SvelteSet } from "svelte/reactivity";
 import {
   discardImage,
@@ -43,7 +43,7 @@ export class ImageAttachments {
    */
   async takePaste(
     event: ClipboardEvent,
-    limits: ImageLimits | null,
+    limits: SendLimits | null,
   ): Promise<string | undefined> {
     const pasted = imagesAmong(event.clipboardData?.files);
     if (pasted.length === 0) return undefined;
@@ -59,7 +59,7 @@ export class ImageAttachments {
    * Returns what was refused. The limits are the server's own, so nothing
    * is uploaded only to be turned away.
    */
-  async attach(files: File[], limits: ImageLimits | null): Promise<string[]> {
+  async attach(files: File[], limits: SendLimits | null): Promise<string[]> {
     if (!limits) return ["The review has not finished loading"];
 
     // Refused by size before counting, so an image that will never be sent

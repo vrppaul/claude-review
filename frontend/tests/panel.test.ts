@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { work } from './agent-work';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { panelStore } from '$lib/stores/panel.svelte';
@@ -41,7 +42,7 @@ describe('the panel talks to the agent about the review', () => {
 		await say('Run the tests and say what fails.');
 
 		expect(server.requests).toMatchObject([
-			{ method: 'POST', path: '/api/message', body: { text: 'Run the tests and say what fails.' } }
+			{ method: 'POST', path: '/api/message', body: { body: 'Run the tests and say what fails.' } }
 		]);
 		expect(panelStore.turns.map((turn) => turn.body)).toEqual(['Run the tests and say what fails.']);
 	});
@@ -186,7 +187,7 @@ describe('the panel talks to the agent about the review', () => {
 	});
 
 	it('goes on showing the work under way when a new message fails to go', async () => {
-		panelStore.reportProgress(undefined, 'Running the tests', ['tests/test_a.py']);
+		panelStore.showWork(work({ text: 'Running the tests', files: ['tests/test_a.py'] }));
 		fakeServer().refuse('POST /api/message', SERVER_ERROR);
 
 		await expect(say('and this?')).rejects.toThrow();

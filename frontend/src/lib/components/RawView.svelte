@@ -39,7 +39,10 @@
 	const commentsByRow = $derived(
 		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
 	);
-	const selection = createLineSelection(() => !diffStore.narrowed);
+	const selection = createLineSelection({
+		mayCommentOnRemoved: () => !diffStore.narrowed,
+		longestRange: () => diffStore.limits?.max_quoted_lines ?? null
+	});
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks
 	const hunkOffsets = $derived(

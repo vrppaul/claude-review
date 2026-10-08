@@ -12,15 +12,18 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from claude_review.domain.models import CommentSeverity, TurnAuthor
+from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
+from claude_review.presentation.schemas import PushKind
 from tests.helpers import (
     CONTEXT_ROUTE,
+    FIRST_THREAD_ID,
     PNG,
     REVIEWED_FILE,
     line_on_the_wire,
     next_push,
     open_session,
     thread_on_the_wire,
+    thread_route,
     until_the_review_holds_threads,
     until_the_review_is_on_round,
 )
@@ -35,8 +38,8 @@ def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClie
     with open_session(review_page) as first, open_session(review_page) as second:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(first, "show") == SHOWN
-        assert next_push(second, "show") == SHOWN
+        assert next_push(first, PushKind.SHOW) == SHOWN
+        assert next_push(second, PushKind.SHOW) == SHOWN
 
 
 def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) -> None:
@@ -57,7 +60,7 @@ def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(revi
         sent = review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False}).json()
 
         assert sent["markdown"].startswith("## Code Review Comments — round 4")
-        assert next_push(socket, "round") == {"type": "round", "number": 5}
+        assert next_push(socket, PushKind.ROUND) == {"type": "round", "number": 5}
 
 
 def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestClient) -> None:
@@ -85,7 +88,7 @@ def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None
 
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, "show") == SHOWN
+        assert next_push(socket, PushKind.SHOW) == SHOWN
 
 
 def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_page: TestClient) -> None:
@@ -122,17 +125,46 @@ def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestCl
 
     with open_session(review_page) as socket:
         socket.send_json({"threads": [pictured]})
-        [held] = until_the_review_holds_threads(review_page, 1)
+        until_the_review_holds_threads(review_page, 1)
+    read = review_page.get(thread_route(FIRST_THREAD_ID)).json()
 
-    assert [Path(path).name for path in held["images"]] == [image_id]
+    assert [Path(path).name for path in read["images"]] == [image_id]
     assert review_page.delete(f"/api/images/{image_id}").status_code == 409
+
+
+def test_an_agent_reading_the_index_is_handed_nothing(review_page: TestClient) -> None:
+    """An index is for choosing what to read; the image stays the reader's to take off."""
+    image_id = review_page.post("/api/images", content=PNG).json()["image_id"]
+    pictured = {**A_THREAD, "images": [image_id]}
+
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [pictured]})
+        [listed] = until_the_review_holds_threads(review_page, 1)
+
+    assert "images" not in listed
+    assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.NO_CONTENT
 
 
 def test_a_thread_the_review_does_not_hold_is_not_found(review_page: TestClient) -> None:
     """An empty answer would read as a thread with nothing in it."""
-    response = review_page.get(CONTEXT_ROUTE, params={"thread": "comment-404"})
+    response = review_page.get(thread_route("comment-404"))
 
     assert response.status_code == 404
+
+
+def test_a_thread_the_server_cannot_read_costs_only_itself(review_page: TestClient) -> None:
+    """One thread out of bounds must not take the round and every other thread with it."""
+    too_long = thread_on_the_wire(
+        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
+        "Quotes more than the review keeps",
+        thread_id="comment-2",
+    )
+
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [A_THREAD, too_long]})
+        until_the_review_is_on_round(review_page, 2)
+
+    assert [held["thread_id"] for held in until_the_review_holds_threads(review_page, 1)] == ["comment-1"]
 
 
 def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> None:

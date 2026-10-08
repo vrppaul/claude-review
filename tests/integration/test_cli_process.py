@@ -27,6 +27,7 @@ from websockets.typing import Origin
 
 from claude_review.cli import DISCONNECT_GRACE
 from claude_review.domain.models import CommentSeverity
+from claude_review.presentation.schemas import PushKind
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
 
 # The command line, as the user runs it, from the interpreter running the tests
@@ -216,7 +217,7 @@ def _session(port: int) -> ClientConnection:
     return connect(f"ws://{LOOPBACK}:{port}/api/session")
 
 
-def _next_push(review_socket: ClientConnection, kind: str) -> dict:
+def _next_push(review_socket: ClientConnection, kind: PushKind) -> dict:
     """Read pushes until the one being waited for arrives.
 
     The socket carries more than any one test is about — a review is told
@@ -329,7 +330,7 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
     with _session(port) as review_socket:
         waiting = cli.start("wait", "--port", str(port), "--seconds", AGENT_WAIT_SECONDS)
         # Said to the review the moment the agent starts waiting on it
-        _next_push(review_socket, "answerer")
+        _next_push(review_socket, PushKind.ANSWERER)
 
         _post(
             port,
@@ -360,7 +361,7 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
         )
         assert answer.returncode == 0
 
-        assert _next_push(review_socket, "reply") == {
+        assert _next_push(review_socket, PushKind.REPLY) == {
             "type": "reply",
             "thread_id": FIRST_THREAD_ID,
             "question_id": FIRST_THREAD_ID,
@@ -376,9 +377,9 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
 
     with _session(port) as review_socket:
         waiting = cli.start("wait", "--port", str(port), "--seconds", AGENT_WAIT_SECONDS)
-        _next_push(review_socket, "answerer")
+        _next_push(review_socket, PushKind.ANSWERER)
 
-        _post(port, "/api/message", {"message_id": "panel-1", "text": "Run the tests and say what fails."})
+        _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
 
         handed = json.loads(waiting.printed())
         assert handed["type"] == "message"
@@ -387,7 +388,7 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
         answer = cli.run("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
         assert answer.returncode == 0
 
-        assert _next_push(review_socket, "chat") == {
+        assert _next_push(review_socket, PushKind.CHAT) == {
             "type": "chat",
             "message_id": "panel-1",
             "text": "One failed; fixed and green.",
@@ -403,7 +404,7 @@ def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cl
         reported = cli.run("status", "--port", str(port), "--model", "opus-5", "--context", "53% of 1M")
         assert reported.returncode == 0
 
-        pushed = _next_push(review_socket, "status")
+        pushed = _next_push(review_socket, PushKind.STATUS)
         assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
 
 
@@ -417,7 +418,7 @@ def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
         raised = cli.run("point", "--port", str(port), "--file", "initial.txt", "--lines", "1", "Kept it on purpose")
         assert raised.returncode == 0
 
-        pushed = _next_push(review_socket, "point")
+        pushed = _next_push(review_socket, PushKind.POINT)
         assert (pushed["anchor"]["file"], pushed["anchor"]["start_line"]) == ("initial.txt", 1)
         assert pushed["body"] == "Kept it on purpose"
 
@@ -431,7 +432,7 @@ def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     with _session(port) as review_socket:
         (changed_repo / "initial.txt").write_text("changed again, by somebody else\n")
 
-        assert _next_push(review_socket, "changed") == {"type": "changed", "moved_count": 1}
+        assert _next_push(review_socket, PushKind.CHANGED) == {"type": "changed", "moved_count": 1}
 
 
 def test_reporting_nothing_is_refused_rather_than_sent(cli: CliProcesses) -> None:
@@ -499,6 +500,20 @@ def test_an_agent_waiting_when_the_reader_closes_the_review_hears_it_closed(
 
     assert json.loads(waiting.printed())["type"] == "closed"
     assert review.finish() == 0
+
+
+def test_what_the_agent_never_took_is_written_out_when_the_review_ends(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """The process stops a moment after the last send; a message still waiting must not go with it."""
+    review = cli.review(changed_repo, port)
+
+    _post(port, "/api/message", {"message_id": "panel-1", "body": "Also check the docs."})
+    _post(port, "/api/submit", {"threads": [], "body": "Rename the helper.", "end": True})
+    printed = review.printed()
+
+    assert "Rename the helper." in printed
+    assert "Also check the docs." in printed
 
 
 def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(

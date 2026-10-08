@@ -1,3 +1,8 @@
+/** What the ids of the reader's threads begin with. */
+export const COMMENT_ID_PREFIX = "comment-";
+/** What the ids of turns in a thread begin with: a question asked in one names it. */
+export const TURN_ID_PREFIX = "turn-";
+
 /**
  * Ids the browser hands out: a kind and a number, in order.
  *
@@ -5,15 +10,25 @@
  * them — `claude-review reply --thread comment-3` — and reads them in every
  * event, so a random string would cost it on every turn.
  *
- * A review restored from its draft already holds ids of every kind, so a
- * sequence carries on past the highest of its own kind rather than from one:
- * a comment deleted before the reload would otherwise hand its id out twice,
- * and two threads sharing an id edit and delete as one.
+ * A review restored from its draft carries on from how many it had handed
+ * out — kept in the draft, because a thread deleted before the reload leaves
+ * no id behind, and the agent may still name it. A draft from before that
+ * was kept carries on past the highest id it holds.
  */
 export class IdSequence {
   private last = 0;
 
   constructor(private readonly prefix: string) {}
+
+  /** How many ids of this kind have been handed out, for a draft to keep. */
+  get issued(): number {
+    return this.last;
+  }
+
+  /** Carry on from what a draft says was handed out before the reload. */
+  continueFrom(issued: number): void {
+    this.last = Math.max(this.last, issued);
+  }
 
   /** The next id of this kind. */
   next(): string {

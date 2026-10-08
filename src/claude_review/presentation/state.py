@@ -6,11 +6,12 @@ from claude_review.domain.models import (
     AgentStatus,
     ImageLedger,
     PanelEntry,
+    RoundSubmission,
     TreeSnapshot,
     TreeState,
 )
-from claude_review.presentation.agent_inbox import AgentInbox
-from claude_review.presentation.schemas import AnswererPush, ProgressPush, ServerPush, ThreadInput
+from claude_review.presentation.schemas import AgentWork, AnswererPush, ProgressPush, ServerPush, ThreadInput
+from claude_review.services.agent_inbox import AgentInbox
 
 # How the threads the author raises are named, apart from the browser's own
 RAISED_PREFIX = "raised-"
@@ -28,7 +29,8 @@ class ServerState:
 
     def __init__(self, shutdown_event: asyncio.Event) -> None:
         self.shutdown_event = shutdown_event
-        self.result: str | None = None
+        # The round sent last, which the review writes out as it ends
+        self.last_round: RoundSubmission | None = None
         self._open_sockets = 0
         self._ever_connected = False
         self._alone_since: float | None = None
@@ -48,7 +50,7 @@ class ServerState:
         self.agent = AgentStatus()
         # What the agent is doing right now, if anything. A push is gone once
         # sent, so a review opened or reloaded mid-work is told it from here.
-        self._progress: ProgressPush | None = None
+        self._work: AgentWork | None = None
         # The working tree as it stood when the diff on screen was taken. The
         # watcher compares against this, so retaking the diff is what settles it.
         self.tree: TreeState = frozenset()
@@ -115,21 +117,26 @@ class ServerState:
         self.answerer_attached = True
         self.push(AnswererPush(attached=True))
 
-    def report_progress(self, progress: ProgressPush) -> None:
-        """Say what the agent is doing, to every review open now and every one opened later."""
-        self._progress = None if progress.says_nothing() else progress
-        self.push(progress)
+    def report_work(self, work: AgentWork | None) -> None:
+        """Say what the agent is doing, or that it is done, to every review open now and every one opened later."""
+        self._work = work
+        self.push(ProgressPush(work=work))
 
     def answered(self, message_id: str | None) -> None:
         """Note an answer: it ends the work done for the message it answers, and nothing else."""
-        if self._progress is not None and message_id is not None and self._progress.message_id == message_id:
-            self._progress = None
+        if self._work is not None and message_id is not None and self._work.message_id == message_id:
+            self.report_work(None)
+
+    def message_arrived(self) -> None:
+        """Note a new message: whatever was being done for the last one is history."""
+        if self._work is not None:
+            self.report_work(None)
 
     def listen(self) -> asyncio.Queue[ServerPush]:
         """Register a socket to receive what the server pushes, starting with the work under way."""
         queue: asyncio.Queue[ServerPush] = asyncio.Queue()
-        if self._progress is not None:
-            queue.put_nowait(self._progress)
+        if self._work is not None:
+            queue.put_nowait(ProgressPush(work=self._work))
         self._listeners.add(queue)
         return queue
 

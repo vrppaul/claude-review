@@ -1,11 +1,14 @@
-import type { components } from "./api";
+import type { components as HttpComponents } from "./generated/http";
+import type { components as SocketComponents } from "./generated/socket";
 
 /**
- * What the server says it sends and takes, generated from its own schemas
- * by `pnpm api:types`. Named here once, so the rest of the browser imports
- * a word rather than a path into the generated file.
+ * What the server sends and takes, generated from its own schemas by
+ * `pnpm api:types`: one file for the routes, one for the session socket.
+ * Named here once, so the rest of the browser imports a word rather than a
+ * path into a generated file.
  */
-type Schemas = components["schemas"];
+type Schemas = HttpComponents["schemas"];
+type SocketSchemas = SocketComponents["schemas"];
 
 export type LineType = Schemas["LineType"];
 /** Which version of the file a line belongs to. Removed lines are "old". */
@@ -29,8 +32,8 @@ export type DiffLine = Schemas["DiffLine"];
 export type DiffHunk = Schemas["DiffHunk"];
 export type DiffFile = Schemas["DiffFile"];
 export type DiffResponse = Schemas["DiffResponse"];
-/** What the server takes in images, so the browser checks before uploading. */
-export type ImageLimits = Schemas["ImageLimits"];
+/** What the server takes — images, and the lines one comment covers — so the browser checks before sending. */
+export type SendLimits = Schemas["SendLimits"];
 
 /** Where a base came from, so a menu can group them. */
 export type VersionKind = Schemas["VersionKind"];
@@ -57,8 +60,8 @@ export interface Turn {
   round: number;
   /** When it was said. Read in the thread, never sent with the review. */
   at?: number;
-  /** Identity of this turn, so an answer can name what it answers. */
-  id?: string;
+  /** Identity of this turn, so a question asked in it, and the answer, can name it. */
+  id: string;
   /** Which question this answer belongs to. */
   answers?: string;
   /** Screenshots the reader pasted with it, by the id the server kept them under. */
@@ -128,9 +131,9 @@ export interface Comment {
  * was read. One shape wherever a thread travels — a round, a question, a
  * panel message, the review saying what it holds.
  */
-export type ThreadPayload = Schemas["ThreadInput"];
+export type ThreadInput = Schemas["ThreadInput"];
 /** A turn as it goes back: what was said, with the images as ids. */
-export type TurnPayload = Schemas["TurnInput"];
+export type TurnInput = Schemas["TurnInput"];
 export type SubmitRequest = Schemas["SubmitRequest"];
 /**
  * A question asked in a thread. The whole thread goes, and the server
@@ -156,37 +159,29 @@ export type SettingsChange = Schemas["SettingsChange"];
 export type GuideResponse = Schemas["GuideResponse"];
 export type GuideChange = Schemas["GuideChange"];
 /** What the review says over its socket, on connecting and whenever its threads change. */
-export type SessionHello = Schemas["SessionHello"];
+export type SessionHello = SocketSchemas["SessionHello"];
 /** What the server pushes down the socket, told apart by `type`. */
-export type ServerPush = Schemas["ServerPush"];
-export type PointPush = Schemas["PointPush"];
+export type ServerPush = SocketSchemas["ServerPush"];
+export type PointPush = SocketSchemas["PointPush"];
 /** Which files changed since a round began, and which round that was. */
 export type ChangesSince = Schemas["ChangesSince"];
 
 /**
- * What the agent is doing right now.
+ * What the agent is doing right now, as the server last said it.
  *
- * Not a turn and not kept: it is the state of work in progress, replaced
- * whenever it changes and gone when the work is.
+ * Not a turn and not kept: the state of work in progress, replaced whenever
+ * it changes. The server alone decides when it is over, and says so.
  */
-export interface Progress {
-  text: string;
-  files: string[];
-  /**
-   * Which message the work is for, when it is for one.
-   *
-   * Absent is not a gap: work started after a round, or on the agent's own
-   * account, belongs to no message — and is exactly the work a reader has
-   * no other way of seeing.
-   */
-  messageId?: string;
-  /** What the work has branched into: checks, subagents, files in hand. */
-  steps: ProgressStep[];
-  at: number;
-}
+export type AgentWork = SocketSchemas["AgentWork"];
 
 /** One branch of the work: under way, or finished. */
-export type ProgressStep = Schemas["ProgressStep-Output"];
+export type ProgressStep = SocketSchemas["ProgressStep"];
+
+/** What moving the threads onto a retaken diff did: how many followed their lines, how many lost them. */
+export interface FollowOutcome {
+  followed: number;
+  outdated: number;
+}
 
 /** Who speaks in the panel. An event is the review itself saying so. */
 export type PanelSpeaker = TurnAuthor | "event";

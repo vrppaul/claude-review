@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, LineSide, TurnAuthor
+from claude_review.presentation.schemas import PushKind
 from tests.helpers import (
     CONTEXT_ROUTE,
     DIFF_ROUTE,
@@ -24,13 +25,15 @@ from tests.helpers import (
     next_push,
     one_line_file,
     open_session,
+    page_client,
     pushes_until,
     thread_on_the_wire,
+    thread_route,
     turn_on_the_wire,
     until_the_review_holds_threads,
 )
 
-MESSAGE = {"message_id": "panel-1", "text": "Run the tests and say what fails."}
+MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails."}
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
@@ -38,7 +41,7 @@ A_MOMENT = 1_791_000_000_000
 THREAD = thread_on_the_wire(
     {**line_on_the_wire(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
     "Why did you drop the None check?",
-    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.")],
+    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
 )
 
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
@@ -92,7 +95,7 @@ def test_an_answer_lands_in_the_panel_of_a_review_still_open(review_page: TestCl
     with open_session(review_page) as socket:
         review_page.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed and green."})
 
-        assert next_push(socket, "chat") == {
+        assert next_push(socket, PushKind.CHAT) == {
             "type": "chat",
             "message_id": "panel-1",
             "text": "One failed; fixed and green.",
@@ -124,7 +127,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
                 "severity": CommentSeverity.QUESTION,
             },
         )
-        pushed = next_push(socket, "point")
+        pushed = next_push(socket, PushKind.POINT)
 
     assert response.json()["thread_id"] == "raised-1"
     assert pushed["thread_id"] == "raised-1"
@@ -188,7 +191,7 @@ def test_the_agent_may_speak_first(review_page: TestClient) -> None:
     """Work finished while the reader reads is news they should not have to ask for."""
     with open_session(review_page) as socket:
         review_page.post("/api/say", json={"text": "Tests are green again.", "files": ["src/cli.py"]})
-        pushed = next_push(socket, "chat")
+        pushed = next_push(socket, PushKind.CHAT)
 
     assert pushed["message_id"] is None
     assert pushed["files"] == ["src/cli.py"]
@@ -201,10 +204,11 @@ def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) ->
             "/api/progress",
             json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
         )
-        pushed = next_push(socket, "progress")
+        work = next_push(socket, PushKind.PROGRESS)["work"]
 
-    assert pushed["text"] == "rewriting the answer handler"
-    assert pushed["files"] == ["a.ts", "b.ts"]
+    assert work["text"] == "rewriting the answer handler"
+    assert work["files"] == ["a.ts", "b.ts"]
+    assert work["message_id"] == "panel-1"
 
 
 def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> None:
@@ -217,12 +221,24 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
                 "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
             },
         )
-        pushed = next_push(socket, "progress")
+        work = next_push(socket, PushKind.PROGRESS)["work"]
 
-    assert pushed["steps"] == [
+    assert work["steps"] == [
         {"text": "ran the tests", "done": True},
         {"text": "three subagents out", "done": False},
     ]
+
+
+def test_work_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
+    """A review reloaded later says how long the work has gone on, not that it just began."""
+    with (
+        page_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as review_page,
+        open_session(review_page) as socket,
+    ):
+        review_page.post("/api/progress", json={"text": "reading the handler"})
+        work = next_push(socket, PushKind.PROGRESS)["work"]
+
+    assert work["at"] == A_MOMENT
 
 
 def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(review_page: TestClient) -> None:
@@ -230,31 +246,60 @@ def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(revi
     review_page.post("/api/progress", json={"text": "rewriting the answer handler", "files": ["a.ts"]})
 
     with open_session(review_page) as socket:
-        pushed = next_push(socket, "progress")
+        work = next_push(socket, PushKind.PROGRESS)["work"]
 
-    assert pushed["text"] == "rewriting the answer handler"
-    assert pushed["files"] == ["a.ts"]
+    assert work["text"] == "rewriting the answer handler"
+    assert work["files"] == ["a.ts"]
 
 
-def test_work_that_was_answered_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
-    """The answer ends the work it answers; a reload must not bring the line back."""
+def test_an_empty_report_says_the_work_is_over(review_page: TestClient) -> None:
+    with open_session(review_page) as socket:
+        review_page.post("/api/progress", json={"text": "reading the handler"})
+        next_push(socket, PushKind.PROGRESS)
+        review_page.post("/api/progress", json={"text": ""})
+
+        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+
+
+def test_the_answer_ends_the_work_it_answers(review_page: TestClient) -> None:
+    """Said to every review on screen, so no tab goes on showing it."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
+        next_push(socket, PushKind.PROGRESS)
+        review_page.post("/api/say", json={"message_id": "panel-1", "text": "It retries twice."})
+
+        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+
+
+def test_an_answer_to_another_message_leaves_the_work_showing(review_page: TestClient) -> None:
+    """Work of the agent's own — reviewers reading, a round worked through — outlives any answer."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/progress", json={"text": "four reviewers reading"})
+        review_page.post("/api/say", json={"message_id": "panel-1", "text": "Two fail."})
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+        kinds = [push["type"] for push in pushes_until(socket, PushKind.SHOW)]
+
+    assert kinds.count("progress") == 1
+
+
+def test_a_new_message_ends_the_work_shown_for_the_last_one(review_page: TestClient) -> None:
+    """A new question, so whatever was being done for the last one is history."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
+        next_push(socket, PushKind.PROGRESS)
+        review_page.post("/api/message", json={**MESSAGE, "message_id": "panel-2"})
+
+        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+
+
+def test_work_that_is_over_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
+    """The answer ended it; a reload must not bring the line back."""
     review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
     review_page.post("/api/say", json={"message_id": "panel-1", "text": "It retries twice."})
 
     with open_session(review_page) as socket:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
-        pushed = pushes_until(socket, "show")
-
-    assert "progress" not in [push["type"] for push in pushed]
-
-
-def test_work_said_to_be_over_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
-    review_page.post("/api/progress", json={"text": "reading the handler"})
-    review_page.post("/api/progress", json={"text": ""})
-
-    with open_session(review_page) as socket:
-        review_page.post("/api/show", json={"file": REVIEWED_FILE})
-        pushed = pushes_until(socket, "show")
+        pushed = pushes_until(socket, PushKind.SHOW)
 
     assert "progress" not in [push["type"] for push in pushed]
 
@@ -264,14 +309,14 @@ def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> 
     with open_session(review_page) as socket:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, "show") == {"type": "show", "file": REVIEWED_FILE}
+        assert next_push(socket, PushKind.SHOW) == {"type": "show", "file": REVIEWED_FILE}
 
 
 def test_the_agent_says_what_only_the_agent_knows(review_page: TestClient) -> None:
     """Model and context cannot be measured here, so they are reported."""
     with open_session(review_page) as socket:
         review_page.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
-        pushed = next_push(socket, "status")
+        pushed = next_push(socket, PushKind.STATUS)
 
     assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
 
@@ -316,7 +361,7 @@ A_DISCUSSED_THREAD = thread_on_the_wire(
     {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]},
     "Why did you drop the None check?",
     severity=CommentSeverity.QUESTION,
-    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.")],
+    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
 )
 
 
@@ -332,7 +377,7 @@ def test_an_agent_arriving_late_is_told_what_the_review_holds(review_page: TestC
 
     assert seen["round"] == 1
     assert seen["file_count"] == 1
-    assert [thread["thread_id"] for thread in seen["threads"]] == ["comment-1"]
+    assert [(thread["thread_id"], thread["turn_count"]) for thread in seen["threads"]] == [("comment-1", 1)]
     assert [(entry["author"], entry["text"]) for entry in seen["panel"]] == [
         ("reader", "Run the tests and say what fails."),
         ("author", "One failed; fixed."),
@@ -345,8 +390,8 @@ def test_one_thread_can_be_asked_for_on_its_own(review_page: TestClient) -> None
         socket.send_json({"threads": [A_DISCUSSED_THREAD, {**A_DISCUSSED_THREAD, "thread_id": "comment-2"}]})
         until_the_review_holds_threads(review_page, 2)
 
-    seen = review_page.get(CONTEXT_ROUTE, params={"thread": "comment-2"}).json()
+    read = review_page.get(thread_route("comment-2")).json()
 
-    assert [thread["thread_id"] for thread in seen["threads"]] == ["comment-2"]
-    # Nothing about the panel: it was not what was asked for
-    assert seen["panel"] == []
+    assert read["thread_id"] == "comment-2"
+    assert [turn["body"] for turn in read["turns"]] == ["It moved to the caller."]
+    assert read["anchor"]["quote"] == [REVIEWED_LINE]

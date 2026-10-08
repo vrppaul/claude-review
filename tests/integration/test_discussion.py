@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
+from claude_review.presentation.schemas import PushKind
 from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
@@ -33,8 +34,10 @@ ANCHOR = {**line_on_the_wire("src/a.py", 42), "quote": [QUOTED]}
 # A thread nothing was said in since the comment that opened it
 A_THREAD = thread_on_the_wire(ANCHOR, OPENING)
 # What the agent answered, and what the reader asked next
-ANSWER = turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.")
-FOLLOW_UP = turn_on_the_wire(TurnAuthor.READER, "Which caller?")
+ANSWER_ID = "turn-1"
+FOLLOW_UP_ID = "turn-2"
+ANSWER = turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id=ANSWER_ID)
+FOLLOW_UP = turn_on_the_wire(TurnAuthor.READER, "Which caller?", turn_id=FOLLOW_UP_ID)
 # An image id the review never kept, or no longer keeps after a restart
 GONE_IMAGE = "gone.png"
 
@@ -80,7 +83,7 @@ async def test_a_thread_nothing_was_said_in_asks_the_comment_that_opened_it(clie
 
 async def test_asking_after_the_readers_own_reply_asks_that_reply(client: AsyncClient) -> None:
     """The reply just written is what the reader wants answered, not the comment it follows."""
-    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}, question_id="turn-2"))
+    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}, question_id=FOLLOW_UP_ID))
 
     question = await _question_taken(client)
 
@@ -118,7 +121,9 @@ async def test_an_opening_asked_with_an_image_the_review_does_not_keep_is_refuse
 async def test_a_reply_asked_with_an_image_the_review_does_not_keep_is_refused(client: AsyncClient) -> None:
     asked = {**FOLLOW_UP, "images": [GONE_IMAGE]}
 
-    response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER, asked]}))
+    response = await client.post(
+        ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER, asked]}, question_id=FOLLOW_UP_ID)
+    )
 
     assert response.status_code == 422
 
@@ -129,18 +134,42 @@ async def test_an_image_earlier_in_the_thread_that_did_not_survive_a_restart_is_
     """Only what is asked was pasted a moment ago; the rest may predate a restart."""
     earlier = {**A_THREAD, "images": [GONE_IMAGE], "turns": [ANSWER, FOLLOW_UP]}
 
-    response = await client.post(ASK_ROUTE, json=_asking(earlier))
+    response = await client.post(ASK_ROUTE, json=_asking(earlier, question_id=FOLLOW_UP_ID))
     question = await _question_taken(client)
 
     assert response.status_code == HTTPStatus.NO_CONTENT
     assert question["thread"]["images"] == []
 
 
+async def test_asking_again_after_a_restart_does_not_need_what_the_restart_lost(client: AsyncClient) -> None:
+    """Asked again once the agent has answered, the opening is not fresh; its screenshot may be gone."""
+    asked_again = {**A_THREAD, "images": [GONE_IMAGE], "turns": [FOLLOW_UP, ANSWER]}
+
+    response = await client.post(ASK_ROUTE, json=_asking(asked_again))
+    question = await _question_taken(client)
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert (question["body"], question["images"]) == (OPENING, [])
+
+
+async def test_a_question_naming_nothing_in_its_thread_is_refused(client: AsyncClient) -> None:
+    response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER]}, question_id="turn-9"))
+
+    assert response.status_code == 422
+
+
+async def test_a_question_cannot_ask_what_the_agent_said(client: AsyncClient) -> None:
+    """A question is the reader's; naming the agent's own answer asks nothing."""
+    response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER]}, question_id=ANSWER_ID))
+
+    assert response.status_code == 422
+
+
 async def test_questions_are_handed_out_in_the_order_they_were_asked(
     client: AsyncClient,
 ) -> None:
-    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "first", "body": "one"}))
-    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "second", "body": "two"}))
+    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "first", "body": "one"}, question_id="first"))
+    await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "second", "body": "two"}, question_id="second"))
 
     first = await _question_taken(client)
     second = await _question_taken(client)
@@ -156,11 +185,12 @@ async def test_a_question_needs_something_asked(client: AsyncClient) -> None:
 
 async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> None:
     """A thread can have several questions waiting, so an answer needs a name for one."""
-    await client.post(ASK_ROUTE, json=_asking(A_THREAD, question_id="turn-2"), headers=LOCAL_HEADERS)
+    asked_in_a_reply = {**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}
+    await client.post(ASK_ROUTE, json=_asking(asked_in_a_reply, question_id=FOLLOW_UP_ID), headers=LOCAL_HEADERS)
 
     event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS)).json()
 
-    assert event["question"]["question_id"] == "turn-2"
+    assert event["question"]["question_id"] == FOLLOW_UP_ID
 
 
 def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> None:
@@ -171,7 +201,7 @@ def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> No
             json={"thread_id": "comment-1", "question_id": "turn-2", "text": "It moved to config"},
         )
 
-        assert next_push(socket, "reply") == {
+        assert next_push(socket, PushKind.REPLY) == {
             "type": "reply",
             "thread_id": "comment-1",
             "question_id": "turn-2",
@@ -184,7 +214,7 @@ def test_an_answer_that_names_no_question_still_arrives(review_page: TestClient)
     with open_session(review_page) as socket:
         review_page.post("/api/reply", json={"thread_id": "comment-1", "text": "It moved to config"})
 
-        assert next_push(socket, "reply") == {
+        assert next_push(socket, PushKind.REPLY) == {
             "type": "reply",
             "thread_id": "comment-1",
             "question_id": None,

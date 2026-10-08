@@ -14,10 +14,11 @@ import type {
   AgentStatus,
   ChangesSince,
   ContentViewMode,
+  FollowOutcome,
   DiffFile,
   DiffLayout,
   DiffResponse,
-  ImageLimits,
+  SendLimits,
   ReviewMode,
   ReviewVersion,
   VersionsResponse,
@@ -54,10 +55,10 @@ let phrase = $state("");
 // What the agent last reported about itself. A push is gone once sent, so a
 // review opened mid-conversation has to read it back with the diff.
 let agent = $state<AgentStatus>({ model: null, context: null, at: null });
-// What the server takes in pasted images. Null until the first diff arrives,
-// and nothing can be pasted before then: the panel waits for the agent, and
-// the agent is announced with the diff.
-let imageLimits = $state<ImageLimits | null>(null);
+// What the server takes: pasted images, and the lines one comment covers.
+// Null until the first diff arrives, and nothing can be pasted or selected
+// before then: there is nothing on screen yet.
+let sendLimits = $state<SendLimits | null>(null);
 // Which release serves this review; empty until the first diff arrives
 let release = $state("");
 // What the file tree may take. Narrower than the floor and a path is
@@ -77,7 +78,7 @@ let movedFiles = $state(0);
 let dismissedMoved = $state(0);
 // What the last retake did to the threads hanging on the diff, until the
 // reader looks away from it
-let retaken = $state<{ followed: number; outdated: number } | null>(null);
+let retaken = $state<FollowOutcome | null>(null);
 // Which files the last retake moved, and which round they are counted from.
 // This is what takes a tick off a file the agent rewrote — without it a file
 // read to the end keeps its mark through the rewrite, and gets walked past.
@@ -139,7 +140,7 @@ function apply(data: DiffResponse): void {
   // None when the review is compared against nothing: files, a transcript
   phrase = data.phrase ?? "";
   agent = data.agent;
-  diffStore.setImageLimits(data.image_limits);
+  diffStore.setLimits(data.limits);
   release = data.release;
   // Said with the diff as well as pushed: a review reloaded while the tree
   // was moving heard the push and lost it, and one opened later never heard
@@ -170,15 +171,15 @@ export const diffStore = {
   get agent(): AgentStatus {
     return agent;
   },
-  get imageLimits(): ImageLimits | null {
-    return imageLimits;
+  get limits(): SendLimits | null {
+    return sendLimits;
   },
   get release(): string {
     return release;
   },
 
-  setImageLimits(limits: ImageLimits) {
-    imageLimits = limits;
+  setLimits(limits: SendLimits) {
+    sendLimits = limits;
   },
 
   get sidebarWidth(): number {
@@ -206,7 +207,7 @@ export const diffStore = {
   },
 
   /** What the last retake did to the threads, if it is still worth saying. */
-  get retaken(): { followed: number; outdated: number } | null {
+  get retaken(): FollowOutcome | null {
     return retaken;
   },
 
@@ -227,10 +228,7 @@ export const diffStore = {
    * then no tick can be trusted, so they all go. A file that loses its tick
    * is unfolded with it, or it would sit there closed and read as read.
    */
-  noteRetaken(
-    result: { followed: number; outdated: number },
-    changes: ChangesSince | null,
-  ) {
+  noteRetaken(result: FollowOutcome, changes: ChangesSince | null) {
     retaken = result;
     movedFiles = 0;
     dismissedMoved = 0;
@@ -393,7 +391,7 @@ export const diffStore = {
     requestedBase = REVIEW;
     versions = [];
     agent = { model: null, context: null, at: null };
-    imageLimits = null;
+    sendLimits = null;
     release = "";
     movedFiles = 0;
     dismissedMoved = 0;

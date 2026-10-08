@@ -11,6 +11,8 @@ const TITLE = 'repo: uncommitted changes';
 const DRAFT_KEY = 'claude-review:draft';
 /** The last shape a draft had before its threads hung on anchors. */
 const BEFORE_ANCHORS = 7;
+/** The last shape a draft had before every turn carried an id. */
+const BEFORE_TURN_IDS = 8;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
@@ -108,6 +110,23 @@ describe('an unsent review', () => {
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
+	it('never hands out again the ids of a thread deleted just before the reload', () => {
+		commentStore.restore(TITLE);
+		commentStore.add(newComment({ startLine: 1, body: 'kept' }));
+		const deleted = commentStore.add(newComment({ startLine: 2, body: 'deleted' }));
+		commentStore.addTurn(deleted, { author: 'reader', body: 'Asked', images: [] });
+		const deletedTurn = commentStore.comments[1].turns[0].id;
+		commentStore.remove(deleted);
+
+		reload();
+		const added = commentStore.add(newComment({ startLine: 3, body: 'new' }));
+		commentStore.addTurn(added, { author: 'reader', body: 'Asked anew', images: [] });
+
+		// The agent may still know the deleted ones, and would answer the new under them
+		expect(added).not.toBe(deleted);
+		expect(commentStore.comments[1].turns[0].id).not.toBe(deletedTurn);
+	});
+
 	it('never hands out a turn id a restored turn already has', () => {
 		commentStore.restore(TITLE);
 		const id = commentStore.add(newComment({ body: 'Why?' }));
@@ -154,7 +173,8 @@ describe('a draft this release kept', () => {
 			reviewBody: 'Overall fine',
 			sent: [['comment-1', 2]],
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
-			composer: { text: 'half a thought', images: ['pasted.png'] }
+			composer: { text: 'half a thought', images: ['pasted.png'] },
+			issued: { comments: 3, turns: 5 }
 		};
 
 		saveDraft(kept);
@@ -217,8 +237,27 @@ describe('a draft written by an older release', () => {
 		});
 
 		expect(loadDraft(TITLE)?.comments[0].turns).toEqual([
-			{ author: 'author', body: 'Done', round: 1, images: [] }
+			{ id: 'turn-1', author: 'author', body: 'Done', round: 1, images: [] }
 		]);
+	});
+
+	it('gives each turn written before turns had ids one of its own, never one a turn already has', () => {
+		keptByAnOlderRelease({
+			version: BEFORE_TURN_IDS,
+			comments: [
+				{
+					...fullThread(),
+					turns: [
+						{ author: 'reader', body: 'Why?', round: 1, images: [] },
+						{ id: 'turn-4', author: 'author', body: 'Because', round: 1, images: [] }
+					]
+				}
+			]
+		});
+
+		const ids = loadDraft(TITLE)?.comments[0].turns.map((turn) => turn.id);
+
+		expect(ids).toEqual(['turn-5', 'turn-4']);
 	});
 
 	it('starts the agent panel empty when the draft predates it', () => {

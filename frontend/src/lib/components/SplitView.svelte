@@ -40,7 +40,10 @@
 		}, [])
 	);
 
-	const selection = createLineSelection(() => !diffStore.narrowed);
+	const selection = createLineSelection({
+		mayCommentOnRemoved: () => !diffStore.narrowed,
+		longestRange: () => diffStore.limits?.max_quoted_lines ?? null
+	});
 
 	$effect(() => {
 		void file.path;
