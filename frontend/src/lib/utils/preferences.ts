@@ -17,11 +17,16 @@ export function storageKey(name: string): string {
 	return `${STORAGE_PREFIX}${name}`;
 }
 
+/** Whether something stored is one of the choices allowed. */
+function isOneOf<T extends string>(stored: string | null, allowed: readonly T[]): stored is T {
+	return allowed.some((choice) => choice === stored);
+}
+
 /** Read a stored choice, falling back when it is missing or no longer valid. */
 export function readChoice<T extends string>(name: string, allowed: readonly T[], fallback: T): T {
 	try {
 		const stored = localStorage.getItem(storageKey(name));
-		return allowed.includes(stored as T) ? (stored as T) : fallback;
+		return isOneOf(stored, allowed) ? stored : fallback;
 	} catch {
 		// Private mode and blocked site data both throw; the default is fine
 		return fallback;
