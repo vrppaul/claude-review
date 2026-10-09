@@ -9,6 +9,7 @@ by the part that answers for it.
 """
 
 from collections.abc import Awaitable
+from contextlib import AbstractContextManager
 
 import structlog
 
@@ -20,11 +21,14 @@ from claude_review.domain.models import (
     FilePath,
     PanelCancel,
     PanelMessage,
+    ProgressStep,
     ReviewMode,
     RoundSubmission,
     Thread,
     ThreadDraft,
     ThreadQuestion,
+    VersionKey,
+    VersionOnOffer,
 )
 from claude_review.domain.page_events import (
     AgentSaid,
@@ -38,16 +42,17 @@ from claude_review.domain.page_events import (
 )
 from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
 from claude_review.services.exit_report import exit_report
-from claude_review.services.image_service import ImageService
+from claude_review.services.file_window_service import FileWindow
+from claude_review.services.image_service import ImageService, StoredImage
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import Answerer
 from claude_review.services.review.browser_presence import BrowserPresence
-from claude_review.services.review.content_sources import ContentSource, Retaken, content_source
+from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken, content_source
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
-from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from claude_review.services.review.round_tracker import RoundTracker
+from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
 from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.review_service import ReviewService
@@ -94,55 +99,84 @@ class Review:
         )
 
     @property
-    def mode(self) -> ReviewMode:
-        return self._mode
-
-    @property
-    def title(self) -> str:
-        """What the header says is under review."""
-        return self._title
-
-    @property
-    def opened_against(self) -> str | None:
-        """What the review was opened against: a commit or a ref, or None for the uncommitted changes."""
-        return self._opened_against
-
-    @property
     def lifetime(self) -> ReviewLifetime:
+        """Whether the review is still running: what whoever hosts it runs its parts until."""
         return self._lifetime
 
-    @property
-    def presence(self) -> BrowserPresence:
-        return self._presence
+    def standing(self) -> ReviewStanding:
+        """What the review is and where it has got to, in one piece."""
+        return ReviewStanding(
+            title=self._title,
+            mode=self._mode,
+            opened_against=self._opened_against,
+            round=self._rounds.current,
+            answerer_attached=self._answerer.attached,
+            agent=self._answerer.status,
+        )
 
-    @property
-    def images(self) -> ImageService:
-        return self._images
+    def catch_up(self) -> CatchUp:
+        """What an agent arriving late is told: an index of the review, nothing handed over."""
+        return CatchUp(
+            standing=self.standing(),
+            file_count=len(self._source.content.files),
+            threads=self._threads.held,
+            panel=self._conversation.entries,
+        )
 
-    @property
-    def answerer(self) -> Answerer:
-        return self._answerer
+    def page_open(self) -> AbstractContextManager[None]:
+        """Count a page as open on the review for as long as this lasts."""
+        return self._presence.page_open()
 
-    @property
-    def rounds(self) -> RoundTracker:
-        return self._rounds
+    def page_reached_round(self, number: int) -> None:
+        """Take the round a page says it had got to, never going back."""
+        self._rounds.catch_up(number)
 
-    @property
-    def conversation(self) -> Conversation:
-        return self._conversation
+    def page_holds(self, threads: list[ThreadDraft], unreadable_ids: list[str]) -> None:
+        """Take the threads a page says it holds, and the ids of those it could not say."""
+        self._threads.hold(threads, unreadable_ids)
 
-    @property
-    def threads(self) -> ReaderThreads:
-        return self._threads
+    def agent_called(self) -> None:
+        """Note that the agent is still there: every call it makes renews its lease."""
+        self._answerer.heard()
 
-    @property
-    def source(self) -> ContentSource:
-        return self._source
+    def report_work(
+        self, *, message_id: str | None, text: str, files: list[FilePath], steps: list[ProgressStep]
+    ) -> None:
+        """Say what the agent is doing, replacing whatever was showing; nothing said ends it."""
+        self._answerer.report_work(message_id=message_id, text=text, files=files, steps=steps)
 
-    @property
-    def content(self) -> ReviewContent:
-        """The take of the content on screen now."""
-        return self._source.content
+    def report_status(self, *, model: str | None, context: str | None) -> None:
+        """Take what the agent says about itself."""
+        self._answerer.report_status(model=model, context=context)
+
+    async def keep_image(self, content: bytes) -> StoredImage:
+        """Keep an image the reader is about to send."""
+        return await self._images.keep(content)
+
+    def kept_image(self, image_id: str) -> StoredImage:
+        """An image this review keeps."""
+        return self._images.kept(image_id)
+
+    async def discard_image(self, image_id: str) -> None:
+        """Drop an image the reader took off before sending it."""
+        await self._images.discard(image_id)
+
+    async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
+        """The diff against a base the review offers, its own when None."""
+        return await self._source.view(base, ignore_whitespace=ignore_whitespace)
+
+    async def offer(self) -> list[VersionOnOffer]:
+        """The bases the diff can be read against."""
+        return await self._source.offer()
+
+    async def file_window(self, path: str, start: int, end: int) -> FileWindow:
+        """Lines a hunk left out, so the reader can widen its context."""
+        return await self._source.file_window(path, start, end)
+
+    def follow(self, anchors: list[Anchor]) -> list[Anchor]:
+        """Where each anchor is in the content as it now stands, or marked outdated."""
+        found = self._source.content.anchors
+        return [found.follow(anchor) for anchor in anchors]
 
     async def open(self) -> None:
         """Note what the review opens on, before any page or agent can reach it."""
@@ -234,7 +268,7 @@ class Review:
             UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError:
                 if the anchor names something the content does not show.
         """
-        quoted = self.content.anchors.quote(anchor)
+        quoted = self._source.content.anchors.quote(anchor)
         thread_id = self._threads.raise_id()
         self._page.tell(ThreadRaised(thread_id=thread_id, anchor=quoted, body=body, severity=severity))
         log.info("thread_raised", thread_id=thread_id, where=quoted.where())

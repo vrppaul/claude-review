@@ -1,5 +1,6 @@
 """Tests for GitRepository error handling."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,8 @@ from claude_review.domain.protocols import GitError
 from claude_review.repositories.git_repository import GitRepository
 from tests.helpers import git
 
+# A moment long before any test runs, in seconds since the epoch
+SETTLED_AT = 1_000_000_000
 # Enough untracked files that a stray blob per file would be plain to see
 GENERATED_FILES = 20
 
@@ -150,3 +153,27 @@ async def test_one_staging_answers_every_question_about_the_same_tree(
     assert "second pass" in diff
     assert changed == {earlier: ["work.txt"]}
     assert now != earlier
+
+
+async def test_a_file_saved_as_the_index_was_written_is_still_seen_changed(tmp_git_repo: Path) -> None:
+    """Same size, same moment: only the index's own time tells git to look again, so the copy must keep it.
+
+    The file is rewritten and given back the time the index knows it by, and
+    the index is dated that same moment, so nothing but that comparison can
+    tell git the file changed. Its ctime would; it is told not to trust it.
+    """
+    reviewed = tmp_git_repo / "settled.txt"
+    reviewed.write_text("settled content\n")
+    # Long settled before the commit, so git keeps its stat as trustworthy
+    os.utime(reviewed, (SETTLED_AT, SETTLED_AT))
+    git(tmp_git_repo, "config", "core.trustctime", "false")
+    git(tmp_git_repo, "add", "settled.txt")
+    git(tmp_git_repo, "commit", "-m", "settle")
+
+    reviewed.write_text("settled CONTENT\n")
+    os.utime(reviewed, (SETTLED_AT, SETTLED_AT))
+    os.utime(tmp_git_repo / ".git" / "index", (SETTLED_AT, SETTLED_AT))
+
+    diff = await _raw_diff(GitRepository(objects=None), tmp_git_repo)
+
+    assert "settled CONTENT" in diff

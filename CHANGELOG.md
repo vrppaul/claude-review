@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **Commands and routes renamed, so each name says one thing.** `claude-review
+  round` is now `claude-review retake` (`POST /api/retake`), and `claude-review
+  context` is now `claude-review catch-up` (`GET /api/catch-up`, a thread at
+  `/api/catch-up/threads/{id}`). "Context" is left to the agent's context
+  window and git's context lines. An installed skill from 1.5.0 uses the old
+  names and must be updated with the release.
+- **The diff and the reader's records on the wire.** A diff line says its
+  `kind`, `old_number` and `new_number` (were `type`, `old_no`, `new_no`).
+  `GET /api/settings` and `GET /api/guide` answer `{record, stored}` (were
+  `{settings, stored}` and `{guide, stored}`). `/api/diff` names the key of
+  the base in force and of the review's own (`base_key`, `review_key`), and a
+  retake names the key that shows what changed since its round.
+- **The agent counts as there for ten minutes after it last called**, and
+  the review stops offering rounds once it has gone quiet for longer.
+- **A page that stops reading is let go** instead of being held in memory;
+  the server's websockets now run on wsproto.
+- **Taking the diff stages the working tree once**, starting from a copy of
+  the repository's own index: much faster on large trees. Like `git diff`, it
+  leaves out edits to files marked assume-unchanged or skip-worktree.
+
 ## [1.5.0] - 2026-10-05
 
 ### Added

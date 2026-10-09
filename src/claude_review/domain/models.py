@@ -152,6 +152,17 @@ class AnchorBase(BaseModel):
     outdated: bool = False
 
 
+def check_line_span(start_line: int, end_line: int) -> None:
+    """Refuse lines that run backwards, wherever an anchor is read.
+
+    Raises:
+        ValueError: if the span ends before it starts.
+    """
+    if start_line > end_line:
+        msg = "start_line must be <= end_line"
+        raise ValueError(msg)
+
+
 class LineAnchor(AnchorBase):
     """Lines of one side of a file in the review's own diff.
 
@@ -167,9 +178,7 @@ class LineAnchor(AnchorBase):
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
-        if self.start_line > self.end_line:
-            msg = "start_line must be <= end_line"
-            raise ValueError(msg)
+        check_line_span(self.start_line, self.end_line)
         return self
 
     def where(self) -> str:

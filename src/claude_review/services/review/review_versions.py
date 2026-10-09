@@ -29,9 +29,9 @@ class ReviewVersions:
     already; a round is not, until the tree it was read at has been written
     down — which is what `mark` does, each time the diff is taken.
 
-    Everything here answers "if it can be said": a repository that will not
-    write a tree — one mid-merge, whose index has unresolved entries — costs
-    the review its versions, never the review itself.
+    Everything here answers "if it can be said": a repository git will not
+    stage or write a tree for just now costs the review its versions, never
+    the review itself.
     """
 
     def __init__(
@@ -46,12 +46,17 @@ class ReviewVersions:
         # first of each round is a base the reader can go back to.
         self._marks: list[TreeSnapshot] = []
 
+    @property
+    def review_base(self) -> str | None:
+        """What the review was opened against; None for the uncommitted changes."""
+        return self._review_base
+
     async def mark(self, round_number: int, staged: StagedTreeProtocol) -> None:
         """Write down the tree the diff has just been taken from, as part of a round."""
         try:
             tree = await staged.write_tree()
-        except GitError as e:
-            log.warning("snapshot_refused", round=round_number, reason=str(e))
+        except GitError as refusal:
+            log.warning("snapshot_refused", round=round_number, reason=str(refusal))
             return
         self._marks.append(TreeSnapshot(round=round_number, tree=tree, at=self._clock.now()))
 
@@ -180,7 +185,7 @@ class ReviewVersions:
         try:
             async with self._git.staged(self._root) as staged:
                 changed = await staged.names_changed_since(list(dict.fromkeys(bases)))
-        except GitError as e:
-            log.warning("counts_refused", reason=str(e))
+        except GitError as refusal:
+            log.warning("counts_refused", reason=str(refusal))
             return {}
         return {base: len(paths) for base, paths in changed.items()}

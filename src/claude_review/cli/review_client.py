@@ -62,7 +62,7 @@ REASON_SEPARATOR = "; "
 # What the review answers, read as what each answer should be. The events
 # are one kind told apart by their `type`, and printed back as they came.
 EVENTS = TypeAdapter[EventResponse](EventResponse)
-CONTEXT_ANSWER = TypeAdapter(CatchUpResponse)
+CATCH_UP_ANSWER = TypeAdapter(CatchUpResponse)
 THREAD_ANSWER = TypeAdapter(Thread)
 POINT_ANSWER = TypeAdapter(PointResponse)
 RETAKE_ANSWER = TypeAdapter(RetakeResponse)
@@ -96,9 +96,9 @@ class ReviewClient:
         route = f"{EVENTS_ROUTE}?{urlencode({WAIT_SECONDS_PARAMETER: wait_seconds})}"
         return self._read(EVENTS, self._call(HTTPMethod.GET, route, timeout=wait_seconds + WAIT_MARGIN_SECONDS))
 
-    def context(self) -> CatchUpResponse:
+    def catch_up(self) -> CatchUpResponse:
         """The review as it stands: an index of its threads, and the panel in short."""
-        return self._read(CONTEXT_ANSWER, self._call(HTTPMethod.GET, CATCH_UP_ROUTE))
+        return self._read(CATCH_UP_ANSWER, self._call(HTTPMethod.GET, CATCH_UP_ROUTE))
 
     def thread(self, thread_id: str) -> Thread:
         """One thread in full, its images handed over."""

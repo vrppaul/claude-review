@@ -13,9 +13,11 @@ from claude_review.services.review.review_lifetime import EndReason, ReviewLifet
 
 # Only what goes wrong: a review is quiet by design
 SERVER_LOG_LEVEL = "error"
-# The default picks uvicorn's older websockets integration, which warns on
-# every connection with websockets 14 and later
-WEBSOCKETS_IMPLEMENTATION = "websockets-sansio"
+# The one of uvicorn's websocket integrations whose send waits while the page
+# is not reading: only then does a page's pushes back up into its own bounded
+# backlog, where a page that stopped reading is let go. The sans-I/O one never
+# waits, and the older websockets one warns on every connection.
+WEBSOCKETS_IMPLEMENTATION = "wsproto"
 # The app opens the review on its content as it starts. uvicorn's default
 # takes a failure there for an app that does not open at all, and serves on.
 LIFESPAN = "on"
@@ -76,7 +78,7 @@ class ReviewServer(uvicorn.Server):
             ServerStartError: If the server never listened.
         """
         if not self.started:
-            msg = "the review's server stopped before it started listening"
+            msg = f"the review's server stopped before it started listening ({self._lifetime.reason})"
             if self._start_failure is not None:
                 msg = f"{msg}: {self._start_failure}"
             raise ServerStartError(msg) from self._start_failure

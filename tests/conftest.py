@@ -13,7 +13,7 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
-from tests.helpers import ReviewFactory, git, http_client, one_line_file, page_client
+from tests.helpers import ReviewFactory, ReviewServers, git, http_client, one_line_file, page_client
 
 
 @pytest.fixture
@@ -59,6 +59,14 @@ def reader_files(tmp_path_factory: pytest.TempPathFactory) -> ReaderFiles:
 def reviews(workspace: ReviewWorkspace, marking_workspace: ReviewWorkspace, reader_files: ReaderFiles) -> ReviewFactory:
     """Builds the reviews a test needs, all sharing this test's directories and reader."""
     return ReviewFactory(workspace=workspace, marking_workspace=marking_workspace, reader_files=reader_files)
+
+
+@pytest.fixture
+async def servers(reviews: ReviewFactory) -> AsyncIterator[ReviewServers]:
+    """Serves reviews on real ports for the test, and stops every one of them after it."""
+    started = ReviewServers(reviews)
+    yield started
+    await started.stop()
 
 
 @pytest.fixture

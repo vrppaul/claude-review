@@ -29,10 +29,10 @@ from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,
     FollowResponse,
-    LineAnchor,
     SubmitRequest,
     SubmitResponse,
     anchor_in_the_review,
+    anchor_on_the_wire,
 )
 from claude_review.services.image_service import MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
@@ -55,17 +55,18 @@ async def get_diff(
     so it asks for the one and goes back to the other without building a key
     itself.
     """
-    view = await review.source.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
+    view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
+    standing = review.standing()
     return DiffResponse(
         files=[DiffFile.of(file) for file in view.files],
-        mode=review.mode,
-        title=review.title,
-        phrase=phrase_of(view.shown, review.opened_against) if view.shown is not None else None,
+        mode=standing.mode,
+        title=standing.title,
+        phrase=phrase_of(view.shown, standing.opened_against) if view.shown is not None else None,
         base_key=key_text(view.shown) if view.shown is not None else None,
         review_key=key_text(ReviewKey()) if view.shown is not None else None,
-        round=review.rounds.current,
-        answerer_attached=review.answerer.attached,
-        agent=AgentStatus.of(review.answerer.status),
+        round=standing.round,
+        answerer_attached=standing.answerer_attached,
+        agent=AgentStatus.of(standing.agent),
         moved=view.moved,
         limits=SEND_LIMITS,
         release=release,
@@ -75,9 +76,8 @@ async def get_diff(
 @router.get("/versions")
 async def offered_versions(review: Review = Depends(get_review)) -> VersionsResponse:
     """Say what the working tree can be compared against: nothing at all, for files or a conversation."""
-    return VersionsResponse(
-        versions=[version_on_the_wire(offered, review.opened_against) for offered in await review.source.offer()]
-    )
+    opened_against = review.standing().opened_against
+    return VersionsResponse(versions=[version_on_the_wire(offered, opened_against) for offered in await review.offer()])
 
 
 @router.get("/file-window")
@@ -88,7 +88,7 @@ async def get_file_window(
     review: Review = Depends(get_review),
 ) -> FileWindowResponse:
     """Serve lines a hunk left out, so the reader can widen its context."""
-    window = await review.source.file_window(path, start, end)
+    window = await review.file_window(path, start, end)
     return FileWindowResponse(start=window.start, lines=window.lines, total=window.total)
 
 
@@ -101,10 +101,8 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
     follows them, one whose lines are gone is marked outdated and keeps its
     quote.
     """
-    anchors = review.content.anchors
-    return FollowResponse(
-        anchors=[LineAnchor.of(anchors.follow(anchor_in_the_review(anchor))) for anchor in request.anchors]
-    )
+    followed = review.follow([anchor_in_the_review(anchor) for anchor in request.anchors])
+    return FollowResponse(anchors=[anchor_on_the_wire(anchor) for anchor in followed])
 
 
 @router.post("/ask", status_code=HTTPStatus.NO_CONTENT)
@@ -114,7 +112,7 @@ async def ask_about_thread(request: AskRequest, review: Review = Depends(get_rev
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
-    review.ask(request.question_id, request.thread.draft())
+    review.ask(request.question_id, request.thread.in_the_review())
 
 
 @router.post("/message", status_code=HTTPStatus.NO_CONTENT)
@@ -128,7 +126,7 @@ async def take_panel_message(request: MessageRequest, review: Review = Depends(g
     review.take_message(
         message_id=request.message_id,
         body=request.body,
-        threads=[thread.draft() for thread in request.threads],
+        threads=[thread.in_the_review() for thread in request.threads],
         image_ids=request.images,
     )
 
@@ -152,7 +150,7 @@ async def keep_an_image(http_request: Request, review: Review = Depends(get_revi
     The body is the image itself rather than a form, so there is nothing to
     parse.
     """
-    stored = await review.images.keep(await _read_capped(http_request, limit=MAX_IMAGE_BYTES))
+    stored = await review.keep_image(await _read_capped(http_request, limit=MAX_IMAGE_BYTES))
     log.info("image_kept", image_id=stored.image_id, size=stored.size)
     return ImageResponse(image_id=stored.image_id)
 
@@ -175,7 +173,7 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
 @router.get("/images/{image_id}")
 async def serve_an_image(image_id: str, review: Review = Depends(get_review)) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
-    stored = review.images.kept(image_id)
+    stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
 
 
@@ -186,7 +184,7 @@ async def discard_an_image(image_id: str, review: Review = Depends(get_review)) 
     One that went out with a message stays: the agent may still be about to
     open it, and nothing on this side knows when it has.
     """
-    await review.images.discard(image_id)
+    await review.discard_image(image_id)
     log.info("image_discarded", image_id=image_id)
 
 
@@ -198,7 +196,9 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
     stdout. A round keeps the review open instead — the threads stay on
     screen, so an answer has somewhere to come back to.
     """
-    sent = review.submit(threads=[thread.draft() for thread in request.threads], body=request.body, ends=request.end)
+    sent = review.submit(
+        threads=[thread.in_the_review() for thread in request.threads], body=request.body, ends=request.end
+    )
     return SubmitResponse(
         markdown=sent.markdown, comment_count=sent.comment_count, round=sent.number, ended=request.end
     )

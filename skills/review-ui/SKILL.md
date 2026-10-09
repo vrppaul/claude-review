@@ -241,7 +241,7 @@ somebody who is waiting.
    claude-review retake --port <port>
    ```
    `--done` first, or the new diff lands under a spinner still saying what you
-   were doing to the old one. `round` is for a diff review: files and a
+   were doing to the old one. `retake` is for a diff review: files and a
    conversation have no diff to take again, so there tell them what changed
    with `say` instead.
    The open review reloads the diff and moves its threads onto it: one whose

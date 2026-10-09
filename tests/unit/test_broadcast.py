@@ -42,7 +42,7 @@ def test_a_page_opening_is_told_first_what_it_must_know() -> None:
 
 
 def test_a_page_that_falls_too_far_behind_is_let_go() -> None:
-    """Held, it would grow without end; let go, it reconnects and reads the review afresh."""
+    """Held, its backlog would grow without end."""
     broadcast = BrowserBroadcast(backlog=BACKLOG)
     stuck = broadcast.listen(first=[])
 

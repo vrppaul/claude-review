@@ -105,7 +105,10 @@ class CliProcess:
                 break
             if line.startswith(ADDRESS_PREFIX):
                 return line.removeprefix(ADDRESS_PREFIX).strip()
-        failure = f"the review never said where it was within {STARTUP_SECONDS} seconds"
+        said = []
+        while not self._said.empty():
+            said.append(self._said.get_nowait())
+        failure = f"the review never said where it was within {STARTUP_SECONDS} seconds; it said: {said}"
         raise AssertionError(failure)
 
     def outlives(self, seconds: float) -> bool:

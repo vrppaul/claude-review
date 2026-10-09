@@ -1,22 +1,12 @@
-"""What every browser test needs: a review served on a real port, and a page to open it in."""
+"""What every browser test needs: a page to open a review in."""
 
 from collections.abc import AsyncIterator
 
 import pytest
 from playwright.async_api import Page, async_playwright
 
-from tests.helpers import ReviewFactory, ReviewServers
-
 # How long a browser test waits for anything on the page before failing
 E2E_TIMEOUT_MS = 5_000
-
-
-@pytest.fixture
-async def servers(reviews: ReviewFactory) -> AsyncIterator[ReviewServers]:
-    """Starts reviews for the test to open, and stops every one of them after it."""
-    started = ReviewServers(reviews)
-    yield started
-    await started.stop()
 
 
 @pytest.fixture

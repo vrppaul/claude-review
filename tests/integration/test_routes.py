@@ -410,7 +410,8 @@ async def test_the_diff_says_which_release_serves_it(client: AsyncClient) -> Non
 async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_hold(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
-    """Read against another base, the diff on screen holds files the review's own does not."""
+    """Read against another base, the diff on screen holds files the review's own does not; never an ignored one."""
+    (tmp_git_repo / ".gitignore").write_text(".env\n")
     (tmp_git_repo / ".env").write_text("SECRET=hunter2\n")
 
     async with http_client(reviews.app([], root=tmp_git_repo)) as client:

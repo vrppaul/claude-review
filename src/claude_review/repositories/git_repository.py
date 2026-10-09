@@ -9,7 +9,7 @@ from pathlib import Path
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.models import GitRef
+from claude_review.domain.models import HEAD, GitRef
 from claude_review.domain.protocols import GitError
 
 log = structlog.get_logger()
@@ -57,6 +57,13 @@ class GitRun(BaseModel):
     exit_code: int
     output: str
     errors: str
+
+
+class OwnPaths(BaseModel):
+    """Where a repository keeps its own object store and index."""
+
+    objects: Path
+    index: Path
 
 
 class StagedTree:
@@ -164,17 +171,17 @@ class GitRepository:
         socket to keep answering on.
         """
         index = await asyncio.to_thread(_temporary_index)
-        throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
-        objects = throwaway or str(self._objects)
-        environment = {**os.environ, "GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
-
+        throwaway: str | None = None
         try:
+            throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
+            objects = throwaway or str(self._objects)
+            environment = {**os.environ, "GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
+            own = await _own_paths(path)
             # Whichever store is written to, the repository's own stays readable
-            real_objects = await _git_path(path, OBJECTS_NAME)
-            if real_objects is not None:
-                environment["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(real_objects)
+            if own is not None:
+                environment["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(own.objects)
 
-            await self._seed(path, Path(index), environment)
+            await self._seed(path, Path(index), own, environment)
             await _run(path, ["add", "-A"], environment)
             yield StagedTree(path, environment, keeps_objects=self._objects is not None)
         finally:
@@ -253,34 +260,39 @@ class GitRepository:
             return None
         return Path(found.strip()) if found.strip() else None
 
-    async def _seed(self, path: Path, index: Path, environment: dict[str, str]) -> None:
+    async def _seed(self, path: Path, index: Path, own: OwnPaths | None, environment: dict[str, str]) -> None:
         """Start a staging's index from the repository's own, from HEAD when it has none, or from nothing.
 
         Nothing is no file at all: git reads an empty file as a broken index,
         and a missing one as an empty index.
         """
-        real_index = await _git_path(path, INDEX_NAME)
-        if real_index is not None and await asyncio.to_thread(real_index.is_file):
-            await asyncio.to_thread(shutil.copyfile, real_index, index)
+        if own is not None and await asyncio.to_thread(own.index.is_file):
+            # With its times kept: git reads a file saved in the same second as
+            # the index was written as maybe changed only by comparing the two,
+            # and a copy dated now would have it trust a stale stat instead
+            await asyncio.to_thread(shutil.copy2, own.index, index)
         elif await _has_commits(path):
-            await _run(path, ["read-tree", "HEAD"], environment)
+            await _run(path, ["read-tree", HEAD], environment)
         else:
             await asyncio.to_thread(index.unlink)
 
 
-async def _git_path(path: Path, name: str) -> Path | None:
-    """Where a part of the repository's own git directory is, if git will say."""
+async def _own_paths(path: Path) -> OwnPaths | None:
+    """Where the repository keeps its own objects and index, asked in one call, if git will say."""
     try:
-        found = await _run(path, ["rev-parse", "--path-format=absolute", "--git-path", name])
+        found = await _run(
+            path, ["rev-parse", "--path-format=absolute", "--git-path", OBJECTS_NAME, "--git-path", INDEX_NAME]
+        )
     except GitError:
         return None
-    return Path(found.strip()) if found.strip() else None
+    objects, _, index = found.strip().partition("\n")
+    return OwnPaths(objects=Path(objects), index=Path(index)) if objects and index else None
 
 
 async def _has_commits(path: Path) -> bool:
     """Whether there is a HEAD to start the index from: a fresh repository has none."""
     try:
-        run = await _execute(path, ["rev-parse", "--verify", "--quiet", "HEAD"], environment=None)
+        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD], environment=None)
     except GitError:
         return False
     return run.exit_code == 0
@@ -319,9 +331,9 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
             stderr=asyncio.subprocess.PIPE,
             env=environment,
         )
-    except (FileNotFoundError, NotADirectoryError) as e:
-        msg = f"git operation failed: {e}"
-        raise GitError(msg) from e
+    except (FileNotFoundError, NotADirectoryError) as failure:
+        msg = f"git operation failed: {failure}"
+        raise GitError(msg) from failure
 
     try:
         output, errors = await asyncio.wait_for(process.communicate(), timeout=GIT_TIMEOUT)

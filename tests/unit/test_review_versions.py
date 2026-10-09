@@ -18,12 +18,12 @@ from tests.helpers import FixedClock
 ROOT = Path("/repository")
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
-# The one file the repository says differs from any base
-MOVED_FILE = "moved.py"
+# What the repository says differs from a base: one file, named after the base
+MOVED_SINCE = "moved-since-{base}.py"
 
 
 class TreeThatMoves:
-    """A staged tree that is a new one each time it is written down, one file away from any base."""
+    """A staged tree that is a new one each time it is written down, one file away from any base, named for it."""
 
     def __init__(self, repository: RepositoryThatMoves) -> None:
         self._repository = repository
@@ -35,7 +35,7 @@ class TreeThatMoves:
         return self._repository.next_tree()
 
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
-        return {base: [MOVED_FILE] for base in bases}
+        return {base: [MOVED_SINCE.format(base=base)] for base in bases}
 
 
 class RepositoryThatMoves:
@@ -128,4 +128,6 @@ async def test_what_changed_is_counted_from_where_the_round_began() -> None:
     await review.mark(1)
     await review.mark(1)
 
-    assert await review.changed_since_round_began(1) == ChangedSinceRound(round=1, paths=[MOVED_FILE])
+    assert await review.changed_since_round_began(1) == ChangedSinceRound(
+        round=1, paths=[MOVED_SINCE.format(base="tree-1")]
+    )

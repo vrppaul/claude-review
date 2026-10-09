@@ -8,7 +8,7 @@ push still waiting to be sent.
 A page holds only so much unsent. One that falls further behind than that is
 not reading — a frozen tab, a network gone — and is let go rather than held
 in memory without end: its socket closes, and a page that is still there
-reconnects and reads the review afresh.
+reconnects. What was pushed to it in between is not sent again.
 """
 
 import asyncio
@@ -44,7 +44,7 @@ from claude_review.presentation.wire.pushes import (
     ShowPush,
     StatusPush,
 )
-from claude_review.presentation.wire.threads import LineAnchor
+from claude_review.presentation.wire.threads import anchor_on_the_wire
 
 log = structlog.get_logger()
 
@@ -108,7 +108,10 @@ def push_of(event: PageEvent) -> ServerPush:
             return StatusPush(agent=AgentStatus.of(event.agent))
         case ThreadRaised():
             return PointPush(
-                thread_id=event.thread_id, anchor=LineAnchor.of(event.anchor), body=event.body, severity=event.severity
+                thread_id=event.thread_id,
+                anchor=anchor_on_the_wire(event.anchor),
+                body=event.body,
+                severity=event.severity,
             )
         case TreeMoved():
             return ChangedPush(moved_count=event.moved_count)

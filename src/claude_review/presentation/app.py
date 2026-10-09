@@ -6,6 +6,7 @@ from functools import partial
 from importlib.metadata import version as installed_version
 from pathlib import Path
 
+import structlog
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
@@ -18,6 +19,9 @@ from claude_review.presentation.refusals import answer_refusals
 from claude_review.presentation.routes.api import include_api
 from claude_review.services.reader_record_service import ReaderRecords
 from claude_review.services.review.review import Review
+from claude_review.services.review.review_lifetime import EndReason
+
+log = structlog.get_logger()
 
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
 
@@ -74,6 +78,15 @@ class PageFiles(StaticFiles):
 
 @contextlib.asynccontextmanager
 async def _opened(review: Review, _app: FastAPI) -> AsyncGenerator[None]:
-    """Open the review on its content before the app answers anything, whoever serves it."""
-    await review.open()
+    """Open the review on its content before the app answers anything, whoever serves it.
+
+    A review that cannot open is over, as a fault, and says why: whoever
+    serves the app sees only that it never started.
+    """
+    try:
+        await review.open()
+    except Exception:
+        log.critical("review_opening_failed", exc_info=True)
+        review.lifetime.end(EndReason.FAULT)
+        raise
     yield

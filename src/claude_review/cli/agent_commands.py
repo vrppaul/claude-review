@@ -108,7 +108,7 @@ def catch_up_command(client: ReviewClient, thread: str | None, as_json: bool) ->
         read = client.thread(thread)
         click.echo(read.model_dump_json() if as_json else render_thread(read))
     else:
-        seen = client.context()
+        seen = client.catch_up()
         click.echo(seen.model_dump_json() if as_json else render_catch_up(seen))
 
 

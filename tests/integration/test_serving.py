@@ -9,10 +9,12 @@ from httpx import AsyncClient
 from structlog.typing import EventDict
 from websockets.asyncio.client import connect
 
+from claude_review.hosting.errors import ServerStartError
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.hosting.serving import serve_review
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review.browser_presence import BrowserPresence
+from claude_review.services.review.content_sources import RepositorySource
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.tree_watcher_service import TreeWatcherService
 from tests.helpers import SESSION_ROUTE, SETTLE_SECONDS
@@ -111,3 +113,20 @@ async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than
 
     assert handed_back == ""
     assert "review_part_failed" in _events(logged)
+
+
+async def _failing_opening(*_arguments: object) -> None:
+    failure = "the repository went away"
+    raise OSError(failure)
+
+
+async def test_a_review_that_cannot_open_says_why_and_ends_as_a_fault(
+    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Never listening, it must still say what stopped it rather than leave only a server that stopped."""
+    monkeypatch.setattr(RepositorySource, "open", _failing_opening)
+
+    with pytest.raises(ServerStartError, match="fault"):
+        await asyncio.wait_for(serve_review(opening, port=ANY_FREE_PORT, announcer=announcer), timeout=SETTLE_SECONDS)
+
+    assert "review_opening_failed" in _events(logged)

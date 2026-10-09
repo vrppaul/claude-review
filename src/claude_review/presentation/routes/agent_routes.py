@@ -42,7 +42,7 @@ from claude_review.services.review.review import Review
 
 async def note_the_agent(review: Review = Depends(get_review)) -> None:
     """Whatever the agent asks says it is still there: every call renews its lease."""
-    review.answerer.heard()
+    review.agent_called()
 
 
 router = APIRouter(dependencies=[Depends(note_the_agent)])
@@ -104,14 +104,16 @@ async def review_context(review: Review = Depends(get_review)) -> CatchUpRespons
     unasked is how a catch-up costs more than the work. A thread is read in
     full from its own route.
     """
+    caught_up = review.catch_up()
+    standing = caught_up.standing
     return CatchUpResponse(
-        title=review.title,
-        round=review.rounds.current,
-        file_count=len(review.content.files),
-        answerer_attached=review.answerer.attached,
-        agent=AgentStatus.of(review.answerer.status),
-        threads=[ThreadSummary.of_draft(held) for held in review.threads.held],
-        panel=[PanelEntry.of(entry) for entry in review.conversation.entries],
+        title=standing.title,
+        round=standing.round,
+        file_count=caught_up.file_count,
+        answerer_attached=standing.answerer_attached,
+        agent=AgentStatus.of(standing.agent),
+        threads=[ThreadSummary.of_draft(held) for held in caught_up.threads],
+        panel=[PanelEntry.of(entry) for entry in caught_up.panel],
     )
 
 
@@ -154,7 +156,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     whatever was showing — the state of the work, not a log of it — and an
     empty one takes the line away.
     """
-    review.answerer.report_work(
+    review.report_work(
         message_id=request.message_id,
         text=request.text,
         files=request.files,
@@ -192,4 +194,4 @@ async def report_status(request: StatusRequest, review: Review = Depends(get_rev
     Which model, and how much of its context is spent: neither can be
     measured from here, so both are quoted with the time they were said.
     """
-    review.answerer.report_status(model=request.model, context=request.context)
+    review.report_status(model=request.model, context=request.context)

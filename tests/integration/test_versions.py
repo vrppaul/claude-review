@@ -14,7 +14,7 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import ReviewMode
-from tests.helpers import DIFF_ROUTE, LOCAL_HEADERS, FixedClock, ReviewFactory, git, http_client
+from tests.helpers import DIFF_ROUTE, LOCAL_HEADERS, FixedClock, ReviewFactory, git, http_client, uncommitted_changes
 
 VERSIONS_ROUTE = "/api/versions"
 
@@ -222,3 +222,18 @@ async def test_the_diff_says_how_far_the_tree_has_moved_since_it_was_taken(
         served = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
 
     assert served["moved"] == 1
+
+
+async def test_a_review_opens_on_the_tree_its_first_round_is_marked_at(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Whatever changed between reading the diff and serving it is on screen, so "since round 1" counts from there."""
+    read_before = await uncommitted_changes(tmp_git_repo)
+    (tmp_git_repo / "written_in_between.py").write_text("saved while the review was starting\n")
+
+    async with http_client(reviews.app(read_before, root=tmp_git_repo)) as client:
+        served = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
+        by_key = {version["key"]: version for version in await _offered(client)}
+
+    assert [file["path"] for file in served["files"]] == ["written_in_between.py"]
+    assert "round:1" not in by_key, "nothing has changed since the tree round 1 began at"

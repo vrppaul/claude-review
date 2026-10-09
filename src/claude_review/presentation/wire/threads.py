@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, JsonValue, ValidationError, model_validator
+from pydantic import Field, JsonValue, TypeAdapter, ValidationError, model_validator
 
 from claude_review.domain import models
 from claude_review.domain.models import MAX_QUOTE_LINES, AnchorKind, CommentSeverity, FilePath, LineSide, TurnAuthor
@@ -36,9 +36,7 @@ class LineAnchor(WireModel):
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
-        if self.start_line > self.end_line:
-            msg = "start_line must be <= end_line"
-            raise ValueError(msg)
+        models.check_line_span(self.start_line, self.end_line)
         return self
 
 
@@ -46,9 +44,19 @@ class LineAnchor(WireModel):
 type Anchor = LineAnchor
 
 
+# Every kind of anchor, read from the other side's form by its fields
+ANCHORS_ON_THE_WIRE: TypeAdapter[Anchor] = TypeAdapter(Anchor)
+ANCHORS_IN_THE_REVIEW: TypeAdapter[models.Anchor] = TypeAdapter(models.Anchor)
+
+
 def anchor_in_the_review(anchor: Anchor) -> models.Anchor:
-    """The review's own form of an anchor the wire carried."""
-    return models.LineAnchor.model_validate(anchor, from_attributes=True)
+    """The review's own form of an anchor the wire carried, whatever its kind."""
+    return ANCHORS_IN_THE_REVIEW.validate_python(anchor, from_attributes=True)
+
+
+def anchor_on_the_wire(anchor: models.Anchor) -> Anchor:
+    """The wire's form of one of the review's anchors, whatever its kind."""
+    return ANCHORS_ON_THE_WIRE.validate_python(anchor, from_attributes=True)
 
 
 class Turn(WireModel):
@@ -117,7 +125,7 @@ class ThreadInput(SaysSomething):
     raised_by: TurnAuthor
     resolved: bool
 
-    def draft(self) -> models.ThreadDraft:
+    def in_the_review(self) -> models.ThreadDraft:
         """The thread as the review holds what the page holds."""
         return models.ThreadDraft.model_validate(self, from_attributes=True)
 

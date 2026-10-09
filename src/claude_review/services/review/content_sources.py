@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
 from claude_review.domain.page_events import TreeMoved
-from claude_review.domain.protocols import Clock, GitError, PageChannel, RepositoryProtocol
+from claude_review.domain.protocols import Clock, GitError, PageChannel, RepositoryProtocol, StagedTreeProtocol
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent
@@ -94,7 +94,6 @@ class RepositorySource:
         page: PageChannel,
     ) -> None:
         self._root = root
-        self._base = opening.base
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
         self._repository = repository
         self._diffs = DiffService()
@@ -111,18 +110,19 @@ class RepositorySource:
         return self._content
 
     async def open(self) -> None:
-        """Note the tree the review opens on: what the watcher compares against, and a base rounds can go back to.
+        """Take the diff the review opens on, and leave round one's mark from the same staging.
 
-        A repository git will not stage just now costs the review its first
-        mark, never the review itself.
+        Taken again here rather than kept from whoever read it first, so the
+        mark rounds go back to is the very tree on screen. A repository git
+        will not stage just now costs the review its first mark, never the
+        review itself: what was read first stays on screen.
         """
-        tree = await self._watcher.read(self._root)
-        self._content = ReviewContent(self._content.files, tree)
         try:
             async with self._repository.staged(self._root) as staged:
-                await self._versions.mark(self._rounds.current, staged)
-        except GitError as e:
-            log.warning("opening_mark_refused", reason=str(e))
+                await self._take(staged, self._rounds.current)
+        except GitError as refusal:
+            log.warning("opening_mark_refused", reason=str(refusal))
+            self._content = ReviewContent(self._content.files, await self._watcher.read(self._root))
 
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The diff against a base, from git when only git can say it.
@@ -160,18 +160,23 @@ class RepositorySource:
             # Asked before the new tree is written down, while the last mark is
             # still the one the diff on screen was taken at
             changes = await self._versions.changed_since_round_began(round_number, staged)
-            files = await self._diffs.read(staged, base=self._base, ignore_whitespace=False)
-            # Read after the diff, not before: a file saved in between then
-            # belongs to the tree the diff was taken at, and the reader is not
-            # told about a change that is already on their screen
-            tree = await self._watcher.read(self._root)
-            self._content = ReviewContent(files, tree)
-            await self._versions.mark(round_number, staged)
+            file_count = await self._take(staged, round_number)
 
         log.info(
-            "diff_retaken", file_count=len(files), round=round_number, changed=len(changes.paths) if changes else None
+            "diff_retaken", file_count=file_count, round=round_number, changed=len(changes.paths) if changes else None
         )
-        return Retaken(file_count=len(files), round=round_number, changes=changes)
+        return Retaken(file_count=file_count, round=round_number, changes=changes)
+
+    async def _take(self, staged: StagedTreeProtocol, round_number: int) -> int:
+        """Take the diff from a staging, put it on screen with its tree, mark it for the round; say how many files."""
+        files = await self._diffs.read(staged, base=self._versions.review_base, ignore_whitespace=False)
+        # Read after the diff, not before: a file saved in between then
+        # belongs to the tree the diff was taken at, and the reader is not
+        # told about a change that is already on their screen
+        tree = await self._watcher.read(self._root)
+        self._content = ReviewContent(files, tree)
+        await self._versions.mark(round_number, staged)
+        return len(files)
 
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)

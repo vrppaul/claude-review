@@ -22,7 +22,8 @@ log = structlog.get_logger()
 router = APIRouter()
 
 # What a page that fell too far behind is told as its socket closes: come
-# back later (RFC 6455, 7.4.1). It reconnects, and reads the review afresh.
+# back later (RFC 6455, 7.4.1). A page still there reconnects; what it missed
+# is not sent again.
 FELL_BEHIND = 1013
 
 # The ASGI message a socket receives once the page has gone
@@ -37,7 +38,7 @@ async def session(
 ) -> None:
     """Hold the review open for as long as the page has it on screen, and tell the page what happens."""
     await websocket.accept()
-    with review.presence.page_open():
+    with review.page_open():
         outbox = broadcast.listen(first=review.news_for_a_new_page())
         try:
             async with asyncio.TaskGroup() as directions:
@@ -89,8 +90,8 @@ def _catch_up(review: Review, said: str) -> None:
         return
 
     if heard.round is not None:
-        review.rounds.catch_up(heard.round)
+        review.page_reached_round(heard.round)
 
     if heard.threads is not None:
         held = HeldThreads.read(heard.threads)
-        review.threads.hold([thread.draft() for thread in held.readable], held.unreadable_ids)
+        review.page_holds([thread.in_the_review() for thread in held.readable], held.unreadable_ids)
