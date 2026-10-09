@@ -161,7 +161,7 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
 
             assert next_push(socket, PushKind.DIFF) == {
                 "type": "diff",
-                "changes": {"since_round": 1, "paths": ["answered.py"]},
+                "changes": {"since_round": 1, "base_key": "round:1", "paths": ["answered.py"]},
             }
 
 

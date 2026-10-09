@@ -10,8 +10,6 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
 from tests.helpers import (
@@ -28,6 +26,7 @@ from tests.helpers import (
     removed_line,
     review_has_ended,
     thread_on_the_wire,
+    uncommitted_changes,
     until_an_agent_waits,
 )
 
@@ -347,7 +346,7 @@ async def _committed_then_changed(repo: Path, committed: str, changed: str) -> l
     git(repo, "add", ".")
     git(repo, "commit", "-m", "add")
     (repo / "app.py").write_text(changed)
-    return await DiffService(git_repository=GitRepository()).get_diff(repo)
+    return await uncommitted_changes(repo)
 
 
 async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: Path, reviews: ReviewFactory) -> None:

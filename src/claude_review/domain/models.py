@@ -421,10 +421,12 @@ class RoundSubmission(ReviewModel):
 type AgentEvent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel
 
 
-class ChangesSince(ReviewModel):
+class ChangedSinceRound(BaseModel):
     """Which files changed since a round began, so they are read again rather than all of them."""
 
-    since_round: int
+    model_config = ConfigDict(frozen=True)
+
+    round: int
     paths: list[str]
 
 
@@ -470,34 +472,47 @@ class GitRef(BaseModel):
     at: EpochMillis
 
 
-class VersionKind(StrEnum):
-    """Where a base came from, so a menu can group them.
-
-    Three answers to one question — what is the working tree being compared
-    against: what the review opened with, a tree one of its rounds was read
-    at, or a ref that was there all along.
-    """
-
-    REVIEW = auto()
-    ROUND = auto()
-    REF = auto()
+# The ref every repository with a commit has: against it, the uncommitted changes
+HEAD = "HEAD"
 
 
-class ReviewVersion(ReviewModel):
-    """One base the working tree can be compared against.
+class ReviewKey(BaseModel):
+    """The review's own base: what it was opened against, and the diff it keeps."""
 
-    Two names for it: `label` is what a menu row calls it, `phrase` what the
-    header says while it is the one in force. Both are written here rather
-    than assembled in the browser, because "uncommitted changes" is not
-    "changes since" anything.
-    """
+    model_config = ConfigDict(frozen=True)
 
-    key: str
-    kind: VersionKind
-    label: str
-    phrase: str
-    at: EpochMillis | None = None
-    changed: int | None = None
+
+class RoundKey(BaseModel):
+    """The tree one of the review's rounds began at."""
+
+    model_config = ConfigDict(frozen=True)
+
+    round: int = Field(ge=1)
+
+
+class RefKey(BaseModel):
+    """A branch or a tag the repository had all along."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str = Field(min_length=1)
+
+
+# What the working tree can be compared against: the review's own base, a
+# round's, or a ref's
+type VersionKey = ReviewKey | RoundKey | RefKey
+
+
+class VersionOnOffer(BaseModel):
+    """One base the working tree can be compared against, and what the reader would see against it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: VersionKey
+    # When it was made: a round when it began, a ref when it was committed
+    at: EpochMillis | None
+    # How many files differ from it, when git will say
+    changed: int | None
 
 
 class ReviewWorkspace(BaseModel):

@@ -14,6 +14,10 @@ export interface paths {
         /**
          * Get Diff
          * @description Serve the review's content, against the base the page asks for, and where the review stands.
+         *
+         *     The page is told the key of the base in force and of the review's own,
+         *     so it asks for the one and goes back to the other without building a key
+         *     itself.
          */
         get: operations["get_diff_api_diff_get"];
         put?: never;
@@ -660,6 +664,8 @@ export interface components {
         ChangesSince: {
             /** Since Round */
             since_round: number;
+            /** Base Key */
+            base_key: string;
             /** Paths */
             paths: string[];
         };
@@ -772,6 +778,10 @@ export interface components {
             title: string;
             /** Phrase */
             phrase: string | null;
+            /** Base Key */
+            base_key: string | null;
+            /** Review Key */
+            review_key: string | null;
             /**
              * Round
              * @default 1
@@ -1092,12 +1102,10 @@ export interface components {
         ReviewMode: "diff" | "files" | "transcript";
         /**
          * ReviewVersion
-         * @description One base the working tree can be compared against.
+         * @description One base the working tree can be compared against, as the page's menu shows it.
          *
-         *     Two names for it: `label` is what a menu row calls it, `phrase` what the
-         *     header says while it is the one in force. Both are written here rather
-         *     than assembled in the browser, because "uncommitted changes" is not
-         *     "changes since" anything.
+         *     `key` is what the page asks for it by; `label` is what a menu row calls
+         *     it, `phrase` what the header says while it is the one in force.
          */
         ReviewVersion: {
             /** Key */

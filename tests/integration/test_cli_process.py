@@ -608,7 +608,7 @@ def test_taking_the_diff_again_says_which_files_changed_since_the_round_began(
     retaken = cli.run("round", "--port", str(port))
 
     assert retaken.returncode == 0
-    assert json.loads(retaken.stdout)["changes"] == {"since_round": 1, "paths": ["initial.txt"]}
+    assert json.loads(retaken.stdout)["changes"] == {"since_round": 1, "base_key": "round:1", "paths": ["initial.txt"]}
 
 
 def test_waiting_until_an_event_waits_through_the_timeouts(changed_repo: Path, cli: CliProcesses, port: int) -> None:

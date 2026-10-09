@@ -59,7 +59,7 @@ describe('when the tree moves under the review', () => {
 	it('takes the diff again when the reader asks for it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
-		server.answer('POST /api/round', { file_count: 1, round: 2, changes: { since_round: 1, paths: [] } });
+		server.answer('POST /api/round', { file_count: 1, round: 2, changes: { since_round: 1, base_key: 'round:1', paths: [] } });
 		diffStore.noteTreeMoved(1);
 
 		const { getByTestId } = render(DiffNotice);
@@ -137,7 +137,7 @@ describe('threads the base on screen cannot draw', () => {
 		serveNarrowed();
 		await diffStore.setBase('round:1');
 		commentStore.add(newComment({ file: 'elsewhere.py', body: 'not on this screen' }));
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 1, paths: [] });
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 1, base_key: 'round:1', paths: [] });
 
 		const { getByTestId, getAllByTestId } = render(DiffNotice);
 		await user.click(getByTestId('list-off-screen'));

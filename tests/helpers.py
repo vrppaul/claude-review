@@ -48,9 +48,10 @@ from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.presentation.schemas import PushKind
+from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review_opening import ReviewOpening
+from claude_review.services.review_opening import ReviewOpening, open_diff
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -117,6 +118,11 @@ def git(repo: Path, *args: str) -> str:
     """Run a git command in the given repo and return stdout."""
     result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
     return result.stdout
+
+
+async def uncommitted_changes(repo: Path) -> list[DiffFile]:
+    """The diff of a repository's uncommitted changes, read the way a review opens on them."""
+    return (await open_diff(repo, None, GitRepository(objects=None))).diff_files
 
 
 def context_line(old_number: int, new_number: int, content: str) -> DiffLine:

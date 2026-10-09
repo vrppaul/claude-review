@@ -10,11 +10,9 @@ from httpx import AsyncClient, TransportError
 from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import ReaderFiles, ReviewMode
-from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
-from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended
+from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended, uncommitted_changes
 
 # What the page posts when it sends the review, a round or the last of it
 SUBMIT_RESPONSE = "**/api/submit"
@@ -131,7 +129,7 @@ def e2e_repo(tmp_path: Path) -> Path:
 @pytest.fixture
 async def diff_review(e2e_repo: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing the e2e repo's uncommitted changes."""
-    return await servers.start(await DiffService(git_repository=GitRepository()).get_diff(e2e_repo))
+    return await servers.start(await uncommitted_changes(e2e_repo))
 
 
 async def test_a_comment_on_a_line_reaches_the_agent(diff_review: RunningReview, page: Page) -> None:
@@ -876,7 +874,7 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
 
 async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, servers: ReviewServers, page: Page) -> None:
     """Said, never acted on: the reader decides when to take the diff again."""
-    review = await servers.start(await DiffService(git_repository=GitRepository()).get_diff(e2e_repo), root=e2e_repo)
+    review = await servers.start(await uncommitted_changes(e2e_repo), root=e2e_repo)
     async with AsyncClient(base_url=review.url) as agent:
         # Taken again, as the agent does after a round: the tree it is compared against is this one
         await agent.post("/api/round", json={})

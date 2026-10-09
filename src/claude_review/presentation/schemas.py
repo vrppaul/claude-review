@@ -10,10 +10,10 @@ from claude_review.domain.models import (
     AgentStatus,
     AgentWork,
     Anchor,
-    ChangesSince,
     CommentSeverity,
     DiffFile,
     DiffLayout,
+    EpochMillis,
     FilePath,
     GuideState,
     PanelCancel,
@@ -23,7 +23,6 @@ from claude_review.domain.models import (
     ReaderSettings,
     ReviewMode,
     ReviewModel,
-    ReviewVersion,
     RoundSubmission,
     Theme,
     Thread,
@@ -90,15 +89,55 @@ class SendLimits(ReviewModel):
     max_quoted_lines: int = MAX_QUOTE_LINES
 
 
+class VersionKind(StrEnum):
+    """Where a base came from, so a menu can group them.
+
+    Three answers to one question — what is the working tree being compared
+    against: what the review opened with, a tree one of its rounds was read
+    at, or a ref that was there all along.
+    """
+
+    REVIEW = auto()
+    ROUND = auto()
+    REF = auto()
+
+
+class ReviewVersion(ReviewModel):
+    """One base the working tree can be compared against, as the page's menu shows it.
+
+    `key` is what the page asks for it by; `label` is what a menu row calls
+    it, `phrase` what the header says while it is the one in force.
+    """
+
+    key: str
+    kind: VersionKind
+    label: str
+    phrase: str
+    at: EpochMillis | None
+    changed: int | None
+
+
+class ChangesSince(ReviewModel):
+    """Which files changed since a round began, so they are read again rather than all of them."""
+
+    since_round: int
+    # The key that shows only what changed since that round
+    base_key: str
+    paths: list[str]
+
+
 class DiffResponse(ReviewModel):
     """Response for GET /api/diff."""
 
     files: list[DiffFile]
     mode: ReviewMode
     title: str
-    # What the diff is compared against, as the header's control says it.
-    # None in a review whose content did not come from a repository.
+    # What the diff is compared against, as the header's control says it, and
+    # the key of that base and of the review's own. None in a review whose
+    # content did not come from a repository.
     phrase: str | None = None
+    base_key: str | None
+    review_key: str | None
     # Which round is being written, and whether anything is there to answer
     # it. A review reloaded mid-round has to learn both from somewhere.
     round: int = 1

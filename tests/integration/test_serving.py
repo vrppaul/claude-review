@@ -66,7 +66,7 @@ def kept_under_this_test(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 @pytest.fixture
 async def opening(tmp_git_repo: Path) -> ReviewOpening:
     (tmp_git_repo / "initial.txt").write_text("changed\n")
-    return await open_diff(tmp_git_repo, None, GitRepository())
+    return await open_diff(tmp_git_repo, None, GitRepository(objects=None))
 
 
 @pytest.fixture

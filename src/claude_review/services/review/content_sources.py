@@ -13,15 +13,15 @@ from typing import Protocol
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import NoRepositoryError
-from claude_review.domain.models import ChangesSince, DiffFile, ReviewVersion
+from claude_review.domain.exceptions import GitError, NoRepositoryError
+from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
 from claude_review.domain.page_events import TreeMoved
 from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_lifetime import ReviewLifetime
-from claude_review.services.review.review_versions import REVIEW_KEY, ReviewVersions
+from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.tree_watcher_service import TreeWatcherService
@@ -33,9 +33,9 @@ class DiffView(BaseModel):
     """The diff as the reader asked to see it, and how far the tree has moved since the review's own was taken."""
 
     files: list[DiffFile]
-    # What the diff is compared against, as the header says it. None in a
-    # review whose content did not come from a repository.
-    phrase: str | None
+    # The base the diff was taken against. None in a review whose content did
+    # not come from a repository: it is compared against nothing.
+    shown: VersionKey | None
     moved: int
 
 
@@ -44,7 +44,7 @@ class Retaken(BaseModel):
 
     file_count: int
     round: int
-    changes: ChangesSince | None
+    changes: ChangedSinceRound | None
 
 
 class ContentSource(Protocol):
@@ -59,11 +59,11 @@ class ContentSource(Protocol):
         """Note what the review opens on: whatever later takes are measured against."""
         ...
 
-    async def view(self, base_key: str | None, *, ignore_whitespace: bool) -> DiffView:
-        """The diff against a base the review offers, with whitespace counted or not."""
+    async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
+        """The diff against a base the review offers — its own when None — with whitespace counted or not."""
         ...
 
-    async def offer(self) -> list[ReviewVersion]:
+    async def offer(self) -> list[VersionOnOffer]:
         """The bases the diff can be read against."""
         ...
 
@@ -96,7 +96,8 @@ class RepositorySource:
         self._root = root
         self._base = opening.base
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
-        self._diffs = DiffService(git_repository=repository)
+        self._repository = repository
+        self._diffs = DiffService()
         self._watcher = TreeWatcherService(git_repository=repository)
         self._windows = FileWindowService(repository)
         self._versions = ReviewVersions(repository, clock, root, review_base=opening.base)
@@ -110,12 +111,20 @@ class RepositorySource:
         return self._content
 
     async def open(self) -> None:
-        """Note the tree the review opens on: what the watcher compares against, and a base rounds can go back to."""
+        """Note the tree the review opens on: what the watcher compares against, and a base rounds can go back to.
+
+        A repository git will not stage just now costs the review its first
+        mark, never the review itself.
+        """
         tree = await self._watcher.read(self._root)
         self._content = ReviewContent(self._content.files, tree)
-        await self._versions.mark(self._rounds.current)
+        try:
+            async with self._repository.staged(self._root) as staged:
+                await self._versions.mark(self._rounds.current, staged)
+        except GitError as e:
+            log.warning("opening_mark_refused", reason=str(e))
 
-    async def view(self, base_key: str | None, *, ignore_whitespace: bool) -> DiffView:
+    async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The diff against a base, from git when only git can say it.
 
         Ignoring whitespace has to come from git, since only git knows which
@@ -125,37 +134,39 @@ class RepositorySource:
         change to what is under review.
         """
         content = self._content
+        shown = base or ReviewKey()
         files = content.files
-        if base_key is not None or ignore_whitespace:
-            against = await self._versions.resolve(base_key) if base_key is not None else self._base
-            files = await self._diffs.get_diff(self._root, base=against, ignore_whitespace=ignore_whitespace)
-        return DiffView(
-            files=files,
-            phrase=self._versions.phrase_of(base_key or REVIEW_KEY),
-            moved=await self._watcher.drift(self._root, content.tree),
-        )
+        # The review's own base, whitespace counted, is the diff it holds:
+        # the one its threads are anchored to
+        if shown != ReviewKey() or ignore_whitespace:
+            against = await self._versions.resolve(shown)
+            async with self._repository.staged(self._root) as staged:
+                files = await self._diffs.read(staged, base=against, ignore_whitespace=ignore_whitespace)
+        return DiffView(files=files, shown=shown, moved=await self._watcher.drift(self._root, content.tree))
 
-    async def offer(self) -> list[ReviewVersion]:
+    async def offer(self) -> list[VersionOnOffer]:
         return await self._versions.offer()
 
     async def retake(self) -> Retaken:
         """Take the diff again, under the round it was taken in.
 
         One retake at a time, each about one round: a round sent while git is
-        working must not tag this retake's mark with the round after it.
+        working must not tag this retake's mark with the round after it. One
+        staging serves the whole of it, so the diff on screen, the tree
+        written down and what changed since are all of the same tree.
         """
-        async with self._retaking:
+        async with self._retaking, self._repository.staged(self._root) as staged:
             round_number = self._rounds.current
             # Asked before the new tree is written down, while the last mark is
             # still the one the diff on screen was taken at
-            changes = await self._versions.changed_since_round_began(round_number)
-            files = await self._diffs.get_diff(self._root, base=self._base)
+            changes = await self._versions.changed_since_round_began(round_number, staged)
+            files = await self._diffs.read(staged, base=self._base, ignore_whitespace=False)
             # Read after the diff, not before: a file saved in between then
             # belongs to the tree the diff was taken at, and the reader is not
             # told about a change that is already on their screen
             tree = await self._watcher.read(self._root)
             self._content = ReviewContent(files, tree)
-            await self._versions.mark(round_number)
+            await self._versions.mark(round_number, staged)
 
         log.info(
             "diff_retaken", file_count=len(files), round=round_number, changed=len(changes.paths) if changes else None
@@ -184,18 +195,18 @@ class FixedSource:
     async def open(self) -> None:
         """Nothing to note: what was read is all there will be."""
 
-    async def view(self, base_key: str | None, *, ignore_whitespace: bool) -> DiffView:
+    async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The content as it was read; whitespace is part of it.
 
         Raises:
             NoRepositoryError: if a base is asked for.
         """
-        if base_key is not None:
+        if base is not None:
             msg = "This review is not compared against anything"
             raise NoRepositoryError(msg)
-        return DiffView(files=self._content.files, phrase=None, moved=0)
+        return DiffView(files=self._content.files, shown=None, moved=0)
 
-    async def offer(self) -> list[ReviewVersion]:
+    async def offer(self) -> list[VersionOnOffer]:
         """No bases: not a failure, only nothing to choose between."""
         return []
 

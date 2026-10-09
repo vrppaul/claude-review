@@ -1,5 +1,6 @@
 """Domain protocols (interfaces) for claude-review."""
 
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 from typing import Protocol
 
@@ -17,22 +18,27 @@ class Clock(Protocol):
         ...
 
 
+class StagedTreeProtocol(Protocol):
+    """The working tree staged whole for one operation: everything git is asked within it reads the same index."""
+
+    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
+        """The unified diff from a base — HEAD when None — to the working tree."""
+        ...
+
+    async def write_tree(self) -> str:
+        """Write the tree down and return its id."""
+        ...
+
+    async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
+        """For each base, the paths that differ from the working tree."""
+        ...
+
+
 class GitRepositoryProtocol(Protocol):
     """Protocol for git operations."""
 
-    async def get_raw_diff(
-        self,
-        path: Path,
-        base: str | None = None,
-        *,
-        ignore_whitespace: bool = False,
-    ) -> str:
-        """Return the raw unified diff output.
-
-        If base is None: diff uncommitted changes against HEAD.
-        If base is provided: diff from base to the current working tree.
-        If ignore_whitespace: leave out changes that only alter whitespace.
-        """
+    def staged(self, path: Path) -> AbstractAsyncContextManager[StagedTreeProtocol]:
+        """Stage the working tree of the repository at ``path`` for one operation."""
         ...
 
     async def top_level(self, path: Path) -> Path | None:
@@ -41,14 +47,6 @@ class GitRepositoryProtocol(Protocol):
 
     async def changed_paths(self, path: Path) -> list[str]:
         """Return every path where the working tree differs from HEAD, untracked files included."""
-        ...
-
-    async def snapshot(self, path: Path) -> str:
-        """Write the working tree as it stands and return the tree's id."""
-        ...
-
-    async def changed_since(self, path: Path, bases: list[str]) -> dict[str, list[str]]:
-        """Return, for each base, the paths that differ from the working tree."""
         ...
 
     async def list_refs(self, path: Path) -> list[GitRef]:

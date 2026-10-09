@@ -7,9 +7,11 @@ time it is asked and says one file differs from every base, so what is
 offered depends on the marks alone.
 """
 
+import contextlib
+from collections.abc import AsyncIterator
 from pathlib import Path
 
-from claude_review.domain.models import GitRef, VersionKind
+from claude_review.domain.models import ChangedSinceRound, GitRef, RoundKey, VersionOnOffer
 from claude_review.services.review.review_versions import ReviewVersions
 from tests.helpers import FixedClock
 
@@ -20,24 +22,38 @@ MARKED_AT = 1_791_000_000_000
 MOVED_FILE = "moved.py"
 
 
+class TreeThatMoves:
+    """A staged tree that is a new one each time it is written down, one file away from any base."""
+
+    def __init__(self, repository: RepositoryThatMoves) -> None:
+        self._repository = repository
+
+    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
+        return ""
+
+    async def write_tree(self) -> str:
+        return self._repository.next_tree()
+
+    async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
+        return {base: [MOVED_FILE] for base in bases}
+
+
 class RepositoryThatMoves:
-    """A repository whose tree is a new one every time it is written down, one file away from any base."""
+    """A repository whose working tree moves between any two stagings."""
 
     def __init__(self) -> None:
         self._written = 0
 
-    async def snapshot(self, path: Path) -> str:
+    def next_tree(self) -> str:
         self._written += 1
         return f"tree-{self._written}"
 
-    async def changed_since(self, path: Path, bases: list[str]) -> dict[str, list[str]]:
-        return {base: [MOVED_FILE] for base in bases}
+    @contextlib.asynccontextmanager
+    async def staged(self, path: Path) -> AsyncIterator[TreeThatMoves]:
+        yield TreeThatMoves(self)
 
     async def list_refs(self, path: Path) -> list[GitRef]:
         return []
-
-    async def get_raw_diff(self, path: Path, base: str | None = None, *, ignore_whitespace: bool = False) -> str:
-        return ""
 
     async def top_level(self, path: Path) -> Path | None:
         return path
@@ -46,54 +62,70 @@ class RepositoryThatMoves:
         return []
 
 
-def _versions() -> ReviewVersions:
-    return ReviewVersions(RepositoryThatMoves(), FixedClock(MARKED_AT), ROOT, review_base=None)
+class MarkingReview:
+    """The bases of one review over a repository that moves, and its marks left one round at a time."""
+
+    def __init__(self) -> None:
+        self._repository = RepositoryThatMoves()
+        self.versions = ReviewVersions(self._repository, FixedClock(MARKED_AT), ROOT, review_base=None)
+
+    async def mark(self, round_number: int) -> None:
+        async with self._repository.staged(ROOT) as staged:
+            await self.versions.mark(round_number, staged)
+
+    async def changed_since_round_began(self, round_number: int) -> ChangedSinceRound | None:
+        async with self._repository.staged(ROOT) as staged:
+            return await self.versions.changed_since_round_began(round_number, staged)
 
 
-async def _rounds_offered(versions: ReviewVersions) -> list[tuple[str, str, str]]:
-    """The rounds on offer, each by its key, its menu label and the header's phrase for it."""
-    return [
-        (version.key, version.label, version.phrase)
-        for version in await versions.offer()
-        if version.kind == VersionKind.ROUND
-    ]
+async def _rounds_offered(review: MarkingReview) -> list[VersionOnOffer]:
+    """The rounds on offer."""
+    return [version for version in await review.versions.offer() if isinstance(version.key, RoundKey)]
 
 
 async def test_every_round_that_has_a_mark_is_on_offer() -> None:
-    versions = _versions()
+    review = MarkingReview()
     for round_number in (1, 2, 3):
-        await versions.mark(round_number)
+        await review.mark(round_number)
 
-    assert await _rounds_offered(versions) == [
-        ("round:1", "round 1", "changes since round 1"),
-        ("round:2", "round 2", "changes since round 2"),
-        ("round:3", "round 3", "changes since round 3"),
+    assert [version.key for version in await _rounds_offered(review)] == [
+        RoundKey(round=1),
+        RoundKey(round=2),
+        RoundKey(round=3),
     ]
 
 
 async def test_a_round_is_remembered_as_it_began() -> None:
     """The agent may retake the diff twice in one round; the round started once."""
-    versions = _versions()
-    await versions.mark(1)
-    await versions.mark(2)
-    await versions.mark(2)
+    review = MarkingReview()
+    await review.mark(1)
+    await review.mark(2)
+    await review.mark(2)
 
-    assert [key for key, _, _ in await _rounds_offered(versions)] == ["round:1", "round:2"]
-    assert await versions.resolve("round:2") == "tree-2"
+    assert [version.key for version in await _rounds_offered(review)] == [RoundKey(round=1), RoundKey(round=2)]
+    assert await review.versions.resolve(RoundKey(round=2)) == "tree-2"
 
 
 async def test_a_round_is_dated_when_it_was_read() -> None:
-    versions = _versions()
-    await versions.mark(1)
+    review = MarkingReview()
+    await review.mark(1)
 
-    [offered] = [version for version in await versions.offer() if version.kind == VersionKind.ROUND]
+    [offered] = await _rounds_offered(review)
     assert offered.at == MARKED_AT
 
 
 async def test_a_review_that_has_left_no_marks_offers_no_rounds() -> None:
-    assert await _rounds_offered(_versions()) == []
+    assert await _rounds_offered(MarkingReview()) == []
 
 
 async def test_a_review_that_has_left_no_marks_cannot_say_what_changed() -> None:
     """Nothing to compare against is not nothing having changed."""
-    assert await _versions().changed_since_round_began(1) is None
+    assert await MarkingReview().changed_since_round_began(1) is None
+
+
+async def test_what_changed_is_counted_from_where_the_round_began() -> None:
+    review = MarkingReview()
+    await review.mark(1)
+    await review.mark(1)
+
+    assert await review.changed_since_round_began(1) == ChangedSinceRound(round=1, paths=[MOVED_FILE])

@@ -6,6 +6,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
+from claude_review.domain.models import ReviewKey
 from claude_review.presentation.dependencies import get_release, get_review
 from claude_review.presentation.schemas import (
     MAX_ID_LENGTH,
@@ -23,6 +24,13 @@ from claude_review.presentation.schemas import (
     SubmitResponse,
     VersionsResponse,
 )
+from claude_review.presentation.version_words import (
+    changes_on_the_wire,
+    key_of,
+    key_text,
+    phrase_of,
+    version_on_the_wire,
+)
 from claude_review.services.image_service import MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
 
@@ -38,13 +46,20 @@ async def get_diff(
     review: Review = Depends(get_review),
     release: str = Depends(get_release),
 ) -> DiffResponse:
-    """Serve the review's content, against the base the page asks for, and where the review stands."""
-    view = await review.source.view(base, ignore_whitespace=ignore_whitespace)
+    """Serve the review's content, against the base the page asks for, and where the review stands.
+
+    The page is told the key of the base in force and of the review's own,
+    so it asks for the one and goes back to the other without building a key
+    itself.
+    """
+    view = await review.source.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
     return DiffResponse(
         files=view.files,
         mode=review.mode,
         title=review.title,
-        phrase=view.phrase,
+        phrase=phrase_of(view.shown, review.opened_against) if view.shown is not None else None,
+        base_key=key_text(view.shown) if view.shown is not None else None,
+        review_key=key_text(ReviewKey()) if view.shown is not None else None,
         round=review.rounds.current,
         answerer_attached=review.answerer.attached,
         agent=review.answerer.status,
@@ -57,7 +72,9 @@ async def get_diff(
 @router.get("/versions")
 async def offered_versions(review: Review = Depends(get_review)) -> VersionsResponse:
     """Say what the working tree can be compared against: nothing at all, for files or a conversation."""
-    return VersionsResponse(versions=await review.source.offer())
+    return VersionsResponse(
+        versions=[version_on_the_wire(offered, review.opened_against) for offered in await review.source.offer()]
+    )
 
 
 @router.get("/file-window")
@@ -194,7 +211,9 @@ async def retake_diff(review: Review = Depends(get_review)) -> RoundResponse:
     agent rewrote under them.
     """
     retaken = await review.retake()
-    return RoundResponse(file_count=retaken.file_count, round=retaken.round, changes=retaken.changes)
+    return RoundResponse(
+        file_count=retaken.file_count, round=retaken.round, changes=changes_on_the_wire(retaken.changes)
+    )
 
 
 @router.post("/end", status_code=HTTPStatus.NO_CONTENT)

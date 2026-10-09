@@ -52,7 +52,8 @@ async def open_diff(location: Path, base: str | None, git_repository: GitReposit
     to start there.
     """
     log.info("loading_diff", path=str(location), base=base)
-    diff_files = await DiffService(git_repository=git_repository).get_diff(location, base=base)
+    async with git_repository.staged(location) as staged:
+        diff_files = await DiffService().read(staged, base=base, ignore_whitespace=False)
     root = await git_repository.top_level(location) or location
     return ReviewOpening(
         mode=ReviewMode.DIFF,

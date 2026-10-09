@@ -42,6 +42,7 @@ from claude_review.presentation.schemas import (
     ShowPush,
     StatusPush,
 )
+from claude_review.presentation.version_words import changes_on_the_wire
 
 log = structlog.get_logger()
 
@@ -110,6 +111,6 @@ def push_of(event: PageEvent) -> ServerPush:
         case RoundBegan():
             return RoundPush(number=event.number)
         case DiffRetaken():
-            return DiffPush(changes=event.changes)
+            return DiffPush(changes=changes_on_the_wire(event.changes))
         case _:
             assert_never(event)

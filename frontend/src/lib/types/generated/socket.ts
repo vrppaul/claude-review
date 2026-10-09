@@ -142,6 +142,8 @@ export interface components {
         ChangesSince: {
             /** Since Round */
             since_round: number;
+            /** Base Key */
+            base_key: string;
             /** Paths */
             paths: string[];
         };

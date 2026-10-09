@@ -46,6 +46,10 @@ END_OF_OPTIONS = "--end-of-options"
 INDEX_SUFFIX = ".git-index"
 OBJECTS_SUFFIX = ".git-objects"
 
+# What a repository's own index and object store are called, as `git rev-parse --git-path` asks
+INDEX_NAME = "index"
+OBJECTS_NAME = "objects"
+
 
 class GitRun(BaseModel):
     """What one git command said, and how it ended."""
@@ -55,40 +59,26 @@ class GitRun(BaseModel):
     errors: str
 
 
-class GitRepository:
-    """Git repository implementation using the git CLI.
+class StagedTree:
+    """The working tree as it stands, staged whole into an index of one operation's own.
 
-    Uses a temporary index to diff ALL changes (tracked + untracked)
-    without modifying the user's actual staging area.
+    Everything git is asked within one operation — the diff, the tree written
+    down, what changed since earlier trees — reads this one index, so the
+    answers agree with each other by construction and the tree is staged
+    once rather than once per question. The repository's own index is never
+    touched.
     """
 
-    def __init__(self, objects: Path | None = None) -> None:
-        """Take the object store that staging writes to.
+    def __init__(self, path: Path, environment: dict[str, str], *, keeps_objects: bool) -> None:
+        self._path = path
+        self._environment = environment
+        self._keeps_objects = keeps_objects
 
-        Staging writes a blob for every untracked file, and those do not
-        belong in the repository under review — it would otherwise gain one
-        per file, and a tree with a large untracked build directory left
-        megabytes behind. None throws them away when the call ends, which is
-        right for a diff read once. A directory given here keeps them for as
-        long as it lasts, which is what lets a snapshot be read back later:
-        the review owns that directory and takes it with it.
-        """
-        self._objects = objects
+    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
+        """The unified diff from a base to the working tree, untracked files included.
 
-    async def get_raw_diff(
-        self,
-        path: Path,
-        base: str | None = None,
-        *,
-        ignore_whitespace: bool = False,
-    ) -> str:
-        """Return unified diff of all changes including untracked files.
-
-        Creates a temporary git index, stages everything there, and diffs
-        against a base ref. When base is None, diffs against HEAD (uncommitted
-        changes only). When base is provided, diffs from that commit — or from
-        a tree a round was snapshotted as — to the current working tree. The
-        real index is untouched.
+        Without a base, from HEAD: the uncommitted changes. A base may be a
+        commit, a ref, or a tree a round was written down as.
 
         With ignore_whitespace, git leaves out changes that only alter
         whitespace — a reindented block stops hiding the one line that
@@ -97,11 +87,10 @@ class GitRepository:
         arguments = [*DIFF_STAGED, *(["-w"] if ignore_whitespace else [])]
         if base is not None:
             arguments += [END_OF_OPTIONS, base]
-        async with self._everything_staged(path) as env:
-            return await self._run(path, arguments, env=env)
+        return await _run(self._path, arguments, self._environment)
 
-    async def snapshot(self, path: Path) -> str:
-        """Write the working tree as it stands and return the tree's id.
+    async def write_tree(self) -> str:
+        """Write the tree down and return its id.
 
         This is how a round leaves a mark. The work under review is
         uncommitted, so between two rounds there may be no commit at all —
@@ -109,40 +98,87 @@ class GitRepository:
         to be compared against.
 
         Raises:
-            GitError: if this repository throws its objects away, which would
+            GitError: if the repository throws its objects away, which would
                 leave a tree id naming something nobody can read.
         """
-        if self._objects is None:
-            msg = "a snapshot needs an object store that outlives the call that took it"
+        if not self._keeps_objects:
+            msg = "a tree written down needs an object store that outlives the staging that wrote it"
             raise GitError(msg)
+        return (await _run(self._path, ["write-tree"], self._environment)).strip()
 
-        async with self._everything_staged(path) as env:
-            return (await self._run(path, ["write-tree"], env=env)).strip()
-
-    async def changed_since(self, path: Path, bases: list[str]) -> dict[str, list[str]]:
+    async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         """Which paths differ between each of these bases and the working tree.
 
         The comparison a diff makes, asked for names alone: what a round
         changed is a list of files, and reading the hunks to find it out
-        costs the whole diff. One staging serves every base, because building
-        the index is the expensive part and it does not depend on what is
-        being compared against. `-z` because git otherwise quotes and escapes
-        any path outside plain ASCII, and these are matched against the paths
-        already on screen.
+        costs the whole diff. `-z` because git otherwise quotes and escapes
+        any path outside plain ASCII, and these are matched against the
+        paths already on screen.
         """
         changed: dict[str, list[str]] = {}
-        async with self._everything_staged(path) as env:
-            for base in bases:
-                try:
-                    listed = await self._run(path, [*DIFF_STAGED, "--name-only", "-z", END_OF_OPTIONS, base], env=env)
-                except GitError:
-                    # One base git will not read — a repository with no HEAD,
-                    # a tree that has been pruned — is one base missing from
-                    # the answer, not the end of the question
-                    log.warning("changed_since_refused", base=base)
-                    continue
-                changed[base] = [name for name in listed.split("\0") if name]
+        for base in bases:
+            try:
+                listed = await _run(
+                    self._path, [*DIFF_STAGED, "--name-only", "-z", END_OF_OPTIONS, base], self._environment
+                )
+            except GitError:
+                # One base git will not read — a repository with no HEAD, a
+                # tree that has been pruned — is one base missing from the
+                # answer, not the end of the question
+                log.warning("changed_since_refused", base=base)
+                continue
+            changed[base] = [name for name in listed.split("\0") if name]
         return changed
+
+
+class GitRepository:
+    """The repository under review, asked through the git command line."""
+
+    def __init__(self, *, objects: Path | None) -> None:
+        """Take the object store that staging writes to.
+
+        Staging writes a blob for every untracked file, and those do not
+        belong in the repository under review — it would otherwise gain one
+        per file, and a tree with a large untracked build directory left
+        megabytes behind. None throws them away when the staging ends, which
+        is all a diff read once needs. A directory given here keeps them for
+        as long as it lasts, which is what lets a tree written down be read
+        back later: the review owns that directory and takes it with it.
+        """
+        self._objects = objects
+
+    @contextlib.asynccontextmanager
+    async def staged(self, path: Path) -> AsyncGenerator[StagedTree]:
+        """Stage the whole working tree into an index of this staging's own, for one operation to read.
+
+        The index starts as a copy of the repository's own, so git knows
+        which files it has already read and hashes only what changed: on a
+        large tree, milliseconds rather than half a second. Like `git diff`
+        and `git status`, it then leaves alone what the reader told git to
+        leave alone — a file marked assume-unchanged or skip-worktree. A
+        repository with no index of its own starts from HEAD, or from
+        nothing.
+
+        The temporary files are made and removed off the event loop: removing
+        an object store can mean megabytes of blobs, and the server has a
+        socket to keep answering on.
+        """
+        index = await asyncio.to_thread(_temporary_index)
+        throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
+        objects = throwaway or str(self._objects)
+        environment = {**os.environ, "GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
+
+        try:
+            # Whichever store is written to, the repository's own stays readable
+            real_objects = await _git_path(path, OBJECTS_NAME)
+            if real_objects is not None:
+                environment["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(real_objects)
+
+            await self._seed(path, Path(index), environment)
+            await _run(path, ["add", "-A"], environment)
+            yield StagedTree(path, environment, keeps_objects=self._objects is not None)
+        finally:
+            await asyncio.to_thread(_remove_staging, index, throwaway)
 
     async def list_refs(self, path: Path) -> list[GitRef]:
         """The branches and tags worth offering as a base, most recent first.
@@ -151,7 +187,7 @@ class GitRepository:
         nobody can read, and whoever wants an older one can open the review
         against it.
         """
-        listed = await self._run(
+        listed = await _run(
             path,
             [
                 "for-each-ref",
@@ -178,43 +214,6 @@ class GitRepository:
                 refs.append(GitRef(name=name, at=int(at) * MILLISECONDS_PER_SECOND))
         return refs
 
-    @contextlib.asynccontextmanager
-    async def _everything_staged(self, path: Path) -> AsyncGenerator[dict[str, str]]:
-        """Stage the whole working tree into an index of this call's own.
-
-        Yields the environment the git commands have to run under to see it:
-        which index they read, and where what they write goes. The temporary
-        files are made and removed off the event loop: removing an object
-        store can mean megabytes of blobs, and the server has a socket to
-        keep answering on.
-        """
-        index = await asyncio.to_thread(_temporary_index)
-        throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
-        objects = throwaway or str(self._objects)
-        env = {**os.environ, "GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
-
-        try:
-            # Whichever store is written to, the repository's own stays readable
-            real_objects = await self._object_directory(path)
-            if real_objects is not None:
-                env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = real_objects
-
-            if await self._has_commits(path):
-                await self._run(path, ["read-tree", "HEAD"], env=env)
-
-            await self._run(path, ["add", "-A"], env=env)
-            yield env
-        finally:
-            await asyncio.to_thread(_remove_staging, index, throwaway)
-
-    async def _object_directory(self, path: Path) -> str | None:
-        """Absolute path of the repository's object store, if git will say."""
-        try:
-            found = await self._run(path, ["rev-parse", "--path-format=absolute", "--git-path", "objects"])
-        except GitError:
-            return None
-        return found.strip() or None
-
     async def changed_paths(self, path: Path) -> list[str]:
         """Every path where the working tree differs from HEAD.
 
@@ -225,10 +224,10 @@ class GitRepository:
         file added inside one is a path of its own; renames are two paths.
         `-z` keeps every name as it is, unquoted.
         """
-        listed = await self._run(
+        listed = await _run(
             path,
             ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"],
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            {**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
         )
         # Each entry is two status letters, a space, then the path
         return [entry[PORCELAIN_PATH_START:] for entry in listed.split("\0") if entry]
@@ -236,7 +235,7 @@ class GitRepository:
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         """Whether the repository tracks the file at this path."""
         try:
-            run = await self._execute(root, ["ls-files", "--error-unmatch", "--", relative_path])
+            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path], environment=None)
         except GitError:
             return False
         return run.exit_code == 0
@@ -249,71 +248,97 @@ class GitRepository:
         start here or it looks for `sub/a.py` inside `sub/`.
         """
         try:
-            found = await self._run(path, ["rev-parse", "--show-toplevel"])
+            found = await _run(path, ["rev-parse", "--show-toplevel"])
         except GitError:
             return None
         return Path(found.strip()) if found.strip() else None
 
-    async def _has_commits(self, path: Path) -> bool:
-        """Whether there is a HEAD to start the index from: a fresh repository has none."""
-        try:
-            run = await self._execute(path, ["rev-parse", "--verify", "--quiet", "HEAD"])
-        except GitError:
-            return False
-        return run.exit_code == 0
+    async def _seed(self, path: Path, index: Path, environment: dict[str, str]) -> None:
+        """Start a staging's index from the repository's own, from HEAD when it has none, or from nothing.
 
-    async def _run(self, path: Path, arguments: list[str], env: dict[str, str] | None = None) -> str:
-        """What a git command printed.
-
-        Raises:
-            GitError: if it could not run, ran out of time, or failed.
+        Nothing is no file at all: git reads an empty file as a broken index,
+        and a missing one as an empty index.
         """
-        run = await self._execute(path, arguments, env)
-        if run.exit_code != 0:
-            log.warning("git_command_failed", command=arguments[0], exit_code=run.exit_code)
-            msg = f"git command failed: {run.errors.strip()}"
-            raise GitError(msg)
-        return run.output
+        real_index = await _git_path(path, INDEX_NAME)
+        if real_index is not None and await asyncio.to_thread(real_index.is_file):
+            await asyncio.to_thread(shutil.copyfile, real_index, index)
+        elif await _has_commits(path):
+            await _run(path, ["read-tree", "HEAD"], environment)
+        else:
+            await asyncio.to_thread(index.unlink)
 
-    async def _execute(self, path: Path, arguments: list[str], env: dict[str, str] | None = None) -> GitRun:
-        """Run git and say how it went, leaving no process behind whatever happens.
 
-        Output is decoded as UTF-8 with anything else replaced: one file in
-        another encoding costs its own odd characters, not the review.
+async def _git_path(path: Path, name: str) -> Path | None:
+    """Where a part of the repository's own git directory is, if git will say."""
+    try:
+        found = await _run(path, ["rev-parse", "--path-format=absolute", "--git-path", name])
+    except GitError:
+        return None
+    return Path(found.strip()) if found.strip() else None
 
-        Raises:
-            GitError: if git could not be started or ran out of time.
-        """
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "git",
-                *GIT_SETTINGS,
-                *arguments,
-                cwd=path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env,
-            )
-        except (FileNotFoundError, NotADirectoryError) as e:
-            msg = f"git operation failed: {e}"
-            raise GitError(msg) from e
 
-        try:
-            output, errors = await asyncio.wait_for(process.communicate(), timeout=GIT_TIMEOUT)
-        except TimeoutError:
-            await _stop(process)
-            msg = f"git command timed out after {GIT_TIMEOUT}s: git {arguments[0]}"
-            raise GitError(msg) from None
-        except BaseException:
-            # Cancelled while git was working: the process goes with the task
-            await _stop(process)
-            raise
+async def _has_commits(path: Path) -> bool:
+    """Whether there is a HEAD to start the index from: a fresh repository has none."""
+    try:
+        run = await _execute(path, ["rev-parse", "--verify", "--quiet", "HEAD"], environment=None)
+    except GitError:
+        return False
+    return run.exit_code == 0
 
-        return GitRun(
-            exit_code=await process.wait(),
-            output=output.decode(errors="replace"),
-            errors=errors.decode(errors="replace"),
+
+async def _run(path: Path, arguments: list[str], environment: dict[str, str] | None = None) -> str:
+    """What a git command printed.
+
+    Raises:
+        GitError: if it could not run, ran out of time, or failed.
+    """
+    run = await _execute(path, arguments, environment)
+    if run.exit_code != 0:
+        log.warning("git_command_failed", command=arguments[0], exit_code=run.exit_code)
+        msg = f"git command failed: {run.errors.strip()}"
+        raise GitError(msg)
+    return run.output
+
+
+async def _execute(path: Path, arguments: list[str], environment: dict[str, str] | None) -> GitRun:
+    """Run git and say how it went, leaving no process behind whatever happens.
+
+    Output is decoded as UTF-8 with anything else replaced: one file in
+    another encoding costs its own odd characters, not the review.
+
+    Raises:
+        GitError: if git could not be started or ran out of time.
+    """
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "git",
+            *GIT_SETTINGS,
+            *arguments,
+            cwd=path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=environment,
         )
+    except (FileNotFoundError, NotADirectoryError) as e:
+        msg = f"git operation failed: {e}"
+        raise GitError(msg) from e
+
+    try:
+        output, errors = await asyncio.wait_for(process.communicate(), timeout=GIT_TIMEOUT)
+    except TimeoutError:
+        await _stop(process)
+        msg = f"git command timed out after {GIT_TIMEOUT}s: git {arguments[0]}"
+        raise GitError(msg) from None
+    except BaseException:
+        # Cancelled while git was working: the process goes with the task
+        await _stop(process)
+        raise
+
+    return GitRun(
+        exit_code=await process.wait(),
+        output=output.decode(errors="replace"),
+        errors=errors.decode(errors="replace"),
+    )
 
 
 async def _stop(process: asyncio.subprocess.Process) -> None:

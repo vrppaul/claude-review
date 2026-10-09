@@ -60,6 +60,8 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 		mode: 'diff',
 		title: 'repo: uncommitted changes',
 		phrase: 'uncommitted changes',
+		base_key: 'review',
+		review_key: 'review',
 		round: 1,
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },

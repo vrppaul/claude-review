@@ -1,10 +1,9 @@
 """Service for parsing git diffs into domain models."""
 
 import re
-from pathlib import Path
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
-from claude_review.domain.protocols import GitRepositoryProtocol
+from claude_review.domain.protocols import StagedTreeProtocol
 
 # Git escapes these as two characters inside a quoted path
 _CONTROL_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, '"': 34, "\\": 92}
@@ -13,18 +12,9 @@ _CONTROL_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, 
 class DiffService:
     """Parses raw git diff output into structured domain models."""
 
-    def __init__(self, git_repository: GitRepositoryProtocol) -> None:
-        self._git = git_repository
-
-    async def get_diff(
-        self,
-        path: Path,
-        base: str | None = None,
-        *,
-        ignore_whitespace: bool = False,
-    ) -> list[DiffFile]:
-        """Get parsed diff for the given repository path."""
-        raw = await self._git.get_raw_diff(path, base=base, ignore_whitespace=ignore_whitespace)
+    async def read(self, staged: StagedTreeProtocol, *, base: str | None, ignore_whitespace: bool) -> list[DiffFile]:
+        """The diff of a staged tree against a base — HEAD when None — as the review's files."""
+        raw = await staged.diff(base, ignore_whitespace=ignore_whitespace)
         if not raw.strip():
             return []
         return self._parse_diff(raw)

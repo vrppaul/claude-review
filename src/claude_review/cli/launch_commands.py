@@ -53,7 +53,7 @@ def diff_command(location: Path, base: str | None, port: int | None, no_open: bo
     LOCATION is any directory in the repository, the current one by default:
     the review is of the whole repository whichever it is.
     """
-    _launch(open_diff(location.resolve(), base, GitRepository()), port=port, no_open=no_open)
+    _launch(open_diff(location.resolve(), base, GitRepository(objects=None)), port=port, no_open=no_open)
 
 
 @click.command("files")

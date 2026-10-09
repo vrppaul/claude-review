@@ -12,7 +12,7 @@ from claude_review.domain.models import (
     AgentStatus,
     AgentWork,
     Anchor,
-    ChangesSince,
+    ChangedSinceRound,
     CommentSeverity,
     FilePath,
 )
@@ -88,7 +88,7 @@ class RoundBegan(PageEventBase):
 class DiffRetaken(PageEventBase):
     """The diff was taken again, and which files changed since the round began, when that can be said."""
 
-    changes: ChangesSince | None
+    changes: ChangedSinceRound | None
 
 
 # Everything the review tells its pages

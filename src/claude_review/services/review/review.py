@@ -73,6 +73,7 @@ class Review:
     ) -> None:
         self._mode = opening.mode
         self._title = opening.title
+        self._opened_against = opening.base
         self._page = page
         self._images = images
         self._presence = presence
@@ -100,6 +101,11 @@ class Review:
     def title(self) -> str:
         """What the header says is under review."""
         return self._title
+
+    @property
+    def opened_against(self) -> str | None:
+        """What the review was opened against: a commit or a ref, or None for the uncommitted changes."""
+        return self._opened_against
 
     @property
     def lifetime(self) -> ReviewLifetime:

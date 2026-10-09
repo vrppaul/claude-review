@@ -50,7 +50,7 @@ describe('what a round changed', () => {
 		diffStore.setViewed('rewritten.py', true);
 		diffStore.setViewed('untouched.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, paths: ['rewritten.py'] });
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
 
 		expect(diffStore.isViewed('rewritten.py')).toBe(false);
 		expect(diffStore.isViewed('untouched.py')).toBe(true);
@@ -62,7 +62,7 @@ describe('what a round changed', () => {
 		diffStore.setFiles([diffFile({ path: 'rewritten.py' })], 'diff');
 		diffStore.setViewed('rewritten.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, paths: ['rewritten.py'] });
+		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
 
 		expect(diffStore.isCollapsed('rewritten.py')).toBe(false);
 	});
@@ -94,9 +94,10 @@ describe('reading the same tree against something else', () => {
 		await diffStore.setBase('round:1');
 
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('answered.py')] }));
-		await diffStore.setBase('review');
+		await diffStore.showWholeReview();
 
-		expect(server.requests.at(-1)).toEqual(WHOLE_REVIEW_ASKED);
+		// By the key the server named the review's own base with
+		expect(server.requests.at(-1)).toMatchObject({ path: '/api/diff', query: { base: 'review' } });
 		expect(diffStore.narrowed).toBe(false);
 	});
 

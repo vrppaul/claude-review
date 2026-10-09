@@ -24,11 +24,6 @@ import type {
   VersionsResponse,
 } from "$lib/types";
 
-/** The review's own base: what it was opened against, and the diff it keeps. */
-const REVIEW = "review";
-/** How the server names the base a round of this review was read at. */
-const ROUND_PREFIX = "round:";
-
 let files = $state<DiffFile[]>([]);
 let selectedPath = $state<string | null>(null);
 let mode = $state<ReviewMode>("diff");
@@ -40,13 +35,18 @@ let contentViewMode = $state<ContentViewMode>(
   ),
 );
 let title = $state("");
-// Which base the diff on screen was taken against, and everything it could
-// be taken against instead
-let base = $state(REVIEW);
-// Which base the reader last asked for. Set the moment they ask, so a diff
-// taken again while theirs is on its way — a round landing — is taken
-// against what they picked, not against what is still on screen.
-let requestedBase = REVIEW;
+// Which base the diff on screen was taken against, by the key the server
+// named it with, and everything it could be taken against instead. Null until
+// the first diff arrives, and in a review compared against nothing.
+let base = $state<string | null>(null);
+// The key of the review's own base, as the server names it: the diff the
+// threads are anchored to. Null in a review compared against nothing.
+let reviewKey = $state<string | null>(null);
+// Which base the reader last asked for, null for whatever the review shows
+// first. Set the moment they ask, so a diff taken again while theirs is on
+// its way — a round landing — is taken against what they picked, not against
+// what is still on screen.
+let requestedBase: string | null = null;
 let versions = $state<ReviewVersion[]>([]);
 // What the header says the diff on screen is. It comes with the diff rather
 // than out of the version list, so the header can speak before it knows
@@ -84,6 +84,8 @@ let retaken = $state<FollowOutcome | null>(null);
 // read to the end keeps its mark through the rewrite, and gets walked past.
 const changedFiles = new SvelteSet<string>();
 let changedSince = $state<number | null>(null);
+// The key that shows only what changed since that round, as the server named it
+let changedSinceKey: string | null = null;
 let knownChanged = $state(false);
 // Paths the reader has marked done, and paths whose body is folded away.
 // Marking a file viewed folds it, which is why the two are separate sets:
@@ -93,12 +95,12 @@ const collapsed = new SvelteSet<string>();
 const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 
 /** What the diff is asked for: whose whitespace, and against what. */
-function asked(against: string): string {
+function asked(against: string | null): string {
   const params = new URLSearchParams();
   if (settingsStore.settings.ignore_whitespace) {
     params.set("ignore_whitespace", "true");
   }
-  if (against !== REVIEW) params.set("base", against);
+  if (against !== null) params.set("base", against);
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -127,7 +129,8 @@ async function take(): Promise<void> {
   const against = requestedBase;
   const data = await read(asked(against));
   if (mine !== asking) return;
-  base = against;
+  base = against ?? data.base_key;
+  reviewKey = data.review_key;
   apply(data);
 }
 
@@ -237,6 +240,7 @@ export const diffStore = {
     movedFiles = 0;
     dismissedMoved = 0;
     changedSince = changes?.since_round ?? null;
+    changedSinceKey = changes?.base_key ?? null;
     changedFiles.clear();
     knownChanged = changes !== null;
 
@@ -391,8 +395,9 @@ export const diffStore = {
     sidebarOpen = readFlag("sidebar-open", true);
     title = "";
     phrase = "";
-    base = REVIEW;
-    requestedBase = REVIEW;
+    base = null;
+    reviewKey = null;
+    requestedBase = null;
     versions = [];
     agent = { model: null, context: null, at: null };
     sendLimits = null;
@@ -401,6 +406,7 @@ export const diffStore = {
     dismissedMoved = 0;
     retaken = null;
     changedSince = null;
+    changedSinceKey = null;
     knownChanged = false;
     changedFiles.clear();
     viewed.clear();
@@ -408,7 +414,7 @@ export const diffStore = {
   },
 
   /** Which base the diff on screen was taken against. */
-  get base(): string {
+  get base(): string | null {
     return base;
   },
 
@@ -419,7 +425,7 @@ export const diffStore = {
    * anchored to the review's own diff, and only that one draws them all.
    */
   get narrowed(): boolean {
-    return base !== REVIEW;
+    return base !== reviewKey;
   },
 
   /** What the header says the diff on screen is. */
@@ -470,13 +476,14 @@ export const diffStore = {
 
   /** Read only what changed since the round the last retake was counted from. */
   async showChangesSinceRetake() {
-    if (changedSince === null) return;
-    await this.setBase(`${ROUND_PREFIX}${changedSince}`);
+    if (changedSinceKey === null) return;
+    await this.setBase(changedSinceKey);
   },
 
   /** Put the review's own diff back, with every thread it holds. */
   async showWholeReview() {
-    await this.setBase(REVIEW);
+    if (reviewKey === null) return;
+    await this.setBase(reviewKey);
   },
 };
 
