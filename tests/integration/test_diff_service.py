@@ -380,6 +380,19 @@ async def test_a_file_that_is_not_utf8_is_still_shown(tmp_git_repo: Path) -> Non
     assert legacy.hunks[0].lines[0].content.startswith("caf")
 
 
+async def test_a_file_without_a_final_newline_shows_only_its_own_lines(tmp_git_repo: Path) -> None:
+    """Git's "No newline at end of file" note is about the file, not a line of it."""
+    (tmp_git_repo / "initial.txt").write_text("first\nlast, with no newline")
+
+    [changed] = await _diff(tmp_git_repo)
+
+    assert [line.content for line in changed.hunks[0].lines if line.kind == LineType.ADD] == [
+        "first",
+        "last, with no newline",
+    ]
+    assert [line.new_number for line in changed.hunks[0].lines if line.kind == LineType.ADD] == [1, 2]
+
+
 @pytest.mark.parametrize(
     ("setting", "value"),
     [
