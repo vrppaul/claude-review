@@ -51,19 +51,19 @@ MOVED_DOWN = [
 
 
 def test_a_thread_follows_its_line_when_the_line_moves() -> None:
-    followed = AnchorService(MOVED_DOWN).follow(line_anchor(FILE, 2, quote=[RUN]))
+    followed = AnchorService.of_diff(MOVED_DOWN).follow(line_anchor(FILE, 2, quote=[RUN]))
 
     assert (followed.start_line, followed.end_line, followed.outdated) == (3, 3, False)
 
 
 def test_a_range_moves_as_one() -> None:
-    followed = AnchorService(MOVED_DOWN).follow(line_anchor(FILE, 2, 3, quote=[RUN, RETURN]))
+    followed = AnchorService.of_diff(MOVED_DOWN).follow(line_anchor(FILE, 2, 3, quote=[RUN, RETURN]))
 
     assert (followed.start_line, followed.end_line) == (3, 4)
 
 
 def test_a_thread_whose_lines_are_gone_says_so_and_stays_put() -> None:
-    gone = AnchorService(MOVED_DOWN).follow(line_anchor(FILE, 2, quote=["def walk():"]))
+    gone = AnchorService.of_diff(MOVED_DOWN).follow(line_anchor(FILE, 2, quote=["def walk():"]))
 
     assert gone.outdated is True
     assert (gone.start_line, gone.end_line) == (2, 2)
@@ -71,13 +71,13 @@ def test_a_thread_whose_lines_are_gone_says_so_and_stays_put() -> None:
 
 
 def test_a_thread_whose_file_left_the_diff_is_outdated() -> None:
-    gone = AnchorService([]).follow(line_anchor(FILE, 2, quote=[RUN]))
+    gone = AnchorService.of_diff([]).follow(line_anchor(FILE, 2, quote=[RUN]))
 
     assert gone.outdated is True
 
 
 def test_a_thread_that_never_kept_its_lines_is_left_where_it_is() -> None:
-    kept = AnchorService(MOVED_DOWN).follow(line_anchor(FILE, 2))
+    kept = AnchorService.of_diff(MOVED_DOWN).follow(line_anchor(FILE, 2))
 
     assert (kept.start_line, kept.outdated) == (2, False)
 
@@ -85,7 +85,7 @@ def test_a_thread_that_never_kept_its_lines_is_left_where_it_is() -> None:
 def test_lines_that_come_back_take_the_outdated_mark_off() -> None:
     outdated = line_anchor(FILE, 7, quote=[RUN], outdated=True)
 
-    followed = AnchorService(MOVED_DOWN).follow(outdated)
+    followed = AnchorService.of_diff(MOVED_DOWN).follow(outdated)
 
     assert (followed.start_line, followed.outdated) == (3, False)
 
@@ -93,13 +93,13 @@ def test_lines_that_come_back_take_the_outdated_mark_off() -> None:
 def test_a_thread_on_a_removed_line_is_looked_for_among_removed_lines() -> None:
     files = [diff_file(FILE, [context_line(1, 1, "import os"), removed_line(2, RUN), added_line(2, RUN)])]
 
-    followed = AnchorService(files).follow(line_anchor(FILE, 5, side=LineSide.OLD, quote=[RUN]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 5, side=LineSide.OLD, quote=[RUN]))
 
     assert (followed.side, followed.start_line, followed.outdated) == (LineSide.OLD, 2, False)
 
 
 def test_quoting_reads_the_lines_off_the_diff() -> None:
-    quoted = AnchorService(MOVED_DOWN).quote(line_anchor(FILE, 3, 4))
+    quoted = AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 3, 4))
 
     assert quoted.quote == [RUN, RETURN]
 
@@ -110,22 +110,22 @@ def test_lines_more_than_a_quote_keeps_are_refused() -> None:
     every_line_shown = _braces_at((), longest)
 
     with pytest.raises(AnchorTooLongError, match=str(MAX_QUOTE_LINES)):
-        AnchorService(every_line_shown).quote(line_anchor(FILE, 1, longest))
+        AnchorService.of_diff(every_line_shown).quote(line_anchor(FILE, 1, longest))
 
 
 def test_quoting_a_file_the_review_does_not_hold_names_what_it_does_hold() -> None:
     with pytest.raises(UnknownAnchorFileError, match=re.escape("elsewhere.py is not in this review. It has: a.py")):
-        AnchorService(MOVED_DOWN).quote(line_anchor("elsewhere.py", 1))
+        AnchorService.of_diff(MOVED_DOWN).quote(line_anchor("elsewhere.py", 1))
 
 
 def test_quoting_lines_the_diff_does_not_show_names_them() -> None:
     with pytest.raises(AnchorLinesNotShownError, match=re.escape("a.py does not show new lines 5-6")):
-        AnchorService(MOVED_DOWN).quote(line_anchor(FILE, 4, 6))
+        AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 4, 6))
 
 
 def test_quoting_a_removed_line_the_diff_does_not_show_says_removed() -> None:
     with pytest.raises(AnchorLinesNotShownError, match=re.escape("a.py does not show removed line 9")):
-        AnchorService(MOVED_DOWN).quote(line_anchor(FILE, 9, side=LineSide.OLD))
+        AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 9, side=LineSide.OLD))
 
 
 @pytest.mark.parametrize(
@@ -144,7 +144,7 @@ def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:
     """A closing brace stands everywhere; the one that moved least is the one meant."""
     files = _braces_at((3, 10), line_count=11)
 
-    followed = AnchorService(files).follow(line_anchor(FILE, 9, quote=[CLOSING_BRACE]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 9, quote=[CLOSING_BRACE]))
 
     assert followed.start_line == 10
 
@@ -168,7 +168,7 @@ def test_a_range_is_followed_only_where_its_lines_stand_together() -> None:
     ]
     files = [DiffFile(path=FILE, status=FileStatus.MODIFIED, hunks=hunks)]
 
-    followed = AnchorService(files).follow(line_anchor(FILE, 1, 2, quote=["end", "start"]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 1, 2, quote=["end", "start"]))
 
     assert followed.outdated
     assert (followed.start_line, followed.end_line) == (1, 2)
@@ -177,7 +177,7 @@ def test_a_range_is_followed_only_where_its_lines_stand_together() -> None:
 def test_a_range_with_one_line_rewritten_is_outdated() -> None:
     files = [diff_file(FILE, [context_line(1, 1, RUN), added_line(2, "    return 2")])]
 
-    followed = AnchorService(files).follow(line_anchor(FILE, 1, 2, quote=[RUN, RETURN]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 1, 2, quote=[RUN, RETURN]))
 
     assert followed.outdated
 
@@ -186,6 +186,6 @@ def test_a_quote_as_near_to_two_places_follows_the_earlier() -> None:
     """Nothing tells the two apart, so the choice is at least the same every time."""
     files = _braces_at((3, 7), line_count=9)
 
-    followed = AnchorService(files).follow(line_anchor(FILE, 5, quote=[CLOSING_BRACE]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 5, quote=[CLOSING_BRACE]))
 
     assert followed.start_line == 3

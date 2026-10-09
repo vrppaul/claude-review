@@ -9,14 +9,13 @@ import click
 from claude_review.cli.parameters import FILE, ID, LINE_SPAN, SAID, STATUS, STEP, WORK, LineSpan
 from claude_review.cli.rendering import render_context, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
-from claude_review.domain.models import CommentSeverity, LineAnchor, LineSide
+from claude_review.domain.models import CommentSeverity, LineAnchor, LineSide, ProgressStep
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.schemas import (
     DEFAULT_WAIT_SECONDS,
     MAX_WAIT_SECONDS,
     PointRequest,
     ProgressRequest,
-    ProgressStep,
     ReplyRequest,
     SayRequest,
     ShowRequest,

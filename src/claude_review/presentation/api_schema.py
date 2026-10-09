@@ -21,7 +21,7 @@ from pydantic import TypeAdapter
 from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
-from claude_review.presentation.routes import router
+from claude_review.presentation.routes.api import include_api
 from claude_review.presentation.schemas import ServerPush, SessionHello
 
 # The OpenAPI version both documents are written in
@@ -59,9 +59,9 @@ class MissingSocketSchemaError(Exception):
 
 
 def http_document() -> dict[str, Any]:
-    """Every route the review serves, as OpenAPI."""
+    """Every route the review serves, as OpenAPI: mounted as a review's app mounts them, with no review behind them."""
     app = FastAPI(title=API_TITLE)
-    app.include_router(router)
+    include_api(app)
     return app.openapi()
 
 

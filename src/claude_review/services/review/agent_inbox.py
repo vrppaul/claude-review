@@ -6,7 +6,7 @@ from collections.abc import Awaitable
 from enum import StrEnum, auto
 
 from claude_review.domain.models import AgentEvent
-from claude_review.services.review_lifetime import ReviewLifetime
+from claude_review.services.review.review_lifetime import ReviewLifetime
 
 
 class Silence(StrEnum):

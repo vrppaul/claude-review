@@ -6,6 +6,7 @@ server keeps them in the reader's own files instead.
 """
 
 import asyncio
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,7 @@ def reader_files(tmp_path: Path) -> ReaderFiles:
     return ReaderFiles(settings=tmp_path / "config" / "settings.json", guide=tmp_path / "state" / "guide.json")
 
 
-def _client(reviews: ReviewFactory) -> AsyncClient:
+def _client(reviews: ReviewFactory) -> AbstractAsyncContextManager[AsyncClient]:
     """A review of nothing in particular: what it remembers is the reader's, not its own."""
     return http_client(reviews.app([]))
 

@@ -6,6 +6,7 @@ from typing import Protocol
 from pydantic import BaseModel
 
 from claude_review.domain.models import EpochMillis, GitRef
+from claude_review.domain.page_events import PageEvent
 
 
 class Clock(Protocol):
@@ -60,6 +61,18 @@ class TrackedPathsProtocol(Protocol):
 
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         """Whether the repository tracks the file at this path."""
+        ...
+
+
+class RepositoryProtocol(GitRepositoryProtocol, TrackedPathsProtocol, Protocol):
+    """Everything a review asks of the repository it reviews."""
+
+
+class PageChannel(Protocol):
+    """Where a review tells the pages open on it what has happened."""
+
+    def tell(self, event: PageEvent) -> None:
+        """Tell every page open now, as things stand at this moment."""
         ...
 
 

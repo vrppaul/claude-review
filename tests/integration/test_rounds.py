@@ -154,8 +154,6 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
     (tmp_git_repo / "untouched.py").write_text("as it was\n")
 
     with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
-        # The take that leaves round 1's first mark, as opening the review does
-        review_page.post("/api/round", json={})
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
 
         with open_session(review_page) as socket:
@@ -179,7 +177,6 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
     (tmp_git_repo / "first.py").write_text("one\n")
 
     with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
-        review_page.post("/api/round", json={})
         (tmp_git_repo / "first.py").write_text("two\n")
         review_page.post("/api/round", json={})
 

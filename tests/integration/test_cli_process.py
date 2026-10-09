@@ -27,8 +27,8 @@ from websockets.sync.client import ClientConnection, connect
 from websockets.typing import Origin
 
 from claude_review.domain.models import CommentSeverity
-from claude_review.hosting.serving import DISCONNECT_GRACE
 from claude_review.presentation.schemas import PushKind
+from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
 
 # The command line, as the user runs it, from the interpreter running the tests
@@ -46,10 +46,10 @@ PUSHES_READ = 5
 
 # A reload drops the socket and takes it again within a moment
 MOMENTS_PER_GRACE = 10
-RELOAD_SECONDS = DISCONNECT_GRACE / MOMENTS_PER_GRACE
+RELOAD_SECONDS = RELOAD_GRACE_SECONDS / MOMENTS_PER_GRACE
 # More than the review takes to look again once the grace has run out
 NOTICE_SECONDS = 1.0
-PAST_GRACE_SECONDS = DISCONNECT_GRACE + NOTICE_SECONDS
+PAST_GRACE_SECONDS = RELOAD_GRACE_SECONDS + NOTICE_SECONDS
 
 # How long the agent's own wait lasts, in the commands these tests run: long
 # enough for what the test sets going, briefly when nothing will come, and

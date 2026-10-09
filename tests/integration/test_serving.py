@@ -7,16 +7,20 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 from structlog.typing import EventDict
+from websockets.asyncio.client import connect
 
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.hosting.serving import serve_review
-from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.review.browser_presence import BrowserPresence
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.tree_watcher_service import TreeWatcherService
-from tests.helpers import SETTLE_SECONDS
+from tests.helpers import SESSION_ROUTE, SETTLE_SECONDS
 
 SUBMIT_ROUTE = "/api/submit"
+# How an address to the review becomes one its page's socket connects to
+HTTP_SCHEME = "http://"
+WEBSOCKET_SCHEME = "ws://"
 THE_ROUND = "Rename the helper."
 # The last round, sent and ending the review
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
@@ -46,8 +50,8 @@ class FailingWatch:
         raise OSError(failure)
 
 
-def _failing_check(*_arguments: object) -> bool:
-    failure = "the clock went away"
+async def _failing_check(*_arguments: object) -> None:
+    failure = "the event loop went away"
     raise OSError(failure)
 
 
@@ -70,6 +74,11 @@ async def announcer() -> RecordingAnnouncer:
     return RecordingAnnouncer()
 
 
+def _session_address(address: str) -> str:
+    """Where the page of the review at this address holds its session socket."""
+    return f"{address.replace(HTTP_SCHEME, WEBSOCKET_SCHEME, 1)}{SESSION_ROUTE}"
+
+
 def _events(logged: list[EventDict]) -> list[str]:
     return [entry["event"] for entry in logged]
 
@@ -81,7 +90,9 @@ async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_
     monkeypatch.setattr(TreeWatcherService, "changes", lambda *_arguments, **_keywords: FailingWatch())
 
     serving = asyncio.ensure_future(serve_review(opening, port=ANY_FREE_PORT, announcer=announcer))
-    async with AsyncClient(base_url=await asyncio.wait_for(announcer.address, SETTLE_SECONDS)) as agent:
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+    # The tree is watched only once a page is there to be told
+    async with connect(_session_address(address)), AsyncClient(base_url=address) as agent:
         await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
 
     assert THE_ROUND in await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
@@ -92,7 +103,7 @@ async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than
     opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Run on, it would hold its port and keep its agent waiting long after the reader has gone."""
-    monkeypatch.setattr(ServerState, "browser_gone", _failing_check)
+    monkeypatch.setattr(BrowserPresence, "until_closed_for_good", _failing_check)
 
     handed_back = await asyncio.wait_for(
         serve_review(opening, port=ANY_FREE_PORT, announcer=announcer), timeout=SETTLE_SECONDS

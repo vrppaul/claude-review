@@ -3,8 +3,8 @@
 A screenshot says what a paragraph about a layout cannot. The agent reads
 files, not bytes on a wire, so each image is written into the review's
 workspace and travels to the agent as a path. What is decided here is only
-policy — which formats, how large, how many — and the bookkeeping in the
-review's ledger; where the bytes go is the store's business.
+policy — which formats, how large, how many — and the bookkeeping of what
+the review keeps; where the bytes go is the store's business.
 """
 
 import uuid
@@ -20,7 +20,7 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
-from claude_review.domain.models import ImageLedger, StoredImage
+from claude_review.domain.models import StoredImage
 from claude_review.domain.protocols import ImageStoreProtocol
 
 log = structlog.get_logger()
@@ -108,12 +108,23 @@ IMAGE_FORMATS = (
 
 
 class ImageService:
-    """Keeps, finds, hands over and discards the images of one review."""
+    """Keeps, finds, hands over and discards the images of one review, for as long as it runs.
 
-    def __init__(self, store: ImageStoreProtocol, ledger: ImageLedger, quota: ImageQuota) -> None:
+    What it keeps is held here rather than read back off the disk: this is
+    what says an id exists, so no path is ever built from one, and what keeps
+    the review under its limit without counting the directory on every upload.
+    """
+
+    def __init__(self, store: ImageStoreProtocol, quota: ImageQuota) -> None:
         self._store = store
-        self._ledger = ledger
         self._quota = quota
+        self._kept: dict[str, StoredImage] = {}
+        # Images that went out with something said. The agent may still be
+        # about to open them, so they stay until the review ends.
+        self._sent: set[str] = set()
+        # Room taken by uploads still being written, so one arriving in the
+        # meantime is measured against them
+        self._writing_bytes = 0
 
     async def keep(self, content: bytes) -> StoredImage:
         """Write an image into the review's workspace.
@@ -136,29 +147,25 @@ class ImageService:
             accepted = ", ".join(known.extension.lstrip(".") for known in IMAGE_FORMATS)
             msg = f"Not an image this review keeps. It takes: {accepted}"
             raise ImageRefusedError(msg)
-        if self._ledger.held_bytes + size > self._quota.review_bytes:
+        if self._held_bytes() + size > self._quota.review_bytes:
             msg = f"This review already keeps {_in_megabytes(self._quota.review_bytes)} of images"
             raise ImageTooLargeError(msg)
 
-        # Reserved before the write is awaited, so an upload arriving in the
-        # meantime is measured against it
-        self._ledger.held_bytes += size
         image_id = f"{uuid.uuid4().hex}{image_format.extension}"
+        # Whatever stops the write, a shutdown included, the room it held is given back
+        self._writing_bytes += size
         try:
             path = await self._store.write(image_id, content)
-        except BaseException:
-            # Whatever stopped the write, a shutdown included, the room it
-            # held is given back
-            self._ledger.held_bytes -= size
-            raise
+        finally:
+            self._writing_bytes -= size
 
         stored = StoredImage(image_id=image_id, path=path, media_type=image_format.media_type, size=size)
-        self._ledger.kept[image_id] = stored
+        self._kept[image_id] = stored
         return stored
 
     def find(self, image_id: str) -> StoredImage | None:
         """The image kept under an id, or None if this review keeps none."""
-        return self._ledger.kept.get(image_id)
+        return self._kept.get(image_id)
 
     def kept(self, image_id: str) -> StoredImage:
         """The image kept under an id.
@@ -178,7 +185,7 @@ class ImageService:
         Raises:
             ImagesNotKeptError: naming the ones it does not keep.
         """
-        missing = [image_id for image_id in image_ids if image_id not in self._ledger.kept]
+        missing = [image_id for image_id in image_ids if image_id not in self._kept]
         if missing:
             msg = f"No such image in this review: {', '.join(missing)}"
             raise ImagesNotKeptError(msg)
@@ -191,11 +198,11 @@ class ImageService:
         """
         # Once each, in the order given: the same image named twice is one file
         unique = list(dict.fromkeys(image_ids))
-        kept = [image_id for image_id in unique if image_id in self._ledger.kept]
-        self._ledger.sent.update(kept)
+        kept = [image_id for image_id in unique if image_id in self._kept]
+        self._sent.update(kept)
         return ImageHandover(
-            paths=[self._ledger.kept[image_id].path for image_id in kept],
-            missing=[image_id for image_id in unique if image_id not in self._ledger.kept],
+            paths=[self._kept[image_id].path for image_id in kept],
+            missing=[image_id for image_id in unique if image_id not in self._kept],
         )
 
     async def discard(self, image_id: str) -> None:
@@ -205,19 +212,22 @@ class ImageService:
             UnknownImageError: if this review keeps no such image.
             ImageAlreadySentError: if it went out with a message.
         """
-        stored = self.kept(image_id)
-        if image_id in self._ledger.sent:
+        self.kept(image_id)
+        if image_id in self._sent:
             msg = "That image was already sent"
             raise ImageAlreadySentError(msg)
 
         try:
             await self._store.remove(image_id)
         except OSError as e:
-            # Still on the disk, so still counted: the ledger says what is there
+            # Still on the disk, so still kept and counted
             log.warning("image_left_behind", image_id=image_id, reason=str(e))
             return
-        del self._ledger.kept[image_id]
-        self._ledger.held_bytes -= stored.size
+        del self._kept[image_id]
+
+    def _held_bytes(self) -> int:
+        """How much the review keeps, uploads still being written included."""
+        return sum(stored.size for stored in self._kept.values()) + self._writing_bytes
 
 
 def _in_megabytes(byte_count: int) -> str:

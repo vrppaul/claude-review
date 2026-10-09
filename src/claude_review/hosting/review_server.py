@@ -9,13 +9,16 @@ import uvicorn
 from fastapi import FastAPI
 
 from claude_review.hosting.errors import ServerStartError
-from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 
 # Only what goes wrong: a review is quiet by design
 SERVER_LOG_LEVEL = "error"
 # The default picks uvicorn's older websockets integration, which warns on
 # every connection with websockets 14 and later
 WEBSOCKETS_IMPLEMENTATION = "websockets-sansio"
+# The app opens the review on its content as it starts. uvicorn's default
+# takes a failure there for an app that does not open at all, and serves on.
+LIFESPAN = "on"
 # How long the requests still running when the review ends may take to
 # finish. An agent's wait ends with the review at once; nothing else should
 # take this long, and a review must not hang on its way out.
@@ -38,6 +41,7 @@ class ReviewServer(uvicorn.Server):
                 app,
                 log_level=SERVER_LOG_LEVEL,
                 ws=WEBSOCKETS_IMPLEMENTATION,
+                lifespan=LIFESPAN,
                 timeout_graceful_shutdown=GRACEFUL_SHUTDOWN_SECONDS,
             )
         )

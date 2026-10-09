@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, TransportError
 from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import ReaderFiles, ReviewMode
@@ -14,7 +14,7 @@ from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
-from tests.helpers import ReviewServers, RunningReview, git, review_has_ended
+from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended
 
 # What the page posts when it sends the review, a round or the last of it
 SUBMIT_RESPONSE = "**/api/submit"
@@ -77,6 +77,28 @@ async def _agent(review: RunningReview, command: str, *arguments: str) -> str:
 async def _next_event(review: RunningReview, seconds: int = AGENT_WAIT_SECONDS) -> dict:
     """Wait as the agent does for whatever the reader hands over next."""
     return json.loads(await _agent(review, "wait", "--seconds", str(seconds)))
+
+
+async def _agent_hears_it_ended(review: RunningReview) -> bool:
+    """Whether an agent asking now is told the review is over, or finds nobody listening.
+
+    The page ends the review with a request of its own, which an agent's poll
+    may beat, so it asks again until it hears. And the server stops a moment
+    after the review ends, so a poll may find nobody there at all — which the
+    skill tells the agent means the same.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + SETTLE_SECONDS
+    while loop.time() < deadline:
+        try:
+            # A client of its own each time: one kept from before would reuse
+            # a connection the stopping server has already let go
+            async with AsyncClient(base_url=review.url) as agent:
+                if await review_has_ended(agent):
+                    return True
+        except TransportError:
+            return True
+    return False
 
 
 async def _click_line_and_comment(page: Page, line_locator: Locator, text: str) -> None:
@@ -781,7 +803,7 @@ async def test_a_round_is_sent_without_ending_the_review(diff_review: RunningRev
         await page.get_by_test_id("end-review").click()
         await page.get_by_test_id("submitted-banner").wait_for()
 
-        assert await review_has_ended(agent)
+    assert await _agent_hears_it_ended(diff_review)
 
 
 async def test_a_second_round_carries_only_what_is_new(diff_review: RunningReview, page: Page) -> None:

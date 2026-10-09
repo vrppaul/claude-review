@@ -17,7 +17,6 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
-from claude_review.domain.models import ImageLedger
 from claude_review.services.image_service import (
     MAX_IMAGE_BYTES,
     MAX_IMAGE_MEGABYTES,
@@ -94,11 +93,11 @@ def store() -> MemoryImageStore:
 
 @pytest.fixture
 def service(store: MemoryImageStore) -> ImageService:
-    return ImageService(store, ImageLedger(), REVIEW_IMAGE_QUOTA)
+    return ImageService(store, REVIEW_IMAGE_QUOTA)
 
 
 def _with_room_for_one(store: MemoryImageStore) -> ImageService:
-    return ImageService(store, ImageLedger(), ROOM_FOR_ONE)
+    return ImageService(store, ROOM_FOR_ONE)
 
 
 def test_a_format_is_read_from_the_bytes() -> None:
@@ -210,7 +209,7 @@ async def test_a_write_that_never_lands_gives_back_its_room() -> None:
 
 async def test_what_is_not_an_image_is_named_so_even_in_a_full_review(store: MemoryImageStore) -> None:
     """The reader can fix a wrong format; a full review is a different problem."""
-    service = ImageService(store, ImageLedger(), FULL)
+    service = ImageService(store, FULL)
 
     # Refused as what it is, not as one more image than the review has room for
     with pytest.raises(ImageRefusedError):

@@ -7,12 +7,12 @@ anchor. How a place is named needs nothing but the anchor, which says it
 itself.
 """
 
-from typing import assert_never
+from typing import Protocol, Self, assert_never
 
 from pydantic import BaseModel
 
 from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
-from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, DiffFile, LineAnchor, LineSide, LineType
+from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, AnchorBase, DiffFile, LineAnchor, LineSide, LineType
 
 # How many of the review's files a refusal names, so whoever named the wrong
 # one can see what the right one is called without the whole list
@@ -24,6 +24,18 @@ class SideLine(BaseModel):
 
     number: int
     content: str
+
+
+class AnchorHandler[Kind: AnchorBase](Protocol):
+    """What answers for one kind of anchor, against what the review holds."""
+
+    def quote(self, anchor: Kind) -> Kind:
+        """The anchor with what it is about read off what the review holds."""
+        ...
+
+    def follow(self, anchor: Kind) -> Kind:
+        """The anchor moved onto what the review holds now, or marked outdated."""
+        ...
 
 
 class LineAnchorHandler:
@@ -100,10 +112,19 @@ class LineAnchorHandler:
 
 
 class AnchorService:
-    """Every kind of anchor, each answered by the handler that knows it."""
+    """Every kind of anchor, each answered by the handler that knows it.
 
-    def __init__(self, diff_files: list[DiffFile]) -> None:
-        self._lines = LineAnchorHandler(diff_files)
+    Built once for each take of what the review holds: the handlers read it
+    once, however many anchors ask.
+    """
+
+    def __init__(self, lines: AnchorHandler[LineAnchor]) -> None:
+        self._lines = lines
+
+    @classmethod
+    def of_diff(cls, diff_files: list[DiffFile]) -> Self:
+        """The anchors of one take of the review's diff."""
+        return cls(lines=LineAnchorHandler(diff_files))
 
     def quote(self, anchor: Anchor) -> Anchor:
         """The anchor with what it is about read off what the review holds.

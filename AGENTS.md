@@ -53,10 +53,10 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 DDD-lite with clean layer separation:
 
 - **domain/** — Pydantic models (DiffFile, Thread, ReviewResult). No I/O, no framework imports.
-- **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols.
+- **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols. `services/review/` is the one owner of a review's state: `Review` (`review.py`) composed of its parts — `ReviewLifetime`, `BrowserPresence` (pages open, no polling), `Answerer`, `AgentInbox` (what the agent waits on), `RoundTracker`, `Conversation`, `ReaderThreads`, and a `ContentSource` (`RepositorySource` or `FixedSource`) holding the `ReviewContent` of the current take and its `ReviewVersions`. It tells pages what happened as domain `PageEvent`s through the `PageChannel` port.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
-- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `services/agent_inbox.py`; what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
-- **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the tasks that run until its `ReviewLifetime` (`services/review_lifetime.py`) ends. It builds the app and the review's own `GitRepository`, which writes trees into the review's workspace. It prints nothing: what whoever started the review must hear goes through a `ReviewAnnouncer`.
+- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes (`routes/`: page, agent, reader records, session socket, mounted by `include_api`) are thin: they read the wire, call one method of the `Review` they get from `get_review`, and write the answer. `BrowserBroadcast` is the `PageChannel`: it turns each `PageEvent` into its `ServerPush` (`schemas.py`) once and queues it for every open page; `api_schema.py` writes the OpenAPI the browser's types come from. The app opens the review (`Review.open`) in its lifespan, so whatever serves it starts it right.
+- **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the review's parts that run until its `ReviewLifetime` ends. `host_review` (`hosted_review.py`) is where a review is put together — its own `GitRepository`, which writes trees into the review's workspace, its images, its broadcast, its app — for the command line and the tests alike. It prints nothing: what whoever started the review must hear goes through a `ReviewAnnouncer`.
 - **cli/** — the command line. The launch commands (`diff`, `files`, `transcript`) read what is reviewed into a `ReviewOpening` (`services/review_opening.py`, with a plain `GitRepository` that only reads) and hand it to hosting with a `TerminalAnnouncer`; the agent's commands call an open review through `ReviewClient`. Every value an agent's command takes is checked against the review's own rule as it is parsed (`parameters.py`), so a mistake is a usage error naming the option; `main.py` turns the ordinary failures into one line and lets faults keep their traceback, and loads each command only when it is run, so an agent's command never loads the server.
 
 Dependencies flow inward: cli → hosting → presentation → services → domain, repositories → domain; cli and hosting also use services and repositories directly, to read what is reviewed and to host it
@@ -77,10 +77,10 @@ class GitRepositoryProtocol(Protocol):
 @router.post("/submit")
 async def submit_review(
     request: SubmitRequest,
-    state: ServerState = Depends(get_state),
-    mode: ReviewMode = Depends(get_review_mode),
+    review: Review = Depends(get_review),
 ) -> SubmitResponse:
-    ...
+    sent = review.submit(threads=[thread.draft() for thread in request.threads], body=request.body, ends=request.end)
+    return SubmitResponse(...)
 ```
 
 ## Conventions
@@ -89,7 +89,7 @@ async def submit_review(
 - **Test what the user cares about**: "diff shows all changed files", not "parse_hunk returns a list"
 - **Modules**: `__init__.py` must be empty — no code, no re-exports, nothing
 - **Error handling**: specific exceptions, not generic `Exception`. Whatever the review refuses is a `ReviewError` of one kind (`NotFoundError`, `InvalidRequestError`, `RefusedError` ⊃ `TooLargeError`, `ConflictError`, in `domain/exceptions.py`); routes raise it and never catch it or raise `HTTPException` — `presentation/refusals.py` is the one table from kind to status
-- **Time**: every moment the review says is `EpochMillis`, read from an injected `Clock` (`get_clock` in routes, `FixedClock` in tests) — never `time.time()` in a route or service
+- **Time**: every moment the review says is `EpochMillis`, read from the `Clock` the review is built with (`FixedClock` in tests) — never `time.time()` in a route or service. Nothing waits on the clock: a grace period is a timeout on an event, not a comparison of moments
 - **Python deps**: add via `uv add` (never specify version), never pip, never manually edit pyproject.toml deps
 - **JS deps**: add via `pnpm add` / `pnpm add -D` (never specify version), never manually edit package.json deps
 - **TODO/Changelog**: track in `TODO.md` / `CHANGELOG.md`

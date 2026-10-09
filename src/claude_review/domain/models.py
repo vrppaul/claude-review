@@ -6,6 +6,8 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from claude_review.domain.exceptions import QuestionNotInThreadError
+
 
 class ReviewModel(BaseModel):
     """A model that crosses the wire: written out, it carries every field.
@@ -243,6 +245,51 @@ class Thread(ReviewModel):
         return self.anchor.where()
 
 
+class SaidInDraft(BaseModel):
+    """Something said in a thread the reader's page holds: words, and screenshots by the ids they are kept under."""
+
+    body: str
+    images: list[str]
+
+
+class TurnDraft(SaidInDraft):
+    """One turn of a thread, as the reader's page holds it."""
+
+    # The id the page gave it, which is what a question asked in it names
+    turn_id: str
+    author: TurnAuthor
+    round: int
+
+
+class ThreadDraft(SaidInDraft):
+    """A thread as the reader's page holds it: unsent work, its screenshots not yet handed to anybody.
+
+    Handed to the agent it becomes a `Thread`, its screenshots files the
+    agent may open.
+    """
+
+    thread_id: str
+    anchor: Anchor
+    severity: CommentSeverity
+    turns: list[TurnDraft]
+    raised_by: TurnAuthor
+    resolved: bool
+
+    def part_asked(self, question_id: str) -> SaidInDraft:
+        """What a question asks: the comment that opened the thread, or a turn the reader wrote in it.
+
+        Raises:
+            QuestionNotInThreadError: if it names neither.
+        """
+        if question_id == self.thread_id:
+            return self
+        for turn in self.turns:
+            if turn.turn_id == question_id and turn.author == TurnAuthor.READER:
+                return turn
+        msg = f"{question_id} is not something the reader said in {self.thread_id}"
+        raise QuestionNotInThreadError(msg)
+
+
 class ReviewResult(BaseModel):
     """Formatted review output."""
 
@@ -294,6 +341,40 @@ class AgentStatus(ReviewModel):
     # When it last reported, so the panel can say how old the numbers are
     # rather than presenting them as current
     at: EpochMillis | None = None
+
+
+# The longest one branch of the work may be said in: a line, not a report
+MAX_STEP_LENGTH = 200
+
+# One branch of the work, as it is said
+StepText = Annotated[str, Field(min_length=1, max_length=MAX_STEP_LENGTH)]
+
+
+class ProgressStep(ReviewModel):
+    """One branch of the work: something being done, or something done."""
+
+    text: StepText
+    done: bool = False
+
+
+class AgentWork(ReviewModel):
+    """What the agent is doing right now, whole: it replaces whatever was showing.
+
+    The review alone decides when it ends — an empty report, the answer to
+    the message it was for, that message taken back, or a new panel message
+    — and says so, so every review on screen, and every one opened later,
+    shows the same. A question in a thread does not end it: the agent may be
+    working through a round, and answers the question beside it.
+    """
+
+    # Which message the work is for; None for work on the agent's own
+    # account — a round being worked through, reviewers still reading
+    message_id: str | None
+    text: str
+    files: list[FilePath]
+    steps: list[ProgressStep]
+    # When it was reported, so a review reloaded later says how long it has gone on
+    at: EpochMillis
 
 
 class PanelCancel(ReviewModel):
@@ -486,19 +567,3 @@ class StoredImage(BaseModel):
     path: Path
     media_type: str
     size: int
-
-
-class ImageLedger(BaseModel):
-    """What one review keeps of the images pasted into it.
-
-    Held beside the rest of the review's state rather than read back off the
-    disk: the ledger is what says an id exists, so no path is ever built from
-    one, and the running total is what keeps the review under its limit
-    without counting the directory on every upload.
-    """
-
-    kept: dict[str, StoredImage] = {}
-    # Images that went out with a message. The agent may still be about to
-    # open them, so they stay until the review ends.
-    sent: set[str] = set()
-    held_bytes: int = 0

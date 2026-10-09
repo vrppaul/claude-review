@@ -8,6 +8,7 @@ the watcher of the tree — and the reason is said once, by that first one.
 
 import asyncio
 import contextlib
+from collections.abc import Awaitable
 from enum import StrEnum, auto
 
 import structlog
@@ -59,6 +60,25 @@ class ReviewLifetime:
     async def until_ended(self) -> None:
         """Return once the review has ended."""
         await self._ended.wait()
+
+    async def before_the_end(self, awaited: Awaitable[object]) -> bool:
+        """Wait for `awaited` or for the review to end, and say whether `awaited` finished first.
+
+        Whatever is still waiting once the review is over is called off, so
+        nothing a review runs outlives it.
+        """
+        waiting = asyncio.ensure_future(awaited)
+        ending = asyncio.ensure_future(self._ended.wait())
+        try:
+            await asyncio.wait({waiting, ending}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            waiting.cancel()
+            ending.cancel()
+        if waiting.cancelled() or not waiting.done():
+            return False
+        # Raises whatever it failed with: a failure is not the review ending
+        waiting.result()
+        return True
 
     async def ended_within(self, seconds: float) -> bool:
         """Wait up to `seconds` for the review to end, and say whether it has."""

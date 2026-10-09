@@ -7,11 +7,12 @@ rearranged.
 """
 
 import asyncio
+import contextlib
 import queue
 import subprocess
 import threading
 import time
-from collections.abc import Coroutine, Iterator, Mapping
+from collections.abc import AsyncIterator, Coroutine, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -22,7 +23,7 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel, ConfigDict
 from starlette.testclient import WebSocketTestSession
-from starlette.types import Message
+from starlette.types import Message, Scope
 
 from claude_review.domain.models import (
     AnchorKind,
@@ -43,13 +44,13 @@ from claude_review.domain.models import (
     TurnAuthor,
 )
 from claude_review.domain.protocols import Clock
+from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import PushKind
-from claude_review.presentation.state import ServerState
 from claude_review.repositories.system_clock import SystemClock
-from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review_opening import ReviewOpening
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -91,6 +92,9 @@ HUNK_HEADER = "@@ -1 +1 @@"
 FIRST_THREAD_ID = "comment-1"
 # The round a review opens on
 FIRST_ROUND = 1
+# What makes a review built here the same review as another: nothing, since
+# none of them is opened twice
+TEST_IDENTITY = "a review under test"
 
 # A PNG as far as anything here reads one: its signature, and enough after it to be a file
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
@@ -246,7 +250,7 @@ class FixedClock:
 
 
 class ReviewFactory:
-    """Builds reviews the way the command line does, each with a state of its own.
+    """Builds reviews the way the command line does, each a review of its own.
 
     A review of a repository is given room to write down its trees, as the
     command line gives it, unless the test is about one that has none.
@@ -259,6 +263,28 @@ class ReviewFactory:
         self._marking_workspace = marking_workspace
         self._reader_files = reader_files
 
+    def hosted(
+        self,
+        diff_files: list[DiffFile],
+        *,
+        mode: ReviewMode = ReviewMode.DIFF,
+        root: Path | None = None,
+        base: str | None = None,
+        title: str = "",
+        keeps_marks: bool = True,
+        clock: Clock | None = None,
+    ) -> HostedReview:
+        opening = ReviewOpening(
+            mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=root, base=base
+        )
+        writes_marks = root is not None and keeps_marks
+        return host_review(
+            opening,
+            workspace=self._marking_workspace if writes_marks else self._workspace,
+            reader_files=self._reader_files,
+            clock=clock or SystemClock(),
+        )
+
     def app(
         self,
         diff_files: list[DiffFile],
@@ -269,25 +295,24 @@ class ReviewFactory:
         title: str = "",
         keeps_marks: bool = True,
         clock: Clock | None = None,
-        lifetime: ReviewLifetime | None = None,
     ) -> FastAPI:
-        writes_marks = root is not None and keeps_marks
-        return create_app(
-            diff_files=diff_files,
-            state=ServerState(lifetime or ReviewLifetime()),
-            mode=mode,
-            workspace=self._marking_workspace if writes_marks else self._workspace,
-            reader_files=self._reader_files,
-            clock=clock or SystemClock(),
-            title=title,
-            root=root,
-            base=base,
-        )
+        return self.hosted(
+            diff_files, mode=mode, root=root, base=base, title=title, keeps_marks=keeps_marks, clock=clock
+        ).app
 
 
-def http_client(app: FastAPI) -> AsyncClient:
-    """Talk to a review over HTTP, as the agent's commands do: no page, so no Origin."""
-    return AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN)
+@contextlib.asynccontextmanager
+async def http_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """Talk to a review over HTTP, as the agent's commands do: no page, so no Origin.
+
+    The review is opened first, as a server opens it before it answers
+    anybody; the transport alone would hand the app requests without that.
+    """
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url=LOCAL_ORIGIN) as client,
+    ):
+        yield client
 
 
 def page_client(app: FastAPI) -> TestClient:
@@ -458,7 +483,7 @@ class UploadThatBreaksOff:
         return app(_request_scope("POST", IMAGES_ROUTE), self.receive, self.send)
 
 
-def _request_scope(method: str, route: str, query: Mapping[str, object] | None = None) -> dict[str, Any]:
+def _request_scope(method: str, route: str, query: Mapping[str, float] | None = None) -> Scope:
     """A request as a server hands it to the app, from the review's own machine."""
     return {
         "type": "http",
@@ -525,10 +550,10 @@ class ReviewServers:
         root: Path | None = None,
         title: str = "",
     ) -> RunningReview:
-        lifetime = ReviewLifetime()
-        app = self._reviews.app(diff_files, mode=mode, root=root, title=title, lifetime=lifetime)
+        hosted = self._reviews.hosted(diff_files, mode=mode, root=root, title=title)
+        lifetime = hosted.review.lifetime
         # The server the command line runs, so a browser test meets the same one
-        server = ReviewServer(app, lifetime)
+        server = ReviewServer(hosted.app, lifetime)
         listening = bind(ANY_PORT, may_fall_back=False)
         self._running.append(
             ServedReview(lifetime=lifetime, serving=asyncio.create_task(server.serve_until_ended(listening)))

@@ -8,17 +8,18 @@ from pydantic import AfterValidator, ConfigDict, Field, JsonValue, ValidationErr
 from claude_review.domain.models import (
     MAX_QUOTE_LINES,
     AgentStatus,
+    AgentWork,
     Anchor,
     ChangesSince,
     CommentSeverity,
     DiffFile,
     DiffLayout,
-    EpochMillis,
     FilePath,
     GuideState,
     PanelCancel,
     PanelEntry,
     PanelMessage,
+    ProgressStep,
     ReaderSettings,
     ReviewMode,
     ReviewModel,
@@ -26,6 +27,7 @@ from claude_review.domain.models import (
     RoundSubmission,
     Theme,
     Thread,
+    ThreadDraft,
     ThreadQuestion,
     TurnAuthor,
 )
@@ -174,6 +176,10 @@ class ThreadInput(SaysSomething):
     raised_by: TurnAuthor
     resolved: bool
 
+    def draft(self) -> ThreadDraft:
+        """The thread as the review holds what the page holds."""
+        return ThreadDraft.model_validate(self, from_attributes=True)
+
 
 class SubmitRequest(ReviewModel):
     """Request body for POST /api/submit."""
@@ -309,8 +315,8 @@ class ThreadSummary(ReviewModel):
     turn_count: int
 
     @classmethod
-    def of(cls, thread: ThreadInput | Thread) -> Self:
-        """The summary of a thread, as the browser holds it or as the agent is handed it."""
+    def of(cls, thread: ThreadDraft | Thread) -> Self:
+        """The summary of a thread, as the page holds it or as the agent is handed it."""
         return cls(
             thread_id=thread.thread_id,
             where=thread.anchor.where(),
@@ -407,26 +413,15 @@ class SayRequest(ReviewModel):
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
 
 
-# The longest one branch of the work may be said in: a line, not a report
-MAX_STEP_LENGTH = 200
-
 # The longest what is being done may be said in. It is a state that replaces
 # itself, not a log, so a line or two is all it ever needs.
 MAX_PROGRESS_LENGTH = 500
 
-# One branch of the work, and the work itself, which may be said in none
-StepText = Annotated[str, Field(min_length=1, max_length=MAX_STEP_LENGTH)]
+# What the work is being said as, which may be nothing: the work is over
 ProgressText = Annotated[str, Field(max_length=MAX_PROGRESS_LENGTH)]
 
 # The most branches the work is shown as at once
 MAX_PROGRESS_STEPS = 20
-
-
-class ProgressStep(ReviewModel):
-    """One branch of the work: something being done, or something done."""
-
-    text: StepText
-    done: bool = False
 
 
 class ProgressRequest(ReviewModel):
@@ -443,30 +438,6 @@ class ProgressRequest(ReviewModel):
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
     steps: list[ProgressStep] = Field(default_factory=list, max_length=MAX_PROGRESS_STEPS)
-
-    def says_nothing(self) -> bool:
-        """Whether this says the work is over, rather than what it is."""
-        return not self.text.strip() and not self.steps
-
-
-class AgentWork(ReviewModel):
-    """What the agent is doing right now, whole: it replaces whatever was showing.
-
-    The server alone decides when it ends — an empty report, the answer to
-    the message it was for, that message taken back, or a new panel message
-    — and says so, so every review on screen, and every one opened later,
-    shows the same. A question in a thread does not end it: the agent may be
-    working through a round, and answers the question beside it.
-    """
-
-    # Which message the work is for; None for work on the agent's own
-    # account — a round being worked through, reviewers still reading
-    message_id: str | None
-    text: str
-    files: list[FilePath]
-    steps: list[ProgressStep]
-    # When it was reported, so a review reloaded later says how long it has gone on
-    at: EpochMillis
 
 
 class ShowRequest(ReviewModel):

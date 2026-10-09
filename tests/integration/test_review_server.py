@@ -10,7 +10,7 @@ from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.errors import ServerStartError
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from tests.helpers import SETTLE_SECONDS, ReviewFactory
 
 

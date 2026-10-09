@@ -1,0 +1,70 @@
+"""When the reader counts as gone: their page closed, rather than reloaded or not yet opened.
+
+Only the running review acts on this, by ending — which test_cli_process
+watches against the real grace period. Here the grace is a moment long, so
+what it decides can be said without waiting it out.
+"""
+
+import asyncio
+
+from claude_review.services.review.browser_presence import BrowserPresence
+from tests.helpers import SETTLE_SECONDS
+
+# A grace period short enough for a test to outlast it several times over
+GRACE_SECONDS = 0.05
+# Long enough for a grace period to have run out had nothing come back within it
+OUTLAST_SECONDS = GRACE_SECONDS * 4
+
+
+def _presence() -> BrowserPresence:
+    return BrowserPresence(reload_grace=GRACE_SECONDS)
+
+
+async def _still_open_after(watched: asyncio.Future[None]) -> bool:
+    """Whether the reader still counts as there once the grace period has had time to run out."""
+    done, _ = await asyncio.wait({watched}, timeout=OUTLAST_SECONDS)
+    watched.cancel()
+    return not done
+
+
+async def test_a_closed_page_that_does_not_come_back_is_the_reader_leaving() -> None:
+    presence = _presence()
+    with presence.page_open():
+        gone = asyncio.ensure_future(presence.until_closed_for_good())
+
+    await asyncio.wait_for(gone, timeout=SETTLE_SECONDS)
+
+
+async def test_a_reload_is_not_the_reader_leaving() -> None:
+    """A reload drops the socket and takes it again within a moment."""
+    presence = _presence()
+    with presence.page_open():
+        gone = asyncio.ensure_future(presence.until_closed_for_good())
+    with presence.page_open():
+        assert await _still_open_after(gone)
+
+
+async def test_a_review_nobody_has_opened_yet_keeps_waiting() -> None:
+    """Starting without a page is normal; it is not an abandoned review."""
+    presence = _presence()
+
+    assert await _still_open_after(asyncio.ensure_future(presence.until_closed_for_good()))
+
+
+async def test_a_second_tab_keeps_the_review_open() -> None:
+    presence = _presence()
+    with presence.page_open():
+        gone = asyncio.ensure_future(presence.until_closed_for_good())
+        with presence.page_open():
+            pass
+
+        assert await _still_open_after(gone)
+
+
+async def test_the_first_page_to_open_is_heard() -> None:
+    """What has to wait for a reader — the watch on the tree — waits for this rather than looking early."""
+    presence = _presence()
+    opened = asyncio.ensure_future(presence.until_first_page())
+
+    with presence.page_open():
+        await asyncio.wait_for(opened, timeout=SETTLE_SECONDS)

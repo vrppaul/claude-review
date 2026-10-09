@@ -12,7 +12,7 @@ from pathlib import Path
 
 from claude_review.domain.models import TreeState
 from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.review_lifetime import ReviewLifetime
+from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.tree_watcher_service import TreeWatcherService
 from tests.helpers import git
 

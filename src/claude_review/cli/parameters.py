@@ -11,8 +11,8 @@ import click
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 from claude_review.cli.review_client import REASON_SEPARATOR
-from claude_review.domain.models import FilePath
-from claude_review.presentation.schemas import AgentText, ProgressText, StatusText, StepText, WireId
+from claude_review.domain.models import FilePath, StepText
+from claude_review.presentation.schemas import AgentText, ProgressText, StatusText, WireId
 
 # What joins the first line of a range to its last
 RANGE_SEPARATOR = "-"

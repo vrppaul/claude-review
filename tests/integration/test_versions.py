@@ -79,17 +79,16 @@ async def test_a_branch_is_dated_in_the_same_unit_as_everything_else(
 
 async def test_the_review_says_how_many_files_a_base_would_show(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """The count is the reason to pick one base over another."""
+    (tmp_git_repo / "before.py").write_text("was here\n")
     async with http_client(reviews.app([], root=tmp_git_repo)) as client:
-        (tmp_git_repo / "before.py").write_text("was here\n")
-        await _mark(client)
         await _begin_next_round(client)
         (tmp_git_repo / "after.py").write_text("came later\n")
         await _mark(client)
 
         by_key = {version["key"]: version for version in await _offered(client)}
 
-    assert by_key["review"]["changed"] == 2, "both files are new since the review opened"
-    assert by_key["round:1"]["changed"] == 1, "only one of them arrived after round 1"
+    assert by_key["review"]["changed"] == 2, "both files are uncommitted"
+    assert by_key["round:1"]["changed"] == 1, "only one of them arrived after round 1 began"
 
 
 async def test_branches_and_tags_are_on_offer(tmp_git_repo: Path, reviews: ReviewFactory) -> None:

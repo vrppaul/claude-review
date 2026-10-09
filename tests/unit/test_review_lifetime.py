@@ -2,7 +2,7 @@
 
 import asyncio
 
-from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from tests.helpers import SETTLE_SECONDS
 
 # Long enough to be sure nothing ended the review, short enough to cost nothing
@@ -45,3 +45,23 @@ async def test_a_look_at_a_review_still_running_says_it_has_not_ended() -> None:
     lifetime.end(EndReason.SERVER_STOPPED)
 
     assert await lifetime.ended_within(GLANCE_SECONDS)
+
+
+async def test_what_finishes_before_the_review_ends_is_said_to_have_come_first() -> None:
+    lifetime = ReviewLifetime()
+    arrived = asyncio.Event()
+    arrived.set()
+
+    assert await lifetime.before_the_end(arrived.wait())
+    assert not lifetime.has_ended
+
+
+async def test_a_review_ending_first_stops_the_wait_for_anything_else() -> None:
+    """A page that never opens must not keep the review's parts waiting after it is over."""
+    lifetime = ReviewLifetime()
+    never = asyncio.Event()
+    waiting = asyncio.ensure_future(lifetime.before_the_end(never.wait()))
+
+    lifetime.end(EndReason.FINISHED)
+
+    assert not await asyncio.wait_for(waiting, timeout=SETTLE_SECONDS)

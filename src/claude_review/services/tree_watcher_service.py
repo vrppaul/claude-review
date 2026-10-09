@@ -16,7 +16,7 @@ import structlog
 from claude_review.domain.exceptions import GitError
 from claude_review.domain.models import PathState, TreeState
 from claude_review.domain.protocols import GitRepositoryProtocol
-from claude_review.services.review_lifetime import ReviewLifetime
+from claude_review.services.review.review_lifetime import ReviewLifetime
 
 log = structlog.get_logger()
 

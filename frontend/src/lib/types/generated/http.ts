@@ -13,17 +13,7 @@ export interface paths {
         };
         /**
          * Get Diff
-         * @description Serve the review's content.
-         *
-         *     Two things make this ask git rather than serve what was loaded at
-         *     startup. Ignoring whitespace has to come from git, since only git knows
-         *     which hunks vanish once whitespace stops counting. And a base names one
-         *     of the versions on offer: the same working tree, read against something
-         *     else.
-         *
-         *     What the review holds is left alone either way. A base is a way of
-         *     looking, not a change to what is under review — the threads are anchored
-         *     to the diff this server loaded, and that is the one it keeps.
+         * @description Serve the review's content, against the base the page asks for, and where the review stands.
          */
         get: operations["get_diff_api_diff_get"];
         put?: never;
@@ -43,111 +33,9 @@ export interface paths {
         };
         /**
          * Offered Versions
-         * @description Say what the working tree can be compared against.
-         *
-         *     A review of files or a transcript is compared against nothing at all, and
-         *     says so with an empty list rather than an error: there is no failure
-         *     here, only nothing to choose between.
+         * @description Say what the working tree can be compared against: nothing at all, for files or a conversation.
          */
         get: operations["offered_versions_api_versions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Reader Settings
-         * @description Say how this reader reads, as chosen in any review on this machine.
-         */
-        get: operations["reader_settings_api_settings_get"];
-        /**
-         * Change Reader Settings
-         * @description Keep a choice the reader made, for this review and every later one.
-         */
-        put: operations["change_reader_settings_api_settings_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide State
-         * @description Say how far this reader has been shown around, in any review on this machine.
-         */
-        get: operations["guide_state_api_guide_get"];
-        /**
-         * Change Guide State
-         * @description Remember what the reader has now been shown.
-         */
-        put: operations["change_guide_state_api_guide_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/context": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Review Context
-         * @description Say what this review holds, for an agent that has just arrived.
-         *
-         *     An agent restarted mid-review knows nothing: `events` hands over what
-         *     happens next, never what already happened. Everything here has passed
-         *     through this server, so it can say what was asked, what was answered and
-         *     what is still open — as an index, because handing over the whole review
-         *     unasked is how a catch-up costs more than the work. A thread is read in
-         *     full from its own route.
-         */
-        get: operations["review_context_api_context_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/context/threads/{thread_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Thread
-         * @description Hand over one thread the review holds, in full: every turn, its lines, its images.
-         *
-         *     Read, so handed over: the agent may open its images from now on, and
-         *     the reader can no longer take them off.
-         */
-        get: operations["read_thread_api_context_threads__thread_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -170,6 +58,31 @@ export interface paths {
         get: operations["get_file_window_api_file_window_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/anchors/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Follow Anchors
+         * @description Say where each anchor is in the review's content as it now stands.
+         *
+         *     The page holds the threads and the review holds the content, so after a
+         *     round the threads come here to be moved: one whose lines survived
+         *     follows them, one whose lines are gone is marked outdated and keeps its
+         *     quote.
+         */
+        post: operations["follow_anchors_api_anchors_follow_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -199,50 +112,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Next Event
-         * @description Wait for the next thing the reader hands over.
-         *
-         *     A long poll rather than a socket: the caller is a command in a shell,
-         *     and blocking until there is something to do is exactly its shape.
-         *     Returning "timeout" lets the caller decide whether to keep waiting.
-         */
-        get: operations["next_event_api_events_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/reply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reply To Thread
-         * @description Push an answer into a thread of a review that is still open.
-         */
-        post: operations["reply_to_thread_api_reply_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/message": {
         parameters: {
             query?: never;
@@ -261,6 +130,29 @@ export interface paths {
          *     has nothing to wait for.
          */
         post: operations["take_panel_message_api_message_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Panel Message
+         * @description Take back a message the agent has not answered yet.
+         *
+         *     A request rather than a kill: it joins the queue behind whatever else is
+         *     waiting, and the agent decides what to do about it.
+         */
+        post: operations["cancel_panel_message_api_cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -314,6 +206,171 @@ export interface paths {
          *     open it, and nothing on this side knows when it has.
          */
         delete: operations["discard_an_image_api_images__image_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Review
+         * @description Send what has been written, and either end the review or carry on.
+         *
+         *     Ending is the plain case: one send, and the agent reads the result on
+         *     stdout. A round keeps the review open instead — the threads stay on
+         *     screen, so an answer has somewhere to come back to.
+         */
+        post: operations["submit_review_api_submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/round": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retake Diff
+         * @description Take the diff again, after the work a round asked for: the agent asks, and so does the page.
+         *
+         *     The pages on screen are told to reload it rather than being handed the
+         *     files: a page has its own view of the diff — which files are folded,
+         *     whether whitespace counts — and asking it to fetch keeps that one path.
+         *     They are also told which files moved: a file the reader had ticked off
+         *     keeps its tick through a retake, so without this they walk past code the
+         *     agent rewrote under them.
+         */
+        post: operations["retake_diff_api_round_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Review
+         * @description End a review that has been kept open for rounds.
+         */
+        post: operations["end_review_api_end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Next Event
+         * @description Wait for the next thing the reader hands over.
+         *
+         *     A long poll rather than a socket: the caller is a command in a shell,
+         *     and blocking until there is something to do is exactly its shape.
+         *     Returning "timeout" lets the caller decide whether to keep waiting.
+         */
+        get: operations["next_event_api_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review Context
+         * @description Say what this review holds, for an agent that has just arrived.
+         *
+         *     An agent restarted mid-review knows nothing: `events` hands over what
+         *     happens next, never what already happened. Everything here has passed
+         *     through this review, so it can say what was asked, what was answered and
+         *     what is still open — as an index, because handing over the whole review
+         *     unasked is how a catch-up costs more than the work. A thread is read in
+         *     full from its own route.
+         */
+        get: operations["review_context_api_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/context/threads/{thread_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Thread
+         * @description Hand over one thread the review holds, in full: every turn, its lines, its images.
+         *
+         *     Read, so handed over: the agent may open its images from now on, and
+         *     the reader can no longer take them off.
+         */
+        get: operations["read_thread_api_context_threads__thread_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply To Thread
+         * @description Push an answer into a thread of a review that is still open.
+         */
+        post: operations["reply_to_thread_api_reply_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -408,61 +465,8 @@ export interface paths {
          *     is about, not in a paragraph somewhere else. What arrives is an ordinary
          *     thread: the reader answers it, settles it or removes it. It is drawn as
          *     the author's, though, and it is never counted as the reader's own work.
-         *
-         *     The anchor is checked against the diff on screen, because a thread hung
-         *     where nothing is shows the reader an empty quote and goes outdated on
-         *     the next retake — and whoever raised it has no way of knowing.
          */
         post: operations["raise_a_thread_api_point_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/anchors/follow": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Follow Anchors
-         * @description Say where each anchor is in the review's diff as it now stands.
-         *
-         *     The browser holds the threads and the server holds the diff, so after a
-         *     round the threads come here to be moved: one whose lines survived follows
-         *     them, one whose lines are gone is marked outdated and keeps its quote.
-         *     The rule lives here, once, for everything that hangs on the diff.
-         */
-        post: operations["follow_anchors_api_anchors_follow_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel Panel Message
-         * @description Take back a message the agent has not answered yet.
-         *
-         *     A request rather than a kill: it joins the queue behind whatever else is
-         *     waiting, and the agent decides what to do about it. Nothing here can
-         *     reach into another process and stop it mid-thought.
-         */
-        post: operations["cancel_panel_message_api_cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -492,72 +496,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/submit": {
+    "/api/settings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Submit Review
-         * @description Send what has been written, and either end the review or carry on.
-         *
-         *     Ending is the plain case: one send, and the agent reads the result on
-         *     stdout. A round keeps the review open instead — the threads stay on
-         *     screen, so an answer has somewhere to come back to.
+         * Reader Settings
+         * @description Say how this reader reads, as chosen in any review on this machine.
          */
-        post: operations["submit_review_api_submit_post"];
+        get: operations["reader_settings_api_settings_get"];
+        /**
+         * Change Reader Settings
+         * @description Keep a choice the reader made, for this review and every later one.
+         */
+        put: operations["change_reader_settings_api_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/round": {
+    "/api/guide": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Retake Diff
-         * @description Take the diff again, after the work a round asked for.
-         *
-         *     The reviews on screen are told to reload it rather than being handed the
-         *     files: a browser has its own view of the diff — which files are folded,
-         *     whether whitespace counts — and asking it to fetch keeps that one path.
-         *
-         *     They are also told which files moved, which is not a nicety: a file the
-         *     reader had ticked off keeps its tick through a retake, so without this
-         *     they walk past code the agent rewrote under them.
+         * Guide State
+         * @description Say how far this reader has been shown around, in any review on this machine.
          */
-        post: operations["retake_diff_api_round_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/end": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
+        get: operations["guide_state_api_guide_get"];
         /**
-         * End Review
-         * @description End a review that has been kept open for rounds.
+         * Change Guide State
+         * @description Remember what the reader has now been shown.
          */
-        post: operations["end_review_api_end_post"];
+        put: operations["change_guide_state_api_guide_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1536,163 +1516,6 @@ export interface operations {
             };
         };
     };
-    reader_settings_api_settings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SettingsResponse"];
-                };
-            };
-        };
-    };
-    change_reader_settings_api_settings_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SettingsChange"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReaderSettings"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    guide_state_api_guide_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GuideResponse"];
-                };
-            };
-        };
-    };
-    change_guide_state_api_guide_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GuideChange"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GuideState"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    review_context_api_context_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContextResponse"];
-                };
-            };
-        };
-    };
-    read_thread_api_context_threads__thread_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Thread"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_file_window_api_file_window_get: {
         parameters: {
             query: {
@@ -1713,6 +1536,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FileWindowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    follow_anchors_api_anchors_follow_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FollowRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1757,38 +1613,7 @@ export interface operations {
             };
         };
     };
-    next_event_api_events_get: {
-        parameters: {
-            query?: {
-                wait_seconds?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reply_to_thread_api_reply_post: {
+    take_panel_message_api_message_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1797,7 +1622,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReplyRequest"];
+                "application/json": components["schemas"]["MessageRequest"];
             };
         };
         responses: {
@@ -1819,7 +1644,7 @@ export interface operations {
             };
         };
     };
-    take_panel_message_api_message_post: {
+    cancel_panel_message_api_cancel_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1828,7 +1653,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MessageRequest"];
+                "application/json": components["schemas"]["CancelRequest"];
             };
         };
         responses: {
@@ -1911,6 +1736,190 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_api_submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retake_diff_api_round_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoundResponse"];
+                };
+            };
+        };
+    };
+    end_review_api_end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    next_event_api_events_get: {
+        parameters: {
+            query?: {
+                wait_seconds?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_context_api_context_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContextResponse"];
+                };
+            };
+        };
+    };
+    read_thread_api_context_threads__thread_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Thread"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_to_thread_api_reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {
@@ -2056,70 +2065,6 @@ export interface operations {
             };
         };
     };
-    follow_anchors_api_anchors_follow_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FollowRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FollowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cancel_panel_message_api_cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CancelRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     report_status_api_status_post: {
         parameters: {
             query?: never;
@@ -2151,7 +2096,27 @@ export interface operations {
             };
         };
     };
-    submit_review_api_submit_post: {
+    reader_settings_api_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+        };
+    };
+    change_reader_settings_api_settings_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -2160,7 +2125,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SubmitRequest"];
+                "application/json": components["schemas"]["SettingsChange"];
             };
         };
         responses: {
@@ -2170,7 +2135,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubmitResponse"];
+                    "application/json": components["schemas"]["ReaderSettings"];
                 };
             };
             /** @description Validation Error */
@@ -2184,7 +2149,7 @@ export interface operations {
             };
         };
     };
-    retake_diff_api_round_post: {
+    guide_state_api_guide_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2199,26 +2164,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoundResponse"];
+                    "application/json": components["schemas"]["GuideResponse"];
                 };
             };
         };
     };
-    end_review_api_end_post: {
+    change_guide_state_api_guide_put: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuideChange"];
+            };
+        };
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuideState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

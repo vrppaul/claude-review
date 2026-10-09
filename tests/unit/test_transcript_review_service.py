@@ -40,7 +40,7 @@ def _message(path: str, lines: list[str]) -> DiffFile:
 
 def _formatted(threads: list[Thread], body: str | None, files: list[DiffFile]) -> ReviewResult:
     """The review as the agent reads it, in its first round."""
-    return TranscriptReviewService().format_review(threads, body, files, round_number=FIRST_ROUND)
+    return TranscriptReviewService(files).format_review(threads, body, round_number=FIRST_ROUND)
 
 
 def test_a_review_of_a_conversation_is_headed_as_one() -> None:
