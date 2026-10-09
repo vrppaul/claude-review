@@ -92,9 +92,9 @@ class FileWindowService:
             with path.open(encoding="utf-8") as handle:
                 window = [line.rstrip("\n") for line in islice(handle, start - 1, start - 1 + wanted)]
                 total = start - 1 + len(window) + sum(1 for _ in handle)
-        except (OSError, UnicodeDecodeError) as e:
+        except (OSError, UnicodeDecodeError) as error:
             msg = f"cannot read as text: {named}"
-            raise FileUnreadableError(msg) from e
+            raise FileUnreadableError(msg) from error
 
         return FileWindow(start=start, lines=window, total=total)
 
@@ -121,10 +121,10 @@ class FileWindowService:
         try:
             resolved = (root / candidate).resolve()
             inside = resolved.is_relative_to(root.resolve())
-        except (ValueError, OSError) as e:
+        except (ValueError, OSError) as error:
             # A NUL byte, or a path the filesystem will not even look at
             msg = f"not a usable path: {relative_path}"
-            raise PathOutsideRepositoryError(msg) from e
+            raise PathOutsideRepositoryError(msg) from error
 
         if not inside:
             msg = f"path leaves the repository: {relative_path}"

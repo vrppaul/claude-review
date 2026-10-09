@@ -105,7 +105,7 @@ export class Conversation {
 			author: 'author',
 			body: text,
 			at: Date.now(),
-			answers: messageId ?? undefined,
+			...(messageId === null ? {} : { answers: messageId }),
 			files
 		});
 	}

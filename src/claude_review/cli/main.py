@@ -10,7 +10,7 @@ agent's command never loads the server.
 import importlib
 import logging
 import sys
-from typing import Any
+from typing import override
 
 import click
 import structlog
@@ -53,7 +53,8 @@ class ReviewCommands(click.Group):
         module = COMMAND_MODULES.get(cmd_name)
         return None if module is None else importlib.import_module(module).COMMANDS[cmd_name]
 
-    def invoke(self, ctx: click.Context) -> Any:
+    @override
+    def invoke(self, ctx: click.Context) -> object:
         try:
             return super().invoke(ctx)
         except EXPLAINED_FAILURES as failure:

@@ -7,6 +7,7 @@
 	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
+	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
@@ -27,12 +28,7 @@
 	);
 	const commentsByRow = $derived(indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed }));
 	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
-	const hunkOffsets = $derived(
-		shown.hunks.reduce<number[]>((acc, hunk, i) => {
-			acc.push(i === 0 ? 0 : acc[i - 1] + shown.hunks[i - 1].lines.length);
-			return acc;
-		}, [])
-	);
+	const offsets = $derived(hunkOffsets(shown.hunks));
 
 	// Every line of the file in the order the rows count them, hunk after hunk
 	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
@@ -173,15 +169,15 @@
 						{@const rightComments = row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
 						{@const boxAt = selection.commentingAt?.anchorIndex}
 						{@const showBox =
-							(row.left && hunkOffsets[hunkIdx] + row.left.index === boxAt) ||
-							(row.right && hunkOffsets[hunkIdx] + row.right.index === boxAt)}
+							(row.left && offsets[hunkIdx] + row.left.index === boxAt) ||
+							(row.right && offsets[hunkIdx] + row.right.index === boxAt)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr data-testid="split-row" class="cr-side-del">
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(row.left, 'delete')}"
 								onmouseenter={() =>
-									row.left && selection.handleMouseEnter(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
+									row.left && selection.handleMouseEnter(row.left.line, offsets[hunkIdx] + row.left.index)}
 							>
 								{#if row.left}
 									{@const cell = row.left}
@@ -196,8 +192,8 @@
 										title={review.diff.narrowed
 											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
 											: undefined}
-										onmousedown={() => selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
-										onkeydown={(e) => commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onmousedown={() => selection.handleMouseDown(cell.line, offsets[hunkIdx] + cell.index)}
+										onkeydown={(e) => commentOnKey(e, cell.line, offsets[hunkIdx] + cell.index)}
 									>
 										{cell.line.old_number ?? ''}
 									</button>
@@ -217,7 +213,7 @@
 									'add'
 								)}"
 								onmouseenter={() =>
-									row.right && selection.handleMouseEnter(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
+									row.right && selection.handleMouseEnter(row.right.line, offsets[hunkIdx] + row.right.index)}
 							>
 								{#if row.right}
 									{@const cell = row.right}
@@ -226,8 +222,8 @@
 										data-tour="line-number"
 										class="cr-gutter-button"
 										aria-label="Comment on line {cell.line.new_number ?? ''}"
-										onmousedown={() => selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
-										onkeydown={(e) => commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onmousedown={() => selection.handleMouseDown(cell.line, offsets[hunkIdx] + cell.index)}
+										onkeydown={(e) => commentOnKey(e, cell.line, offsets[hunkIdx] + cell.index)}
 									>
 										{cell.line.new_number ?? ''}
 									</button>

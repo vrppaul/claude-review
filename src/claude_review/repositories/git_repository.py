@@ -373,7 +373,6 @@ def _temporary_objects() -> str:
 
 
 def _remove_staging(index: str, throwaway: str | None) -> None:
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(index)
+    Path(index).unlink(missing_ok=True)
     if throwaway is not None:
         shutil.rmtree(throwaway, ignore_errors=True)

@@ -20,6 +20,9 @@ jobs:
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
       - run: uv run ty check src/ tests/
+      # The code rules no linter here can be told to keep
+      - run: uv run python scripts/check_code_rules.py src tests scripts
+      - run: uv run typos
       # The skill ships twice, as a skill and as the plugin's command
       - run: cmp skills/review-ui/SKILL.md plugin/commands/review-ui.md
 
@@ -46,6 +49,7 @@ jobs:
       - run: pnpm --dir frontend install --frozen-lockfile
       - run: pnpm --dir frontend check
       - run: pnpm --dir frontend lint
+      - run: pnpm --dir frontend format:check
       - run: pnpm --dir frontend test
 
   # The browser's types are generated from the server's schemas; a schema

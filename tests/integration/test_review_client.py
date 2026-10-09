@@ -5,6 +5,7 @@ import threading
 from collections.abc import Generator
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import override
 
 import pytest
 
@@ -40,6 +41,7 @@ class RefusingHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(answer)
 
+    @override
     def log_message(self, format: str, *args: object) -> None:
         """Quiet: what it answers is what the test reads."""
 

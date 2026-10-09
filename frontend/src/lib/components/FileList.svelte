@@ -19,7 +19,8 @@
 	interface TreeNode {
 		name: string;
 		path: string;
-		file?: DiffFile;
+		// The file a leaf stands for; a folder has none
+		file: DiffFile | null;
 		children: TreeNode[];
 	}
 
@@ -52,7 +53,7 @@
 					const node: TreeNode = {
 						name,
 						path: parts.slice(0, i + 1).join('/'),
-						file: isFile ? file : undefined,
+						file: isFile ? file : null,
 						children: []
 					};
 					current.push(node);

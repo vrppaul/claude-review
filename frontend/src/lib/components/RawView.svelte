@@ -5,6 +5,7 @@
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
+	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import { useReview } from '$lib/review/context';
@@ -43,13 +44,7 @@
 		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
 	});
 
-	// Compute flat line index offsets per hunk so we have unique indices across all hunks
-	const hunkOffsets = $derived(
-		shown.hunks.reduce<number[]>((acc, hunk, i) => {
-			acc.push(i === 0 ? 0 : acc[i - 1] + shown.hunks[i - 1].lines.length);
-			return acc;
-		}, [])
-	);
+	const offsets = $derived(hunkOffsets(shown.hunks));
 
 	$effect(() => {
 		void file.path;
@@ -163,7 +158,7 @@
 				</colgroup>
 				<tbody>
 					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
-						{@const flatIdx = hunkOffsets[hunkIdx] + lineIdx}
+						{@const flatIdx = offsets[hunkIdx] + lineIdx}
 						{@const lineNo = getLineNumber(line)}
 						{@const side = lineSide(line)}
 						{@const lineComments = commentsByRow.get(`${side}:${lineNo}`)}

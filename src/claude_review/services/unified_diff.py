@@ -144,7 +144,7 @@ def _path(header: list[str]) -> str | None:
 
 def _marker_path(value: str) -> str:
     """The one path a marker names, without the tab git may end it with and unquoted."""
-    return _unquote(value.split(MARKER_PATH_END)[0])
+    return _unquote(value.split(MARKER_PATH_END, maxsplit=1)[0])
 
 
 def _without_side_prefix(path: str) -> str:

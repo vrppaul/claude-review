@@ -14,16 +14,16 @@
 		kind: CommentKind;
 		onSave: (body: string, severity: CommentSeverity, images: string[]) => void;
 		/** Hand this one over now, rather than with the rest of the review. */
-		onAsk?: (body: string, severity: CommentSeverity, images: string[]) => void;
+		onAsk?: ((body: string, severity: CommentSeverity, images: string[]) => void) | undefined;
 		onCancel: () => void;
 		/** Where the comment hangs, said above the field: "Line 42". */
-		label?: string;
+		label?: string | undefined;
 		initialBody?: string;
 		initialSeverity?: CommentSeverity;
 		/** Images already on the comment being edited. */
 		initialImages?: string[];
 		/** The lines being commented on, so a suggestion can start from them. */
-		suggestFrom?: string[];
+		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
 		severityPicker?: boolean;
 		/** Written inside a thread, which already draws the card around it. */

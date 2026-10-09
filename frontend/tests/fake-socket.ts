@@ -40,7 +40,7 @@ export class FakeSocket {
 	}
 
 	emit(kind: string, data?: string) {
-		for (const listener of this.listeners.get(kind) ?? []) listener({ data });
+		for (const listener of this.listeners.get(kind) ?? []) listener(data === undefined ? {} : { data });
 	}
 
 	/** What the page said down this socket, read back. */

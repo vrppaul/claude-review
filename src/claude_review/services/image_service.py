@@ -227,9 +227,9 @@ class ImageService:
 
         try:
             await self._store.remove(image_id)
-        except OSError as e:
+        except OSError as error:
             # Still on the disk, so still kept and counted
-            log.warning("image_left_behind", image_id=image_id, reason=str(e))
+            log.warning("image_left_behind", image_id=image_id, reason=str(error))
             return
         del self._kept[image_id]
 

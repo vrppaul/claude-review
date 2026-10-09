@@ -1,16 +1,36 @@
+# Every hook runs once, before the commit; only the message check runs on the message
+default_stages: [pre-commit]
+
 repos:
-  # Ruff - Fast Python linter and formatter
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+  # Ruff — the project's own, the one `uv run` and CI use: a mirror pins a
+  # release of its own and drifts from it
+  - repo: local
     hooks:
       - id: ruff
         name: ruff (linter)
-        args: [--fix]
+        entry: uv run ruff check --fix
+        language: system
         types_or: [python, pyi]
 
       - id: ruff-format
         name: ruff (formatter)
+        entry: uv run ruff format
+        language: system
         types_or: [python, pyi]
+
+      # The code rules no linter here can be told to keep: no function
+      # inside another, no name too short to say what it holds
+      - id: code-rules
+        name: code rules (nested functions, short names)
+        entry: uv run python scripts/check_code_rules.py
+        language: system
+        types: [python]
+
+      - id: typos
+        name: typos
+        entry: uv run typos
+        language: system
+        types: [text]
 
   # Pre-commit hooks for general file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -70,14 +90,14 @@ repos:
         name: eslint (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm lint'
         language: system
-        files: ^frontend/src/
+        files: ^frontend/(src/|tests/|eslint\.config\.js$)
         pass_filenames: false
 
       - id: frontend-check
         name: svelte-check (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm check'
         language: system
-        files: ^frontend/src/
+        files: ^frontend/(src/|tests/|tsconfig\.json$)
         pass_filenames: false
 
       # Checks rather than rewrites: a commit never carries formatting it was not shown
@@ -86,6 +106,17 @@ repos:
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format:check'
         language: system
         files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|\.prettierrc\.json$)
+        pass_filenames: false
+
+  # The browser's types are generated from the server's schemas: a schema
+  # changed without regenerating them fails here, not in a browser
+  - repo: local
+    hooks:
+      - id: api-types
+        name: generated API types match the server
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm api:check'
+        language: system
+        files: ^(src/claude_review/(presentation|domain)/|frontend/src/lib/types/generated/)
         pass_filenames: false
 
   # The skill ships twice — as a skill, and as the plugin's command — and

@@ -39,12 +39,12 @@ def expected_version() -> str:
 def find_artifact(pattern: str) -> Path:
     matches = list((ROOT / "dist").glob(pattern))
     if len(matches) != 1:
-        fail(f"expected exactly one dist/{pattern}, found: {[m.name for m in matches]}")
+        fail(f"expected exactly one dist/{pattern}, found: {[match.name for match in matches]}")
     return matches[0]
 
 
 def check_no_sourcemaps(name: str, files: list[str]) -> None:
-    maps = [f for f in files if f.endswith(".map")]
+    maps = [path for path in files if path.endswith(".map")]
     if maps:
         fail(f"{name} ships source maps ({maps}) — keep sourcemap: false in frontend/vite.config.ts")
 
@@ -54,9 +54,9 @@ def check_wheel(wheel: Path) -> None:
         files = archive.namelist()
     if "claude_review/static/dist/index.html" not in files:
         fail(f"{wheel.name} is missing the UI entry point (static/dist/index.html)")
-    assets = [f for f in files if f.startswith("claude_review/static/dist/assets/")]
+    assets = [path for path in files if path.startswith("claude_review/static/dist/assets/")]
     for extension in (".js", ".css"):
-        if not any(f.endswith(extension) for f in assets):
+        if not any(asset.endswith(extension) for asset in assets):
             fail(f"{wheel.name} is missing built {extension} assets, got: {assets}")
     check_no_sourcemaps(wheel.name, files)
 
@@ -69,7 +69,7 @@ def check_sdist(sdist: Path, version: str) -> None:
         fail(f"{sdist.name} is missing prebuilt UI assets — building a wheel from it would require pnpm")
     if f"{prefix}/hatch_build.py" not in files:
         fail(f"{sdist.name} is missing hatch_build.py — the build hook could not run")
-    if any(f.startswith(f"{prefix}/frontend/") for f in files):
+    if any(path.startswith(f"{prefix}/frontend/") for path in files):
         fail(f"{sdist.name} ships frontend/ sources — building from sdist must not need pnpm")
     check_no_sourcemaps(sdist.name, files)
 

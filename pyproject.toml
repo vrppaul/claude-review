@@ -26,6 +26,7 @@ dev = [
     "pytest-playwright>=0.7.2",
     "ruff>=0.15.9",
     "ty>=0.0.28",
+    "typos>=1.51.1",
 ]
 
 [tool.pytest.ini_options]
@@ -72,7 +73,27 @@ select = [
     "RSE",      # unnecessary parens on raise
     "PERF",     # performance anti-patterns
     "FURB",     # refurb modernizations
-    "PLC0415",  # import-outside-toplevel
+    "PLC",      # pylint conventions (import-outside-toplevel among them)
+    "PLE",      # pylint errors
+    "PLW",      # pylint warnings
+    "A",        # nothing shadows a builtin
+    "ANN",      # every function says what it takes and gives
+    "BLE",      # no blind `except Exception`
+    "DTZ",      # no naive datetimes
+    "EM",       # an exception's message is named before it is raised
+    "ERA",      # no commented-out code
+    "FLY",      # f-strings over joins of literals
+    "G",        # logging calls take fields, not formatted strings
+    "INP",      # no implicit namespace packages
+    "ISC",      # no implicit string concatenation
+    "LOG",      # logging used as meant
+    "PGH",      # no blanket noqa or type: ignore
+    "PIE",      # unnecessary pass, spreads and the like
+    "PT",       # pytest used as meant
+    "PTH",      # pathlib over os.path
+    "RET",      # returns that say what they return
+    "SLF",      # nothing reaches into another object's private members
+    "TRY",      # exceptions raised and caught as meant
 ]
 ignore = [
     "B008",     # function call in argument defaults (common in FastAPI)
@@ -83,9 +104,24 @@ ignore = [
 combine-as-imports = true
 known-first-party = ["claude_review"]
 
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"typing.Any".msg = "Name the shape: a model, a protocol or a type of its own."
+"typing.cast".msg = "Prove the type instead: narrow it, or validate it with a model."
+
 [tool.ruff.lint.per-file-ignores]
-# Standalone CI scripts run on bare python3 with no deps — print, not structlog
-"scripts/**" = ["T20"]
+# Standalone CI scripts run on bare python3 with no deps — print, not
+# structlog — and are run by path, not imported from a package
+"scripts/**" = ["T20", "INP001"]
+# OpenAPI documents are JSON of any shape, and their writer says so
+"src/claude_review/presentation/api_schema.py" = ["TID251"]
+
+[tool.typos.default.extend-words]
+# Not misspelt: pieces of words the tests type or read on purpose — a word
+# typed one key at a time, the start of "café" read back in Latin-1, and
+# keys pressed to show they land in a field
+Ove = "Ove"
+caf = "caf"
+pn = "pn"
 
 [tool.ty.environment]
 python-version = "3.14"

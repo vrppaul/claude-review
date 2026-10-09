@@ -13,6 +13,8 @@ uv run pytest tests/e2e/             # E2E tests (Playwright browser)
 uv run ruff check src/               # Lint Python
 uv run ruff format src/              # Format Python
 uv run ty check src/                 # Type check Python
+uv run python scripts/check_code_rules.py src tests scripts  # No function inside another, no name too short
+uv run typos                         # Spelling, in code and prose alike
 uv run claude-review diff                    # Run the tool (diff mode)
 uv run claude-review diff --base HEAD~3      # Diff since a specific commit
 uv run claude-review files f.md              # Run the tool (files mode)

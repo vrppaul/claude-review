@@ -31,15 +31,15 @@ class JsonRecordStore[Record: BaseModel]:
             text = await asyncio.to_thread(self._path.read_text, encoding=RECORD_ENCODING)
         except FileNotFoundError:
             return None
-        except (OSError, UnicodeDecodeError) as e:
-            log.warning("record_unreadable", path=str(self._path), reason=str(e))
+        except (OSError, UnicodeDecodeError) as error:
+            log.warning("record_unreadable", path=str(self._path), reason=str(error))
             return None
         try:
             return self._record_type.model_validate_json(text)
-        except ValidationError as e:
+        except ValidationError as error:
             # A file edited by hand into nonsense costs the reader their
             # choices, not the review
-            log.warning("record_unreadable", path=str(self._path), reason=str(e))
+            log.warning("record_unreadable", path=str(self._path), reason=str(error))
             return None
 
     async def write(self, record: Record) -> None:

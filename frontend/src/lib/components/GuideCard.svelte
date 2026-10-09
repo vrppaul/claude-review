@@ -13,7 +13,6 @@
 	// One mark per step, filled up to the one on screen
 	const stepNumbers = $derived([...Array(review.guide.stepCount).keys()]);
 
-	let card = $state<HTMLElement | null>(null);
 	let title = $state<HTMLElement | null>(null);
 	let firstAction = $state<HTMLButtonElement | null>(null);
 
@@ -46,7 +45,7 @@
 
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
 {#if review.guide.touring && step}
-	<section bind:this={card} data-testid="guide-tour" class="cr-guide-card" aria-label="Tour of the review">
+	<section data-testid="guide-tour" class="cr-guide-card" aria-label="Tour of the review">
 		<div class="flex items-center gap-2.5">
 			<div class="flex gap-1" aria-hidden="true">
 				{#each stepNumbers as index (index)}
@@ -95,13 +94,7 @@
 		</div>
 	</section>
 {:else if review.guide.card === 'welcome'}
-	<section
-		bind:this={card}
-		data-testid="guide-welcome"
-		class="cr-guide-card"
-		role="complementary"
-		aria-labelledby="guide-welcome-title"
-	>
+	<section data-testid="guide-welcome" class="cr-guide-card" role="complementary" aria-labelledby="guide-welcome-title">
 		<div class="flex items-center gap-2.5">
 			<svg class="cr-guide-compass" viewBox="0 0 20 20" aria-hidden="true">
 				<circle cx="10" cy="10" r="7.5"></circle>
@@ -136,13 +129,7 @@
 		<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
 	</section>
 {:else if review.guide.card === 'news' && news}
-	<section
-		bind:this={card}
-		data-testid="guide-news"
-		class="cr-guide-card"
-		role="complementary"
-		aria-labelledby="guide-news-title"
-	>
+	<section data-testid="guide-news" class="cr-guide-card" role="complementary" aria-labelledby="guide-news-title">
 		<div class="flex items-center gap-2">
 			<span class="cr-faint text-xs">New in</span>
 			<span class="cr-guide-release">{news.release}</span>

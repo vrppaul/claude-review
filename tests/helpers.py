@@ -12,9 +12,8 @@ import queue
 import subprocess
 import threading
 import time
-from collections.abc import AsyncIterator, Coroutine, Iterator, Mapping
+from collections.abc import AsyncGenerator, Iterator, Mapping
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlencode
 
 from anyio import EndOfStream
@@ -307,7 +306,7 @@ class ReviewFactory:
 
 
 @contextlib.asynccontextmanager
-async def http_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+async def http_client(app: FastAPI) -> AsyncGenerator[AsyncClient]:
     """Talk to a review over HTTP, as the agent's commands do: no page, so no Origin.
 
     The review is opened first, as a server opens it before it answers
@@ -461,10 +460,10 @@ class CallerThatLeaves:
     async def send(self, message: Message) -> None:
         """Whatever is answered goes nowhere: nobody is there to read it."""
 
-    def poll(self, app: FastAPI, wait_seconds: float) -> Coroutine[Any, Any, None]:
+    async def poll(self, app: FastAPI, wait_seconds: float) -> None:
         """Ask the review for its next event, as this caller."""
         scope = _request_scope("GET", EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
-        return app(scope, self.receive, self.send)
+        await app(scope, self.receive, self.send)
 
 
 class UploadThatBreaksOff:
@@ -488,9 +487,9 @@ class UploadThatBreaksOff:
     async def send(self, message: Message) -> None:
         """Whatever is answered goes nowhere: nobody is there to read it."""
 
-    def upload(self, app: FastAPI) -> Coroutine[Any, Any, None]:
-        """Start pasting the image into the review, as this browser."""
-        return app(_request_scope("POST", IMAGES_ROUTE), self.receive, self.send)
+    async def upload(self, app: FastAPI) -> None:
+        """Paste the image into the review, as this browser."""
+        await app(_request_scope("POST", IMAGES_ROUTE), self.receive, self.send)
 
 
 def _request_scope(method: str, route: str, query: Mapping[str, float] | None = None) -> Scope:

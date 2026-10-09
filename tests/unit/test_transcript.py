@@ -58,6 +58,11 @@ def _turn_texts(turns: list[DiffFile]) -> list[list[str]]:
     return [[line.content for hunk in turn.hunks for line in hunk.lines] for turn in turns]
 
 
+def _names_by_first_line(turns: list[DiffFile]) -> dict[str, str]:
+    """The name each turn is reviewed under, found by the first line it says."""
+    return {turn.hunks[0].lines[0].content: turn.path for turn in turns}
+
+
 def _user_tool_result() -> dict:
     return _user_blocks([{"type": "tool_result", "content": "ok"}])
 
@@ -221,7 +226,7 @@ class TestRead:
         )
 
         result = await read_transcript(conversation)
-        paths = [r.path for r in result]
+        paths = [turn.path for turn in result]
 
         assert len(paths) == len(set(paths))
 
@@ -285,10 +290,10 @@ class TestLabels:
             _user("first", timestamp="2026-04-04T18:05:00.000Z"),
             _assistant("answer", timestamp="2026-04-04T18:05:00.000Z"),
         ]
-        before = {r.hunks[0].lines[0].content: r.path for r in await read_transcript(_write_jsonl(tmp_path, earlier))}
+        before = _names_by_first_line(await read_transcript(_write_jsonl(tmp_path, earlier)))
 
         grown = [*earlier, _user("second", timestamp="2026-04-04T18:06:00.000Z")]
-        after = {r.hunks[0].lines[0].content: r.path for r in await read_transcript(_write_jsonl(tmp_path, grown))}
+        after = _names_by_first_line(await read_transcript(_write_jsonl(tmp_path, grown)))
 
         assert after["first"] == before["first"]
         assert after["answer"] == before["answer"]
@@ -304,6 +309,6 @@ class TestLabels:
             ],
         )
 
-        paths = [r.path for r in await read_transcript(transcript)]
+        paths = [turn.path for turn in await read_transcript(transcript)]
 
         assert len(set(paths)) == 3
