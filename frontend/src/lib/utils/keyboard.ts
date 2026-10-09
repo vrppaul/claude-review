@@ -8,15 +8,7 @@
  */
 
 /** Text-entry inputs; a checkbox or a button is not one of them. */
-const TYPED_INTO = new Set([
-  "text",
-  "search",
-  "email",
-  "url",
-  "tel",
-  "password",
-  "number",
-]);
+const TYPED_INTO = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
 
 /**
  * Whether a key belongs to whatever has focus rather than to the review.
@@ -26,35 +18,31 @@ const TYPED_INTO = new Set([
  * on screen to explain it.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable || target.tagName === "TEXTAREA") return true;
-  if (!(target instanceof HTMLInputElement)) return false;
-  return TYPED_INTO.has(target.type);
+	if (!(target instanceof HTMLElement)) return false;
+	if (target.isContentEditable || target.tagName === 'TEXTAREA') return true;
+	if (!(target instanceof HTMLInputElement)) return false;
+	return TYPED_INTO.has(target.type);
 }
 
 function gutters(): HTMLElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>('[data-testid="line-gutter"]'),
-  );
+	return Array.from(document.querySelectorAll<HTMLElement>('[data-testid="line-gutter"]'));
 }
 
 /** Move focus one line down or up, starting at the top when nothing is focused. */
 export function moveByLine(step: 1 | -1): void {
-  const all = gutters();
-  if (all.length === 0) return;
+	const all = gutters();
+	if (all.length === 0) return;
 
-  const at = all.indexOf(document.activeElement as HTMLElement);
-  const next = at === -1 ? 0 : Math.min(all.length - 1, Math.max(0, at + step));
-  all[next]?.focus();
+	const at = all.indexOf(document.activeElement as HTMLElement);
+	const next = at === -1 ? 0 : Math.min(all.length - 1, Math.max(0, at + step));
+	all[next]?.focus();
 }
 
 /** The file section the reader is in, by focus if possible and by scroll if not. */
 export function currentSectionPath(): string | null {
-  const focused = (document.activeElement as HTMLElement | null)?.closest?.(
-    '[data-testid="file-section"]',
-  );
-  if (focused instanceof HTMLElement && focused.dataset.path) {
-    return focused.dataset.path;
-  }
-  return null;
+	const focused = (document.activeElement as HTMLElement | null)?.closest?.('[data-testid="file-section"]');
+	if (focused instanceof HTMLElement && focused.dataset.path) {
+		return focused.dataset.path;
+	}
+	return null;
 }

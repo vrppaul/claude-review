@@ -48,10 +48,7 @@
 	punctuation in the middle of a sentence. -->
 {#if hidden > 0}
 	{#if header}
-		<div
-			data-testid="hunk-header"
-			class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs"
-		>
+		<div data-testid="hunk-header" class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
 			{header}
 		</div>
 	{/if}

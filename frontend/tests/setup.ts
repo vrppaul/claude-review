@@ -27,10 +27,7 @@ class ImmediateIntersectionObserver implements IntersectionObserver {
 	}
 
 	observe = (target: Element) => {
-		this.callback(
-			[{ target, isIntersecting: true } as IntersectionObserverEntry],
-			this as IntersectionObserver
-		);
+		this.callback([{ target, isIntersecting: true } as IntersectionObserverEntry], this as IntersectionObserver);
 	};
 	unobserve = vi.fn();
 	disconnect = vi.fn();
@@ -39,8 +36,7 @@ class ImmediateIntersectionObserver implements IntersectionObserver {
 
 // Assigned rather than stubbed: every test's stubs are dropped after it,
 // and this would go with them.
-globalThis.IntersectionObserver =
-	ImmediateIntersectionObserver as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver = ImmediateIntersectionObserver as unknown as typeof IntersectionObserver;
 
 if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();

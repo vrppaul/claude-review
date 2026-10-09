@@ -6,12 +6,7 @@
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
-	import {
-		createLineSelection,
-		getLineNumber,
-		lineSide,
-		rowOfLine
-	} from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -39,9 +34,7 @@
 		)
 	);
 	// Comments indexed by the row they belong to, rather than scanned per line
-	const commentsByRow = $derived(
-		indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed })
-	);
+	const commentsByRow = $derived(indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed }));
 	// Every line of the file in the order the rows count them, hunk after hunk
 	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
 	const selection = createLineSelection({
@@ -85,10 +78,7 @@
 		return shown.hunks
 			.flatMap((hunk) => hunk.lines)
 			.filter(
-				(line) =>
-					lineSide(line) === at.side &&
-					getLineNumber(line) >= at.line &&
-					getLineNumber(line) <= at.endLine
+				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.line && getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -96,11 +86,7 @@
 	/** Where the comment being written hangs, said above its field. */
 	const commentingLabel = $derived(
 		selection.commentingAt
-			? lineRangeLabel(
-					selection.commentingAt.side,
-					selection.commentingAt.line,
-					selection.commentingAt.endLine
-				)
+			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.line, selection.commentingAt.endLine)
 			: undefined
 	);
 
@@ -202,11 +188,10 @@
 									</button>
 								</td>
 							{/if}
-							<td
-								class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none"
-							>
+							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
 								<button
-									data-testid="line-gutter" data-tour="line-number"
+									data-testid="line-gutter"
+									data-tour="line-number"
 									class="cr-gutter-button"
 									aria-label="Comment on line {line.new_number ?? line.old_number ?? ''}"
 									disabled={line.kind === 'delete' && review.diff.narrowed}

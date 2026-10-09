@@ -30,9 +30,7 @@
 	const matching = $derived(
 		filter.trim() === ''
 			? review.diff.files
-			: review.diff.files.filter((file) =>
-					file.path.toLowerCase().includes(filter.trim().toLowerCase())
-				)
+			: review.diff.files.filter((file) => file.path.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
 	const tree = $derived(isDiffMode ? buildTree(matching) : []);
 
@@ -108,17 +106,13 @@
 	<li>
 		<button
 			data-testid="file-item"
-			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs {viewed
-				? 'opacity-45'
-				: ''}"
+			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs {viewed ? 'opacity-45' : ''}"
 			class:cr-current={review.diff.fileInView === file.path}
 			style="padding-left: {depth * 12 + 8}px"
 			onclick={() => review.sections.scrollToFile(file.path)}
 		>
 			{#if isDiffMode}
-				<span class="w-3 shrink-0 text-center font-semibold" style="color: {mark.colour}"
-					>{mark.label}</span
-				>
+				<span class="w-3 shrink-0 text-center font-semibold" style="color: {mark.colour}">{mark.label}</span>
 			{/if}
 			<span class="flex-1 truncate">{name}</span>
 			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
@@ -189,7 +183,8 @@
 {/snippet}
 
 <aside
-	data-testid="sidebar" data-tour="file-tree"
+	data-testid="sidebar"
+	data-tour="file-tree"
 	class="relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
 	style="width: {review.layout.fileTree.width}px"
 >

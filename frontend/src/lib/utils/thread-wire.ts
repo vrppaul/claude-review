@@ -1,4 +1,4 @@
-import type { Thread, ThreadInput, Turn, TurnInput } from "$lib/types";
+import type { Thread, ThreadInput, Turn, TurnInput } from '$lib/types';
 
 /**
  * A thread as the other side is told about it.
@@ -9,26 +9,20 @@ import type { Thread, ThreadInput, Turn, TurnInput } from "$lib/types";
  * should not have to learn it twice.
  */
 export function threadOnTheWire(comment: Thread): ThreadInput {
-  return {
-    thread_id: comment.id,
-    anchor: comment.anchor,
-    severity: comment.severity,
-    body: comment.body,
-    images: comment.images,
-    // The clock belongs to reading the thread, not to what it says
-    turns: comment.turns.map(turnOnTheWire),
-    raised_by: comment.raised_by,
-    resolved: comment.resolved,
-  };
+	return {
+		thread_id: comment.id,
+		anchor: comment.anchor,
+		severity: comment.severity,
+		body: comment.body,
+		images: comment.images,
+		// The clock belongs to reading the thread, not to what it says
+		turns: comment.turns.map(turnOnTheWire),
+		raised_by: comment.raised_by,
+		resolved: comment.resolved
+	};
 }
 
 /** A turn as the other side is told about it: what was said and by whom, not when. */
-export function turnOnTheWire({
-  id,
-  author,
-  body,
-  round,
-  images,
-}: Turn): TurnInput {
-  return { turn_id: id, author, body, round, images };
+export function turnOnTheWire({ id, author, body, round, images }: Turn): TurnInput {
+	return { turn_id: id, author, body, round, images };
 }

@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	hiddenAbove,
-	nextWindow,
-	withRevealed,
-	toContextLines,
-	EXPAND_STEP
-} from '$lib/utils/expansions';
+import { hiddenAbove, nextWindow, withRevealed, toContextLines, EXPAND_STEP } from '$lib/utils/expansions';
 import type { DiffHunk } from '$lib/types';
 import { contextLine, diffFile, hunk } from './diff';
 

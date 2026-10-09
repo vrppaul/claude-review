@@ -203,9 +203,7 @@ export class FakeServer {
 /** Put a server in place of the network for the rest of the test. */
 export function fakeServer(): FakeServer {
 	const server = new FakeServer();
-	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
-		server.receive(input, init)
-	);
+	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => server.receive(input, init));
 	return server;
 }
 

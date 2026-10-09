@@ -10,14 +10,7 @@ import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
-import {
-	SEND_LIMITS,
-	KEPT_AS,
-	keepingImages,
-	oversizedScreenshot,
-	paste,
-	screenshot
-} from '../pasted-images';
+import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
 
 const TITLE = 'claude-review: uncommitted changes';
 // jsdom lays nothing out, so the panel is given a height to scroll in: this
@@ -103,9 +96,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'Look at @');
 		await user.click(getAllByTestId('thread-option')[0]);
 
-		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe(
-			'Look at @src/routes.py:2-2 '
-		);
+		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('Look at @src/routes.py:2-2 ');
 		expect(getByTestId('pointed-thread').textContent).toContain('routes.py');
 	});
 
@@ -116,9 +107,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'What is in @');
 		await user.click(getAllByTestId('file-option')[0]);
 
-		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe(
-			'What is in @src/routes.py '
-		);
+		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('What is in @src/routes.py ');
 	});
 
 	it('sends the thread the message points at', async () => {
@@ -132,9 +121,7 @@ describe('the agent panel', () => {
 		await user.type(getByTestId('panel-input'), 'again');
 		await user.click(getByTestId('send-message'));
 
-		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([
-			{ threads: [{ body: 'Why catch here?' }] }
-		]);
+		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ threads: [{ body: 'Why catch here?' }] }]);
 	});
 
 	it('offers to stop a message the agent is still working on', async () => {
@@ -148,9 +135,7 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-working')).toBeTruthy();
 		await user.click(getByTestId('stop-message'));
 
-		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([
-			{ message_id: review.conversation.turns[0].id }
-		]);
+		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: review.conversation.turns[0].id }]);
 		expect(getByTestId('panel-cancelled')).toBeTruthy();
 	});
 
@@ -362,9 +347,7 @@ describe('the agent panel', () => {
 		const reloaded = render(AgentPanel, inReview(answeredReview()));
 
 		expect((reloaded.getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('Look at this');
-		expect(reloaded.getByTestId('attached-image').getAttribute('src')).toBe(
-			`/api/images/${KEPT_AS}`
-		);
+		expect(reloaded.getByTestId('attached-image').getAttribute('src')).toBe(`/api/images/${KEPT_AS}`);
 	});
 
 	it('takes an image the server lost off the message, and says so', async () => {

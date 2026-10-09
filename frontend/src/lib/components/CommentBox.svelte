@@ -70,9 +70,7 @@
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
-	const sayable = $derived(
-		(body.trim().length > 0 || attachments.images.length > 0) && attachments.uploading === 0
-	);
+	const sayable = $derived((body.trim().length > 0 || attachments.images.length > 0) && attachments.uploading === 0);
 
 	let textareaEl: HTMLTextAreaElement;
 
@@ -207,20 +205,11 @@
 			</button>
 		{/if}
 		<div class="flex-1"></div>
-		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}>
-			Cancel
-		</button>
+		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}> Cancel </button>
 		{#if onAsk}
-			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>
-				Ask now
-			</button>
+			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}> Ask now </button>
 		{/if}
-		<button
-			class="btn btn-primary btn-xs"
-			data-testid="save-comment"
-			disabled={!sayable}
-			onclick={save}
-		>
+		<button class="btn btn-primary btn-xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
 			Add to review
 		</button>
 	</div>

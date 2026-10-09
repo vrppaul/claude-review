@@ -22,6 +22,8 @@ cd frontend && pnpm install          # Install frontend dependencies
 cd frontend && pnpm build            # Build frontend (outputs to src/claude_review/static/dist/)
 cd frontend && pnpm test             # Run frontend tests
 cd frontend && pnpm lint             # Lint frontend
+cd frontend && pnpm format           # Format frontend (src, tests, configs; .svelte too)
+cd frontend && pnpm format:check     # Fail on anything Prettier would change (the pre-commit hook runs this)
 cd frontend && pnpm check            # Type check frontend
 cd frontend && pnpm api:types        # Regenerate src/lib/types/generated/ from the server's schemas
 cd frontend && pnpm api:check        # Fail if the generated types no longer match the server (CI runs this)

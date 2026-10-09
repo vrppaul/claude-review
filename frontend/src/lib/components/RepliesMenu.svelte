@@ -39,12 +39,7 @@
 />
 
 <div class="relative" bind:this={container}>
-	<button
-		data-testid="replies-menu"
-		class="cr-chip"
-		aria-expanded={open}
-		onclick={() => (open = !open)}
-	>
+	<button data-testid="replies-menu" class="cr-chip" aria-expanded={open} onclick={() => (open = !open)}>
 		<svg
 			class="h-3.5 w-3.5"
 			viewBox="0 0 16 16"
@@ -95,7 +90,8 @@
 					</span>
 					<span class="min-w-0 flex-1">
 						<span class="flex items-baseline gap-2">
-							<span class="font-mono text-xs {review.threads.reading.isUnread(comment.id) ? '' : 'cr-muted'}"
+							<span
+								class="font-mono text-xs {review.threads.reading.isUnread(comment.id) ? '' : 'cr-muted'}"
 								style={review.threads.reading.isUnread(comment.id) ? 'color: var(--cr-mark)' : ''}
 							>
 								{anchorShortPlace(comment.anchor)}
@@ -109,7 +105,6 @@
 					Nothing new. Answers land here.
 				</p>
 			{/each}
-
 		</div>
 	{/if}
 </div>

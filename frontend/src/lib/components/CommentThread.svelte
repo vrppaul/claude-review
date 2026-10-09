@@ -30,9 +30,7 @@
 	// In a diff, the same line number exists on both sides, so the thread says
 	// which one it hangs on in the diff's own signs
 	const side = $derived(comment.anchor.kind === 'line' ? comment.anchor.side : null);
-	const sign = $derived(
-		review.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+'
-	);
+	const sign = $derived(review.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+');
 
 	/** When a turn was said, to the minute — a thread is read, not audited. */
 	function said(at: number | undefined): string {
@@ -79,8 +77,7 @@
 					answers: []
 				});
 			} else {
-				const belongsTo =
-					list.find((exchange) => exchange.id === turn.answers) ?? list[list.length - 1];
+				const belongsTo = list.find((exchange) => exchange.id === turn.answers) ?? list[list.length - 1];
 				belongsTo.answers.push(turn);
 			}
 		}
@@ -167,9 +164,10 @@
 					viewBox="0 0 12 12"
 					fill="currentColor"
 					style="color: var(--cr-add-edge)"
-					aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg>
+					aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg
+				>
 			{/if}
-<button
+			<button
 				data-testid="fold-comment"
 				class="btn btn-ghost btn-xs px-1"
 				aria-expanded={!folded}
@@ -215,8 +213,8 @@
 	{:else}
 		<!-- Looking at the thread is what makes its answer read -->
 		<div
-			class="cr-comment group rounded-r px-4 py-3 {comment.anchor.outdated ? 'cr-stale' : ''} {sentIn !==
-				undefined && !raised
+			class="cr-comment group rounded-r px-4 py-3 {comment.anchor.outdated ? 'cr-stale' : ''} {sentIn !== undefined &&
+			!raised
 				? 'cr-sent'
 				: ''} {raised ? 'cr-raised' : ''}"
 			role="presentation"
@@ -224,21 +222,21 @@
 		>
 			<div class="mb-2 flex items-center gap-2">
 				<button
-				data-testid="fold-comment"
-				class="btn btn-ghost btn-xs px-1"
-				aria-expanded={!folded}
-				aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
-				onclick={() => reading.setFolded(comment.id, !folded)}
-			>
-				<svg
-					class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
-					viewBox="0 0 12 12"
-					fill="currentColor"
-					aria-hidden="true"
+					data-testid="fold-comment"
+					class="btn btn-ghost btn-xs px-1"
+					aria-expanded={!folded}
+					aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
+					onclick={() => reading.setFolded(comment.id, !folded)}
 				>
-					<path d="M2 4l4 4 4-4z" />
-				</svg>
-			</button>
+					<svg
+						class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
+						viewBox="0 0 12 12"
+						fill="currentColor"
+						aria-hidden="true"
+					>
+						<path d="M2 4l4 4 4-4z" />
+					</svg>
+				</button>
 				{#if sign}
 					<span
 						data-testid="comment-side"
@@ -263,13 +261,7 @@
 					<span data-testid="comment-resolved" class="cr-severity cr-muted">resolved</span>
 				{/if}
 				{#if unread}
-					<span
-						data-testid="comment-unread"
-						class="text-xs"
-						style="color: var(--cr-mark)"
-					>
-						● new reply
-					</span>
+					<span data-testid="comment-unread" class="text-xs" style="color: var(--cr-mark)"> ● new reply </span>
 				{/if}
 				<div class="flex-1"></div>
 				{#if raised}
@@ -277,14 +269,8 @@
 				{:else if sentIn !== undefined}
 					<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 				{/if}
-				<div
-					class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-				>
-					<button
-						data-testid="edit-comment"
-						class="btn btn-ghost btn-xs"
-						onclick={() => (editing = true)}
-					>
+				<div class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+					<button data-testid="edit-comment" class="btn btn-ghost btn-xs" onclick={() => (editing = true)}>
 						Edit
 					</button>
 					{#if comment.resolved}
@@ -296,11 +282,7 @@
 							Reopen
 						</button>
 					{:else}
-						<button
-							data-testid="resolve-comment"
-							class="btn btn-ghost btn-xs"
-							onclick={() => resolve()}
-						>
+						<button data-testid="resolve-comment" class="btn btn-ghost btn-xs" onclick={() => resolve()}>
 							Resolve
 						</button>
 					{/if}
@@ -363,10 +345,9 @@
 									<span class="cr-tie" aria-hidden="true"></span>
 								{/if}
 								<div
-									data-testid="thread-answer" data-tour="answer"
-									class="cr-answer {unread && i === exchange.answers.length - 1
-										? 'cr-answer-new'
-										: ''}"
+									data-testid="thread-answer"
+									data-tour="answer"
+									class="cr-answer {unread && i === exchange.answers.length - 1 ? 'cr-answer-new' : ''}"
 								>
 									<p class="cr-who"><strong>Agent</strong> {said(answer.at)}</p>
 									<MarkdownRenderer text={answer.body} dense />
@@ -382,8 +363,7 @@
 								<div data-testid="awaiting-answer" data-tour="awaited-answer" class="cr-answer flex items-center gap-3">
 									<span class="cr-who"><strong>Agent</strong></span>
 									<span class="flex items-center gap-1">
-										<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"
-										></span>
+										<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
 									</span>
 									<div class="flex-1"></div>
 									<span class="cr-muted text-xs">
@@ -415,9 +395,7 @@
 					<CommentBox
 						kind="reply"
 						onSave={(body, _severity, images) => reply(body, images)}
-						onAsk={review.answerer.attached
-							? (body, _severity, images) => replyAndAsk(body, images)
-							: undefined}
+						onAsk={review.answerer.attached ? (body, _severity, images) => replyAndAsk(body, images) : undefined}
 						onCancel={() => (replying = false)}
 						severityPicker={false}
 						nested

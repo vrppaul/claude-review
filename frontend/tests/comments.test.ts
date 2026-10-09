@@ -57,9 +57,7 @@ describe('the comments of a review', () => {
 	});
 
 	it('remember which side of the diff a comment is on, so line numbers stay unambiguous', () => {
-		review.threads.add(
-			newComment({ side: 'old', startLine: 7, endLine: 9, body: 'why was this dropped' })
-		);
+		review.threads.add(newComment({ side: 'old', startLine: 7, endLine: 9, body: 'why was this dropped' }));
 
 		expect(review.threads.all[0].anchor).toMatchObject({
 			side: 'old',
@@ -89,10 +87,7 @@ describe('the comments of a review', () => {
 		review.threads.add(newComment({ file: 'b.ts', startLine: 1, body: 'comment B' }));
 		review.threads.add(newComment({ file: 'a.ts', startLine: 5, body: 'comment A2' }));
 
-		expect(review.threads.onFile('a.ts').map((comment) => comment.body)).toEqual([
-			'comment A',
-			'comment A2'
-		]);
+		expect(review.threads.onFile('a.ts').map((comment) => comment.body)).toEqual(['comment A', 'comment A2']);
 		expect(review.threads.onFile('b.ts')).toHaveLength(1);
 		expect(review.threads.onFile('c.ts')).toHaveLength(0);
 	});
@@ -153,10 +148,7 @@ describe('answered threads', () => {
 		review.threads.receiveReply(newer, 'answered last', null);
 		vi.useRealTimers();
 
-		expect(review.threads.answered.map((comment) => comment.body)).toEqual([
-			'asked second',
-			'asked first'
-		]);
+		expect(review.threads.answered.map((comment) => comment.body)).toEqual(['asked second', 'asked first']);
 	});
 });
 
@@ -176,7 +168,7 @@ describe('asking about a thread', () => {
 });
 
 describe('a thread the author raised', () => {
-	it('is not counted as the reader\'s work', () => {
+	it("is not counted as the reader's work", () => {
 		review.threads.raise(
 			'raised-1',
 			lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']),
@@ -194,12 +186,7 @@ describe('a thread the author raised', () => {
 	it('goes with the next round once the reader has answered in it', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/submit', { ...ENDED, ended: false });
-		review.threads.raise(
-			'raised-1',
-			lineAnchor('src/routes.py', 'new', 2, 2, []),
-			'I did this differently',
-			'note'
-		);
+		review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, []), 'I did this differently', 'note');
 
 		review.threads.addTurn('raised-1', { author: 'reader', body: 'Fine, but rename it', images: [] });
 		await review.submission.submit(false);
@@ -209,15 +196,10 @@ describe('a thread the author raised', () => {
 		]);
 	});
 
-	it('is handed over as the author\'s own words', async () => {
+	it("is handed over as the author's own words", async () => {
 		const server = fakeServer();
 		server.answer('POST /api/ask', null);
-		review.threads.raise(
-			'raised-1',
-			lineAnchor('src/routes.py', 'new', 2, 2, []),
-			'I kept the old name',
-			'note'
-		);
+		review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, []), 'I kept the old name', 'note');
 		review.threads.addTurn('raised-1', { author: 'reader', body: 'Why?', images: [] });
 
 		await review.threads.ask('raised-1');
@@ -324,9 +306,7 @@ describe('ending the review', () => {
 
 		review.threads.add(newComment({ body: 'test' }));
 
-		await expect(review.submission.submit(true)).rejects.toThrow(
-			`Could not send the review: ${SERVER_ERROR}`
-		);
+		await expect(review.submission.submit(true)).rejects.toThrow(`Could not send the review: ${SERVER_ERROR}`);
 		expect(review.submission.finished).toBe(false);
 	});
 });

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
 
@@ -13,131 +13,127 @@
  */
 
 @theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono:
-    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code",
-    Menlo, Consolas, monospace;
+	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
 }
 
 :root {
-  --cr-code-size: 0.8125rem;
-  --cr-code-leading: 1.55;
-  /* Comments outrank the code they annotate: they are what the review produces */
-  --cr-comment-size: 0.9375rem;
-  --cr-comment-leading: 1.6;
+	--cr-code-size: 0.8125rem;
+	--cr-code-leading: 1.55;
+	/* Comments outrank the code they annotate: they are what the review produces */
+	--cr-comment-size: 0.9375rem;
+	--cr-comment-leading: 1.6;
 }
 
-[data-theme="dark"] {
-  color-scheme: dark;
+[data-theme='dark'] {
+	color-scheme: dark;
 
-  --color-base-100: #12161c;
-  --color-base-200: #171c25;
-  --color-base-300: #232b37;
-  --color-base-content: #d9e1ec;
-  --color-neutral: #232b37;
-  --color-neutral-content: #d9e1ec;
-  --color-primary: #5b8def;
-  --color-primary-content: #0b111c;
-  --color-secondary: #c792ea;
-  --color-secondary-content: #14101c;
-  --color-accent: #5b8def;
-  --color-accent-content: #0b111c;
-  --color-info: #5b8def;
-  --color-info-content: #0b111c;
-  --color-success: #4fb865;
-  --color-success-content: #08150c;
-  --color-warning: #e0a458;
-  --color-warning-content: #1c1408;
-  --color-error: #f2545b;
-  --color-error-content: #1c0a0c;
+	--color-base-100: #12161c;
+	--color-base-200: #171c25;
+	--color-base-300: #232b37;
+	--color-base-content: #d9e1ec;
+	--color-neutral: #232b37;
+	--color-neutral-content: #d9e1ec;
+	--color-primary: #5b8def;
+	--color-primary-content: #0b111c;
+	--color-secondary: #c792ea;
+	--color-secondary-content: #14101c;
+	--color-accent: #5b8def;
+	--color-accent-content: #0b111c;
+	--color-info: #5b8def;
+	--color-info-content: #0b111c;
+	--color-success: #4fb865;
+	--color-success-content: #08150c;
+	--color-warning: #e0a458;
+	--color-warning-content: #1c1408;
+	--color-error: #f2545b;
+	--color-error-content: #1c0a0c;
 
-  --radius-selector: 0.375rem;
-  --radius-field: 0.25rem;
-  --radius-box: 0.375rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
+	--radius-selector: 0.375rem;
+	--radius-field: 0.25rem;
+	--radius-box: 0.375rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
 
-  --cr-add-edge: #3f9d54;
-  --cr-add-tint: rgb(79 184 101 / 0.09);
-  --cr-del-edge: #cf4249;
-  --cr-del-tint: rgb(242 84 91 / 0.09);
-  --cr-mark: #5b8def;
-  --cr-mark-tint: rgb(91 141 239 / 0.14);
-  /* What the tour lays over everything it is not pointing at */
-  --cr-shade: rgb(6 9 14 / 0.6);
-  --cr-raised-edge: #a68dd8;
-  --cr-gutter-fg: #7c8a9e;
-  --cr-muted: #98a5b6;
-  --cr-faint: #7a8798;
-  --cr-add-text: #59c470;
-  --cr-del-text: #ff8086;
+	--cr-add-edge: #3f9d54;
+	--cr-add-tint: rgb(79 184 101 / 0.09);
+	--cr-del-edge: #cf4249;
+	--cr-del-tint: rgb(242 84 91 / 0.09);
+	--cr-mark: #5b8def;
+	--cr-mark-tint: rgb(91 141 239 / 0.14);
+	/* What the tour lays over everything it is not pointing at */
+	--cr-shade: rgb(6 9 14 / 0.6);
+	--cr-raised-edge: #a68dd8;
+	--cr-gutter-fg: #7c8a9e;
+	--cr-muted: #98a5b6;
+	--cr-faint: #7a8798;
+	--cr-add-text: #59c470;
+	--cr-del-text: #ff8086;
 
-  --cr-syn-keyword: #c792ea;
-  --cr-syn-string: #e0a458;
-  --cr-syn-comment: #6c7a8c;
-  --cr-syn-number: #7fd3f7;
-  --cr-syn-type: #7fd3f7;
-  --cr-syn-function: #82aaff;
-  --cr-syn-variable: #d9e1ec;
-  --cr-syn-meta: #c792ea;
+	--cr-syn-keyword: #c792ea;
+	--cr-syn-string: #e0a458;
+	--cr-syn-comment: #6c7a8c;
+	--cr-syn-number: #7fd3f7;
+	--cr-syn-type: #7fd3f7;
+	--cr-syn-function: #82aaff;
+	--cr-syn-variable: #d9e1ec;
+	--cr-syn-meta: #c792ea;
 }
 
-[data-theme="light"] {
-  color-scheme: light;
+[data-theme='light'] {
+	color-scheme: light;
 
-  --color-base-100: #ffffff;
-  --color-base-200: #f4f7fa;
-  --color-base-300: #dde4ec;
-  --color-base-content: #1b2430;
-  --color-neutral: #dde4ec;
-  --color-neutral-content: #1b2430;
-  --color-primary: #2c6bd9;
-  --color-primary-content: #ffffff;
-  --color-secondary: #7c3fbf;
-  --color-secondary-content: #ffffff;
-  --color-accent: #2c6bd9;
-  --color-accent-content: #ffffff;
-  --color-info: #2c6bd9;
-  --color-info-content: #ffffff;
-  --color-success: #1f8b3a;
-  --color-success-content: #ffffff;
-  --color-warning: #9a6410;
-  --color-warning-content: #ffffff;
-  --color-error: #c8323c;
-  --color-error-content: #ffffff;
+	--color-base-100: #ffffff;
+	--color-base-200: #f4f7fa;
+	--color-base-300: #dde4ec;
+	--color-base-content: #1b2430;
+	--color-neutral: #dde4ec;
+	--color-neutral-content: #1b2430;
+	--color-primary: #2c6bd9;
+	--color-primary-content: #ffffff;
+	--color-secondary: #7c3fbf;
+	--color-secondary-content: #ffffff;
+	--color-accent: #2c6bd9;
+	--color-accent-content: #ffffff;
+	--color-info: #2c6bd9;
+	--color-info-content: #ffffff;
+	--color-success: #1f8b3a;
+	--color-success-content: #ffffff;
+	--color-warning: #9a6410;
+	--color-warning-content: #ffffff;
+	--color-error: #c8323c;
+	--color-error-content: #ffffff;
 
-  --radius-selector: 0.375rem;
-  --radius-field: 0.25rem;
-  --radius-box: 0.375rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
+	--radius-selector: 0.375rem;
+	--radius-field: 0.25rem;
+	--radius-box: 0.375rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
 
-  --cr-add-edge: #2f9e4f;
-  --cr-add-tint: rgb(31 139 58 / 0.08);
-  --cr-del-edge: #d24049;
-  --cr-del-tint: rgb(200 50 60 / 0.08);
-  --cr-mark: #2c6bd9;
-  --cr-mark-tint: rgb(44 107 217 / 0.12);
-  --cr-shade: rgb(27 36 48 / 0.45);
-  --cr-raised-edge: #6b4bb8;
-  --cr-gutter-fg: #5d6a7a;
-  --cr-muted: #4c5866;
-  --cr-faint: #5d6a7a;
-  --cr-add-text: #16702e;
-  --cr-del-text: #a5222c;
+	--cr-add-edge: #2f9e4f;
+	--cr-add-tint: rgb(31 139 58 / 0.08);
+	--cr-del-edge: #d24049;
+	--cr-del-tint: rgb(200 50 60 / 0.08);
+	--cr-mark: #2c6bd9;
+	--cr-mark-tint: rgb(44 107 217 / 0.12);
+	--cr-shade: rgb(27 36 48 / 0.45);
+	--cr-raised-edge: #6b4bb8;
+	--cr-gutter-fg: #5d6a7a;
+	--cr-muted: #4c5866;
+	--cr-faint: #5d6a7a;
+	--cr-add-text: #16702e;
+	--cr-del-text: #a5222c;
 
-  --cr-syn-keyword: #8250df;
-  --cr-syn-string: #8a5a00;
-  --cr-syn-comment: #6e7a88;
-  --cr-syn-number: #0b6e99;
-  --cr-syn-type: #0b6e99;
-  --cr-syn-function: #2c6bd9;
-  --cr-syn-variable: #1b2430;
-  --cr-syn-meta: #8250df;
+	--cr-syn-keyword: #8250df;
+	--cr-syn-string: #8a5a00;
+	--cr-syn-comment: #6e7a88;
+	--cr-syn-number: #0b6e99;
+	--cr-syn-type: #0b6e99;
+	--cr-syn-function: #2c6bd9;
+	--cr-syn-variable: #1b2430;
+	--cr-syn-meta: #8250df;
 }
 
 /*
@@ -145,42 +141,42 @@
  * both themes stay in step and neither borrows green or red from the diff.
  */
 .hljs {
-  background: transparent;
-  color: var(--cr-syn-variable);
+	background: transparent;
+	color: var(--cr-syn-variable);
 }
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-literal,
 .hljs-section {
-  color: var(--cr-syn-keyword);
+	color: var(--cr-syn-keyword);
 }
 .hljs-string,
 .hljs-regexp,
 .hljs-symbol,
 .hljs-quote,
 .hljs-addition {
-  color: var(--cr-syn-string);
+	color: var(--cr-syn-string);
 }
 .hljs-comment,
 .hljs-doctag {
-  color: var(--cr-syn-comment);
-  font-style: italic;
+	color: var(--cr-syn-comment);
+	font-style: italic;
 }
 .hljs-number,
 .hljs-bullet {
-  color: var(--cr-syn-number);
+	color: var(--cr-syn-number);
 }
 .hljs-type,
 .hljs-built_in,
 .hljs-class .hljs-title,
 .hljs-tag {
-  color: var(--cr-syn-type);
+	color: var(--cr-syn-type);
 }
 .hljs-title,
 .hljs-title.class_,
 .hljs-title.function_,
 .hljs-name {
-  color: var(--cr-syn-function);
+	color: var(--cr-syn-function);
 }
 .hljs-attr,
 .hljs-attribute,
@@ -188,20 +184,20 @@
 .hljs-template-variable,
 .hljs-params,
 .hljs-property {
-  color: var(--cr-syn-variable);
+	color: var(--cr-syn-variable);
 }
 .hljs-meta,
 .hljs-meta .hljs-keyword,
 .hljs-selector-id,
 .hljs-selector-class,
 .hljs-deletion {
-  color: var(--cr-syn-meta);
+	color: var(--cr-syn-meta);
 }
 .hljs-emphasis {
-  font-style: italic;
+	font-style: italic;
 }
 .hljs-strong {
-  font-weight: 600;
+	font-weight: 600;
 }
 
 /*
@@ -210,7 +206,7 @@
  * files all still work.
  */
 .cr-section {
-  content-visibility: auto;
+	content-visibility: auto;
 }
 
 /*
@@ -223,42 +219,42 @@
  * shifts sideways between them.
  */
 .cr-code {
-  font-size: var(--cr-code-size);
-  line-height: var(--cr-code-leading);
+	font-size: var(--cr-code-size);
+	line-height: var(--cr-code-leading);
 }
 
 .cr-row > td:first-child {
-  border-left: 2px solid transparent;
+	border-left: 2px solid transparent;
 }
 .cr-row-add {
-  background: var(--cr-add-tint);
+	background: var(--cr-add-tint);
 }
 .cr-row-add > td:first-child {
-  border-left-color: var(--cr-add-edge);
+	border-left-color: var(--cr-add-edge);
 }
 .cr-row-del {
-  background: var(--cr-del-tint);
+	background: var(--cr-del-tint);
 }
 .cr-row-del > td:first-child {
-  border-left-color: var(--cr-del-edge);
+	border-left-color: var(--cr-del-edge);
 }
 /* Selection outranks the change underneath it: it is the reader's own mark */
 .cr-row-marked {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 .cr-row-marked > td:first-child {
-  border-left-color: var(--cr-mark);
+	border-left-color: var(--cr-mark);
 }
 
 .cr-gutter {
-  color: var(--cr-gutter-fg);
-  font-variant-numeric: tabular-nums;
-  /* A wrapped line's number belongs beside its first visual line, not
+	color: var(--cr-gutter-fg);
+	font-variant-numeric: tabular-nums;
+	/* A wrapped line's number belongs beside its first visual line, not
      floating in the middle of however many lines it took */
-  vertical-align: top;
+	vertical-align: top;
 }
 .cr-sign {
-  vertical-align: top;
+	vertical-align: top;
 }
 /* The rule at the row's edge can be light; the glyphs beside it are text.
    A split row tints each side's gutter cell itself, so there the gutter
@@ -266,17 +262,17 @@
 .cr-row-add .cr-gutter,
 .cr-row-add .cr-sign,
 .cr-gutter.cr-cell-add {
-  color: var(--cr-add-text);
+	color: var(--cr-add-text);
 }
 .cr-row-del .cr-gutter,
 .cr-row-del .cr-sign,
 .cr-gutter.cr-cell-del {
-  color: var(--cr-del-text);
+	color: var(--cr-del-text);
 }
 .cr-row-marked .cr-gutter,
 .cr-row-marked .cr-sign,
 .cr-gutter.cr-cell-marked {
-  color: var(--cr-mark);
+	color: var(--cr-mark);
 }
 
 /*
@@ -289,9 +285,9 @@
  * the reader's own marks on someone else's code.
  */
 .cr-comment {
-  max-width: 96ch;
-  border-left: 2px solid var(--cr-mark);
-  background: var(--cr-mark-tint);
+	max-width: 96ch;
+	border-left: 2px solid var(--cr-mark);
+	background: var(--cr-mark-tint);
 }
 /*
  * The box being written in, told apart from the lines it is about.
@@ -303,16 +299,16 @@
  * rule the diff rows follow: mark the edge, do not wash the middle.
  */
 .cr-composing {
-  background: var(--color-base-200);
+	background: var(--color-base-200);
 }
 .cr-comment-body {
-  font-family: var(--font-sans);
-  font-size: var(--cr-comment-size);
-  line-height: var(--cr-comment-leading);
+	font-family: var(--font-sans);
+	font-size: var(--cr-comment-size);
+	line-height: var(--cr-comment-leading);
 }
 .cr-comment-ref {
-  color: var(--cr-mark);
-  font-variant-numeric: tabular-nums;
+	color: var(--cr-mark);
+	font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -321,8 +317,8 @@
  * the two-column layouts used to do, splits identifiers mid-word.
  */
 .cr-code-cell {
-  overflow-wrap: anywhere;
-  word-break: normal;
+	overflow-wrap: anywhere;
+	word-break: normal;
 }
 
 /*
@@ -336,17 +332,16 @@
 .cr-row-add,
 .cr-cell-add,
 .cr-side-add {
-  --cr-word-bg: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
+	--cr-word-bg: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
 }
 .cr-row-del,
 .cr-cell-del,
 .cr-side-del {
-  --cr-word-bg: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
+	--cr-word-bg: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
 }
 .cr-word {
-  background: linear-gradient(var(--cr-word-bg), var(--cr-word-bg)) center /
-    100% 1.2em no-repeat;
-  border-radius: 2px;
+	background: linear-gradient(var(--cr-word-bg), var(--cr-word-bg)) center / 100% 1.2em no-repeat;
+	border-radius: 2px;
 }
 
 /*
@@ -354,52 +349,52 @@
  * the edge are set per cell rather than per row.
  */
 .cr-cell-add {
-  background: var(--cr-add-tint);
+	background: var(--cr-add-tint);
 }
 .cr-cell-del {
-  background: var(--cr-del-tint);
+	background: var(--cr-del-tint);
 }
 .cr-cell-marked {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 .cr-edge {
-  border-left: 2px solid transparent;
+	border-left: 2px solid transparent;
 }
 .cr-edge-add {
-  border-left-color: var(--cr-add-edge);
+	border-left-color: var(--cr-add-edge);
 }
 .cr-edge-del {
-  border-left-color: var(--cr-del-edge);
+	border-left-color: var(--cr-del-edge);
 }
 .cr-edge-marked {
-  border-left-color: var(--cr-mark);
+	border-left-color: var(--cr-mark);
 }
 /* An absent side of a replacement: nothing was there, and it is not a gap */
 .cr-cell-absent {
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 11px,
-    var(--color-base-300) 11px,
-    var(--color-base-300) 12px
-  );
-  opacity: 0.5;
+	background: repeating-linear-gradient(
+		45deg,
+		transparent,
+		transparent 11px,
+		var(--color-base-300) 11px,
+		var(--color-base-300) 12px
+	);
+	opacity: 0.5;
 }
 
 /* Muted text carries the same weight in both themes rather than being an
    alpha of the body colour, which light loses a fifth of its contrast to. */
 .cr-muted {
-  color: var(--cr-muted);
+	color: var(--cr-muted);
 }
 .cr-faint {
-  color: var(--cr-faint);
+	color: var(--cr-faint);
 }
 
 /* One focus treatment, in the palette, so keyboard use is visible everywhere */
 :where(button, input, textarea, select, a, [tabindex]):focus-visible {
-  outline: 2px solid var(--cr-mark);
-  outline-offset: 1px;
-  box-shadow: none;
+	outline: 2px solid var(--cr-mark);
+	outline-offset: 1px;
+	box-shadow: none;
 }
 
 /*
@@ -407,61 +402,61 @@
  * track with the current chip raised rather than as rows of primary buttons.
  */
 .cr-segmented {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius-field);
-  background: var(--color-base-300);
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	border-radius: var(--radius-field);
+	background: var(--color-base-300);
 }
 .cr-segment {
-  padding: 3px 10px;
-  border-radius: calc(var(--radius-field) - 1px);
-  color: var(--cr-muted);
-  font-size: 0.6875rem;
-  line-height: 1.5;
-  white-space: nowrap;
+	padding: 3px 10px;
+	border-radius: calc(var(--radius-field) - 1px);
+	color: var(--cr-muted);
+	font-size: 0.6875rem;
+	line-height: 1.5;
+	white-space: nowrap;
 }
 .cr-segment:hover {
-  color: var(--color-base-content);
+	color: var(--color-base-content);
 }
-.cr-segment[aria-pressed="true"] {
-  background: var(--color-base-100);
-  color: var(--color-base-content);
-  font-weight: 600;
+.cr-segment[aria-pressed='true'] {
+	background: var(--color-base-100);
+	color: var(--color-base-content);
+	font-weight: 600;
 }
 
 /* A chip the whole of which is the hit target, over a 16px checkbox */
 .cr-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-field);
-  color: var(--cr-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-field);
+	color: var(--cr-muted);
+	font-size: 0.75rem;
+	cursor: pointer;
 }
 .cr-chip:hover {
-  background: var(--color-base-300);
-  color: var(--color-base-content);
+	background: var(--color-base-300);
+	color: var(--color-base-content);
 }
 .cr-chip:has(:checked) {
-  color: var(--cr-add-text);
+	color: var(--cr-add-text);
 }
 .cr-chip input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
 }
 .cr-chip:has(:focus-visible) {
-  outline: 2px solid var(--cr-mark);
-  outline-offset: 1px;
+	outline: 2px solid var(--cr-mark);
+	outline-offset: 1px;
 }
 
 /* Rendered prose gets the same measure as a comment: it is prose too */
 .cr-prose {
-  max-width: 72ch;
+	max-width: 72ch;
 }
 
 /*
@@ -471,17 +466,17 @@
  */
 .btn:disabled,
 .btn[disabled] {
-  opacity: 1;
-  background-color: var(--color-base-300);
-  color: var(--cr-muted);
-  border-color: transparent;
+	opacity: 1;
+	background-color: var(--color-base-300);
+	color: var(--cr-muted);
+	border-color: transparent;
 }
 
 /* The palette sets depth to zero, so a dialog needs its own way of reading
    as being on top of the page rather than part of it */
 .cr-dialog {
-  border: 1px solid var(--color-base-300);
-  box-shadow: 0 18px 48px rgb(0 0 0 / 0.45);
+	border: 1px solid var(--color-base-300);
+	box-shadow: 0 18px 48px rgb(0 0 0 / 0.45);
 }
 
 /*
@@ -489,17 +484,17 @@
  * button fills its cell so the target is the whole gutter, not the digits.
  */
 .cr-gutter-button {
-  display: block;
-  width: 100%;
-  padding: 0 0.5rem;
-  color: inherit;
-  text-align: right;
-  cursor: pointer;
-  font: inherit;
-  font-variant-numeric: tabular-nums;
+	display: block;
+	width: 100%;
+	padding: 0 0.5rem;
+	color: inherit;
+	text-align: right;
+	cursor: pointer;
+	font: inherit;
+	font-variant-numeric: tabular-nums;
 }
 .cr-gutter-button:hover {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 
 /*
@@ -507,21 +502,21 @@
  * asks for: a question wants an answer, a blocker has to be dealt with.
  */
 .cr-severity {
-  padding: 0 0.375rem;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  text-transform: lowercase;
+	padding: 0 0.375rem;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	font-family: var(--font-sans);
+	font-size: 0.6875rem;
+	text-transform: lowercase;
 }
 .cr-severity-question {
-  color: var(--cr-mark);
+	color: var(--cr-mark);
 }
 .cr-severity-blocker {
-  border-color: transparent;
-  background: var(--color-warning);
-  color: var(--color-warning-content);
-  font-weight: 600;
+	border-color: transparent;
+	background: var(--color-warning);
+	color: var(--color-warning-content);
+	font-weight: 600;
 }
 
 /*
@@ -530,32 +525,32 @@
  * inherit into every button inside a thread.
  */
 .cr-comment {
-  font-family: var(--font-sans);
+	font-family: var(--font-sans);
 }
 
 /* Which file the reader is in, marked the way selection is marked elsewhere */
 .cr-current {
-  background: var(--cr-mark-tint);
-  box-shadow: inset 2px 0 0 var(--cr-mark);
+	background: var(--cr-mark-tint);
+	box-shadow: inset 2px 0 0 var(--cr-mark);
 }
 
 /* A gap between hunks is a control, not a caption */
 .cr-expand {
-  color: var(--cr-mark);
-  cursor: pointer;
+	color: var(--cr-mark);
+	cursor: pointer;
 }
 .cr-expand:hover {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 .cr-expand:disabled {
-  color: var(--cr-muted);
-  cursor: default;
+	color: var(--cr-muted);
+	cursor: default;
 }
 
 /* A word mark that wraps keeps its shape on both lines */
 .cr-word {
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
 }
 
 /*
@@ -568,43 +563,43 @@
  * themes without either side being invented for the occasion.
  */
 .cr-thread {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
 }
 .cr-exchange {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4375rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4375rem;
 }
 .cr-reply {
-  position: relative;
-  padding-left: 1.5rem;
+	position: relative;
+	padding-left: 1.5rem;
 }
 .cr-tie {
-  position: absolute;
-  left: 4px;
-  top: 0;
-  width: 20px;
-  height: 17px;
-  border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
-  border-bottom: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
-  border-bottom-left-radius: 8px;
+	position: absolute;
+	left: 4px;
+	top: 0;
+	width: 20px;
+	height: 17px;
+	border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
+	border-bottom: 1.5px solid color-mix(in srgb, var(--cr-mark) 42%, transparent);
+	border-bottom-left-radius: 8px;
 }
 .cr-answer {
-  background: var(--color-base-100);
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  padding: 0.625rem 0.75rem;
+	background: var(--color-base-100);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	padding: 0.625rem 0.75rem;
 }
 /* Said once per turn, and quieter than what was said */
 .cr-who {
-  font-size: 0.6875rem;
-  color: var(--cr-faint);
+	font-size: 0.6875rem;
+	color: var(--cr-faint);
 }
 .cr-who strong {
-  font-weight: 600;
-  color: var(--color-base-content);
+	font-weight: 600;
+	color: var(--color-base-content);
 }
 
 /*
@@ -612,42 +607,42 @@
  * breathes, because a line that never changes reads as a hang.
  */
 .cr-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--cr-muted);
-  display: inline-block;
-  animation: cr-pulse 1.4s ease-in-out infinite;
+	width: 5px;
+	height: 5px;
+	border-radius: 999px;
+	background: var(--cr-muted);
+	display: inline-block;
+	animation: cr-pulse 1.4s ease-in-out infinite;
 }
 .cr-dot:nth-of-type(2) {
-  animation-delay: 0.18s;
+	animation-delay: 0.18s;
 }
 .cr-dot:nth-of-type(3) {
-  animation-delay: 0.36s;
+	animation-delay: 0.36s;
 }
 @keyframes cr-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	50% {
+		opacity: 1;
+	}
 }
 
 /* An answer lands with one tint that fades, and leaves the dot behind */
 .cr-answer-new {
-  animation: cr-land 1.8s ease-out 1;
+	animation: cr-land 1.8s ease-out 1;
 }
 @keyframes cr-land {
-  0% {
-    border-color: var(--cr-mark);
-    background: var(--cr-mark-tint);
-  }
-  100% {
-    border-color: var(--color-base-300);
-    background: var(--color-base-100);
-  }
+	0% {
+		border-color: var(--cr-mark);
+		background: var(--cr-mark-tint);
+	}
+	100% {
+		border-color: var(--color-base-300);
+		background: var(--color-base-100);
+	}
 }
 
 /*
@@ -656,49 +651,49 @@
  * are different things and must not read as the same box.
  */
 .cr-field {
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--cr-mark) 35%, transparent);
+	background: transparent;
+	border: 1px solid color-mix(in srgb, var(--cr-mark) 35%, transparent);
 }
 .cr-field:focus {
-  border-color: var(--cr-mark);
+	border-color: var(--cr-mark);
 }
 
 /* A settled thread gives back its space and its mark colour */
 .cr-resolved {
-  background: var(--color-base-200);
-  border-left: 2px solid var(--color-base-300);
+	background: var(--color-base-200);
+	border-left: 2px solid var(--color-base-300);
 }
 /* One that has lost its lines keeps its own copy of them */
 .cr-stale {
-  background: color-mix(in srgb, var(--cr-mark) 7%, transparent);
-  border-left: 2px solid var(--cr-faint);
+	background: color-mix(in srgb, var(--cr-mark) 7%, transparent);
+	border-left: 2px solid var(--cr-faint);
 }
 .cr-stale-quote {
-  background: var(--color-base-100);
-  border-left: 2px solid var(--cr-faint);
+	background: var(--color-base-100);
+	border-left: 2px solid var(--cr-faint);
 }
 
 /* Where a round ended, inside a thread that outlived it */
 .cr-round-mark {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
 }
 .cr-round-mark > span:first-child,
 .cr-round-mark > span:last-child {
-  flex-grow: 1;
-  height: 1px;
-  background: var(--color-base-300);
+	flex-grow: 1;
+	height: 1px;
+	background: var(--color-base-300);
 }
 
 /* Which side of the diff a thread hangs on, in the diff's own signs */
 .cr-sign-del {
-  color: var(--cr-del-text);
-  margin-right: 0.25rem;
+	color: var(--cr-del-text);
+	margin-right: 0.25rem;
 }
 .cr-sign-add {
-  color: var(--cr-add-text);
-  margin-right: 0.25rem;
+	color: var(--cr-add-text);
+	margin-right: 0.25rem;
 }
 
 /*
@@ -706,32 +701,32 @@
  * above the lines it puts there, marked the way the diff marks them.
  */
 .cr-suggestion {
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  overflow: hidden;
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	overflow: hidden;
 }
 .cr-sugg-row {
-  font-family: var(--font-mono);
-  font-size: var(--cr-code-size);
-  line-height: var(--cr-code-leading);
-  white-space: pre-wrap;
-  padding: 0 0.5rem;
-  border-left: 2px solid transparent;
+	font-family: var(--font-mono);
+	font-size: var(--cr-code-size);
+	line-height: var(--cr-code-leading);
+	white-space: pre-wrap;
+	padding: 0 0.5rem;
+	border-left: 2px solid transparent;
 }
 .cr-sugg-sign {
-  display: inline-block;
-  width: 1.25ch;
-  margin-right: 0.5ch;
+	display: inline-block;
+	width: 1.25ch;
+	margin-right: 0.5ch;
 }
 .cr-sugg-del {
-  background: var(--cr-del-tint);
-  border-left-color: var(--cr-del-edge);
-  color: var(--cr-del-text);
+	background: var(--cr-del-tint);
+	border-left-color: var(--cr-del-edge);
+	color: var(--cr-del-text);
 }
 .cr-sugg-add {
-  background: var(--cr-add-tint);
-  border-left-color: var(--cr-add-edge);
-  color: var(--cr-add-text);
+	background: var(--cr-add-tint);
+	border-left-color: var(--cr-add-edge);
+	color: var(--cr-add-text);
 }
 
 /*
@@ -740,17 +735,17 @@
  * hands is what the colour is for.
  */
 .cr-sent {
-  background: color-mix(in srgb, var(--cr-mark) 5%, transparent);
-  border-left-color: var(--color-base-300);
+	background: color-mix(in srgb, var(--cr-mark) 5%, transparent);
+	border-left-color: var(--color-base-300);
 }
 .cr-sent .cr-comment-ref {
-  color: var(--cr-muted);
+	color: var(--cr-muted);
 }
 
 /* Folded by hand: one line, and the first words of what was said */
 .cr-folded {
-  background: var(--color-base-200);
-  border-left: 2px solid var(--cr-mark);
+	background: var(--color-base-200);
+	border-left: 2px solid var(--cr-mark);
 }
 
 /*
@@ -763,119 +758,119 @@
  * designs.
  */
 .cr-panel {
-  position: relative;
-  background: var(--color-base-100);
+	position: relative;
+	background: var(--color-base-100);
 }
 .cr-panel-grip {
-  position: absolute;
-  inset-block: 0;
-  left: -3px;
-  width: 6px;
-  cursor: col-resize;
-  z-index: 10;
+	position: absolute;
+	inset-block: 0;
+	left: -3px;
+	width: 6px;
+	cursor: col-resize;
+	z-index: 10;
 }
 .cr-panel-grip:hover,
 .cr-panel-grip:focus-visible {
-  background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-  outline: none;
+	background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
+	outline: none;
 }
 /* An image in the panel: small enough to keep the words beside it in view */
 .cr-image-thumb {
-  width: 4rem;
-  height: 4rem;
-  object-fit: cover;
-  border-radius: var(--radius-field);
-  border: 1px solid var(--color-base-300);
+	width: 4rem;
+	height: 4rem;
+	object-fit: cover;
+	border-radius: var(--radius-field);
+	border: 1px solid var(--color-base-300);
 }
 .cr-image-attached {
-  position: relative;
-  display: inline-flex;
+	position: relative;
+	display: inline-flex;
 }
 .cr-image-detach {
-  position: absolute;
-  top: -0.375rem;
-  right: -0.375rem;
-  width: 1rem;
-  height: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-base-300);
-  font-size: 0.6875rem;
-  line-height: 1;
+	position: absolute;
+	top: -0.375rem;
+	right: -0.375rem;
+	width: 1rem;
+	height: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-base-300);
+	font-size: 0.6875rem;
+	line-height: 1;
 }
 .cr-image-pending {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 /* An image the server no longer has, said in words rather than a broken icon */
 .cr-image-lost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
-  font-size: 0.625rem;
-  line-height: 1.2;
-  text-align: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.25rem;
+	font-size: 0.625rem;
+	line-height: 1.2;
+	text-align: center;
 }
 
 .cr-panel-said {
-  background: var(--cr-mark-tint);
-  border-left: 2px solid var(--cr-mark);
+	background: var(--cr-mark-tint);
+	border-left: 2px solid var(--cr-mark);
 }
 
 /* A measurement, said quietly and once */
 .cr-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.0625rem 0.375rem;
-  border-radius: var(--radius-field);
-  background: var(--color-base-200);
-  color: var(--cr-faint);
-  font-size: 0.6875rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.0625rem 0.375rem;
+	border-radius: var(--radius-field);
+	background: var(--color-base-200);
+	color: var(--cr-faint);
+	font-size: 0.6875rem;
 }
 
 /* A thread named in a message, and a way back to it */
 .cr-thread-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.125rem;
-  padding: 0.0625rem 0.375rem;
-  border-radius: var(--radius-field);
-  background: color-mix(in srgb, var(--cr-mark) 18%, transparent);
-  color: var(--cr-mark);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	padding: 0.0625rem 0.375rem;
+	border-radius: var(--radius-field);
+	background: color-mix(in srgb, var(--cr-mark) 18%, transparent);
+	color: var(--cr-mark);
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
 }
 .cr-thread-chip:hover {
-  background: color-mix(in srgb, var(--cr-mark) 28%, transparent);
+	background: color-mix(in srgb, var(--cr-mark) 28%, transparent);
 }
 
 /* Typing @ opens the threads, in the order they appear in the diff */
 .cr-picker {
-  position: absolute;
-  bottom: calc(100% - 0.5rem);
-  left: 0.75rem;
-  right: 0.75rem;
-  max-height: 15rem;
-  overflow-y: auto;
-  z-index: 20;
-  background: var(--color-base-100);
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.18);
+	position: absolute;
+	bottom: calc(100% - 0.5rem);
+	left: 0.75rem;
+	right: 0.75rem;
+	max-height: 15rem;
+	overflow-y: auto;
+	z-index: 20;
+	background: var(--color-base-100);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	box-shadow: 0 10px 24px rgb(0 0 0 / 0.18);
 }
 .cr-picker-row {
-  display: block;
-  width: 100%;
-  padding: 0.375rem 0.625rem;
-  text-align: left;
+	display: block;
+	width: 100%;
+	padding: 0.375rem 0.625rem;
+	text-align: left;
 }
 .cr-picker-row:hover,
 .cr-picker-on {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 
 /*
@@ -885,19 +880,19 @@
  * tree moving, the second is the reader's doing.
  */
 .cr-notice {
-  color: var(--color-base-content);
+	color: var(--color-base-content);
 }
 .cr-notice-moved {
-  background: color-mix(in srgb, var(--cr-syn-string) 14%, transparent);
+	background: color-mix(in srgb, var(--cr-syn-string) 14%, transparent);
 }
 .cr-notice-moved svg {
-  color: var(--cr-syn-string);
+	color: var(--cr-syn-string);
 }
 .cr-notice-taken {
-  background: color-mix(in srgb, var(--cr-mark) 10%, transparent);
+	background: color-mix(in srgb, var(--cr-mark) 10%, transparent);
 }
 .cr-notice-taken svg {
-  color: var(--cr-mark);
+	color: var(--cr-mark);
 }
 
 /*
@@ -909,35 +904,35 @@
  * and the tree notice owns amber.
  */
 .cr-raised {
-  background: color-mix(in srgb, var(--cr-raised-edge) 12%, transparent);
-  border-left-color: var(--cr-raised-edge);
+	background: color-mix(in srgb, var(--cr-raised-edge) 12%, transparent);
+	border-left-color: var(--cr-raised-edge);
 }
 .cr-raised .cr-comment-ref {
-  color: var(--cr-raised-edge);
+	color: var(--cr-raised-edge);
 }
 .cr-raised .cr-field {
-  border-color: color-mix(in srgb, var(--cr-raised-edge) 35%, transparent);
+	border-color: color-mix(in srgb, var(--cr-raised-edge) 35%, transparent);
 }
 .cr-raised .cr-tie {
-  border-color: color-mix(in srgb, var(--cr-raised-edge) 42%, transparent);
+	border-color: color-mix(in srgb, var(--cr-raised-edge) 42%, transparent);
 }
 .cr-raised-tag {
-  color: var(--cr-raised-edge);
+	color: var(--cr-raised-edge);
 }
 
 /* The file tree's own edge, mirroring the panel's */
 .cr-tree-grip {
-  position: absolute;
-  inset-block: 0;
-  right: -3px;
-  width: 6px;
-  cursor: col-resize;
-  z-index: 10;
+	position: absolute;
+	inset-block: 0;
+	right: -3px;
+	width: 6px;
+	cursor: col-resize;
+	z-index: 10;
 }
 .cr-tree-grip:hover,
 .cr-tree-grip:focus-visible {
-  background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-  outline: none;
+	background: color-mix(in srgb, var(--cr-mark) 45%, transparent);
+	outline: none;
 }
 
 /*
@@ -947,9 +942,9 @@
  * state of the work, and it will be gone by the time the answer arrives.
  */
 .cr-progress {
-  color: var(--cr-muted);
-  margin: 0;
-  line-height: 1.5;
+	color: var(--cr-muted);
+	margin: 0;
+	line-height: 1.5;
 }
 
 /*
@@ -962,48 +957,48 @@
  * cannot clip it.
  */
 .cr-marked {
-  outline: 2px solid transparent;
-  outline-offset: -2px;
-  animation: cr-mark-file 2s ease-out 1;
+	outline: 2px solid transparent;
+	outline-offset: -2px;
+	animation: cr-mark-file 2s ease-out 1;
 }
 @keyframes cr-mark-file {
-  0%,
-  35% {
-    outline-color: var(--cr-mark);
-    background: var(--cr-mark-tint);
-  }
-  100% {
-    outline-color: transparent;
-    background: transparent;
-  }
+	0%,
+	35% {
+		outline-color: var(--cr-mark);
+		background: var(--cr-mark-tint);
+	}
+	100% {
+		outline-color: transparent;
+		background: transparent;
+	}
 }
 
 /* What the file tree leaves behind when it is put away */
 .cr-tree-rail {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 0.75rem;
-  width: 1.5rem;
-  flex-shrink: 0;
-  border-right: 1px solid var(--color-base-300);
-  background: var(--color-base-100);
-  color: var(--cr-faint);
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: 0.75rem;
+	width: 1.5rem;
+	flex-shrink: 0;
+	border-right: 1px solid var(--color-base-300);
+	background: var(--color-base-100);
+	color: var(--cr-faint);
 }
 .cr-tree-rail:hover {
-  background: var(--color-base-200);
-  color: var(--color-base-content);
+	background: var(--color-base-200);
+	color: var(--color-base-content);
 }
 
 /* A small pane under the button that opened it, rather than a full stop */
 .cr-popover {
-  background: var(--color-base-100);
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  box-shadow: 0 18px 44px rgb(0 0 0 / 0.22);
+	background: var(--color-base-100);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	box-shadow: 0 18px 44px rgb(0 0 0 / 0.22);
 }
 .cr-finish-row:hover {
-  background: var(--cr-mark-tint);
+	background: var(--cr-mark-tint);
 }
 
 /*
@@ -1014,249 +1009,249 @@
  * one says for itself whether it is still running.
  */
 .cr-branches {
-  margin: 0.125rem 0 0;
-  padding: 0;
-  list-style: none;
-  border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 30%, transparent);
-  margin-left: 0.3125rem;
+	margin: 0.125rem 0 0;
+	padding: 0;
+	list-style: none;
+	border-left: 1.5px solid color-mix(in srgb, var(--cr-mark) 30%, transparent);
+	margin-left: 0.3125rem;
 }
 .cr-branch {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 0.375rem;
-  padding: 0.0625rem 0 0.0625rem 0.75rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--cr-muted);
+	position: relative;
+	display: flex;
+	align-items: baseline;
+	gap: 0.375rem;
+	padding: 0.0625rem 0 0.0625rem 0.75rem;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--cr-muted);
 }
 /* The tick that joins a branch to the rail */
 .cr-branch::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.6875rem;
-  width: 0.5rem;
-  height: 1.5px;
-  background: color-mix(in srgb, var(--cr-mark) 30%, transparent);
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.6875rem;
+	width: 0.5rem;
+	height: 1.5px;
+	background: color-mix(in srgb, var(--cr-mark) 30%, transparent);
 }
 .cr-branch-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 0.75rem;
-  height: 0.75rem;
-  flex-shrink: 0;
-  color: var(--cr-add-edge);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 0.75rem;
+	height: 0.75rem;
+	flex-shrink: 0;
+	color: var(--cr-add-edge);
 }
 .cr-branch-done {
-  color: var(--cr-faint);
+	color: var(--cr-faint);
 }
 
 /* The guide: one card bottom left, and a light over what it talks about */
 .cr-guide-card {
-  position: fixed;
-  left: 1rem;
-  bottom: 1rem;
-  z-index: 60;
-  width: 21.5rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem 1.125rem;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-  border-radius: 0.5rem;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+	position: fixed;
+	left: 1rem;
+	bottom: 1rem;
+	z-index: 60;
+	width: 21.5rem;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 1rem 1.125rem;
+	background: var(--color-base-200);
+	border: 1px solid var(--color-base-300);
+	border-radius: 0.5rem;
+	box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
 }
 .cr-guide-body {
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--cr-muted);
+	font-size: 0.8125rem;
+	line-height: 1.55;
+	color: var(--cr-muted);
 }
 /* The light is a hole in a shade: a ring round what it points at, and a
    shadow spread far enough to cover any screen. Above the review and its
    sticky headers (z 10–20), below every list and popover the reader can
    open (z 30 and up), so what they open is never dimmed. */
 .cr-guide-spot {
-  position: fixed;
-  z-index: 25;
-  pointer-events: none;
-  border-radius: var(--radius-box);
-  box-shadow:
-    0 0 0 2px var(--cr-mark),
-    0 0 0 9999px var(--cr-shade);
+	position: fixed;
+	z-index: 25;
+	pointer-events: none;
+	border-radius: var(--radius-box);
+	box-shadow:
+		0 0 0 2px var(--cr-mark),
+		0 0 0 9999px var(--cr-shade);
 }
 /* Only between steps: while the page scrolls under one, it keeps up */
 .cr-guide-spot-gliding {
-  transition:
-    left var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
-    top var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
-    width var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
-    height var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
+	transition:
+		left var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
+		top var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
+		width var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
+		height var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  .cr-guide-spot-gliding {
-    transition: none;
-  }
+	.cr-guide-spot-gliding {
+		transition: none;
+	}
 }
 .cr-guide-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+	font-size: 0.9375rem;
+	font-weight: 600;
 }
 .cr-guide-compass {
-  width: 1.25rem;
-  height: 1.25rem;
-  fill: none;
-  stroke: var(--cr-mark);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+	width: 1.25rem;
+	height: 1.25rem;
+	fill: none;
+	stroke: var(--cr-mark);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 .cr-guide-tick {
-  display: block;
-  width: 0.75rem;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-base-300);
+	display: block;
+	width: 0.75rem;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--color-base-300);
 }
 .cr-guide-tick-done {
-  background: var(--cr-mark);
+	background: var(--cr-mark);
 }
 /* One way a choice can go: its button's look, and what follows from it */
 .cr-guide-fork {
-  display: grid;
-  grid-template-columns: 6rem minmax(0, 1fr);
-  column-gap: 0.625rem;
-  align-items: start;
+	display: grid;
+	grid-template-columns: 6rem minmax(0, 1fr);
+	column-gap: 0.625rem;
+	align-items: start;
 }
 .cr-guide-route {
-  justify-self: start;
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-field);
-  border: 1px solid var(--color-base-300);
-  font-size: 0.75rem;
-  font-weight: 600;
+	justify-self: start;
+	padding: 0.125rem 0.5rem;
+	border-radius: var(--radius-field);
+	border: 1px solid var(--color-base-300);
+	font-size: 0.75rem;
+	font-weight: 600;
 }
 .cr-guide-route-primary {
-  border-color: var(--cr-mark);
-  background: var(--cr-mark);
-  color: var(--color-primary-content);
+	border-color: var(--cr-mark);
+	background: var(--cr-mark);
+	color: var(--color-primary-content);
 }
 .cr-guide-hint {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--cr-mark);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.75rem;
+	color: var(--cr-mark);
 }
 .cr-guide-hint-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: var(--cr-mark);
+	width: 6px;
+	height: 6px;
+	border-radius: 9999px;
+	background: var(--cr-mark);
 }
 .cr-guide-release {
-  padding: 0 0.375rem;
-  border-radius: var(--radius-field);
-  background: var(--cr-mark-tint);
-  color: var(--cr-mark);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+	padding: 0 0.375rem;
+	border-radius: var(--radius-field);
+	background: var(--cr-mark-tint);
+	color: var(--cr-mark);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
 }
 .cr-guide-key {
-  padding: 0 0.3rem;
-  border: 1px solid var(--color-base-300);
-  border-radius: 3px;
-  font-family: var(--font-mono);
+	padding: 0 0.3rem;
+	border: 1px solid var(--color-base-300);
+	border-radius: 3px;
+	font-family: var(--font-mono);
 }
 .cr-guide-link {
-  font-size: 0.8125rem;
-  color: var(--cr-mark);
+	font-size: 0.8125rem;
+	color: var(--cr-mark);
 }
 .cr-guide-entry {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-box);
-  font-size: 0.8125rem;
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: var(--radius-box);
+	font-size: 0.8125rem;
 }
 .cr-guide-entry:hover,
 .cr-guide-entry-lead {
-  background: var(--color-base-200);
+	background: var(--color-base-200);
 }
 .cr-guide-plus {
-  width: 1.125rem;
-  height: 1.125rem;
-  fill: none;
-  stroke: var(--cr-muted);
-  stroke-width: 1.5;
-  stroke-linecap: round;
+	width: 1.125rem;
+	height: 1.125rem;
+	fill: none;
+	stroke: var(--cr-muted);
+	stroke-width: 1.5;
+	stroke-linecap: round;
 }
 /* What is new, shown rather than told: a file, or a drawing in the theme */
 .cr-news-image {
-  display: block;
-  width: 100%;
-  border-radius: var(--radius-box);
-  border: 1px solid var(--color-base-300);
+	display: block;
+	width: 100%;
+	border-radius: var(--radius-box);
+	border: 1px solid var(--color-base-300);
 }
 .cr-illustration {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.625rem;
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  background: var(--color-base-100);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.625rem;
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	background: var(--color-base-100);
 }
 .cr-illustration-thumb {
-  position: relative;
-  width: 3.5rem;
-  height: 2.5rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0.375rem;
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-field);
-  background: var(--color-base-200);
+	position: relative;
+	width: 3.5rem;
+	height: 2.5rem;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 0.375rem;
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-field);
+	background: var(--color-base-200);
 }
 .cr-illustration-line {
-  display: block;
-  height: 3px;
-  width: 90%;
-  border-radius: 2px;
-  background: var(--cr-gutter-fg);
+	display: block;
+	height: 3px;
+	width: 90%;
+	border-radius: 2px;
+	background: var(--cr-gutter-fg);
 }
 .cr-illustration-line-added {
-  width: 70%;
-  background: var(--cr-add-edge);
+	width: 70%;
+	background: var(--cr-add-edge);
 }
 .cr-illustration-line-short {
-  width: 55%;
+	width: 55%;
 }
 .cr-illustration-detach {
-  position: absolute;
-  top: -0.375rem;
-  right: -0.375rem;
-  width: 0.875rem;
-  height: 0.875rem;
-  border-radius: 9999px;
-  background: var(--color-base-300);
-  font-size: 0.625rem;
-  line-height: 0.875rem;
-  text-align: center;
+	position: absolute;
+	top: -0.375rem;
+	right: -0.375rem;
+	width: 0.875rem;
+	height: 0.875rem;
+	border-radius: 9999px;
+	background: var(--color-base-300);
+	font-size: 0.625rem;
+	line-height: 0.875rem;
+	text-align: center;
 }
 .cr-illustration-field {
-  height: 1.75rem;
-  display: flex;
-  align-items: center;
-  padding: 0 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--cr-mark) 35%, transparent);
-  border-radius: var(--radius-field);
-  font-size: 0.75rem;
-  color: var(--cr-faint);
+	height: 1.75rem;
+	display: flex;
+	align-items: center;
+	padding: 0 0.5rem;
+	border: 1px solid color-mix(in srgb, var(--cr-mark) 35%, transparent);
+	border-radius: var(--radius-field);
+	font-size: 0.75rem;
+	color: var(--cr-faint);
 }

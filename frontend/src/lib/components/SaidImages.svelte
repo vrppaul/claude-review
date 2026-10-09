@@ -19,9 +19,7 @@
 	<div class="mt-2 flex flex-wrap gap-2">
 		{#each images as imageId (imageId)}
 			{#if lost.has(imageId)}
-				<span data-testid="lost-image" class="cr-image-thumb cr-image-lost cr-faint">
-					can no longer be shown
-				</span>
+				<span data-testid="lost-image" class="cr-image-thumb cr-image-lost cr-faint"> can no longer be shown </span>
 			{:else}
 				<a data-testid="said-image" href={imageUrl(imageId)} target="_blank" rel="noopener noreferrer">
 					<img

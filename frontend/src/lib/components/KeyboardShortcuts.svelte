@@ -65,9 +65,7 @@
 	 */
 	function talkToAgent() {
 		review.layout.agentPanel.setOpen(true);
-		requestAnimationFrame(() =>
-			document.querySelector<HTMLTextAreaElement>('[data-testid="panel-input"]')?.focus()
-		);
+		requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('[data-testid="panel-input"]')?.focus());
 	}
 
 	function actOnCurrentFile(act: (path: string) => void) {

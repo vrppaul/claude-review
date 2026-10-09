@@ -83,16 +83,12 @@ describe('the panel talks to the agent about the review', () => {
 		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
 		const thread = review.threads.all[0];
 
-		expect(
-			threadsIn(`Look at ${anchorToken(thread.anchor)} again`, review.threads.all)
-		).toHaveLength(1);
+		expect(threadsIn(`Look at ${anchorToken(thread.anchor)} again`, review.threads.all)).toHaveLength(1);
 		expect(threadsIn('Look at it again', review.threads.all)).toHaveLength(0);
 	});
 
 	it('does not mistake one range for a longer one that starts the same', () => {
-		review.threads.add(
-			newComment({ file: 'src/routes.py', startLine: 1, endLine: 2, body: 'the short one' })
-		);
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 1, endLine: 2, body: 'the short one' }));
 		const short = review.threads.all[0];
 
 		expect(threadsIn('@src/routes.py:1-20 is the other one', [short])).toHaveLength(0);

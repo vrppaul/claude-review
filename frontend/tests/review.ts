@@ -59,10 +59,7 @@ export function openReview({ files = [], facts, diff, settings = new Settings() 
 
 /** The options a component drawn on its own needs to be drawn inside this review. */
 export function inReview(review: Review): { context: Map<symbol, Review> };
-export function inReview<Props>(
-	review: Review,
-	props: Props
-): { props: Props; context: Map<symbol, Review> };
+export function inReview<Props>(review: Review, props: Props): { props: Props; context: Map<symbol, Review> };
 export function inReview<Props>(review: Review, props?: Props) {
 	const context = reviewContext(review);
 	return props === undefined ? { context } : { props, context };

@@ -24,7 +24,6 @@ function text(element: HTMLElement): string {
 }
 
 describe('when the tree moves under the review', () => {
-
 	it('says so, and leaves the taking to the reader', () => {
 		review.diff.treeMoved.note(3);
 
@@ -65,7 +64,11 @@ describe('when the tree moves under the review', () => {
 	it('takes the diff again when the reader asks for it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
-		server.answer('POST /api/retake', { file_count: 1, round: 2, changes: { since_round: 1, base_key: 'round:1', paths: [] } });
+		server.answer('POST /api/retake', {
+			file_count: 1,
+			round: 2,
+			changes: { since_round: 1, base_key: 'round:1', paths: [] }
+		});
 		review.diff.treeMoved.note(1);
 
 		const { getByTestId } = render(DiffNotice, inReview(review));
@@ -120,14 +123,11 @@ describe('when the tree moves under the review', () => {
 });
 
 describe('threads the base on screen cannot draw', () => {
-
 	it('lists them, so a count is not the end of the road', async () => {
 		const user = userEvent.setup({ delay: null });
 		serveNarrowed();
 		await review.diff.setBase('round:1');
-		review.threads.add(
-			newComment({ file: 'elsewhere.py', startLine: 12, body: 'this one is not on this screen' })
-		);
+		review.threads.add(newComment({ file: 'elsewhere.py', startLine: 12, body: 'this one is not on this screen' }));
 
 		const { getByTestId } = render(DiffNotice, inReview(review));
 		expect(text(getByTestId('narrowed-to'))).toContain('1 thread is not on this screen');

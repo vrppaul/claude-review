@@ -7,9 +7,7 @@
 
 	let { file }: Props = $props();
 
-	const modeChange = $derived(
-		file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null
-	);
+	const modeChange = $derived(file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null);
 	// A file can change without producing lines: binary content, or a bare
 	// permission change. Say which, rather than showing an empty panel.
 	const emptyReason = $derived(
@@ -25,10 +23,7 @@
 
 <!-- What the lines cannot show, above whichever way the lines are drawn -->
 {#if modeChange}
-	<div
-		data-testid="mode-change-note"
-		class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs"
-	>
+	<div data-testid="mode-change-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs">
 		Permission changed: {modeChange}
 	</div>
 {/if}

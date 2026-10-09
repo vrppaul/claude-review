@@ -87,8 +87,7 @@ describe('marking words in highlighted code', () => {
 		const result = markRanges(html, [[0, 3]]);
 
 		expect(result).toBe(
-			'<span class="cr-word">a</span><span class="hljs-string">' +
-				'<span class="cr-word">bc</span></span>d'
+			'<span class="cr-word">a</span><span class="hljs-string">' + '<span class="cr-word">bc</span></span>d'
 		);
 	});
 
@@ -118,12 +117,7 @@ describe('word marks across a hunk', () => {
 	});
 
 	it('pairs each removal with the addition opposite it in the run', () => {
-		const lines = [
-			removedLine(1, 'a = 1'),
-			removedLine(2, 'b = 2'),
-			addedLine(1, 'a = 9'),
-			addedLine(2, 'b = 8')
-		];
+		const lines = [removedLine(1, 'a = 1'), removedLine(2, 'b = 2'), addedLine(1, 'a = 9'), addedLine(2, 'b = 8')];
 		const html = ['a = 1', 'b = 2', 'a = 9', 'b = 8'];
 
 		const marked = applyWordMarks(lines, html);

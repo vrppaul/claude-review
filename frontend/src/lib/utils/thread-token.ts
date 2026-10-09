@@ -8,10 +8,10 @@
  * longer mention.
  */
 
-import type { Thread } from "$lib/types";
-import { anchorMentionedIn } from "$lib/anchors/views";
+import type { Thread } from '$lib/types';
+import { anchorMentionedIn } from '$lib/anchors/views';
 
 /** The threads a message points at, as its text stands right now. */
 export function threadsIn(text: string, threads: Thread[]): Thread[] {
-  return threads.filter((thread) => anchorMentionedIn(text, thread.anchor));
+	return threads.filter((thread) => anchorMentionedIn(text, thread.anchor));
 }

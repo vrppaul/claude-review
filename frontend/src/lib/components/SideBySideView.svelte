@@ -39,18 +39,10 @@
 </script>
 
 <div data-testid="side-by-side-view" class="flex min-h-0 flex-1">
-	<div
-		bind:this={leftPane}
-		class="w-1/2 overflow-auto border-r border-base-300"
-		onscroll={() => syncScroll('left')}
-	>
+	<div bind:this={leftPane} class="w-1/2 overflow-auto border-r border-base-300" onscroll={() => syncScroll('left')}>
 		<RawView {file} {language} />
 	</div>
-	<div
-		bind:this={rightPane}
-		class="w-1/2 overflow-auto p-4"
-		onscroll={() => syncScroll('right')}
-	>
+	<div bind:this={rightPane} class="w-1/2 overflow-auto p-4" onscroll={() => syncScroll('right')}>
 		<MarkdownRenderer text={renderedText} />
 	</div>
 </div>

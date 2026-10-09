@@ -16,7 +16,10 @@ beforeEach(() => {
 describe('a comment field', () => {
 	it('saves what was written, without the spaces around it', async () => {
 		const onSave = vi.fn();
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' })
+		);
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
 		await userEvent.type(input, '  Fix this  ');
@@ -41,13 +44,19 @@ describe('a comment field', () => {
 	});
 
 	it('says where the comment hangs', () => {
-		const { getByText } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' }));
+		const { getByText } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' })
+		);
 
 		expect(getByText('Lines 10-15')).toBeTruthy();
 	});
 
 	it('reopens with what the comment already says', () => {
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'existing text' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'existing text' })
+		);
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
 		expect(input.value).toBe('existing text');
@@ -57,13 +66,16 @@ describe('a comment field', () => {
 describe('suggesting a replacement', () => {
 	it('starts the suggestion from the lines being commented on', async () => {
 		const user = userEvent.setup();
-		const { getByTestId } = render(CommentBox, inReview(review, {
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, {
 				kind: 'new',
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Lines 3',
 				suggestFrom: ['    if x:', '        return 1']
-			}));
+			})
+		);
 
 		await user.click(getByTestId('suggest-change'));
 
@@ -73,13 +85,16 @@ describe('suggesting a replacement', () => {
 
 	it('keeps what was already written above the suggestion', async () => {
 		const user = userEvent.setup();
-		const { getByTestId } = render(CommentBox, inReview(review, {
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, {
 				kind: 'new',
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Line 3',
 				suggestFrom: ['x = 1']
-			}));
+			})
+		);
 
 		await user.type(getByTestId('comment-input'), 'Name it after the unit');
 		await user.click(getByTestId('suggest-change'));
@@ -89,14 +104,20 @@ describe('suggesting a replacement', () => {
 	});
 
 	it('offers nothing to suggest when no lines were given', () => {
-		const { queryByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' }));
+		const { queryByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' })
+		);
 
 		expect(queryByTestId('suggest-change')).toBeNull();
 	});
 
 	it('will not start a second suggestion in one comment', async () => {
 		const user = userEvent.setup();
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3', suggestFrom: ['x = 1'] }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3', suggestFrom: ['x = 1'] })
+		);
 
 		await user.click(getByTestId('suggest-change'));
 
@@ -108,7 +129,10 @@ describe('how a comment is meant', () => {
 	it('is an ordinary note unless said otherwise', async () => {
 		const user = userEvent.setup();
 		const onSave = vi.fn();
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' })
+		);
 
 		await user.type(getByTestId('comment-input'), 'Reads well');
 		await user.click(getByTestId('save-comment'));
@@ -119,7 +143,10 @@ describe('how a comment is meant', () => {
 	it('can be marked as a question', async () => {
 		const user = userEvent.setup();
 		const onSave = vi.fn();
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' })
+		);
 
 		await user.click(getByTestId('severity-question'));
 		await user.type(getByTestId('comment-input'), 'Is this reachable?');
@@ -129,20 +156,25 @@ describe('how a comment is meant', () => {
 	});
 
 	it('reopens for editing with the mark it was saved under', async () => {
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1', initialSeverity: 'blocker' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1', initialSeverity: 'blocker' })
+		);
 
 		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
 	});
 });
 
 describe('images in a comment', () => {
-	beforeEach(() => {
-	});
+	beforeEach(() => {});
 
 	it('saves a pasted screenshot as the whole comment', async () => {
 		keepingImages();
 		const onSave = vi.fn();
-		const { getByTestId, findByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' }));
+		const { getByTestId, findByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' })
+		);
 
 		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
@@ -154,7 +186,10 @@ describe('images in a comment', () => {
 	it('lets the server drop what was pasted when the field closes unsent', async () => {
 		// Cancel, a click on another line, a folded thread: each closes the field
 		const server = keepingImages();
-		const { getByTestId, findByTestId, unmount } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }));
+		const { getByTestId, findByTestId, unmount } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
+		);
 
 		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
@@ -168,7 +203,10 @@ describe('images in a comment', () => {
 
 	it('keeps what was pasted once the comment is saved', async () => {
 		const server = keepingImages();
-		const { getByTestId, findByTestId, unmount } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }));
+		const { getByTestId, findByTestId, unmount } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
+		);
 
 		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
@@ -180,7 +218,16 @@ describe('images in a comment', () => {
 
 	it('leaves the images a comment already had when an edit closes unsent', async () => {
 		const server = keepingImages();
-		const { unmount } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'This', initialImages: ['kept.png'] }));
+		const { unmount } = render(
+			CommentBox,
+			inReview(review, {
+				kind: 'new',
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				initialBody: 'This',
+				initialImages: ['kept.png']
+			})
+		);
 
 		unmount();
 
@@ -191,7 +238,10 @@ describe('images in a comment', () => {
 describe('what a comment field says happened to it', () => {
 	it('says it opened, and what became of it, naming which kind of field it is', async () => {
 		const report = vi.spyOn(review.commentFields, 'report');
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
+		);
 
 		await userEvent.type(getByTestId('comment-input'), 'Fix this');
 		await userEvent.click(getByTestId('save-comment'));

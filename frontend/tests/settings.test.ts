@@ -1,13 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { Settings } from '$lib/reader/settings.svelte';
 import type { ReaderSettings } from '$lib/types';
-import {
-	fakeServer,
-	keepingSettings,
-	NEW_READER,
-	SERVER_ERROR,
-	type FakeServer
-} from './fake-server';
+import { fakeServer, keepingSettings, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 
 // The names this browser kept choices under before the server kept them.
 // The theme's is also where the first paint reads it, before the server answers.
@@ -99,9 +93,7 @@ describe('the reader settings', () => {
 
 		await settings.load();
 
-		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
-			{ ...NEW_READER, ignore_whitespace: true }
-		]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NEW_READER, ignore_whitespace: true }]);
 	});
 
 	it('hand nothing over when this browser kept nothing', async () => {

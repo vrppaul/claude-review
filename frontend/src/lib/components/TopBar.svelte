@@ -25,10 +25,7 @@
 	}
 </script>
 
-<header
-	data-testid="top-bar"
-	class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4"
->
+<header data-testid="top-bar" class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4">
 	<span class="font-semibold">Review</span>
 	<!-- The ? key may belong to a browser extension, so the list has a button too -->
 	<button
@@ -54,7 +51,14 @@
 					title="Show whitespace changes again"
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
-					<svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+					<svg
+						class="h-2.5 w-2.5"
+						viewBox="0 0 12 12"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						aria-hidden="true"
+					>
 						<path d="M3 3l6 6M9 3l-6 6" />
 					</svg>
 				</button>
@@ -113,7 +117,8 @@
 	{/if}
 
 	<button
-		data-testid="toggle-panel" data-tour="agent-panel-toggle"
+		data-testid="toggle-panel"
+		data-tour="agent-panel-toggle"
 		class="cr-chip"
 		aria-pressed={review.layout.agentPanel.open}
 		title="The agent panel — talk about the review, not one line of it"
@@ -132,7 +137,8 @@
 	<!-- One door: what has been written, a summary, and the two ways out -->
 	<button
 		class="btn btn-primary btn-sm"
-		data-testid="quick-submit" data-tour="send"
+		data-testid="quick-submit"
+		data-tour="send"
 		disabled={submitting}
 		onclick={onOpenModal}
 		title="Ctrl+Shift+Enter"

@@ -28,9 +28,7 @@ const file = diffFile({
 
 /** The row of the two columns that holds this text, on either side. */
 function rowHolding(text: string): HTMLElement {
-	const row = screen
-		.getAllByTestId('split-row')
-		.find((candidate) => candidate.textContent?.includes(text));
+	const row = screen.getAllByTestId('split-row').find((candidate) => candidate.textContent?.includes(text));
 	if (!row) throw new Error(`No row holds ${text}`);
 	return row;
 }
@@ -130,11 +128,7 @@ describe('reaching every row from the keyboard in two columns', () => {
 	const removal = diffFile({
 		path: 'src/gone.ts',
 		hunks: [
-			hunk([
-				contextLine(1, 1, 'const a = 1;'),
-				removedLine(2, 'const b = 2;'),
-				contextLine(3, 2, 'const c = 3;')
-			])
+			hunk([contextLine(1, 1, 'const a = 1;'), removedLine(2, 'const b = 2;'), contextLine(3, 2, 'const c = 3;')])
 		]
 	});
 

@@ -154,7 +154,7 @@ describe('a thread the base on screen cannot draw', () => {
 	});
 });
 
-describe('a base that is not the review\'s own', () => {
+describe("a base that is not the review's own", () => {
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
 		await review.diff.setBase('round:1');

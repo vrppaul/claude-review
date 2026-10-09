@@ -12,30 +12,28 @@
  * too, but it is not the one being read.
  */
 export function observeFilesInView(
-  container: HTMLElement,
-  onChange: (visiblePaths: ReadonlySet<string>) => void,
+	container: HTMLElement,
+	onChange: (visiblePaths: ReadonlySet<string>) => void
 ): () => void {
-  const visible = new Set<string>();
+	const visible = new Set<string>();
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const path = (entry.target as HTMLElement).dataset.path;
-        if (!path) continue;
-        if (entry.isIntersecting) visible.add(path);
-        else visible.delete(path);
-      }
-      onChange(visible);
-    },
-    { root: container, rootMargin: "0px 0px -85% 0px", threshold: 0 },
-  );
+	const observer = new IntersectionObserver(
+		(entries) => {
+			for (const entry of entries) {
+				const path = (entry.target as HTMLElement).dataset.path;
+				if (!path) continue;
+				if (entry.isIntersecting) visible.add(path);
+				else visible.delete(path);
+			}
+			onChange(visible);
+		},
+		{ root: container, rootMargin: '0px 0px -85% 0px', threshold: 0 }
+	);
 
-  for (const section of container.querySelectorAll(
-    '[data-testid="file-section"]',
-  )) {
-    observer.observe(section);
-  }
-  return () => observer.disconnect();
+	for (const section of container.querySelectorAll('[data-testid="file-section"]')) {
+		observer.observe(section);
+	}
+	return () => observer.disconnect();
 }
 
 /**
@@ -48,20 +46,16 @@ export function observeFilesInView(
  * before it is reached, and nothing is torn down once built: a file scrolled
  * past stays in the document, and stays findable.
  */
-export function whenNearViewport(
-  element: HTMLElement,
-  root: HTMLElement | null,
-  onNear: () => void,
-): () => void {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        observer.disconnect();
-        onNear();
-      }
-    },
-    { root, rootMargin: "1500px 0px", threshold: 0 },
-  );
-  observer.observe(element);
-  return () => observer.disconnect();
+export function whenNearViewport(element: HTMLElement, root: HTMLElement | null, onNear: () => void): () => void {
+	const observer = new IntersectionObserver(
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				observer.disconnect();
+				onNear();
+			}
+		},
+		{ root, rootMargin: '1500px 0px', threshold: 0 }
+	);
+	observer.observe(element);
+	return () => observer.disconnect();
 }

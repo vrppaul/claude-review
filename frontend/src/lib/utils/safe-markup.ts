@@ -9,26 +9,26 @@
 
 // What would close a text node or a quoted attribute early, as entities
 const MARKUP_ENTITIES: Readonly<Record<string, string>> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
+	'&': '&amp;',
+	'<': '&lt;',
+	'>': '&gt;',
+	'"': '&quot;',
+	"'": '&#39;'
 };
 const MARKUP_SPECIAL = /[&<>"']/g;
 
 // Schemes a link or an image may lead to. Anything else — javascript:, data:,
 // vbscript: — is not a destination, it is code or content carried inline.
-const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 // What a relative destination is read against. Never fetched: it only lets the
 // parser tell a path from a scheme. A relative path resolves onto it and takes
 // its protocol, which is a safe one.
-const RELATIVE_BASE = "https://relative.invalid/";
+const RELATIVE_BASE = 'https://relative.invalid/';
 
 /** Text made safe for a text node and for a quoted attribute value alike. */
 export function escapeMarkup(text: string): string {
-  return text.replace(MARKUP_SPECIAL, (special) => MARKUP_ENTITIES[special]);
+	return text.replace(MARKUP_SPECIAL, (special) => MARKUP_ENTITIES[special]);
 }
 
 /**
@@ -40,9 +40,9 @@ export function escapeMarkup(text: string): string {
  * same lets it through.
  */
 export function isSafeDestination(destination: string): boolean {
-  try {
-    return SAFE_PROTOCOLS.has(new URL(destination, RELATIVE_BASE).protocol);
-  } catch {
-    return false;
-  }
+	try {
+		return SAFE_PROTOCOLS.has(new URL(destination, RELATIVE_BASE).protocol);
+	} catch {
+		return false;
+	}
 }

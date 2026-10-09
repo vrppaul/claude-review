@@ -72,7 +72,10 @@ describe('the file tree', () => {
 	});
 
 	it('counts a transcript in messages', () => {
-		const review = openReview({ files: [wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')], facts: { mode: 'transcript' } });
+		const review = openReview({
+			files: [wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')],
+			facts: { mode: 'transcript' }
+		});
 
 		const { getByTestId, getAllByTestId } = render(FileList, inReview(review));
 

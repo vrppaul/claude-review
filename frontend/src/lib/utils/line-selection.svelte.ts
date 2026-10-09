@@ -1,57 +1,51 @@
-import type { DiffLine, LineSide } from "$lib/types";
+import type { DiffLine, LineSide } from '$lib/types';
 
 export interface LineRange {
-  side: LineSide;
-  line: number;
-  endLine: number;
-  /** Index of the last line in the flat hunk lines array where the comment box should render */
-  anchorIndex: number;
+	side: LineSide;
+	line: number;
+	endLine: number;
+	/** Index of the last line in the flat hunk lines array where the comment box should render */
+	anchorIndex: number;
 }
 
 /** A removed line only exists in the old file; everything else is the new one. */
 export function lineSide(line: DiffLine): LineSide {
-  return line.kind === "delete" ? "old" : "new";
+	return line.kind === 'delete' ? 'old' : 'new';
 }
 
 /** The number a line carries on its own side — old for removed, new otherwise. */
 export function getLineNumber(line: DiffLine): number {
-  return line.new_number ?? line.old_number ?? 0;
+	return line.new_number ?? line.old_number ?? 0;
 }
 
 /** What the reader may select, asked afresh each time it matters. */
 export interface SelectionRules {
-  /**
-   * Whether a removed line may be commented on. Under a narrower base the
-   * left-hand side of the diff belongs to that base, not to the review, so a
-   * thread written on a removed line there would be anchored in somebody
-   * else's numbering — and hidden the moment it was saved, because that is
-   * what the drawing rule does with it.
-   */
-  mayCommentOnRemoved: () => boolean;
-  /**
-   * The most lines one comment may cover, as the server says; null before it
-   * has. A comment quotes every line it covers, and the server refuses a
-   * quote longer than this — so a drag simply stops there.
-   */
-  longestRange: () => number | null;
-  /**
-   * Where a line stands among the rows on screen, so a drag stopped short of
-   * the pointer opens the comment under the row it stopped at. Undefined for
-   * a line the diff does not show.
-   */
-  rowOf: (side: LineSide, lineNumber: number) => number | undefined;
+	/**
+	 * Whether a removed line may be commented on. Under a narrower base the
+	 * left-hand side of the diff belongs to that base, not to the review, so a
+	 * thread written on a removed line there would be anchored in somebody
+	 * else's numbering — and hidden the moment it was saved, because that is
+	 * what the drawing rule does with it.
+	 */
+	mayCommentOnRemoved: () => boolean;
+	/**
+	 * The most lines one comment may cover, as the server says; null before it
+	 * has. A comment quotes every line it covers, and the server refuses a
+	 * quote longer than this — so a drag simply stops there.
+	 */
+	longestRange: () => number | null;
+	/**
+	 * Where a line stands among the rows on screen, so a drag stopped short of
+	 * the pointer opens the comment under the row it stopped at. Undefined for
+	 * a line the diff does not show.
+	 */
+	rowOf: (side: LineSide, lineNumber: number) => number | undefined;
 }
 
 /** Where a line stands among a file's rows, counted as the views count them. */
-export function rowOfLine(
-  rows: DiffLine[],
-  side: LineSide,
-  lineNumber: number,
-): number | undefined {
-  const row = rows.findIndex(
-    (line) => lineSide(line) === side && getLineNumber(line) === lineNumber,
-  );
-  return row === -1 ? undefined : row;
+export function rowOfLine(rows: DiffLine[], side: LineSide, lineNumber: number): number | undefined {
+	const row = rows.findIndex((line) => lineSide(line) === side && getLineNumber(line) === lineNumber);
+	return row === -1 ? undefined : row;
 }
 
 /**
@@ -59,125 +53,106 @@ export function rowOfLine(
  * far as the longest range allows in that direction.
  */
 function reach(start: number, toward: number, longest: number | null): number {
-  if (longest === null) return toward;
-  const furthest = longest - 1;
-  return toward >= start
-    ? Math.min(toward, start + furthest)
-    : Math.max(toward, start - furthest);
+	if (longest === null) return toward;
+	const furthest = longest - 1;
+	return toward >= start ? Math.min(toward, start + furthest) : Math.max(toward, start - furthest);
 }
 
 /** Track what the reader is selecting, within what they may select. */
 export function createLineSelection(rules: SelectionRules) {
-  let commentingAt = $state<LineRange | null>(null);
-  let dragSide = $state<LineSide | null>(null);
-  let dragStart = $state<number | null>(null);
-  let dragEnd = $state<number | null>(null);
-  let dragAnchorIndex = $state<number | null>(null);
-  let dragging = $state(false);
+	let commentingAt = $state<LineRange | null>(null);
+	let dragSide = $state<LineSide | null>(null);
+	let dragStart = $state<number | null>(null);
+	let dragEnd = $state<number | null>(null);
+	let dragAnchorIndex = $state<number | null>(null);
+	let dragging = $state(false);
 
-  return {
-    get commentingAt() {
-      return commentingAt;
-    },
-    get dragging() {
-      return dragging;
-    },
+	return {
+		get commentingAt() {
+			return commentingAt;
+		},
+		get dragging() {
+			return dragging;
+		},
 
-    reset() {
-      commentingAt = null;
-      dragSide = null;
-      dragStart = null;
-      dragEnd = null;
-      dragAnchorIndex = null;
-      dragging = false;
-    },
+		reset() {
+			commentingAt = null;
+			dragSide = null;
+			dragStart = null;
+			dragEnd = null;
+			dragAnchorIndex = null;
+			dragging = false;
+		},
 
-    handleMouseDown(line: DiffLine, index: number) {
-      const lineNo = getLineNumber(line);
-      if (lineNo === 0) return;
-      if (lineSide(line) === "old" && !rules.mayCommentOnRemoved()) return;
-      dragSide = lineSide(line);
-      dragStart = lineNo;
-      dragEnd = lineNo;
-      dragAnchorIndex = index;
-      dragging = true;
-    },
+		handleMouseDown(line: DiffLine, index: number) {
+			const lineNo = getLineNumber(line);
+			if (lineNo === 0) return;
+			if (lineSide(line) === 'old' && !rules.mayCommentOnRemoved()) return;
+			dragSide = lineSide(line);
+			dragStart = lineNo;
+			dragEnd = lineNo;
+			dragAnchorIndex = index;
+			dragging = true;
+		},
 
-    handleMouseEnter(line: DiffLine, index: number) {
-      if (!dragging) return;
-      // A range spans one side only: old line 42 and new line 42 are different
-      // places, so dragging across the other side must not extend the range.
-      if (lineSide(line) !== dragSide) return;
-      const lineNo = getLineNumber(line);
-      if (lineNo === 0 || dragStart === null) return;
-      dragEnd = reach(dragStart, lineNo, rules.longestRange());
-      // The composer opens under the row the drag reaches, so this follows the
-      // drag back up rather than staying at the furthest point it reached —
-      // and when the pointer is past where the drag may reach, it opens under
-      // the row the drag stopped at
-      dragAnchorIndex =
-        dragEnd === lineNo
-          ? index
-          : (rules.rowOf(lineSide(line), dragEnd) ?? dragAnchorIndex);
-    },
+		handleMouseEnter(line: DiffLine, index: number) {
+			if (!dragging) return;
+			// A range spans one side only: old line 42 and new line 42 are different
+			// places, so dragging across the other side must not extend the range.
+			if (lineSide(line) !== dragSide) return;
+			const lineNo = getLineNumber(line);
+			if (lineNo === 0 || dragStart === null) return;
+			dragEnd = reach(dragStart, lineNo, rules.longestRange());
+			// The composer opens under the row the drag reaches, so this follows the
+			// drag back up rather than staying at the furthest point it reached —
+			// and when the pointer is past where the drag may reach, it opens under
+			// the row the drag stopped at
+			dragAnchorIndex = dragEnd === lineNo ? index : (rules.rowOf(lineSide(line), dragEnd) ?? dragAnchorIndex);
+		},
 
-    handleMouseUp() {
-      if (
-        !dragging ||
-        dragStart === null ||
-        dragEnd === null ||
-        dragSide === null
-      )
-        return;
-      dragging = false;
-      commentingAt = {
-        side: dragSide,
-        line: Math.min(dragStart, dragEnd),
-        endLine: Math.max(dragStart, dragEnd),
-        anchorIndex: dragAnchorIndex ?? 0,
-      };
-      dragSide = null;
-      dragStart = null;
-      dragEnd = null;
-      dragAnchorIndex = null;
-    },
+		handleMouseUp() {
+			if (!dragging || dragStart === null || dragEnd === null || dragSide === null) return;
+			dragging = false;
+			commentingAt = {
+				side: dragSide,
+				line: Math.min(dragStart, dragEnd),
+				endLine: Math.max(dragStart, dragEnd),
+				anchorIndex: dragAnchorIndex ?? 0
+			};
+			dragSide = null;
+			dragStart = null;
+			dragEnd = null;
+			dragAnchorIndex = null;
+		},
 
-    /** Open the composer on one line, without a drag — the keyboard path. */
-    commentOnLine(line: DiffLine, index: number) {
-      const lineNo = getLineNumber(line);
-      if (lineNo === 0) return;
-      if (lineSide(line) === "old" && !rules.mayCommentOnRemoved()) return;
-      dragging = false;
-      commentingAt = {
-        side: lineSide(line),
-        line: lineNo,
-        endLine: lineNo,
-        anchorIndex: index,
-      };
-    },
+		/** Open the composer on one line, without a drag — the keyboard path. */
+		commentOnLine(line: DiffLine, index: number) {
+			const lineNo = getLineNumber(line);
+			if (lineNo === 0) return;
+			if (lineSide(line) === 'old' && !rules.mayCommentOnRemoved()) return;
+			dragging = false;
+			commentingAt = {
+				side: lineSide(line),
+				line: lineNo,
+				endLine: lineNo,
+				anchorIndex: index
+			};
+		},
 
-    clearCommenting() {
-      commentingAt = null;
-    },
+		clearCommenting() {
+			commentingAt = null;
+		},
 
-    isHighlighted(side: LineSide, lineNo: number): boolean {
-      if (
-        dragging &&
-        dragSide === side &&
-        dragStart !== null &&
-        dragEnd !== null
-      ) {
-        if (
-          lineNo >= Math.min(dragStart, dragEnd) &&
-          lineNo <= Math.max(dragStart, dragEnd)
-        ) {
-          return true;
-        }
-      }
-      if (commentingAt !== null && commentingAt.side === side) {
-        return lineNo >= commentingAt.line && lineNo <= commentingAt.endLine;
-      }
-      return false;
-    },
-  };
+		isHighlighted(side: LineSide, lineNo: number): boolean {
+			if (dragging && dragSide === side && dragStart !== null && dragEnd !== null) {
+				if (lineNo >= Math.min(dragStart, dragEnd) && lineNo <= Math.max(dragStart, dragEnd)) {
+					return true;
+				}
+			}
+			if (commentingAt !== null && commentingAt.side === side) {
+				return lineNo >= commentingAt.line && lineNo <= commentingAt.endLine;
+			}
+			return false;
+		}
+	};
 }

@@ -16,13 +16,7 @@ beforeEach(() => {
 
 const changedFile = diffFile({
 	path: 'src/handler.ts',
-	hunks: [
-		hunk([
-			contextLine(1, 1, 'const x = 1;'),
-			removedLine(2, 'const y = 2;'),
-			addedLine(2, 'const y = 3;')
-		])
-	]
+	hunks: [hunk([contextLine(1, 1, 'const x = 1;'), removedLine(2, 'const y = 2;'), addedLine(2, 'const y = 3;')])]
 });
 
 /** The same change, further down a file, with lines hidden above it. */
@@ -85,10 +79,7 @@ describe('a diff on screen', () => {
 
 		const { getAllByTestId } = render(DiffView, inReview(review));
 
-		expect(getAllByTestId('line-gutter').map((gutter) => gutter.textContent?.trim())).toEqual([
-			'1',
-			'2'
-		]);
+		expect(getAllByTestId('line-gutter').map((gutter) => gutter.textContent?.trim())).toEqual(['1', '2']);
 	});
 
 	it('marks where the diff jumps, and says how far', () => {
@@ -216,9 +207,7 @@ describe('comment anchoring across diff sides', () => {
 	it('shows a comment on a removed line only once', () => {
 		// The fixture replaces line 2, so old line 2 and new line 2 both exist.
 		review = openReview({ files: [changedFile] });
-		review.threads.add(
-			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
-		);
+		review.threads.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' }));
 
 		const { getAllByText } = render(DiffView, inReview(review));
 
@@ -227,9 +216,7 @@ describe('comment anchoring across diff sides', () => {
 
 	it('labels a comment on a removed line as removed', () => {
 		review = openReview({ files: [changedFile] });
-		review.threads.add(
-			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
-		);
+		review.threads.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' }));
 
 		const { getByTestId } = render(DiffView, inReview(review));
 
@@ -238,12 +225,8 @@ describe('comment anchoring across diff sides', () => {
 
 	it('shows both sides of a replaced line as separate comments', () => {
 		review = openReview({ files: [changedFile] });
-		review.threads.add(
-			newComment({ file: changedFile.path, side: 'old', startLine: 2, body: 'the old one' })
-		);
-		review.threads.add(
-			newComment({ file: changedFile.path, side: 'new', startLine: 2, body: 'the new one' })
-		);
+		review.threads.add(newComment({ file: changedFile.path, side: 'old', startLine: 2, body: 'the old one' }));
+		review.threads.add(newComment({ file: changedFile.path, side: 'new', startLine: 2, body: 'the new one' }));
 
 		const { getAllByText } = render(DiffView, inReview(review));
 
@@ -302,9 +285,7 @@ describe('editing a comment', () => {
 	it('keeps the removed wording when the comment is reopened for editing', async () => {
 		const user = userEvent.setup();
 		review = openReview({ files: [changedFile] });
-		review.threads.add(
-			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
-		);
+		review.threads.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' }));
 
 		const { getByText, getByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('edit-comment'));

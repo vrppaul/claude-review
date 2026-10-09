@@ -12,7 +12,7 @@ function fileOf(lines: DiffLine[], path = 'src/thing.py'): DiffFile {
 	return diffFile({ path, hunks: [hunk(lines)] });
 }
 
-describe('the colours of a file\'s code', () => {
+describe("the colours of a file's code", () => {
 	it('keeps a docstring coloured on every one of its lines', () => {
 		const file = fileOf([
 			context(1, 'def load():'),
@@ -32,11 +32,7 @@ describe('the colours of a file\'s code', () => {
 	});
 
 	it('does not colour code after a docstring as if it were still inside one', () => {
-		const file = fileOf([
-			context(1, '"""Module docs."""'),
-			context(2, 'import os'),
-			context(3, 'VALUE = 1')
-		]);
+		const file = fileOf([context(1, '"""Module docs."""'), context(2, 'import os'), context(3, 'VALUE = 1')]);
 
 		const [highlighted] = highlightFile(file, 'python');
 
@@ -104,7 +100,7 @@ describe('the colours of a file\'s code', () => {
 });
 
 describe('which language a file is read as', () => {
-	it('is told by the file\'s extension', () => {
+	it("is told by the file's extension", () => {
 		expect(detectLanguage('src/a.py')).toBe('python');
 		expect(detectLanguage('src/a.rs')).toBe('rust');
 	});

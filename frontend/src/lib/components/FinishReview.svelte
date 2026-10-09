@@ -47,11 +47,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <!-- Click anywhere else and the review carries on where it was -->
-<button
-	data-testid="finish-backdrop"
-	class="fixed inset-0 z-40 cursor-default"
-	aria-label="Close"
-	onclick={onClose}
+<button data-testid="finish-backdrop" class="fixed inset-0 z-40 cursor-default" aria-label="Close" onclick={onClose}
 ></button>
 
 <div
@@ -77,9 +73,7 @@
 
 	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
 		{#if review.threads.count === 0}
-			<p class="cr-faint text-sm">
-				Nothing written yet. A summary on its own is a review too.
-			</p>
+			<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
 		{:else}
 			<ul class="flex flex-col gap-1.5">
 				{#each review.threads.all as comment (comment.id)}
@@ -87,9 +81,7 @@
 					<li>
 						<button
 							data-testid="finish-comment"
-							class="cr-finish-row w-full rounded px-2 py-1.5 text-left {sent !== undefined
-								? 'opacity-55'
-								: ''}"
+							class="cr-finish-row w-full rounded px-2 py-1.5 text-left {sent !== undefined ? 'opacity-55' : ''}"
 							onclick={() => jump(comment)}
 						>
 							<span class="flex items-baseline gap-2">
@@ -132,9 +124,7 @@
 			<span class="cr-faint hidden text-xs lg:inline">Ctrl+Shift+Enter sends</span>
 			<div class="flex-1"></div>
 			{#if inRounds}
-				<button data-testid="end-review" class="btn btn-ghost btn-sm" onclick={onEnd}>
-					End review
-				</button>
+				<button data-testid="end-review" class="btn btn-ghost btn-sm" onclick={onEnd}> End review </button>
 				<button
 					data-testid="modal-submit"
 					class="btn btn-primary btn-sm"

@@ -6,22 +6,22 @@
  * a field does depends on it.
  */
 
-import type { CommentFieldEvent } from "$lib/types";
+import type { CommentFieldEvent } from '$lib/types';
 
 type Listener = (event: CommentFieldEvent) => void;
 
 export class CommentFields {
-  readonly #listeners = new Set<Listener>();
+	readonly #listeners = new Set<Listener>();
 
-  report(event: CommentFieldEvent): void {
-    for (const listener of this.#listeners) listener(event);
-  }
+	report(event: CommentFieldEvent): void {
+		for (const listener of this.#listeners) listener(event);
+	}
 
-  /** Follow every field from now on; returns how to stop. */
-  listen(listener: Listener): () => void {
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
+	/** Follow every field from now on; returns how to stop. */
+	listen(listener: Listener): () => void {
+		this.#listeners.add(listener);
+		return () => {
+			this.#listeners.delete(listener);
+		};
+	}
 }

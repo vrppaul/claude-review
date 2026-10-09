@@ -65,9 +65,7 @@ describe('the review header', () => {
 
 		const { getByTestId } = render(SubmitBar, inReview(review));
 
-		expect(getByTestId('review-title').textContent?.trim()).toBe(
-			'claude-review: uncommitted changes'
-		);
+		expect(getByTestId('review-title').textContent?.trim()).toBe('claude-review: uncommitted changes');
 	});
 
 	it('leaves the title out when the server sent none', () => {

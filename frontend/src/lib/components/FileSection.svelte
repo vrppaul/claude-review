@@ -27,9 +27,7 @@
 	const language = $derived(isTranscriptMode ? 'markdown' : detectLanguage(file.path));
 	const hasRenderablePreview = $derived(isRenderable(language));
 	// Content with nothing to render always shows raw, whatever the preference
-	const viewMode = $derived<ContentViewMode>(
-		hasRenderablePreview ? review.layout.contentView.mode : 'raw'
-	);
+	const viewMode = $derived<ContentViewMode>(hasRenderablePreview ? review.layout.contentView.mode : 'raw');
 
 	const stats = $derived(fileStats(file));
 	const commentCount = $derived(review.threads.onFile(file.path).length);
@@ -48,8 +46,7 @@
 		try {
 			await review.showChangesSinceRetake();
 		} catch (error) {
-			changedSinceFailed =
-				error instanceof Error ? error.message : 'Could not take the diff against that round';
+			changedSinceFailed = error instanceof Error ? error.message : 'Could not take the diff against that round';
 		}
 	}
 

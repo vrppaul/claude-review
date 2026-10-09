@@ -117,8 +117,8 @@
 			>
 		</div>
 		<p class="cr-guide-body">
-			A short walk through one review: what you are reading, where comments go, and how the agent
-			answers them. {review.guide.stepCount} stops, about two minutes.
+			A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
+				.guide.stepCount} stops, about two minutes.
 		</p>
 		<div class="flex items-center gap-2">
 			<button
@@ -167,7 +167,13 @@
 				{/each}
 			</div>
 		{/if}
-		<a data-testid="guide-release-link" class="cr-guide-link" href={releaseUrl(news.release)} target="_blank" rel="noopener noreferrer">
+		<a
+			data-testid="guide-release-link"
+			class="cr-guide-link"
+			href={releaseUrl(news.release)}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
 			Everything in {news.release}, on GitHub
 		</a>
 		<div class="flex items-center gap-2">

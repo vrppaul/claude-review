@@ -1,14 +1,14 @@
-import type { DiffLine } from "$lib/types";
+import type { DiffLine } from '$lib/types';
 
 export interface SplitCell {
-  line: DiffLine;
-  /** Position in the hunk's flat line list, so a comment can anchor to it. */
-  index: number;
+	line: DiffLine;
+	/** Position in the hunk's flat line list, so a comment can anchor to it. */
+	index: number;
 }
 
 export interface SplitRow {
-  left?: SplitCell;
-  right?: SplitCell;
+	left?: SplitCell;
+	right?: SplitCell;
 }
 
 /**
@@ -20,36 +20,36 @@ export interface SplitRow {
  * the other side of the surplus rows empty.
  */
 export function buildSplitRows(lines: DiffLine[]): SplitRow[] {
-  const rows: SplitRow[] = [];
-  let index = 0;
+	const rows: SplitRow[] = [];
+	let index = 0;
 
-  while (index < lines.length) {
-    if (lines[index].kind === "context") {
-      rows.push({
-        left: { line: lines[index], index },
-        right: { line: lines[index], index },
-      });
-      index += 1;
-      continue;
-    }
+	while (index < lines.length) {
+		if (lines[index].kind === 'context') {
+			rows.push({
+				left: { line: lines[index], index },
+				right: { line: lines[index], index }
+			});
+			index += 1;
+			continue;
+		}
 
-    const removals: SplitCell[] = [];
-    while (index < lines.length && lines[index].kind === "delete") {
-      removals.push({ line: lines[index], index });
-      index += 1;
-    }
+		const removals: SplitCell[] = [];
+		while (index < lines.length && lines[index].kind === 'delete') {
+			removals.push({ line: lines[index], index });
+			index += 1;
+		}
 
-    const additions: SplitCell[] = [];
-    while (index < lines.length && lines[index].kind === "add") {
-      additions.push({ line: lines[index], index });
-      index += 1;
-    }
+		const additions: SplitCell[] = [];
+		while (index < lines.length && lines[index].kind === 'add') {
+			additions.push({ line: lines[index], index });
+			index += 1;
+		}
 
-    const height = Math.max(removals.length, additions.length);
-    for (let offset = 0; offset < height; offset += 1) {
-      rows.push({ left: removals[offset], right: additions[offset] });
-    }
-  }
+		const height = Math.max(removals.length, additions.length);
+		for (let offset = 0; offset < height; offset += 1) {
+			rows.push({ left: removals[offset], right: additions[offset] });
+		}
+	}
 
-  return rows;
+	return rows;
 }

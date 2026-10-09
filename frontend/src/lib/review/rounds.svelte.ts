@@ -10,19 +10,19 @@
  * only side that still knows better.
  */
 export class Rounds {
-  #current: number;
+	#current: number;
 
-  constructor(first: number) {
-    this.#current = $state(first);
-  }
+	constructor(first: number) {
+		this.#current = $state(first);
+	}
 
-  /** The round being written. */
-  get current(): number {
-    return this.#current;
-  }
+	/** The round being written. */
+	get current(): number {
+		return this.#current;
+	}
 
-  /** Move to a round somebody knows the review has reached; never back. */
-  reach(round: number): void {
-    this.#current = Math.max(this.#current, round);
-  }
+	/** Move to a round somebody knows the review has reached; never back. */
+	reach(round: number): void {
+		this.#current = Math.max(this.#current, round);
+	}
 }

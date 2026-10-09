@@ -79,11 +79,10 @@
 	<!-- The second half of the title, made a control: the header still reads
 		as one sentence, and takes the mark tint while a narrower base is on. -->
 	<button
-		data-testid="base-picker" data-tour="review-base"
+		data-testid="base-picker"
+		data-tour="review-base"
 		class="cr-chip font-mono"
-		style={review.diff.narrowed
-			? 'background: var(--cr-mark-tint); color: var(--color-base-content)'
-			: ''}
+		style={review.diff.narrowed ? 'background: var(--cr-mark-tint); color: var(--color-base-content)' : ''}
 		aria-expanded={open}
 		title="What the working tree is compared against"
 		bind:this={trigger}
@@ -113,7 +112,8 @@
 
 	{#if open}
 		<div
-			data-testid="base-list" data-tour="review-base-list"
+			data-testid="base-list"
+			data-tour="review-base-list"
 			class="cr-dialog absolute left-0 z-30 mt-2 w-80 overflow-hidden rounded-box bg-base-200"
 		>
 			<div class="px-3 pt-2 pb-1">

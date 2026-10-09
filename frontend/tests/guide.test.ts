@@ -197,9 +197,7 @@ describe('which news a returning reader is shown', () => {
 	it('is written for releases in order, each once', () => {
 		const releases = RELEASE_NEWS.map((news) => news.release);
 		expect(new Set(releases).size).toBe(releases.length);
-		expect(releases.every((release, index) => index === 0 || isNewer(release, releases[index - 1]))).toBe(
-			true
-		);
+		expect(releases.every((release, index) => index === 0 || isNewer(release, releases[index - 1]))).toBe(true);
 	});
 });
 
@@ -227,9 +225,7 @@ describe('what the guide shows a reader arriving', () => {
 		await arriveAt('1.5.1');
 
 		expect(review.guide.card).toBeNull();
-		await vi.waitFor(() =>
-			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.1' }])
-		);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.1' }]));
 	});
 
 	it('puts the card away for good once it is closed', async () => {
@@ -239,9 +235,7 @@ describe('what the guide shows a reader arriving', () => {
 		review.guide.dismiss();
 
 		expect(review.guide.card).toBeNull();
-		await vi.waitFor(() =>
-			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.0' }])
-		);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.0' }]));
 	});
 
 	it('shows nothing rather than welcome somebody twice when the server cannot say', async () => {
@@ -267,7 +261,10 @@ describe('the news card', () => {
 	});
 
 	it('shows a picture from a file, described for whoever cannot see it', () => {
-		const { getByTestId } = render(NewsIllustration, inReview(review, { illustration: { kind: 'image', src: '/news/paste.gif', alt: 'A screenshot pasted' } }));
+		const { getByTestId } = render(
+			NewsIllustration,
+			inReview(review, { illustration: { kind: 'image', src: '/news/paste.gif', alt: 'A screenshot pasted' } })
+		);
 
 		const image = getByTestId('news-image') as HTMLImageElement;
 		expect(image.getAttribute('src')).toBe('/news/paste.gif');

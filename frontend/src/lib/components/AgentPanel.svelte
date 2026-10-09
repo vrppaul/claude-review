@@ -57,9 +57,7 @@
 	}
 
 	// When the agent last said anything, so silence can be read as silence
-	const lastAnswer = $derived(
-		[...review.conversation.turns].reverse().find((turn) => turn.author === 'author')?.at
-	);
+	const lastAnswer = $derived([...review.conversation.turns].reverse().find((turn) => turn.author === 'author')?.at);
 
 	/** How long ago, in the words a conversation uses. */
 	function since(at: number | null | undefined): string {
@@ -146,9 +144,7 @@
 
 	/** Take a thread out of the message by taking its token out of the words. */
 	function drop(comment: Thread) {
-		review.conversation.composer.setText(
-			draft.split(anchorToken(comment.anchor)).join('').replace(/ {2,}/g, ' ')
-		);
+		review.conversation.composer.setText(draft.split(anchorToken(comment.anchor)).join('').replace(/ {2,}/g, ' '));
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -263,7 +259,8 @@
 {/snippet}
 
 <aside
-	data-testid="agent-panel" data-tour="agent-panel"
+	data-testid="agent-panel"
+	data-tour="agent-panel"
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
 	style="width: {review.layout.agentPanel.width}px"
 >
@@ -282,11 +279,7 @@
 	>
 		<span
 			class="h-1.5 w-1.5 shrink-0 rounded-full"
-			style="background: {attached
-				? working
-					? 'var(--cr-mark)'
-					: 'var(--cr-add-edge)'
-				: 'var(--color-base-300)'}"
+			style="background: {attached ? (working ? 'var(--cr-mark)' : 'var(--cr-add-edge)') : 'var(--color-base-300)'}"
 		></span>
 		<span class="text-sm font-semibold {attached ? '' : 'cr-muted'}">
 			{attached ? 'Agent' : 'Waiting for the agent'}
@@ -339,10 +332,7 @@
 			no other way of seeing. -->
 		{#if review.conversation.turns.length === 0 && !review.answerer.work}
 			{#if attached}
-				<div
-					data-testid="panel-empty"
-					class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center"
-				>
+				<div data-testid="panel-empty" class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
 					<svg
 						class="h-5 w-5"
 						viewBox="0 0 16 16"
@@ -357,8 +347,8 @@
 						<path d="M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z"></path>
 					</svg>
 					<p class="cr-faint text-sm leading-relaxed">
-						Ask about anything — the plan, the tests, a file nobody commented on. A thread is about
-						one line; this is about the rest.
+						Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
+						about the rest.
 					</p>
 				</div>
 			{:else}
@@ -374,12 +364,10 @@
 						The agent joins once it starts listening. Comments you write meanwhile are kept.
 					</p>
 					<details data-testid="panel-attach-by-hand" class="w-full text-left">
-						<summary class="cr-faint cursor-pointer text-center text-xs">
-							Started the review yourself?
-						</summary>
+						<summary class="cr-faint cursor-pointer text-center text-xs"> Started the review yourself? </summary>
 						<p class="cr-faint mt-2 text-xs leading-relaxed">
-							Nothing answers a review run in the foreground. Start it in the background and keep
-							the listening half in a loop:
+							Nothing answers a review run in the foreground. Start it in the background and keep the listening half in
+							a loop:
 						</p>
 						<pre
 							class="cr-code cr-muted mt-2 w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2">claude-review diff --no-open &
@@ -469,11 +457,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 							</span>
 							<div class="flex-1"></div>
 							<span class="cr-faint text-xs">working {since(working.at)}</span>
-							<button
-								data-testid="stop-message"
-								class="btn btn-outline btn-xs"
-								onclick={() => stop(working.id)}
-							>
+							<button data-testid="stop-message" class="btn btn-outline btn-xs" onclick={() => stop(working.id)}>
 								Stop
 							</button>
 						</div>
@@ -514,9 +498,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						</span>
 						{#if pick.kind === 'thread'}
 							<span class="cr-muted block truncate text-sm">
-								{pick.comment.body}{threadState(pick.comment)
-									? ` · ${threadState(pick.comment)}`
-									: ''}
+								{pick.comment.body}{threadState(pick.comment) ? ` · ${threadState(pick.comment)}` : ''}
 							</span>
 						{:else}
 							<span class="cr-faint block truncate text-sm">file</span>
@@ -542,11 +524,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 					{/each}
 				</div>
 			{/if}
-			<AttachedImages
-				attachments={review.conversation.composer.attachments}
-				disabled={sending}
-				onLost={onImageLost}
-			/>
+			<AttachedImages attachments={review.conversation.composer.attachments} disabled={sending} onLost={onImageLost} />
 			<textarea
 				data-testid="panel-input"
 				bind:this={composer}

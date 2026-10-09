@@ -91,7 +91,7 @@ describe('how a markdown file is shown', () => {
 		expect(localStorage.getItem(CONTENT_VIEW_KEPT_HERE)).toBe('side-by-side');
 	});
 
-	it('stays across reviews — it is the reader\'s, not the review\'s', () => {
+	it("stays across reviews — it is the reader's, not the review's", () => {
 		review.layout.contentView.set('side-by-side');
 
 		review = openReview();
@@ -107,9 +107,7 @@ describe('retaking the diff', () => {
 
 		await review.setIgnoreWhitespace(true);
 
-		expect(server.requestsTo('GET /api/diff')).toMatchObject([
-			{ query: { ignore_whitespace: 'true' } }
-		]);
+		expect(server.requestsTo('GET /api/diff')).toMatchObject([{ query: { ignore_whitespace: 'true' } }]);
 		expect(review.settings.current.ignore_whitespace).toBe(true);
 	});
 
@@ -149,7 +147,7 @@ describe('retaking the diff', () => {
 });
 
 describe('how a diff is laid out', () => {
-	it('is kept with the reader\'s settings, for every review', async () => {
+	it("is kept with the reader's settings, for every review", async () => {
 		const server = fakeServer();
 		keepingSettings(server);
 

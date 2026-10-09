@@ -80,11 +80,12 @@ repos:
         files: ^frontend/src/
         pass_filenames: false
 
+      # Checks rather than rewrites: a commit never carries formatting it was not shown
       - id: frontend-format
         name: prettier (frontend)
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format'
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format:check'
         language: system
-        files: ^frontend/src/
+        files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|\.prettierrc\.json$)
         pass_filenames: false
 
   # The skill ships twice — as a skill, and as the plugin's command — and

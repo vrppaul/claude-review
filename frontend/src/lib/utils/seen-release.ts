@@ -6,23 +6,21 @@
  * this browser is handed over once.
  */
 
-import { keepGuide, readGuide } from "$lib/api/review-api";
+import { keepGuide, readGuide } from '$lib/api/review-api';
 
-const LEGACY_COOKIE = "claude-review-seen";
+const LEGACY_COOKIE = 'claude-review-seen';
 
 // The numbered part of a Python release: 1.5.0 out of 1.5.0rc1 or 1.4.3.dev0
 const RELEASE_NUMBERS = /^\d+(?:\.\d+)*/;
 
 function legacyCookie(): string | null {
-  const prefix = `${LEGACY_COOKIE}=`;
-  const found = document.cookie
-    .split("; ")
-    .find((part) => part.startsWith(prefix));
-  return found ? decodeURIComponent(found.slice(prefix.length)) : null;
+	const prefix = `${LEGACY_COOKIE}=`;
+	const found = document.cookie.split('; ').find((part) => part.startsWith(prefix));
+	return found ? decodeURIComponent(found.slice(prefix.length)) : null;
 }
 
 function forgetLegacyCookie(): void {
-  document.cookie = `${LEGACY_COOKIE}=; path=/; max-age=0`;
+	document.cookie = `${LEGACY_COOKIE}=; path=/; max-age=0`;
 }
 
 /**
@@ -32,18 +30,18 @@ function forgetLegacyCookie(): void {
  * a newcomer is better left unwelcomed than welcomed twice.
  */
 export async function readSeenRelease(): Promise<string | null> {
-  const kept = await readGuide();
-  if (kept.stored) return kept.record.seen_release;
+	const kept = await readGuide();
+	if (kept.stored) return kept.record.seen_release;
 
-  const handedOver = legacyCookie();
-  if (handedOver === null) return null;
-  await writeSeenRelease(handedOver);
-  forgetLegacyCookie();
-  return handedOver;
+	const handedOver = legacyCookie();
+	if (handedOver === null) return null;
+	await writeSeenRelease(handedOver);
+	forgetLegacyCookie();
+	return handedOver;
 }
 
 export async function writeSeenRelease(release: string): Promise<void> {
-  await keepGuide({ seen_release: release });
+	await keepGuide({ seen_release: release });
 }
 
 /**
@@ -54,16 +52,16 @@ export async function writeSeenRelease(release: string): Promise<void> {
  * written per release, and 1.5.0rc1 is about to be 1.5.0.
  */
 export function isNewer(candidate: string, than: string): boolean {
-  const left = releaseNumbers(candidate);
-  const right = releaseNumbers(than);
-  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
-    const difference = (left[index] ?? 0) - (right[index] ?? 0);
-    if (difference !== 0) return difference > 0;
-  }
-  return false;
+	const left = releaseNumbers(candidate);
+	const right = releaseNumbers(than);
+	for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+		const difference = (left[index] ?? 0) - (right[index] ?? 0);
+		if (difference !== 0) return difference > 0;
+	}
+	return false;
 }
 
 function releaseNumbers(release: string): number[] {
-  const numbered = RELEASE_NUMBERS.exec(release)?.[0] ?? "";
-  return numbered.split(".").map((part) => Number.parseInt(part, 10) || 0);
+	const numbered = RELEASE_NUMBERS.exec(release)?.[0] ?? '';
+	return numbered.split('.').map((part) => Number.parseInt(part, 10) || 0);
 }

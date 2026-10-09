@@ -18,9 +18,7 @@
 	// Threads the base on screen cannot draw. They are not lost — they are
 	// anchored to the review's own diff — but saying nothing would leave the
 	// reader counting a review they can only see part of.
-	const offScreen = $derived(
-		review.threads.all.filter((c) => !isDrawn(c, review.diff.files, { removedLines: false }))
-	);
+	const offScreen = $derived(review.threads.all.filter((c) => !isDrawn(c, review.diff.files, { removedLines: false })));
 	// The diff the list of them was opened over. Every diff taken after it —
 	// another base, a retake — starts folded, so the list is never left open
 	// from a screen the reader has left.
@@ -120,11 +118,7 @@
 			<span data-testid="retake-error" class="text-error">{failed}</span>
 		{/if}
 		<button data-testid="retake-diff" class="btn btn-ghost btn-xs" onclick={retake}>Retake</button>
-		<button
-			data-testid="dismiss-moved"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.diff.treeMoved.dismiss()}
-		>
+		<button data-testid="dismiss-moved" class="btn btn-ghost btn-xs" onclick={() => review.diff.treeMoved.dismiss()}>
 			Dismiss
 		</button>
 	</div>
@@ -150,20 +144,14 @@
 		<span>
 			{whatChanged()}{retaken.followed > 0
 				? ` · ${retaken.followed} ${retaken.followed === 1 ? 'thread' : 'threads'} followed their lines`
-				: ''}{retaken.outdated > 0
-				? ` · ${retaken.outdated} ${retaken.outdated === 1 ? 'is' : 'are'} outdated`
-				: ''}
+				: ''}{retaken.outdated > 0 ? ` · ${retaken.outdated} ${retaken.outdated === 1 ? 'is' : 'are'} outdated` : ''}
 		</span>
 		<div class="flex-1"></div>
 		{#if failed}
 			<span data-testid="retaken-error" class="text-error">{failed}</span>
 		{/if}
 		{#if review.lastRetake.changedSince !== null && review.lastRetake.changedCount > 0}
-			<button
-				data-testid="show-what-changed"
-				class="btn btn-ghost btn-xs"
-				onclick={showWhatChanged}
-			>
+			<button data-testid="show-what-changed" class="btn btn-ghost btn-xs" onclick={showWhatChanged}>
 				Show what changed
 			</button>
 		{/if}
@@ -176,15 +164,10 @@
 				Show it
 			</button>
 		{/if}
-		<button
-			data-testid="dismiss-retaken"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.lastRetake.dismiss()}
-		>
+		<button data-testid="dismiss-retaken" class="btn btn-ghost btn-xs" onclick={() => review.lastRetake.dismiss()}>
 			Dismiss
 		</button>
 	</div>
-
 {/if}
 
 {#if review.diff.narrowed}
@@ -245,10 +228,7 @@
 		<!-- Where they are, so a count is not the end of the road. Picking one
 			puts the whole diff back and goes to it: it is anchored there, and
 			that is the only screen that can draw it. -->
-		<div
-			data-testid="off-screen-list"
-			class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5"
-		>
+		<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
 			{#each offScreen as comment (comment.id)}
 				<button
 					data-testid="off-screen-thread"
@@ -261,9 +241,7 @@
 					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{comment.body}</span>
 				</button>
 			{/each}
-			<p class="cr-faint px-2 pt-1 text-xs">
-				They are still in the review, and still go out with the round.
-			</p>
+			<p class="cr-faint px-2 pt-1 text-xs">They are still in the review, and still go out with the round.</p>
 		</div>
 	{/if}
 {/if}

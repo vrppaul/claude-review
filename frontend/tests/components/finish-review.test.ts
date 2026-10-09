@@ -128,9 +128,7 @@ describe('the line a comment sits on, before it is sent', () => {
 	});
 
 	it('marks a comment that sits on a removed line', () => {
-		review.threads.add(
-			newComment({ file: 'src/app.ts', side: 'old', startLine: 42, body: 'why was this dropped' })
-		);
+		review.threads.add(newComment({ file: 'src/app.ts', side: 'old', startLine: 42, body: 'why was this dropped' }));
 
 		const { getByTestId } = render(FinishReview, inReview(review, props));
 
@@ -138,9 +136,7 @@ describe('the line a comment sits on, before it is sent', () => {
 	});
 
 	it('leaves a comment on the current version unmarked', () => {
-		review.threads.add(
-			newComment({ file: 'src/app.ts', startLine: 42, endLine: 47, body: 'tighten this' })
-		);
+		review.threads.add(newComment({ file: 'src/app.ts', startLine: 42, endLine: 47, body: 'tighten this' }));
 
 		const { getByTestId } = render(FinishReview, inReview(review, props));
 

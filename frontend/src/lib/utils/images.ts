@@ -9,12 +9,10 @@ const BYTES_PER_MEGABYTE = 1024 * 1024;
 
 /** The images among what was pasted. */
 export function imagesAmong(files: FileList | null | undefined): File[] {
-  return Array.from(files ?? []).filter((file) =>
-    file.type.startsWith("image/"),
-  );
+	return Array.from(files ?? []).filter((file) => file.type.startsWith('image/'));
 }
 
 /** A limit in bytes, said the way the server says it. */
 export function wholeMegabytes(bytes: number): number {
-  return Math.floor(bytes / BYTES_PER_MEGABYTE);
+	return Math.floor(bytes / BYTES_PER_MEGABYTE);
 }

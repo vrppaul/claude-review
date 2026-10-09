@@ -4,12 +4,7 @@
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import {
-		createLineSelection,
-		getLineNumber,
-		lineSide,
-		rowOfLine
-	} from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
@@ -28,13 +23,9 @@
 
 	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
 	const highlighted = $derived(
-		highlightFile(shown, language).map((hunkHtml, i) =>
-			applyWordMarks(shown.hunks[i].lines, hunkHtml)
-		)
+		highlightFile(shown, language).map((hunkHtml, i) => applyWordMarks(shown.hunks[i].lines, hunkHtml))
 	);
-	const commentsByRow = $derived(
-		indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed })
-	);
+	const commentsByRow = $derived(indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed }));
 	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
 	const hunkOffsets = $derived(
 		shown.hunks.reduce<number[]>((acc, hunk, i) => {
@@ -77,10 +68,7 @@
 		return shown.hunks
 			.flatMap((hunk) => hunk.lines)
 			.filter(
-				(line) =>
-					lineSide(line) === at.side &&
-					getLineNumber(line) >= at.line &&
-					getLineNumber(line) <= at.endLine
+				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.line && getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -88,11 +76,7 @@
 	/** Where the comment being written hangs, said above its field. */
 	const commentingLabel = $derived(
 		selection.commentingAt
-			? lineRangeLabel(
-					selection.commentingAt.side,
-					selection.commentingAt.line,
-					selection.commentingAt.endLine
-				)
+			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.line, selection.commentingAt.endLine)
 			: undefined
 	);
 
@@ -145,8 +129,7 @@
 	 * keeps showing what changed on it while you are writing about it. */
 	function tint(cell: SplitCell | undefined, kind: DiffLine['kind']): string {
 		if (!cell) return 'cr-cell-absent';
-		const change =
-			cell.line.kind === kind ? `cr-cell-${kind === 'add' ? 'add' : 'del'}` : '';
+		const change = cell.line.kind === kind ? `cr-cell-${kind === 'add' ? 'add' : 'del'}` : '';
 		return marked(cell) ? `${change} cr-cell-marked` : change;
 	}
 
@@ -187,8 +170,7 @@
 				<tbody>
 					{#each rowsPerHunk[hunkIdx] as row, rowIdx (rowIdx)}
 						{@const leftComments = commentsFor(row.left)}
-						{@const rightComments =
-							row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
+						{@const rightComments = row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
 						{@const boxAt = selection.commentingAt?.anchorIndex}
 						{@const showBox =
 							(row.left && hunkOffsets[hunkIdx] + row.left.index === boxAt) ||
@@ -197,13 +179,9 @@
 						<tr data-testid="split-row" class="cr-side-del">
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(
-									row.left,
-									'delete'
-								)}"
+								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(row.left, 'delete')}"
 								onmouseenter={() =>
-									row.left &&
-									selection.handleMouseEnter(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
+									row.left && selection.handleMouseEnter(row.left.line, hunkOffsets[hunkIdx] + row.left.index)}
 							>
 								{#if row.left}
 									{@const cell = row.left}
@@ -218,10 +196,8 @@
 										title={review.diff.narrowed
 											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
 											: undefined}
-										onmousedown={() =>
-											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
-										onkeydown={(e) =>
-											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onmousedown={() => selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onkeydown={(e) => commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
 									>
 										{cell.line.old_number ?? ''}
 									</button>
@@ -229,34 +205,29 @@
 							</td>
 							<td
 								data-testid="split-old-code"
-								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(
-									row.left,
-									'delete'
-								)}"
+								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(row.left, 'delete')}"
 							>
 								{#if row.left}{@html highlighted[hunkIdx][row.left.index]}{/if}
 							</td>
 
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(
+								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(row.right, 'add')} {tint(
 									row.right,
 									'add'
-								)} {tint(row.right, 'add')}"
+								)}"
 								onmouseenter={() =>
-									row.right &&
-									selection.handleMouseEnter(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
+									row.right && selection.handleMouseEnter(row.right.line, hunkOffsets[hunkIdx] + row.right.index)}
 							>
 								{#if row.right}
 									{@const cell = row.right}
 									<button
-										data-testid="line-gutter" data-tour="line-number"
+										data-testid="line-gutter"
+										data-tour="line-number"
 										class="cr-gutter-button"
 										aria-label="Comment on line {cell.line.new_number ?? ''}"
-										onmousedown={() =>
-											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
-										onkeydown={(e) =>
-											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onmousedown={() => selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
+										onkeydown={(e) => commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
 									>
 										{cell.line.new_number ?? ''}
 									</button>

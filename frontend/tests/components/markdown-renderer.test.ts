@@ -90,9 +90,7 @@ describe('a previewed file is read, not run', () => {
 			props: { text: '[other](./other.md)\n' }
 		});
 
-		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe(
-			'./other.md'
-		);
+		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe('./other.md');
 	});
 
 	it('still renders a relative link written without a leading dot', () => {
@@ -100,9 +98,7 @@ describe('a previewed file is read, not run', () => {
 			props: { text: '[readme](README.md)\n' }
 		});
 
-		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe(
-			'README.md'
-		);
+		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe('README.md');
 	});
 
 	it('keeps an image description inside its own attribute', () => {

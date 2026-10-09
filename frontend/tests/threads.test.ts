@@ -106,11 +106,7 @@ describe('a thread is a conversation', () => {
 		review.threads.addTurn(id, { author: 'reader', body: 'Then say so in the docstring', images: [] });
 		review.threads.receiveReply(id, 'Added', null);
 
-		expect(review.threads.all[0].turns.map((turn) => turn.author)).toEqual([
-			'author',
-			'reader',
-			'author'
-		]);
+		expect(review.threads.all[0].turns.map((turn) => turn.author)).toEqual(['author', 'reader', 'author']);
 	});
 
 	it('does not offer to ask when nothing is there to answer', async () => {
