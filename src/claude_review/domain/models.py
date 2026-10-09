@@ -195,7 +195,7 @@ class Turn(BaseModel):
 
     author: TurnAuthor
     body: str
-    round: int
+    round: int = Field(ge=FIRST_ROUND)
     # Screenshots pasted with it, as files whoever answers can open
     images: list[Path] = []
 
@@ -242,7 +242,7 @@ class TurnDraft(SaidInDraft):
     # The id the page gave it, which is what a question asked in it names
     turn_id: str
     author: TurnAuthor
-    round: int
+    round: int = Field(ge=FIRST_ROUND)
 
 
 class ThreadDraft(SaidInDraft):
@@ -395,7 +395,7 @@ class RoundSubmission(BaseModel):
     the diff is retaken under the same threads.
     """
 
-    number: int
+    number: int = Field(ge=FIRST_ROUND)
     markdown: str
     comment_count: int
 
@@ -410,7 +410,7 @@ class ChangedSinceRound(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    round: int
+    round: int = Field(ge=FIRST_ROUND)
     paths: list[str]
 
 
@@ -444,7 +444,7 @@ class TreeSnapshot(BaseModel):
     changed since.
     """
 
-    round: int
+    round: int = Field(ge=FIRST_ROUND)
     tree: str
     at: EpochMillis
 

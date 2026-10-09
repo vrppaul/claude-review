@@ -5,8 +5,9 @@ shape git writes under those options: a part per file, opened by
 "diff --git", its header lines, then its hunks.
 """
 
-import itertools
 import re
+
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 
@@ -43,12 +44,12 @@ MARKER_PATH_END = "\t"
 
 # What the header says happened to the file; a file it says none of was
 # modified. A copy leaves the original in place, so what is new here is a file.
-STATUS_HEADERS = (
-    ("new file", FileStatus.ADDED),
-    ("deleted file", FileStatus.DELETED),
-    ("rename from", FileStatus.RENAMED),
-    ("copy from", FileStatus.ADDED),
-)
+STATUS_HEADERS = {
+    "new file": FileStatus.ADDED,
+    "deleted file": FileStatus.DELETED,
+    "rename from": FileStatus.RENAMED,
+    "copy from": FileStatus.ADDED,
+}
 
 # What a line of a hunk is, by its first character. Anything else —
 # "\ No newline at end of file", the empty line the diff ends with — is not
@@ -70,6 +71,18 @@ ESCAPED_CHARACTERS = {
 OCTAL_BASE = 8
 
 
+class HunkStart(BaseModel):
+    """A hunk's header: where it stands in its file's part of the diff, and the line each side starts at."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The header's line in the file's part of the diff
+    index: int
+    header: str
+    old_start: int
+    new_start: int
+
+
 def parse_unified_diff(raw: str) -> list[DiffFile]:
     """Every file in git's unified diff, in the order git wrote them."""
     parts = (part for part in FILE_START.split(raw) if part.strip())
@@ -79,10 +92,10 @@ def parse_unified_diff(raw: str) -> list[DiffFile]:
 def _file(part: str) -> DiffFile | None:
     """One file's part of the diff, or None when no path can be read from it."""
     lines = part.split("\n")
-    hunk_headers = {index: header for index, line in enumerate(lines) if (header := HUNK_HEADER.match(line))}
+    hunk_starts = [start for index, line in enumerate(lines) if (start := _hunk_start(index, line)) is not None]
     # Only what comes before the first hunk is the header. A removed line
     # reading "-- x" arrives as "--- x", and would otherwise pass for a path.
-    header = lines[: min(hunk_headers, default=len(lines))]
+    header = lines[: hunk_starts[0].index] if hunk_starts else lines
 
     path = _path(header)
     if path is None:
@@ -91,7 +104,7 @@ def _file(part: str) -> DiffFile | None:
     return DiffFile(
         path=path,
         status=_status(header),
-        hunks=_hunks(lines, hunk_headers),
+        hunks=_hunks(lines, hunk_starts),
         is_binary=any(line.startswith(BINARY_HEADER) for line in header),
         old_mode=_mode(header, OLD_MODE_HEADER),
         new_mode=_mode(header, NEW_MODE_HEADER),
@@ -187,7 +200,7 @@ def _unquote(value: str) -> str:
 def _status(header: list[str]) -> FileStatus:
     """What happened to the file, as its header says."""
     for line in header:
-        for said, status in STATUS_HEADERS:
+        for said, status in STATUS_HEADERS.items():
             if line.startswith(said):
                 return status
     return FileStatus.MODIFIED
@@ -202,17 +215,25 @@ def _mode(header: list[str], mode_header: str) -> str | None:
     return next((line.removeprefix(mode_header).strip() for line in header if line.startswith(mode_header)), None)
 
 
-def _hunks(lines: list[str], hunk_headers: dict[int, re.Match[str]]) -> list[DiffHunk]:
+def _hunk_start(index: int, line: str) -> HunkStart | None:
+    """The hunk this line opens, if it is a hunk's header."""
+    header = HUNK_HEADER.match(line)
+    if header is None:
+        return None
+    return HunkStart(index=index, header=line, old_start=int(header["old_start"]), new_start=int(header["new_start"]))
+
+
+def _hunks(lines: list[str], hunk_starts: list[HunkStart]) -> list[DiffHunk]:
     """Every hunk of a file, each running from its header to the next one."""
-    boundaries = [*hunk_headers, len(lines)]
-    return [_hunk(hunk_headers[start], lines[start + 1 : end]) for start, end in itertools.pairwise(boundaries)]
+    # Each hunk ends where the next begins, the last where the file's part does
+    boundaries = [*(start.index for start in hunk_starts), len(lines)]
+    ends = boundaries[1:]
+    return [_hunk(start, lines[start.index + 1 : end]) for start, end in zip(hunk_starts, ends, strict=True)]
 
 
-def _hunk(header: re.Match[str], body: list[str]) -> DiffHunk:
+def _hunk(start: HunkStart, body: list[str]) -> DiffHunk:
     """One hunk, each of its lines numbered on the sides it is on."""
-    old_start = int(header["old_start"])
-    new_start = int(header["new_start"])
-    old_number, new_number = old_start, new_start
+    old_number, new_number = start.old_start, start.new_start
     lines: list[DiffLine] = []
 
     for raw in body:
@@ -234,4 +255,4 @@ def _hunk(header: re.Match[str], body: list[str]) -> DiffHunk:
         if on_new_side:
             new_number += 1
 
-    return DiffHunk(header=header.string, old_start=old_start, new_start=new_start, lines=lines)
+    return DiffHunk(header=start.header, old_start=start.old_start, new_start=start.new_start, lines=lines)

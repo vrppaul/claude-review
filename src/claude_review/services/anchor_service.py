@@ -17,6 +17,9 @@ from claude_review.services.place_words import line_span
 # How many of the review's files a refusal names, so whoever named the wrong
 # one can see what the right one is called without the whole list
 FILES_NAMED_IN_REFUSAL = 5
+# How many lines either side of its own an excerpt of lines quotes, so a
+# comment on one sentence is read with the ones it follows from
+EXCERPT_REACH = 2
 
 
 class SideLine(BaseModel):
@@ -33,8 +36,8 @@ class AnchorHandler[Kind: AnchorBase](Protocol):
         """The anchor with what it is about read off what the review holds."""
         ...
 
-    def excerpt(self, anchor: Kind, *, reach: int) -> list[str]:
-        """What the anchor is on and `reach` lines either side, as the review holds them; nothing if it holds none."""
+    def excerpt(self, anchor: Kind) -> list[str]:
+        """What the anchor is on, with what stands around it, as the review holds it; nothing if it holds none."""
         ...
 
     def follow(self, anchor: Kind) -> Kind:
@@ -81,8 +84,8 @@ class LineAnchorHandler:
 
         return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
 
-    def excerpt(self, anchor: LineAnchor, *, reach: int) -> list[str]:
-        """The anchor's lines and `reach` more either side, from the side of the file it is on.
+    def excerpt(self, anchor: LineAnchor) -> list[str]:
+        """The anchor's lines and `EXCERPT_REACH` more either side, from the side of the file it is on.
 
         A file the review does not hold has nothing to show: a thread may
         outlive the content it was written on.
@@ -90,7 +93,7 @@ class LineAnchorHandler:
         shown = self._files.get(anchor.file)
         if shown is None:
             return []
-        around = range(anchor.start_line - reach, anchor.end_line + reach + 1)
+        around = range(anchor.start_line - EXCERPT_REACH, anchor.end_line + EXCERPT_REACH + 1)
         return [line.content for line in self._lines_of(shown, anchor.side) if line.number in around]
 
     def follow(self, anchor: LineAnchor) -> LineAnchor:
@@ -155,11 +158,11 @@ class AnchorService:
             case _:
                 assert_never(anchor)
 
-    def excerpt(self, anchor: Anchor, *, reach: int) -> list[str]:
-        """What the anchor is on and `reach` lines either side, as the review holds them; nothing if it holds none."""
+    def excerpt(self, anchor: Anchor) -> list[str]:
+        """What the anchor is on, with what stands around it, as the review holds it; nothing if it holds none."""
         match anchor:
             case LineAnchor():
-                return self._lines.excerpt(anchor, reach=reach)
+                return self._lines.excerpt(anchor)
             case _:
                 assert_never(anchor)
 

@@ -198,3 +198,35 @@ def test_a_thread_the_agent_raised_opens_with_the_agent_speaking() -> None:
     markdown = _formatted(threads, None, files).markdown
 
     assert "> **You:** I kept the old flow on purpose" in markdown
+
+
+def test_a_comment_quotes_two_lines_either_side_and_no_more() -> None:
+    """Enough to read the sentence in what it follows from, not the whole message."""
+    files = [_message("assistant-2", [f"line {number}" for number in range(1, 10)])]
+    threads = [thread(line_anchor("assistant-2", 5), "Why?")]
+
+    markdown = _formatted(threads, None, files).markdown
+
+    assert "> line 3\n> line 4\n> line 5\n> line 6\n> line 7\nWhy?" in markdown
+    assert "> line 2" not in markdown
+    assert "> line 8" not in markdown
+
+
+def test_a_comment_quotes_only_its_own_message() -> None:
+    files = [_message("user-1", ["the question"]), _message("assistant-2", ["the answer"])]
+    threads = [thread(line_anchor("assistant-2", 1), "Wrong")]
+
+    markdown = _formatted(threads, None, files).markdown
+
+    assert "> the answer" in markdown
+    assert "the question" not in markdown
+
+
+def test_a_comment_on_a_message_the_review_no_longer_holds_is_sent_without_a_quote() -> None:
+    """A thread may outlive what it was written on; what was said in it still goes."""
+    threads = [thread(line_anchor("assistant-9", 1), "Still matters")]
+
+    markdown = _formatted(threads, None, [_message("user-1", ["hello"])]).markdown
+
+    assert "Still matters" in markdown
+    assert ">" not in markdown

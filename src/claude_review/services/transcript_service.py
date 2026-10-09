@@ -67,7 +67,7 @@ class TranscriptService:
     """Converts a Claude Code JSONL conversation file into DiffFile models for review."""
 
     async def read(self, path: Path) -> list[DiffFile]:
-        """Read a Claude Code JSONL conversation file into reviewable DiffFiles, off the event loop.
+        """Read a Claude Code JSONL conversation file into reviewable DiffFiles, on a thread rather than the event loop.
 
         Each line in the JSONL is a JSON object with a ``type`` field.
         Only ``user`` and ``assistant`` entries are extracted::
@@ -92,8 +92,11 @@ class TranscriptService:
         Raises:
             UnreadableContentError: If the file cannot be read, or a line is not JSON.
         """
-        text = await asyncio.to_thread(self._read_text, path)
-        turns = self._merge_turns(self._entries(text))
+        return await asyncio.to_thread(self._files_of, path)
+
+    def _files_of(self, path: Path) -> list[DiffFile]:
+        """The conversation's turns as files, newest first: the file read and parsed in one go."""
+        turns = self._merge_turns(self._entries(self._read_text(path)))
         labels = _labels(turns)
         return [whole_file(label, turn.text) for turn, label in reversed(list(zip(turns, labels, strict=True)))]
 

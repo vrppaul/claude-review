@@ -50,6 +50,35 @@ MOVED_DOWN = [
 ]
 
 
+# Lines 4 to 8 of the old file were removed between two that stayed
+REMOVED_RUN = [
+    diff_file(
+        FILE,
+        [
+            context_line(3, 3, "before"),
+            *(removed_line(number, f"removed {number}") for number in range(4, 9)),
+            context_line(9, 4, "after"),
+        ],
+    )
+]
+
+
+def test_an_excerpt_is_what_the_anchor_is_on_and_two_lines_either_side() -> None:
+    excerpt = AnchorService.of_diff(_braces_at((), line_count=11)).excerpt(line_anchor(FILE, 5, 6))
+
+    assert excerpt == ["line 3", "line 4", "line 5", "line 6", "line 7", "line 8"]
+
+
+def test_an_excerpt_of_removed_lines_reads_the_file_as_it_was() -> None:
+    excerpt = AnchorService.of_diff(REMOVED_RUN).excerpt(line_anchor(FILE, 6, side=LineSide.OLD))
+
+    assert excerpt == ["removed 4", "removed 5", "removed 6", "removed 7", "removed 8"]
+
+
+def test_an_excerpt_of_a_file_the_review_does_not_hold_is_empty() -> None:
+    assert AnchorService.of_diff(MOVED_DOWN).excerpt(line_anchor("gone.py", 1)) == []
+
+
 def test_a_thread_follows_its_line_when_the_line_moves() -> None:
     followed = AnchorService.of_diff(MOVED_DOWN).follow(line_anchor(FILE, 2, quote=[RUN]))
 

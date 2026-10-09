@@ -13,21 +13,26 @@ from typing import Protocol, Self
 from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread
 from claude_review.services.anchor_service import AnchorService
 from claude_review.services.place_words import place_in_markdown
-from claude_review.services.thread_markdown import format_conversation, thread_tags
+from claude_review.services.thread_markdown import blockquote, format_conversation, thread_tags
 
-# How many lines either side of a thread's own a conversation's round
-# quotes, so a comment on one sentence is read with the ones it follows from
-EXCERPT_REACH = 2
+# What a round is headed as, by what the agent has in front of it
+FILES_ROUND_TITLE = "Code Review Comments"
+CONVERSATION_ROUND_TITLE = "Transcript Review"
+# Markdown's marks for a round's heading and for each thread's
+ROUND_HEADING = "##"
+THREAD_HEADING = "###"
+# What sets an aside — a round's number, a thread's tags — apart from what it is said of
+ASIDE = " — "
 TAG_SEPARATOR = ", "
+# Markdown's mark for words set apart, as a thread's tags are when no heading carries them
+EMPHASIS = "_"
 
 
 class ThreadLead(Protocol):
     """How a round leads into each thread, for one kind of review."""
 
-    @property
-    def title(self) -> str:
-        """What the round is headed as."""
-        ...
+    # What the round is headed as
+    title: str
 
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:
         """What comes before everything said in the thread."""
@@ -37,14 +42,12 @@ class ThreadLead(Protocol):
 class PlaceLead:
     """The agent has the files: name the place, and carry the old lines once they have moved."""
 
-    @property
-    def title(self) -> str:
-        return "Code Review Comments"
+    title = FILES_ROUND_TITLE
 
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:
         tags = thread_tags(thread)
-        tagged = f" — {TAG_SEPARATOR.join(tags)}" if tags else ""
-        heading = f"### {place_in_markdown(thread.anchor)}{tagged}"
+        tagged = f"{ASIDE}{TAG_SEPARATOR.join(tags)}" if tags else ""
+        heading = f"{THREAD_HEADING} {place_in_markdown(thread.anchor)}{tagged}"
         if thread.anchor.outdated and thread.anchor.quote:
             return [heading, _written_against(thread.anchor.quote)]
         return [heading]
@@ -53,18 +56,16 @@ class PlaceLead:
 class ExcerptLead:
     """The agent does not have the conversation: quote what each thread is on, with the lines around it."""
 
-    @property
-    def title(self) -> str:
-        return "Transcript Review"
+    title = CONVERSATION_ROUND_TITLE
 
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:
-        excerpt = anchors.excerpt(thread.anchor, reach=EXCERPT_REACH)
+        excerpt = anchors.excerpt(thread.anchor)
         tags = thread_tags(thread)
         lead: list[str] = []
         if excerpt:
-            lead.append("\n".join(f"> {line}" for line in excerpt))
+            lead.append(blockquote(excerpt))
         if tags:
-            lead.append(f"_{TAG_SEPARATOR.join(tags)}_")
+            lead.append(f"{EMPHASIS}{TAG_SEPARATOR.join(tags)}{EMPHASIS}")
         return lead
 
 
@@ -113,8 +114,8 @@ class RoundFormatter:
         A review sent in one go is just a review; numbering it would say
         there are others when there are not.
         """
-        title = f"## {self._lead.title}"
-        return title if round_number <= FIRST_ROUND else f"{title} — round {round_number}"
+        title = f"{ROUND_HEADING} {self._lead.title}"
+        return title if round_number <= FIRST_ROUND else f"{title}{ASIDE}round {round_number}"
 
     def _thread(self, thread: Thread, anchors: AnchorService) -> str:
         return "\n".join([*self._lead.lead(thread, anchors), *format_conversation(thread)]) + "\n"

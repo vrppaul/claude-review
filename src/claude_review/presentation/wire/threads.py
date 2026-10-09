@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, JsonValue, TypeAdapter, ValidationError, computed_field, model_validator
+from pydantic import Field, JsonValue, TypeAdapter, ValidationError, model_validator
 
 from claude_review.domain import models
 from claude_review.domain.models import (
@@ -82,6 +82,8 @@ class Thread(WireModel):
 
     thread_id: str
     anchor: Anchor
+    # The place, in plain words, for whoever reads the thread as text
+    where: str
     severity: CommentSeverity
     body: str
     images: list[Path]
@@ -89,11 +91,17 @@ class Thread(WireModel):
     raised_by: TurnAuthor
     resolved: bool
 
-    @computed_field
-    @property
-    def where(self) -> str:
-        """The place, in plain words, for whoever reads the thread as text."""
-        return place_in_words(anchor_in_the_review(self.anchor))
+    @model_validator(mode="before")
+    @classmethod
+    def place_named(cls, source: object) -> object:
+        """A thread built from the review's own is told where it is; one read off the wire says it already.
+
+        Built here rather than in `of`, because a thread also arrives inside a
+        question or a panel message, built field by field with them.
+        """
+        if isinstance(source, models.Thread):
+            return {**dict(source), "where": place_in_words(source.anchor)}
+        return source
 
 
 class SaysSomething(WireModel):

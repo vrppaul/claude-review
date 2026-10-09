@@ -16,7 +16,7 @@ from typing import Self
 
 from wsproto import ConnectionType, WSConnection
 from wsproto.connection import ConnectionState
-from wsproto.events import CloseConnection, Ping, RejectConnection, Request, TextMessage
+from wsproto.events import CloseConnection, Event, Ping, RejectConnection, Request, TextMessage
 from wsproto.frame_protocol import CloseReason
 
 from tests.helpers import LOOPBACK, SESSION_ROUTE
@@ -25,6 +25,8 @@ from tests.helpers import LOOPBACK, SESSION_ROUTE
 READ_BYTES = 65536
 # How long connecting and the handshake may take together
 HANDSHAKE_SECONDS = 10.0
+# How long one message, or the goodbye, may take to go out
+SEND_SECONDS = 10.0
 ORIGIN_HEADER = b"Origin"
 
 
@@ -55,6 +57,8 @@ class PageSocket:
         self._received: deque[str] = deque()
         # The text of a message whose last frame has not arrived yet
         self._unfinished = ""
+        # The code the review closed the socket with, once it has
+        self._closed_with: int | None = None
         if receive_buffer is not None:
             self._connection.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, receive_buffer)
         try:
@@ -68,30 +72,35 @@ class PageSocket:
         return self._protocol.state == ConnectionState.OPEN
 
     def send(self, text: str) -> None:
-        self._connection.sendall(self._protocol.send(TextMessage(data=text)))
+        self._send_event(TextMessage(data=text))
 
     def receive(self, *, timeout: float) -> str:
         """The next message the review sends, within `timeout` seconds.
 
         Raises:
             TimeoutError: if none arrives in time.
-            ConnectionError: if the review closes the connection first.
+            ConnectionError: if the review has closed the socket and sent nothing more before it.
         """
         deadline = time.monotonic() + timeout
         while not self._received:
+            if self._closed_with is not None:
+                failure = f"the review closed the socket with {self._closed_with}"
+                raise ConnectionError(failure)
             self._read(deadline)
         return self._received.popleft()
 
     def close(self) -> None:
-        """Go as a page does: say so, then hang up.
+        """Go as a page does: say so, then hang up, whatever became of saying so.
 
         A review that has already let the page go hung up first, and there is
         nobody left to tell.
         """
-        with contextlib.suppress(ConnectionError):
-            if self.is_open:
-                self._connection.sendall(self._protocol.send(CloseConnection(code=CloseReason.NORMAL_CLOSURE)))
-        self._connection.close()
+        try:
+            with contextlib.suppress(OSError):
+                if self.is_open:
+                    self._send_event(CloseConnection(code=CloseReason.NORMAL_CLOSURE))
+        finally:
+            self._connection.close()
 
     def __enter__(self) -> Self:
         return self
@@ -106,8 +115,7 @@ class PageSocket:
         self._connection.settimeout(HANDSHAKE_SECONDS)
         self._connection.connect((LOOPBACK, port))
         headers = [(ORIGIN_HEADER, origin.encode())] if origin is not None else []
-        request = Request(host=f"{LOOPBACK}:{port}", target=SESSION_ROUTE, extra_headers=headers)
-        self._connection.sendall(self._protocol.send(request))
+        self._send_event(Request(host=f"{LOOPBACK}:{port}", target=SESSION_ROUTE, extra_headers=headers))
         # The review's acceptance shows as the connection opening
         while self._protocol.state == ConnectionState.CONNECTING:
             self._read(deadline)
@@ -127,13 +135,21 @@ class PageSocket:
                 case TextMessage():
                     self._take_text(event)
                 case Ping():
-                    self._connection.sendall(self._protocol.send(event.response()))
+                    self._send_event(event.response())
                 case CloseConnection():
-                    failure = f"the review closed the socket with {event.code}"
-                    raise ConnectionError(failure)
+                    # Answered, as the protocol asks, unless the review hung up
+                    # straight after; what arrived before it is still read
+                    with contextlib.suppress(OSError):
+                        self._send_event(event.response())
+                    self._closed_with = event.code
                 case _:
                     # The acceptance is read off the state; nothing else is for a page
                     pass
+
+    def _send_event(self, event: Event) -> None:
+        """Send one event, under a timeout of its own rather than whatever the last read left."""
+        self._connection.settimeout(SEND_SECONDS)
+        self._connection.sendall(self._protocol.send(event))
 
     def _take_text(self, frame: TextMessage) -> None:
         self._unfinished += frame.data

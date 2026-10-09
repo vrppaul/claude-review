@@ -17,18 +17,20 @@ class TextFileService:
     """Converts plain text files into DiffFile models for review."""
 
     async def read_files(self, paths: list[Path]) -> list[DiffFile]:
-        """Read files and convert each into a reviewable DiffFile.
+        """Read files and convert each into a reviewable DiffFile, on a thread rather than the event loop.
 
-        Skips empty files. A file named twice, however it was named, is read
-        once. The disk is read off the event loop.
+        The paths come resolved from whoever opens the review, so a file
+        named twice is read once. Empty files are skipped.
 
         Raises:
             UnreadableContentError: If a path does not point to a readable text file.
         """
-        resolved = [await asyncio.to_thread(path.resolve) for path in paths]
+        return await asyncio.to_thread(self._read_all, paths)
+
+    def _read_all(self, paths: list[Path]) -> list[DiffFile]:
         files: list[DiffFile] = []
-        for path in dict.fromkeys(resolved):
-            text = await asyncio.to_thread(self._read_text, path)
+        for path in dict.fromkeys(paths):
+            text = self._read_text(path)
             if text:
                 files.append(whole_file(self._display_path(path), text))
         return files

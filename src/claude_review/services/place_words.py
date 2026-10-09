@@ -34,7 +34,7 @@ def place_in_markdown(anchor: Anchor) -> str:
     """The place as Markdown, its path set as code: "`src/a.py`:42-47"."""
     match anchor:
         case LineAnchor():
-            return _lines_place(anchor, code_span(anchor.file))
+            return _lines_place(anchor, _code_span(anchor.file))
         case _:
             assert_never(anchor)
 
@@ -44,7 +44,7 @@ def line_span(start: int, end: int) -> str:
     return str(start) if start == end else f"{start}-{end}"
 
 
-def code_span(text: str) -> str:
+def _code_span(text: str) -> str:
     """The text as Markdown code, whatever backticks it holds.
 
     The fence is one backtick longer than any run inside, so none of them

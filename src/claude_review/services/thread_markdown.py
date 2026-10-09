@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
-from claude_review.domain.models import CommentSeverity, Thread, Turn, TurnAuthor
+from claude_review.domain.models import FIRST_ROUND, CommentSeverity, Thread, Turn, TurnAuthor
 
 # The agent reading this wrote the change, so its own turns are addressed to
 # it as "You"
 TURN_LABELS = {TurnAuthor.AUTHOR: "You", TurnAuthor.READER: "Reviewer"}
+# What starts every line of a Markdown blockquote
+QUOTE_MARK = ">"
 
 
 def format_opening(body: str, images: list[Path]) -> str:
@@ -21,13 +23,16 @@ def format_turn(turn: Turn) -> str:
     it, so the instruction and the discussion of it do not read as one
     paragraph.
     """
-    label = f"> **{TURN_LABELS[turn.author]}:**"
+    label = f"{QUOTE_MARK} **{TURN_LABELS[turn.author]}:**"
     lines = [*turn.body.splitlines(), *image_lines(turn.images)]
     if len(lines) == 1:
         return f"{label} {lines[0]}"
-    # A quoted block needs the marker on every line, blank ones included
-    quoted = "\n".join(f"> {line}" if line else ">" for line in lines)
-    return f"{label}\n{quoted}"
+    return f"{label}\n{blockquote(lines)}"
+
+
+def blockquote(lines: list[str]) -> str:
+    """The lines as one Markdown blockquote: the mark on every line, blank ones included, or the quote breaks."""
+    return "\n".join(f"{QUOTE_MARK} {line}" if line else QUOTE_MARK for line in lines)
 
 
 def image_lines(images: list[Path]) -> list[str]:
@@ -64,7 +69,7 @@ def format_conversation(thread: Thread) -> list[str]:
     reply rather than as the whole thread.
     """
     if thread.raised_by == TurnAuthor.AUTHOR:
-        opening = format_turn(Turn(author=TurnAuthor.AUTHOR, body=thread.body, round=1, images=thread.images))
+        opening = format_turn(Turn(author=TurnAuthor.AUTHOR, body=thread.body, round=FIRST_ROUND, images=thread.images))
     else:
         opening = format_opening(thread.body, thread.images)
     return [opening, *(format_turn(turn) for turn in thread.turns)]
