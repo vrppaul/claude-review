@@ -1,6 +1,6 @@
 import type { LineAnchor, LineSide } from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
-import { lineRangeLabel } from '$lib/utils/line-label';
+import { lineRangeLabel } from '$lib/anchors/line-label';
 
 // What may follow a line token inside a longer one: `@a.py:1-2` sits inside
 // `@a.py:1-20`, so a digit or a dash after it means it is not this token

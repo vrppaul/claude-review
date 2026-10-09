@@ -36,8 +36,6 @@ export class ReviewDiff {
 	// than out of the version list, so the header can speak before it knows
 	// everything the diff could be compared against.
 	#phrase = $state('');
-	// The file the reader has scrolled to
-	#fileInView = $state<string | null>(null);
 	// Which request is the latest. Two can be in flight — a round landing
 	// while the reader picks a base — and only the latest is drawn, whatever
 	// order the answers come back in.
@@ -79,16 +77,6 @@ export class ReviewDiff {
 	 */
 	get narrowed(): boolean {
 		return this.#base !== this.#reviewKey;
-	}
-
-	/** The file the reader has scrolled to. */
-	get fileInView(): string | null {
-		return this.#fileInView;
-	}
-
-	/** Record which file the reader has scrolled to. */
-	markInView(path: string): void {
-		this.#fileInView = path;
 	}
 
 	/** Take the diff again against the base the reader asked for. */
@@ -152,7 +140,6 @@ export class ReviewDiff {
 	#show(data: DiffResponse, base: string | null): void {
 		this.revealed.forget();
 		this.#files = data.files;
-		this.#fileInView = data.files[0]?.path ?? null;
 		this.#base = base;
 		this.#reviewKey = data.review_key;
 		// None when the review is compared against nothing: files, a transcript

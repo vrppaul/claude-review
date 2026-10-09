@@ -1,5 +1,5 @@
 import type { Thread } from '$lib/types';
-import { sideIsDrawn } from '$lib/utils/placement';
+import { sideIsDrawn } from '$lib/anchors/placement';
 
 /**
  * A file's comments keyed by the row they hang under, as "side:line".
@@ -11,7 +11,7 @@ import { sideIsDrawn } from '$lib/utils/placement';
  * `isDrawn`: under a narrower base those numbers belong to something else.
  */
 export function indexByRow(
-	threads: Thread[],
+	threads: readonly Thread[],
 	file: string,
 	{ removedLines = true }: { removedLines?: boolean } = {}
 ): Map<string, Thread[]> {

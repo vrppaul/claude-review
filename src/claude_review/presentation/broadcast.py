@@ -20,9 +20,10 @@ comes back as any other does.
 import asyncio
 import secrets
 from collections import deque
-from typing import NamedTuple, assert_never
+from typing import assert_never
 
 import structlog
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.page_events import (
     AgentSaid,
@@ -57,18 +58,23 @@ from claude_review.presentation.wire.threads import anchor_on_the_wire
 
 log = structlog.get_logger()
 
-# How many pushes one page may have waiting before it counts as gone, and so
-# how many are kept for a page coming back. Far more than a review says in a
-# burst: a round, its answers and the work around them.
+# How many pushes one page may have waiting before it counts as gone. Far more
+# than a review says in a burst: a round, its answers and the work around them.
 PAGE_BACKLOG = 256
+# How many backlogs' worth of pushes the review keeps for pages coming back.
+# More than one: a page let go for falling a backlog behind must still find
+# what it missed, with room for what was said while it reconnected.
+JOURNAL_DEPTH = 2
 # How many random bytes name one run of the review
 RUN_NAME_BYTES = 8
 # The welcome that opens every connection takes a place of its own
 WELCOME_PLACES = 1
 
 
-class Told(NamedTuple):
+class Told(BaseModel):
     """One push as it was told, with its number."""
+
+    model_config = ConfigDict(frozen=True)
 
     sequence: int
     said: str
@@ -84,14 +90,14 @@ class BrowserBroadcast:
         # port numbers its pushes afresh, and a page must not mistake one
         # run's numbers for the other's
         self._instance = secrets.token_hex(RUN_NAME_BYTES)
-        self._journal: deque[Told] = deque(maxlen=backlog)
+        self._journal: deque[Told] = deque(maxlen=backlog * JOURNAL_DEPTH)
         self._sequence = 0
 
     def tell(self, event: PageEvent) -> None:
         """Tell every page open now, in the words of its push, written once and numbered."""
         self._sequence += 1
         said = Delivery(sequence=self._sequence, push=push_of(event)).model_dump_json()
-        self._journal.append(Told(self._sequence, said))
+        self._journal.append(Told(sequence=self._sequence, said=said))
         for queue in list(self._listeners):
             try:
                 queue.put_nowait(said)
@@ -105,16 +111,22 @@ class BrowserBroadcast:
         then raises `asyncio.QueueShutDown`.
         """
         missed = self._missed_since(resume)
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog + WELCOME_PLACES)
+        handed = missed or []
+        # What it missed waits already; a backlog on top of it is what it may fall behind by
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog + WELCOME_PLACES + len(handed))
         welcome = Welcome(instance=self._instance, sequence=self._sequence, resumed=missed is not None)
         queue.put_nowait(welcome.model_dump_json())
-        for told in missed or []:
+        for told in handed:
             queue.put_nowait(told.said)
         self._listeners.add(queue)
         return queue
 
     def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
+
+    def position(self) -> Resume:
+        """Where a page reading the review's facts now continues from: this run, and the last push told."""
+        return Resume(instance=self._instance, after=self._sequence)
 
     def _missed_since(self, resume: Resume | None) -> list[Told] | None:
         """What a page coming back missed, or None when it cannot be handed all of it."""

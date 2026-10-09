@@ -22,7 +22,7 @@ type Method = 'get' | 'put' | 'post' | 'delete';
  * A route the server does not have, or a method it does not answer, does
  * not compile.
  */
-type ReplyOf<Path extends keyof paths, M extends Method> = paths[Path][M] extends {
+type ReplyOf<Path extends keyof paths, Verb extends Method> = paths[Path][Verb] extends {
 	responses: infer Responses;
 }
 	? Responses extends { 200: { content: { 'application/json': infer Body } } }
@@ -104,7 +104,7 @@ interface Waiting {
 }
 
 /** Requests to one route that wait until the test answers them, in any order. */
-export class HeldReplies<R extends Route> implements Holder {
+export class HeldReplies<Held extends Route> implements Holder {
 	private readonly waiting: Waiting[] = [];
 
 	take(request: ReceivedRequest, respond: (response: Response) => void): void {
@@ -117,7 +117,7 @@ export class HeldReplies<R extends Route> implements Holder {
 	}
 
 	/** Answer the request that arrived `position`-th, counting from zero. */
-	answer(position: number, reply: Replies[R]): void {
+	answer(position: number, reply: Replies[Held]): void {
 		const held = this.waiting[position];
 		if (!held) {
 			throw new Error(`Only ${this.waiting.length} requests are waiting, not ${position + 1}`);
@@ -132,12 +132,12 @@ export class FakeServer {
 	private readonly answers = new Map<string, Answer>();
 
 	/** Answer every request to the route with this reply. */
-	answer<R extends Route>(route: R, reply: Replies[R]): void {
+	answer<Answered extends Route>(route: Answered, reply: Replies[Answered]): void {
 		this.answers.set(route, { kind: 'reply', reply: () => reply });
 	}
 
 	/** Answer every request to the route with what the request itself decides. */
-	answerWith<R extends Route>(route: R, reply: (request: ReceivedRequest) => Replies[R]): void {
+	answerWith<Answered extends Route>(route: Answered, reply: (request: ReceivedRequest) => Replies[Answered]): void {
 		this.answers.set(route, { kind: 'reply', reply });
 	}
 
@@ -162,8 +162,8 @@ export class FakeServer {
 	}
 
 	/** Hold every request to the route until the test answers it. */
-	hold<R extends Route>(route: R): HeldReplies<R> {
-		const held = new HeldReplies<R>();
+	hold<Held extends Route>(route: Held): HeldReplies<Held> {
+		const held = new HeldReplies<Held>();
 		this.answers.set(route, { kind: 'hold', holder: held });
 		return held;
 	}

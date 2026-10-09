@@ -47,9 +47,10 @@ function elementFor(name: string): HTMLElement | null {
 
 /** Whether anything is drawn on the page under a name; the first drawn is enough. */
 function isDrawn(name: string): boolean {
-	return Array.from(document.querySelectorAll<HTMLElement>(selectorFor(name))).some((element) =>
-		hasSize(element.getBoundingClientRect())
-	);
+	for (const element of document.querySelectorAll<HTMLElement>(selectorFor(name))) {
+		if (hasSize(element.getBoundingClientRect())) return true;
+	}
+	return false;
 }
 
 /** The elements drawn for some names, one per name at most. */

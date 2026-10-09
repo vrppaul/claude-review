@@ -9,7 +9,6 @@
  */
 
 import { Guide } from '$lib/guide/guide.svelte';
-import type { PageConnection } from '$lib/connection/page-connection';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { ReplySound } from '$lib/reader/reply-sound';
 import type { Settings } from '$lib/reader/settings.svelte';
@@ -18,10 +17,12 @@ import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
 import { FileSections } from '$lib/review/file-sections';
 import { LastRetake } from '$lib/review/last-retake.svelte';
+import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { Submission } from '$lib/review/submission.svelte';
+import { Telling } from '$lib/review/telling.svelte';
 import { ThreadNavigator } from '$lib/review/thread-navigator';
 import { Threads } from '$lib/review/threads.svelte';
 import type {
@@ -34,13 +35,18 @@ import type {
 	SessionHello
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
-import { reviewWeight } from '$lib/utils/weight';
+import { reviewWeight } from '$lib/review/weight';
 
 /** What a review opens on: what the server says it is, its first diff, and any unsent draft. */
 export interface Opening {
 	facts: ReviewResponse;
 	firstDiff: DiffResponse;
 	draft: Draft | null;
+}
+
+/** Whoever carries what the page holds to the server. */
+export interface Greeter {
+	greet(hello: SessionHello): void;
 }
 
 /** What belongs to the reader rather than to the review, and outlives it. */
@@ -62,6 +68,8 @@ export class Review {
 	readonly sound: ReplySound;
 
 	readonly rounds: Rounds;
+	/** How far the server's telling has got for this page. */
+	readonly telling: Telling;
 	readonly answerer: Answerer;
 	readonly diff: ReviewDiff;
 	readonly reading = new ReadingProgress();
@@ -84,6 +92,8 @@ export class Review {
 	readonly #hello: SessionHello;
 	// The unsent review as a draft keeps it; none once the review is over
 	readonly #draft: Draft | null;
+	// The retake being taken in, so the next waits for it
+	#retaking: Promise<unknown> = Promise.resolve();
 
 	constructor({ facts, firstDiff, draft }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
@@ -94,13 +104,14 @@ export class Review {
 		this.sound = reader.sound;
 
 		this.rounds = new Rounds(facts.round);
+		this.telling = new Telling(facts, draft);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.threads = new Threads(this.rounds, draft);
 		this.submission = new Submission(this.threads, this.rounds, draft);
 		this.conversation = new Conversation(draft);
 		this.guide = new Guide(this.answerer, facts.release);
-		this.navigator = new ThreadNavigator(this.reading, this.sections);
+		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
 		this.#weight = $derived(reviewWeight(this.diff.files, this.threads.all));
 		this.#hello = $derived({
@@ -108,6 +119,7 @@ export class Review {
 			threads: this.threads.onTheWire
 		});
 		this.#draft = $derived(this.submission.finished ? null : this.#snapshot());
+		if (this.answerer.attached) this.layout.agentPanel.offer();
 	}
 
 	/** The unsent review as a draft keeps it; none once the review is over. */
@@ -134,6 +146,7 @@ export class Review {
 
 	/** Take in the draft another tab on the same review has just kept. */
 	adopt(draft: Draft): void {
+		this.telling.adopt(draft.told);
 		this.threads.adopt(draft);
 		this.submission.adopt(draft);
 		this.conversation.adopt(draft);
@@ -162,7 +175,7 @@ export class Review {
 	 * an agent that attaches later has no other way to learn the threads
 	 * exist, and a restarted server knows only round one. Returns how to stop.
 	 */
-	tellServerThrough(connection: Pick<PageConnection, 'greet'>): () => void {
+	tellServerThrough(connection: Greeter): () => void {
 		return $effect.root(() => {
 			$effect(() => connection.greet(this.#hello));
 		});
@@ -176,15 +189,31 @@ export class Review {
 	 */
 	async setIgnoreWhitespace(next: boolean): Promise<void> {
 		await this.settings.change({ ignore_whitespace: next });
-		await this.diff.take();
+		try {
+			await this.diff.take();
+		} catch (error) {
+			// Nobody is waiting on this but the reader, so it is said where they will see it
+			this.conversation.note(diffNotTakenNote(error));
+		}
 	}
 
 	/**
-	 * Note what a retake did, and take the tick off what it rewrote. Whatever
-	 * moved on disk is in the diff now, so the tree has nothing left to say.
+	 * Move the threads onto the review's diff as it now stands, and take it.
+	 *
+	 * The threads go first: the server already holds the new diff, and a
+	 * thread left on old numbers would be kept that way in the draft. One
+	 * retake is taken in at a time, so threads never follow onto a diff older
+	 * than the one on screen. Whatever had moved on disk is in the diff taken,
+	 * so the tree has nothing more to say — unless it moves again meanwhile.
 	 */
+	takeRetakenDiff(): Promise<FollowOutcome> {
+		const taken = this.#retaking.then(() => this.#followAndTake());
+		this.#retaking = taken.catch(() => undefined);
+		return taken;
+	}
+
+	/** Note what a retake did, and take the tick off what it rewrote. */
 	noteRetake(outcome: FollowOutcome, changes: ChangesSince | null): void {
-		this.diff.treeMoved.settle();
 		this.lastRetake.note(outcome, changes);
 		this.reading.forgetRewritten(changes);
 	}
@@ -199,8 +228,16 @@ export class Review {
 			sent: this.threads.sentRounds,
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
-			issued: this.threads.issued
+			issued: this.threads.issued,
+			told: this.telling.position
 		};
+	}
+
+	async #followAndTake(): Promise<FollowOutcome> {
+		const moved = await this.threads.follow();
+		this.diff.treeMoved.settle();
+		await this.diff.take();
+		return moved;
 	}
 
 	/** Read only what changed since the round the last retake was counted from. */

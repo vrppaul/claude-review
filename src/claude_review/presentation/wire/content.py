@@ -114,6 +114,10 @@ class ReviewResponse(WireModel):
     work: AgentWork | None
     # What the browser checks before uploading an image or quoting lines
     limits: SendLimits
+    # How far the review's telling had got when this was read, in which run of
+    # it: a page reading these facts continues from here on its socket
+    instance: str
+    sequence: int
     # Which release is serving the review, so the browser can tell a reader
     # what changed since the one they last saw. "Release" rather than
     # "version": a version here is a base the diff is read against.

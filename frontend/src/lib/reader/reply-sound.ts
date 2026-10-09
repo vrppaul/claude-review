@@ -17,6 +17,9 @@ const TICK_FADED = 0.0001;
 const TICK_FADES_WITHIN_SECONDS = 0.12;
 // Stopped just after the fade, so it never ends on a click
 const TICK_STOPS_AFTER_SECONDS = 0.13;
+// Answers handed over together — a page coming back is handed what it
+// missed at once — tick once, not once each
+const TICK_AT_MOST_EVERY = 1000;
 
 function tick(): void {
 	const Sound = window.AudioContext ?? window.webkitAudioContext;
@@ -39,6 +42,7 @@ function tick(): void {
 
 export class ReplySound {
 	readonly #settings: Settings;
+	#tickedAt = Number.NEGATIVE_INFINITY;
 
 	constructor(settings: Settings) {
 		this.#settings = settings;
@@ -47,6 +51,9 @@ export class ReplySound {
 	/** Say that an answer landed, if the reader asked to be told out loud. */
 	announce(): void {
 		if (!this.#settings.current.sound_on_replies || !document.hidden) return;
+		const now = performance.now();
+		if (now - this.#tickedAt < TICK_AT_MOST_EVERY) return;
+		this.#tickedAt = now;
 		try {
 			tick();
 		} catch {

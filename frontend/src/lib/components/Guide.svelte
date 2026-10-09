@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { reveal, TargetWatcher } from '$lib/guide/spotlight';
 	import { TOUR_TARGETS } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
@@ -10,16 +10,18 @@
 
 	const step = $derived(review.guide.step);
 
-	// The page is what knows which steps have something to show, and the
-	// comment fields are what know how a comment went. The tour hears them
-	// once the page has drawn the result, so the step it moves to finds it.
-	onMount(() => {
-		const drawn = new TargetWatcher(TOUR_TARGETS, (targets) => review.guide.seeTargets(targets));
-		const stopListening = review.commentFields.listen((event) => void tick().then(() => review.guide.notice(event)));
-		return () => {
-			drawn.stop();
-			stopListening();
-		};
+	// The comment fields are what know how a comment went. The tour hears
+	// them once the page has drawn the result, so the step it moves to finds it.
+	onMount(() => review.commentFields.listen((event) => void tick().then(() => review.guide.notice(event))));
+
+	// The page is what knows which steps have something to show. It is
+	// watched while the tour runs, and only then: watching looks over the
+	// page on every change, and nothing else asks.
+	$effect(() => {
+		if (!review.guide.touring) return;
+		// What the watcher tells the guide is not what this effect follows
+		const drawn = untrack(() => new TargetWatcher(TOUR_TARGETS, (targets) => review.guide.seeTargets(targets)));
+		return () => drawn.stop();
 	});
 
 	// A step's place is brought into view once it is drawn, which is after

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DraftRepository } from '$lib/drafts/draft-repository';
-import { threadsIn } from '$lib/utils/thread-token';
+import { threadsIn } from '$lib/anchors/thread-token';
 import { anchorToken } from '$lib/anchors/views';
-import { formatWeight } from '$lib/utils/weight';
+import { formatWeight } from '$lib/review/weight';
 import type { Thread } from '$lib/types';
 import { contextLine, addedLine, diffFile, hunk } from './diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR } from './fake-server';

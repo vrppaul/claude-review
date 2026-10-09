@@ -10,6 +10,8 @@
  * query string.
  */
 
+import { ReadingBand } from '$lib/review/reading-band.svelte';
+
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
 const MARKED_FOR = 2000;
@@ -20,10 +22,16 @@ const SETTLE_WITHIN = 2000;
 const STILL_FRAMES = 2;
 // The class that draws the mark on a section somebody else pointed at
 const MARKED_CLASS = 'cr-marked';
-// The band across the top of the reading area a file is read in: a long
-// file below the one whose header is pinned is in view too, but it is not
-// the one being read
-const READING_BAND = '0px 0px -85% 0px';
+// How long a thread asked for before it was drawn is waited for: its file
+// is built or unfolded within a frame or two, and one never drawn — hidden
+// by a narrower base, or outdated — must not pull the screen to it later
+const AWAIT_THREAD_FOR = 2000;
+
+/** A thread asked for before it was drawn, and until when it is waited for. */
+interface AwaitedThread {
+	threadId: string;
+	until: number;
+}
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
 interface Mark {
@@ -71,15 +79,14 @@ class SettleWatch {
 
 export class FileSections {
 	readonly #sections = new Map<string, HTMLElement>();
-	// Which file each section stands for, for what an observer reports
+	// Which file each section stands for, so the section being read names its file
 	readonly #paths = new Map<Element, string>();
 	readonly #threads = new Map<string, HTMLElement>();
-	// A thread asked for before it was drawn: its file is being built, or
-	// unfolded, and the thread is brought into view once it is drawn
-	#awaitedThread: string | null = null;
-	// Which files are in the reading band, while something is watching it
-	#band: IntersectionObserver | null = null;
-	readonly #inBand = new Set<string>();
+	// A thread asked for before it was drawn, and until when it is waited
+	// for: brought into view once it is drawn, if that is soon
+	#awaitedThread: AwaitedThread | null = null;
+	// Which section the reader is in, while the reading area is watched
+	readonly #band = new ReadingBand();
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
@@ -88,51 +95,41 @@ export class FileSections {
 	// marking
 	#showing = 0;
 
+	/**
+	 * The file the reader is in: the one whose header is pinned at the top of
+	 * the reading area, while the reading area is watched.
+	 */
+	get fileInView(): string | null {
+		const earliest = this.#band.earliest;
+		return earliest === null ? null : (this.#paths.get(earliest) ?? null);
+	}
+
 	/** Say where a file's section is; returns how to take it back. */
 	register(path: string, element: HTMLElement): () => void {
 		this.#sections.set(path, element);
 		this.#paths.set(element, path);
-		this.#band?.observe(element);
-		return () => {
-			this.#band?.unobserve(element);
-			this.#paths.delete(element);
-			if (this.#sections.get(path) !== element) return;
-			this.#sections.delete(path);
-			this.#inBand.delete(path);
-		};
+		this.#band.add(element);
+		return () => this.#unregister(path, element);
 	}
 
 	/** Say where a thread is drawn; returns how to take it back. */
 	registerThread(threadId: string, element: HTMLElement): () => void {
 		this.#threads.set(threadId, element);
-		if (this.#awaitedThread === threadId) {
+		const awaited = this.#awaitedThread;
+		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
 			this.#awaitedThread = null;
 			bringToCentre(element);
 		}
-		return () => {
-			if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
-		};
+		return () => this.#unregisterThread(threadId, element);
 	}
 
 	/**
-	 * Report which files are in the reading band of a scrolling area, so the
+	 * Follow which file the reader is in as they scroll an area, so the
 	 * sidebar can follow the scroll instead of driving it. Files drawn later
 	 * are watched as they arrive. Returns how to stop.
 	 */
-	watchInView(root: HTMLElement, onChange: (inBand: ReadonlySet<string>) => void): () => void {
-		const band = new IntersectionObserver((entries) => this.#crossed(entries, onChange), {
-			root,
-			rootMargin: READING_BAND,
-			threshold: 0
-		});
-		this.#band = band;
-		for (const element of this.#sections.values()) band.observe(element);
-		return () => {
-			band.disconnect();
-			if (this.#band !== band) return;
-			this.#band = null;
-			this.#inBand.clear();
-		};
+	watchInView(root: HTMLElement): () => void {
+		return this.#band.watch(root, this.#sections.values());
 	}
 
 	/** The file whose section holds the focus, if any does. */
@@ -146,6 +143,8 @@ export class FileSections {
 	}
 
 	scrollToFile(path: string): void {
+		// Going anywhere else is no longer waiting for a thread
+		this.#awaitedThread = null;
 		this.#sections.get(path)?.scrollIntoView({ block: 'start' });
 	}
 
@@ -164,6 +163,7 @@ export class FileSections {
 		if (!section) return;
 
 		const mine = ++this.#showing;
+		this.#awaitedThread = null;
 		this.#unmark();
 		section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		new SettleWatch(section, () => {
@@ -187,18 +187,18 @@ export class FileSections {
 			bringToCentre(drawn);
 			return;
 		}
-		this.#awaitedThread = threadId;
 		this.scrollToFile(file);
+		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_THREAD_FOR };
 	}
 
-	#crossed(entries: IntersectionObserverEntry[], onChange: (inBand: ReadonlySet<string>) => void): void {
-		for (const entry of entries) {
-			const path = this.#paths.get(entry.target);
-			if (path === undefined) continue;
-			if (entry.isIntersecting) this.#inBand.add(path);
-			else this.#inBand.delete(path);
-		}
-		onChange(this.#inBand);
+	#unregister(path: string, element: HTMLElement): void {
+		this.#band.remove(element);
+		this.#paths.delete(element);
+		if (this.#sections.get(path) === element) this.#sections.delete(path);
+	}
+
+	#unregisterThread(threadId: string, element: HTMLElement): void {
+		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
 	}
 
 	#mark(section: HTMLElement): void {

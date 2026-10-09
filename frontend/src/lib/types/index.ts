@@ -166,6 +166,17 @@ export type Delivery = SocketSchemas['Delivery'];
 /** What the server pushes down the socket, told apart by `type`. */
 export type ServerPush = SocketSchemas['ServerPush'];
 export type PointPush = SocketSchemas['PointPush'];
+
+/**
+ * How far the review's telling has got, as a page holds it: which run of the
+ * review, and the number of the last push taken in. Numbers start again
+ * with each run, so they mean nothing without it.
+ */
+export interface TellingPosition {
+	instance: string;
+	sequence: number;
+}
+
 /** Which files changed since a round began, and which round that was. */
 export type ChangesSince = Schemas['ChangesSince'];
 

@@ -5,14 +5,14 @@
 
 import { readReview, takeDiff } from '$lib/api/review-api';
 import type { PageConnection } from '$lib/connection/page-connection';
-import { catchUp, handlePush } from '$lib/page/push-handling';
+import { catchUp, takePush } from '$lib/page/push-handling';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
-import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
 import { DraftRepository } from '$lib/drafts/draft-repository';
-import { Review } from '$lib/review/review.svelte';
+import type { Review } from '$lib/review/review.svelte';
+import { openKeptReview } from '$lib/page/kept-review';
 
 /** Where the page has got to with its review. */
 export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } | { kind: 'failed'; reason: string };
@@ -37,9 +37,12 @@ export class ReviewPage {
 	 * Open the review this page was served for, and keep it open.
 	 *
 	 * The socket opens first: holding it is what tells the server the review
-	 * is on screen, and whatever it says before the review is ready is held
-	 * until it is. The reader's settings come before the diff: whether
-	 * whitespace counts decides which diff is asked for.
+	 * is on screen, and reading the review may take longer than the server
+	 * waits for a reloaded page to come back. The reader's settings come
+	 * before the diff: whether whitespace counts decides which diff is asked
+	 * for. Once the review is open, the socket goes on from where its draft
+	 * or its facts left the telling, so whatever was said meanwhile is handed
+	 * over rather than missed.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -54,24 +57,17 @@ export class ReviewPage {
 				})
 			]);
 			// An unsent review of the same thing is picked up where it stopped
-			const draft = this.#drafts.load(facts.title);
-			const review = new Review(
-				{ facts, firstDiff, draft },
-				{
-					settings: this.#settings,
-					layout: this.#layout,
-					sound: new ReplySound(this.#settings)
-				}
+			const { review } = openKeptReview(
+				facts,
+				firstDiff,
+				{ settings: this.#settings, layout: this.#layout, sound: new ReplySound(this.#settings) },
+				this.#drafts
 			);
-			if (review.answerer.attached) this.#layout.agentPanel.offer();
 			review.tellServerThrough(this.#connection);
-			new DraftKeeper(this.#drafts, review).start();
-			// Two tabs on one review keep one draft: what either writes, both hold
-			this.#drafts.onChange(facts.title, (kept) => review.adopt(kept));
-			// Only now is there a review for what the server said meanwhile to land in
 			this.#connection.deliverTo({
-				take: (push) => handlePush(review, push),
-				catchUp: () => catchUp(review)
+				told: () => review.telling.position,
+				take: (push, at) => takePush(review, push, at),
+				catchUp: (from) => catchUp(review, from)
 			});
 			this.#state = { kind: 'open', review };
 			// A first review is welcomed; a newer release says what changed

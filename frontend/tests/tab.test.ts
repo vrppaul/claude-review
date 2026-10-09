@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { markTab } from '$lib/utils/tab';
+import { markTab } from '$lib/dom/tab';
 
 const TITLE = 'repo: uncommitted changes';
 

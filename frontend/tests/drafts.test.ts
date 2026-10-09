@@ -192,7 +192,8 @@ describe('an unsent review', () => {
 			sent: [],
 			panel: [],
 			composer: { text: '', images: [] },
-			issued: { comments: 0, turns: 0 }
+			issued: { comments: 0, turns: 0 },
+			told: null
 		});
 		drafts.clear();
 
@@ -211,7 +212,8 @@ describe('a draft this release kept', () => {
 			sent: [['comment-1', 2]],
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
 			composer: { text: 'half a thought', images: ['pasted.png'] },
-			issued: { comments: 3, turns: 5 }
+			issued: { comments: 3, turns: 5 },
+			told: null
 		};
 
 		drafts.save(kept);

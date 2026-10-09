@@ -9,24 +9,32 @@ import svelteConfig from './svelte.config.js';
 // components.
 const LAYERS = {
 	types: [],
+	// Plain helpers over plain data; nothing of the page in them
+	utils: ['types'],
+	// What the page does to the document itself: focus, scroll, the tab
+	dom: ['types'],
 	api: ['types'],
 	connection: ['types'],
-	anchors: ['types', 'utils'],
-	utils: ['types', 'anchors'],
+	anchors: ['types'],
 	drafts: ['types', 'utils'],
 	reader: ['types', 'utils', 'api'],
 	guide: ['types', 'utils', 'api'],
-	review: ['types', 'utils', 'anchors', 'api', 'connection', 'drafts', 'guide', 'reader'],
+	review: ['types', 'utils', 'anchors', 'api', 'drafts', 'guide', 'reader'],
 	page: ['types', 'utils', 'anchors', 'api', 'connection', 'drafts', 'guide', 'reader', 'review']
 };
 const PARTS = [...Object.keys(LAYERS), 'components'];
 
-/** The import patterns a part may not use: every part it is not listed as building on. */
+/**
+ * The import patterns a part may not use: every part it is not listed as
+ * building on, and any path climbing out of its folder, which would reach
+ * them without saying so.
+ */
 function outOfReach(part) {
-	return PARTS.filter((other) => other !== part && !LAYERS[part].includes(other)).flatMap((other) => [
+	const parts = PARTS.filter((other) => other !== part && !LAYERS[part].includes(other)).flatMap((other) => [
 		`$lib/${other}`,
 		`$lib/${other}/*`
 	]);
+	return [...parts, '../*'];
 }
 
 const layerRules = Object.keys(LAYERS).map((part) => ({
@@ -49,16 +57,24 @@ const layerRules = Object.keys(LAYERS).map((part) => ({
 // Short words that still say what they mean; anything else that short
 // abbreviates, and `_` says nothing is kept
 const SHORT_WORDS = ['_', 'id', 'at', 'to', 'ok', 'of', 'on', 'by', 'is'];
+// A type parameter is a word, as `Kind` or `Choice` is, never one letter
+const TYPE_NAME = '^[A-Z][a-z]';
 
 // A helper is a function of its module, with a name and parameters of its
 // own, not a closure in the body of another. A one-line lambda — passed to
 // a call, or kept to take a listener off again — is still fine; one with a
-// body of statements is a helper.
+// body of statements is a helper, however it is kept: in a variable, in an
+// object, or handed back as a teardown.
 const NESTED_HELPER = 'A helper with logic is a function of the module, not one inside another.';
 const NO_NESTED_HELPERS = [
 	{ selector: ':function VariableDeclarator > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
 	{ selector: ':function VariableDeclarator > FunctionExpression', message: NESTED_HELPER },
-	{ selector: ':function FunctionDeclaration', message: NESTED_HELPER }
+	{ selector: ':function FunctionDeclaration', message: NESTED_HELPER },
+	{ selector: ':function ReturnStatement > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
+	{ selector: ':function ReturnStatement > FunctionExpression', message: NESTED_HELPER },
+	{ selector: 'ArrowFunctionExpression > ArrowFunctionExpression.body[expression=false]', message: NESTED_HELPER },
+	{ selector: ':function Property > FunctionExpression', message: NESTED_HELPER },
+	{ selector: ':function Property > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER }
 ];
 
 // Components written before the rules below, each listed against the rule
@@ -169,6 +185,11 @@ export default tseslint.config(
 		files: ['src/**/*.ts', 'src/**/*.svelte', 'tests/**/*.ts'],
 		rules: {
 			'id-length': ['error', { min: 3, exceptions: SHORT_WORDS, properties: 'never' }],
+			// id-length passes over type parameters; a type has a name, as a value does
+			'@typescript-eslint/naming-convention': [
+				'error',
+				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
+			],
 			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS],
 			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
 			// A switch over every kind of a union is one decision, not one per kind

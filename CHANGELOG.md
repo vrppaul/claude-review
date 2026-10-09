@@ -30,16 +30,20 @@
 - **A page that stops reading is let go** instead of being held in memory;
   the server's websockets now run on wsproto, and the `websockets` package
   is no longer a dependency.
-- **Nothing said while a page's socket was down is lost.** Every
+- **A page whose socket drops is handed what it missed.** Every
   connection to `/api/session` begins with a `welcome` naming the run of
   the review and how far its telling has got, and every push now arrives
   in a numbered `delivery` (`{type: "delivery", sequence, push}`) rather
-  than on its own. A page coming back connects with `?instance=…&after=…`
-  and is handed the pushes it missed, up to the last 256; one that cannot
-  be handed them all is told so (`resumed: false`), reads `GET /api/review`
-  again, and follows its threads onto the diff as it stands. The work under
-  way is read from `GET /api/review` (`work`) rather than pushed to a page
-  as it opens.
+  than on its own. A page connects with `?instance=…&after=…` and is handed
+  the pushes it missed, up to the last 512. One that cannot be handed them
+  all — the review was restarted, or the page was away too long — is told
+  so (`resumed: false`), reads `GET /api/review` again, follows its threads
+  onto the diff as it stands, and says in the panel that answers given
+  meanwhile may be missing. `GET /api/review` says the work under way
+  (`work`, no longer pushed to a page as it opens) and how far the telling
+  had got when it was read (`instance`, `sequence`), so a page opening
+  continues from there; a reloaded page continues from where its draft
+  left off, so answers given during the reload arrive too.
 - **Taking the diff stages the working tree once**, starting from a copy of
   the repository's own index: much faster on large trees. Like `git diff`, it
   leaves out edits to files marked assume-unchanged or skip-worktree.

@@ -37,8 +37,8 @@ const MESSAGE_CHECKS: Record<SessionMessage['type'], (message: object) => boolea
 /**
  * A message from the server, or null when it is not one this page can read.
  *
- * Only the reading is forgiven: a fault in whatever handles a message is a
- * fault, and is left to surface.
+ * Only the reading is forgiven here: a fault in whatever takes a push in is
+ * the page's own, and the connection says so.
  */
 export function decodeSessionMessage(data: unknown): SessionMessage | null {
 	try {

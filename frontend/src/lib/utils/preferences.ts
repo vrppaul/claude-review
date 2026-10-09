@@ -18,12 +18,12 @@ export function storageKey(name: string): string {
 }
 
 /** Whether something stored is one of the choices allowed. */
-function isOneOf<T extends string>(stored: string | null, allowed: readonly T[]): stored is T {
+function isOneOf<Choice extends string>(stored: string | null, allowed: readonly Choice[]): stored is Choice {
 	return allowed.some((choice) => choice === stored);
 }
 
 /** Read a stored choice, falling back when it is missing or no longer valid. */
-export function readChoice<T extends string>(name: string, allowed: readonly T[], fallback: T): T {
+export function readChoice<Choice extends string>(name: string, allowed: readonly Choice[], fallback: Choice): Choice {
 	try {
 		const stored = localStorage.getItem(storageKey(name));
 		return isOneOf(stored, allowed) ? stored : fallback;

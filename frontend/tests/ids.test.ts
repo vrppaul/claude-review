@@ -23,13 +23,4 @@ describe('ids the browser hands out', () => {
 
 		expect(comments.next()).toBe('comment-3');
 	});
-
-	it('start over for a new review', () => {
-		const comments = new IdSequence('comment-');
-		comments.continuePast(['comment-5']);
-
-		comments.reset();
-
-		expect(comments.next()).toBe('comment-1');
-	});
 });

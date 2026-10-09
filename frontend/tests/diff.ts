@@ -1,4 +1,5 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
+import { THIS_RUN } from './fake-socket';
 import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
@@ -76,6 +77,8 @@ export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewRespo
 		work: null,
 		limits: SEND_LIMITS,
 		release: '1.5.0',
+		instance: THIS_RUN,
+		sequence: 0,
 		...given
 	};
 }

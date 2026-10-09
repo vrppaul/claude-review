@@ -28,6 +28,7 @@ from tests.helpers import (
     next_push,
     open_session,
     open_session_at,
+    review_facts,
     thread_on_the_wire,
     thread_route,
     until_the_review_holds_threads,
@@ -57,6 +58,17 @@ def test_a_page_coming_back_is_handed_what_was_said_while_it_was_away(review_pag
     with open_session_at(review_page, _coming_back(last_seen)) as back:
         assert welcome_of(back).resumed
         assert next_push(back, ReplyPush) == ReplyPush(thread_id=FIRST_THREAD_ID, question_id=None, body=ANSWER)
+
+
+def test_the_facts_say_how_far_the_telling_had_got_when_they_were_read(review_page: TestClient) -> None:
+    """A page continues on its socket from where its facts left off, so nothing told in between is missed."""
+    review_page.post("/api/show", json={"file": REVIEWED_FILE})
+
+    facts = review_facts(review_page)
+    with open_session(review_page) as socket:
+        welcome = welcome_of(socket)
+
+    assert (facts.instance, facts.sequence) == (welcome.instance, welcome.sequence)
 
 
 def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_missed(

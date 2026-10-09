@@ -411,6 +411,6 @@ describe('the file being read', () => {
 		if (!arrived) throw new Error('The retaken file is not drawn');
 		ScriptedObserver.scrollTo(arrived);
 
-		expect(review.diff.fileInView).toBe(secondFile.path);
+		expect(review.sections.fileInView).toBe(secondFile.path);
 	});
 });

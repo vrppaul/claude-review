@@ -1113,6 +1113,10 @@ export interface components {
             agent: components["schemas"]["AgentStatus"];
             work: components["schemas"]["AgentWork"] | null;
             limits: components["schemas"]["SendLimits"];
+            /** Instance */
+            instance: string;
+            /** Sequence */
+            sequence: number;
             /** Release */
             release: string;
         };

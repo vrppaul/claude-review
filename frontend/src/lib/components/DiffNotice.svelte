@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { Thread, DiffFile } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
-	import { isDrawn } from '$lib/utils/placement';
+	import { isDrawn } from '$lib/anchors/placement';
 	import { useReview } from '$lib/review/context';
+	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 
 	const review = useReview();
 
@@ -142,9 +143,7 @@
 			<path d="M3 8.5l3.2 3.2L13 5"></path>
 		</svg>
 		<span>
-			{whatChanged()}{retaken.followed > 0
-				? ` · ${retaken.followed} ${retaken.followed === 1 ? 'thread' : 'threads'} followed their lines`
-				: ''}{retaken.outdated > 0 ? ` · ${retaken.outdated} ${retaken.outdated === 1 ? 'is' : 'are'} outdated` : ''}
+			{[whatChanged(), ...followWords(retaken)].join(PHRASE_BREAK)}
 		</span>
 		<div class="flex-1"></div>
 		{#if failed}

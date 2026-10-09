@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isTypingTarget, moveByLine } from '$lib/utils/keyboard';
+	import { isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 
 	const review = useReview();
@@ -35,7 +35,7 @@
 
 	/** The file the reader is in: by focus if a line in it has the focus, by scroll if not. */
 	function currentFile(): string | null {
-		return review.sections.focused() ?? review.diff.fileInView;
+		return review.sections.focused() ?? review.sections.fileInView;
 	}
 
 	function stepFile(direction: 1 | -1) {
@@ -47,11 +47,6 @@
 		atFile = from === -1 ? (direction === 1 ? 0 : files.length - 1) : from + direction;
 		atFile = Math.min(files.length - 1, Math.max(0, atFile));
 		review.sections.scrollToFile(files[atFile].path);
-	}
-
-	function stepComment(direction: 1 | -1) {
-		const comment = review.threads.step(direction);
-		if (comment) review.navigator.reveal(comment);
 	}
 
 	/** Go to the oldest thread carrying an answer nobody has looked at. */
@@ -93,8 +88,8 @@
 			']': () => stepFile(1),
 			'[': () => stepFile(-1),
 			a: stepUnread,
-			n: () => stepComment(1),
-			p: () => stepComment(-1),
+			n: () => review.navigator.step(1),
+			p: () => review.navigator.step(-1),
 			c: talkToAgent,
 			f: () => review.layout.fileTree.toggle(),
 			v: () => actOnCurrentFile((path) => review.reading.toggleViewed(path)),

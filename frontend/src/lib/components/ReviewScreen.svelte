@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
-	import { markTab } from '$lib/utils/tab';
+	import { markTab } from '$lib/dom/tab';
 	import AgentPanel from './AgentPanel.svelte';
 	import DiffNotice from './DiffNotice.svelte';
 	import DiffView from './DiffView.svelte';

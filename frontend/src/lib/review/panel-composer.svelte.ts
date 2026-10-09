@@ -30,7 +30,7 @@ export class PanelComposer {
 	get kept(): Composer {
 		return {
 			text: this.#text,
-			images: $state.snapshot(this.attachments.images)
+			images: [...this.attachments.images]
 		};
 	}
 

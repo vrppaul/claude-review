@@ -1,9 +1,10 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { isDrawn } from '$lib/utils/placement';
-import { createLineSelection } from '$lib/components/line-selection.svelte';
+import { isDrawn } from '$lib/anchors/placement';
+import { LineSelection } from '$lib/components/line-selection.svelte';
 import type { Thread, DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
+import { SEND_LIMITS } from './pasted-images';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
@@ -158,9 +159,9 @@ describe("a base that is not the review's own", () => {
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
 		await review.diff.setBase('round:1');
-		const selection = createLineSelection({
+		const selection = new LineSelection({
 			mayCommentOnRemoved: () => !review.diff.narrowed,
-			longestRange: () => null,
+			longestRange: () => SEND_LIMITS.max_quoted_lines,
 			rowOf: () => undefined
 		});
 
@@ -172,9 +173,9 @@ describe("a base that is not the review's own", () => {
 	it('takes a thread on a line of the working tree, which every base shares', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
 		await review.diff.setBase('round:1');
-		const selection = createLineSelection({
+		const selection = new LineSelection({
 			mayCommentOnRemoved: () => !review.diff.narrowed,
-			longestRange: () => null,
+			longestRange: () => SEND_LIMITS.max_quoted_lines,
 			rowOf: () => undefined
 		});
 

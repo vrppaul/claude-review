@@ -25,7 +25,7 @@ import type {
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
-import { threadOnTheWire } from '$lib/utils/thread-wire';
+import { threadOnTheWire } from '$lib/api/thread-wire';
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
 function lastAnsweredAt(thread: Thread): number {
@@ -57,8 +57,6 @@ export class Threads {
 	readonly #sent = new SvelteMap<string, number>();
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
-	// Where the reader is in the list, shared by every control that steps it
-	#cursor = -1;
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#all, (thread) => anchorFile(thread.anchor)));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
@@ -125,13 +123,6 @@ export class Threads {
 	/** Which round a thread went out in, or nothing if it has not yet. */
 	sentInRound(id: string): number | undefined {
 		return this.#sent.get(id);
-	}
-
-	/** Step to the next or previous thread, and say which it is. */
-	step(direction: 1 | -1): Thread | undefined {
-		if (this.#all.length === 0) return undefined;
-		this.#cursor = (this.#cursor + direction + this.#all.length) % this.#all.length;
-		return this.#all[this.#cursor];
 	}
 
 	add({ anchor, body, severity, images }: NewComment): string {

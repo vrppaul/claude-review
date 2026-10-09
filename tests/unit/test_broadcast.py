@@ -13,7 +13,7 @@ from hypothesis import given, strategies as strategy
 
 from claude_review.domain.models import AgentWork
 from claude_review.domain.page_events import FileShown, WorkReported
-from claude_review.presentation.broadcast import BrowserBroadcast, push_of
+from claude_review.presentation.broadcast import JOURNAL_DEPTH, BrowserBroadcast, push_of
 from claude_review.presentation.wire.pushes import ShowPush
 from claude_review.presentation.wire.session import Delivery, Resume, Welcome
 from tests.helpers import message_said
@@ -24,6 +24,9 @@ REWRITING = "rewriting the handler"
 REPORTED_AT = 1
 # How many pushes a page here may fall behind by, and how many the review keeps for one coming back
 BACKLOG = 4
+KEPT = BACKLOG * JOURNAL_DEPTH
+# How many pushes leave a page that reads nothing let go
+LET_GO_AFTER = BACKLOG + 1
 SHOWN_FILE = "a.py"
 SHOWN = FileShown(file=SHOWN_FILE)
 # A few pushes, fewer than a page may fall behind by
@@ -31,7 +34,7 @@ FEW = 3
 # A run of the review other than the one listening
 ANOTHER_RUN = "another-run"
 # How far past what is kept the tests tell, to cover pages gone a long while
-TOLD_AT_MOST = BACKLOG * 3
+TOLD_AT_MOST = KEPT * 3
 
 
 def _welcome(outbox: asyncio.Queue[str]) -> Welcome:
@@ -102,7 +105,7 @@ def test_every_push_is_numbered_in_the_order_it_was_told() -> None:
 
 @given(told=strategy.integers(min_value=0, max_value=TOLD_AT_MOST), data=strategy.data())
 def test_a_page_coming_back_is_handed_exactly_what_it_missed(told: int, data: strategy.DataObject) -> None:
-    missed = data.draw(strategy.integers(min_value=0, max_value=min(told, BACKLOG)))
+    missed = data.draw(strategy.integers(min_value=0, max_value=min(told, KEPT)))
     broadcast = BrowserBroadcast(backlog=BACKLOG)
     instance = _instance(broadcast)
     _told_times(broadcast, told)
@@ -113,11 +116,11 @@ def test_a_page_coming_back_is_handed_exactly_what_it_missed(told: int, data: st
     assert [delivery.sequence for delivery in _deliveries(back)] == list(range(told - missed + 1, told + 1))
 
 
-@given(told=strategy.integers(min_value=BACKLOG + 1, max_value=TOLD_AT_MOST), data=strategy.data())
+@given(told=strategy.integers(min_value=KEPT + 1, max_value=TOLD_AT_MOST), data=strategy.data())
 def test_a_page_that_missed_more_than_is_kept_is_told_it_was_not_handed_it(
     told: int, data: strategy.DataObject
 ) -> None:
-    after = data.draw(strategy.integers(min_value=0, max_value=told - BACKLOG - 1))
+    after = data.draw(strategy.integers(min_value=0, max_value=told - KEPT - 1))
     broadcast = BrowserBroadcast(backlog=BACKLOG)
     instance = _instance(broadcast)
     _told_times(broadcast, told)
@@ -160,7 +163,7 @@ def test_a_page_that_falls_too_far_behind_is_let_go() -> None:
     broadcast = BrowserBroadcast(backlog=BACKLOG)
     stuck = broadcast.listen(resume=None)
 
-    _told_times(broadcast, BACKLOG + 1)
+    _told_times(broadcast, LET_GO_AFTER)
 
     with pytest.raises(asyncio.QueueShutDown):
         stuck.get_nowait()
@@ -179,3 +182,27 @@ def test_a_page_let_go_is_told_nothing_more() -> None:
 
     assert stuck.qsize() == 0
     assert [delivery.push for delivery in _deliveries(keeping_up)] == [ShowPush(file=SHOWN_FILE)]
+
+
+def test_a_page_let_go_for_falling_behind_is_handed_what_it_missed_when_it_comes_back() -> None:
+    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    stuck = broadcast.listen(resume=None)
+    last_seen = _welcome(stuck)
+
+    _told_times(broadcast, LET_GO_AFTER)
+    back = broadcast.listen(resume=Resume(instance=last_seen.instance, after=last_seen.sequence))
+
+    assert _welcome(back).resumed
+    assert len(_deliveries(back)) == LET_GO_AFTER
+
+
+def test_a_page_handed_a_backlog_of_what_it_missed_still_has_room_for_what_comes_next() -> None:
+    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    instance = _instance(broadcast)
+    _told_times(broadcast, BACKLOG)
+    back = broadcast.listen(resume=Resume(instance=instance, after=0))
+
+    broadcast.tell(SHOWN)
+
+    _welcome(back)
+    assert len(_deliveries(back)) == BACKLOG + 1

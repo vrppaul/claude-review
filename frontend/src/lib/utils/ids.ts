@@ -55,9 +55,4 @@ export class IdSequence {
 			}
 		}
 	}
-
-	/** Start over, for a review that holds nothing yet. */
-	reset(): void {
-		this.last = 0;
-	}
 }

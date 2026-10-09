@@ -1,15 +1,15 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine, LineSide } from '$lib/types';
-	import { indexByRow } from '$lib/utils/comment-index';
-	import { lineRangeLabel } from '$lib/utils/line-label';
+	import { indexByRow } from '$lib/anchors/comment-index';
+	import { lineRangeLabel } from '$lib/anchors/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
+	import { getLineNumber, LineSelection, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { LINE_NUMBER_ROLE } from '$lib/utils/keyboard';
+	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -27,13 +27,15 @@
 	const highlighted = $derived(
 		highlightFile(shown, language).map((hunkHtml, i) => applyWordMarks(shown.hunks[i].lines, hunkHtml))
 	);
-	const commentsByRow = $derived(indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed }));
+	const commentsByRow = $derived(
+		indexByRow(review.threads.onFile(file.path), file.path, { removedLines: !review.diff.narrowed })
+	);
 	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
 	const offsets = $derived(hunkOffsets(shown.hunks));
 
 	// Every line of the file in the order the rows count them, hunk after hunk
 	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
-	const selection = createLineSelection({
+	const selection = new LineSelection({
 		mayCommentOnRemoved: () => !review.diff.narrowed,
 		longestRange: () => review.longestQuotedRange,
 		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)

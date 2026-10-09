@@ -3,7 +3,7 @@
 	import type { DiffFile, FileStatus } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { useReview } from '$lib/review/context';
-	import { dragEdge, stepEdge } from '$lib/utils/resize';
+	import { dragEdge, stepEdge } from '$lib/dom/resize';
 
 	const review = useReview();
 
@@ -108,7 +108,7 @@
 		<button
 			data-testid="file-item"
 			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs {viewed ? 'opacity-45' : ''}"
-			class:cr-current={review.diff.fileInView === file.path}
+			class:cr-current={review.sections.fileInView === file.path}
 			style="padding-left: {depth * 12 + 8}px"
 			onclick={() => review.sections.scrollToFile(file.path)}
 		>
@@ -198,13 +198,13 @@
 			dragEdge(e, {
 				width: review.layout.fileTree.width,
 				grows: 'right',
-				onWidth: (px) => review.layout.fileTree.setWidth(px)
+				onWidth: (width) => review.layout.fileTree.setWidth(width)
 			})}
 		onkeydown={(e) =>
 			stepEdge(e, {
 				width: review.layout.fileTree.width,
 				grows: 'right',
-				onWidth: (px) => review.layout.fileTree.setWidth(px)
+				onWidth: (width) => review.layout.fileTree.setWidth(width)
 			})}
 	></button>
 	<div class="min-h-0 flex-1 overflow-y-auto p-3">

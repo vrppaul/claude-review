@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.models import ReviewKey
-from claude_review.presentation.dependencies import get_release, get_review
+from claude_review.presentation.broadcast import BrowserBroadcast
+from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.version_words import (
     changes_on_the_wire,
     key_of,
@@ -44,10 +45,15 @@ router = APIRouter()
 
 
 @router.get("/review")
-async def get_the_review(review: Review = Depends(get_review), release: str = Depends(get_release)) -> ReviewResponse:
+async def get_the_review(
+    review: Review = Depends(get_review),
+    release: str = Depends(get_release),
+    broadcast: BrowserBroadcast = Depends(get_broadcast),
+) -> ReviewResponse:
     """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
     standing = review.standing()
     work = review.work_under_way()
+    told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
         mode=standing.mode,
@@ -57,6 +63,8 @@ async def get_the_review(review: Review = Depends(get_review), release: str = De
         work=AgentWork.of(work) if work is not None else None,
         limits=SEND_LIMITS,
         release=release,
+        instance=told.instance,
+        sequence=told.after,
     )
 
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { lineAnchor } from '$lib/anchors/line';
 import type { LineSide } from '$lib/types';
-import { indexByRow } from '$lib/utils/comment-index';
+import { indexByRow } from '$lib/anchors/comment-index';
 import { fakeServer, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -213,28 +213,6 @@ describe('a thread the author raised', () => {
 				}
 			}
 		]);
-	});
-});
-
-describe('stepping through comments', () => {
-	it('keeps one position, so two controls cannot disagree', () => {
-		review.threads.add(newComment({ startLine: 1, body: 'one' }));
-		review.threads.add(newComment({ startLine: 2, body: 'two' }));
-
-		expect(review.threads.step(1)?.body).toBe('one');
-		expect(review.threads.step(1)?.body).toBe('two');
-		expect(review.threads.step(-1)?.body).toBe('one');
-	});
-
-	it('wraps around rather than stopping at the end', () => {
-		review.threads.add(newComment({ body: 'one' }));
-
-		expect(review.threads.step(1)?.body).toBe('one');
-		expect(review.threads.step(1)?.body).toBe('one');
-	});
-
-	it('has nothing to step to when there are no comments', () => {
-		expect(review.threads.step(1)).toBeUndefined();
 	});
 });
 

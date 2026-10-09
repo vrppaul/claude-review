@@ -15,7 +15,7 @@ import { PanelComposer } from '$lib/review/panel-composer.svelte';
 import type { Draft } from '$lib/drafts/draft-shapes';
 import type { Thread, PanelTurn } from '$lib/types';
 import { ANSWER_ID_PREFIX, EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
-import { threadOnTheWire } from '$lib/utils/thread-wire';
+import { threadOnTheWire } from '$lib/api/thread-wire';
 
 /**
  * The message the agent is still working on.
@@ -72,7 +72,7 @@ export class Conversation {
 	async send(threads: Thread[]): Promise<void> {
 		const written = this.composer.text;
 		const text = written.trim();
-		const images = $state.snapshot(this.composer.attachments.images);
+		const images = [...this.composer.attachments.images];
 		const id = this.#messageIds.next();
 		this.#say({
 			id,

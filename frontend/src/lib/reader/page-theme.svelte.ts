@@ -7,6 +7,7 @@
  */
 
 import type { Settings } from '$lib/reader/settings.svelte';
+import { stopsTogether } from '$lib/utils/stops';
 
 type ResolvedTheme = 'light' | 'dark';
 
@@ -46,10 +47,7 @@ export class PageTheme {
 
 		const query = window.matchMedia(SYSTEM_PREFERS_LIGHT);
 		query.addEventListener('change', this.#followSystem);
-		return () => {
-			stopApplying();
-			query.removeEventListener('change', this.#followSystem);
-		};
+		return stopsTogether(stopApplying, () => query.removeEventListener('change', this.#followSystem));
 	}
 
 	#apply(): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createLineSelection } from '$lib/components/line-selection.svelte';
+import { LineSelection } from '$lib/components/line-selection.svelte';
 import { contextLine } from './diff';
 
 // The most lines the review takes in one comment, as the server would say it
@@ -8,7 +8,7 @@ const LONGEST_RANGE = 3;
 const FIRST_LINE = 10;
 
 function selection() {
-	return createLineSelection({
+	return new LineSelection({
 		mayCommentOnRemoved: () => true,
 		longestRange: () => LONGEST_RANGE,
 		rowOf: (_side, lineNumber) => lineNumber - FIRST_LINE

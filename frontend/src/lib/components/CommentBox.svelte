@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import type { CommentKind, CommentSeverity } from '$lib/types';
 	import { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { useReview } from '$lib/review/context';
@@ -62,11 +62,14 @@
 	// the server drop what was pasted into it.
 	let handedOver = false;
 
-	$effect(() => () => {
+	/** A field going with nothing handed over: what was pasted is let go, and the closing said. */
+	function closeUnsaid() {
 		if (handedOver) return;
 		attachments.abandon();
 		review.commentFields.report({ type: 'closed', kind });
-	});
+	}
+
+	onDestroy(closeUnsaid);
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
@@ -98,7 +101,7 @@
 	function save() {
 		if (!sayable) return;
 		handedOver = true;
-		onSave(body.trim(), severity, $state.snapshot(attachments.images));
+		onSave(body.trim(), severity, [...attachments.images]);
 		review.commentFields.report({ type: 'added', kind });
 	}
 
@@ -123,7 +126,7 @@
 	function ask() {
 		if (!sayable || !onAsk) return;
 		handedOver = true;
-		onAsk(body.trim(), 'question', $state.snapshot(attachments.images));
+		onAsk(body.trim(), 'question', [...attachments.images]);
 		review.commentFields.report({ type: 'asked', kind });
 	}
 

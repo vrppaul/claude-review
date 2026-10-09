@@ -8,6 +8,7 @@ import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
 import { contextLine, diffFile, diffResponse, hunk, reviewResponse } from './diff';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
+import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
 
@@ -93,7 +94,21 @@ describe('what the server pushes, taken in', () => {
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 3 files');
 	});
+
+	it('says one file as one', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/anchors/follow', { anchors: [] });
+		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
+
+		handlePush(review, { type: 'diff', file_count: 1, changes: null });
+		await settled();
+
+		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 1 file');
+	});
 });
+
+// Where the telling goes on after what could not be handed over
+const GOES_ON_FROM = { instance: THIS_RUN, sequence: 0 };
 
 /** A server the page can catch up from: the review as it now stands, and its threads where they were. */
 function caughtUpFrom(): FakeServer {
@@ -113,7 +128,7 @@ describe('catching up on what the server could not hand over again', () => {
 			reviewResponse({ round: 3, answerer_attached: true, agent: status, work: underWay })
 		);
 
-		await catchUp(review);
+		await catchUp(review, GOES_ON_FROM);
 
 		expect(review.rounds.current).toBe(3);
 		expect(review.answerer.attached).toBe(true);
@@ -127,17 +142,17 @@ describe('catching up on what the server could not hand over again', () => {
 		const moved = { ...review.threads.all[0].anchor, start_line: 2, end_line: 2 };
 		caughtUpFrom().answer('POST /api/anchors/follow', { anchors: [moved] });
 
-		await catchUp(review);
+		await catchUp(review, GOES_ON_FROM);
 
 		expect(review.threads.all.find((thread) => thread.id === id)?.anchor.start_line).toBe(2);
-		expect(review.conversation.turns.at(-1)?.body).toContain('1 threads followed their lines');
+		expect(review.conversation.turns.at(-1)?.body).toContain('1 thread followed its lines');
 	});
 
 	it('says in the panel that what was said meanwhile may be missing, and leaves the ticks alone', async () => {
 		caughtUpFrom();
 		review.reading.setViewed('a.py', true);
 
-		await catchUp(review);
+		await catchUp(review, GOES_ON_FROM);
 
 		expect(review.conversation.turns.at(-1)?.body).toMatch(/anything said meanwhile may be missing/);
 		expect(review.reading.isViewed('a.py')).toBe(true);
@@ -146,7 +161,7 @@ describe('catching up on what the server could not hand over again', () => {
 	it('says so when the review cannot be read again', async () => {
 		caughtUpFrom().fail('GET /api/review', SERVER_ERROR);
 
-		await catchUp(review);
+		await catchUp(review, GOES_ON_FROM);
 
 		expect(review.conversation.turns.at(-1)?.body).toMatch(/could not be read again/);
 	});

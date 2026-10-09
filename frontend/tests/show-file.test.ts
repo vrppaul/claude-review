@@ -12,6 +12,8 @@ beforeEach(() => {
 const FRAMES_TO_SETTLE = 6;
 // A moment into a scroll that is still on its way
 const FRAMES_WHILE_MOVING = 2;
+// Long after anything asked for has had time to be drawn, in milliseconds
+const A_MINUTE = 60_000;
 
 /** Let the settling watch run. */
 async function frames(count = FRAMES_TO_SETTLE): Promise<void> {
@@ -113,6 +115,19 @@ describe('being taken to a thread', () => {
 		expect(thread.scrollIntoView).toHaveBeenCalled();
 	});
 
+	it('does not go to a thread drawn long after it was asked for', () => {
+		const later = document.createElement('div');
+		later.scrollIntoView = vi.fn();
+		const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
+		sections.scrollToThread('comment-1', 'a.py');
+
+		clock.mockReturnValue(A_MINUTE);
+		sections.registerThread('comment-1', later);
+
+		expect(later.scrollIntoView).not.toHaveBeenCalled();
+		clock.mockRestore();
+	});
+
 	it('does not go to a thread drawn later once the reader has asked for another', () => {
 		const first = document.createElement('div');
 		first.scrollIntoView = vi.fn();
@@ -147,12 +162,41 @@ describe('knowing which file the reader is in', () => {
 		expect(sections.focused()).toBeNull();
 	});
 
+	it('is none while the reading area is not watched', () => {
+		section('a.py');
+
+		expect(sections.fileInView).toBeNull();
+	});
+
+	it('is the earliest file in the reading band, in the order the page draws them', () => {
+		const first = document.createElement('div');
+		const second = document.createElement('div');
+		document.body.append(first, second);
+		sections.register('b.py', second);
+		sections.register('a.py', first);
+
+		sections.watchInView(document.body);
+
+		expect(sections.fileInView).toBe('a.py');
+	});
+
 	it('follows a file drawn after the watching began', () => {
-		const seen: string[][] = [];
-		sections.watchInView(document.body, (visible) => seen.push([...visible]));
+		sections.watchInView(document.body);
 
 		section('a.py');
 
-		expect(seen.at(-1)).toEqual(['a.py']);
+		expect(sections.fileInView).toBe('a.py');
+	});
+
+	it('moves on to the next file in the band when the one in view is taken away', () => {
+		const leaving = document.createElement('div');
+		document.body.append(leaving);
+		const takeBack = sections.register('a.py', leaving);
+		section('b.py');
+		sections.watchInView(document.body);
+
+		takeBack();
+
+		expect(sections.fileInView).toBe('b.py');
 	});
 });

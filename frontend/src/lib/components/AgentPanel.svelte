@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace, anchorToken } from '$lib/anchors/views';
-	import { dragEdge, stepEdge } from '$lib/utils/resize';
-	import { threadsIn } from '$lib/utils/thread-token';
-	import { formatWeight } from '$lib/utils/weight';
+	import { dragEdge, stepEdge } from '$lib/dom/resize';
+	import { threadsIn } from '$lib/anchors/thread-token';
+	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -29,8 +29,8 @@
 
 	const attached = $derived(review.answerer.attached);
 	const working = $derived(review.conversation.working);
-	// The message being written lives in the store, so hiding the panel or
-	// reloading the page does not lose it
+	// The message being written lives in the review's composer, so hiding
+	// the panel or reloading the page does not lose it
 	const draft = $derived(review.conversation.composer.text);
 	// Threads this message points at, read back from the text every time: a
 	// token deleted like a word takes its reference with it
@@ -226,7 +226,7 @@
 	const sizing = $derived({
 		width: review.layout.agentPanel.width,
 		grows: 'left' as const,
-		onWidth: (px: number) => review.layout.agentPanel.setWidth(px)
+		onWidth: (width: number) => review.layout.agentPanel.setWidth(width)
 	});
 </script>
 

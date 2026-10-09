@@ -13,17 +13,25 @@ import { discardImage, keepImage } from '$lib/api/review-api';
 import { imagesAmong, wholeMegabytes } from '$lib/utils/images';
 
 export class ImageAttachments {
-	/** Ids the server kept the attached images under, in the order pasted. */
-	images = $state<string[]>([]);
-	/** Images still on their way to the server; sending waits for them. */
-	uploading = $state(0);
+	#images = $state<string[]>([]);
+	#uploading = $state(0);
 	// What this instance uploaded itself, as opposed to images it was handed
 	// with an edit or a draft: the only ones it may let the server drop
 	readonly #uploaded = new SvelteSet<string>();
 
+	/** Ids the server kept the attached images under, in the order pasted. */
+	get images(): readonly string[] {
+		return this.#images;
+	}
+
+	/** Images still on their way to the server; sending waits for them. */
+	get uploading(): number {
+		return this.#uploading;
+	}
+
 	/** @param images what is already attached, when picking up a draft or an edit */
 	constructor(images: string[]) {
-		this.images = images;
+		this.#images = images;
 	}
 
 	/**
@@ -53,7 +61,7 @@ export class ImageAttachments {
 		const fitting = files.filter((file) => file.size <= limits.max_image_bytes);
 		const refusals =
 			fitting.length < files.length ? [`The image is over ${wholeMegabytes(limits.max_image_bytes)} MB`] : [];
-		const room = Math.max(0, limits.max_images_per_message - this.images.length - this.uploading);
+		const room = Math.max(0, limits.max_images_per_message - this.#images.length - this.#uploading);
 		if (fitting.length > room) {
 			refusals.push(`At most ${limits.max_images_per_message} images at a time`);
 		}
@@ -69,12 +77,12 @@ export class ImageAttachments {
 
 	/** Take an image off without asking the server: it no longer has it. */
 	forget(imageId: string) {
-		this.images = this.images.filter((kept) => kept !== imageId);
+		this.#images = this.#images.filter((kept) => kept !== imageId);
 	}
 
 	/** Let go of what went out with a message; what was pasted since stays. */
 	release(sent: string[]) {
-		this.images = this.images.filter((imageId) => !sent.includes(imageId));
+		this.#images = this.#images.filter((imageId) => !sent.includes(imageId));
 	}
 
 	/**
@@ -84,10 +92,10 @@ export class ImageAttachments {
 	 * the agent, and the server keeps those anyway.
 	 */
 	abandon() {
-		for (const imageId of this.images) {
+		for (const imageId of this.#images) {
 			if (this.#uploaded.has(imageId)) void letServerDrop(imageId);
 		}
-		this.images = [];
+		this.#images = [];
 	}
 
 	/**
@@ -97,20 +105,20 @@ export class ImageAttachments {
 	 * when it lands, and zeroing it here would leave it below nothing.
 	 */
 	reset(images: string[]) {
-		this.images = images;
+		this.#images = images;
 	}
 
 	async #attachOne(file: File): Promise<string | null> {
-		this.uploading += 1;
+		this.#uploading += 1;
 		try {
 			const { image_id: imageId } = await keepImage(file);
 			this.#uploaded.add(imageId);
-			this.images = [...this.images, imageId];
+			this.#images = [...this.#images, imageId];
 			return null;
 		} catch (error) {
 			return error instanceof Error ? error.message : 'Could not attach the image';
 		} finally {
-			this.uploading -= 1;
+			this.#uploading -= 1;
 		}
 	}
 }

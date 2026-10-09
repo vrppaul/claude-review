@@ -3,10 +3,10 @@ import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
-import { Review } from '$lib/review/review.svelte';
+import type { Review } from '$lib/review/review.svelte';
 import type { DiffFile, DiffResponse, ReviewResponse } from '$lib/types';
-import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
 import { DraftRepository } from '$lib/drafts/draft-repository';
+import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
 
 /** What a test says about the review it opens; the rest is a diff in its first round. */
@@ -20,13 +20,8 @@ export interface Opened {
 	settings?: Settings;
 }
 
-/** The page open in this tab: the review it holds, keeping its draft as the page does. */
-interface OpenPage {
-	keeper: DraftKeeper;
-	stopKeeping: () => void;
-}
-
-let openPage: OpenPage | null = null;
+// The page open in this tab: the review it holds, keeping its draft as the page does
+let openPage: KeptReview | null = null;
 
 /**
  * Let the page open in this tab go, as a reload or a closed tab does: what
@@ -46,15 +41,13 @@ export function leavePage(): void {
  */
 export function openReview({ files = [], facts, diff, settings = new Settings() }: Opened = {}): Review {
 	leavePage();
-	const said = reviewResponse(facts);
-	const drafts = new DraftRepository();
-	const review = new Review(
-		{ facts: said, firstDiff: diffResponse({ files, ...diff }), draft: drafts.load(said.title) },
-		{ settings, layout: new PageLayout(), sound: new ReplySound(settings) }
+	openPage = openKeptReview(
+		reviewResponse(facts),
+		diffResponse({ files, ...diff }),
+		{ settings, layout: new PageLayout(), sound: new ReplySound(settings) },
+		new DraftRepository()
 	);
-	const keeper = new DraftKeeper(drafts, review);
-	openPage = { keeper, stopKeeping: keeper.start() };
-	return review;
+	return openPage.review;
 }
 
 /** The options a component drawn on its own needs to be drawn inside this review. */

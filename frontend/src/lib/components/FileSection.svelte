@@ -4,7 +4,7 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { detectLanguage } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
-	import { whenNearViewport } from '$lib/utils/scroll';
+	import { whenNearViewport } from '$lib/dom/scroll';
 	import { useReview } from '$lib/review/context';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileNotes from './FileNotes.svelte';

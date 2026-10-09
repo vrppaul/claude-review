@@ -12,15 +12,16 @@
  * restarted mid-review comes back believing it is round one; the browser is
  * the only side that still knows better.
  *
- * Every push arrives numbered. When the socket drops — a laptop asleep, a
- * network gone — the connection comes back naming the run of the review it
- * was reading and the last number it was handed, and is handed what it
- * missed. When the review cannot hand over all of it, the page is asked to
- * catch up, and what arrives meanwhile waits until it has.
+ * Every push arrives numbered. Once the page can take pushes, each
+ * connection names where its telling stands — the run of the review it was
+ * reading and the last push it took in, which the page alone knows: it may
+ * have taken in another tab's draft since — and is handed what came after.
+ * When the review cannot hand over all of it, the page is asked to catch up,
+ * and what arrives meanwhile waits until it has.
  */
 
 import { decodeSessionMessage } from '$lib/connection/session-messages';
-import type { Delivery, ServerPush, SessionHello, Welcome } from '$lib/types';
+import type { Delivery, ServerPush, SessionHello, TellingPosition, Welcome } from '$lib/types';
 
 /** How long the first attempt to reconnect waits, in milliseconds. */
 export const FIRST_RETRY = 500;
@@ -41,14 +42,23 @@ export function sessionUrl(page: Location): string {
 
 /** What the page does with what the connection brings it. */
 export interface PushReceiver {
-	/** Take in one push. */
-	take(push: ServerPush): void;
+	/** Where the page's telling stands: the run of the review, and the last push it took in. */
+	told(): TellingPosition;
+	/** Take in one push, and where it stands in the telling. */
+	take(push: ServerPush, at: TellingPosition): void;
 	/**
-	 * Learn again what the pushes would have said: the connection came back
-	 * to a review that could not hand over everything it missed. Settles once
-	 * done, whether or not it could; what went wrong, it says itself.
+	 * Learn again what the pushes would have said: the review could not hand
+	 * over everything missed before `from`, where the telling now goes on.
+	 * Settles once done, whether or not it could; what went wrong, it says
+	 * itself.
 	 */
-	catchUp(): Promise<void>;
+	catchUp(from: TellingPosition): Promise<void>;
+}
+
+/** A push waiting to be handed over, with where it stands in the telling. */
+interface HeldPush {
+	push: ServerPush;
+	at: TellingPosition;
 }
 
 /** The page's socket: held open, reconnected when it drops, and spoken through. */
@@ -59,18 +69,18 @@ export class PageConnection {
 	#closed = false;
 	#retryDelay = FIRST_RETRY;
 	#retrying: ReturnType<typeof setTimeout> | null = null;
-	// Which run of the review this page was welcomed by, and the number of the
-	// last push it was handed: what it names when it comes back
-	#instance: string | null = null;
-	#sequence: number | null = null;
-	// What arrives while the page cannot take it: before its review is open —
-	// a reply or a raised thread taken in before the draft is restored would
-	// be overwritten by it — and while it catches up
-	#held: ServerPush[] = [];
+	// What takes what the socket brings. Until there is one, the socket only
+	// holds the review on screen: it named no place in the telling to go on
+	// from, and is replaced by one that does once the page can say it.
 	#receiver: PushReceiver | null = null;
-	// Whether something was missed that the page has still to catch up on,
-	// and whether it is catching up now
-	#behind = false;
+	// Which run of the review the socket open now is talking to, as its
+	// welcome said: what a delivery's number counts in
+	#instance: string | null = null;
+	// What arrives while the page catches up, handed over once it has
+	#held: HeldPush[] = [];
+	// Where the telling went on after something was missed, while the page
+	// has still to catch up on it; and whether it is catching up now
+	#resumedAt: TellingPosition | null = null;
 	#catchingUp = false;
 	// What the page last said it holds. Said again on every connection,
 	// because a connection may be to a server that has just come up knowing
@@ -83,7 +93,12 @@ export class PageConnection {
 		this.#url = url;
 	}
 
-	/** Connect, and keep connecting again whenever the socket drops, until closed. */
+	/**
+	 * Connect, and keep connecting again whenever the socket drops, until
+	 * closed. Holding the socket is what tells the server the review is on
+	 * screen, so it is held before anything else, however long the review
+	 * takes to read.
+	 */
 	open(): void {
 		this.#connect();
 	}
@@ -91,20 +106,30 @@ export class PageConnection {
 	/** Let the socket go for good. */
 	close(): void {
 		this.#closed = true;
-		if (this.#retrying !== null) clearTimeout(this.#retrying);
+		this.#stopRetrying();
 		if (this.#telling !== null) clearTimeout(this.#telling);
-		this.#retrying = null;
 		this.#telling = null;
 		this.#socket?.close();
 		this.#socket = null;
 		this.#receiver = null;
 		this.#held = [];
+		this.#resumedAt = null;
 	}
 
-	/** Hand over what arrived while the page was not ready, and everything from now on. */
+	/**
+	 * Hand everything from now on to the page, going on from where its
+	 * telling stands. The socket held until now named no such place, so one
+	 * that does takes its place, and the review hands over whatever it told
+	 * in between.
+	 */
 	deliverTo(receiver: PushReceiver): void {
 		this.#receiver = receiver;
-		this.#serve();
+		// Not open yet: opening will name the place
+		if (this.#socket === null) return;
+		this.#stopRetrying();
+		const holding = this.#socket;
+		this.#connect();
+		holding.close();
 	}
 
 	/**
@@ -118,80 +143,84 @@ export class PageConnection {
 
 	#connect(): void {
 		if (this.#closed) return;
+		this.#instance = null;
 		const socket = new WebSocket(this.#address());
-		socket.addEventListener('open', () => this.#opened());
-		socket.addEventListener('message', (event) => this.#received(event.data));
-		socket.addEventListener('close', () => this.#lost());
+		socket.addEventListener('open', () => this.#opened(socket));
+		socket.addEventListener('message', (event) => this.#received(socket, event.data));
+		socket.addEventListener('close', () => this.#lost(socket));
 		this.#socket = socket;
 	}
 
-	/** Where to connect: naming, once there is one, the run of the review and the last push handed. */
+	/** Where to connect: naming, once the page can say it, the run of the review and the last push it took in. */
 	#address(): string {
-		if (this.#instance === null || this.#sequence === null) return this.#url;
-		const resume = new URLSearchParams({ instance: this.#instance, after: String(this.#sequence) });
+		const told = this.#receiver?.told();
+		if (told === undefined) return this.#url;
+		const resume = new URLSearchParams({ instance: told.instance, after: String(told.sequence) });
 		return `${this.#url}?${resume.toString()}`;
 	}
 
-	#opened(): void {
+	#opened(socket: WebSocket): void {
+		if (socket !== this.#socket) return;
 		this.#retryDelay = FIRST_RETRY;
 		this.#sayHello();
 	}
 
-	#received(data: unknown): void {
+	/** What a socket said; one replaced since is no longer listened to. */
+	#received(socket: WebSocket, data: unknown): void {
+		const receiver = this.#receiver;
+		if (socket !== this.#socket || receiver === null) return;
 		const message = decodeSessionMessage(data);
 		if (message === null) return;
-		if (message.type === 'welcome') this.#welcomed(message);
-		else this.#delivered(message);
+		if (message.type === 'welcome') this.#welcomed(message, receiver);
+		else this.#delivered(message, receiver);
 	}
 
 	/**
-	 * A connection made. One that was handed what it missed reads on from
-	 * where it was; any other reads on from where the review's telling has
-	 * got to, and one that came back that way has missed something.
+	 * A connection made. One handed what it missed reads on from where it
+	 * was; any other has missed something it cannot be handed, and reads on
+	 * from where the review's telling has got, once the page has caught up.
 	 */
-	#welcomed(welcome: Welcome): void {
-		const cameBack = this.#instance !== null;
+	#welcomed(welcome: Welcome, receiver: PushReceiver): void {
 		this.#instance = welcome.instance;
 		if (welcome.resumed) return;
-		this.#sequence = welcome.sequence;
-		if (cameBack) {
-			this.#behind = true;
-			this.#serve();
-		}
+		this.#resumedAt = { instance: welcome.instance, sequence: welcome.sequence };
+		this.#serve(receiver);
 	}
 
-	#delivered(delivery: Delivery): void {
-		this.#sequence = delivery.sequence;
-		this.#held.push(delivery.push);
-		this.#serve();
+	#delivered(delivery: Delivery, receiver: PushReceiver): void {
+		// The server welcomes every connection first; a number counted in no
+		// run that was named cannot be placed
+		if (this.#instance === null) return;
+		this.#held.push({ push: delivery.push, at: { instance: this.#instance, sequence: delivery.sequence } });
+		this.#serve(receiver);
 	}
 
 	/**
-	 * Hand the page what is held, unless it cannot take it yet: its review is
-	 * not open, or it is catching up — which, owed, comes first.
+	 * Hand the page what is held, in order, unless it is catching up —
+	 * which, owed, comes first.
 	 */
-	#serve(): void {
-		const receiver = this.#receiver;
-		if (receiver === null || this.#catchingUp) return;
-		if (this.#behind) {
-			this.#behind = false;
+	#serve(receiver: PushReceiver): void {
+		if (this.#catchingUp) return;
+		const resumedAt = this.#resumedAt;
+		if (resumedAt !== null) {
+			this.#resumedAt = null;
 			this.#catchingUp = true;
-			void receiver.catchUp().finally(() => this.#caughtUp());
+			void receiver.catchUp(resumedAt).finally(() => this.#caughtUp(receiver));
 			return;
 		}
-		const waiting = this.#held;
-		this.#held = [];
-		for (const push of waiting) receiver.take(push);
+		for (let held = this.#held.shift(); held !== undefined; held = this.#held.shift()) {
+			handOver(receiver, held);
+		}
 	}
 
-	#caughtUp(): void {
+	#caughtUp(receiver: PushReceiver): void {
 		this.#catchingUp = false;
-		this.#serve();
+		if (receiver === this.#receiver) this.#serve(receiver);
 	}
 
 	/** The server may simply be slow to come back; back off rather than spin. */
-	#lost(): void {
-		if (this.#closed) return;
+	#lost(socket: WebSocket): void {
+		if (this.#closed || socket !== this.#socket) return;
 		this.#retrying = setTimeout(() => this.#retry(), this.#retryDelay);
 		this.#retryDelay = Math.min(this.#retryDelay * RETRY_GROWTH, LONGEST_RETRY);
 	}
@@ -199,6 +228,11 @@ export class PageConnection {
 	#retry(): void {
 		this.#retrying = null;
 		this.#connect();
+	}
+
+	#stopRetrying(): void {
+		if (this.#retrying !== null) clearTimeout(this.#retrying);
+		this.#retrying = null;
 	}
 
 	#sayHello(): void {
@@ -218,5 +252,18 @@ export class PageConnection {
 	#sayHelloLater(): void {
 		this.#telling = null;
 		this.#sayHello();
+	}
+}
+
+/**
+ * Hand one push to the page. One it fails to take in is a fault of the
+ * page's own, said where faults are said; the pushes behind it are not at
+ * fault, and still go through.
+ */
+function handOver(receiver: PushReceiver, held: HeldPush): void {
+	try {
+		receiver.take(held.push, held.at);
+	} catch (error) {
+		console.error('claude-review: a push from the server could not be taken in', held.push, error);
 	}
 }

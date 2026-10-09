@@ -20,8 +20,6 @@ export class CommentFields {
 	/** Follow every field from now on; returns how to stop. */
 	listen(listener: Listener): () => void {
 		this.#listeners.add(listener);
-		return () => {
-			this.#listeners.delete(listener);
-		};
+		return () => this.#listeners.delete(listener);
 	}
 }

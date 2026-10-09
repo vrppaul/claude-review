@@ -13,7 +13,7 @@ type Grows = 'left' | 'right';
 interface Sizing {
 	width: number;
 	grows: Grows;
-	onWidth: (px: number) => void;
+	onWidth: (width: number) => void;
 }
 
 /** How far the arrow keys move an edge at a time. */
@@ -26,7 +26,7 @@ class EdgeDrag {
 	readonly #startX: number;
 	readonly #width: number;
 	readonly #towards: number;
-	readonly #onWidth: (px: number) => void;
+	readonly #onWidth: (width: number) => void;
 
 	constructor(event: PointerEvent & { currentTarget: HTMLElement }, { width, grows, onWidth }: Sizing) {
 		this.#handle = event.currentTarget;

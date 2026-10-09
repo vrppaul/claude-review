@@ -3,9 +3,10 @@
  *
  * A thread is named in its own header, in menus and in the panel, and a
  * panel message mentions it by a token. Each kind of anchor answers those
- * questions in its own module, so nothing that lists threads has to ask
- * what a thread hangs on. Bringing one into view moves the page, and is the
- * review's `ThreadNavigator`.
+ * questions in its own module, so naming, matching and mentioning a thread
+ * never asks what it hangs on. Drawing one on the lines it hangs on still
+ * does — only line anchors are drawn on a file — and bringing one into view
+ * moves the page, which is the review's `ThreadNavigator`.
  */
 
 import type { Anchor, AnchorKind } from '$lib/types';

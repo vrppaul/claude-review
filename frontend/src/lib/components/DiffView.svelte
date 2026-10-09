@@ -10,12 +10,7 @@
 	// current — one direction each way, so the two cannot fight over it.
 	$effect(() => {
 		if (!container) return;
-		return review.sections.watchInView(container, (inBand) => {
-			// Several sections can share the band; the earliest one is the file
-			// whose header is pinned at the top.
-			const current = review.diff.files.find((file) => inBand.has(file.path));
-			if (current) review.diff.markInView(current.path);
-		});
+		return review.sections.watchInView(container);
 	});
 </script>
 

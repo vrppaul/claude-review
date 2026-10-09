@@ -8,7 +8,7 @@ import type { Rounds } from '$lib/review/rounds.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Draft } from '$lib/drafts/draft-shapes';
 import type { SubmitResponse } from '$lib/types';
-import { threadOnTheWire } from '$lib/utils/thread-wire';
+import { threadOnTheWire } from '$lib/api/thread-wire';
 
 export class Submission {
 	readonly #threads: Threads;

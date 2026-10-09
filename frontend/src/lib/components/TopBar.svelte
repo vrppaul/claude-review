@@ -16,13 +16,6 @@
 	// A round is only worth offering while something is there to work through
 	// it; on its own, sending is the end of the review
 	const inRounds = $derived(review.answerer.attached);
-
-	function step(direction: 1 | -1) {
-		const comment = review.threads.step(direction);
-		if (!comment) return;
-
-		review.navigator.reveal(comment);
-	}
 </script>
 
 <header data-testid="top-bar" class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4">
@@ -94,7 +87,7 @@
 			<button
 				data-testid="prev-comment"
 				class="btn join-item btn-ghost btn-xs"
-				onclick={() => step(-1)}
+				onclick={() => review.navigator.step(-1)}
 				title="Previous comment"
 				aria-label="Previous comment"
 			>
@@ -105,7 +98,7 @@
 			<button
 				data-testid="next-comment"
 				class="btn join-item btn-ghost btn-xs"
-				onclick={() => step(1)}
+				onclick={() => review.navigator.step(1)}
 				title="Next comment"
 				aria-label="Next comment"
 			>

@@ -55,7 +55,8 @@ export class Guide {
 	// is already open does not wait for something that has happened
 	#openNewComments = $state(0);
 	// Which places the page has drawn for a step to light. The page says so
-	// whenever it changes; until it first has, every step counts as shown.
+	// while the tour runs; until it first has, every step counts as shown,
+	// and a step landed on then is checked again once it has.
 	#onPage = $state<ReadonlySet<TourTarget> | null>(null);
 	readonly #steps: TourStep[];
 	readonly #stepIndex: number;
@@ -118,9 +119,16 @@ export class Guide {
 		return latestNews(RELEASE_NEWS, this.#release);
 	}
 
-	/** The page says which of the tour's places it has drawn. */
+	/**
+	 * The page says which of the tour's places it has drawn. A step left with
+	 * nothing to light — the tour began before the page could say — moves on
+	 * to the next that has something.
+	 */
 	seeTargets(drawn: ReadonlySet<TourTarget>): void {
+		const landedBlind = this.#onPage === null;
 		this.#onPage = drawn;
+		const current = this.step;
+		if (landedBlind && current && !this.#shows(current)) this.#landFrom(this.#stepIndex, 1);
 	}
 
 	/** Decide what to show a reader arriving at a review served by this release. */
@@ -163,6 +171,8 @@ export class Guide {
 
 	endTour(): void {
 		this.#touring = false;
+		// The page is no longer watched, so what it last said goes stale
+		this.#onPage = null;
 	}
 
 	next(): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTypingTarget } from '$lib/utils/keyboard';
+import { isTypingTarget } from '$lib/dom/keyboard';
 
 describe('which keys belong to the review', () => {
 	it('leaves letters alone while a comment is being typed', () => {

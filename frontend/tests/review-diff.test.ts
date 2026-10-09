@@ -22,25 +22,6 @@ const files = [
 const CONTENT_VIEW_KEPT_HERE = 'claude-review:content-view';
 
 describe('the diff on screen', () => {
-	it('has nothing in view when the review holds no files', () => {
-		expect(review.diff.files).toEqual([]);
-		expect(review.diff.fileInView).toBeNull();
-	});
-
-	it('selects the first file of a diff that arrives', () => {
-		review = openReview({ files });
-
-		expect(review.diff.files).toHaveLength(2);
-		expect(review.diff.fileInView).toBe('src/a.ts');
-	});
-
-	it('records the file scrolled into view', () => {
-		review = openReview({ files });
-		review.diff.markInView('src/b.ts');
-
-		expect(review.diff.fileInView).toBe('src/b.ts');
-	});
-
 	it('is read from the server', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse({ files }));
