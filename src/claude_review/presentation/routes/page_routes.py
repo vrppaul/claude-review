@@ -64,7 +64,7 @@ async def get_the_review(
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,
-        sequence=told.after,
+        sequence=told.sequence,
     )
 
 

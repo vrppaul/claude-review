@@ -10,7 +10,7 @@
  * query string.
  */
 
-import { ReadingBand } from '$lib/review/reading-band.svelte';
+import { ReadingBand } from '$lib/dom/reading-band.svelte';
 
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks

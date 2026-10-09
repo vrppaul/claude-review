@@ -7,9 +7,13 @@
  * A review that is over has no draft, and its old one is forgotten, so the
  * next review is not greeted with this one's unsent work.
  *
- * Two tabs on one review keep one draft: what another tab keeps, this one
- * takes in, so neither writes the other's threads away — merged with what
- * this one has not kept yet, so neither wipes the other's either.
+ * Two tabs on one review keep one draft. Keeping is a turn taken with the
+ * kept draft: it is read, merged with what this tab changed since the two
+ * last agreed, written back, and taken in here — so neither tab writes the
+ * other's work away, and both end up holding the same. The tabs take these
+ * turns one at a time, so whatever is kept was built on what was kept
+ * before it, and what a tab last read or wrote is always where the kept
+ * draft and this tab's both started from.
  */
 
 import type { DraftRepository } from '$lib/drafts/draft-repository';
@@ -22,7 +26,7 @@ import { stopsTogether } from '$lib/utils/stops';
 // almost nothing
 const KEPT_AFTER = 300;
 
-/** What a draft is kept for: a review's snapshot of it, and taking in another tab's. */
+/** What a draft is kept for: a review's snapshot of it, and taking in the merged one. */
 export interface Drafted {
 	readonly title: string;
 	/** The draft as the review now stands, or null once it is over. */
@@ -34,13 +38,15 @@ export class DraftKeeper {
 	readonly #repository: DraftRepository;
 	readonly #review: Drafted;
 	#waiting: ReturnType<typeof setTimeout> | null = null;
-	// The draft as this tab last kept it or took it in: what a draft from
-	// another tab is merged against
-	#base: Draft | null = null;
+	// The draft as this tab last read it from storage or wrote it there: what
+	// this tab's draft and whatever is kept now both started from
+	#base: Draft | null;
 
-	constructor(repository: DraftRepository, review: Drafted) {
+	/** @param opened the draft the review opened from, if it opened from one */
+	constructor(repository: DraftRepository, review: Drafted, opened: Draft | null) {
 		this.#repository = repository;
 		this.#review = review;
+		this.#base = opened;
 	}
 
 	/** Keep the draft from now on, and take in another tab's; returns how to stop. */
@@ -50,46 +56,47 @@ export class DraftKeeper {
 			$effect.root(() => {
 				$effect(() => this.#changed(this.#review.draft));
 			}),
-			this.#repository.onChange(this.#review.title, (kept) => this.#takeIn(kept)),
+			this.#repository.onChange(this.#review.title, () => this.#keepInTurn()),
 			() => window.removeEventListener('pagehide', this.#leaving),
 			() => this.#stopWaiting()
 		);
 	}
 
-	/** Keep the draft as it stands now, without waiting. */
+	/**
+	 * Keep the draft as it stands now, without waiting — not even for a turn:
+	 * a page going away cannot wait for one.
+	 */
 	flush(): void {
 		this.#stopWaiting();
-		this.#keep(this.#review.draft);
+		this.#bringTogether();
 	}
 
 	#changed(draft: Draft | null): void {
 		this.#stopWaiting();
 		if (draft === null) {
+			this.#base = null;
 			this.#repository.clear();
 			return;
 		}
-		this.#waiting = setTimeout(() => this.flush(), KEPT_AFTER);
+		// Just as it was last read or written: nothing to keep
+		if (this.#base !== null && sameDraft(draft, this.#base)) return;
+		this.#waiting = setTimeout(() => this.#keepInTurn(), KEPT_AFTER);
 	}
 
-	#keep(draft: Draft | null): void {
-		this.#base = draft;
-		if (draft === null) this.#repository.clear();
-		else this.#repository.save(draft);
+	#keepInTurn(): void {
+		this.#stopWaiting();
+		void this.#repository.inTurn(() => this.#bringTogether());
 	}
 
-	/**
-	 * Take in the draft another tab kept. Taken as it is when this tab has
-	 * nothing it has not kept; merged with this tab's when it has, and the
-	 * merge kept at once, so the other tab takes in this one's too.
-	 */
-	#takeIn(theirs: Draft): void {
+	/** Read the kept draft, merge this tab's into it, keep the merge, and take it in here. */
+	#bringTogether(): void {
 		const mine = this.#review.draft;
 		if (mine === null) return;
-		const untouched = this.#waiting === null && this.#base !== null && sameDraft(mine, this.#base);
-		const taken = untouched ? theirs : mergeDrafts(this.#base ?? emptyDraftLike(theirs), mine, theirs);
-		this.#review.adopt(taken);
-		this.#base = taken;
-		if (!untouched) this.flush();
+		const kept = this.#repository.load(this.#review.title);
+		const together = kept === null ? mine : mergeDrafts(this.#base ?? emptyDraftLike(mine), mine, kept);
+		this.#repository.save(together);
+		this.#base = together;
+		if (!sameDraft(together, mine)) this.#review.adopt(together);
 	}
 
 	#stopWaiting(): void {

@@ -13,8 +13,9 @@
 import { cancelMessage, sendMessage } from '$lib/api/review-api';
 import { PanelComposer } from '$lib/review/panel-composer.svelte';
 import type { Draft } from '$lib/drafts/draft-shapes';
-import type { Thread, PanelTurn } from '$lib/types';
+import type { Thread, PanelTurn, TellingPosition } from '$lib/types';
 import { ANSWER_ID_PREFIX, EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
+import { samePosition } from '$lib/utils/telling';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 
 /**
@@ -27,6 +28,12 @@ function workingOn(turns: PanelTurn[]): PanelTurn | undefined {
 	const last = turns.findLast((turn) => turn.author === 'reader');
 	if (!last || last.cancelled) return undefined;
 	return turns.some((turn) => turn.answers === last.id) ? undefined : last;
+}
+
+/** What a note is about: the threads it names, and the push it tells of, if one. */
+export interface NoteAbout {
+	threads?: string[];
+	pushedAt?: TellingPosition;
 }
 
 export class Conversation {
@@ -98,16 +105,23 @@ export class Conversation {
 		this.composer.takeSent(written, images);
 	}
 
-	/** Take what the agent said and put it under what it answers, if anything. */
-	receive(messageId: string | null, text: string, files: string[]): void {
+	/**
+	 * Take what the agent said and put it under what it answers, if anything.
+	 * Says whether it is new here: what was taken in already — with another
+	 * tab's draft — is not taken in twice.
+	 */
+	receive(messageId: string | null, text: string, files: string[], pushedAt: TellingPosition): boolean {
+		if (this.#holds(pushedAt)) return false;
 		this.#say({
 			id: this.#answerIds.next(),
 			author: 'author',
 			body: text,
 			at: Date.now(),
 			...(messageId === null ? {} : { answers: messageId }),
-			files
+			files,
+			pushedAt
 		});
+		return true;
 	}
 
 	/**
@@ -115,15 +129,18 @@ export class Conversation {
 	 *
 	 * A retaken diff is not a turn — nobody said it — but it happened in the
 	 * middle of the conversation, and an answer written before it was written
-	 * about different code.
+	 * about different code. A note telling of a push is written once, however
+	 * many tabs take the push in.
 	 */
-	note(body: string, threads: string[] = []): void {
+	note(body: string, { threads = [], pushedAt }: NoteAbout = {}): void {
+		if (pushedAt && this.#holds(pushedAt)) return;
 		this.#say({
 			id: this.#eventIds.next(),
 			author: 'event',
 			body,
 			at: Date.now(),
-			threads
+			threads,
+			...(pushedAt ? { pushedAt } : {})
 		});
 	}
 
@@ -147,6 +164,11 @@ export class Conversation {
 
 	#say(turn: PanelTurn): void {
 		this.#turns = [...this.#turns, turn];
+	}
+
+	/** Whether the panel holds what a push brought: its answer, or a note about it. */
+	#holds(pushedAt: TellingPosition): boolean {
+		return this.#turns.some((turn) => turn.pushedAt && samePosition(turn.pushedAt, pushedAt));
 	}
 
 	#pickUp(said: PanelTurn[]): void {

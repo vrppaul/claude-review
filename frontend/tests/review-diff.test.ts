@@ -92,6 +92,14 @@ describe('retaking the diff', () => {
 		expect(review.settings.current.ignore_whitespace).toBe(true);
 	});
 
+	it('says in the panel when the diff cannot be taken again without whitespace', async () => {
+		fakeServer().fail('GET /api/diff', SERVER_ERROR);
+
+		await review.setIgnoreWhitespace(true);
+
+		expect(review.conversation.turns.at(-1)?.body).toMatch(/the diff could not be taken again/);
+	});
+
 	it('keeps the files already worked through', async () => {
 		fakeServer().answer('GET /api/diff', diffResponse());
 		review.reading.setViewed('src/a.ts', true);

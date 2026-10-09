@@ -55,6 +55,34 @@ describe('going on with the telling across connections', () => {
 		connection.close();
 	});
 
+	it('holds the review on screen with the first socket until the one replacing it is open', () => {
+		const connection = opened();
+		const holding = latestSocket();
+		holding.accept();
+
+		connection.deliverTo(new RecordingPage());
+		expect(holding.readyState).toBe(FakeSocket.OPEN);
+
+		latestSocket().accept();
+		expect(holding.readyState).toBe(FakeSocket.CLOSED);
+		connection.close();
+	});
+
+	it('takes nothing from the socket it is replacing, however late that one speaks', () => {
+		const page = new RecordingPage();
+		const connection = opened();
+		const holding = latestSocket();
+		connection.deliverTo(page);
+
+		holding.accept();
+		holding.say(welcome({ sequence: TOLD_SINCE }));
+		holding.deliver(A_REPLY, TOLD_SINCE + 1);
+
+		expect(page.catchUps).toBe(0);
+		expect(page.heard).toEqual([]);
+		connection.close();
+	});
+
 	it('goes on from where the page stands at once, even while waiting to connect again', () => {
 		const connection = opened();
 		latestSocket().drop();

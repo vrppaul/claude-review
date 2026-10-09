@@ -7,6 +7,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
+import { pushedAt } from './pushes';
 
 let review: Review;
 
@@ -83,7 +84,7 @@ describe('a thread is a conversation', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 
 		const { getByTestId, rerender } = render(DiffView, inReview(review));
-		review.threads.receiveReply(id, 'It moved into the config default', null);
+		review.threads.receiveReply(id, 'It moved into the config default', null, pushedAt(1));
 		await rerender({});
 
 		expect(getByTestId('thread-answer').textContent).toContain('It moved into the config default');
@@ -92,7 +93,7 @@ describe('a thread is a conversation', () => {
 	it('marks a thread with an answer nobody has looked at', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 
-		review.threads.receiveReply(id, 'It moved into the config default', null);
+		review.threads.receiveReply(id, 'It moved into the config default', null, pushedAt(2));
 
 		expect(review.threads.unread.length).toBe(1);
 		review.threads.reading.markRead(id);
@@ -102,9 +103,9 @@ describe('a thread is a conversation', () => {
 	it('keeps every turn rather than overwriting the last one', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 
-		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.receiveReply(id, 'Because of the retry path', null, pushedAt(3));
 		review.threads.addTurn(id, { author: 'reader', body: 'Then say so in the docstring', images: [] });
-		review.threads.receiveReply(id, 'Added', null);
+		review.threads.receiveReply(id, 'Added', null, pushedAt(4));
 
 		expect(review.threads.all[0].turns.map((turn) => turn.author)).toEqual(['author', 'reader', 'author']);
 	});
@@ -128,7 +129,7 @@ describe('a thread is a conversation', () => {
 		await review.threads.ask(id);
 
 		// The first answer arrives after the second question was already asked
-		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.receiveReply(id, 'Because of the retry path', null, pushedAt(5));
 
 		const answer = review.threads.all[0].turns.find((turn) => turn.author === 'author');
 		expect(answer?.answers).toBe(id);
@@ -143,7 +144,7 @@ describe('a thread is a conversation', () => {
 		await review.threads.ask(id);
 		const second = review.threads.reading.awaiting(review.threads.all[0].id)[1].id;
 
-		review.threads.receiveReply(id, 'Into the config default', second);
+		review.threads.receiveReply(id, 'Into the config default', second, pushedAt(6));
 
 		expect(review.threads.all[0].turns.at(-1)?.answers).toBe(second);
 		expect(review.threads.reading.awaiting(review.threads.all[0].id).map((waiting) => waiting.id)).toEqual([id]);
@@ -164,7 +165,7 @@ describe('a thread is a conversation', () => {
 	it('names the reply it asks when the reader said the last word', async () => {
 		const server = answering();
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.receiveReply(id, 'Because of the retry path', null, pushedAt(7));
 		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
 		const reply = review.threads.all[0].turns[1].id;
 
@@ -177,7 +178,7 @@ describe('a thread is a conversation', () => {
 	it('names the thread itself when the agent said the last word', async () => {
 		const server = answering();
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.receiveReply(id, 'Because of the retry path', null, pushedAt(8));
 
 		await review.threads.ask(id);
 
@@ -188,7 +189,7 @@ describe('a thread is a conversation', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 
 		const { getAllByTestId, rerender } = render(DiffView, inReview(review));
-		review.threads.receiveReply(id, 'Look at\n\n```python\nreturn 1\n```', null);
+		review.threads.receiveReply(id, 'Look at\n\n```python\nreturn 1\n```', null, pushedAt(9));
 		await rerender({});
 
 		const rendered = getAllByTestId('markdown-content').at(-1);

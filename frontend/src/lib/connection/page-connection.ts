@@ -73,6 +73,9 @@ export class PageConnection {
 	// holds the review on screen: it named no place in the telling to go on
 	// from, and is replaced by one that does once the page can say it.
 	#receiver: PushReceiver | null = null;
+	// The socket that held the review on screen, kept until the one replacing
+	// it is open: a review with no socket at all is a review the server ends
+	#holding: WebSocket | null = null;
 	// Which run of the review the socket open now is talking to, as its
 	// welcome said: what a delivery's number counts in
 	#instance: string | null = null;
@@ -109,6 +112,7 @@ export class PageConnection {
 		this.#stopRetrying();
 		if (this.#telling !== null) clearTimeout(this.#telling);
 		this.#telling = null;
+		this.#letGoOfHolding();
 		this.#socket?.close();
 		this.#socket = null;
 		this.#receiver = null;
@@ -119,17 +123,16 @@ export class PageConnection {
 	/**
 	 * Hand everything from now on to the page, going on from where its
 	 * telling stands. The socket held until now named no such place, so one
-	 * that does takes its place, and the review hands over whatever it told
-	 * in between.
+	 * that does takes its place once it is open, and the review hands over
+	 * whatever it told in between.
 	 */
 	deliverTo(receiver: PushReceiver): void {
 		this.#receiver = receiver;
 		// Not open yet: opening will name the place
 		if (this.#socket === null) return;
 		this.#stopRetrying();
-		const holding = this.#socket;
+		this.#holding = this.#socket;
 		this.#connect();
-		holding.close();
 	}
 
 	/**
@@ -161,8 +164,14 @@ export class PageConnection {
 
 	#opened(socket: WebSocket): void {
 		if (socket !== this.#socket) return;
+		this.#letGoOfHolding();
 		this.#retryDelay = FIRST_RETRY;
 		this.#sayHello();
+	}
+
+	#letGoOfHolding(): void {
+		this.#holding?.close();
+		this.#holding = null;
 	}
 
 	/** What a socket said; one replaced since is no longer listened to. */

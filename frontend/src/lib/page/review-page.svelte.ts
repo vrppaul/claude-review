@@ -40,22 +40,22 @@ export class ReviewPage {
 	 * is on screen, and reading the review may take longer than the server
 	 * waits for a reloaded page to come back. The reader's settings come
 	 * before the diff: whether whitespace counts decides which diff is asked
-	 * for. Once the review is open, the socket goes on from where its draft
-	 * or its facts left the telling, so whatever was said meanwhile is handed
-	 * over rather than missed.
+	 * for. The facts come before the diff too: they say how far the telling
+	 * had got, and a diff read after them holds everything told by then.
+	 * Once the review is open, the socket goes on from where its draft or its
+	 * facts left the telling, so whatever was said meanwhile is handed over
+	 * rather than missed.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
 		this.#connection.open();
 		try {
 			await this.#settings.load();
-			const [facts, firstDiff] = await Promise.all([
-				readReview(),
-				takeDiff({
-					ignoreWhitespace: this.#settings.current.ignore_whitespace,
-					base: null
-				})
-			]);
+			const facts = await readReview();
+			const firstDiff = await takeDiff({
+				ignoreWhitespace: this.#settings.current.ignore_whitespace,
+				base: null
+			});
 			// An unsent review of the same thing is picked up where it stopped
 			const { review } = openKeptReview(
 				facts,
@@ -65,7 +65,7 @@ export class ReviewPage {
 			);
 			review.tellServerThrough(this.#connection);
 			this.#connection.deliverTo({
-				told: () => review.telling.position,
+				told: () => review.telling.heard,
 				take: (push, at) => takePush(review, push, at),
 				catchUp: (from) => catchUp(review, from)
 			});

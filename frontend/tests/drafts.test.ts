@@ -7,6 +7,7 @@ import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { leavePage, openReview } from './review';
+import { pushedAt } from './pushes';
 
 let review: Review;
 // Where the page keeps drafts, read the way the page reads them
@@ -156,7 +157,7 @@ describe('an unsent review', () => {
 		review = openReview();
 		const id = review.threads.add(newComment({ body: 'Why?' }));
 		review.threads.addTurn(id, { author: 'reader', body: 'Still asking', images: [] });
-		review.threads.receiveReply(id, 'Because', null);
+		review.threads.receiveReply(id, 'Because', null, pushedAt(1));
 
 		reload();
 		review.threads.addTurn(id, { author: 'reader', body: 'Thanks', images: [] });
@@ -193,7 +194,7 @@ describe('an unsent review', () => {
 			panel: [],
 			composer: { text: '', images: [] },
 			issued: { comments: 0, turns: 0 },
-			told: null
+			told: {}
 		});
 		drafts.clear();
 
@@ -213,7 +214,7 @@ describe('a draft this release kept', () => {
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
 			composer: { text: 'half a thought', images: ['pasted.png'] },
 			issued: { comments: 3, turns: 5 },
-			told: null
+			told: {}
 		};
 
 		drafts.save(kept);

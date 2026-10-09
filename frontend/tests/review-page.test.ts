@@ -1,14 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FIRST_RETRY, PageConnection } from '$lib/connection/page-connection';
 import { ReviewPage } from '$lib/page/review-page.svelte';
+import { takePush } from '$lib/page/push-handling';
+import type { Review } from '$lib/review/review.svelte';
+import { storageKey } from '$lib/utils/preferences';
 import { diffResponse, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
 import type { ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
+import { pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 
 const SESSION_URL = 'ws://review.test/api/session';
+// Where the page keeps its draft
+const DRAFT_KEY = storageKey('draft');
+// How far the review's telling had got when the page read its facts
+const FACTS_READ_AT = 5;
+// How far the draft a reloaded page opens from had got
+const DRAFT_LEFT_AT = 2;
+// A push that changes nothing a test reads
+const NO_WORK: ServerPush = { type: 'progress', work: null };
+
+/** The review an open page holds. */
+function openedReview(page: ReviewPage): Review {
+	if (page.state.kind !== 'open') throw new Error(`The page is ${page.state.kind}`);
+	return page.state.review;
+}
 
 /** A server with a review to open, and a reader it knows nothing about yet. */
 function serving(): FakeServer {
@@ -44,22 +62,39 @@ describe('opening the page', () => {
 		await opening;
 	});
 
+	it('reads the diff only once it knows how far the telling had got, so the diff holds all of it', async () => {
+		const server = serving();
+		const facts = server.hold('GET /api/review');
+		const page = new ReviewPage(new PageConnection(SESSION_URL));
+
+		const opening = page.open();
+		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
+
+		expect(server.requestsTo('GET /api/diff')).toEqual([]);
+		facts.answer(0, reviewResponse());
+		await opening;
+		expect(server.requestsTo('GET /api/diff')).toHaveLength(1);
+	});
+
 	it('is handed what was said while it reloaded, into the thread the draft brings back', async () => {
-		serving();
-		// A thread written before the reload, kept in the draft
-		const id = openReview().threads.add(newComment({ body: 'Why?' }));
-		// And then the reload
+		const server = serving();
+		// A thread written before the reload, and pushes taken in up to the second
+		const before = openReview();
+		const id = before.threads.add(newComment({ body: 'Why?' }));
+		takePush(before, NO_WORK, pushedAt(1));
+		takePush(before, NO_WORK, pushedAt(DRAFT_LEFT_AT));
+		// And then the reload, while the review's telling goes on to the fifth
 		leavePage();
+		server.answer('GET /api/review', reviewResponse({ sequence: FACTS_READ_AT }));
 		const page = new ReviewPage(new PageConnection(SESSION_URL));
 
 		await page.open();
 		latestSocket().accept();
-		latestSocket().say(welcome({ resumed: true }));
-		latestSocket().deliver({ type: 'reply', thread_id: id, question_id: null, body: 'Because.' }, 1);
+		latestSocket().say(welcome({ sequence: FACTS_READ_AT, resumed: true }));
+		latestSocket().deliver({ type: 'reply', thread_id: id, question_id: null, body: 'Because.' }, DRAFT_LEFT_AT + 1);
 
-		if (page.state.kind !== 'open') throw new Error(`The page is ${page.state.kind}`);
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=0`);
-		expect(page.state.review.threads.all[0].turns.at(-1)?.body).toBe('Because.');
+		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${DRAFT_LEFT_AT}`);
+		expect(openedReview(page).threads.all[0].turns.at(-1)?.body).toBe('Because.');
 	});
 
 	it('takes in once what another tab took in first', async () => {
@@ -68,10 +103,14 @@ describe('opening the page', () => {
 		await page.open();
 		latestSocket().accept();
 		latestSocket().say(welcome({ resumed: true }));
-		if (page.state.kind !== 'open') throw new Error(`The page is ${page.state.kind}`);
-		const { review } = page.state;
+		const review = openedReview(page);
 		const chat: ServerPush = { type: 'chat', message_id: null, body: 'Done.', files: [] };
-		latestSocket().deliver(chat, 1);
+		// The other tab's socket hands it the answer first, and it keeps its draft
+		const elsewhere = openReview();
+		takePush(elsewhere, chat, pushedAt(1));
+		const theirs = JSON.stringify(elsewhere.draft);
+		leavePage();
+		window.dispatchEvent(new StorageEvent('storage', { key: DRAFT_KEY, newValue: theirs }));
 
 		latestSocket().deliver(chat, 1);
 
@@ -94,10 +133,9 @@ describe('opening the page', () => {
 		latestSocket().accept();
 		latestSocket().say(welcome({ sequence: 5 }));
 
-		if (page.state.kind !== 'open') throw new Error(`The page is ${page.state.kind}`);
-		const { review } = page.state;
+		const review = openedReview(page);
 		await vi.waitFor(() => expect(review.rounds.current).toBe(4));
-		expect(review.telling.position).toEqual({ instance: THIS_RUN, sequence: 5 });
+		expect(review.telling.heard).toEqual({ instance: THIS_RUN, sequence: 5 });
 	});
 
 	it('says why when the review cannot be opened', async () => {

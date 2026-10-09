@@ -45,9 +45,15 @@ function anotherTabsDraft({
 	return kept;
 }
 
-/** The storage event a tab hears when another tab on this port keeps something. */
-function keptElsewhere(draft: Draft): void {
+/** The storage event a tab hears when another tab on this port has kept its draft. */
+function heardElsewhere(draft: Draft): void {
 	window.dispatchEvent(new StorageEvent('storage', { key: DRAFT_KEY, newValue: JSON.stringify(draft) }));
+}
+
+/** Another tab on this port keeps its draft, and this tab hears of it. */
+function keptElsewhere(draft: Draft): void {
+	localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+	heardElsewhere(draft);
 }
 
 /** How many times the draft was written, of everything written to storage. */
@@ -138,7 +144,7 @@ describe('keeping the draft', () => {
 		localStorage.setItem(DRAFT_KEY, JSON.stringify(theirs));
 		const written = vi.spyOn(Storage.prototype, 'setItem');
 
-		keptElsewhere(theirs);
+		heardElsewhere(theirs);
 		flushSync();
 		vi.advanceTimersByTime(AFTER_A_PAUSE);
 

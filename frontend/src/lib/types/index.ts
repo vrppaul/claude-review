@@ -68,6 +68,8 @@ export interface Turn {
 	answers?: string;
 	/** Screenshots the reader pasted with it, by the id the server kept them under. */
 	images: string[];
+	/** The push that brought it, for an answer: every tab takes the same push in, and keeps it once. */
+	pushedAt?: TellingPosition;
 }
 
 /** What is said in a thread after the comment that opened it, as it is written. */
@@ -166,6 +168,7 @@ export type Delivery = SocketSchemas['Delivery'];
 /** What the server pushes down the socket, told apart by `type`. */
 export type ServerPush = SocketSchemas['ServerPush'];
 export type PointPush = SocketSchemas['PointPush'];
+export type DiffPush = SocketSchemas['DiffPush'];
 
 /**
  * How far the review's telling has got, as a page holds it: which run of the
@@ -176,6 +179,9 @@ export interface TellingPosition {
 	instance: string;
 	sequence: number;
 }
+
+/** How far the review's telling had got in each run of it: the number of the last push, by run. */
+export type TellingByRun = Record<string, number>;
 
 /** Which files changed since a round began, and which round that was. */
 export type ChangesSince = Schemas['ChangesSince'];
@@ -219,6 +225,8 @@ export interface PanelTurn {
 	answers?: string;
 	/** Taken back before it was answered. */
 	cancelled?: boolean;
+	/** The push that brought it, for an answer or a note about one: kept once, however many tabs take it in. */
+	pushedAt?: TellingPosition;
 }
 
 /** Which comment field: one on a line, a reply in a thread, or an edit. */

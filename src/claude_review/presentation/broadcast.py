@@ -71,6 +71,15 @@ RUN_NAME_BYTES = 8
 WELCOME_PLACES = 1
 
 
+class TellingPosition(BaseModel):
+    """How far the review's telling has got: which run of the review, and the number of the last push told."""
+
+    model_config = ConfigDict(frozen=True)
+
+    instance: str
+    sequence: int
+
+
 class Told(BaseModel):
     """One push as it was told, with its number."""
 
@@ -124,9 +133,9 @@ class BrowserBroadcast:
     def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
 
-    def position(self) -> Resume:
-        """Where a page reading the review's facts now continues from: this run, and the last push told."""
-        return Resume(instance=self._instance, after=self._sequence)
+    def position(self) -> TellingPosition:
+        """How far the telling has got: where a page reading the review's facts now goes on from."""
+        return TellingPosition(instance=self._instance, sequence=self._sequence)
 
     def _missed_since(self, resume: Resume | None) -> list[Told] | None:
         """What a page coming back missed, or None when it cannot be handed all of it."""

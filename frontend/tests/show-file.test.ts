@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FileSections } from '$lib/review/file-sections';
+import { FileSections } from '$lib/dom/file-sections';
 
 let sections: FileSections;
 

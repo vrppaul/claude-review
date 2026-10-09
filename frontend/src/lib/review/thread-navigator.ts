@@ -7,7 +7,7 @@
  * among the threads, which only moving changes.
  */
 
-import type { FileSections } from '$lib/review/file-sections';
+import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread, LineAnchor } from '$lib/types';

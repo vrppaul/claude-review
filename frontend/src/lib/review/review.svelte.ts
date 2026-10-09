@@ -15,7 +15,7 @@ import type { Settings } from '$lib/reader/settings.svelte';
 import { Answerer } from '$lib/review/answerer.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
-import { FileSections } from '$lib/review/file-sections';
+import { FileSections } from '$lib/dom/file-sections';
 import { LastRetake } from '$lib/review/last-retake.svelte';
 import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
@@ -207,9 +207,15 @@ export class Review {
 	 * so the tree has nothing more to say — unless it moves again meanwhile.
 	 */
 	takeRetakenDiff(): Promise<FollowOutcome> {
-		const taken = this.#retaking.then(() => this.#followAndTake());
-		this.#retaking = taken.catch(() => undefined);
-		return taken;
+		return this.#oneRetakeAtATime(() => this.#followAndTake());
+	}
+
+	/**
+	 * Move the threads onto the review's diff as it now stands, leaving the
+	 * diff on screen as it is: it was taken after the retake already.
+	 */
+	followThreads(): Promise<FollowOutcome> {
+		return this.#oneRetakeAtATime(() => this.threads.follow());
 	}
 
 	/** Note what a retake did, and take the tick off what it rewrote. */
@@ -229,8 +235,14 @@ export class Review {
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,
-			told: this.telling.position
+			told: this.telling.kept
 		};
+	}
+
+	#oneRetakeAtATime(retake: () => Promise<FollowOutcome>): Promise<FollowOutcome> {
+		const taken = this.#retaking.then(retake);
+		this.#retaking = taken.catch(() => undefined);
+		return taken;
 	}
 
 	async #followAndTake(): Promise<FollowOutcome> {

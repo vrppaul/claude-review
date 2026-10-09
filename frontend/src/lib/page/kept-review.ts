@@ -27,7 +27,8 @@ export function openKeptReview(
 	reader: ReaderParts,
 	drafts: DraftRepository
 ): KeptReview {
-	const review = new Review({ facts, firstDiff, draft: drafts.load(facts.title) }, reader);
-	const keeper = new DraftKeeper(drafts, review);
+	const draft = drafts.load(facts.title);
+	const review = new Review({ facts, firstDiff, draft }, reader);
+	const keeper = new DraftKeeper(drafts, review, draft);
 	return { review, keeper, stopKeeping: keeper.start() };
 }

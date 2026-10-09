@@ -11,6 +11,7 @@ import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
+import { pushedAt } from '../pushes';
 
 const TITLE = 'claude-review: uncommitted changes';
 // jsdom lays nothing out, so the panel is given a height to scroll in: this
@@ -155,7 +156,7 @@ describe('the agent panel', () => {
 		givenTall(stream);
 
 		await say(review, 'Run the tests');
-		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', []);
+		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', [], pushedAt(2));
 		await painted();
 
 		expect(stream.scrollTop).toBe(FULL_HEIGHT);
@@ -172,7 +173,7 @@ describe('the agent panel', () => {
 		stream.scrollTop = 0;
 		stream.dispatchEvent(new Event('scroll'));
 
-		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', []);
+		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', [], pushedAt(2));
 		await painted();
 
 		expect(stream.scrollTop).toBe(0);
@@ -243,7 +244,7 @@ describe('the agent panel', () => {
 	it('lets the agent speak first, with a file worth opening at it', async () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(null, 'Tests are green again.', ['src/claude_review/cli.py']);
+		review.conversation.receive(null, 'Tests are green again.', ['src/claude_review/cli.py'], pushedAt(1));
 		await tick();
 
 		expect(getByTestId('panel-answer').textContent).toContain('Tests are green again.');

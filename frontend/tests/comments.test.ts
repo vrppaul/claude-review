@@ -6,6 +6,7 @@ import { fakeServer, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
+import { pushedAt } from './pushes';
 
 let review: Review;
 
@@ -143,9 +144,9 @@ describe('answered threads', () => {
 		const newer = review.threads.add(newComment({ body: 'asked second' }));
 
 		vi.setSystemTime(1_000);
-		review.threads.receiveReply(older, 'answered first', null);
+		review.threads.receiveReply(older, 'answered first', null, pushedAt(1));
 		vi.setSystemTime(2_000);
-		review.threads.receiveReply(newer, 'answered last', null);
+		review.threads.receiveReply(newer, 'answered last', null, pushedAt(2));
 		vi.useRealTimers();
 
 		expect(review.threads.answered.map((comment) => comment.body)).toEqual(['asked second', 'asked first']);

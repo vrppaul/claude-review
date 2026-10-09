@@ -12,13 +12,16 @@
  * somebody's reading.
  */
 
-import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingPosition, Thread, Turn } from '$lib/types';
+import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingByRun, Thread, Turn } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 11;
-// The shape before drafts kept how far the telling had got
-const BEFORE_TELLING = 10;
+export const DRAFT_SHAPE = 12;
+// The shapes since threads were kept as threads, before drafts kept how far
+// the telling had got in each run: neither was ever released, and what the
+// later one kept of the telling is not trusted
+const THREADS_KEPT_AS_THREADS = 10;
+const ONE_RUN_TOLD = 11;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -50,13 +53,13 @@ export interface Draft {
 	composer: Composer;
 	/** How many thread and turn ids have been handed out, deleted ones included. */
 	issued: IssuedIds;
-	/** The last push taken in: one numbered at or below it is in the draft already. Null when unknown. */
-	told: TellingPosition | null;
+	/** In each run of the review, the last push whose effect the draft holds. */
+	told: TellingByRun;
 }
 
-/** A draft as it was kept before it said how far the telling had got. */
+/** A draft as it was kept before it said how far the telling had got in each run. */
 interface UntoldDraft extends Omit<Draft, 'version' | 'told'> {
-	version: typeof BEFORE_TELLING;
+	version: typeof THREADS_KEPT_AS_THREADS | typeof ONE_RUN_TOLD;
 }
 
 /** A thread as drafts kept it until how it was read moved out of it. */
@@ -126,7 +129,7 @@ function isCurrent(kept: KeptDraft): kept is Draft {
 }
 
 function isUntold(kept: KeptDraft): kept is UntoldDraft {
-	return kept.version === BEFORE_TELLING;
+	return kept.version === THREADS_KEPT_AS_THREADS || kept.version === ONE_RUN_TOLD;
 }
 
 export function emptyComposer(): Composer {
@@ -136,8 +139,8 @@ export function emptyComposer(): Composer {
 /** A draft of the current shape, whichever shape it was kept in. */
 export function upToDate(kept: KeptDraft): Draft {
 	if (isCurrent(kept)) return kept;
-	// Kept before it said how far the telling had got: nobody can tell now
-	if (isUntold(kept)) return { ...kept, version: DRAFT_SHAPE, told: null };
+	// Kept before it said how far the telling had got in each run: nobody can tell now
+	if (isUntold(kept)) return { ...kept, version: DRAFT_SHAPE, told: {} };
 	return fromComments(kept);
 }
 
@@ -171,7 +174,7 @@ function fromComments(kept: OlderDraft): Draft {
 		// The panel kept nothing half-written until it could hold images
 		composer: kept.composer ?? emptyComposer(),
 		issued,
-		told: null
+		told: {}
 	};
 }
 

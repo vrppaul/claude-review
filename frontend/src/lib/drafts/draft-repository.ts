@@ -12,6 +12,9 @@ import { type Draft, isKeptDraft, upToDate } from '$lib/drafts/draft-shapes';
 import { storageKey } from '$lib/utils/preferences';
 
 const DRAFT_KEY = storageKey('draft');
+// Held while a tab reads the kept draft and writes it back, so tabs keeping
+// theirs at the same moment take turns rather than write over each other
+const DRAFT_LOCK = storageKey('draft-lock');
 
 /** A draft of this review, read from what was kept; null for none or another review's. */
 function draftOf(kept: string | null, title: string): Draft | null {
@@ -62,18 +65,30 @@ export class DraftRepository {
 	}
 
 	/**
+	 * Read the draft and write it back with no other tab's reading and
+	 * writing in between, so what is kept after is built on what was kept
+	 * before. At once where the browser holds no locks.
+	 */
+	async inTurn(task: () => void): Promise<void> {
+		// Absent in jsdom, and in browsers too old to matter here
+		if (typeof navigator.locks === 'undefined') {
+			task();
+			return;
+		}
+		await navigator.locks.request(DRAFT_LOCK, task);
+	}
+
+	/**
 	 * Hear when another tab on the same review keeps its draft. A tab is
 	 * never told of its own writes, only of the others'. Returns how to stop.
 	 */
-	onChange(title: string, listener: (draft: Draft) => void): () => void {
+	onChange(title: string, listener: () => void): () => void {
 		const heard = (event: StorageEvent) => this.#heard(event, title, listener);
 		window.addEventListener('storage', heard);
 		return () => window.removeEventListener('storage', heard);
 	}
 
-	#heard(event: StorageEvent, title: string, listener: (draft: Draft) => void): void {
-		if (event.key !== DRAFT_KEY) return;
-		const draft = draftOf(event.newValue, title);
-		if (draft !== null) listener(draft);
+	#heard(event: StorageEvent, title: string, listener: () => void): void {
+		if (event.key === DRAFT_KEY && draftOf(event.newValue, title) !== null) listener();
 	}
 }

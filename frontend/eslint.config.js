@@ -11,7 +11,8 @@ const LAYERS = {
 	types: [],
 	// Plain helpers over plain data; nothing of the page in them
 	utils: ['types'],
-	// What the page does to the document itself: focus, scroll, the tab
+	// What the page does to the document itself: focus, scroll, the tab, and
+	// where each file and thread is drawn
 	dom: ['types'],
 	api: ['types'],
 	connection: ['types'],
@@ -19,7 +20,7 @@ const LAYERS = {
 	drafts: ['types', 'utils'],
 	reader: ['types', 'utils', 'api'],
 	guide: ['types', 'utils', 'api'],
-	review: ['types', 'utils', 'anchors', 'api', 'drafts', 'guide', 'reader'],
+	review: ['types', 'utils', 'dom', 'anchors', 'api', 'drafts', 'guide', 'reader'],
 	page: ['types', 'utils', 'anchors', 'api', 'connection', 'drafts', 'guide', 'reader', 'review']
 };
 const PARTS = [...Object.keys(LAYERS), 'components'];
@@ -63,8 +64,10 @@ const TYPE_NAME = '^[A-Z][a-z]';
 // A helper is a function of its module, with a name and parameters of its
 // own, not a closure in the body of another. A one-line lambda — passed to
 // a call, or kept to take a listener off again — is still fine; one with a
-// body of statements is a helper, however it is kept: in a variable, in an
-// object, or handed back as a teardown.
+// body of statements is a helper when it is kept: in a variable, in an
+// object, or handed back as a teardown. One passed straight to a call is
+// not checked yet: an effect's body is one too, and telling the two apart
+// waits for the components to be cleaned.
 const NESTED_HELPER = 'A helper with logic is a function of the module, not one inside another.';
 const NO_NESTED_HELPERS = [
 	{ selector: ':function VariableDeclarator > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },

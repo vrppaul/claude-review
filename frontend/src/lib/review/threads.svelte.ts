@@ -20,11 +20,13 @@ import type {
 	FollowOutcome,
 	NewComment,
 	NewTurn,
+	TellingPosition,
 	Thread,
 	ThreadInput,
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
+import { samePosition } from '$lib/utils/telling';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
@@ -41,6 +43,11 @@ function lastAnsweredAt(thread: Thread): number {
 function questionIdOf(thread: Thread): string {
 	const last = thread.turns.at(-1);
 	return last?.author === 'reader' ? last.id : thread.id;
+}
+
+/** Whether a thread holds the answer a push brought. */
+function holdsAnswer(thread: Thread, pushedAt: TellingPosition): boolean {
+	return thread.turns.some((turn) => turn.pushedAt && samePosition(turn.pushedAt, pushedAt));
 }
 
 /** What a file with no threads holds. */
@@ -143,14 +150,17 @@ export class Threads {
 	}
 
 	/**
-	 * Take a thread the agent raised and put it on the diff.
+	 * Take a thread the agent raised and put it on the diff. Says whether it
+	 * is new here: the server names it, and a thread already held — taken in
+	 * with another tab's draft — is not raised twice.
 	 *
 	 * It arrives already sent: the reader has not written it, so it must not
 	 * swell "unsent" or travel back to the side that wrote it. The moment
 	 * they answer or edit it, it stops being sent — as any thread does — and
 	 * goes with the next round, so the reply arrives with what it replies to.
 	 */
-	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): string {
+	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): boolean {
+		if (this.#all.some((held) => held.id === id)) return false;
 		const thread: Thread = {
 			id,
 			anchor,
@@ -166,7 +176,7 @@ export class Threads {
 		this.#all = [...this.#all, thread];
 		this.reading.markUnread(id);
 		this.#sent.set(id, this.#rounds.current);
-		return id;
+		return true;
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {
@@ -225,13 +235,16 @@ export class Threads {
 
 	/**
 	 * Take an answer that came back and put it under the question it answers.
+	 * Says whether it is new here: an answer taken in already — with another
+	 * tab's draft — is not taken in twice.
 	 *
 	 * An answerer that names the question is believed; one that does not gets
 	 * the oldest question still waiting, which is the order they were handed
 	 * over in.
 	 */
-	receiveReply(id: string, text: string, questionId: string | null): void {
-		if (!this.#all.some((thread) => thread.id === id)) return;
+	receiveReply(id: string, text: string, questionId: string | null, pushedAt: TellingPosition): boolean {
+		const thread = this.#all.find((candidate) => candidate.id === id);
+		if (!thread || holdsAnswer(thread, pushedAt)) return false;
 
 		const answers = questionId ?? this.reading.awaiting(id)[0]?.id;
 		const turn: Turn = {
@@ -241,7 +254,8 @@ export class Threads {
 			round: this.#rounds.current,
 			at: Date.now(),
 			answers,
-			images: []
+			images: [],
+			pushedAt
 		};
 		// Not marked unsent: the answer came from the side that reads the
 		// rounds, so sending it back would only repeat what they wrote
@@ -251,6 +265,7 @@ export class Threads {
 		}));
 		this.reading.settled(id, answers);
 		this.reading.markUnread(id);
+		return true;
 	}
 
 	/** Settle a thread, which folds it away, or open it again. */

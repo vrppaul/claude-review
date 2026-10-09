@@ -62,7 +62,7 @@ type SessionMessage = Annotated[Welcome | Delivery, Field(discriminator="type")]
 
 
 class Resume(BaseModel):
-    """What a page coming back says it had: which run of the review, and the last push it was handed."""
+    """What a page says it holds: which run of the review, and the last push it took in."""
 
     model_config = ConfigDict(frozen=True)
 
