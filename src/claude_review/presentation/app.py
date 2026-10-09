@@ -9,6 +9,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.types import Receive, Scope, Send
+from starlette.websockets import WebSocketClose
 
 from claude_review.domain.models import GuideState, ReaderFiles, ReaderSettings
 from claude_review.presentation.body_limit import BodySizeLimit
@@ -54,9 +56,24 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_files: Reader
     answer_refusals(app)
 
     if STATIC_DIR.exists():
-        app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+        app.mount("/", PageFiles(directory=STATIC_DIR, html=True), name="static")
 
     return app
+
+
+class PageFiles(StaticFiles):
+    """The page's own files, served under every path no route claims.
+
+    Files are fetched, never opened as sockets: a socket opened anywhere but
+    the review's own is turned away the way a router turns away one it has
+    no route for, rather than reaching a file server that cannot answer it.
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "websocket":
+            await WebSocketClose()(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
 
 @contextlib.asynccontextmanager

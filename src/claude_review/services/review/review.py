@@ -67,6 +67,7 @@ class Review:
         images: ImageService,
         page: PageChannel,
         presence: BrowserPresence,
+        answerer: Answerer,
         lifetime: ReviewLifetime,
         clock: Clock,
     ) -> None:
@@ -77,7 +78,7 @@ class Review:
         self._presence = presence
         self._lifetime = lifetime
         self._rounds = RoundTracker()
-        self._answerer = Answerer(page, clock)
+        self._answerer = answerer
         self._inbox = AgentInbox(lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
@@ -149,11 +150,11 @@ class Review:
     async def next_event(self, *, within: float, caller_left: Awaitable[None]) -> AgentEvent | Silence:
         """The next thing the reader handed over, for the agent asking.
 
-        Asking at all is what says an agent is there, which is what makes
-        rounds worth offering in the review.
+        Waiting is what says most plainly that an agent is there, which is
+        what makes rounds worth offering in the review.
         """
-        self._answerer.heard()
-        return await self._inbox.take(within=within, caller_left=caller_left)
+        with self._answerer.waiting():
+            return await self._inbox.take(within=within, caller_left=caller_left)
 
     def ask(self, question_id: str, thread: ThreadDraft) -> None:
         """Take a question asked in one thread, for the agent to pick up.

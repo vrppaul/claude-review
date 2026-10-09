@@ -333,6 +333,11 @@ def open_session(client: TestClient, headers: Mapping[str, str] | None = None) -
     return client.websocket_connect(SESSION_ROUTE, headers=dict(headers or {}))
 
 
+def open_session_at(client: TestClient, route: str) -> WebSocketTestSession:
+    """Open a socket at any route, the way the page opens its own."""
+    return client.websocket_connect(route)
+
+
 def next_push(socket: WebSocketTestSession, kind: PushKind) -> dict:
     """Read what the server pushes until a push of one kind arrives.
 

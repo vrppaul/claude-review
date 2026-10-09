@@ -55,6 +55,17 @@ describe('finishing a review', () => {
 		expect(getByTestId('end-review')).toBeTruthy();
 	});
 
+	it('offers only the final send once the agent has gone', () => {
+		reviewStore.attachAnswerer();
+		reviewStore.detachAnswerer();
+		commentStore.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
+
+		const { getByTestId, queryByTestId } = render(FinishReview, { props });
+
+		expect(getByTestId('modal-submit').textContent).not.toContain('Send round');
+		expect(queryByTestId('end-review')).toBeNull();
+	});
+
 	it('shows each comment in full before it is sent', () => {
 		const long =
 			'This reads the clock twice per call, so a sweep can see two different ' +

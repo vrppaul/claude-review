@@ -29,6 +29,11 @@ export const reviewStore = {
     answerer = true;
   },
 
+  /** The agent has gone quiet for long enough to count as gone: rounds go with it. */
+  detachAnswerer() {
+    answerer = false;
+  },
+
   clear() {
     round = 1;
     answerer = false;

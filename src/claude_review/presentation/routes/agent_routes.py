@@ -39,7 +39,13 @@ from claude_review.presentation.schemas import (
 from claude_review.services.review.agent_inbox import Silence
 from claude_review.services.review.review import Review
 
-router = APIRouter()
+
+async def note_the_agent(review: Review = Depends(get_review)) -> None:
+    """Whatever the agent asks says it is still there: every call renews its lease."""
+    review.answerer.heard()
+
+
+router = APIRouter(dependencies=[Depends(note_the_agent)])
 
 
 @router.get("/events")

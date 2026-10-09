@@ -74,7 +74,10 @@
 				soundStore.announce();
 				return;
 			case 'answerer':
-				if (!push.attached) return;
+				if (!push.attached) {
+					reviewStore.detachAnswerer();
+					return;
+				}
 				reviewStore.attachAnswerer();
 				panelStore.offer();
 				return;

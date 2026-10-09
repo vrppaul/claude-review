@@ -4,10 +4,17 @@ Each event is written as the push the page reads once, as it stands the
 moment it is told, and every page is sent those same words: nothing that
 changes afterwards — the work reported again, a status replaced — reaches a
 push still waiting to be sent.
+
+A page holds only so much unsent. One that falls further behind than that is
+not reading — a frozen tab, a network gone — and is let go rather than held
+in memory without end: its socket closes, and a page that is still there
+reconnects and reads the review afresh.
 """
 
 import asyncio
 from typing import assert_never
+
+import structlog
 
 from claude_review.domain.page_events import (
     AgentSaid,
@@ -36,22 +43,36 @@ from claude_review.presentation.schemas import (
     StatusPush,
 )
 
+log = structlog.get_logger()
+
+# How many pushes one page may have waiting before it counts as gone. Far more
+# than a review says in a burst: a round, its answers and the work around them.
+PAGE_BACKLOG = 256
+
 
 class BrowserBroadcast:
     """The pages listening to the review, each with the pushes not yet sent to it."""
 
-    def __init__(self) -> None:
+    def __init__(self, backlog: int) -> None:
+        self._backlog = backlog
         self._listeners: set[asyncio.Queue[str]] = set()
 
     def tell(self, event: PageEvent) -> None:
         """Tell every page open now, in the words of its push, written once."""
         said = push_of(event).model_dump_json()
-        for queue in self._listeners:
-            queue.put_nowait(said)
+        for queue in list(self._listeners):
+            try:
+                queue.put_nowait(said)
+            except asyncio.QueueFull:
+                self._let_go(queue)
 
     def listen(self, first: list[PageEvent]) -> asyncio.Queue[str]:
-        """Take a page's socket on as a listener, starting with what it must be told before anything new."""
-        queue: asyncio.Queue[str] = asyncio.Queue()
+        """Take a page's socket on as a listener, starting with what it must be told before anything new.
+
+        The queue is shut down once the page falls too far behind; reading it
+        then raises `asyncio.QueueShutDown`.
+        """
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog)
         for event in first:
             queue.put_nowait(push_of(event).model_dump_json())
         self._listeners.add(queue)
@@ -59,6 +80,12 @@ class BrowserBroadcast:
 
     def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
+
+    def _let_go(self, queue: asyncio.Queue[str]) -> None:
+        """Stop telling a page that is not reading, and drop what it never read."""
+        self._listeners.discard(queue)
+        queue.shutdown(immediate=True)
+        log.warning("page_fell_behind", backlog=self._backlog)
 
 
 def push_of(event: PageEvent) -> ServerPush:

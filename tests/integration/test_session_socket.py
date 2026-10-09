@@ -10,7 +10,9 @@ it holds. The server tells the page what happened since.
 from http import HTTPStatus
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
 from claude_review.presentation.schemas import PushKind
@@ -22,6 +24,7 @@ from tests.helpers import (
     line_on_the_wire,
     next_push,
     open_session,
+    open_session_at,
     thread_on_the_wire,
     thread_route,
     until_the_review_holds_threads,
@@ -213,3 +216,21 @@ def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_
     )
 
     assert raised.json()["thread_id"] == "raised-4"
+
+
+def test_a_binary_frame_is_ignored_and_the_socket_goes_on(review_page: TestClient) -> None:
+    """Nothing the page sends is binary; one that arrives anyway must not drop the review."""
+    with open_session(review_page) as socket:
+        socket.send_bytes(b"\x00\x01")
+        socket.send_json({"round": 2})
+        until_the_review_is_on_round(review_page, 2)
+
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+
+        assert next_push(socket, PushKind.SHOW) == SHOWN
+
+
+def test_a_socket_to_no_route_is_closed_rather_than_failing(review_page: TestClient) -> None:
+    """The page's files answer every other path; a socket there is turned away, not a fault of the server."""
+    with pytest.raises(WebSocketDisconnect), open_session_at(review_page, "/api/nowhere") as socket:
+        socket.receive_text()
