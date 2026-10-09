@@ -6,24 +6,38 @@ import { fakeServer, keepingSettings, type FakeServer } from './fake-server';
 
 type SystemListener = (event: MediaQueryListEvent) => void;
 
+/** A listener, and the query it listens to. */
+interface Listening {
+	query: string;
+	listener: SystemListener;
+}
+
+/** What a system says of light and dark: one of them, or neither. */
+type SystemTaste = 'dark' | 'light' | 'neither';
+
 /** Where the page reads the theme before its first paint: see index.html. */
 const FIRST_PAINT_CACHE = 'claude-review:theme';
 
-/** A system that prefers dark or light, telling `listeners` when that changes. */
-function stubSystem(prefersDark: boolean, listeners: SystemListener[] = []) {
+/** Whether a query about the system's colours holds for a system of some taste. */
+function holds(query: string, taste: SystemTaste): boolean {
+	return taste !== 'neither' && query.includes(taste);
+}
+
+/** A system of some taste, telling `listeners` when that changes. */
+function stubSystem(taste: SystemTaste, listeners: Listening[] = []) {
 	vi.stubGlobal(
 		'matchMedia',
 		vi.fn().mockImplementation((query: string) => ({
-			matches: query.includes('dark') ? prefersDark : !prefersDark,
-			addEventListener: (_kind: string, listener: SystemListener) => listeners.push(listener),
+			matches: holds(query, taste),
+			addEventListener: (_kind: string, listener: SystemListener) => listeners.push({ query, listener }),
 			removeEventListener: vi.fn()
 		}))
 	);
 }
 
-/** The system changing its mind about dark. */
-function systemFlips(listeners: SystemListener[], prefersDark: boolean) {
-	for (const listener of listeners) listener({ matches: prefersDark } as MediaQueryListEvent);
+/** The system changing its mind. */
+function systemFlips(listeners: Listening[], taste: SystemTaste) {
+	for (const { query, listener } of listeners) listener({ matches: holds(query, taste) } as MediaQueryListEvent);
 }
 
 /** The theme on the page's root, where the styles read it. */
@@ -37,7 +51,7 @@ describe('the theme', () => {
 
 	beforeEach(() => {
 		document.documentElement.removeAttribute('data-theme');
-		stubSystem(true);
+		stubSystem('dark');
 		server = fakeServer();
 		keepingSettings(server);
 		settings = new Settings();
@@ -65,14 +79,23 @@ describe('the theme', () => {
 		stop();
 	});
 
-	it('reacts when the system flips while following it', () => {
-		const listeners: SystemListener[] = [];
-		stubSystem(true, listeners);
+	it('reads a system that says nothing of either as dark, as the first paint does', () => {
+		stubSystem('neither');
 		const stop = new PageTheme(settings).start();
 		flushSync();
 
 		expect(applied()).toBe('dark');
-		systemFlips(listeners, false);
+		stop();
+	});
+
+	it('reacts when the system flips while following it', () => {
+		const listeners: Listening[] = [];
+		stubSystem('dark', listeners);
+		const stop = new PageTheme(settings).start();
+		flushSync();
+
+		expect(applied()).toBe('dark');
+		systemFlips(listeners, 'light');
 		flushSync();
 
 		expect(applied()).toBe('light');
@@ -80,12 +103,12 @@ describe('the theme', () => {
 	});
 
 	it('ignores a system flip once a theme has been chosen', () => {
-		const listeners: SystemListener[] = [];
-		stubSystem(true, listeners);
+		const listeners: Listening[] = [];
+		stubSystem('dark', listeners);
 		const stop = new PageTheme(settings).start();
 		void settings.change({ theme: 'dark' });
 
-		systemFlips(listeners, false);
+		systemFlips(listeners, 'light');
 		flushSync();
 
 		expect(applied()).toBe('dark');

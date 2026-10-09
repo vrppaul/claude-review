@@ -188,14 +188,7 @@ export class Guide {
 			if (event.type === 'opened') this.next();
 			return;
 		}
-		if (event.type === 'added' && waiting.routes.includes('review')) {
-			this.choose('review');
-		} else if (event.type === 'asked' && waiting.routes.includes('ask')) {
-			this.choose('ask');
-		} else if (event.type === 'closed' && this.#openNewComments === 0) {
-			// While another comment on a line is open, that one is still to be sent
-			this.back();
-		}
+		this.#followComment(event.type, waiting.routes);
 	}
 
 	/** The reader chose where a comment goes; the next step shows what came of it. */
@@ -209,6 +202,18 @@ export class Guide {
 		const legacy = legacySeenRelease();
 		if (legacy !== null) await handOverLegacyRelease(legacy);
 		return legacy;
+	}
+
+	/** Move on to what became of a comment the step was waiting to see sent, or back if it was dropped. */
+	#followComment(happened: CommentFieldEvent['type'], routes: readonly CommentRoute[]): void {
+		if (happened === 'added' && routes.includes('review')) {
+			this.choose('review');
+		} else if (happened === 'asked' && routes.includes('ask')) {
+			this.choose('ask');
+		} else if (happened === 'closed' && this.#openNewComments === 0) {
+			// While another comment on a line is open, that one is still to be sent
+			this.back();
+		}
 	}
 
 	/** Remember this release as seen, so the card does not come back. */

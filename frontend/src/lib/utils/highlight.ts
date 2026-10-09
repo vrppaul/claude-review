@@ -16,7 +16,7 @@ import bash from 'highlight.js/lib/languages/bash';
 import yaml from 'highlight.js/lib/languages/yaml';
 import markdown from 'highlight.js/lib/languages/markdown';
 import rust from 'highlight.js/lib/languages/rust';
-import go from 'highlight.js/lib/languages/go';
+import golang from 'highlight.js/lib/languages/go';
 import sql from 'highlight.js/lib/languages/sql';
 
 hljs.registerLanguage('javascript', javascript);
@@ -30,7 +30,7 @@ hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('markdown', markdown);
 hljs.registerLanguage('rust', rust);
-hljs.registerLanguage('go', go);
+hljs.registerLanguage('go', golang);
 hljs.registerLanguage('sql', sql);
 
 const EXT_TO_LANG: Record<string, string> = {
@@ -119,6 +119,9 @@ function sideLines(lines: DiffLine[], exclusive: DiffLine['kind'], language: str
 	}
 }
 
+// What closes every span the highlighter opens
+const SPAN_CLOSE = '</span>';
+
 /**
  * Cut highlighted markup into one string per line.
  *
@@ -130,36 +133,36 @@ function splitHighlighted(html: string): string[] {
 	const lines: string[] = [];
 	const open: string[] = [];
 	let current = '';
-	let i = 0;
+	let position = 0;
 
-	while (i < html.length) {
-		const char = html[i];
+	while (position < html.length) {
+		const character = html[position];
 
-		if (char === '<') {
-			const close = html.indexOf('>', i);
+		if (character === '<') {
+			const close = html.indexOf('>', position);
 			if (close === -1) {
-				current += html.slice(i);
+				current += html.slice(position);
 				break;
 			}
-			const tag = html.slice(i, close + 1);
+			const tag = html.slice(position, close + 1);
 			if (tag.startsWith('</')) open.pop();
 			else if (!tag.endsWith('/>')) open.push(tag);
 			current += tag;
-			i = close + 1;
+			position = close + 1;
 			continue;
 		}
 
-		if (char === '\n') {
-			lines.push(current + '</span>'.repeat(open.length));
+		if (character === '\n') {
+			lines.push(current + SPAN_CLOSE.repeat(open.length));
 			current = open.join('');
-			i += 1;
+			position += 1;
 			continue;
 		}
 
-		current += char;
-		i += 1;
+		current += character;
+		position += 1;
 	}
 
-	lines.push(current + '</span>'.repeat(open.length));
+	lines.push(current + SPAN_CLOSE.repeat(open.length));
 	return lines;
 }

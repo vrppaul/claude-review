@@ -23,7 +23,7 @@ describe('selecting lines to comment on', () => {
 		lines.handleMouseEnter(contextLine(20, 20, 'far below'), 10);
 		lines.handleMouseUp();
 
-		expect(lines.commentingAt).toMatchObject({ line: 10, endLine: 12 });
+		expect(lines.commentingAt).toMatchObject({ startLine: 10, endLine: 12 });
 	});
 
 	it('stops a drag upwards the same way', () => {
@@ -33,7 +33,7 @@ describe('selecting lines to comment on', () => {
 		lines.handleMouseEnter(contextLine(10, 10, 'far above'), 0);
 		lines.handleMouseUp();
 
-		expect(lines.commentingAt).toMatchObject({ line: 18, endLine: 20 });
+		expect(lines.commentingAt).toMatchObject({ startLine: 18, endLine: 20 });
 	});
 
 	it('opens the comment under the row the drag stopped at, however far past it the pointer went', () => {
@@ -43,7 +43,7 @@ describe('selecting lines to comment on', () => {
 		lines.handleMouseEnter(contextLine(20, 20, 'far below'), 10);
 		lines.handleMouseUp();
 
-		expect(lines.commentingAt?.anchorIndex).toBe(12 - FIRST_LINE);
+		expect(lines.commentingAt?.opensBelow).toBe(12 - FIRST_LINE);
 	});
 
 	it('shows the drag as far as it will go', () => {

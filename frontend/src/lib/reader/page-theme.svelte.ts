@@ -10,14 +10,16 @@ import type { Settings } from '$lib/reader/settings.svelte';
 
 type ResolvedTheme = 'light' | 'dark';
 
-const SYSTEM_PREFERS_DARK = '(prefers-color-scheme: dark)';
+// Light only when the system asks for it, dark otherwise — the rule the
+// first paint in index.html keeps too, before any of this has loaded
+const SYSTEM_PREFERS_LIGHT = '(prefers-color-scheme: light)';
 // What the page's root carries for the styles to read
 const THEME_ATTRIBUTE = 'data-theme';
 
 function systemTheme(): ResolvedTheme {
 	// Absent in jsdom and in browsers old enough not to matter here
 	if (typeof window.matchMedia !== 'function') return 'dark';
-	return window.matchMedia(SYSTEM_PREFERS_DARK).matches ? 'dark' : 'light';
+	return window.matchMedia(SYSTEM_PREFERS_LIGHT).matches ? 'light' : 'dark';
 }
 
 export class PageTheme {
@@ -42,7 +44,7 @@ export class PageTheme {
 		});
 		if (typeof window.matchMedia !== 'function') return stopApplying;
 
-		const query = window.matchMedia(SYSTEM_PREFERS_DARK);
+		const query = window.matchMedia(SYSTEM_PREFERS_LIGHT);
 		query.addEventListener('change', this.#followSystem);
 		return () => {
 			stopApplying();
@@ -55,6 +57,6 @@ export class PageTheme {
 	}
 
 	readonly #followSystem = (event: MediaQueryListEvent): void => {
-		this.#system = event.matches ? 'dark' : 'light';
+		this.#system = event.matches ? 'light' : 'dark';
 	};
 }

@@ -35,10 +35,10 @@ export class RevealedContext {
 	 * always widened upward from the hunk below it.
 	 */
 	async reveal(path: string, hunkIndex: number, start: number, end: number, oldOffset: number): Promise<void> {
-		const window = await readFileWindow(path, start, end);
+		const read = await readFileWindow(path, start, end);
 		const forPath = this.#revealed.get(path) ?? new SvelteMap();
 		const existing = forPath.get(hunkIndex) ?? [];
-		forPath.set(hunkIndex, [...toContextLines(window.start, window.lines, oldOffset), ...existing]);
+		forPath.set(hunkIndex, [...toContextLines(read.start, read.lines, oldOffset), ...existing]);
 		this.#revealed.set(path, forPath);
 	}
 

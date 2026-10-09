@@ -33,8 +33,12 @@ export function reviewWeight(files: DiffFile[], comments: Thread[]): number {
 	return Math.round(characters / CHARS_PER_TOKEN);
 }
 
-/** The same number as the panel says it: "~18k", "~900". */
+// Counts this large are said in thousands, to one decimal place: "~18.2k"
+const THOUSAND = 1000;
+const TENTHS = 10;
+
+/** The same number as the panel says it: "~18.2k", "~900". */
 export function formatWeight(tokens: number): string {
-	if (tokens < 1000) return `~${tokens}`;
-	return `~${Math.round(tokens / 100) / 10}k`;
+	if (tokens < THOUSAND) return `~${tokens}`;
+	return `~${Math.round(tokens / (THOUSAND / TENTHS)) / TENTHS}k`;
 }

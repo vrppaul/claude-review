@@ -65,7 +65,7 @@
 		return shown.hunks
 			.flatMap((hunk) => hunk.lines)
 			.filter(
-				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.line && getLineNumber(line) <= at.endLine
+				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.startLine && getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -73,17 +73,17 @@
 	/** Where the comment being written hangs, said above its field. */
 	const commentingLabel = $derived(
 		selection.commentingAt
-			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.line, selection.commentingAt.endLine)
+			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.startLine, selection.commentingAt.endLine)
 			: undefined
 	);
 
 	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
-		const { side, line, endLine } = selection.commentingAt;
+		const { side, startLine, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
 		review.threads.add({
-			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
+			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
 			body,
 			severity,
 			images
@@ -94,9 +94,9 @@
 	/** Write the comment and hand it straight to whoever is answering. */
 	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
-		const { side, line, endLine } = selection.commentingAt;
+		const { side, startLine, endLine } = selection.commentingAt;
 		const id = review.threads.add({
-			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
+			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
 			body,
 			severity,
 			images
@@ -168,7 +168,7 @@
 					{#each rowsPerHunk[hunkIdx] as row, rowIdx (rowIdx)}
 						{@const leftComments = commentsFor(row.left)}
 						{@const rightComments = row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
-						{@const boxAt = selection.commentingAt?.anchorIndex}
+						{@const boxAt = selection.commentingAt?.opensBelow}
 						{@const showBox =
 							(row.left && offsets[hunkIdx] + row.left.index === boxAt) ||
 							(row.right && offsets[hunkIdx] + row.right.index === boxAt)}

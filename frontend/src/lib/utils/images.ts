@@ -5,7 +5,8 @@
  * arrived.
  */
 
-const BYTES_PER_MEGABYTE = 1024 * 1024;
+const BYTES_PER_KILOBYTE = 1024;
+const BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE * BYTES_PER_KILOBYTE;
 
 /** The images among what was pasted. */
 export function imagesAmong(files: FileList | null | undefined): File[] {

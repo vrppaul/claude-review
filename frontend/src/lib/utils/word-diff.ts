@@ -12,7 +12,19 @@ const MAX_MARKED_SHARE = 0.5;
  * space between them does not deserve a gap in the marking. */
 const JOIN_WITHIN = 2;
 
-export type Range = [start: number, end: number];
+/** Where a stretch of a line's plain text begins and ends, the end left out. */
+export interface TextRange {
+	start: number;
+	end: number;
+}
+
+// How a changed stretch is marked inside highlighted markup
+const MARK_OPEN = '<span class="cr-word">';
+const MARK_CLOSE = '</span>';
+// The longest escape the highlighter writes for one character, &quot; and
+// its kind, with room to spare: an ampersand further than this from the
+// next semicolon is a character of its own
+const LONGEST_ESCAPE = 8;
 
 /**
  * Which parts of a replaced line actually changed.
@@ -22,7 +34,7 @@ export type Range = [start: number, end: number];
  * keeps the marks on things a reader recognises — an identifier, a number, an
  * argument — instead of scattering them mid-token.
  */
-export function wordRanges(removedText: string, addedText: string): { removed: Range[]; added: Range[] } {
+export function wordRanges(removedText: string, addedText: string): { removed: TextRange[]; added: TextRange[] } {
 	const before = tokenize(removedText);
 	const after = tokenize(addedText);
 	const none = { removed: [], added: [] };
@@ -52,54 +64,77 @@ export function wordRanges(removedText: string, addedText: string): { removed: R
  * closed before any tag and reopened after it, so a range crossing a
  * highlight span leaves both properly nested.
  */
-export function markRanges(html: string, ranges: Range[]): string {
+export function markRanges(html: string, ranges: TextRange[]): string {
 	if (ranges.length === 0) return html;
 
-	let out = '';
+	const writer = new MarkWriter();
 	let position = 0;
 	let plainIndex = 0;
 	let rangeIndex = 0;
-	let marking = false;
-
-	const openMark = () => {
-		if (!marking) {
-			out += '<span class="cr-word">';
-			marking = true;
-		}
-	};
-	const closeMark = () => {
-		if (marking) {
-			out += '</span>';
-			marking = false;
-		}
-	};
 
 	while (position < html.length) {
-		while (rangeIndex < ranges.length && plainIndex >= ranges[rangeIndex][1]) {
+		while (rangeIndex < ranges.length && plainIndex >= ranges[rangeIndex].end) {
 			rangeIndex += 1;
 		}
 
 		if (html[position] === '<') {
 			const close = html.indexOf('>', position);
 			const end = close === -1 ? html.length : close + 1;
-			closeMark();
-			out += html.slice(position, end);
+			writer.tag(html.slice(position, end));
 			position = end;
 			continue;
 		}
 
 		const piece = readCharacter(html, position);
 		const range = ranges[rangeIndex];
-		if (range && plainIndex >= range[0] && plainIndex < range[1]) openMark();
-		else closeMark();
-
-		out += piece;
+		writer.character(piece, range !== undefined && plainIndex >= range.start && plainIndex < range.end);
 		position += piece.length;
 		plainIndex += 1;
 	}
 
-	closeMark();
-	return out;
+	return writer.finished();
+}
+
+/**
+ * Writes markup out again with marks around some of its characters.
+ *
+ * A mark is closed before any tag and opened again after it, so a mark
+ * crossing a highlight span leaves both properly nested.
+ */
+class MarkWriter {
+	#written = '';
+	#marking = false;
+
+	/** A character of the text, inside a mark or out of one. */
+	character(piece: string, marked: boolean): void {
+		if (marked) this.#open();
+		else this.#close();
+		this.#written += piece;
+	}
+
+	/** A tag of the highlighter's own, which no mark may straddle. */
+	tag(markup: string): void {
+		this.#close();
+		this.#written += markup;
+	}
+
+	/** Everything written, with the last mark closed. */
+	finished(): string {
+		this.#close();
+		return this.#written;
+	}
+
+	#open(): void {
+		if (this.#marking) return;
+		this.#written += MARK_OPEN;
+		this.#marking = true;
+	}
+
+	#close(): void {
+		if (!this.#marking) return;
+		this.#written += MARK_CLOSE;
+		this.#marking = false;
+	}
 }
 
 /**
@@ -146,25 +181,26 @@ function tokenize(text: string): string[] {
 function readCharacter(html: string, at: number): string {
 	if (html[at] !== '&') return html[at];
 	const semicolon = html.indexOf(';', at);
-	const isEntity = semicolon !== -1 && semicolon - at <= 8;
+	const isEntity = semicolon !== -1 && semicolon - at <= LONGEST_ESCAPE;
 	return isEntity ? html.slice(at, semicolon + 1) : html[at];
 }
 
 /** Merge ranges with only a character or two between them. */
-function join(ranges: Range[]): Range[] {
-	if (ranges.length < 2) return ranges;
+function join(ranges: TextRange[]): TextRange[] {
+	// One range, or none, has nothing to be merged with
+	if (ranges.length <= 1) return ranges;
 
-	const merged: Range[] = [ranges[0]];
-	for (const [start, end] of ranges.slice(1)) {
+	const merged: TextRange[] = [{ ...ranges[0] }];
+	for (const range of ranges.slice(1)) {
 		const last = merged[merged.length - 1];
-		if (start - last[1] <= JOIN_WITHIN) last[1] = end;
-		else merged.push([start, end]);
+		if (range.start - last.end <= JOIN_WITHIN) last.end = range.end;
+		else merged.push({ ...range });
 	}
 	return merged;
 }
 
-function covered(ranges: Range[]): number {
-	return ranges.reduce((total, [start, end]) => total + (end - start), 0);
+function covered(ranges: TextRange[]): number {
+	return ranges.reduce((total, range) => total + (range.end - range.start), 0);
 }
 
 function longestCommonSubsequence(before: string[], after: string[]): { beforeKept: boolean[]; afterKept: boolean[] } {
@@ -172,26 +208,29 @@ function longestCommonSubsequence(before: string[], after: string[]): { beforeKe
 	const columns = after.length;
 	const table: number[][] = Array.from({ length: rows + 1 }, () => new Array<number>(columns + 1).fill(0));
 
-	for (let i = rows - 1; i >= 0; i -= 1) {
-		for (let j = columns - 1; j >= 0; j -= 1) {
-			table[i][j] = before[i] === after[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
+	for (let beforeIndex = rows - 1; beforeIndex >= 0; beforeIndex -= 1) {
+		for (let afterIndex = columns - 1; afterIndex >= 0; afterIndex -= 1) {
+			table[beforeIndex][afterIndex] =
+				before[beforeIndex] === after[afterIndex]
+					? table[beforeIndex + 1][afterIndex + 1] + 1
+					: Math.max(table[beforeIndex + 1][afterIndex], table[beforeIndex][afterIndex + 1]);
 		}
 	}
 
 	const beforeKept = new Array<boolean>(rows).fill(false);
 	const afterKept = new Array<boolean>(columns).fill(false);
-	let i = 0;
-	let j = 0;
-	while (i < rows && j < columns) {
-		if (before[i] === after[j]) {
-			beforeKept[i] = true;
-			afterKept[j] = true;
-			i += 1;
-			j += 1;
-		} else if (table[i + 1][j] >= table[i][j + 1]) {
-			i += 1;
+	let beforeIndex = 0;
+	let afterIndex = 0;
+	while (beforeIndex < rows && afterIndex < columns) {
+		if (before[beforeIndex] === after[afterIndex]) {
+			beforeKept[beforeIndex] = true;
+			afterKept[afterIndex] = true;
+			beforeIndex += 1;
+			afterIndex += 1;
+		} else if (table[beforeIndex + 1][afterIndex] >= table[beforeIndex][afterIndex + 1]) {
+			beforeIndex += 1;
 		} else {
-			j += 1;
+			afterIndex += 1;
 		}
 	}
 
@@ -199,8 +238,8 @@ function longestCommonSubsequence(before: string[], after: string[]): { beforeKe
 }
 
 /** Character ranges covering the tokens that are not shared. */
-function rangesOfChanged(tokens: string[], kept: boolean[]): Range[] {
-	const ranges: Range[] = [];
+function rangesOfChanged(tokens: string[], kept: boolean[]): TextRange[] {
+	const ranges: TextRange[] = [];
 	let offset = 0;
 	let runStart: number | null = null;
 
@@ -208,12 +247,12 @@ function rangesOfChanged(tokens: string[], kept: boolean[]): Range[] {
 		if (!kept[index]) {
 			if (runStart === null) runStart = offset;
 		} else if (runStart !== null) {
-			ranges.push([runStart, offset]);
+			ranges.push({ start: runStart, end: offset });
 			runStart = null;
 		}
 		offset += token.length;
 	});
 
-	if (runStart !== null) ranges.push([runStart, offset]);
+	if (runStart !== null) ranges.push({ start: runStart, end: offset });
 	return ranges;
 }

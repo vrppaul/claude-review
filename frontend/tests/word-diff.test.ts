@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { wordRanges, markRanges, applyWordMarks } from '$lib/utils/word-diff';
+import fastCheck from 'fast-check';
+import { escapeMarkup } from '$lib/utils/safe-markup';
+import { wordRanges, markRanges, applyWordMarks, type TextRange } from '$lib/utils/word-diff';
 import { splitSuggestions } from '$lib/utils/suggestion';
 import { addedLine, contextLine, removedLine } from './diff';
 
@@ -72,19 +74,19 @@ describe('the words a changed line marks', () => {
 
 describe('marking words in highlighted code', () => {
 	it('wraps a range of plain text', () => {
-		expect(markRanges('abcdef', [[2, 4]])).toBe('ab<span class="cr-word">cd</span>ef');
+		expect(markRanges('abcdef', [{ start: 2, end: 4 }])).toBe('ab<span class="cr-word">cd</span>ef');
 	});
 
 	it('counts an escaped character as one character', () => {
 		const html = 'a&amp;b';
 
-		expect(markRanges(html, [[2, 3]])).toBe('a&amp;<span class="cr-word">b</span>');
+		expect(markRanges(html, [{ start: 2, end: 3 }])).toBe('a&amp;<span class="cr-word">b</span>');
 	});
 
 	it('leaves existing markup valid when a range crosses a tag', () => {
 		const html = 'a<span class="hljs-string">bc</span>d';
 
-		const result = markRanges(html, [[0, 3]]);
+		const result = markRanges(html, [{ start: 0, end: 3 }]);
 
 		expect(result).toBe(
 			'<span class="cr-word">a</span><span class="hljs-string">' + '<span class="cr-word">bc</span></span>d'
@@ -134,8 +136,8 @@ describe('word marks across a hunk', () => {
 	});
 });
 
-function pick(text: string, ranges: [number, number][]): string[] {
-	return ranges.map(([start, end]) => text.slice(start, end));
+function pick(text: string, ranges: TextRange[]): string[] {
+	return ranges.map((range) => text.slice(range.start, range.end));
 }
 
 describe('a suggested replacement in a comment', () => {
@@ -156,5 +158,109 @@ describe('a suggested replacement in a comment', () => {
 		const parts = splitSuggestions('```suggestion\nif x:\n    return 1\n```');
 
 		expect(parts).toEqual([{ kind: 'suggestion', text: 'if x:\n    return 1' }]);
+	});
+});
+
+// What a line of code is made of here: letters, a space, and every character markup escapes
+const CODE_CHARACTERS = ['a', 'b', ' ', '&', '<', '>', '"', "'"];
+// The longest stretch of a line the highlighter treats as one, and the most stretches in a line
+const LONGEST_STRETCH = 6;
+const MOST_STRETCHES = 6;
+// How the highlighter wraps a stretch it colours
+const HIGHLIGHT_OPEN = '<span class="hljs-keyword">';
+const SPAN_CLOSE = '</span>';
+// The class the marks carry
+const MARK_CLASS = 'cr-word';
+
+/** A line as the highlighter hands it over: its text, and that text escaped with some stretches wrapped. */
+const highlightedLine = fastCheck
+	.array(
+		fastCheck.record({
+			text: fastCheck.string({
+				unit: fastCheck.constantFrom(...CODE_CHARACTERS),
+				minLength: 1,
+				maxLength: LONGEST_STRETCH
+			}),
+			wrapped: fastCheck.boolean()
+		}),
+		{ maxLength: MOST_STRETCHES }
+	)
+	.map((stretches) => ({
+		text: stretches.map((stretch) => stretch.text).join(''),
+		html: stretches
+			.map((stretch) =>
+				stretch.wrapped ? `${HIGHLIGHT_OPEN}${escapeMarkup(stretch.text)}${SPAN_CLOSE}` : escapeMarkup(stretch.text)
+			)
+			.join('')
+	}));
+
+/** Ranges of a text of some length, in order and apart, as word ranges are. */
+function rangesWithin(length: number): fastCheck.Arbitrary<TextRange[]> {
+	return fastCheck
+		.uniqueArray(fastCheck.integer({ min: 0, max: length }), { maxLength: length + 1 })
+		.map((edges) => edges.sort((first, second) => first - second))
+		.map((edges) => {
+			const ranges: TextRange[] = [];
+			for (let edge = 0; edge + 1 < edges.length; edge += 2) ranges.push({ start: edges[edge], end: edges[edge + 1] });
+			return ranges.filter((range) => range.start < range.end);
+		});
+}
+
+const lineAndRanges = highlightedLine.chain((line) =>
+	rangesWithin(line.text.length).map((ranges) => ({ ...line, ranges }))
+);
+
+/** Markup as the page draws it. */
+function drawn(html: string): HTMLElement {
+	const holder = document.createElement('div');
+	holder.innerHTML = html;
+	return holder;
+}
+
+/** Which characters of the drawn text sit inside a mark, one flag per character. */
+function markedCharacters(html: string): boolean[] {
+	const flags: boolean[] = [];
+	const walker = document.createTreeWalker(drawn(html), NodeFilter.SHOW_TEXT);
+	for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+		const inMark = node.parentElement?.closest(`.${MARK_CLASS}`) !== null;
+		flags.push(...Array.from(node.textContent ?? '', () => inMark));
+	}
+	return flags;
+}
+
+/** Whether every span opened is closed, and none is closed before it opens. */
+function spansNest(html: string): boolean {
+	let depth = 0;
+	for (const tag of html.match(/<\/?span\b/g) ?? []) {
+		depth += tag.startsWith('</') ? -1 : 1;
+		if (depth < 0) return false;
+	}
+	return depth === 0;
+}
+
+describe('marking ranges inside highlighted markup, whatever the line', () => {
+	it('changes nothing of what the line says', () => {
+		fastCheck.assert(
+			fastCheck.property(lineAndRanges, ({ text, html, ranges }) => {
+				expect(drawn(markRanges(html, ranges)).textContent).toBe(text);
+			})
+		);
+	});
+
+	it('marks exactly the characters in the ranges', () => {
+		fastCheck.assert(
+			fastCheck.property(lineAndRanges, ({ text, html, ranges }) => {
+				const wanted = [...text].map((_, index) => ranges.some((range) => index >= range.start && index < range.end));
+				expect(markedCharacters(markRanges(html, ranges))).toEqual(wanted);
+			})
+		);
+	});
+
+	it('leaves every span closed in the order it was opened', () => {
+		fastCheck.assert(
+			fastCheck.property(lineAndRanges, ({ html, ranges }) => {
+				expect(spansNest(markRanges(html, ranges))).toBe(true);
+			})
+		);
 	});
 });

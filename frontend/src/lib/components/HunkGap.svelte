@@ -18,23 +18,23 @@
 
 	const revealed = $derived(review.diff.revealed.revealedCount(path, index));
 	const hidden = $derived(hiddenAbove(hunks, index, revealed));
-	const window = $derived(nextWindow(hunks, index, revealed));
+	const shownNext = $derived(nextWindow(hunks, index, revealed));
 	const label = $derived(
-		window === null
+		shownNext === null
 			? ''
-			: window.end - window.start + 1 === hidden
+			: shownNext.end - shownNext.start + 1 === hidden
 				? `Show the ${hidden} hidden ${hidden === 1 ? 'line' : 'lines'}`
-				: `Show ${window.end - window.start + 1} more of ${hidden} hidden lines`
+				: `Show ${shownNext.end - shownNext.start + 1} more of ${hidden} hidden lines`
 	);
 
 	async function reveal() {
-		if (!window || loading) return;
+		if (!shownNext || loading) return;
 		loading = true;
 		failed = null;
 		try {
 			// How far the old numbering runs behind the new one at this hunk
 			const oldOffset = hunks[index].old_start - hunks[index].new_start;
-			await review.diff.revealed.reveal(path, index, window.start, window.end, oldOffset);
+			await review.diff.revealed.reveal(path, index, shownNext.start, shownNext.end, oldOffset);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not read the file';
 		} finally {

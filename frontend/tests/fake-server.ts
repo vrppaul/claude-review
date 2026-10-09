@@ -63,7 +63,7 @@ export interface ReceivedRequest {
 	body: unknown;
 }
 
-const OK = 200;
+const SUCCEEDED = 200;
 // What a route answers when it did what was asked and has nothing to add
 const NO_CONTENT = 204;
 const NOT_FOUND = 404;
@@ -255,7 +255,7 @@ function parsedBody(body: RequestInit['body']): unknown {
 
 /** A route doing what it was asked: what it says, or nothing at all when it has nothing to add. */
 function replyResponse(reply: unknown): Response {
-	return reply === null ? new Response(null, { status: NO_CONTENT }) : jsonResponse(OK, reply);
+	return reply === null ? new Response(null, { status: NO_CONTENT }) : jsonResponse(SUCCEEDED, reply);
 }
 
 function jsonResponse(status: number, body: unknown): Response {

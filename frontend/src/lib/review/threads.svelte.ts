@@ -64,6 +64,11 @@ export class Threads {
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
 	readonly #unsent = $derived(this.#all.filter((thread) => !this.#sent.has(thread.id)));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
+	readonly #answered = $derived(
+		this.#all
+			.filter((thread) => thread.turns.length > 0)
+			.sort((first, second) => lastAnsweredAt(second) - lastAnsweredAt(first))
+	);
 
 	/**
 	 * @param rounds the round each thread and turn is stamped with
@@ -98,10 +103,8 @@ export class Threads {
 	}
 
 	/** Threads that have been discussed, newest answer first. */
-	get answered(): Thread[] {
-		return this.#all
-			.filter((thread) => thread.turns.length > 0)
-			.sort((first, second) => lastAnsweredAt(second) - lastAnsweredAt(first));
+	get answered(): readonly Thread[] {
+		return this.#answered;
 	}
 
 	/** The threads hanging on one file. */

@@ -72,9 +72,6 @@ export function toContextLines(start: number, lines: string[], oldOffset: number
 }
 
 function lastNewLine(hunk: DiffHunk): number {
-	for (let i = hunk.lines.length - 1; i >= 0; i -= 1) {
-		const line = hunk.lines[i];
-		if (line.new_number !== null) return line.new_number;
-	}
-	return hunk.new_start - 1;
+	const last = hunk.lines.findLast((line) => line.new_number !== null);
+	return last?.new_number ?? hunk.new_start - 1;
 }

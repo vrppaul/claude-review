@@ -74,7 +74,7 @@
 		return shown.hunks
 			.flatMap((hunk) => hunk.lines)
 			.filter(
-				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.line && getLineNumber(line) <= at.endLine
+				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.startLine && getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -82,17 +82,17 @@
 	/** Where the comment being written hangs, said above its field. */
 	const commentingLabel = $derived(
 		selection.commentingAt
-			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.line, selection.commentingAt.endLine)
+			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.startLine, selection.commentingAt.endLine)
 			: undefined
 	);
 
 	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
-		const { side, line, endLine } = selection.commentingAt;
+		const { side, startLine, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
 		review.threads.add({
-			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
+			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
 			body,
 			severity,
 			images
@@ -103,9 +103,9 @@
 	/** Write the comment and hand it straight to whoever is answering. */
 	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
-		const { side, line, endLine } = selection.commentingAt;
+		const { side, startLine, endLine } = selection.commentingAt;
 		const id = review.threads.add({
-			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
+			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
 			body,
 			severity,
 			images
@@ -160,11 +160,11 @@
 				<tbody>
 					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
 						{@const flatIdx = offsets[hunkIdx] + lineIdx}
-						{@const lineNo = getLineNumber(line)}
+						{@const lineNumber = getLineNumber(line)}
 						{@const side = lineSide(line)}
-						{@const lineComments = commentsByRow.get(`${side}:${lineNo}`)}
-						{@const inRange = selection.isHighlighted(side, lineNo)}
-						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
+						{@const lineComments = commentsByRow.get(`${side}:${lineNumber}`)}
+						{@const inRange = selection.isHighlighted(side, lineNumber)}
+						{@const showCommentBox = selection.commentingAt?.opensBelow === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
 							class="cr-row {rowClass(line.kind, inRange)} hover:brightness-110"

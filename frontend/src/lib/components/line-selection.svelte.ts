@@ -2,10 +2,10 @@ import type { DiffLine, LineSide } from '$lib/types';
 
 export interface LineRange {
 	side: LineSide;
-	line: number;
+	startLine: number;
 	endLine: number;
-	/** Index of the last line in the flat hunk lines array where the comment box should render */
-	anchorIndex: number;
+	/** Which of the file's lines, counted end to end across its hunks, the comment field opens below. */
+	opensBelow: number;
 }
 
 /** A removed line only exists in the old file; everything else is the new one. */
@@ -64,7 +64,7 @@ export function createLineSelection(rules: SelectionRules) {
 	let dragSide = $state<LineSide | null>(null);
 	let dragStart = $state<number | null>(null);
 	let dragEnd = $state<number | null>(null);
-	let dragAnchorIndex = $state<number | null>(null);
+	let dragOpensBelow = $state<number | null>(null);
 	let dragging = $state(false);
 
 	return {
@@ -80,18 +80,18 @@ export function createLineSelection(rules: SelectionRules) {
 			dragSide = null;
 			dragStart = null;
 			dragEnd = null;
-			dragAnchorIndex = null;
+			dragOpensBelow = null;
 			dragging = false;
 		},
 
 		handleMouseDown(line: DiffLine, index: number) {
-			const lineNo = getLineNumber(line);
-			if (lineNo === 0) return;
+			const lineNumber = getLineNumber(line);
+			if (lineNumber === 0) return;
 			if (lineSide(line) === 'old' && !rules.mayCommentOnRemoved()) return;
 			dragSide = lineSide(line);
-			dragStart = lineNo;
-			dragEnd = lineNo;
-			dragAnchorIndex = index;
+			dragStart = lineNumber;
+			dragEnd = lineNumber;
+			dragOpensBelow = index;
 			dragging = true;
 		},
 
@@ -100,14 +100,14 @@ export function createLineSelection(rules: SelectionRules) {
 			// A range spans one side only: old line 42 and new line 42 are different
 			// places, so dragging across the other side must not extend the range.
 			if (lineSide(line) !== dragSide) return;
-			const lineNo = getLineNumber(line);
-			if (lineNo === 0 || dragStart === null) return;
-			dragEnd = reach(dragStart, lineNo, rules.longestRange());
+			const lineNumber = getLineNumber(line);
+			if (lineNumber === 0 || dragStart === null) return;
+			dragEnd = reach(dragStart, lineNumber, rules.longestRange());
 			// The composer opens under the row the drag reaches, so this follows the
 			// drag back up rather than staying at the furthest point it reached —
 			// and when the pointer is past where the drag may reach, it opens under
 			// the row the drag stopped at
-			dragAnchorIndex = dragEnd === lineNo ? index : (rules.rowOf(lineSide(line), dragEnd) ?? dragAnchorIndex);
+			dragOpensBelow = dragEnd === lineNumber ? index : (rules.rowOf(lineSide(line), dragEnd) ?? dragOpensBelow);
 		},
 
 		handleMouseUp() {
@@ -115,27 +115,27 @@ export function createLineSelection(rules: SelectionRules) {
 			dragging = false;
 			commentingAt = {
 				side: dragSide,
-				line: Math.min(dragStart, dragEnd),
+				startLine: Math.min(dragStart, dragEnd),
 				endLine: Math.max(dragStart, dragEnd),
-				anchorIndex: dragAnchorIndex ?? 0
+				opensBelow: dragOpensBelow ?? 0
 			};
 			dragSide = null;
 			dragStart = null;
 			dragEnd = null;
-			dragAnchorIndex = null;
+			dragOpensBelow = null;
 		},
 
 		/** Open the composer on one line, without a drag — the keyboard path. */
 		commentOnLine(line: DiffLine, index: number) {
-			const lineNo = getLineNumber(line);
-			if (lineNo === 0) return;
+			const lineNumber = getLineNumber(line);
+			if (lineNumber === 0) return;
 			if (lineSide(line) === 'old' && !rules.mayCommentOnRemoved()) return;
 			dragging = false;
 			commentingAt = {
 				side: lineSide(line),
-				line: lineNo,
-				endLine: lineNo,
-				anchorIndex: index
+				startLine: lineNumber,
+				endLine: lineNumber,
+				opensBelow: index
 			};
 		},
 
@@ -143,14 +143,14 @@ export function createLineSelection(rules: SelectionRules) {
 			commentingAt = null;
 		},
 
-		isHighlighted(side: LineSide, lineNo: number): boolean {
+		isHighlighted(side: LineSide, lineNumber: number): boolean {
 			if (dragging && dragSide === side && dragStart !== null && dragEnd !== null) {
-				if (lineNo >= Math.min(dragStart, dragEnd) && lineNo <= Math.max(dragStart, dragEnd)) {
+				if (lineNumber >= Math.min(dragStart, dragEnd) && lineNumber <= Math.max(dragStart, dragEnd)) {
 					return true;
 				}
 			}
 			if (commentingAt !== null && commentingAt.side === side) {
-				return lineNo >= commentingAt.line && lineNo <= commentingAt.endLine;
+				return lineNumber >= commentingAt.startLine && lineNumber <= commentingAt.endLine;
 			}
 			return false;
 		}

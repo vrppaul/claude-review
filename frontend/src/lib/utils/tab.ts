@@ -7,13 +7,8 @@
  * permission prompt the way a system notification would.
  */
 
-const MARK = '#5b8def';
-const OUTLINE = '#8894a6';
-
-function icon(unread: boolean): string {
-	const dot = unread ? `<circle cx="23" cy="9" r="8" fill="${MARK}"/>` : '';
-	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="3" y="7" width="26" height="19" rx="4" fill="none" stroke="${OUTLINE}" stroke-width="3"/><path d="M9 17h9" stroke="${OUTLINE}" stroke-width="3" stroke-linecap="round"/>${dot}</svg>`;
-}
+import quietIcon from '$lib/assets/tab-icon.svg';
+import unreadIcon from '$lib/assets/tab-icon-unread.svg';
 
 function iconLink(): HTMLLinkElement {
 	const existing = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
@@ -27,5 +22,5 @@ function iconLink(): HTMLLinkElement {
 
 export function markTab(unread: number, title: string): void {
 	document.title = unread > 0 ? `(${unread}) ${title}` : title;
-	iconLink().href = `data:image/svg+xml,${encodeURIComponent(icon(unread > 0))}`;
+	iconLink().href = unread > 0 ? unreadIcon : quietIcon;
 }

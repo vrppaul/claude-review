@@ -42,13 +42,13 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 - **Pydantic** — all models (domain, wire)
 - **structlog** — structured logging
 - **ruff** — lint + format
-- **pytest + pytest-asyncio** — Python tests
+- **pytest + pytest-asyncio** — Python tests; **hypothesis** for properties that must hold whatever the input
 - **Svelte 5** — frontend (runes: `$state`, `$derived`, `$effect`)
 - **Vite 8** — frontend build tool
 - **TypeScript** — strict mode, no `any`
 - **Tailwind CSS 4 + DaisyUI 5** — styling
 - **pnpm** — JS package manager
-- **Vitest + @testing-library/svelte** — frontend unit tests
+- **Vitest + @testing-library/svelte** — frontend unit tests; **fast-check** for properties
 - **Playwright** (Python, pytest-playwright) — E2E tests
 - **ESLint + Prettier + svelte-check** — frontend code quality
 

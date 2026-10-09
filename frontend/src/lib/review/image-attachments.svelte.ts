@@ -107,8 +107,8 @@ export class ImageAttachments {
 			this.#uploaded.add(imageId);
 			this.images = [...this.images, imageId];
 			return null;
-		} catch (e) {
-			return e instanceof Error ? e.message : 'Could not attach the image';
+		} catch (error) {
+			return error instanceof Error ? error.message : 'Could not attach the image';
 		} finally {
 			this.uploading -= 1;
 		}
