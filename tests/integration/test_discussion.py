@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.pushes import ReplyPush
 from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
@@ -217,12 +217,9 @@ def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> No
             json={"thread_id": "comment-1", "question_id": "turn-2", "body": "It moved to config"},
         )
 
-        assert next_push(socket, PushKind.REPLY) == {
-            "type": "reply",
-            "thread_id": "comment-1",
-            "question_id": "turn-2",
-            "body": "It moved to config",
-        }
+        assert next_push(socket, ReplyPush) == ReplyPush(
+            thread_id="comment-1", question_id="turn-2", body="It moved to config"
+        )
 
 
 def test_an_answer_that_names_no_question_still_arrives(review_page: TestClient) -> None:
@@ -230,12 +227,9 @@ def test_an_answer_that_names_no_question_still_arrives(review_page: TestClient)
     with open_session(review_page) as socket:
         review_page.post("/api/reply", json={"thread_id": "comment-1", "body": "It moved to config"})
 
-        assert next_push(socket, PushKind.REPLY) == {
-            "type": "reply",
-            "thread_id": "comment-1",
-            "question_id": None,
-            "body": "It moved to config",
-        }
+        assert next_push(socket, ReplyPush) == ReplyPush(
+            thread_id="comment-1", question_id=None, body="It moved to config"
+        )
 
 
 async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient) -> None:

@@ -73,6 +73,7 @@ export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewRespo
 		round: 1,
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },
+		work: null,
 		limits: SEND_LIMITS,
 		release: '1.5.0',
 		...given

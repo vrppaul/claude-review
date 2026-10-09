@@ -1,13 +1,20 @@
 /**
- * What each push from the server does to the review on screen.
+ * What each push from the server does to the review on screen, and what the
+ * page does when pushes were missed.
  *
  * The connection has already read a push and checked its kind; this decides
  * what it means. The compiler refuses a kind left out of the switch.
  */
 
 import { anchorShortPlace } from '$lib/anchors/views';
+import { readReview } from '$lib/api/review-api';
 import type { Review } from '$lib/review/review.svelte';
 import type { ChangesSince, FollowOutcome, PointPush, ServerPush } from '$lib/types';
+
+// What the panel says when pushes were missed that the server could not hand over again
+const CONNECTION_LOST = 'connection lost for a while — anything said meanwhile may be missing';
+// What stands between the parts of one note in the panel
+const NOTE_PARTS = ' · ';
 
 /** Take in what the server said while the review is open. */
 export function handlePush(review: Review, push: ServerPush): void {
@@ -17,8 +24,7 @@ export function handlePush(review: Review, push: ServerPush): void {
 			review.sound.announce();
 			return;
 		case 'answerer':
-			review.answerer.setAttached(push.attached);
-			if (push.attached) review.layout.agentPanel.offer();
+			review.noteAnswerer(push.attached);
 			return;
 		case 'chat':
 			review.conversation.receive(push.message_id, push.body, push.files);
@@ -102,9 +108,38 @@ async function landed(review: Review, fileCount: number, changes: ChangesSince |
  * What a retaken diff did to the threads hanging on it. The count is the
  * review's: a narrower base on screen holds fewer files than it does.
  */
-function retakenNote(fileCount: number, { followed, outdated }: FollowOutcome): string {
-	const parts = [`diff retaken · ${fileCount} files`];
+function retakenNote(fileCount: number, outcome: FollowOutcome): string {
+	return [`diff retaken · ${fileCount} files`, ...followedParts(outcome)].join(NOTE_PARTS);
+}
+
+/** What following the threads did, said only where it did anything. */
+function followedParts({ followed, outdated }: FollowOutcome): string[] {
+	const parts: string[] = [];
 	if (followed > 0) parts.push(`${followed} threads followed their lines`);
 	if (outdated > 0) parts.push(`${outdated} outdated`);
-	return parts.join(' · ');
+	return parts;
+}
+
+/**
+ * Catch up after the connection came back to a review that could not hand
+ * over everything it missed.
+ *
+ * What the pushes kept up to date is read again. What they alone carried —
+ * an answer in a thread, a thread raised, a word in the panel — is gone, and
+ * the panel says so. A retake among them would have left the threads on old
+ * lines: following them again moves only those whose lines moved, so it is
+ * done whether or not one happened. Which files a missed retake rewrote
+ * cannot be told, so the ticks stay as the reader left them.
+ */
+export async function catchUp(review: Review): Promise<void> {
+	try {
+		review.learn(await readReview());
+		const moved = await review.threads.follow();
+		await review.diff.take();
+		review.conversation.note([CONNECTION_LOST, ...followedParts(moved)].join(NOTE_PARTS));
+	} catch (error) {
+		review.conversation.note(
+			`${CONNECTION_LOST} — and the review could not be read again: ${error instanceof Error ? error.message : 'reload the review'}`
+		);
+	}
 }

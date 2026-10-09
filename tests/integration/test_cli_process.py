@@ -24,9 +24,20 @@ from typing import IO
 import pytest
 
 from claude_review.domain.models import CommentSeverity
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.agent import AgentWork, ProgressStep
+from claude_review.presentation.wire.pushes import (
+    AnswererPush,
+    ChangedPush,
+    ChatPush,
+    PointPush,
+    ProgressPush,
+    Push,
+    ReplyPush,
+    StatusPush,
+)
+from claude_review.presentation.wire.session import Delivery
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
-from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
+from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, message_said, thread_on_the_wire
 from tests.page_socket import HandshakeRefusedError, PageSocket
 
 # The command line, as the user runs it, from the interpreter running the tests
@@ -39,7 +50,7 @@ STARTUP_SECONDS = 20.0
 COMMAND_SECONDS = 30.0
 # How long a push takes to arrive over the socket, at most
 PUSH_SECONDS = 10.0
-# Enough reads to get past the pushes a test is not about
+# Enough reads to get past the welcome and the pushes a test is not about
 PUSHES_READ = 5
 
 # A reload drops the socket and takes it again within a moment
@@ -226,18 +237,25 @@ def _session(port: int) -> PageSocket:
     return PageSocket(port)
 
 
-def _next_push(review_socket: PageSocket, kind: PushKind) -> dict:
+def _next_push[PushT: Push](review_socket: PageSocket, kind: type[PushT]) -> PushT:
     """Read pushes until the one being waited for arrives.
 
     The socket carries more than any one test is about — a review is told
     when an agent attaches, and when a round retakes the diff.
     """
     for _ in range(PUSHES_READ):
-        message = json.loads(review_socket.receive(timeout=PUSH_SECONDS))
-        if message.get("type") == kind:
-            return message
-    failure = f"no {kind} push arrived"
+        message = message_said(review_socket.receive(timeout=PUSH_SECONDS))
+        if isinstance(message, Delivery) and isinstance(message.push, kind):
+            return message.push
+    failure = f"no {kind.__name__} arrived"
     raise AssertionError(failure)
+
+
+def _work_pushed(review_socket: PageSocket) -> AgentWork:
+    """The work the next progress push says is under way."""
+    work = _next_push(review_socket, ProgressPush).work
+    assert work is not None, "the progress push said the work was over"
+    return work
 
 
 def _post(port: int, path: str, payload: dict) -> None:
@@ -341,7 +359,7 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
     with _session(port) as review_socket:
         waiting = cli.start("wait", "--port", str(port), "--seconds", AGENT_WAIT_SECONDS)
         # Said to the review the moment the agent starts waiting on it
-        _next_push(review_socket, PushKind.ANSWERER)
+        _next_push(review_socket, AnswererPush)
 
         _post(
             port,
@@ -372,12 +390,9 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
         )
         assert answer.returncode == 0
 
-        assert _next_push(review_socket, PushKind.REPLY) == {
-            "type": "reply",
-            "thread_id": FIRST_THREAD_ID,
-            "question_id": FIRST_THREAD_ID,
-            "body": "Because the constant moved to config",
-        }
+        assert _next_push(review_socket, ReplyPush) == ReplyPush(
+            thread_id=FIRST_THREAD_ID, question_id=FIRST_THREAD_ID, body="Because the constant moved to config"
+        )
 
 
 def test_a_panel_message_and_its_answer_travel_between_processes(
@@ -388,7 +403,7 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
 
     with _session(port) as review_socket:
         waiting = cli.start("wait", "--port", str(port), "--seconds", AGENT_WAIT_SECONDS)
-        _next_push(review_socket, PushKind.ANSWERER)
+        _next_push(review_socket, AnswererPush)
 
         _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
 
@@ -399,12 +414,9 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
         answer = cli.run("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
         assert answer.returncode == 0
 
-        assert _next_push(review_socket, PushKind.CHAT) == {
-            "type": "chat",
-            "message_id": "panel-1",
-            "body": "One failed; fixed and green.",
-            "files": [],
-        }
+        assert _next_push(review_socket, ChatPush) == ChatPush(
+            message_id="panel-1", body="One failed; fixed and green.", files=[]
+        )
 
 
 def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cli: CliProcesses, port: int) -> None:
@@ -415,8 +427,8 @@ def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cl
         reported = cli.run("status", "--port", str(port), "--model", "opus-5", "--context", "53% of 1M")
         assert reported.returncode == 0
 
-        pushed = _next_push(review_socket, PushKind.STATUS)
-        assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
+        pushed = _next_push(review_socket, StatusPush)
+        assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
 
 
 def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
@@ -429,9 +441,9 @@ def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
         raised = cli.run("point", "--port", str(port), "--file", "initial.txt", "--lines", "1", "Kept it on purpose")
         assert raised.returncode == 0
 
-        pushed = _next_push(review_socket, PushKind.POINT)
-        assert (pushed["anchor"]["file"], pushed["anchor"]["start_line"]) == ("initial.txt", 1)
-        assert pushed["body"] == "Kept it on purpose"
+        pushed = _next_push(review_socket, PointPush)
+        assert (pushed.anchor.file, pushed.anchor.start_line) == ("initial.txt", 1)
+        assert pushed.body == "Kept it on purpose"
 
 
 def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
@@ -443,7 +455,7 @@ def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     with _session(port) as review_socket:
         (changed_repo / "initial.txt").write_text("changed again, by somebody else\n")
 
-        assert _next_push(review_socket, PushKind.CHANGED) == {"type": "changed", "moved_count": 1}
+        assert _next_push(review_socket, ChangedPush) == ChangedPush(moved_count=1)
 
 
 def test_waiting_reports_when_nothing_was_asked(changed_repo: Path, cli: CliProcesses, port: int) -> None:
@@ -588,17 +600,17 @@ def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done(
             "two subagents out",
             "rewriting the handler",
         )
-        work = _next_push(review_socket, PushKind.PROGRESS)["work"]
+        work = _work_pushed(review_socket)
 
         cli.run("progress", "--port", str(port), "--done")
-        finished = _next_push(review_socket, PushKind.PROGRESS)
+        finished = _next_push(review_socket, ProgressPush)
 
-    assert (work["message_id"], work["text"], work["files"]) == ("panel-1", "rewriting the handler", ["initial.txt"])
-    assert work["steps"] == [
-        {"text": "read the handler", "done": True},
-        {"text": "two subagents out", "done": False},
+    assert (work.message_id, work.text, work.files) == ("panel-1", "rewriting the handler", ["initial.txt"])
+    assert work.steps == [
+        ProgressStep(text="read the handler", done=True),
+        ProgressStep(text="two subagents out", done=False),
     ]
-    assert finished["work"] is None
+    assert finished.work is None
 
 
 def test_taking_the_diff_again_says_which_files_changed_since_the_round_began(
@@ -619,7 +631,7 @@ def test_waiting_until_an_event_waits_through_the_timeouts(changed_repo: Path, c
     cli.review(changed_repo, port)
     with _session(port) as review_socket:
         waiting = cli.start("wait", "--port", str(port), "--seconds", SHORTEST_WAIT_SECONDS, "--until-event")
-        _next_push(review_socket, PushKind.ANSWERER)
+        _next_push(review_socket, AnswererPush)
         # Long enough for the first wait to have timed out
         time.sleep(PAST_THE_SHORTEST_WAIT_SECONDS)
 

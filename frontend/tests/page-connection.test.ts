@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { FakeSocket, latestSocket } from './fake-socket';
+import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
 import type { ServerPush } from '$lib/types';
 import {
 	FIRST_RETRY,
 	HELLO_AT_MOST_EVERY,
 	LONGEST_RETRY,
 	PageConnection,
-	RETRY_GROWTH
+	RETRY_GROWTH,
+	type PushReceiver
 } from '$lib/connection/page-connection';
 
 // Pushes as the server sends them
@@ -20,11 +21,44 @@ const SECOND_RETRY = RETRY_GROWTH * FIRST_RETRY;
 // Where the page's socket is; the fake socket only keeps it
 const SESSION_URL = 'ws://review.test/api/session';
 
+// How far the review's telling had got when the page connected
+const TOLD_BEFORE = 3;
+// How far it has got when a page that dropped comes back
+const TOLD_SINCE = 9;
+
 /** A page's connection, opened. */
 function connected(): PageConnection {
 	const connection = new PageConnection(SESSION_URL);
 	connection.open();
 	return connection;
+}
+
+/** A page that notes what it is handed, and catches up when asked, finishing when the test says. */
+class RecordingPage implements PushReceiver {
+	readonly heard: ServerPush[] = [];
+	catchUps = 0;
+	#finish: (() => void) | null = null;
+
+	take(push: ServerPush): void {
+		this.heard.push(push);
+	}
+
+	catchUp(): Promise<void> {
+		this.catchUps += 1;
+		return new Promise((resolve) => (this.#finish = resolve));
+	}
+
+	/** The page has caught up; what the connection held is handed over once it hears so. */
+	finishCatchingUp(): void {
+		this.#finish?.();
+	}
+}
+
+/** Drop the socket and let the connection come back on a socket of its own. */
+function dropAndComeBack(): void {
+	latestSocket().drop();
+	vi.advanceTimersByTime(FIRST_RETRY);
+	latestSocket().accept();
 }
 
 /** What a page says when it holds no threads, in this round. */
@@ -44,46 +78,138 @@ describe('the session socket', () => {
 	});
 
 	it('holds what arrives before the page can take it, then hands it over in order', () => {
-		const heard: ServerPush[] = [];
+		const page = new RecordingPage();
 		const connection = connected();
 		const socket = latestSocket();
+		socket.accept();
+		socket.say(welcome());
 
-		socket.emit('message', JSON.stringify(A_REPLY));
-		socket.emit('message', JSON.stringify(A_CHAT));
-		expect(heard).toEqual([]);
+		socket.deliver(A_REPLY, 1);
+		socket.deliver(A_CHAT, 2);
+		expect(page.heard).toEqual([]);
 
-		connection.deliverTo((push) => heard.push(push));
-		socket.emit('message', JSON.stringify(A_SHOW));
+		connection.deliverTo(page);
+		socket.deliver(A_SHOW, 3);
 
-		expect(heard).toEqual([A_REPLY, A_CHAT, A_SHOW]);
+		expect(page.heard).toEqual([A_REPLY, A_CHAT, A_SHOW]);
 		connection.close();
 	});
 
 	it('passes over what it cannot read and keeps listening', () => {
-		const heard: ServerPush[] = [];
+		const page = new RecordingPage();
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		const connection = connected();
-		connection.deliverTo((push) => heard.push(push));
+		connection.deliverTo(page);
 		const socket = latestSocket();
 
 		socket.emit('message', 'not json');
 		socket.emit('message', JSON.stringify({ text: 'no type' }));
 		socket.emit('message', JSON.stringify({ type: 'teleport', to: 'elsewhere' }));
+		socket.emit('message', JSON.stringify({ type: 'delivery', sequence: 1, push: { type: 'teleport' } }));
 		socket.emit('message', JSON.stringify(A_REPLY));
+		socket.deliver(A_REPLY, 1);
 
-		expect(heard).toEqual([A_REPLY]);
-		expect(warn).toHaveBeenCalledTimes(3);
+		expect(page.heard).toEqual([A_REPLY]);
+		expect(warn).toHaveBeenCalledTimes(5);
 		connection.close();
 	});
 
-	it('does not hide a fault in whatever handles a message', () => {
+	it('does not hide a fault in whatever handles a push', () => {
 		const connection = connected();
-		connection.deliverTo(() => {
+		const page = new RecordingPage();
+		page.take = () => {
 			throw new Error('handler broke');
-		});
-		const socket = latestSocket();
+		};
+		connection.deliverTo(page);
 
-		expect(() => socket.emit('message', JSON.stringify(A_REPLY))).toThrow('handler broke');
+		expect(() => latestSocket().deliver(A_REPLY, 1)).toThrow('handler broke');
+		connection.close();
+	});
+
+	it('connects the first time naming nothing', () => {
+		const connection = connected();
+
+		expect(latestSocket().url).toBe(SESSION_URL);
+		connection.close();
+	});
+
+	it('comes back naming the run of the review it read and the last push it was handed', () => {
+		const connection = connected();
+		connection.deliverTo(new RecordingPage());
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: TOLD_BEFORE }));
+		latestSocket().deliver(A_REPLY, TOLD_BEFORE + 1);
+
+		dropAndComeBack();
+
+		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_BEFORE + 1}`);
+		connection.close();
+	});
+
+	it('reads on from what it was handed when the review hands over what it missed', () => {
+		const page = new RecordingPage();
+		const connection = connected();
+		connection.deliverTo(page);
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: TOLD_BEFORE }));
+
+		dropAndComeBack();
+		latestSocket().say(welcome({ sequence: TOLD_SINCE, resumed: true }));
+		latestSocket().deliver(A_REPLY, TOLD_BEFORE + 1);
+
+		expect(page.catchUps).toBe(0);
+		expect(page.heard).toEqual([A_REPLY]);
+		connection.close();
+	});
+
+	it('never catches up on its first connection: the page reads the review as it opens', () => {
+		const page = new RecordingPage();
+		const connection = connected();
+		connection.deliverTo(page);
+		latestSocket().accept();
+
+		latestSocket().say(welcome({ sequence: TOLD_BEFORE }));
+
+		expect(page.catchUps).toBe(0);
+		connection.close();
+	});
+
+	it('catches up when it comes back without what it missed, holding what arrives meanwhile', async () => {
+		const page = new RecordingPage();
+		const connection = connected();
+		connection.deliverTo(page);
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: TOLD_BEFORE }));
+
+		dropAndComeBack();
+		latestSocket().say(welcome({ sequence: TOLD_SINCE }));
+		latestSocket().deliver(A_REPLY, TOLD_SINCE + 1);
+
+		expect(page.catchUps).toBe(1);
+		expect(page.heard).toEqual([]);
+
+		page.finishCatchingUp();
+
+		await vi.waitFor(() => expect(page.heard).toEqual([A_REPLY]));
+		dropAndComeBack();
+		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_SINCE + 1}`);
+		connection.close();
+	});
+
+	it('catches up once its review is open when it came back without what it missed before then', async () => {
+		const page = new RecordingPage();
+		const connection = connected();
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: TOLD_BEFORE }));
+		dropAndComeBack();
+		latestSocket().say(welcome({ sequence: TOLD_SINCE }));
+		latestSocket().deliver(A_CHAT, TOLD_SINCE + 1);
+
+		connection.deliverTo(page);
+
+		expect(page.catchUps).toBe(1);
+		page.finishCatchingUp();
+		await vi.waitFor(() => expect(page.heard).toEqual([A_CHAT]));
 		connection.close();
 	});
 

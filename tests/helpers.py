@@ -20,7 +20,7 @@ from anyio import EndOfStream
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
 
@@ -46,7 +46,9 @@ from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.content import ReviewResponse
+from claude_review.presentation.wire.pushes import Push, ServerPush
+from claude_review.presentation.wire.session import Delivery, SessionMessage, Welcome
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
@@ -70,6 +72,8 @@ ASGI_VERSION = "3.0"
 HTTP_VERSION = "1.1"
 
 SESSION_ROUTE = "/api/session"
+# Reads what the server says down the session socket, as the page does
+SESSION_MESSAGES = TypeAdapter[SessionMessage](SessionMessage)
 REVIEW_ROUTE = "/api/review"
 DIFF_ROUTE = "/api/diff"
 CATCH_UP_ROUTE = "/api/catch-up"
@@ -342,7 +346,19 @@ def open_session_at(client: TestClient, route: str) -> WebSocketTestSession:
     return client.websocket_connect(route)
 
 
-def next_push(socket: WebSocketTestSession, kind: PushKind) -> dict:
+def message_said(said: str | bytes) -> SessionMessage:
+    """One thing the server said down the session socket, read as the page reads it."""
+    return SESSION_MESSAGES.validate_json(said)
+
+
+def welcome_of(socket: WebSocketTestSession) -> Welcome:
+    """The welcome every connection starts with."""
+    message = message_said(_receive_within(socket, SETTLE_SECONDS))
+    assert isinstance(message, Welcome), f"a connection began with {message.type}, not a welcome"
+    return message
+
+
+def next_push[PushT: Push](socket: WebSocketTestSession, kind: type[PushT]) -> PushT:
     """Read what the server pushes until a push of one kind arrives.
 
     The socket carries more than any one test is about — a review is told
@@ -350,49 +366,60 @@ def next_push(socket: WebSocketTestSession, kind: PushKind) -> dict:
     first is not always what the test waits for. A read that never returns
     fails the test rather than hanging it.
     """
-    deadline = time.monotonic() + SETTLE_SECONDS
-    while (remaining := deadline - time.monotonic()) > 0:
-        pushed = _receive_within(socket, remaining)
-        if pushed["type"] == kind:
-            return pushed
-    failure = f"no {kind} push arrived"
+    for push in _pushes(socket):
+        if isinstance(push, kind):
+            return push
+    failure = f"no {kind.__name__} arrived"
     raise AssertionError(failure)
 
 
-def pushes_until(socket: WebSocketTestSession, kind: PushKind) -> list[dict]:
+def pushes_until(socket: WebSocketTestSession, kind: type[Push]) -> list[ServerPush]:
     """Everything the server pushes, up to and including the first push of one kind."""
-    deadline = time.monotonic() + SETTLE_SECONDS
-    pushed: list[dict] = []
-    while (remaining := deadline - time.monotonic()) > 0:
-        pushed.append(_receive_within(socket, remaining))
-        if pushed[-1]["type"] == kind:
+    pushed: list[ServerPush] = []
+    for push in _pushes(socket):
+        pushed.append(push)
+        if isinstance(push, kind):
             return pushed
-    failure = f"no {kind} push arrived"
+    failure = f"no {kind.__name__} arrived"
     raise AssertionError(failure)
 
 
-def _receive_within(socket: WebSocketTestSession, seconds: float) -> dict:
-    """One push, read off a thread of its own so that waiting for it has an end.
+def _pushes(socket: WebSocketTestSession) -> Iterator[ServerPush]:
+    """Every push delivered down a socket as it arrives, passing over welcomes, for as long as a test waits."""
+    deadline = time.monotonic() + SETTLE_SECONDS
+    while (remaining := deadline - time.monotonic()) > 0:
+        message = message_said(_receive_within(socket, remaining))
+        if isinstance(message, Delivery):
+            yield message.push
+
+
+def _receive_within(socket: WebSocketTestSession, seconds: float) -> str:
+    """One message, read off a thread of its own so that waiting for it has an end.
 
     The test client's read blocks until something arrives. A thread left
     waiting is let go when the socket closes.
     """
-    received: queue.Queue[dict] = queue.Queue()
+    received: queue.Queue[str] = queue.Queue()
     threading.Thread(target=_receive_into, args=(socket, received), daemon=True).start()
     try:
         return received.get(timeout=seconds)
     except queue.Empty:
-        failure = "nothing was pushed"
+        failure = "nothing was said down the socket"
         raise AssertionError(failure) from None
 
 
-def _receive_into(socket: WebSocketTestSession, received: queue.Queue[dict]) -> None:
+def _receive_into(socket: WebSocketTestSession, received: queue.Queue[str]) -> None:
     try:
-        received.put(socket.receive_json())
+        received.put(socket.receive_text())
     except EndOfStream:
         # The socket closed while this waited, a test having given up on it:
         # nothing more will come
         return
+
+
+def review_facts(client: TestClient) -> ReviewResponse:
+    """What the review says it is and where it stands, as a page opening reads it."""
+    return ReviewResponse.model_validate_json(client.get(REVIEW_ROUTE).text)
 
 
 def until_the_review_is_on_round(client: TestClient, round_number: int) -> None:

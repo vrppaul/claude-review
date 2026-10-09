@@ -585,6 +585,22 @@ export interface components {
             at: number | null;
         };
         /**
+         * AgentWork
+         * @description What the agent is doing right now, whole: it replaces whatever was showing.
+         */
+        AgentWork: {
+            /** Message Id */
+            message_id: string | null;
+            /** Text */
+            text: string;
+            /** Files */
+            files: string[];
+            /** Steps */
+            steps: components["schemas"]["ProgressStep-Output"][];
+            /** At */
+            at: number;
+        };
+        /**
          * LineAnchor
          * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
          *
@@ -992,13 +1008,26 @@ export interface components {
             /** Files */
             files?: string[];
             /** Steps */
-            steps?: components["schemas"]["ProgressStep"][];
+            steps?: components["schemas"]["ProgressStep-Input"][];
         };
         /**
          * ProgressStep
          * @description One branch of the work: something being done, or something done.
          */
-        ProgressStep: {
+        "ProgressStep-Input": {
+            /** Text */
+            text: string;
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+        };
+        /**
+         * ProgressStep
+         * @description One branch of the work: something being done, or something done.
+         */
+        "ProgressStep-Output": {
             /** Text */
             text: string;
             /**
@@ -1069,8 +1098,9 @@ export interface components {
          * ReviewResponse
          * @description Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
          *
-         *     Read when a page opens: a push is gone once sent, and a page that was not
-         *     there for it learns the state here.
+         *     Read when a page opens, and again when it comes back from a gap it could
+         *     not be handed: a push is gone once sent, and a page that was not there for
+         *     it learns the state here.
          */
         ReviewResponse: {
             /** Title */
@@ -1081,6 +1111,7 @@ export interface components {
             /** Answerer Attached */
             answerer_attached: boolean;
             agent: components["schemas"]["AgentStatus"];
+            work: components["schemas"]["AgentWork"] | null;
             limits: components["schemas"]["SendLimits"];
             /** Release */
             release: string;

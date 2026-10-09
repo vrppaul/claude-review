@@ -154,6 +154,20 @@ export interface components {
          */
         CommentSeverity: "note" | "question" | "blocker";
         /**
+         * Delivery
+         * @description One push, with its number in the review's telling.
+         */
+        Delivery: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "delivery";
+            /** Sequence */
+            sequence: number;
+            push: components["schemas"]["ServerPush"];
+        };
+        /**
          * DiffPush
          * @description The diff was taken again: fetch it. How many files the review now holds, and which changed since the round began.
          *
@@ -275,6 +289,7 @@ export interface components {
              */
             threads: components["schemas"]["ThreadInput"][] | null;
         };
+        SessionMessage: components["schemas"]["Welcome"] | components["schemas"]["Delivery"];
         /** ShowPush */
         ShowPush: {
             /**
@@ -341,6 +356,27 @@ export interface components {
             author: components["schemas"]["TurnAuthor"];
             /** Round */
             round: number;
+        };
+        /**
+         * Welcome
+         * @description Which run of the review the page reached, how far its telling has got, and whether the page missed nothing.
+         *
+         *     `sequence` is the number of the last push told before this connection.
+         *     A page handed what it missed reads on from its own last number; one that
+         *     was not reads on from here.
+         */
+        Welcome: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "welcome";
+            /** Instance */
+            instance: string;
+            /** Sequence */
+            sequence: number;
+            /** Resumed */
+            resumed: boolean;
         };
     };
     responses: never;

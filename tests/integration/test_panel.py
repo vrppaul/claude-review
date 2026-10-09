@@ -7,9 +7,11 @@ same queue, so an answer written after a round arrives after it.
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.agent import AgentWork, ProgressStep
+from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
     EVENTS_ROUTE,
@@ -27,6 +29,7 @@ from tests.helpers import (
     open_session,
     page_client,
     pushes_until,
+    review_facts,
     thread_on_the_wire,
     thread_route,
     turn_on_the_wire,
@@ -47,6 +50,13 @@ THREAD = thread_on_the_wire(
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
 
 POINT_ROUTE = "/api/point"
+
+
+def _work_pushed(socket: WebSocketTestSession) -> AgentWork:
+    """The work the next progress push says is under way."""
+    work = next_push(socket, ProgressPush).work
+    assert work is not None, "the progress push said the work was over"
+    return work
 
 
 def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
@@ -95,12 +105,9 @@ def test_an_answer_lands_in_the_panel_of_a_review_still_open(review_page: TestCl
     with open_session(review_page) as socket:
         review_page.post("/api/say", json={"message_id": "panel-1", "body": "One failed; fixed and green."})
 
-        assert next_push(socket, PushKind.CHAT) == {
-            "type": "chat",
-            "message_id": "panel-1",
-            "body": "One failed; fixed and green.",
-            "files": [],
-        }
+        assert next_push(socket, ChatPush) == ChatPush(
+            message_id="panel-1", body="One failed; fixed and green.", files=[]
+        )
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:
@@ -127,14 +134,14 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
                 "severity": CommentSeverity.QUESTION,
             },
         )
-        pushed = next_push(socket, PushKind.POINT)
+        pushed = next_push(socket, PointPush)
 
     assert response.json()["thread_id"] == "raised-1"
-    assert pushed["thread_id"] == "raised-1"
-    assert (pushed["anchor"]["file"], pushed["anchor"]["start_line"]) == (REVIEWED_FILE, 1)
+    assert pushed.thread_id == "raised-1"
+    assert (pushed.anchor.file, pushed.anchor.start_line) == (REVIEWED_FILE, 1)
     # Quoted from the diff, so the thread can follow its line when it moves
-    assert pushed["anchor"]["quote"] == [REVIEWED_LINE]
-    assert pushed["severity"] == "question"
+    assert pushed.anchor.quote == [REVIEWED_LINE]
+    assert pushed.severity == CommentSeverity.QUESTION
 
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
@@ -201,10 +208,10 @@ def test_the_agent_may_speak_first(review_page: TestClient) -> None:
     """Work finished while the reader reads is news they should not have to ask for."""
     with open_session(review_page) as socket:
         review_page.post("/api/say", json={"body": "Tests are green again.", "files": ["src/cli.py"]})
-        pushed = next_push(socket, PushKind.CHAT)
+        pushed = next_push(socket, ChatPush)
 
-    assert pushed["message_id"] is None
-    assert pushed["files"] == ["src/cli.py"]
+    assert pushed.message_id is None
+    assert pushed.files == ["src/cli.py"]
 
 
 def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) -> None:
@@ -214,11 +221,11 @@ def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) ->
             "/api/progress",
             json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
         )
-        work = next_push(socket, PushKind.PROGRESS)["work"]
+        work = _work_pushed(socket)
 
-    assert work["text"] == "rewriting the answer handler"
-    assert work["files"] == ["a.ts", "b.ts"]
-    assert work["message_id"] == "panel-1"
+    assert work.text == "rewriting the answer handler"
+    assert work.files == ["a.ts", "b.ts"]
+    assert work.message_id == "panel-1"
 
 
 def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> None:
@@ -231,11 +238,11 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
                 "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
             },
         )
-        work = next_push(socket, PushKind.PROGRESS)["work"]
+        work = _work_pushed(socket)
 
-    assert work["steps"] == [
-        {"text": "ran the tests", "done": True},
-        {"text": "three subagents out", "done": False},
+    assert work.steps == [
+        ProgressStep(text="ran the tests", done=True),
+        ProgressStep(text="three subagents out", done=False),
     ]
 
 
@@ -246,39 +253,39 @@ def test_work_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
         open_session(review_page) as socket,
     ):
         review_page.post("/api/progress", json={"text": "reading the handler"})
-        work = next_push(socket, PushKind.PROGRESS)["work"]
+        work = _work_pushed(socket)
 
-    assert work["at"] == A_MOMENT
+    assert work.at == A_MOMENT
 
 
 def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(review_page: TestClient) -> None:
     """A push is gone once sent, and a reload must not lose the line saying what the agent is doing."""
     review_page.post("/api/progress", json={"text": "rewriting the answer handler", "files": ["a.ts"]})
 
-    with open_session(review_page) as socket:
-        work = next_push(socket, PushKind.PROGRESS)["work"]
+    work = review_facts(review_page).work
 
-    assert work["text"] == "rewriting the answer handler"
-    assert work["files"] == ["a.ts"]
+    assert work is not None
+    assert work.text == "rewriting the answer handler"
+    assert work.files == ["a.ts"]
 
 
 def test_an_empty_report_says_the_work_is_over(review_page: TestClient) -> None:
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"text": "reading the handler"})
-        next_push(socket, PushKind.PROGRESS)
+        next_push(socket, ProgressPush)
         review_page.post("/api/progress", json={"text": ""})
 
-        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+        assert next_push(socket, ProgressPush) == ProgressPush(work=None)
 
 
 def test_the_answer_ends_the_work_it_answers(review_page: TestClient) -> None:
     """Said to every review on screen, so no tab goes on showing it."""
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
-        next_push(socket, PushKind.PROGRESS)
+        next_push(socket, ProgressPush)
         review_page.post("/api/say", json={"message_id": "panel-1", "body": "It retries twice."})
 
-        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+        assert next_push(socket, ProgressPush) == ProgressPush(work=None)
 
 
 def test_an_answer_to_another_message_leaves_the_work_showing(review_page: TestClient) -> None:
@@ -287,19 +294,19 @@ def test_an_answer_to_another_message_leaves_the_work_showing(review_page: TestC
         review_page.post("/api/progress", json={"text": "four reviewers reading"})
         review_page.post("/api/say", json={"message_id": "panel-1", "body": "Two fail."})
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
-        kinds = [push["type"] for push in pushes_until(socket, PushKind.SHOW)]
+        pushed = pushes_until(socket, ShowPush)
 
-    assert kinds.count("progress") == 1
+    assert sum(isinstance(push, ProgressPush) for push in pushed) == 1
 
 
 def test_a_new_message_ends_the_work_shown_for_the_last_one(review_page: TestClient) -> None:
     """A new question, so whatever was being done for the last one is history."""
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
-        next_push(socket, PushKind.PROGRESS)
+        next_push(socket, ProgressPush)
         review_page.post("/api/message", json={**MESSAGE, "message_id": "panel-2"})
 
-        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+        assert next_push(socket, ProgressPush) == ProgressPush(work=None)
 
 
 def test_a_message_that_is_refused_leaves_the_work_showing(review_page: TestClient) -> None:
@@ -307,21 +314,21 @@ def test_a_message_that_is_refused_leaves_the_work_showing(review_page: TestClie
     review_page.post("/api/progress", json={"text": "reading the handler"})
     refused = review_page.post("/api/message", json={**MESSAGE, "images": ["never-kept.png"]})
 
-    with open_session(review_page) as socket:
-        work = next_push(socket, PushKind.PROGRESS)["work"]
+    work = review_facts(review_page).work
 
     assert refused.status_code == 422
-    assert work["text"] == "reading the handler"
+    assert work is not None
+    assert work.text == "reading the handler"
 
 
 def test_taking_a_message_back_ends_the_work_for_it(review_page: TestClient) -> None:
     """The reader pressed Stop; the line must not go on saying the agent works on it."""
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
-        next_push(socket, PushKind.PROGRESS)
+        next_push(socket, ProgressPush)
         review_page.post("/api/cancel", json={"message_id": "panel-1"})
 
-        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+        assert next_push(socket, ProgressPush) == ProgressPush(work=None)
 
 
 def test_work_that_is_over_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
@@ -329,11 +336,7 @@ def test_work_that_is_over_is_not_shown_to_a_review_opened_after(review_page: Te
     review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
     review_page.post("/api/say", json={"message_id": "panel-1", "body": "It retries twice."})
 
-    with open_session(review_page) as socket:
-        review_page.post("/api/show", json={"file": REVIEWED_FILE})
-        pushed = pushes_until(socket, PushKind.SHOW)
-
-    assert "progress" not in [push["type"] for push in pushed]
+    assert review_facts(review_page).work is None
 
 
 def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> None:
@@ -341,16 +344,16 @@ def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> 
     with open_session(review_page) as socket:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, PushKind.SHOW) == {"type": "show", "file": REVIEWED_FILE}
+        assert next_push(socket, ShowPush) == ShowPush(file=REVIEWED_FILE)
 
 
 def test_the_agent_says_what_only_the_agent_knows(review_page: TestClient) -> None:
     """Model and context cannot be measured here, so they are reported."""
     with open_session(review_page) as socket:
         review_page.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
-        pushed = next_push(socket, PushKind.STATUS)
+        pushed = next_push(socket, StatusPush)
 
-    assert (pushed["agent"]["model"], pushed["agent"]["context"]) == ("opus-5", "53% of 1M")
+    assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
 
 
 async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) -> None:

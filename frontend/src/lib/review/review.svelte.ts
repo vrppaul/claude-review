@@ -94,7 +94,7 @@ export class Review {
 		this.sound = reader.sound;
 
 		this.rounds = new Rounds(facts.round);
-		this.answerer = new Answerer(facts.answerer_attached, facts.agent);
+		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.threads = new Threads(this.rounds, draft);
 		this.submission = new Submission(this.threads, this.rounds, draft);
@@ -113,6 +113,23 @@ export class Review {
 	/** The unsent review as a draft keeps it; none once the review is over. */
 	get draft(): Draft | null {
 		return this.#draft;
+	}
+
+	/**
+	 * Take in where the review stands, as the server says now: after a gap in
+	 * what it pushed, the facts the pushes kept up to date are read again.
+	 */
+	learn(facts: ReviewResponse): void {
+		this.rounds.reach(facts.round);
+		this.noteAnswerer(facts.answerer_attached);
+		this.answerer.report(facts.agent);
+		this.answerer.showWork(facts.work);
+	}
+
+	/** An agent turned up, or went quiet long enough to count as gone; one that turns up is offered the panel. */
+	noteAnswerer(attached: boolean): void {
+		this.answerer.setAttached(attached);
+		if (attached) this.layout.agentPanel.offer();
 	}
 
 	/** Take in the draft another tab on the same review has just kept. */

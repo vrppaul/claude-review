@@ -15,7 +15,7 @@ from claude_review.presentation.version_words import (
     phrase_of,
     version_on_the_wire,
 )
-from claude_review.presentation.wire.agent import AgentStatus, CancelRequest, ImageResponse, MessageRequest
+from claude_review.presentation.wire.agent import AgentStatus, AgentWork, CancelRequest, ImageResponse, MessageRequest
 from claude_review.presentation.wire.base import MAX_ID_LENGTH
 from claude_review.presentation.wire.content import (
     SEND_LIMITS,
@@ -47,12 +47,14 @@ router = APIRouter()
 async def get_the_review(review: Review = Depends(get_review), release: str = Depends(get_release)) -> ReviewResponse:
     """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
     standing = review.standing()
+    work = review.work_under_way()
     return ReviewResponse(
         title=standing.title,
         mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,
         agent=AgentStatus.of(standing.agent),
+        work=AgentWork.of(work) if work is not None else None,
         limits=SEND_LIMITS,
         release=release,
     )

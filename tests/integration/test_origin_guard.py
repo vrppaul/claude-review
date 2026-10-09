@@ -11,7 +11,7 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.pushes import ShowPush
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -127,7 +127,7 @@ def test_the_reviews_own_page_opened_as_localhost_holds_the_session_socket(revie
     with open_session(review_page, LOCALHOST_PAGE_HEADERS) as socket:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, PushKind.SHOW) == {"type": "show", "file": REVIEWED_FILE}
+        assert next_push(socket, ShowPush) == ShowPush(file=REVIEWED_FILE)
 
 
 async def test_the_page_says_what_it_may_load(client: AsyncClient) -> None:

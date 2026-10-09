@@ -8,6 +8,7 @@ when they are gone.
 import re
 
 import pytest
+from hypothesis import given, strategies as strategy
 
 from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
 from claude_review.domain.models import MAX_QUOTE_LINES, DiffFile, DiffHunk, FileStatus, LineSide
@@ -19,6 +20,12 @@ RUN = "def run():"
 RETURN = "    return 1"
 # A line that stands in many places in a file
 CLOSING_BRACE = "}"
+# Few kinds of line, so the same run stands in several places, as braces and blank lines do
+LINE_KINDS = [CLOSING_BRACE, RUN, RETURN]
+# Long enough for runs to repeat and to move, short enough to read when a case fails
+LONGEST_FILE = 30
+# The longest run a generated thread quotes
+LONGEST_QUOTE = 4
 
 
 def _braces_at(brace_lines: tuple[int, ...], line_count: int) -> list[DiffFile]:
@@ -206,3 +213,38 @@ def test_a_quote_as_near_to_two_places_follows_the_earlier() -> None:
     followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 5, quote=[CLOSING_BRACE]))
 
     assert followed.start_line == 3
+
+
+def _file_of(contents: list[str]) -> list[DiffFile]:
+    """A file of these lines, none of them changed."""
+    return [diff_file(FILE, [context_line(number, number, content) for number, content in enumerate(contents, 1)])]
+
+
+@given(
+    contents=strategy.lists(strategy.sampled_from(LINE_KINDS), min_size=1, max_size=LONGEST_FILE),
+    quote=strategy.lists(strategy.sampled_from(LINE_KINDS), min_size=1, max_size=LONGEST_QUOTE),
+    claimed_start=strategy.integers(min_value=1, max_value=LONGEST_FILE),
+)
+def test_following_again_leaves_a_thread_where_following_put_it(
+    contents: list[str], quote: list[str], claimed_start: int
+) -> None:
+    """A page that lost track of a retake follows its threads again: nothing may move twice."""
+    anchors = AnchorService.of_diff(_file_of(contents))
+    claimed = line_anchor(FILE, claimed_start, claimed_start + len(quote) - 1, quote=quote)
+
+    followed = anchors.follow(claimed)
+
+    assert anchors.follow(followed) == followed
+
+
+@given(
+    contents=strategy.lists(strategy.sampled_from(LINE_KINDS), min_size=1, max_size=LONGEST_FILE), data=strategy.data()
+)
+def test_a_thread_on_lines_that_did_not_move_stays_on_them(contents: list[str], data: strategy.DataObject) -> None:
+    start = data.draw(strategy.integers(min_value=1, max_value=len(contents)))
+    end = data.draw(strategy.integers(min_value=start, max_value=min(len(contents), start + LONGEST_QUOTE - 1)))
+    on_its_lines = line_anchor(FILE, start, end, quote=contents[start - 1 : end])
+
+    followed = AnchorService.of_diff(_file_of(contents)).follow(on_its_lines)
+
+    assert followed == on_its_lines

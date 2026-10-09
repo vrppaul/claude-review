@@ -3,7 +3,7 @@
 from enum import StrEnum, auto
 
 from claude_review.domain.models import MAX_QUOTE_LINES, EpochMillis, FileStatus, LineType, ReviewMode
-from claude_review.presentation.wire.agent import AgentStatus
+from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.base import WireModel
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
@@ -99,8 +99,9 @@ class ChangesSince(WireModel):
 class ReviewResponse(WireModel):
     """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
 
-    Read when a page opens: a push is gone once sent, and a page that was not
-    there for it learns the state here.
+    Read when a page opens, and again when it comes back from a gap it could
+    not be handed: a push is gone once sent, and a page that was not there for
+    it learns the state here.
     """
 
     title: str
@@ -108,8 +109,9 @@ class ReviewResponse(WireModel):
     # Which round is being written, and whether anything is there to answer it
     round: int
     answerer_attached: bool
-    # What the agent last said about itself
+    # What the agent last said about itself, and what it says it is doing now
     agent: AgentStatus
+    work: AgentWork | None
     # What the browser checks before uploading an image or quoting lines
     limits: SendLimits
     # Which release is serving the review, so the browser can tell a reader

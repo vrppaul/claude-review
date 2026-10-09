@@ -5,7 +5,7 @@
 
 import { readReview, takeDiff } from '$lib/api/review-api';
 import type { PageConnection } from '$lib/connection/page-connection';
-import { handlePush } from '$lib/page/push-handling';
+import { catchUp, handlePush } from '$lib/page/push-handling';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
@@ -69,7 +69,10 @@ export class ReviewPage {
 			// Two tabs on one review keep one draft: what either writes, both hold
 			this.#drafts.onChange(facts.title, (kept) => review.adopt(kept));
 			// Only now is there a review for what the server said meanwhile to land in
-			this.#connection.deliverTo((push) => handlePush(review, push));
+			this.#connection.deliverTo({
+				take: (push) => handlePush(review, push),
+				catchUp: () => catchUp(review)
+			});
 			this.#state = { kind: 'open', review };
 			// A first review is welcomed; a newer release says what changed
 			void review.guide.open();

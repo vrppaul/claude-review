@@ -2,11 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
-import { handlePush } from '$lib/page/push-handling';
+import { catchUp, handlePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
-import { contextLine, diffFile, diffResponse, hunk } from './diff';
-import { fakeServer } from './fake-server';
+import { work } from './agent-work';
+import { contextLine, diffFile, diffResponse, hunk, reviewResponse } from './diff';
+import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
 
@@ -91,6 +92,63 @@ describe('what the server pushes, taken in', () => {
 		await settled();
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 3 files');
+	});
+});
+
+/** A server the page can catch up from: the review as it now stands, and its threads where they were. */
+function caughtUpFrom(): FakeServer {
+	const server = fakeServer();
+	server.answer('GET /api/review', reviewResponse());
+	server.answer('POST /api/anchors/follow', { anchors: [] });
+	server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py'), untouched('b.py')] }));
+	return server;
+}
+
+describe('catching up on what the server could not hand over again', () => {
+	it('learns again where the review stands: the round, whoever answers, and its work', async () => {
+		const status = { model: 'opus-5', context: '53% of 1M', at: Date.now() };
+		const underWay = work();
+		caughtUpFrom().answer(
+			'GET /api/review',
+			reviewResponse({ round: 3, answerer_attached: true, agent: status, work: underWay })
+		);
+
+		await catchUp(review);
+
+		expect(review.rounds.current).toBe(3);
+		expect(review.answerer.attached).toBe(true);
+		expect(review.answerer.status).toEqual(status);
+		expect(review.answerer.work).toEqual(underWay);
+		expect(review.layout.agentPanel.open).toBe(true);
+	});
+
+	it('follows the threads onto the diff as it stands, in case a retake was among what was missed', async () => {
+		const id = review.threads.add(newComment({ file: 'a.py', startLine: 1, quote: ['x'] }));
+		const moved = { ...review.threads.all[0].anchor, start_line: 2, end_line: 2 };
+		caughtUpFrom().answer('POST /api/anchors/follow', { anchors: [moved] });
+
+		await catchUp(review);
+
+		expect(review.threads.all.find((thread) => thread.id === id)?.anchor.start_line).toBe(2);
+		expect(review.conversation.turns.at(-1)?.body).toContain('1 threads followed their lines');
+	});
+
+	it('says in the panel that what was said meanwhile may be missing, and leaves the ticks alone', async () => {
+		caughtUpFrom();
+		review.reading.setViewed('a.py', true);
+
+		await catchUp(review);
+
+		expect(review.conversation.turns.at(-1)?.body).toMatch(/anything said meanwhile may be missing/);
+		expect(review.reading.isViewed('a.py')).toBe(true);
+	});
+
+	it('says so when the review cannot be read again', async () => {
+		caughtUpFrom().fail('GET /api/review', SERVER_ERROR);
+
+		await catchUp(review);
+
+		expect(review.conversation.turns.at(-1)?.body).toMatch(/could not be read again/);
 	});
 });
 

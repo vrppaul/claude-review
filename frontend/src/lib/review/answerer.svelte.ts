@@ -13,11 +13,12 @@ export class Answerer {
 	#status: AgentStatus;
 	// The state of the work in progress, so it is never kept and never
 	// outlives the work: whether it is over is the server's to say
-	#work = $state<AgentWork | null>(null);
+	#work: AgentWork | null;
 
-	constructor(attached: boolean, status: AgentStatus) {
+	constructor(attached: boolean, status: AgentStatus, work: AgentWork | null) {
 		this.#attached = $state(attached);
 		this.#status = $state(status);
+		this.#work = $state(work);
 	}
 
 	/** Whether an agent is waiting on the review, so a round can be sent. */

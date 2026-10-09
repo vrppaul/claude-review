@@ -22,7 +22,7 @@ from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
 from claude_review.presentation.routes.api import include_api
-from claude_review.presentation.wire.pushes import ServerPush
+from claude_review.presentation.wire.session import SessionMessage
 from claude_review.presentation.wire.threads import SessionHello
 
 # The OpenAPI version both documents are written in
@@ -51,7 +51,7 @@ class SocketMessage(NamedTuple):
 
 SOCKET_MESSAGES = (
     SocketMessage("SessionHello", "validation", TypeAdapter(SessionHello)),
-    SocketMessage("ServerPush", "serialization", TypeAdapter(ServerPush)),
+    SocketMessage("SessionMessage", "serialization", TypeAdapter(SessionMessage)),
 )
 
 

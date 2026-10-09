@@ -16,6 +16,7 @@ import structlog
 from claude_review.domain.exceptions import ReviewEndedError
 from claude_review.domain.models import (
     AgentEvent,
+    AgentWork,
     Anchor,
     CommentSeverity,
     FilePath,
@@ -33,11 +34,9 @@ from claude_review.domain.page_events import (
     AgentSaid,
     DiffRetaken,
     FileShown,
-    PageEvent,
     RoundBegan,
     ThreadAnswered,
     ThreadRaised,
-    WorkReported,
 )
 from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
 from claude_review.services.exit_report import exit_report
@@ -179,10 +178,9 @@ class Review:
         """Note what the review opens on, before any page or agent can reach it."""
         await self._source.open()
 
-    def news_for_a_new_page(self) -> list[PageEvent]:
-        """What a page opening now must be told that nothing will tell it again: the work under way."""
-        work = self._answerer.work
-        return [WorkReported(work=work)] if work is not None else []
+    def work_under_way(self) -> AgentWork | None:
+        """What the agent says it is doing now, if anything: a page opening, or coming back, learns it here."""
+        return self._answerer.work
 
     async def next_event(self, *, within: float, caller_left: Awaitable[None]) -> AgentEvent | Silence:
         """The next thing the reader handed over, for the agent asking.

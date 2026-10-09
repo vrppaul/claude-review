@@ -9,18 +9,21 @@ it holds. The server tells the page what happened since.
 
 from http import HTTPStatus
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.pushes import PushKind
+from claude_review.presentation.wire.pushes import ReplyPush, RoundPush, ShowPush
+from claude_review.presentation.wire.session import Welcome
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
     PNG,
     REVIEWED_FILE,
+    SESSION_ROUTE,
     line_on_the_wire,
     next_push,
     open_session,
@@ -29,11 +32,43 @@ from tests.helpers import (
     thread_route,
     until_the_review_holds_threads,
     until_the_review_is_on_round,
+    welcome_of,
 )
 
 A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why one?")
 
-SHOWN = {"type": "show", "file": REVIEWED_FILE}
+SHOWN = ShowPush(file=REVIEWED_FILE)
+ANSWER = "It moved to config"
+# A run of the review other than the one serving
+ANOTHER_RUN = "another-run"
+
+
+def _coming_back(welcome: Welcome) -> str:
+    """Where a page coming back connects: naming the run it read, and the last push it was handed."""
+    return f"{SESSION_ROUTE}?{urlencode({'instance': welcome.instance, 'after': welcome.sequence})}"
+
+
+def test_a_page_coming_back_is_handed_what_was_said_while_it_was_away(review_page: TestClient) -> None:
+    """A laptop asleep drops the socket; the answer given meanwhile must still reach the page."""
+    with open_session(review_page) as away:
+        last_seen = welcome_of(away)
+    review_page.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": ANSWER})
+
+    with open_session_at(review_page, _coming_back(last_seen)) as back:
+        assert welcome_of(back).resumed
+        assert next_push(back, ReplyPush) == ReplyPush(thread_id=FIRST_THREAD_ID, question_id=None, body=ANSWER)
+
+
+def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_missed(
+    review_page: TestClient,
+) -> None:
+    """A review restarted on the same port knows nothing of what the last one said."""
+    with open_session(review_page) as first:
+        serving = welcome_of(first)
+
+    elsewhere = serving.model_copy(update={"instance": ANOTHER_RUN})
+    with open_session_at(review_page, _coming_back(elsewhere)) as back:
+        assert not welcome_of(back).resumed
 
 
 def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClient) -> None:
@@ -41,8 +76,8 @@ def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClie
     with open_session(review_page) as first, open_session(review_page) as second:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(first, PushKind.SHOW) == SHOWN
-        assert next_push(second, PushKind.SHOW) == SHOWN
+        assert next_push(first, ShowPush) == SHOWN
+        assert next_push(second, ShowPush) == SHOWN
 
 
 def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) -> None:
@@ -63,7 +98,7 @@ def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(revi
         sent = review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False}).json()
 
         assert sent["markdown"].startswith("## Code Review Comments — round 4")
-        assert next_push(socket, PushKind.ROUND) == {"type": "round", "number": 5}
+        assert next_push(socket, RoundPush) == RoundPush(number=5)
 
 
 def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestClient) -> None:
@@ -91,7 +126,7 @@ def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None
 
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, PushKind.SHOW) == SHOWN
+        assert next_push(socket, ShowPush) == SHOWN
 
 
 def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_page: TestClient) -> None:
@@ -227,7 +262,7 @@ def test_a_binary_frame_is_ignored_and_the_socket_goes_on(review_page: TestClien
 
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
-        assert next_push(socket, PushKind.SHOW) == SHOWN
+        assert next_push(socket, ShowPush) == SHOWN
 
 
 def test_a_socket_to_no_route_is_closed_rather_than_failing(review_page: TestClient) -> None:

@@ -32,3 +32,4 @@ htmlcov/
 # Environment
 .env
 .env.local
+.hypothesis/

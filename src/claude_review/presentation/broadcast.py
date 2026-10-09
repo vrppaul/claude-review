@@ -5,14 +5,22 @@ moment it is told, and every page is sent those same words: nothing that
 changes afterwards — the work reported again, a status replaced — reaches a
 push still waiting to be sent.
 
+Every push is numbered across the run of the review, and the last few are
+kept. A page whose socket dropped — a laptop asleep, a network gone —
+comes back with the number it last had and is handed what it missed. One
+gone longer than is kept, or coming back to another run of the review, is
+told it was not, and reads the review's facts again instead.
+
 A page holds only so much unsent. One that falls further behind than that is
 not reading — a frozen tab, a network gone — and is let go rather than held
 in memory without end: its socket closes, and a page that is still there
-reconnects. What was pushed to it in between is not sent again.
+comes back as any other does.
 """
 
 import asyncio
-from typing import assert_never
+import secrets
+from collections import deque
+from typing import NamedTuple, assert_never
 
 import structlog
 
@@ -44,45 +52,78 @@ from claude_review.presentation.wire.pushes import (
     ShowPush,
     StatusPush,
 )
+from claude_review.presentation.wire.session import Delivery, Resume, Welcome
 from claude_review.presentation.wire.threads import anchor_on_the_wire
 
 log = structlog.get_logger()
 
-# How many pushes one page may have waiting before it counts as gone. Far more
-# than a review says in a burst: a round, its answers and the work around them.
+# How many pushes one page may have waiting before it counts as gone, and so
+# how many are kept for a page coming back. Far more than a review says in a
+# burst: a round, its answers and the work around them.
 PAGE_BACKLOG = 256
+# How many random bytes name one run of the review
+RUN_NAME_BYTES = 8
+# The welcome that opens every connection takes a place of its own
+WELCOME_PLACES = 1
+
+
+class Told(NamedTuple):
+    """One push as it was told, with its number."""
+
+    sequence: int
+    said: str
 
 
 class BrowserBroadcast:
-    """The pages listening to the review, each with the pushes not yet sent to it."""
+    """The pages listening to the review, each with the pushes not yet sent to it, and the last pushes told."""
 
     def __init__(self, backlog: int) -> None:
         self._backlog = backlog
         self._listeners: set[asyncio.Queue[str]] = set()
+        # Which run of the review this is: a review restarted on the same
+        # port numbers its pushes afresh, and a page must not mistake one
+        # run's numbers for the other's
+        self._instance = secrets.token_hex(RUN_NAME_BYTES)
+        self._journal: deque[Told] = deque(maxlen=backlog)
+        self._sequence = 0
 
     def tell(self, event: PageEvent) -> None:
-        """Tell every page open now, in the words of its push, written once."""
-        said = push_of(event).model_dump_json()
+        """Tell every page open now, in the words of its push, written once and numbered."""
+        self._sequence += 1
+        said = Delivery(sequence=self._sequence, push=push_of(event)).model_dump_json()
+        self._journal.append(Told(self._sequence, said))
         for queue in list(self._listeners):
             try:
                 queue.put_nowait(said)
             except asyncio.QueueFull:
                 self._let_go(queue)
 
-    def listen(self, first: list[PageEvent]) -> asyncio.Queue[str]:
-        """Take a page's socket on as a listener, starting with what it must be told before anything new.
+    def listen(self, resume: Resume | None) -> asyncio.Queue[str]:
+        """Take a page's socket on as a listener: welcomed, and handed what it missed if it is coming back.
 
         The queue is shut down once the page falls too far behind; reading it
         then raises `asyncio.QueueShutDown`.
         """
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog)
-        for event in first:
-            queue.put_nowait(push_of(event).model_dump_json())
+        missed = self._missed_since(resume)
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog + WELCOME_PLACES)
+        welcome = Welcome(instance=self._instance, sequence=self._sequence, resumed=missed is not None)
+        queue.put_nowait(welcome.model_dump_json())
+        for told in missed or []:
+            queue.put_nowait(told.said)
         self._listeners.add(queue)
         return queue
 
     def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
+
+    def _missed_since(self, resume: Resume | None) -> list[Told] | None:
+        """What a page coming back missed, or None when it cannot be handed all of it."""
+        if resume is None or resume.instance != self._instance or resume.after > self._sequence:
+            return None
+        oldest_kept = self._journal[0].sequence if self._journal else self._sequence + 1
+        if resume.after + 1 < oldest_kept:
+            return None
+        return [told for told in self._journal if told.sequence > resume.after]
 
     def _let_go(self, queue: asyncio.Queue[str]) -> None:
         """Stop telling a page that is not reading, and drop what it never read."""

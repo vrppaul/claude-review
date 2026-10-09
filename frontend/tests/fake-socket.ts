@@ -1,3 +1,13 @@
+import type { ServerPush, SessionMessage, Welcome } from '$lib/types';
+
+/** Which run of the review the fake server is. */
+export const THIS_RUN = 'this-run';
+
+/** What the server says first on a connection: to this run, handed nothing it missed unless told otherwise. */
+export function welcome(given: Partial<Welcome> = {}): Welcome {
+	return { type: 'welcome', instance: THIS_RUN, sequence: 0, resumed: false, ...given };
+}
+
 /** The session socket, as far as a test needs one. */
 type Listener = (event: { data?: string }) => void;
 
@@ -41,6 +51,16 @@ export class FakeSocket {
 
 	emit(kind: string, data?: string) {
 		for (const listener of this.listeners.get(kind) ?? []) listener(data === undefined ? {} : { data });
+	}
+
+	/** The server said something down this socket. */
+	say(message: SessionMessage) {
+		this.emit('message', JSON.stringify(message));
+	}
+
+	/** The server delivered a push, numbered in its telling. */
+	deliver(push: ServerPush, sequence: number) {
+		this.say({ type: 'delivery', sequence, push });
 	}
 
 	/** What the page said down this socket, read back. */

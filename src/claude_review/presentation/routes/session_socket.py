@@ -9,11 +9,13 @@ Both directions run side by side, and either one ending ends the socket.
 import asyncio
 
 import structlog
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
+from claude_review.presentation.wire.base import MAX_ID_LENGTH
+from claude_review.presentation.wire.session import Resume
 from claude_review.presentation.wire.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
 
@@ -22,8 +24,8 @@ log = structlog.get_logger()
 router = APIRouter()
 
 # What a page that fell too far behind is told as its socket closes: come
-# back later (RFC 6455, 7.4.1). A page still there reconnects; what it missed
-# is not sent again.
+# back later (RFC 6455, 7.4.1). A page still there reconnects, and is handed
+# what it missed if the review still keeps it.
 FELL_BEHIND = 1013
 
 # The ASGI message a socket receives once the page has gone
@@ -33,13 +35,20 @@ SOCKET_GONE = "websocket.disconnect"
 @router.websocket("/session")
 async def session(
     websocket: WebSocket,
+    instance: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
+    after: int | None = Query(default=None, ge=0),
     review: Review = Depends(get_review),
     broadcast: BrowserBroadcast = Depends(get_broadcast),
 ) -> None:
-    """Hold the review open for as long as the page has it on screen, and tell the page what happens."""
+    """Hold the review open for as long as the page has it on screen, and tell the page what happens.
+
+    A page coming back names the run of the review it was reading and the
+    last push it was handed, and is handed what it missed.
+    """
     await websocket.accept()
     with review.page_open():
-        outbox = broadcast.listen(first=review.news_for_a_new_page())
+        resume = Resume(instance=instance, after=after) if instance is not None and after is not None else None
+        outbox = broadcast.listen(resume=resume)
         try:
             async with asyncio.TaskGroup() as directions:
                 telling = directions.create_task(_tell_the_page(outbox, websocket))

@@ -157,6 +157,13 @@ export type KeptGuide = Schemas['KeptRecord_GuideState_'];
 export type GuideChange = Schemas['GuideChange'];
 /** What the review says over its socket, on connecting and whenever its threads change. */
 export type SessionHello = SocketSchemas['SessionHello'];
+/**
+ * What the server says down the socket: a welcome on every connection, then
+ * each push in a delivery numbered across the run of the review.
+ */
+export type SessionMessage = SocketSchemas['SessionMessage'];
+export type Welcome = SocketSchemas['Welcome'];
+export type Delivery = SocketSchemas['Delivery'];
 /** What the server pushes down the socket, told apart by `type`. */
 export type ServerPush = SocketSchemas['ServerPush'];
 export type PointPush = SocketSchemas['PointPush'];
@@ -169,10 +176,10 @@ export type ChangesSince = Schemas['ChangesSince'];
  * Not a turn and not kept: the state of work in progress, replaced whenever
  * it changes. The server alone decides when it is over, and says so.
  */
-export type AgentWork = SocketSchemas['AgentWork'];
+export type AgentWork = Schemas['AgentWork'];
 
-/** One branch of the work: under way, or finished. */
-export type ProgressStep = SocketSchemas['ProgressStep'];
+/** One branch of the work: under way, or finished, as the review writes it. */
+export type ProgressStep = Schemas['ProgressStep-Output'];
 
 /** What moving the threads onto a retaken diff did: how many followed their lines, how many lost them. */
 export interface FollowOutcome {
