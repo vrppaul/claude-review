@@ -21,11 +21,21 @@ import type {
   MessageRequest,
   ReaderSettings,
   RetakeResponse,
+  ReviewResponse,
   SettingsChange,
   SubmitRequest,
   SubmitResponse,
   VersionsResponse,
 } from "$lib/types";
+
+/** What the review is and where it stands: read as the page opens. */
+export function readReview(): Promise<ReviewResponse> {
+  return read({
+    method: "GET",
+    path: "/api/review",
+    doing: "Could not open the review",
+  });
+}
 
 /** Which diff is asked for: whose whitespace, and against which base. */
 export interface DiffQuery {

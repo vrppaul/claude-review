@@ -23,6 +23,7 @@ from claude_review.presentation.wire.content import (
     DiffResponse,
     FileWindowResponse,
     RetakeResponse,
+    ReviewResponse,
     VersionsResponse,
 )
 from claude_review.presentation.wire.threads import (
@@ -42,34 +43,41 @@ log = structlog.get_logger()
 router = APIRouter()
 
 
+@router.get("/review")
+async def get_the_review(review: Review = Depends(get_review), release: str = Depends(get_release)) -> ReviewResponse:
+    """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
+    standing = review.standing()
+    return ReviewResponse(
+        title=standing.title,
+        mode=standing.mode,
+        round=standing.round,
+        answerer_attached=standing.answerer_attached,
+        agent=AgentStatus.of(standing.agent),
+        limits=SEND_LIMITS,
+        release=release,
+    )
+
+
 @router.get("/diff")
 async def get_diff(
     ignore_whitespace: bool = Query(default=False),
     base: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
     review: Review = Depends(get_review),
-    release: str = Depends(get_release),
 ) -> DiffResponse:
-    """Serve the review's content, against the base the page asks for, and where the review stands.
+    """Serve the review's content against the base the page asks for.
 
     The page is told the key of the base in force and of the review's own,
     so it asks for the one and goes back to the other without building a key
     itself.
     """
     view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
-    standing = review.standing()
+    opened_against = review.standing().opened_against
     return DiffResponse(
         files=[DiffFile.of(file) for file in view.files],
-        mode=standing.mode,
-        title=standing.title,
-        phrase=phrase_of(view.shown, standing.opened_against) if view.shown is not None else None,
+        phrase=phrase_of(view.shown, opened_against) if view.shown is not None else None,
         base_key=key_text(view.shown) if view.shown is not None else None,
         review_key=key_text(ReviewKey()) if view.shown is not None else None,
-        round=standing.round,
-        answerer_attached=standing.answerer_attached,
-        agent=AgentStatus.of(standing.agent),
         moved=view.moved,
-        limits=SEND_LIMITS,
-        release=release,
     )
 
 

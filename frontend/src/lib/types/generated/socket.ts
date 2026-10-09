@@ -155,7 +155,10 @@ export interface components {
         CommentSeverity: "note" | "question" | "blocker";
         /**
          * DiffPush
-         * @description The diff was taken again: fetch it, and which files changed since the round began.
+         * @description The diff was taken again: fetch it. How many files the review now holds, and which changed since the round began.
+         *
+         *     The count is the review's own: a page reading a narrower base cannot
+         *     count the review from what it has on screen.
          */
         DiffPush: {
             /**
@@ -163,6 +166,8 @@ export interface components {
              * @enum {string}
              */
             type: "diff";
+            /** File Count */
+            file_count: number;
             changes: components["schemas"]["ChangesSince"] | null;
         };
         /**

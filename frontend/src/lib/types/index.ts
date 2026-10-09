@@ -33,6 +33,8 @@ export type GuideState = Schemas["GuideState"];
 export type DiffLine = Schemas["DiffLine"];
 export type DiffHunk = Schemas["DiffHunk"];
 export type DiffFile = Schemas["DiffFile"];
+/** What the review is and where it stands, read as the page opens. */
+export type ReviewResponse = Schemas["ReviewResponse"];
 export type DiffResponse = Schemas["DiffResponse"];
 /** What the server takes — images, and the lines one comment covers — so the browser checks before sending. */
 export type SendLimits = Schemas["SendLimits"];

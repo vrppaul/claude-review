@@ -15,6 +15,7 @@ from claude_review.services.transcript import read_transcript
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
+    REVIEW_ROUTE,
     WAIT_FOR_EVENT,
     ReviewFactory,
     added_line,
@@ -73,9 +74,7 @@ async def test_the_diff_serves_every_file_with_its_lines(client: AsyncClient) ->
     response = await client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
-    served = response.json()
-    assert served["mode"] == "diff"
-    [handler] = served["files"]
+    [handler] = response.json()["files"]
     assert (handler["path"], handler["status"]) == ("src/handler.ts", "modified")
     [hunk] = handler["hunks"]
     assert len(hunk["lines"]) == 5
@@ -207,7 +206,7 @@ async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIte
 
 async def test_a_review_of_files_tells_the_page_it_is_one(files_mode_client: AsyncClient) -> None:
     """The page draws files differently from a diff, so it is told which it has."""
-    response = await files_mode_client.get(DIFF_ROUTE)
+    response = await files_mode_client.get(REVIEW_ROUTE)
 
     assert response.status_code == 200
     assert response.json()["mode"] == "files"
@@ -265,9 +264,8 @@ async def test_a_review_of_a_conversation_serves_its_messages_newest_first(
     response = await transcript_mode_client.get(DIFF_ROUTE)
 
     assert response.status_code == 200
-    served = response.json()
-    assert served["mode"] == "transcript"
-    newest, oldest = served["files"]
+    assert (await transcript_mode_client.get(REVIEW_ROUTE)).json()["mode"] == "transcript"
+    newest, oldest = response.json()["files"]
     assert "assistant" in newest["path"]
     assert "user" in oldest["path"]
 
@@ -296,9 +294,9 @@ async def test_a_comment_on_a_message_reaches_the_agent_with_the_message_quoted(
     assert await review_has_ended(transcript_mode_client)
 
 
-async def test_the_diff_says_what_is_under_review(client: AsyncClient) -> None:
+async def test_the_review_says_what_is_under_review(client: AsyncClient) -> None:
     """The UI can name the thing being reviewed, not just list its files."""
-    response = await client.get(DIFF_ROUTE)
+    response = await client.get(REVIEW_ROUTE)
 
     assert response.status_code == 200
     assert response.json()["title"] == REVIEW_TITLE
@@ -400,9 +398,9 @@ async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, re
     ]
 
 
-async def test_the_diff_says_which_release_serves_it(client: AsyncClient) -> None:
+async def test_the_review_says_which_release_serves_it(client: AsyncClient) -> None:
     """So the browser can tell a reader what changed since the release they last saw."""
-    response = await client.get(DIFF_ROUTE)
+    response = await client.get(REVIEW_ROUTE)
 
     assert response.json()["release"] == version("claude-review")
 

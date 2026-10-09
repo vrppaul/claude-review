@@ -2,7 +2,6 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { offeredVersions, retakeDiff, takeDiff } from "$lib/api/review-api";
 import { expansionStore } from "$lib/stores/expansions.svelte";
-import { reviewStore } from "$lib/stores/review.svelte";
 import { settingsStore } from "$lib/stores/settings.svelte";
 import {
   readChoice,
@@ -12,7 +11,6 @@ import {
 } from "$lib/utils/preferences";
 
 import type {
-  AgentStatus,
   ChangesSince,
   ContentViewMode,
   FollowOutcome,
@@ -21,6 +19,7 @@ import type {
   DiffResponse,
   SendLimits,
   ReviewMode,
+  ReviewResponse,
   ReviewVersion,
 } from "$lib/types";
 
@@ -52,15 +51,10 @@ let versions = $state<ReviewVersion[]>([]);
 // than out of the version list, so the header can speak before it knows
 // everything the diff could be compared against.
 let phrase = $state("");
-// What the agent last reported about itself. A push is gone once sent, so a
-// review opened mid-conversation has to read it back with the diff.
-let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 // What the server takes: pasted images, and the lines one comment covers.
-// Null until the first diff arrives, and nothing can be pasted or selected
+// Null until the review has been read, and nothing can be pasted or selected
 // before then: there is nothing on screen yet.
 let sendLimits = $state<SendLimits | null>(null);
-// Which release serves this review; empty until the first diff arrives
-let release = $state("");
 // What the file tree may take. Narrower than the floor and a path is
 // unreadable; wider than the ceiling and it is taking the room from what it
 // is a table of contents for.
@@ -123,19 +117,19 @@ function apply(data: DiffResponse): void {
   // Revealed lines sit above hunks counted by position, and a new diff
   // counts them afresh: a round, a base, whitespace all renumber them
   expansionStore.clear();
-  diffStore.setFiles(data.files, data.mode, data.title);
+  show(data.files);
   // None when the review is compared against nothing: files, a transcript
   phrase = data.phrase ?? "";
-  agent = data.agent;
-  diffStore.setLimits(data.limits);
-  release = data.release;
   // Said with the diff as well as pushed: a review reloaded while the tree
   // was moving heard the push and lost it, and one opened later never heard
   // it at all
   diffStore.noteTreeMoved(data.moved);
-  // A review reloaded in the middle of a round has to learn where it is
-  reviewStore.setRound(data.round);
-  if (data.answerer_attached) reviewStore.attachAnswerer();
+}
+
+/** Draw these files, starting from the first. */
+function show(newFiles: DiffFile[]): void {
+  files = newFiles;
+  selectedPath = newFiles.length > 0 ? newFiles[0].path : null;
 }
 
 export const diffStore = {
@@ -154,19 +148,12 @@ export const diffStore = {
   get contentViewMode(): ContentViewMode {
     return contentViewMode;
   },
-  /** What is under review — which repository, and against what. */
-  get agent(): AgentStatus {
-    return agent;
-  },
   get limits(): SendLimits | null {
     return sendLimits;
   },
   /** The most lines one comment may cover, once the server has said. */
   get longestQuotedRange(): number | null {
     return sendLimits?.max_quoted_lines ?? null;
-  },
-  get release(): string {
-    return release;
   },
 
   setLimits(limits: SendLimits) {
@@ -337,10 +324,16 @@ export const diffStore = {
   },
 
   setFiles(newFiles: DiffFile[], newMode: ReviewMode, newTitle = "") {
-    files = newFiles;
+    show(newFiles);
     mode = newMode;
     title = newTitle;
-    selectedPath = newFiles.length > 0 ? newFiles[0].path : null;
+  },
+
+  /** Take in what the review is, as the page opens: none of it changes afterwards. */
+  learn(facts: ReviewResponse) {
+    mode = facts.mode;
+    title = facts.title;
+    sendLimits = facts.limits;
   },
 
   /** Record which file the reader has scrolled to. */
@@ -376,9 +369,7 @@ export const diffStore = {
     reviewKey = null;
     requestedBase = null;
     versions = [];
-    agent = { model: null, context: null, at: null };
     sendLimits = null;
-    release = "";
     movedFiles = 0;
     dismissedMoved = 0;
     retaken = null;

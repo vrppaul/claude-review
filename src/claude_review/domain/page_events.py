@@ -86,8 +86,9 @@ class RoundBegan(PageEventBase):
 
 
 class DiffRetaken(PageEventBase):
-    """The diff was taken again, and which files changed since the round began, when that can be said."""
+    """The diff was taken again: how many files it holds, and which changed since the round began, if that is known."""
 
+    file_count: int
     changes: ChangedSinceRound | None
 
 

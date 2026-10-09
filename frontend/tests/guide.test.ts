@@ -71,8 +71,9 @@ function ignore() {}
 
 /** The header of a review an agent is attached to, once its diff has arrived. */
 async function drawHeader() {
-	fakeServer().answer('GET /api/diff', diffResponse({ files: [FILE], answerer_attached: true }));
+	fakeServer().answer('GET /api/diff', diffResponse({ files: [FILE] }));
 	await diffStore.fetchDiff();
+	reviewStore.attachAnswerer();
 	render(TopBar, { props: HEADER });
 }
 

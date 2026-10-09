@@ -1,5 +1,5 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
-import type { DiffFile, DiffHunk, DiffLine, DiffResponse } from '$lib/types';
+import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
 /** A file as the diff carries it: modified, text, with no lines unless given some. */
@@ -57,15 +57,22 @@ export function wholeFile(path: string, ...lines: string[]): DiffFile {
 export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 	return {
 		files: [],
-		mode: 'diff',
-		title: 'repo: uncommitted changes',
 		phrase: 'uncommitted changes',
 		base_key: 'review',
 		review_key: 'review',
+		moved: 0,
+		...given
+	};
+}
+
+/** What the server says the review is, as a page opening reads it: a diff in its first round. */
+export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {
+	return {
+		title: 'repo: uncommitted changes',
+		mode: 'diff',
 		round: 1,
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },
-		moved: 0,
 		limits: SEND_LIMITS,
 		release: '1.5.0',
 		...given

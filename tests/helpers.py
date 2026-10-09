@@ -71,6 +71,7 @@ ASGI_VERSION = "3.0"
 HTTP_VERSION = "1.1"
 
 SESSION_ROUTE = "/api/session"
+REVIEW_ROUTE = "/api/review"
 DIFF_ROUTE = "/api/diff"
 CATCH_UP_ROUTE = "/api/catch-up"
 EVENTS_ROUTE = "/api/events"
@@ -401,7 +402,7 @@ def until_the_review_is_on_round(client: TestClient, round_number: int) -> None:
     What the page says over its socket is taken in the order it was said,
     but not before a request that follows it; this waits for it to land.
     """
-    next(reading for reading in _readings(client, DIFF_ROUTE) if reading["round"] == round_number)
+    next(reading for reading in _readings(client, REVIEW_ROUTE) if reading["round"] == round_number)
 
 
 def until_the_review_holds_threads(client: TestClient, count: int) -> list[dict]:
@@ -429,7 +430,7 @@ async def until_an_agent_waits(client: AsyncClient, headers: dict[str, str] | No
     """
     deadline = asyncio.get_running_loop().time() + SETTLE_SECONDS
     while asyncio.get_running_loop().time() < deadline:
-        if (await client.get(DIFF_ROUTE, headers=headers)).json()["answerer_attached"]:
+        if (await client.get(REVIEW_ROUTE, headers=headers)).json()["answerer_attached"]:
             return
         await asyncio.sleep(LOOK_EVERY_SECONDS)
     failure = "no agent started waiting on the review"

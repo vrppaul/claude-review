@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ChangesSince, FollowOutcome, PointPush, ServerPush } from '$lib/types';
+	import { readReview } from '$lib/api/review-api';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
 	import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
@@ -31,23 +32,29 @@
 		// diff is asked for
 		settingsStore
 			.load()
-			.then(() => diffStore.fetchDiff())
-			.then(() => {
+			.then(() => Promise.all([readReview(), diffStore.fetchDiff()]))
+			.then(([facts]) => {
+				diffStore.learn(facts);
+				// A review reloaded in the middle of a round has to learn where it is
+				reviewStore.setRound(facts.round);
+				if (facts.answerer_attached) reviewStore.attachAnswerer();
+				// A push is gone once sent, so what the agent last said of itself
+				// is read back here
+				panelStore.report(facts.agent);
 				// An unsent review of the same thing is picked up where it stopped,
 				// the conversation in the panel with it
-				restored = commentStore.restore(diffStore.title);
-				panelStore.restore(diffStore.title);
-				panelStore.report(diffStore.agent);
+				restored = commentStore.restore(facts.title);
+				panelStore.restore(facts.title);
 				if (reviewStore.canSendRound) panelStore.offer();
 				// The draft may know a later round than a restarted server does
 				tellServer();
 				// Only now is there a draft for what the server said meanwhile to land in
 				dispatchHeld();
 				// A first review is welcomed; a newer release says what changed
-				void guideStore.open(diffStore.release);
+				void guideStore.open(facts.release);
 			})
 			.catch((e) => {
-				error = e instanceof Error ? e.message : 'Failed to load diff';
+				error = e instanceof Error ? e.message : 'Could not open the review';
 			})
 			.finally(() => {
 				loading = false;
@@ -107,7 +114,7 @@
 				reviewStore.setRound(push.number);
 				return;
 			case 'diff':
-				landed(push.changes).catch((e) => {
+				landed(push.file_count, push.changes).catch((e) => {
 					// A round landing half-applied is worse than not at all: the code
 					// under the reader has moved and their threads have not
 					panelStore.note(
@@ -141,13 +148,13 @@
 	 * thread left on old numbers would be kept that way in the draft, while a
 	 * diff that failed to arrive comes back with a reload.
 	 */
-	async function landed(changes: ChangesSince | null) {
+	async function landed(fileCount: number, changes: ChangesSince | null) {
 		const moved = await commentStore.follow();
 		await diffStore.fetchDiff();
 		diffStore.noteRetaken(moved, changes);
 		// The conversation is about code that has just changed under it, so
 		// the panel says where one lot of answers stops applying
-		panelStore.note(retaken(moved));
+		panelStore.note(retaken(fileCount, moved));
 	}
 
 	/** Put a thread the author raised onto the diff, and say so in the panel. */
@@ -158,9 +165,12 @@
 		soundStore.announce();
 	}
 
-	/** What a retaken diff did to the threads hanging on it. */
-	function retaken({ followed, outdated }: FollowOutcome): string {
-		const parts = [`diff retaken · ${diffStore.files.length} files`];
+	/**
+	 * What a retaken diff did to the threads hanging on it. The count is the
+	 * review's: a narrower base on screen holds fewer files than it does.
+	 */
+	function retaken(fileCount: number, { followed, outdated }: FollowOutcome): string {
+		const parts = [`diff retaken · ${fileCount} files`];
 		if (followed > 0) parts.push(`${followed} threads followed their lines`);
 		if (outdated > 0) parts.push(`${outdated} outdated`);
 		return parts.join(' · ');

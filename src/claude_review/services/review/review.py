@@ -315,7 +315,7 @@ class Review:
             NoRepositoryError: if the review's content did not come from a repository.
         """
         retaken = await self._source.retake()
-        self._page.tell(DiffRetaken(changes=retaken.changes))
+        self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
         return retaken
 
     def end(self) -> None:

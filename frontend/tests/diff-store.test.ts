@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { expansionStore } from '$lib/stores/expansions.svelte';
-import { contextLine, addedLine, diffFile, diffResponse, hunk } from './diff';
+import { contextLine, addedLine, diffFile, diffResponse, hunk, reviewResponse } from './diff';
 import { fakeServer, keepingSettings, SERVER_ERROR } from './fake-server';
 
 const files = [
@@ -70,10 +70,8 @@ describe('the diff on screen', () => {
 		expect(diffStore.mode).toBe('transcript');
 	});
 
-	it('takes the mode the server says the review is in', async () => {
-		fakeServer().answer('GET /api/diff', diffResponse({ files, mode: 'files' }));
-
-		await diffStore.fetchDiff();
+	it('takes the mode the server says the review is in', () => {
+		diffStore.learn(reviewResponse({ mode: 'files' }));
 
 		expect(diffStore.mode).toBe('files');
 	});

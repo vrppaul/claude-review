@@ -12,9 +12,9 @@ from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSi
 from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
     CATCH_UP_ROUTE,
-    DIFF_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
+    REVIEW_ROUTE,
     REVIEWED_FILE,
     REVIEWED_LINE,
     WAIT_FOR_EVENT,
@@ -357,20 +357,20 @@ async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) ->
     """A push is gone once sent; the review has to get it from somewhere."""
     await client.post("/api/status", json={"model": "opus-5", "context": "53% of 1M"})
 
-    diff = (await client.get(DIFF_ROUTE)).json()
+    standing = (await client.get(REVIEW_ROUTE)).json()
 
-    assert diff["agent"]["model"] == "opus-5"
-    assert diff["agent"]["context"] == "53% of 1M"
-    assert diff["agent"]["at"] is not None
+    assert standing["agent"]["model"] == "opus-5"
+    assert standing["agent"]["context"] == "53% of 1M"
+    assert standing["agent"]["at"] is not None
 
 
 async def test_a_status_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
     """The panel says how old the numbers are, so the date is the review's own clock."""
     async with http_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
         await client.post("/api/status", json={"model": "opus-5"})
-        diff = (await client.get(DIFF_ROUTE)).json()
+        standing = (await client.get(REVIEW_ROUTE)).json()
 
-    assert diff["agent"]["at"] == A_MOMENT
+    assert standing["agent"]["at"] == A_MOMENT
 
 
 async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: ReviewFactory) -> None:
@@ -384,9 +384,9 @@ async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: Revi
 
 async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncClient) -> None:
     """A number nobody sent is a lie; the panel shows it as unknown."""
-    diff = (await client.get(DIFF_ROUTE)).json()
+    standing = (await client.get(REVIEW_ROUTE)).json()
 
-    assert diff["agent"] == {"model": None, "context": None, "at": None}
+    assert standing["agent"] == {"model": None, "context": None, "at": None}
 
 
 A_DISCUSSED_THREAD = thread_on_the_wire(

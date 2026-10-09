@@ -19,10 +19,10 @@ from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
-    DIFF_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
     PNG,
+    REVIEW_ROUTE,
     REVIEWED_FILE,
     WAIT_FOR_EVENT,
     ReviewFactory,
@@ -235,7 +235,7 @@ async def test_an_image_already_sent_stays(client: AsyncClient) -> None:
 
 async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
     """So it checks them before sending rather than repeating the numbers."""
-    limits = (await client.get(DIFF_ROUTE)).json()["limits"]
+    limits = (await client.get(REVIEW_ROUTE)).json()["limits"]
 
     assert limits == {
         "max_image_bytes": MAX_IMAGE_BYTES,

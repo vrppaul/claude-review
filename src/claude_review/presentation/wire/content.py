@@ -96,34 +96,41 @@ class ChangesSince(WireModel):
     paths: list[str]
 
 
+class ReviewResponse(WireModel):
+    """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
+
+    Read when a page opens: a push is gone once sent, and a page that was not
+    there for it learns the state here.
+    """
+
+    title: str
+    mode: ReviewMode
+    # Which round is being written, and whether anything is there to answer it
+    round: int
+    answerer_attached: bool
+    # What the agent last said about itself
+    agent: AgentStatus
+    # What the browser checks before uploading an image or quoting lines
+    limits: SendLimits
+    # Which release is serving the review, so the browser can tell a reader
+    # what changed since the one they last saw. "Release" rather than
+    # "version": a version here is a base the diff is read against.
+    release: str
+
+
 class DiffResponse(WireModel):
-    """Response for GET /api/diff."""
+    """Response for GET /api/diff — the review's content against one base."""
 
     files: list[DiffFile]
-    mode: ReviewMode
-    title: str
     # What the diff is compared against, as the header's control says it, and
     # the key of that base and of the review's own. None in a review whose
     # content did not come from a repository.
     phrase: str | None
     base_key: str | None
     review_key: str | None
-    # Which round is being written, and whether anything is there to answer
-    # it. A review reloaded mid-round has to learn both from somewhere.
-    round: int
-    answerer_attached: bool
     # How many files have moved on since this diff was taken. A push says it
     # once; this is how a review that was reloaded, or opened late, finds out.
     moved: int
-    # What the agent last said about itself, so a reloaded review does not
-    # lose the model and the context along with the pushes it missed
-    agent: AgentStatus
-    # What the browser checks before uploading an image
-    limits: SendLimits
-    # Which release is serving the review, so the browser can tell a reader
-    # what changed since the one they last saw. "Release" rather than
-    # "version": a version here is a base the diff is read against.
-    release: str
 
 
 class VersionsResponse(WireModel):

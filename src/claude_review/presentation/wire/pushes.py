@@ -110,9 +110,14 @@ class RoundPush(Push):
 
 
 class DiffPush(Push):
-    """The diff was taken again: fetch it, and which files changed since the round began."""
+    """The diff was taken again: fetch it. How many files the review now holds, and which changed since the round began.
+
+    The count is the review's own: a page reading a narrower base cannot
+    count the review from what it has on screen.
+    """
 
     type: Literal[PushKind.DIFF] = PushKind.DIFF
+    file_count: int
     changes: ChangesSince | None
 
 

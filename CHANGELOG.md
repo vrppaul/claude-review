@@ -15,6 +15,12 @@
   `{settings, stored}` and `{guide, stored}`). `/api/diff` names the key of
   the base in force and of the review's own (`base_key`, `review_key`), and a
   retake names the key that shows what changed since its round.
+- **What the review is, apart from its diff.** `GET /api/review` says the
+  title, mode, round, whether an agent is attached and what it last said of
+  itself, the limits and the release; `/api/diff` carries only the diff
+  against a base (files, phrase, keys, moved). The `diff` push says how many
+  files the review now holds, so a page reading a narrower base counts the
+  review rather than its screen.
 - **A thread's `where` is plain text for the agent**: `src/a.py:42-47`,
   where it was `` `src/a.py`:42-47 ``. The events, `catch-up` and its index
   carry no Markdown any more; the round, which is Markdown, still sets the

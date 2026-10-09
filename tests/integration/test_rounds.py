@@ -20,6 +20,7 @@ from tests.helpers import (
     EVENTS_ROUTE,
     GLANCE_AT_EVENTS,
     LOCAL_HEADERS,
+    REVIEW_ROUTE,
     REVIEWED_FILE,
     WAIT_FOR_EVENT,
     ReviewFactory,
@@ -138,14 +139,14 @@ async def test_a_review_without_a_repository_cannot_retake_its_diff(client: Asyn
 def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClient) -> None:
     """Rounds are only offered when an agent is actually waiting on them."""
     with open_session(review_page) as socket:
-        before = review_page.get(DIFF_ROUTE).json()["answerer_attached"]
+        before = review_page.get(REVIEW_ROUTE).json()["answerer_attached"]
         review_page.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
         assert next_push(socket, PushKind.ANSWERER) == {"type": "answerer", "attached": True}
 
     assert before is False
     # And a review opened only now learns it too
-    assert review_page.get(DIFF_ROUTE).json()["answerer_attached"] is True
+    assert review_page.get(REVIEW_ROUTE).json()["answerer_attached"] is True
 
 
 def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
@@ -159,10 +160,24 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
         with open_session(review_page) as socket:
             review_page.post("/api/retake", json={})
 
-            assert next_push(socket, PushKind.DIFF) == {
-                "type": "diff",
-                "changes": {"since_round": 1, "base_key": "round:1", "paths": ["answered.py"]},
-            }
+            told = next_push(socket, PushKind.DIFF)
+
+    assert told["changes"] == {"since_round": 1, "base_key": "round:1", "paths": ["answered.py"]}
+
+
+def test_a_retake_tells_the_page_how_many_files_the_review_now_holds(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The review's own count: a page reading a narrower base cannot count the review from its screen."""
+    with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
+        (tmp_git_repo / "added.py").write_text("print('hi')\n")
+        git(tmp_git_repo, "add", ".")
+
+        with open_session(review_page) as socket:
+            review_page.post("/api/retake", json={})
+            told = next_push(socket, PushKind.DIFF)
+
+    assert told["file_count"] == 1
 
 
 def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
@@ -199,7 +214,7 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
     ):
         review_page.post("/api/retake", json={})
 
-        assert next_push(socket, PushKind.DIFF) == {"type": "diff", "changes": None}
+        assert next_push(socket, PushKind.DIFF)["changes"] is None
 
 
 async def test_after_a_retake_each_thread_is_told_where_its_lines_went(

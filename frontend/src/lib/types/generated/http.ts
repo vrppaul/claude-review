@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get The Review
+         * @description Say what the review is and where it stands: what a page opening, or coming back, must learn.
+         */
+        get: operations["get_the_review_api_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/diff": {
         parameters: {
             query?: never;
@@ -13,7 +33,7 @@ export interface paths {
         };
         /**
          * Get Diff
-         * @description Serve the review's content, against the base the page asks for, and where the review stands.
+         * @description Serve the review's content against the base the page asks for.
          *
          *     The page is told the key of the base in force and of the review's own,
          *     so it asks for the one and goes back to the other without building a key
@@ -755,30 +775,19 @@ export interface components {
         };
         /**
          * DiffResponse
-         * @description Response for GET /api/diff.
+         * @description Response for GET /api/diff — the review's content against one base.
          */
         DiffResponse: {
             /** Files */
             files: components["schemas"]["DiffFile"][];
-            mode: components["schemas"]["ReviewMode"];
-            /** Title */
-            title: string;
             /** Phrase */
             phrase: string | null;
             /** Base Key */
             base_key: string | null;
             /** Review Key */
             review_key: string | null;
-            /** Round */
-            round: number;
-            /** Answerer Attached */
-            answerer_attached: boolean;
             /** Moved */
             moved: number;
-            agent: components["schemas"]["AgentStatus"];
-            limits: components["schemas"]["SendLimits"];
-            /** Release */
-            release: string;
         };
         EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
         /**
@@ -1056,6 +1065,26 @@ export interface components {
          * @enum {string}
          */
         ReviewMode: "diff" | "files" | "transcript";
+        /**
+         * ReviewResponse
+         * @description Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
+         *
+         *     Read when a page opens: a push is gone once sent, and a page that was not
+         *     there for it learns the state here.
+         */
+        ReviewResponse: {
+            /** Title */
+            title: string;
+            mode: components["schemas"]["ReviewMode"];
+            /** Round */
+            round: number;
+            /** Answerer Attached */
+            answerer_attached: boolean;
+            agent: components["schemas"]["AgentStatus"];
+            limits: components["schemas"]["SendLimits"];
+            /** Release */
+            release: string;
+        };
         /**
          * ReviewVersion
          * @description One base the working tree can be compared against, as the page's menu shows it.
@@ -1368,6 +1397,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_the_review_api_review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+        };
+    };
     get_diff_api_diff_get: {
         parameters: {
             query?: {
