@@ -58,7 +58,7 @@ DDD-lite with clean layer separation:
 
 ```
 presentation/  → FastAPI routes, wire models, Depends() DI
-services/      → orchestration (DiffService, TextFileService, ReviewService)
+services/      → orchestration (DiffService, TextFileService, RoundFormatter)
 repositories/  → infrastructure (GitRepository)
 domain/        → Pydantic models, protocols, enums
 ```

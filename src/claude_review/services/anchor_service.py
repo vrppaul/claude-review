@@ -1,10 +1,9 @@
 """What a thread hangs on, and finding it again after the code has moved.
 
-Every kind of anchor answers two questions that need what the review holds:
-what does it say, and where is it now. A handler per kind answers them, and
-the rest of the review asks this service instead of looking inside an
-anchor. How a place is named needs nothing but the anchor, which says it
-itself.
+Every kind of anchor answers three questions that need what the review
+holds: what does it say, what is around it, and where is it now. A handler
+per kind answers them, and the rest of the review asks this service instead
+of looking inside an anchor.
 """
 
 from typing import Protocol, Self, assert_never
@@ -13,6 +12,7 @@ from pydantic import BaseModel
 
 from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
 from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, AnchorBase, DiffFile, LineAnchor, LineSide, LineType
+from claude_review.services.place_words import line_span
 
 # How many of the review's files a refusal names, so whoever named the wrong
 # one can see what the right one is called without the whole list
@@ -31,6 +31,10 @@ class AnchorHandler[Kind: AnchorBase](Protocol):
 
     def quote(self, anchor: Kind) -> Kind:
         """The anchor with what it is about read off what the review holds."""
+        ...
+
+    def excerpt(self, anchor: Kind, *, reach: int) -> list[str]:
+        """What the anchor is on and `reach` lines either side, as the review holds them; nothing if it holds none."""
         ...
 
     def follow(self, anchor: Kind) -> Kind:
@@ -72,10 +76,22 @@ class LineAnchorHandler:
         if missing:
             side = "removed" if anchor.side == LineSide.OLD else "new"
             plural = "s" if len(missing) > 1 else ""
-            msg = f"{anchor.file} does not show {side} line{plural} {_span(missing[0], missing[-1])}"
+            msg = f"{anchor.file} does not show {side} line{plural} {line_span(missing[0], missing[-1])}"
             raise AnchorLinesNotShownError(msg)
 
         return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
+
+    def excerpt(self, anchor: LineAnchor, *, reach: int) -> list[str]:
+        """The anchor's lines and `reach` more either side, from the side of the file it is on.
+
+        A file the review does not hold has nothing to show: a thread may
+        outlive the content it was written on.
+        """
+        shown = self._files.get(anchor.file)
+        if shown is None:
+            return []
+        around = range(anchor.start_line - reach, anchor.end_line + reach + 1)
+        return [line.content for line in self._lines_of(shown, anchor.side) if line.number in around]
 
     def follow(self, anchor: LineAnchor) -> LineAnchor:
         """Where the anchor's lines are in the diff as it now stands.
@@ -139,6 +155,14 @@ class AnchorService:
             case _:
                 assert_never(anchor)
 
+    def excerpt(self, anchor: Anchor, *, reach: int) -> list[str]:
+        """What the anchor is on and `reach` lines either side, as the review holds them; nothing if it holds none."""
+        match anchor:
+            case LineAnchor():
+                return self._lines.excerpt(anchor, reach=reach)
+            case _:
+                assert_never(anchor)
+
     def follow(self, anchor: Anchor) -> Anchor:
         """The anchor moved onto what the review holds now, or marked outdated."""
         match anchor:
@@ -196,8 +220,3 @@ def _stands_at(lines: list[SideLine], quote: list[str], start: int) -> bool:
         lines[start + offset].content == text and lines[start + offset].number == first + offset
         for offset, text in enumerate(quote)
     )
-
-
-def _span(start: int, end: int) -> str:
-    """A range the way a person says it: "12", or "12-19"."""
-    return str(start) if start == end else f"{start}-{end}"

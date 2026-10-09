@@ -54,7 +54,7 @@ def test_catching_up_costs_a_line_a_thread() -> None:
     printed = render_catch_up(SEEN)
 
     assert "round 3 · 7 files" in printed
-    assert "`src/routes.py`:118-130" in _line_of(printed, "comment-4")
+    assert "src/routes.py:118-130" in _line_of(printed, "comment-4")
     assert "question" in _line_of(printed, "comment-4")
     # The first line of the comment, and not the second
     assert "Does a round overtake a question?" in printed
@@ -104,7 +104,7 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
     """The index is for choosing what to read; this is the reading."""
     printed = render_thread(Thread.of(DISCUSSED))
 
-    assert printed.startswith("comment-4  `src/routes.py`:118-130  question")
+    assert printed.startswith("comment-4  src/routes.py:118-130  question")
     assert "And if it does, what then?" in printed
     assert "you: It cannot: one queue." in printed
     assert "lines:     return event" in printed

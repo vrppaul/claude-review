@@ -26,6 +26,7 @@ from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
 
 from claude_review.domain.models import (
+    FIRST_ROUND,
     AnchorKind,
     CommentSeverity,
     DiffFile,
@@ -90,8 +91,6 @@ HUNK_HEADER = "@@ -1 +1 @@"
 # The id the browser gives the first thread it mints, and the one a test
 # names when it holds only one
 FIRST_THREAD_ID = "comment-1"
-# The round a review opens on
-FIRST_ROUND = 1
 # What makes a review built here the same review as another: nothing, since
 # none of them is opened twice
 TEST_IDENTITY = "a review under test"

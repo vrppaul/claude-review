@@ -3,10 +3,18 @@
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, JsonValue, TypeAdapter, ValidationError, model_validator
+from pydantic import Field, JsonValue, TypeAdapter, ValidationError, computed_field, model_validator
 
 from claude_review.domain import models
-from claude_review.domain.models import MAX_QUOTE_LINES, AnchorKind, CommentSeverity, FilePath, LineSide, TurnAuthor
+from claude_review.domain.models import (
+    FIRST_ROUND,
+    MAX_QUOTE_LINES,
+    AnchorKind,
+    CommentSeverity,
+    FilePath,
+    LineSide,
+    TurnAuthor,
+)
 from claude_review.presentation.wire.base import (
     MAX_TEXT_LENGTH,
     MAX_THREADS,
@@ -15,6 +23,7 @@ from claude_review.presentation.wire.base import (
     WireId,
     WireModel,
 )
+from claude_review.services.place_words import place_in_words
 
 # The most turns one thread carries
 MAX_TURNS = 200
@@ -73,14 +82,18 @@ class Thread(WireModel):
 
     thread_id: str
     anchor: Anchor
-    # The place, named the way the review names it everywhere it is told
-    where: str
     severity: CommentSeverity
     body: str
     images: list[Path]
     turns: list[Turn]
     raised_by: TurnAuthor
     resolved: bool
+
+    @computed_field
+    @property
+    def where(self) -> str:
+        """The place, in plain words, for whoever reads the thread as text."""
+        return place_in_words(anchor_in_the_review(self.anchor))
 
 
 class SaysSomething(WireModel):
@@ -104,7 +117,7 @@ class TurnInput(SaysSomething):
     # The id the browser gave it, which is what a question asked in it names
     turn_id: WireId
     author: TurnAuthor
-    round: int = Field(ge=1)
+    round: int = Field(ge=FIRST_ROUND)
 
 
 class ThreadInput(SaysSomething):
@@ -172,7 +185,7 @@ class SessionHello(WireModel):
     anything: this never leaves the machine until an agent asks for it.
     """
 
-    round: int | None = Field(default=None, ge=1)
+    round: int | None = Field(default=None, ge=FIRST_ROUND)
     # None when the browser said nothing about them; an empty list when it
     # holds none — the last one was deleted
     threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
@@ -186,7 +199,7 @@ class ReceivedHello(WireModel):
     thread with it, so each is read on its own afterwards (`HeldThreads`).
     """
 
-    round: int | None = Field(default=None, ge=1)
+    round: int | None = Field(default=None, ge=FIRST_ROUND)
     threads: list[JsonValue] | None = Field(default=None, max_length=MAX_THREADS)
 
 
@@ -241,7 +254,7 @@ class ThreadSummary(WireModel):
         """The summary of a thread as the page holds it."""
         return cls(
             thread_id=thread.thread_id,
-            where=thread.anchor.where(),
+            where=place_in_words(thread.anchor),
             severity=thread.severity,
             body=thread.body,
             raised_by=thread.raised_by,

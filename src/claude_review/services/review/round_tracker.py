@@ -2,12 +2,9 @@
 
 import structlog
 
-from claude_review.domain.models import RoundSubmission
+from claude_review.domain.models import FIRST_ROUND, RoundSubmission
 
 log = structlog.get_logger()
-
-# The round every review opens on
-FIRST_ROUND = 1
 
 
 class RoundTracker:

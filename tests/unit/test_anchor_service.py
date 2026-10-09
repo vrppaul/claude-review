@@ -1,8 +1,8 @@
 """Functional requirement tests for anchors: what a thread hangs on.
 
 A thread is written about lines, not about numbers. Work moves the lines,
-so the review has to find them again after every round, say plainly when
-they are gone, and name the place the same way everywhere it is told.
+so the review has to find them again after every round, and say plainly
+when they are gone.
 """
 
 import re
@@ -10,7 +10,7 @@ import re
 import pytest
 
 from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
-from claude_review.domain.models import MAX_QUOTE_LINES, DiffFile, DiffHunk, FileStatus, LineAnchor, LineSide
+from claude_review.domain.models import MAX_QUOTE_LINES, DiffFile, DiffHunk, FileStatus, LineSide
 from claude_review.services.anchor_service import AnchorService
 from tests.helpers import added_line, context_line, diff_file, line_anchor, removed_line
 
@@ -126,18 +126,6 @@ def test_quoting_lines_the_diff_does_not_show_names_them() -> None:
 def test_quoting_a_removed_line_the_diff_does_not_show_says_removed() -> None:
     with pytest.raises(AnchorLinesNotShownError, match=re.escape("a.py does not show removed line 9")):
         AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 9, side=LineSide.OLD))
-
-
-@pytest.mark.parametrize(
-    ("anchor", "said"),
-    [
-        (line_anchor(FILE, 42), "`a.py`:42"),
-        (line_anchor(FILE, 42, 47), "`a.py`:42-47"),
-        (line_anchor(FILE, 42, side=LineSide.OLD), "`a.py`:42 (removed)"),
-    ],
-)
-def test_a_place_is_named_the_way_the_review_names_it(anchor: LineAnchor, said: str) -> None:
-    assert anchor.where() == said
 
 
 def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:

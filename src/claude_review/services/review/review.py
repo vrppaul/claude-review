@@ -22,7 +22,6 @@ from claude_review.domain.models import (
     PanelCancel,
     PanelMessage,
     ProgressStep,
-    ReviewMode,
     RoundSubmission,
     Thread,
     ThreadDraft,
@@ -44,6 +43,7 @@ from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtoco
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
+from claude_review.services.place_words import place_in_words
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import Answerer
 from claude_review.services.review.browser_presence import BrowserPresence
@@ -55,8 +55,7 @@ from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
 from claude_review.services.review_opening import ReviewOpening
-from claude_review.services.review_service import ReviewService
-from claude_review.services.transcript_review_service import TranscriptReviewService
+from claude_review.services.round_formatter import RoundFormatter
 
 log = structlog.get_logger()
 
@@ -94,9 +93,7 @@ class Review:
         )
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
-        self._formatter = (
-            TranscriptReviewService(opening.diff_files) if opening.mode == ReviewMode.TRANSCRIPT else ReviewService()
-        )
+        self._formatter = RoundFormatter.for_mode(opening.mode)
 
     @property
     def lifetime(self) -> ReviewLifetime:
@@ -210,7 +207,7 @@ class Review:
         # was pasted, and nothing here can tell the two apart.
         images = self._handover.kept_images(asked.images)
         self._inbox.hand_in(ThreadQuestion(question_id=question_id, body=asked.body, images=images, thread=handed))
-        log.info("thread_question", thread_id=thread.thread_id, where=handed.where)
+        log.info("thread_question", thread_id=thread.thread_id, where=place_in_words(handed.anchor))
 
     def take_message(self, *, message_id: str, body: str, threads: list[ThreadDraft], image_ids: list[str]) -> None:
         """Take what the reader typed in the panel, for the agent to pick up.
@@ -271,7 +268,7 @@ class Review:
         quoted = self._source.content.anchors.quote(anchor)
         thread_id = self._threads.raise_id()
         self._page.tell(ThreadRaised(thread_id=thread_id, anchor=quoted, body=body, severity=severity))
-        log.info("thread_raised", thread_id=thread_id, where=quoted.where())
+        log.info("thread_raised", thread_id=thread_id, where=place_in_words(quoted))
         return thread_id
 
     def read_thread(self, thread_id: str) -> Thread:
@@ -293,8 +290,11 @@ class Review:
             raise ReviewEndedError(msg)
 
         number = self._rounds.current
-        result = self._formatter.format_review(
-            [self._handover.thread(thread) for thread in threads], body, round_number=number
+        result = self._formatter.format(
+            [self._handover.thread(thread) for thread in threads],
+            body,
+            round_number=number,
+            anchors=self._source.content.anchors,
         )
         submission = RoundSubmission(number=number, markdown=result.markdown, comment_count=result.comment_count)
         self._rounds.sent(submission)

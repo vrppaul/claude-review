@@ -181,20 +181,13 @@ class LineAnchor(AnchorBase):
         check_line_span(self.start_line, self.end_line)
         return self
 
-    def where(self) -> str:
-        """The place as the review writes it: "`a.py`:42-47", or "… (removed)".
-
-        A removed line exists only in the file as it was, so its number is
-        said to belong there, or it would be read against the current file.
-        """
-        removed = " (removed)" if self.side == LineSide.OLD else ""
-        span = str(self.start_line) if self.start_line == self.end_line else f"{self.start_line}-{self.end_line}"
-        return f"`{self.file}`:{span}{removed}"
-
 
 # Everything a thread can hang on, told apart by `kind`; `AnchorService`
 # answers for each kind
 type Anchor = LineAnchor
+
+# The round every review opens on; rounds are counted from it
+FIRST_ROUND = 1
 
 
 class Turn(BaseModel):
@@ -234,11 +227,6 @@ class Thread(BaseModel):
     # Settled, by the reader who opened it. Travels with the review, because
     # an agent reading a settled thread should not act on it again.
     resolved: bool
-
-    @property
-    def where(self) -> str:
-        """The place, named the way the review names it everywhere it is told."""
-        return self.anchor.where()
 
 
 class SaidInDraft(BaseModel):
@@ -483,7 +471,7 @@ class RoundKey(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    round: int = Field(ge=1)
+    round: int = Field(ge=FIRST_ROUND)
 
 
 class RefKey(BaseModel):

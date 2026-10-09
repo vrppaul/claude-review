@@ -132,14 +132,15 @@ somebody who is waiting.
      again. `body` and `images` are what is asked: the user's last reply in
      the thread, or the comment that opened it when they have said nothing
      since. `thread` is the whole thread it was asked in: `thread_id`;
-     `where`, the place as the review names it; `anchor`, the file, side and
-     line range with `quote`, the lines it is about; `body` and `images`, the
-     comment that opened it; `turns`, everything said since, each with its
-     `author`, `body`, `round` and `images` — a question asked in a reply is
-     the last of them; and `severity`, `resolved` and `raised_by`, which is
-     `author` on a thread you opened yourself. Every `images` holds absolute
-     paths to screenshots the reader pasted, and the text beside it may be
-     empty when a screenshot is all there is.
+     `where`, the place in plain words (`src/a.py:42-47`); `anchor`, the
+     file, side and line range with `quote`, the lines it is about; `body`
+     and `images`, the comment that opened it; `turns`, everything said
+     since, each with its `author`, `body`, `round` and `images` — a
+     question asked in a reply is the last of them; and `severity`,
+     `resolved` and `raised_by`, which is `author` on a thread you opened
+     yourself. Every `images` holds absolute paths to screenshots the
+     reader pasted, and the text beside it may be empty when a screenshot
+     is all there is.
    - `{"type":"message","message":{"message_id":"panel-1","body":"...",
      "threads":[...],"images":[...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:

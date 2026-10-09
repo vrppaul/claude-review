@@ -1,18 +1,38 @@
-"""Functional requirement tests for the review service.
+"""Functional requirement tests for a round as the agent reads it, in a review of a diff or of files.
 
-These test the formatting of threads into markdown for Claude.
+The agent has the files in front of it, so a thread is filed under its
+place, and carries the lines it was written against only once they have moved.
 """
 
 from pathlib import Path
 
-from claude_review.domain.models import CommentSeverity, LineSide, ReviewResult, Thread, Turn, TurnAuthor
-from claude_review.services.review_service import ReviewService
-from tests.helpers import FIRST_ROUND, line_anchor, thread
+from claude_review.domain.models import (
+    FIRST_ROUND,
+    CommentSeverity,
+    LineSide,
+    ReviewMode,
+    ReviewResult,
+    Thread,
+    Turn,
+    TurnAuthor,
+)
+from claude_review.services.anchor_service import AnchorService
+from claude_review.services.round_formatter import RoundFormatter
+from tests.helpers import line_anchor, thread
+
+# What the threads hang on: a diff review files them by place, and needs none of it
+NO_CONTENT = AnchorService.of_diff([])
 
 
-def _formatted(threads: list[Thread], *, body: str | None = None, round_number: int = FIRST_ROUND) -> ReviewResult:
-    """The review as the agent reads it: no summary, and the first round, unless a test says otherwise."""
-    return ReviewService().format_review(threads, body=body, round_number=round_number)
+def _formatted(
+    threads: list[Thread],
+    *,
+    body: str | None = None,
+    round_number: int = FIRST_ROUND,
+    mode: ReviewMode = ReviewMode.DIFF,
+) -> ReviewResult:
+    """The round as the agent reads it: a diff review, no summary, and the first round, unless a test says otherwise."""
+    return RoundFormatter.for_mode(mode).format(threads, body, round_number=round_number, anchors=NO_CONTENT)
 
 
 def test_a_comment_is_filed_under_its_file_and_line() -> None:
@@ -227,3 +247,11 @@ def test_a_comment_reaches_the_agent_as_written() -> None:
     body = "first\r\nsecond\n"
 
     assert body in _formatted([thread(line_anchor("src/handler.ts", 1), body)]).markdown
+
+
+def test_a_review_of_files_files_its_threads_as_a_diff_review_does() -> None:
+    """The agent has the files there too, so a place is enough."""
+    result = _formatted([thread(line_anchor("docs/plan.md", 3), "Say why")], mode=ReviewMode.FILES)
+
+    assert result.markdown.startswith("## Code Review Comments\n")
+    assert "### `docs/plan.md`:3\nSay why" in result.markdown

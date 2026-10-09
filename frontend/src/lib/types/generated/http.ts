@@ -1208,8 +1208,6 @@ export interface components {
             /** Thread Id */
             thread_id: string;
             anchor: components["schemas"]["Anchor-Output"];
-            /** Where */
-            where: string;
             severity: components["schemas"]["CommentSeverity"];
             /** Body */
             body: string;
@@ -1220,6 +1218,11 @@ export interface components {
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
+            /**
+             * Where
+             * @description The place, in plain words, for whoever reads the thread as text.
+             */
+            readonly where: string;
         };
         /**
          * ThreadInput

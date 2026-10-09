@@ -70,7 +70,7 @@ async def test_the_answerer_is_handed_the_question_in_its_thread(client: AsyncCl
     assert event["question"]["body"] == OPENING
     # The quoted lines travel with it, since the answerer may not have the file
     assert event["question"]["thread"]["anchor"]["quote"] == [QUOTED]
-    assert event["question"]["thread"]["where"] == "`src/a.py`:42"
+    assert event["question"]["thread"]["where"] == "src/a.py:42"
 
 
 async def test_a_thread_nothing_was_said_in_asks_the_comment_that_opened_it(client: AsyncClient) -> None:

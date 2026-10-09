@@ -9,6 +9,7 @@ agent already looks once it hears the review is over.
 from typing import assert_never
 
 from claude_review.domain.models import AgentEvent, PanelCancel, PanelMessage, RoundSubmission, ThreadQuestion
+from claude_review.services.place_words import place_in_markdown
 from claude_review.services.thread_markdown import format_opening
 
 UNREAD_HEADING = "## Left unread when the review ended"
@@ -47,11 +48,11 @@ def _unread(event: ThreadQuestion | PanelMessage | PanelCancel) -> str:
     """One thing the agent never took, as it would have read it."""
     match event:
         case ThreadQuestion():
-            heading = f"### Question in {event.thread.thread_id}, {event.thread.where}"
+            heading = f"### Question in {event.thread.thread_id}, {place_in_markdown(event.thread.anchor)}"
             return "\n".join([heading, format_opening(event.body, event.images)])
         case PanelMessage():
             heading = f"### Message {event.message_id}"
-            threads = [f"About {thread.thread_id}, {thread.where}" for thread in event.threads]
+            threads = [f"About {thread.thread_id}, {place_in_markdown(thread.anchor)}" for thread in event.threads]
             return "\n".join([heading, format_opening(event.body, event.images), *threads])
         case PanelCancel():
             return f"### Message {event.message_id} taken back"

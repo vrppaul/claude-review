@@ -103,8 +103,8 @@ def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_
         held = until_the_review_holds_threads(review_page, 2)
 
     assert [(thread["thread_id"], thread["where"]) for thread in held] == [
-        ("comment-1", f"`{REVIEWED_FILE}`:1"),
-        ("comment-2", f"`{REVIEWED_FILE}`:3-5"),
+        ("comment-1", f"{REVIEWED_FILE}:1"),
+        ("comment-2", f"{REVIEWED_FILE}:3-5"),
     ]
 
 

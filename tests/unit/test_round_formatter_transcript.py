@@ -1,46 +1,33 @@
-"""Functional tests for TranscriptReviewService.
+"""Functional requirement tests for a round as the agent reads it, in a review of a conversation.
 
-These test the formatting of transcript review threads into
-self-contained markdown that includes context from the conversation.
+The agent does not have the conversation in front of it, so each thread
+quotes what it is on, with the lines around it, rather than naming a place.
 """
 
 from claude_review.domain.models import (
+    FIRST_ROUND,
     CommentSeverity,
     DiffFile,
-    DiffHunk,
-    DiffLine,
-    FileStatus,
-    LineType,
+    ReviewMode,
     ReviewResult,
     Thread,
     TurnAuthor,
 )
-from claude_review.services.transcript_review_service import TranscriptReviewService
-from tests.helpers import FIRST_ROUND, line_anchor, thread
+from claude_review.services.anchor_service import AnchorService
+from claude_review.services.round_formatter import RoundFormatter
+from claude_review.services.whole_file import whole_file
+from tests.helpers import line_anchor, thread
 
 
-def _message(path: str, lines: list[str]) -> DiffFile:
-    """Build a DiffFile representing a transcript message."""
-    return DiffFile(
-        path=path,
-        status=FileStatus.ADDED,
-        hunks=[
-            DiffHunk(
-                header="",
-                old_start=0,
-                new_start=1,
-                lines=[
-                    DiffLine(kind=LineType.CONTEXT, new_number=line_number, content=line)
-                    for line_number, line in enumerate(lines, start=1)
-                ],
-            )
-        ],
-    )
+def _message(name: str, lines: list[str]) -> DiffFile:
+    """One message of the conversation, as the review holds it."""
+    return whole_file(name, "\n".join(lines))
 
 
 def _formatted(threads: list[Thread], body: str | None, files: list[DiffFile]) -> ReviewResult:
-    """The review as the agent reads it, in its first round."""
-    return TranscriptReviewService(files).format_review(threads, body, round_number=FIRST_ROUND)
+    """The round as the agent reads it, in its first round."""
+    formatter = RoundFormatter.for_mode(ReviewMode.TRANSCRIPT)
+    return formatter.format(threads, body, round_number=FIRST_ROUND, anchors=AnchorService.of_diff(files))
 
 
 def test_a_review_of_a_conversation_is_headed_as_one() -> None:

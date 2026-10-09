@@ -15,6 +15,10 @@
   `{settings, stored}` and `{guide, stored}`). `/api/diff` names the key of
   the base in force and of the review's own (`base_key`, `review_key`), and a
   retake names the key that shows what changed since its round.
+- **A thread's `where` is plain text for the agent**: `src/a.py:42-47`,
+  where it was `` `src/a.py`:42-47 ``. The events, `catch-up` and its index
+  carry no Markdown any more; the round, which is Markdown, still sets the
+  path as code, and a path with a backtick in it no longer breaks it.
 - **The agent counts as there for ten minutes after it last called**, and
   the review stops offering rounds once it has gone quiet for longer.
 - **A page that stops reading is let go** instead of being held in memory;
