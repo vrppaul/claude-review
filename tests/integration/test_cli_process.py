@@ -16,6 +16,7 @@ import threading
 import time
 import urllib.request
 from collections.abc import Callable, Iterator, Mapping
+from http import HTTPStatus
 from importlib.metadata import version
 from pathlib import Path
 from typing import IO
@@ -25,7 +26,7 @@ from websockets.exceptions import InvalidStatus
 from websockets.sync.client import ClientConnection, connect
 from websockets.typing import Origin
 
-from claude_review.cli import DISCONNECT_GRACE
+from claude_review.cli.serving import DISCONNECT_GRACE
 from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.schemas import PushKind
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
@@ -56,10 +57,11 @@ PAST_GRACE_SECONDS = DISCONNECT_GRACE + NOTICE_SECONDS
 AGENT_WAIT_SECONDS = "20"
 BRIEF_WAIT_SECONDS = "1"
 LONG_WAIT_SECONDS = "120"
-# A port for a command that refuses before it calls anything
-NEVER_CALLED_PORT = "1"
-# Longer than any thread id the review accepts
-OVERLONG_THREAD_ID = "x" * 500
+# A wait that times out almost at once, and long enough after it for it to have
+SHORTEST_WAIT_SECONDS = "0.2"
+PAST_THE_SHORTEST_WAIT_SECONDS = 0.6
+# A thread no review holds
+NO_SUCH_THREAD = "comment-99"
 # What a machine with no browser to open looks like
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}
 # A page on somebody else's site
@@ -130,9 +132,13 @@ class CliProcess:
         self._process.terminate()
 
     def stop(self) -> None:
-        """Kill it if it is still running, and reap it either way."""
+        """Stop it the way `kill` does if it is still running, killing it outright only if that fails; reap it."""
         if self._process.poll() is None:
-            self._process.kill()
+            self._process.terminate()
+            try:
+                self._process.wait(timeout=COMMAND_SECONDS)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
         self._process.wait(timeout=COMMAND_SECONDS)
 
 
@@ -145,8 +151,9 @@ def _collect(stream: IO[str], keep: Callable[[str], None]) -> None:
 class CliProcesses:
     """Runs the command line as the user would, and leaves nothing running after the test.
 
-    Every process starts with the reader's files kept under the test's own
-    directory, so no test reads or writes the real ones.
+    Every process starts with the reader's files and its temporary
+    directories under the test's own directory, so no test reads or writes
+    the real ones, and none leaves anything in the system's.
     """
 
     def __init__(self, environment: dict[str, str]) -> None:
@@ -163,7 +170,7 @@ class CliProcesses:
 
     def review(self, repo: Path, port: int) -> CliProcess:
         """A review of the repository's uncommitted changes, served and ready."""
-        started = self.start("--port", str(port), "--no-open", "diff", str(repo))
+        started = self.start("diff", str(repo), "--port", str(port), "--no-open")
         started.wait_for_address()
         return started
 
@@ -185,12 +192,13 @@ class CliProcesses:
 
 @pytest.fixture
 def cli(tmp_path_factory: pytest.TempPathFactory) -> Iterator[CliProcesses]:
-    """The command line, run with the reader's files under this test's own directory."""
+    """The command line, run with the reader's files and the temporary directories under this test's own."""
     reader_home = tmp_path_factory.mktemp("reader")
     environment = {
         **os.environ,
         "XDG_CONFIG_HOME": str(reader_home / "config"),
         "XDG_STATE_HOME": str(reader_home / "state"),
+        "TMPDIR": str(tmp_path_factory.mktemp("temporary")),
     }
     processes = CliProcesses(environment)
     yield processes
@@ -248,7 +256,7 @@ def test_busy_port_reports_one_readable_line(changed_repo: Path, cli: CliProcess
         holder.listen()
         taken_port = holder.getsockname()[1]
 
-        result = cli.run("--port", str(taken_port), "--no-open", "diff", str(changed_repo))
+        result = cli.run("diff", str(changed_repo), "--port", str(taken_port), "--no-open")
 
     assert result.returncode == 1
     assert "Traceback" not in result.stderr
@@ -275,7 +283,7 @@ def test_the_address_is_printed_whether_or_not_a_browser_opens(
     passed `--no-open` to get it, and nobody's browser ever opened. On a
     machine with no browser to find, it is all there is to go on.
     """
-    review = cli.start("--port", str(port), *opening, "diff", str(changed_repo), environment=NO_BROWSER)
+    review = cli.start("diff", str(changed_repo), "--port", str(port), *opening, environment=NO_BROWSER)
 
     assert review.wait_for_address() == f"http://{LOOPBACK}:{port}"
 
@@ -435,14 +443,6 @@ def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
         assert _next_push(review_socket, PushKind.CHANGED) == {"type": "changed", "moved_count": 1}
 
 
-def test_reporting_nothing_is_refused_rather_than_sent(cli: CliProcesses) -> None:
-    """An empty report would tell the panel to show blanks it already shows."""
-    result = cli.run("status", "--port", NEVER_CALLED_PORT)
-
-    assert result.returncode != 0
-    assert "nothing to report" in result.stderr
-
-
 def test_waiting_reports_when_nothing_was_asked(changed_repo: Path, cli: CliProcesses, port: int) -> None:
     """A caller in a loop needs to be told, not left hanging."""
     cli.review(changed_repo, port)
@@ -461,7 +461,7 @@ def test_expanding_context_works_from_a_subdirectory(tmp_git_repo: Path, cli: Cl
     git(tmp_git_repo, "commit", "-m", "add")
     (nested / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 40)) + "changed\n")
 
-    cli.start("--port", str(port), "--no-open", "diff", cwd=nested).wait_for_address()
+    cli.start("diff", "--port", str(port), "--no-open", cwd=nested).wait_for_address()
     request = urllib.request.Request(f"http://{LOOPBACK}:{port}/api/file-window?path=sub/app.py&start=1&end=3")
     with urllib.request.urlopen(request, timeout=COMMAND_SECONDS) as response:
         window = json.loads(response.read())
@@ -469,23 +469,16 @@ def test_expanding_context_works_from_a_subdirectory(tmp_git_repo: Path, cli: Cl
     assert window["lines"] == ["line 1", "line 2", "line 3"]
 
 
-def test_waiting_on_a_server_that_is_not_there_explains_itself(cli: CliProcesses, port: int) -> None:
+def test_what_the_review_refuses_is_explained_in_a_line(changed_repo: Path, cli: CliProcesses, port: int) -> None:
     """These commands run in a loop, where a traceback says nothing useful."""
-    result = cli.run("wait", "--port", str(port), "--seconds", BRIEF_WAIT_SECONDS)
-
-    assert result.returncode != 0
-    assert "Traceback" not in result.stderr
-    assert "no review is listening" in result.stderr
-
-
-def test_replying_to_a_thread_that_is_refused_explains_itself(changed_repo: Path, cli: CliProcesses, port: int) -> None:
     cli.review(changed_repo, port)
 
-    result = cli.run("reply", "--port", str(port), "--thread", OVERLONG_THREAD_ID, "hello")
+    result = cli.run("context", "--port", str(port), "--thread", NO_SUCH_THREAD)
 
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
     assert "refused" in result.stderr
+    assert str(HTTPStatus.NOT_FOUND.value) in result.stderr
 
 
 def test_an_agent_waiting_when_the_reader_closes_the_review_hears_it_closed(
@@ -523,7 +516,7 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
     temporary = tmp_path / "temporary"
     temporary.mkdir()
     review = cli.start(
-        "--port", str(port), "--no-open", "diff", str(changed_repo), environment={"TMPDIR": str(temporary)}
+        "diff", str(changed_repo), "--port", str(port), "--no-open", environment={"TMPDIR": str(temporary)}
     )
     review.wait_for_address()
 
@@ -532,3 +525,101 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
 
     assert "Rename the helper." in review.printed()
     assert not list(temporary.glob("*.claude-review-objects"))
+
+
+def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) -> dict:
+    """The review as the agent reads it, once the page has told it of as many threads."""
+    deadline = time.monotonic() + PUSH_SECONDS
+    while time.monotonic() < deadline:
+        seen = json.loads(cli.run("context", "--port", str(port), "--json").stdout)
+        if len(seen["threads"]) == count:
+            return seen
+    failure = f"the review never held {count} threads"
+    raise AssertionError(failure)
+
+
+def test_catching_up_reads_the_review_as_it_stands(changed_repo: Path, cli: CliProcesses, port: int) -> None:
+    """An agent arriving late learns what was said before it came, in short."""
+    cli.review(changed_repo, port)
+    _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
+
+    index = cli.run("context", "--port", str(port))
+
+    assert index.returncode == 0
+    assert "panel: 1 message" in index.stdout
+    assert "you: Run the tests and say what fails." in index.stdout
+
+
+def test_a_thread_named_is_read_in_full(changed_repo: Path, cli: CliProcesses, port: int) -> None:
+    """The index is for choosing; naming a thread hands over all of it, with the lines it is about."""
+    cli.review(changed_repo, port)
+    with _session(port) as review_socket:
+        anchor = {**line_on_the_wire("initial.txt", 1), "quote": ["changed"]}
+        review_socket.send(json.dumps({"threads": [thread_on_the_wire(anchor, "Why this?\nAnd not that?")]}))
+        _until_the_review_holds_threads(cli, port, 1)
+
+        read = cli.run("context", "--port", str(port), "--thread", FIRST_THREAD_ID)
+
+    assert read.returncode == 0
+    assert "And not that?" in read.stdout
+    assert "lines: changed" in read.stdout
+
+
+def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """What the agent says it is doing is drawn as it said it, and taken away when it says it is done."""
+    cli.review(changed_repo, port)
+    with _session(port) as review_socket:
+        cli.run(
+            "progress",
+            "--port",
+            str(port),
+            "--message",
+            "panel-1",
+            "--file",
+            "initial.txt",
+            "--did",
+            "read the handler",
+            "--step",
+            "two subagents out",
+            "rewriting the handler",
+        )
+        work = _next_push(review_socket, PushKind.PROGRESS)["work"]
+
+        cli.run("progress", "--port", str(port), "--done")
+        finished = _next_push(review_socket, PushKind.PROGRESS)
+
+    assert (work["message_id"], work["text"], work["files"]) == ("panel-1", "rewriting the handler", ["initial.txt"])
+    assert work["steps"] == [
+        {"text": "read the handler", "done": True},
+        {"text": "two subagents out", "done": False},
+    ]
+    assert finished["work"] is None
+
+
+def test_taking_the_diff_again_says_which_files_changed_since_the_round_began(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """The agent reads those again rather than the whole diff."""
+    cli.review(changed_repo, port)
+    (changed_repo / "initial.txt").write_text("changed again by the agent\n")
+
+    retaken = cli.run("round", "--port", str(port))
+
+    assert retaken.returncode == 0
+    assert json.loads(retaken.stdout)["changes"] == {"since_round": 1, "paths": ["initial.txt"]}
+
+
+def test_waiting_until_an_event_waits_through_the_timeouts(changed_repo: Path, cli: CliProcesses, port: int) -> None:
+    """The agent's loop is handed only what happened, never a timeout to look for and skip."""
+    cli.review(changed_repo, port)
+    with _session(port) as review_socket:
+        waiting = cli.start("wait", "--port", str(port), "--seconds", SHORTEST_WAIT_SECONDS, "--until-event")
+        _next_push(review_socket, PushKind.ANSWERER)
+        # Long enough for the first wait to have timed out
+        time.sleep(PAST_THE_SHORTEST_WAIT_SECONDS)
+
+        _post(port, "/api/message", {"message_id": "panel-1", "body": "Still there?"})
+
+        assert json.loads(waiting.printed())["type"] == "message"

@@ -16,6 +16,10 @@ class PortUnavailableError(Exception):
     """Raised when the review server cannot take the requested port."""
 
 
+class UnreadableContentError(Exception):
+    """Raised when what was asked to be reviewed cannot be read: a file missing or not text, a transcript not JSON."""
+
+
 class ReviewError(Exception):
     """Raised when the review will not do what it was asked; the message says why."""
 

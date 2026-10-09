@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.cli import _workspace
+from claude_review.cli.workspace import review_workspace
 
 
 @pytest.fixture(autouse=True)
@@ -21,9 +21,9 @@ def temporary_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
 
 
 def test_pasted_images_outlive_the_review_and_the_trees_do_not(
-    tmp_git_repo: Path, capsys: pytest.CaptureFixture[str]
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    with _workspace(tmp_git_repo) as workspace:
+    with review_workspace(writes_trees=True) as workspace:
         assert workspace.objects is not None
         (workspace.objects / "blob").write_bytes(b"a copy of an untracked file")
         (workspace.images / "shot.png").write_bytes(b"\x89PNG")
@@ -34,7 +34,7 @@ def test_pasted_images_outlive_the_review_and_the_trees_do_not(
 
 
 def test_a_review_nobody_pasted_into_leaves_nothing(capsys: pytest.CaptureFixture[str]) -> None:
-    with _workspace(None) as workspace:
+    with review_workspace(writes_trees=False) as workspace:
         assert workspace.objects is None
 
     assert not workspace.images.exists()

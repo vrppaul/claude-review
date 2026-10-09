@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
 
+from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 
 # Claude Code injects internal messages (slash commands, system reminders, bash output)
@@ -87,7 +88,7 @@ class TranscriptService:
         Tool calls act as turn boundaries.  Returns newest turns first.
 
         Raises:
-            ValueError: If the file cannot be parsed.
+            UnreadableContentError: If the file cannot be read, or a line is not JSON.
         """
         turns = self._merge_turns(self._read_jsonl(path))
         labels = _labels(turns)
@@ -104,9 +105,9 @@ class TranscriptService:
         """
         try:
             text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError) as e:
-            msg = f"Invalid transcript file: {e}"
-            raise ValueError(msg) from e
+        except (OSError, UnicodeDecodeError) as error:
+            msg = f"Invalid transcript file: {error}"
+            raise UnreadableContentError(msg) from error
 
         entries = []
         for line_number, line in enumerate(text.splitlines(), start=1):
@@ -114,9 +115,9 @@ class TranscriptService:
                 continue
             try:
                 raw = json.loads(line)
-            except json.JSONDecodeError as e:
-                msg = f"Invalid JSON on line {line_number}: {e}"
-                raise ValueError(msg) from e
+            except json.JSONDecodeError as error:
+                msg = f"Invalid JSON on line {line_number}: {error}"
+                raise UnreadableContentError(msg) from error
             try:
                 entries.append(TranscriptEntry.model_validate(raw))
             except ValidationError:

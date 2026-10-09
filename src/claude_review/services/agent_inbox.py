@@ -6,6 +6,7 @@ from collections.abc import Awaitable
 from enum import StrEnum, auto
 
 from claude_review.domain.models import AgentEvent
+from claude_review.services.review_lifetime import ReviewLifetime
 
 
 class Silence(StrEnum):
@@ -40,8 +41,8 @@ class AgentInbox:
     it; only an acknowledgement could close that, and the loop has none.
     """
 
-    def __init__(self, closed: asyncio.Event) -> None:
-        self._closed = closed
+    def __init__(self, lifetime: ReviewLifetime) -> None:
+        self._lifetime = lifetime
         self._waiting: deque[AgentEvent] = deque()
         # Set while anything waits to be taken, so a poll can sleep until it does
         self._filled = asyncio.Event()
@@ -60,7 +61,7 @@ class AgentInbox:
         loop = asyncio.get_running_loop()
         deadline = loop.time() + within
         leaving = asyncio.ensure_future(caller_left)
-        closing = asyncio.ensure_future(self._until_closed())
+        closing = asyncio.ensure_future(self._lifetime.until_ended())
         try:
             while True:
                 if leaving.done():
@@ -89,9 +90,6 @@ class AgentInbox:
         if not self._waiting:
             self._filled.clear()
         return event
-
-    async def _until_closed(self) -> None:
-        await self._closed.wait()
 
     async def _until_something_changes(self, seconds: float, *watched: asyncio.Future[None]) -> None:
         """Sleep until something arrives, one of the watched finishes, or time is up.

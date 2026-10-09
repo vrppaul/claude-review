@@ -16,6 +16,7 @@ import structlog
 from claude_review.domain.exceptions import GitError
 from claude_review.domain.models import PathState, TreeState
 from claude_review.domain.protocols import GitRepositoryProtocol
+from claude_review.services.review_lifetime import ReviewLifetime
 
 log = structlog.get_logger()
 
@@ -59,9 +60,9 @@ class TreeWatcherService:
         root: Path,
         *,
         taken_at: Callable[[], TreeState],
-        stop: asyncio.Event,
+        lifetime: ReviewLifetime,
     ) -> AsyncGenerator[int]:
-        """Yield how many files have moved, each time the tree moves again.
+        """Yield how many files have moved, each time the tree moves again, until the review ends.
 
         Once per change rather than once per poll: a notice that repeats every
         half second while somebody edits is noise, and the reader has already
@@ -70,8 +71,7 @@ class TreeWatcherService:
         """
         told: TreeState | None = None
 
-        while not stop.is_set():
-            await asyncio.sleep(self._poll_seconds)
+        while not await lifetime.ended_within(self._poll_seconds):
             current = await self.read(root)
             baseline = taken_at()
 

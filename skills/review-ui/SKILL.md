@@ -1,7 +1,6 @@
 ---
 name: review-ui
 description: Open a review in the browser and stay attached to it — the user comments on a diff, files or a transcript, asks about any of it while they read, and sends rounds you answer without the review ending
-user-invocable: true
 ---
 
 Open the claude-review viewer so the user can read a change and mark it up.
@@ -20,11 +19,10 @@ button on every thread and a panel that says, when they finally click,
 that nobody is listening.
 
 Usage:
-- `/review-ui` — review current git changes
-- `/review-ui last 3 commits` — review changes from the last 3 commits
-- `/review-ui since v0.5.0` — review changes since a tag
-- `/review-ui plan` — review the current plan file
-- `/review-ui transcript` — review the current conversation as a transcript
+- No argument: review current git changes
+- `last 3 commits`, `since v0.5.0`, `diff --base HEAD~3`: review changes since a specific point
+- `plan`: review the current plan file
+- `transcript`: review the current conversation as a transcript
 
 ## Three rules while a review is open
 
@@ -63,24 +61,30 @@ somebody who is waiting.
    reader read the same working tree against a branch, a tag or an earlier
    round of this review.
 
-3. Start it in the background. It opens in their browser by itself:
+3. Start it in the background, with a log of its own, and note where the
+   log is — your shell forgets the variable once the command returns. It
+   opens in their browser by itself:
    ```bash
-   setsid nohup claude-review --port 8765 diff > /tmp/review.log 2>&1 &
+   log=$(mktemp -t claude-review.XXXXXX)
+   setsid nohup claude-review diff > "$log" 2>&1 &
+   echo "$log"
    ```
    Detached, rather than a bare `&`: started in the shell's own session, the
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS
    ships no `setsid` — `nohup … &` on its own is the fallback.
 
-   The address is printed to that log whether or not a window opened. Read it
-   and give it to them anyway: over ssh or in a container there is nothing to
-   open, and a tab closed by accident needs the way back. Pass `--no-open`
-   only when you know a window would be wrong.
+   Once it is up the log says `Review ready at http://127.0.0.1:<port>`,
+   whether or not a window opened. That port is the `--port <port>` every
+   command below takes. Give them the address anyway: over ssh or in a
+   container there is nothing to open, and a tab closed by accident needs the
+   way back. Add `--no-open` after the command only when you know a window
+   would be wrong.
 
-   If the port is taken the command says so; pick another. (Without `--port`
-   the review picks one from the repository and the base ref, so reopening
-   the same review comes back to the same address — and to the draft left
-   in it.)
+   The port is worked out from the repository and the base, so reopening the
+   same review comes back to the same address — and to the draft left in it.
+   `--port` after the command picks one yourself; if it is taken, the
+   command says so.
 
    The reader is in the review from the moment it opens, and until your
    first `wait` the panel tells them the agent has not joined yet. So start
@@ -90,7 +94,7 @@ somebody who is waiting.
 
 4. Catch up, if this review was already under way when you arrived:
    ```bash
-   claude-review context --port 8765
+   claude-review context --port <port>
    ```
    `wait` hands over what happens next, never what already happened — so an
    agent that restarted mid-review knows nothing until somebody says
@@ -106,23 +110,20 @@ somebody who is waiting.
 
 5. Stay in the loop until the review is over:
    ```bash
-   claude-review wait --port 8765 --seconds 25
+   claude-review wait --port <port> --until-event
    ```
-   It prints one JSON object and exits. One call per turn leaves the review
-   unattended between them — the silence the first rule is about — and a bare
-   backgrounded `wait` comes back on the first timeout twenty-five seconds
-   later. What holds is a detached loop that swallows timeouts and prints
-   every real event:
+   It waits until the reader hands something over, prints it as one JSON
+   object, and exits. Waiting only between your own turns leaves the review
+   unattended — the silence the first rule is about — so keep one running in
+   the background at all times. Either start it again after every event, if
+   what wakes you is a background command finishing, or run a loop that
+   prints every event and stops when the review is over:
    ```bash
-   while :; do
-     out=$(claude-review wait --port 8765 --seconds 25) || break
-     case "$out" in *'"type":"timeout"'*) continue ;; esac
+   while out=$(claude-review wait --port <port> --until-event); do
      printf '%s\n' "$out"
+     case "$out" in *'"type":"closed"'*) break ;; esac
    done
    ```
-   Start it in the background and read what it prints. If what wakes you is a
-   background command *finishing* rather than printing, put `break` after the
-   `printf` and start the loop again after each event.
    - `{"type": "question", "question": {"question_id": "...", "body": "...",
      "images": [...], "thread": {...}}}` — answer it (step 6), then wait
      again. `body` and `images` are what is asked: the user's last reply in
@@ -153,7 +154,8 @@ somebody who is waiting.
    - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.
-   - `{"type": "timeout"}` — nothing was asked; wait again.
+   - `{"type": "timeout"}` — nothing was asked. Only a `wait` without
+     `--until-event` prints it, after `--seconds`; wait again.
    - `{"type": "closed"}` — the review is over. Stop looping. The last round
      reached you as its own event just before this one; the background
      process also writes it to its log on the way out, which is where to
@@ -164,7 +166,7 @@ somebody who is waiting.
 
 6. Answer in the thread it belongs to, naming the question:
    ```bash
-   claude-review reply --port 8765 --thread <thread_id> --question <question_id> "..."
+   claude-review reply --port <port> --thread <thread_id> --question <question_id> "..."
    ```
    A thread can have more than one question waiting at once, which is why the
    answer names one: without it the answer is filed under whatever was asked
@@ -174,7 +176,7 @@ somebody who is waiting.
 
 7. Answer a panel message, naming the message:
    ```bash
-   claude-review say --port 8765 --message <message_id> "..."
+   claude-review say --port <port> --message <message_id> "..."
    ```
    The panel is one conversation, so the answer lands under the message it
    names — and naming it is also what closes it: a message answered without
@@ -184,7 +186,7 @@ somebody who is waiting.
    Optionally, say what only you can know about yourself — the panel shows it
    beside the review's own weight, with the time it was said:
    ```bash
-   claude-review status --port 8765 --model opus-5 --context "53% of 1M"
+   claude-review status --port <port> --model opus-5 --context "53% of 1M"
    ```
    Report it when it changes, not on every turn. Say nothing and the panel
    shows nothing, which is better than a number that is a guess.
@@ -192,7 +194,7 @@ somebody who is waiting.
    Leave `--message` out and you are speaking first, which is worth as much
    as answering:
    ```bash
-   claude-review say --port 8765 "Both are green now — the second one needed
+   claude-review say --port <port> "Both are green now — the second one needed
    the base read from the round rather than from the diff."
    ```
    Work that finished while the reader was reading is news they would
@@ -201,7 +203,7 @@ somebody who is waiting.
 
 8. Say what you are doing, while you are doing it:
    ```bash
-   claude-review progress --port 8765 --message <message_id> \
+   claude-review progress --port <port> --message <message_id> \
      --file src/a.py --file src/b.py "rewriting the answer handler"
    ```
    Waiting says only that something is happening; this says what. Send it
@@ -222,8 +224,8 @@ somebody who is waiting.
 
    Two more, for what a paragraph cannot do:
    ```bash
-   claude-review say --port 8765 --file src/a.py "Renamed it here."
-   claude-review show --port 8765 --file src/a.py
+   claude-review say --port <port> --file src/a.py "Renamed it here."
+   claude-review show --port <port> --file src/a.py
    ```
    `say --file` offers a jump the reader takes when they want it. `show`
    takes them there and marks the file for a moment — it moves somebody
@@ -232,11 +234,13 @@ somebody who is waiting.
 9. After making the changes a round asked for, put the work line out and
    show them:
    ```bash
-   claude-review progress --port 8765 --done
-   claude-review round --port 8765
+   claude-review progress --port <port> --done
+   claude-review round --port <port>
    ```
    `--done` first, or the new diff lands under a spinner still saying what you
-   were doing to the old one.
+   were doing to the old one. `round` is for a diff review: files and a
+   conversation have no diff to take again, so there tell them what changed
+   with `say` instead.
    The open review reloads the diff and moves its threads onto it: one whose
    lines survived follows them, one whose lines are gone is marked outdated
    and keeps a copy of what it was written against. What comes back names the
@@ -245,7 +249,7 @@ somebody who is waiting.
 
 10. Point at a line, when what you have to say belongs on the code:
     ```bash
-    claude-review point --port 8765 --file src/x.py --lines 118-130 \
+    claude-review point --port <port> --file src/x.py --lines 118-130 \
       --severity question "I kept the old name here: renaming it broke two callers."
     ```
     Use it for what a paragraph in the panel would bury — where you did

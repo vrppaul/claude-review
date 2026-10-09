@@ -12,6 +12,7 @@ from pathlib import Path
 
 from claude_review.domain.models import TreeState
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.review_lifetime import ReviewLifetime
 from claude_review.services.tree_watcher_service import TreeWatcherService
 from tests.helpers import git
 
@@ -30,7 +31,7 @@ async def _first(
     watcher: TreeWatcherService, root: Path, taken_at: TreeState, *, give_up_after: float = REPORT_TIMEOUT_SECONDS
 ) -> int | None:
     """How many files the watcher reports moving, or nothing before it gives up."""
-    changes = watcher.changes(root, taken_at=lambda: taken_at, stop=asyncio.Event())
+    changes = watcher.changes(root, taken_at=lambda: taken_at, lifetime=ReviewLifetime())
     try:
         return await asyncio.wait_for(anext(changes), timeout=give_up_after)
     except TimeoutError:
@@ -79,8 +80,7 @@ async def test_a_change_is_reported_once_rather_than_every_poll(tmp_git_repo: Pa
     taken_at = await watcher.read(tmp_git_repo)
     (tmp_git_repo / "initial.txt").write_text("changed\n")
 
-    stop = asyncio.Event()
-    changes = watcher.changes(tmp_git_repo, taken_at=lambda: taken_at, stop=stop)
+    changes = watcher.changes(tmp_git_repo, taken_at=lambda: taken_at, lifetime=ReviewLifetime())
     try:
         assert await asyncio.wait_for(anext(changes), timeout=5) == 1
         second = asyncio.ensure_future(anext(changes))

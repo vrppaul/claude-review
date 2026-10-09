@@ -21,6 +21,7 @@ from claude_review.presentation.schemas import (
     ThreadInput,
 )
 from claude_review.services.agent_inbox import AgentInbox
+from claude_review.services.review_lifetime import ReviewLifetime
 
 log = structlog.get_logger()
 
@@ -38,8 +39,9 @@ class ServerState:
     from under it. A socket is not throttled.
     """
 
-    def __init__(self, shutdown_event: asyncio.Event) -> None:
-        self.shutdown_event = shutdown_event
+    def __init__(self, lifetime: ReviewLifetime) -> None:
+        # Whether the review is still running, which everything serving it watches
+        self.lifetime = lifetime
         # The round sent last, which the review writes out as it ends
         self.last_round: RoundSubmission | None = None
         self._open_sockets = 0
@@ -51,7 +53,7 @@ class ServerState:
         # What the reader has handed over and nobody has taken yet: questions
         # about a thread, rounds of the review itself, and what was typed in
         # the panel. Read out once the review is over, too, until nothing is left.
-        self.inbox = AgentInbox(closed=shutdown_event)
+        self.inbox = AgentInbox(lifetime)
         # Which round is being written. It goes up when one is sent and the
         # review stays open.
         self.round = 1

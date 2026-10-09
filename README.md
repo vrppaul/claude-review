@@ -163,7 +163,7 @@ claude-review diff --base v0.5.0           # diff since a tag
 claude-review files plan.md                # files mode — review text files
 claude-review files a.md b.py c.rs         # files mode — multiple files
 claude-review transcript conv.jsonl        # transcript mode — review conversation
-claude-review wait --port 8765             # wait for a question, a message or a round
+claude-review wait --port 8765 --until-event   # wait for a question, a message or a round
 claude-review reply --port 8765 --thread <id> --question <id> "..."   # answer in a thread
 claude-review say --port 8765 --message <id> "..."                    # answer in the panel
 claude-review status --port 8765 --model opus-5 --context "53% of 1M" # what only the agent knows
@@ -172,9 +172,9 @@ claude-review progress --port 8765 --message <id> --file a.py "..."   # what you
 claude-review show --port 8765 --file a.py                            # take the reader to a file
 claude-review context --port 8765                                     # catch up on a review under way
 claude-review round --port 8765            # retake the diff after a round
-claude-review --port 8080 diff             # shared options before subcommand
-claude-review --no-open diff               # don't open browser automatically
-claude-review --verbose diff --base HEAD~1 # enable diagnostic logging
+claude-review diff --port 8080             # serve on a port of your choosing
+claude-review diff --no-open               # don't open browser automatically
+claude-review --verbose diff --base HEAD~1 # enable diagnostic logging (before the command)
 claude-review --version                    # print the installed version
 ```
 
@@ -191,8 +191,9 @@ claude-review say --port 8765 --message panel-1 "One failed; fixed and green"
 ```
 
 `wait` prints one JSON object and exits — a question, a panel message, a
-round, or `{"type":"timeout"}` if nothing was said — so it can be driven from
-a loop. The `/review-ui` skill documents the loop.
+round, or `{"type":"timeout"}` if nothing was said; with `--until-event` it
+waits on through the timeouts — so it can be driven from a loop. The
+`/review-ui` skill documents the loop.
 
 ### Manual install (optional)
 

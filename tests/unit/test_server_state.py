@@ -8,14 +8,14 @@ is said here, against the clock the state is handed.
 And that a push says what was true when it was pushed, to every review open.
 """
 
-import asyncio
 import json
 
 import pytest
 
-from claude_review.cli import DISCONNECT_GRACE
+from claude_review.cli.serving import DISCONNECT_GRACE
 from claude_review.presentation.schemas import AgentWork
 from claude_review.presentation.state import ServerState
+from claude_review.services.review_lifetime import ReviewLifetime
 
 # Moments on the review's clock: a socket opened, one more a moment later,
 # one dropped a moment after that, and the time before and after the grace
@@ -37,7 +37,7 @@ REPORTED_AT = 1
 
 @pytest.fixture
 def state() -> ServerState:
-    return ServerState(shutdown_event=asyncio.Event())
+    return ServerState(ReviewLifetime())
 
 
 def test_a_reload_is_not_the_reader_leaving(state: ServerState) -> None:

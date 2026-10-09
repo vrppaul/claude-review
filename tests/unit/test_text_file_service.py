@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.services.text_file_service import TextFileService
+
+# Bytes no UTF-8 text starts with, as an image or a compiled file does
+NOT_UTF8 = b"\x89PNG\r\n\x1a\n\xff\xfe"
 
 
 @pytest.fixture
@@ -71,8 +75,16 @@ class TestReadFiles:
 
     def test_missing_file_is_reported(self, service: TextFileService, tmp_path: Path) -> None:
         """A clear error is raised when a file does not exist."""
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(UnreadableContentError):
             service.read_files([tmp_path / "nonexistent.md"])
+
+    def test_a_file_that_is_not_text_is_reported(self, service: TextFileService, tmp_path: Path) -> None:
+        """An image or a build artefact handed over by mistake is said to be one, not a crash."""
+        binary = tmp_path / "image.png"
+        binary.write_bytes(NOT_UTF8)
+
+        with pytest.raises(UnreadableContentError, match=binary.name):
+            service.read_files([binary])
 
     def test_duplicate_paths_are_loaded_once(self, service: TextFileService, tmp_path: Path) -> None:
         """Passing the same file twice does not create duplicate entries."""

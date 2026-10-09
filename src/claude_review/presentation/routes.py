@@ -106,6 +106,7 @@ from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindowService
 from claude_review.services.image_service import MAX_IMAGE_BYTES, ImageService
 from claude_review.services.reader_record_service import ReaderRecordService
+from claude_review.services.review_lifetime import EndReason
 from claude_review.services.review_service import ReviewService
 from claude_review.services.transcript_review_service import TranscriptReviewService
 from claude_review.services.tree_watcher_service import TreeWatcherService
@@ -747,7 +748,7 @@ async def submit_review(
     stdout. A round keeps the review open instead — the threads stay on
     screen, so an answer has somewhere to come back to.
     """
-    if state.shutdown_event.is_set():
+    if state.lifetime.has_ended:
         msg = "Review already submitted"
         raise ReviewEndedError(msg)
 
@@ -763,7 +764,7 @@ async def submit_review(
     state.inbox.hand_in(state.last_round)
 
     if request.end:
-        state.shutdown_event.set()
+        state.lifetime.end(EndReason.FINISHED)
     else:
         state.round += 1
         state.push(RoundPush(number=state.round))
@@ -830,5 +831,4 @@ async def retake_diff(
 @router.post("/end", status_code=HTTPStatus.NO_CONTENT)
 async def end_review(state: ServerState = Depends(get_state)) -> None:
     """End a review that has been kept open for rounds."""
-    state.shutdown_event.set()
-    log.info("review_ended", round=state.round)
+    state.lifetime.end(EndReason.FINISHED)

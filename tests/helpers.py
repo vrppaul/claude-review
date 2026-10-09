@@ -48,6 +48,7 @@ from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import PushKind
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.system_clock import SystemClock
+from claude_review.services.review_lifetime import ReviewLifetime
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -271,7 +272,7 @@ class ReviewFactory:
         writes_marks = root is not None and keeps_marks
         return create_app(
             diff_files=diff_files,
-            state=ServerState(shutdown_event=asyncio.Event()),
+            state=ServerState(ReviewLifetime()),
             mode=mode,
             workspace=self._marking_workspace if writes_marks else self._workspace,
             reader_files=self._reader_files,

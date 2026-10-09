@@ -20,6 +20,8 @@ jobs:
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
       - run: uv run ty check src/ tests/
+      # The skill ships twice, as a skill and as the plugin's command
+      - run: cmp skills/review-ui/SKILL.md plugin/commands/review-ui.md
 
   test-python:
     runs-on: ubuntu-latest

@@ -8,6 +8,7 @@ line with a single line number — there is no "old" vs "new" distinction.
 
 from pathlib import Path
 
+from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 
 
@@ -21,7 +22,7 @@ class TextFileService:
         is not loaded twice.
 
         Raises:
-            FileNotFoundError: If a path does not point to a readable file.
+            UnreadableContentError: If a path does not point to a readable text file.
         """
         seen: set[Path] = set()
         result: list[DiffFile] = []
@@ -57,13 +58,14 @@ class TextFileService:
         """Read file content as UTF-8 text.
 
         Raises:
-            FileNotFoundError: If the path is missing, is a directory,
-                or cannot be read.
+            UnreadableContentError: If the path is missing, is a directory,
+                cannot be read, or is not UTF-8 text.
         """
-        if not path.is_file():
-            msg = f"Not a readable file: {path}"
-            raise FileNotFoundError(msg)
-        return path.read_text(encoding="utf-8")
+        try:
+            return path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as error:
+            msg = f"Not a readable text file: {path}"
+            raise UnreadableContentError(msg) from error
 
     def _split_lines(self, text: str) -> list[str]:
         """Split text into lines, stripping a single trailing empty line."""

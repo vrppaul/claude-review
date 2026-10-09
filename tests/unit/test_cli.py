@@ -1,224 +1,103 @@
-"""Tests for CLI argument handling."""
+"""The command line as it is typed: what it offers, and what it refuses before it calls anything."""
 
-from pathlib import Path
+import socket
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
-from claude_review.cli import (
-    _diff_seed,
-    _diff_title,
-    _files_seed,
-    _files_title,
-    _reader_files,
-    _render_context,
-    _render_thread,
-    _stable_port,
-    _transcript_title,
-    main,
-)
-from claude_review.domain.models import AgentStatus, CommentSeverity, PanelEntry, Turn, TurnAuthor
-from claude_review.presentation.schemas import ContextResponse, ThreadSummary
-from tests.helpers import line_anchor, thread
+from claude_review.cli.address import LOOPBACK
+from claude_review.cli.main import main
+from claude_review.cli.ports import ANY_FREE_PORT
+from claude_review.presentation.schemas import MAX_ID_LENGTH, MAX_WAIT_SECONDS
+
+# What click exits with when a command is typed wrong, before it runs
+USAGE_ERROR = 2
+# What a command that ran and failed exits with
+FAILED = 1
+
+LAUNCH_COMMANDS = ("diff", "files", "transcript")
+AGENT_COMMANDS = ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round")
+LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
 
 
-def test_help_shows_usage() -> None:
-    """--help prints usage without errors."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
-
-    assert result.exit_code == 0
-    assert "Browser-based code review tool" in result.output
-
-
-def test_diff_subcommand_in_help() -> None:
-    """diff subcommand appears in help output."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
-
-    assert "diff" in result.output
-    assert "files" in result.output
-    assert "transcript" in result.output
+@pytest.fixture
+def unused_port() -> str:
+    """A port nothing listens on: any call to it finds no review."""
+    with socket.socket() as probe:
+        probe.bind((LOOPBACK, ANY_FREE_PORT))
+        return str(probe.getsockname()[1])
 
 
-def test_diff_help_shows_base_option() -> None:
-    """diff --help shows the --base option."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["diff", "--help"])
+def _run(*arguments: str) -> Result:
+    return CliRunner().invoke(main, list(arguments))
+
+
+def _failed_in_a_line(result: Result, exit_code: int) -> bool:
+    """Whether a command failed the way a command line should: a line said, not a traceback."""
+    return result.exit_code == exit_code and isinstance(result.exception, SystemExit)
+
+
+def test_every_command_is_offered() -> None:
+    """An agent driving a review has to find them without being told."""
+    result = _run("--help")
 
     assert result.exit_code == 0
-    assert "--base" in result.output
+    for command in (*LAUNCH_COMMANDS, *AGENT_COMMANDS):
+        assert command in result.output
 
 
-def test_files_requires_paths() -> None:
-    """files subcommand requires at least one path argument."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["files"])
+@pytest.mark.parametrize("command", LAUNCH_COMMANDS)
+def test_every_launch_takes_where_to_serve_and_whether_to_open_a_window(command: str) -> None:
+    result = _run(command, "--help")
 
-    assert result.exit_code != 0
-
-
-def test_transcript_requires_path() -> None:
-    """transcript subcommand requires a path argument."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["transcript"])
-
-    assert result.exit_code != 0
+    assert "--port" in result.output
+    assert "--no-open" in result.output
 
 
-def test_diff_title_names_the_repository_and_the_range() -> None:
-    """The UI header says which repository is under review, and against what."""
-    assert _diff_title(Path("/home/pavel/projects/claude-review"), None) == ("claude-review: uncommitted changes")
-    assert _diff_title(Path("/home/pavel/projects/claude-review"), "HEAD~3") == ("claude-review: changes since HEAD~3")
+def test_a_diff_can_be_taken_against_another_base() -> None:
+    assert "--base" in _run("diff", "--help").output
 
 
-def test_files_title_names_what_was_opened() -> None:
-    assert _files_title([Path("docs/plan.md")]) == "plan.md"
-    assert _files_title([Path("b.py"), Path("a.md")]) == "a.md, b.py"
-    assert (
-        _files_title([Path(name) for name in ("e.md", "d.md", "c.md", "b.md", "a.md")]) == "a.md, b.md, c.md + 2 more"
-    )
+@pytest.mark.parametrize("command", ["files", "transcript"])
+def test_a_review_of_files_needs_files_to_review(command: str) -> None:
+    assert _run(command).exit_code == USAGE_ERROR
 
 
-def test_transcript_title_names_the_conversation() -> None:
-    assert _transcript_title(Path("/tmp/sessions/abc123.jsonl")) == "Conversation abc123"
+@pytest.mark.parametrize("lines", ["abc", "0", "47-42", "4-x"])
+def test_lines_that_are_no_line_are_refused_before_anything_is_called(unused_port: str, lines: str) -> None:
+    """A wrong range is the typist's to fix, so it is said as a usage error, naming what was typed."""
+    result = _run("point", "--port", unused_port, "--file", "a.py", "--lines", lines, "Kept on purpose")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert f'"{lines}"' in result.output
 
 
-def test_reopening_the_same_review_lands_on_the_same_port() -> None:
-    """The port is the origin, and the origin is where a draft is kept."""
-    first = _stable_port(_diff_seed(Path("/home/dev/project"), "HEAD~3"))
-    again = _stable_port(_diff_seed(Path("/home/dev/project"), "HEAD~3"))
+def test_reporting_nothing_is_refused_rather_than_sent(unused_port: str) -> None:
+    """An empty report would tell the panel to show blanks it already shows."""
+    result = _run("status", "--port", unused_port)
 
-    assert first == again
-
-
-def test_a_different_review_gets_a_different_port() -> None:
-    """Two repositories reopened side by side must not share a draft."""
-    project = _stable_port(_diff_seed(Path("/home/dev/project"), None))
-    other = _stable_port(_diff_seed(Path("/home/dev/other"), None))
-    since_a_tag = _stable_port(_diff_seed(Path("/home/dev/project"), "v1.0.0"))
-
-    assert project != other
-    assert project != since_a_tag
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "nothing to report" in result.output
 
 
-def test_the_same_files_in_another_order_are_the_same_review() -> None:
-    assert _files_seed([Path("/docs/a.md"), Path("/docs/b.md")]) == _files_seed(
-        [Path("/docs/b.md"), Path("/docs/a.md")]
-    )
+def test_a_wait_longer_than_the_review_allows_is_refused_before_it_is_asked(unused_port: str) -> None:
+    result = _run("wait", "--port", unused_port, "--seconds", str(MAX_WAIT_SECONDS + 1))
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
 
 
-def test_files_that_start_alike_are_a_different_review() -> None:
-    """Same first file, same count: still another set of files, and another draft."""
-    assert _files_seed([Path("/docs/a.md"), Path("/docs/b.md")]) != _files_seed(
-        [Path("/docs/a.md"), Path("/docs/c.md")]
-    )
+def test_a_call_to_a_review_that_is_not_there_explains_itself(unused_port: str) -> None:
+    """These commands run in a loop, where a traceback says nothing useful."""
+    result = _run("wait", "--port", unused_port, "--seconds", "1")
+
+    assert _failed_in_a_line(result, FAILED)
+    assert "no review is listening" in result.output
 
 
-def test_a_derived_port_stays_out_of_the_way() -> None:
-    """High enough to be free of well-known services and of ephemeral ports."""
-    port = _stable_port(_diff_seed(Path("/home/dev/project"), None))
+def test_a_request_the_review_would_refuse_is_not_sent(unused_port: str) -> None:
+    """Said in a line naming the field, rather than a page of validation errors."""
+    result = _run("reply", "--port", unused_port, "--thread", LONGER_THAN_ANY_ID, "Because")
 
-    assert 40000 <= port <= 60000
-
-
-def test_round_subcommand_in_help() -> None:
-    """The half that retakes the diff is discoverable from the CLI."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
-
-    assert "round" in result.output
-
-
-def test_the_panel_commands_are_in_help() -> None:
-    """An agent driving the review has to find them without being told."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
-
-    assert "say" in result.output
-    assert "status" in result.output
-
-
-# A thread as the server holds it, so this reads what the agent is handed
-DISCUSSED = thread(
-    line_anchor("src/routes.py", 118, 130, quote=["    return event"]),
-    "Does a round overtake a question?\nAnd if it does, what then?",
-    thread_id="comment-4",
-    severity=CommentSeverity.QUESTION,
-    turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2)],
-)
-
-SEEN = ContextResponse(
-    title="claude-review: uncommitted changes",
-    round=3,
-    file_count=7,
-    answerer_attached=True,
-    agent=AgentStatus(model="opus-5", context="45% of 1M", at=1),
-    threads=[ThreadSummary.of(DISCUSSED)],
-    panel=[PanelEntry(message_id="panel-1", author=TurnAuthor.READER, body="Run the tests", at=1)],
-)
-
-
-def test_catching_up_costs_a_line_a_thread() -> None:
-    """An index is what makes catching up cheaper than being handed the review."""
-    printed = _render_context(SEEN)
-    [thread_line] = [line for line in printed.splitlines() if line.startswith("comment-4")]
-
-    assert "round 3 · 7 files" in printed
-    assert "1 open" in printed
-    assert "`src/routes.py`:118-130" in thread_line
-    assert "question" in thread_line
-    # The first line of the comment, and not the second
-    assert "Does a round overtake a question?" in printed
-    assert "And if it does" not in printed
-
-
-def test_a_thread_asked_for_by_name_comes_in_full() -> None:
-    """The index is for choosing what to read; this is the reading."""
-    printed = _render_thread(DISCUSSED)
-
-    assert printed.startswith("comment-4  `src/routes.py`:118-130  question")
-    assert "And if it does, what then?" in printed
-    assert "author: It cannot: one queue." in printed
-    assert "lines:     return event" in printed
-
-
-def test_a_review_nobody_answers_says_so() -> None:
-    """Because it changes what the agent should do next, or whether it can."""
-    printed = _render_context(SEEN.model_copy(update={"answerer_attached": False}))
-
-    assert "nobody answering" in printed
-
-
-def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
-    """The words alone would leave "look at this" pointing at nothing."""
-    image = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
-    said = PanelEntry(message_id="panel-1", author=TurnAuthor.READER, body="", at=1, images=[image])
-
-    printed = _render_context(SEEN.model_copy(update={"panel": [said]}))
-
-    assert "you: (image)" in printed
-    assert f"image: {image}" in printed
-
-
-def test_the_reader_files_follow_the_base_directories_the_environment_names(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-
-    files = _reader_files()
-
-    assert files.settings == tmp_path / "config" / "claude-review" / "settings.json"
-    assert files.guide == tmp_path / "state" / "claude-review" / "guide.json"
-
-
-def test_a_relative_base_directory_is_ignored_for_the_home_directory(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A relative one would point somewhere different from every directory a review starts in."""
-    monkeypatch.setenv("XDG_CONFIG_HOME", "config")
-    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
-
-    files = _reader_files()
-
-    assert files.settings == Path.home() / ".config" / "claude-review" / "settings.json"
-    assert files.guide == Path.home() / ".local" / "state" / "claude-review" / "guide.json"
+    assert _failed_in_a_line(result, FAILED)
+    assert "would refuse" in result.output
+    assert "thread_id" in result.output

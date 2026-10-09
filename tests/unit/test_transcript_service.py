@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile
 from claude_review.services.transcript_service import TranscriptService
 
@@ -262,7 +263,7 @@ class TestParse:
         conversation = tmp_path / "conversation.jsonl"
         conversation.write_text("not json\n")
 
-        with pytest.raises(ValueError, match="Invalid JSON"):
+        with pytest.raises(UnreadableContentError, match="Invalid JSON"):
             service.parse(conversation)
 
 

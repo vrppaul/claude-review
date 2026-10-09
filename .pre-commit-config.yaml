@@ -87,6 +87,17 @@ repos:
         files: ^frontend/src/
         pass_filenames: false
 
+  # The skill ships twice — as a skill, and as the plugin's command — and
+  # the two copies must say the same thing
+  - repo: local
+    hooks:
+      - id: skill-copies
+        name: skill copies match
+        entry: cmp skills/review-ui/SKILL.md plugin/commands/review-ui.md
+        language: system
+        files: ^(skills/review-ui/SKILL\.md|plugin/commands/review-ui\.md)$
+        pass_filenames: false
+
   # Conventional commits enforcement
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0

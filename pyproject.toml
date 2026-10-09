@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-claude-review = "claude_review.cli:main"
+claude-review = "claude_review.cli.main:main"
 
 [dependency-groups]
 dev = [
@@ -89,8 +89,6 @@ combine-as-imports = true
 known-first-party = ["claude_review"]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"tests/**/*.py" = ["D", "ANN", "SLF001", "T20", "PLC0415"]
 # Standalone CI scripts run on bare python3 with no deps — print, not structlog
 "scripts/**" = ["T20"]
 
@@ -99,10 +97,6 @@ python-version = "3.14"
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
-skips = ["B101"]
-
-[tool.hatchling.build]
-packages = ["src/claude_review"]
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
