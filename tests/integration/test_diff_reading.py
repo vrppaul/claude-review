@@ -1,4 +1,4 @@
-"""Functional requirement tests for the diff service.
+"""Functional requirement tests for reading the diff.
 
 These test the actual user-facing behavior, not implementation details.
 """
@@ -10,14 +10,14 @@ import pytest
 from claude_review.domain.models import DiffFile, FileStatus, LineType
 from claude_review.domain.protocols import GitError
 from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.diff_service import DiffService
+from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
 
 
 async def _diff(repo: Path, base: str | None = None, *, ignore_whitespace: bool = False) -> list[DiffFile]:
     """The diff of a repository's working tree against a base, HEAD unless one is named."""
     async with GitRepository(objects=None).staged(repo) as staged:
-        return await DiffService().read(staged, base=base, ignore_whitespace=ignore_whitespace)
+        return await read_diff(staged, base=base, ignore_whitespace=ignore_whitespace)
 
 
 async def test_diff_shows_all_changed_files(tmp_git_repo: Path) -> None:

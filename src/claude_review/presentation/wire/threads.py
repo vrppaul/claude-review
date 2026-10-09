@@ -100,7 +100,7 @@ class Thread(WireModel):
         question or a panel message, built field by field with them.
         """
         if isinstance(source, models.Thread):
-            return {**dict(source), "where": place_in_words(source.anchor)}
+            return {**source.model_dump(), "where": place_in_words(source.anchor)}
         return source
 
 

@@ -17,8 +17,6 @@ FILE_START = re.compile(r"^diff --git ", re.MULTILINE)
 HUNK_HEADER = re.compile(r"^@@ -(?P<old_start>\d+)(?:,\d+)? \+(?P<new_start>\d+)(?:,\d+)? @@")
 # The "a/x b/x" line with both paths quoted, which git does to a path that needs escapes
 QUOTED_PATHS = re.compile(r'(?P<old>"(?:[^"\\]|\\.)*") (?P<new>"(?:[^"\\]|\\.)*")$')
-# The "a/x b/x" line read the shortest way, when nothing better is left
-UNQUOTED_PATHS = re.compile(r"a/(?P<old>.+?) b/(?P<new>.+)")
 # A path git quoted, and what is between the quotes
 QUOTED_PATH = re.compile(r'"(?P<inside>.*)"', re.DOTALL)
 # One piece of a quoted path: a byte in octal, an escaped character, or plain text
@@ -35,6 +33,8 @@ OLD_SIDE_PREFIX = "a/"
 NEW_SIDE_PREFIX = "b/"
 SIDE_PREFIXES = (OLD_SIDE_PREFIX, NEW_SIDE_PREFIX)
 NEW_SIDE_SEPARATOR = f" {NEW_SIDE_PREFIX}"
+# The "a/x b/x" line read the shortest way, when nothing better is left
+UNQUOTED_PATHS = re.compile(f"{re.escape(OLD_SIDE_PREFIX)}(?P<old>.+?){re.escape(NEW_SIDE_SEPARATOR)}(?P<new>.+)")
 # A permission change: the file's mode before and after
 OLD_MODE_HEADER = "old mode "
 NEW_MODE_HEADER = "new mode "
@@ -69,6 +69,9 @@ ESCAPED_CHARACTERS = {
     "\\": "\\",
 }
 OCTAL_BASE = 8
+# Git writes a path's bytes as the file system holds them, here UTF-8; a
+# byte that is not is shown replaced rather than lost with the whole diff
+PATH_ENCODING = "utf-8"
 
 
 class HunkStart(BaseModel):
@@ -194,7 +197,7 @@ def _unquote(value: str) -> str:
             decoded.extend(ESCAPED_CHARACTERS.get(piece["escaped"], piece["escaped"]).encode())
         else:
             decoded.extend(piece["plain"].encode())
-    return decoded.decode("utf-8", errors="replace")
+    return decoded.decode(PATH_ENCODING, errors="replace")
 
 
 def _status(header: list[str]) -> FileStatus:

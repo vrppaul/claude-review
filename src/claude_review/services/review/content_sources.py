@@ -17,7 +17,7 @@ from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
 from claude_review.domain.page_events import TreeMoved
 from claude_review.domain.protocols import Clock, GitError, PageChannel, RepositoryProtocol, StagedTreeProtocol
-from claude_review.services.diff_service import DiffService
+from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_lifetime import ReviewLifetime
@@ -96,7 +96,6 @@ class RepositorySource:
         self._root = root
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
         self._repository = repository
-        self._diffs = DiffService()
         self._watcher = TreeWatcherService(git_repository=repository)
         self._windows = FileWindowService(repository)
         self._versions = ReviewVersions(repository, clock, root, review_base=opening.base)
@@ -141,7 +140,7 @@ class RepositorySource:
         if shown != ReviewKey() or ignore_whitespace:
             against = await self._versions.resolve(shown)
             async with self._repository.staged(self._root) as staged:
-                files = await self._diffs.read(staged, base=against, ignore_whitespace=ignore_whitespace)
+                files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
         return DiffView(files=files, shown=shown, moved=await self._watcher.drift(self._root, content.tree))
 
     async def offer(self) -> list[VersionOnOffer]:
@@ -169,7 +168,7 @@ class RepositorySource:
 
     async def _take(self, staged: StagedTreeProtocol, round_number: int) -> int:
         """Take the diff from a staging, put it on screen with its tree, mark it for the round; say how many files."""
-        files = await self._diffs.read(staged, base=self._versions.review_base, ignore_whitespace=False)
+        files = await read_diff(staged, base=self._versions.review_base, ignore_whitespace=False)
         # Read after the diff, not before: a file saved in between then
         # belongs to the tree the diff was taken at, and the reader is not
         # told about a change that is already on their screen

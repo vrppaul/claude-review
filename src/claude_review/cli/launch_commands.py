@@ -53,7 +53,7 @@ def diff_command(location: Path, base: str | None, port: int | None, no_open: bo
     LOCATION is any directory in the repository, the current one by default:
     the review is of the whole repository whichever it is.
     """
-    _launch(open_diff(location.resolve(), base, GitRepository(objects=None)), port=port, no_open=no_open)
+    _launch(open_diff(location, base, GitRepository(objects=None)), port=port, no_open=no_open)
 
 
 @click.command("files")
@@ -62,7 +62,8 @@ def diff_command(location: Path, base: str | None, port: int | None, no_open: bo
 @no_open_option
 def files_command(paths: tuple[Path, ...], port: int | None, no_open: bool) -> None:
     """Review text files — plans, docs, configs, source code."""
-    _launch(open_files([path.resolve() for path in paths]), port=port, no_open=no_open)
+    # Named for the reader as they named them: from where they ran the command
+    _launch(open_files(list(paths), named_from=Path.cwd()), port=port, no_open=no_open)
 
 
 @click.command("transcript")
@@ -71,7 +72,7 @@ def files_command(paths: tuple[Path, ...], port: int | None, no_open: bool) -> N
 @no_open_option
 def transcript_command(path: Path, port: int | None, no_open: bool) -> None:
     """Review a conversation transcript JSONL file."""
-    _launch(open_transcript(path.resolve()), port=port, no_open=no_open)
+    _launch(open_transcript(path), port=port, no_open=no_open)
 
 
 def _launch(opening: Awaitable[ReviewOpening], *, port: int | None, no_open: bool) -> None:

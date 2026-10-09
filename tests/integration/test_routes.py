@@ -10,8 +10,8 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.services.text_file_service import TextFileService
-from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.text_files import read_text_files
+from claude_review.services.transcript import read_transcript
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -199,8 +199,8 @@ def plan_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    """Client backed by a real text file loaded through TextFileService."""
-    files = await TextFileService().read_files([plan_file])
+    """Client backed by a real text file, read as a files review reads it."""
+    files = await read_text_files([plan_file], named_from=plan_file.parent)
     async with http_client(reviews.app(files, mode=ReviewMode.FILES)) as agent:
         yield agent
 
@@ -253,8 +253,8 @@ def transcript_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    """Client backed by a real transcript file loaded through TranscriptService."""
-    messages = await TranscriptService().read(transcript_file)
+    """Client backed by a real transcript file, read as a conversation review reads it."""
+    messages = await read_transcript(transcript_file)
     async with http_client(reviews.app(messages, mode=ReviewMode.TRANSCRIPT)) as agent:
         yield agent
 

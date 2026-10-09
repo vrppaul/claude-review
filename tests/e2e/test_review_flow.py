@@ -11,8 +11,8 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import ReviewMode
 from claude_review.hosting.workspace import ReaderFiles
-from claude_review.services.text_file_service import TextFileService
-from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.text_files import read_text_files
+from claude_review.services.transcript import read_transcript
 from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended, uncommitted_changes
 
 # What the page posts when it sends the review, a round or the last of it
@@ -280,9 +280,9 @@ def text_files(tmp_path: Path) -> list[Path]:
 
 
 @pytest.fixture
-async def files_review(text_files: list[Path], servers: ReviewServers) -> RunningReview:
+async def files_review(text_files: list[Path], servers: ReviewServers, tmp_path: Path) -> RunningReview:
     """A real server reviewing two text files."""
-    return await servers.start(await TextFileService().read_files(text_files), mode=ReviewMode.FILES)
+    return await servers.start(await read_text_files(text_files, named_from=tmp_path), mode=ReviewMode.FILES)
 
 
 async def test_files_mode_sidebar_shows_files_without_diff_decorations(files_review: RunningReview, page: Page) -> None:
@@ -472,7 +472,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
-    return await servers.start(await TranscriptService().read(transcript_file), mode=ReviewMode.TRANSCRIPT)
+    return await servers.start(await read_transcript(transcript_file), mode=ReviewMode.TRANSCRIPT)
 
 
 async def test_transcript_mode_sidebar_shows_messages(transcript_review: RunningReview, page: Page) -> None:

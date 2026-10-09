@@ -1,4 +1,4 @@
-"""Functional tests for TranscriptService.
+"""Functional tests for reading a conversation for review.
 
 These test user-facing behavior: can a Claude Code JSONL conversation
 be loaded and reviewed — not the internal data structures used to represent it.
@@ -10,13 +10,8 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.models import DiffFile
-from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.transcript import read_transcript
 from claude_review.services.unreadable_content import UnreadableContentError
-
-
-@pytest.fixture
-def service() -> TranscriptService:
-    return TranscriptService()
 
 
 def _write_jsonl(path: Path, entries: list[dict]) -> Path:
@@ -68,14 +63,14 @@ def _user_tool_result() -> dict:
 
 
 class TestRead:
-    async def test_single_message(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_single_message(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_user("hello world")])
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 1
         assert "user" in result[0].path
 
-    async def test_newest_messages_first(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_newest_messages_first(self, tmp_path: Path) -> None:
         """Messages are reversed — newest turn appears first in sidebar."""
         conversation = _write_jsonl(
             tmp_path,
@@ -86,12 +81,12 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         contents = [message.hunks[0].lines[0].content for message in result]
 
         assert contents == ["second question", "first answer", "first question"]
 
-    async def test_consecutive_same_role_merged(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_consecutive_same_role_merged(self, tmp_path: Path) -> None:
         """Consecutive text entries from same role merge into one turn."""
         conversation = _write_jsonl(
             tmp_path,
@@ -102,14 +97,14 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 2
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "part one" in content
         assert "part two" in content
 
-    async def test_thinking_and_tool_use_excluded(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_thinking_and_tool_use_excluded(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
             tmp_path,
             [
@@ -120,13 +115,13 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         assert len(result) == 2
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "my answer" in content
         assert "think" not in content
 
-    async def test_tool_calls_break_turns(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_tool_calls_break_turns(self, tmp_path: Path) -> None:
         """Text separated by tool calls becomes separate turns."""
         conversation = _write_jsonl(
             tmp_path,
@@ -139,7 +134,7 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 3
         # Newest first
@@ -147,7 +142,7 @@ class TestRead:
         assert result[1].hunks[0].lines[0].content == "let me check"
         assert result[2].hunks[0].lines[0].content == "question"
 
-    async def test_system_command_messages_excluded(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_system_command_messages_excluded(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
             tmp_path,
             [
@@ -158,14 +153,14 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 2
         user_content = "\n".join(line.content for line in result[1].hunks[0].lines)
         assert "real question" in user_content
         assert "command" not in user_content
 
-    async def test_non_message_entries_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_non_message_entries_skipped(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
             tmp_path,
             [
@@ -176,26 +171,26 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         assert len(result) == 2
 
-    async def test_content_preserved_line_by_line(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_content_preserved_line_by_line(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_user("line one\nline two\nline three")])
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         content = [line.content for line in result[0].hunks[0].lines]
 
         assert content == ["line one", "line two", "line three"]
 
-    async def test_every_line_has_commentable_line_number(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_every_line_has_commentable_line_number(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_assistant("first\nsecond\nthird")])
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         numbers = [line.new_number for line in result[0].hunks[0].lines]
 
         assert numbers == [1, 2, 3]
 
-    async def test_empty_messages_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_empty_messages_skipped(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
             tmp_path,
             [
@@ -204,17 +199,17 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         assert len(result) == 1
 
-    async def test_timestamp_in_label(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_timestamp_in_label(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_user("hello", timestamp="2026-04-04T18:05:44.342Z")])
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         assert "user" in result[0].path
         assert ")" in result[0].path
 
-    async def test_labels_are_unique(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_labels_are_unique(self, tmp_path: Path) -> None:
         """Each turn gets a unique path so the store can select by path."""
         conversation = _write_jsonl(
             tmp_path,
@@ -225,12 +220,12 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
         paths = [r.path for r in result]
 
         assert len(paths) == len(set(paths))
 
-    async def test_no_visible_messages_produces_empty_result(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_no_visible_messages_produces_empty_result(self, tmp_path: Path) -> None:
         """JSONL with only non-message entries produces no turns."""
         conversation = _write_jsonl(
             tmp_path,
@@ -240,11 +235,11 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 0
 
-    async def test_malformed_content_skipped(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_malformed_content_skipped(self, tmp_path: Path) -> None:
         """Entries with null or non-standard content are skipped, not crashed on."""
         conversation = _write_jsonl(
             tmp_path,
@@ -254,59 +249,51 @@ class TestRead:
             ],
         )
 
-        result = await service.read(conversation)
+        result = await read_transcript(conversation)
 
         assert len(result) == 1
         assert result[0].hunks[0].lines[0].content == "real answer"
 
-    async def test_invalid_jsonl_raises_error(self, service: TranscriptService, tmp_path: Path) -> None:
+    async def test_invalid_jsonl_raises_error(self, tmp_path: Path) -> None:
         conversation = tmp_path / "conversation.jsonl"
         conversation.write_text("not json\n")
 
         with pytest.raises(UnreadableContentError, match="Invalid JSON"):
-            await service.read(conversation)
+            await read_transcript(conversation)
 
 
 class TestWhatIsATurn:
-    async def test_text_the_tool_put_in_the_users_name_is_not_a_turn(
-        self, service: TranscriptService, tmp_path: Path
-    ) -> None:
+    async def test_text_the_tool_put_in_the_users_name_is_not_a_turn(self, tmp_path: Path) -> None:
         """A skill's instructions, a pasted image's note, a subagent's report:
         written for the model, not by the user."""
         injected = {**_user("Base directory for this skill: /skills/review"), "isMeta": True}
         transcript = _write_jsonl(tmp_path, [_user("Review this"), injected])
 
-        assert _turn_texts(await service.read(transcript)) == [["Review this"]]
+        assert _turn_texts(await read_transcript(transcript)) == [["Review this"]]
 
-    async def test_a_side_conversation_is_not_part_of_the_transcript(
-        self, service: TranscriptService, tmp_path: Path
-    ) -> None:
+    async def test_a_side_conversation_is_not_part_of_the_transcript(self, tmp_path: Path) -> None:
         side = {**_assistant("subagent musing"), "isSidechain": True}
         transcript = _write_jsonl(tmp_path, [_user("Review this"), side])
 
-        assert _turn_texts(await service.read(transcript)) == [["Review this"]]
+        assert _turn_texts(await read_transcript(transcript)) == [["Review this"]]
 
 
 class TestLabels:
-    async def test_a_turn_keeps_its_name_as_the_conversation_grows(
-        self, service: TranscriptService, tmp_path: Path
-    ) -> None:
+    async def test_a_turn_keeps_its_name_as_the_conversation_grows(self, tmp_path: Path) -> None:
         """Threads and the unsent draft hang on these names; a live session keeps growing."""
         earlier = [
             _user("first", timestamp="2026-04-04T18:05:00.000Z"),
             _assistant("answer", timestamp="2026-04-04T18:05:00.000Z"),
         ]
-        before = {r.hunks[0].lines[0].content: r.path for r in await service.read(_write_jsonl(tmp_path, earlier))}
+        before = {r.hunks[0].lines[0].content: r.path for r in await read_transcript(_write_jsonl(tmp_path, earlier))}
 
         grown = [*earlier, _user("second", timestamp="2026-04-04T18:06:00.000Z")]
-        after = {r.hunks[0].lines[0].content: r.path for r in await service.read(_write_jsonl(tmp_path, grown))}
+        after = {r.hunks[0].lines[0].content: r.path for r in await read_transcript(_write_jsonl(tmp_path, grown))}
 
         assert after["first"] == before["first"]
         assert after["answer"] == before["answer"]
 
-    async def test_two_turns_in_the_same_second_are_told_apart(
-        self, service: TranscriptService, tmp_path: Path
-    ) -> None:
+    async def test_two_turns_in_the_same_second_are_told_apart(self, tmp_path: Path) -> None:
         same_second = "2026-04-04T18:05:00.000Z"
         transcript = _write_jsonl(
             tmp_path,
@@ -317,6 +304,6 @@ class TestLabels:
             ],
         )
 
-        paths = [r.path for r in await service.read(transcript)]
+        paths = [r.path for r in await read_transcript(transcript)]
 
         assert len(set(paths)) == 3

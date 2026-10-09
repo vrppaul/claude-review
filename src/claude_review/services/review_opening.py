@@ -2,10 +2,12 @@
 
 Each kind of review reads its content its own way, and names itself its own
 way; everything after that — the port, the server, the way out — is the
-same for all three. Paths arrive resolved: what makes two openings the same
-review is where the files are, not how they were named.
+same for all three. Paths are resolved here, before anything else: what
+makes two openings the same review is where the files are, not how they
+were named.
 """
 
+import asyncio
 from pathlib import Path
 
 import structlog
@@ -13,9 +15,9 @@ from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import DiffFile, ReviewMode
 from claude_review.domain.protocols import GitRepositoryProtocol
-from claude_review.services.diff_service import DiffService
-from claude_review.services.text_file_service import TextFileService
-from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.diff_reading import read_diff
+from claude_review.services.text_files import read_text_files
+from claude_review.services.transcript import read_transcript
 
 log = structlog.get_logger()
 
@@ -50,10 +52,11 @@ async def open_diff(location: Path, base: str | None, git_repository: GitReposit
     anything that reads those paths later — expanding a hunk's context — has
     to start there.
     """
-    log.info("loading_diff", path=str(location), base=base)
-    async with git_repository.staged(location) as staged:
-        diff_files = await DiffService().read(staged, base=base, ignore_whitespace=False)
-    root = await git_repository.top_level(location) or location
+    resolved_location = await asyncio.to_thread(location.resolve)
+    log.info("loading_diff", path=str(resolved_location), base=base)
+    async with git_repository.staged(resolved_location) as staged:
+        diff_files = await read_diff(staged, base=base, ignore_whitespace=False)
+    root = await git_repository.top_level(resolved_location) or resolved_location
     return ReviewOpening(
         mode=ReviewMode.DIFF,
         diff_files=diff_files,
@@ -64,16 +67,17 @@ async def open_diff(location: Path, base: str | None, git_repository: GitReposit
     )
 
 
-async def open_files(paths: list[Path]) -> ReviewOpening:
-    """Text files — plans, docs, configs, source code — each read whole."""
-    log.info("loading_files", count=len(paths))
-    diff_files = await TextFileService().read_files(paths)
+async def open_files(paths: list[Path], *, named_from: Path) -> ReviewOpening:
+    """Text files — plans, docs, configs, source code — each read whole, and named as seen from `named_from`."""
+    files = await asyncio.to_thread(_resolved_once, paths)
+    log.info("loading_files", count=len(files))
+    diff_files = await read_text_files(files, named_from=named_from)
     return ReviewOpening(
         mode=ReviewMode.FILES,
         diff_files=diff_files,
-        title=_files_title(paths),
+        title=_files_title(files),
         # The same files are the same review, in whatever order they are named
-        identity="\n".join(sorted(str(path) for path in paths)),
+        identity="\n".join(sorted(str(file) for file in files)),
         root=None,
         base=None,
     )
@@ -81,16 +85,22 @@ async def open_files(paths: list[Path]) -> ReviewOpening:
 
 async def open_transcript(path: Path) -> ReviewOpening:
     """A conversation, from the JSONL file Claude Code keeps it in."""
-    log.info("loading_transcript", path=str(path))
-    diff_files = await TranscriptService().read(path)
+    conversation = await asyncio.to_thread(path.resolve)
+    log.info("loading_transcript", path=str(conversation))
+    diff_files = await read_transcript(conversation)
     return ReviewOpening(
         mode=ReviewMode.TRANSCRIPT,
         diff_files=diff_files,
-        title=f"Conversation {path.stem}",
-        identity=f"{path}\n{ReviewMode.TRANSCRIPT}",
+        title=f"Conversation {conversation.stem}",
+        identity=f"{conversation}\n{ReviewMode.TRANSCRIPT}",
         root=None,
         base=None,
     )
+
+
+def _resolved_once(paths: list[Path]) -> list[Path]:
+    """Each path resolved, a file named twice kept once, in the order it was first named."""
+    return list(dict.fromkeys(path.resolve() for path in paths))
 
 
 def _diff_title(root: Path, base: str | None) -> str:

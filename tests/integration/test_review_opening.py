@@ -54,14 +54,14 @@ async def test_a_diff_against_another_base_is_another_review(changed_repo: Path)
 
 
 async def test_files_are_named_by_what_was_opened(tmp_path: Path) -> None:
-    opened = await open_files(_written(tmp_path, "b.py", "a.md"))
+    opened = await open_files(_written(tmp_path, "b.py", "a.md"), named_from=tmp_path)
 
     assert opened.mode == ReviewMode.FILES
     assert opened.title == "a.md, b.py"
 
 
 async def test_many_files_are_named_by_the_first_few_and_counted_after(tmp_path: Path) -> None:
-    opened = await open_files(_written(tmp_path, *FIVE_FILES))
+    opened = await open_files(_written(tmp_path, *FIVE_FILES), named_from=tmp_path)
 
     assert opened.title == "a.md, b.md, c.md + 2 more"
 
@@ -69,14 +69,18 @@ async def test_many_files_are_named_by_the_first_few_and_counted_after(tmp_path:
 async def test_the_same_files_in_another_order_are_the_same_review(tmp_path: Path) -> None:
     files = _written(tmp_path, "a.md", "b.md")
 
-    assert (await open_files(files)).identity == (await open_files(files[::-1])).identity
+    assert (await open_files(files, named_from=tmp_path)).identity == (
+        await open_files(files[::-1], named_from=tmp_path)
+    ).identity
 
 
 async def test_files_that_start_alike_are_a_different_review(tmp_path: Path) -> None:
     """Same first file, same count: still another set of files, and another draft."""
     first, second, third = _written(tmp_path, "a.md", "b.md", "c.md")
 
-    assert (await open_files([first, second])).identity != (await open_files([first, third])).identity
+    assert (await open_files([first, second], named_from=tmp_path)).identity != (
+        await open_files([first, third], named_from=tmp_path)
+    ).identity
 
 
 async def test_a_conversation_is_named_by_its_file(tmp_path: Path) -> None:
@@ -87,3 +91,34 @@ async def test_a_conversation_is_named_by_its_file(tmp_path: Path) -> None:
 
     assert opened.mode == ReviewMode.TRANSCRIPT
     assert opened.title == "Conversation abc123"
+
+
+async def test_a_file_named_two_ways_is_one_file_and_the_same_review(tmp_path: Path) -> None:
+    """However the reader spelled it, a file is reviewed once, and comes back to the same review."""
+    [plan] = _written(tmp_path, "plan.md")
+    (tmp_path / "sub").mkdir()
+    roundabout = tmp_path / "sub" / ".." / "plan.md"
+
+    named_twice = await open_files([plan, roundabout], named_from=tmp_path)
+
+    assert len(named_twice.diff_files) == 1
+    assert named_twice.identity == (await open_files([plan], named_from=tmp_path)).identity
+
+
+async def test_a_file_is_named_as_seen_from_where_the_review_was_opened(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    [plan] = _written(tmp_path / "docs", "plan.md")
+
+    opened = await open_files([plan], named_from=tmp_path)
+
+    assert [file.path for file in opened.diff_files] == ["docs/plan.md"]
+
+
+async def test_a_conversation_named_by_a_roundabout_path_is_the_same_review(tmp_path: Path) -> None:
+    conversation = tmp_path / "abc123.jsonl"
+    conversation.write_text("")
+    (tmp_path / "sub").mkdir()
+
+    roundabout = await open_transcript(tmp_path / "sub" / ".." / "abc123.jsonl")
+
+    assert roundabout.identity == (await open_transcript(conversation)).identity
