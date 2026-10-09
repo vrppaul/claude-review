@@ -111,21 +111,30 @@ async def test_a_question_says_how_its_thread_is_meant_to_be_taken(client: Async
     assert (thread["severity"], thread["resolved"], thread["raised_by"]) == ("blocker", True, "author")
 
 
-async def test_an_opening_asked_with_an_image_the_review_does_not_keep_is_refused(client: AsyncClient) -> None:
-    """Pasted a moment ago, so a missing one is a fault, not a screenshot lost to a restart."""
+async def test_an_opening_asked_with_an_image_the_review_no_longer_keeps_is_asked_without_it(
+    client: AsyncClient,
+) -> None:
+    """After a restart a screenshot is gone, whenever it was pasted; the question still goes."""
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "images": [GONE_IMAGE]}))
+    question = await _question_taken(client)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert (question["body"], question["images"]) == (OPENING, [])
 
 
-async def test_a_reply_asked_with_an_image_the_review_does_not_keep_is_refused(client: AsyncClient) -> None:
+async def test_a_reply_asked_again_after_a_restart_is_asked_without_what_the_restart_lost(
+    client: AsyncClient,
+) -> None:
+    """The reader's own last word, asked again: its screenshot may predate the restart."""
     asked = {**FOLLOW_UP, "images": [GONE_IMAGE]}
 
     response = await client.post(
         ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER, asked]}, question_id=FOLLOW_UP_ID)
     )
+    question = await _question_taken(client)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert (question["body"], question["images"]) == ("Which caller?", [])
 
 
 async def test_an_image_earlier_in_the_thread_that_did_not_survive_a_restart_is_left_out(
@@ -150,6 +159,13 @@ async def test_asking_again_after_a_restart_does_not_need_what_the_restart_lost(
 
     assert response.status_code == HTTPStatus.NO_CONTENT
     assert (question["body"], question["images"]) == (OPENING, [])
+
+
+async def test_an_id_that_could_not_be_read_back_is_refused(client: AsyncClient) -> None:
+    """A thread is read back at a path of its own, where a slash would name another route."""
+    response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "a/b"}, question_id="a/b"))
+
+    assert response.status_code == 422
 
 
 async def test_a_question_naming_nothing_in_its_thread_is_refused(client: AsyncClient) -> None:

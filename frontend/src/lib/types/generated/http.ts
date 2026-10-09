@@ -1370,11 +1370,12 @@ export interface components {
         };
         /**
          * ThreadSummary
-         * @description One line's worth of a thread: enough to choose what to read, and nothing handed over.
+         * @description A thread in short: enough to choose what to read, and nothing handed over.
          *
-         *     No images and no turns: those are what reading the thread in full is
-         *     for, and handing out an image's path is what keeps it from being taken
-         *     off a comment nobody has sent yet.
+         *     The comment that opened it, whole — a reader of the index shortens it as
+         *     it likes — but no images and no turns: those are what reading the thread
+         *     in full is for, and handing out an image's path is what keeps it from
+         *     being taken off a comment nobody has sent yet.
          */
         ThreadSummary: {
             /** Thread Id */

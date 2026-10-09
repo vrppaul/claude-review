@@ -2,6 +2,8 @@
 
 import asyncio
 
+import structlog
+
 from claude_review.domain.models import (
     AgentStatus,
     ImageLedger,
@@ -10,8 +12,17 @@ from claude_review.domain.models import (
     TreeSnapshot,
     TreeState,
 )
-from claude_review.presentation.schemas import AgentWork, AnswererPush, ProgressPush, ServerPush, ThreadInput
+from claude_review.presentation.schemas import (
+    AgentWork,
+    AnswererPush,
+    HeldThreads,
+    ProgressPush,
+    ServerPush,
+    ThreadInput,
+)
 from claude_review.services.agent_inbox import AgentInbox
+
+log = structlog.get_logger()
 
 # How the threads the author raises are named, apart from the browser's own
 RAISED_PREFIX = "raised-"
@@ -64,6 +75,8 @@ class ServerState:
         # over only to an agent that reads them, so an image in a comment
         # nobody has read yet can still be taken off.
         self.threads: list[ThreadInput] = []
+        # The ids of threads the browser holds that this server could not read
+        self._unreadable_ids: list[str] = []
         # What has been said in the panel, both halves, in order
         self.panel: list[PanelEntry] = []
         # The tree behind every diff this review has taken, oldest first. The
@@ -81,14 +94,21 @@ class ServerState:
         self._raised += 1
         return f"{RAISED_PREFIX}{self._raised}"
 
-    def hold_threads(self, threads: list[ThreadInput]) -> None:
+    def hold_threads(self, held: HeldThreads) -> None:
         """Take the threads the browser holds, and never hand out an id one of them has.
 
         A server restarted mid-review starts counting again from nothing, while
-        the browser still holds the threads the author raised before it.
+        the browser still holds the threads the author raised before it — the
+        ones this server could not read included.
         """
-        self.threads = threads
-        self._raised = max([self._raised, *(_raised_number(thread.thread_id) for thread in threads)])
+        self.threads = held.readable
+        held_ids = [*(thread.thread_id for thread in held.readable), *held.unreadable_ids]
+        self._raised = max([self._raised, *(_raised_number(thread_id) for thread_id in held_ids)])
+        # Said when it changes rather than on every hello, which comes as
+        # often as once a second while the reader types
+        if held.unreadable_ids != self._unreadable_ids:
+            log.warning("threads_left_out", thread_ids=held.unreadable_ids)
+        self._unreadable_ids = held.unreadable_ids
 
     def connected(self, now: float) -> None:
         self._open_sockets += 1
@@ -122,8 +142,8 @@ class ServerState:
         self._work = work
         self.push(ProgressPush(work=work))
 
-    def answered(self, message_id: str | None) -> None:
-        """Note an answer: it ends the work done for the message it answers, and nothing else."""
+    def end_work_for(self, message_id: str | None) -> None:
+        """End the work done for one message — answered, or taken back — and nothing else."""
         if self._work is not None and message_id is not None and self._work.message_id == message_id:
             self.report_work(None)
 

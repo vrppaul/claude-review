@@ -13,6 +13,8 @@ const DRAFT_KEY = 'claude-review:draft';
 const BEFORE_ANCHORS = 7;
 /** The last shape a draft had before every turn carried an id. */
 const BEFORE_TURN_IDS = 8;
+/** The shape every turn carries an id in, and the draft counts the ids handed out. */
+const SHAPE_WITH_TURN_IDS = 9;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
@@ -239,6 +241,15 @@ describe('a draft written by an older release', () => {
 		expect(loadDraft(TITLE)?.comments[0].turns).toEqual([
 			{ id: 'turn-1', author: 'author', body: 'Done', round: 1, images: [] }
 		]);
+	});
+
+	it('is restored when it is of this shape but kept no count of the ids handed out', () => {
+		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [fullThread()], sent: [] });
+
+		const count = commentStore.restore(TITLE);
+
+		expect(count).toBe(1);
+		expect(commentStore.add(newComment({ body: 'next' }))).not.toBe(fullThread().id);
 	});
 
 	it('gives each turn written before turns had ids one of its own, never one a turn already has', () => {

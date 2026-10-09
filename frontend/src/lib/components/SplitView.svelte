@@ -8,7 +8,7 @@
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import { createLineSelection } from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
@@ -40,9 +40,12 @@
 		}, [])
 	);
 
+	// Every line of the file in the order the rows count them, hunk after hunk
+	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
 	const selection = createLineSelection({
 		mayCommentOnRemoved: () => !diffStore.narrowed,
-		longestRange: () => diffStore.limits?.max_quoted_lines ?? null
+		longestRange: () => diffStore.longestQuotedRange,
+		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
 	});
 
 	$effect(() => {

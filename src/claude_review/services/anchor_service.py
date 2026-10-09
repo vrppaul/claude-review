@@ -11,8 +11,8 @@ from typing import assert_never
 
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import AnchorLinesNotShownError, UnknownAnchorFileError
-from claude_review.domain.models import Anchor, DiffFile, LineAnchor, LineSide, LineType
+from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
+from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, DiffFile, LineAnchor, LineSide, LineType
 
 # How many of the review's files a refusal names, so whoever named the wrong
 # one can see what the right one is called without the whole list
@@ -38,9 +38,16 @@ class LineAnchorHandler:
         """The anchor with the lines it names read off the diff.
 
         Raises:
+            AnchorTooLongError: if it names more lines than a thread may quote:
+                such a thread could never be sent in a round.
             UnknownAnchorFileError: if the file is not in this review.
             AnchorLinesNotShownError: if the diff does not show those lines of it.
         """
+        line_count = anchor.end_line - anchor.start_line + 1
+        if line_count > MAX_QUOTE_LINES:
+            msg = f"a thread may hang on at most {MAX_QUOTE_LINES} lines, not {line_count}"
+            raise AnchorTooLongError(msg)
+
         shown = self._files.get(anchor.file)
         if shown is None:
             listed = ", ".join(list(self._files)[:FILES_NAMED_IN_REFUSAL])
@@ -56,7 +63,7 @@ class LineAnchorHandler:
             msg = f"{anchor.file} does not show {side} line{plural} {_span(missing[0], missing[-1])}"
             raise AnchorLinesNotShownError(msg)
 
-        return anchor.model_copy(update={"quote": [on_screen[number] for number in wanted], "outdated": False})
+        return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
 
     def follow(self, anchor: LineAnchor) -> LineAnchor:
         """Where the anchor's lines are in the diff as it now stands.
@@ -67,23 +74,22 @@ class LineAnchorHandler:
         its lines has nothing to search for, and is left where it is.
         """
         if not anchor.quote:
-            return anchor.model_copy(update={"outdated": False})
+            return _changed(anchor, outdated=False)
 
         shown = self._files.get(anchor.file)
         if shown is None:
-            return anchor.model_copy(update={"outdated": True})
+            return _changed(anchor, outdated=True)
 
         lines = self._lines_of(shown, anchor.side)
         found = _find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
-            return anchor.model_copy(update={"outdated": True})
+            return _changed(anchor, outdated=True)
 
-        return anchor.model_copy(
-            update={
-                "start_line": lines[found].number,
-                "end_line": lines[found + len(anchor.quote) - 1].number,
-                "outdated": False,
-            }
+        return _changed(
+            anchor,
+            start_line=lines[found].number,
+            end_line=lines[found + len(anchor.quote) - 1].number,
+            outdated=False,
         )
 
     def _lines_of(self, file: DiffFile, side: LineSide) -> list[SideLine]:
@@ -135,6 +141,15 @@ def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
         if (line.type == LineType.DELETE) == removed_side
         and (number := line.old_no if removed_side else line.new_no) is not None
     ]
+
+
+def _changed(anchor: LineAnchor, **changes: object) -> LineAnchor:
+    """The anchor with some fields changed, checked again as any anchor is.
+
+    `model_copy` would skip the checks, and an anchor built here goes out to
+    the browser and comes back in a round, where they are applied.
+    """
+    return LineAnchor.model_validate({**anchor.model_dump(), **changes})
 
 
 def _find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | None:

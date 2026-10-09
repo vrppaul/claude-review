@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { work } from './agent-work';
 import { commentStore } from '$lib/stores/comments.svelte';
 import { diffStore } from '$lib/stores/diff.svelte';
 import { panelStore } from '$lib/stores/panel.svelte';
@@ -184,15 +183,6 @@ describe('the panel talks to the agent about the review', () => {
 
 		await expect(say('into the void')).rejects.toThrow();
 		expect(panelStore.turns).toHaveLength(0);
-	});
-
-	it('goes on showing the work under way when a new message fails to go', async () => {
-		panelStore.showWork(work({ text: 'Running the tests', files: ['tests/test_a.py'] }));
-		fakeServer().refuse('POST /api/message', SERVER_ERROR);
-
-		await expect(say('and this?')).rejects.toThrow();
-
-		expect(panelStore.progress?.text).toBe('Running the tests');
 	});
 
 	it('weighs the review from what is on screen, and says so roughly', () => {

@@ -8,7 +8,7 @@ same queue, so an answer written after a round arrives after it.
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.domain.models import CommentSeverity, LineSide, TurnAuthor
+from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
 from claude_review.presentation.schemas import PushKind
 from tests.helpers import (
     CONTEXT_ROUTE,
@@ -180,6 +180,16 @@ async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: Asyn
     assert "does not show new line 900" in response.json()["detail"]
 
 
+async def test_a_thread_on_more_lines_than_a_round_can_carry_is_refused(client: AsyncClient) -> None:
+    """Raised, it would block every round until the reader found it and deleted it."""
+    too_many = line_on_the_wire(REVIEWED_FILE, 1, MAX_QUOTE_LINES + 1)
+
+    response = await client.post(POINT_ROUTE, json=_pointing(too_many, "all of it"))
+
+    assert response.status_code == 422
+    assert str(MAX_QUOTE_LINES) in response.json()["detail"]
+
+
 async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClient) -> None:
     """The check is a guard, not a hurdle: what is on screen goes through."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "this line"))
@@ -288,6 +298,28 @@ def test_a_new_message_ends_the_work_shown_for_the_last_one(review_page: TestCli
         review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
         next_push(socket, PushKind.PROGRESS)
         review_page.post("/api/message", json={**MESSAGE, "message_id": "panel-2"})
+
+        assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
+
+
+def test_a_message_that_is_refused_leaves_the_work_showing(review_page: TestClient) -> None:
+    """Nothing new was asked, so whatever was being done is still being done."""
+    review_page.post("/api/progress", json={"text": "reading the handler"})
+    refused = review_page.post("/api/message", json={**MESSAGE, "images": ["never-kept.png"]})
+
+    with open_session(review_page) as socket:
+        work = next_push(socket, PushKind.PROGRESS)["work"]
+
+    assert refused.status_code == 422
+    assert work["text"] == "reading the handler"
+
+
+def test_taking_a_message_back_ends_the_work_for_it(review_page: TestClient) -> None:
+    """The reader pressed Stop; the line must not go on saying the agent works on it."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
+        next_push(socket, PushKind.PROGRESS)
+        review_page.post("/api/cancel", json={"message_id": "panel-1"})
 
         assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
 

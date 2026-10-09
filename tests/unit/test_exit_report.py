@@ -26,14 +26,27 @@ def test_the_last_round_is_written_even_once_the_agent_has_read_it() -> None:
 
 
 def test_what_the_agent_never_took_follows_the_review() -> None:
-    written = exit_report(LAST_ROUND, [A_MESSAGE, LAST_ROUND, PanelCancel(message_id="panel-3")])
+    written = exit_report(LAST_ROUND, [A_MESSAGE, LAST_ROUND])
 
     review, unread = written.split(UNREAD_HEADING)
     assert review.strip() == LAST_ROUND.markdown
     assert "Also check the docs." in unread
     assert "/tmp/images/shot.png" in unread
     assert f"`{REVIEWED_FILE}`:1" in unread
-    assert "panel-3 taken back" in unread
+
+
+def test_a_message_taken_back_before_the_agent_read_it_is_left_out() -> None:
+    """Written out, it would invite the agent to act on what the reader withdrew."""
+    written = exit_report(LAST_ROUND, [A_MESSAGE, LAST_ROUND, PanelCancel(message_id=A_MESSAGE.message_id)])
+
+    assert written == LAST_ROUND.markdown
+
+
+def test_a_message_the_agent_read_and_the_reader_then_took_back_says_so() -> None:
+    """The agent may already be at work on it."""
+    unread = exit_report(LAST_ROUND, [PanelCancel(message_id="panel-2")]).split(UNREAD_HEADING)[1]
+
+    assert "panel-2 taken back" in unread
 
 
 def test_an_unanswered_question_says_which_thread_it_was_asked_in() -> None:

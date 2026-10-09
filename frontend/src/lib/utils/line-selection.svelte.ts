@@ -34,6 +34,24 @@ export interface SelectionRules {
    * quote longer than this — so a drag simply stops there.
    */
   longestRange: () => number | null;
+  /**
+   * Where a line stands among the rows on screen, so a drag stopped short of
+   * the pointer opens the comment under the row it stopped at. Undefined for
+   * a line the diff does not show.
+   */
+  rowOf: (side: LineSide, lineNumber: number) => number | undefined;
+}
+
+/** Where a line stands among a file's rows, counted as the views count them. */
+export function rowOfLine(
+  rows: DiffLine[],
+  side: LineSide,
+  lineNumber: number,
+): number | undefined {
+  const row = rows.findIndex(
+    (line) => lineSide(line) === side && getLineNumber(line) === lineNumber,
+  );
+  return row === -1 ? undefined : row;
 }
 
 /**
@@ -93,11 +111,14 @@ export function createLineSelection(rules: SelectionRules) {
       const lineNo = getLineNumber(line);
       if (lineNo === 0 || dragStart === null) return;
       dragEnd = reach(dragStart, lineNo, rules.longestRange());
-      // The composer opens under the row the cursor is on, so this follows the
+      // The composer opens under the row the drag reaches, so this follows the
       // drag back up rather than staying at the furthest point it reached —
-      // unless the cursor is past where the drag may reach, and then it stays
-      // under the last row the drag still covered
-      if (dragEnd === lineNo) dragAnchorIndex = index;
+      // and when the pointer is past where the drag may reach, it opens under
+      // the row the drag stopped at
+      dragAnchorIndex =
+        dragEnd === lineNo
+          ? index
+          : (rules.rowOf(lineSide(line), dragEnd) ?? dragAnchorIndex);
     },
 
     handleMouseUp() {

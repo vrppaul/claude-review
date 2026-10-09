@@ -167,6 +167,26 @@ def test_a_thread_the_server_cannot_read_costs_only_itself(review_page: TestClie
     assert [held["thread_id"] for held in until_the_review_holds_threads(review_page, 1)] == ["comment-1"]
 
 
+def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_out(review_page: TestClient) -> None:
+    """The browser still holds it: a second thread under the same id would edit and delete as one."""
+    unreadable = thread_on_the_wire(
+        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
+        "Raised before the restart",
+        thread_id="raised-7",
+        raised_by=TurnAuthor.AUTHOR,
+    )
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [unreadable]})
+        until_the_review_is_on_round(review_page, 2)
+
+    raised = review_page.post(
+        "/api/point",
+        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+    )
+
+    assert raised.json()["thread_id"] == "raised-8"
+
+
 def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> None:
     """Deleting the last thread leaves nothing to tell an agent about, and that is what it is told."""
     with open_session(review_page) as socket:

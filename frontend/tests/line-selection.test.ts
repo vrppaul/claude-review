@@ -4,9 +4,15 @@ import { contextLine } from './diff';
 
 // The most lines the review takes in one comment, as the server would say it
 const LONGEST_RANGE = 3;
+// Where the lines in these tests stand among the rows: line 10 is the first
+const FIRST_LINE = 10;
 
 function selection() {
-	return createLineSelection({ mayCommentOnRemoved: () => true, longestRange: () => LONGEST_RANGE });
+	return createLineSelection({
+		mayCommentOnRemoved: () => true,
+		longestRange: () => LONGEST_RANGE,
+		rowOf: (_side, lineNumber) => lineNumber - FIRST_LINE
+	});
 }
 
 describe('selecting lines to comment on', () => {
@@ -28,6 +34,16 @@ describe('selecting lines to comment on', () => {
 		lines.handleMouseUp();
 
 		expect(lines.commentingAt).toMatchObject({ line: 18, endLine: 20 });
+	});
+
+	it('opens the comment under the row the drag stopped at, however far past it the pointer went', () => {
+		const lines = selection();
+
+		lines.handleMouseDown(contextLine(10, 10, 'start'), 0);
+		lines.handleMouseEnter(contextLine(20, 20, 'far below'), 10);
+		lines.handleMouseUp();
+
+		expect(lines.commentingAt?.anchorIndex).toBe(12 - FIRST_LINE);
 	});
 
 	it('shows the drag as far as it will go', () => {

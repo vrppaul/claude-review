@@ -55,7 +55,7 @@ DDD-lite with clean layer separation:
 - **domain/** — Pydantic models (DiffFile, Thread, ReviewResult). No I/O, no framework imports.
 - **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
-- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `AgentInbox` (`agent_inbox.py`); what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
+- **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `services/agent_inbox.py`; what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
 
 Dependencies flow inward: presentation → services → domain, repositories → domain
 
@@ -86,7 +86,7 @@ async def submit_review(
 - **TDD**: write tests BEFORE implementation. Tests encode functional requirements, not implementation details.
 - **Test what the user cares about**: "diff shows all changed files", not "parse_hunk returns a list"
 - **Modules**: `__init__.py` must be empty — no code, no re-exports, nothing
-- **Error handling**: specific exceptions, not generic `Exception`. Whatever the review refuses is a `ReviewError` of one kind (`NotFoundError`, `BadRequestError`, `RefusedError` ⊃ `TooLargeError`, `ConflictError`, in `domain/exceptions.py`); routes raise it and never catch it or raise `HTTPException` — `presentation/refusals.py` is the one table from kind to status
+- **Error handling**: specific exceptions, not generic `Exception`. Whatever the review refuses is a `ReviewError` of one kind (`NotFoundError`, `InvalidRequestError`, `RefusedError` ⊃ `TooLargeError`, `ConflictError`, in `domain/exceptions.py`); routes raise it and never catch it or raise `HTTPException` — `presentation/refusals.py` is the one table from kind to status
 - **Time**: every moment the review says is `EpochMillis`, read from an injected `Clock` (`get_clock` in routes, `FixedClock` in tests) — never `time.time()` in a route or service
 - **Python deps**: add via `uv add` (never specify version), never pip, never manually edit pyproject.toml deps
 - **JS deps**: add via `pnpm add` / `pnpm add -D` (never specify version), never manually edit package.json deps

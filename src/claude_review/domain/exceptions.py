@@ -80,6 +80,10 @@ class UnknownAnchorFileError(NotFoundError):
     """Raised when an anchor names a file this review does not hold."""
 
 
+class AnchorTooLongError(RefusedError):
+    """Raised when an anchor names more lines than a thread may quote."""
+
+
 class AnchorLinesNotShownError(RefusedError):
     """Raised when an anchor names lines of a file that the diff does not show."""
 

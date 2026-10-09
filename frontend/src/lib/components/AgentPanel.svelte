@@ -231,15 +231,15 @@
 
 {#snippet workUnderWay()}
 	<!-- What is being done, in its own words, replaced as it changes -->
-	{#if panelStore.progress?.text}
+	{#if panelStore.work?.text}
 		<p data-testid="panel-progress" class="cr-progress text-sm">
-			{panelStore.progress.text}
+			{panelStore.work.text}
 		</p>
 	{/if}
-	{#if panelStore.progress && panelStore.progress.steps.length > 0}
+	{#if panelStore.work && panelStore.work.steps.length > 0}
 		<!-- Branches of the same work, drawn hanging off it -->
 		<ul data-testid="progress-steps" class="cr-branches">
-			{#each panelStore.progress.steps as step (step.text)}
+			{#each panelStore.work.steps as step (step.text)}
 				<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
 					{#if step.done}
 						<svg class="cr-branch-mark" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"
@@ -253,9 +253,9 @@
 			{/each}
 		</ul>
 	{/if}
-	{#if panelStore.progress && panelStore.progress.files.length > 0}
+	{#if panelStore.work && panelStore.work.files.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each panelStore.progress.files as path (path)}
+			{#each panelStore.work.files as path (path)}
 				<button data-testid="progress-file" class="cr-thread-chip" onclick={() => showFile(path)}>
 					{path.split('/').pop()}
 				</button>
@@ -339,7 +339,7 @@
 		<!-- Work showing outranks the empty state: an agent doing something
 			before anybody has said anything is exactly the case a reader has
 			no other way of seeing. -->
-		{#if panelStore.turns.length === 0 && !panelStore.progress}
+		{#if panelStore.turns.length === 0 && !panelStore.work}
 			{#if attached}
 				<div
 					data-testid="panel-empty"
@@ -481,7 +481,7 @@ claude-review wait --port &lt;port&gt;</pre>
 						</div>
 						{@render workUnderWay()}
 					</div>
-				{:else if panelStore.progress}
+				{:else if panelStore.work}
 					<!-- Work nobody is waiting on: what a round asked for, or what
 						the agent took on itself. Without a row of its own it could not
 						be shown at all, and a reader watching a silent panel cannot
@@ -493,7 +493,7 @@ claude-review wait --port &lt;port&gt;</pre>
 								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
 							</span>
 							<div class="flex-1"></div>
-							<span class="cr-faint text-xs">working {since(panelStore.progress.at)}</span>
+							<span class="cr-faint text-xs">working {since(panelStore.work.at)}</span>
 						</div>
 						{@render workUnderWay()}
 					</div>

@@ -23,7 +23,12 @@ import type {
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
 import { emptyComposer, loadDraft, saveDraft } from "$lib/utils/drafts";
-import { IdSequence } from "$lib/utils/ids";
+import {
+  ANSWER_ID_PREFIX,
+  EVENT_ID_PREFIX,
+  IdSequence,
+  MESSAGE_ID_PREFIX,
+} from "$lib/utils/ids";
 import { ImageAttachments } from "$lib/utils/image-attachments.svelte";
 import { readChoice, readNumber, writeChoice } from "$lib/utils/preferences";
 import { refusalOf } from "$lib/utils/refusal";
@@ -55,7 +60,7 @@ let width = $state(
 let agent = $state<AgentStatus>({ model: null, context: null, at: null });
 // What the agent says it is doing. Ephemeral by nature: it is the state of
 // the work, so it is never stored and never outlives the work itself.
-let progress = $state<AgentWork | null>(null);
+let work = $state<AgentWork | null>(null);
 // Answers that landed while the panel was shut, so the header can say so
 let unread = $state(0);
 // Whether the reader has ever said whether they want the panel. Until they
@@ -69,9 +74,9 @@ let chosen = stored !== "unset";
 // server with nothing on screen pointing at it.
 let composerText = $state("");
 const attachments = new ImageAttachments([], rememberComposer);
-const messageIds = new IdSequence("panel-");
-const answerIds = new IdSequence("answer-");
-const eventIds = new IdSequence("event-");
+const messageIds = new IdSequence(MESSAGE_ID_PREFIX);
+const answerIds = new IdSequence(ANSWER_ID_PREFIX);
+const eventIds = new IdSequence(EVENT_ID_PREFIX);
 
 /**
  * The message the agent is still working on.
@@ -131,8 +136,8 @@ export const panelStore = {
   get working(): PanelTurn | undefined {
     return working;
   },
-  get progress(): AgentWork | null {
-    return progress;
+  get work(): AgentWork | null {
+    return work;
   },
   get composerText(): string {
     return composerText;
@@ -251,8 +256,8 @@ export const panelStore = {
    * whether it is over is the server's to say — a new message, an answer to
    * the one it was for, an empty report — so every tab shows the same.
    */
-  showWork(work: AgentWork | null) {
-    progress = work;
+  showWork(said: AgentWork | null) {
+    work = said;
   },
 
   /** Take what was said and put it under what it answers, if anything. */
@@ -330,7 +335,7 @@ export const panelStore = {
 
   clear() {
     turns = [];
-    progress = null;
+    work = null;
     agent = { model: null, context: null, at: null };
     unread = 0;
     composerText = "";

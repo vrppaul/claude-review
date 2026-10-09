@@ -26,7 +26,6 @@ import uvicorn
 from claude_review.domain.exceptions import PortUnavailableError
 from claude_review.domain.models import (
     AnchorKind,
-    CommentSeverity,
     DiffFile,
     ReaderFiles,
     ReviewMode,
@@ -48,6 +47,7 @@ from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.diff_service import DiffService
 from claude_review.services.exit_report import exit_report
 from claude_review.services.text_file_service import TextFileService
+from claude_review.services.thread_markdown import tags_of
 from claude_review.services.transcript_service import TranscriptService
 from claude_review.services.tree_watcher_service import TreeWatcherService
 from claude_review.services.version_service import VersionService
@@ -587,13 +587,9 @@ def _render_thread(thread: Thread) -> str:
 
 def _marks(summary: ThreadSummary) -> str:
     """What is not ordinary about a thread, and nothing when it is."""
-    marks: list[str] = [summary.severity] if summary.severity != CommentSeverity.NOTE else []
+    marks = tags_of(summary.severity, resolved=summary.resolved, outdated=summary.outdated)
     if summary.raised_by == TurnAuthor.AUTHOR:
         marks.append("yours")
-    if summary.resolved:
-        marks.append("resolved")
-    if summary.outdated:
-        marks.append("outdated")
     if summary.turn_count:
         marks.append(f"{summary.turn_count} turns")
     return " · ".join(marks)

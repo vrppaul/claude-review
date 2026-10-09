@@ -10,7 +10,7 @@
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { createLineSelection } from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, rowOfLine } from '$lib/utils/line-selection.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import HunkGap from './HunkGap.svelte';
@@ -39,9 +39,12 @@
 	const commentsByRow = $derived(
 		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
 	);
+	// Every line of the file in the order the rows count them, hunk after hunk
+	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
 	const selection = createLineSelection({
 		mayCommentOnRemoved: () => !diffStore.narrowed,
-		longestRange: () => diffStore.limits?.max_quoted_lines ?? null
+		longestRange: () => diffStore.longestQuotedRange,
+		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
 	});
 
 	// Compute flat line index offsets per hunk so we have unique indices across all hunks

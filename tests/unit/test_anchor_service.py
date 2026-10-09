@@ -9,8 +9,8 @@ import re
 
 import pytest
 
-from claude_review.domain.exceptions import AnchorLinesNotShownError, UnknownAnchorFileError
-from claude_review.domain.models import DiffFile, DiffHunk, FileStatus, LineAnchor, LineSide
+from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
+from claude_review.domain.models import MAX_QUOTE_LINES, DiffFile, DiffHunk, FileStatus, LineAnchor, LineSide
 from claude_review.services.anchor_service import AnchorService
 from tests.helpers import added_line, context_line, diff_file, line_anchor, removed_line
 
@@ -102,6 +102,15 @@ def test_quoting_reads_the_lines_off_the_diff() -> None:
     quoted = AnchorService(MOVED_DOWN).quote(line_anchor(FILE, 3, 4))
 
     assert quoted.quote == [RUN, RETURN]
+
+
+def test_lines_more_than_a_quote_keeps_are_refused() -> None:
+    """A thread the review cannot keep its quote of could never be sent in a round."""
+    longest = MAX_QUOTE_LINES + 1
+    every_line_shown = _braces_at((), longest)
+
+    with pytest.raises(AnchorTooLongError, match=str(MAX_QUOTE_LINES)):
+        AnchorService(every_line_shown).quote(line_anchor(FILE, 1, longest))
 
 
 def test_quoting_a_file_the_review_does_not_hold_names_what_it_does_hold() -> None:

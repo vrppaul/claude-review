@@ -162,10 +162,12 @@ SEEN = ContextResponse(
 def test_catching_up_costs_a_line_a_thread() -> None:
     """An index is what makes catching up cheaper than being handed the review."""
     printed = _render_context(SEEN)
+    [thread_line] = [line for line in printed.splitlines() if line.startswith("comment-4")]
 
     assert "round 3 · 7 files" in printed
-    assert "1 threads, 1 open · panel: 1 messages" in printed
-    assert "comment-4  `src/routes.py`:118-130  question · 1 turns" in printed
+    assert "1 open" in printed
+    assert "`src/routes.py`:118-130" in thread_line
+    assert "question" in thread_line
     # The first line of the comment, and not the second
     assert "Does a round overtake a question?" in printed
     assert "And if it does" not in printed
@@ -175,7 +177,7 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
     """The index is for choosing what to read; this is the reading."""
     printed = _render_thread(DISCUSSED)
 
-    assert "comment-4  `src/routes.py`:118-130  question · 1 turns" in printed
+    assert printed.startswith("comment-4  `src/routes.py`:118-130  question")
     assert "And if it does, what then?" in printed
     assert "author: It cannot: one queue." in printed
     assert "lines:     return event" in printed

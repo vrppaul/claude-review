@@ -43,10 +43,15 @@ def thread_tags(thread: Thread) -> list[str]:
     observation" — and only worth saying when they differ from it. The same
     goes for a thread that is settled or hanging on lines that moved.
     """
-    tags = [str(thread.severity)] if thread.severity != CommentSeverity.NOTE else []
-    if thread.resolved:
+    return tags_of(thread.severity, resolved=thread.resolved, outdated=thread.anchor.outdated)
+
+
+def tags_of(severity: CommentSeverity, *, resolved: bool, outdated: bool) -> list[str]:
+    """The tags a thread of this severity and standing carries, wherever it is listed."""
+    tags = [str(severity)] if severity != CommentSeverity.NOTE else []
+    if resolved:
         tags.append("resolved")
-    if thread.anchor.outdated:
+    if outdated:
         tags.append("outdated")
     return tags
 

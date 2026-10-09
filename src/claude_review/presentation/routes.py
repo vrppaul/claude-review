@@ -52,6 +52,7 @@ from claude_review.presentation.schemas import (
     DEFAULT_WAIT_SECONDS,
     MAX_ID_LENGTH,
     MAX_WAIT_SECONDS,
+    SAFE_ID,
     AgentWork,
     AskRequest,
     CancelEvent,
@@ -67,6 +68,7 @@ from claude_review.presentation.schemas import (
     FollowResponse,
     GuideChange,
     GuideResponse,
+    HeldThreads,
     ImageResponse,
     MessageEvent,
     MessageRequest,
@@ -75,15 +77,16 @@ from claude_review.presentation.schemas import (
     PointResponse,
     ProgressRequest,
     QuestionEvent,
+    ReceivedHello,
     ReplyPush,
     ReplyRequest,
     RoundEvent,
     RoundPush,
     RoundResponse,
     SayRequest,
+    SaysSomething,
     SendLimits,
     ServerPush,
-    SessionHello,
     SettingsChange,
     SettingsResponse,
     ShowPush,
@@ -259,7 +262,7 @@ async def review_context(
 
 @router.get("/context/threads/{thread_id}")
 async def read_thread(
-    thread_id: str = PathParameter(max_length=MAX_ID_LENGTH),
+    thread_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID),
     state: ServerState = Depends(get_state),
     image_service: ImageService = Depends(get_image_service),
 ) -> Thread:
@@ -306,36 +309,28 @@ async def ask_about_thread(
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
-    position = _asked_position(request)
-    given = request.thread
-    asked_in = given if position is None else given.turns[position]
-    # The last thing said was pasted a moment ago, so an image this review
-    # does not keep is a fault to report — checked before any is handed
-    # over, so a refused question leaves none of them kept for good. Asked
-    # again later, what was said may predate a restart, and a screenshot
-    # it lost is only left out.
-    if asked_in is (given.turns[-1] if given.turns else given):
-        image_service.require(asked_in.images)
-
-    thread = _hand_over_thread(given, image_service)
-    asked = thread if position is None else thread.turns[position]
-    state.inbox.hand_in(
-        ThreadQuestion(question_id=request.question_id, body=asked.body, images=asked.images, thread=thread)
-    )
+    asked = _asked_in(request)
+    thread = _hand_over_thread(request.thread, image_service)
+    # Handed over with the thread already; named again, they are the same
+    # files. Like every image in the thread, one this review no longer keeps
+    # is left out: after a restart a screenshot is gone however recently it
+    # was pasted, and nothing here can tell the two apart.
+    images = _hand_over_kept(asked.images, image_service)
+    state.inbox.hand_in(ThreadQuestion(question_id=request.question_id, body=asked.body, images=images, thread=thread))
     log.info("thread_question", thread_id=thread.thread_id, where=thread.where)
 
 
-def _asked_position(request: AskRequest) -> int | None:
-    """Where in its thread a question is asked: None for the comment that opened it, else the turn's place.
+def _asked_in(request: AskRequest) -> SaysSomething:
+    """What a question asks: the comment that opened its thread, or a turn the reader wrote in it.
 
     Raises:
-        QuestionNotInThreadError: if it names neither the opening nor a turn the reader wrote.
+        QuestionNotInThreadError: if it names neither.
     """
     if request.question_id == request.thread.thread_id:
-        return None
-    for position, turn in enumerate(request.thread.turns):
+        return request.thread
+    for turn in request.thread.turns:
         if turn.turn_id == request.question_id and turn.author == TurnAuthor.READER:
-            return position
+            return turn
     msg = f"{request.question_id} is not something the reader said in {request.thread.thread_id}"
     raise QuestionNotInThreadError(msg)
 
@@ -555,7 +550,7 @@ async def say_in_panel(
     the reader was reading is news they would otherwise have to ask for.
     """
     state.push(ChatPush(message_id=request.message_id, text=request.text, files=request.files))
-    state.answered(request.message_id)
+    state.end_work_for(request.message_id)
     state.panel.append(
         PanelEntry(
             message_id=request.message_id,
@@ -661,6 +656,7 @@ async def cancel_panel_message(
     reach into another process and stop it mid-thought.
     """
     state.inbox.hand_in(PanelCancel(message_id=request.message_id))
+    state.end_work_for(request.message_id)
     log.info("panel_cancelled", message_id=request.message_id)
 
 
@@ -731,7 +727,7 @@ def _catch_up(state: ServerState, said: str) -> None:
     they exist.
     """
     try:
-        heard = SessionHello.model_validate_json(said)
+        heard = ReceivedHello.model_validate_json(said)
     except ValidationError as error:
         # The socket is a lifeline first; nonsense on it is not worth
         # dropping a review over, but worth a line for whoever debugs it
@@ -743,7 +739,7 @@ def _catch_up(state: ServerState, said: str) -> None:
         state.round = heard.round
 
     if heard.threads is not None:
-        state.hold_threads(heard.threads)
+        state.hold_threads(HeldThreads.read(heard.threads))
 
 
 @router.post("/submit")

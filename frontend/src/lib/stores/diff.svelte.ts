@@ -174,6 +174,10 @@ export const diffStore = {
   get limits(): SendLimits | null {
     return sendLimits;
   },
+  /** The most lines one comment may cover, once the server has said. */
+  get longestQuotedRange(): number | null {
+    return sendLimits?.max_quoted_lines ?? null;
+  },
   get release(): string {
     return release;
   },

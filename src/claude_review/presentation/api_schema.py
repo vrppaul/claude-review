@@ -15,6 +15,7 @@ import sys
 from collections.abc import Callable
 from typing import Any, NamedTuple
 
+import click
 from fastapi import FastAPI
 from pydantic import TypeAdapter
 from pydantic.json_schema import JsonSchemaMode
@@ -33,7 +34,11 @@ SCHEMA_REFERENCE = "#/components/schemas/{model}"
 
 
 class SocketMessage(NamedTuple):
-    """One kind of message on the socket, as pydantic is asked to describe it."""
+    """One kind of message on the socket, as pydantic is asked to describe it.
+
+    A named tuple because `TypeAdapter.json_schemas` takes each as a
+    `(key, mode, adapter)` triple: the fields keep that order.
+    """
 
     # Its name in the document, which is the name of its type
     name: str
@@ -43,10 +48,10 @@ class SocketMessage(NamedTuple):
     adapter: TypeAdapter[Any]
 
 
-SOCKET_MESSAGES = [
+SOCKET_MESSAGES = (
     SocketMessage("SessionHello", "validation", TypeAdapter(SessionHello)),
     SocketMessage("ServerPush", "serialization", TypeAdapter(ServerPush)),
-]
+)
 
 
 class MissingSocketSchemaError(Exception):
@@ -80,5 +85,12 @@ def socket_document() -> dict[str, Any]:
 DOCUMENTS: dict[str, Callable[[], dict[str, Any]]] = {"http": http_document, "socket": socket_document}
 
 
+@click.command()
+@click.argument("document", type=click.Choice(list(DOCUMENTS)))
+def print_document(document: str) -> None:
+    """Print one of the documents the browser's types are generated from."""
+    json.dump(DOCUMENTS[document](), sys.stdout, indent=2)
+
+
 if __name__ == "__main__":
-    json.dump(DOCUMENTS[sys.argv[1]](), sys.stdout, indent=2)
+    print_document()

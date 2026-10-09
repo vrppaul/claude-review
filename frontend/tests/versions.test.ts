@@ -156,7 +156,8 @@ describe('a base that is not the review\'s own', () => {
 		await diffStore.setBase('round:1');
 		const selection = createLineSelection({
 			mayCommentOnRemoved: () => !diffStore.narrowed,
-			longestRange: () => null
+			longestRange: () => null,
+			rowOf: () => undefined
 		});
 
 		selection.handleMouseDown(removedLine(17, 'gone'), 0);
@@ -169,7 +170,8 @@ describe('a base that is not the review\'s own', () => {
 		await diffStore.setBase('round:1');
 		const selection = createLineSelection({
 			mayCommentOnRemoved: () => !diffStore.narrowed,
-			longestRange: () => null
+			longestRange: () => null,
+			rowOf: () => undefined
 		});
 
 		selection.commentOnLine(contextLine(17, 17, 'here'), 0);

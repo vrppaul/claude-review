@@ -189,7 +189,12 @@ export function loadDraft(title: string): Draft | null {
 
     const draft: Draft = JSON.parse(stored);
     if (draft.title !== title || !Array.isArray(draft.comments)) return null;
-    current = draft.version === SHAPE ? draft : upgrade(draft);
+    // One of this shape that kept no count of the ids handed out is brought
+    // up like an older one: what it holds is all there is to count from
+    current =
+      draft.version === SHAPE && draft.issued !== undefined
+        ? draft
+        : upgrade(draft);
     return current;
   } catch {
     return null;

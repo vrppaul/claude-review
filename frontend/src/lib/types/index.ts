@@ -5,7 +5,9 @@ import type { components as SocketComponents } from "./generated/socket";
  * What the server sends and takes, generated from its own schemas by
  * `pnpm api:types`: one file for the routes, one for the session socket.
  * Named here once, so the rest of the browser imports a word rather than a
- * path into a generated file.
+ * path into a generated file. What only the socket carries comes from
+ * `socket.ts`; what the routes carry too comes from `http.ts`, the shape
+ * being the same in both.
  */
 type Schemas = HttpComponents["schemas"];
 type SocketSchemas = SocketComponents["schemas"];

@@ -3,8 +3,7 @@
 from enum import StrEnum, auto
 from typing import Annotated, Literal, Self
 
-import structlog
-from pydantic import ConfigDict, Field, ValidationError, ValidatorFunctionWrapHandler, field_validator, model_validator
+from pydantic import ConfigDict, Field, JsonValue, ValidationError, model_validator
 
 from claude_review.domain.models import (
     MAX_QUOTE_LINES,
@@ -32,14 +31,20 @@ from claude_review.domain.models import (
 )
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
-log = structlog.get_logger()
-
 # The most one thing said may hold: a comment, a turn, a panel message
 MAX_TEXT_LENGTH = 50_000
 
 # The longest id a request may name: a thread, a question, a message, an
 # image, a base
 MAX_ID_LENGTH = 200
+
+# What an id may hold. A thread is read back at a path of its own —
+# `/api/context/threads/{id}` — where a slash would name another route, so
+# an id is letters, digits, dots, dashes and underscores, and nothing else.
+SAFE_ID = r"^[A-Za-z0-9._-]+$"
+
+# An id as a request names it: a thread, a turn, a question, a message, an image
+WireId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
 
 # How long an agent's poll for events waits when it does not say: long enough
 # that a loop of polls costs nothing, short enough to stay under the timeouts
@@ -51,7 +56,7 @@ MAX_WAIT_SECONDS = 600.0
 
 # Ids handed out by POST /api/images, as many as one thing said may carry
 ImageIds = Annotated[
-    list[Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH)]],
+    list[WireId],
     Field(max_length=MAX_IMAGES_PER_MESSAGE),
 ]
 
@@ -133,7 +138,7 @@ class TurnInput(SaysSomething):
     """One turn of a thread, as the browser sends it back."""
 
     # The id the browser gave it, which is what a question asked in it names
-    turn_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    turn_id: WireId
     author: TurnAuthor
     round: int = Field(ge=1)
 
@@ -147,7 +152,7 @@ class ThreadInput(SaysSomething):
     review saying what it holds.
     """
 
-    thread_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    thread_id: WireId
     anchor: Anchor
     severity: CommentSeverity
     turns: list[TurnInput] = Field(default_factory=list, max_length=MAX_TURNS)
@@ -213,7 +218,7 @@ class AskRequest(ReviewModel):
     finds it.
     """
 
-    question_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    question_id: WireId
     thread: ThreadInput
 
 
@@ -231,34 +236,54 @@ class SessionHello(ReviewModel):
     # holds none — the last one was deleted
     threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
-    @field_validator("threads", mode="wrap")
-    @classmethod
-    def leave_out_unreadable_threads(
-        cls, threads: object, read: ValidatorFunctionWrapHandler
-    ) -> list[ThreadInput] | None:
-        """Read the threads one by one, and leave out any this server cannot read.
 
-        One thread out of bounds would otherwise cost the whole hello: the
-        round, and every other thread with it, lost without a trace. A round
-        sent with that thread is refused, so the reader hears of it there.
-        """
-        if not isinstance(threads, list):
-            return read(threads)
+class ReceivedHello(ReviewModel):
+    """A hello as the server first reads it, its threads not yet read one by one.
+
+    `SessionHello` is what the browser says; this is how the server takes
+    it. One thread out of bounds must not cost the round and every other
+    thread with it, so each is read on its own afterwards (`HeldThreads`).
+    """
+
+    round: int | None = Field(default=None, ge=1)
+    threads: list[JsonValue] | None = Field(default=None, max_length=MAX_THREADS)
+
+
+class HeldThreads(ReviewModel):
+    """The threads a hello says the review holds: those the server can read, and the ids of the rest."""
+
+    readable: list[ThreadInput]
+    # A thread left out still owns its id in the browser, so the server
+    # must not hand that id out again
+    unreadable_ids: list[str]
+
+    @classmethod
+    def read(cls, threads: list[JsonValue]) -> Self:
+        """Read each thread on its own, keeping what can be read and the id of what cannot."""
         readable: list[ThreadInput] = []
+        unreadable_ids: list[str] = []
         for thread in threads:
             try:
                 readable.append(ThreadInput.model_validate(thread))
-            except ValidationError as error:
-                log.warning("thread_left_out", errors=error.error_count())
-        return read(readable)
+            except ValidationError:
+                if (thread_id := _thread_id_of(thread)) is not None:
+                    unreadable_ids.append(thread_id)
+        return cls(readable=readable, unreadable_ids=unreadable_ids)
+
+
+def _thread_id_of(thread: JsonValue) -> str | None:
+    """The id a thread the server cannot read says it has, if it says one."""
+    thread_id = thread.get("thread_id") if isinstance(thread, dict) else None
+    return thread_id if isinstance(thread_id, str) else None
 
 
 class ThreadSummary(ReviewModel):
-    """One line's worth of a thread: enough to choose what to read, and nothing handed over.
+    """A thread in short: enough to choose what to read, and nothing handed over.
 
-    No images and no turns: those are what reading the thread in full is
-    for, and handing out an image's path is what keeps it from being taken
-    off a comment nobody has sent yet.
+    The comment that opened it, whole — a reader of the index shortens it as
+    it likes — but no images and no turns: those are what reading the thread
+    in full is for, and handing out an image's path is what keeps it from
+    being taken off a comment nobody has sent yet.
     """
 
     thread_id: str
@@ -308,7 +333,7 @@ class MessageRequest(SaysSomething):
     the whole question.
     """
 
-    message_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    message_id: WireId
     body: str = Field(default="", max_length=MAX_TEXT_LENGTH)
     threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
 
@@ -362,7 +387,7 @@ class SayRequest(ReviewModel):
     something worth saying — and then there is nothing to name.
     """
 
-    message_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
+    message_id: WireId | None = None
     text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
@@ -395,7 +420,7 @@ class ProgressRequest(ReviewModel):
     and the line goes away.
     """
 
-    message_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
+    message_id: WireId | None = None
     text: str = Field(default="", max_length=MAX_PROGRESS_LENGTH)
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
     # What the work has branched into: subagents, checks, files being
@@ -411,8 +436,10 @@ class AgentWork(ReviewModel):
     """What the agent is doing right now, whole: it replaces whatever was showing.
 
     The server alone decides when it ends — an empty report, the answer to
-    the message it was for, or the reader asking something new — and says
-    so, so every review on screen, and every one opened later, shows the same.
+    the message it was for, that message taken back, or a new panel message
+    — and says so, so every review on screen, and every one opened later,
+    shows the same. A question in a thread does not end it: the agent may be
+    working through a round, and answers the question beside it.
     """
 
     # Which message the work is for; None for work on the agent's own
@@ -438,7 +465,7 @@ class ShowRequest(ReviewModel):
 class CancelRequest(ReviewModel):
     """Request body for POST /api/cancel — the reader taking it back."""
 
-    message_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    message_id: WireId
 
 
 # The longest the agent may say which model it is, or how full its context is
@@ -459,11 +486,11 @@ class StatusRequest(ReviewModel):
 class ReplyRequest(ReviewModel):
     """Request body for POST /api/reply — the answer coming back."""
 
-    thread_id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    thread_id: WireId
     text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Which question is being answered. Omitted, the answer goes to the
     # oldest question in that thread still waiting for one.
-    question_id: str | None = Field(default=None, max_length=MAX_ID_LENGTH)
+    question_id: WireId | None = None
 
 
 class EventKind(StrEnum):

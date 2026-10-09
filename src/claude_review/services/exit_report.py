@@ -24,8 +24,23 @@ def exit_report(last_round: RoundSubmission | None, unread: list[AgentEvent]) ->
     """
     unread_rounds = [event.markdown for event in unread if isinstance(event, RoundSubmission)]
     rounds = unread_rounds or ([last_round.markdown] if last_round is not None else [])
-    others = [_unread(event) for event in unread if not isinstance(event, RoundSubmission)]
+    others = [_unread(event) for event in _not_taken_back(unread) if not isinstance(event, RoundSubmission)]
     return "\n\n".join([*rounds, *([UNREAD_HEADING, *others] if others else [])])
+
+
+def _not_taken_back(unread: list[AgentEvent]) -> list[AgentEvent]:
+    """What is still meant: a message the reader took back goes, and so does the taking back.
+
+    A withdrawal of a message the agent did read stays, because it may
+    already be at work on it.
+    """
+    unread_messages = {event.message_id for event in unread if isinstance(event, PanelMessage)}
+    withdrawn = {event.message_id for event in unread if isinstance(event, PanelCancel)} & unread_messages
+    return [
+        event
+        for event in unread
+        if not (isinstance(event, PanelMessage | PanelCancel) and event.message_id in withdrawn)
+    ]
 
 
 def _unread(event: ThreadQuestion | PanelMessage | PanelCancel) -> str:

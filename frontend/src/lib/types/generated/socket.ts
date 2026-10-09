@@ -37,8 +37,10 @@ export interface components {
          * @description What the agent is doing right now, whole: it replaces whatever was showing.
          *
          *     The server alone decides when it ends — an empty report, the answer to
-         *     the message it was for, or the reader asking something new — and says
-         *     so, so every review on screen, and every one opened later, shows the same.
+         *     the message it was for, that message taken back, or a new panel message
+         *     — and says so, so every review on screen, and every one opened later,
+         *     shows the same. A question in a thread does not end it: the agent may be
+         *     working through a round, and answers the question beside it.
          */
         AgentWork: {
             /** Message Id */
