@@ -38,7 +38,7 @@ function inViewport(rect: DOMRect): boolean {
  * one meant is the first the reader can see, falling back to the first that
  * is drawn at all. One that takes no room on the page is not there.
  */
-export function elementFor(name: string): HTMLElement | null {
+function elementFor(name: string): HTMLElement | null {
 	const drawn = Array.from(document.querySelectorAll<HTMLElement>(selectorFor(name))).filter((element) =>
 		hasSize(element.getBoundingClientRect())
 	);
@@ -53,7 +53,7 @@ function isDrawn(name: string): boolean {
 }
 
 /** The elements drawn for some names, one per name at most. */
-export function elementsFor(names: string[]): HTMLElement[] {
+function elementsFor(names: string[]): HTMLElement[] {
 	return names.map(elementFor).filter((element): element is HTMLElement => element !== null);
 }
 

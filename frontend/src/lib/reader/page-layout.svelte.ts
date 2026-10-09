@@ -31,7 +31,7 @@ const AGENT_PANEL_WIDTH_KEY = 'panel-width';
 const CONTENT_VIEW_KEY = 'content-view';
 
 /** Every way a renderable file can be shown: as text, rendered, or both side by side. */
-export const CONTENT_VIEW_MODES = ['raw', 'preview', 'side-by-side'] as const;
+const CONTENT_VIEW_MODES = ['raw', 'preview', 'side-by-side'] as const;
 export type ContentViewMode = (typeof CONTENT_VIEW_MODES)[number];
 const FIRST_CONTENT_VIEW: ContentViewMode = 'raw';
 
@@ -69,7 +69,7 @@ class StoredWidth {
 }
 
 /** The file tree: on screen or put away, and how wide. */
-export class FileTreeLayout {
+class FileTreeLayout {
 	#open = $state(readFlag(FILE_TREE_OPEN_KEY, true));
 	readonly #width = new StoredWidth(FILE_TREE_WIDTH_KEY, FILE_TREE_WIDTH);
 
@@ -96,7 +96,7 @@ export class FileTreeLayout {
  * The agent panel: open or shut, how wide, and how many answers landed
  * while it was shut, so the header can say so.
  */
-export class AgentPanelLayout {
+class AgentPanelLayout {
 	#open: boolean;
 	// Until the reader has said whether they want the panel, it opens itself
 	// when an agent turns up and stays out of the way otherwise: an empty
@@ -169,7 +169,7 @@ export class AgentPanelLayout {
 }
 
 /** How a file that can be rendered is shown. */
-export class ContentViewChoice {
+class ContentViewChoice {
 	#mode = $state(readChoice(CONTENT_VIEW_KEY, CONTENT_VIEW_MODES, FIRST_CONTENT_VIEW));
 
 	get mode(): ContentViewMode {

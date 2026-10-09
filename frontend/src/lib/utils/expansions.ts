@@ -4,7 +4,7 @@ import type { DiffFile, DiffHunk, DiffLine } from '$lib/types';
 export const EXPAND_STEP = 20;
 
 /** A gap this small is not worth revealing a piece at a time. */
-export const EXPAND_ALL_BELOW = 60;
+const EXPAND_ALL_BELOW = 60;
 
 /**
  * How many lines are still hidden above a hunk.

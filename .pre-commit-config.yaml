@@ -100,12 +100,20 @@ repos:
         files: ^frontend/(src/|tests/|tsconfig\.json$)
         pass_filenames: false
 
+      # Files, exports and dependencies nothing uses
+      - id: frontend-knip
+        name: knip (frontend)
+        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm knip'
+        language: system
+        files: ^frontend/(src/|tests/|package\.json$|knip\.ts$)
+        pass_filenames: false
+
       # Checks rather than rewrites: a commit never carries formatting it was not shown
       - id: frontend-format
         name: prettier (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format:check'
         language: system
-        files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|\.prettierrc\.json$)
+        files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|knip\.ts$|\.prettierrc\.json$)
         pass_filenames: false
 
   # The browser's types are generated from the server's schemas: a schema

@@ -12,7 +12,6 @@ import type { components as SocketComponents } from './generated/socket';
 type Schemas = HttpComponents['schemas'];
 type SocketSchemas = SocketComponents['schemas'];
 
-export type LineType = Schemas['LineType'];
 /** Which version of the file a line belongs to. Removed lines are "old". */
 export type LineSide = Schemas['LineSide'];
 /** How the reader means a comment to be taken. */
@@ -55,7 +54,7 @@ export type ReviewVersion = Schemas['ReviewVersion'];
 export type AgentStatus = Schemas['AgentStatus'];
 
 /** Who wrote a turn: the reader, or whoever answers for the change. */
-export type TurnAuthor = Schemas['TurnAuthor'];
+type TurnAuthor = Schemas['TurnAuthor'];
 
 export interface Turn {
 	author: TurnAuthor;
@@ -178,9 +177,6 @@ export type ChangesSince = Schemas['ChangesSince'];
  */
 export type AgentWork = Schemas['AgentWork'];
 
-/** One branch of the work: under way, or finished, as the review writes it. */
-export type ProgressStep = Schemas['ProgressStep-Output'];
-
 /** What moving the threads onto a retaken diff did: how many followed their lines, how many lost them. */
 export interface FollowOutcome {
 	followed: number;
@@ -188,7 +184,7 @@ export interface FollowOutcome {
 }
 
 /** Who speaks in the panel. An event is the review itself saying so. */
-export type PanelSpeaker = TurnAuthor | 'event';
+type PanelSpeaker = TurnAuthor | 'event';
 
 /**
  * One turn of the panel conversation.

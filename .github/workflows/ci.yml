@@ -50,6 +50,7 @@ jobs:
       - run: pnpm --dir frontend check
       - run: pnpm --dir frontend lint
       - run: pnpm --dir frontend format:check
+      - run: pnpm --dir frontend knip
       - run: pnpm --dir frontend test
 
   # The browser's types are generated from the server's schemas; a schema

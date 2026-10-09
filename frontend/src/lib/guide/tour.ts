@@ -33,7 +33,7 @@ export type TourTarget = (typeof TOUR_TARGETS)[number];
 export type CommentRoute = 'review' | 'ask';
 
 /** One way a choice can go, as the card lays it out beside the others. */
-export interface ForkOption {
+interface ForkOption {
 	label: string;
 	primary: boolean;
 	says: string;
@@ -49,7 +49,7 @@ export interface TourContext {
  * What the reader does to move on, when "Next" is not the way. Thread
  * fields say what happened to them; the tour never guesses from the page.
  */
-export type WaitsFor =
+type WaitsFor =
 	| { kind: 'comment-opened'; hint: string }
 	| {
 			kind: 'comment-sent';

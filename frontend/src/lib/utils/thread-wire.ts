@@ -23,6 +23,6 @@ export function threadOnTheWire(comment: Thread): ThreadInput {
 }
 
 /** A turn as the other side is told about it: what was said and by whom, not when. */
-export function turnOnTheWire({ id, author, body, round, images }: Turn): TurnInput {
+function turnOnTheWire({ id, author, body, round, images }: Turn): TurnInput {
 	return { turn_id: id, author, body, round, images };
 }

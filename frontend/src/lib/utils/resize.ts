@@ -8,7 +8,7 @@
  */
 
 /** Which way the column grows when the pointer moves that way. */
-export type Grows = 'left' | 'right';
+type Grows = 'left' | 'right';
 
 interface Sizing {
 	width: number;
