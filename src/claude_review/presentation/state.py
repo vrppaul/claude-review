@@ -45,7 +45,9 @@ class ServerState:
         self._open_sockets = 0
         self._ever_connected = False
         self._alone_since: float | None = None
-        self._listeners: set[asyncio.Queue[ServerPush]] = set()
+        # One queue per open review, of pushes already written as the JSON
+        # the socket sends
+        self._listeners: set[asyncio.Queue[str]] = set()
         # What the reader has handed over and nobody has taken yet: questions
         # about a thread, rounds of the review itself, and what was typed in
         # the panel. Read out once the review is over, too, until nothing is left.
@@ -152,21 +154,27 @@ class ServerState:
         if self._work is not None:
             self.report_work(None)
 
-    def listen(self) -> asyncio.Queue[ServerPush]:
+    def listen(self) -> asyncio.Queue[str]:
         """Register a socket to receive what the server pushes, starting with the work under way."""
-        queue: asyncio.Queue[ServerPush] = asyncio.Queue()
+        queue: asyncio.Queue[str] = asyncio.Queue()
         if self._work is not None:
-            queue.put_nowait(ProgressPush(work=self._work))
+            queue.put_nowait(ProgressPush(work=self._work).model_dump_json())
         self._listeners.add(queue)
         return queue
 
-    def stop_listening(self, queue: asyncio.Queue[ServerPush]) -> None:
+    def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
 
     def push(self, push: ServerPush) -> None:
-        """Send a push to every open review."""
+        """Send a push to every open review, written down once, as it stands now.
+
+        Written before it is queued, so every review is sent the same words,
+        and nothing that changes after — the agent's work reported again, a
+        status replaced — reaches a push still waiting in a queue.
+        """
+        said = push.model_dump_json()
         for queue in self._listeners:
-            queue.put_nowait(push)
+            queue.put_nowait(said)
 
 
 def _raised_number(thread_id: str) -> int:

@@ -11,8 +11,8 @@ import {
 } from '$lib/stores/session.svelte';
 
 // Pushes as the server sends them
-const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, text: 'first' };
-const A_CHAT: ServerPush = { type: 'chat', message_id: null, text: 'second', files: [] };
+const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, body: 'first' };
+const A_CHAT: ServerPush = { type: 'chat', message_id: null, body: 'second', files: [] };
 const A_SHOW: ServerPush = { type: 'show', file: 'a.py' };
 
 // The second attempt to reconnect waits longer than the first

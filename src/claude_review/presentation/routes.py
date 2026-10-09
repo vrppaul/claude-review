@@ -7,7 +7,6 @@ import structlog
 from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
-from starlette.requests import ClientDisconnect
 
 from claude_review.domain.exceptions import (
     NoRepositoryError,
@@ -47,7 +46,6 @@ from claude_review.presentation.dependencies import (
     get_settings_service,
     get_state,
 )
-from claude_review.presentation.refusals import UploadCutOffError
 from claude_review.presentation.schemas import (
     DEFAULT_WAIT_SECONDS,
     MAX_ID_LENGTH,
@@ -86,7 +84,6 @@ from claude_review.presentation.schemas import (
     SayRequest,
     SaysSomething,
     SendLimits,
-    ServerPush,
     SettingsChange,
     SettingsResponse,
     ShowPush,
@@ -389,7 +386,7 @@ async def reply_to_thread(
     state: ServerState = Depends(get_state),
 ) -> None:
     """Push an answer into a thread of a review that is still open."""
-    state.push(ReplyPush(thread_id=request.thread_id, question_id=request.question_id, text=request.text))
+    state.push(ReplyPush(thread_id=request.thread_id, question_id=request.question_id, body=request.body))
     log.info("thread_reply", thread_id=request.thread_id, question_id=request.question_id)
 
 
@@ -416,7 +413,7 @@ async def take_panel_message(
     state.inbox.hand_in(
         PanelMessage(
             message_id=request.message_id,
-            text=request.body,
+            body=request.body,
             threads=[_hand_over_thread(thread, image_service) for thread in request.threads],
             images=handed,
         )
@@ -425,7 +422,7 @@ async def take_panel_message(
         PanelEntry(
             message_id=request.message_id,
             author=TurnAuthor.READER,
-            text=request.body,
+            body=request.body,
             at=clock.now(),
             images=handed,
         )
@@ -456,19 +453,14 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
     """Read a body, stopping as soon as it runs past the limit.
 
     Past it is enough to know it is too big, and the rest is never held.
-
-    Raises:
-        UploadCutOffError: if the browser went away mid-upload.
+    A browser gone mid-upload ends the read with `ClientDisconnect`, which
+    the app drops as a request cut off.
     """
     received = bytearray()
-    try:
-        async for chunk in http_request.stream():
-            received.extend(chunk)
-            if len(received) > limit:
-                break
-    except ClientDisconnect as e:
-        msg = "The upload was cut off"
-        raise UploadCutOffError(msg) from e
+    async for chunk in http_request.stream():
+        received.extend(chunk)
+        if len(received) > limit:
+            break
     return bytes(received)
 
 
@@ -549,13 +541,13 @@ async def say_in_panel(
     the agent speaking first, which is worth as much: work finished while
     the reader was reading is news they would otherwise have to ask for.
     """
-    state.push(ChatPush(message_id=request.message_id, text=request.text, files=request.files))
+    state.push(ChatPush(message_id=request.message_id, body=request.body, files=request.files))
     state.end_work_for(request.message_id)
     state.panel.append(
         PanelEntry(
             message_id=request.message_id,
             author=TurnAuthor.AUTHOR,
-            text=request.text,
+            body=request.body,
             at=clock.now(),
         )
     )
@@ -671,8 +663,7 @@ async def report_status(
     Which model, and how much of its context is spent: neither can be
     measured from here, so both are quoted with the time they were said.
     """
-    # Replaced whole rather than changed in place: a push already queued
-    # carries the status as it was when it was said
+    # A field it leaves out keeps what it said before
     state.agent = AgentStatus(
         model=request.model if request.model is not None else state.agent.model,
         context=request.context if request.context is not None else state.agent.context,
@@ -709,10 +700,10 @@ async def session(websocket: WebSocket) -> None:
         state.disconnected(asyncio.get_running_loop().time())
 
 
-async def _forward(outbox: asyncio.Queue[ServerPush], websocket: WebSocket) -> None:
+async def _forward(outbox: asyncio.Queue[str], websocket: WebSocket) -> None:
     """Send down the socket everything pushed to it, for as long as it is open."""
     while True:
-        await websocket.send_text((await outbox.get()).model_dump_json())
+        await websocket.send_text(await outbox.get())
 
 
 def _catch_up(state: ServerState, said: str) -> None:

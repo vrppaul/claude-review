@@ -17,9 +17,9 @@ A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why one?")
 # Every request that is answered by being done, with a body it takes
 DONE_BY_ASKING = [
     ("/api/ask", {"question_id": FIRST_THREAD_ID, "thread": A_THREAD}),
-    ("/api/reply", {"thread_id": FIRST_THREAD_ID, "text": "Because"}),
+    ("/api/reply", {"thread_id": FIRST_THREAD_ID, "body": "Because"}),
     ("/api/message", {"message_id": "panel-1", "body": "Still there?"}),
-    ("/api/say", {"text": "Tests are green."}),
+    ("/api/say", {"body": "Tests are green."}),
     ("/api/progress", {"text": "reading the handler"}),
     ("/api/show", {"file": REVIEWED_FILE}),
     ("/api/cancel", {"message_id": "panel-1"}),

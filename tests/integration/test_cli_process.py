@@ -365,7 +365,7 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
             "type": "reply",
             "thread_id": FIRST_THREAD_ID,
             "question_id": FIRST_THREAD_ID,
-            "text": "Because the constant moved to config",
+            "body": "Because the constant moved to config",
         }
 
 
@@ -383,7 +383,7 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
 
         handed = json.loads(waiting.printed())
         assert handed["type"] == "message"
-        assert handed["message"]["text"] == "Run the tests and say what fails."
+        assert handed["message"]["body"] == "Run the tests and say what fails."
 
         answer = cli.run("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
         assert answer.returncode == 0
@@ -391,7 +391,7 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
         assert _next_push(review_socket, PushKind.CHAT) == {
             "type": "chat",
             "message_id": "panel-1",
-            "text": "One failed; fixed and green.",
+            "body": "One failed; fixed and green.",
             "files": [],
         }
 

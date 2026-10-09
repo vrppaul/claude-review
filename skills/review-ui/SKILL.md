@@ -136,7 +136,7 @@ somebody who is waiting.
      `author` on a thread you opened yourself. Every `images` holds absolute
      paths to screenshots the reader pasted, and the text beside it may be
      empty when a screenshot is all there is.
-   - `{"type": "message", "message": {"message_id": "panel-1", "text": "...",
+   - `{"type": "message", "message": {"message_id": "panel-1", "body": "...",
      "threads": [...], "images": [...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:
      the plan, the tests, a file nobody commented on. Answer it with `say`

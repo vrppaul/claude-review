@@ -508,8 +508,8 @@ def wait_cmd(port: int, seconds: float) -> None:
     default=None,
     help="Question being answered, from the event. Omitted, the oldest one still waiting takes it.",
 )
-@click.argument("text", required=True, type=str)
-def reply_cmd(port: int, thread: str, question: str | None, text: str) -> None:
+@click.argument("body", required=True, type=str)
+def reply_cmd(port: int, thread: str, question: str | None, body: str) -> None:
     """Answer a question the reader asked about a comment thread.
 
     A thread can have several questions waiting at once, so naming the one
@@ -518,7 +518,7 @@ def reply_cmd(port: int, thread: str, question: str | None, text: str) -> None:
     """
     _call(
         f"http://127.0.0.1:{port}/api/reply",
-        payload={"thread_id": thread, "question_id": question, "text": text},
+        payload={"thread_id": thread, "question_id": question, "body": body},
     )
 
 
@@ -569,7 +569,7 @@ def _render_context(seen: ContextResponse) -> str:
         for entry in seen.panel:
             who = "you" if entry.author == TurnAuthor.READER else "me"
             # A message can be an image alone, and an empty line says nothing
-            lines.append(f"  {who}: {_gist(entry.text) or '(image)'}")
+            lines.append(f"  {who}: {_gist(entry.body) or '(image)'}")
             lines.extend(f"    image: {path}" for path in entry.images)
 
     return "\n".join(lines) + "\n"
@@ -625,8 +625,8 @@ def _gist(text: str) -> str:
     multiple=True,
     help="A file worth opening at what you said. Repeatable; each becomes a chip the reader can jump by.",
 )
-@click.argument("text", required=True, type=str)
-def say_cmd(port: int, message: str | None, files: tuple[str, ...], text: str) -> None:
+@click.argument("body", required=True, type=str)
+def say_cmd(port: int, message: str | None, files: tuple[str, ...], body: str) -> None:
     """Say something in the agent panel.
 
     The panel is where the review is discussed rather than any one line of
@@ -637,7 +637,7 @@ def say_cmd(port: int, message: str | None, files: tuple[str, ...], text: str) -
     """
     _call(
         f"http://127.0.0.1:{port}/api/say",
-        payload={"message_id": message, "text": text, "files": list(files)},
+        payload={"message_id": message, "body": body, "files": list(files)},
     )
 
 

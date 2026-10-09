@@ -155,7 +155,7 @@ SEEN = ContextResponse(
     answerer_attached=True,
     agent=AgentStatus(model="opus-5", context="45% of 1M", at=1),
     threads=[ThreadSummary.of(DISCUSSED)],
-    panel=[PanelEntry(message_id="panel-1", author=TurnAuthor.READER, text="Run the tests", at=1)],
+    panel=[PanelEntry(message_id="panel-1", author=TurnAuthor.READER, body="Run the tests", at=1)],
 )
 
 
@@ -193,7 +193,7 @@ def test_a_review_nobody_answers_says_so() -> None:
 def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
     """The words alone would leave "look at this" pointing at nothing."""
     image = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
-    said = PanelEntry(message_id="panel-1", author=TurnAuthor.READER, text="", at=1, images=[image])
+    said = PanelEntry(message_id="panel-1", author=TurnAuthor.READER, body="", at=1, images=[image])
 
     printed = _render_context(SEEN.model_copy(update={"panel": [said]}))
 

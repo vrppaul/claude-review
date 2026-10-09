@@ -70,6 +70,7 @@ SESSION_ROUTE = "/api/session"
 DIFF_ROUTE = "/api/diff"
 CONTEXT_ROUTE = "/api/context"
 EVENTS_ROUTE = "/api/events"
+IMAGES_ROUTE = "/api/images"
 
 
 def thread_route(thread_id: str) -> str:
@@ -424,21 +425,52 @@ class CallerThatLeaves:
 
     def poll(self, app: FastAPI, wait_seconds: float) -> Coroutine[Any, Any, None]:
         """Ask the review for its next event, as this caller."""
-        scope = {
-            "type": "http",
-            "asgi": {"version": ASGI_VERSION},
-            "http_version": HTTP_VERSION,
-            "method": "GET",
-            "scheme": "http",
-            "path": EVENTS_ROUTE,
-            "raw_path": EVENTS_ROUTE.encode(),
-            "query_string": urlencode({"wait_seconds": wait_seconds}).encode(),
-            "root_path": "",
-            "headers": [(b"host", LOCAL_HOST.encode())],
-            "client": (LOOPBACK, ANY_PORT),
-            "server": (LOOPBACK, ANY_PORT),
-        }
+        scope = _request_scope("GET", EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
         return app(scope, self.receive, self.send)
+
+
+class UploadThatBreaksOff:
+    """A pasted image whose browser goes away before the last of it arrives: a tab closed mid-upload.
+
+    Played against the app directly, as `CallerThatLeaves` is: the test
+    clients hand the app the whole body and never go away in the middle of it.
+    """
+
+    def __init__(self, first_part: bytes) -> None:
+        self._first_part = first_part
+        self._sent_first_part = False
+
+    async def receive(self) -> Message:
+        """The first part of the image, then the browser gone."""
+        if not self._sent_first_part:
+            self._sent_first_part = True
+            return {"type": "http.request", "body": self._first_part, "more_body": True}
+        return {"type": "http.disconnect"}
+
+    async def send(self, message: Message) -> None:
+        """Whatever is answered goes nowhere: nobody is there to read it."""
+
+    def upload(self, app: FastAPI) -> Coroutine[Any, Any, None]:
+        """Start pasting the image into the review, as this browser."""
+        return app(_request_scope("POST", IMAGES_ROUTE), self.receive, self.send)
+
+
+def _request_scope(method: str, route: str, query: Mapping[str, object] | None = None) -> dict[str, Any]:
+    """A request as a server hands it to the app, from the review's own machine."""
+    return {
+        "type": "http",
+        "asgi": {"version": ASGI_VERSION},
+        "http_version": HTTP_VERSION,
+        "method": method,
+        "scheme": "http",
+        "path": route,
+        "raw_path": route.encode(),
+        "query_string": urlencode(query or {}).encode(),
+        "root_path": "",
+        "headers": [(b"host", LOCAL_HOST.encode())],
+        "client": (LOOPBACK, ANY_PORT),
+        "server": (LOOPBACK, ANY_PORT),
+    }
 
 
 async def review_has_ended(client: AsyncClient) -> bool:

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
+from structlog.typing import EventDict
 
 from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, ReviewWorkspace, TurnAuthor
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
@@ -24,6 +25,7 @@ from tests.helpers import (
     REVIEWED_FILE,
     WAIT_FOR_EVENT,
     ReviewFactory,
+    UploadThatBreaksOff,
     http_client,
     line_on_the_wire,
     thread_on_the_wire,
@@ -41,6 +43,8 @@ LARGEST_IMAGE = PNG + b"\x00" * (MAX_IMAGE_BYTES - len(PNG))
 LARGEST_IMAGES_A_REVIEW_HOLDS = MAX_REVIEW_BYTES // MAX_IMAGE_BYTES
 # One image past what one thing said may carry
 ONE_TOO_MANY = MAX_IMAGES_PER_MESSAGE + 1
+# The levels a log line is written at when someone should look into it
+WORTH_A_LOOK = frozenset({"warning", "error", "critical"})
 
 A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Looks off")
 
@@ -136,6 +140,18 @@ async def test_an_image_too_large_is_refused_before_it_is_written(
 
     assert response.status_code == 413
     assert await _files_in(workspace.images) == []
+
+
+async def test_an_upload_the_browser_breaks_off_is_dropped_without_a_refusal(
+    reviews: ReviewFactory, workspace: ReviewWorkspace, logged: list[EventDict]
+) -> None:
+    """Nobody is left to be told no, and a refusal in the log would read as something gone wrong."""
+    review = reviews.app([], mode=ReviewMode.FILES)
+
+    await UploadThatBreaksOff(first_part=PNG).upload(review)
+
+    assert await _files_in(workspace.images) == []
+    assert [entry["event"] for entry in logged if entry["log_level"] in WORTH_A_LOOK] == []
 
 
 async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient) -> None:

@@ -5,8 +5,11 @@ from importlib.metadata import version
 from pathlib import Path
 
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from structlog.testing import capture_logs
+from structlog.typing import EventDict
 
 from claude_review.domain.models import GuideState, ReaderFiles, ReviewWorkspace
 from tests.helpers import ReviewFactory, git, http_client, one_line_file, page_client
@@ -69,3 +72,19 @@ def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
     """The review's own page, socket and all, on a review of one file with one line in it."""
     with page_client(reviews.app([one_line_file()])) as page:
         yield page
+
+
+@pytest.fixture
+def logged() -> Iterator[list[EventDict]]:
+    """What the review logs during a test, at every level.
+
+    A test that runs the command line configures logging the way the command
+    does, which filters out everything short of critical; a level filtered out
+    is never seen here, so the configuration is set aside for the test and
+    put back after it.
+    """
+    configured = structlog.get_config()
+    structlog.reset_defaults()
+    with capture_logs() as entries:
+        yield entries
+    structlog.configure(**configured)

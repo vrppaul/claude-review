@@ -61,7 +61,7 @@ async def test_a_message_reaches_whoever_is_waiting(client: AsyncClient) -> None
     event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert event["type"] == "message"
-    assert event["message"]["text"] == "Run the tests and say what fails."
+    assert event["message"]["body"] == "Run the tests and say what fails."
     assert event["message"]["message_id"] == "panel-1"
 
 
@@ -93,12 +93,12 @@ async def test_questions_rounds_and_messages_keep_one_order(client: AsyncClient)
 def test_an_answer_lands_in_the_panel_of_a_review_still_open(review_page: TestClient) -> None:
     """The answer comes back down the socket every review already holds."""
     with open_session(review_page) as socket:
-        review_page.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed and green."})
+        review_page.post("/api/say", json={"message_id": "panel-1", "body": "One failed; fixed and green."})
 
         assert next_push(socket, PushKind.CHAT) == {
             "type": "chat",
             "message_id": "panel-1",
-            "text": "One failed; fixed and green.",
+            "body": "One failed; fixed and green.",
             "files": [],
         }
 
@@ -200,7 +200,7 @@ async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClien
 def test_the_agent_may_speak_first(review_page: TestClient) -> None:
     """Work finished while the reader reads is news they should not have to ask for."""
     with open_session(review_page) as socket:
-        review_page.post("/api/say", json={"text": "Tests are green again.", "files": ["src/cli.py"]})
+        review_page.post("/api/say", json={"body": "Tests are green again.", "files": ["src/cli.py"]})
         pushed = next_push(socket, PushKind.CHAT)
 
     assert pushed["message_id"] is None
@@ -276,7 +276,7 @@ def test_the_answer_ends_the_work_it_answers(review_page: TestClient) -> None:
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
         next_push(socket, PushKind.PROGRESS)
-        review_page.post("/api/say", json={"message_id": "panel-1", "text": "It retries twice."})
+        review_page.post("/api/say", json={"message_id": "panel-1", "body": "It retries twice."})
 
         assert next_push(socket, PushKind.PROGRESS) == {"type": "progress", "work": None}
 
@@ -285,7 +285,7 @@ def test_an_answer_to_another_message_leaves_the_work_showing(review_page: TestC
     """Work of the agent's own — reviewers reading, a round worked through — outlives any answer."""
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"text": "four reviewers reading"})
-        review_page.post("/api/say", json={"message_id": "panel-1", "text": "Two fail."})
+        review_page.post("/api/say", json={"message_id": "panel-1", "body": "Two fail."})
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
         kinds = [push["type"] for push in pushes_until(socket, PushKind.SHOW)]
 
@@ -327,7 +327,7 @@ def test_taking_a_message_back_ends_the_work_for_it(review_page: TestClient) -> 
 def test_work_that_is_over_is_not_shown_to_a_review_opened_after(review_page: TestClient) -> None:
     """The answer ended it; a reload must not bring the line back."""
     review_page.post("/api/progress", json={"message_id": "panel-1", "text": "reading the handler"})
-    review_page.post("/api/say", json={"message_id": "panel-1", "text": "It retries twice."})
+    review_page.post("/api/say", json={"message_id": "panel-1", "body": "It retries twice."})
 
     with open_session(review_page) as socket:
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
@@ -376,7 +376,7 @@ async def test_a_status_is_dated_when_it_was_reported(reviews: ReviewFactory) ->
 async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: ReviewFactory) -> None:
     async with http_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
         await client.post("/api/message", json=MESSAGE)
-        await client.post("/api/say", json={"message_id": MESSAGE["message_id"], "text": "Two fail."})
+        await client.post("/api/say", json={"message_id": MESSAGE["message_id"], "body": "Two fail."})
         panel = (await client.get(CONTEXT_ROUTE)).json()["panel"]
 
     assert [entry["at"] for entry in panel] == [A_MOMENT, A_MOMENT]
@@ -403,14 +403,14 @@ def test_an_agent_arriving_late_is_told_what_the_review_holds(review_page: TestC
         socket.send_json({"threads": [A_DISCUSSED_THREAD]})
         until_the_review_holds_threads(review_page, 1)
     review_page.post("/api/message", json=MESSAGE)
-    review_page.post("/api/say", json={"message_id": "panel-1", "text": "One failed; fixed."})
+    review_page.post("/api/say", json={"message_id": "panel-1", "body": "One failed; fixed."})
 
     seen = review_page.get(CONTEXT_ROUTE).json()
 
     assert seen["round"] == 1
     assert seen["file_count"] == 1
     assert [(thread["thread_id"], thread["turn_count"]) for thread in seen["threads"]] == [("comment-1", 1)]
-    assert [(entry["author"], entry["text"]) for entry in seen["panel"]] == [
+    assert [(entry["author"], entry["body"]) for entry in seen["panel"]] == [
         ("reader", "Run the tests and say what fails."),
         ("author", "One failed; fixed."),
     ]

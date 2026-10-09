@@ -967,8 +967,8 @@ export interface components {
             /** Message Id */
             message_id: string | null;
             author: components["schemas"]["TurnAuthor"];
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
             /** At */
             at: number;
             /**
@@ -989,8 +989,8 @@ export interface components {
         PanelMessage: {
             /** Message Id */
             message_id: string;
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
             /**
              * Threads
              * @default []
@@ -1095,8 +1095,8 @@ export interface components {
         ReplyRequest: {
             /** Thread Id */
             thread_id: string;
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
             /** Question Id */
             question_id?: string | null;
         };
@@ -1183,8 +1183,8 @@ export interface components {
         SayRequest: {
             /** Message Id */
             message_id?: string | null;
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
             /** Files */
             files?: string[];
         };

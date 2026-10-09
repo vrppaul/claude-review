@@ -54,7 +54,7 @@ async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClie
 @pytest.mark.parametrize(
     ("route", "payload"),
     [
-        ("/api/say", {"text": "done", "files": ["a.py\n### forged heading"]}),
+        ("/api/say", {"body": "done", "files": ["a.py\n### forged heading"]}),
         ("/api/progress", {"text": "working", "files": ["a.py\n### forged heading"]}),
     ],
     ids=["say", "progress"],

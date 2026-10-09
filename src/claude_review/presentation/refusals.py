@@ -3,6 +3,9 @@
 Routes raise what went wrong and never decide how it is said. Every refusal
 is answered the same way, with its message as the `detail` FastAPI uses for
 its own refusals, so a caller reads one shape whoever refused.
+
+A request whose caller went away before it had sent all of it is no refusal:
+nobody is left to answer, and nothing went wrong on either side.
 """
 
 from functools import partial
@@ -10,7 +13,8 @@ from http import HTTPStatus
 
 import structlog
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from starlette.requests import ClientDisconnect
 
 from claude_review.domain.exceptions import (
     ConflictError,
@@ -22,10 +26,6 @@ from claude_review.domain.exceptions import (
 )
 
 log = structlog.get_logger()
-
-
-class UploadCutOffError(InvalidRequestError):
-    """Raised when the browser went away in the middle of an upload: a refusal HTTP itself causes."""
 
 
 # What each kind of refusal answers. Starlette answers an error with the
@@ -42,13 +42,25 @@ REFUSAL_STATUS: dict[type[ReviewError], HTTPStatus] = {
 }
 
 
+# What a request whose caller went away is answered with. Nobody reads it; the
+# server still owes the request an answer.
+CUT_OFF_STATUS = HTTPStatus.BAD_REQUEST
+
+
 def answer_refusals(app: FastAPI) -> None:
-    """Have the app answer every kind of refusal with its status."""
+    """Have the app answer every kind of refusal with its status, and drop a request cut off."""
     for kind, status in REFUSAL_STATUS.items():
         app.add_exception_handler(kind, partial(answer_refusal, status=status))
+    app.add_exception_handler(ClientDisconnect, drop_cut_off_request)
 
 
 async def answer_refusal(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
     """Tell whoever asked why the review would not do it."""
     log.warning("request_refused", path=request.url.path, refusal=type(error).__name__, reason=str(error))
     return JSONResponse(status_code=status, content={"detail": str(error)})
+
+
+async def drop_cut_off_request(request: Request, _error: Exception) -> Response:
+    """Let a request go whose caller left mid-way: a tab closed while an image was still uploading."""
+    log.info("request_cut_off", path=request.url.path)
+    return Response(status_code=CUT_OFF_STATUS)

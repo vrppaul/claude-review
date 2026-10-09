@@ -821,7 +821,7 @@ async def test_the_panel_carries_a_message_to_the_agent_and_back(diff_review: Ru
 
     handed_over = await waiting
     assert handed_over["type"] == "message"
-    assert handed_over["message"]["text"] == "Which tests cover this?"
+    assert handed_over["message"]["body"] == "Which tests cover this?"
 
     await _agent(
         diff_review, "say", "--message", handed_over["message"]["message_id"], "The e2e one, and two unit tests."

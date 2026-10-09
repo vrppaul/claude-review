@@ -9,7 +9,7 @@ from tests.helpers import REVIEWED_FILE, line_anchor, thread
 LAST_ROUND = RoundSubmission(number=2, markdown="## Code Review Comments — round 2\n\nRename it.", comment_count=1)
 A_MESSAGE = PanelMessage(
     message_id="panel-3",
-    text="Also check the docs.",
+    body="Also check the docs.",
     threads=[thread(line_anchor(REVIEWED_FILE, 1), "This one")],
     images=[Path("/tmp/images/shot.png")],
 )

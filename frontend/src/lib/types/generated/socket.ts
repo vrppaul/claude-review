@@ -157,8 +157,8 @@ export interface components {
             type: "chat";
             /** Message Id */
             message_id: string | null;
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
             /** Files */
             files: string[];
         };
@@ -251,8 +251,8 @@ export interface components {
             thread_id: string;
             /** Question Id */
             question_id: string | null;
-            /** Text */
-            text: string;
+            /** Body */
+            body: string;
         };
         /**
          * RoundPush

@@ -214,27 +214,27 @@ def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> No
     with open_session(review_page) as socket:
         review_page.post(
             "/api/reply",
-            json={"thread_id": "comment-1", "question_id": "turn-2", "text": "It moved to config"},
+            json={"thread_id": "comment-1", "question_id": "turn-2", "body": "It moved to config"},
         )
 
         assert next_push(socket, PushKind.REPLY) == {
             "type": "reply",
             "thread_id": "comment-1",
             "question_id": "turn-2",
-            "text": "It moved to config",
+            "body": "It moved to config",
         }
 
 
 def test_an_answer_that_names_no_question_still_arrives(review_page: TestClient) -> None:
     """A person answering by hand should not have to quote an id."""
     with open_session(review_page) as socket:
-        review_page.post("/api/reply", json={"thread_id": "comment-1", "text": "It moved to config"})
+        review_page.post("/api/reply", json={"thread_id": "comment-1", "body": "It moved to config"})
 
         assert next_push(socket, PushKind.REPLY) == {
             "type": "reply",
             "thread_id": "comment-1",
             "question_id": None,
-            "text": "It moved to config",
+            "body": "It moved to config",
         }
 
 

@@ -388,7 +388,7 @@ class SayRequest(ReviewModel):
     """
 
     message_id: WireId | None = None
-    text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
@@ -487,7 +487,7 @@ class ReplyRequest(ReviewModel):
     """Request body for POST /api/reply — the answer coming back."""
 
     thread_id: WireId
-    text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     # Which question is being answered. Omitted, the answer goes to the
     # oldest question in that thread still waiting for one.
     question_id: WireId | None = None
@@ -611,7 +611,7 @@ class PushKind(StrEnum):
 
 
 class Push(ReviewModel):
-    """What every push is: said once and never changed, though several sockets queue the same one."""
+    """What every push is: said once, as it stands, and never changed."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -622,7 +622,7 @@ class ReplyPush(Push):
     type: Literal[PushKind.REPLY] = PushKind.REPLY
     thread_id: str
     question_id: str | None
-    text: str
+    body: str
 
 
 class AnswererPush(Push):
@@ -635,7 +635,7 @@ class ChatPush(Push):
 
     type: Literal[PushKind.CHAT] = PushKind.CHAT
     message_id: str | None
-    text: str
+    body: str
     files: list[FilePath]
 
 

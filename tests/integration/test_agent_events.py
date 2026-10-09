@@ -47,7 +47,7 @@ async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews
         event = (await agent.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event["type"] == "message"
-    assert event["message"]["text"] == A_MESSAGE["body"]
+    assert event["message"]["body"] == A_MESSAGE["body"]
 
 
 async def test_the_last_round_reaches_an_agent_that_asks_after_the_review_ended(client: AsyncClient) -> None:

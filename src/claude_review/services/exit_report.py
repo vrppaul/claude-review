@@ -52,7 +52,7 @@ def _unread(event: ThreadQuestion | PanelMessage | PanelCancel) -> str:
         case PanelMessage():
             heading = f"### Message {event.message_id}"
             threads = [f"About {thread.thread_id}, {thread.where}" for thread in event.threads]
-            return "\n".join([heading, format_opening(event.text, event.images), *threads])
+            return "\n".join([heading, format_opening(event.body, event.images), *threads])
         case PanelCancel():
             return f"### Message {event.message_id} taken back"
         case _:

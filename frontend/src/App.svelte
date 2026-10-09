@@ -70,7 +70,7 @@
 		switch (push.type) {
 			case 'reply':
 				// The wire says null where the store says nothing was named
-				commentStore.receiveReply(push.thread_id, push.text, push.question_id ?? undefined);
+				commentStore.receiveReply(push.thread_id, push.body, push.question_id ?? undefined);
 				soundStore.announce();
 				return;
 			case 'answerer':
@@ -79,7 +79,7 @@
 				panelStore.offer();
 				return;
 			case 'chat':
-				panelStore.receive(push.message_id ?? undefined, push.text, push.files);
+				panelStore.receive(push.message_id ?? undefined, push.body, push.files);
 				soundStore.announce();
 				return;
 			case 'progress':

@@ -275,7 +275,7 @@ class PanelMessage(ReviewModel):
     """
 
     message_id: str
-    text: str
+    body: str
     threads: list[Thread] = []
     # Images the reader pasted, as files the agent can open
     images: list[Path] = []
@@ -317,7 +317,7 @@ class PanelEntry(ReviewModel):
 
     message_id: str | None = None
     author: TurnAuthor
-    text: str
+    body: str
     at: EpochMillis
     images: list[Path] = []
 
