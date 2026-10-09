@@ -87,6 +87,13 @@
 		if (!stream) return;
 		atFoot = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80;
 	}
+	// Asked for from the keyboard, perhaps before the panel was open: taken
+	// once the field is drawn
+	$effect(() => {
+		if (!composer || !review.layout.agentPanel.inputWanted) return;
+		composer.focus();
+		review.layout.agentPanel.inputTaken();
+	});
 
 	// A new turn is the point of the panel, so it is brought into view. The
 	// count is what this watches: it changes exactly when something is said.

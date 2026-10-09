@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createLineSelection } from '$lib/utils/line-selection.svelte';
+import { createLineSelection } from '$lib/components/line-selection.svelte';
 import { contextLine } from './diff';
 
 // The most lines the review takes in one comment, as the server would say it

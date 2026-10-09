@@ -1,11 +1,13 @@
 /**
- * Where each file sits in the stream, and bringing one into view.
+ * Where each file and each thread sits in the stream, which file the reader
+ * is in, and bringing one into view.
  *
  * The sidebar and the comment navigator move the reader by scrolling rather
  * than by swapping what is rendered, so find-in-page, text selection across
- * files and the browser's own history all keep working. Sections announce
- * themselves here instead of being looked up by selector, which keeps path
- * characters out of a query string.
+ * files and the browser's own history all keep working. Sections and threads
+ * announce themselves here instead of being looked up on the page: nothing
+ * depends on an id or a test id staying as it is, and no path ends up in a
+ * query string.
  */
 
 // Long enough to find what was pointed at, short enough not to become part
@@ -18,6 +20,10 @@ const SETTLE_WITHIN = 2000;
 const STILL_FRAMES = 2;
 // The class that draws the mark on a section somebody else pointed at
 const MARKED_CLASS = 'cr-marked';
+// The band across the top of the reading area a file is read in: a long
+// file below the one whose header is pinned is in view too, but it is not
+// the one being read
+const READING_BAND = '0px 0px -85% 0px';
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
 interface Mark {
@@ -65,6 +71,15 @@ class SettleWatch {
 
 export class FileSections {
 	readonly #sections = new Map<string, HTMLElement>();
+	// Which file each section stands for, for what an observer reports
+	readonly #paths = new Map<Element, string>();
+	readonly #threads = new Map<string, HTMLElement>();
+	// A thread asked for before it was drawn: its file is being built, or
+	// unfolded, and the thread is brought into view once it is drawn
+	#awaitedThread: string | null = null;
+	// Which files are in the reading band, while something is watching it
+	#band: IntersectionObserver | null = null;
+	readonly #inBand = new Set<string>();
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
@@ -76,9 +91,58 @@ export class FileSections {
 	/** Say where a file's section is; returns how to take it back. */
 	register(path: string, element: HTMLElement): () => void {
 		this.#sections.set(path, element);
+		this.#paths.set(element, path);
+		this.#band?.observe(element);
 		return () => {
-			if (this.#sections.get(path) === element) this.#sections.delete(path);
+			this.#band?.unobserve(element);
+			this.#paths.delete(element);
+			if (this.#sections.get(path) !== element) return;
+			this.#sections.delete(path);
+			this.#inBand.delete(path);
 		};
+	}
+
+	/** Say where a thread is drawn; returns how to take it back. */
+	registerThread(threadId: string, element: HTMLElement): () => void {
+		this.#threads.set(threadId, element);
+		if (this.#awaitedThread === threadId) {
+			this.#awaitedThread = null;
+			bringToCentre(element);
+		}
+		return () => {
+			if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
+		};
+	}
+
+	/**
+	 * Report which files are in the reading band of a scrolling area, so the
+	 * sidebar can follow the scroll instead of driving it. Files drawn later
+	 * are watched as they arrive. Returns how to stop.
+	 */
+	watchInView(root: HTMLElement, onChange: (inBand: ReadonlySet<string>) => void): () => void {
+		const band = new IntersectionObserver((entries) => this.#crossed(entries, onChange), {
+			root,
+			rootMargin: READING_BAND,
+			threshold: 0
+		});
+		this.#band = band;
+		for (const element of this.#sections.values()) band.observe(element);
+		return () => {
+			band.disconnect();
+			if (this.#band !== band) return;
+			this.#band = null;
+			this.#inBand.clear();
+		};
+	}
+
+	/** The file whose section holds the focus, if any does. */
+	focused(): string | null {
+		const focus = document.activeElement;
+		if (focus === null) return null;
+		for (const [path, element] of this.#sections) {
+			if (element.contains(focus)) return path;
+		}
+		return null;
 	}
 
 	scrollToFile(path: string): void {
@@ -108,23 +172,33 @@ export class FileSections {
 	}
 
 	/**
-	 * Bring a thread into view, building its file first if need be.
+	 * Bring a thread into view, building or unfolding its file first if need be.
 	 *
-	 * A file's rows are only built once it has been near the viewport, so a
-	 * thread further down the review — restored from a draft, say — has no
-	 * element yet. Scrolling to the file makes one appear, and the thread can
-	 * be reached on the next frame.
+	 * A file's rows are only built once it has been near the viewport, and a
+	 * folded file draws none, so a thread further down the review — restored
+	 * from a draft, say — may have nothing drawn yet. Its file is brought into
+	 * view instead, and the thread follows the moment it is drawn, however
+	 * long that takes.
 	 */
 	scrollToThread(threadId: string, file: string): void {
-		const found = document.getElementById(threadId);
-		if (found) {
-			found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		const drawn = this.#threads.get(threadId);
+		if (drawn) {
+			this.#awaitedThread = null;
+			bringToCentre(drawn);
 			return;
 		}
+		this.#awaitedThread = threadId;
 		this.scrollToFile(file);
-		requestAnimationFrame(() =>
-			document.getElementById(threadId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-		);
+	}
+
+	#crossed(entries: IntersectionObserverEntry[], onChange: (inBand: ReadonlySet<string>) => void): void {
+		for (const entry of entries) {
+			const path = this.#paths.get(entry.target);
+			if (path === undefined) continue;
+			if (entry.isIntersecting) this.#inBand.add(path);
+			else this.#inBand.delete(path);
+		}
+		onChange(this.#inBand);
 	}
 
 	#mark(section: HTMLElement): void {
@@ -145,4 +219,9 @@ export class FileSections {
 		delete this.#marked.element.dataset.marked;
 		this.#marked = null;
 	}
+}
+
+/** Scroll smoothly until an element stands in the middle of its scrolling area. */
+function bringToCentre(element: HTMLElement): void {
+	element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

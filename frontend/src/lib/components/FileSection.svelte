@@ -15,9 +15,11 @@
 
 	interface Props {
 		file: DiffFile;
+		/** The area the review scrolls in, which a file comes near to be built; null for the page itself. */
+		scrollRoot: HTMLElement | null;
 	}
 
-	let { file }: Props = $props();
+	let { file, scrollRoot }: Props = $props();
 	const review = useReview();
 
 	const isDiffMode = $derived(review.mode === 'diff');
@@ -58,7 +60,7 @@
 
 	$effect(() => {
 		if (!element || built) return;
-		return whenNearViewport(element, element.closest('[data-testid="diff-view"]'), () => {
+		return whenNearViewport(element, scrollRoot, () => {
 			built = true;
 		});
 	});

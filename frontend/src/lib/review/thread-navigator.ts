@@ -31,9 +31,10 @@ export class ThreadNavigator {
 	}
 
 	#revealOnLines(threadId: string, anchor: LineAnchor): void {
-		// A folded file has no thread on screen to move to, so it is opened first
+		// A folded file has no thread on screen to move to, so it is opened
+		// first; the thread is brought into view once it is drawn
 		this.#reading.unfold(anchor.file);
-		requestAnimationFrame(() => this.#sections.scrollToThread(threadId, anchor.file));
+		this.#sections.scrollToThread(threadId, anchor.file);
 	}
 }
 

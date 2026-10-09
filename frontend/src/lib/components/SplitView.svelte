@@ -4,11 +4,12 @@
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
+	import { LINE_NUMBER_ROLE } from '$lib/utils/keyboard';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -219,6 +220,7 @@
 									{@const cell = row.right}
 									<button
 										data-testid="line-gutter"
+										data-role={LINE_NUMBER_ROLE}
 										data-tour="line-number"
 										class="cr-gutter-button"
 										aria-label="Comment on line {cell.line.new_number ?? ''}"

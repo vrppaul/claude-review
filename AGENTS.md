@@ -103,6 +103,8 @@ async def submit_review(
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations
 - **Wire types**: the browser's types for what crosses the wire are generated from the server's schemas into `frontend/src/lib/types/generated/` — `http.ts` from the routes' OpenAPI, `socket.ts` from a document of the session socket's messages (`presentation/api_schema.py` writes both). Change a schema → run `pnpm api:types`; never edit the generated files by hand. `types/index.ts` names the generated schemas for the rest of the browser
 - **Test selectors**: use `data-testid` attributes for targeting elements to interact with (click, type, check disabled). Use `getByText` / `text=` only for asserting visible content the user sees. Never use CSS class selectors in tests. Add `data-testid` to every new button, input, textarea, and container.
+- **Finding elements in the page's own code**: never by test id or by a page-wide id. An element announces itself to whoever needs it (`FileSections` holds every file section and thread); a selector that cannot be avoided reads a `data-role`. eslint refuses the rest.
+- **Frontend layers**: the parts of `frontend/src/lib` build on each other in one direction, as `LAYERS` in `frontend/eslint.config.js` lists them; an import against it fails the lint. Components build on everything and are built on by nothing but components.
 
 ## Boundaries
 

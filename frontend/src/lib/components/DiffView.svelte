@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { observeFilesInView } from '$lib/utils/scroll';
 	import { useReview } from '$lib/review/context';
 	import FileSection from './FileSection.svelte';
 
@@ -11,12 +10,10 @@
 	// current — one direction each way, so the two cannot fight over it.
 	$effect(() => {
 		if (!container) return;
-		void review.diff.files.length;
-
-		return observeFilesInView(container, (visible) => {
+		return review.sections.watchInView(container, (inBand) => {
 			// Several sections can share the band; the earliest one is the file
 			// whose header is pinned at the top.
-			const current = review.diff.files.find((file) => visible.has(file.path));
+			const current = review.diff.files.find((file) => inBand.has(file.path));
 			if (current) review.diff.markInView(current.path);
 		});
 	});
@@ -24,6 +21,6 @@
 
 <div bind:this={container} data-testid="diff-view" class="flex-1 overflow-auto bg-base-100">
 	{#each review.diff.files as file (file.path)}
-		<FileSection {file} />
+		<FileSection {file} scrollRoot={container ?? null} />
 	{/each}
 </div>

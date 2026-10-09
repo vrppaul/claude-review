@@ -103,6 +103,9 @@ export class AgentPanelLayout {
 	// panel beside a review nobody is answering is a column of nothing
 	#chosen: boolean;
 	#unread = $state(0);
+	// The cursor was asked into the panel's field, which has not taken it yet:
+	// the field may not be drawn until the panel opens
+	#inputWanted = $state(false);
 	readonly #width = new StoredWidth(AGENT_PANEL_WIDTH_KEY, AGENT_PANEL_WIDTH);
 
 	constructor() {
@@ -138,6 +141,21 @@ export class AgentPanelLayout {
 	/** An agent has turned up; show the panel unless the reader shut it. */
 	offer(): void {
 		if (!this.#chosen) this.#open = true;
+	}
+
+	/** Whether the cursor is waiting to be put in the panel's field. */
+	get inputWanted(): boolean {
+		return this.#inputWanted;
+	}
+
+	/** Put the cursor in the panel's field, as soon as there is one. */
+	askForInput(): void {
+		this.#inputWanted = true;
+	}
+
+	/** The field has the cursor. */
+	inputTaken(): void {
+		this.#inputWanted = false;
 	}
 
 	/** An answer landed in the conversation; count it if nobody can see it. */

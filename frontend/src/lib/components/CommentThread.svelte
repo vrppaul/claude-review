@@ -17,6 +17,10 @@
 	let replying = $state(false);
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
+	let container: HTMLElement | undefined = $state();
+
+	// Announced to the review, which brings the thread into view by it, never by an id on the page
+	$effect(() => (container ? review.sections.registerThread(comment.id, container) : undefined));
 
 	const reading = review.threads.reading;
 	const label = $derived(anchorLabel(comment.anchor));
@@ -136,7 +140,7 @@
 	}
 </script>
 
-<div id={comment.id} class="px-3 py-2">
+<div bind:this={container} data-testid="comment-thread" data-thread-id={comment.id} class="px-3 py-2">
 	{#if editing}
 		<CommentBox
 			kind="edit"

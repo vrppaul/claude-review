@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { work } from '../agent-work';
 import { fireEvent, render } from '@testing-library/svelte';
-import { tick } from 'svelte';
+import { flushSync, tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import type { Thread, ReviewResponse } from '$lib/types';
@@ -45,6 +45,15 @@ describe('the agent panel', () => {
 
 	beforeEach(() => {
 		review = answeredReview();
+	});
+
+	it('takes the cursor when the reader asks to talk to the agent', () => {
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		review.layout.agentPanel.askForInput();
+		flushSync();
+
+		expect(document.activeElement).toBe(getByTestId('panel-input'));
 	});
 
 	it('says what it is for before anything has been said', () => {

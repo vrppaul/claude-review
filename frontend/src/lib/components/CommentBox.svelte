@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { CommentKind, CommentSeverity } from '$lib/types';
-	import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
+	import { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 

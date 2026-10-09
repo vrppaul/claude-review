@@ -24,25 +24,23 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 	return TYPED_INTO.has(target.type);
 }
 
-function gutters(): HTMLElement[] {
-	return Array.from(document.querySelectorAll<HTMLElement>('[data-testid="line-gutter"]'));
+/**
+ * What every line number a reader moves between from the keyboard carries,
+ * in the order the page draws them. A role of its own: a test id may be
+ * renamed for the tests' sake, and the tour's names are the tour's.
+ */
+export const LINE_NUMBER_ROLE = 'line-number';
+
+function lineNumbers(): HTMLElement[] {
+	return Array.from(document.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
 }
 
 /** Move focus one line down or up, starting at the top when nothing is focused. */
 export function moveByLine(step: 1 | -1): void {
-	const all = gutters();
+	const all = lineNumbers();
 	if (all.length === 0) return;
 
-	const at = all.indexOf(document.activeElement as HTMLElement);
+	const at = document.activeElement instanceof HTMLElement ? all.indexOf(document.activeElement) : -1;
 	const next = at === -1 ? 0 : Math.min(all.length - 1, Math.max(0, at + step));
 	all[next]?.focus();
-}
-
-/** The file section the reader is in, by focus if possible and by scroll if not. */
-export function currentSectionPath(): string | null {
-	const focused = (document.activeElement as HTMLElement | null)?.closest?.('[data-testid="file-section"]');
-	if (focused instanceof HTMLElement && focused.dataset.path) {
-		return focused.dataset.path;
-	}
-	return null;
 }

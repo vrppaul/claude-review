@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { currentSectionPath, isTypingTarget, moveByLine } from '$lib/utils/keyboard';
+	import { isTypingTarget, moveByLine } from '$lib/utils/keyboard';
 	import { useReview } from '$lib/review/context';
 
 	const review = useReview();
@@ -33,11 +33,16 @@
 		review.guide.showNews();
 	}
 
+	/** The file the reader is in: by focus if a line in it has the focus, by scroll if not. */
+	function currentFile(): string | null {
+		return review.sections.focused() ?? review.diff.fileInView;
+	}
+
 	function stepFile(direction: 1 | -1) {
 		const files = review.diff.files;
 		if (files.length === 0) return;
 
-		const here = currentSectionPath() ?? review.diff.fileInView;
+		const here = currentFile();
 		const from = here ? files.findIndex((f) => f.path === here) : -1;
 		atFile = from === -1 ? (direction === 1 ? 0 : files.length - 1) : from + direction;
 		atFile = Math.min(files.length - 1, Math.max(0, atFile));
@@ -65,11 +70,11 @@
 	 */
 	function talkToAgent() {
 		review.layout.agentPanel.setOpen(true);
-		requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('[data-testid="panel-input"]')?.focus());
+		review.layout.agentPanel.askForInput();
 	}
 
 	function actOnCurrentFile(act: (path: string) => void) {
-		const path = currentSectionPath() ?? review.diff.fileInView;
+		const path = currentFile();
 		if (path) act(path);
 	}
 

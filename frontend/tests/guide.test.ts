@@ -1,21 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
-import { tick } from 'svelte';
+import { flushSync, tick } from 'svelte';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import CommentBox from '$lib/components/CommentBox.svelte';
 import CommentThread from '$lib/components/CommentThread.svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import FileList from '$lib/components/FileList.svelte';
 import Guide from '$lib/components/Guide.svelte';
+import GuideCard from '$lib/components/GuideCard.svelte';
 import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
 import TopBar from '$lib/components/TopBar.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
-import { latestNews, unseenNews } from '$lib/guide/news-choice';
+import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
+import { readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
 import { TOUR_TARGETS, type TourTarget } from '$lib/guide/tour';
 import type { GuideState } from '$lib/types';
-import { isNewer, readSeenRelease, writeSeenRelease } from '$lib/utils/seen-release';
 import { addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer, SERVER_ERROR, type FakeServer, type ReceivedRequest } from './fake-server';
 import { newComment } from './new-comment';
@@ -71,9 +72,12 @@ function entry(release: string, also: string[] = []): ReleaseNews {
 	return { release, title: `In ${release}`, body: 'Something new.', also };
 }
 
+// How the tour says how far along it is: "2 of 7"
+const STEP_COUNT = /^\d+ of \d+$/;
+
 /** A page on which exactly these places are drawn. */
-function pageWith(...names: string[]) {
-	review.guide.readPageWith((targets) => targets.some((target) => names.includes(target)));
+function pageWith(...names: TourTarget[]) {
+	review.guide.seeTargets(new Set(names));
 }
 
 function ignore() {}
@@ -169,9 +173,11 @@ describe('which release a reader has seen', () => {
 		document.cookie = 'claude-review-seen=1.4.2; path=/';
 		const server = guideServer(null);
 
-		expect(await readSeenRelease()).toBe('1.4.2');
-		expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.4.2' }]);
+		await review.guide.open();
+
+		expect(server.bodiesSentTo('PUT /api/guide')).toContainEqual({ seen_release: '1.4.2' });
 		expect(document.cookie).not.toContain('claude-review-seen');
+		expect(review.guide.card).not.toBe('welcome');
 	});
 });
 
@@ -410,6 +416,18 @@ describe('the tour', () => {
 		review.guide.notice({ type: 'closed', kind: 'new' });
 
 		expect(review.guide.step?.id).toBe('comment-route');
+	});
+
+	it('counts again the moment a comment field opens, which a step was waiting for', () => {
+		pageWith('file-tree', 'line-number', 'comment-field');
+		review.guide.startTour();
+		const { getByText } = render(GuideCard, inReview(review));
+		const before = getByText(STEP_COUNT).textContent;
+
+		review.guide.notice({ type: 'opened', kind: 'new' });
+		flushSync();
+
+		expect(getByText(STEP_COUNT).textContent).not.toBe(before);
 	});
 
 	it('counts only the steps it will show, and offers no Back before the first', () => {

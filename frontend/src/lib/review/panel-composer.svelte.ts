@@ -9,7 +9,7 @@
 
 import { type Draft, emptyComposer } from '$lib/drafts/draft-shapes';
 import type { Composer } from '$lib/types';
-import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
+import { ImageAttachments } from '$lib/review/image-attachments.svelte';
 
 export class PanelComposer {
 	#text: string;

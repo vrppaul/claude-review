@@ -7,15 +7,19 @@
  * The tour narrates from that same card while a light moves over the review.
  */
 
-import type { CommentRoute, TourStep } from '$lib/guide/tour';
+import type { CommentRoute, TourStep, TourTarget } from '$lib/guide/tour';
 import type { CommentFieldEvent } from '$lib/types';
 import { TOUR_STEPS, stepsFor } from '$lib/guide/tour';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
-import { latestNews, unseenNews } from '$lib/guide/news-choice';
-import type { Answerer } from '$lib/review/answerer.svelte';
-import { isNewer, readSeenRelease, writeSeenRelease } from '$lib/utils/seen-release';
+import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
+import { handOverLegacyRelease, legacySeenRelease, readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
 
 export type GuideCard = 'welcome' | 'news';
+
+/** Whoever answers the review, as far as the tour cares: whether anyone is there to send a round to. */
+export interface AnswererPresence {
+	readonly attached: boolean;
+}
 
 /** Where a step stands among the steps that are shown, by its id. */
 function indexOfStep(shown: TourStep[], id: string | null): number {
@@ -34,7 +38,7 @@ function indexOfStep(shown: TourStep[], id: string | null): number {
 }
 
 export class Guide {
-	readonly #answerer: Answerer;
+	readonly #answerer: AnswererPresence;
 	// Which release serves this review
 	readonly #release: string;
 	#card = $state<GuideCard | null>(null);
@@ -49,14 +53,14 @@ export class Guide {
 	#route = $state<CommentRoute>('review');
 	// Thread fields on a line open right now, so a step asking for one that
 	// is already open does not wait for something that has happened
-	#openNewComments = 0;
-	// Whether a step has anything on the page to light. The page answers;
-	// until it is attached every step counts as shown.
-	#isOnPage: (targets: string[]) => boolean = () => true;
+	#openNewComments = $state(0);
+	// Which places the page has drawn for a step to light. The page says so
+	// whenever it changes; until it first has, every step counts as shown.
+	#onPage = $state<ReadonlySet<TourTarget> | null>(null);
 	readonly #steps: TourStep[];
 	readonly #stepIndex: number;
 
-	constructor(answerer: Answerer, release: string) {
+	constructor(answerer: AnswererPresence, release: string) {
 		this.#answerer = answerer;
 		this.#release = release;
 		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
@@ -114,16 +118,16 @@ export class Guide {
 		return latestNews(RELEASE_NEWS, this.#release);
 	}
 
-	/** Let the page say which steps have something to show. */
-	readPageWith(predicate: (targets: string[]) => boolean): void {
-		this.#isOnPage = predicate;
+	/** The page says which of the tour's places it has drawn. */
+	seeTargets(drawn: ReadonlySet<TourTarget>): void {
+		this.#onPage = drawn;
 	}
 
 	/** Decide what to show a reader arriving at a review served by this release. */
 	async open(): Promise<void> {
 		let seen: string | null;
 		try {
-			seen = await readSeenRelease();
+			seen = (await readSeenRelease()) ?? (await this.#fromLegacyCookie());
 		} catch {
 			return;
 		}
@@ -200,6 +204,13 @@ export class Guide {
 		this.next();
 	}
 
+	/** The release a cookie from an older release says was seen, handed over to the server; null when there is none. */
+	async #fromLegacyCookie(): Promise<string | null> {
+		const legacy = legacySeenRelease();
+		if (legacy !== null) await handOverLegacyRelease(legacy);
+		return legacy;
+	}
+
 	/** Remember this release as seen, so the card does not come back. */
 	#settle(): void {
 		writeSeenRelease(this.#release).catch(() => {
@@ -208,7 +219,8 @@ export class Guide {
 	}
 
 	#shows(step: TourStep): boolean {
-		if (!this.#isOnPage(step.targets)) return false;
+		const onPage = this.#onPage;
+		if (onPage !== null && !step.targets.some((target) => onPage.has(target))) return false;
 		return !(step.waitsFor?.kind === 'comment-opened' && this.#openNewComments > 0);
 	}
 

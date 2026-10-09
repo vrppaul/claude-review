@@ -34,7 +34,7 @@ describe('widening the context around a hunk', () => {
 	});
 
 	it('offers to show the lines the diff left out', () => {
-		const { getByTestId } = render(FileSection, inReview(review, { file }));
+		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 
 		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
 	});
@@ -47,7 +47,7 @@ describe('widening the context around a hunk', () => {
 			total: FILE_LENGTH
 		});
 
-		const { getByTestId, getByText } = render(FileSection, inReview(review, { file }));
+		const { getByTestId, getByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(getByText('before one')).toBeTruthy();
@@ -59,7 +59,7 @@ describe('widening the context around a hunk', () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: [], total: FILE_LENGTH });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file }));
+		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(server.requests).toMatchObject([
@@ -79,7 +79,7 @@ describe('widening the context around a hunk', () => {
 		};
 		review = openReview({ files: [distant] });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: distant }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: distant, scrollRoot: null }));
 		expect(getByTestId('expand-context').textContent).toContain('of 500 hidden lines');
 
 		await user.click(getByTestId('expand-context'));
@@ -93,7 +93,7 @@ describe('widening the context around a hunk', () => {
 		const user = userEvent.setup();
 		fakeServer().refuse('GET /api/file-window', BAD_REQUEST);
 
-		const { getByTestId } = render(FileSection, inReview(review, { file }));
+		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(getByTestId('expand-error')).toBeTruthy();
@@ -107,7 +107,7 @@ describe('widening the context around a hunk', () => {
 		};
 		review = openReview({ files: [fromTop] });
 
-		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop, scrollRoot: null }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
@@ -116,7 +116,7 @@ describe('widening the context around a hunk', () => {
 		const plain: DiffFile = { ...file, path: '/tmp/plan.md' };
 		review = openReview({ files: [plain], facts: { mode: 'files' } });
 
-		const { queryByTestId } = render(FileSection, inReview(review, { file: plain }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file: plain, scrollRoot: null }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
@@ -129,7 +129,7 @@ describe('widening the context around a hunk', () => {
 			lines: Array.from({ length: 29 }, (_, offset) => `line ${offset + 1}`),
 			total: FILE_LENGTH
 		});
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 		expect(getByTestId('hunk-header')).toBeTruthy();
 
 		await user.click(getByTestId('expand-context'));

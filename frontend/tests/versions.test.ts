@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { isDrawn } from '$lib/utils/placement';
-import { createLineSelection } from '$lib/utils/line-selection.svelte';
+import { createLineSelection } from '$lib/components/line-selection.svelte';
 import type { Thread, DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';

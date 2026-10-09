@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ImageAttachments } from '$lib/utils/image-attachments.svelte';
+	import type { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { imageUrl } from '$lib/api/review-api';
 
 	interface Props {

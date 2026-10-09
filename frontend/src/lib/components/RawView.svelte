@@ -7,7 +7,8 @@
 	import { withRevealed } from '$lib/utils/expansions';
 	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/utils/line-selection.svelte';
+	import { createLineSelection, getLineNumber, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
+	import { LINE_NUMBER_ROLE } from '$lib/utils/keyboard';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -186,6 +187,7 @@
 							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
 								<button
 									data-testid="line-gutter"
+									data-role={LINE_NUMBER_ROLE}
 									data-tour="line-number"
 									class="cr-gutter-button"
 									aria-label="Comment on line {line.new_number ?? line.old_number ?? ''}"

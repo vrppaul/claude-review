@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { anyOnPage, reveal } from '$lib/guide/spotlight';
+	import { reveal, TargetWatcher } from '$lib/guide/spotlight';
+	import { TOUR_TARGETS } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import GuideCard from './GuideCard.svelte';
 	import TourSpotlight from './TourSpotlight.svelte';
@@ -13,8 +14,12 @@
 	// comment fields are what know how a comment went. The tour hears them
 	// once the page has drawn the result, so the step it moves to finds it.
 	onMount(() => {
-		review.guide.readPageWith(anyOnPage);
-		return review.commentFields.listen((event) => void tick().then(() => review.guide.notice(event)));
+		const drawn = new TargetWatcher(TOUR_TARGETS, (targets) => review.guide.seeTargets(targets));
+		const stopListening = review.commentFields.listen((event) => void tick().then(() => review.guide.notice(event)));
+		return () => {
+			drawn.stop();
+			stopListening();
+		};
 	});
 
 	// A step's place is brought into view once it is drawn, which is after

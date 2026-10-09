@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FileSections } from '$lib/review/file-sections';
 
 let sections: FileSections;
@@ -80,5 +80,79 @@ describe('being taken to a file somebody else pointed at', () => {
 
 	it('says nothing about a file the review does not hold', () => {
 		expect(() => sections.showFile('missing.py')).not.toThrow();
+	});
+});
+
+describe('being taken to a thread', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('brings a thread already drawn into view', () => {
+		const thread = document.createElement('div');
+		thread.scrollIntoView = vi.fn();
+		sections.registerThread('comment-1', thread);
+
+		sections.scrollToThread('comment-1', 'a.py');
+
+		expect(thread.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('goes to the file of a thread not yet drawn, and to the thread once it is', () => {
+		const file = section('a.py');
+		file.scrollIntoView = vi.fn();
+		const thread = document.createElement('div');
+		thread.scrollIntoView = vi.fn();
+
+		sections.scrollToThread('comment-1', 'a.py');
+		expect(file.scrollIntoView).toHaveBeenCalled();
+		expect(thread.scrollIntoView).not.toHaveBeenCalled();
+
+		sections.registerThread('comment-1', thread);
+
+		expect(thread.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('does not go to a thread drawn later once the reader has asked for another', () => {
+		const first = document.createElement('div');
+		first.scrollIntoView = vi.fn();
+		sections.scrollToThread('comment-1', 'a.py');
+		sections.scrollToThread('comment-2', 'a.py');
+
+		sections.registerThread('comment-1', first);
+
+		expect(first.scrollIntoView).not.toHaveBeenCalled();
+	});
+});
+
+describe('knowing which file the reader is in', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('is the file holding the focus', () => {
+		section('a.py');
+		const reading = section('b.py');
+		const lineNumber = document.createElement('button');
+		reading.append(lineNumber);
+
+		lineNumber.focus();
+
+		expect(sections.focused()).toBe('b.py');
+	});
+
+	it('is none while the focus is outside every file', () => {
+		section('a.py');
+
+		expect(sections.focused()).toBeNull();
+	});
+
+	it('follows a file drawn after the watching began', () => {
+		const seen: string[][] = [];
+		sections.watchInView(document.body, (visible) => seen.push([...visible]));
+
+		section('a.py');
+
+		expect(seen.at(-1)).toEqual(['a.py']);
 	});
 });
