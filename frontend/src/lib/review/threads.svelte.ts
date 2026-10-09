@@ -13,13 +13,14 @@ import { askInThread, followAnchors } from "$lib/api/review-api";
 import { anchorPlace } from "$lib/anchors/views";
 import type { Draft, IssuedIds } from "$lib/drafts/draft-shapes";
 import type { Rounds } from "$lib/review/rounds.svelte";
+import { ThreadReading } from "$lib/review/thread-reading.svelte";
 import type {
   Anchor,
-  Comment,
   CommentSeverity,
   FollowOutcome,
   NewComment,
   NewTurn,
+  Thread,
   ThreadInput,
   Turn,
 } from "$lib/types";
@@ -27,8 +28,8 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
-function lastAnsweredAt(comment: Comment): number {
-  return comment.turns.findLast((turn) => turn.author === "author")?.at ?? 0;
+function lastAnsweredAt(thread: Thread): number {
+  return thread.turns.findLast((turn) => turn.author === "author")?.at ?? 0;
 }
 
 /**
@@ -37,17 +38,19 @@ function lastAnsweredAt(comment: Comment): number {
  * Decided here alone: the server finds what the id names, and asks nothing
  * else of it.
  */
-function questionIdOf(comment: Comment): string {
-  const last = comment.turns.at(-1);
-  return last?.author === "reader" ? last.id : comment.id;
+function questionIdOf(thread: Thread): string {
+  const last = thread.turns.at(-1);
+  return last?.author === "reader" ? last.id : thread.id;
 }
 
 /** What a file with no threads holds. */
-const NO_THREADS: readonly Comment[] = [];
+const NO_THREADS: readonly Thread[] = [];
 
 export class Threads {
+  /** How the page reads them: folded, unread, waiting on an answer. */
+  readonly reading = new ThreadReading();
   readonly #rounds: Rounds;
-  #all = $state<Comment[]>([]);
+  #all = $state<Thread[]>([]);
   // Which threads have gone out, and in which round. A round carries what
   // is new since the last one, not the whole review again — and the reader
   // can see which of what is on screen the answering side has already read.
@@ -58,11 +61,13 @@ export class Threads {
   #cursor = -1;
   // By the file they hang on, so a file asks for its own without a scan
   readonly #byFile = $derived(
-    Map.groupBy(this.#all, (comment) => comment.anchor.file),
+    Map.groupBy(this.#all, (thread) => thread.anchor.file),
   );
-  readonly #unread = $derived(this.#all.filter((comment) => comment.unread));
+  readonly #unread = $derived(
+    this.#all.filter((thread) => this.reading.isUnread(thread.id)),
+  );
   readonly #unsent = $derived(
-    this.#all.filter((comment) => !this.#sent.has(comment.id)),
+    this.#all.filter((thread) => !this.#sent.has(thread.id)),
   );
   readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
 
@@ -75,7 +80,7 @@ export class Threads {
     if (draft !== null) this.adopt(draft);
   }
 
-  get all(): Comment[] {
+  get all(): Thread[] {
     return this.#all;
   }
 
@@ -84,12 +89,12 @@ export class Threads {
   }
 
   /** Threads carrying an answer nobody has looked at. */
-  get unread(): Comment[] {
+  get unread(): Thread[] {
     return this.#unread;
   }
 
   /** Threads the answering side has not been told about yet. */
-  get unsent(): Comment[] {
+  get unsent(): Thread[] {
     return this.#unsent;
   }
 
@@ -99,14 +104,14 @@ export class Threads {
   }
 
   /** Threads that have been discussed, newest answer first. */
-  get answered(): Comment[] {
+  get answered(): Thread[] {
     return this.#all
-      .filter((comment) => comment.turns.length > 0)
+      .filter((thread) => thread.turns.length > 0)
       .sort((first, second) => lastAnsweredAt(second) - lastAnsweredAt(first));
   }
 
   /** The threads hanging on one file. */
-  onFile(path: string): readonly Comment[] {
+  onFile(path: string): readonly Thread[] {
     return this.#byFile.get(path) ?? NO_THREADS;
   }
 
@@ -126,7 +131,7 @@ export class Threads {
   }
 
   /** Step to the next or previous thread, and say which it is. */
-  step(direction: 1 | -1): Comment | undefined {
+  step(direction: 1 | -1): Thread | undefined {
     if (this.#all.length === 0) return undefined;
     this.#cursor =
       (this.#cursor + direction + this.#all.length) % this.#all.length;
@@ -134,7 +139,7 @@ export class Threads {
   }
 
   add({ anchor, body, severity, images }: NewComment): string {
-    const comment: Comment = {
+    const thread: Thread = {
       id: this.#commentIds.next(),
       anchor,
       severity,
@@ -143,14 +148,11 @@ export class Threads {
       turns: [],
       raised_by: "reader",
       resolved: false,
-      awaiting: [],
-      collapsed: false,
-      unread: false,
       round: this.#rounds.current,
       at: Date.now(),
     };
-    this.#all = [...this.#all, comment];
-    return comment.id;
+    this.#all = [...this.#all, thread];
+    return thread.id;
   }
 
   /**
@@ -167,7 +169,7 @@ export class Threads {
     body: string,
     severity: CommentSeverity,
   ): string {
-    const comment: Comment = {
+    const thread: Thread = {
       id,
       anchor,
       severity,
@@ -176,13 +178,11 @@ export class Threads {
       turns: [],
       raised_by: "author",
       resolved: false,
-      awaiting: [],
-      collapsed: false,
-      unread: true,
       round: this.#rounds.current,
       at: Date.now(),
     };
-    this.#all = [...this.#all, comment];
+    this.#all = [...this.#all, thread];
+    this.reading.markUnread(id);
     this.#sent.set(id, this.#rounds.current);
     return id;
   }
@@ -194,12 +194,13 @@ export class Threads {
     images: string[],
   ): void {
     this.#sent.delete(id);
-    this.#replace(id, (comment) => ({ ...comment, body, severity, images }));
+    this.#replace(id, (thread) => ({ ...thread, body, severity, images }));
   }
 
   remove(id: string): void {
     this.#sent.delete(id);
-    this.#all = this.#all.filter((comment) => comment.id !== id);
+    this.reading.forget(id);
+    this.#all = this.#all.filter((thread) => thread.id !== id);
   }
 
   /** Add what someone said to a thread. */
@@ -213,9 +214,9 @@ export class Threads {
       images,
     };
     this.#sent.delete(id);
-    this.#replace(id, (comment) => ({
-      ...comment,
-      turns: [...comment.turns, turn],
+    this.#replace(id, (thread) => ({
+      ...thread,
+      turns: [...thread.turns, turn],
     }));
   }
 
@@ -229,25 +230,18 @@ export class Threads {
    * to guess what the thread was about.
    */
   async ask(id: string): Promise<void> {
-    const comment = this.#all.find((candidate) => candidate.id === id);
-    if (!comment) return;
+    const thread = this.#all.find((candidate) => candidate.id === id);
+    if (!thread) return;
 
-    const questionId = questionIdOf(comment);
-    this.#replace(id, (asked) => ({
-      ...asked,
-      awaiting: [...asked.awaiting, { id: questionId, at: Date.now() }],
-    }));
-
+    const questionId = questionIdOf(thread);
+    this.reading.asked(id, questionId);
     try {
       await askInThread({
         question_id: questionId,
-        thread: threadOnTheWire(comment),
+        thread: threadOnTheWire(thread),
       });
     } catch (error) {
-      this.#replace(id, (asked) => ({
-        ...asked,
-        awaiting: asked.awaiting.filter((waiting) => waiting.id !== questionId),
-      }));
+      this.reading.settled(id, questionId);
       throw error;
     }
   }
@@ -260,10 +254,9 @@ export class Threads {
    * over in.
    */
   receiveReply(id: string, text: string, questionId: string | null): void {
-    const comment = this.#all.find((candidate) => candidate.id === id);
-    if (!comment) return;
+    if (!this.#all.some((thread) => thread.id === id)) return;
 
-    const answers = questionId ?? comment.awaiting[0]?.id;
+    const answers = questionId ?? this.reading.awaiting(id)[0]?.id;
     const turn: Turn = {
       id: this.#turnIds.next(),
       author: "author",
@@ -278,37 +271,21 @@ export class Threads {
     this.#replace(id, (answered) => ({
       ...answered,
       turns: [...answered.turns, turn],
-      awaiting: answered.awaiting.filter((waiting) => waiting.id !== answers),
-      unread: true,
     }));
+    this.reading.settled(id, answers);
+    this.reading.markUnread(id);
   }
 
-  markRead(id: string): void {
-    if (!this.#all.some((comment) => comment.id === id && comment.unread)) {
-      return;
-    }
-    this.#replace(id, (comment) => ({ ...comment, unread: false }));
-  }
-
-  markAllRead(): void {
-    this.#all = this.#all.map((comment) =>
-      comment.unread ? { ...comment, unread: false } : comment,
-    );
-  }
-
+  /** Settle a thread, which folds it away, or open it again. */
   setResolved(id: string, resolved: boolean): void {
     this.#sent.delete(id);
-    this.#replace(id, (comment) => ({ ...comment, resolved }));
-  }
-
-  /** Fold a thread away, or bring it back. Not a state the review carries. */
-  setCollapsed(id: string, collapsed: boolean): void {
-    this.#replace(id, (comment) => ({ ...comment, collapsed }));
+    this.#replace(id, (thread) => ({ ...thread, resolved }));
+    if (resolved) this.reading.setFolded(id, true);
   }
 
   /** Note that these threads went out in this round. */
-  markSent(sent: Comment[], round: number): void {
-    for (const comment of sent) this.#sent.set(comment.id, round);
+  markSent(sent: Thread[], round: number): void {
+    for (const thread of sent) this.#sent.set(thread.id, round);
   }
 
   /**
@@ -323,9 +300,9 @@ export class Threads {
    * and the only part of a retake they cannot see at a glance.
    */
   async follow(): Promise<FollowOutcome> {
-    const asked = this.#all.map((comment) => comment.id);
+    const asked = this.#all.map((thread) => thread.id);
     const { anchors } = await followAnchors({
-      anchors: this.#all.map((comment) => comment.anchor),
+      anchors: this.#all.map((thread) => thread.anchor),
     });
     const movedTo: Record<string, Anchor> = Object.fromEntries(
       asked.map((id, index) => [id, anchors[index]]),
@@ -333,14 +310,13 @@ export class Threads {
 
     let followed = 0;
     let outdated = 0;
-    this.#all = this.#all.map((comment) => {
-      const moved = movedTo[comment.id];
+    this.#all = this.#all.map((thread) => {
+      const moved = movedTo[thread.id];
       // Written while the answer was on its way, so already on the new diff
-      if (!moved) return comment;
-      if (moved.outdated && !comment.anchor.outdated) outdated += 1;
-      else if (anchorPlace(moved) !== anchorPlace(comment.anchor))
-        followed += 1;
-      return { ...comment, anchor: moved };
+      if (!moved) return thread;
+      if (moved.outdated && !thread.anchor.outdated) outdated += 1;
+      else if (anchorPlace(moved) !== anchorPlace(thread.anchor)) followed += 1;
+      return { ...thread, anchor: moved };
     });
     return { followed, outdated };
   }
@@ -355,18 +331,19 @@ export class Threads {
    * and would number the next round wrongly for everyone.
    */
   adopt(draft: Draft): void {
-    this.#all = draft.comments;
+    this.#all = draft.threads;
+    this.reading.adopt(draft.read);
     this.#sent.clear();
     for (const [id, round] of draft.sent) this.#sent.set(id, round);
     this.#commentIds.continueFrom(draft.issued.comments);
     this.#turnIds.continueFrom(draft.issued.turns);
-    for (const comment of this.#all) this.#rounds.reach(comment.round);
+    for (const thread of this.#all) this.#rounds.reach(thread.round);
     for (const round of this.#sent.values()) this.#rounds.reach(round + 1);
   }
 
-  #replace(id: string, change: (comment: Comment) => Comment): void {
-    this.#all = this.#all.map((comment) =>
-      comment.id === id ? change(comment) : comment,
+  #replace(id: string, change: (thread: Thread) => Thread): void {
+    this.#all = this.#all.map((thread) =>
+      thread.id === id ? change(thread) : thread,
     );
   }
 }

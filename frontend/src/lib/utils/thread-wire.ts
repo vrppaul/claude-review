@@ -1,4 +1,4 @@
-import type { Comment, ThreadInput, Turn, TurnInput } from "$lib/types";
+import type { Thread, ThreadInput, Turn, TurnInput } from "$lib/types";
 
 /**
  * A thread as the other side is told about it.
@@ -8,7 +8,7 @@ import type { Comment, ThreadInput, Turn, TurnInput } from "$lib/types";
  * fact — what this thread is and what has been said in it — and an agent
  * should not have to learn it twice.
  */
-export function threadOnTheWire(comment: Comment): ThreadInput {
+export function threadOnTheWire(comment: Thread): ThreadInput {
   return {
     thread_id: comment.id,
     anchor: comment.anchor,

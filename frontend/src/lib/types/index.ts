@@ -94,19 +94,19 @@ export interface NewComment {
 }
 
 /** A question handed over and not answered yet. */
-export interface Awaited {
+export interface AwaitedQuestion {
   id: string;
   at: number;
 }
 
 /**
- * A thread hanging on something the reader reads.
+ * A thread hanging on something the reader reads: what it says.
  *
  * The comment that opened it stays in `body`; everything said afterwards is
- * a turn. The last four fields never leave the browser — they are how the
- * thread is read, not what it says.
+ * a turn. How the page reads it — folded, unread, waiting on an answer — is
+ * not part of it, and is kept apart.
  */
-export interface Comment {
+export interface Thread {
   id: string;
   anchor: Anchor;
   severity: CommentSeverity;
@@ -117,12 +117,6 @@ export interface Comment {
   /** Who opened it. The author may point at a line too. */
   raised_by: TurnAuthor;
   resolved: boolean;
-  /** Questions with the author and not answered yet, oldest first. */
-  awaiting: Awaited[];
-  /** Folded away by the reader, to get its space back without settling it. */
-  collapsed: boolean;
-  /** An answer arrived that has not been looked at. */
-  unread: boolean;
   /** Which round it was written in, so a thread can show where one ended. */
   round: number;
   /** When it was written. Read in the thread, never sent with the review. */

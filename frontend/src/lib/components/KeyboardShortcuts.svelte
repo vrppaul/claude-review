@@ -54,7 +54,7 @@
 		const comment = review.threads.unread[0];
 		if (!comment) return;
 		review.navigator.reveal(comment);
-		review.threads.markRead(comment.id);
+		review.threads.reading.markRead(comment.id);
 	}
 
 	/**

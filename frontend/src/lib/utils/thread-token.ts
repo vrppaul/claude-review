@@ -8,7 +8,7 @@
  * longer mention.
  */
 
-import type { Comment } from "$lib/types";
+import type { Thread } from "$lib/types";
 import { anchorToken } from "$lib/anchors/views";
 
 /**
@@ -28,7 +28,7 @@ function mentions(text: string, token: string): boolean {
 }
 
 /** The threads a message points at, as its text stands right now. */
-export function threadsIn(text: string, comments: Comment[]): Comment[] {
+export function threadsIn(text: string, comments: Thread[]): Thread[] {
   return comments.filter((comment) =>
     mentions(text, anchorToken(comment.anchor)),
   );

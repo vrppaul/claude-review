@@ -13,7 +13,7 @@
 import { cancelMessage, sendMessage } from "$lib/api/review-api";
 import { PanelComposer } from "$lib/review/panel-composer.svelte";
 import type { Draft } from "$lib/drafts/draft-shapes";
-import type { Comment, PanelTurn } from "$lib/types";
+import type { Thread, PanelTurn } from "$lib/types";
 import {
   ANSWER_ID_PREFIX,
   EVENT_ID_PREFIX,
@@ -74,7 +74,7 @@ export class Conversation {
    * them. Images are the other way round: the server already keeps them,
    * so only their ids go.
    */
-  async send(threads: Comment[]): Promise<void> {
+  async send(threads: Thread[]): Promise<void> {
     const written = this.composer.text;
     const text = written.trim();
     const images = $state.snapshot(this.composer.attachments.images);

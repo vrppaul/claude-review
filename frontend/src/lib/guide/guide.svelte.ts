@@ -53,7 +53,7 @@ export class Guide {
   // or leaves, and a position would then point at a different step
   #stepId = $state<string | null>(null);
   #route = $state<CommentRoute>("review");
-  // Comment fields on a line open right now, so a step asking for one that
+  // Thread fields on a line open right now, so a step asking for one that
   // is already open does not wait for something that has happened
   #openNewComments = 0;
   // Whether a step has anything on the page to light. The page answers;

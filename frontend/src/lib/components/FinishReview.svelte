@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Comment } from '$lib/types';
+	import type { Thread } from '$lib/types';
 	import { anchorPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 
@@ -38,7 +38,7 @@
 		}
 	}
 
-	function jump(comment: Comment) {
+	function jump(comment: Thread) {
 		onClose();
 		review.navigator.reveal(comment);
 	}

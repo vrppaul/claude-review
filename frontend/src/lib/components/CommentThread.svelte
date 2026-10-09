@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment, CommentSeverity, Turn } from '$lib/types';
+	import type { Thread, CommentSeverity, Turn } from '$lib/types';
 	import { anchorLabel, anchorSide } from '$lib/anchors/views';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { useReview } from '$lib/review/context';
@@ -8,7 +8,7 @@
 	import SaidImages from './SaidImages.svelte';
 
 	interface Props {
-		comment: Comment;
+		comment: Thread;
 	}
 
 	let { comment }: Props = $props();
@@ -18,7 +18,12 @@
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
 
+	const reading = review.threads.reading;
 	const label = $derived(anchorLabel(comment.anchor));
+	const folded = $derived(reading.isFolded(comment.id));
+	const unread = $derived(reading.isUnread(comment.id));
+	// Questions in this thread still with the agent, oldest first
+	const awaiting = $derived(reading.awaiting(comment.id));
 	// Which round it went out in, if it has. What is still unsent keeps the
 	// mark colour; what has gone reads as already read by the other side.
 	const sentIn = $derived(review.threads.sentInRound(comment.id));
@@ -91,14 +96,14 @@
 	const raised = $derived(comment.raised_by === 'author');
 
 	function waitingFor(exchange: Exchange): number | null {
-		const asked = comment.awaiting.find((w) => w.id === exchange.id);
+		const asked = awaiting.find((question) => question.id === exchange.id);
 		return asked ? Math.round((now - asked.at) / 1000) : null;
 	}
 
 	// How long each question has been with the author, so silence reads as
 	// silence rather than as something broken
 	$effect(() => {
-		if (comment.awaiting.length === 0) return;
+		if (awaiting.length === 0) return;
 		const timer = setInterval(() => (now = Date.now()), 1000);
 		return () => clearInterval(timer);
 	});
@@ -111,7 +116,6 @@
 	/** Settling a thread folds it away; it can still be opened and read. */
 	function resolve() {
 		review.threads.setResolved(comment.id, true);
-		review.threads.setCollapsed(comment.id, true);
 	}
 
 	function reply(body: string, images: string[]) {
@@ -146,7 +150,7 @@
 			initialImages={comment.images}
 			{label}
 		/>
-	{:else if comment.collapsed}
+	{:else if folded}
 		<!-- Folded, by hand or by settling it. Either way it opens to be read. -->
 		<div
 			data-testid={comment.resolved ? 'resolved-thread' : 'folded-thread'}
@@ -168,12 +172,12 @@
 <button
 				data-testid="fold-comment"
 				class="btn btn-ghost btn-xs px-1"
-				aria-expanded={!comment.collapsed}
-				aria-label={comment.collapsed ? 'Unfold this thread' : 'Fold this thread away'}
-				onclick={() => review.threads.setCollapsed(comment.id, !comment.collapsed)}
+				aria-expanded={!folded}
+				aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
+				onclick={() => reading.setFolded(comment.id, !folded)}
 			>
 				<svg
-					class="h-3 w-3 transition-transform {comment.collapsed ? '-rotate-90' : ''}"
+					class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
 					viewBox="0 0 12 12"
 					fill="currentColor"
 					aria-hidden="true"
@@ -184,7 +188,7 @@
 			<button
 				data-testid="unfold-thread"
 				class="flex min-w-0 flex-1 items-baseline gap-3 text-left"
-				onclick={() => review.threads.setCollapsed(comment.id, false)}
+				onclick={() => reading.setFolded(comment.id, false)}
 			>
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">{label}</span>
 				<span class="cr-muted truncate text-sm">{comment.body || 'an image'}</span>
@@ -195,7 +199,7 @@
 					</span>
 				{/if}
 			</button>
-			{#if comment.unread}
+			{#if unread}
 				<span class="shrink-0 text-xs" style="color: var(--cr-mark)">● new reply</span>
 			{/if}
 			{#if comment.resolved}
@@ -216,18 +220,18 @@
 				? 'cr-sent'
 				: ''} {raised ? 'cr-raised' : ''}"
 			role="presentation"
-			onclick={() => review.threads.markRead(comment.id)}
+			onclick={() => reading.markRead(comment.id)}
 		>
 			<div class="mb-2 flex items-center gap-2">
 				<button
 				data-testid="fold-comment"
 				class="btn btn-ghost btn-xs px-1"
-				aria-expanded={!comment.collapsed}
-				aria-label={comment.collapsed ? 'Unfold this thread' : 'Fold this thread away'}
-				onclick={() => review.threads.setCollapsed(comment.id, !comment.collapsed)}
+				aria-expanded={!folded}
+				aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
+				onclick={() => reading.setFolded(comment.id, !folded)}
 			>
 				<svg
-					class="h-3 w-3 transition-transform {comment.collapsed ? '-rotate-90' : ''}"
+					class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
 					viewBox="0 0 12 12"
 					fill="currentColor"
 					aria-hidden="true"
@@ -258,7 +262,7 @@
 				{#if comment.resolved}
 					<span data-testid="comment-resolved" class="cr-severity cr-muted">resolved</span>
 				{/if}
-				{#if comment.unread}
+				{#if unread}
 					<span
 						data-testid="comment-unread"
 						class="text-xs"
@@ -360,7 +364,7 @@
 								{/if}
 								<div
 									data-testid="thread-answer" data-tour="answer"
-									class="cr-answer {comment.unread && i === exchange.answers.length - 1
+									class="cr-answer {unread && i === exchange.answers.length - 1
 										? 'cr-answer-new'
 										: ''}"
 								>
@@ -392,7 +396,7 @@
 				{/each}
 			</div>
 
-			{#if review.answerer.attached && comment.awaiting.length === 0 && lastWord !== 'author'}
+			{#if review.answerer.attached && awaiting.length === 0 && lastWord !== 'author'}
 				<!-- Hands over everything said so far, the comment included, and hangs
 					under the last of it rather than beside the empty field below. -->
 				<div class="mt-3">

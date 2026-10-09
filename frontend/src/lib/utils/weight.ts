@@ -1,4 +1,4 @@
-import type { Comment, DiffFile } from "$lib/types";
+import type { Thread, DiffFile } from "$lib/types";
 
 // Characters per token, roughly, for English prose and code alike. Close
 // enough for the only question the number answers: is handing this over
@@ -14,7 +14,7 @@ const CHARS_PER_TOKEN = 4;
  * this side at all, which is why it arrives as a report rather than a
  * measurement.
  */
-export function reviewWeight(files: DiffFile[], comments: Comment[]): number {
+export function reviewWeight(files: DiffFile[], comments: Thread[]): number {
   let characters = 0;
 
   for (const file of files) {

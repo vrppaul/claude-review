@@ -1,4 +1,4 @@
-import type { Comment } from "$lib/types";
+import type { Thread } from "$lib/types";
 
 /**
  * A file's comments keyed by the row they hang under, as "side:line".
@@ -10,11 +10,11 @@ import type { Comment } from "$lib/types";
  * `isDrawn`: under a narrower base those numbers belong to something else.
  */
 export function indexByRow(
-  comments: Comment[],
+  comments: Thread[],
   file: string,
   { removedLines = true }: { removedLines?: boolean } = {},
-): Map<string, Comment[]> {
-  const index = new Map<string, Comment[]>();
+): Map<string, Thread[]> {
+  const index = new Map<string, Thread[]>();
   for (const comment of comments) {
     const { anchor } = comment;
     if (anchor.file !== file) continue;

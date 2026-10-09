@@ -4,7 +4,7 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
-import type { Comment, ReviewResponse } from '$lib/types';
+import type { Thread, ReviewResponse } from '$lib/types';
 import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -28,7 +28,7 @@ const FULL_HEIGHT = 500;
 const file = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(2, 'y = 3')])] });
 
 /** Write a message in the panel and send it, the way the composer does. */
-function say(review: Review, text: string, threads: Comment[] = []): Promise<void> {
+function say(review: Review, text: string, threads: Thread[] = []): Promise<void> {
 	review.conversation.composer.setText(text);
 	return review.conversation.send(threads);
 }

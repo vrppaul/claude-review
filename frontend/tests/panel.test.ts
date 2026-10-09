@@ -3,7 +3,7 @@ import { DraftRepository } from '$lib/drafts/draft-repository';
 import { threadsIn } from '$lib/utils/thread-token';
 import { anchorToken } from '$lib/anchors/views';
 import { formatWeight } from '$lib/utils/weight';
-import type { Comment } from '$lib/types';
+import type { Thread } from '$lib/types';
 import { contextLine, addedLine, diffFile, hunk } from './diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
@@ -28,7 +28,7 @@ const NARROWEST_PANEL = 280;
 const WIDEST_PANEL = 720;
 
 /** Write a message in the panel and send it, the way the composer does. */
-function say(text: string, threads: Comment[] = []): Promise<void> {
+function say(text: string, threads: Thread[] = []): Promise<void> {
 	review.conversation.composer.setText(text);
 	return review.conversation.send(threads);
 }
@@ -159,7 +159,7 @@ describe('the panel talks to the agent about the review', () => {
 		leavePage();
 
 		const kept = new DraftRepository().load(TITLE);
-		expect(kept?.comments).toHaveLength(1);
+		expect(kept?.threads).toHaveLength(1);
 		expect(kept?.panel).toHaveLength(1);
 	});
 

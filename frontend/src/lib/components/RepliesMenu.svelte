@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment } from '$lib/types';
+	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 
@@ -12,17 +12,17 @@
 	// this list exists at all
 	const threads = $derived([
 		...review.threads.unread,
-		...review.threads.answered.filter((c) => !c.unread)
+		...review.threads.answered.filter((thread) => !review.threads.reading.isUnread(thread.id))
 	]);
 
-	function lastAnswer(comment: Comment): string {
+	function lastAnswer(comment: Thread): string {
 		return [...comment.turns].reverse().find((t) => t.author === 'author')?.body ?? '';
 	}
 
-	function goTo(comment: Comment) {
+	function goTo(comment: Thread) {
 		open = false;
 		review.navigator.reveal(comment);
-		review.threads.markRead(comment.id);
+		review.threads.reading.markRead(comment.id);
 	}
 
 	function onWindowClick(event: MouseEvent) {
@@ -77,7 +77,7 @@
 					{review.threads.unread.length} unread
 				</span>
 				<div class="flex-1"></div>
-				<button class="btn btn-ghost btn-xs" onclick={() => review.threads.markAllRead()}>
+				<button class="btn btn-ghost btn-xs" onclick={() => review.threads.reading.markAllRead()}>
 					Mark all read
 				</button>
 			</div>
@@ -89,14 +89,14 @@
 					onclick={() => goTo(comment)}
 				>
 					<span class="w-2 pt-1.5">
-						{#if comment.unread}
+						{#if review.threads.reading.isUnread(comment.id)}
 							<span class="block h-1.5 w-1.5 rounded-full" style="background: var(--cr-mark)"></span>
 						{/if}
 					</span>
 					<span class="min-w-0 flex-1">
 						<span class="flex items-baseline gap-2">
-							<span class="font-mono text-xs {comment.unread ? '' : 'cr-muted'}"
-								style={comment.unread ? 'color: var(--cr-mark)' : ''}
+							<span class="font-mono text-xs {review.threads.reading.isUnread(comment.id) ? '' : 'cr-muted'}"
+								style={review.threads.reading.isUnread(comment.id) ? 'color: var(--cr-mark)' : ''}
 							>
 								{anchorShortPlace(comment.anchor)}
 							</span>

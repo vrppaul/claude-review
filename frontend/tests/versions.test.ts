@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { isDrawn } from '$lib/utils/placement';
 import { createLineSelection } from '$lib/utils/line-selection.svelte';
-import type { Comment, DiffFile, LineAnchor } from '$lib/types';
+import type { Thread, DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
@@ -23,7 +23,7 @@ function untouched(path: string): DiffFile {
 	return diffFile({ path, hunks: [hunk([contextLine(1, 1, 'x')])] });
 }
 
-function thread(at: Partial<LineAnchor> = {}): Comment {
+function thread(at: Partial<LineAnchor> = {}): Thread {
 	return {
 		id: 'c1',
 		anchor: { ...lineAnchor('a.py', 'new', 1, 1, []), ...at },
@@ -33,9 +33,6 @@ function thread(at: Partial<LineAnchor> = {}): Comment {
 		turns: [],
 		raised_by: 'reader',
 		resolved: false,
-		awaiting: [],
-		collapsed: false,
-		unread: false,
 		round: 1,
 		at: 0
 	};

@@ -179,7 +179,8 @@ export class Review {
     return {
       version: DRAFT_SHAPE,
       title: this.title,
-      comments: this.threads.all,
+      threads: this.threads.all,
+      read: this.threads.reading.kept,
       reviewBody: this.submission.body,
       sent: this.threads.sentRounds,
       panel: this.conversation.turns,

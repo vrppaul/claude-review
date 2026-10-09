@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment, DiffFile } from '$lib/types';
+	import type { Thread, DiffFile } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { isDrawn } from '$lib/utils/placement';
 	import { useReview } from '$lib/review/context';
@@ -28,7 +28,7 @@
 	const listing = $derived(listedOver === review.diff.files);
 
 	/** Take the reader back to the whole diff, and to the thread they picked. */
-	async function goTo(comment: Comment) {
+	async function goTo(comment: Thread) {
 		failed = null;
 		try {
 			await review.diff.showWholeReview();

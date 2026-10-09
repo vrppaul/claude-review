@@ -6,16 +6,24 @@
  * against, the questions still waiting for an answer, and who raised it;
  * the review has grown a conversation in the agent panel, and the message
  * being written there; what a thread hangs on has moved into an anchor of
- * its own, and every turn carries an id a question can name. A draft is
- * brought up to date — never thrown away: it is an hour of somebody's
- * reading.
+ * its own, and every turn carries an id a question can name; how a thread
+ * is read — folded, unread, waited on — has moved out of the thread. A
+ * draft is brought up to date — never thrown away: it is an hour of
+ * somebody's reading.
  */
 
-import type { Comment, Composer, LineSide, PanelTurn, Turn } from "$lib/types";
+import type {
+  AwaitedQuestion,
+  Composer,
+  LineSide,
+  PanelTurn,
+  Thread,
+  Turn,
+} from "$lib/types";
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 9;
+export const DRAFT_SHAPE = 10;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -23,12 +31,21 @@ export interface IssuedIds {
   turns: number;
 }
 
+/** How the page was reading the threads: folded, unread, and waiting on an answer. */
+export interface ThreadsRead {
+  folded: string[];
+  unread: string[];
+  /** Questions with the agent, by thread, oldest first. */
+  awaiting: [string, AwaitedQuestion[]][];
+}
+
 /** An unsent review, as it is kept between reloads. */
 export interface Draft {
   version: typeof DRAFT_SHAPE;
   /** What the review was of, so a draft is not restored onto a different one. */
   title: string;
-  comments: Comment[];
+  threads: Thread[];
+  read: ThreadsRead;
   reviewBody: string;
   /** Threads already sent, and the round each went out in. */
   sent: [string, number][];
@@ -40,8 +57,15 @@ export interface Draft {
   issued: IssuedIds;
 }
 
+/** A thread as drafts kept it until how it was read moved out of it. */
+interface ReadComment extends Thread {
+  awaiting: AwaitedQuestion[];
+  collapsed: boolean;
+  unread: boolean;
+}
+
 /** A thread as drafts kept it before it hung on an anchor. */
-interface FlatComment extends Omit<Comment, "anchor"> {
+interface FlatComment extends Omit<ReadComment, "anchor"> {
   file: string;
   side: LineSide;
   start_line: number;
@@ -70,17 +94,17 @@ type GrownLater =
 
 /** A thread as a draft kept it, with any field it grew later possibly missing. */
 type AsKept<Shape> = Omit<Shape, GrownLater | "turns"> &
-  Partial<Pick<Comment, GrownLater>> & { turns?: KeptTurn[] };
+  Partial<Pick<ReadComment, GrownLater>> & { turns?: KeptTurn[] };
 
-/** A thread in any shape a draft has kept one in: on an anchor, or on lines alone. */
-type KeptComment = AsKept<Comment> | AsKept<FlatComment>;
+/** A thread in any shape before shape 10: on an anchor, or on lines alone. */
+type KeptComment = AsKept<ReadComment> | AsKept<FlatComment>;
 
 /**
- * A draft in any shape it has been kept in: the current one, or an older
- * one — one of the current shape that kept no count of the ids handed out
- * included, since what it holds is all there is to count from.
+ * A draft of a shape before 10, when threads were kept as comments with how
+ * they were read inside them — one of shape 9 that kept no count of the ids
+ * handed out included, since what it holds is all there is to count from.
  */
-export interface KeptDraft {
+interface OlderDraft {
   version?: number;
   title: string;
   comments: KeptComment[];
@@ -92,16 +116,19 @@ export interface KeptDraft {
   issued?: IssuedIds;
 }
 
+/** A draft in any shape it has been kept in. */
+export type KeptDraft = Draft | OlderDraft;
+
 /** Whether what was read from storage is a draft at all, in any shape. */
 export function isKeptDraft(value: unknown): value is KeptDraft {
   if (typeof value !== "object" || value === null) return false;
-  if (!("title" in value) || !("comments" in value)) return false;
-  return typeof value.title === "string" && Array.isArray(value.comments);
+  if (!("title" in value) || typeof value.title !== "string") return false;
+  if ("threads" in value) return Array.isArray(value.threads);
+  return "comments" in value && Array.isArray(value.comments);
 }
 
-/** Whether a kept draft is already in the current shape, nothing to bring up. */
 function isCurrent(kept: KeptDraft): kept is Draft {
-  return kept.version === DRAFT_SHAPE && kept.issued !== undefined;
+  return kept.version === DRAFT_SHAPE;
 }
 
 export function emptyComposer(): Composer {
@@ -110,7 +137,11 @@ export function emptyComposer(): Composer {
 
 /** A draft of the current shape, whichever shape it was kept in. */
 export function upToDate(kept: KeptDraft): Draft {
-  if (isCurrent(kept)) return kept;
+  return isCurrent(kept) ? kept : fromComments(kept);
+}
+
+/** A draft of the current shape, out of one that kept its threads as comments. */
+function fromComments(kept: OlderDraft): Draft {
   // A turn that came without an id gets one past every id the draft holds,
   // the way the review hands them out
   const turnIds = new IdSequence(TURN_ID_PREFIX);
@@ -122,14 +153,22 @@ export function upToDate(kept: KeptDraft): Draft {
   const comments = kept.comments.map((comment) =>
     upToDateComment(comment, turnIds),
   );
-  // Before the draft kept how many were handed out, the ids it holds are all
-  // there is to go on
-  const commentIds = new IdSequence(COMMENT_ID_PREFIX);
-  commentIds.continuePast(kept.comments.map((comment) => comment.id));
+  // Where a comment kept count of the ids handed out, it is believed
+  const issued = kept.issued ?? {
+    comments: commentIdsPast(kept.comments),
+    turns: turnIds.issued,
+  };
   return {
     version: DRAFT_SHAPE,
     title: kept.title,
-    comments,
+    threads: comments.map(threadOf),
+    read: {
+      folded: comments.filter((comment) => comment.collapsed).map(idOf),
+      unread: comments.filter((comment) => comment.unread).map(idOf),
+      awaiting: comments
+        .filter((comment) => comment.awaiting.length > 0)
+        .map((comment) => [comment.id, comment.awaiting]),
+    },
     reviewBody: kept.reviewBody ?? "",
     sent: (kept.sent ?? []).map((entry) =>
       typeof entry === "string" ? [entry, 1] : entry,
@@ -138,12 +177,42 @@ export function upToDate(kept: KeptDraft): Draft {
     panel: kept.panel ?? [],
     // The panel kept nothing half-written until it could hold images
     composer: kept.composer ?? emptyComposer(),
-    issued: { comments: commentIds.issued, turns: turnIds.issued },
+    issued,
   };
 }
 
-/** A thread of the current shape, whichever shape it was kept in. */
-function upToDateComment(kept: KeptComment, turnIds: IdSequence): Comment {
+/**
+ * How many comment ids a draft had handed out, before it kept count: the
+ * ids it holds are all there is to go on.
+ */
+function commentIdsPast(comments: KeptComment[]): number {
+  const commentIds = new IdSequence(COMMENT_ID_PREFIX);
+  commentIds.continuePast(comments.map(idOf));
+  return commentIds.issued;
+}
+
+function idOf(kept: { id: string }): string {
+  return kept.id;
+}
+
+/** What a comment said, without how it was read. */
+function threadOf(comment: ReadComment): Thread {
+  return {
+    id: comment.id,
+    anchor: comment.anchor,
+    severity: comment.severity,
+    body: comment.body,
+    images: comment.images,
+    turns: comment.turns,
+    raised_by: comment.raised_by,
+    resolved: comment.resolved,
+    round: comment.round,
+    at: comment.at,
+  };
+}
+
+/** A comment of shape 9, whichever older shape it was kept in. */
+function upToDateComment(kept: KeptComment, turnIds: IdSequence): ReadComment {
   return {
     id: kept.id,
     anchor: anchorOf(kept),
@@ -168,7 +237,7 @@ function upToDateComment(kept: KeptComment, turnIds: IdSequence): Comment {
 }
 
 /** What a kept thread hangs on, whether it kept an anchor or the lines alone. */
-function anchorOf(kept: KeptComment): Comment["anchor"] {
+function anchorOf(kept: KeptComment): Thread["anchor"] {
   if ("anchor" in kept) return kept.anchor;
   return {
     kind: "line",

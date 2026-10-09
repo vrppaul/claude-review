@@ -95,7 +95,7 @@ describe('a thread is a conversation', () => {
 		review.threads.receiveReply(id, 'It moved into the config default', null);
 
 		expect(review.threads.unread.length).toBe(1);
-		review.threads.markRead(id);
+		review.threads.reading.markRead(id);
 		expect(review.threads.unread.length).toBe(0);
 	});
 
@@ -136,7 +136,7 @@ describe('a thread is a conversation', () => {
 
 		const answer = review.threads.all[0].turns.find((turn) => turn.author === 'author');
 		expect(answer?.answers).toBe(id);
-		expect(review.threads.all[0].awaiting).toHaveLength(1);
+		expect(review.threads.reading.awaiting(review.threads.all[0].id)).toHaveLength(1);
 	});
 
 	it('believes an answer that names its question', async () => {
@@ -145,12 +145,12 @@ describe('a thread is a conversation', () => {
 		await review.threads.ask(id);
 		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
 		await review.threads.ask(id);
-		const second = review.threads.all[0].awaiting[1].id;
+		const second = review.threads.reading.awaiting(review.threads.all[0].id)[1].id;
 
 		review.threads.receiveReply(id, 'Into the config default', second);
 
 		expect(review.threads.all[0].turns.at(-1)?.answers).toBe(second);
-		expect(review.threads.all[0].awaiting.map((waiting) => waiting.id)).toEqual([id]);
+		expect(review.threads.reading.awaiting(review.threads.all[0].id).map((waiting) => waiting.id)).toEqual([id]);
 	});
 
 	it('hands over the comment that opened the thread, not only the replies', async () => {
@@ -175,7 +175,7 @@ describe('a thread is a conversation', () => {
 		await review.threads.ask(id);
 
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([{ question_id: reply }]);
-		expect(review.threads.all[0].awaiting.map((waiting) => waiting.id)).toEqual([reply]);
+		expect(review.threads.reading.awaiting(review.threads.all[0].id).map((waiting) => waiting.id)).toEqual([reply]);
 	});
 
 	it('names the thread itself when the agent said the last word', async () => {

@@ -46,7 +46,7 @@ export interface TourContext {
 }
 
 /**
- * What the reader does to move on, when "Next" is not the way. Comment
+ * What the reader does to move on, when "Next" is not the way. Thread
  * fields say what happened to them; the tour never guesses from the page.
  */
 export type WaitsFor =

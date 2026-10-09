@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Comment } from '$lib/types';
+	import type { Thread } from '$lib/types';
 	import { anchorShortPlace, anchorToken } from '$lib/anchors/views';
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
 	import { threadsIn } from '$lib/utils/thread-token';
@@ -42,7 +42,7 @@
 	// — and then the files themselves, so a file nobody has marked can be
 	// pointed at too. The agent can name any file; the reader should be able
 	// to as well.
-	type Candidate = { kind: 'thread'; comment: Comment } | { kind: 'file'; path: string };
+	type Candidate = { kind: 'thread'; comment: Thread } | { kind: 'file'; path: string };
 	const candidates = $derived<Candidate[]>([
 		...review.threads.all
 			.filter((comment) => matches(`${anchorToken(comment.anchor)} ${comment.body}`))
@@ -75,7 +75,7 @@
 	}
 
 	/** What a thread is in, so the picker says whether it is still live. */
-	function threadState(comment: Comment): string {
+	function threadState(comment: Thread): string {
 		if (comment.anchor.outdated) return 'outdated';
 		if (comment.resolved) return 'resolved';
 		if (comment.turns.length > 0) {
@@ -145,7 +145,7 @@
 	}
 
 	/** Take a thread out of the message by taking its token out of the words. */
-	function drop(comment: Comment) {
+	function drop(comment: Thread) {
 		review.conversation.composer.setText(
 			draft.split(anchorToken(comment.anchor)).join('').replace(/ {2,}/g, ' ')
 		);

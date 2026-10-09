@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DraftRepository } from '$lib/drafts/draft-repository';
 import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
 import { lineAnchor } from '$lib/anchors/line';
-import type { Comment } from '$lib/types';
+import type { AwaitedQuestion, Thread } from '$lib/types';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -47,24 +47,36 @@ function flatThread(kept: object = {}) {
 	};
 }
 
+/** A thread as shape 9 kept it, with how it was read inside it. */
+interface KeptComment extends Thread {
+	awaiting: AwaitedQuestion[];
+	collapsed: boolean;
+	unread: boolean;
+}
+
 /** A thread with every field this release keeps filled in. */
-function fullThread(): Comment {
+function fullThread(): Thread {
 	return {
 		id: 'comment-1',
 		anchor: lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']),
 		severity: 'question',
 		body: 'Why both?',
 		images: ['opening.png'],
-		turns: [
-			{ id: 'turn-1', author: 'author', body: 'History', round: 2, at: 50, images: [] }
-		],
+		turns: [{ id: 'turn-1', author: 'author', body: 'History', round: 2, at: 50, images: [] }],
 		raised_by: 'reader',
 		resolved: false,
-		awaiting: [{ id: 'comment-1', at: 40 }],
-		collapsed: true,
-		unread: true,
 		round: 2,
 		at: 30
+	};
+}
+
+/** The same thread as shape 9 kept it, folded, unread, and with a question waiting. */
+function keptComment(): KeptComment {
+	return {
+		...fullThread(),
+		awaiting: [{ id: 'comment-1', at: 40 }],
+		collapsed: true,
+		unread: true
 	};
 }
 
@@ -174,7 +186,8 @@ describe('an unsent review', () => {
 		drafts.save({
 			version: DRAFT_SHAPE,
 			title: 'repo',
-			comments: [],
+			threads: [],
+			read: { folded: [], unread: [], awaiting: [] },
 			reviewBody: 'x',
 			sent: [],
 			panel: [],
@@ -192,7 +205,8 @@ describe('a draft this release kept', () => {
 		const kept: Draft = {
 			version: DRAFT_SHAPE,
 			title: TITLE,
-			comments: [fullThread()],
+			threads: [fullThread()],
+			read: { folded: ['comment-1'], unread: [], awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]] },
 			reviewBody: 'Overall fine',
 			sent: [['comment-1', 2]],
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
@@ -212,10 +226,23 @@ describe('a draft written by an older release', () => {
 
 		const draft = drafts.load(TITLE);
 
-		expect(draft?.comments[0].body).toBe('written before threads existed');
-		expect(draft?.comments[0].turns).toEqual([]);
-		expect(draft?.comments[0].awaiting).toEqual([]);
+		expect(draft?.threads[0].body).toBe('written before threads existed');
+		expect(draft?.threads[0].turns).toEqual([]);
+		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: [] });
 		expect(draft?.sent).toEqual([]);
+	});
+
+	it('keeps how each thread was being read, apart from what it says', () => {
+		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [keptComment()], sent: [] });
+
+		const draft = drafts.load(TITLE);
+
+		expect(draft?.threads).toEqual([fullThread()]);
+		expect(draft?.read).toEqual({
+			folded: ['comment-1'],
+			unread: ['comment-1'],
+			awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]]
+		});
 	});
 
 	it('keeps where each thread hung, and what it was written against', () => {
@@ -233,7 +260,7 @@ describe('a draft written by an older release', () => {
 			]
 		});
 
-		const [comment] = drafts.load(TITLE)?.comments ?? [];
+		const [comment] = drafts.load(TITLE)?.threads ?? [];
 
 		expect(comment.anchor).toEqual({
 			kind: 'line',
@@ -259,13 +286,13 @@ describe('a draft written by an older release', () => {
 			comments: [flatThread({ turns: [{ author: 'author', body: 'Done', round: 1 }] })]
 		});
 
-		expect(drafts.load(TITLE)?.comments[0].turns).toEqual([
+		expect(drafts.load(TITLE)?.threads[0].turns).toEqual([
 			{ id: 'turn-1', author: 'author', body: 'Done', round: 1, images: [] }
 		]);
 	});
 
 	it('is restored when it is of this shape but kept no count of the ids handed out', () => {
-		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [fullThread()], sent: [] });
+		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [keptComment()], sent: [] });
 
 		review = openReview();
 		const count = review.restoredCount;
@@ -279,7 +306,7 @@ describe('a draft written by an older release', () => {
 			version: BEFORE_TURN_IDS,
 			comments: [
 				{
-					...fullThread(),
+					...keptComment(),
 					turns: [
 						{ author: 'reader', body: 'Why?', round: 1, images: [] },
 						{ id: 'turn-4', author: 'author', body: 'Because', round: 1, images: [] }
@@ -288,7 +315,7 @@ describe('a draft written by an older release', () => {
 			]
 		});
 
-		const ids = drafts.load(TITLE)?.comments[0].turns.map((turn) => turn.id);
+		const ids = drafts.load(TITLE)?.threads[0].turns.map((turn) => turn.id);
 
 		expect(ids).toEqual(['turn-5', 'turn-4']);
 	});

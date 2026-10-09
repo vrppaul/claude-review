@@ -8,7 +8,7 @@
 
 import type { FileSections } from "$lib/review/file-sections";
 import type { ReadingProgress } from "$lib/review/reading-progress.svelte";
-import type { Comment, LineAnchor } from "$lib/types";
+import type { Thread, LineAnchor } from "$lib/types";
 
 export class ThreadNavigator {
   readonly #reading: ReadingProgress;
@@ -19,7 +19,7 @@ export class ThreadNavigator {
     this.#sections = sections;
   }
 
-  reveal(thread: Comment): void {
+  reveal(thread: Thread): void {
     const { anchor } = thread;
     switch (anchor.kind) {
       case "line":

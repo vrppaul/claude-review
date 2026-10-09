@@ -1,4 +1,4 @@
-import type { Comment, DiffFile } from "$lib/types";
+import type { Thread, DiffFile } from "$lib/types";
 
 /**
  * Whether a thread has a row to hang on in the diff as it is drawn.
@@ -15,7 +15,7 @@ import type { Comment, DiffFile } from "$lib/types";
  * `removedLines` off, the old side is not drawn at all.
  */
 export function isDrawn(
-  comment: Comment,
+  comment: Thread,
   files: DiffFile[],
   { removedLines = true }: { removedLines?: boolean } = {},
 ): boolean {

@@ -110,13 +110,16 @@ describe('what the page tells the server it holds', () => {
 		stop();
 	});
 
-	it('is not said again when a file is folded, which the server has no use for', () => {
-		review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+	it('is not said again for how the page reads, which the server has no use for', () => {
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+		review.threads.receiveReply(id, 'Because.', null);
 		const said: SessionHello[] = [];
 		const stop = review.tellServerThrough({ greet: (hello) => said.push(hello) });
 		flushSync();
 
 		review.reading.toggleFolded('a.py');
+		review.threads.reading.setFolded(id, true);
+		review.threads.reading.markRead(id);
 		flushSync();
 
 		expect(said).toHaveLength(1);
