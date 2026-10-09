@@ -313,11 +313,13 @@ describe('ending the review', () => {
 
 	it('stays open when the server refuses it', async () => {
 		const server = fakeServer();
-		server.refuse('POST /api/submit', SERVER_ERROR);
+		server.fail('POST /api/submit', SERVER_ERROR);
 
 		commentStore.add(newComment({ body: 'test' }));
 
-		await expect(commentStore.submit(true)).rejects.toThrow(`Submit failed: ${SERVER_ERROR}`);
+		await expect(commentStore.submit(true)).rejects.toThrow(
+			`Could not send the review: ${SERVER_ERROR}`
+		);
 		expect(commentStore.submitted).toBe(false);
 	});
 });

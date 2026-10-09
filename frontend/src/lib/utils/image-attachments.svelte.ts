@@ -9,12 +9,8 @@
 
 import type { SendLimits } from "$lib/types";
 import { SvelteSet } from "svelte/reactivity";
-import {
-  discardImage,
-  imagesAmong,
-  uploadImage,
-  wholeMegabytes,
-} from "$lib/utils/images";
+import { discardImage, keepImage } from "$lib/api/review-api";
+import { imagesAmong, wholeMegabytes } from "$lib/utils/images";
 
 export class ImageAttachments {
   /** Ids the server kept the attached images under, in the order pasted. */
@@ -90,7 +86,7 @@ export class ImageAttachments {
   /** Take an image off, and off the server unless the agent may know of it. */
   detach(imageId: string) {
     this.forget(imageId);
-    void discardImage(imageId);
+    void letServerDrop(imageId);
   }
 
   /** Take an image off without asking the server: it no longer has it. */
@@ -113,7 +109,7 @@ export class ImageAttachments {
    */
   abandon() {
     for (const imageId of this.images) {
-      if (this.#uploaded.has(imageId)) void discardImage(imageId);
+      if (this.#uploaded.has(imageId)) void letServerDrop(imageId);
     }
     this.images = [];
   }
@@ -131,7 +127,7 @@ export class ImageAttachments {
   async #attachOne(file: File): Promise<string | null> {
     this.uploading += 1;
     try {
-      const imageId = await uploadImage(file);
+      const { image_id: imageId } = await keepImage(file);
       this.#uploaded.add(imageId);
       this.images = [...this.images, imageId];
       this.#onChange?.();
@@ -141,5 +137,18 @@ export class ImageAttachments {
     } finally {
       this.uploading -= 1;
     }
+  }
+}
+
+/**
+ * Let the server drop an image nothing points at any more.
+ *
+ * Best effort: whatever is left behind goes with the review when it ends.
+ */
+async function letServerDrop(imageId: string): Promise<void> {
+  try {
+    await discardImage(imageId);
+  } catch {
+    // The review's workspace is removed at the end either way
   }
 }

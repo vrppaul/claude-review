@@ -7,40 +7,48 @@
  * told it about answers 404, as the real server does.
  */
 import { vi } from 'vitest';
-import type {
-	DiffResponse,
-	FileWindowResponse,
-	FollowResponse,
-	KeptGuide,
-	GuideState,
-	ImageResponse,
-	ReaderSettings,
-	RetakeResponse,
-	KeptSettings,
-	SubmitResponse,
-	VersionsResponse
-} from '$lib/types';
+import type { paths } from '$lib/types/generated/http';
+import type { ReaderSettings } from '$lib/types';
 
 /** What a route answers when it did what it was asked and has nothing to add: no body at all. */
 type Done = null;
 
-/** What each route answers with when it does what was asked, as the server sends it. */
+/** How the server's schema names the methods a route answers. */
+type Method = 'get' | 'put' | 'post' | 'delete';
+
+/**
+ * What a route answers when it does what was asked, read from the server's
+ * own schema: the JSON it sends, or nothing for a route that sends no body.
+ * A route the server does not have, or a method it does not answer, does
+ * not compile.
+ */
+type ReplyOf<Path extends keyof paths, M extends Method> = paths[Path][M] extends {
+	responses: infer Responses;
+}
+	? Responses extends { 200: { content: { 'application/json': infer Body } } }
+		? Body
+		: Responses extends { 204: unknown }
+			? Done
+			: never
+	: never;
+
+/** What each route the page uses answers with when it does what was asked. */
 export interface Replies {
-	'GET /api/diff': DiffResponse;
-	'GET /api/versions': VersionsResponse;
-	'GET /api/file-window': FileWindowResponse;
-	'GET /api/settings': KeptSettings;
-	'PUT /api/settings': ReaderSettings;
-	'GET /api/guide': KeptGuide;
-	'PUT /api/guide': GuideState;
-	'POST /api/images': ImageResponse;
-	'POST /api/ask': Done;
-	'POST /api/message': Done;
-	'POST /api/cancel': Done;
-	'POST /api/anchors/follow': FollowResponse;
-	'POST /api/submit': SubmitResponse;
-	'POST /api/retake': RetakeResponse;
-	'POST /api/end': Done;
+	'GET /api/diff': ReplyOf<'/api/diff', 'get'>;
+	'GET /api/versions': ReplyOf<'/api/versions', 'get'>;
+	'GET /api/file-window': ReplyOf<'/api/file-window', 'get'>;
+	'GET /api/settings': ReplyOf<'/api/settings', 'get'>;
+	'PUT /api/settings': ReplyOf<'/api/settings', 'put'>;
+	'GET /api/guide': ReplyOf<'/api/guide', 'get'>;
+	'PUT /api/guide': ReplyOf<'/api/guide', 'put'>;
+	'POST /api/images': ReplyOf<'/api/images', 'post'>;
+	'POST /api/ask': ReplyOf<'/api/ask', 'post'>;
+	'POST /api/message': ReplyOf<'/api/message', 'post'>;
+	'POST /api/cancel': ReplyOf<'/api/cancel', 'post'>;
+	'POST /api/anchors/follow': ReplyOf<'/api/anchors/follow', 'post'>;
+	'POST /api/submit': ReplyOf<'/api/submit', 'post'>;
+	'POST /api/retake': ReplyOf<'/api/retake', 'post'>;
+	'POST /api/end': ReplyOf<'/api/end', 'post'>;
 }
 
 export type Route = keyof Replies;
@@ -60,6 +68,11 @@ const NO_CONTENT = 204;
 const NOT_FOUND = 404;
 // What FastAPI says of a route it does not have
 const NOT_FOUND_DETAIL = 'Not Found';
+// What FastAPI says of a request whose body its schema refuses: a list of
+// what is wrong where, not a sentence
+const INVALID_REQUEST_DETAIL = [{ loc: ['body'], msg: 'Field required', type: 'missing' }];
+// What a fault on the server's side answers with: plain text, no reason
+const FAULT_TEXT = 'Internal Server Error';
 /** What a test has a route refuse with. */
 export const BAD_REQUEST = 400;
 export const UNPROCESSABLE = 422;
@@ -78,7 +91,8 @@ interface Holder {
 /** How a route answers whatever arrives on it. */
 type Answer =
 	| { kind: 'reply'; reply: (request: ReceivedRequest) => unknown }
-	| { kind: 'refuse'; status: number; detail: string }
+	| { kind: 'refuse'; status: number; detail: unknown }
+	| { kind: 'fail'; status: number }
 	| { kind: 'drop' }
 	| { kind: 'hold'; holder: Holder };
 
@@ -131,6 +145,16 @@ export class FakeServer {
 		this.answers.set(route, { kind: 'refuse', status, detail });
 	}
 
+	/** Refuse every request to the route as FastAPI refuses a body its schema does not take. */
+	refuseAsInvalid(route: Route): void {
+		this.answers.set(route, { kind: 'refuse', status: UNPROCESSABLE, detail: INVALID_REQUEST_DETAIL });
+	}
+
+	/** Answer every request to the route with a fault of the server's own, which gives no reason. */
+	fail(route: Route, status: number): void {
+		this.answers.set(route, { kind: 'fail', status });
+	}
+
 	/** Let every request to the route fail to arrive, as when the server is gone. */
 	drop(route: Route): void {
 		this.answers.set(route, { kind: 'drop' });
@@ -165,6 +189,8 @@ export class FakeServer {
 				return Promise.resolve(replyResponse(answer.reply(request)));
 			case 'refuse':
 				return Promise.resolve(jsonResponse(answer.status, { detail: answer.detail }));
+			case 'fail':
+				return Promise.resolve(new Response(FAULT_TEXT, { status: answer.status }));
 			case 'drop':
 				return Promise.reject(new TypeError(UNREACHABLE));
 			case 'hold':

@@ -49,9 +49,9 @@ describe('the diff on screen', () => {
 	});
 
 	it('says so when it cannot be read', async () => {
-		fakeServer().refuse('GET /api/diff', SERVER_ERROR);
+		fakeServer().fail('GET /api/diff', SERVER_ERROR);
 
-		await expect(diffStore.fetchDiff()).rejects.toThrow(`Failed to fetch diff: ${SERVER_ERROR}`);
+		await expect(diffStore.fetchDiff()).rejects.toThrow(`Could not take the diff: ${SERVER_ERROR}`);
 	});
 
 	it('reads as a diff until told otherwise', () => {

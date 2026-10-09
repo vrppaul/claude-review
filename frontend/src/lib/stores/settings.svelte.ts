@@ -9,13 +9,8 @@
  * before its first paint, long before the server could answer.
  */
 
-import type {
-  DiffLayout,
-  ReaderSettings,
-  SettingsChange,
-  KeptSettings,
-  Theme,
-} from "$lib/types";
+import { keepSettings, readSettings } from "$lib/api/review-api";
+import type { DiffLayout, ReaderSettings, Theme } from "$lib/types";
 import {
   forget,
   readChoice,
@@ -65,18 +60,6 @@ function sameSettings(one: ReaderSettings, other: ReaderSettings): boolean {
   );
 }
 
-async function keep(changes: SettingsChange): Promise<ReaderSettings> {
-  const response = await fetch("/api/settings", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(changes),
-  });
-  if (!response.ok) {
-    throw new Error(`Could not keep the settings: ${response.status}`);
-  }
-  return response.json();
-}
-
 export const settingsStore = {
   get settings(): ReaderSettings {
     return settings;
@@ -91,14 +74,12 @@ export const settingsStore = {
    */
   async load(): Promise<void> {
     try {
-      const response = await fetch("/api/settings");
-      if (!response.ok) return;
-      const kept: KeptSettings = await response.json();
+      const kept = await readSettings();
       const local = keptInThisBrowser();
       settings =
         kept.stored || sameSettings(local, NEW_READER)
           ? kept.record
-          : await keep(local);
+          : await keepSettings(local);
       forget(LAYOUT_KEPT_HERE);
       forget(WHITESPACE_KEPT_HERE);
       forget(SOUND_KEPT_HERE);
@@ -113,7 +94,7 @@ export const settingsStore = {
     settings = { ...settings, ...changes };
     writeChoice(THEME_CACHE, settings.theme);
     try {
-      await keep(changes);
+      await keepSettings(changes);
     } catch {
       // The choice still applies to this tab, it just will not be remembered
     }

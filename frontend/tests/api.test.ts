@@ -1,0 +1,76 @@
+import { describe, it, expect } from 'vitest';
+import { ApiError } from '$lib/api/request';
+import { keepImage, submitReview, takeDiff } from '$lib/api/review-api';
+import { diffResponse } from './diff';
+import { fakeServer, SERVER_ERROR, UNPROCESSABLE } from './fake-server';
+import { screenshot } from './pasted-images';
+
+/** A round with nothing in it, as the page would send one. */
+const AN_EMPTY_ROUND = { threads: [], end: false };
+
+/** What the page sees of a request that did not succeed. */
+async function refusalOf(request: Promise<unknown>): Promise<ApiError> {
+	const error = await request.then(
+		() => null,
+		(thrown: unknown) => thrown
+	);
+	if (!(error instanceof ApiError)) throw new Error(`Expected a refusal, got ${String(error)}`);
+	return error;
+}
+
+describe('asking the server', () => {
+	it('tells the reader why the server refused, in its own words', async () => {
+		fakeServer().refuse('POST /api/submit', UNPROCESSABLE, 'The review has already ended');
+
+		const refusal = await refusalOf(submitReview(AN_EMPTY_ROUND));
+
+		expect(refusal.message).toBe('The review has already ended');
+		expect(refusal.status).toBe(UNPROCESSABLE);
+	});
+
+	it('says what was being done, and the status, when the server gave no reason', async () => {
+		fakeServer().fail('POST /api/submit', SERVER_ERROR);
+
+		const refusal = await refusalOf(submitReview(AN_EMPTY_ROUND));
+
+		expect(refusal.message).toBe(`Could not send the review: ${SERVER_ERROR}`);
+	});
+
+	it('does not show the reader a list of schema errors as a reason', async () => {
+		fakeServer().refuseAsInvalid('POST /api/submit');
+
+		const refusal = await refusalOf(submitReview(AN_EMPTY_ROUND));
+
+		expect(refusal.message).toBe(`Could not send the review: ${UNPROCESSABLE}`);
+	});
+
+	it('lets a request that never arrived fail as it did', async () => {
+		fakeServer().drop('POST /api/submit');
+
+		await expect(submitReview(AN_EMPTY_ROUND)).rejects.toBeInstanceOf(TypeError);
+	});
+
+	it("names in the diff's query only what the reader changed: whitespace, and another base", async () => {
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse());
+
+		await takeDiff({ ignoreWhitespace: false, base: null });
+		await takeDiff({ ignoreWhitespace: true, base: 'round:2' });
+
+		expect(server.requestsTo('GET /api/diff').map((request) => request.query)).toEqual([
+			{},
+			{ ignore_whitespace: 'true', base: 'round:2' }
+		]);
+	});
+
+	it('sends an image as itself rather than wrapped in JSON', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/images', { image_id: 'kept.png' });
+		const image = screenshot();
+
+		const kept = await keepImage(image);
+
+		expect(kept.image_id).toBe('kept.png');
+		expect(server.bodiesSentTo('POST /api/images')).toEqual([image]);
+	});
+});

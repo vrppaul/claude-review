@@ -200,10 +200,11 @@ describe('a thread is a conversation', () => {
 		fakeServer().refuse('POST /api/ask', SERVER_ERROR);
 		commentStore.add(onTheAddedLine('Why 3?'));
 
-		const { getByTestId, queryByTestId } = render(DiffView);
+		const { findByTestId, getByTestId, queryByTestId } = render(DiffView);
 		await user.click(getByTestId('ask-now-thread'));
 
-		expect(getByTestId('ask-error')).toBeTruthy();
+		// The refusal is read off the server's answer before it is shown
+		expect(await findByTestId('ask-error')).toBeTruthy();
 		expect(queryByTestId('awaiting-answer')).toBeNull();
 	});
 

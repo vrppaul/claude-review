@@ -1,5 +1,6 @@
 import { SvelteSet } from "svelte/reactivity";
 
+import { offeredVersions, retakeDiff, takeDiff } from "$lib/api/review-api";
 import { expansionStore } from "$lib/stores/expansions.svelte";
 import { reviewStore } from "$lib/stores/review.svelte";
 import { settingsStore } from "$lib/stores/settings.svelte";
@@ -21,7 +22,6 @@ import type {
   SendLimits,
   ReviewMode,
   ReviewVersion,
-  VersionsResponse,
 } from "$lib/types";
 
 let files = $state<DiffFile[]>([]);
@@ -94,25 +94,6 @@ const viewed = new SvelteSet<string>();
 const collapsed = new SvelteSet<string>();
 const selectedFile = $derived(files.find((f) => f.path === selectedPath));
 
-/** What the diff is asked for: whose whitespace, and against what. */
-function asked(against: string | null): string {
-  const params = new URLSearchParams();
-  if (settingsStore.settings.ignore_whitespace) {
-    params.set("ignore_whitespace", "true");
-  }
-  if (against !== null) params.set("base", against);
-  const query = params.toString();
-  return query ? `?${query}` : "";
-}
-
-async function read(query: string): Promise<DiffResponse> {
-  const response = await fetch(`/api/diff${query}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch diff: ${response.status}`);
-  }
-  return response.json();
-}
-
 // Which request is the latest. Two can be in flight — a round landing while
 // the reader picks a base — and only the latest is drawn, whatever order the
 // answers come back in.
@@ -127,7 +108,10 @@ let asking = 0;
 async function take(): Promise<void> {
   const mine = ++asking;
   const against = requestedBase;
-  const data = await read(asked(against));
+  const data = await takeDiff({
+    ignoreWhitespace: settingsStore.settings.ignore_whitespace,
+    base: against,
+  });
   if (mine !== asking) return;
   base = against ?? data.base_key;
   reviewKey = data.review_key;
@@ -296,14 +280,7 @@ export const diffStore = {
    * fetch, so a browser keeps its own view of what is folded.
    */
   async retake(): Promise<void> {
-    const response = await fetch("/api/retake", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    if (!response.ok) {
-      throw new Error(`Could not take the diff again: ${response.status}`);
-    }
+    await retakeDiff();
   },
 
   get title(): string {
@@ -438,12 +415,7 @@ export const diffStore = {
   },
 
   async fetchVersions() {
-    const response = await fetch("/api/versions");
-    if (!response.ok) {
-      throw new Error(`Failed to fetch versions: ${response.status}`);
-    }
-    const offered: VersionsResponse = await response.json();
-    versions = offered.versions;
+    versions = (await offeredVersions()).versions;
   },
 
   /**

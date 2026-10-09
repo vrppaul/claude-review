@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import { imageUrl } from '$lib/utils/images';
+	import { imageUrl } from '$lib/api/review-api';
 
 	interface Props {
 		images: string[];

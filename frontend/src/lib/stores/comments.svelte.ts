@@ -1,19 +1,21 @@
 import type {
   Anchor,
-  AskRequest,
   Comment,
   CommentSeverity,
   FollowOutcome,
-  FollowRequest,
-  FollowResponse,
   NewComment,
   NewTurn,
-  SubmitRequest,
   SubmitResponse,
   Turn,
 } from "$lib/types";
 import { SvelteMap } from "svelte/reactivity";
 
+import {
+  askInThread,
+  endReview,
+  followAnchors,
+  submitReview,
+} from "$lib/api/review-api";
 import { anchorPlace } from "$lib/anchors/views";
 import { reviewStore } from "$lib/stores/review.svelte";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
@@ -266,22 +268,17 @@ export const commentStore = {
       awaiting: [...asked.awaiting, { id: questionId, at: Date.now() }],
     }));
 
-    const request: AskRequest = {
-      question_id: questionId,
-      thread: threadOnTheWire(comment),
-    };
-    const response = await fetch("/api/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
+    try {
+      await askInThread({
+        question_id: questionId,
+        thread: threadOnTheWire(comment),
+      });
+    } catch (error) {
       replace(id, (c) => ({
         ...c,
         awaiting: c.awaiting.filter((w) => w.id !== questionId),
       }));
-      throw new Error(`Could not ask: ${response.status}`);
+      throw error;
     }
   },
 
@@ -359,18 +356,9 @@ export const commentStore = {
    */
   async follow(): Promise<FollowOutcome> {
     const asked = comments.map((comment) => comment.id);
-    const request: FollowRequest = {
+    const { anchors } = await followAnchors({
       anchors: comments.map((comment) => comment.anchor),
-    };
-    const response = await fetch("/api/anchors/follow", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
     });
-    if (!response.ok) {
-      throw new Error(`Could not move the threads: ${response.status}`);
-    }
-    const { anchors }: FollowResponse = await response.json();
     const movedTo: Record<string, Anchor> = Object.fromEntries(
       asked.map((id, index) => [id, anchors[index]]),
     );
@@ -416,22 +404,11 @@ export const commentStore = {
     const trimmedBody = reviewBody.trim();
     const unsent = comments.filter(isUnsent);
 
-    const request: SubmitRequest = {
+    const result = await submitReview({
       threads: unsent.map(threadOnTheWire),
       ...(trimmedBody ? { body: trimmedBody } : {}),
       end,
-    };
-    const response = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
     });
-
-    if (!response.ok) {
-      throw new Error(`Submit failed: ${response.status}`);
-    }
-
-    const result: SubmitResponse = await response.json();
 
     if (end) {
       submitted = true;
@@ -451,16 +428,7 @@ export const commentStore = {
 
   /** End a review that was being worked through in rounds. */
   async end(): Promise<void> {
-    const response = await fetch("/api/end", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Could not end the review: ${response.status}`);
-    }
-
+    await endReview();
     submitted = true;
     clearDraft();
   },

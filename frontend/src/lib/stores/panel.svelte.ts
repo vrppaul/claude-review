@@ -13,13 +13,12 @@
 import type {
   AgentStatus,
   AgentWork,
-  CancelRequest,
   Comment,
   Composer,
-  MessageRequest,
   PanelTurn,
 } from "$lib/types";
 
+import { cancelMessage, sendMessage } from "$lib/api/review-api";
 import { commentStore } from "$lib/stores/comments.svelte";
 import { diffStore } from "$lib/stores/diff.svelte";
 import { emptyComposer, loadDraft, saveDraft } from "$lib/utils/drafts";
@@ -31,7 +30,6 @@ import {
 } from "$lib/utils/ids";
 import { ImageAttachments } from "$lib/utils/image-attachments.svelte";
 import { readChoice, readNumber, writeChoice } from "$lib/utils/preferences";
-import { refusalOf } from "$lib/utils/refusal";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 import { reviewWeight } from "$lib/utils/weight";
 
@@ -219,27 +217,16 @@ export const panelStore = {
     ];
     remember();
 
-    let response: Response;
     try {
-      const request: MessageRequest = {
+      await sendMessage({
         message_id: id,
         body: text,
         threads: threads.map(threadOnTheWire),
         images,
-      };
-      response = await fetch("/api/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
       });
     } catch (error) {
       takeBack(id);
       throw error;
-    }
-
-    if (!response.ok) {
-      takeBack(id);
-      throw new Error(await refusalOf(response, "Could not send"));
     }
 
     // What was written or pasted while this was on its way belongs to the
@@ -308,23 +295,12 @@ export const panelStore = {
   async cancel(messageId: string): Promise<void> {
     markCancelled(messageId, true);
 
-    let response: Response;
     try {
-      const request: CancelRequest = { message_id: messageId };
-      response = await fetch("/api/cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-      });
+      await cancelMessage({ message_id: messageId });
     } catch (error) {
-      markCancelled(messageId, false);
-      throw error;
-    }
-
-    if (!response.ok) {
       // Never heard, so the agent is still on it and the panel still waits
       markCancelled(messageId, false);
-      throw new Error(`Could not stop it: ${response.status}`);
+      throw error;
     }
   },
 
