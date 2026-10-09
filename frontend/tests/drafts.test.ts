@@ -1,13 +1,16 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { loadDraft, saveDraft, clearDraft, type Draft } from '$lib/utils/drafts';
+import { DraftRepository } from '$lib/drafts/draft-repository';
+import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
 import { lineAnchor } from '$lib/anchors/line';
 import type { Comment } from '$lib/types';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import { openReview } from './review';
+import { leavePage, openReview } from './review';
 
 let review: Review;
+// Where the page keeps drafts, read the way the page reads them
+const drafts = new DraftRepository();
 
 beforeEach(() => {
 	review = openReview();
@@ -25,6 +28,8 @@ const SHAPE_WITH_TURN_IDS = 9;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
+	// That release's page has gone; none of this one is open over it
+	leavePage();
 	localStorage.setItem(DRAFT_KEY, JSON.stringify({ title: TITLE, reviewBody: '', ...draft }));
 }
 
@@ -162,20 +167,30 @@ describe('an unsent review', () => {
 	it('ignores a draft that is not what it should be', () => {
 		localStorage.setItem(DRAFT_KEY, 'not json at all');
 
-		expect(loadDraft(TITLE)).toBeNull();
+		expect(drafts.load(TITLE)).toBeNull();
 	});
 
 	it('is forgotten when asked', () => {
-		saveDraft({ title: 'repo', comments: [], sent: [], reviewBody: 'x' });
-		clearDraft();
+		drafts.save({
+			version: DRAFT_SHAPE,
+			title: 'repo',
+			comments: [],
+			reviewBody: 'x',
+			sent: [],
+			panel: [],
+			composer: { text: '', images: [] },
+			issued: { comments: 0, turns: 0 }
+		});
+		drafts.clear();
 
-		expect(loadDraft('repo')).toBeNull();
+		expect(drafts.load('repo')).toBeNull();
 	});
 });
 
 describe('a draft this release kept', () => {
 	it('comes back as it was kept', () => {
-		const kept: Omit<Draft, 'version'> = {
+		const kept: Draft = {
+			version: DRAFT_SHAPE,
 			title: TITLE,
 			comments: [fullThread()],
 			reviewBody: 'Overall fine',
@@ -185,9 +200,9 @@ describe('a draft this release kept', () => {
 			issued: { comments: 3, turns: 5 }
 		};
 
-		saveDraft(kept);
+		drafts.save(kept);
 
-		expect(loadDraft(TITLE)).toEqual({ ...kept, version: expect.any(Number) });
+		expect(drafts.load(TITLE)).toEqual(kept);
 	});
 });
 
@@ -195,7 +210,7 @@ describe('a draft written by an older release', () => {
 	it('is brought up to the current shape rather than thrown away', () => {
 		keptByAnOlderRelease({ comments: [flatThread({ body: 'written before threads existed' })] });
 
-		const draft = loadDraft(TITLE);
+		const draft = drafts.load(TITLE);
 
 		expect(draft?.comments[0].body).toBe('written before threads existed');
 		expect(draft?.comments[0].turns).toEqual([]);
@@ -218,7 +233,7 @@ describe('a draft written by an older release', () => {
 			]
 		});
 
-		const [comment] = loadDraft(TITLE)?.comments ?? [];
+		const [comment] = drafts.load(TITLE)?.comments ?? [];
 
 		expect(comment.anchor).toEqual({
 			kind: 'line',
@@ -236,7 +251,7 @@ describe('a draft written by an older release', () => {
 	it('counts a thread sent before rounds were numbered as sent in the first', () => {
 		keptByAnOlderRelease({ comments: [flatThread()], sent: ['comment-1'] });
 
-		expect(loadDraft(TITLE)?.sent).toEqual([['comment-1', 1]]);
+		expect(drafts.load(TITLE)?.sent).toEqual([['comment-1', 1]]);
 	});
 
 	it('gives a turn written before images could be pasted no images', () => {
@@ -244,7 +259,7 @@ describe('a draft written by an older release', () => {
 			comments: [flatThread({ turns: [{ author: 'author', body: 'Done', round: 1 }] })]
 		});
 
-		expect(loadDraft(TITLE)?.comments[0].turns).toEqual([
+		expect(drafts.load(TITLE)?.comments[0].turns).toEqual([
 			{ id: 'turn-1', author: 'author', body: 'Done', round: 1, images: [] }
 		]);
 	});
@@ -273,7 +288,7 @@ describe('a draft written by an older release', () => {
 			]
 		});
 
-		const ids = loadDraft(TITLE)?.comments[0].turns.map((turn) => turn.id);
+		const ids = drafts.load(TITLE)?.comments[0].turns.map((turn) => turn.id);
 
 		expect(ids).toEqual(['turn-5', 'turn-4']);
 	});
@@ -281,7 +296,7 @@ describe('a draft written by an older release', () => {
 	it('starts the agent panel empty when the draft predates it', () => {
 		keptByAnOlderRelease({ comments: [flatThread()] });
 
-		const draft = loadDraft(TITLE);
+		const draft = drafts.load(TITLE);
 
 		expect(draft?.panel).toEqual([]);
 		expect(draft?.composer).toEqual({ text: '', images: [] });
@@ -291,7 +306,7 @@ describe('a draft written by an older release', () => {
 		const said = { id: 'message-1', author: 'reader', body: 'Run the tests', at: 60 };
 		keptByAnOlderRelease({ comments: [flatThread()], panel: [said] });
 
-		const draft = loadDraft(TITLE);
+		const draft = drafts.load(TITLE);
 
 		expect(draft?.panel).toEqual([said]);
 		expect(draft?.composer).toEqual({ text: '', images: [] });

@@ -1,13 +1,13 @@
 /** jsdom implements none of these; components under test rely on them. */
 import { beforeEach, vi } from 'vitest';
-import { clearDraft } from '$lib/utils/drafts';
+import { leavePage } from './review';
 
 // Every test starts from a page opened fresh: each builds its own review,
 // and what one test leaves in storage, or in the draft the page holds,
 // would otherwise be the next test's starting point
 beforeEach(() => {
+	leavePage();
 	localStorage.clear();
-	clearDraft();
 });
 
 /**

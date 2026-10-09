@@ -5,7 +5,8 @@ import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
 import { Review } from '$lib/review/review.svelte';
 import type { DiffFile, DiffResponse, ReviewResponse } from '$lib/types';
-import { loadDraft } from '$lib/utils/drafts';
+import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
+import { DraftRepository } from '$lib/drafts/draft-repository';
 import { diffResponse, reviewResponse } from './diff';
 
 /** What a test says about the review it opens; the rest is a diff in its first round. */
@@ -19,17 +20,41 @@ export interface Opened {
 	settings?: Settings;
 }
 
+/** The page open in this tab: the review it holds, keeping its draft as the page does. */
+interface OpenPage {
+	keeper: DraftKeeper;
+	stopKeeping: () => void;
+}
+
+let openPage: OpenPage | null = null;
+
+/**
+ * Let the page open in this tab go, as a reload or a closed tab does: what
+ * it was about to keep is kept first.
+ */
+export function leavePage(): void {
+	openPage?.keeper.flush();
+	openPage?.stopKeeping();
+	openPage = null;
+}
+
 /**
  * Open a review as the page does: from what the server says it is, its
  * first diff, and whatever unsent draft of the same review this browser
- * kept. Opening it again is a reload.
+ * kept — and keep its draft from then on. Opening another is a reload: the
+ * page before it goes first.
  */
 export function openReview({ files = [], facts, diff, settings = new Settings() }: Opened = {}): Review {
+	leavePage();
 	const said = reviewResponse(facts);
-	return new Review(
-		{ facts: said, firstDiff: diffResponse({ files, ...diff }), draft: loadDraft(said.title) },
+	const drafts = new DraftRepository();
+	const review = new Review(
+		{ facts: said, firstDiff: diffResponse({ files, ...diff }), draft: drafts.load(said.title) },
 		{ settings, layout: new PageLayout(), sound: new ReplySound(settings) }
 	);
+	const keeper = new DraftKeeper(drafts, review);
+	openPage = { keeper, stopKeeping: keeper.start() };
+	return review;
 }
 
 /** The options a component drawn on its own needs to be drawn inside this review. */

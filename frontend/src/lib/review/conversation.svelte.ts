@@ -12,8 +12,8 @@
 
 import { cancelMessage, sendMessage } from "$lib/api/review-api";
 import { PanelComposer } from "$lib/review/panel-composer.svelte";
+import type { Draft } from "$lib/drafts/draft-shapes";
 import type { Comment, PanelTurn } from "$lib/types";
-import { type Draft, saveDraft } from "$lib/utils/drafts";
 import {
   ANSWER_ID_PREFIX,
   EVENT_ID_PREFIX,
@@ -37,33 +37,28 @@ function workingOn(turns: PanelTurn[]): PanelTurn | undefined {
 export class Conversation {
   /** The message being written. */
   readonly composer: PanelComposer;
-  readonly #title: string;
   #turns: PanelTurn[];
   readonly #messageIds = new IdSequence(MESSAGE_ID_PREFIX);
   readonly #answerIds = new IdSequence(ANSWER_ID_PREFIX);
   readonly #eventIds = new IdSequence(EVENT_ID_PREFIX);
   readonly #working: PanelTurn | undefined;
 
-  /**
-   * @param title what the review is of, which its draft is kept under
-   * @param draft an unsent review of the same thing, with what was said here
-   */
-  constructor(title: string, draft: Draft | null) {
-    this.#title = title;
-    this.composer = new PanelComposer(title, draft);
-    const said = draft?.panel ?? [];
-    this.#turns = $state(said);
+  /** @param draft an unsent review of the same thing, with what was said here */
+  constructor(draft: Draft | null) {
+    this.composer = new PanelComposer(draft);
+    this.#turns = $state([]);
     this.#working = $derived(workingOn(this.#turns));
-    // Past the highest id already handed out, so an answer cannot land under
-    // a message that only shares its number
-    const saidIds = said.map((turn) => turn.id);
-    this.#messageIds.continuePast(saidIds);
-    this.#answerIds.continuePast(saidIds);
-    this.#eventIds.continuePast(saidIds);
+    if (draft !== null) this.#pickUp(draft.panel);
   }
 
   get turns(): PanelTurn[] {
     return this.#turns;
+  }
+
+  /** Take in what another tab on the same review has said here. */
+  adopt(draft: Draft): void {
+    this.#pickUp(draft.panel);
+    this.composer.adopt(draft);
   }
 
   /** The message the agent is still working on, if any. */
@@ -103,7 +98,6 @@ export class Conversation {
     } catch (error) {
       // Never reached the agent, so it is taken off the conversation
       this.#turns = this.#turns.filter((turn) => turn.id !== id);
-      this.#remember();
       throw error;
     }
     this.composer.takeSent(written, images);
@@ -158,17 +152,21 @@ export class Conversation {
 
   #say(turn: PanelTurn): void {
     this.#turns = [...this.#turns, turn];
-    this.#remember();
+  }
+
+  #pickUp(said: PanelTurn[]): void {
+    this.#turns = said;
+    // Past the highest id already handed out, so an answer cannot land under
+    // a message that only shares its number
+    const saidIds = said.map((turn) => turn.id);
+    this.#messageIds.continuePast(saidIds);
+    this.#answerIds.continuePast(saidIds);
+    this.#eventIds.continuePast(saidIds);
   }
 
   #markCancelled(messageId: string, cancelled: boolean): void {
     this.#turns = this.#turns.map((turn) =>
       turn.id === messageId ? { ...turn, cancelled } : turn,
     );
-    this.#remember();
-  }
-
-  #remember(): void {
-    saveDraft({ title: this.#title, panel: this.#turns });
   }
 }

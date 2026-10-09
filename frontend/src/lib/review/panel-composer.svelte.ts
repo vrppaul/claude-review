@@ -2,40 +2,46 @@
  * The message being written in the agent panel: its words and the images
  * pasted into it.
  *
- * Held here rather than in the panel, and saved with the draft, so hiding
+ * Held here rather than in the panel, and kept with the draft, so hiding
  * the panel or reloading the page loses neither — and no image is left on
  * the server with nothing on screen pointing at it.
  */
 
+import { type Draft, emptyComposer } from "$lib/drafts/draft-shapes";
 import type { Composer } from "$lib/types";
-import { type Draft, saveDraft } from "$lib/utils/drafts";
 import { ImageAttachments } from "$lib/utils/image-attachments.svelte";
 
 export class PanelComposer {
-  readonly #title: string;
   #text: string;
   readonly attachments: ImageAttachments;
 
-  /**
-   * @param title what the review is of, which its draft is kept under
-   * @param draft an unsent review of the same thing, with its half-written message
-   */
-  constructor(title: string, draft: Draft | null) {
-    this.#title = title;
-    const kept = draft?.composer;
-    this.#text = $state(kept?.text ?? "");
-    this.attachments = new ImageAttachments(kept?.images ?? [], () =>
-      this.#remember(),
-    );
+  /** @param draft an unsent review of the same thing, with its half-written message */
+  constructor(draft: Draft | null) {
+    const kept = draft?.composer ?? emptyComposer();
+    this.#text = $state(kept.text);
+    this.attachments = new ImageAttachments(kept.images);
   }
 
   get text(): string {
     return this.#text;
   }
 
+  /** The message as the draft keeps it. */
+  get kept(): Composer {
+    return {
+      text: this.#text,
+      images: $state.snapshot(this.attachments.images),
+    };
+  }
+
   setText(text: string): void {
     this.#text = text;
-    this.#remember();
+  }
+
+  /** Take in what another tab on the same review was writing. */
+  adopt(draft: Draft): void {
+    this.#text = draft.composer.text;
+    this.attachments.reset(draft.composer.images);
   }
 
   /**
@@ -48,13 +54,5 @@ export class PanelComposer {
       this.#text = this.#text.slice(written.length).trimStart();
     }
     this.attachments.release(images);
-  }
-
-  #remember(): void {
-    const composer: Composer = {
-      text: this.#text,
-      images: $state.snapshot(this.attachments.images),
-    };
-    saveDraft({ title: this.#title, composer });
   }
 }

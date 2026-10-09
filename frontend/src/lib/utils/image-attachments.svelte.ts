@@ -17,18 +17,13 @@ export class ImageAttachments {
   images = $state<string[]>([]);
   /** Images still on their way to the server; sending waits for them. */
   uploading = $state(0);
-  readonly #onChange: (() => void) | undefined;
   // What this instance uploaded itself, as opposed to images it was handed
   // with an edit or a draft: the only ones it may let the server drop
   readonly #uploaded = new SvelteSet<string>();
 
-  /**
-   * @param images what is already attached, when picking up a draft or an edit
-   * @param onChange called whenever the attached images change, to save them
-   */
-  constructor(images: string[], onChange?: () => void) {
+  /** @param images what is already attached, when picking up a draft or an edit */
+  constructor(images: string[]) {
     this.images = images;
-    this.#onChange = onChange;
   }
 
   /**
@@ -90,13 +85,11 @@ export class ImageAttachments {
   /** Take an image off without asking the server: it no longer has it. */
   forget(imageId: string) {
     this.images = this.images.filter((kept) => kept !== imageId);
-    this.#onChange?.();
   }
 
   /** Let go of what went out with a message; what was pasted since stays. */
   release(sent: string[]) {
     this.images = this.images.filter((imageId) => !sent.includes(imageId));
-    this.#onChange?.();
   }
 
   /**
@@ -128,7 +121,6 @@ export class ImageAttachments {
       const { image_id: imageId } = await keepImage(file);
       this.#uploaded.add(imageId);
       this.images = [...this.images, imageId];
-      this.#onChange?.();
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : "Could not attach the image";

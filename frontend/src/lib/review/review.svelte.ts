@@ -33,7 +33,7 @@ import type {
   SendLimits,
   SessionHello,
 } from "$lib/types";
-import type { Draft } from "$lib/utils/drafts";
+import { DRAFT_SHAPE, type Draft } from "$lib/drafts/draft-shapes";
 import { reviewWeight } from "$lib/utils/weight";
 
 /** What a review opens on: what the server says it is, its first diff, and any unsent draft. */
@@ -82,6 +82,8 @@ export class Review {
   // What the page tells the server it holds: the round it has reached, and
   // the threads, which are unsent work and live only here
   readonly #hello: SessionHello;
+  // The unsent review as a draft keeps it; none once the review is over
+  readonly #draft: Draft | null;
 
   constructor({ facts, firstDiff, draft }: Opening, reader: ReaderParts) {
     this.title = facts.title;
@@ -97,14 +99,9 @@ export class Review {
       firstDiff,
       () => this.settings.current.ignore_whitespace,
     );
-    this.threads = new Threads(this.rounds, facts.title, draft);
-    this.submission = new Submission(
-      this.threads,
-      this.rounds,
-      facts.title,
-      draft,
-    );
-    this.conversation = new Conversation(facts.title, draft);
+    this.threads = new Threads(this.rounds, draft);
+    this.submission = new Submission(this.threads, this.rounds, draft);
+    this.conversation = new Conversation(draft);
     this.guide = new Guide(this.answerer, facts.release);
     this.navigator = new ThreadNavigator(this.reading, this.sections);
     this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
@@ -113,6 +110,19 @@ export class Review {
       round: this.rounds.current,
       threads: this.threads.onTheWire,
     });
+    this.#draft = $derived(this.submission.finished ? null : this.#snapshot());
+  }
+
+  /** The unsent review as a draft keeps it; none once the review is over. */
+  get draft(): Draft | null {
+    return this.#draft;
+  }
+
+  /** Take in the draft another tab on the same review has just kept. */
+  adopt(draft: Draft): void {
+    this.threads.adopt(draft);
+    this.submission.adopt(draft);
+    this.conversation.adopt(draft);
   }
 
   get restoredCount(): number {
@@ -163,6 +173,19 @@ export class Review {
     this.diff.treeMoved.settle();
     this.lastRetake.note(outcome, changes);
     this.reading.forgetRewritten(changes);
+  }
+
+  #snapshot(): Draft {
+    return {
+      version: DRAFT_SHAPE,
+      title: this.title,
+      comments: this.threads.all,
+      reviewBody: this.submission.body,
+      sent: this.threads.sentRounds,
+      panel: this.conversation.turns,
+      composer: this.conversation.composer.kept,
+      issued: this.threads.issued,
+    };
   }
 
   /** Read only what changed since the round the last retake was counted from. */

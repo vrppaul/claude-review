@@ -6,31 +6,21 @@
 import { endReview, submitReview } from "$lib/api/review-api";
 import type { Rounds } from "$lib/review/rounds.svelte";
 import type { Threads } from "$lib/review/threads.svelte";
+import type { Draft } from "$lib/drafts/draft-shapes";
 import type { SubmitResponse } from "$lib/types";
-import { clearDraft, type Draft, saveDraft } from "$lib/utils/drafts";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 
 export class Submission {
   readonly #threads: Threads;
   readonly #rounds: Rounds;
-  readonly #title: string;
   // The summary: about the change as a whole, not one line of it
   #body: string;
   #finished = $state(false);
 
-  /**
-   * @param title what the review is of, which its draft is kept under
-   * @param draft an unsent review of the same thing, with its summary
-   */
-  constructor(
-    threads: Threads,
-    rounds: Rounds,
-    title: string,
-    draft: Draft | null,
-  ) {
+  /** @param draft an unsent review of the same thing, with its summary */
+  constructor(threads: Threads, rounds: Rounds, draft: Draft | null) {
     this.#threads = threads;
     this.#rounds = rounds;
-    this.#title = title;
     this.#body = $state(draft?.reviewBody ?? "");
   }
 
@@ -55,7 +45,11 @@ export class Submission {
 
   setBody(text: string): void {
     this.#body = text;
-    saveDraft({ title: this.#title, reviewBody: text });
+  }
+
+  /** Take in the summary another tab on the same review was writing. */
+  adopt(draft: Draft): void {
+    this.#body = draft.reviewBody;
   }
 
   /**
@@ -75,7 +69,7 @@ export class Submission {
     });
 
     if (end) {
-      this.#finish();
+      this.#finished = true;
       return result;
     }
 
@@ -90,12 +84,6 @@ export class Submission {
   /** End a review that was being worked through in rounds. */
   async end(): Promise<void> {
     await endReview();
-    this.#finish();
-  }
-
-  #finish(): void {
     this.#finished = true;
-    // The review has left; keeping it would greet the next one as unsent work
-    clearDraft();
   }
 }

@@ -10,8 +10,9 @@ import { PageLayout } from "$lib/reader/page-layout.svelte";
 import { PageTheme } from "$lib/reader/page-theme.svelte";
 import { ReplySound } from "$lib/reader/reply-sound";
 import { Settings } from "$lib/reader/settings.svelte";
+import { DraftKeeper } from "$lib/drafts/draft-keeper.svelte";
+import { DraftRepository } from "$lib/drafts/draft-repository";
 import { Review } from "$lib/review/review.svelte";
-import { loadDraft } from "$lib/utils/drafts";
 
 /** Where the page has got to with its review. */
 export type PageState =
@@ -24,6 +25,7 @@ export class ReviewPage {
   readonly #settings = new Settings();
   readonly #layout = new PageLayout();
   readonly #theme = new PageTheme(this.#settings);
+  readonly #drafts = new DraftRepository();
   #state = $state<PageState>({ kind: "opening" });
 
   constructor(connection: PageConnection) {
@@ -55,7 +57,7 @@ export class ReviewPage {
         }),
       ]);
       // An unsent review of the same thing is picked up where it stopped
-      const draft = loadDraft(facts.title);
+      const draft = this.#drafts.load(facts.title);
       const review = new Review(
         { facts, firstDiff, draft },
         {
@@ -66,6 +68,9 @@ export class ReviewPage {
       );
       if (review.answerer.attached) this.#layout.agentPanel.offer();
       review.tellServerThrough(this.#connection);
+      new DraftKeeper(this.#drafts, review).start();
+      // Two tabs on one review keep one draft: what either writes, both hold
+      this.#drafts.onChange(facts.title, (kept) => review.adopt(kept));
       // Only now is there a review for what the server said meanwhile to land in
       this.#connection.deliverTo((push) => handlePush(review, push));
       this.#state = { kind: "open", review };

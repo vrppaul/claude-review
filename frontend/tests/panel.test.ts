@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadDraft } from '$lib/utils/drafts';
+import { DraftRepository } from '$lib/drafts/draft-repository';
 import { threadsIn } from '$lib/utils/thread-token';
 import { anchorToken } from '$lib/anchors/views';
 import { formatWeight } from '$lib/utils/weight';
@@ -8,7 +8,7 @@ import { contextLine, addedLine, diffFile, hunk } from './diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import { openReview } from './review';
+import { leavePage, openReview } from './review';
 
 let review: Review;
 
@@ -156,9 +156,11 @@ describe('the panel talks to the agent about the review', () => {
 		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'an hour of reading' }));
 
 		await say('and a message');
+		leavePage();
 
-		expect(loadDraft(TITLE)?.comments).toHaveLength(1);
-		expect(loadDraft(TITLE)?.panel).toHaveLength(1);
+		const kept = new DraftRepository().load(TITLE);
+		expect(kept?.comments).toHaveLength(1);
+		expect(kept?.panel).toHaveLength(1);
 	});
 
 	it('takes a failed send back off the conversation', async () => {

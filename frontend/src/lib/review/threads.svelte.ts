@@ -11,6 +11,7 @@ import { SvelteMap } from "svelte/reactivity";
 
 import { askInThread, followAnchors } from "$lib/api/review-api";
 import { anchorPlace } from "$lib/anchors/views";
+import type { Draft, IssuedIds } from "$lib/drafts/draft-shapes";
 import type { Rounds } from "$lib/review/rounds.svelte";
 import type {
   Anchor,
@@ -22,7 +23,6 @@ import type {
   ThreadInput,
   Turn,
 } from "$lib/types";
-import { type Draft, saveDraft } from "$lib/utils/drafts";
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
 
@@ -47,8 +47,6 @@ const NO_THREADS: readonly Comment[] = [];
 
 export class Threads {
   readonly #rounds: Rounds;
-  // What the draft is tied to, so it is not restored onto another review
-  readonly #title: string;
   #all = $state<Comment[]>([]);
   // Which threads have gone out, and in which round. A round carries what
   // is new since the last one, not the whole review again — and the reader
@@ -70,13 +68,11 @@ export class Threads {
 
   /**
    * @param rounds the round each thread and turn is stamped with
-   * @param title what the review is of, which its draft is kept under
    * @param draft an unsent review of the same thing, picked up where it stopped
    */
-  constructor(rounds: Rounds, title: string, draft: Draft | null) {
+  constructor(rounds: Rounds, draft: Draft | null) {
     this.#rounds = rounds;
-    this.#title = title;
-    if (draft !== null) this.#pickUp(draft);
+    if (draft !== null) this.adopt(draft);
   }
 
   get all(): Comment[] {
@@ -114,6 +110,16 @@ export class Threads {
     return this.#byFile.get(path) ?? NO_THREADS;
   }
 
+  /** Every thread sent so far, and the round it went out in, as the draft keeps them. */
+  get sentRounds(): [string, number][] {
+    return [...this.#sent];
+  }
+
+  /** How many thread and turn ids have been handed out, deleted ones included. */
+  get issued(): IssuedIds {
+    return { comments: this.#commentIds.issued, turns: this.#turnIds.issued };
+  }
+
   /** Which round a thread went out in, or nothing if it has not yet. */
   sentInRound(id: string): number | undefined {
     return this.#sent.get(id);
@@ -144,7 +150,6 @@ export class Threads {
       at: Date.now(),
     };
     this.#all = [...this.#all, comment];
-    this.#remember();
     return comment.id;
   }
 
@@ -179,7 +184,6 @@ export class Threads {
     };
     this.#all = [...this.#all, comment];
     this.#sent.set(id, this.#rounds.current);
-    this.#remember();
     return id;
   }
 
@@ -196,7 +200,6 @@ export class Threads {
   remove(id: string): void {
     this.#sent.delete(id);
     this.#all = this.#all.filter((comment) => comment.id !== id);
-    this.#remember();
   }
 
   /** Add what someone said to a thread. */
@@ -291,7 +294,6 @@ export class Threads {
     this.#all = this.#all.map((comment) =>
       comment.unread ? { ...comment, unread: false } : comment,
     );
-    this.#remember();
   }
 
   setResolved(id: string, resolved: boolean): void {
@@ -307,7 +309,6 @@ export class Threads {
   /** Note that these threads went out in this round. */
   markSent(sent: Comment[], round: number): void {
     for (const comment of sent) this.#sent.set(comment.id, round);
-    this.#remember();
   }
 
   /**
@@ -341,21 +342,21 @@ export class Threads {
         followed += 1;
       return { ...comment, anchor: moved };
     });
-
-    this.#remember();
     return { followed, outdated };
   }
 
   /**
-   * Pick up an unsent review of the same thing.
+   * Take in an unsent review of the same thing: kept before a reload, or
+   * written in another tab.
    *
    * A round the server has forgotten is still written all over the draft:
    * every thread knows the round it was written in, and every sent thread
    * the round it went out in. A restarted server comes back at round one
    * and would number the next round wrongly for everyone.
    */
-  #pickUp(draft: Draft): void {
+  adopt(draft: Draft): void {
     this.#all = draft.comments;
+    this.#sent.clear();
     for (const [id, round] of draft.sent) this.#sent.set(id, round);
     this.#commentIds.continueFrom(draft.issued.comments);
     this.#turnIds.continueFrom(draft.issued.turns);
@@ -367,18 +368,5 @@ export class Threads {
     this.#all = this.#all.map((comment) =>
       comment.id === id ? change(comment) : comment,
     );
-    this.#remember();
-  }
-
-  #remember(): void {
-    saveDraft({
-      title: this.#title,
-      comments: this.#all,
-      sent: [...this.#sent],
-      issued: {
-        comments: this.#commentIds.issued,
-        turns: this.#turnIds.issued,
-      },
-    });
   }
 }

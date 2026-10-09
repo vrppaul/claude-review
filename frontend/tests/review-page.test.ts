@@ -5,7 +5,7 @@ import { diffResponse, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket } from './fake-socket';
 import { newComment } from './new-comment';
-import { openReview } from './review';
+import { leavePage, openReview } from './review';
 
 const SESSION_URL = 'ws://review.test/api/session';
 
@@ -33,6 +33,8 @@ describe('opening the page', () => {
 		serving();
 		// A thread written before the reload, kept in the draft
 		const id = openReview().threads.add(newComment({ body: 'Why?' }));
+		// And then the reload
+		leavePage();
 		const page = new ReviewPage(new PageConnection(SESSION_URL));
 
 		const opening = page.open();
