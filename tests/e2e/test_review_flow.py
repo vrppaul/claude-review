@@ -282,7 +282,7 @@ def text_files(tmp_path: Path) -> list[Path]:
 @pytest.fixture
 async def files_review(text_files: list[Path], servers: ReviewServers) -> RunningReview:
     """A real server reviewing two text files."""
-    return await servers.start(TextFileService().read_files(text_files), mode=ReviewMode.FILES)
+    return await servers.start(await TextFileService().read_files(text_files), mode=ReviewMode.FILES)
 
 
 async def test_files_mode_sidebar_shows_files_without_diff_decorations(files_review: RunningReview, page: Page) -> None:
@@ -472,7 +472,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
-    return await servers.start(TranscriptService().parse(transcript_file), mode=ReviewMode.TRANSCRIPT)
+    return await servers.start(await TranscriptService().read(transcript_file), mode=ReviewMode.TRANSCRIPT)
 
 
 async def test_transcript_mode_sidebar_shows_messages(transcript_review: RunningReview, page: Page) -> None:

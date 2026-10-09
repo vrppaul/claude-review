@@ -200,7 +200,7 @@ def plan_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real text file loaded through TextFileService."""
-    files = TextFileService().read_files([plan_file])
+    files = await TextFileService().read_files([plan_file])
     async with http_client(reviews.app(files, mode=ReviewMode.FILES)) as agent:
         yield agent
 
@@ -254,7 +254,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real transcript file loaded through TranscriptService."""
-    messages = TranscriptService().parse(transcript_file)
+    messages = await TranscriptService().read(transcript_file)
     async with http_client(reviews.app(messages, mode=ReviewMode.TRANSCRIPT)) as agent:
         yield agent
 

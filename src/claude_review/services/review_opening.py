@@ -6,7 +6,6 @@ same for all three. Paths arrive resolved: what makes two openings the same
 review is where the files are, not how they were named.
 """
 
-import asyncio
 from pathlib import Path
 
 import structlog
@@ -68,7 +67,7 @@ async def open_diff(location: Path, base: str | None, git_repository: GitReposit
 async def open_files(paths: list[Path]) -> ReviewOpening:
     """Text files — plans, docs, configs, source code — each read whole."""
     log.info("loading_files", count=len(paths))
-    diff_files = await asyncio.to_thread(TextFileService().read_files, paths)
+    diff_files = await TextFileService().read_files(paths)
     return ReviewOpening(
         mode=ReviewMode.FILES,
         diff_files=diff_files,
@@ -83,7 +82,7 @@ async def open_files(paths: list[Path]) -> ReviewOpening:
 async def open_transcript(path: Path) -> ReviewOpening:
     """A conversation, from the JSONL file Claude Code keeps it in."""
     log.info("loading_transcript", path=str(path))
-    diff_files = await asyncio.to_thread(TranscriptService().parse, path)
+    diff_files = await TranscriptService().read(path)
     return ReviewOpening(
         mode=ReviewMode.TRANSCRIPT,
         diff_files=diff_files,

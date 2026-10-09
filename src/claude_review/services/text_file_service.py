@@ -2,45 +2,36 @@
 
 Text files are mapped into the existing DiffFile model so that the same
 review UI, comment system, and submission pipeline work for both git diffs
-and plain text files (plans, docs, etc.).  Every line becomes a CONTEXT
-line with a single line number — there is no "old" vs "new" distinction.
+and plain text files (plans, docs, etc.).
 """
 
+import asyncio
 from pathlib import Path
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.domain.models import DiffFile
 from claude_review.services.unreadable_content import UnreadableContentError
+from claude_review.services.whole_file import whole_file
 
 
 class TextFileService:
     """Converts plain text files into DiffFile models for review."""
 
-    def read_files(self, paths: list[Path]) -> list[DiffFile]:
+    async def read_files(self, paths: list[Path]) -> list[DiffFile]:
         """Read files and convert each into a reviewable DiffFile.
 
-        Skips empty files.  Deduplicates paths so the same file
-        is not loaded twice.
+        Skips empty files. A file named twice, however it was named, is read
+        once. The disk is read off the event loop.
 
         Raises:
             UnreadableContentError: If a path does not point to a readable text file.
         """
-        seen: set[Path] = set()
-        result: list[DiffFile] = []
-
-        for path in paths:
-            resolved = path.resolve()
-            if resolved in seen:
-                continue
-            seen.add(resolved)
-
-            text = self._read_text(resolved)
-            if not text:
-                continue
-
-            lines = self._split_lines(text)
-            result.append(self._build_diff_file(self._display_path(resolved), lines))
-
-        return result
+        resolved = [await asyncio.to_thread(path.resolve) for path in paths]
+        files: list[DiffFile] = []
+        for path in dict.fromkeys(resolved):
+            text = await asyncio.to_thread(self._read_text, path)
+            if text:
+                files.append(whole_file(self._display_path(path), text))
+        return files
 
     def _display_path(self, path: Path) -> str:
         """Name a file the way the reader would.
@@ -66,24 +57,3 @@ class TextFileService:
         except (OSError, UnicodeDecodeError) as error:
             msg = f"Not a readable text file: {path}"
             raise UnreadableContentError(msg) from error
-
-    def _split_lines(self, text: str) -> list[str]:
-        """Split text into lines, stripping a single trailing empty line."""
-        lines = text.split("\n")
-        if lines and lines[-1] == "":
-            lines = lines[:-1]
-        return lines
-
-    def _build_diff_file(self, path: str, raw_lines: list[str]) -> DiffFile:
-        """Wrap lines into a DiffFile with a single all-context hunk."""
-        diff_lines = [
-            DiffLine(kind=LineType.CONTEXT, old_number=None, new_number=i, content=line)
-            for i, line in enumerate(raw_lines, start=1)
-        ]
-        hunk = DiffHunk(
-            header="",
-            old_start=0,  # no "old" version for plain text
-            new_start=1,
-            lines=diff_lines,
-        )
-        return DiffFile(path=path, status=FileStatus.ADDED, hunks=[hunk])

@@ -5,6 +5,7 @@ from the same role are merged into a single turn.  Tool calls/results,
 thinking blocks, and system/command messages are excluded.
 """
 
+import asyncio
 import json
 import re
 from collections import Counter
@@ -13,12 +14,13 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.domain.models import DiffFile
 from claude_review.services.unreadable_content import UnreadableContentError
+from claude_review.services.whole_file import whole_file
 
 # Claude Code injects internal messages (slash commands, system reminders, bash output)
 # as user entries with XML tags.  These aren't real user input — filter them out.
-_SYSTEM_TAG_RE = re.compile(r"^<(command-|local-command-|system-reminder|bash-)")
+SYSTEM_TAG = re.compile(r"^<(command-|local-command-|system-reminder|bash-)")
 
 # The entry types that are one side of the conversation
 CONVERSATION_ROLES = frozenset({"user", "assistant"})
@@ -64,8 +66,8 @@ class ConversationTurn(BaseModel):
 class TranscriptService:
     """Converts a Claude Code JSONL conversation file into DiffFile models for review."""
 
-    def parse(self, path: Path) -> list[DiffFile]:
-        """Parse a Claude Code JSONL conversation file into reviewable DiffFiles.
+    async def read(self, path: Path) -> list[DiffFile]:
+        """Read a Claude Code JSONL conversation file into reviewable DiffFiles, off the event loop.
 
         Each line in the JSONL is a JSON object with a ``type`` field.
         Only ``user`` and ``assistant`` entries are extracted::
@@ -90,25 +92,32 @@ class TranscriptService:
         Raises:
             UnreadableContentError: If the file cannot be read, or a line is not JSON.
         """
-        turns = self._merge_turns(self._read_jsonl(path))
+        text = await asyncio.to_thread(self._read_text, path)
+        turns = self._merge_turns(self._entries(text))
         labels = _labels(turns)
-        return [
-            self._build_diff_file(label, self._split_lines(turn.text))
-            for turn, label in reversed(list(zip(turns, labels, strict=True)))
-        ]
+        return [whole_file(label, turn.text) for turn, label in reversed(list(zip(turns, labels, strict=True)))]
 
-    def _read_jsonl(self, path: Path) -> list[TranscriptEntry]:
-        """Read the conversation's entries, one JSON object per line.
+    def _read_text(self, path: Path) -> str:
+        """The conversation file's text.
 
-        An entry whose shape this does not know is left out rather than read
-        wrongly: the transcript's format belongs to another program.
+        Raises:
+            UnreadableContentError: If the file cannot be read, or is not UTF-8.
         """
         try:
-            text = path.read_text(encoding="utf-8")
+            return path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as error:
             msg = f"Invalid transcript file: {error}"
             raise UnreadableContentError(msg) from error
 
+    def _entries(self, text: str) -> list[TranscriptEntry]:
+        """The conversation's entries, one JSON object per line.
+
+        An entry whose shape this does not know is left out rather than read
+        wrongly: the transcript's format belongs to another program.
+
+        Raises:
+            UnreadableContentError: If a line is not JSON.
+        """
         entries = []
         for line_number, line in enumerate(text.splitlines(), start=1):
             if not line.strip():
@@ -159,27 +168,6 @@ class TranscriptService:
 
         return turns
 
-    def _split_lines(self, text: str) -> list[str]:
-        """Split text into lines, stripping a single trailing empty line."""
-        lines = text.split("\n")
-        if lines and lines[-1] == "":
-            lines = lines[:-1]
-        return lines
-
-    def _build_diff_file(self, path: str, raw_lines: list[str]) -> DiffFile:
-        """Wrap lines into a DiffFile with a single all-context hunk."""
-        diff_lines = [
-            DiffLine(kind=LineType.CONTEXT, old_number=None, new_number=i, content=line)
-            for i, line in enumerate(raw_lines, start=1)
-        ]
-        hunk = DiffHunk(
-            header="",
-            old_start=0,
-            new_start=1,
-            lines=diff_lines,
-        )
-        return DiffFile(path=path, status=FileStatus.ADDED, hunks=[hunk])
-
 
 def _has_tool_blocks(entry: TranscriptEntry) -> bool:
     """Whether an entry calls a tool or carries a tool's result."""
@@ -193,13 +181,13 @@ def _extract_text(entry: TranscriptEntry) -> str:
 
     if isinstance(content, str):
         text = content.strip()
-        return "" if _SYSTEM_TAG_RE.match(text) else text
+        return "" if SYSTEM_TAG.match(text) else text
 
     if content is None:
         return ""
 
     said = [(block.text or "").strip() for block in content if block.type == TEXT_BLOCK]
-    return "\n".join(text for text in said if text and not _SYSTEM_TAG_RE.match(text))
+    return "\n".join(text for text in said if text and not SYSTEM_TAG.match(text))
 
 
 def _labels(turns: list[ConversationTurn]) -> list[str]:
