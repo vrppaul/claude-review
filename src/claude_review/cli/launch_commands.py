@@ -11,9 +11,10 @@ from pathlib import Path
 import click
 import structlog
 
+from claude_review.cli.terminal_announcer import TerminalAnnouncer
 from claude_review.domain.models import ReviewMode
 from claude_review.hosting.ports import ANY_FREE_PORT, HIGHEST_PORT
-from claude_review.hosting.serving import LaunchOptions, serve_review
+from claude_review.hosting.serving import serve_review
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff, open_files, open_transcript
 
@@ -75,19 +76,20 @@ def transcript_command(path: Path, port: int | None, no_open: bool) -> None:
 
 def _launch(opening: Awaitable[ReviewOpening], *, port: int | None, no_open: bool) -> None:
     """Open a review, hold it open until it ends, and print what it handed back."""
-    handed_back = asyncio.run(_open_and_serve(opening, LaunchOptions(port=port, open_browser=not no_open)))
+    announcer = TerminalAnnouncer(open_browser=not no_open)
+    handed_back = asyncio.run(_open_and_serve(opening, port=port, announcer=announcer))
     if handed_back:
         click.echo(handed_back)
 
 
-async def _open_and_serve(opening: Awaitable[ReviewOpening], options: LaunchOptions) -> str:
+async def _open_and_serve(opening: Awaitable[ReviewOpening], *, port: int | None, announcer: TerminalAnnouncer) -> str:
     """Read what is to be reviewed, and serve it unless there is nothing in it."""
     opened = await opening
     if not opened.diff_files:
         click.echo(NOTHING_TO_REVIEW[opened.mode], err=True)
         return ""
     log.info("content_loaded", file_count=len(opened.diff_files), mode=opened.mode)
-    return await serve_review(opened, options)
+    return await serve_review(opened, port=port, announcer=announcer)
 
 
-LAUNCH_COMMANDS = (diff_command, files_command, transcript_command)
+COMMANDS = {command.name: command for command in (diff_command, files_command, transcript_command)}

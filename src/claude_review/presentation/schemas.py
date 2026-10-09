@@ -3,7 +3,7 @@
 from enum import StrEnum, auto
 from typing import Annotated, Literal, Self
 
-from pydantic import ConfigDict, Field, JsonValue, ValidationError, model_validator
+from pydantic import AfterValidator, ConfigDict, Field, JsonValue, ValidationError, model_validator
 
 from claude_review.domain.models import (
     MAX_QUOTE_LINES,
@@ -45,6 +45,19 @@ SAFE_ID = r"^[A-Za-z0-9._-]+$"
 
 # An id as a request names it: a thread, a turn, a question, a message, an image
 WireId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
+
+
+def _says_something(text: str) -> str:
+    """Refuse text that is only blanks: on screen it would be a turn with nothing in it."""
+    if not text.strip():
+        msg = "says nothing"
+        raise ValueError(msg)
+    return text
+
+
+# What the agent says — an answer, a panel message, a thread it raises:
+# words, since it has no screenshots to send
+AgentText = Annotated[str, Field(min_length=1, max_length=MAX_TEXT_LENGTH), AfterValidator(_says_something)]
 
 # How long an agent's poll for events waits when it does not say: long enough
 # that a loop of polls costs nothing, short enough to stay under the timeouts
@@ -352,7 +365,7 @@ class PointRequest(ReviewModel):
     """
 
     anchor: Anchor
-    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    body: AgentText
     severity: CommentSeverity
 
 
@@ -388,7 +401,7 @@ class SayRequest(ReviewModel):
     """
 
     message_id: WireId | None = None
-    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    body: AgentText
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
@@ -401,6 +414,10 @@ MAX_STEP_LENGTH = 200
 # itself, not a log, so a line or two is all it ever needs.
 MAX_PROGRESS_LENGTH = 500
 
+# One branch of the work, and the work itself, which may be said in none
+StepText = Annotated[str, Field(min_length=1, max_length=MAX_STEP_LENGTH)]
+ProgressText = Annotated[str, Field(max_length=MAX_PROGRESS_LENGTH)]
+
 # The most branches the work is shown as at once
 MAX_PROGRESS_STEPS = 20
 
@@ -408,7 +425,7 @@ MAX_PROGRESS_STEPS = 20
 class ProgressStep(ReviewModel):
     """One branch of the work: something being done, or something done."""
 
-    text: str = Field(min_length=1, max_length=MAX_STEP_LENGTH)
+    text: StepText
     done: bool = False
 
 
@@ -421,7 +438,7 @@ class ProgressRequest(ReviewModel):
     """
 
     message_id: WireId | None = None
-    text: str = Field(default="", max_length=MAX_PROGRESS_LENGTH)
+    text: ProgressText = ""
     files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
@@ -470,6 +487,7 @@ class CancelRequest(ReviewModel):
 
 # The longest the agent may say which model it is, or how full its context is
 MAX_STATUS_LENGTH = 200
+StatusText = Annotated[str, Field(max_length=MAX_STATUS_LENGTH)]
 
 
 class StatusRequest(ReviewModel):
@@ -479,15 +497,15 @@ class StatusRequest(ReviewModel):
     its business, and this side only repeats it with a time beside it.
     """
 
-    model: str | None = Field(default=None, max_length=MAX_STATUS_LENGTH)
-    context: str | None = Field(default=None, max_length=MAX_STATUS_LENGTH)
+    model: StatusText | None = None
+    context: StatusText | None = None
 
 
 class ReplyRequest(ReviewModel):
     """Request body for POST /api/reply — the answer coming back."""
 
     thread_id: WireId
-    body: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
+    body: AgentText
     # Which question is being answered. Omitted, the answer goes to the
     # oldest question in that thread still waiting for one.
     question_id: WireId | None = None

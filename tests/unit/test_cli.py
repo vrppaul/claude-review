@@ -1,6 +1,9 @@
 """The command line as it is typed: what it offers, and what it refuses before it calls anything."""
 
+import re
 import socket
+import subprocess
+import sys
 
 import pytest
 from click.testing import CliRunner, Result
@@ -15,11 +18,20 @@ USAGE_ERROR = 2
 # What a command that ran and failed exits with
 FAILED = 1
 
-# Where the help starts listing commands, one to a line
+# Where the help starts listing commands, and a line that names one: indented
+# once, where a description too long for its line goes on indented further
 COMMANDS_HEADING = "Commands:"
+COMMAND_LINE = re.compile(r"^  (\S+)  ")
 LAUNCH_COMMANDS = ("diff", "files", "transcript")
 AGENT_COMMANDS = ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round")
 LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
+# Words that say nothing
+BLANK = "   "
+# Loading an agent's command the way the command line does, and listing every module it brought in
+LOAD_AN_AGENTS_COMMAND = (
+    "import sys; from claude_review.cli.main import main; main.get_command(None, 'wait'); print(*sys.modules)"
+)
+SERVER_MODULE = "uvicorn"
 
 
 @pytest.fixture
@@ -40,9 +52,9 @@ def _failed_in_a_line(result: Result, exit_code: int) -> bool:
 
 
 def _offered_commands(help_text: str) -> set[str]:
-    """The commands the help lists, one to a line under its heading."""
+    """The commands the help lists under its heading, each at the start of a line of its own."""
     listed = help_text.split(COMMANDS_HEADING, 1)[1]
-    return {line.split()[0] for line in listed.splitlines() if line.strip()}
+    return {found.group(1) for line in listed.splitlines() if (found := COMMAND_LINE.match(line))}
 
 
 def test_every_command_is_offered() -> None:
@@ -102,17 +114,33 @@ def test_a_call_to_a_review_that_is_not_there_explains_itself(unused_port: str) 
 
 
 @pytest.mark.parametrize(
-    ("arguments", "field"),
+    ("arguments", "typed_in"),
     [
-        (["reply", "--thread", LONGER_THAN_ANY_ID, "Because"], "thread_id"),
-        (["say", ""], "body"),
+        (["reply", "--thread", LONGER_THAN_ANY_ID, "Because"], "--thread"),
+        (["context", "--thread", "not an id"], "--thread"),
+        (["say", ""], "BODY"),
+        (["say", BLANK], "BODY"),
+        (["progress", "--did", "", "reading the handler"], "--did"),
+        (["point", "--file", "", "--lines", "1", "Kept on purpose"], "--file"),
     ],
-    ids=["an-overlong-thread-id", "an-empty-body"],
+    ids=["an-overlong-thread-id", "an-id-with-spaces", "an-empty-body", "a-blank-body", "an-empty-step", "no-file"],
 )
-def test_a_request_the_review_would_refuse_is_not_sent(unused_port: str, arguments: list[str], field: str) -> None:
-    """Said as the typist's to fix, naming the field, rather than as a page of validation errors."""
+def test_a_value_the_review_would_refuse_is_refused_naming_where_it_was_typed(
+    unused_port: str, arguments: list[str], typed_in: str
+) -> None:
+    """The typist's to fix, said for the option or argument they typed, before any request is built."""
     command, *rest = arguments
     result = _run(command, "--port", unused_port, *rest)
 
     assert _failed_in_a_line(result, USAGE_ERROR)
-    assert f"would refuse this: {field}:" in result.output
+    assert f"'{typed_in}'" in result.output
+    assert "would refuse" in result.output
+
+
+def test_an_agents_command_does_not_load_the_server() -> None:
+    """It runs many times a minute, and the server it would load is in another process."""
+    loaded = subprocess.run(
+        [sys.executable, "-c", LOAD_AN_AGENTS_COMMAND], capture_output=True, text=True, check=True
+    ).stdout.split()
+
+    assert SERVER_MODULE not in loaded

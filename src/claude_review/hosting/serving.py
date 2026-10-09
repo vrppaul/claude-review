@@ -1,29 +1,27 @@
 """Holding a review open on this machine until it ends, and what it hands back when it does.
 
 Four things run while a review is open, and the review ending stops all of
-them: the server, the line that says where it is, the check that its page is
-still open, and the watch on the working tree. Whichever way it ends — sent,
-closed, Ctrl+C or `kill`, the server stopping — the way out is the same: the
-directories it wrote go, and the last round is handed back.
+them: the server, the word to whoever started it that it is listening, the
+check that its page is still open, and the watch on the working tree.
+Whichever way it ends — sent, closed, Ctrl+C or `kill`, the server stopping,
+a fault — the way out is the same: the directories it wrote go, and the last
+round is handed back.
 """
 
 import asyncio
 import contextlib
 import signal
 import socket
-import webbrowser
 from collections.abc import Coroutine, Generator
 from pathlib import Path
-from typing import Any
 
-import click
 import structlog
 from fastapi import FastAPI
-from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import ReviewWorkspace
 from claude_review.domain.protocols import Clock
 from claude_review.hosting.address import review_url
+from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import reader_files, review_workspace
@@ -49,42 +47,31 @@ PRESENCE_CHECK_SECONDS = 0.5
 # What stops a review the way closing it does: Ctrl+C, and `kill`
 STOP_SIGNALS = (signal.SIGINT, signal.SIGTERM)
 
-# How the review says where it is, on stderr: whoever started it in the
-# background reads the address from this line
-READY_ANNOUNCEMENT = "Review ready at "
 
-
-class LaunchOptions(BaseModel):
-    """How a review is launched, apart from what it opens on."""
-
-    model_config = ConfigDict(frozen=True)
-
-    # The port asked for; None leaves it to be worked out from what is reviewed
-    port: int | None
-    open_browser: bool
-
-
-async def serve_review(opening: ReviewOpening, options: LaunchOptions) -> str:
+async def serve_review(opening: ReviewOpening, *, port: int | None, announcer: ReviewAnnouncer) -> str:
     """Hold a review open until it ends, and return what it hands back: its rounds, and anything left unread.
+
+    `port` is the one asked for; None works it out from what is reviewed, so
+    the review comes back on the same one whenever it is opened again.
 
     Raises:
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
     """
-    with review_workspace(writes_trees=opening.root is not None) as workspace:
+    with review_workspace(writes_trees=opening.root is not None, announcer=announcer) as workspace:
         clock = SystemClock()
         state = ServerState(ReviewLifetime())
+        # The review's own repository, which writes the trees it is read
+        # against into the review's workspace rather than the one under review
         git = GitRepository(objects=workspace.objects)
         watcher = TreeWatcherService(git_repository=git)
         if opening.root is not None:
             await _note_the_opening_tree(state, watcher, VersionService(git_repository=git, clock=clock), opening.root)
 
         server = ReviewServer(_review_app(opening, state, workspace, clock), state.lifetime)
-        listening = bind(_port_to_take(opening, options), may_fall_back=options.port is None)
+        listening = bind(port if port is not None else stable_port(opening.identity), may_fall_back=port is None)
         try:
-            await _run_until_ended(
-                server, listening, state, watcher, root=opening.root, open_browser=options.open_browser
-            )
+            await _run_until_ended(server, listening, state, watcher, opening.root, announcer)
         finally:
             listening.close()
 
@@ -107,11 +94,6 @@ def _review_app(opening: ReviewOpening, state: ServerState, workspace: ReviewWor
     )
 
 
-def _port_to_take(opening: ReviewOpening, options: LaunchOptions) -> int:
-    """The port asked for, or the one this review comes back on whenever it is opened again."""
-    return options.port if options.port is not None else stable_port(opening.identity)
-
-
 async def _note_the_opening_tree(
     state: ServerState, watcher: TreeWatcherService, versions: VersionService, root: Path
 ) -> None:
@@ -127,65 +109,52 @@ async def _run_until_ended(
     listening: socket.socket,
     state: ServerState,
     watcher: TreeWatcherService,
-    *,
     root: Path | None,
-    open_browser: bool,
+    announcer: ReviewAnnouncer,
 ) -> None:
     """Run everything a review open on screen needs, until the review ends and every one of them has stopped.
 
-    The server is the review; the rest only help it, and one of them failing
-    must not take the server down with the reader's unsent work on screen,
-    nor keep the last round from being handed back. The tree is watched only
-    in a review of a repository, whose `root` it is.
+    The server is the review. Saying where it is and noticing its page close
+    are what it cannot do without: one of them failing ends the review, the
+    last round handed back. The watch on the tree, which only a review of a
+    repository has, only helps: it failing leaves the review running.
     """
     url = review_url(listening.getsockname()[1])
-    with _ended_by_signals(state.lifetime):
+    lifetime = state.lifetime
+    with _ended_by_signals(lifetime):
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(server.serve_until_ended(listening))
-            tasks.create_task(_helping(_announce_once_listening(server, url, open_browser=open_browser)))
-            tasks.create_task(_helping(_end_once_the_page_is_closed(state)))
+            tasks.create_task(_needed(_announce_once_listening(server, url, announcer), lifetime))
+            tasks.create_task(_needed(_end_once_the_page_is_closed(state), lifetime))
             if root is not None:
                 tasks.create_task(_helping(_tell_when_the_tree_moves(state, watcher, root)))
 
 
-async def _helping(work: Coroutine[Any, Any, None]) -> None:
-    """Run something that helps the review, and let the review go on without it if it fails.
+async def _needed(work: Coroutine[object, object, None], lifetime: ReviewLifetime) -> None:
+    """Run something the review cannot do without, and end the review if it fails.
 
     Said at critical, the level a review that is otherwise quiet still says.
     """
     try:
         await work
     except Exception:
+        log.critical("review_part_failed", part=work.__qualname__, exc_info=True)
+        lifetime.end(EndReason.FAULT)
+
+
+async def _helping(work: Coroutine[object, object, None]) -> None:
+    """Run something that only helps the review, and let the review go on without it if it fails."""
+    try:
+        await work
+    except Exception:
         log.critical("review_helper_failed", helper=work.__qualname__, exc_info=True)
 
 
-async def _announce_once_listening(server: ReviewServer, url: str, *, open_browser: bool) -> None:
-    """Say where the review is once it listens, and open it if asked.
-
-    Said either way. Opening a window and saying where the review is are two
-    different jobs, and tying them together meant that anything starting a
-    review for somebody else had to refuse the window to learn the address —
-    so nobody's browser ever opened.
-    """
-    if not await server.came_up():
-        return
-    log.info("server_started", url=url)
-    click.echo(f"{READY_ANNOUNCEMENT}{url}", err=True)
-    if open_browser:
-        await asyncio.to_thread(_open_browser, url)
-
-
-def _open_browser(url: str) -> None:
-    """Open the review, and let it go if there is nothing to open it with.
-
-    A machine with no browser — over ssh, in a container, in CI — must not
-    lose its review over the attempt. The address has already been printed,
-    which is the way in either way.
-    """
-    try:
-        webbrowser.open_new(url)
-    except webbrowser.Error:
-        log.info("no_browser", url=url)
+async def _announce_once_listening(server: ReviewServer, url: str, announcer: ReviewAnnouncer) -> None:
+    """Tell whoever started the review where it is, once it listens."""
+    if await server.came_up():
+        log.info("server_started", url=url)
+        await announcer.listening_at(url)
 
 
 async def _end_once_the_page_is_closed(state: ServerState) -> None:

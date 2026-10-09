@@ -56,10 +56,10 @@ DDD-lite with clean layer separation:
 - **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
 - **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `services/agent_inbox.py`; what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
-- **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the tasks that run until its `ReviewLifetime` (`services/review_lifetime.py`) ends. The one place the app, the services and the repositories are put together.
-- **cli/** — the command line: the launch commands (`diff`, `files`, `transcript`) hand a `ReviewOpening` (`services/review_opening.py`) to hosting; the agent's commands call an open review through `ReviewClient`. `main.py` is the one error boundary: ordinary failures are one line, faults keep their traceback.
+- **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the tasks that run until its `ReviewLifetime` (`services/review_lifetime.py`) ends. It builds the app and the review's own `GitRepository`, which writes trees into the review's workspace. It prints nothing: what whoever started the review must hear goes through a `ReviewAnnouncer`.
+- **cli/** — the command line. The launch commands (`diff`, `files`, `transcript`) read what is reviewed into a `ReviewOpening` (`services/review_opening.py`, with a plain `GitRepository` that only reads) and hand it to hosting with a `TerminalAnnouncer`; the agent's commands call an open review through `ReviewClient`. Every value an agent's command takes is checked against the review's own rule as it is parsed (`parameters.py`), so a mistake is a usage error naming the option; `main.py` turns the ordinary failures into one line and lets faults keep their traceback, and loads each command only when it is run, so an agent's command never loads the server.
 
-Dependencies flow inward: cli → hosting → presentation → services → domain, repositories → domain
+Dependencies flow inward: cli → hosting → presentation → services → domain, repositories → domain; cli and hosting also use services and repositories directly, to read what is reviewed and to host it
 
 ## Code Style
 

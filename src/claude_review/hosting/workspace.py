@@ -7,9 +7,8 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
-import click
-
 from claude_review.domain.models import ReaderFiles, ReviewWorkspace
+from claude_review.hosting.announcer import ReviewAnnouncer
 
 # What a review's own temporary directories are called, so they can be told apart in /tmp
 OBJECTS_SUFFIX = ".claude-review-objects"
@@ -28,7 +27,7 @@ GUIDE_FILE = "guide.json"
 
 
 @contextlib.contextmanager
-def review_workspace(*, writes_trees: bool) -> Generator[ReviewWorkspace]:
+def review_workspace(*, writes_trees: bool, announcer: ReviewAnnouncer) -> Generator[ReviewWorkspace]:
     """Lend the review the directories it writes to while it runs.
 
     Two, because they outlive the review differently. The trees a review of
@@ -40,7 +39,9 @@ def review_workspace(*, writes_trees: bool) -> Generator[ReviewWorkspace]:
 
     The images pasted into it stay. The last round names them, and the agent
     reads it only once the review has ended; the system clears its temporary
-    directory on its own schedule, which is long enough for that.
+    directory on its own schedule, which is long enough for that. Whoever
+    started the review is told where they are; if nothing was pasted, nothing
+    is left.
     """
     images = Path(tempfile.mkdtemp(suffix=IMAGES_SUFFIX))
     objects = Path(tempfile.mkdtemp(suffix=OBJECTS_SUFFIX)) if writes_trees else None
@@ -49,17 +50,10 @@ def review_workspace(*, writes_trees: bool) -> Generator[ReviewWorkspace]:
     finally:
         if objects is not None:
             shutil.rmtree(objects, ignore_errors=True)
-        _leave_images(images)
-
-
-def _leave_images(images: Path) -> None:
-    """Leave what was pasted for the agent, and say where; leave nothing if nothing was."""
-    if any(images.iterdir()):
-        click.echo(
-            f"Images pasted in this review stay in {images} until the system clears its temporary files.", err=True
-        )
-    else:
-        images.rmdir()
+        if any(images.iterdir()):
+            announcer.images_left_in(images)
+        else:
+            images.rmdir()
 
 
 def reader_files() -> ReaderFiles:

@@ -96,7 +96,7 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
 
     assert printed.startswith("comment-4  `src/routes.py`:118-130  question")
     assert "And if it does, what then?" in printed
-    assert "me: It cannot: one queue." in printed
+    assert "you: It cannot: one queue." in printed
     assert "lines:     return event" in printed
 
 
@@ -114,5 +114,5 @@ def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
 
     printed = render_context(SEEN.model_copy(update={"panel": [said]}))
 
-    assert "you: (image)" in printed
+    assert "reader: (image)" in printed
     assert f"image: {image}" in printed

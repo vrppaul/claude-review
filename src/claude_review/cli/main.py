@@ -2,9 +2,12 @@
 
 Two kinds of command hang off it. Those that open a review — `diff`,
 `files`, `transcript` — serve it until it ends. The rest are what its agent
-runs against a review already open, by the port it is served on.
+runs against a review already open, by the port it is served on, many times
+a minute; so each command is loaded only when it is run or listed, and an
+agent's command never loads the server.
 """
 
+import importlib
 import logging
 import sys
 from typing import Any
@@ -12,11 +15,19 @@ from typing import Any
 import click
 import structlog
 
-from claude_review.cli.agent_commands import AGENT_COMMANDS
-from claude_review.cli.launch_commands import LAUNCH_COMMANDS
 from claude_review.cli.review_client import ReviewCallError
 from claude_review.domain.exceptions import GitError, PortUnavailableError, UnreadableContentError
-from claude_review.hosting.review_server import ServerStartError
+from claude_review.hosting.errors import ServerStartError
+
+LAUNCH_COMMANDS_MODULE = "claude_review.cli.launch_commands"
+AGENT_COMMANDS_MODULE = "claude_review.cli.agent_commands"
+# Which module each command lives in, as its `COMMANDS` table names it
+COMMAND_MODULES = {
+    **dict.fromkeys(("diff", "files", "transcript"), LAUNCH_COMMANDS_MODULE),
+    **dict.fromkeys(
+        ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round"), AGENT_COMMANDS_MODULE
+    ),
+}
 
 # What goes wrong in ordinary use, and is said in a line rather than a
 # traceback: no review on that port or a refusal from it, a directory that
@@ -26,11 +37,20 @@ EXPLAINED_FAILURES = (ReviewCallError, GitError, UnreadableContentError, PortUna
 
 
 class ReviewCommands(click.Group):
-    """The commands, failing the way a command line should: one line on stderr, never a traceback.
+    """The commands, loaded as they are needed, failing in one line when the failure is an ordinary one.
 
     Anything not explained here is a fault in this program, and keeps its
-    traceback so it can be found.
+    traceback so it can be found. A value an agent's command was typed with
+    that the review would refuse is refused as it is parsed (`parameters.py`),
+    before anything is called.
     """
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        return sorted(COMMAND_MODULES)
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        module = COMMAND_MODULES.get(cmd_name)
+        return None if module is None else importlib.import_module(module).COMMANDS[cmd_name]
 
     def invoke(self, ctx: click.Context) -> Any:
         try:
@@ -45,10 +65,6 @@ class ReviewCommands(click.Group):
 def main(verbose: bool) -> None:
     """Browser-based code review tool for Claude Code."""
     _configure_logging(verbose=verbose)
-
-
-for command in (*LAUNCH_COMMANDS, *AGENT_COMMANDS):
-    main.add_command(command)
 
 
 def _configure_logging(*, verbose: bool) -> None:

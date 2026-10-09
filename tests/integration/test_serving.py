@@ -1,33 +1,54 @@
 """A review held open in this process: what it hands back, whatever else goes wrong while it runs."""
 
 import asyncio
-import socket
 import tempfile
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient, HTTPError
+from httpx import AsyncClient
+from structlog.typing import EventDict
 
-from claude_review.hosting.address import LOOPBACK, review_url
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.hosting.serving import LaunchOptions, serve_review
+from claude_review.hosting.serving import serve_review
+from claude_review.presentation.state import ServerState
 from claude_review.repositories.git_repository import GitRepository
-from claude_review.services.review_opening import open_diff
+from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.tree_watcher_service import TreeWatcherService
-from tests.helpers import CONTEXT_ROUTE, LOOK_EVERY_SECONDS, SETTLE_SECONDS
+from tests.helpers import SETTLE_SECONDS
 
+SUBMIT_ROUTE = "/api/submit"
 THE_ROUND = "Rename the helper."
+# The last round, sent and ending the review
+LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
 
 
-class ChangesThatFail:
+class RecordingAnnouncer:
+    """Whoever started the review, as a test: it holds on to what it is told."""
+
+    def __init__(self) -> None:
+        self.address: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+
+    async def listening_at(self, url: str) -> None:
+        self.address.set_result(url)
+
+    def images_left_in(self, directory: Path) -> None:
+        """Nothing is pasted in these reviews."""
+
+
+class FailingWatch:
     """A watch on the tree that fails the first time it looks, as a disk gone away would."""
 
-    def __aiter__(self) -> ChangesThatFail:
+    def __aiter__(self) -> FailingWatch:
         return self
 
     async def __anext__(self) -> int:
         failure = "the disk went away"
         raise OSError(failure)
+
+
+def _failing_check(*_arguments: object) -> bool:
+    failure = "the clock went away"
+    raise OSError(failure)
 
 
 @pytest.fixture(autouse=True)
@@ -39,36 +60,43 @@ def kept_under_this_test(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 @pytest.fixture
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind((LOOPBACK, ANY_FREE_PORT))
-        return probe.getsockname()[1]
+async def opening(tmp_git_repo: Path) -> ReviewOpening:
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    return await open_diff(tmp_git_repo, None, GitRepository())
 
 
-async def _until_it_answers(agent: AsyncClient) -> None:
-    deadline = asyncio.get_running_loop().time() + SETTLE_SECONDS
-    while asyncio.get_running_loop().time() < deadline:
-        try:
-            await agent.get(CONTEXT_ROUTE)
-        except HTTPError:
-            await asyncio.sleep(LOOK_EVERY_SECONDS)
-        else:
-            return
-    failure = "the review never answered"
-    raise AssertionError(failure)
+@pytest.fixture
+async def announcer() -> RecordingAnnouncer:
+    return RecordingAnnouncer()
+
+
+def _events(logged: list[EventDict]) -> list[str]:
+    return [entry["event"] for entry in logged]
 
 
 async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_round_handed_back(
-    tmp_git_repo: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
+    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The watch only helps; the reader's unsent work and the last round matter more than it."""
-    (tmp_git_repo / "initial.txt").write_text("changed\n")
-    monkeypatch.setattr(TreeWatcherService, "changes", lambda *_arguments, **_keywords: ChangesThatFail())
-    opening = await open_diff(tmp_git_repo, None, GitRepository())
+    monkeypatch.setattr(TreeWatcherService, "changes", lambda *_arguments, **_keywords: FailingWatch())
 
-    serving = asyncio.ensure_future(serve_review(opening, LaunchOptions(port=free_port, open_browser=False)))
-    async with AsyncClient(base_url=review_url(free_port)) as agent:
-        await _until_it_answers(agent)
-        await agent.post("/api/submit", json={"threads": [], "body": THE_ROUND, "end": True})
+    serving = asyncio.ensure_future(serve_review(opening, port=ANY_FREE_PORT, announcer=announcer))
+    async with AsyncClient(base_url=await asyncio.wait_for(announcer.address, SETTLE_SECONDS)) as agent:
+        await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
 
     assert THE_ROUND in await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+    assert "review_helper_failed" in _events(logged)
+
+
+async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than_running_for_good(
+    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Run on, it would hold its port and keep its agent waiting long after the reader has gone."""
+    monkeypatch.setattr(ServerState, "browser_gone", _failing_check)
+
+    handed_back = await asyncio.wait_for(
+        serve_review(opening, port=ANY_FREE_PORT, announcer=announcer), timeout=SETTLE_SECONDS
+    )
+
+    assert handed_back == ""
+    assert "review_part_failed" in _events(logged)

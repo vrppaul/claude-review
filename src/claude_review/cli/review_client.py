@@ -56,6 +56,10 @@ WAIT_SECONDS_PARAMETER = "wait_seconds"
 # The parts of a request a refused field is named under, which say nothing
 # to whoever typed the command
 REQUEST_PARTS = frozenset({"body", "query", "path"})
+# How a refusal names a field inside another — `anchor.file` — and joins the
+# reasons for several
+FIELD_PATH_SEPARATOR = "."
+REASON_SEPARATOR = "; "
 
 # What the review answers, read as what each answer should be. The events
 # are one kind told apart by their `type`, and printed back as they came.
@@ -159,9 +163,11 @@ class ReviewClient:
             raise ReviewCallError(msg) from error
 
 
-def fields_said_wrong(refusals: list[FieldRefusal]) -> str:
+def _fields_said_wrong(refusals: list[FieldRefusal]) -> str:
     """Name each field a request had wrong, and why, on one line."""
-    return "; ".join(f"{'.'.join(str(part) for part in refusal.loc)}: {refusal.msg}" for refusal in refusals)
+    return REASON_SEPARATOR.join(
+        f"{FIELD_PATH_SEPARATOR.join(str(part) for part in refusal.loc)}: {refusal.msg}" for refusal in refusals
+    )
 
 
 def _reason(answer: bytes) -> str:
@@ -172,7 +178,7 @@ def _reason(answer: bytes) -> str:
         return answer.decode(errors="replace").strip()
     if isinstance(refusal.detail, str):
         return refusal.detail
-    return fields_said_wrong([_as_typed(field) for field in refusal.detail])
+    return _fields_said_wrong([_as_typed(field) for field in refusal.detail])
 
 
 def _as_typed(refusal: FieldRefusal) -> FieldRefusal:

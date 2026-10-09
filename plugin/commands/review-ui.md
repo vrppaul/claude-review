@@ -67,11 +67,11 @@ somebody who is waiting.
    ```bash
    log=$(mktemp -t claude-review.XXXXXX)
    setsid nohup claude-review diff > "$log" 2>&1 &
-   until grep -q 'Review ready at' "$log" || ! kill -0 $! 2>/dev/null; do sleep 0.2; done
+   for _ in $(seq 150); do grep -qE '^(Review ready at|Error|No )' "$log" && break; sleep 0.2; done
    echo "$log"; cat "$log"
    ```
-   It waits until the review says where it is — or stops, and then the log
-   says why.
+   It waits, thirty seconds at most, until the log says where the review
+   is — or why there is none: an error, or nothing to review.
    Detached, rather than a bare `&`: started in the shell's own session, the
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS

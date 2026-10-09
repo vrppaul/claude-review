@@ -547,7 +547,7 @@ def test_catching_up_reads_the_review_as_it_stands(changed_repo: Path, cli: CliP
 
     assert index.returncode == 0
     assert "panel: 1 message" in index.stdout
-    assert "you: Run the tests and say what fails." in index.stdout
+    assert "reader: Run the tests and say what fails." in index.stdout
 
 
 def test_a_thread_named_is_read_in_full(changed_repo: Path, cli: CliProcesses, port: int) -> None:

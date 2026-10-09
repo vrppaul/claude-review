@@ -22,12 +22,14 @@ class EndReason(StrEnum):
     BROWSER_CLOSED — its page was closed and not opened again in time.
     STOPPED — the process was stopped: Ctrl+C, or `kill`.
     SERVER_STOPPED — its server stopped on its own, or never came up.
+    FAULT — something the review cannot run without failed.
     """
 
     FINISHED = auto()
     BROWSER_CLOSED = auto()
     STOPPED = auto()
     SERVER_STOPPED = auto()
+    FAULT = auto()
 
 
 class ReviewLifetime:

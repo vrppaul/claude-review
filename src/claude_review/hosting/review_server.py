@@ -8,6 +8,7 @@ from collections.abc import Generator
 import uvicorn
 from fastapi import FastAPI
 
+from claude_review.hosting.errors import ServerStartError
 from claude_review.services.review_lifetime import EndReason, ReviewLifetime
 
 # Only what goes wrong: a review is quiet by design
@@ -19,10 +20,6 @@ WEBSOCKETS_IMPLEMENTATION = "websockets-sansio"
 # finish. An agent's wait ends with the review at once; nothing else should
 # take this long, and a review must not hang on its way out.
 GRACEFUL_SHUTDOWN_SECONDS = 5
-
-
-class ServerStartError(Exception):
-    """Raised when the review's server stopped before it ever listened."""
 
 
 class ReviewServer(uvicorn.Server):

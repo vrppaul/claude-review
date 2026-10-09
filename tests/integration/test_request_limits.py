@@ -17,6 +17,8 @@ from tests.helpers import FIRST_THREAD_ID, line_on_the_wire, thread_on_the_wire
 
 # Big enough to be read in several pieces, as a socket delivers a large body
 CHUNK_BYTES = 1024 * 1024
+# Words that say nothing
+BLANK = "   "
 
 
 async def _oversized_body() -> AsyncIterator[bytes]:
@@ -61,6 +63,23 @@ async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClie
 )
 async def test_a_file_the_agent_names_is_one_line(client: AsyncClient, route: str, payload: dict[str, object]) -> None:
     """A file named in the panel is drawn as a chip and read back as a path, never as markup."""
+    response = await client.post(route, json=payload)
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("route", "payload"),
+    [
+        ("/api/say", {"body": BLANK}),
+        ("/api/reply", {"thread_id": FIRST_THREAD_ID, "body": BLANK}),
+    ],
+    ids=["say", "reply"],
+)
+async def test_what_the_agent_says_must_say_something(
+    client: AsyncClient, route: str, payload: dict[str, object]
+) -> None:
+    """Blanks would be drawn as a turn with nothing in it."""
     response = await client.post(route, json=payload)
 
     assert response.status_code == 422
