@@ -1,13 +1,14 @@
 /**
  * What the browser needs to know about each kind of anchor.
  *
- * A thread is named in its own header, in menus and in the panel. Each
- * kind of anchor answers that in its own module, so nothing that lists
- * threads has to ask what a thread hangs on. Bringing one into view moves
- * the page, and is the review's `ThreadNavigator`.
+ * A thread is named in its own header, in menus and in the panel, and a
+ * panel message mentions it by a token. Each kind of anchor answers those
+ * questions in its own module, so nothing that lists threads has to ask
+ * what a thread hangs on. Bringing one into view moves the page, and is the
+ * review's `ThreadNavigator`.
  */
 
-import type { Anchor, AnchorKind, LineSide } from "$lib/types";
+import type { Anchor, AnchorKind } from "$lib/types";
 import { lineAnchorView } from "$lib/anchors/line";
 
 export interface AnchorView<Kind extends Anchor> {
@@ -19,8 +20,12 @@ export interface AnchorView<Kind extends Anchor> {
   shortPlace(anchor: Kind): string;
   /** The word a panel message mentions the thread by. */
   token(anchor: Kind): string;
-  /** Which side of the diff it hangs on, when it hangs on the diff at all. */
-  side(anchor: Kind): LineSide | null;
+  /** Whether a message mentions the thread by its token. */
+  mentionedIn(text: string, anchor: Kind): boolean;
+  /** Whether two anchors of this kind hang on the same spot. */
+  sameSpot(one: Kind, other: Kind): boolean;
+  /** The file it hangs on, for a kind that hangs on one. */
+  fileOf(anchor: Kind): string | null;
 }
 
 const VIEWS: {
@@ -49,6 +54,15 @@ export function anchorToken(anchor: Anchor): string {
   return viewOf(anchor).token(anchor);
 }
 
-export function anchorSide(anchor: Anchor): LineSide | null {
-  return viewOf(anchor).side(anchor);
+export function anchorMentionedIn(text: string, anchor: Anchor): boolean {
+  return viewOf(anchor).mentionedIn(text, anchor);
+}
+
+/** Whether two anchors hang on the same spot; anchors of different kinds never do. */
+export function sameSpot(one: Anchor, other: Anchor): boolean {
+  return one.kind === other.kind && viewOf(one).sameSpot(one, other);
+}
+
+export function anchorFile(anchor: Anchor): string | null {
+  return viewOf(anchor).fileOf(anchor);
 }

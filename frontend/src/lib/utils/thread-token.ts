@@ -9,27 +9,9 @@
  */
 
 import type { Thread } from "$lib/types";
-import { anchorToken } from "$lib/anchors/views";
-
-/**
- * Whether a message mentions this thread.
- *
- * A plain search would let `@a.py:1-2` match inside `@a.py:1-20`, so what
- * follows the token has to be something other than the rest of a number.
- */
-function mentions(text: string, token: string): boolean {
-  let from = text.indexOf(token);
-  while (from !== -1) {
-    const after = text[from + token.length];
-    if (after === undefined || !/[\d-]/.test(after)) return true;
-    from = text.indexOf(token, from + 1);
-  }
-  return false;
-}
+import { anchorMentionedIn } from "$lib/anchors/views";
 
 /** The threads a message points at, as its text stands right now. */
-export function threadsIn(text: string, comments: Thread[]): Thread[] {
-  return comments.filter((comment) =>
-    mentions(text, anchorToken(comment.anchor)),
-  );
+export function threadsIn(text: string, threads: Thread[]): Thread[] {
+  return threads.filter((thread) => anchorMentionedIn(text, thread.anchor));
 }

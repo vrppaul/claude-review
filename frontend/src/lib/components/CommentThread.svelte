@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Thread, CommentSeverity, Turn } from '$lib/types';
-	import { anchorLabel, anchorSide } from '$lib/anchors/views';
+	import { anchorLabel } from '$lib/anchors/views';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
@@ -29,7 +29,7 @@
 	const sentIn = $derived(review.threads.sentInRound(comment.id));
 	// In a diff, the same line number exists on both sides, so the thread says
 	// which one it hangs on in the diff's own signs
-	const side = $derived(anchorSide(comment.anchor));
+	const side = $derived(comment.anchor.kind === 'line' ? comment.anchor.side : null);
 	const sign = $derived(
 		review.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+'
 	);

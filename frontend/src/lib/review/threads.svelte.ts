@@ -10,7 +10,7 @@
 import { SvelteMap } from "svelte/reactivity";
 
 import { askInThread, followAnchors } from "$lib/api/review-api";
-import { anchorPlace } from "$lib/anchors/views";
+import { anchorFile, sameSpot } from "$lib/anchors/views";
 import type { Draft, IssuedIds } from "$lib/drafts/draft-shapes";
 import type { Rounds } from "$lib/review/rounds.svelte";
 import { ThreadReading } from "$lib/review/thread-reading.svelte";
@@ -61,7 +61,7 @@ export class Threads {
   #cursor = -1;
   // By the file they hang on, so a file asks for its own without a scan
   readonly #byFile = $derived(
-    Map.groupBy(this.#all, (thread) => thread.anchor.file),
+    Map.groupBy(this.#all, (thread) => anchorFile(thread.anchor)),
   );
   readonly #unread = $derived(
     this.#all.filter((thread) => this.reading.isUnread(thread.id)),
@@ -315,7 +315,7 @@ export class Threads {
       // Written while the answer was on its way, so already on the new diff
       if (!moved) return thread;
       if (moved.outdated && !thread.anchor.outdated) outdated += 1;
-      else if (anchorPlace(moved) !== anchorPlace(thread.anchor)) followed += 1;
+      else if (!sameSpot(moved, thread.anchor)) followed += 1;
       return { ...thread, anchor: moved };
     });
     return { followed, outdated };

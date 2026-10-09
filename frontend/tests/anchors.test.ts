@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { lineAnchor } from '$lib/anchors/line';
-import { anchorLabel, anchorPlace, anchorShortPlace, anchorSide, anchorToken } from '$lib/anchors/views';
+import {
+	anchorLabel,
+	anchorMentionedIn,
+	anchorPlace,
+	anchorShortPlace,
+	anchorToken,
+	sameSpot
+} from '$lib/anchors/views';
 
 describe('a thread on lines is named the same way wherever it is shown', () => {
 	const range = lineAnchor('src/claude_review/routes.py', 'new', 42, 47, []);
@@ -20,7 +27,17 @@ describe('a thread on lines is named the same way wherever it is shown', () => {
 		expect(anchorToken(range)).toBe('@src/claude_review/routes.py:42-47');
 	});
 
-	it('says which side of the diff it hangs on', () => {
-		expect(anchorSide(removed)).toBe('old');
+	it('is mentioned by its token, and not by a longer one that starts the same', () => {
+		const short = lineAnchor('a.py', 'new', 1, 2, []);
+
+		expect(anchorMentionedIn('see @a.py:1-2 please', short)).toBe(true);
+		expect(anchorMentionedIn('see @a.py:1-20 please', short)).toBe(false);
+	});
+
+	it('is the same spot as another on the same lines, whatever they quote', () => {
+		const quoted = lineAnchor('src/claude_review/routes.py', 'new', 42, 47, ['x']);
+
+		expect(sameSpot(range, quoted)).toBe(true);
+		expect(sameSpot(range, removed)).toBe(false);
 	});
 });
