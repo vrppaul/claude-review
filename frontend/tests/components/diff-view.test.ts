@@ -1,12 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
-import { diffStore } from '$lib/stores/diff.svelte';
-import { commentStore } from '$lib/stores/comments.svelte';
 import { addedLine, contextLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
+import type { Review } from '$lib/review/review.svelte';
+import { inReview, openReview } from '../review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 const changedFile = diffFile({
 	path: 'src/handler.ts',
@@ -42,42 +48,42 @@ const readme = wholeFile('docs/readme.md', '# Hello');
 
 describe('a diff on screen', () => {
 	it('names each file', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { getByText } = render(DiffView);
+		const { getByText } = render(DiffView, inReview(review));
 
 		expect(getByText('src/handler.ts')).toBeTruthy();
 	});
 
 	it('says how each file changed', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { getByText } = render(DiffView);
+		const { getByText } = render(DiffView, inReview(review));
 
 		expect(getByText('modified')).toBeTruthy();
 	});
 
 	it('says nothing of a change when the files are read whole', () => {
-		diffStore.setFiles([plan], 'files');
+		review = openReview({ files: [plan], facts: { mode: 'files' } });
 
-		const { queryByText } = render(DiffView);
+		const { queryByText } = render(DiffView, inReview(review));
 
 		expect(queryByText('added')).toBeNull();
 	});
 
 	it('shows what each line says', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		// Content may be split by syntax highlighting spans, so check the container
 		expect(getByTestId('diff-view').textContent).toContain('const x = 1;');
 	});
 
 	it('numbers every line, to comment on', () => {
-		diffStore.setFiles([plan], 'files');
+		review = openReview({ files: [plan], facts: { mode: 'files' } });
 
-		const { getAllByTestId } = render(DiffView);
+		const { getAllByTestId } = render(DiffView, inReview(review));
 
 		expect(getAllByTestId('line-gutter').map((gutter) => gutter.textContent?.trim())).toEqual([
 			'1',
@@ -86,18 +92,18 @@ describe('a diff on screen', () => {
 	});
 
 	it('marks where the diff jumps, and says how far', () => {
-		diffStore.setFiles([jumpingFile], 'diff');
+		review = openReview({ files: [jumpingFile] });
 
-		const { getByText, getByTestId } = render(DiffView);
+		const { getByText, getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByText('@@ -30,3 +30,4 @@')).toBeTruthy();
 		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
 	});
 
 	it('leaves the marker out where the code runs on unbroken', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { queryByTestId } = render(DiffView);
+		const { queryByTestId } = render(DiffView, inReview(review));
 
 		// The hunk starts at line 1: nothing is hidden above it, so there is
 		// no jump for a marker to announce
@@ -105,29 +111,29 @@ describe('a diff on screen', () => {
 	});
 
 	it('marks no jumps in a file read whole', () => {
-		diffStore.setFiles([plan], 'files');
+		review = openReview({ files: [plan], facts: { mode: 'files' } });
 
-		const { queryByTestId } = render(DiffView);
+		const { queryByTestId } = render(DiffView, inReview(review));
 
 		expect(queryByTestId('hunk-header')).toBeNull();
 	});
 
 	it('shows what a transcript message says', () => {
-		diffStore.setFiles(
-			[wholeFile('user-1', 'can you refactor auth?', 'use JWT instead')],
-			'transcript'
-		);
+		review = openReview({
+			files: [wholeFile('user-1', 'can you refactor auth?', 'use JWT instead')],
+			facts: { mode: 'transcript' }
+		});
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('diff-view').textContent).toContain('can you refactor auth?');
 		expect(getByTestId('diff-view').textContent).toContain('use JWT instead');
 	});
 
 	it('says nothing of a change in a transcript', () => {
-		diffStore.setFiles([wholeFile('assistant-2', 'response')], 'transcript');
+		review = openReview({ files: [wholeFile('assistant-2', 'response')], facts: { mode: 'transcript' } });
 
-		const { queryByText } = render(DiffView);
+		const { queryByText } = render(DiffView, inReview(review));
 
 		expect(queryByText('added')).toBeNull();
 	});
@@ -135,42 +141,42 @@ describe('a diff on screen', () => {
 
 describe('how a markdown file is shown', () => {
 	it('can be chosen for a markdown file', () => {
-		diffStore.setFiles([readme], 'files');
+		review = openReview({ files: [readme], facts: { mode: 'files' } });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('content-view-toggle')).toBeTruthy();
 	});
 
 	it('is not offered for code', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { queryByTestId } = render(DiffView);
+		const { queryByTestId } = render(DiffView, inReview(review));
 
 		expect(queryByTestId('content-view-toggle')).toBeNull();
 	});
 
 	it('can be chosen for a transcript message', () => {
-		diffStore.setFiles([wholeFile('assistant (14:30) #1', '# Response')], 'transcript');
+		review = openReview({ files: [wholeFile('assistant (14:30) #1', '# Response')], facts: { mode: 'transcript' } });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('content-view-toggle')).toBeTruthy();
 	});
 
 	it('is the raw text until the reader picks another way', () => {
-		diffStore.setFiles([readme], 'files');
+		review = openReview({ files: [readme], facts: { mode: 'files' } });
 
-		const { getByTestId, queryByTestId } = render(DiffView);
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('raw-view')).toBeTruthy();
 		expect(queryByTestId('preview-view')).toBeNull();
 	});
 
 	it('is the preview once the reader picks it', async () => {
-		diffStore.setFiles([readme], 'files');
+		review = openReview({ files: [readme], facts: { mode: 'files' } });
 
-		const { getByTestId, queryByTestId } = render(DiffView);
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
 		await userEvent.setup().click(getByTestId('view-mode-preview'));
 
@@ -179,10 +185,10 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('says in the preview that comments are on the raw text', async () => {
-		diffStore.setFiles([readme], 'files');
-		commentStore.add(newComment({ file: 'docs/readme.md', startLine: 1, body: 'Fix this heading' }));
+		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review.threads.add(newComment({ file: 'docs/readme.md', startLine: 1, body: 'Fix this heading' }));
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		await userEvent.setup().click(getByTestId('view-mode-preview'));
 
@@ -192,9 +198,9 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('is both side by side once the reader picks that', async () => {
-		diffStore.setFiles([readme], 'files');
+		review = openReview({ files: [readme], facts: { mode: 'files' } });
 
-		const { getByTestId, queryByTestId } = render(DiffView);
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
 		await userEvent.setup().click(getByTestId('view-mode-side-by-side'));
 
@@ -209,37 +215,37 @@ describe('how a markdown file is shown', () => {
 describe('comment anchoring across diff sides', () => {
 	it('shows a comment on a removed line only once', () => {
 		// The fixture replaces line 2, so old line 2 and new line 2 both exist.
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(
+		review = openReview({ files: [changedFile] });
+		review.threads.add(
 			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
 		);
 
-		const { getAllByText } = render(DiffView);
+		const { getAllByText } = render(DiffView, inReview(review));
 
 		expect(getAllByText('why was this dropped')).toHaveLength(1);
 	});
 
 	it('labels a comment on a removed line as removed', () => {
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(
+		review = openReview({ files: [changedFile] });
+		review.threads.add(
 			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
 		);
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('comment-line-label').textContent).toBe('Removed line 2');
 	});
 
 	it('shows both sides of a replaced line as separate comments', () => {
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(
+		review = openReview({ files: [changedFile] });
+		review.threads.add(
 			newComment({ file: changedFile.path, side: 'old', startLine: 2, body: 'the old one' })
 		);
-		commentStore.add(
+		review.threads.add(
 			newComment({ file: changedFile.path, side: 'new', startLine: 2, body: 'the new one' })
 		);
 
-		const { getAllByText } = render(DiffView);
+		const { getAllByText } = render(DiffView, inReview(review));
 
 		expect(getAllByText('the old one')).toHaveLength(1);
 		expect(getAllByText('the new one')).toHaveLength(1);
@@ -256,36 +262,36 @@ describe('files with no lines to show', () => {
 	});
 
 	it('explains why a binary file shows nothing', () => {
-		diffStore.setFiles([binaryFile], 'diff');
+		review = openReview({ files: [binaryFile] });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('empty-file-note').textContent).toContain('Binary file');
 	});
 
 	it('shows a permission change that touched no line', () => {
-		diffStore.setFiles([modeOnlyFile], 'diff');
+		review = openReview({ files: [modeOnlyFile] });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
 	});
 
-	it('keeps a permission change in sight when the diff reads across two columns', () => {
+	it('keeps a permission change in sight when the diff reads across two columns', async () => {
 		keepingSettings(fakeServer());
-		diffStore.setDiffLayout('split');
-		diffStore.setFiles([{ ...changedFile, old_mode: '100644', new_mode: '100755' }], 'diff');
+		review = openReview({ files: [{ ...changedFile, old_mode: '100644', new_mode: '100755' }] });
+		await review.settings.change({ diff_layout: 'split' });
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('split-view')).toBeTruthy();
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
 	});
 
 	it('does not claim an empty panel for a file that has hunks', () => {
-		diffStore.setFiles([changedFile], 'diff');
+		review = openReview({ files: [changedFile] });
 
-		const { queryByTestId } = render(DiffView);
+		const { queryByTestId } = render(DiffView, inReview(review));
 
 		expect(queryByTestId('empty-file-note')).toBeNull();
 		expect(queryByTestId('mode-change-note')).toBeNull();
@@ -295,12 +301,12 @@ describe('files with no lines to show', () => {
 describe('editing a comment', () => {
 	it('keeps the removed wording when the comment is reopened for editing', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(
+		review = openReview({ files: [changedFile] });
+		review.threads.add(
 			newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' })
 		);
 
-		const { getByText, getByTestId } = render(DiffView);
+		const { getByText, getByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('edit-comment'));
 
 		expect(getByTestId('comment-input')).toBeTruthy();
@@ -310,17 +316,17 @@ describe('editing a comment', () => {
 
 describe('the diff as one stream', () => {
 	it('shows every file at once instead of one at a time', () => {
-		diffStore.setFiles([changedFile, secondFile], 'diff');
+		review = openReview({ files: [changedFile, secondFile] });
 
-		const { getAllByTestId } = render(DiffView);
+		const { getAllByTestId } = render(DiffView, inReview(review));
 
 		expect(getAllByTestId('file-section')).toHaveLength(2);
 	});
 
 	it('keeps the files in the order the diff gave them', () => {
-		diffStore.setFiles([changedFile, secondFile], 'diff');
+		review = openReview({ files: [changedFile, secondFile] });
 
-		const { getAllByTestId } = render(DiffView);
+		const { getAllByTestId } = render(DiffView, inReview(review));
 		const paths = getAllByTestId('file-section').map((section) => section.dataset.path);
 
 		expect(paths).toEqual(['src/handler.ts', 'src/other.ts']);
@@ -328,9 +334,9 @@ describe('the diff as one stream', () => {
 
 	it('lets a comment be left on any file without switching to it first', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles([changedFile, secondFile], 'diff');
+		review = openReview({ files: [changedFile, secondFile] });
 
-		const { getAllByTestId, getByTestId } = render(DiffView);
+		const { getAllByTestId, getByTestId } = render(DiffView, inReview(review));
 		const [, second] = getAllByTestId('file-section');
 
 		await user.click(within(second).getAllByTestId('line-gutter')[0]);
@@ -342,8 +348,8 @@ describe('the diff as one stream', () => {
 
 describe('showing how a comment is meant', () => {
 	it('marks a blocker as one', () => {
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(
+		review = openReview({ files: [changedFile] });
+		review.threads.add(
 			newComment({
 				file: 'src/handler.ts',
 				startLine: 2,
@@ -352,16 +358,16 @@ describe('showing how a comment is meant', () => {
 			})
 		);
 
-		const { getByTestId } = render(DiffView);
+		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('comment-severity').textContent).toBe('blocker');
 	});
 
 	it('says nothing on an ordinary note', () => {
-		diffStore.setFiles([changedFile], 'diff');
-		commentStore.add(newComment({ file: 'src/handler.ts', startLine: 2, body: 'Reads well' }));
+		review = openReview({ files: [changedFile] });
+		review.threads.add(newComment({ file: 'src/handler.ts', startLine: 2, body: 'Reads well' }));
 
-		const { queryByTestId } = render(DiffView);
+		const { queryByTestId } = render(DiffView, inReview(review));
 
 		expect(queryByTestId('comment-severity')).toBeNull();
 	});

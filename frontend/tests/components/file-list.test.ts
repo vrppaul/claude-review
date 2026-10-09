@@ -2,9 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
-import { diffStore } from '$lib/stores/diff.svelte';
-import { registerSection } from '$lib/utils/scroll';
 import { addedLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
+import { inReview, openReview } from '../review';
 
 const diffFiles = [
 	diffFile({
@@ -16,47 +15,47 @@ const diffFiles = [
 
 describe('the file tree', () => {
 	it('counts what is being reviewed, in words', () => {
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getByTestId } = render(FileList);
+		const { getByTestId } = render(FileList, inReview(review));
 
 		expect(getByTestId('sidebar-heading').textContent).toBe('2 changed files');
 	});
 
 	it('names plain files as files rather than changes', () => {
-		diffStore.setFiles([wholeFile('/tmp/plan.md', '# Plan')], 'files');
+		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { mode: 'files' } });
 
-		const { getByTestId } = render(FileList);
+		const { getByTestId } = render(FileList, inReview(review));
 
 		expect(getByTestId('sidebar-heading').textContent).toBe('1 file');
 	});
 
 	it('counts how many files are done once any are', async () => {
-		diffStore.setFiles(diffFiles, 'diff');
-		diffStore.setViewed('src/handler.ts', true);
+		const review = openReview({ files: diffFiles });
+		review.reading.setViewed('src/handler.ts', true);
 
-		const { getByTestId } = render(FileList);
+		const { getByTestId } = render(FileList, inReview(review));
 
 		expect(getByTestId('sidebar-heading').textContent).toBe('2 changed files · 1 viewed');
 	});
 
 	it('lists every file', () => {
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getAllByTestId } = render(FileList);
+		const { getAllByTestId } = render(FileList, inReview(review));
 		const items = getAllByTestId('file-item');
 
 		expect(items).toHaveLength(2);
 	});
 
 	it('takes the reader to the file it names', async () => {
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 		const section = document.createElement('div');
 		const scrollIntoView = vi.fn();
 		section.scrollIntoView = scrollIntoView;
-		const unregister = registerSection('src/utils.ts', section);
+		const unregister = review.sections.register('src/utils.ts', section);
 
-		const { getAllByTestId } = render(FileList);
+		const { getAllByTestId } = render(FileList, inReview(review));
 		await userEvent.click(getAllByTestId('file-item')[1]);
 
 		expect(scrollIntoView).toHaveBeenCalled();
@@ -64,18 +63,18 @@ describe('the file tree', () => {
 	});
 
 	it('marks a file the reader has finished with', () => {
-		diffStore.setFiles(diffFiles, 'diff');
-		diffStore.setViewed('src/handler.ts', true);
+		const review = openReview({ files: diffFiles });
+		review.reading.setViewed('src/handler.ts', true);
 
-		const { getAllByTestId } = render(FileList);
+		const { getAllByTestId } = render(FileList, inReview(review));
 
 		expect(getAllByTestId('file-viewed-mark')).toHaveLength(1);
 	});
 
 	it('counts a transcript in messages', () => {
-		diffStore.setFiles([wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')], 'transcript');
+		const review = openReview({ files: [wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')], facts: { mode: 'transcript' } });
 
-		const { getByTestId, getAllByTestId } = render(FileList);
+		const { getByTestId, getAllByTestId } = render(FileList, inReview(review));
 
 		expect(getByTestId('sidebar-heading').textContent).toBe('2 messages');
 		expect(getAllByTestId('file-item')).toHaveLength(2);
@@ -85,9 +84,9 @@ describe('the file tree', () => {
 describe('finding a file in a long review', () => {
 	it('narrows the list to paths that match', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getByTestId, getAllByTestId } = render(FileList);
+		const { getByTestId, getAllByTestId } = render(FileList, inReview(review));
 		await user.type(getByTestId('file-filter'), 'utils');
 
 		const items = getAllByTestId('file-item');
@@ -97,9 +96,9 @@ describe('finding a file in a long review', () => {
 
 	it('says so when nothing matches', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getByTestId, queryAllByTestId } = render(FileList);
+		const { getByTestId, queryAllByTestId } = render(FileList, inReview(review));
 		await user.type(getByTestId('file-filter'), 'zzz');
 
 		expect(queryAllByTestId('file-item')).toHaveLength(0);
@@ -108,9 +107,9 @@ describe('finding a file in a long review', () => {
 
 	it('reports how many of the files are showing while filtering', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getByTestId } = render(FileList);
+		const { getByTestId } = render(FileList, inReview(review));
 		await user.type(getByTestId('file-filter'), 'utils');
 
 		expect(getByTestId('sidebar-heading').textContent).toBe('1 of 2');
@@ -118,9 +117,9 @@ describe('finding a file in a long review', () => {
 
 	it('folds a directory away and back', async () => {
 		const user = userEvent.setup();
-		diffStore.setFiles(diffFiles, 'diff');
+		const review = openReview({ files: diffFiles });
 
-		const { getAllByTestId, queryAllByTestId } = render(FileList);
+		const { getAllByTestId, queryAllByTestId } = render(FileList, inReview(review));
 		expect(queryAllByTestId('file-item')).toHaveLength(2);
 
 		await user.click(getAllByTestId('folder-item')[0]);

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { commentFields } from '$lib/stores/comment-fields';
 	import type { CommentKind, CommentSeverity } from '$lib/types';
 	import { ImageAttachments } from '$lib/utils/image-attachments.svelte';
+	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
+
+	const review = useReview();
 
 	const SUGGESTION_FENCE = '```suggestion';
 
@@ -64,7 +65,7 @@
 	$effect(() => () => {
 		if (handedOver) return;
 		attachments.abandon();
-		commentFields.report({ type: 'closed', kind });
+		review.commentFields.report({ type: 'closed', kind });
 	});
 
 	// A screenshot can be the whole comment, so words are not required; an
@@ -93,19 +94,19 @@
 		// Commenting on a line near the bottom of the window opened the composer
 		// mostly below it: focused, but with its buttons out of sight.
 		textareaEl?.scrollIntoView({ block: 'nearest' });
-		commentFields.report({ type: 'opened', kind });
+		review.commentFields.report({ type: 'opened', kind });
 	});
 
 	function save() {
 		if (!sayable) return;
 		handedOver = true;
 		onSave(body.trim(), severity, $state.snapshot(attachments.images));
-		commentFields.report({ type: 'added', kind });
+		review.commentFields.report({ type: 'added', kind });
 	}
 
 	async function onPaste(event: ClipboardEvent) {
 		failed = null;
-		const refusal = await attachments.takePaste(event, diffStore.limits);
+		const refusal = await attachments.takePaste(event, review.limits);
 		if (refusal) failed = refusal;
 	}
 
@@ -125,7 +126,7 @@
 		if (!sayable || !onAsk) return;
 		handedOver = true;
 		onAsk(body.trim(), 'question', $state.snapshot(attachments.images));
-		commentFields.report({ type: 'asked', kind });
+		review.commentFields.report({ type: 'asked', kind });
 	}
 
 	/**

@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { diffStore } from '$lib/stores/diff.svelte';
-import { expansionStore } from '$lib/stores/expansions.svelte';
-import { contextLine, addedLine, diffFile, diffResponse, hunk, reviewResponse } from './diff';
+import { beforeEach, describe, it, expect } from 'vitest';
+import { contextLine, addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer, keepingSettings, SERVER_ERROR } from './fake-server';
+import type { Review } from '$lib/review/review.svelte';
+import { openReview } from './review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 const files = [
 	diffFile({
@@ -16,89 +22,81 @@ const files = [
 const CONTENT_VIEW_KEPT_HERE = 'claude-review:content-view';
 
 describe('the diff on screen', () => {
-	it('starts with no files and none selected', () => {
-		expect(diffStore.files).toEqual([]);
-		expect(diffStore.selectedPath).toBeNull();
-		expect(diffStore.selectedFile).toBeUndefined();
+	it('has nothing in view when the review holds no files', () => {
+		expect(review.diff.files).toEqual([]);
+		expect(review.diff.fileInView).toBeNull();
 	});
 
 	it('selects the first file of a diff that arrives', () => {
-		diffStore.setFiles(files, 'diff');
+		review = openReview({ files });
 
-		expect(diffStore.files).toHaveLength(2);
-		expect(diffStore.selectedPath).toBe('src/a.ts');
-		expect(diffStore.selectedFile?.path).toBe('src/a.ts');
+		expect(review.diff.files).toHaveLength(2);
+		expect(review.diff.fileInView).toBe('src/a.ts');
 	});
 
 	it('records the file scrolled into view', () => {
-		diffStore.setFiles(files, 'diff');
-		diffStore.markInView('src/b.ts');
+		review = openReview({ files });
+		review.diff.markInView('src/b.ts');
 
-		expect(diffStore.selectedPath).toBe('src/b.ts');
-		expect(diffStore.selectedFile?.path).toBe('src/b.ts');
+		expect(review.diff.fileInView).toBe('src/b.ts');
 	});
 
 	it('is read from the server', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse({ files }));
 
-		await diffStore.fetchDiff();
+		await review.diff.take();
 
-		expect(diffStore.files.map((file) => file.path)).toEqual(['src/a.ts', 'src/b.ts']);
+		expect(review.diff.files.map((file) => file.path)).toEqual(['src/a.ts', 'src/b.ts']);
 		expect(server.requests).toEqual([{ method: 'GET', path: '/api/diff', query: {}, body: null }]);
 	});
 
 	it('says so when it cannot be read', async () => {
 		fakeServer().fail('GET /api/diff', SERVER_ERROR);
 
-		await expect(diffStore.fetchDiff()).rejects.toThrow(`Could not take the diff: ${SERVER_ERROR}`);
+		await expect(review.diff.take()).rejects.toThrow(`Could not take the diff: ${SERVER_ERROR}`);
 	});
 
 	it('reads as a diff until told otherwise', () => {
-		expect(diffStore.mode).toBe('diff');
+		expect(review.mode).toBe('diff');
 	});
 
 	it('reads plain files as files', () => {
-		diffStore.setFiles(files, 'files');
+		review = openReview({ files: files, facts: { mode: 'files' } });
 
-		expect(diffStore.mode).toBe('files');
+		expect(review.mode).toBe('files');
 	});
 
 	it('reads a transcript as one', () => {
-		diffStore.setFiles(files, 'transcript');
+		review = openReview({ files: files, facts: { mode: 'transcript' } });
 
-		expect(diffStore.mode).toBe('transcript');
-	});
-
-	it('takes the mode the server says the review is in', () => {
-		diffStore.learn(reviewResponse({ mode: 'files' }));
-
-		expect(diffStore.mode).toBe('files');
+		expect(review.mode).toBe('transcript');
 	});
 });
 
 describe('how a markdown file is shown', () => {
 	it('is the raw text until the reader asks otherwise', () => {
-		expect(diffStore.contentViewMode).toBe('raw');
+		expect(review.layout.contentView.mode).toBe('raw');
 	});
 
 	it('is the way the reader picked', () => {
-		diffStore.setContentViewMode('preview');
+		review.layout.contentView.set('preview');
 
-		expect(diffStore.contentViewMode).toBe('preview');
+		expect(review.layout.contentView.mode).toBe('preview');
 	});
 
 	it('is remembered in this browser', () => {
-		diffStore.setContentViewMode('side-by-side');
+		review.layout.contentView.set('side-by-side');
 
 		expect(localStorage.getItem(CONTENT_VIEW_KEPT_HERE)).toBe('side-by-side');
 	});
 
 	it('stays across reviews — it is the reader\'s, not the review\'s', () => {
-		diffStore.setContentViewMode('side-by-side');
-		diffStore.clear();
+		review.layout.contentView.set('side-by-side');
 
-		expect(diffStore.contentViewMode).toBe('side-by-side');
+		review = openReview();
+
+		expect(review.layout.contentView.mode).toBe('side-by-side');
 	});
 });
 
@@ -107,66 +105,66 @@ describe('retaking the diff', () => {
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse());
 
-		await diffStore.setIgnoreWhitespace(true);
+		await review.setIgnoreWhitespace(true);
 
 		expect(server.requestsTo('GET /api/diff')).toMatchObject([
 			{ query: { ignore_whitespace: 'true' } }
 		]);
-		expect(diffStore.ignoreWhitespace).toBe(true);
+		expect(review.settings.current.ignore_whitespace).toBe(true);
 	});
 
 	it('keeps the files already worked through', async () => {
 		fakeServer().answer('GET /api/diff', diffResponse());
-		diffStore.setViewed('src/a.ts', true);
+		review.reading.setViewed('src/a.ts', true);
 
-		await diffStore.setIgnoreWhitespace(true);
+		await review.setIgnoreWhitespace(true);
 
 		// Retaking the diff must not undo a reader's progress through it
-		expect(diffStore.isViewed('src/a.ts')).toBe(true);
+		expect(review.reading.isViewed('src/a.ts')).toBe(true);
 	});
 
 	it('drops lines revealed against hunks a round replaced', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await expansionStore.reveal('a.ts', 0, 1, 2, 0);
-		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
+		await review.diff.revealed.reveal('a.ts', 0, 1, 2, 0);
+		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(2);
 
-		await diffStore.fetchDiff();
+		await review.diff.take();
 
-		expect(expansionStore.revealedCount('a.ts', 0)).toBe(0);
+		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(0);
 	});
 
 	it('drops lines revealed against hunks whitespace renumbered', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await expansionStore.reveal('a.ts', 0, 1, 2, 0);
-		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
+		await review.diff.revealed.reveal('a.ts', 0, 1, 2, 0);
+		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(2);
 
-		await diffStore.setIgnoreWhitespace(true);
+		await review.setIgnoreWhitespace(true);
 
-		expect(expansionStore.revealedCount('a.ts', 0)).toBe(0);
+		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(0);
 	});
 });
 
 describe('how a diff is laid out', () => {
-	it('is kept with the reader\'s settings, for every review', () => {
+	it('is kept with the reader\'s settings, for every review', async () => {
 		const server = fakeServer();
 		keepingSettings(server);
 
-		diffStore.setDiffLayout('split');
+		await review.settings.change({ diff_layout: 'split' });
 
-		expect(diffStore.diffLayout).toBe('split');
+		expect(review.settings.current.diff_layout).toBe('split');
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ diff_layout: 'split' }]);
 	});
 
-	it('stays across reviews, which are not what it belongs to', () => {
+	it('stays across reviews, which are not what it belongs to', async () => {
 		keepingSettings(fakeServer());
-		diffStore.setDiffLayout('split');
+		await review.settings.change({ diff_layout: 'split' });
 
-		diffStore.clear();
+		review = openReview({ settings: review.settings });
 
-		expect(diffStore.diffLayout).toBe('split');
+		expect(review.settings.current.diff_layout).toBe('split');
 	});
 });

@@ -19,7 +19,6 @@ export type LineSide = Schemas["LineSide"];
 export type CommentSeverity = Schemas["CommentSeverity"];
 export type FileStatus = Schemas["FileStatus"];
 export type ReviewMode = Schemas["ReviewMode"];
-export type ContentViewMode = "raw" | "preview" | "side-by-side";
 /** Whether a diff reads down one column or across two. */
 export type DiffLayout = Schemas["DiffLayout"];
 /** How the review is coloured: as the system says, or always light or dark. */

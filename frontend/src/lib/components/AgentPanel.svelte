@@ -1,17 +1,15 @@
 <script lang="ts">
 	import type { Comment } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { panelStore } from '$lib/stores/panel.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
-	import { anchorShortPlace, anchorToken, revealThread } from '$lib/anchors/views';
-	import { showFile } from '$lib/utils/scroll';
+	import { anchorShortPlace, anchorToken } from '$lib/anchors/views';
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
 	import { threadsIn } from '$lib/utils/thread-token';
 	import { formatWeight } from '$lib/utils/weight';
+	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
+
+	const review = useReview();
 
 	let sending = $state(false);
 	let failed = $state<string | null>(null);
@@ -29,16 +27,16 @@
 	let query = $state('');
 	let highlighted = $state(0);
 
-	const attached = $derived(reviewStore.canSendRound);
-	const working = $derived(panelStore.working);
+	const attached = $derived(review.answerer.attached);
+	const working = $derived(review.conversation.working);
 	// The message being written lives in the store, so hiding the panel or
 	// reloading the page does not lose it
-	const draft = $derived(panelStore.composerText);
+	const draft = $derived(review.conversation.composer.text);
 	// Threads this message points at, read back from the text every time: a
 	// token deleted like a word takes its reference with it
-	const pointed = $derived(threadsIn(draft, commentStore.comments));
+	const pointed = $derived(threadsIn(draft, review.threads.all));
 	// A screenshot can be the whole question, so words are not required
-	const sayable = $derived(draft.trim().length > 0 || panelStore.attachments.images.length > 0);
+	const sayable = $derived(draft.trim().length > 0 || review.conversation.composer.attachments.images.length > 0);
 
 	// Threads first — most questions are about something already commented on
 	// — and then the files themselves, so a file nobody has marked can be
@@ -46,10 +44,10 @@
 	// to as well.
 	type Candidate = { kind: 'thread'; comment: Comment } | { kind: 'file'; path: string };
 	const candidates = $derived<Candidate[]>([
-		...commentStore.comments
+		...review.threads.all
 			.filter((comment) => matches(`${anchorToken(comment.anchor)} ${comment.body}`))
 			.map((comment) => ({ kind: 'thread' as const, comment })),
-		...diffStore.files
+		...review.diff.files
 			.filter((file) => matches(file.path))
 			.map((file) => ({ kind: 'file' as const, path: file.path }))
 	]);
@@ -60,7 +58,7 @@
 
 	// When the agent last said anything, so silence can be read as silence
 	const lastAnswer = $derived(
-		[...panelStore.turns].reverse().find((turn) => turn.author === 'author')?.at
+		[...review.conversation.turns].reverse().find((turn) => turn.author === 'author')?.at
 	);
 
 	/** How long ago, in the words a conversation uses. */
@@ -95,7 +93,7 @@
 	// A new turn is the point of the panel, so it is brought into view. The
 	// count is what this watches: it changes exactly when something is said.
 	$effect(() => {
-		const said = panelStore.turns.length;
+		const said = review.conversation.turns.length;
 		if (said === 0 || !stream || !atFoot) return;
 		const shown = stream;
 		requestAnimationFrame(() => {
@@ -107,7 +105,7 @@
 
 	// A clock only while something is waiting on it
 	$effect(() => {
-		if (!working && !panelStore.agent.at && lastAnswer === undefined) return;
+		if (!working && !review.answerer.status.at && lastAnswer === undefined) return;
 		const timer = setInterval(() => (now = Date.now()), 1000);
 		return () => clearInterval(timer);
 	});
@@ -122,7 +120,7 @@
 	/** Watch what is being typed for an @ that has not been finished yet. */
 	function onInput(event: Event & { currentTarget: HTMLTextAreaElement }) {
 		const field = event.currentTarget;
-		panelStore.setComposerText(field.value);
+		review.conversation.composer.setText(field.value);
 		const opening = /@([^\s@]*)$/.exec(field.value.slice(0, field.selectionStart));
 		picking = opening !== null;
 		query = opening?.[1] ?? '';
@@ -137,7 +135,7 @@
 		const before = draft.slice(0, caret).replace(/@[^\s@]*$/, '');
 		const after = draft.slice(caret);
 		const token = `${pick.kind === 'thread' ? anchorToken(pick.comment.anchor) : `@${pick.path}`} `;
-		panelStore.setComposerText(`${before}${token}${after}`);
+		review.conversation.composer.setText(`${before}${token}${after}`);
 		picking = false;
 		field.focus();
 		requestAnimationFrame(() => {
@@ -148,7 +146,7 @@
 
 	/** Take a thread out of the message by taking its token out of the words. */
 	function drop(comment: Comment) {
-		panelStore.setComposerText(
+		review.conversation.composer.setText(
 			draft.split(anchorToken(comment.anchor)).join('').replace(/ {2,}/g, ' ')
 		);
 	}
@@ -183,7 +181,7 @@
 	}
 
 	async function onPaste(event: ClipboardEvent) {
-		const refusal = await panelStore.attachments.takePaste(event, diffStore.limits);
+		const refusal = await review.conversation.composer.attachments.takePaste(event, review.limits);
 		if (refusal) failed = refusal;
 	}
 
@@ -192,18 +190,18 @@
 	 * draft, but a file the browser cannot decode looks the same from here.
 	 */
 	function onImageLost(imageId: string) {
-		panelStore.attachments.forget(imageId);
+		review.conversation.composer.attachments.forget(imageId);
 		failed = 'An image could not be shown and was taken off the message';
 	}
 
 	async function send() {
-		if (!sayable || sending || panelStore.attachments.uploading > 0 || !attached) return;
+		if (!sayable || sending || review.conversation.composer.attachments.uploading > 0 || !attached) return;
 		sending = true;
 		failed = null;
 		// Sending is a deliberate act: it always brings you back to the foot
 		atFoot = true;
 		try {
-			await panelStore.send(pointed);
+			await review.conversation.send(pointed);
 			picking = false;
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not send';
@@ -215,7 +213,7 @@
 	async function stop(messageId: string) {
 		failed = null;
 		try {
-			await panelStore.cancel(messageId);
+			await review.conversation.cancel(messageId);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not stop it';
 		}
@@ -223,23 +221,23 @@
 
 	/** The panel is on the right, so dragging left is what widens it. */
 	const sizing = $derived({
-		width: panelStore.width,
+		width: review.layout.agentPanel.width,
 		grows: 'left' as const,
-		onWidth: (px: number) => panelStore.setWidth(px)
+		onWidth: (px: number) => review.layout.agentPanel.setWidth(px)
 	});
 </script>
 
 {#snippet workUnderWay()}
 	<!-- What is being done, in its own words, replaced as it changes -->
-	{#if panelStore.work?.text}
+	{#if review.answerer.work?.text}
 		<p data-testid="panel-progress" class="cr-progress text-sm">
-			{panelStore.work.text}
+			{review.answerer.work.text}
 		</p>
 	{/if}
-	{#if panelStore.work && panelStore.work.steps.length > 0}
+	{#if review.answerer.work && review.answerer.work.steps.length > 0}
 		<!-- Branches of the same work, drawn hanging off it -->
 		<ul data-testid="progress-steps" class="cr-branches">
-			{#each panelStore.work.steps as step (step.text)}
+			{#each review.answerer.work.steps as step (step.text)}
 				<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
 					{#if step.done}
 						<svg class="cr-branch-mark" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"
@@ -253,10 +251,10 @@
 			{/each}
 		</ul>
 	{/if}
-	{#if panelStore.work && panelStore.work.files.length > 0}
+	{#if review.answerer.work && review.answerer.work.files.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each panelStore.work.files as path (path)}
-				<button data-testid="progress-file" class="cr-thread-chip" onclick={() => showFile(path)}>
+			{#each review.answerer.work.files as path (path)}
+				<button data-testid="progress-file" class="cr-thread-chip" onclick={() => review.sections.showFile(path)}>
 					{path.split('/').pop()}
 				</button>
 			{/each}
@@ -267,7 +265,7 @@
 <aside
 	data-testid="agent-panel" data-tour="agent-panel"
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
-	style="width: {panelStore.width}px"
+	style="width: {review.layout.agentPanel.width}px"
 >
 	<!-- The reader's own width, dragged or stepped with the arrow keys -->
 	<button
@@ -293,9 +291,9 @@
 		<span class="text-sm font-semibold {attached ? '' : 'cr-muted'}">
 			{attached ? 'Agent' : 'Waiting for the agent'}
 		</span>
-		{#if panelStore.agent.model}
+		{#if review.answerer.status.model}
 			<span data-testid="agent-model" class="cr-faint font-mono text-xs">
-				{panelStore.agent.model}
+				{review.answerer.status.model}
 			</span>
 		{/if}
 		<div class="flex-1"></div>
@@ -310,7 +308,7 @@
 			data-testid="close-panel"
 			class="btn btn-ghost btn-xs px-1"
 			aria-label="Hide the agent panel"
-			onclick={() => panelStore.setOpen(false)}
+			onclick={() => review.layout.agentPanel.setOpen(false)}
 		>
 			<svg class="h-3 w-3 -rotate-90" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
 				<path d="M2 4l4 4 4-4z" />
@@ -321,11 +319,11 @@
 	<!-- Two numbers, told apart: one this side measures, one the agent reports -->
 	<div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 px-3 py-1.5">
 		<span data-testid="review-weight" class="cr-pill" title="What handing this review over costs">
-			review {formatWeight(panelStore.weight)}
+			review {formatWeight(review.weight)}
 		</span>
-		{#if panelStore.agent.context}
+		{#if review.answerer.status.context}
 			<span data-testid="agent-context" class="cr-pill">
-				context {panelStore.agent.context} · as reported {since(panelStore.agent.at)}
+				context {review.answerer.status.context} · as reported {since(review.answerer.status.at)}
 			</span>
 		{/if}
 	</div>
@@ -339,7 +337,7 @@
 		<!-- Work showing outranks the empty state: an agent doing something
 			before anybody has said anything is exactly the case a reader has
 			no other way of seeing. -->
-		{#if panelStore.turns.length === 0 && !panelStore.work}
+		{#if review.conversation.turns.length === 0 && !review.answerer.work}
 			{#if attached}
 				<div
 					data-testid="panel-empty"
@@ -391,16 +389,16 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 			{/if}
 		{:else}
 			<div class="flex flex-col gap-3">
-				{#each panelStore.turns as turn (turn.id)}
+				{#each review.conversation.turns as turn (turn.id)}
 					{#if turn.author === 'event'}
-						{@const raised = commentStore.comments.find((c) => c.id === turn.threads?.[0])}
+						{@const raised = review.threads.all.find((c) => c.id === turn.threads?.[0])}
 						<div data-testid="panel-event" class="cr-round-mark">
 							<span></span>
 							{#if raised}
 								<button
 									data-testid="panel-thread-ref"
 									class="cr-thread-chip"
-									onclick={() => revealThread(raised)}
+									onclick={() => review.navigator.reveal(raised)}
 								>
 									{turn.body}
 								</button>
@@ -422,12 +420,12 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 							{#if turn.threads && turn.threads.length > 0}
 								<div class="mt-2 flex flex-wrap gap-1">
 									{#each turn.threads as id (id)}
-										{@const thread = commentStore.comments.find((c) => c.id === id)}
+										{@const thread = review.threads.all.find((c) => c.id === id)}
 										{#if thread}
 											<button
 												data-testid="panel-thread-ref"
 												class="cr-thread-chip"
-												onclick={() => revealThread(thread)}
+												onclick={() => review.navigator.reveal(thread)}
 											>
 												{anchorShortPlace(thread.anchor)}
 											</button>
@@ -451,7 +449,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 										<button
 											data-testid="answer-file"
 											class="cr-thread-chip"
-											onclick={() => showFile(path)}
+											onclick={() => review.sections.showFile(path)}
 										>
 											{path.split('/').pop()}
 										</button>
@@ -481,7 +479,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						</div>
 						{@render workUnderWay()}
 					</div>
-				{:else if panelStore.work}
+				{:else if review.answerer.work}
 					<!-- Work nobody is waiting on: what a round asked for, or what
 						the agent took on itself. Without a row of its own it could not
 						be shown at all, and a reader watching a silent panel cannot
@@ -493,7 +491,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
 							</span>
 							<div class="flex-1"></div>
-							<span class="cr-faint text-xs">working {since(panelStore.work.at)}</span>
+							<span class="cr-faint text-xs">working {since(review.answerer.work.at)}</span>
 						</div>
 						{@render workUnderWay()}
 					</div>
@@ -545,7 +543,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 				</div>
 			{/if}
 			<AttachedImages
-				attachments={panelStore.attachments}
+				attachments={review.conversation.composer.attachments}
 				disabled={sending}
 				onLost={onImageLost}
 			/>
@@ -572,7 +570,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 				<button
 					data-testid="send-message"
 					class="btn btn-primary btn-xs"
-					disabled={!sayable || sending || panelStore.attachments.uploading > 0}
+					disabled={!sayable || sending || review.conversation.composer.attachments.uploading > 0}
 					onclick={send}
 				>
 					{sending ? 'Sending' : 'Send'}

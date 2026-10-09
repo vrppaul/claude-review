@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { ContentViewMode, DiffFile } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
+	import type { ContentViewMode } from '$lib/reader/page-layout.svelte';
+	import type { DiffFile } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { detectLanguage } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
-	import { registerSection, whenNearViewport } from '$lib/utils/scroll';
+	import { whenNearViewport } from '$lib/utils/scroll';
+	import { useReview } from '$lib/review/context';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileNotes from './FileNotes.svelte';
 	import PreviewView from './PreviewView.svelte';
@@ -18,22 +18,23 @@
 	}
 
 	let { file }: Props = $props();
+	const review = useReview();
 
-	const isDiffMode = $derived(diffStore.mode === 'diff');
-	const isTranscriptMode = $derived(diffStore.mode === 'transcript');
+	const isDiffMode = $derived(review.mode === 'diff');
+	const isTranscriptMode = $derived(review.mode === 'transcript');
 	// Transcript entries are labels like "user (22:41) #1", so they carry no
 	// extension. Their text is Claude's prose, which reads best as markdown.
 	const language = $derived(isTranscriptMode ? 'markdown' : detectLanguage(file.path));
 	const hasRenderablePreview = $derived(isRenderable(language));
 	// Content with nothing to render always shows raw, whatever the preference
 	const viewMode = $derived<ContentViewMode>(
-		hasRenderablePreview ? diffStore.contentViewMode : 'raw'
+		hasRenderablePreview ? review.layout.contentView.mode : 'raw'
 	);
 
 	const stats = $derived(fileStats(file));
-	const commentCount = $derived(commentStore.getForFile(file.path).length);
-	const collapsed = $derived(diffStore.isCollapsed(file.path));
-	const viewed = $derived(diffStore.isViewed(file.path));
+	const commentCount = $derived(review.threads.onFile(file.path).length);
+	const collapsed = $derived(review.reading.isFolded(file.path));
+	const viewed = $derived(review.reading.isViewed(file.path));
 
 	// Rough height so the browser can leave an off-screen file undrawn without
 	// the scrollbar lurching once it renders for real. One row plus the header.
@@ -45,7 +46,7 @@
 	async function showChangesSince() {
 		changedSinceFailed = null;
 		try {
-			await diffStore.showChangesSinceRetake();
+			await review.showChangesSinceRetake();
 		} catch (error) {
 			changedSinceFailed =
 				error instanceof Error ? error.message : 'Could not take the diff against that round';
@@ -56,7 +57,7 @@
 	// Rows are built when the file comes within reach, and kept from then on
 	let built = $state(false);
 
-	$effect(() => (element ? registerSection(file.path, element) : undefined));
+	$effect(() => (element ? review.sections.register(file.path, element) : undefined));
 
 	$effect(() => {
 		if (!element || built) return;
@@ -83,7 +84,7 @@
 			class="btn btn-ghost btn-xs px-1.5"
 			aria-expanded={!collapsed}
 			aria-label={collapsed ? `Expand ${file.path}` : `Collapse ${file.path}`}
-			onclick={() => diffStore.toggleCollapsed(file.path)}
+			onclick={() => review.reading.toggleFolded(file.path)}
 		>
 			<svg
 				class="h-3 w-3 transition-transform {collapsed ? '-rotate-90' : ''}"
@@ -96,7 +97,7 @@
 		</button>
 
 		<span class="font-mono text-sm font-semibold">{file.path}</span>
-		{#if !diffStore.narrowed && diffStore.isChanged(file.path)}
+		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button
 				data-testid="file-changed-since"
 				class="cr-chip"
@@ -104,7 +105,7 @@
 				title="Show only what changed since then"
 				onclick={showChangesSince}
 			>
-				changed since round {diffStore.changedSince}
+				changed since round {review.lastRetake.changedSince}
 			</button>
 			{#if changedSinceFailed}
 				<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
@@ -136,7 +137,7 @@
 				data-testid="viewed-toggle"
 				type="checkbox"
 				checked={viewed}
-				onchange={() => diffStore.toggleViewed(file.path)}
+				onchange={() => review.reading.toggleViewed(file.path)}
 			/>
 			<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
 				{#if viewed}
@@ -156,7 +157,7 @@
 				<PreviewView {file} />
 			{:else if viewMode === 'side-by-side'}
 				<SideBySideView {file} {language} />
-			{:else if isDiffMode && diffStore.diffLayout === 'split' && file.hunks.length > 0}
+			{:else if isDiffMode && review.settings.current.diff_layout === 'split' && file.hunks.length > 0}
 				<SplitView {file} {language} />
 			{:else}
 				<RawView {file} {language} />

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
 	import type { Comment } from '$lib/types';
-	import { anchorPlace, revealThread } from '$lib/anchors/views';
+	import { anchorPlace } from '$lib/anchors/views';
+	import { useReview } from '$lib/review/context';
 
 	interface Props {
 		submitting: boolean;
@@ -14,13 +13,14 @@
 	}
 
 	let { submitting, onSendRound, onSubmit, onEnd, onClose }: Props = $props();
+	const review = useReview();
 
 	let summary = $state<HTMLTextAreaElement | null>(null);
 
 	// A round is only worth offering while something is there to work through
 	// it; on its own, sending is the end of the review
-	const inRounds = $derived(reviewStore.canSendRound);
-	const unsent = $derived(commentStore.unsentCount);
+	const inRounds = $derived(review.answerer.attached);
+	const unsent = $derived(review.threads.unsent.length);
 
 	onMount(() => summary?.focus());
 
@@ -33,14 +33,14 @@
 			event.preventDefault();
 			// The same rule as the button it stands for: nothing written,
 			// nothing sent
-			if (inRounds && commentStore.hasUnsent) onSendRound();
-			else if (!inRounds && commentStore.hasContent) onSubmit();
+			if (inRounds && review.submission.hasUnsent) onSendRound();
+			else if (!inRounds && review.submission.hasContent) onSubmit();
 		}
 	}
 
 	function jump(comment: Comment) {
 		onClose();
-		revealThread(comment);
+		review.navigator.reveal(comment);
 	}
 </script>
 
@@ -63,27 +63,27 @@
 >
 	<div class="flex items-baseline gap-2 border-b border-base-300 px-4 py-2.5">
 		<h3 class="text-sm font-semibold">
-			{inRounds ? `Round ${reviewStore.round}` : 'Finish the review'}
+			{inRounds ? `Round ${review.rounds.current}` : 'Finish the review'}
 		</h3>
 		<span data-testid="finish-count" class="cr-faint text-xs">
 			{#if inRounds}
-				{unsent} unsent of {commentStore.count}
+				{unsent} unsent of {review.threads.count}
 			{:else}
-				{commentStore.count}
-				{commentStore.count === 1 ? 'comment' : 'comments'}
+				{review.threads.count}
+				{review.threads.count === 1 ? 'comment' : 'comments'}
 			{/if}
 		</span>
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-		{#if commentStore.count === 0}
+		{#if review.threads.count === 0}
 			<p class="cr-faint text-sm">
 				Nothing written yet. A summary on its own is a review too.
 			</p>
 		{:else}
 			<ul class="flex flex-col gap-1.5">
-				{#each commentStore.comments as comment (comment.id)}
-					{@const sent = commentStore.sentInRound(comment.id)}
+				{#each review.threads.all as comment (comment.id)}
+					{@const sent = review.threads.sentInRound(comment.id)}
 					<li>
 						<button
 							data-testid="finish-comment"
@@ -124,8 +124,8 @@
 			data-testid="review-body"
 			class="cr-field cr-comment-body min-h-16 w-full rounded px-3 py-2"
 			placeholder="Summary — optional, about the change as a whole"
-			value={commentStore.reviewBody}
-			oninput={(e) => commentStore.setReviewBody(e.currentTarget.value)}
+			value={review.submission.body}
+			oninput={(e) => review.submission.setBody(e.currentTarget.value)}
 		></textarea>
 
 		<div class="mt-2 flex items-center gap-2">
@@ -138,16 +138,16 @@
 				<button
 					data-testid="modal-submit"
 					class="btn btn-primary btn-sm"
-					disabled={!commentStore.hasUnsent || submitting}
+					disabled={!review.submission.hasUnsent || submitting}
 					onclick={onSendRound}
 				>
-					{submitting ? 'Sending' : `Send round ${reviewStore.round}`}
+					{submitting ? 'Sending' : `Send round ${review.rounds.current}`}
 				</button>
 			{:else}
 				<button
 					data-testid="modal-submit"
 					class="btn btn-primary btn-sm"
-					disabled={!commentStore.hasContent || submitting}
+					disabled={!review.submission.hasContent || submitting}
 					onclick={onSubmit}
 				>
 					{submitting ? 'Sending' : 'Send review'}

@@ -2,10 +2,17 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
-import { diffStore } from '$lib/stores/diff.svelte';
 import type { DiffFile } from '$lib/types';
 import { addedLine, diffFile, hunk, removedLine } from '../diff';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
+import type { Review } from '$lib/review/review.svelte';
+import { inReview, openReview } from '../review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 /** How many lines long the file is, as the server says when it hands a window of it. */
 const FILE_LENGTH = 40;
@@ -23,11 +30,11 @@ const file = diffFile({
 
 describe('widening the context around a hunk', () => {
 	beforeEach(() => {
-		diffStore.setFiles([file], 'diff');
+		review = openReview({ files: [file] });
 	});
 
 	it('offers to show the lines the diff left out', () => {
-		const { getByTestId } = render(FileSection, { props: { file } });
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
 	});
@@ -40,7 +47,7 @@ describe('widening the context around a hunk', () => {
 			total: FILE_LENGTH
 		});
 
-		const { getByTestId, getByText } = render(FileSection, { props: { file } });
+		const { getByTestId, getByText } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(getByText('before one')).toBeTruthy();
@@ -52,7 +59,7 @@ describe('widening the context around a hunk', () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: [], total: FILE_LENGTH });
 
-		const { getByTestId } = render(FileSection, { props: { file } });
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(server.requests).toMatchObject([
@@ -70,9 +77,9 @@ describe('widening the context around a hunk', () => {
 			path: 'src/long.py',
 			hunks: [{ ...file.hunks[0], new_start: 501, old_start: 501 }]
 		};
-		diffStore.setFiles([distant], 'diff');
+		review = openReview({ files: [distant] });
 
-		const { getByTestId } = render(FileSection, { props: { file: distant } });
+		const { getByTestId } = render(FileSection, inReview(review, { file: distant }));
 		expect(getByTestId('expand-context').textContent).toContain('of 500 hidden lines');
 
 		await user.click(getByTestId('expand-context'));
@@ -86,7 +93,7 @@ describe('widening the context around a hunk', () => {
 		const user = userEvent.setup();
 		fakeServer().refuse('GET /api/file-window', BAD_REQUEST);
 
-		const { getByTestId } = render(FileSection, { props: { file } });
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-context'));
 
 		expect(getByTestId('expand-error')).toBeTruthy();
@@ -98,18 +105,18 @@ describe('widening the context around a hunk', () => {
 			path: 'src/top.py',
 			hunks: [{ ...file.hunks[0], new_start: 1, old_start: 1 }]
 		};
-		diffStore.setFiles([fromTop], 'diff');
+		review = openReview({ files: [fromTop] });
 
-		const { queryByTestId } = render(FileSection, { props: { file: fromTop } });
+		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
 
 	it('leaves plain files alone, since nothing of them is hidden', () => {
 		const plain: DiffFile = { ...file, path: '/tmp/plan.md' };
-		diffStore.setFiles([plain], 'files');
+		review = openReview({ files: [plain], facts: { mode: 'files' } });
 
-		const { queryByTestId } = render(FileSection, { props: { file: plain } });
+		const { queryByTestId } = render(FileSection, inReview(review, { file: plain }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
@@ -122,7 +129,7 @@ describe('widening the context around a hunk', () => {
 			lines: Array.from({ length: 29 }, (_, offset) => `line ${offset + 1}`),
 			total: FILE_LENGTH
 		});
-		const { getByTestId, queryByTestId } = render(FileSection, { props: { file } });
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 		expect(getByTestId('hunk-header')).toBeTruthy();
 
 		await user.click(getByTestId('expand-context'));

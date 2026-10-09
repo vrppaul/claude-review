@@ -48,7 +48,7 @@ export function nextWindow(
  */
 export function withRevealed(
   file: DiffFile,
-  revealed: Map<number, DiffLine[]>,
+  revealed: ReadonlyMap<number, DiffLine[]>,
 ): DiffFile {
   if (revealed.size === 0) return file;
 

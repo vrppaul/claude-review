@@ -1,10 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
-import { commentStore } from '$lib/stores/comments.svelte';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { loadDraft, saveDraft, clearDraft, type Draft } from '$lib/utils/drafts';
 import { lineAnchor } from '$lib/anchors/line';
 import type { Comment } from '$lib/types';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
+import type { Review } from '$lib/review/review.svelte';
+import { openReview } from './review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 const TITLE = 'repo: uncommitted changes';
 /** Where the page keeps the draft between reloads. */
@@ -58,87 +65,86 @@ function fullThread(): Comment {
 
 /** The reload of a page: whatever it held is gone, and the draft is read again. */
 function reload() {
-	commentStore.clear();
-	commentStore.restore(TITLE);
+	review = openReview();
 }
 
 describe('an unsent review', () => {
 	it('survives a reload of the same review', () => {
-		commentStore.restore(TITLE);
-		commentStore.add(newComment({ file: 'a.py', body: 'tighten this' }));
-		commentStore.setReviewBody('Overall fine');
+		review = openReview();
+		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		review.submission.setBody('Overall fine');
 
-		commentStore.clear();
-		const count = commentStore.restore(TITLE);
+		review = openReview();
+		const count = review.restoredCount;
 
 		expect(count).toBe(1);
-		expect(commentStore.comments[0].body).toBe('tighten this');
-		expect(commentStore.reviewBody).toBe('Overall fine');
+		expect(review.threads.all[0].body).toBe('tighten this');
+		expect(review.submission.body).toBe('Overall fine');
 	});
 
 	it('is not handed to a different review', () => {
-		commentStore.restore(TITLE);
-		commentStore.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		review = openReview();
+		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 
-		commentStore.clear();
-		const count = commentStore.restore('other-repo: changes since v1');
+		review = openReview({ facts: { title: 'other-repo: changes since v1' } });
+		const count = review.restoredCount;
 
 		expect(count).toBe(0);
-		expect(commentStore.comments).toEqual([]);
+		expect(review.threads.all).toEqual([]);
 	});
 
 	it('does not come back after it has been sent', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/submit', { markdown: '## x', comment_count: 1, round: 1, ended: true });
-		commentStore.restore(TITLE);
-		commentStore.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		review = openReview();
+		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 
-		await commentStore.submit(true);
-		commentStore.clear();
+		await review.submission.submit(true);
 
-		expect(commentStore.restore(TITLE)).toBe(0);
+		review = openReview();
+		expect(review.restoredCount).toBe(0);
 	});
 
 	it('never hands out a comment id a restored comment already has, even after a deletion', () => {
-		commentStore.restore(TITLE);
-		const first = commentStore.add(newComment({ startLine: 1, body: 'one' }));
-		commentStore.add(newComment({ startLine: 2, body: 'two' }));
-		commentStore.remove(first);
+		review = openReview();
+		const first = review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.remove(first);
 
 		reload();
-		commentStore.add(newComment({ startLine: 3, body: 'three' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
 
-		const ids = commentStore.comments.map((comment) => comment.id);
+		const ids = review.threads.all.map((comment) => comment.id);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
 	it('never hands out again the ids of a thread deleted just before the reload', () => {
-		commentStore.restore(TITLE);
-		commentStore.add(newComment({ startLine: 1, body: 'kept' }));
-		const deleted = commentStore.add(newComment({ startLine: 2, body: 'deleted' }));
-		commentStore.addTurn(deleted, { author: 'reader', body: 'Asked', images: [] });
-		const deletedTurn = commentStore.comments[1].turns[0].id;
-		commentStore.remove(deleted);
+		review = openReview();
+		review.threads.add(newComment({ startLine: 1, body: 'kept' }));
+		const deleted = review.threads.add(newComment({ startLine: 2, body: 'deleted' }));
+		review.threads.addTurn(deleted, { author: 'reader', body: 'Asked', images: [] });
+		const deletedTurn = review.threads.all[1].turns[0].id;
+		review.threads.remove(deleted);
 
 		reload();
-		const added = commentStore.add(newComment({ startLine: 3, body: 'new' }));
-		commentStore.addTurn(added, { author: 'reader', body: 'Asked anew', images: [] });
+		const added = review.threads.add(newComment({ startLine: 3, body: 'new' }));
+		review.threads.addTurn(added, { author: 'reader', body: 'Asked anew', images: [] });
 
 		// The agent may still know the deleted ones, and would answer the new under them
 		expect(added).not.toBe(deleted);
-		expect(commentStore.comments[1].turns[0].id).not.toBe(deletedTurn);
+		expect(review.threads.all[1].turns[0].id).not.toBe(deletedTurn);
 	});
 
 	it('never hands out a turn id a restored turn already has', () => {
-		commentStore.restore(TITLE);
-		const id = commentStore.add(newComment({ body: 'Why?' }));
-		commentStore.addTurn(id, { author: 'reader', body: 'Still asking', images: [] });
-		commentStore.receiveReply(id, 'Because');
+		review = openReview();
+		const id = review.threads.add(newComment({ body: 'Why?' }));
+		review.threads.addTurn(id, { author: 'reader', body: 'Still asking', images: [] });
+		review.threads.receiveReply(id, 'Because', null);
 
 		reload();
-		commentStore.addTurn(id, { author: 'reader', body: 'Thanks', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'Thanks', images: [] });
 
-		const ids = commentStore.comments[0].turns.map((turn) => turn.id);
+		const ids = review.threads.all[0].turns.map((turn) => turn.id);
 		expect(ids).toHaveLength(3);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
@@ -148,9 +154,9 @@ describe('an unsent review', () => {
 			throw new Error('blocked');
 		});
 
-		commentStore.restore(TITLE);
-		expect(() => commentStore.add(newComment({ body: 'still fine' }))).not.toThrow();
-		expect(commentStore.count).toBe(1);
+		review = openReview();
+		expect(() => review.threads.add(newComment({ body: 'still fine' }))).not.toThrow();
+		expect(review.threads.count).toBe(1);
 	});
 
 	it('ignores a draft that is not what it should be', () => {
@@ -246,10 +252,11 @@ describe('a draft written by an older release', () => {
 	it('is restored when it is of this shape but kept no count of the ids handed out', () => {
 		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [fullThread()], sent: [] });
 
-		const count = commentStore.restore(TITLE);
+		review = openReview();
+		const count = review.restoredCount;
 
 		expect(count).toBe(1);
-		expect(commentStore.add(newComment({ body: 'next' }))).not.toBe(fullThread().id);
+		expect(review.threads.add(newComment({ body: 'next' }))).not.toBe(fullThread().id);
 	});
 
 	it('gives each turn written before turns had ids one of its own, never one a turn already has', () => {

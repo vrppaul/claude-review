@@ -1,15 +1,22 @@
-import { describe, it, expect } from 'vitest';
-import { diffStore } from '$lib/stores/diff.svelte';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { isDrawn } from '$lib/utils/placement';
 import { createLineSelection } from '$lib/utils/line-selection.svelte';
 import type { Comment, DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
+import type { Review } from '$lib/review/review.svelte';
+import { openReview } from './review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 const SINCE_ROUND_ONE = 'changes since round 1';
-/** A request for the review's own diff: against no other base. */
-const WHOLE_REVIEW_ASKED = { method: 'GET', path: '/api/diff', query: {}, body: null };
+/** A request for the review's own diff, by the key the server named its base with. */
+const WHOLE_REVIEW_ASKED = { method: 'GET', path: '/api/diff', query: { base: 'review' }, body: null };
 
 /** A file whose only line, the first, the change left alone. */
 function untouched(path: string): DiffFile {
@@ -43,38 +50,37 @@ function serving(paths: string[], phrase = 'uncommitted changes'): FakeServer {
 
 describe('what a round changed', () => {
 	it('takes the tick off a file the round rewrote, and leaves the others alone', () => {
-		diffStore.setFiles(
-			[diffFile({ path: 'rewritten.py' }), diffFile({ path: 'untouched.py' })],
-			'diff'
-		);
-		diffStore.setViewed('rewritten.py', true);
-		diffStore.setViewed('untouched.py', true);
+		review = openReview({
+			files: [diffFile({ path: 'rewritten.py' }), diffFile({ path: 'untouched.py' })]
+		});
+		review.reading.setViewed('rewritten.py', true);
+		review.reading.setViewed('untouched.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
+		review.noteRetake({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
 
-		expect(diffStore.isViewed('rewritten.py')).toBe(false);
-		expect(diffStore.isViewed('untouched.py')).toBe(true);
-		expect(diffStore.isChanged('rewritten.py')).toBe(true);
-		expect(diffStore.changedSince).toBe(2);
+		expect(review.reading.isViewed('rewritten.py')).toBe(false);
+		expect(review.reading.isViewed('untouched.py')).toBe(true);
+		expect(review.lastRetake.isChanged('rewritten.py')).toBe(true);
+		expect(review.lastRetake.changedSince).toBe(2);
 	});
 
 	it('brings a rewritten file back into view, or it sits folded and reads as read', () => {
-		diffStore.setFiles([diffFile({ path: 'rewritten.py' })], 'diff');
-		diffStore.setViewed('rewritten.py', true);
+		review = openReview({ files: [diffFile({ path: 'rewritten.py' })] });
+		review.reading.setViewed('rewritten.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
+		review.noteRetake({ followed: 0, outdated: 0 }, { since_round: 2, base_key: 'round:2', paths: ['rewritten.py'] });
 
-		expect(diffStore.isCollapsed('rewritten.py')).toBe(false);
+		expect(review.reading.isFolded('rewritten.py')).toBe(false);
 	});
 
 	it('trusts no tick when there is no way to tell what moved', () => {
-		diffStore.setFiles([diffFile({ path: 'a.py' }), diffFile({ path: 'b.py' })], 'diff');
-		diffStore.setViewed('a.py', true);
-		diffStore.setViewed('b.py', true);
+		review = openReview({ files: [diffFile({ path: 'a.py' }), diffFile({ path: 'b.py' })] });
+		review.reading.setViewed('a.py', true);
+		review.reading.setViewed('b.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null);
+		review.noteRetake({ followed: 0, outdated: 0 }, null);
 
-		expect(diffStore.viewedCount).toBe(0);
+		expect(review.reading.viewedCount).toBe(0);
 	});
 });
 
@@ -82,34 +88,34 @@ describe('reading the same tree against something else', () => {
 	it('asks for the diff against the base it was given', async () => {
 		const server = serving(['answered.py'], SINCE_ROUND_ONE);
 
-		await diffStore.setBase('round:1');
+		await review.diff.setBase('round:1');
 
 		expect(server.requests).toMatchObject([{ path: '/api/diff', query: { base: 'round:1' } }]);
-		expect(diffStore.narrowed).toBe(true);
-		expect(diffStore.phrase).toBe(SINCE_ROUND_ONE);
+		expect(review.diff.narrowed).toBe(true);
+		expect(review.diff.phrase).toBe(SINCE_ROUND_ONE);
 	});
 
 	it('goes back to the whole review, and stops being narrowed', async () => {
 		const server = serving(['answered.py'], SINCE_ROUND_ONE);
-		await diffStore.setBase('round:1');
+		await review.diff.setBase('round:1');
 
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('answered.py')] }));
-		await diffStore.showWholeReview();
+		await review.diff.showWholeReview();
 
 		// By the key the server named the review's own base with
 		expect(server.requests.at(-1)).toMatchObject({ path: '/api/diff', query: { base: 'review' } });
-		expect(diffStore.narrowed).toBe(false);
+		expect(review.diff.narrowed).toBe(false);
 	});
 
 	it('stays where it was when the base cannot be taken', async () => {
 		const server = fakeServer();
 		server.refuse('GET /api/diff', BAD_REQUEST);
 
-		await expect(diffStore.setBase('round:9')).rejects.toThrow();
+		await expect(review.diff.setBase('round:9')).rejects.toThrow();
 
-		expect(diffStore.narrowed).toBe(false);
+		expect(review.diff.narrowed).toBe(false);
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('answered.py')] }));
-		await diffStore.fetchDiff();
+		await review.diff.take();
 		expect(server.requests.at(-1)).toEqual(WHOLE_REVIEW_ASKED);
 	});
 
@@ -117,15 +123,15 @@ describe('reading the same tree against something else', () => {
 		const diffs = fakeServer().hold('GET /api/diff');
 		const narrowed = diffResponse({ files: [untouched('answered.py')], phrase: SINCE_ROUND_ONE });
 
-		const picking = diffStore.setBase('round:1');
-		const landing = diffStore.fetchDiff();
+		const picking = review.diff.setBase('round:1');
+		const landing = review.diff.take();
 		diffs.answer(1, narrowed);
 		diffs.answer(0, narrowed);
 		await Promise.all([picking, landing]);
 
 		expect(diffs.requests[1]).toMatchObject({ path: '/api/diff', query: { base: 'round:1' } });
-		expect(diffStore.base).toBe('round:1');
-		expect(diffStore.narrowed).toBe(true);
+		expect(review.diff.base).toBe('round:1');
+		expect(review.diff.narrowed).toBe(true);
 	});
 });
 
@@ -154,9 +160,9 @@ describe('a thread the base on screen cannot draw', () => {
 describe('a base that is not the review\'s own', () => {
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
-		await diffStore.setBase('round:1');
+		await review.diff.setBase('round:1');
 		const selection = createLineSelection({
-			mayCommentOnRemoved: () => !diffStore.narrowed,
+			mayCommentOnRemoved: () => !review.diff.narrowed,
 			longestRange: () => null,
 			rowOf: () => undefined
 		});
@@ -168,9 +174,9 @@ describe('a base that is not the review\'s own', () => {
 
 	it('takes a thread on a line of the working tree, which every base shares', async () => {
 		serving(['answered.py'], SINCE_ROUND_ONE);
-		await diffStore.setBase('round:1');
+		await review.diff.setBase('round:1');
 		const selection = createLineSelection({
-			mayCommentOnRemoved: () => !diffStore.narrowed,
+			mayCommentOnRemoved: () => !review.diff.narrowed,
 			longestRange: () => null,
 			rowOf: () => undefined
 		});
@@ -181,14 +187,14 @@ describe('a base that is not the review\'s own', () => {
 	});
 
 	it('unfolds every file when there is no way to tell which ones moved', () => {
-		diffStore.setFiles([diffFile({ path: 'a.py' }), diffFile({ path: 'b.py' })], 'diff');
-		diffStore.setViewed('a.py', true);
-		diffStore.setViewed('b.py', true);
+		review = openReview({ files: [diffFile({ path: 'a.py' }), diffFile({ path: 'b.py' })] });
+		review.reading.setViewed('a.py', true);
+		review.reading.setViewed('b.py', true);
 
-		diffStore.noteRetaken({ followed: 0, outdated: 0 }, null);
+		review.noteRetake({ followed: 0, outdated: 0 }, null);
 
-		expect(diffStore.isCollapsed('a.py')).toBe(false);
-		expect(diffStore.isCollapsed('b.py')).toBe(false);
-		expect(diffStore.changedKnown).toBe(false);
+		expect(review.reading.isFolded('a.py')).toBe(false);
+		expect(review.reading.isFolded('b.py')).toBe(false);
+		expect(review.lastRetake.changedKnown).toBe(false);
 	});
 });

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { DiffLayout, Theme } from '$lib/types';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { soundStore } from '$lib/stores/sound.svelte';
-	import { themeStore } from '$lib/stores/theme.svelte';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	const layouts: { value: DiffLayout; label: string; testId: string }[] = [
 		{ value: 'unified', label: 'Unified', testId: 'layout-unified' },
@@ -66,7 +66,7 @@
 		>
 			<span class="text-xs font-semibold">Settings</span>
 
-			{#if diffStore.mode === 'diff'}
+			{#if review.mode === 'diff'}
 				<div class="flex items-center justify-between gap-3">
 					<span>Diff layout</span>
 					<div data-testid="diff-layout-toggle" class="cr-segmented">
@@ -74,8 +74,8 @@
 							<button
 								data-testid={layout.testId}
 								class="cr-segment"
-								aria-pressed={diffStore.diffLayout === layout.value}
-								onclick={() => diffStore.setDiffLayout(layout.value)}
+								aria-pressed={review.settings.current.diff_layout === layout.value}
+								onclick={() => review.settings.change({ diff_layout: layout.value })}
 							>
 								{layout.label}
 							</button>
@@ -89,8 +89,8 @@
 						data-testid="ignore-whitespace"
 						type="checkbox"
 						class="checkbox checkbox-xs"
-						checked={diffStore.ignoreWhitespace}
-						onchange={(e) => diffStore.setIgnoreWhitespace(e.currentTarget.checked)}
+						checked={review.settings.current.ignore_whitespace}
+						onchange={(e) => review.setIgnoreWhitespace(e.currentTarget.checked)}
 					/>
 				</label>
 			{/if}
@@ -102,8 +102,8 @@
 						<button
 							data-testid={choice.testId}
 							class="cr-segment"
-							aria-pressed={themeStore.theme === choice.value}
-							onclick={() => themeStore.set(choice.value)}
+							aria-pressed={review.settings.current.theme === choice.value}
+							onclick={() => review.settings.change({ theme: choice.value })}
 						>
 							{choice.label}
 						</button>
@@ -120,8 +120,8 @@
 					data-testid="reply-sound"
 					type="checkbox"
 					class="checkbox checkbox-xs"
-					checked={soundStore.enabled}
-					onchange={(e) => soundStore.setEnabled(e.currentTarget.checked)}
+					checked={review.settings.current.sound_on_replies}
+					onchange={(e) => review.settings.change({ sound_on_replies: e.currentTarget.checked })}
 				/>
 			</label>
 		</div>

@@ -14,16 +14,19 @@ import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { latestNews, unseenNews } from '$lib/guide/news-choice';
 import { TOUR_TARGETS, type TourTarget } from '$lib/guide/tour';
-import { commentStore } from '$lib/stores/comments.svelte';
-import { diffStore } from '$lib/stores/diff.svelte';
-import { guideStore } from '$lib/stores/guide.svelte';
-import { commentFields } from '$lib/stores/comment-fields';
-import { reviewStore } from '$lib/stores/review.svelte';
 import type { GuideState } from '$lib/types';
 import { isNewer, readSeenRelease, writeSeenRelease } from '$lib/utils/seen-release';
 import { addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer, SERVER_ERROR, type FakeServer, type ReceivedRequest } from './fake-server';
 import { newComment } from './new-comment';
+import type { Review } from '$lib/review/review.svelte';
+import { inReview, openReview } from './review';
+
+let review: Review;
+
+beforeEach(() => {
+	review = openReview();
+});
 
 const HEADER = { submitting: false, error: null, onOpenModal: ignore };
 const FILE = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(1, 'y = 3')])] });
@@ -49,6 +52,12 @@ class GuideMemory {
 	}
 }
 
+/** Open a review served by this release, and let the guide decide what to show the reader. */
+async function arriveAt(release: string): Promise<void> {
+	review = openReview({ facts: { release } });
+	await review.guide.open();
+}
+
 /** A server remembering which release this reader was shown, as `/api/guide` does. */
 function guideServer(seen: string | null): FakeServer {
 	const server = fakeServer();
@@ -64,7 +73,7 @@ function entry(release: string, also: string[] = []): ReleaseNews {
 
 /** A page on which exactly these places are drawn. */
 function pageWith(...names: string[]) {
-	guideStore.readPageWith((targets) => targets.some((target) => names.includes(target)));
+	review.guide.readPageWith((targets) => targets.some((target) => names.includes(target)));
 }
 
 function ignore() {}
@@ -72,9 +81,9 @@ function ignore() {}
 /** The header of a review an agent is attached to, once its diff has arrived. */
 async function drawHeader() {
 	fakeServer().answer('GET /api/diff', diffResponse({ files: [FILE] }));
-	await diffStore.fetchDiff();
-	reviewStore.attachAnswerer();
-	render(TopBar, { props: HEADER });
+	await review.diff.take();
+	review.answerer.setAttached(true);
+	render(TopBar, inReview(review, HEADER));
 }
 
 /** The header, with the list of bases it can be read against open. */
@@ -82,42 +91,42 @@ async function drawBaseList() {
 	const server = fakeServer();
 	server.answer('GET /api/diff', diffResponse({ files: [FILE] }));
 	server.answer('GET /api/versions', { versions: [] });
-	await diffStore.fetchDiff();
-	render(TopBar, { props: HEADER });
+	await review.diff.take();
+	render(TopBar, inReview(review, HEADER));
 	await userEvent.click(screen.getByTestId('base-picker'));
 }
 
 function drawFileTree() {
-	diffStore.setFiles([FILE], 'diff');
-	render(FileList);
+	review = openReview({ files: [FILE] });
+	render(FileList, inReview(review));
 }
 
 function drawDiff() {
-	diffStore.setFiles([FILE], 'diff');
-	render(DiffView);
+	review = openReview({ files: [FILE] });
+	render(DiffView, inReview(review));
 }
 
 function drawCommentField() {
-	render(CommentBox, { props: { kind: 'new', onSave: ignore, onCancel: ignore } });
+	render(CommentBox, inReview(review, { kind: 'new', onSave: ignore, onCancel: ignore }));
 }
 
 /** A thread whose question is with the agent, not answered yet. */
 async function drawAwaitedQuestion() {
 	fakeServer().answer('POST /api/ask', null);
-	const id = commentStore.add(newComment({ file: FILE.path, body: 'Why 3?' }));
-	await commentStore.ask(id);
-	render(CommentThread, { props: { comment: commentStore.comments[0] } });
+	const id = review.threads.add(newComment({ file: FILE.path, body: 'Why 3?' }));
+	await review.threads.ask(id);
+	render(CommentThread, inReview(review, { comment: review.threads.all[0] }));
 }
 
 function drawAnswer() {
-	const id = commentStore.add(newComment({ file: FILE.path, body: 'Why 3?' }));
-	commentStore.receiveReply(id, 'It was 2 before the retry path');
-	render(CommentThread, { props: { comment: commentStore.comments[0] } });
+	const id = review.threads.add(newComment({ file: FILE.path, body: 'Why 3?' }));
+	review.threads.receiveReply(id, 'It was 2 before the retry path', null);
+	render(CommentThread, inReview(review, { comment: review.threads.all[0] }));
 }
 
 function drawAgentPanel() {
-	reviewStore.attachAnswerer();
-	render(AgentPanel);
+	review.answerer.setAttached(true);
+	render(AgentPanel, inReview(review));
 }
 
 /** How to draw the part of the review that holds each place the tour points at. */
@@ -136,7 +145,6 @@ const DRAWING: Record<TourTarget, () => void | Promise<void>> = {
 };
 
 describe('which release a reader has seen', () => {
-
 	it('compares releases number by number', () => {
 		expect(isNewer('1.10.0', '1.9.3')).toBe(true);
 		expect(isNewer('1.5.0', '1.5.0')).toBe(false);
@@ -196,30 +204,29 @@ describe('which news a returning reader is shown', () => {
 });
 
 describe('what the guide shows a reader arriving', () => {
-
 	it('welcomes somebody who has never opened a review', async () => {
 		guideServer(null);
 
-		await guideStore.open('1.5.0');
+		await arriveAt('1.5.0');
 
-		expect(guideStore.card).toBe('welcome');
+		expect(review.guide.card).toBe('welcome');
 	});
 
 	it('tells somebody back from an older release what changed', async () => {
 		guideServer('1.4.2');
 
-		await guideStore.open('1.5.0');
+		await arriveAt('1.5.0');
 
-		expect(guideStore.card).toBe('news');
-		expect(guideStore.news?.release).toBe('1.5.0');
+		expect(review.guide.card).toBe('news');
+		expect(review.guide.news?.release).toBe('1.5.0');
 	});
 
 	it('says nothing about a release with nothing written since, and remembers it', async () => {
 		const server = guideServer('1.5.0');
 
-		await guideStore.open('1.5.1');
+		await arriveAt('1.5.1');
 
-		expect(guideStore.card).toBeNull();
+		expect(review.guide.card).toBeNull();
 		await vi.waitFor(() =>
 			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.1' }])
 		);
@@ -227,11 +234,11 @@ describe('what the guide shows a reader arriving', () => {
 
 	it('puts the card away for good once it is closed', async () => {
 		const server = guideServer(null);
-		await guideStore.open('1.5.0');
+		await arriveAt('1.5.0');
 
-		guideStore.dismiss();
+		review.guide.dismiss();
 
-		expect(guideStore.card).toBeNull();
+		expect(review.guide.card).toBeNull();
 		await vi.waitFor(() =>
 			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ seen_release: '1.5.0' }])
 		);
@@ -240,19 +247,18 @@ describe('what the guide shows a reader arriving', () => {
 	it('shows nothing rather than welcome somebody twice when the server cannot say', async () => {
 		fakeServer().refuse('GET /api/guide', SERVER_ERROR);
 
-		await guideStore.open('1.5.0');
+		await arriveAt('1.5.0');
 
-		expect(guideStore.card).toBeNull();
+		expect(review.guide.card).toBeNull();
 	});
 });
 
 describe('the news card', () => {
-
 	it('links to the release on GitHub even when there is nothing else to list', async () => {
 		guideServer('1.4.2');
-		await guideStore.open('1.5.0');
+		await arriveAt('1.5.0');
 
-		const { getByTestId } = render(Guide);
+		const { getByTestId } = render(Guide, inReview(review));
 		await tick();
 
 		expect(getByTestId('guide-release-link').getAttribute('href')).toBe(
@@ -261,9 +267,7 @@ describe('the news card', () => {
 	});
 
 	it('shows a picture from a file, described for whoever cannot see it', () => {
-		const { getByTestId } = render(NewsIllustration, {
-			props: { illustration: { kind: 'image', src: '/news/paste.gif', alt: 'A screenshot pasted' } }
-		});
+		const { getByTestId } = render(NewsIllustration, inReview(review, { illustration: { kind: 'image', src: '/news/paste.gif', alt: 'A screenshot pasted' } }));
 
 		const image = getByTestId('news-image') as HTMLImageElement;
 		expect(image.getAttribute('src')).toBe('/news/paste.gif');
@@ -285,12 +289,12 @@ describe('the tour', () => {
 	});
 
 	it('takes the steps a review with an agent has, and leaves out the others', () => {
-		reviewStore.attachAnswerer();
-		guideStore.startTour();
+		review.answerer.setAttached(true);
+		review.guide.startTour();
 		const seen: string[] = [];
-		while (guideStore.step) {
-			seen.push(guideStore.step.id);
-			guideStore.next();
+		while (review.guide.step) {
+			seen.push(review.guide.step.id);
+			review.guide.next();
 		}
 
 		expect(seen).toContain('comment-route');
@@ -300,146 +304,146 @@ describe('the tour', () => {
 	});
 
 	it('stays on the same part of the tour when an agent joins in the middle of it', () => {
-		guideStore.startTour();
-		while (guideStore.step && guideStore.step.id !== 'comment-save') guideStore.next();
-		expect(guideStore.step?.id).toBe('comment-save');
+		review.guide.startTour();
+		while (review.guide.step && review.guide.step.id !== 'comment-save') review.guide.next();
+		expect(review.guide.step?.id).toBe('comment-save');
 
-		reviewStore.attachAnswerer();
+		review.answerer.setAttached(true);
 
 		// With an agent there, saving a comment is one of the ways it can go
-		expect(guideStore.step?.id).toBe('comment-route');
+		expect(review.guide.step?.id).toBe('comment-route');
 	});
 
 	it('stays at the end of the tour when an agent joins on its last step', () => {
-		guideStore.startTour();
-		while (guideStore.step && guideStore.step.id !== 'finish') guideStore.next();
-		expect(guideStore.step?.id).toBe('finish');
+		review.guide.startTour();
+		while (review.guide.step && review.guide.step.id !== 'finish') review.guide.next();
+		expect(review.guide.step?.id).toBe('finish');
 
-		reviewStore.attachAnswerer();
+		review.answerer.setAttached(true);
 
-		expect(guideStore.step?.id).toBe('round-or-end');
-		expect(guideStore.isLastStep).toBe(true);
+		expect(review.guide.step?.id).toBe('round-or-end');
+		expect(review.guide.isLastStep).toBe(true);
 	});
 
 	it('passes over a step with nothing on screen to show', () => {
 		// A plan under review has no base to choose: the tour opens on the files
 		pageWith('file-tree', 'line-number');
 
-		guideStore.startTour();
+		review.guide.startTour();
 
-		expect(guideStore.step?.id).toBe('files');
+		expect(review.guide.step?.id).toBe('files');
 	});
 
 	it('turns round at the start rather than landing on a step with nothing to show', () => {
 		pageWith('file-tree', 'line-number');
-		guideStore.startTour();
+		review.guide.startTour();
 
-		guideStore.back();
+		review.guide.back();
 
-		expect(guideStore.step?.id).toBe('files');
+		expect(review.guide.step?.id).toBe('files');
 	});
 
 	it('waits for a comment on a line, not for a reply', () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.startTour();
-		guideStore.next();
-		expect(guideStore.step?.id).toBe('comment-line');
+		review.guide.startTour();
+		review.guide.next();
+		expect(review.guide.step?.id).toBe('comment-line');
 
-		guideStore.notice({ type: 'opened', kind: 'reply' });
-		expect(guideStore.step?.id).toBe('comment-line');
+		review.guide.notice({ type: 'opened', kind: 'reply' });
+		expect(review.guide.step?.id).toBe('comment-line');
 
-		guideStore.notice({ type: 'opened', kind: 'new' });
-		expect(guideStore.step?.id).toBe('comment-save');
+		review.guide.notice({ type: 'opened', kind: 'new' });
+		expect(review.guide.step?.id).toBe('comment-save');
 	});
 
 	it('does not wait for a comment that is already open', () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.notice({ type: 'opened', kind: 'new' });
+		review.guide.notice({ type: 'opened', kind: 'new' });
 
-		guideStore.startTour();
-		guideStore.next();
+		review.guide.startTour();
+		review.guide.next();
 
-		expect(guideStore.step?.id).toBe('comment-save');
+		expect(review.guide.step?.id).toBe('comment-save');
 	});
 
 	it('follows the comment where the reader sent it', () => {
-		reviewStore.attachAnswerer();
+		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field', 'awaited-answer', 'unsent-count');
-		guideStore.startTour();
-		guideStore.next();
-		guideStore.notice({ type: 'opened', kind: 'new' });
-		expect(guideStore.step?.id).toBe('comment-route');
+		review.guide.startTour();
+		review.guide.next();
+		review.guide.notice({ type: 'opened', kind: 'new' });
+		expect(review.guide.step?.id).toBe('comment-route');
 
-		guideStore.notice({ type: 'asked', kind: 'new' });
+		review.guide.notice({ type: 'asked', kind: 'new' });
 
-		expect(guideStore.step?.id).toBe('asked');
+		expect(review.guide.step?.id).toBe('asked');
 	});
 
 	it('goes back a step when the comment is closed without being sent', () => {
-		reviewStore.attachAnswerer();
+		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.startTour();
-		guideStore.next();
-		guideStore.notice({ type: 'opened', kind: 'new' });
+		review.guide.startTour();
+		review.guide.next();
+		review.guide.notice({ type: 'opened', kind: 'new' });
 
-		guideStore.notice({ type: 'closed', kind: 'new' });
+		review.guide.notice({ type: 'closed', kind: 'new' });
 
-		expect(guideStore.step?.id).toBe('comment-line');
+		expect(review.guide.step?.id).toBe('comment-line');
 	});
 
 	it('leaves Escape to whatever is open over the review', async () => {
 		pageWith('review-base');
-		guideStore.startTour();
-		render(Guide);
+		review.guide.startTour();
+		render(Guide, inReview(review));
 		await tick();
 
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-		expect(guideStore.touring).toBe(true);
+		expect(review.guide.touring).toBe(true);
 	});
 
 	it('keeps waiting for a comment while another one on a line is still open', () => {
-		reviewStore.attachAnswerer();
+		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.startTour();
-		guideStore.next();
-		guideStore.notice({ type: 'opened', kind: 'new' });
-		guideStore.notice({ type: 'opened', kind: 'new' });
+		review.guide.startTour();
+		review.guide.next();
+		review.guide.notice({ type: 'opened', kind: 'new' });
+		review.guide.notice({ type: 'opened', kind: 'new' });
 
-		guideStore.notice({ type: 'closed', kind: 'new' });
+		review.guide.notice({ type: 'closed', kind: 'new' });
 
-		expect(guideStore.step?.id).toBe('comment-route');
+		expect(review.guide.step?.id).toBe('comment-route');
 	});
 
 	it('counts only the steps it will show, and offers no Back before the first', () => {
 		pageWith('file-tree', 'line-number');
-		guideStore.startTour();
+		review.guide.startTour();
 
-		expect(guideStore.stepPosition).toBe(0);
-		expect(guideStore.canGoBack).toBe(false);
-		expect(guideStore.stepCount).toBe(2);
+		expect(review.guide.stepPosition).toBe(0);
+		expect(review.guide.canGoBack).toBe(false);
+		expect(review.guide.stepCount).toBe(2);
 	});
 
 	it('hears the comment fields once the page shows what happened', async () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.startTour();
-		render(Guide);
+		review.guide.startTour();
+		render(Guide, inReview(review));
 		await tick();
 		pageWith('file-tree', 'line-number', 'comment-field');
-		guideStore.next();
+		review.guide.next();
 
-		commentFields.report({ type: 'opened', kind: 'new' });
-		expect(guideStore.step?.id).toBe('comment-line');
+		review.commentFields.report({ type: 'opened', kind: 'new' });
+		expect(review.guide.step?.id).toBe('comment-line');
 		await tick();
 
-		expect(guideStore.step?.id).toBe('comment-save');
+		expect(review.guide.step?.id).toBe('comment-save');
 	});
 });
 
 describe('the ? list', () => {
 	it('opens from a button too, for whoever has ? taken by a browser extension', async () => {
-		const { getByTestId, queryByTestId } = render(KeyboardShortcuts);
-		const { getByTestId: inHeader } = render(TopBar, { props: HEADER });
+		const { getByTestId, queryByTestId } = render(KeyboardShortcuts, inReview(review));
+		const { getByTestId: inHeader } = render(TopBar, inReview(review, HEADER));
 		expect(queryByTestId('shortcuts-list')).toBeNull();
 
 		inHeader('open-help').click();

@@ -36,11 +36,6 @@ const LAYOUT_KEPT_HERE = "layout";
 const WHITESPACE_KEPT_HERE = "ignore-whitespace";
 const SOUND_KEPT_HERE = "reply-sound";
 
-let settings = $state<ReaderSettings>({
-  ...NEW_READER,
-  theme: readChoice(THEME_CACHE, THEMES, NEW_READER.theme),
-});
-
 /** What this browser kept before the server did, read under the old names. */
 function keptInThisBrowser(): ReaderSettings {
   return {
@@ -54,16 +49,29 @@ function keptInThisBrowser(): ReaderSettings {
   };
 }
 
-function sameSettings(one: ReaderSettings, other: ReaderSettings): boolean {
-  return (Object.keys(one) as (keyof ReaderSettings)[]).every(
-    (name) => one[name] === other[name],
+/**
+ * Whether this browser kept any choice a new reader would not have. Only
+ * these four were ever kept here: a setting added since has no old copy.
+ */
+function choseAnything(kept: ReaderSettings): boolean {
+  return (
+    kept.theme !== NEW_READER.theme ||
+    kept.diff_layout !== NEW_READER.diff_layout ||
+    kept.ignore_whitespace !== NEW_READER.ignore_whitespace ||
+    kept.sound_on_replies !== NEW_READER.sound_on_replies
   );
 }
 
-export const settingsStore = {
-  get settings(): ReaderSettings {
-    return settings;
-  },
+/** The reader's settings: here at once, and on the server for every later review. */
+export class Settings {
+  #current = $state<ReaderSettings>({
+    ...NEW_READER,
+    theme: readChoice(THEME_CACHE, THEMES, NEW_READER.theme),
+  });
+
+  get current(): ReaderSettings {
+    return this.#current;
+  }
 
   /**
    * Read what the reader chose, in this review or any other.
@@ -76,32 +84,27 @@ export const settingsStore = {
     try {
       const kept = await readSettings();
       const local = keptInThisBrowser();
-      settings =
-        kept.stored || sameSettings(local, NEW_READER)
+      this.#current =
+        kept.stored || !choseAnything(local)
           ? kept.record
           : await keepSettings(local);
       forget(LAYOUT_KEPT_HERE);
       forget(WHITESPACE_KEPT_HERE);
       forget(SOUND_KEPT_HERE);
-      writeChoice(THEME_CACHE, settings.theme);
+      writeChoice(THEME_CACHE, this.#current.theme);
     } catch {
       // A server that cannot say leaves this tab reading as it was
     }
-  },
+  }
 
   /** Make a choice, here at once and for every later review once the server has it. */
   async change(changes: Partial<ReaderSettings>): Promise<void> {
-    settings = { ...settings, ...changes };
-    writeChoice(THEME_CACHE, settings.theme);
+    this.#current = { ...this.#current, ...changes };
+    writeChoice(THEME_CACHE, this.#current.theme);
     try {
       await keepSettings(changes);
     } catch {
       // The choice still applies to this tab, it just will not be remembered
     }
-  },
-
-  /** Test seam: a reader who has never chosen anything. */
-  clear() {
-    settings = { ...NEW_READER };
-  },
-};
+  }
+}

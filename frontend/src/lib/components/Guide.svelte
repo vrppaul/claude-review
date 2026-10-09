@@ -1,19 +1,20 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { guideStore } from '$lib/stores/guide.svelte';
-	import { commentFields } from '$lib/stores/comment-fields';
 	import { anyOnPage, reveal } from '$lib/guide/spotlight';
+	import { useReview } from '$lib/review/context';
 	import GuideCard from './GuideCard.svelte';
 	import TourSpotlight from './TourSpotlight.svelte';
 
-	const step = $derived(guideStore.step);
+	const review = useReview();
+
+	const step = $derived(review.guide.step);
 
 	// The page is what knows which steps have something to show, and the
 	// comment fields are what know how a comment went. The tour hears them
 	// once the page has drawn the result, so the step it moves to finds it.
 	onMount(() => {
-		guideStore.readPageWith(anyOnPage);
-		return commentFields.listen((event) => void tick().then(() => guideStore.notice(event)));
+		review.guide.readPageWith(anyOnPage);
+		return review.commentFields.listen((event) => void tick().then(() => review.guide.notice(event)));
 	});
 
 	// A step's place is brought into view once it is drawn, which is after

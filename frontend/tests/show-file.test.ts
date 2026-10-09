@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { registerSection, showFile } from '$lib/utils/scroll';
+import { FileSections } from '$lib/review/file-sections';
+
+let sections: FileSections;
+
+beforeEach(() => {
+	sections = new FileSections();
+});
 
 // Enough frames for the settling watch, which looks once a frame until
 // nothing has moved for two of them
@@ -21,7 +27,7 @@ function isMarked(section: HTMLElement): boolean {
 function section(path: string): HTMLElement {
 	const element = document.createElement('div');
 	document.body.append(element);
-	registerSection(path, element);
+	sections.register(path, element);
 	return element;
 }
 
@@ -35,7 +41,7 @@ describe('being taken to a file somebody else pointed at', () => {
 		let top = 900;
 		moving.getBoundingClientRect = () => ({ top }) as DOMRect;
 
-		showFile('a.py');
+		sections.showFile('a.py');
 		await frames(FRAMES_WHILE_MOVING);
 		expect(isMarked(moving)).toBe(false);
 
@@ -48,11 +54,11 @@ describe('being taken to a file somebody else pointed at', () => {
 		const shown = section('a.py');
 		shown.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
-		showFile('a.py');
+		sections.showFile('a.py');
 		await frames();
 		expect(isMarked(shown)).toBe(true);
 
-		showFile('a.py');
+		sections.showFile('a.py');
 		expect(isMarked(shown)).toBe(false);
 		await frames();
 		expect(isMarked(shown)).toBe(true);
@@ -64,8 +70,8 @@ describe('being taken to a file somebody else pointed at', () => {
 		first.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 		second.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
-		showFile('a.py');
-		showFile('b.py');
+		sections.showFile('a.py');
+		sections.showFile('b.py');
 		await frames();
 
 		expect(isMarked(first)).toBe(false);
@@ -73,6 +79,6 @@ describe('being taken to a file somebody else pointed at', () => {
 	});
 
 	it('says nothing about a file the review does not hold', () => {
-		expect(() => showFile('missing.py')).not.toThrow();
+		expect(() => sections.showFile('missing.py')).not.toThrow();
 	});
 });

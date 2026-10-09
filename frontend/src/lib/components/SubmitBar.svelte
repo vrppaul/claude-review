@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { commentStore } from '$lib/stores/comments.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import TopBar from './TopBar.svelte';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let showModal = $state(false);
 
 	async function handleSubmit() {
-		await send(() => commentStore.submit(true), { closes: true });
+		await send(() => review.submission.submit(true), { closes: true });
 	}
 
 	/**
@@ -19,11 +21,11 @@
 	 * answers to this round come back to.
 	 */
 	async function handleSendRound() {
-		await send(() => commentStore.submit(false), { closes: false });
+		await send(() => review.submission.submit(false), { closes: false });
 	}
 
 	async function handleEnd() {
-		await send(() => commentStore.end(), { closes: true });
+		await send(() => review.submission.end(), { closes: true });
 	}
 
 	async function send(act: () => Promise<unknown>, { closes }: { closes: boolean }) {
@@ -54,7 +56,7 @@
 	});
 </script>
 
-{#if commentStore.submitted}
+{#if review.submission.finished}
 	<div
 		data-testid="submitted-banner"
 		class="flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 bg-base-200 px-4"

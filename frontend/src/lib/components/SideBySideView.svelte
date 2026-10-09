@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
-	import { diffStore } from '$lib/stores/diff.svelte';
 	import { assembleText } from '$lib/utils/renderable';
+	import { useReview } from '$lib/review/context';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import RawView from './RawView.svelte';
 
@@ -11,8 +11,9 @@
 	}
 
 	let { file, language }: Props = $props();
+	const review = useReview();
 
-	const isDiffMode = $derived(diffStore.mode === 'diff');
+	const isDiffMode = $derived(review.mode === 'diff');
 	const renderedText = $derived(assembleText(file, isDiffMode));
 
 	let leftPane: HTMLDivElement | undefined = $state();

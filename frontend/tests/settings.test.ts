@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { settingsStore } from '$lib/stores/settings.svelte';
+import { beforeEach, describe, it, expect } from 'vitest';
+import { Settings } from '$lib/reader/settings.svelte';
 import type { ReaderSettings } from '$lib/types';
 import {
 	fakeServer,
@@ -25,13 +25,19 @@ function serving(settings: ReaderSettings, stored: boolean): FakeServer {
 }
 
 describe('the reader settings', () => {
+	let settings: Settings;
+
+	beforeEach(() => {
+		settings = new Settings();
+	});
+
 	it('come from the server, the same in every review', async () => {
 		serving({ ...NEW_READER, diff_layout: 'split', theme: 'dark' }, true);
 
-		await settingsStore.load();
+		await settings.load();
 
-		expect(settingsStore.settings.diff_layout).toBe('split');
-		expect(settingsStore.settings.theme).toBe('dark');
+		expect(settings.current.diff_layout).toBe('split');
+		expect(settings.current.theme).toBe('dark');
 	});
 
 	it('take over what this browser kept before the server did, once', async () => {
@@ -39,12 +45,12 @@ describe('the reader settings', () => {
 		localStorage.setItem(SOUND_KEPT_HERE, 'on');
 		const server = serving(NEW_READER, false);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
 			{ theme: 'system', diff_layout: 'split', ignore_whitespace: false, sound_on_replies: true }
 		]);
-		expect(settingsStore.settings.diff_layout).toBe('split');
+		expect(settings.current.diff_layout).toBe('split');
 		// Dropped, so another review does not hand over stale copies later
 		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBeNull();
 		expect(localStorage.getItem(SOUND_KEPT_HERE)).toBeNull();
@@ -54,10 +60,10 @@ describe('the reader settings', () => {
 		localStorage.setItem(THEME_KEPT_HERE, 'dark');
 		const server = serving(NEW_READER, false);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NEW_READER, theme: 'dark' }]);
-		expect(settingsStore.settings.theme).toBe('dark');
+		expect(settings.current.theme).toBe('dark');
 		expect(localStorage.getItem(THEME_KEPT_HERE)).toBe('dark');
 	});
 
@@ -67,7 +73,7 @@ describe('the reader settings', () => {
 		const server = serving(NEW_READER, false);
 		server.refuse('PUT /api/settings', SERVER_ERROR);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toHaveLength(1);
 		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBe('split');
@@ -79,9 +85,9 @@ describe('the reader settings', () => {
 		const server = serving(NEW_READER, false);
 		server.refuse('GET /api/settings', SERVER_ERROR);
 
-		await settingsStore.load();
+		await settings.load();
 
-		expect(settingsStore.settings).toEqual(NEW_READER);
+		expect(settings.current).toEqual(NEW_READER);
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
 		expect(localStorage.getItem(LAYOUT_KEPT_HERE)).toBe('split');
 	});
@@ -91,7 +97,7 @@ describe('the reader settings', () => {
 		localStorage.setItem(WHITESPACE_KEPT_HERE, 'on');
 		const server = serving(NEW_READER, false);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
 			{ ...NEW_READER, ignore_whitespace: true }
@@ -101,7 +107,7 @@ describe('the reader settings', () => {
 	it('hand nothing over when this browser kept nothing', async () => {
 		const server = serving(NEW_READER, false);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
 	});
@@ -110,18 +116,18 @@ describe('the reader settings', () => {
 		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
 		const server = serving(NEW_READER, true);
 
-		await settingsStore.load();
+		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
-		expect(settingsStore.settings.diff_layout).toBe('unified');
+		expect(settings.current.diff_layout).toBe('unified');
 	});
 
 	it('apply a change at once and send only what changed', async () => {
 		const server = serving(NEW_READER, true);
 
-		await settingsStore.change({ ignore_whitespace: true });
+		await settings.change({ ignore_whitespace: true });
 
-		expect(settingsStore.settings.ignore_whitespace).toBe(true);
+		expect(settings.current.ignore_whitespace).toBe(true);
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ignore_whitespace: true }]);
 	});
 
@@ -130,9 +136,9 @@ describe('the reader settings', () => {
 		server.drop('GET /api/settings');
 		server.drop('PUT /api/settings');
 
-		await settingsStore.load();
-		await settingsStore.change({ diff_layout: 'split' });
+		await settings.load();
+		await settings.change({ diff_layout: 'split' });
 
-		expect(settingsStore.settings.diff_layout).toBe('split');
+		expect(settings.current.diff_layout).toBe('split');
 	});
 });

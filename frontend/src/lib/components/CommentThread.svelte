@@ -1,10 +1,8 @@
 <script lang="ts">
 	import type { Comment, CommentSeverity, Turn } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
 	import { anchorLabel, anchorSide } from '$lib/anchors/views';
 	import { splitSuggestions } from '$lib/utils/suggestion';
+	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
@@ -14,6 +12,7 @@
 	}
 
 	let { comment }: Props = $props();
+	const review = useReview();
 	let editing = $state(false);
 	let replying = $state(false);
 	let failed = $state<string | null>(null);
@@ -22,12 +21,12 @@
 	const label = $derived(anchorLabel(comment.anchor));
 	// Which round it went out in, if it has. What is still unsent keeps the
 	// mark colour; what has gone reads as already read by the other side.
-	const sentIn = $derived(commentStore.sentInRound(comment.id));
+	const sentIn = $derived(review.threads.sentInRound(comment.id));
 	// In a diff, the same line number exists on both sides, so the thread says
 	// which one it hangs on in the diff's own signs
 	const side = $derived(anchorSide(comment.anchor));
 	const sign = $derived(
-		diffStore.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+'
+		review.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+'
 	);
 
 	/** When a turn was said, to the minute — a thread is read, not audited. */
@@ -105,23 +104,23 @@
 	});
 
 	function handleSave(body: string, severity: CommentSeverity, images: string[]) {
-		commentStore.update(comment.id, body, severity, images);
+		review.threads.update(comment.id, body, severity, images);
 		editing = false;
 	}
 
 	/** Settling a thread folds it away; it can still be opened and read. */
 	function resolve() {
-		commentStore.setResolved(comment.id, true);
-		commentStore.setCollapsed(comment.id, true);
+		review.threads.setResolved(comment.id, true);
+		review.threads.setCollapsed(comment.id, true);
 	}
 
 	function reply(body: string, images: string[]) {
-		commentStore.addTurn(comment.id, { author: 'reader', body, images });
+		review.threads.addTurn(comment.id, { author: 'reader', body, images });
 		replying = false;
 	}
 
 	async function replyAndAsk(body: string, images: string[]) {
-		commentStore.addTurn(comment.id, { author: 'reader', body, images });
+		review.threads.addTurn(comment.id, { author: 'reader', body, images });
 		replying = false;
 		await handOver();
 	}
@@ -129,7 +128,7 @@
 	async function handOver() {
 		failed = null;
 		try {
-			await commentStore.ask(comment.id);
+			await review.threads.ask(comment.id);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not ask';
 		}
@@ -171,7 +170,7 @@
 				class="btn btn-ghost btn-xs px-1"
 				aria-expanded={!comment.collapsed}
 				aria-label={comment.collapsed ? 'Unfold this thread' : 'Fold this thread away'}
-				onclick={() => commentStore.setCollapsed(comment.id, !comment.collapsed)}
+				onclick={() => review.threads.setCollapsed(comment.id, !comment.collapsed)}
 			>
 				<svg
 					class="h-3 w-3 transition-transform {comment.collapsed ? '-rotate-90' : ''}"
@@ -185,7 +184,7 @@
 			<button
 				data-testid="unfold-thread"
 				class="flex min-w-0 flex-1 items-baseline gap-3 text-left"
-				onclick={() => commentStore.setCollapsed(comment.id, false)}
+				onclick={() => review.threads.setCollapsed(comment.id, false)}
 			>
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">{label}</span>
 				<span class="cr-muted truncate text-sm">{comment.body || 'an image'}</span>
@@ -203,7 +202,7 @@
 				<button
 					data-testid="reopen-thread"
 					class="btn btn-ghost btn-xs"
-					onclick={() => commentStore.setResolved(comment.id, false)}
+					onclick={() => review.threads.setResolved(comment.id, false)}
 				>
 					Reopen
 				</button>
@@ -217,7 +216,7 @@
 				? 'cr-sent'
 				: ''} {raised ? 'cr-raised' : ''}"
 			role="presentation"
-			onclick={() => commentStore.markRead(comment.id)}
+			onclick={() => review.threads.markRead(comment.id)}
 		>
 			<div class="mb-2 flex items-center gap-2">
 				<button
@@ -225,7 +224,7 @@
 				class="btn btn-ghost btn-xs px-1"
 				aria-expanded={!comment.collapsed}
 				aria-label={comment.collapsed ? 'Unfold this thread' : 'Fold this thread away'}
-				onclick={() => commentStore.setCollapsed(comment.id, !comment.collapsed)}
+				onclick={() => review.threads.setCollapsed(comment.id, !comment.collapsed)}
 			>
 				<svg
 					class="h-3 w-3 transition-transform {comment.collapsed ? '-rotate-90' : ''}"
@@ -288,7 +287,7 @@
 						<button
 							data-testid="reopen-comment"
 							class="btn btn-ghost btn-xs"
-							onclick={() => commentStore.setResolved(comment.id, false)}
+							onclick={() => review.threads.setResolved(comment.id, false)}
 						>
 							Reopen
 						</button>
@@ -304,7 +303,7 @@
 					<button
 						data-testid="delete-comment"
 						class="btn btn-ghost btn-xs hover:text-error"
-						onclick={() => commentStore.remove(comment.id)}
+						onclick={() => review.threads.remove(comment.id)}
 					>
 						Delete
 					</button>
@@ -393,7 +392,7 @@
 				{/each}
 			</div>
 
-			{#if reviewStore.canSendRound && comment.awaiting.length === 0 && lastWord !== 'author'}
+			{#if review.answerer.attached && comment.awaiting.length === 0 && lastWord !== 'author'}
 				<!-- Hands over everything said so far, the comment included, and hangs
 					under the last of it rather than beside the empty field below. -->
 				<div class="mt-3">
@@ -412,7 +411,7 @@
 					<CommentBox
 						kind="reply"
 						onSave={(body, _severity, images) => reply(body, images)}
-						onAsk={reviewStore.canSendRound
+						onAsk={review.answerer.attached
 							? (body, _severity, images) => replyAndAsk(body, images)
 							: undefined}
 						onCancel={() => (replying = false)}

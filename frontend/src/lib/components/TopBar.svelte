@@ -1,10 +1,5 @@
 <script lang="ts">
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { guideStore } from '$lib/stores/guide.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { panelStore } from '$lib/stores/panel.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
-	import { revealThread } from '$lib/anchors/views';
+	import { useReview } from '$lib/review/context';
 	import BasePicker from './BasePicker.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
@@ -16,16 +11,17 @@
 	}
 
 	let { submitting, error, onOpenModal }: Props = $props();
+	const review = useReview();
 
 	// A round is only worth offering while something is there to work through
 	// it; on its own, sending is the end of the review
-	const inRounds = $derived(reviewStore.canSendRound);
+	const inRounds = $derived(review.answerer.attached);
 
 	function step(direction: 1 | -1) {
-		const comment = commentStore.step(direction);
+		const comment = review.threads.step(direction);
 		if (!comment) return;
 
-		revealThread(comment);
+		review.navigator.reveal(comment);
 	}
 </script>
 
@@ -39,15 +35,15 @@
 		data-testid="open-help"
 		class="cr-chip"
 		title="The tour, what is new, and the keys (?)"
-		onclick={() => guideStore.setHelpOpen(true)}
+		onclick={() => review.guide.setHelpOpen(true)}
 	>
 		<kbd class="cr-guide-key">?</kbd> Help
 	</button>
 	<!-- What the diff is compared against, as a control. The repository it is
 		of is in the tab's title; the header has room only for what changes. -->
-	{#if diffStore.phrase}
+	{#if review.diff.phrase}
 		<BasePicker />
-		{#if diffStore.ignoreWhitespace}
+		{#if review.settings.current.ignore_whitespace}
 			<!-- Said here as well as in the settings, because it hides changes -->
 			<span data-testid="whitespace-hidden" class="cr-chip text-base-content">
 				No whitespace
@@ -56,7 +52,7 @@
 					class="btn btn-ghost btn-xs px-1"
 					aria-label="Show whitespace changes again"
 					title="Show whitespace changes again"
-					onclick={() => diffStore.setIgnoreWhitespace(false)}
+					onclick={() => review.setIgnoreWhitespace(false)}
 				>
 					<svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
 						<path d="M3 3l6 6M9 3l-6 6" />
@@ -64,9 +60,9 @@
 				</button>
 			</span>
 		{/if}
-	{:else if diffStore.title}
+	{:else if review.title}
 		<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
-			{diffStore.title}
+			{review.title}
 		</span>
 	{/if}
 
@@ -76,20 +72,20 @@
 		<span data-testid="submit-error" class="text-sm text-error">{error}</span>
 	{/if}
 
-	{#if commentStore.answered.length > 0}
+	{#if review.threads.answered.length > 0}
 		<RepliesMenu />
 	{/if}
 
 	<span data-testid="comment-count" data-tour="unsent-count" class="cr-muted text-sm">
 		{#if inRounds}
-			{commentStore.unsentCount} unsent · {commentStore.count}
+			{review.threads.unsent.length} unsent · {review.threads.count}
 		{:else}
-			{commentStore.count}
-			{commentStore.count === 1 ? 'comment' : 'comments'}
+			{review.threads.count}
+			{review.threads.count === 1 ? 'comment' : 'comments'}
 		{/if}
 	</span>
 
-	{#if commentStore.count > 0}
+	{#if review.threads.count > 0}
 		<div class="join">
 			<button
 				data-testid="prev-comment"
@@ -119,16 +115,16 @@
 	<button
 		data-testid="toggle-panel" data-tour="agent-panel-toggle"
 		class="cr-chip"
-		aria-pressed={panelStore.open}
+		aria-pressed={review.layout.agentPanel.open}
 		title="The agent panel — talk about the review, not one line of it"
-		onclick={() => panelStore.toggle()}
+		onclick={() => review.layout.agentPanel.toggle()}
 	>
 		<span
 			class="h-1.5 w-1.5 rounded-full"
 			style="background: {inRounds ? 'var(--cr-add-edge)' : 'var(--color-base-300)'}"
 		></span>
 		Agent
-		{#if panelStore.unread > 0}
+		{#if review.layout.agentPanel.unread > 0}
 			<span data-testid="panel-unread" style="color: var(--cr-mark)">●</span>
 		{/if}
 	</button>
@@ -145,7 +141,7 @@
 			<span class="loading loading-xs loading-spinner"></span>
 			Sending
 		{:else if inRounds}
-			Send round {reviewStore.round}
+			Send round {review.rounds.current}
 		{:else}
 			Finish review
 		{/if}

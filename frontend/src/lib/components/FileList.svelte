@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { DiffFile, FileStatus } from '$lib/types';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { commentStore } from '$lib/stores/comments.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
-	import { scrollToFile } from '$lib/utils/scroll';
+	import { useReview } from '$lib/review/context';
 	import { dragEdge, stepEdge } from '$lib/utils/resize';
+
+	const review = useReview();
 
 	// A letter in the change's own colour, rather than a filled disc: the file
 	// name is what the eye should land on in this list.
@@ -26,11 +26,11 @@
 	let filter = $state('');
 	const foldedFolders = new SvelteSet<string>();
 
-	const isDiffMode = $derived(diffStore.mode === 'diff');
+	const isDiffMode = $derived(review.mode === 'diff');
 	const matching = $derived(
 		filter.trim() === ''
-			? diffStore.files
-			: diffStore.files.filter((file) =>
+			? review.diff.files
+			: review.diff.files.filter((file) =>
 					file.path.toLowerCase().includes(filter.trim().toLowerCase())
 				)
 	);
@@ -92,28 +92,28 @@
 	};
 
 	const heading = $derived.by(() => {
-		const noun = sidebarNoun[diffStore.mode] ?? 'file';
-		const total = diffStore.files.length;
+		const noun = sidebarNoun[review.mode] ?? 'file';
+		const total = review.diff.files.length;
 		const shown = matching.length;
 		const counted = shown === total ? `${total} ${noun}${total === 1 ? '' : 's'}` : `${shown} of ${total}`;
-		return diffStore.viewedCount > 0 ? `${counted} · ${diffStore.viewedCount} viewed` : counted;
+		return review.reading.viewedCount > 0 ? `${counted} · ${review.reading.viewedCount} viewed` : counted;
 	});
 </script>
 
 {#snippet fileRow(file: DiffFile, name: string, depth: number)}
 	{@const mark = statusMark[file.status]}
-	{@const fileComments = commentStore.getForFile(file.path)}
+	{@const fileComments = review.threads.onFile(file.path)}
 	{@const stats = fileStats(file)}
-	{@const viewed = diffStore.isViewed(file.path)}
+	{@const viewed = review.reading.isViewed(file.path)}
 	<li>
 		<button
 			data-testid="file-item"
 			class="btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs {viewed
 				? 'opacity-45'
 				: ''}"
-			class:cr-current={diffStore.selectedPath === file.path}
+			class:cr-current={review.diff.fileInView === file.path}
 			style="padding-left: {depth * 12 + 8}px"
-			onclick={() => scrollToFile(file.path)}
+			onclick={() => review.sections.scrollToFile(file.path)}
 		>
 			{#if isDiffMode}
 				<span class="w-3 shrink-0 text-center font-semibold" style="color: {mark.colour}"
@@ -121,14 +121,14 @@
 				>
 			{/if}
 			<span class="flex-1 truncate">{name}</span>
-			{#if !diffStore.narrowed && diffStore.isChanged(file.path)}
+			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 				<!-- The same fact the file header spells out, where there is no
 					room to spell it -->
 				<span
 					data-testid="file-changed-mark"
 					class="h-1.5 w-1.5 shrink-0 rounded-full"
 					style="background: var(--cr-mark)"
-					title="Changed since round {diffStore.changedSince}"
+					title="Changed since round {review.lastRetake.changedSince}"
 				></span>
 			{/if}
 			{#if viewed}
@@ -191,7 +191,7 @@
 <aside
 	data-testid="sidebar" data-tour="file-tree"
 	class="relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
-	style="width: {diffStore.sidebarWidth}px"
+	style="width: {review.layout.fileTree.width}px"
 >
 	<!-- The reader's own width, dragged or stepped with the arrow keys -->
 	<button
@@ -200,15 +200,15 @@
 		aria-label="Resize the file tree"
 		onpointerdown={(e) =>
 			dragEdge(e, {
-				width: diffStore.sidebarWidth,
+				width: review.layout.fileTree.width,
 				grows: 'right',
-				onWidth: (px) => diffStore.setSidebarWidth(px)
+				onWidth: (px) => review.layout.fileTree.setWidth(px)
 			})}
 		onkeydown={(e) =>
 			stepEdge(e, {
-				width: diffStore.sidebarWidth,
+				width: review.layout.fileTree.width,
 				grows: 'right',
-				onWidth: (px) => diffStore.setSidebarWidth(px)
+				onWidth: (px) => review.layout.fileTree.setWidth(px)
 			})}
 	></button>
 	<div class="min-h-0 flex-1 overflow-y-auto p-3">
@@ -220,7 +220,7 @@
 				class="btn btn-ghost btn-xs px-1"
 				title="Put the tree away"
 				aria-label="Put the file tree away"
-				onclick={() => diffStore.toggleSidebar()}
+				onclick={() => review.layout.fileTree.toggle()}
 			>
 				<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
 					<path d="M7.5 2L4 6l3.5 4z" />

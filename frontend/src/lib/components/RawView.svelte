@@ -1,9 +1,5 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
-	import { expansionStore } from '$lib/stores/expansions.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
@@ -11,6 +7,7 @@
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { createLineSelection, rowOfLine } from '$lib/utils/line-selection.svelte';
+	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import HunkGap from './HunkGap.svelte';
@@ -21,15 +18,16 @@
 	}
 
 	let { file, language }: Props = $props();
+	const review = useReview();
 
-	const isDiffMode = $derived(diffStore.mode === 'diff');
+	const isDiffMode = $derived(review.mode === 'diff');
 	const colSpan = $derived(isDiffMode ? 4 : 2);
 	// Markup per hunk per line, computed once per file rather than per row.
 	// A row coloured end to end says a line changed but not where, so what
 	// actually differs inside a replaced line is marked on top of the syntax.
 	// Lines revealed from the file sit inside the hunk above which they were
 	// read, so numbering, highlighting and anchoring need no special case.
-	const shown = $derived(withRevealed(file, expansionStore.forFile(file.path)));
+	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
 	const highlighted = $derived(
 		highlightFile(shown, language).map((hunkHtml, i) =>
 			isDiffMode ? applyWordMarks(shown.hunks[i].lines, hunkHtml) : hunkHtml
@@ -37,13 +35,13 @@
 	);
 	// Comments indexed by the row they belong to, rather than scanned per line
 	const commentsByRow = $derived(
-		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
+		indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed })
 	);
 	// Every line of the file in the order the rows count them, hunk after hunk
 	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
 	const selection = createLineSelection({
-		mayCommentOnRemoved: () => !diffStore.narrowed,
-		longestRange: () => diffStore.longestQuotedRange,
+		mayCommentOnRemoved: () => !review.diff.narrowed,
+		longestRange: () => review.longestQuotedRange,
 		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
 	});
 
@@ -106,7 +104,7 @@
 		const { side, line, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
-		commentStore.add({
+		review.threads.add({
 			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
@@ -119,7 +117,7 @@
 	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		const id = commentStore.add({
+		const id = review.threads.add({
 			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
@@ -127,7 +125,7 @@
 		});
 		selection.clearCommenting();
 		try {
-			await commentStore.ask(id);
+			await review.threads.ask(id);
 		} catch {
 			// The comment is written either way; the thread offers to ask again
 		}
@@ -206,8 +204,8 @@
 									data-testid="line-gutter" data-tour="line-number"
 									class="cr-gutter-button"
 									aria-label="Comment on line {line.new_number ?? line.old_number ?? ''}"
-									disabled={line.kind === 'delete' && diffStore.narrowed}
-									title={line.kind === 'delete' && diffStore.narrowed
+									disabled={line.kind === 'delete' && review.diff.narrowed}
+									title={line.kind === 'delete' && review.diff.narrowed
 										? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
 										: undefined}
 									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
@@ -236,7 +234,7 @@
 										<CommentBox
 											kind="new"
 											onSave={handleSaveComment}
-											onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
+											onAsk={review.answerer.attached ? handleAskComment : undefined}
 											onCancel={() => selection.clearCommenting()}
 											label={commentingLabel}
 											suggestFrom={selectedText}

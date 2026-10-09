@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { releaseUrl } from '$lib/guide/news';
-	import { guideStore } from '$lib/stores/guide.svelte';
+	import { useReview } from '$lib/review/context';
 	import NewsIllustration from './NewsIllustration.svelte';
 
-	const step = $derived(guideStore.step);
-	const news = $derived(guideStore.news);
+	const review = useReview();
+
+	const step = $derived(review.guide.step);
+	const news = $derived(review.guide.news);
 	// What the reader does to move on, when it is not pressing Next
 	const waiting = $derived(step?.waitsFor);
 	// One mark per step, filled up to the one on screen
-	const stepNumbers = $derived([...Array(guideStore.stepCount).keys()]);
+	const stepNumbers = $derived([...Array(review.guide.stepCount).keys()]);
 
 	let card = $state<HTMLElement | null>(null);
 	let title = $state<HTMLElement | null>(null);
@@ -26,7 +28,7 @@
 
 	// A card that appears offers its first button, unless the reader is busy
 	$effect(() => {
-		if (guideStore.card === null) return;
+		if (review.guide.card === null) return;
 		void tick().then(() => {
 			if (focusIsFree()) firstAction?.focus();
 		});
@@ -43,17 +45,17 @@
 </script>
 
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
-{#if guideStore.touring && step}
+{#if review.guide.touring && step}
 	<section bind:this={card} data-testid="guide-tour" class="cr-guide-card" aria-label="Tour of the review">
 		<div class="flex items-center gap-2.5">
 			<div class="flex gap-1" aria-hidden="true">
 				{#each stepNumbers as index (index)}
-					<span class="cr-guide-tick {index <= guideStore.stepPosition ? 'cr-guide-tick-done' : ''}"></span>
+					<span class="cr-guide-tick {index <= review.guide.stepPosition ? 'cr-guide-tick-done' : ''}"></span>
 				{/each}
 			</div>
-			<span class="cr-faint text-xs">{guideStore.stepPosition + 1} of {guideStore.stepCount}</span>
+			<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
 			<span class="flex-1"></span>
-			<button data-testid="guide-skip" class="cr-faint px-0.5 text-xs" onclick={() => guideStore.endTour()}>
+			<button data-testid="guide-skip" class="cr-faint px-0.5 text-xs" onclick={() => review.guide.endTour()}>
 				Skip tour
 			</button>
 		</div>
@@ -79,20 +81,20 @@
 			</p>
 		{/if}
 		<div class="flex items-center gap-2">
-			{#if guideStore.canGoBack}
-				<button data-testid="guide-back" class="btn btn-outline btn-sm" onclick={() => guideStore.back()}>
+			{#if review.guide.canGoBack}
+				<button data-testid="guide-back" class="btn btn-outline btn-sm" onclick={() => review.guide.back()}>
 					Back
 				</button>
 			{/if}
 			<span class="flex-1"></span>
 			{#if !waiting}
-				<button data-testid="guide-next" class="btn btn-primary btn-sm" onclick={() => guideStore.next()}>
-					{guideStore.isLastStep ? 'Done' : 'Next'}
+				<button data-testid="guide-next" class="btn btn-primary btn-sm" onclick={() => review.guide.next()}>
+					{review.guide.isLastStep ? 'Done' : 'Next'}
 				</button>
 			{/if}
 		</div>
 	</section>
-{:else if guideStore.card === 'welcome'}
+{:else if review.guide.card === 'welcome'}
 	<section
 		bind:this={card}
 		data-testid="guide-welcome"
@@ -111,29 +113,29 @@
 				data-testid="guide-close"
 				class="btn btn-ghost btn-xs"
 				aria-label="Close"
-				onclick={() => guideStore.dismiss()}>×</button
+				onclick={() => review.guide.dismiss()}>×</button
 			>
 		</div>
 		<p class="cr-guide-body">
 			A short walk through one review: what you are reading, where comments go, and how the agent
-			answers them. {guideStore.stepCount} stops, about two minutes.
+			answers them. {review.guide.stepCount} stops, about two minutes.
 		</p>
 		<div class="flex items-center gap-2">
 			<button
 				bind:this={firstAction}
 				data-testid="guide-start"
 				class="btn btn-primary btn-sm"
-				onclick={() => guideStore.startTour()}
+				onclick={() => review.guide.startTour()}
 			>
 				Show me around
 			</button>
-			<button data-testid="guide-not-now" class="btn btn-ghost btn-sm" onclick={() => guideStore.dismiss()}>
+			<button data-testid="guide-not-now" class="btn btn-ghost btn-sm" onclick={() => review.guide.dismiss()}>
 				Not now
 			</button>
 		</div>
 		<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
 	</section>
-{:else if guideStore.card === 'news' && news}
+{:else if review.guide.card === 'news' && news}
 	<section
 		bind:this={card}
 		data-testid="guide-news"
@@ -149,7 +151,7 @@
 				data-testid="guide-close"
 				class="btn btn-ghost btn-xs"
 				aria-label="Close"
-				onclick={() => guideStore.dismiss()}>×</button
+				onclick={() => review.guide.dismiss()}>×</button
 			>
 		</div>
 		<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
@@ -173,11 +175,11 @@
 				bind:this={firstAction}
 				data-testid="guide-got-it"
 				class="btn btn-primary btn-sm"
-				onclick={() => guideStore.dismiss()}
+				onclick={() => review.guide.dismiss()}
 			>
 				Got it
 			</button>
-			<button data-testid="guide-take-tour" class="btn btn-ghost btn-sm" onclick={() => guideStore.startTour()}>
+			<button data-testid="guide-take-tour" class="btn btn-ghost btn-sm" onclick={() => review.guide.startTour()}>
 				Take the tour
 			</button>
 		</div>

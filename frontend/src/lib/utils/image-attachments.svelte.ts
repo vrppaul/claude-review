@@ -39,7 +39,7 @@ export class ImageAttachments {
    */
   async takePaste(
     event: ClipboardEvent,
-    limits: SendLimits | null,
+    limits: SendLimits,
   ): Promise<string | undefined> {
     const pasted = imagesAmong(event.clipboardData?.files);
     if (pasted.length === 0) return undefined;
@@ -55,9 +55,7 @@ export class ImageAttachments {
    * Returns what was refused. The limits are the server's own, so nothing
    * is uploaded only to be turned away.
    */
-  async attach(files: File[], limits: SendLimits | null): Promise<string[]> {
-    if (!limits) return ["The review has not finished loading"];
-
+  async attach(files: File[], limits: SendLimits): Promise<string[]> {
     // Refused by size before counting, so an image that will never be sent
     // does not take the place of one that would
     const fitting = files.filter((file) => file.size <= limits.max_image_bytes);

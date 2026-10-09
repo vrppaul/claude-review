@@ -1,13 +1,13 @@
 /**
  * What the browser needs to know about each kind of anchor.
  *
- * A thread is named in its own header, in menus and in the panel, and is
- * brought into view from all of them. Each kind of anchor answers those
- * questions in its own module, so nothing that lists or jumps to threads
- * has to ask what a thread hangs on.
+ * A thread is named in its own header, in menus and in the panel. Each
+ * kind of anchor answers that in its own module, so nothing that lists
+ * threads has to ask what a thread hangs on. Bringing one into view moves
+ * the page, and is the review's `ThreadNavigator`.
  */
 
-import type { Anchor, AnchorKind, Comment, LineSide } from "$lib/types";
+import type { Anchor, AnchorKind, LineSide } from "$lib/types";
 import { lineAnchorView } from "$lib/anchors/line";
 
 export interface AnchorView<Kind extends Anchor> {
@@ -21,8 +21,6 @@ export interface AnchorView<Kind extends Anchor> {
   token(anchor: Kind): string;
   /** Which side of the diff it hangs on, when it hangs on the diff at all. */
   side(anchor: Kind): LineSide | null;
-  /** Bring the thread into view. */
-  reveal(threadId: string, anchor: Kind): void;
 }
 
 const VIEWS: {
@@ -53,8 +51,4 @@ export function anchorToken(anchor: Anchor): string {
 
 export function anchorSide(anchor: Anchor): LineSide | null {
   return viewOf(anchor).side(anchor);
-}
-
-export function revealThread(comment: Comment): void {
-  viewOf(comment.anchor).reveal(comment.id, comment.anchor);
 }

@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { diffStore } from '$lib/stores/diff.svelte';
 	import type { ReviewVersion, VersionKind } from '$lib/types';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	let open = $state(false);
 	let filter = $state('');
@@ -16,9 +18,9 @@
 	];
 
 	const matching = $derived(
-		diffStore.versions.filter((v) => v.label.toLowerCase().includes(filter.trim().toLowerCase()))
+		review.diff.versions.filter((v) => v.label.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
-	const hasRounds = $derived(diffStore.versions.some((v) => v.kind === 'round'));
+	const hasRounds = $derived(review.diff.versions.some((v) => v.kind === 'round'));
 
 	async function show() {
 		open = !open;
@@ -27,7 +29,7 @@
 		failed = null;
 		asking = true;
 		try {
-			await diffStore.fetchVersions();
+			await review.diff.loadVersions();
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not list what this can be compared against';
 		} finally {
@@ -44,7 +46,7 @@
 	async function pick(version: ReviewVersion) {
 		failed = null;
 		try {
-			await diffStore.setBase(version.key);
+			await review.diff.setBase(version.key);
 			shut();
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not take the diff against that';
@@ -79,7 +81,7 @@
 	<button
 		data-testid="base-picker" data-tour="review-base"
 		class="cr-chip font-mono"
-		style={diffStore.narrowed
+		style={review.diff.narrowed
 			? 'background: var(--cr-mark-tint); color: var(--color-base-content)'
 			: ''}
 		aria-expanded={open}
@@ -89,7 +91,7 @@
 	>
 		<svg
 			class="h-3 w-3 shrink-0"
-			style={diffStore.narrowed ? 'color: var(--cr-mark)' : ''}
+			style={review.diff.narrowed ? 'color: var(--cr-mark)' : ''}
 			viewBox="0 0 16 16"
 			fill="none"
 			stroke="currentColor"
@@ -103,7 +105,7 @@
 			<path d="M13.5 11h-9" />
 			<path d="M7 8.5L4.5 11 7 13.5" />
 		</svg>
-		{diffStore.phrase}
+		{review.diff.phrase}
 		<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
 			<path d="M2 4l4 4 4-4z" />
 		</svg>
@@ -134,11 +136,11 @@
 						<button
 							data-testid="base-option"
 							class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-base-300"
-							style={version.key === diffStore.base ? 'background: var(--cr-mark-tint)' : ''}
+							style={version.key === review.diff.base ? 'background: var(--cr-mark-tint)' : ''}
 							onclick={() => pick(version)}
 						>
 							<span class="w-3 shrink-0">
-								{#if version.key === diffStore.base}
+								{#if version.key === review.diff.base}
 									<svg
 										class="h-3 w-3"
 										style="color: var(--cr-mark)"

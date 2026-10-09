@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { panelStore } from '$lib/stores/panel.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { guideStore } from '$lib/stores/guide.svelte';
 	import { currentSectionPath, isTypingTarget, moveByLine } from '$lib/utils/keyboard';
-	import { scrollToFile } from '$lib/utils/scroll';
-	import { revealThread } from '$lib/anchors/views';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	let atFile = $state(-1);
 
@@ -27,37 +24,37 @@
 
 	/** Leave the list for the tour, which needs the review uncovered. */
 	function takeTour() {
-		guideStore.setHelpOpen(false);
-		guideStore.startTour();
+		review.guide.setHelpOpen(false);
+		review.guide.startTour();
 	}
 
 	function readNews() {
-		guideStore.setHelpOpen(false);
-		guideStore.showNews();
+		review.guide.setHelpOpen(false);
+		review.guide.showNews();
 	}
 
 	function stepFile(direction: 1 | -1) {
-		const files = diffStore.files;
+		const files = review.diff.files;
 		if (files.length === 0) return;
 
-		const here = currentSectionPath() ?? diffStore.selectedPath;
+		const here = currentSectionPath() ?? review.diff.fileInView;
 		const from = here ? files.findIndex((f) => f.path === here) : -1;
 		atFile = from === -1 ? (direction === 1 ? 0 : files.length - 1) : from + direction;
 		atFile = Math.min(files.length - 1, Math.max(0, atFile));
-		scrollToFile(files[atFile].path);
+		review.sections.scrollToFile(files[atFile].path);
 	}
 
 	function stepComment(direction: 1 | -1) {
-		const comment = commentStore.step(direction);
-		if (comment) revealThread(comment);
+		const comment = review.threads.step(direction);
+		if (comment) review.navigator.reveal(comment);
 	}
 
 	/** Go to the oldest thread carrying an answer nobody has looked at. */
 	function stepUnread() {
-		const comment = commentStore.unread[0];
+		const comment = review.threads.unread[0];
 		if (!comment) return;
-		revealThread(comment);
-		commentStore.markRead(comment.id);
+		review.navigator.reveal(comment);
+		review.threads.markRead(comment.id);
 	}
 
 	/**
@@ -67,14 +64,14 @@
 	 * to the agent should not be the one thing that needs a mouse.
 	 */
 	function talkToAgent() {
-		panelStore.setOpen(true);
+		review.layout.agentPanel.setOpen(true);
 		requestAnimationFrame(() =>
 			document.querySelector<HTMLTextAreaElement>('[data-testid="panel-input"]')?.focus()
 		);
 	}
 
 	function actOnCurrentFile(act: (path: string) => void) {
-		const path = currentSectionPath() ?? diffStore.selectedPath;
+		const path = currentSectionPath() ?? review.diff.fileInView;
 		if (path) act(path);
 	}
 
@@ -82,8 +79,8 @@
 		if (event.metaKey || event.ctrlKey || event.altKey) return;
 		if (isTypingTarget(event.target)) return;
 
-		if (guideStore.helpOpen && event.key === 'Escape') {
-			guideStore.setHelpOpen(false);
+		if (review.guide.helpOpen && event.key === 'Escape') {
+			review.guide.setHelpOpen(false);
 			return;
 		}
 
@@ -96,10 +93,10 @@
 			n: () => stepComment(1),
 			p: () => stepComment(-1),
 			c: talkToAgent,
-			f: () => diffStore.toggleSidebar(),
-			v: () => actOnCurrentFile((path) => diffStore.toggleViewed(path)),
-			u: () => actOnCurrentFile((path) => diffStore.toggleCollapsed(path)),
-			'?': () => guideStore.setHelpOpen(!guideStore.helpOpen)
+			f: () => review.layout.fileTree.toggle(),
+			v: () => actOnCurrentFile((path) => review.reading.toggleViewed(path)),
+			u: () => actOnCurrentFile((path) => review.reading.toggleFolded(path)),
+			'?': () => review.guide.setHelpOpen(!review.guide.helpOpen)
 		};
 
 		const act = handled[event.key];
@@ -114,7 +111,7 @@
 	});
 </script>
 
-{#if guideStore.helpOpen}
+{#if review.guide.helpOpen}
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
 		role="dialog"
@@ -122,8 +119,8 @@
 		aria-label="Getting around, and the keyboard"
 		tabindex="-1"
 		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
-		onclick={(e) => e.target === e.currentTarget && guideStore.setHelpOpen(false)}
-		onkeydown={(e) => e.key === 'Escape' && guideStore.setHelpOpen(false)}
+		onclick={(e) => e.target === e.currentTarget && review.guide.setHelpOpen(false)}
+		onkeydown={(e) => e.key === 'Escape' && review.guide.setHelpOpen(false)}
 	>
 		<div class="cr-dialog w-full max-w-md rounded-lg bg-base-100 p-6">
 			<!-- The way back to the tour and the news, once their card is put away -->
@@ -134,14 +131,14 @@
 						<path d="M12.8 7.2l-1.7 3.9-3.9 1.7 1.7-3.9z"></path>
 					</svg>
 					<span class="flex-1 text-left">Take the tour again</span>
-					<span class="cr-faint text-xs">{guideStore.stepCount} stops</span>
+					<span class="cr-faint text-xs">{review.guide.stepCount} stops</span>
 				</button>
-				{#if guideStore.latestNews}
+				{#if review.guide.latestNews}
 					<button data-testid="read-news" class="cr-guide-entry" onclick={readNews}>
 						<svg class="cr-guide-plus" viewBox="0 0 20 20" aria-hidden="true">
 							<path d="M10 3v14M3 10h14"></path>
 						</svg>
-						<span class="flex-1 text-left">What's new in {guideStore.latestNews.release}</span>
+						<span class="flex-1 text-left">What's new in {review.guide.latestNews.release}</span>
 					</button>
 				{/if}
 			</div>

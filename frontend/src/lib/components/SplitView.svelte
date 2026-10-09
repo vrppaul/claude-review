@@ -1,9 +1,5 @@
 <script lang="ts">
 	import type { CommentSeverity, DiffFile, DiffLine, LineSide } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
-	import { reviewStore } from '$lib/stores/review.svelte';
-	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { indexByRow } from '$lib/utils/comment-index';
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
@@ -12,6 +8,7 @@
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
+	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import HunkGap from './HunkGap.svelte';
@@ -22,15 +19,16 @@
 	}
 
 	let { file, language }: Props = $props();
+	const review = useReview();
 
-	const shown = $derived(withRevealed(file, expansionStore.forFile(file.path)));
+	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
 	const highlighted = $derived(
 		highlightFile(shown, language).map((hunkHtml, i) =>
 			applyWordMarks(shown.hunks[i].lines, hunkHtml)
 		)
 	);
 	const commentsByRow = $derived(
-		indexByRow(commentStore.comments, file.path, { removedLines: !diffStore.narrowed })
+		indexByRow(review.threads.all, file.path, { removedLines: !review.diff.narrowed })
 	);
 	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
 	const hunkOffsets = $derived(
@@ -43,8 +41,8 @@
 	// Every line of the file in the order the rows count them, hunk after hunk
 	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
 	const selection = createLineSelection({
-		mayCommentOnRemoved: () => !diffStore.narrowed,
-		longestRange: () => diffStore.longestQuotedRange,
+		mayCommentOnRemoved: () => !review.diff.narrowed,
+		longestRange: () => review.longestQuotedRange,
 		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
 	});
 
@@ -98,7 +96,7 @@
 		const { side, line, endLine } = selection.commentingAt;
 		// The lines travel with the comment: once the diff is taken again
 		// they are how the thread finds where it belongs
-		commentStore.add({
+		review.threads.add({
 			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
@@ -111,7 +109,7 @@
 	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
 		if (!selection.commentingAt) return;
 		const { side, line, endLine } = selection.commentingAt;
-		const id = commentStore.add({
+		const id = review.threads.add({
 			anchor: lineAnchor(file.path, side, line, endLine, selectedText ?? []),
 			body,
 			severity,
@@ -119,7 +117,7 @@
 		});
 		selection.clearCommenting();
 		try {
-			await commentStore.ask(id);
+			await review.threads.ask(id);
 		} catch {
 			// The comment is written either way; the thread offers to ask again
 		}
@@ -159,7 +157,7 @@
 		<CommentBox
 			kind="new"
 			onSave={handleSaveComment}
-			onAsk={reviewStore.canSendRound ? handleAskComment : undefined}
+			onAsk={review.answerer.attached ? handleAskComment : undefined}
 			onCancel={() => selection.clearCommenting()}
 			label={commentingLabel}
 			suggestFrom={selectedText}
@@ -211,8 +209,8 @@
 										class="cr-gutter-button"
 										tabindex={row.right ? -1 : 0}
 										aria-label="Comment on removed line {cell.line.old_number ?? ''}"
-										disabled={diffStore.narrowed}
-										title={diffStore.narrowed
+										disabled={review.diff.narrowed}
+										title={review.diff.narrowed
 											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
 											: undefined}
 										onmousedown={() =>

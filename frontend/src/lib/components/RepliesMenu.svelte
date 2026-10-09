@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { Comment } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { anchorShortPlace, revealThread } from '$lib/anchors/views';
+	import { anchorShortPlace } from '$lib/anchors/views';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	let open = $state(false);
 	let container = $state<HTMLElement>();
@@ -9,8 +11,8 @@
 	// Unread first: what changed since the reader last looked is the reason
 	// this list exists at all
 	const threads = $derived([
-		...commentStore.unread,
-		...commentStore.answered.filter((c) => !c.unread)
+		...review.threads.unread,
+		...review.threads.answered.filter((c) => !c.unread)
 	]);
 
 	function lastAnswer(comment: Comment): string {
@@ -19,8 +21,8 @@
 
 	function goTo(comment: Comment) {
 		open = false;
-		revealThread(comment);
-		commentStore.markRead(comment.id);
+		review.navigator.reveal(comment);
+		review.threads.markRead(comment.id);
 	}
 
 	function onWindowClick(event: MouseEvent) {
@@ -57,9 +59,9 @@
 			<path d="M9.5 8l3 2.5-3 2.5" />
 		</svg>
 		Replies
-		{#if commentStore.unreadCount > 0}
+		{#if review.threads.unread.length > 0}
 			<span data-testid="unread-count" class="font-semibold" style="color: var(--cr-mark)">
-				{commentStore.unreadCount}
+				{review.threads.unread.length}
 			</span>
 		{/if}
 	</button>
@@ -72,10 +74,10 @@
 			<div class="flex items-center gap-2 px-3 py-2">
 				<span class="text-xs font-semibold">Replies</span>
 				<span class="cr-muted text-xs">
-					{commentStore.unreadCount} unread
+					{review.threads.unread.length} unread
 				</span>
 				<div class="flex-1"></div>
-				<button class="btn btn-ghost btn-xs" onclick={() => commentStore.markAllRead()}>
+				<button class="btn btn-ghost btn-xs" onclick={() => review.threads.markAllRead()}>
 					Mark all read
 				</button>
 			</div>

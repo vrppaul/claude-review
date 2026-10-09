@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { DiffHunk } from '$lib/types';
-	import { expansionStore } from '$lib/stores/expansions.svelte';
 	import { hiddenAbove, nextWindow } from '$lib/utils/expansions';
+	import { useReview } from '$lib/review/context';
 
 	interface Props {
 		path: string;
@@ -11,11 +11,12 @@
 	}
 
 	let { path, hunks, index, header }: Props = $props();
+	const review = useReview();
 
 	let failed = $state<string | null>(null);
 	let loading = $state(false);
 
-	const revealed = $derived(expansionStore.revealedCount(path, index));
+	const revealed = $derived(review.diff.revealed.revealedCount(path, index));
 	const hidden = $derived(hiddenAbove(hunks, index, revealed));
 	const window = $derived(nextWindow(hunks, index, revealed));
 	const label = $derived(
@@ -33,7 +34,7 @@
 		try {
 			// How far the old numbering runs behind the new one at this hunk
 			const oldOffset = hunks[index].old_start - hunks[index].new_start;
-			await expansionStore.reveal(path, index, window.start, window.end, oldOffset);
+			await review.diff.revealed.reveal(path, index, window.start, window.end, oldOffset);
 		} catch (e) {
 			failed = e instanceof Error ? e.message : 'Could not read the file';
 		} finally {

@@ -1,6 +1,8 @@
 <script lang="ts">
-	import type { ContentViewMode } from '$lib/types';
-	import { diffStore } from '$lib/stores/diff.svelte';
+	import type { ContentViewMode } from '$lib/reader/page-layout.svelte';
+	import { useReview } from '$lib/review/context';
+
+	const review = useReview();
 
 	const modes: { value: ContentViewMode; label: string; testId: string }[] = [
 		{ value: 'raw', label: 'Raw', testId: 'view-mode-raw' },
@@ -14,8 +16,8 @@
 		<button
 			data-testid={mode.testId}
 			class="cr-segment"
-			aria-pressed={diffStore.contentViewMode === mode.value}
-			onclick={() => diffStore.setContentViewMode(mode.value)}
+			aria-pressed={review.layout.contentView.mode === mode.value}
+			onclick={() => review.layout.contentView.set(mode.value)}
 		>
 			{mode.label}
 		</button>

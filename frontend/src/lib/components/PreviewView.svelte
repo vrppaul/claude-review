@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
-	import { commentStore } from '$lib/stores/comments.svelte';
-	import { diffStore } from '$lib/stores/diff.svelte';
 	import { assembleText } from '$lib/utils/renderable';
+	import { useReview } from '$lib/review/context';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 
 	interface Props {
@@ -10,10 +9,11 @@
 	}
 
 	let { file }: Props = $props();
+	const review = useReview();
 
-	const isDiffMode = $derived(diffStore.mode === 'diff');
+	const isDiffMode = $derived(review.mode === 'diff');
 	const fullText = $derived(assembleText(file, isDiffMode));
-	const commentCount = $derived(commentStore.getForFile(file.path).length);
+	const commentCount = $derived(review.threads.onFile(file.path).length);
 </script>
 
 <div data-testid="preview-view" class="p-4">
