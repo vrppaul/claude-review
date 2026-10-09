@@ -19,7 +19,6 @@ import {
 import { anchorPlace } from "$lib/anchors/views";
 import { reviewStore } from "$lib/stores/review.svelte";
 import { threadOnTheWire } from "$lib/utils/thread-wire";
-import { tellServer } from "$lib/stores/session.svelte";
 import { clearDraft, loadDraft, saveDraft } from "$lib/utils/drafts";
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from "$lib/utils/ids";
 
@@ -47,10 +46,6 @@ function remember(): void {
     sent: [...sent],
     issued: { comments: commentIds.issued, turns: turnIds.issued },
   });
-  // The threads are unsent work and live only here. An agent that attaches
-  // later has no other way to learn they exist, so the server is kept up to
-  // date — it costs nothing until somebody asks it for them.
-  tellServer();
 }
 
 function replace(id: string, change: (comment: Comment) => Comment): void {

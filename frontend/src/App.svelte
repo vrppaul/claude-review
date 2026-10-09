@@ -4,7 +4,7 @@
 	import { readReview } from '$lib/api/review-api';
 	import { diffStore } from '$lib/stores/diff.svelte';
 	import { commentStore } from '$lib/stores/comments.svelte';
-	import { dispatchHeld, openSession, tellServer } from '$lib/stores/session.svelte';
+	import { PageConnection, sessionUrl } from '$lib/connection/page-connection';
 	import { reviewStore } from '$lib/stores/review.svelte';
 	import { panelStore } from '$lib/stores/panel.svelte';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -26,8 +26,13 @@
 	let error = $state<string | null>(null);
 	let restored = $state(0);
 
+	// Holding this open is what tells the server the review is still on
+	// screen; a poll is throttled to a crawl in a background tab.
+	const connection = new PageConnection(sessionUrl(window.location));
+
 	onMount(() => {
 		const stopTheme = themeStore.start();
+		connection.open();
 		// The reader's settings first: whether whitespace counts decides which
 		// diff is asked for
 		settingsStore
@@ -46,10 +51,8 @@
 				restored = commentStore.restore(facts.title);
 				panelStore.restore(facts.title);
 				if (reviewStore.canSendRound) panelStore.offer();
-				// The draft may know a later round than a restarted server does
-				tellServer();
 				// Only now is there a draft for what the server said meanwhile to land in
-				dispatchHeld();
+				connection.deliverTo(handle);
 				// A first review is welcomed; a newer release says what changed
 				void guideStore.open(facts.release);
 			})
@@ -60,16 +63,18 @@
 				loading = false;
 			});
 
-		// Holding this open is what tells the server the review is still on
-		// screen; a poll is throttled to a crawl in a background tab.
-		const closeSession = openSession(handle, () => ({
-			round: reviewStore.round,
-			threads: commentStore.onTheWire
-		}));
 		return () => {
-			closeSession();
+			connection.close();
 			stopTheme();
 		};
+	});
+
+	// The threads are unsent work and live only in this page. An agent that
+	// attaches later has no other way to learn they exist, and a restarted
+	// server knows only round one, so the server is told whenever either
+	// changes — it costs nothing until somebody asks it for them.
+	$effect(() => {
+		connection.greet({ round: reviewStore.round, threads: commentStore.onTheWire });
 	});
 
 	/** What the server has to say while the review is open. */
@@ -128,7 +133,7 @@
 	}
 
 	/**
-	 * A push of a kind this page does not handle. The session passes over
+	 * A push of a kind this page does not handle. The connection passes over
 	 * kinds it does not know, and the compiler refuses a known kind left out
 	 * of the switch above, so this only says so if both are ever wrong.
 	 */

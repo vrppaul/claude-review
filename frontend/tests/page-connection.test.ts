@@ -1,14 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ServerPush } from '$lib/types';
 import {
-	dispatchHeld,
 	FIRST_RETRY,
 	HELLO_AT_MOST_EVERY,
 	LONGEST_RETRY,
-	openSession,
-	RETRY_GROWTH,
-	tellServer
-} from '$lib/stores/session.svelte';
+	PageConnection,
+	RETRY_GROWTH
+} from '$lib/connection/page-connection';
 
 // Pushes as the server sends them
 const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, body: 'first' };
@@ -74,46 +72,53 @@ function latestSocket(): FakeSocket {
 	return socket;
 }
 
-function ignore() {}
+// Where the page's socket is; the fake socket only keeps it
+const SESSION_URL = 'ws://review.test/api/session';
 
-// The session remembers when it last said hello for as long as the page
-// lives, and this file is one page: each test starts on a clock later than
-// the last one stopped, so that memory never holds a test's hello back
-let clockStart = Date.now();
+/** A page's connection, opened. */
+function connected(): PageConnection {
+	const connection = new PageConnection(SESSION_URL);
+	connection.open();
+	return connection;
+}
+
+/** What a page says when it holds no threads, in this round. */
+function inRound(round: number) {
+	return { round, threads: null };
+}
 
 describe('the session socket', () => {
 	beforeEach(() => {
 		FakeSocket.opened = [];
 		vi.stubGlobal('WebSocket', FakeSocket);
-		vi.useFakeTimers({ now: clockStart });
+		vi.useFakeTimers();
 	});
 
 	afterEach(() => {
-		clockStart = Date.now() + HELLO_AT_MOST_EVERY;
 		vi.useRealTimers();
 	});
 
-	it('holds what arrives before the draft is restored, then hands it over in order', () => {
+	it('holds what arrives before the page can take it, then hands it over in order', () => {
 		const heard: ServerPush[] = [];
-		const close = openSession((push) => heard.push(push));
+		const connection = connected();
 		const socket = latestSocket();
 
 		socket.emit('message', JSON.stringify(A_REPLY));
 		socket.emit('message', JSON.stringify(A_CHAT));
 		expect(heard).toEqual([]);
 
-		dispatchHeld();
+		connection.deliverTo((push) => heard.push(push));
 		socket.emit('message', JSON.stringify(A_SHOW));
 
 		expect(heard).toEqual([A_REPLY, A_CHAT, A_SHOW]);
-		close();
+		connection.close();
 	});
 
 	it('passes over what it cannot read and keeps listening', () => {
 		const heard: ServerPush[] = [];
-		const warn = vi.spyOn(console, 'warn').mockImplementation(ignore);
-		const close = openSession((push) => heard.push(push));
-		dispatchHeld();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const connection = connected();
+		connection.deliverTo((push) => heard.push(push));
 		const socket = latestSocket();
 
 		socket.emit('message', 'not json');
@@ -123,24 +128,22 @@ describe('the session socket', () => {
 
 		expect(heard).toEqual([A_REPLY]);
 		expect(warn).toHaveBeenCalledTimes(3);
-		close();
+		connection.close();
 	});
 
 	it('does not hide a fault in whatever handles a message', () => {
-		const close = openSession(() => {
+		const connection = connected();
+		connection.deliverTo(() => {
 			throw new Error('handler broke');
 		});
-		dispatchHeld();
 		const socket = latestSocket();
 
-		expect(() => socket.emit('message', JSON.stringify(A_REPLY))).toThrow(
-			'handler broke'
-		);
-		close();
+		expect(() => socket.emit('message', JSON.stringify(A_REPLY))).toThrow('handler broke');
+		connection.close();
 	});
 
 	it('connects again after the server goes, waiting longer after each failure', () => {
-		const close = openSession(ignore);
+		const connection = connected();
 		latestSocket().accept();
 		latestSocket().drop();
 
@@ -154,11 +157,11 @@ describe('the session socket', () => {
 		expect(FakeSocket.opened).toHaveLength(2);
 		vi.advanceTimersByTime(1);
 		expect(FakeSocket.opened).toHaveLength(3);
-		close();
+		connection.close();
 	});
 
 	it('waits no longer than five seconds between attempts', () => {
-		const close = openSession(ignore);
+		const connection = connected();
 		latestSocket().accept();
 
 		// 0.5, 1, 2 and 4 seconds, and then the longest wait rather than 8
@@ -171,11 +174,11 @@ describe('the session socket', () => {
 		vi.advanceTimersByTime(LONGEST_RETRY);
 
 		expect(FakeSocket.opened).toHaveLength(attempts + 1);
-		close();
+		connection.close();
 	});
 
 	it('starts waiting from the shortest again once a connection holds', () => {
-		const close = openSession(ignore);
+		const connection = connected();
 		latestSocket().accept();
 		latestSocket().drop();
 		vi.advanceTimersByTime(FIRST_RETRY);
@@ -187,64 +190,72 @@ describe('the session socket', () => {
 		vi.advanceTimersByTime(FIRST_RETRY);
 
 		expect(FakeSocket.opened).toHaveLength(4);
-		close();
+		connection.close();
 	});
 
 	it('stays closed once the page has closed it', () => {
-		const close = openSession(ignore);
+		const connection = connected();
 		const socket = latestSocket();
 
-		close();
+		connection.close();
 		socket.drop();
 		vi.advanceTimersByTime(LONGEST_RETRY);
 
 		expect(FakeSocket.opened).toHaveLength(1);
 	});
 
+	it('does not connect again when closed while waiting to', () => {
+		const connection = connected();
+		latestSocket().drop();
+
+		connection.close();
+		vi.advanceTimersByTime(LONGEST_RETRY);
+
+		expect(FakeSocket.opened).toHaveLength(1);
+	});
+
 	it('says hello on every connection, to a server that may have just come up', () => {
-		const review = { round: 3 };
-		const close = openSession(ignore, () => ({ round: review.round, threads: null }));
+		const connection = connected();
+		connection.greet(inRound(3));
 
 		latestSocket().accept();
-		expect(latestSocket().said).toEqual([{ round: 3, threads: null }]);
+		expect(latestSocket().said).toEqual([inRound(3)]);
 
 		latestSocket().drop();
 		vi.advanceTimersByTime(FIRST_RETRY);
 		latestSocket().accept();
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
-		expect(latestSocket().said).toEqual([{ round: 3, threads: null }]);
-		close();
+		expect(latestSocket().said).toEqual([inRound(3)]);
+		connection.close();
 	});
 
 	it('tells the server what changed at most once a second, ending on the latest', () => {
-		const review = { round: 1 };
-		const close = openSession(ignore, () => ({ round: review.round, threads: null }));
+		const connection = connected();
 		const socket = latestSocket();
 		socket.accept();
+		connection.greet(inRound(1));
 
-		review.round = 2;
-		tellServer();
-		review.round = 3;
-		tellServer();
-		expect(socket.said).toEqual([{ round: 1, threads: null }]);
+		connection.greet(inRound(2));
+		connection.greet(inRound(3));
+		expect(socket.said).toEqual([inRound(1)]);
 
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
-		expect(socket.said).toEqual([
-			{ round: 1, threads: null },
-			{ round: 3, threads: null }
-		]);
-		close();
+		expect(socket.said).toEqual([inRound(1), inRound(3)]);
+		connection.close();
 	});
 
-	it('says nothing before the connection is open', () => {
-		const close = openSession(ignore, () => ({ round: 1, threads: null }));
+	it('says nothing before the connection is open, and what it holds once it is', () => {
+		const connection = connected();
 
-		tellServer();
+		connection.greet(inRound(2));
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
-
 		expect(latestSocket().said).toEqual([]);
-		close();
+
+		latestSocket().accept();
+
+		expect(latestSocket().said).toEqual([inRound(2)]);
+		connection.close();
 	});
 });
