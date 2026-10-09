@@ -59,13 +59,13 @@ describe('when the tree moves under the review', () => {
 	it('takes the diff again when the reader asks for it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
-		server.answer('POST /api/round', { file_count: 1, round: 2, changes: { since_round: 1, base_key: 'round:1', paths: [] } });
+		server.answer('POST /api/retake', { file_count: 1, round: 2, changes: { since_round: 1, base_key: 'round:1', paths: [] } });
 		diffStore.noteTreeMoved(1);
 
 		const { getByTestId } = render(DiffNotice);
 		await user.click(getByTestId('retake-diff'));
 
-		expect(server.requests).toMatchObject([{ method: 'POST', path: '/api/round' }]);
+		expect(server.requests).toMatchObject([{ method: 'POST', path: '/api/retake' }]);
 	});
 
 	it('stays dismissed until something moves again', async () => {

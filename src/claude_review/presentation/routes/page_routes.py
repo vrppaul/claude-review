@@ -8,28 +8,31 @@ from fastapi.responses import FileResponse
 
 from claude_review.domain.models import ReviewKey
 from claude_review.presentation.dependencies import get_release, get_review
-from claude_review.presentation.schemas import (
-    MAX_ID_LENGTH,
-    AskRequest,
-    CancelRequest,
-    DiffResponse,
-    FileWindowResponse,
-    FollowRequest,
-    FollowResponse,
-    ImageResponse,
-    MessageRequest,
-    RoundResponse,
-    SendLimits,
-    SubmitRequest,
-    SubmitResponse,
-    VersionsResponse,
-)
 from claude_review.presentation.version_words import (
     changes_on_the_wire,
     key_of,
     key_text,
     phrase_of,
     version_on_the_wire,
+)
+from claude_review.presentation.wire.agent import AgentStatus, CancelRequest, ImageResponse, MessageRequest
+from claude_review.presentation.wire.base import MAX_ID_LENGTH
+from claude_review.presentation.wire.content import (
+    SEND_LIMITS,
+    DiffFile,
+    DiffResponse,
+    FileWindowResponse,
+    RetakeResponse,
+    VersionsResponse,
+)
+from claude_review.presentation.wire.threads import (
+    AskRequest,
+    FollowRequest,
+    FollowResponse,
+    LineAnchor,
+    SubmitRequest,
+    SubmitResponse,
+    anchor_in_the_review,
 )
 from claude_review.services.image_service import MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
@@ -54,7 +57,7 @@ async def get_diff(
     """
     view = await review.source.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
     return DiffResponse(
-        files=view.files,
+        files=[DiffFile.of(file) for file in view.files],
         mode=review.mode,
         title=review.title,
         phrase=phrase_of(view.shown, review.opened_against) if view.shown is not None else None,
@@ -62,9 +65,9 @@ async def get_diff(
         review_key=key_text(ReviewKey()) if view.shown is not None else None,
         round=review.rounds.current,
         answerer_attached=review.answerer.attached,
-        agent=review.answerer.status,
+        agent=AgentStatus.of(review.answerer.status),
         moved=view.moved,
-        limits=SendLimits(),
+        limits=SEND_LIMITS,
         release=release,
     )
 
@@ -99,7 +102,9 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
     quote.
     """
     anchors = review.content.anchors
-    return FollowResponse(anchors=[anchors.follow(anchor) for anchor in request.anchors])
+    return FollowResponse(
+        anchors=[LineAnchor.of(anchors.follow(anchor_in_the_review(anchor))) for anchor in request.anchors]
+    )
 
 
 @router.post("/ask", status_code=HTTPStatus.NO_CONTENT)
@@ -199,8 +204,8 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
     )
 
 
-@router.post("/round")
-async def retake_diff(review: Review = Depends(get_review)) -> RoundResponse:
+@router.post("/retake")
+async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
     """Take the diff again, after the work a round asked for: the agent asks, and so does the page.
 
     The pages on screen are told to reload it rather than being handed the
@@ -211,7 +216,7 @@ async def retake_diff(review: Review = Depends(get_review)) -> RoundResponse:
     agent rewrote under them.
     """
     retaken = await review.retake()
-    return RoundResponse(
+    return RetakeResponse(
         file_count=retaken.file_count, round=retaken.round, changes=changes_on_the_wire(retaken.changes)
     )
 

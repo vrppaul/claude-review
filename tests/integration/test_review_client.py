@@ -11,7 +11,7 @@ import pytest
 from claude_review.cli.review_client import FieldRefusal, Refusal, ReviewCallError, ReviewClient
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.presentation.schemas import ShowRequest
+from claude_review.presentation.wire.agent import ShowRequest
 
 # A refusal as FastAPI writes one for a field it would not take, under the
 # part of the request the field came in

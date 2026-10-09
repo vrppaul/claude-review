@@ -43,11 +43,11 @@ async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
     started = await servers.start([], root=picker_repo, title=f"{picker_repo.name}: uncommitted changes")
     async with AsyncClient(base_url=started.url) as agent:
         # The diff taken, and with it the tree round 1 began from written down
-        await agent.post("/api/round", json={})
+        await agent.post("/api/retake", json={})
         # The work that answers round 1, done after its tree was written down
         (picker_repo / "read.py").write_text("first pass\nsecond pass\nand what round 1 asked for\n")
         # Taken again after the work, as the agent does: this is the diff on screen
-        await agent.post("/api/round", json={})
+        await agent.post("/api/retake", json={})
     return started
 
 

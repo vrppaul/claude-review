@@ -9,8 +9,8 @@ from pathlib import Path
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import GitError
 from claude_review.domain.models import GitRef
+from claude_review.domain.protocols import GitError
 
 log = structlog.get_logger()
 

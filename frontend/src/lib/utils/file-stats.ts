@@ -10,8 +10,8 @@ export function fileStats(file: DiffFile): FileStats {
   let deletions = 0;
   for (const hunk of file.hunks) {
     for (const line of hunk.lines) {
-      if (line.type === "add") additions++;
-      else if (line.type === "delete") deletions++;
+      if (line.kind === "add") additions++;
+      else if (line.kind === "delete") deletions++;
     }
   }
   return { additions, deletions };

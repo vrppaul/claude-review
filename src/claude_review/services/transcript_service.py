@@ -13,8 +13,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.services.unreadable_content import UnreadableContentError
 
 # Claude Code injects internal messages (slash commands, system reminders, bash output)
 # as user entries with XML tags.  These aren't real user input — filter them out.
@@ -169,7 +169,7 @@ class TranscriptService:
     def _build_diff_file(self, path: str, raw_lines: list[str]) -> DiffFile:
         """Wrap lines into a DiffFile with a single all-context hunk."""
         diff_lines = [
-            DiffLine(type=LineType.CONTEXT, old_no=None, new_no=i, content=line)
+            DiffLine(kind=LineType.CONTEXT, old_number=None, new_number=i, content=line)
             for i, line in enumerate(raw_lines, start=1)
         ]
         hunk = DiffHunk(

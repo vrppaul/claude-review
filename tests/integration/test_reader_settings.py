@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import ReaderFiles
+from claude_review.hosting.workspace import ReaderFiles
 from tests.helpers import ReviewFactory, http_client
 
 
@@ -32,7 +32,7 @@ async def test_a_reader_who_never_chose_gets_the_defaults_and_is_told_so(reviews
         seen = (await client.get("/api/settings")).json()
 
     assert seen == {
-        "settings": {
+        "record": {
             "theme": "system",
             "diff_layout": "unified",
             "ignore_whitespace": False,
@@ -48,7 +48,7 @@ async def test_a_choice_made_in_one_review_is_there_in_the_next(reviews: ReviewF
     async with _client(reviews) as another_review:
         seen = (await another_review.get("/api/settings")).json()
 
-    assert seen["settings"]["theme"] == "dark"
+    assert seen["record"]["theme"] == "dark"
     assert seen["stored"] is True
 
 
@@ -75,8 +75,8 @@ async def test_the_release_a_reader_was_shown_is_remembered(reviews: ReviewFacto
         await client.put("/api/guide", json={"seen_release": "1.5.0"})
         after = (await client.get("/api/guide")).json()
 
-    assert before == {"guide": {"seen_release": None}, "stored": False}
-    assert after == {"guide": {"seen_release": "1.5.0"}, "stored": True}
+    assert before == {"record": {"seen_release": None}, "stored": False}
+    assert after == {"record": {"seen_release": "1.5.0"}, "stored": True}
 
 
 async def test_settings_and_what_was_shown_are_kept_apart(reviews: ReviewFactory, reader_files: ReaderFiles) -> None:
@@ -104,6 +104,6 @@ async def test_settings_changed_together_are_all_kept(reviews: ReviewFactory) ->
             client.put("/api/settings", json={"diff_layout": "split"}),
             client.put("/api/settings", json={"sound_on_replies": True}),
         )
-        kept = (await client.get("/api/settings")).json()["settings"]
+        kept = (await client.get("/api/settings")).json()["record"]
 
     assert (kept["theme"], kept["diff_layout"], kept["sound_on_replies"]) == ("dark", "split", True)

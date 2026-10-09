@@ -19,7 +19,7 @@ const SOUND_KEPT_HERE = 'claude-review:reply-sound';
 /** A server holding these settings, or none, and taking every change on top of them. */
 function serving(settings: ReaderSettings, stored: boolean): FakeServer {
 	const server = fakeServer();
-	server.answer('GET /api/settings', { settings, stored });
+	server.answer('GET /api/settings', { record: settings, stored });
 	keepingSettings(server, settings);
 	return server;
 }

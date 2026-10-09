@@ -22,7 +22,8 @@ from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
 from claude_review.presentation.routes.api import include_api
-from claude_review.presentation.schemas import ServerPush, SessionHello
+from claude_review.presentation.wire.pushes import ServerPush
+from claude_review.presentation.wire.threads import SessionHello
 
 # The OpenAPI version both documents are written in
 OPENAPI_VERSION = "3.1.0"

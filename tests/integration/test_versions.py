@@ -27,7 +27,7 @@ AN_HOUR_IN_MILLISECONDS = 60 * 60 * MILLISECONDS_PER_SECOND
 
 async def _mark(client: AsyncClient) -> None:
     """Take the diff again, which writes down the tree as it stands for the round being written."""
-    await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+    await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
 
 
 async def _begin_next_round(client: AsyncClient) -> None:

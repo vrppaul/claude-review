@@ -9,38 +9,19 @@ export interface components {
     schemas: {
         /**
          * AgentStatus
-         * @description What the agent has said about itself.
-         *
-         *     Nothing here can be measured from this side — the agent lives in another
-         *     process — so every field starts empty and stays empty until it reports.
-         *     A zero would read as a measurement, and it would be a lie.
+         * @description What the agent has said about itself: nothing until it reports, never a zero standing in for it.
          */
         AgentStatus: {
-            /**
-             * Model
-             * @default null
-             */
+            /** Model */
             model: string | null;
-            /**
-             * Context
-             * @default null
-             */
+            /** Context */
             context: string | null;
-            /**
-             * At
-             * @default null
-             */
+            /** At */
             at: number | null;
         };
         /**
          * AgentWork
          * @description What the agent is doing right now, whole: it replaces whatever was showing.
-         *
-         *     The review alone decides when it ends — an empty report, the answer to
-         *     the message it was for, that message taken back, or a new panel message
-         *     — and says so, so every review on screen, and every one opened later,
-         *     shows the same. A question in a thread does not end it: the agent may be
-         *     working through a round, and answers the question beside it.
          */
         AgentWork: {
             /** Message Id */
@@ -56,12 +37,24 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff.
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
          *
-         *     Line numbers are only meaningful together with the side: a hunk that
-         *     replaces a line has both an old line 42 and a new line 42.
+         *     A quote left out is filled in by the review from its diff.
          */
         "Anchor-Input": {
+            /**
+             * Kind
+             * @default line
+             * @constant
+             */
+            kind: "line";
+            /** File */
+            file: string;
+            side: components["schemas"]["LineSide"];
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
             /** Quote */
             quote?: string[];
             /**
@@ -69,6 +62,14 @@ export interface components {
              * @default false
              */
             outdated: boolean;
+        };
+        /**
+         * LineAnchor
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         *
+         *     A quote left out is filled in by the review from its diff.
+         */
+        "Anchor-Output": {
             /**
              * Kind
              * @default line
@@ -82,15 +83,6 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
-        };
-        /**
-         * LineAnchor
-         * @description Lines of one side of a file in the review's own diff.
-         *
-         *     Line numbers are only meaningful together with the side: a hunk that
-         *     replaces a line has both an old line 42 and a new line 42.
-         */
-        "Anchor-Output": {
             /** Quote */
             quote: string[];
             /**
@@ -98,19 +90,6 @@ export interface components {
              * @default false
              */
             outdated: boolean;
-            /**
-             * Kind
-             * @default line
-             * @constant
-             */
-            kind: "line";
-            /** File */
-            file: string;
-            side: components["schemas"]["LineSide"];
-            /** Start Line */
-            start_line: number;
-            /** End Line */
-            end_line: number;
         };
         /** AnswererPush */
         AnswererPush: {

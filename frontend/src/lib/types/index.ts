@@ -151,14 +151,14 @@ export type FollowResponse = Schemas["FollowResponse"];
 export type FileWindowResponse = Schemas["FileWindowResponse"];
 export type VersionsResponse = Schemas["VersionsResponse"];
 /** The diff taken again: how many files, which round, and what changed since it began. */
-export type RoundResponse = Schemas["RoundResponse"];
+export type RetakeResponse = Schemas["RetakeResponse"];
 export type ImageResponse = Schemas["ImageResponse"];
-/** The reader's choices, and whether any were kept yet. */
-export type SettingsResponse = Schemas["SettingsResponse"];
+/** The reader's choices, and whether any were kept yet: the server's `KeptRecord[ReaderSettings]`. */
+export type KeptSettings = Schemas["KeptRecord_ReaderSettings_"];
 /** The choices being changed, and only those. */
 export type SettingsChange = Schemas["SettingsChange"];
-/** How far the reader has been shown around, and whether that was kept yet. */
-export type GuideResponse = Schemas["GuideResponse"];
+/** How far the reader has been shown around, and whether that was kept yet: `KeptRecord[GuideState]`. */
+export type KeptGuide = Schemas["KeptRecord_GuideState_"];
 export type GuideChange = Schemas["GuideChange"];
 /** What the review says over its socket, on connecting and whenever its threads change. */
 export type SessionHello = SocketSchemas["SessionHello"];

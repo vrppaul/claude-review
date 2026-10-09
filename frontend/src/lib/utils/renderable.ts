@@ -15,7 +15,7 @@ export function isRenderable(language: string | null): boolean {
 export function assembleText(file: DiffFile, isDiffMode: boolean): string {
   return file.hunks
     .flatMap((h) => h.lines)
-    .filter((line) => !isDiffMode || line.type !== "delete")
+    .filter((line) => !isDiffMode || line.kind !== "delete")
     .map((l) => l.content)
     .join("\n");
 }

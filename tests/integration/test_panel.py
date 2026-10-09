@@ -9,9 +9,9 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
-    CONTEXT_ROUTE,
+    CATCH_UP_ROUTE,
     DIFF_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
@@ -377,7 +377,7 @@ async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: Revi
     async with http_client(reviews.app([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
         await client.post("/api/message", json=MESSAGE)
         await client.post("/api/say", json={"message_id": MESSAGE["message_id"], "body": "Two fail."})
-        panel = (await client.get(CONTEXT_ROUTE)).json()["panel"]
+        panel = (await client.get(CATCH_UP_ROUTE)).json()["panel"]
 
     assert [entry["at"] for entry in panel] == [A_MOMENT, A_MOMENT]
 
@@ -405,7 +405,7 @@ def test_an_agent_arriving_late_is_told_what_the_review_holds(review_page: TestC
     review_page.post("/api/message", json=MESSAGE)
     review_page.post("/api/say", json={"message_id": "panel-1", "body": "One failed; fixed."})
 
-    seen = review_page.get(CONTEXT_ROUTE).json()
+    seen = review_page.get(CATCH_UP_ROUTE).json()
 
     assert seen["round"] == 1
     assert seen["file_count"] == 1

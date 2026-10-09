@@ -72,12 +72,12 @@ export function withRevealed(
 export function toContextLines(
   start: number,
   lines: string[],
-  oldOffset = 0,
+  oldOffset: number,
 ): DiffLine[] {
   return lines.map((content, offset) => ({
-    type: "context" as const,
-    old_no: start + offset + oldOffset,
-    new_no: start + offset,
+    kind: "context" as const,
+    old_number: start + offset + oldOffset,
+    new_number: start + offset,
     content,
   }));
 }
@@ -85,7 +85,7 @@ export function toContextLines(
 function lastNewLine(hunk: DiffHunk): number {
   for (let i = hunk.lines.length - 1; i >= 0; i -= 1) {
     const line = hunk.lines[i];
-    if (line.new_no !== null) return line.new_no;
+    if (line.new_number !== null) return line.new_number;
   }
   return hunk.new_start - 1;
 }

@@ -12,7 +12,7 @@ from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.body_limit import MAX_REQUEST_BYTES
-from claude_review.presentation.schemas import MAX_THREADS
+from claude_review.presentation.wire.base import MAX_THREADS
 from tests.helpers import FIRST_THREAD_ID, line_on_the_wire, thread_on_the_wire
 
 # Big enough to be read in several pieces, as a socket delivers a large body

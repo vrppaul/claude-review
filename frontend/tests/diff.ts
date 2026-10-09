@@ -25,15 +25,15 @@ export function hunk(lines: DiffLine[], placed: Partial<Omit<DiffHunk, 'lines'>>
  * version, so its lines carry no old number.
  */
 export function contextLine(oldNumber: number | null, newNumber: number, content: string): DiffLine {
-	return { type: 'context', old_no: oldNumber, new_no: newNumber, content };
+	return { kind: 'context', old_number: oldNumber, new_number: newNumber, content };
 }
 
 export function addedLine(newNumber: number, content: string): DiffLine {
-	return { type: 'add', old_no: null, new_no: newNumber, content };
+	return { kind: 'add', old_number: null, new_number: newNumber, content };
 }
 
 export function removedLine(oldNumber: number, content: string): DiffLine {
-	return { type: 'delete', old_no: oldNumber, new_no: null, content };
+	return { kind: 'delete', old_number: oldNumber, new_number: null, content };
 }
 
 /**

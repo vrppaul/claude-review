@@ -117,15 +117,15 @@ export function applyWordMarks(lines: DiffLine[], html: string[]): string[] {
 
   let index = 0;
   while (index < lines.length) {
-    if (lines[index].type !== "delete") {
+    if (lines[index].kind !== "delete") {
       index += 1;
       continue;
     }
 
     const removalStart = index;
-    while (index < lines.length && lines[index].type === "delete") index += 1;
+    while (index < lines.length && lines[index].kind === "delete") index += 1;
     const additionStart = index;
-    while (index < lines.length && lines[index].type === "add") index += 1;
+    while (index < lines.length && lines[index].kind === "add") index += 1;
 
     const removals = additionStart - removalStart;
     const additions = index - additionStart;

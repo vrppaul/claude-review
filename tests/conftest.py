@@ -11,7 +11,8 @@ from httpx import AsyncClient
 from structlog.testing import capture_logs
 from structlog.typing import EventDict
 
-from claude_review.domain.models import GuideState, ReaderFiles, ReviewWorkspace
+from claude_review.domain.models import GuideState
+from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from tests.helpers import ReviewFactory, git, http_client, one_line_file, page_client
 
 

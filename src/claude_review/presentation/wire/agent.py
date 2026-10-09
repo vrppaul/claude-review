@@ -1,0 +1,267 @@
+"""What passes between the review and its agent: what the reader handed over, and what the agent says back."""
+
+from enum import StrEnum, auto
+from pathlib import Path
+from typing import Annotated, Literal
+
+from pydantic import Field
+
+from claude_review.domain import models
+from claude_review.domain.models import EpochMillis, FilePath, StepText, TurnAuthor
+from claude_review.presentation.wire.base import (
+    MAX_FILES_NAMED,
+    MAX_TEXT_LENGTH,
+    AgentText,
+    WireId,
+    WireModel,
+)
+from claude_review.presentation.wire.threads import SaysSomething, Thread, ThreadInput, ThreadSummary
+
+# The most threads one panel message may point at
+MAX_THREADS_IN_MESSAGE = 50
+
+# The longest what is being done may be said in. It is a state that replaces
+# itself, not a log, so a line or two is all it ever needs.
+MAX_PROGRESS_LENGTH = 500
+
+# What the work is being said as, which may be nothing: the work is over
+ProgressText = Annotated[str, Field(max_length=MAX_PROGRESS_LENGTH)]
+
+# The most branches the work is shown as at once
+MAX_PROGRESS_STEPS = 20
+
+# The longest the agent may say which model it is, or how full its context is
+MAX_STATUS_LENGTH = 200
+StatusText = Annotated[str, Field(max_length=MAX_STATUS_LENGTH)]
+
+
+class AgentStatus(WireModel):
+    """What the agent has said about itself: nothing until it reports, never a zero standing in for it."""
+
+    model: str | None
+    context: str | None
+    # When it last reported, so the panel can say how old the numbers are
+    at: EpochMillis | None
+
+
+class ProgressStep(WireModel):
+    """One branch of the work: something being done, or something done."""
+
+    text: StepText
+    done: bool = False
+
+    def in_the_review(self) -> models.ProgressStep:
+        return models.ProgressStep.model_validate(self, from_attributes=True)
+
+
+class AgentWork(WireModel):
+    """What the agent is doing right now, whole: it replaces whatever was showing."""
+
+    # Which message the work is for; None for work on the agent's own account
+    message_id: str | None
+    text: str
+    files: list[FilePath]
+    steps: list[ProgressStep]
+    # When it was reported, so a review reloaded later says how long it has gone on
+    at: EpochMillis
+
+
+class ThreadQuestion(WireModel):
+    """Something the reader asked in one thread, with the whole thread around it."""
+
+    # Which question in that thread: an answer has to say which it belongs to
+    question_id: str
+    # What is asked: the reader's last word in the thread, or the comment that opened it
+    body: str
+    images: list[Path]
+    thread: Thread
+
+
+class PanelMessage(WireModel):
+    """Something the reader typed in the agent panel, with the threads it points at."""
+
+    message_id: str
+    body: str
+    threads: list[Thread]
+    images: list[Path]
+
+
+class PanelCancel(WireModel):
+    """The reader withdrawing a panel message before it was answered."""
+
+    message_id: str
+
+
+class PanelEntry(WireModel):
+    """One thing said in the panel, kept so a later agent can catch up."""
+
+    message_id: str | None
+    author: TurnAuthor
+    body: str
+    at: EpochMillis
+    images: list[Path]
+
+
+class RoundSubmission(WireModel):
+    """One round of a review, on its way to whoever answers it."""
+
+    number: int
+    markdown: str
+    comment_count: int
+
+
+class CatchUpResponse(WireModel):
+    """Response for GET /api/catch-up — the review as it stands.
+
+    An index, not the contents: one line's worth per thread, and the panel
+    in short. Whoever wants a thread in full reads that thread.
+    """
+
+    title: str
+    round: int
+    file_count: int
+    answerer_attached: bool
+    agent: AgentStatus
+    threads: list[ThreadSummary]
+    panel: list[PanelEntry]
+
+
+class MessageRequest(SaysSomething):
+    """Request body for POST /api/message — the reader typing in the panel.
+
+    Words, screenshots or both, like anything else said: a screenshot can be
+    the whole question.
+    """
+
+    message_id: WireId
+    body: str = Field(default="", max_length=MAX_TEXT_LENGTH)
+    threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
+
+
+class ImageResponse(WireModel):
+    """Response for POST /api/images — what the image is kept under."""
+
+    image_id: str
+
+
+class SayRequest(WireModel):
+    """Request body for POST /api/say — the agent speaking in the panel.
+
+    Usually an answer, and then it names what it answers. It may also be the
+    agent speaking first — having finished something, or having found
+    something worth saying — and then there is nothing to name.
+    """
+
+    message_id: WireId | None = None
+    body: AgentText
+    # Files worth opening at what was said. They travel as chips under the
+    # turn, so the reader jumps rather than searches.
+    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
+
+
+class ProgressRequest(WireModel):
+    """Request body for POST /api/progress — what is being done right now.
+
+    It replaces whatever was showing rather than adding to it: this is the
+    state of the work, not a log of it. Sent empty, it says the work is over
+    and the line goes away.
+    """
+
+    message_id: WireId | None = None
+    text: ProgressText = ""
+    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
+    # What the work has branched into: subagents, checks, files being
+    # rewritten. Sent whole every time, because this is a state and not a log.
+    steps: list[ProgressStep] = Field(default_factory=list, max_length=MAX_PROGRESS_STEPS)
+
+
+class ShowRequest(WireModel):
+    """Request body for POST /api/show — bring a file into view.
+
+    The one thing here that moves the reader's screen, so it is only ever
+    sent when they asked to be taken somewhere.
+    """
+
+    file: FilePath
+
+
+class CancelRequest(WireModel):
+    """Request body for POST /api/cancel — the reader taking it back."""
+
+    message_id: WireId
+
+
+class StatusRequest(WireModel):
+    """Request body for POST /api/status — what only the agent knows.
+
+    Both are free text on purpose: how an agent measures its own context is
+    its business, and this side only repeats it with a time beside it.
+    """
+
+    model: StatusText | None = None
+    context: StatusText | None = None
+
+
+class ReplyRequest(WireModel):
+    """Request body for POST /api/reply — the answer coming back."""
+
+    thread_id: WireId
+    body: AgentText
+    # Which question is being answered. Omitted, the answer goes to the
+    # oldest question in that thread still waiting for one.
+    question_id: WireId | None = None
+
+
+class EventKind(StrEnum):
+    """What GET /api/events can answer, as the `type` the agent's loop reads.
+
+    QUESTION — a question asked in one thread.
+    ROUND — a round of the review, sent.
+    MESSAGE — something typed in the agent panel.
+    CANCEL — a panel message taken back.
+    TIMEOUT — nothing was handed over in the time asked for.
+    CLOSED — the review is over, and nothing handed over is left.
+    """
+
+    QUESTION = auto()
+    ROUND = auto()
+    MESSAGE = auto()
+    CANCEL = auto()
+    TIMEOUT = auto()
+    CLOSED = auto()
+
+
+class QuestionEvent(WireModel):
+    type: Literal[EventKind.QUESTION] = EventKind.QUESTION
+    question: ThreadQuestion
+
+
+class RoundEvent(WireModel):
+    type: Literal[EventKind.ROUND] = EventKind.ROUND
+    round: RoundSubmission
+
+
+class MessageEvent(WireModel):
+    type: Literal[EventKind.MESSAGE] = EventKind.MESSAGE
+    message: PanelMessage
+
+
+class CancelEvent(WireModel):
+    type: Literal[EventKind.CANCEL] = EventKind.CANCEL
+    cancel: PanelCancel
+
+
+class TimeoutEvent(WireModel):
+    type: Literal[EventKind.TIMEOUT] = EventKind.TIMEOUT
+
+
+class ClosedEvent(WireModel):
+    type: Literal[EventKind.CLOSED] = EventKind.CLOSED
+
+
+# Response for GET /api/events, the long poll an answerer waits on: one kind
+# of event, carrying only what that kind is
+type EventResponse = Annotated[
+    QuestionEvent | RoundEvent | MessageEvent | CancelEvent | TimeoutEvent | ClosedEvent,
+    Field(discriminator="type"),
+]

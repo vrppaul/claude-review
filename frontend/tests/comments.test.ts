@@ -255,7 +255,7 @@ describe('ending the review', () => {
 		server.answer('POST /api/submit', ENDED);
 
 		commentStore.add(newComment({ file: 'file.ts', startLine: 10, body: 'fix this' }));
-		const result = await commentStore.submit();
+		const result = await commentStore.submit(true);
 
 		expect(server.requests).toEqual([
 			{
@@ -296,7 +296,7 @@ describe('ending the review', () => {
 		server.answer('POST /api/submit', ENDED);
 
 		commentStore.setReviewBody('General feedback');
-		await commentStore.submit();
+		await commentStore.submit(true);
 
 		expect(server.bodiesSentTo('POST /api/submit')).toMatchObject([{ body: 'General feedback' }]);
 	});
@@ -306,7 +306,7 @@ describe('ending the review', () => {
 		server.answer('POST /api/submit', ENDED);
 
 		commentStore.add(newComment({ body: 'fix' }));
-		await commentStore.submit();
+		await commentStore.submit(true);
 
 		expect(server.bodiesSentTo('POST /api/submit')[0]).not.toHaveProperty('body');
 	});
@@ -317,7 +317,7 @@ describe('ending the review', () => {
 
 		commentStore.add(newComment({ body: 'test' }));
 
-		await expect(commentStore.submit()).rejects.toThrow(`Submit failed: ${SERVER_ERROR}`);
+		await expect(commentStore.submit(true)).rejects.toThrow(`Submit failed: ${SERVER_ERROR}`);
 		expect(commentStore.submitted).toBe(false);
 	});
 });

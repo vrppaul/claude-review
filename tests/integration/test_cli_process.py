@@ -27,7 +27,7 @@ from websockets.sync.client import ClientConnection, connect
 from websockets.typing import Origin
 
 from claude_review.domain.models import CommentSeverity
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
 
@@ -473,7 +473,7 @@ def test_what_the_review_refuses_is_explained_in_a_line(changed_repo: Path, cli:
     """These commands run in a loop, where a traceback says nothing useful."""
     cli.review(changed_repo, port)
 
-    result = cli.run("context", "--port", str(port), "--thread", NO_SUCH_THREAD)
+    result = cli.run("catch-up", "--port", str(port), "--thread", NO_SUCH_THREAD)
 
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
@@ -531,7 +531,7 @@ def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) ->
     """The review as the agent reads it, once the page has told it of as many threads."""
     deadline = time.monotonic() + PUSH_SECONDS
     while time.monotonic() < deadline:
-        seen = json.loads(cli.run("context", "--port", str(port), "--json").stdout)
+        seen = json.loads(cli.run("catch-up", "--port", str(port), "--json").stdout)
         if len(seen["threads"]) == count:
             return seen
     failure = f"the review never held {count} threads"
@@ -543,7 +543,7 @@ def test_catching_up_reads_the_review_as_it_stands(changed_repo: Path, cli: CliP
     cli.review(changed_repo, port)
     _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
 
-    index = cli.run("context", "--port", str(port))
+    index = cli.run("catch-up", "--port", str(port))
 
     assert index.returncode == 0
     assert "panel: 1 message" in index.stdout
@@ -558,7 +558,7 @@ def test_a_thread_named_is_read_in_full(changed_repo: Path, cli: CliProcesses, p
         review_socket.send(json.dumps({"threads": [thread_on_the_wire(anchor, "Why this?\nAnd not that?")]}))
         _until_the_review_holds_threads(cli, port, 1)
 
-        read = cli.run("context", "--port", str(port), "--thread", FIRST_THREAD_ID)
+        read = cli.run("catch-up", "--port", str(port), "--thread", FIRST_THREAD_ID)
 
     assert read.returncode == 0
     assert "And not that?" in read.stdout
@@ -605,7 +605,7 @@ def test_taking_the_diff_again_says_which_files_changed_since_the_round_began(
     cli.review(changed_repo, port)
     (changed_repo / "initial.txt").write_text("changed again by the agent\n")
 
-    retaken = cli.run("round", "--port", str(port))
+    retaken = cli.run("retake", "--port", str(port))
 
     assert retaken.returncode == 0
     assert json.loads(retaken.stdout)["changes"] == {"since_round": 1, "base_key": "round:1", "paths": ["initial.txt"]}

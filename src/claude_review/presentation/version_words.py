@@ -18,7 +18,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
-from claude_review.presentation.schemas import ChangesSince, ReviewVersion, VersionKind
+from claude_review.presentation.wire.content import ChangesSince, ReviewVersion, VersionKind
 
 # The keys, as the page holds them: the review's own base, and the prefixes
 # a round's and a ref's are written with

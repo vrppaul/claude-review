@@ -11,7 +11,7 @@ from click.testing import CliRunner, Result
 from claude_review.cli.main import main
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.presentation.schemas import MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_WAIT_SECONDS
 
 # What click exits with when a command is typed wrong, before it runs
 USAGE_ERROR = 2
@@ -23,7 +23,7 @@ FAILED = 1
 COMMANDS_HEADING = "Commands:"
 COMMAND_LINE = re.compile(r"^  (\S+)  ")
 LAUNCH_COMMANDS = ("diff", "files", "transcript")
-AGENT_COMMANDS = ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round")
+AGENT_COMMANDS = ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake")
 LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
 # Words that say nothing
 BLANK = "   "
@@ -117,7 +117,7 @@ def test_a_call_to_a_review_that_is_not_there_explains_itself(unused_port: str) 
     ("arguments", "typed_in"),
     [
         (["reply", "--thread", LONGER_THAN_ANY_ID, "Because"], "--thread"),
-        (["context", "--thread", "not an id"], "--thread"),
+        (["catch-up", "--thread", "not an id"], "--thread"),
         (["say", ""], "BODY"),
         (["say", BLANK], "BODY"),
         (["progress", "--did", "", "reading the handler"], "--did"),

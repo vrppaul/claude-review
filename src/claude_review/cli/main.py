@@ -16,8 +16,9 @@ import click
 import structlog
 
 from claude_review.cli.review_client import ReviewCallError
-from claude_review.domain.exceptions import GitError, PortUnavailableError, UnreadableContentError
-from claude_review.hosting.errors import ServerStartError
+from claude_review.domain.protocols import GitError
+from claude_review.hosting.errors import PortUnavailableError, ServerStartError
+from claude_review.services.unreadable_content import UnreadableContentError
 
 LAUNCH_COMMANDS_MODULE = "claude_review.cli.launch_commands"
 AGENT_COMMANDS_MODULE = "claude_review.cli.agent_commands"
@@ -25,7 +26,7 @@ AGENT_COMMANDS_MODULE = "claude_review.cli.agent_commands"
 COMMAND_MODULES = {
     **dict.fromkeys(("diff", "files", "transcript"), LAUNCH_COMMANDS_MODULE),
     **dict.fromkeys(
-        ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round"), AGENT_COMMANDS_MODULE
+        ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake"), AGENT_COMMANDS_MODULE
     ),
 }
 

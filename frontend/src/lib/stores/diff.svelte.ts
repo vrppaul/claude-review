@@ -291,12 +291,12 @@ export const diffStore = {
   /**
    * Take the diff again, at the reader's word.
    *
-   * The same act the agent performs with `claude-review round`, and it goes
+   * The same act the agent performs with `claude-review retake`, and it goes
    * the same way: the server retakes it and every open review is told to
    * fetch, so a browser keeps its own view of what is folded.
    */
   async retake(): Promise<void> {
-    const response = await fetch("/api/round", {
+    const response = await fetch("/api/retake", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",

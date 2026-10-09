@@ -29,7 +29,7 @@ export const expansionStore = {
     hunkIndex: number,
     start: number,
     end: number,
-    oldOffset = 0,
+    oldOffset: number,
   ) {
     const params = new URLSearchParams({
       path,

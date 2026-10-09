@@ -24,7 +24,7 @@ export function buildSplitRows(lines: DiffLine[]): SplitRow[] {
   let index = 0;
 
   while (index < lines.length) {
-    if (lines[index].type === "context") {
+    if (lines[index].kind === "context") {
       rows.push({
         left: { line: lines[index], index },
         right: { line: lines[index], index },
@@ -34,13 +34,13 @@ export function buildSplitRows(lines: DiffLine[]): SplitRow[] {
     }
 
     const removals: SplitCell[] = [];
-    while (index < lines.length && lines[index].type === "delete") {
+    while (index < lines.length && lines[index].kind === "delete") {
       removals.push({ line: lines[index], index });
       index += 1;
     }
 
     const additions: SplitCell[] = [];
-    while (index < lines.length && lines[index].type === "add") {
+    while (index < lines.length && lines[index].kind === "add") {
       additions.push({ line: lines[index], index });
       index += 1;
     }

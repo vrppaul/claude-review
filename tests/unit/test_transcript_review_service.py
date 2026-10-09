@@ -30,7 +30,7 @@ def _message(path: str, lines: list[str]) -> DiffFile:
                 old_start=0,
                 new_start=1,
                 lines=[
-                    DiffLine(type=LineType.CONTEXT, new_no=line_number, content=line)
+                    DiffLine(kind=LineType.CONTEXT, new_number=line_number, content=line)
                     for line_number, line in enumerate(lines, start=1)
                 ],
             )

@@ -3,3 +3,7 @@
 
 class ServerStartError(Exception):
     """Raised when the review's server stopped before it ever listened."""
+
+
+class PortUnavailableError(Exception):
+    """Raised when the review server cannot take the requested port."""

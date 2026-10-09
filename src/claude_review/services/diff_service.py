@@ -223,20 +223,24 @@ class DiffService:
     def _build_hunk(self, header: str, old_start: int, new_start: int, raw_lines: list[str]) -> DiffHunk:
         """Build a DiffHunk from raw diff lines."""
         diff_lines: list[DiffLine] = []
-        old_no = old_start
-        new_no = new_start
+        old_number = old_start
+        new_number = new_start
 
         for line in raw_lines:
             if line.startswith("+"):
-                diff_lines.append(DiffLine(type=LineType.ADD, old_no=None, new_no=new_no, content=line[1:]))
-                new_no += 1
+                diff_lines.append(DiffLine(kind=LineType.ADD, old_number=None, new_number=new_number, content=line[1:]))
+                new_number += 1
             elif line.startswith("-"):
-                diff_lines.append(DiffLine(type=LineType.DELETE, old_no=old_no, new_no=None, content=line[1:]))
-                old_no += 1
+                diff_lines.append(
+                    DiffLine(kind=LineType.DELETE, old_number=old_number, new_number=None, content=line[1:])
+                )
+                old_number += 1
             elif line.startswith(" "):
-                diff_lines.append(DiffLine(type=LineType.CONTEXT, old_no=old_no, new_no=new_no, content=line[1:]))
-                old_no += 1
-                new_no += 1
+                diff_lines.append(
+                    DiffLine(kind=LineType.CONTEXT, old_number=old_number, new_number=new_number, content=line[1:])
+                )
+                old_number += 1
+                new_number += 1
             elif line.startswith("\\"):
                 # "\ No newline at end of file" — skip
                 continue

@@ -5,8 +5,8 @@ import socket
 
 import structlog
 
-from claude_review.domain.exceptions import PortUnavailableError
 from claude_review.hosting.address import LOOPBACK
+from claude_review.hosting.errors import PortUnavailableError
 
 log = structlog.get_logger()
 

@@ -9,7 +9,8 @@ import pytest
 from httpx import AsyncClient, TransportError
 from playwright.async_api import Locator, Page, expect
 
-from claude_review.domain.models import ReaderFiles, ReviewMode
+from claude_review.domain.models import ReviewMode
+from claude_review.hosting.workspace import ReaderFiles
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
 from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended, uncommitted_changes
@@ -877,7 +878,7 @@ async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, serv
     review = await servers.start(await uncommitted_changes(e2e_repo), root=e2e_repo)
     async with AsyncClient(base_url=review.url) as agent:
         # Taken again, as the agent does after a round: the tree it is compared against is this one
-        await agent.post("/api/round", json={})
+        await agent.post("/api/retake", json={})
     (e2e_repo / "main.py").write_text("def hello():\n    return 'hey'\n")
     (e2e_repo / "utils.py").write_text("# utils, rewritten\n")
 

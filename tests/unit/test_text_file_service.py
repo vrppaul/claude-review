@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.services.text_file_service import TextFileService
+from claude_review.services.unreadable_content import UnreadableContentError
 
 # Bytes no UTF-8 text starts with, as an image or a compiled file does
 NOT_UTF8 = b"\x89PNG\r\n\x1a\n\xff\xfe"
@@ -38,7 +38,7 @@ class TestReadFiles:
         text_file.write_text("first\nsecond\nthird\n")
 
         result = service.read_files([text_file])
-        line_numbers = [line.new_no for line in result[0].hunks[0].lines]
+        line_numbers = [line.new_number for line in result[0].hunks[0].lines]
 
         assert line_numbers == [1, 2, 3]
 

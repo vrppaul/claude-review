@@ -3,13 +3,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import ReaderFiles, ReviewWorkspace
+from claude_review.domain.models import GuideState, ReaderSettings
 from claude_review.domain.protocols import Clock
+from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.broadcast import PAGE_BACKLOG, BrowserBroadcast
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.image_store import DirectoryImageStore
+from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
+from claude_review.services.reader_record_service import ReaderRecords, ReaderRecordService
 from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
 from claude_review.services.review.review import Review
@@ -46,4 +49,12 @@ def host_review(
         lifetime=ReviewLifetime(),
         clock=clock,
     )
-    return HostedReview(review=review, app=create_app(review, broadcast, reader_files))
+    return HostedReview(review=review, app=create_app(review, broadcast, _reader_records(reader_files)))
+
+
+def _reader_records(reader_files: ReaderFiles) -> ReaderRecords:
+    """What the review remembers about its reader, each record kept in its own file."""
+    return ReaderRecords(
+        settings=ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings),
+        guide=ReaderRecordService(JsonRecordStore(reader_files.guide, GuideState), GuideState),
+    )

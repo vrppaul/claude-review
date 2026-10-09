@@ -1,0 +1,292 @@
+"""Threads on the wire: what they hang on, what the page sends of them, and what the agent is handed."""
+
+from pathlib import Path
+from typing import Literal, Self
+
+from pydantic import Field, JsonValue, ValidationError, model_validator
+
+from claude_review.domain import models
+from claude_review.domain.models import MAX_QUOTE_LINES, AnchorKind, CommentSeverity, FilePath, LineSide, TurnAuthor
+from claude_review.presentation.wire.base import (
+    MAX_TEXT_LENGTH,
+    MAX_THREADS,
+    AgentText,
+    ImageIds,
+    WireId,
+    WireModel,
+)
+
+# The most turns one thread carries
+MAX_TURNS = 200
+
+
+class LineAnchor(WireModel):
+    """Lines of one side of a file in the review's own diff, as the page and the agent name them.
+
+    A quote left out is filled in by the review from its diff.
+    """
+
+    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
+    file: FilePath
+    side: LineSide
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    quote: list[str] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
+    outdated: bool = False
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> Self:
+        if self.start_line > self.end_line:
+            msg = "start_line must be <= end_line"
+            raise ValueError(msg)
+        return self
+
+
+# Everything a thread can hang on, as the wire carries it
+type Anchor = LineAnchor
+
+
+def anchor_in_the_review(anchor: Anchor) -> models.Anchor:
+    """The review's own form of an anchor the wire carried."""
+    return models.LineAnchor.model_validate(anchor, from_attributes=True)
+
+
+class Turn(WireModel):
+    """One thing said in a thread after the comment that opened it, its screenshots as files to open."""
+
+    author: TurnAuthor
+    body: str
+    round: int
+    images: list[Path]
+
+
+class Thread(WireModel):
+    """A thread as the agent is handed it: where it is, everything said in it, its screenshots as files."""
+
+    thread_id: str
+    anchor: Anchor
+    # The place, named the way the review names it everywhere it is told
+    where: str
+    severity: CommentSeverity
+    body: str
+    images: list[Path]
+    turns: list[Turn]
+    raised_by: TurnAuthor
+    resolved: bool
+
+
+class SaysSomething(WireModel):
+    """Something said: words, screenshots, or both — but never neither."""
+
+    body: str = Field(max_length=MAX_TEXT_LENGTH)
+    images: ImageIds = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def says_something(self) -> Self:
+        """A screenshot can be the whole of what is said, but something has to be."""
+        if not self.body.strip() and not self.images:
+            msg = "needs text or an image"
+            raise ValueError(msg)
+        return self
+
+
+class TurnInput(SaysSomething):
+    """One turn of a thread, as the browser sends it back."""
+
+    # The id the browser gave it, which is what a question asked in it names
+    turn_id: WireId
+    author: TurnAuthor
+    round: int = Field(ge=1)
+
+
+class ThreadInput(SaysSomething):
+    """A thread as the browser holds it, turns and all.
+
+    The browser holds the threads — they are unsent work, and never reach
+    this side until a round is — so whatever is about one sends it along,
+    as it stands right now: a round, a question, a panel message, the
+    review saying what it holds.
+    """
+
+    thread_id: WireId
+    anchor: Anchor
+    severity: CommentSeverity
+    turns: list[TurnInput] = Field(default_factory=list, max_length=MAX_TURNS)
+    # Who opened it. Sent back so a thread the author raised is not read as
+    # something the reader wrote.
+    raised_by: TurnAuthor
+    resolved: bool
+
+    def draft(self) -> models.ThreadDraft:
+        """The thread as the review holds what the page holds."""
+        return models.ThreadDraft.model_validate(self, from_attributes=True)
+
+
+class SubmitRequest(WireModel):
+    """Request body for POST /api/submit."""
+
+    threads: list[ThreadInput] = Field(max_length=MAX_THREADS)
+    body: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
+    # Whether this send is the last one. False sends a round and leaves the
+    # review open, which only makes sense while something is answering it.
+    end: bool
+
+
+class SubmitResponse(WireModel):
+    """Response for POST /api/submit."""
+
+    markdown: str
+    comment_count: int
+    # Which round was just sent, and which one is being written now
+    round: int
+    ended: bool
+
+
+class AskRequest(WireModel):
+    """Request body for POST /api/ask — the reader asking in a thread.
+
+    The whole thread goes, as it stands. `question_id` names what is asked:
+    the thread's own id for the comment that opened it, or the id of one of
+    the reader's turns in it. The browser decides which; the server only
+    finds it.
+    """
+
+    question_id: WireId
+    thread: ThreadInput
+
+
+class SessionHello(WireModel):
+    """What the browser says on connecting, and whenever its threads change.
+
+    The review on screen is the only side that knows what has been written
+    in it — the threads are unsent work — and the only side that survives a
+    server restarted mid-review. So it says both, and neither costs anybody
+    anything: this never leaves the machine until an agent asks for it.
+    """
+
+    round: int | None = Field(default=None, ge=1)
+    # None when the browser said nothing about them; an empty list when it
+    # holds none — the last one was deleted
+    threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
+
+
+class ReceivedHello(WireModel):
+    """A hello as the server first reads it, its threads not yet read one by one.
+
+    `SessionHello` is what the browser says; this is how the server takes
+    it. One thread out of bounds must not cost the round and every other
+    thread with it, so each is read on its own afterwards (`HeldThreads`).
+    """
+
+    round: int | None = Field(default=None, ge=1)
+    threads: list[JsonValue] | None = Field(default=None, max_length=MAX_THREADS)
+
+
+class HeldThreads(WireModel):
+    """The threads a hello says the review holds: those the server can read, and the ids of the rest."""
+
+    readable: list[ThreadInput]
+    # A thread left out still owns its id in the browser, so the server
+    # must not hand that id out again
+    unreadable_ids: list[str]
+
+    @classmethod
+    def read(cls, threads: list[JsonValue]) -> Self:
+        """Read each thread on its own, keeping what can be read and the id of what cannot."""
+        readable: list[ThreadInput] = []
+        unreadable_ids: list[str] = []
+        for thread in threads:
+            try:
+                readable.append(ThreadInput.model_validate(thread))
+            except ValidationError:
+                if (thread_id := _thread_id_of(thread)) is not None:
+                    unreadable_ids.append(thread_id)
+        return cls(readable=readable, unreadable_ids=unreadable_ids)
+
+
+def _thread_id_of(thread: JsonValue) -> str | None:
+    """The id a thread the server cannot read says it has, if it says one."""
+    thread_id = thread.get("thread_id") if isinstance(thread, dict) else None
+    return thread_id if isinstance(thread_id, str) else None
+
+
+class ThreadSummary(WireModel):
+    """A thread in short: enough to choose what to read, and nothing handed over.
+
+    The comment that opened it, whole — a reader of the index shortens it as
+    it likes — but no images and no turns: those are what reading the thread
+    in full is for, and handing out an image's path is what keeps it from
+    being taken off a comment nobody has sent yet.
+    """
+
+    thread_id: str
+    where: str
+    severity: CommentSeverity
+    body: str
+    raised_by: TurnAuthor
+    resolved: bool
+    outdated: bool
+    turn_count: int
+
+    @classmethod
+    def of_draft(cls, thread: models.ThreadDraft) -> Self:
+        """The summary of a thread as the page holds it."""
+        return cls(
+            thread_id=thread.thread_id,
+            where=thread.anchor.where(),
+            severity=thread.severity,
+            body=thread.body,
+            raised_by=thread.raised_by,
+            resolved=thread.resolved,
+            outdated=thread.anchor.outdated,
+            turn_count=len(thread.turns),
+        )
+
+    @classmethod
+    def of_thread(cls, thread: Thread) -> Self:
+        """The summary of a thread as the agent was handed it."""
+        return cls(
+            thread_id=thread.thread_id,
+            where=thread.where,
+            severity=thread.severity,
+            body=thread.body,
+            raised_by=thread.raised_by,
+            resolved=thread.resolved,
+            outdated=thread.anchor.outdated,
+            turn_count=len(thread.turns),
+        )
+
+
+class PointRequest(WireModel):
+    """Request body for POST /api/point — the author raising a thread.
+
+    The same anchor a reader's comment carries, because it becomes exactly
+    that: a thread on a line, which the reader answers, settles or removes.
+    """
+
+    anchor: Anchor
+    body: AgentText
+    severity: CommentSeverity
+
+
+class PointResponse(WireModel):
+    """Response for POST /api/point — which thread was raised."""
+
+    thread_id: str
+
+
+class FollowRequest(WireModel):
+    """Request body for POST /api/anchors/follow — where these are now.
+
+    The browser holds the threads, and the server holds the diff they hang
+    on: after a round the browser sends what its threads hang on, and gets
+    each one back moved onto the diff as it now stands, in the same order.
+    """
+
+    anchors: list[Anchor] = Field(max_length=MAX_THREADS)
+
+
+class FollowResponse(WireModel):
+    """Response for POST /api/anchors/follow, one anchor per one asked about."""
+
+    anchors: list[Anchor]

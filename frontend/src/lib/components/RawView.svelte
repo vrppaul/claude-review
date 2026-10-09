@@ -139,14 +139,14 @@
 	 * Selection is added to the change rather than replacing it: a line keeps
 	 * showing what changed on it while you are writing about it.
 	 */
-	function rowClass(type: DiffLine['type'], marked: boolean): string {
-		const change = !isDiffMode ? '' : type === 'add' ? 'cr-row-add' : type === 'delete' ? 'cr-row-del' : '';
+	function rowClass(kind: DiffLine['kind'], marked: boolean): string {
+		const change = !isDiffMode ? '' : kind === 'add' ? 'cr-row-add' : kind === 'delete' ? 'cr-row-del' : '';
 		return marked ? `${change} cr-row-marked` : change;
 	}
 
-	function linePrefix(type: DiffLine['type']): string {
-		if (type === 'add') return '+';
-		if (type === 'delete') return '-';
+	function linePrefix(kind: DiffLine['kind']): string {
+		if (kind === 'add') return '+';
+		if (kind === 'delete') return '-';
 		return ' ';
 	}
 </script>
@@ -182,7 +182,7 @@
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
-							class="cr-row {rowClass(line.type, inRange)} hover:brightness-110"
+							class="cr-row {rowClass(line.kind, inRange)} hover:brightness-110"
 							onmouseenter={() => selection.handleMouseEnter(line, flatIdx)}
 						>
 							{#if isDiffMode}
@@ -191,11 +191,11 @@
 										data-testid="old-line-gutter"
 										class="cr-gutter-button"
 										tabindex="-1"
-										aria-label="Comment on line {line.old_no ?? ''}"
+										aria-label="Comment on line {line.old_number ?? ''}"
 										onmousedown={() => selection.handleMouseDown(line, flatIdx)}
 										onkeydown={(e) => commentOnKey(e, line, flatIdx)}
 									>
-										{line.old_no ?? ''}
+										{line.old_number ?? ''}
 									</button>
 								</td>
 							{/if}
@@ -205,20 +205,20 @@
 								<button
 									data-testid="line-gutter" data-tour="line-number"
 									class="cr-gutter-button"
-									aria-label="Comment on line {line.new_no ?? line.old_no ?? ''}"
-									disabled={line.type === 'delete' && diffStore.narrowed}
-									title={line.type === 'delete' && diffStore.narrowed
+									aria-label="Comment on line {line.new_number ?? line.old_number ?? ''}"
+									disabled={line.kind === 'delete' && diffStore.narrowed}
+									title={line.kind === 'delete' && diffStore.narrowed
 										? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
 										: undefined}
 									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
 									onkeydown={(e) => commentOnKey(e, line, flatIdx)}
 								>
-									{line.new_no ?? ''}
+									{line.new_number ?? ''}
 								</button>
 							</td>
 							{#if isDiffMode}
 								<td class="cr-sign w-4 px-1 text-center select-none">
-									{linePrefix(line.type)}
+									{linePrefix(line.kind)}
 								</td>
 							{/if}
 							<td class="cr-code-cell px-2 pr-4 whitespace-pre-wrap">

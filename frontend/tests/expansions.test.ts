@@ -77,11 +77,11 @@ describe('revealed lines in the file shown', () => {
 	const file = diffFile({ path: 'a.py', hunks: [unchangedHunk(10, 2)] });
 
 	it('puts revealed lines inside the hunk they sit above', () => {
-		const revealed = new Map([[0, toContextLines(8, ['line 8', 'line 9'])]]);
+		const revealed = new Map([[0, toContextLines(8, ['line 8', 'line 9'], 0)]]);
 
 		const shown = withRevealed(file, revealed);
 
-		expect(shown.hunks[0].lines.map((line) => line.new_no)).toEqual([8, 9, 10, 11]);
+		expect(shown.hunks[0].lines.map((line) => line.new_number)).toEqual([8, 9, 10, 11]);
 	});
 
 	it('leaves the file alone when nothing has been revealed', () => {
@@ -89,7 +89,7 @@ describe('revealed lines in the file shown', () => {
 	});
 
 	it('does not change the file it was given', () => {
-		withRevealed(file, new Map([[0, toContextLines(9, ['line 9'])]]));
+		withRevealed(file, new Map([[0, toContextLines(9, ['line 9'], 0)]]));
 
 		expect(file.hunks[0].lines).toHaveLength(2);
 	});
@@ -97,11 +97,11 @@ describe('revealed lines in the file shown', () => {
 
 describe('lines read from the file', () => {
 	it('numbers lines from where the window started', () => {
-		const lines = toContextLines(5, ['a', 'b']);
+		const lines = toContextLines(5, ['a', 'b'], 0);
 
 		expect(lines).toEqual([
-			{ type: 'context', old_no: 5, new_no: 5, content: 'a' },
-			{ type: 'context', old_no: 6, new_no: 6, content: 'b' }
+			{ kind: 'context', old_number: 5, new_number: 5, content: 'a' },
+			{ kind: 'context', old_number: 6, new_number: 6, content: 'b' }
 		]);
 	});
 
@@ -109,6 +109,6 @@ describe('lines read from the file', () => {
 		// The old side runs two behind by this point in the file
 		const lines = toContextLines(10, ['a'], -2);
 
-		expect(lines[0]).toEqual({ type: 'context', old_no: 8, new_no: 10, content: 'a' });
+		expect(lines[0]).toEqual({ kind: 'context', old_number: 8, new_number: 10, content: 'a' });
 	});
 });

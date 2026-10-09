@@ -65,7 +65,7 @@ async def _changed_lines(client: AsyncClient, *, ignore_whitespace: bool) -> lis
         for changed in served["files"]
         for hunk in changed["hunks"]
         for line in hunk["lines"]
-        if line["type"] in ("add", "delete")
+        if line["kind"] in ("add", "delete")
     ]
 
 
@@ -86,9 +86,9 @@ async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient)
     lines = (await client.get(DIFF_ROUTE)).json()["files"][0]["hunks"][0]["lines"]
 
     kept, removed, added = lines[:3]
-    assert (kept["type"], kept["old_no"], kept["new_no"]) == ("context", 1, 1)
-    assert (removed["type"], removed["old_no"], removed["new_no"]) == ("delete", 2, None)
-    assert (added["type"], added["old_no"], added["new_no"]) == ("add", None, 2)
+    assert (kept["kind"], kept["old_number"], kept["new_number"]) == ("context", 1, 1)
+    assert (removed["kind"], removed["old_number"], removed["new_number"]) == ("delete", 2, None)
+    assert (added["kind"], added["old_number"], added["new_number"]) == ("add", None, 2)
 
 
 async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
@@ -396,7 +396,7 @@ async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, re
         for served in full["files"]
         for hunk in served["hunks"]
         for line in hunk["lines"]
-        if line["type"] in ("add", "delete")
+        if line["kind"] in ("add", "delete")
     ]
 
 

@@ -93,7 +93,7 @@ describe('an unsent review', () => {
 		commentStore.restore(TITLE);
 		commentStore.add(newComment({ file: 'a.py', body: 'tighten this' }));
 
-		await commentStore.submit();
+		await commentStore.submit(true);
 		commentStore.clear();
 
 		expect(commentStore.restore(TITLE)).toBe(0);

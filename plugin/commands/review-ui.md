@@ -97,12 +97,12 @@ somebody who is waiting.
 
 4. Catch up, if this review was already under way when you arrived:
    ```bash
-   claude-review context --port <port>
+   claude-review catch-up --port <port>
    ```
    `wait` hands over what happens next, never what already happened — so an
    agent that restarted mid-review knows nothing until somebody says
    something. This prints the round, a line per thread and the panel in
-   short. It is an index on purpose: `claude-review context --thread
+   short. It is an index on purpose: `claude-review catch-up --thread
    comment-4` gets that one thread in full, with its lines and every turn.
    `--json` is the same thing for a program to read rather than a person —
    worth it when you mean to count or filter rather than to catch up. The
@@ -238,7 +238,7 @@ somebody who is waiting.
    show them:
    ```bash
    claude-review progress --port <port> --done
-   claude-review round --port <port>
+   claude-review retake --port <port>
    ```
    `--done` first, or the new diff lands under a spinner still saying what you
    were doing to the old one. `round` is for a diff review: files and a

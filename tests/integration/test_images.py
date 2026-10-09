@@ -15,7 +15,8 @@ import pytest
 from httpx import AsyncClient
 from structlog.typing import EventDict
 
-from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, ReviewWorkspace, TurnAuthor
+from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, TurnAuthor
+from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
     DIFF_ROUTE,
@@ -205,7 +206,7 @@ async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClie
     image_id = await _upload(client, PNG)
     await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
 
-    context = (await client.get("/api/context")).json()
+    context = (await client.get("/api/catch-up")).json()
 
     [entry] = context["panel"]
     assert Path(entry["images"][0]).name == image_id

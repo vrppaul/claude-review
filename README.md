@@ -170,8 +170,8 @@ claude-review status --port 8765 --model opus-5 --context "53% of 1M" # what onl
 claude-review point --port 8765 --file a.py --lines 42-47 "..."       # raise a thread on a line
 claude-review progress --port 8765 --message <id> --file a.py "..."   # what you are doing now
 claude-review show --port 8765 --file a.py                            # take the reader to a file
-claude-review context --port 8765                                     # catch up on a review under way
-claude-review round --port 8765            # retake the diff after a round
+claude-review catch-up --port 8765                                     # catch up on a review under way
+claude-review retake --port 8765            # retake the diff after a round
 claude-review diff --port 8080             # serve on a port of your choosing
 claude-review diff --no-open               # don't open browser automatically
 claude-review --verbose diff --base HEAD~1 # enable diagnostic logging (before the command)

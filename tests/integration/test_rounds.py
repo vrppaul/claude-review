@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -121,7 +121,7 @@ async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, r
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
         git(tmp_git_repo, "add", ".")
 
-        retaken = await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+        retaken = await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
         diff = await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)
 
     assert retaken.status_code == 200
@@ -130,7 +130,7 @@ async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, r
 
 
 async def test_a_review_without_a_repository_cannot_retake_its_diff(client: AsyncClient) -> None:
-    response = await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+    response = await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
 
     assert response.status_code == 404
 
@@ -157,7 +157,7 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
 
         with open_session(review_page) as socket:
-            review_page.post("/api/round", json={})
+            review_page.post("/api/retake", json={})
 
             assert next_push(socket, PushKind.DIFF) == {
                 "type": "diff",
@@ -178,11 +178,11 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
 
     with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
         (tmp_git_repo / "first.py").write_text("two\n")
-        review_page.post("/api/round", json={})
+        review_page.post("/api/retake", json={})
 
         with open_session(review_page) as socket:
             (tmp_git_repo / "second.py").write_text("only this one now\n")
-            review_page.post("/api/round", json={})
+            review_page.post("/api/retake", json={})
             told = next_push(socket, PushKind.DIFF)
 
     assert told["changes"]["since_round"] == 1
@@ -197,7 +197,7 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
         page_client(reviews.app([], root=tmp_git_repo, keeps_marks=False)) as review_page,
         open_session(review_page) as socket,
     ):
-        review_page.post("/api/round", json={})
+        review_page.post("/api/retake", json={})
 
         assert next_push(socket, PushKind.DIFF) == {"type": "diff", "changes": None}
 
@@ -212,7 +212,7 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
 
     async with http_client(reviews.app([], root=tmp_git_repo)) as client:
         (tmp_git_repo / "a.py").write_text("import sys\ndef run():\n    return 1\n")
-        await client.post("/api/round", json={}, headers=LOCAL_HEADERS)
+        await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
         response = await client.post("/api/anchors/follow", json={"anchors": [on_run, on_walk]}, headers=LOCAL_HEADERS)
 
     followed, gone = response.json()["anchors"]

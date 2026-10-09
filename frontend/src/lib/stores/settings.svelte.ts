@@ -13,7 +13,7 @@ import type {
   DiffLayout,
   ReaderSettings,
   SettingsChange,
-  SettingsResponse,
+  KeptSettings,
   Theme,
 } from "$lib/types";
 import {
@@ -93,11 +93,11 @@ export const settingsStore = {
     try {
       const response = await fetch("/api/settings");
       if (!response.ok) return;
-      const kept: SettingsResponse = await response.json();
+      const kept: KeptSettings = await response.json();
       const local = keptInThisBrowser();
       settings =
         kept.stored || sameSettings(local, NEW_READER)
-          ? kept.settings
+          ? kept.record
           : await keep(local);
       forget(LAYOUT_KEPT_HERE);
       forget(WHITESPACE_KEPT_HERE);

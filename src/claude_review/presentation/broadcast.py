@@ -29,7 +29,9 @@ from claude_review.domain.page_events import (
     TreeMoved,
     WorkReported,
 )
-from claude_review.presentation.schemas import (
+from claude_review.presentation.version_words import changes_on_the_wire
+from claude_review.presentation.wire.agent import AgentStatus, AgentWork
+from claude_review.presentation.wire.pushes import (
     AnswererPush,
     ChangedPush,
     ChatPush,
@@ -42,7 +44,7 @@ from claude_review.presentation.schemas import (
     ShowPush,
     StatusPush,
 )
-from claude_review.presentation.version_words import changes_on_the_wire
+from claude_review.presentation.wire.threads import LineAnchor
 
 log = structlog.get_logger()
 
@@ -99,13 +101,15 @@ def push_of(event: PageEvent) -> ServerPush:
         case AgentSaid():
             return ChatPush(message_id=event.message_id, body=event.body, files=event.files)
         case WorkReported():
-            return ProgressPush(work=event.work)
+            return ProgressPush(work=AgentWork.of(event.work) if event.work is not None else None)
         case FileShown():
             return ShowPush(file=event.file)
         case StatusReported():
-            return StatusPush(agent=event.agent)
+            return StatusPush(agent=AgentStatus.of(event.agent))
         case ThreadRaised():
-            return PointPush(thread_id=event.thread_id, anchor=event.anchor, body=event.body, severity=event.severity)
+            return PointPush(
+                thread_id=event.thread_id, anchor=LineAnchor.of(event.anchor), body=event.body, severity=event.severity
+            )
         case TreeMoved():
             return ChangedPush(moved_count=event.moved_count)
         case RoundBegan():

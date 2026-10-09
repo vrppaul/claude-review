@@ -7,21 +7,21 @@ them from a loop of its own and reads and writes code between them.
 import click
 
 from claude_review.cli.parameters import FILE, ID, LINE_SPAN, SAID, STATUS, STEP, WORK, LineSpan
-from claude_review.cli.rendering import render_context, render_thread
+from claude_review.cli.rendering import render_catch_up, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
-from claude_review.domain.models import CommentSeverity, LineAnchor, LineSide, ProgressStep
+from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
-from claude_review.presentation.schemas import (
-    DEFAULT_WAIT_SECONDS,
-    MAX_WAIT_SECONDS,
-    PointRequest,
+from claude_review.presentation.wire.agent import (
     ProgressRequest,
+    ProgressStep,
     ReplyRequest,
     SayRequest,
     ShowRequest,
     StatusRequest,
     TimeoutEvent,
 )
+from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.threads import LineAnchor, PointRequest
 
 
 def _client_for(_context: click.Context, _parameter: click.Parameter, port: int) -> ReviewClient:
@@ -89,11 +89,11 @@ def reply_command(client: ReviewClient, thread: str, question: str | None, body:
     client.reply(ReplyRequest(thread_id=thread, question_id=question, body=body))
 
 
-@click.command("context")
+@click.command("catch-up")
 @review_port
 @click.option("--thread", type=ID, default=None, help="One thread, in full, rather than the index.")
 @click.option("--json", "as_json", is_flag=True, help="The whole thing as JSON, for a program to read.")
-def context_command(client: ReviewClient, thread: str | None, as_json: bool) -> None:
+def catch_up_command(client: ReviewClient, thread: str | None, as_json: bool) -> None:
     """Catch up on a review already under way.
 
     `wait` hands over what happens next, never what already happened, so an
@@ -109,7 +109,7 @@ def context_command(client: ReviewClient, thread: str | None, as_json: bool) -> 
         click.echo(read.model_dump_json() if as_json else render_thread(read))
     else:
         seen = client.context()
-        click.echo(seen.model_dump_json() if as_json else render_context(seen))
+        click.echo(seen.model_dump_json() if as_json else render_catch_up(seen))
 
 
 @click.command("say")
@@ -250,9 +250,9 @@ def status_command(client: ReviewClient, model: str | None, context: str | None)
     client.report_status(StatusRequest(model=model, context=context))
 
 
-@click.command("round")
+@click.command("retake")
 @review_port
-def round_command(client: ReviewClient) -> None:
+def retake_command(client: ReviewClient) -> None:
     """Take the diff again, after making the changes a round asked for.
 
     The reviews on screen reload it, keeping their threads: a comment whose
@@ -269,12 +269,12 @@ COMMANDS = {
     for command in (
         wait_command,
         reply_command,
-        context_command,
+        catch_up_command,
         say_command,
         progress_command,
         show_command,
         point_command,
         status_command,
-        round_command,
+        retake_command,
     )
 }

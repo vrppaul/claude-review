@@ -36,9 +36,7 @@ from claude_review.domain.models import (
     LineAnchor,
     LineSide,
     LineType,
-    ReaderFiles,
     ReviewMode,
-    ReviewWorkspace,
     Thread,
     Turn,
     TurnAuthor,
@@ -47,7 +45,8 @@ from claude_review.domain.protocols import Clock
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.presentation.schemas import PushKind
+from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
+from claude_review.presentation.wire.pushes import PushKind
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
@@ -72,14 +71,14 @@ HTTP_VERSION = "1.1"
 
 SESSION_ROUTE = "/api/session"
 DIFF_ROUTE = "/api/diff"
-CONTEXT_ROUTE = "/api/context"
+CATCH_UP_ROUTE = "/api/catch-up"
 EVENTS_ROUTE = "/api/events"
 IMAGES_ROUTE = "/api/images"
 
 
 def thread_route(thread_id: str) -> str:
     """Where one thread the review holds is read in full."""
-    return f"{CONTEXT_ROUTE}/threads/{thread_id}"
+    return f"{CATCH_UP_ROUTE}/threads/{thread_id}"
 
 
 # The file most reviews here hold, and the one line it shows
@@ -127,15 +126,15 @@ async def uncommitted_changes(repo: Path) -> list[DiffFile]:
 
 def context_line(old_number: int, new_number: int, content: str) -> DiffLine:
     """A line both sides of the diff share."""
-    return DiffLine(type=LineType.CONTEXT, old_no=old_number, new_no=new_number, content=content)
+    return DiffLine(kind=LineType.CONTEXT, old_number=old_number, new_number=new_number, content=content)
 
 
 def added_line(new_number: int, content: str) -> DiffLine:
-    return DiffLine(type=LineType.ADD, new_no=new_number, content=content)
+    return DiffLine(kind=LineType.ADD, new_number=new_number, content=content)
 
 
 def removed_line(old_number: int, content: str) -> DiffLine:
-    return DiffLine(type=LineType.DELETE, old_no=old_number, content=content)
+    return DiffLine(kind=LineType.DELETE, old_number=old_number, content=content)
 
 
 def diff_file(path: str, lines: list[DiffLine], status: FileStatus = FileStatus.MODIFIED) -> DiffFile:
@@ -408,7 +407,7 @@ def until_the_review_is_on_round(client: TestClient, round_number: int) -> None:
 
 def until_the_review_holds_threads(client: TestClient, count: int) -> list[dict]:
     """Return the threads the review holds, once it holds as many as the page sent."""
-    return next(reading["threads"] for reading in _readings(client, CONTEXT_ROUTE) if len(reading["threads"]) == count)
+    return next(reading["threads"] for reading in _readings(client, CATCH_UP_ROUTE) if len(reading["threads"]) == count)
 
 
 def _readings(client: TestClient, route: str) -> Iterator[dict]:

@@ -11,7 +11,7 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,

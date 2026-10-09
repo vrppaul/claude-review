@@ -5,36 +5,36 @@ from typing import assert_never
 
 from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
 
-from claude_review.domain.models import (
-    AgentEvent,
-    PanelCancel,
-    PanelMessage,
-    RoundSubmission,
-    Thread,
-    ThreadQuestion,
-)
+from claude_review.domain import models
 from claude_review.presentation.dependencies import get_review
-from claude_review.presentation.schemas import (
-    DEFAULT_WAIT_SECONDS,
-    MAX_ID_LENGTH,
-    MAX_WAIT_SECONDS,
-    SAFE_ID,
+from claude_review.presentation.wire.agent import (
+    AgentStatus,
     CancelEvent,
+    CatchUpResponse,
     ClosedEvent,
-    ContextResponse,
     EventResponse,
     MessageEvent,
-    PointRequest,
-    PointResponse,
+    PanelCancel,
+    PanelEntry,
+    PanelMessage,
     ProgressRequest,
     QuestionEvent,
     ReplyRequest,
     RoundEvent,
+    RoundSubmission,
     SayRequest,
     ShowRequest,
     StatusRequest,
-    ThreadSummary,
+    ThreadQuestion,
     TimeoutEvent,
+)
+from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_ID_LENGTH, MAX_WAIT_SECONDS, SAFE_ID
+from claude_review.presentation.wire.threads import (
+    PointRequest,
+    PointResponse,
+    Thread,
+    ThreadSummary,
+    anchor_in_the_review,
 )
 from claude_review.services.review.agent_inbox import Silence
 from claude_review.services.review.review import Review
@@ -73,17 +73,17 @@ async def _until_the_caller_leaves(http_request: Request) -> None:
         continue
 
 
-def _envelope(taken: AgentEvent | Silence) -> EventResponse:
+def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
     """Name what was taken, so the loop can tell the kinds apart."""
     match taken:
-        case ThreadQuestion():
-            return QuestionEvent(question=taken)
-        case RoundSubmission():
-            return RoundEvent(round=taken)
-        case PanelMessage():
-            return MessageEvent(message=taken)
-        case PanelCancel():
-            return CancelEvent(cancel=taken)
+        case models.ThreadQuestion():
+            return QuestionEvent(question=ThreadQuestion.of(taken))
+        case models.RoundSubmission():
+            return RoundEvent(round=RoundSubmission.of(taken))
+        case models.PanelMessage():
+            return MessageEvent(message=PanelMessage.of(taken))
+        case models.PanelCancel():
+            return CancelEvent(cancel=PanelCancel.of(taken))
         case Silence.CLOSED:
             return ClosedEvent()
         # Nobody reads what a caller that left is answered
@@ -93,8 +93,8 @@ def _envelope(taken: AgentEvent | Silence) -> EventResponse:
             assert_never(taken)
 
 
-@router.get("/context")
-async def review_context(review: Review = Depends(get_review)) -> ContextResponse:
+@router.get("/catch-up")
+async def review_context(review: Review = Depends(get_review)) -> CatchUpResponse:
     """Say what this review holds, for an agent that has just arrived.
 
     An agent restarted mid-review knows nothing: `events` hands over what
@@ -104,18 +104,18 @@ async def review_context(review: Review = Depends(get_review)) -> ContextRespons
     unasked is how a catch-up costs more than the work. A thread is read in
     full from its own route.
     """
-    return ContextResponse(
+    return CatchUpResponse(
         title=review.title,
         round=review.rounds.current,
         file_count=len(review.content.files),
         answerer_attached=review.answerer.attached,
-        agent=review.answerer.status,
-        threads=[ThreadSummary.of(held) for held in review.threads.held],
-        panel=review.conversation.entries,
+        agent=AgentStatus.of(review.answerer.status),
+        threads=[ThreadSummary.of_draft(held) for held in review.threads.held],
+        panel=[PanelEntry.of(entry) for entry in review.conversation.entries],
     )
 
 
-@router.get("/context/threads/{thread_id}")
+@router.get("/catch-up/threads/{thread_id}")
 async def read_thread(
     thread_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID),
     review: Review = Depends(get_review),
@@ -125,7 +125,7 @@ async def read_thread(
     Read, so handed over: the agent may open its images from now on, and
     the reader can no longer take them off.
     """
-    return review.read_thread(thread_id)
+    return Thread.of(review.read_thread(thread_id))
 
 
 @router.post("/reply", status_code=HTTPStatus.NO_CONTENT)
@@ -155,7 +155,10 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     empty one takes the line away.
     """
     review.answerer.report_work(
-        message_id=request.message_id, text=request.text, files=request.files, steps=request.steps
+        message_id=request.message_id,
+        text=request.text,
+        files=request.files,
+        steps=[step.in_the_review() for step in request.steps],
     )
 
 
@@ -178,7 +181,8 @@ async def raise_a_thread(request: PointRequest, review: Review = Depends(get_rev
     thread: the reader answers it, settles it or removes it. It is drawn as
     the author's, though, and it is never counted as the reader's own work.
     """
-    return PointResponse(thread_id=review.raise_thread(request.anchor, body=request.body, severity=request.severity))
+    raised = review.raise_thread(anchor_in_the_review(request.anchor), body=request.body, severity=request.severity)
+    return PointResponse(thread_id=raised)
 
 
 @router.post("/status", status_code=HTTPStatus.NO_CONTENT)

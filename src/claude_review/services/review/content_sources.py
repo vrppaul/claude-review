@@ -13,10 +13,10 @@ from typing import Protocol
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import GitError, NoRepositoryError
+from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
 from claude_review.domain.page_events import TreeMoved
-from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
+from claude_review.domain.protocols import Clock, GitError, PageChannel, RepositoryProtocol
 from claude_review.services.diff_service import DiffService
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent

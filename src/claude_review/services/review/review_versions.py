@@ -5,7 +5,7 @@ from typing import assert_never
 
 import structlog
 
-from claude_review.domain.exceptions import GitError, UnknownVersionError
+from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import (
     HEAD,
     ChangedSinceRound,
@@ -16,7 +16,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
-from claude_review.domain.protocols import Clock, GitRepositoryProtocol, StagedTreeProtocol
+from claude_review.domain.protocols import Clock, GitError, GitRepositoryProtocol, StagedTreeProtocol
 
 log = structlog.get_logger()
 

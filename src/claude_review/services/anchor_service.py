@@ -159,8 +159,8 @@ def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
         SideLine(number=number, content=line.content)
         for hunk in file.hunks
         for line in hunk.lines
-        if (line.type == LineType.DELETE) == removed_side
-        and (number := line.old_no if removed_side else line.new_no) is not None
+        if (line.kind == LineType.DELETE) == removed_side
+        and (number := line.old_number if removed_side else line.new_number) is not None
     ]
 
 

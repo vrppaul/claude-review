@@ -11,12 +11,12 @@ import type {
 	DiffResponse,
 	FileWindowResponse,
 	FollowResponse,
-	GuideResponse,
+	KeptGuide,
 	GuideState,
 	ImageResponse,
 	ReaderSettings,
-	RoundResponse,
-	SettingsResponse,
+	RetakeResponse,
+	KeptSettings,
 	SubmitResponse,
 	VersionsResponse
 } from '$lib/types';
@@ -29,9 +29,9 @@ export interface Replies {
 	'GET /api/diff': DiffResponse;
 	'GET /api/versions': VersionsResponse;
 	'GET /api/file-window': FileWindowResponse;
-	'GET /api/settings': SettingsResponse;
+	'GET /api/settings': KeptSettings;
 	'PUT /api/settings': ReaderSettings;
-	'GET /api/guide': GuideResponse;
+	'GET /api/guide': KeptGuide;
 	'PUT /api/guide': GuideState;
 	'POST /api/images': ImageResponse;
 	'POST /api/ask': Done;
@@ -39,7 +39,7 @@ export interface Replies {
 	'POST /api/cancel': Done;
 	'POST /api/anchors/follow': FollowResponse;
 	'POST /api/submit': SubmitResponse;
-	'POST /api/round': RoundResponse;
+	'POST /api/retake': RetakeResponse;
 	'POST /api/end': Done;
 }
 

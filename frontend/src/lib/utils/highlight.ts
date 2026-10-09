@@ -91,16 +91,16 @@ export function highlightFile(
 function highlightHunk(lines: DiffLine[], language: string | null): string[] {
   if (!language) return lines.map((line) => escapeMarkup(line.content));
 
-  const hasRemovals = lines.some((line) => line.type === "delete");
+  const hasRemovals = lines.some((line) => line.kind === "delete");
   const newSide = sideLines(lines, "add", language);
   const oldSide = hasRemovals ? sideLines(lines, "delete", language) : newSide;
 
   let oldAt = 0;
   let newAt = 0;
   return lines.map((line) => {
-    if (line.type === "delete")
+    if (line.kind === "delete")
       return oldSide[oldAt++] ?? escapeMarkup(line.content);
-    if (line.type === "add")
+    if (line.kind === "add")
       return newSide[newAt++] ?? escapeMarkup(line.content);
     // Context belongs to both versions, so it advances both readers
     const html = newSide[newAt] ?? escapeMarkup(line.content);
@@ -113,11 +113,11 @@ function highlightHunk(lines: DiffLine[], language: string | null): string[] {
 /** Highlight one version of a hunk: its context plus the lines exclusive to that side. */
 function sideLines(
   lines: DiffLine[],
-  exclusive: DiffLine["type"],
+  exclusive: DiffLine["kind"],
   language: string,
 ): string[] {
   const text = lines
-    .filter((line) => line.type === "context" || line.type === exclusive)
+    .filter((line) => line.kind === "context" || line.kind === exclusive)
     .map((line) => line.content)
     .join("\n");
 

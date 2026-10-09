@@ -57,7 +57,7 @@ cd frontend && pnpm build            # outputs to src/claude_review/static/dist/
 DDD-lite with clean layer separation:
 
 ```
-presentation/  → FastAPI routes, Pydantic schemas, Depends() DI
+presentation/  → FastAPI routes, wire models, Depends() DI
 services/      → orchestration (DiffService, TextFileService, ReviewService)
 repositories/  → infrastructure (GitRepository)
 domain/        → Pydantic models, protocols, enums

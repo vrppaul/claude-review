@@ -7,7 +7,8 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
-from claude_review.domain.models import ReaderFiles, ReviewWorkspace
+from pydantic import BaseModel
+
 from claude_review.hosting.announcer import ReviewAnnouncer
 
 # What a review's own temporary directories are called, so they can be told apart in /tmp
@@ -24,6 +25,30 @@ STATE_HOME_FALLBACK = Path(".local") / "state"
 READER_DIRECTORY = "claude-review"
 SETTINGS_FILE = "settings.json"
 GUIDE_FILE = "guide.json"
+
+
+class ReviewWorkspace(BaseModel):
+    """Where a review writes, so nothing of it lands in the repository under review."""
+
+    # Where the trees written down at every take of the diff are kept. None
+    # in a review whose content did not come from a repository: it leaves no
+    # marks, and so cannot offer its own rounds as bases.
+    objects: Path | None
+    # Where the images the reader pastes into the panel are kept
+    images: Path
+
+
+class ReaderFiles(BaseModel):
+    """Where what a review remembers about its reader is kept, for every review.
+
+    Two files for two kinds of thing: what the reader chose, kept with their
+    configuration, and what the review noticed, kept with other programs'
+    state. Configuration is often kept in git, where a release number
+    changing with every upgrade would be noise.
+    """
+
+    settings: Path
+    guide: Path
 
 
 @contextlib.contextmanager

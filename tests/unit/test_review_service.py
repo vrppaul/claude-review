@@ -145,8 +145,8 @@ def test_an_answered_thread_carries_the_conversation() -> None:
         "Every open review gets this push. Deliberate?",
         severity=CommentSeverity.QUESTION,
         turns=[
-            Turn(author=TurnAuthor.AUTHOR, body="Deliberate: two tabs are one reader."),
-            Turn(author=TurnAuthor.READER, body="Then say so in the docstring."),
+            Turn(author=TurnAuthor.AUTHOR, body="Deliberate: two tabs are one reader.", round=FIRST_ROUND),
+            Turn(author=TurnAuthor.READER, body="Then say so in the docstring.", round=FIRST_ROUND),
         ],
     )
 
@@ -196,7 +196,7 @@ def test_a_thread_the_author_raised_reads_as_the_authors_own_words() -> None:
         line_anchor("src/a.py", 42),
         "I renamed this rather than deleting it",
         raised_by=TurnAuthor.AUTHOR,
-        turns=[Turn(author=TurnAuthor.READER, body="Good, but call it `head`")],
+        turns=[Turn(author=TurnAuthor.READER, body="Good, but call it `head`", round=FIRST_ROUND)],
     )
 
     markdown = _formatted([raised]).markdown
@@ -213,7 +213,7 @@ def test_images_are_named_as_files_to_open() -> None:
         line_anchor("src/handler.ts", 42),
         "",
         images=[opening],
-        turns=[Turn(author=TurnAuthor.READER, body="Still like this", images=[reply])],
+        turns=[Turn(author=TurnAuthor.READER, body="Still like this", round=FIRST_ROUND, images=[reply])],
     )
 
     markdown = _formatted([pictured]).markdown

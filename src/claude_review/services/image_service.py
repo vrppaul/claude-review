@@ -20,7 +20,6 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
-from claude_review.domain.models import StoredImage
 from claude_review.domain.protocols import ImageStoreProtocol
 
 log = structlog.get_logger()
@@ -40,6 +39,15 @@ MAX_REVIEW_BYTES = MAX_REVIEW_MEGABYTES * BYTES_PER_MEGABYTE
 # More than a handful of images in one thing said — a panel message, a
 # comment, a reply — is a gallery, not a question
 MAX_IMAGES_PER_MESSAGE = 10
+
+
+class StoredImage(BaseModel):
+    """An image the reader pasted, kept where the review's store put it."""
+
+    image_id: str
+    path: Path
+    media_type: str
+    size: int
 
 
 class ImageQuota(BaseModel):

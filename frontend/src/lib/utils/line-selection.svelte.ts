@@ -10,12 +10,12 @@ export interface LineRange {
 
 /** A removed line only exists in the old file; everything else is the new one. */
 export function lineSide(line: DiffLine): LineSide {
-  return line.type === "delete" ? "old" : "new";
+  return line.kind === "delete" ? "old" : "new";
 }
 
 /** The number a line carries on its own side — old for removed, new otherwise. */
 export function getLineNumber(line: DiffLine): number {
-  return line.new_no ?? line.old_no ?? 0;
+  return line.new_number ?? line.old_number ?? 0;
 }
 
 /** What the reader may select, asked afresh each time it matters. */

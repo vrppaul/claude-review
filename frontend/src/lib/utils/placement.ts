@@ -28,7 +28,8 @@ export function isDrawn(
   return file.hunks.some((hunk) =>
     hunk.lines.some(
       (line) =>
-        (anchor.side === "old" ? line.old_no : line.new_no) === anchor.end_line,
+        (anchor.side === "old" ? line.old_number : line.new_number) ===
+        anchor.end_line,
     ),
   );
 }

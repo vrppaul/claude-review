@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.exceptions import GitError
 from claude_review.domain.models import DiffFile, FileStatus, LineType
+from claude_review.domain.protocols import GitError
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_service import DiffService
 from tests.helpers import git
@@ -70,35 +70,35 @@ async def test_diff_includes_context_lines(tmp_git_repo: Path) -> None:
     assert len(files) == 1
     hunk = files[0].hunks[0]
 
-    context_lines = [line for line in hunk.lines if line.type == LineType.CONTEXT]
+    context_lines = [line for line in hunk.lines if line.kind == LineType.CONTEXT]
     assert len(context_lines) > 0, "Hunk should include context lines"
 
     # Context lines should have both old and new line numbers
     for line in context_lines:
-        assert line.old_no is not None
-        assert line.new_no is not None
+        assert line.old_number is not None
+        assert line.new_number is not None
 
 
 async def test_added_deleted_modified_lines_typed_correctly(tmp_git_repo: Path) -> None:
-    """Each line has correct type, old_no, new_no."""
+    """Each line has correct type, old_number, new_number."""
     (tmp_git_repo / "initial.txt").write_text("replaced content\n")
 
     files = await _diff(tmp_git_repo)
     hunk = files[0].hunks[0]
 
-    deleted = [dl for dl in hunk.lines if dl.type == LineType.DELETE]
-    added = [al for al in hunk.lines if al.type == LineType.ADD]
+    deleted = [line for line in hunk.lines if line.kind == LineType.DELETE]
+    added = [line for line in hunk.lines if line.kind == LineType.ADD]
 
     assert len(deleted) > 0
     assert len(added) > 0
 
     for line in deleted:
-        assert line.old_no is not None
-        assert line.new_no is None
+        assert line.old_number is not None
+        assert line.new_number is None
 
     for line in added:
-        assert line.old_no is None
-        assert line.new_no is not None
+        assert line.old_number is None
+        assert line.new_number is not None
 
 
 async def test_git_repo_with_no_changes(tmp_git_repo: Path) -> None:
@@ -126,7 +126,7 @@ async def test_deleted_file_status(tmp_git_repo: Path) -> None:
 
     assert len(files) == 1
     assert files[0].status == FileStatus.DELETED
-    assert all(line.type == LineType.DELETE for line in files[0].hunks[0].lines)
+    assert all(line.kind == LineType.DELETE for line in files[0].hunks[0].lines)
 
 
 async def test_base_shows_committed_changes(tmp_git_repo: Path) -> None:

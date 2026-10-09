@@ -239,7 +239,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/round": {
+    "/api/retake": {
         parameters: {
             query?: never;
             header?: never;
@@ -259,7 +259,7 @@ export interface paths {
          *     keeps its tick through a retake, so without this they walk past code the
          *     agent rewrote under them.
          */
-        post: operations["retake_diff_api_round_post"];
+        post: operations["retake_diff_api_retake_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -310,7 +310,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/context": {
+    "/api/catch-up": {
         parameters: {
             query?: never;
             header?: never;
@@ -328,7 +328,7 @@ export interface paths {
          *     unasked is how a catch-up costs more than the work. A thread is read in
          *     full from its own route.
          */
-        get: operations["review_context_api_context_get"];
+        get: operations["review_context_api_catch_up_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -337,7 +337,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/context/threads/{thread_id}": {
+    "/api/catch-up/threads/{thread_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -351,7 +351,7 @@ export interface paths {
          *     Read, so handed over: the agent may open its images from now on, and
          *     the reader can no longer take them off.
          */
-        get: operations["read_thread_api_context_threads__thread_id__get"];
+        get: operations["read_thread_api_catch_up_threads__thread_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -554,11 +554,7 @@ export interface components {
     schemas: {
         /**
          * AgentStatus
-         * @description What the agent has said about itself.
-         *
-         *     Nothing here can be measured from this side — the agent lives in another
-         *     process — so every field starts empty and stays empty until it reports.
-         *     A zero would read as a measurement, and it would be a lie.
+         * @description What the agent has said about itself: nothing until it reports, never a zero standing in for it.
          */
         AgentStatus: {
             /** Model */
@@ -570,12 +566,24 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff.
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
          *
-         *     Line numbers are only meaningful together with the side: a hunk that
-         *     replaces a line has both an old line 42 and a new line 42.
+         *     A quote left out is filled in by the review from its diff.
          */
         "Anchor-Input": {
+            /**
+             * Kind
+             * @default line
+             * @constant
+             */
+            kind: "line";
+            /** File */
+            file: string;
+            side: components["schemas"]["LineSide"];
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
             /** Quote */
             quote?: string[];
             /**
@@ -583,6 +591,14 @@ export interface components {
              * @default false
              */
             outdated: boolean;
+        };
+        /**
+         * LineAnchor
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         *
+         *     A quote left out is filled in by the review from its diff.
+         */
+        "Anchor-Output": {
             /**
              * Kind
              * @default line
@@ -596,15 +612,6 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
-        };
-        /**
-         * LineAnchor
-         * @description Lines of one side of a file in the review's own diff.
-         *
-         *     Line numbers are only meaningful together with the side: a hunk that
-         *     replaces a line has both an old line 42 and a new line 42.
-         */
-        "Anchor-Output": {
             /** Quote */
             quote: string[];
             /**
@@ -612,19 +619,6 @@ export interface components {
              * @default false
              */
             outdated: boolean;
-            /**
-             * Kind
-             * @default line
-             * @constant
-             */
-            kind: "line";
-            /** File */
-            file: string;
-            side: components["schemas"]["LineSide"];
-            /** Start Line */
-            start_line: number;
-            /** End Line */
-            end_line: number;
         };
         /**
          * AskRequest
@@ -658,6 +652,28 @@ export interface components {
             message_id: string;
         };
         /**
+         * CatchUpResponse
+         * @description Response for GET /api/catch-up — the review as it stands.
+         *
+         *     An index, not the contents: one line's worth per thread, and the panel
+         *     in short. Whoever wants a thread in full reads that thread.
+         */
+        CatchUpResponse: {
+            /** Title */
+            title: string;
+            /** Round */
+            round: number;
+            /** File Count */
+            file_count: number;
+            /** Answerer Attached */
+            answerer_attached: boolean;
+            agent: components["schemas"]["AgentStatus"];
+            /** Threads */
+            threads: components["schemas"]["ThreadSummary"][];
+            /** Panel */
+            panel: components["schemas"]["PanelEntry"][];
+        };
+        /**
          * ChangesSince
          * @description Which files changed since a round began, so they are read again rather than all of them.
          */
@@ -688,34 +704,8 @@ export interface components {
          */
         CommentSeverity: "note" | "question" | "blocker";
         /**
-         * ContextResponse
-         * @description Response for GET /api/context — the review as it stands.
-         *
-         *     An index, not the contents: one line's worth per thread, and the panel
-         *     in short. Whoever wants a thread in full reads that thread.
-         */
-        ContextResponse: {
-            /** Title */
-            title: string;
-            /** Round */
-            round: number;
-            /** File Count */
-            file_count: number;
-            /** Answerer Attached */
-            answerer_attached: boolean;
-            agent: components["schemas"]["AgentStatus"];
-            /** Threads */
-            threads: components["schemas"]["ThreadSummary"][];
-            /** Panel */
-            panel: components["schemas"]["PanelEntry"][];
-        };
-        /**
          * DiffFile
-         * @description A file that has been changed.
-         *
-         *     A file can change without producing hunks: binary content has no lines to
-         *     show, and a permission change touches no line at all. The extra fields let
-         *     the UI say which of those happened instead of showing an empty panel.
+         * @description A file that has been changed, and what kind of change it was when it has no lines to show.
          */
         DiffFile: {
             /** Path */
@@ -723,10 +713,7 @@ export interface components {
             status: components["schemas"]["FileStatus"];
             /** Hunks */
             hunks: components["schemas"]["DiffHunk"][];
-            /**
-             * Is Binary
-             * @default false
-             */
+            /** Is Binary */
             is_binary: boolean;
             /** Old Mode */
             old_mode: string | null;
@@ -755,14 +742,14 @@ export interface components {
         DiffLayout: "unified" | "split";
         /**
          * DiffLine
-         * @description A single line in a diff hunk.
+         * @description A single line in a diff hunk, numbered on the side or sides it is on.
          */
         DiffLine: {
-            type: components["schemas"]["LineType"];
-            /** Old No */
-            old_no: number | null;
-            /** New No */
-            new_no: number | null;
+            kind: components["schemas"]["LineType"];
+            /** Old Number */
+            old_number: number | null;
+            /** New Number */
+            new_number: number | null;
             /** Content */
             content: string;
         };
@@ -782,30 +769,13 @@ export interface components {
             base_key: string | null;
             /** Review Key */
             review_key: string | null;
-            /**
-             * Round
-             * @default 1
-             */
+            /** Round */
             round: number;
-            /**
-             * Answerer Attached
-             * @default false
-             */
+            /** Answerer Attached */
             answerer_attached: boolean;
-            /**
-             * Moved
-             * @default 0
-             */
+            /** Moved */
             moved: number;
-            /** @default {} */
             agent: components["schemas"]["AgentStatus"];
-            /**
-             * @default {
-             *       "max_image_bytes": 10485760,
-             *       "max_images_per_message": 10,
-             *       "max_quoted_lines": 200
-             *     }
-             */
             limits: components["schemas"]["SendLimits"];
             /** Release */
             release: string;
@@ -851,20 +821,11 @@ export interface components {
         };
         /**
          * GuideChange
-         * @description Request body for PUT /api/guide.
+         * @description Request body for PUT /api/guide — what the reader has now been shown.
          */
         GuideChange: {
             /** Seen Release */
             seen_release: string;
-        };
-        /**
-         * GuideResponse
-         * @description Response for GET /api/guide.
-         */
-        GuideResponse: {
-            guide: components["schemas"]["GuideState"];
-            /** Stored */
-            stored: boolean;
         };
         /**
          * GuideState
@@ -886,6 +847,18 @@ export interface components {
         ImageResponse: {
             /** Image Id */
             image_id: string;
+        };
+        /** KeptRecord[GuideState] */
+        KeptRecord_GuideState_: {
+            record: components["schemas"]["GuideState"];
+            /** Stored */
+            stored: boolean;
+        };
+        /** KeptRecord[ReaderSettings] */
+        KeptRecord_ReaderSettings_: {
+            record: components["schemas"]["ReaderSettings"];
+            /** Stored */
+            stored: boolean;
         };
         /**
          * LineSide
@@ -936,9 +909,6 @@ export interface components {
         /**
          * PanelCancel
          * @description The reader withdrawing a panel message before it was answered.
-         *
-         *     A request, not a kill: it goes onto the same queue as everything else,
-         *     and whoever is working decides what to do about it.
          */
         PanelCancel: {
             /** Message Id */
@@ -947,11 +917,6 @@ export interface components {
         /**
          * PanelEntry
          * @description One thing said in the panel, kept so a later agent can catch up.
-         *
-         *     The reader's browser remembers the whole conversation across a reload;
-         *     the agent may be a different process by then and remembers nothing. The
-         *     server saw both halves go past, so it is the one that can say what was
-         *     already discussed.
          */
         PanelEntry: {
             /** Message Id */
@@ -961,35 +926,21 @@ export interface components {
             body: string;
             /** At */
             at: number;
-            /**
-             * Images
-             * @default []
-             */
+            /** Images */
             images: string[];
         };
         /**
          * PanelMessage
-         * @description Something the reader typed in the agent panel.
-         *
-         *     A thread is about one line; this is about everything else — the plan,
-         *     the tests, a file nobody commented on. It may still point at threads,
-         *     and then it carries them, so the agent is not left guessing which lines
-         *     "that one" meant.
+         * @description Something the reader typed in the agent panel, with the threads it points at.
          */
         PanelMessage: {
             /** Message Id */
             message_id: string;
             /** Body */
             body: string;
-            /**
-             * Threads
-             * @default []
-             */
+            /** Threads */
             threads: components["schemas"]["Thread"][];
-            /**
-             * Images
-             * @default []
-             */
+            /** Images */
             images: string[];
         };
         /**
@@ -1059,23 +1010,13 @@ export interface components {
         /**
          * ReaderSettings
          * @description How this reader reads a review, the same in every review on the machine.
-         *
-         *     Each field holds what a reader who has never chosen gets.
          */
         ReaderSettings: {
-            /** @default system */
             theme: components["schemas"]["Theme"];
-            /** @default unified */
             diff_layout: components["schemas"]["DiffLayout"];
-            /**
-             * Ignore Whitespace
-             * @default false
-             */
+            /** Ignore Whitespace */
             ignore_whitespace: boolean;
-            /**
-             * Sound On Replies
-             * @default false
-             */
+            /** Sound On Replies */
             sound_on_replies: boolean;
         };
         /**
@@ -1089,6 +1030,21 @@ export interface components {
             body: string;
             /** Question Id */
             question_id?: string | null;
+        };
+        /**
+         * RetakeResponse
+         * @description Response for POST /api/retake — the diff taken again.
+         *
+         *     The files that changed are named, so an agent that has come back to a
+         *     review it left knows which ones to read again rather than all of them.
+         *     None when this review kept no tree to compare against.
+         */
+        RetakeResponse: {
+            /** File Count */
+            file_count: number;
+            /** Round */
+            round: number;
+            changes: components["schemas"]["ChangesSince"] | null;
         };
         /**
          * ReviewMode
@@ -1130,27 +1086,8 @@ export interface components {
             round: components["schemas"]["RoundSubmission"];
         };
         /**
-         * RoundResponse
-         * @description Response for POST /api/round — the diff taken again.
-         *
-         *     The files that changed are named, so an agent that has come back to a
-         *     review it left knows which ones to read again rather than all of them.
-         *     None when this review kept no tree to compare against.
-         */
-        RoundResponse: {
-            /** File Count */
-            file_count: number;
-            /** Round */
-            round: number;
-            changes: components["schemas"]["ChangesSince"] | null;
-        };
-        /**
          * RoundSubmission
          * @description One round of a review, on its way to whoever answers it.
-         *
-         *     A round is everything written since the last one was sent. The review
-         *     does not end with it: the agent answers, changes what it changed, and
-         *     the diff is retaken under the same threads.
          */
         RoundSubmission: {
             /** Number */
@@ -1185,25 +1122,19 @@ export interface components {
          *     written in the first place.
          */
         SendLimits: {
-            /**
-             * Max Image Bytes
-             * @default 10485760
-             */
+            /** Max Image Bytes */
             max_image_bytes: number;
-            /**
-             * Max Images Per Message
-             * @default 10
-             */
+            /** Max Images Per Message */
             max_images_per_message: number;
-            /**
-             * Max Quoted Lines
-             * @default 200
-             */
+            /** Max Quoted Lines */
             max_quoted_lines: number;
         };
         /**
          * SettingsChange
          * @description Request body for PUT /api/settings — the choices being changed, and only those.
+         *
+         *     A choice sent as null is a choice not sent, as in every change to what
+         *     is kept about the reader.
          */
         SettingsChange: {
             theme?: components["schemas"]["Theme"] | null;
@@ -1212,15 +1143,6 @@ export interface components {
             ignore_whitespace?: boolean | null;
             /** Sound On Replies */
             sound_on_replies?: boolean | null;
-        };
-        /**
-         * SettingsResponse
-         * @description Response for GET /api/settings.
-         */
-        SettingsResponse: {
-            settings: components["schemas"]["ReaderSettings"];
-            /** Stored */
-            stored: boolean;
         };
         /**
          * ShowRequest
@@ -1280,41 +1202,24 @@ export interface components {
         Theme: "system" | "light" | "dark";
         /**
          * Thread
-         * @description A thread hanging on something the reader reads, and everything said in it.
-         *
-         *     The comment that opened it stays in `body`, and everything said
-         *     afterwards is a turn. Keeping the opening apart is not ceremony: it is
-         *     what the anchor, the severity and the whole thread are about, and a
-         *     review with nothing discussed is still only bodies.
-         *
-         *     It carries the quoted lines as well as what was said, because the agent
-         *     that answers may be reading it without the file in front of it.
+         * @description A thread as the agent is handed it: where it is, everything said in it, its screenshots as files.
          */
         Thread: {
             /** Thread Id */
             thread_id: string;
             anchor: components["schemas"]["Anchor-Output"];
+            /** Where */
+            where: string;
             severity: components["schemas"]["CommentSeverity"];
             /** Body */
             body: string;
-            /**
-             * Images
-             * @default []
-             */
+            /** Images */
             images: string[];
-            /**
-             * Turns
-             * @default []
-             */
+            /** Turns */
             turns: components["schemas"]["Turn"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
-            /**
-             * Where
-             * @description The place, named the way the review names it everywhere it is told.
-             */
-            readonly where: string;
         };
         /**
          * ThreadInput
@@ -1349,10 +1254,7 @@ export interface components {
             question_id: string;
             /** Body */
             body: string;
-            /**
-             * Images
-             * @default []
-             */
+            /** Images */
             images: string[];
             thread: components["schemas"]["Thread"];
         };
@@ -1391,21 +1293,15 @@ export interface components {
         };
         /**
          * Turn
-         * @description One thing said in a thread after the comment that opened it.
+         * @description One thing said in a thread after the comment that opened it, its screenshots as files to open.
          */
         Turn: {
             author: components["schemas"]["TurnAuthor"];
             /** Body */
             body: string;
-            /**
-             * Round
-             * @default 1
-             */
+            /** Round */
             round: number;
-            /**
-             * Images
-             * @default []
-             */
+            /** Images */
             images: string[];
         };
         /**
@@ -1796,7 +1692,7 @@ export interface operations {
             };
         };
     };
-    retake_diff_api_round_post: {
+    retake_diff_api_retake_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1811,7 +1707,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RoundResponse"];
+                    "application/json": components["schemas"]["RetakeResponse"];
                 };
             };
         };
@@ -1865,7 +1761,7 @@ export interface operations {
             };
         };
     };
-    review_context_api_context_get: {
+    review_context_api_catch_up_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1880,12 +1776,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContextResponse"];
+                    "application/json": components["schemas"]["CatchUpResponse"];
                 };
             };
         };
     };
-    read_thread_api_context_threads__thread_id__get: {
+    read_thread_api_catch_up_threads__thread_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2119,7 +2015,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SettingsResponse"];
+                    "application/json": components["schemas"]["KeptRecord_ReaderSettings_"];
                 };
             };
         };
@@ -2172,7 +2068,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuideResponse"];
+                    "application/json": components["schemas"]["KeptRecord_GuideState_"];
                 };
             };
         };

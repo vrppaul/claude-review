@@ -18,6 +18,10 @@ class Clock(Protocol):
         ...
 
 
+class GitError(Exception):
+    """Raised when a git operation fails: the error every repository behind these ports raises."""
+
+
 class StagedTreeProtocol(Protocol):
     """The working tree staged whole for one operation: everything git is asked within it reads the same index."""
 

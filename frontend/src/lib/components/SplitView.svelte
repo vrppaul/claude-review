@@ -140,17 +140,17 @@
 
 	/** Selection is added to the change rather than replacing it, so a line
 	 * keeps showing what changed on it while you are writing about it. */
-	function tint(cell: SplitCell | undefined, type: DiffLine['type']): string {
+	function tint(cell: SplitCell | undefined, kind: DiffLine['kind']): string {
 		if (!cell) return 'cr-cell-absent';
 		const change =
-			cell.line.type === type ? `cr-cell-${type === 'add' ? 'add' : 'del'}` : '';
+			cell.line.kind === kind ? `cr-cell-${kind === 'add' ? 'add' : 'del'}` : '';
 		return marked(cell) ? `${change} cr-cell-marked` : change;
 	}
 
-	function edge(cell: SplitCell | undefined, type: DiffLine['type']): string {
+	function edge(cell: SplitCell | undefined, kind: DiffLine['kind']): string {
 		if (!cell) return 'cr-edge';
 		if (marked(cell)) return 'cr-edge cr-edge-marked';
-		return cell.line.type === type ? `cr-edge cr-edge-${type === 'add' ? 'add' : 'del'}` : 'cr-edge';
+		return cell.line.kind === kind ? `cr-edge cr-edge-${kind === 'add' ? 'add' : 'del'}` : 'cr-edge';
 	}
 </script>
 
@@ -210,7 +210,7 @@
 										data-testid={row.right ? 'old-line-gutter' : 'line-gutter'}
 										class="cr-gutter-button"
 										tabindex={row.right ? -1 : 0}
-										aria-label="Comment on removed line {cell.line.old_no ?? ''}"
+										aria-label="Comment on removed line {cell.line.old_number ?? ''}"
 										disabled={diffStore.narrowed}
 										title={diffStore.narrowed
 											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
@@ -220,7 +220,7 @@
 										onkeydown={(e) =>
 											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
 									>
-										{cell.line.old_no ?? ''}
+										{cell.line.old_number ?? ''}
 									</button>
 								{/if}
 							</td>
@@ -249,13 +249,13 @@
 									<button
 										data-testid="line-gutter" data-tour="line-number"
 										class="cr-gutter-button"
-										aria-label="Comment on line {cell.line.new_no ?? ''}"
+										aria-label="Comment on line {cell.line.new_number ?? ''}"
 										onmousedown={() =>
 											selection.handleMouseDown(cell.line, hunkOffsets[hunkIdx] + cell.index)}
 										onkeydown={(e) =>
 											commentOnKey(e, cell.line, hunkOffsets[hunkIdx] + cell.index)}
 									>
-										{cell.line.new_no ?? ''}
+										{cell.line.new_number ?? ''}
 									</button>
 								{/if}
 							</td>

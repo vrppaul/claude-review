@@ -5,8 +5,9 @@ over the whole review unasked would cost more than the work; a thread in
 full when it is named.
 """
 
-from claude_review.domain.models import Thread, TurnAuthor
-from claude_review.presentation.schemas import ContextResponse, ThreadSummary
+from claude_review.domain.models import TurnAuthor
+from claude_review.presentation.wire.agent import CatchUpResponse
+from claude_review.presentation.wire.threads import Thread, ThreadSummary
 from claude_review.services.thread_markdown import tags_of
 
 # How much of a comment fits on one line of an index without becoming the index
@@ -39,7 +40,7 @@ MESSAGE_NOUN = "message"
 TURN_NOUN = "turn"
 
 
-def render_context(seen: ContextResponse) -> str:
+def render_catch_up(seen: CatchUpResponse) -> str:
     """Lay the review out for reading, in as few lines as it can be said: one per thread, the panel in short."""
     open_count = sum(1 for summary in seen.threads if not summary.resolved and not summary.outdated)
     heading = [seen.title, f"{ROUND_LABEL} {seen.round}", _counted(seen.file_count, FILE_NOUN)]
@@ -73,7 +74,7 @@ def render_context(seen: ContextResponse) -> str:
 
 def render_thread(thread: Thread) -> str:
     """One thread in full: everything said in it, and the lines it hangs on."""
-    lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of(thread))}"]
+    lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of_thread(thread))}"]
     lines.append(_indent(thread.body))
     lines.extend(_indent(turn.body, who=SPEAKERS[turn.author]) for turn in thread.turns)
     if thread.anchor.quote:

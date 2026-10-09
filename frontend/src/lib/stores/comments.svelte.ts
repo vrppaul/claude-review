@@ -412,7 +412,7 @@ export const commentStore = {
    * `end` decides whether this is the last word: a round leaves the review
    * open, so the answers to it have somewhere to come back to.
    */
-  async submit(end = true): Promise<SubmitResponse> {
+  async submit(end: boolean): Promise<SubmitResponse> {
     const trimmedBody = reviewBody.trim();
     const unsent = comments.filter(isUnsent);
 

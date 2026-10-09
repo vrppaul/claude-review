@@ -15,6 +15,7 @@ the server pushes, and — since the review ends when the last socket closes —
 throw away an unsent review by connecting and disconnecting once.
 """
 
+from functools import partial
 from urllib.parse import urlsplit
 
 from starlette.datastructures import Headers, MutableHeaders
@@ -93,15 +94,16 @@ class SecurityHeaders:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        await self.app(scope, receive, partial(_send_with_security_headers, send=send))
 
-        async def with_headers(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                headers = MutableHeaders(scope=message)
-                for name, value in SECURITY_HEADERS.items():
-                    headers.setdefault(name, value)
-            await send(message)
 
-        await self.app(scope, receive, with_headers)
+async def _send_with_security_headers(message: Message, *, send: Send) -> None:
+    """Send a message on, the start of a response carrying the page's security headers unless it set its own."""
+    if message["type"] == "http.response.start":
+        headers = MutableHeaders(scope=message)
+        for name, value in SECURITY_HEADERS.items():
+            headers.setdefault(name, value)
+    await send(message)
 
 
 class LocalOriginOnly:

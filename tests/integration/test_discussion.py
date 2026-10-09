@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,

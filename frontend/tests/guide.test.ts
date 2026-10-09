@@ -38,8 +38,8 @@ class GuideMemory {
 		this.stored = seen !== null;
 	}
 
-	read(): { guide: GuideState; stored: boolean } {
-		return { guide: { seen_release: this.seen }, stored: this.stored };
+	read(): { record: GuideState; stored: boolean } {
+		return { record: { seen_release: this.seen }, stored: this.stored };
 	}
 
 	write(request: ReceivedRequest): GuideState {

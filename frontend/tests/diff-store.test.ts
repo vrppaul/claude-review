@@ -131,7 +131,7 @@ describe('retaking the diff', () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await expansionStore.reveal('a.ts', 0, 1, 2);
+		await expansionStore.reveal('a.ts', 0, 1, 2, 0);
 		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
 
 		await diffStore.fetchDiff();
@@ -143,7 +143,7 @@ describe('retaking the diff', () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await expansionStore.reveal('a.ts', 0, 1, 2);
+		await expansionStore.reveal('a.ts', 0, 1, 2, 0);
 		expect(expansionStore.revealedCount('a.ts', 0)).toBe(2);
 
 		await diffStore.setIgnoreWhitespace(true);

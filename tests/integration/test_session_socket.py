@@ -15,9 +15,9 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.schemas import PushKind
+from claude_review.presentation.wire.pushes import PushKind
 from tests.helpers import (
-    CONTEXT_ROUTE,
+    CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
     PNG,
     REVIEWED_FILE,
@@ -51,7 +51,7 @@ def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) 
         socket.send_json({"round": 4})
         until_the_review_is_on_round(review_page, 4)
 
-    assert review_page.get(CONTEXT_ROUTE).json()["round"] == 4
+    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == 4
 
 
 def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(review_page: TestClient) -> None:
@@ -78,7 +78,7 @@ def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestC
         fresh.send_json({"threads": [A_THREAD]})
         until_the_review_holds_threads(review_page, 1)
 
-    assert review_page.get(CONTEXT_ROUTE).json()["round"] == 3
+    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == 3
 
 
 def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None:

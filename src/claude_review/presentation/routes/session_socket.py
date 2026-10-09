@@ -14,7 +14,7 @@ from pydantic import ValidationError
 
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
-from claude_review.presentation.schemas import HeldThreads, ReceivedHello
+from claude_review.presentation.wire.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
 
 log = structlog.get_logger()

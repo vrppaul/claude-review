@@ -15,20 +15,18 @@ from urllib.parse import quote, urlencode
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from claude_review.domain.models import Thread
 from claude_review.hosting.address import LOOPBACK
-from claude_review.presentation.schemas import (
-    ContextResponse,
+from claude_review.presentation.wire.agent import (
+    CatchUpResponse,
     EventResponse,
-    PointRequest,
-    PointResponse,
     ProgressRequest,
     ReplyRequest,
-    RoundResponse,
     SayRequest,
     ShowRequest,
     StatusRequest,
 )
+from claude_review.presentation.wire.content import RetakeResponse
+from claude_review.presentation.wire.threads import PointRequest, PointResponse, Thread
 
 # How long an ordinary call may take: the review answers at once
 CALL_SECONDS = 10.0
@@ -41,15 +39,15 @@ WAIT_MARGIN_SECONDS = 10.0
 JSON_HEADERS = {"Content-Type": "application/json"}
 
 EVENTS_ROUTE = "/api/events"
-CONTEXT_ROUTE = "/api/context"
-THREADS_ROUTE = "/api/context/threads"
+CATCH_UP_ROUTE = "/api/catch-up"
+THREADS_ROUTE = "/api/catch-up/threads"
 REPLY_ROUTE = "/api/reply"
 SAY_ROUTE = "/api/say"
 PROGRESS_ROUTE = "/api/progress"
 STATUS_ROUTE = "/api/status"
 SHOW_ROUTE = "/api/show"
 POINT_ROUTE = "/api/point"
-RETAKE_ROUTE = "/api/round"
+RETAKE_ROUTE = "/api/retake"
 # What the poll for events calls how long it may wait
 WAIT_SECONDS_PARAMETER = "wait_seconds"
 
@@ -64,10 +62,10 @@ REASON_SEPARATOR = "; "
 # What the review answers, read as what each answer should be. The events
 # are one kind told apart by their `type`, and printed back as they came.
 EVENTS = TypeAdapter[EventResponse](EventResponse)
-CONTEXT_ANSWER = TypeAdapter(ContextResponse)
+CONTEXT_ANSWER = TypeAdapter(CatchUpResponse)
 THREAD_ANSWER = TypeAdapter(Thread)
 POINT_ANSWER = TypeAdapter(PointResponse)
-RETAKE_ANSWER = TypeAdapter(RoundResponse)
+RETAKE_ANSWER = TypeAdapter(RetakeResponse)
 
 
 class ReviewCallError(Exception):
@@ -98,9 +96,9 @@ class ReviewClient:
         route = f"{EVENTS_ROUTE}?{urlencode({WAIT_SECONDS_PARAMETER: wait_seconds})}"
         return self._read(EVENTS, self._call(HTTPMethod.GET, route, timeout=wait_seconds + WAIT_MARGIN_SECONDS))
 
-    def context(self) -> ContextResponse:
+    def context(self) -> CatchUpResponse:
         """The review as it stands: an index of its threads, and the panel in short."""
-        return self._read(CONTEXT_ANSWER, self._call(HTTPMethod.GET, CONTEXT_ROUTE))
+        return self._read(CONTEXT_ANSWER, self._call(HTTPMethod.GET, CATCH_UP_ROUTE))
 
     def thread(self, thread_id: str) -> Thread:
         """One thread in full, its images handed over."""
@@ -125,7 +123,7 @@ class ReviewClient:
     def point(self, request: PointRequest) -> PointResponse:
         return self._read(POINT_ANSWER, self._call(HTTPMethod.POST, POINT_ROUTE, request))
 
-    def retake(self) -> RoundResponse:
+    def retake(self) -> RetakeResponse:
         """Take the diff again, which the reviews on screen then reload."""
         return self._read(RETAKE_ANSWER, self._call(HTTPMethod.POST, RETAKE_ROUTE, timeout=RETAKE_SECONDS))
 

@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile
 from claude_review.services.transcript_service import TranscriptService
+from claude_review.services.unreadable_content import UnreadableContentError
 
 
 @pytest.fixture
@@ -191,7 +191,7 @@ class TestParse:
         conversation = _write_jsonl(tmp_path, [_assistant("first\nsecond\nthird")])
 
         result = service.parse(conversation)
-        numbers = [line.new_no for line in result[0].hunks[0].lines]
+        numbers = [line.new_number for line in result[0].hunks[0].lines]
 
         assert numbers == [1, 2, 3]
 

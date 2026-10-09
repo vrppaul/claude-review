@@ -4,21 +4,9 @@ from enum import StrEnum, auto
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from claude_review.domain.exceptions import QuestionNotInThreadError
-
-
-class ReviewModel(BaseModel):
-    """A model that crosses the wire: written out, it carries every field.
-
-    A field with a default may be left out by whoever sends one, but the
-    review always writes it, so the schema of what it writes says so — and
-    the browser's types, generated from that schema, do not call such a
-    field maybe missing. Models that never leave the server are plain.
-    """
-
-    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
 
 class ReviewMode(StrEnum):
@@ -64,16 +52,16 @@ class FileStatus(StrEnum):
     RENAMED = auto()
 
 
-class DiffLine(ReviewModel):
+class DiffLine(BaseModel):
     """A single line in a diff hunk."""
 
-    type: LineType
-    old_no: int | None = None
-    new_no: int | None = None
+    kind: LineType
+    old_number: int | None = None
+    new_number: int | None = None
     content: str
 
 
-class DiffHunk(ReviewModel):
+class DiffHunk(BaseModel):
     """A contiguous block of changes in a file."""
 
     header: str
@@ -82,7 +70,7 @@ class DiffHunk(ReviewModel):
     lines: list[DiffLine]
 
 
-class DiffFile(ReviewModel):
+class DiffFile(BaseModel):
     """A file that has been changed.
 
     A file can change without producing hunks: binary content has no lines to
@@ -151,7 +139,7 @@ EpochMillis = Annotated[int, Field(ge=0)]
 MAX_QUOTE_LINES = 200
 
 
-class AnchorBase(ReviewModel):
+class AnchorBase(BaseModel):
     """What every kind of anchor has, whatever it hangs on.
 
     Where it hangs goes stale as the work moves things; what it said when it
@@ -200,17 +188,17 @@ class LineAnchor(AnchorBase):
 type Anchor = LineAnchor
 
 
-class Turn(ReviewModel):
+class Turn(BaseModel):
     """One thing said in a thread after the comment that opened it."""
 
     author: TurnAuthor
     body: str
-    round: int = 1
+    round: int
     # Screenshots pasted with it, as files whoever answers can open
     images: list[Path] = []
 
 
-class Thread(ReviewModel):
+class Thread(BaseModel):
     """A thread hanging on something the reader reads, and everything said in it.
 
     The comment that opened it stays in `body`, and everything said
@@ -238,7 +226,6 @@ class Thread(ReviewModel):
     # an agent reading a settled thread should not act on it again.
     resolved: bool
 
-    @computed_field
     @property
     def where(self) -> str:
         """The place, named the way the review names it everywhere it is told."""
@@ -297,7 +284,7 @@ class ReviewResult(BaseModel):
     comment_count: int
 
 
-class ThreadQuestion(ReviewModel):
+class ThreadQuestion(BaseModel):
     """Something the reader asked in one thread, with the whole thread around it."""
 
     # Which question in that thread. A thread can have more than one waiting
@@ -312,7 +299,7 @@ class ThreadQuestion(ReviewModel):
     thread: Thread
 
 
-class PanelMessage(ReviewModel):
+class PanelMessage(BaseModel):
     """Something the reader typed in the agent panel.
 
     A thread is about one line; this is about everything else — the plan,
@@ -328,7 +315,7 @@ class PanelMessage(ReviewModel):
     images: list[Path] = []
 
 
-class AgentStatus(ReviewModel):
+class AgentStatus(BaseModel):
     """What the agent has said about itself.
 
     Nothing here can be measured from this side — the agent lives in another
@@ -350,14 +337,14 @@ MAX_STEP_LENGTH = 200
 StepText = Annotated[str, Field(min_length=1, max_length=MAX_STEP_LENGTH)]
 
 
-class ProgressStep(ReviewModel):
+class ProgressStep(BaseModel):
     """One branch of the work: something being done, or something done."""
 
     text: StepText
     done: bool = False
 
 
-class AgentWork(ReviewModel):
+class AgentWork(BaseModel):
     """What the agent is doing right now, whole: it replaces whatever was showing.
 
     The review alone decides when it ends — an empty report, the answer to
@@ -377,7 +364,7 @@ class AgentWork(ReviewModel):
     at: EpochMillis
 
 
-class PanelCancel(ReviewModel):
+class PanelCancel(BaseModel):
     """The reader withdrawing a panel message before it was answered.
 
     A request, not a kill: it goes onto the same queue as everything else,
@@ -387,7 +374,7 @@ class PanelCancel(ReviewModel):
     message_id: str
 
 
-class PanelEntry(ReviewModel):
+class PanelEntry(BaseModel):
     """One thing said in the panel, kept so a later agent can catch up.
 
     The reader's browser remembers the whole conversation across a reload;
@@ -403,7 +390,7 @@ class PanelEntry(ReviewModel):
     images: list[Path] = []
 
 
-class RoundSubmission(ReviewModel):
+class RoundSubmission(BaseModel):
     """One round of a review, on its way to whoever answers it.
 
     A round is everything written since the last one was sent. The review
@@ -515,17 +502,6 @@ class VersionOnOffer(BaseModel):
     changed: int | None
 
 
-class ReviewWorkspace(BaseModel):
-    """Where a review writes, so nothing of it lands in the repository under review."""
-
-    # Where the trees written down at every take of the diff are kept. None
-    # in a review whose content did not come from a repository: it leaves no
-    # marks, and so cannot offer its own rounds as bases.
-    objects: Path | None
-    # Where the images the reader pastes into the panel are kept
-    images: Path
-
-
 class Theme(StrEnum):
     """How the review is coloured: as the system says, or always light or dark."""
 
@@ -541,7 +517,7 @@ class DiffLayout(StrEnum):
     SPLIT = auto()
 
 
-class ReaderSettings(ReviewModel):
+class ReaderSettings(BaseModel):
     """How this reader reads a review, the same in every review on the machine.
 
     Each field holds what a reader who has never chosen gets.
@@ -555,30 +531,8 @@ class ReaderSettings(ReviewModel):
     sound_on_replies: bool = False
 
 
-class GuideState(ReviewModel):
+class GuideState(BaseModel):
     """What the review remembers of having shown this reader around."""
 
     # The release whose news the reader was last shown
     seen_release: str | None = None
-
-
-class ReaderFiles(BaseModel):
-    """Where what a review remembers about its reader is kept, for every review.
-
-    Two files for two kinds of thing: what the reader chose, kept with their
-    configuration, and what the review noticed, kept with other programs'
-    state. Configuration is often kept in git, where a release number
-    changing with every upgrade would be noise.
-    """
-
-    settings: Path
-    guide: Path
-
-
-class StoredImage(BaseModel):
-    """An image the reader pasted, written into the review's workspace."""
-
-    image_id: str
-    path: Path
-    media_type: str
-    size: int

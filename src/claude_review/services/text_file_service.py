@@ -8,8 +8,8 @@ line with a single line number — there is no "old" vs "new" distinction.
 
 from pathlib import Path
 
-from claude_review.domain.exceptions import UnreadableContentError
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.services.unreadable_content import UnreadableContentError
 
 
 class TextFileService:
@@ -77,7 +77,7 @@ class TextFileService:
     def _build_diff_file(self, path: str, raw_lines: list[str]) -> DiffFile:
         """Wrap lines into a DiffFile with a single all-context hunk."""
         diff_lines = [
-            DiffLine(type=LineType.CONTEXT, old_no=None, new_no=i, content=line)
+            DiffLine(kind=LineType.CONTEXT, old_number=None, new_number=i, content=line)
             for i, line in enumerate(raw_lines, start=1)
         ]
         hunk = DiffHunk(

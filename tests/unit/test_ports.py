@@ -5,8 +5,8 @@ from collections.abc import Iterator
 
 import pytest
 
-from claude_review.domain.exceptions import PortUnavailableError
 from claude_review.hosting.address import LOOPBACK
+from claude_review.hosting.errors import PortUnavailableError
 from claude_review.hosting.ports import ANY_FREE_PORT, STABLE_PORT_CEILING, STABLE_PORT_FLOOR, bind, stable_port
 
 A_REVIEW = "/home/dev/project\nHEAD~3"
