@@ -13,8 +13,7 @@
 	let { file, language }: Props = $props();
 	const review = useReview();
 
-	const isDiffMode = $derived(review.mode === 'diff');
-	const renderedText = $derived(assembleText(file, isDiffMode));
+	const renderedText = $derived(assembleText(file, review.mode));
 
 	let leftPane: HTMLDivElement | undefined = $state();
 	let rightPane: HTMLDivElement | undefined = $state();

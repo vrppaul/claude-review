@@ -6,7 +6,12 @@
 	import { highlightFile } from '$lib/utils/highlight';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { createLineSelection, rowOfLine } from '$lib/utils/line-selection.svelte';
+	import {
+		createLineSelection,
+		getLineNumber,
+		lineSide,
+		rowOfLine
+	} from '$lib/utils/line-selection.svelte';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -81,9 +86,9 @@
 			.flatMap((hunk) => hunk.lines)
 			.filter(
 				(line) =>
-					selection.lineSide(line) === at.side &&
-					selection.getLineNumber(line) >= at.line &&
-					selection.getLineNumber(line) <= at.endLine
+					lineSide(line) === at.side &&
+					getLineNumber(line) >= at.line &&
+					getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -173,8 +178,8 @@
 				<tbody>
 					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
 						{@const flatIdx = hunkOffsets[hunkIdx] + lineIdx}
-						{@const lineNo = selection.getLineNumber(line)}
-						{@const side = selection.lineSide(line)}
+						{@const lineNo = getLineNumber(line)}
+						{@const side = lineSide(line)}
 						{@const lineComments = commentsByRow.get(`${side}:${lineNo}`)}
 						{@const inRange = selection.isHighlighted(side, lineNo)}
 						{@const showCommentBox = selection.commentingAt?.anchorIndex === flatIdx}

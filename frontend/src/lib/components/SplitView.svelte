@@ -4,7 +4,12 @@
 	import { lineRangeLabel } from '$lib/utils/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import { createLineSelection, rowOfLine } from '$lib/utils/line-selection.svelte';
+	import {
+		createLineSelection,
+		getLineNumber,
+		lineSide,
+		rowOfLine
+	} from '$lib/utils/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
 	import { withRevealed } from '$lib/utils/expansions';
 	import { applyWordMarks } from '$lib/utils/word-diff';
@@ -73,9 +78,9 @@
 			.flatMap((hunk) => hunk.lines)
 			.filter(
 				(line) =>
-					selection.lineSide(line) === at.side &&
-					selection.getLineNumber(line) >= at.line &&
-					selection.getLineNumber(line) <= at.endLine
+					lineSide(line) === at.side &&
+					getLineNumber(line) >= at.line &&
+					getLineNumber(line) <= at.endLine
 			)
 			.map((line) => line.content);
 	});
@@ -124,16 +129,16 @@
 	}
 
 	function cellSide(cell: SplitCell): LineSide {
-		return selection.lineSide(cell.line);
+		return lineSide(cell.line);
 	}
 
 	function commentsFor(cell: SplitCell | undefined): ReturnType<typeof commentsByRow.get> {
 		if (!cell) return undefined;
-		return commentsByRow.get(`${cellSide(cell)}:${selection.getLineNumber(cell.line)}`);
+		return commentsByRow.get(`${cellSide(cell)}:${getLineNumber(cell.line)}`);
 	}
 
 	function marked(cell: SplitCell): boolean {
-		return selection.isHighlighted(cellSide(cell), selection.getLineNumber(cell.line));
+		return selection.isHighlighted(cellSide(cell), getLineNumber(cell.line));
 	}
 
 	/** Selection is added to the change rather than replacing it, so a line

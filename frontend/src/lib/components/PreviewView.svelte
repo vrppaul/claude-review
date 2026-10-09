@@ -11,8 +11,7 @@
 	let { file }: Props = $props();
 	const review = useReview();
 
-	const isDiffMode = $derived(review.mode === 'diff');
-	const fullText = $derived(assembleText(file, isDiffMode));
+	const fullText = $derived(assembleText(file, review.mode));
 	const commentCount = $derived(review.threads.onFile(file.path).length);
 </script>
 

@@ -179,8 +179,5 @@ export function createLineSelection(rules: SelectionRules) {
       }
       return false;
     },
-
-    getLineNumber,
-    lineSide,
   };
 }

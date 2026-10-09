@@ -65,11 +65,6 @@ export function elementsFor(names: string[]): HTMLElement[] {
     .filter((element): element is HTMLElement => element !== null);
 }
 
-/** The frame around every place that is drawn, or null for none. */
-export function frameAround(names: string[]): Frame | null {
-  return frameOf(elementsFor(names));
-}
-
 function frameOf(elements: HTMLElement[]): Frame | null {
   const rects = elements.map((element) => element.getBoundingClientRect());
   if (rects.length === 0) return null;
