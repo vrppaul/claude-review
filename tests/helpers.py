@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-import uvicorn
 from anyio import EndOfStream
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -44,11 +43,13 @@ from claude_review.domain.models import (
     TurnAuthor,
 )
 from claude_review.domain.protocols import Clock
+from claude_review.hosting.ports import bind
+from claude_review.hosting.review_server import ReviewServer
 from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import PushKind
 from claude_review.presentation.state import ServerState
 from claude_review.repositories.system_clock import SystemClock
-from claude_review.services.review_lifetime import ReviewLifetime
+from claude_review.services.review_lifetime import EndReason, ReviewLifetime
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -268,11 +269,12 @@ class ReviewFactory:
         title: str = "",
         keeps_marks: bool = True,
         clock: Clock | None = None,
+        lifetime: ReviewLifetime | None = None,
     ) -> FastAPI:
         writes_marks = root is not None and keeps_marks
         return create_app(
             diff_files=diff_files,
-            state=ServerState(ReviewLifetime()),
+            state=ServerState(lifetime or ReviewLifetime()),
             mode=mode,
             workspace=self._marking_workspace if writes_marks else self._workspace,
             reader_files=self._reader_files,
@@ -500,11 +502,11 @@ class RunningReview(BaseModel):
 
 
 class ServedReview(BaseModel):
-    """A server a test started, and the task serving it until the test is over."""
+    """A review a test started, and the task serving it until the review ends."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    server: uvicorn.Server
+    lifetime: ReviewLifetime
     serving: asyncio.Task[None]
 
 
@@ -523,27 +525,21 @@ class ReviewServers:
         root: Path | None = None,
         title: str = "",
     ) -> RunningReview:
-        app = self._reviews.app(diff_files, mode=mode, root=root, title=title)
-        # Match the command line: the default picks uvicorn's older websockets integration
-        config = uvicorn.Config(app, host=LOOPBACK, port=ANY_PORT, log_level="warning", ws="websockets-sansio")
-        server = uvicorn.Server(config)
-        self._running.append(ServedReview(server=server, serving=asyncio.create_task(server.serve())))
+        lifetime = ReviewLifetime()
+        app = self._reviews.app(diff_files, mode=mode, root=root, title=title, lifetime=lifetime)
+        # The server the command line runs, so a browser test meets the same one
+        server = ReviewServer(app, lifetime)
+        listening = bind(ANY_PORT, may_fall_back=False)
+        self._running.append(
+            ServedReview(lifetime=lifetime, serving=asyncio.create_task(server.serve_until_ended(listening)))
+        )
 
-        await _until_started(server)
-        return RunningReview(port=server.servers[0].sockets[0].getsockname()[1])
+        if not await asyncio.wait_for(server.came_up(), timeout=STARTUP_SECONDS):
+            failure = "the review's server stopped before it listened"
+            raise AssertionError(failure)
+        return RunningReview(port=listening.getsockname()[1])
 
     async def stop(self) -> None:
         for served in self._running:
-            served.server.should_exit = True
+            served.lifetime.end(EndReason.FINISHED)
             await served.serving
-
-
-async def _until_started(server: uvicorn.Server) -> None:
-    """Return once the server is listening."""
-    deadline = asyncio.get_running_loop().time() + STARTUP_SECONDS
-    while asyncio.get_running_loop().time() < deadline:
-        if server.started:
-            return
-        await asyncio.sleep(LOOK_EVERY_SECONDS)
-    failure = f"the review did not come up within {STARTUP_SECONDS} seconds"
-    raise AssertionError(failure)

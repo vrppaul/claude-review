@@ -13,28 +13,36 @@ from claude_review.services.thread_markdown import tags_of
 GIST_LENGTH = 72
 # What stands in for the rest of a line cut short
 ELLIPSIS = "…"
-# What a message that is an image alone says in the index, where an empty line says nothing
-IMAGE_ONLY = "(image)"
-# How each side of the panel is named to the agent reading it
+# How each side of the review is named to the agent reading it
 SPEAKERS = {TurnAuthor.READER: "you", TurnAuthor.AUTHOR: "me"}
 # How deep what belongs to a line of the index is set under it
 INDENT = "  "
 MARK_SEPARATOR = " · "
 
+# The words the index and a thread are laid out with
+NOBODY_ANSWERING = "nobody answering"
+PANEL_HEADING = "panel:"
+# What a message that is an image alone says, where an empty line says nothing
+IMAGE_ONLY = "(image)"
+IMAGE_LABEL = "image"
+RAISED_BY_THE_AGENT = "yours"
+QUOTE_LABEL = "lines"
+
 
 def render_context(seen: ContextResponse) -> str:
     """Lay the review out for reading, in as few lines as it can be said: one per thread, the panel in short."""
     open_count = sum(1 for summary in seen.threads if not summary.resolved and not summary.outdated)
+    heading = [seen.title, f"round {seen.round}", _counted(seen.file_count, "file")]
+    if not seen.answerer_attached:
+        heading.append(NOBODY_ANSWERING)
     lines = [
+        MARK_SEPARATOR.join(heading),
         MARK_SEPARATOR.join(
             [
-                seen.title,
-                f"round {seen.round}",
-                _counted(seen.file_count, "file"),
-                *([] if seen.answerer_attached else ["nobody answering"]),
+                f"{_counted(len(seen.threads), 'thread')}, {open_count} open",
+                f"{PANEL_HEADING} {_counted(len(seen.panel), 'message')}",
             ]
         ),
-        f"{_counted(len(seen.threads), 'thread')}, {open_count} open · panel: {_counted(len(seen.panel), 'message')}",
     ]
 
     for summary in seen.threads:
@@ -44,10 +52,10 @@ def render_context(seen: ContextResponse) -> str:
 
     if seen.panel:
         lines.append("")
-        lines.append("panel:")
+        lines.append(PANEL_HEADING)
         for entry in seen.panel:
-            lines.append(f"{INDENT}{SPEAKERS[entry.author]}: {_gist(entry.body) or IMAGE_ONLY}")
-            lines.extend(f"{INDENT * 2}image: {path}" for path in entry.images)
+            lines.append(_indent(_gist(entry.body) or IMAGE_ONLY, who=SPEAKERS[entry.author]))
+            lines.extend(f"{INDENT * 2}{IMAGE_LABEL}: {path}" for path in entry.images)
 
     return "\n".join(lines)
 
@@ -56,9 +64,9 @@ def render_thread(thread: Thread) -> str:
     """One thread in full: everything said in it, and the lines it hangs on."""
     lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of(thread))}"]
     lines.append(_indent(thread.body))
-    lines.extend(_indent(turn.body, who=turn.author) for turn in thread.turns)
+    lines.extend(_indent(turn.body, who=SPEAKERS[turn.author]) for turn in thread.turns)
     if thread.anchor.quote:
-        lines.append(_indent("\n".join(thread.anchor.quote), who="lines"))
+        lines.append(_indent("\n".join(thread.anchor.quote), who=QUOTE_LABEL))
     return "\n".join(lines)
 
 
@@ -66,7 +74,7 @@ def _marks(summary: ThreadSummary) -> str:
     """What is not ordinary about a thread, and nothing when it is."""
     marks = tags_of(summary.severity, resolved=summary.resolved, outdated=summary.outdated)
     if summary.raised_by == TurnAuthor.AUTHOR:
-        marks.append("yours")
+        marks.append(RAISED_BY_THE_AGENT)
     if summary.turn_count:
         marks.append(_counted(summary.turn_count, "turn"))
     return MARK_SEPARATOR.join(marks)

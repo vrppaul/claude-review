@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from claude_review.cli.serving import DISCONNECT_GRACE
+from claude_review.hosting.serving import DISCONNECT_GRACE
 from claude_review.presentation.schemas import AgentWork
 from claude_review.presentation.state import ServerState
 from claude_review.services.review_lifetime import ReviewLifetime

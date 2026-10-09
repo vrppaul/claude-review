@@ -3,6 +3,7 @@
 import asyncio
 
 from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from tests.helpers import SETTLE_SECONDS
 
 # Long enough to be sure nothing ended the review, short enough to cost nothing
 GLANCE_SECONDS = 0.01
@@ -32,7 +33,7 @@ async def test_whoever_waits_on_a_review_hears_it_end() -> None:
 
     lifetime.end(EndReason.STOPPED)
 
-    await asyncio.wait_for(waiting, timeout=1)
+    await asyncio.wait_for(waiting, timeout=SETTLE_SECONDS)
 
 
 async def test_a_look_at_a_review_still_running_says_it_has_not_ended() -> None:

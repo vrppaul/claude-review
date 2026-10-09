@@ -67,15 +67,18 @@ somebody who is waiting.
    ```bash
    log=$(mktemp -t claude-review.XXXXXX)
    setsid nohup claude-review diff > "$log" 2>&1 &
-   echo "$log"
+   until grep -q 'Review ready at' "$log" || ! kill -0 $! 2>/dev/null; do sleep 0.2; done
+   echo "$log"; cat "$log"
    ```
+   It waits until the review says where it is — or stops, and then the log
+   says why.
    Detached, rather than a bare `&`: started in the shell's own session, the
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS
    ships no `setsid` — `nohup … &` on its own is the fallback.
 
-   Once it is up the log says `Review ready at http://127.0.0.1:<port>`,
-   whether or not a window opened. That port is the `--port <port>` every
+   The log then says `Review ready at http://127.0.0.1:<port>`, whether or
+   not a window opened. That port is the `--port <port>` every
    command below takes. Give them the address anyway: over ssh or in a
    container there is nothing to open, and a tab closed by accident needs the
    way back. Add `--no-open` after the command only when you know a window
@@ -88,9 +91,9 @@ somebody who is waiting.
 
    The reader is in the review from the moment it opens, and until your
    first `wait` the panel tells them the agent has not joined yet. So start
-   the loop from step 5 in your very next call, before reading the log or
-   catching up: `wait` hands over only what happens after it, and nothing
-   that step 4 prints goes away while you listen.
+   the loop from step 5 in your very next call, the moment you have the
+   port, before catching up: `wait` hands over only what happens after it,
+   and nothing that step 4 prints goes away while you listen.
 
 4. Catch up, if this review was already under way when you arrived:
    ```bash
@@ -124,8 +127,8 @@ somebody who is waiting.
      case "$out" in *'"type":"closed"'*) break ;; esac
    done
    ```
-   - `{"type": "question", "question": {"question_id": "...", "body": "...",
-     "images": [...], "thread": {...}}}` — answer it (step 6), then wait
+   - `{"type":"question","question":{"question_id":"...","body":"...",
+     "images":[...],"thread":{...}}}` — answer it (step 6), then wait
      again. `body` and `images` are what is asked: the user's last reply in
      the thread, or the comment that opened it when they have said nothing
      since. `thread` is the whole thread it was asked in: `thread_id`;
@@ -137,8 +140,8 @@ somebody who is waiting.
      `author` on a thread you opened yourself. Every `images` holds absolute
      paths to screenshots the reader pasted, and the text beside it may be
      empty when a screenshot is all there is.
-   - `{"type": "message", "message": {"message_id": "panel-1", "body": "...",
-     "threads": [...], "images": [...]}}` — the user has said something in
+   - `{"type":"message","message":{"message_id":"panel-1","body":"...",
+     "threads":[...],"images":[...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:
      the plan, the tests, a file nobody commented on. Answer it with `say`
      (step 7). Any threads it points at come with it, in the same shape as
@@ -146,17 +149,17 @@ somebody who is waiting.
      the text may be empty when an image is the whole question: open each
      with your file reader before answering. They outlive the review in
      the system's temporary directory, so the last round's are still there.
-   - `{"type": "round", "round": {"number": 1, "markdown": "..."}}` — the
+   - `{"type":"round","round":{"number":1,"markdown":"..."}}` — the
      user has sent a round. The markdown is the review itself; address it as
      you would a finished one, then take the diff again (step 9) and keep
      waiting. An `Image: /path` line under a comment or a turn is a
      screenshot pasted there: open it before answering what it came with.
-   - `{"type": "cancel", "cancel": {"message_id": "panel-1"}}` — the user has
+   - `{"type":"cancel","cancel":{"message_id":"panel-1"}}` — the user has
      taken a message back. Drop what you were doing for it if you still can,
      and say nothing about it unless it is already half done.
-   - `{"type": "timeout"}` — nothing was asked. Only a `wait` without
+   - `{"type":"timeout"}` — nothing was asked. Only a `wait` without
      `--until-event` prints it, after `--seconds`; wait again.
-   - `{"type": "closed"}` — the review is over. Stop looping. The last round
+   - `{"type":"closed"}` — the review is over. Stop looping. The last round
      reached you as its own event just before this one; the background
      process also writes it to its log on the way out, which is where to
      look if you were not waiting at the time. Anything else you never took

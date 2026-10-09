@@ -4,12 +4,16 @@ Each names the review by its port and makes one call, so an agent drives
 them from a loop of its own and reads and writes code between them.
 """
 
+from typing import Any
+
 import click
+from pydantic import ValidationError
 
 from claude_review.cli.line_span import LINE_SPAN, LineSpan
 from claude_review.cli.rendering import render_context, render_thread
-from claude_review.cli.review_client import EVENTS, ReviewClient
+from claude_review.cli.review_client import EVENTS, FieldRefusal, ReviewClient, fields_said_wrong
 from claude_review.domain.models import CommentSeverity, LineAnchor, LineSide
+from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.schemas import (
     DEFAULT_WAIT_SECONDS,
     MAX_WAIT_SECONDS,
@@ -24,6 +28,25 @@ from claude_review.presentation.schemas import (
 )
 
 
+class AgentCommand(click.Command):
+    """A command against an open review, which refuses a request the review would refuse before sending it.
+
+    The review's own rules — an id's length, a body that says something —
+    are checked as the request is built, and a request that breaks one is
+    the typist's to fix: said as a usage error, naming the field. What the
+    review answers is read inside the client, so nothing else here raises
+    a validation error.
+    """
+
+    def invoke(self, ctx: click.Context) -> Any:
+        try:
+            return super().invoke(ctx)
+        except ValidationError as invalid:
+            refusals = [FieldRefusal.model_validate(detail) for detail in invalid.errors()]
+            msg = f"the review would refuse this: {fields_said_wrong(refusals)}"
+            raise click.UsageError(msg, ctx) from invalid
+
+
 def _client_for(_context: click.Context, _parameter: click.Parameter, port: int) -> ReviewClient:
     """The review a command calls, from the port it is served on."""
     return ReviewClient(port)
@@ -31,11 +54,16 @@ def _client_for(_context: click.Context, _parameter: click.Parameter, port: int)
 
 # Every command here calls one review, named by its port
 review_port = click.option(
-    "--port", "client", required=True, type=int, callback=_client_for, help="Port the review is served on."
+    "--port",
+    "client",
+    required=True,
+    type=click.IntRange(min=LOWEST_PORT, max=HIGHEST_PORT),
+    callback=_client_for,
+    help="Port the review is served on.",
 )
 
 
-@click.command("wait")
+@click.command("wait", cls=AgentCommand)
 @review_port
 @click.option(
     "--seconds",
@@ -64,7 +92,7 @@ def wait_command(client: ReviewClient, seconds: float, until_event: bool) -> Non
     click.echo(EVENTS.dump_json(event).decode())
 
 
-@click.command("reply")
+@click.command("reply", cls=AgentCommand)
 @review_port
 @click.option("--thread", required=True, type=str, help="Thread the answer belongs to.")
 @click.option(
@@ -84,7 +112,7 @@ def reply_command(client: ReviewClient, thread: str, question: str | None, body:
     client.reply(ReplyRequest(thread_id=thread, question_id=question, body=body))
 
 
-@click.command("context")
+@click.command("context", cls=AgentCommand)
 @review_port
 @click.option("--thread", type=str, default=None, help="One thread, in full, rather than the index.")
 @click.option("--json", "as_json", is_flag=True, help="The whole thing as JSON, for a program to read.")
@@ -107,7 +135,7 @@ def context_command(client: ReviewClient, thread: str | None, as_json: bool) -> 
         click.echo(seen.model_dump_json() if as_json else render_context(seen))
 
 
-@click.command("say")
+@click.command("say", cls=AgentCommand)
 @review_port
 @click.option(
     "--message",
@@ -134,7 +162,7 @@ def say_command(client: ReviewClient, message: str | None, files: tuple[str, ...
     client.say(SayRequest(message_id=message, body=body, files=list(files)))
 
 
-@click.command("progress")
+@click.command("progress", cls=AgentCommand)
 @review_port
 @click.option("--message", type=str, default=None, help="Message being worked on, from the event.")
 @click.option("--file", "files", multiple=True, help="A file being worked on. Repeatable.")
@@ -173,7 +201,7 @@ def progress_command(
     client.report_progress(ProgressRequest(message_id=message, text=text, files=list(files), steps=branches))
 
 
-@click.command("show")
+@click.command("show", cls=AgentCommand)
 @review_port
 @click.option("--file", "path", required=True, type=str, help="File to bring into view, as the diff names it.")
 def show_command(client: ReviewClient, path: str) -> None:
@@ -186,7 +214,7 @@ def show_command(client: ReviewClient, path: str) -> None:
     client.show(ShowRequest(file=path))
 
 
-@click.command("point")
+@click.command("point", cls=AgentCommand)
 @review_port
 @click.option("--file", "path", required=True, type=str, help="File the thread hangs on, as the diff names it.")
 @click.option("--lines", required=True, type=LINE_SPAN, help='Line or range it is about, e.g. "42" or "42-47".')
@@ -219,7 +247,7 @@ def point_command(
     click.echo(raised.model_dump_json())
 
 
-@click.command("status")
+@click.command("status", cls=AgentCommand)
 @review_port
 @click.option("--model", type=str, default=None, help="Which model is answering.")
 @click.option(
@@ -242,7 +270,7 @@ def status_command(client: ReviewClient, model: str | None, context: str | None)
     client.report_status(StatusRequest(model=model, context=context))
 
 
-@click.command("round")
+@click.command("round", cls=AgentCommand)
 @review_port
 def round_command(client: ReviewClient) -> None:
     """Take the diff again, after making the changes a round asked for.

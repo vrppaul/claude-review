@@ -5,8 +5,8 @@ import socket
 
 import structlog
 
-from claude_review.cli.address import LOOPBACK
 from claude_review.domain.exceptions import PortUnavailableError
+from claude_review.hosting.address import LOOPBACK
 
 log = structlog.get_logger()
 
@@ -19,6 +19,8 @@ PORT_DIGEST_BYTES = 4
 
 # The port that asks the kernel for any free one
 ANY_FREE_PORT = 0
+# The ports a review can be found on
+LOWEST_PORT = 1
 HIGHEST_PORT = 65_535
 
 

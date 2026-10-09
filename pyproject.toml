@@ -31,11 +31,6 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = [
-    "unit: pure logic tests, no I/O",
-    "integration: tests with real git repos or server",
-    "e2e: full browser round-trip tests",
-]
 
 [build-system]
 requires = ["hatchling"]

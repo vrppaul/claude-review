@@ -34,6 +34,10 @@ class GitRepositoryProtocol(Protocol):
         """
         ...
 
+    async def top_level(self, path: Path) -> Path | None:
+        """Return the root of the repository containing ``path``, or None outside any."""
+        ...
+
     async def changed_paths(self, path: Path) -> list[str]:
         """Return every path where the working tree differs from HEAD, untracked files included."""
         ...

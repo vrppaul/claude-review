@@ -5,9 +5,9 @@ import socket
 import pytest
 from click.testing import CliRunner, Result
 
-from claude_review.cli.address import LOOPBACK
 from claude_review.cli.main import main
-from claude_review.cli.ports import ANY_FREE_PORT
+from claude_review.hosting.address import LOOPBACK
+from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.schemas import MAX_ID_LENGTH, MAX_WAIT_SECONDS
 
 # What click exits with when a command is typed wrong, before it runs
@@ -15,6 +15,8 @@ USAGE_ERROR = 2
 # What a command that ran and failed exits with
 FAILED = 1
 
+# Where the help starts listing commands, one to a line
+COMMANDS_HEADING = "Commands:"
 LAUNCH_COMMANDS = ("diff", "files", "transcript")
 AGENT_COMMANDS = ("wait", "reply", "context", "say", "progress", "show", "point", "status", "round")
 LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
@@ -37,13 +39,18 @@ def _failed_in_a_line(result: Result, exit_code: int) -> bool:
     return result.exit_code == exit_code and isinstance(result.exception, SystemExit)
 
 
+def _offered_commands(help_text: str) -> set[str]:
+    """The commands the help lists, one to a line under its heading."""
+    listed = help_text.split(COMMANDS_HEADING, 1)[1]
+    return {line.split()[0] for line in listed.splitlines() if line.strip()}
+
+
 def test_every_command_is_offered() -> None:
     """An agent driving a review has to find them without being told."""
     result = _run("--help")
 
     assert result.exit_code == 0
-    for command in (*LAUNCH_COMMANDS, *AGENT_COMMANDS):
-        assert command in result.output
+    assert _offered_commands(result.output) == {*LAUNCH_COMMANDS, *AGENT_COMMANDS}
 
 
 @pytest.mark.parametrize("command", LAUNCH_COMMANDS)
@@ -94,10 +101,18 @@ def test_a_call_to_a_review_that_is_not_there_explains_itself(unused_port: str) 
     assert "no review is listening" in result.output
 
 
-def test_a_request_the_review_would_refuse_is_not_sent(unused_port: str) -> None:
-    """Said in a line naming the field, rather than a page of validation errors."""
-    result = _run("reply", "--port", unused_port, "--thread", LONGER_THAN_ANY_ID, "Because")
+@pytest.mark.parametrize(
+    ("arguments", "field"),
+    [
+        (["reply", "--thread", LONGER_THAN_ANY_ID, "Because"], "thread_id"),
+        (["say", ""], "body"),
+    ],
+    ids=["an-overlong-thread-id", "an-empty-body"],
+)
+def test_a_request_the_review_would_refuse_is_not_sent(unused_port: str, arguments: list[str], field: str) -> None:
+    """Said as the typist's to fix, naming the field, rather than as a page of validation errors."""
+    command, *rest = arguments
+    result = _run(command, "--port", unused_port, *rest)
 
-    assert _failed_in_a_line(result, FAILED)
-    assert "would refuse" in result.output
-    assert "thread_id" in result.output
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert f"would refuse this: {field}:" in result.output

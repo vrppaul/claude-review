@@ -13,7 +13,7 @@ import structlog
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.repositories.git_repository import GitRepository
+from claude_review.domain.protocols import GitRepositoryProtocol
 from claude_review.services.diff_service import DiffService
 from claude_review.services.text_file_service import TextFileService
 from claude_review.services.transcript_service import TranscriptService
@@ -43,7 +43,7 @@ class ReviewOpening(BaseModel):
     base: str | None
 
 
-async def open_diff(location: Path, base: str | None) -> ReviewOpening:
+async def open_diff(location: Path, base: str | None, git_repository: GitRepositoryProtocol) -> ReviewOpening:
     """The changes in the repository `location` is in, against `base`, or uncommitted ones without it.
 
     Git reports paths relative to the repository root rather than to the
@@ -51,10 +51,9 @@ async def open_diff(location: Path, base: str | None) -> ReviewOpening:
     anything that reads those paths later — expanding a hunk's context — has
     to start there.
     """
-    git = GitRepository()
     log.info("loading_diff", path=str(location), base=base)
-    diff_files = await DiffService(git_repository=git).get_diff(location, base=base)
-    root = await git.top_level(location) or location
+    diff_files = await DiffService(git_repository=git_repository).get_diff(location, base=base)
+    root = await git_repository.top_level(location) or location
     return ReviewOpening(
         mode=ReviewMode.DIFF,
         diff_files=diff_files,

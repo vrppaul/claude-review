@@ -11,13 +11,12 @@ from typing import Any
 
 import click
 import structlog
-from pydantic import ValidationError
 
 from claude_review.cli.agent_commands import AGENT_COMMANDS
 from claude_review.cli.launch_commands import LAUNCH_COMMANDS
-from claude_review.cli.review_client import FieldRefusal, ReviewCallError, fields_said_wrong
-from claude_review.cli.review_server import ServerStartError
+from claude_review.cli.review_client import ReviewCallError
 from claude_review.domain.exceptions import GitError, PortUnavailableError, UnreadableContentError
+from claude_review.hosting.review_server import ServerStartError
 
 # What goes wrong in ordinary use, and is said in a line rather than a
 # traceback: no review on that port or a refusal from it, a directory that
@@ -38,11 +37,6 @@ class ReviewCommands(click.Group):
             return super().invoke(ctx)
         except EXPLAINED_FAILURES as failure:
             raise click.ClickException(str(failure)) from failure
-        except ValidationError as invalid:
-            # A request a command could not even build, from what it was given
-            refusals = [FieldRefusal.model_validate(detail) for detail in invalid.errors()]
-            msg = f"the review would refuse this: {fields_said_wrong(refusals)}"
-            raise click.ClickException(msg) from invalid
 
 
 @click.group(cls=ReviewCommands)

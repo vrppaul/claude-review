@@ -4,8 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.cli.openings import open_diff, open_files, open_transcript
 from claude_review.domain.models import ReviewMode
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.review_opening import open_diff, open_files, open_transcript
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
@@ -25,8 +26,8 @@ def _written(directory: Path, *names: str) -> list[Path]:
 
 
 async def test_a_diff_is_named_by_its_repository_and_what_it_is_compared_against(changed_repo: Path) -> None:
-    uncommitted = await open_diff(changed_repo, None)
-    since_a_commit = await open_diff(changed_repo, "HEAD")
+    uncommitted = await open_diff(changed_repo, None, GitRepository())
+    since_a_commit = await open_diff(changed_repo, "HEAD", GitRepository())
 
     assert uncommitted.title == f"{changed_repo.name}: uncommitted changes"
     assert since_a_commit.title == f"{changed_repo.name}: changes since HEAD"
@@ -37,8 +38,8 @@ async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed
     nested = changed_repo / "sub"
     nested.mkdir()
 
-    from_inside = await open_diff(nested, None)
-    from_the_root = await open_diff(changed_repo, None)
+    from_inside = await open_diff(nested, None, GitRepository())
+    from_the_root = await open_diff(changed_repo, None, GitRepository())
 
     assert from_inside.root == from_the_root.root
     assert from_inside.title == from_the_root.title
@@ -47,7 +48,9 @@ async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed
 
 async def test_a_diff_against_another_base_is_another_review(changed_repo: Path) -> None:
     """Its threads are about other changes, and its draft must not be mixed with this one's."""
-    assert (await open_diff(changed_repo, None)).identity != (await open_diff(changed_repo, "HEAD")).identity
+    assert (await open_diff(changed_repo, None, GitRepository())).identity != (
+        await open_diff(changed_repo, "HEAD", GitRepository())
+    ).identity
 
 
 async def test_files_are_named_by_what_was_opened(tmp_path: Path) -> None:

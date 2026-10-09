@@ -384,8 +384,8 @@
 							the listening half in a loop:
 						</p>
 						<pre
-							class="cr-code cr-muted mt-2 w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2">claude-review --no-open diff &
-claude-review wait --port &lt;port&gt;</pre>
+							class="cr-code cr-muted mt-2 w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2">claude-review diff --no-open &
+claude-review wait --port &lt;port&gt; --until-event</pre>
 					</details>
 				</div>
 			{/if}

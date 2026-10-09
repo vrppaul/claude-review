@@ -15,6 +15,10 @@ SERVER_LOG_LEVEL = "error"
 # The default picks uvicorn's older websockets integration, which warns on
 # every connection with websockets 14 and later
 WEBSOCKETS_IMPLEMENTATION = "websockets-sansio"
+# How long the requests still running when the review ends may take to
+# finish. An agent's wait ends with the review at once; nothing else should
+# take this long, and a review must not hang on its way out.
+GRACEFUL_SHUTDOWN_SECONDS = 5
 
 
 class ServerStartError(Exception):
@@ -32,7 +36,14 @@ class ReviewServer(uvicorn.Server):
     """
 
     def __init__(self, app: FastAPI, lifetime: ReviewLifetime) -> None:
-        super().__init__(uvicorn.Config(app, log_level=SERVER_LOG_LEVEL, ws=WEBSOCKETS_IMPLEMENTATION))
+        super().__init__(
+            uvicorn.Config(
+                app,
+                log_level=SERVER_LOG_LEVEL,
+                ws=WEBSOCKETS_IMPLEMENTATION,
+                timeout_graceful_shutdown=GRACEFUL_SHUTDOWN_SECONDS,
+            )
+        )
         self._lifetime = lifetime
         # Whether it came up: settled once it listens, or once it stops without ever listening
         self._came_up: asyncio.Future[bool] = asyncio.get_running_loop().create_future()

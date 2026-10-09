@@ -35,17 +35,22 @@ class ReviewLifetime:
 
     def __init__(self) -> None:
         self._ended = asyncio.Event()
-        self.reason: EndReason | None = None
+        self._reason: EndReason | None = None
 
     @property
     def has_ended(self) -> bool:
         return self._ended.is_set()
 
+    @property
+    def reason(self) -> EndReason | None:
+        """Why it ended, once it has."""
+        return self._reason
+
     def end(self, reason: EndReason) -> None:
         """End the review, unless something has already: the first reason is the one kept."""
         if self.has_ended:
             return
-        self.reason = reason
+        self._reason = reason
         log.info("review_ended", reason=reason)
         self._ended.set()
 

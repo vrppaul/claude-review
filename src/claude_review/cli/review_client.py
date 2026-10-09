@@ -15,8 +15,8 @@ from urllib.parse import quote, urlencode
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from claude_review.cli.address import LOOPBACK
 from claude_review.domain.models import Thread
+from claude_review.hosting.address import LOOPBACK
 from claude_review.presentation.schemas import (
     ContextResponse,
     EventResponse,
@@ -161,13 +161,7 @@ class ReviewClient:
 
 def fields_said_wrong(refusals: list[FieldRefusal]) -> str:
     """Name each field a request had wrong, and why, on one line."""
-    return "; ".join(f"{_field_name(refusal.loc)}: {refusal.msg}" for refusal in refusals)
-
-
-def _field_name(location: tuple[str | int, ...]) -> str:
-    """The field as whoever typed the command knows it, without the part of the request it came in."""
-    named = location[1:] if location and location[0] in REQUEST_PARTS else location
-    return ".".join(str(part) for part in named)
+    return "; ".join(f"{'.'.join(str(part) for part in refusal.loc)}: {refusal.msg}" for refusal in refusals)
 
 
 def _reason(answer: bytes) -> str:
@@ -176,4 +170,17 @@ def _reason(answer: bytes) -> str:
         refusal = Refusal.model_validate_json(answer)
     except ValidationError:
         return answer.decode(errors="replace").strip()
-    return refusal.detail if isinstance(refusal.detail, str) else fields_said_wrong(refusal.detail)
+    if isinstance(refusal.detail, str):
+        return refusal.detail
+    return fields_said_wrong([_as_typed(field) for field in refusal.detail])
+
+
+def _as_typed(refusal: FieldRefusal) -> FieldRefusal:
+    """A field the review refused, named as whoever typed the command knows it.
+
+    The review names it under the part of the request it came in — `body`,
+    `query`, `path` — which says nothing to them.
+    """
+    location = refusal.loc
+    named = location[1:] if location and location[0] in REQUEST_PARTS else location
+    return refusal.model_copy(update={"loc": named})

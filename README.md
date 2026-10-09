@@ -47,8 +47,8 @@ Review any text files — plans, docs, configs, source code.
 Opens the current plan file for inline review before approving. You can also review arbitrary files from the CLI:
 
 ```bash
-claude-review --files plan.md
-claude-review --files design.md api.py schema.sql
+claude-review files plan.md
+claude-review files design.md api.py schema.sql
 ```
 
 Shows files with single-column line numbers, syntax highlighting based on file extension, and a flat file list sidebar.
@@ -64,7 +64,7 @@ Review a Claude Code conversation — every user and assistant message appears a
 Opens the current session's conversation for inline review. You can also review any JSONL conversation file from the CLI:
 
 ```bash
-claude-review --transcript ~/.claude/projects/<project>/<session-id>.jsonl
+claude-review transcript ~/.claude/projects/<project>/<session-id>.jsonl
 ```
 
 Shows messages newest-first with timestamps, merges consecutive same-role entries into turns, and filters out tool calls and thinking blocks.

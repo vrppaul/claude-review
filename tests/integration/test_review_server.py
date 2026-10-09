@@ -5,10 +5,10 @@ import socket
 
 import pytest
 
-from claude_review.cli.address import LOOPBACK
-from claude_review.cli.ports import ANY_FREE_PORT
-from claude_review.cli.review_server import ReviewServer, ServerStartError
 from claude_review.domain.models import ReviewMode
+from claude_review.hosting.address import LOOPBACK
+from claude_review.hosting.ports import ANY_FREE_PORT
+from claude_review.hosting.review_server import ReviewServer, ServerStartError
 from claude_review.services.review_lifetime import EndReason, ReviewLifetime
 from tests.helpers import SETTLE_SECONDS, ReviewFactory
 

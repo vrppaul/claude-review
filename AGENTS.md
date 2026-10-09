@@ -17,7 +17,7 @@ uv run claude-review diff                    # Run the tool (diff mode)
 uv run claude-review diff --base HEAD~3      # Diff since a specific commit
 uv run claude-review files f.md              # Run the tool (files mode)
 uv run claude-review transcript c.jsonl      # Run the tool (transcript mode)
-uv run claude-review --port 8080 diff        # Run on specific port
+uv run claude-review diff --port 8080        # Run on specific port
 cd frontend && pnpm install          # Install frontend dependencies
 cd frontend && pnpm build            # Build frontend (outputs to src/claude_review/static/dist/)
 cd frontend && pnpm test             # Run frontend tests
@@ -56,8 +56,10 @@ DDD-lite with clean layer separation:
 - **services/** — orchestration (DiffService, TextFileService, TranscriptService, ReviewService, TranscriptReviewService). Depends on domain + repository protocols.
 - **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
 - **presentation/** — FastAPI routes + Pydantic schemas + `Depends()` DI. Routes declare dependencies explicitly. What the agent waits on is `services/agent_inbox.py`; what the browser is pushed is the `ServerPush` union in `schemas.py`; `api_schema.py` writes the OpenAPI the browser's types come from.
+- **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the tasks that run until its `ReviewLifetime` (`services/review_lifetime.py`) ends. The one place the app, the services and the repositories are put together.
+- **cli/** — the command line: the launch commands (`diff`, `files`, `transcript`) hand a `ReviewOpening` (`services/review_opening.py`) to hosting; the agent's commands call an open review through `ReviewClient`. `main.py` is the one error boundary: ordinary failures are one line, faults keep their traceback.
 
-Dependencies flow inward: presentation → services → domain, repositories → domain
+Dependencies flow inward: cli → hosting → presentation → services → domain, repositories → domain
 
 ## Code Style
 

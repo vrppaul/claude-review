@@ -26,8 +26,8 @@ from websockets.exceptions import InvalidStatus
 from websockets.sync.client import ClientConnection, connect
 from websockets.typing import Origin
 
-from claude_review.cli.serving import DISCONNECT_GRACE
 from claude_review.domain.models import CommentSeverity
+from claude_review.hosting.serving import DISCONNECT_GRACE
 from claude_review.presentation.schemas import PushKind
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
 

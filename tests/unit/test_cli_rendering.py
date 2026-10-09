@@ -96,7 +96,7 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
 
     assert printed.startswith("comment-4  `src/routes.py`:118-130  question")
     assert "And if it does, what then?" in printed
-    assert "author: It cannot: one queue." in printed
+    assert "me: It cannot: one queue." in printed
     assert "lines:     return event" in printed
 
 

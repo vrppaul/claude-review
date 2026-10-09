@@ -74,17 +74,22 @@ def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
         yield page
 
 
-@pytest.fixture
-def logged() -> Iterator[list[EventDict]]:
-    """What the review logs during a test, at every level.
+@pytest.fixture(autouse=True)
+def logging_left_as_found() -> Iterator[None]:
+    """Put back how logging was set up once a test is over.
 
-    A test that runs the command line configures logging the way the command
-    does, which filters out everything short of critical; a level filtered out
-    is never seen here, so the configuration is set aside for the test and
-    put back after it.
+    A test that runs the command line sets logging up the way the command
+    does, for the whole process — silent short of critical — and no test
+    after it should inherit that.
     """
     configured = structlog.get_config()
+    yield
+    structlog.configure(**configured)
+
+
+@pytest.fixture
+def logged() -> Iterator[list[EventDict]]:
+    """What the review logs during a test, at every level, whatever the test sets up."""
     structlog.reset_defaults()
     with capture_logs() as entries:
         yield entries
-    structlog.configure(**configured)

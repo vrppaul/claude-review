@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.cli.workspace import review_workspace
+from claude_review.hosting.workspace import review_workspace
 
 
 @pytest.fixture(autouse=True)

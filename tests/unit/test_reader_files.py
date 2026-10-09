@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.cli.workspace import reader_files
+from claude_review.hosting.workspace import GUIDE_FILE, READER_DIRECTORY, SETTINGS_FILE, reader_files
 
 
 def test_the_reader_files_follow_the_base_directories_the_environment_names(
@@ -15,8 +15,8 @@ def test_the_reader_files_follow_the_base_directories_the_environment_names(
 
     files = reader_files()
 
-    assert files.settings == tmp_path / "config" / "claude-review" / "settings.json"
-    assert files.guide == tmp_path / "state" / "claude-review" / "guide.json"
+    assert files.settings == tmp_path / "config" / READER_DIRECTORY / SETTINGS_FILE
+    assert files.guide == tmp_path / "state" / READER_DIRECTORY / GUIDE_FILE
 
 
 def test_a_relative_base_directory_is_ignored_for_the_home_directory(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -26,5 +26,5 @@ def test_a_relative_base_directory_is_ignored_for_the_home_directory(monkeypatch
 
     files = reader_files()
 
-    assert files.settings == Path.home() / ".config" / "claude-review" / "settings.json"
-    assert files.guide == Path.home() / ".local" / "state" / "claude-review" / "guide.json"
+    assert files.settings == Path.home() / ".config" / READER_DIRECTORY / SETTINGS_FILE
+    assert files.guide == Path.home() / ".local" / "state" / READER_DIRECTORY / GUIDE_FILE

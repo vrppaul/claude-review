@@ -12,21 +12,21 @@ import contextlib
 import signal
 import socket
 import webbrowser
-from collections.abc import Generator
+from collections.abc import Coroutine, Generator
 from pathlib import Path
+from typing import Any
 
 import click
 import structlog
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.cli.address import review_url
-from claude_review.cli.openings import ReviewOpening
-from claude_review.cli.ports import bind, stable_port
-from claude_review.cli.review_server import ReviewServer
-from claude_review.cli.workspace import reader_files, review_workspace
 from claude_review.domain.models import ReviewWorkspace
 from claude_review.domain.protocols import Clock
+from claude_review.hosting.address import review_url
+from claude_review.hosting.ports import bind, stable_port
+from claude_review.hosting.review_server import ReviewServer
+from claude_review.hosting.workspace import reader_files, review_workspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.schemas import ChangedPush
 from claude_review.presentation.state import ServerState
@@ -34,6 +34,7 @@ from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.exit_report import exit_report
 from claude_review.services.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.tree_watcher_service import TreeWatcherService
 from claude_review.services.version_service import VersionService
 
@@ -132,16 +133,30 @@ async def _run_until_ended(
 ) -> None:
     """Run everything a review open on screen needs, until the review ends and every one of them has stopped.
 
-    The tree is watched only in a review of a repository, whose `root` it is.
+    The server is the review; the rest only help it, and one of them failing
+    must not take the server down with the reader's unsent work on screen,
+    nor keep the last round from being handed back. The tree is watched only
+    in a review of a repository, whose `root` it is.
     """
     url = review_url(listening.getsockname()[1])
     with _ended_by_signals(state.lifetime):
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(server.serve_until_ended(listening))
-            tasks.create_task(_announce_once_listening(server, url, open_browser=open_browser))
-            tasks.create_task(_end_once_the_page_is_closed(state))
+            tasks.create_task(_helping(_announce_once_listening(server, url, open_browser=open_browser)))
+            tasks.create_task(_helping(_end_once_the_page_is_closed(state)))
             if root is not None:
-                tasks.create_task(_tell_when_the_tree_moves(state, watcher, root))
+                tasks.create_task(_helping(_tell_when_the_tree_moves(state, watcher, root)))
+
+
+async def _helping(work: Coroutine[Any, Any, None]) -> None:
+    """Run something that helps the review, and let the review go on without it if it fails.
+
+    Said at critical, the level a review that is otherwise quiet still says.
+    """
+    try:
+        await work
+    except Exception:
+        log.critical("review_helper_failed", helper=work.__qualname__, exc_info=True)
 
 
 async def _announce_once_listening(server: ReviewServer, url: str, *, open_browser: bool) -> None:
