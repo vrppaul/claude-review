@@ -5,9 +5,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx import URL, AsyncClient
 from structlog.typing import EventDict
-from websockets.asyncio.client import connect
 
 from claude_review.hosting.errors import ServerStartError
 from claude_review.hosting.ports import ANY_FREE_PORT
@@ -17,12 +16,10 @@ from claude_review.services.review.browser_presence import BrowserPresence
 from claude_review.services.review.content_sources import RepositorySource
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.tree_watcher_service import TreeWatcherService
-from tests.helpers import SESSION_ROUTE, SETTLE_SECONDS
+from tests.helpers import SETTLE_SECONDS
+from tests.page_socket import page_socket_held
 
 SUBMIT_ROUTE = "/api/submit"
-# How an address to the review becomes one its page's socket connects to
-HTTP_SCHEME = "http://"
-WEBSOCKET_SCHEME = "ws://"
 THE_ROUND = "Rename the helper."
 # The last round, sent and ending the review
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
@@ -76,9 +73,13 @@ async def announcer() -> RecordingAnnouncer:
     return RecordingAnnouncer()
 
 
-def _session_address(address: str) -> str:
-    """Where the page of the review at this address holds its session socket."""
-    return f"{address.replace(HTTP_SCHEME, WEBSOCKET_SCHEME, 1)}{SESSION_ROUTE}"
+def _port_of(address: str) -> int:
+    """The port the review at this address listens on."""
+    port = URL(address).port
+    if port is None:
+        failure = f"{address} names no port"
+        raise AssertionError(failure)
+    return port
 
 
 def _events(logged: list[EventDict]) -> list[str]:
@@ -94,7 +95,7 @@ async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_
     serving = asyncio.ensure_future(serve_review(opening, port=ANY_FREE_PORT, announcer=announcer))
     address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
     # The tree is watched only once a page is there to be told
-    async with connect(_session_address(address)), AsyncClient(base_url=address) as agent:
+    async with page_socket_held(_port_of(address)), AsyncClient(base_url=address) as agent:
         await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
 
     assert THE_ROUND in await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)

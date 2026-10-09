@@ -22,14 +22,12 @@ from pathlib import Path
 from typing import IO
 
 import pytest
-from websockets.exceptions import InvalidStatus
-from websockets.sync.client import ClientConnection, connect
-from websockets.typing import Origin
 
 from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.wire.pushes import PushKind
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
 from tests.helpers import ANY_PORT, FIRST_THREAD_ID, LOOPBACK, git, line_on_the_wire, thread_on_the_wire
+from tests.page_socket import HandshakeRefusedError, PageSocket
 
 # The command line, as the user runs it, from the interpreter running the tests
 COMMAND_LINE = [sys.executable, "-m", "claude_review"]
@@ -65,7 +63,7 @@ NO_SUCH_THREAD = "comment-99"
 # What a machine with no browser to open looks like
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}
 # A page on somebody else's site
-FOREIGN_ORIGIN = Origin("https://attacker.example")
+FOREIGN_ORIGIN = "https://attacker.example"
 
 
 class CliProcess:
@@ -223,19 +221,19 @@ def port() -> int:
         return probe.getsockname()[1]
 
 
-def _session(port: int) -> ClientConnection:
+def _session(port: int) -> PageSocket:
     """The session socket, held open as a review on screen holds it; with no Origin, as from no page at all."""
-    return connect(f"ws://{LOOPBACK}:{port}/api/session")
+    return PageSocket(port)
 
 
-def _next_push(review_socket: ClientConnection, kind: PushKind) -> dict:
+def _next_push(review_socket: PageSocket, kind: PushKind) -> dict:
     """Read pushes until the one being waited for arrives.
 
     The socket carries more than any one test is about — a review is told
     when an agent attaches, and when a round retakes the diff.
     """
     for _ in range(PUSHES_READ):
-        message = json.loads(review_socket.recv(timeout=PUSH_SECONDS))
+        message = json.loads(review_socket.receive(timeout=PUSH_SECONDS))
         if message.get("type") == kind:
             return message
     failure = f"no {kind} push arrived"
@@ -297,7 +295,7 @@ def test_the_session_socket_is_served_by_the_real_server(changed_repo: Path, cli
     cli.review(changed_repo, port)
 
     with _session(port) as review_socket:
-        assert review_socket.protocol.state.name == "OPEN"
+        assert review_socket.is_open
 
 
 def test_the_server_winds_down_once_the_review_is_closed(changed_repo: Path, cli: CliProcesses, port: int) -> None:
@@ -327,8 +325,10 @@ def test_a_review_nobody_has_opened_is_not_ended_by_a_page_it_refused(
     """Starting without a browser is normal, and a refused handshake is not a reader leaving."""
     review = cli.review(changed_repo, port)
 
-    with pytest.raises(InvalidStatus), connect(f"ws://{LOOPBACK}:{port}/api/session", origin=FOREIGN_ORIGIN):
-        pass
+    with pytest.raises(HandshakeRefusedError) as refused:
+        PageSocket(port, origin=FOREIGN_ORIGIN)
+
+    assert refused.value.status_code == HTTPStatus.FORBIDDEN
 
     assert review.outlives(PAST_GRACE_SECONDS), "the review ended without ever being opened"
 

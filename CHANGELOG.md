@@ -18,7 +18,8 @@
 - **The agent counts as there for ten minutes after it last called**, and
   the review stops offering rounds once it has gone quiet for longer.
 - **A page that stops reading is let go** instead of being held in memory;
-  the server's websockets now run on wsproto.
+  the server's websockets now run on wsproto, and the `websockets` package
+  is no longer a dependency.
 - **Taking the diff stages the working tree once**, starting from a copy of
   the repository's own index: much faster on large trees. Like `git diff`, it
   leaves out edits to files marked assume-unchanged or skip-worktree.
