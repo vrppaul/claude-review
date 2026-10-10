@@ -32,7 +32,7 @@ LOAD_AN_AGENTS_COMMAND = (
     "import sys; from claude_review.cli.main import main; main.get_command(None, 'wait'); print(*sys.modules)"
 )
 # The server and the web framework under it: an agent's command calls a review in another process, and needs neither
-WEB_STACK = {"uvicorn", "fastapi", "starlette"}
+WEB_STACK = {"uvicorn", "fastapi", "starlette", "wsproto"}
 
 
 @pytest.fixture
