@@ -12,6 +12,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
 from claude_review.presentation.wire.base import MAX_ID_LENGTH
@@ -27,9 +28,6 @@ router = APIRouter()
 # back later (RFC 6455, 7.4.1). A page still there reconnects, and is handed
 # what it missed if the review still keeps it.
 FELL_BEHIND = 1013
-
-# The ASGI message a socket receives once the page has gone
-SOCKET_GONE = "websocket.disconnect"
 
 
 @router.websocket("/session")
@@ -76,7 +74,7 @@ async def _tell_the_page(outbox: asyncio.Queue[str], websocket: WebSocket) -> No
 
 async def _hear_the_page(review: Review, websocket: WebSocket) -> None:
     """Take what the page says until it goes. It says only text; anything else is passed over."""
-    while (message := await websocket.receive())["type"] != SOCKET_GONE:
+    while (message := await websocket.receive())["type"] != WEBSOCKET_DISCONNECT:
         said = message.get("text")
         if said is None:
             log.debug("page_frame_ignored")

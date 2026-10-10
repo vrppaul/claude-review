@@ -18,7 +18,15 @@ from schemathesis.specs.openapi.checks import positive_data_acceptance
 
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
-from tests.helpers import EVENTS_ROUTE, LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file, opening_of
+from tests.helpers import (
+    EVENTS_ROUTE,
+    LOCAL_HEADERS,
+    LOCAL_ORIGIN,
+    ReviewFactory,
+    one_line_file,
+    opening_of,
+    repository_opening,
+)
 
 # What the review holds a well-formed request to beyond its schema, which no
 # schema can say: that what it names — a thread, a file, a base — is in the
@@ -81,9 +89,9 @@ def reviews_read_once(reviews: ReviewFactory) -> ReviewsByOperation:
 
 
 @pytest.fixture
-def reviews_of_a_repository(reviews: ReviewFactory, changed_repository: Path) -> ReviewsByOperation:
+async def reviews_of_a_repository(reviews: ReviewFactory, changed_repository: Path) -> ReviewsByOperation:
     """Reviews of a repository's changes, which git is asked about whenever a route needs it."""
-    return ReviewsByOperation(reviews, opening_of([], root=changed_repository))
+    return ReviewsByOperation(reviews, await repository_opening(changed_repository))
 
 
 def _answers_as_its_schema_says(case: Case, reviews_by_operation: ReviewsByOperation) -> None:

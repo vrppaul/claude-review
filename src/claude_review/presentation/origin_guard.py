@@ -54,9 +54,10 @@ def is_local_host(value: str | None) -> bool:
     if not value:
         return False
     if value.startswith(IPV6_OPENS):
-        host = value.partition(IPV6_CLOSES)[0] + IPV6_CLOSES
+        address, _, _ = value.partition(IPV6_CLOSES)
+        host = address + IPV6_CLOSES
     else:
-        host = value.rsplit(PORT_SEPARATOR, maxsplit=1)[0]
+        host, _, _ = value.partition(PORT_SEPARATOR)
     return host in LOCAL_HOSTS
 
 

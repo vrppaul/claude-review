@@ -132,8 +132,9 @@ known-first-party = ["claude_review"]
 "src/claude_review/cli/agent_commands.py" = ["PLR0913"]
 # The module is one match from each page event to its push. McCabe counts
 # every case as a branch; ty proves the match covers the closed union of
-# events (assert_never), so it is one dispatch, and grouping the events to
-# please the count would make each new event an edit in three places
+# events (assert_never), so it is one dispatch. Grouping the events would
+# not make it smaller: ty proves no match over a group's base class
+# complete, so each group's own match would need its members listed again
 "src/claude_review/presentation/event_pushes.py" = ["C901"]
 # Builders take every field of what they build as an optional keyword
 "tests/helpers.py" = ["PLR0913"]

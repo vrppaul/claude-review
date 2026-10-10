@@ -19,8 +19,8 @@ from tests.helpers import (
     RunningReview,
     git,
     opening_of,
+    repository_opening,
     review_has_ended,
-    uncommitted_changes,
     write_files,
 )
 
@@ -47,6 +47,8 @@ CHANGES = {
 }
 # The files the e2e repository's uncommitted changes touch
 CHANGED_FILES = tuple(CHANGES)
+# What moves under a review after its diff was taken: two files the reader has not been shown again
+MOVED_AFTER_THE_RETAKE = {MAIN_FILE: "def hello():\n    return 'hey'\n", UTILS_FILE: "# utils, rewritten\n"}
 # What the sidebar's filter is typed with to find the added file alone
 NEW_FILE_TYPED = Path(NEW_FILE).stem
 # The conversation the transcript is written with, one entry a line: a question, and its answer
@@ -176,7 +178,7 @@ def e2e_repo(tmp_path: Path) -> Path:
 @pytest.fixture
 async def diff_review(e2e_repo: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing the e2e repo's uncommitted changes."""
-    return await servers.start(opening_of(await uncommitted_changes(e2e_repo)))
+    return await servers.start(await repository_opening(e2e_repo))
 
 
 async def test_a_comment_on_a_line_reaches_the_agent(diff_review: RunningReview, page: Page) -> None:
@@ -907,18 +909,18 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
 
 async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, servers: ReviewServers, page: Page) -> None:
     """Said, never acted on: the reader decides when to take the diff again."""
-    review = await servers.start(opening_of(await uncommitted_changes(e2e_repo), root=e2e_repo))
+    review = await servers.start(await repository_opening(e2e_repo))
     async with AsyncClient(base_url=review.url) as agent:
         # Taken again, as the agent does after a round: the tree it is compared against is this one
         await agent.post("/api/retake", json={})
-    (e2e_repo / MAIN_FILE).write_text("def hello():\n    return 'hey'\n")
-    (e2e_repo / "utils.py").write_text("# utils, rewritten\n")
+    write_files(e2e_repo, MOVED_AFTER_THE_RETAKE)
 
     await page.goto(review.url)
 
     notice = page.get_by_test_id("tree-moved")
     await notice.wait_for()
-    assert "2 files have changed" in " ".join((await notice.text_content() or "").split())
+    said = " ".join((await notice.text_content() or "").split())
+    assert f"{len(MOVED_AFTER_THE_RETAKE)} files have changed" in said
 
     await page.get_by_test_id("dismiss-moved").click()
     assert await notice.count() == 0

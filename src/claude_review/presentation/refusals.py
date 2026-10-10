@@ -77,9 +77,10 @@ REFUSED_ON_THE_WAY: dict[Takes, frozenset[HTTPStatus]] = {
     Takes.JSON_BODY: frozenset({UNREADABLE_BODY, WRONG_INPUT, TOO_LARGE_STATUS}),
     Takes.RAW_BODY: frozenset({TOO_LARGE_STATUS}),
 }
-# What the description of a status says after its own words when it is given
-# before the route is reached, for what the request carried
-ON_THE_WAY_NOTE = " — refused before the route is reached, for what the request carried"
+# The OpenAPI extension that marks a refusal given before the route is
+# reached, for what the request carried: said where a reader of the API sees
+# it, and where a test can hold it to what the route takes in
+ON_THE_WAY_EXTENSION = "x-refused-before-the-route"
 # The header a refusal of a method names the methods a path does take in
 ALLOW_HEADER = "Allow"
 ALLOW_SEPARATOR = ", "
@@ -107,10 +108,15 @@ def documented(
     Those given on the way to the route say so. In order, so the API is
     described the same way every time it is written.
     """
-    return {
-        status: {"model": Refusal, "description": status.phrase + (ON_THE_WAY_NOTE if status in on_the_way else "")}
-        for status in sorted({*statuses, *on_the_way})
-    }
+    return {status: _refusal(status, on_the_way=status in on_the_way) for status in sorted({*statuses, *on_the_way})}
+
+
+def _refusal(status: HTTPStatus, *, on_the_way: bool) -> dict[str, object]:
+    """One status a route may refuse with, as the API describes it."""
+    described: dict[str, object] = {"model": Refusal, "description": status.phrase}
+    if on_the_way:
+        described[ON_THE_WAY_EXTENSION] = True
+    return described
 
 
 def status_of(kind: type[ReviewError]) -> HTTPStatus:

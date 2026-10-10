@@ -56,6 +56,15 @@ tests. Remove items when done — don't check them off.
 
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
+- [ ] Hold strings to ruff's PLR2004 too (`[tool.ruff.lint.pylint]
+      allow-magic-value-types = []`). The package passes it; 288 string
+      literals in the tests do not, most of them text the browser tests
+      compare with what the page shows. Name them, or write the fixtures and
+      the comparisons from the same data, then turn it on.
+- [ ] Build the requests tests send from the wire models rather than from
+      dicts (`tests/helpers.thread_on_the_wire` and its kin), keeping raw
+      bodies only where a test sends what the models would refuse; then the
+      builders' PLR0913 exception in pyproject.toml can go.
 
 ## Known limits
 

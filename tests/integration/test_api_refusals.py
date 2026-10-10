@@ -16,7 +16,13 @@ from httpx import AsyncClient
 from pydantic import BaseModel, Field, JsonValue
 
 from claude_review.domain.exceptions import ReviewError
-from claude_review.presentation.refusals import ON_THE_WAY_NOTE, REFUSED_ON_THE_WAY, Takes, answer_refusals, status_of
+from claude_review.presentation.refusals import (
+    ON_THE_WAY_EXTENSION,
+    REFUSED_ON_THE_WAY,
+    Takes,
+    answer_refusals,
+    status_of,
+)
 from claude_review.presentation.wire.refusal import Refusal
 from tests.helpers import http_client
 
@@ -44,8 +50,8 @@ class MediaType(BaseModel):
 class Answer(BaseModel):
     """One answer an operation describes."""
 
-    description: str
     content: dict[str, MediaType] = Field(default_factory=dict)
+    refused_on_the_way: bool = Field(default=False, alias=ON_THE_WAY_EXTENSION)
 
     def is_refusal(self) -> bool:
         """Whether the answer is a refusal, said as every refusal is."""
@@ -81,7 +87,7 @@ class Operation(BaseModel):
         return frozenset(
             HTTPStatus(int(status))
             for status, answer in self.responses.items()
-            if answer.is_refusal() and answer.description.endswith(ON_THE_WAY_NOTE)
+            if answer.is_refusal() and answer.refused_on_the_way
         )
 
 

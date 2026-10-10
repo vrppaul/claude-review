@@ -57,13 +57,18 @@ cd frontend && pnpm build            # outputs to src/claude_review/static/dist/
 DDD-lite with clean layer separation:
 
 ```
+cli/           → the command line: launching a review, and the agent's commands
+hosting/       → one review held open on this machine: its directories, port and server
 presentation/  → FastAPI routes, wire models, Depends() DI
-services/      → orchestration (read_diff, read_text_files, RoundFormatter)
-repositories/  → infrastructure (GitRepository)
-domain/        → Pydantic models, interfaces, enums
+services/      → orchestration; services/review/ owns a review's state
+repositories/  → infrastructure (GitRepository, the image and record stores, the clock)
+domain/        → Pydantic models, the interfaces the services build on, enums
 ```
 
-Dependencies flow inward: presentation → services → domain
+Each part builds only on those below it — cli → hosting → presentation →
+services | repositories → domain — and the services and the repositories
+never import each other. `uv run lint-imports` holds it. AGENTS.md says the
+rest.
 
 The frontend uses a `ReviewMode` that flows from the backend API to control rendering:
 - `diff` — two-column line numbers, add/delete styling, file tree sidebar
