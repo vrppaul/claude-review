@@ -33,6 +33,7 @@ from claude_review.presentation.wire.pushes import (
     ProgressPush,
     Push,
     ReplyPush,
+    ShowPush,
     StatusPush,
 )
 from claude_review.presentation.wire.session import Delivery
@@ -444,6 +445,19 @@ def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
         pushed = _next_push(review_socket, PointPush)
         assert (pushed.anchor.file, pushed.anchor.start_line) == ("initial.txt", 1)
         assert pushed.body == "Kept it on purpose"
+
+
+def test_the_agent_takes_the_reader_to_a_file_from_its_own_process(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """The one command that moves the reader's screen reaches the review it names."""
+    cli.review(changed_repo, port)
+
+    with _session(port) as review_socket:
+        shown = cli.run("show", "--port", str(port), "--file", "initial.txt")
+        assert shown.returncode == 0
+
+        assert _next_push(review_socket, ShowPush) == ShowPush(file="initial.txt")
 
 
 def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(

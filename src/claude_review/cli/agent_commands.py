@@ -148,7 +148,7 @@ def say_command(*, client: ReviewClient, message: str | None, files: tuple[str, 
     "--step", "steps", type=STEP, multiple=True, help="Something under way — a check, a subagent. Repeatable."
 )
 @click.option("--did", "finished", type=STEP, multiple=True, help="A step already finished. Repeatable.")
-@click.option("--done", is_flag=True, help="Take the line away: the work is finished.")
+@click.option("--done", is_flag=True, help="Take the line away: the work is finished. Sent on its own.")
 @click.argument("text", required=False, type=WORK, default="")
 def progress_command(
     *,
@@ -172,6 +172,9 @@ def progress_command(
     Send it with --done, or answer, and the whole thing goes away.
     """
     if done:
+        if message is not None or files or steps or finished or text:
+            msg = "--done takes the work line away and says nothing more: send it on its own"
+            raise click.UsageError(msg)
         # Empty, which is what says the work is over
         client.report_progress(ProgressRequest())
         return

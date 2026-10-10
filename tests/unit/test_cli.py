@@ -138,6 +138,14 @@ def test_a_value_the_review_would_refuse_is_refused_naming_where_it_was_typed(
     assert "would refuse" in result.output
 
 
+def test_putting_the_work_line_out_takes_nothing_with_it(unused_port: str) -> None:
+    """Said beside --done, anything else would be dropped unseen; the typist is told instead."""
+    result = _run("progress", "--port", unused_port, "--done", "--step", "running the tests")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "--done" in result.output
+
+
 def test_an_agents_command_does_not_load_the_server_or_its_framework() -> None:
     """It runs many times a minute, and whatever serves the review is in another process."""
     loaded = subprocess.run(

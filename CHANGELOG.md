@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Changed
+- **`claude-review progress --done` is sent on its own.** Given a text, a
+  file, a step or a message beside it, it used to drop them unseen; it now
+  refuses, naming `--done`, as `status` with nothing to report does.
 - **A side of a hunk with no lines starts where its first line would be.**
   Git writes the line before it — 0 for an added file's old side — and the
   page counted the lines hidden above such a hunk from there, one short. A
