@@ -23,7 +23,7 @@ from tests.helpers import (
     git,
     http_client,
     opening_of,
-    uncommitted_changes,
+    repository_opening,
 )
 
 VERSIONS_ROUTE = "/api/versions"
@@ -50,7 +50,7 @@ async def _offered(client: AsyncClient) -> list[dict]:
 
 async def test_the_review_and_its_rounds_are_on_offer(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """What this review opened against, and every round that left a mark."""
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         (tmp_git_repo / "work.py").write_text("first\n")
         await _mark(client)
         await _begin_next_round(client)
@@ -64,7 +64,7 @@ async def test_the_review_and_its_rounds_are_on_offer(tmp_git_repo: Path, review
 
 
 async def test_a_round_is_dated_when_it_was_read(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo), clock=FixedClock(A_MOMENT))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), clock=FixedClock(A_MOMENT))) as client:
         (tmp_git_repo / "work.py").write_text("first\n")
         await _mark(client)
         await _begin_next_round(client)
@@ -81,7 +81,7 @@ async def test_a_branch_is_dated_in_the_same_unit_as_everything_else(
 ) -> None:
     """Epoch milliseconds, like every other time the review says; git says seconds."""
     git(tmp_git_repo, "branch", "earlier")
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         by_label = {version["label"]: version for version in await _offered(client) if version["kind"] == "ref"}
 
     assert abs(by_label["earlier"]["at"] - time.time() * MILLISECONDS_PER_SECOND) < AN_HOUR_IN_MILLISECONDS
@@ -91,7 +91,7 @@ async def test_the_review_says_how_many_files_a_base_would_show(tmp_git_repo: Pa
     """The count is the reason to pick one base over another."""
     before, after = "before.py", "after.py"
     (tmp_git_repo / before).write_text("was here\n")
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _begin_next_round(client)
         (tmp_git_repo / after).write_text("came later\n")
         await _mark(client)
@@ -107,7 +107,7 @@ async def test_branches_and_tags_are_on_offer(tmp_git_repo: Path, reviews: Revie
     git(tmp_git_repo, "branch", "earlier")
     git(tmp_git_repo, "tag", "v0.1.0")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         refs = [version["label"] for version in await _offered(client) if version["kind"] == "ref"]
 
     assert "earlier" in refs
@@ -119,7 +119,7 @@ async def test_the_diff_can_be_taken_against_a_round(tmp_git_repo: Path, reviews
     (tmp_git_repo / "answered.py").write_text("as it was\n")
     (tmp_git_repo / "elsewhere.py").write_text("untouched since\n")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
 
@@ -135,7 +135,7 @@ async def test_the_diff_can_be_taken_against_a_round(tmp_git_repo: Path, reviews
 )
 async def test_a_base_nobody_offered_is_refused(tmp_git_repo: Path, reviews: ReviewFactory, base: str) -> None:
     """What reaches git as a revision is never whatever arrived in the query."""
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
 
         asked = await client.get(DIFF_ROUTE, params={"base": base}, headers=LOCAL_HEADERS)
@@ -149,7 +149,7 @@ async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
     """A base is a way of looking, not a change to what is under review."""
     (tmp_git_repo / "from_the_start.py").write_text("here all along\n")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
         (tmp_git_repo / "later.py").write_text("came after\n")
         await _mark(client)
@@ -171,7 +171,7 @@ async def test_a_round_nothing_has_happened_since_is_not_offered(tmp_git_repo: P
     """It would open an empty screen, and leave the reader wondering what they broke."""
     (tmp_git_repo / "work.py").write_text("done\n")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
         offered = await _offered(client)
 
@@ -182,7 +182,7 @@ async def test_an_annotated_tag_is_offered_like_any_other(tmp_git_repo: Path, re
     """A tag object has a tagger and no committer, and asking for the wrong one drops it."""
     git(tmp_git_repo, "tag", "-a", "v2.0.0", "-m", "release")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         offered = await _offered(client)
 
     assert "v2.0.0" in [version["label"] for version in offered if version["kind"] == "ref"]
@@ -195,7 +195,7 @@ async def test_a_ref_whose_name_begins_with_a_dash_is_never_a_base(
     target = tmp_path_factory.mktemp("outside") / "written-by-git"
     git(tmp_git_repo, "update-ref", f"refs/heads/--output={target}", "HEAD")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         offered = await _offered(client)
         asked = await client.get(DIFF_ROUTE, params={"base": f"ref:--output={target}"}, headers=LOCAL_HEADERS)
 
@@ -215,7 +215,7 @@ async def test_a_repository_with_nothing_committed_still_offers_its_bases(
     git(fresh, "init", "-b", "main")
     (fresh / "started.py").write_text("nothing committed yet\n")
 
-    async with http_client(reviews.app(opening_of([], root=fresh))) as client:
+    async with http_client(reviews.app(await repository_opening(fresh))) as client:
         offered = await _offered(client)
 
     assert [version["key"] for version in offered] == ["review"]
@@ -226,7 +226,7 @@ async def test_the_diff_says_how_far_the_tree_has_moved_since_it_was_taken(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
     """A review reloaded while the tree was moving heard the push and lost it."""
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
         (tmp_git_repo / "moved_after.py").write_text("written while the review was open\n")
 
@@ -239,10 +239,10 @@ async def test_a_review_opens_on_the_tree_its_first_round_is_marked_at(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
     """Whatever changed between reading the diff and serving it is on screen, so "since round 1" counts from there."""
-    read_before = await uncommitted_changes(tmp_git_repo)
+    opening = await repository_opening(tmp_git_repo)
     (tmp_git_repo / "written_in_between.py").write_text("saved while the review was starting\n")
 
-    async with http_client(reviews.app(opening_of(read_before, root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(opening)) as client:
         served = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
         by_key = {version["key"]: version for version in await _offered(client)}
 

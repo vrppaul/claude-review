@@ -135,11 +135,6 @@ async def repository_opening(repo: Path) -> ReviewOpening:
     return await open_diff(repo, None, GitRepository(objects=None))
 
 
-async def uncommitted_changes(repo: Path) -> list[DiffFile]:
-    """The diff of a repository's uncommitted changes, read the way a review opens on them."""
-    return (await repository_opening(repo)).diff_files
-
-
 def context_line(old_number: int, new_number: int, content: str) -> DiffLine:
     """A line both sides of the diff share."""
     return DiffLine(kind=LineType.CONTEXT, old_number=old_number, new_number=new_number, content=content)
@@ -271,16 +266,9 @@ class FixedClock(Clock):
         return self._moment
 
 
-def opening_of(
-    diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, root: Path | None = None, title: str = ""
-) -> ReviewOpening:
-    """What a review opens on, built by the test: files read once, or a repository whose first read the test chooses.
-
-    A review of a repository takes its diff again as it opens, so the first
-    read matters only to a test about that. One opened as the command line
-    opens it is `repository_opening`.
-    """
-    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=root, base=None)
+def opening_of(diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, title: str = "") -> ReviewOpening:
+    """What a review of files read once opens on, built by the test; a repository is opened by `repository_opening`."""
+    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=None, base=None)
 
 
 class ReviewFactory:

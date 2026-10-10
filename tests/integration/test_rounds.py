@@ -10,12 +10,14 @@ import asyncio
 from http import HTTPStatus
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
 from claude_review.presentation.wire.content import ChangesSince
 from claude_review.presentation.wire.pushes import AnswererPush, DiffPush
+from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -30,8 +32,8 @@ from tests.helpers import (
     line_on_the_wire,
     next_push,
     open_session,
-    opening_of,
     page_client,
+    repository_opening,
     review_has_ended,
     thread_on_the_wire,
     turn_on_the_wire,
@@ -39,6 +41,12 @@ from tests.helpers import (
 )
 
 A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
+
+
+@pytest.fixture
+async def opened_repository(tmp_git_repo: Path) -> ReviewOpening:
+    """The repository under review, as the command line opens it; the review reads its diff again as it opens."""
+    return await repository_opening(tmp_git_repo)
 
 
 async def test_a_round_does_not_end_the_review(client: AsyncClient) -> None:
@@ -120,7 +128,7 @@ async def test_a_waiting_agent_is_told_the_review_ended(client: AsyncClient) -> 
 
 
 async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
         git(tmp_git_repo, "add", ".")
 
@@ -151,12 +159,14 @@ def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClie
     assert review_page.get(REVIEW_ROUTE).json()["answerer_attached"] is True
 
 
-def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+def test_a_retake_names_the_files_that_changed_since_the_last_one(
+    tmp_git_repo: Path, reviews: ReviewFactory, opened_repository: ReviewOpening
+) -> None:
     """A file the agent rewrote must not keep the tick that says it was read."""
     (tmp_git_repo / "answered.py").write_text("as it was\n")
     (tmp_git_repo / "untouched.py").write_text("as it was\n")
 
-    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
+    with page_client(reviews.app(opened_repository)) as review_page:
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
 
         with open_session(review_page) as socket:
@@ -168,10 +178,10 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
 
 
 def test_a_retake_tells_the_page_how_many_files_the_review_now_holds(
-    tmp_git_repo: Path, reviews: ReviewFactory
+    tmp_git_repo: Path, reviews: ReviewFactory, opened_repository: ReviewOpening
 ) -> None:
     """The review's own count: a page reading a narrower base cannot count the review from its screen."""
-    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
+    with page_client(reviews.app(opened_repository)) as review_page:
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
         git(tmp_git_repo, "add", ".")
 
@@ -182,7 +192,9 @@ def test_a_retake_tells_the_page_how_many_files_the_review_now_holds(
     assert told.file_count == 1
 
 
-def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+def test_a_retake_is_measured_from_where_the_round_began(
+    tmp_git_repo: Path, reviews: ReviewFactory, opened_repository: ReviewOpening
+) -> None:
     """Twice through the loop in one round, and the count still means what it says.
 
     The agent may take the diff again several times while one round is being
@@ -193,7 +205,7 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
     """
     (tmp_git_repo / "first.py").write_text("one\n")
 
-    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
+    with page_client(reviews.app(opened_repository)) as review_page:
         (tmp_git_repo / "first.py").write_text("two\n")
         review_page.post("/api/retake", json={})
 
@@ -208,11 +220,11 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
 
 
 def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
-    tmp_git_repo: Path, reviews: ReviewFactory
+    reviews: ReviewFactory, opened_repository: ReviewOpening
 ) -> None:
     """Without a mark to compare against, the review must not claim nothing moved."""
     with (
-        page_client(reviews.app(opening_of([], root=tmp_git_repo), keeps_marks=False)) as review_page,
+        page_client(reviews.app(opened_repository, keeps_marks=False)) as review_page,
         open_session(review_page) as socket,
     ):
         review_page.post("/api/retake", json={})
@@ -228,7 +240,7 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
     on_run = {"file": "a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["def run():"]}
     on_walk = {**on_run, "quote": ["def walk():"]}
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         (tmp_git_repo / "a.py").write_text("import sys\ndef run():\n    return 1\n")
         await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
         response = await client.post("/api/anchors/follow", json={"anchors": [on_run, on_walk]}, headers=LOCAL_HEADERS)

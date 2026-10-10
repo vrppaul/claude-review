@@ -11,6 +11,7 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.helpers import (
@@ -27,22 +28,34 @@ from tests.helpers import (
     line_on_the_wire,
     opening_of,
     removed_line,
+    repository_opening,
     review_has_ended,
     thread_on_the_wire,
-    uncommitted_changes,
     until_an_agent_waits,
+    write_files,
 )
 
 REVIEW_TITLE = "test-repo: uncommitted changes"
+# The file most of these reviews hold
+HANDLER_FILE = "src/handler.ts"
+# The file a review of a repository shows, how long it is, and the line its
+# change replaces: far from the lines a test widens the context into
+APP_FILE = "src/app.py"
+APP_LINES = 30
+CHANGED_APP_LINE = 20
+CHANGED_APP_TEXT = "changed"
+# The lines of it a test asks for that the diff leaves out
+WIDENED_FROM = 4
+WIDENED_TO = 6
 
 A_NOTE = thread_on_the_wire(line_on_the_wire("x.py", 1), "fix this")
 
 
-def _handler_change(path: str = "src/handler.ts") -> list[DiffFile]:
+def _handler_change() -> list[DiffFile]:
     """One file with a line replaced and one added, between two that stayed."""
     return [
         diff_file(
-            path,
+            HANDLER_FILE,
             [
                 context_line(1, 1, "const x = 1;"),
                 removed_line(2, "const y = 2;"),
@@ -77,7 +90,7 @@ async def test_the_diff_serves_every_file_with_its_lines(client: AsyncClient) ->
 
     assert response.status_code == HTTPStatus.OK
     [handler] = response.json()["files"]
-    assert (handler["path"], handler["status"]) == ("src/handler.ts", "modified")
+    assert (handler["path"], handler["status"]) == (HANDLER_FILE, "modified")
     [hunk] = handler["hunks"]
     [changed] = _handler_change()
     assert [line["content"] for line in hunk["lines"]] == [line.content for line in changed.hunks[0].lines]
@@ -95,8 +108,8 @@ async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient)
 
 async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
     threads = [
-        thread_on_the_wire(line_on_the_wire("src/handler.ts", 42), "Wrong null check", thread_id="comment-1"),
-        thread_on_the_wire(line_on_the_wire("src/handler.ts", 67, 70), "Add max retry", thread_id="comment-2"),
+        thread_on_the_wire(line_on_the_wire(HANDLER_FILE, 42), "Wrong null check", thread_id="comment-1"),
+        thread_on_the_wire(line_on_the_wire(HANDLER_FILE, 67, 70), "Add max retry", thread_id="comment-2"),
     ]
 
     response = await client.post("/api/submit", json={"threads": threads, "end": True})
@@ -303,23 +316,36 @@ async def test_the_review_says_what_is_under_review(client: AsyncClient) -> None
     assert response.json()["title"] == REVIEW_TITLE
 
 
+def _app_line(number: int) -> str:
+    """What a line of the app says, by its number, until the change."""
+    return f"line {number}"
+
+
 @pytest.fixture
-async def repo_backed_client(tmp_path: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    """A client whose server can read files, as diff mode's can."""
-    (tmp_path / "src").mkdir()
-    (tmp_path / "src" / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 31)))
-    async with http_client(
-        reviews.app(opening_of(_handler_change("src/app.py"), root=tmp_path, title=REVIEW_TITLE))
-    ) as agent:
+async def repo_backed_client(tmp_git_repo: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
+    """A client of a review of a repository, whose server can read what the diff leaves out."""
+    lines = [f"{_app_line(number)}\n" for number in range(1, APP_LINES + 1)]
+    write_files(tmp_git_repo, {APP_FILE: "".join(lines)})
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "app")
+    lines[CHANGED_APP_LINE - 1] = f"{CHANGED_APP_TEXT}\n"
+    write_files(tmp_git_repo, {APP_FILE: "".join(lines)})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
         yield agent
 
 
 async def test_file_window_serves_lines_the_diff_left_out(repo_backed_client: AsyncClient) -> None:
     """Context around a hunk can be widened without reloading the review."""
-    response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 4, "end": 6})
+    response = await repo_backed_client.get(
+        "/api/file-window", params={"path": APP_FILE, "start": WIDENED_FROM, "end": WIDENED_TO}
+    )
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {"start": 4, "lines": ["line 4", "line 5", "line 6"], "total": 30}
+    assert response.json() == {
+        "start": WIDENED_FROM,
+        "lines": [_app_line(number) for number in range(WIDENED_FROM, WIDENED_TO + 1)],
+        "total": APP_LINES,
+    }
 
 
 async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: AsyncClient) -> None:
@@ -329,7 +355,7 @@ async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: A
 
 
 async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: AsyncClient) -> None:
-    response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 0, "end": 3})
+    response = await repo_backed_client.get("/api/file-window", params={"path": APP_FILE, "start": 0, "end": 3})
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
@@ -341,25 +367,25 @@ async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-async def _committed_then_changed(repo: Path, committed: str, changed: str) -> list[DiffFile]:
-    """The diff of app.py, committed as one text and then rewritten as another."""
+async def _committed_then_changed(repo: Path, committed: str, changed: str) -> ReviewOpening:
+    """A review of app.py, committed as one text and then rewritten as another, opened as the command line opens it."""
     (repo / "app.py").write_text(committed)
     git(repo, "add", ".")
     git(repo, "commit", "-m", "add")
     (repo / "app.py").write_text(changed)
-    return await uncommitted_changes(repo)
+    return await repository_opening(repo)
 
 
 async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """A reindented block should stop hiding the line that actually changed."""
     # Every line reindented, and one of them changed for real
-    files = await _committed_then_changed(
+    opening = await _committed_then_changed(
         tmp_git_repo,
         "def f():\n  a = 1\n  b = 2\n  c = 3\n",
         "def f():\n    a = 1\n    b = 99\n    c = 3\n",
     )
 
-    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(opening)) as client:
         plain = await _changed_lines(client, ignore_whitespace=False)
         ignored = await _changed_lines(client, ignore_whitespace=True)
 
@@ -370,9 +396,9 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: 
 
 async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """A file whose only change is indentation disappears from the review."""
-    files = await _committed_then_changed(tmp_git_repo, "def f():\n    return 1\n", "def f():\n        return 1\n")
+    opening = await _committed_then_changed(tmp_git_repo, "def f():\n    return 1\n", "def f():\n        return 1\n")
 
-    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(opening)) as client:
         plain = (await client.get(DIFF_ROUTE)).json()
         ignored = (await client.get(DIFF_ROUTE, params={"ignore_whitespace": True})).json()
 
@@ -382,11 +408,11 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
 
 async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """It is a way of looking at the diff, not a door that shuts behind you."""
-    files = await _committed_then_changed(
+    opening = await _committed_then_changed(
         tmp_git_repo, "def f():\n  a = 1\n  b = 2\n", "def f():\n    a = 1\n    b = 99\n"
     )
 
-    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(opening)) as client:
         full = (await client.get(DIFF_ROUTE)).json()
         ignored = await _changed_lines(client, ignore_whitespace=True)
         back = await _changed_lines(client, ignore_whitespace=False)
@@ -415,7 +441,7 @@ async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_h
     (tmp_git_repo / ".gitignore").write_text(".env\n")
     (tmp_git_repo / ".env").write_text("SECRET=hunter2\n")
 
-    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         tracked = await client.get("/api/file-window", params={"path": "initial.txt", "start": 1, "end": 1})
         untracked = await client.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
 
