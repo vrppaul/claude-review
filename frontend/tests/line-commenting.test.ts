@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { LineCommenting } from '$lib/components/line-commenting.svelte';
 import { type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
-import { contextLine, diffFile, hunk } from './diff';
+import { contextLine, diffFile, hunk, removedLine } from './diff';
 import { SEND_LIMITS } from './pasted-images';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
@@ -100,5 +100,54 @@ describe('picking lines to comment on', () => {
 		lines.release();
 
 		expect(started().at.quote).toEqual(['line 11', 'line 12']);
+	});
+});
+
+describe('picking removed lines', () => {
+	/** Lines 10 and 11 removed, 12 kept, 13 removed: on the old side, 12 is not a removed line. */
+	const removals = diffFile({
+		path: 'b.py',
+		hunks: [
+			hunk(
+				[
+					removedLine(10, 'gone 10'),
+					removedLine(11, 'gone 11'),
+					contextLine(12, 10, 'kept'),
+					removedLine(13, 'gone 13')
+				],
+				{
+					old_start: 10,
+					new_start: 10
+				}
+			)
+		]
+	});
+	const [drawnRemovals] = drawnHunks(removals, null, true);
+
+	function removedLines(): LineCommenting {
+		review = openReview({ files: [removals], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: LONGEST_RANGE } } });
+		return new LineCommenting(review, {
+			path: () => removals.path,
+			hunks: () => [drawnRemovals],
+			reviewOwnsRemovedLines: () => true
+		});
+	}
+
+	function removedLine13(): DrawnLine {
+		const found = drawnRemovals.lines.find((candidate) => candidate.line.content === 'gone 13');
+		if (!found) throw new Error('Line 13 is not drawn');
+		return found;
+	}
+
+	it('stops a drag cut short on the last removed line it reaches, never on a line the change kept', () => {
+		const lines = removedLines();
+
+		lines.press(drawnRemovals.lines[0]);
+		lines.enter(removedLine13());
+		lines.release();
+
+		const [field] = review.threads.writing.onLinesOf(removals.path);
+		expect(field.at.lines).toMatchObject({ side: 'old', startLine: 10, endLine: 11 });
+		expect(field.at.lines.opensBelow).toEqual({ side: 'old', number: 11 });
 	});
 });

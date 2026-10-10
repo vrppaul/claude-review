@@ -22,6 +22,8 @@ export class ImageAttachments {
 	// What this instance uploaded itself, as opposed to images it was handed
 	// with an edit or a draft: the only ones it may let the server drop
 	readonly #uploaded = new SvelteSet<string>();
+	// Whether what it holds was let go: an image still on its way then is let go as it lands
+	#abandoned = false;
 
 	/** Ids the server kept the attached images under, in the order pasted. */
 	get images(): readonly string[] {
@@ -73,10 +75,14 @@ export class ImageAttachments {
 		return [...refusals, ...failures.filter((failure): failure is string => failure !== null)];
 	}
 
-	/** Take an image off, and off the server unless the agent may know of it. */
+	/**
+	 * Take an image off, and off the server if it was uploaded here: one handed
+	 * in with an edit or a draft may be what a thread already shows, or what
+	 * the agent has seen.
+	 */
 	detach(imageId: string) {
 		this.forget(imageId);
-		void letServerDrop(imageId);
+		if (this.#uploaded.has(imageId)) void letServerDrop(imageId);
 	}
 
 	/** Take an image off without asking the server: it no longer has it. */
@@ -96,6 +102,7 @@ export class ImageAttachments {
 	 * the agent, and the server keeps those anyway.
 	 */
 	abandon() {
+		this.#abandoned = true;
 		for (const imageId of this.#images) {
 			if (this.#uploaded.has(imageId)) void letServerDrop(imageId);
 		}
@@ -106,6 +113,11 @@ export class ImageAttachments {
 		this.#uploading += 1;
 		try {
 			const { image_id: imageId } = await keepImage(file);
+			if (this.#abandoned) {
+				// Landed after what it was pasted into was put away: nothing will show it
+				void letServerDrop(imageId);
+				return null;
+			}
 			this.#uploaded.add(imageId);
 			this.#images = [...this.#images, imageId];
 			return null;

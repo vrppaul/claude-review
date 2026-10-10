@@ -9,6 +9,7 @@ import { newComment } from '../new-comment';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, leavePage, openReview } from '../review';
+import { settled } from '../settled';
 
 let review: Review;
 
@@ -208,6 +209,23 @@ describe('a reply or an edit being written in a thread', () => {
 	});
 });
 
+describe('an image on its way when its field is put away', () => {
+	it('is let go on the server as it lands', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		const uploads = server.hold('POST /api/images');
+		render(DiffView, inReview(review));
+		await user.click(lineNumber(2));
+		await paste(screen.getByTestId('comment-input'), screenshot());
+
+		await user.click(screen.getByTestId('cancel-comment'));
+		uploads.answer(0, { image_id: KEPT_AS });
+		await settled();
+
+		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
+	});
+});
+
 describe('a comment with images of its own', () => {
 	it('leaves the images it already had when its edit is put away', async () => {
 		const user = userEvent.setup();
@@ -218,6 +236,20 @@ describe('a comment with images of its own', () => {
 
 		await user.click(screen.getByTestId('cancel-comment'));
 
+		expect(server.requests.filter((request) => request.method === 'DELETE')).toEqual([]);
+	});
+
+	it('keeps an image taken off in an edit that is put away, which the comment still shows', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'see this', images: ['kept.png'] }));
+		const server = fakeServer();
+		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('edit-comment'));
+
+		await user.click(screen.getByTestId('detach-image'));
+		await user.click(screen.getByTestId('cancel-comment'));
+
+		expect(review.threads.all[0].images).toEqual(['kept.png']);
 		expect(server.requests.filter((request) => request.method === 'DELETE')).toEqual([]);
 	});
 });

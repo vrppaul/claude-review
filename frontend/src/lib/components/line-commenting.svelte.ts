@@ -100,13 +100,14 @@ export class LineCommenting {
 		// A range spans one side only: old line 42 and new line 42 are different
 		// places, so dragging across the other side must not extend the range.
 		if (drag === null || drawn.place.side !== drag.side || drawn.place.number === NO_NUMBER) return;
-		const end = reach(drag.start, drawn.place.number, this.#review.longestQuotedRange);
-		const reached = { side: drag.side, number: end };
+		const furthest = reach(drag.start, drawn.place.number, this.#review.longestQuotedRange);
+		// A drag stopped short of the pointer stops on a line of its side that is
+		// drawn: on the old side the line at the furthest number may be one the
+		// change kept, which is on the new side, and nothing would hang under it.
 		// The field opens under the line the drag reached, following the drag
-		// back up rather than staying at the furthest point; a drag stopped
-		// short of the pointer opens it where the drag stopped, if that line
-		// is drawn
-		this.#drag = { ...drag, end, opensBelow: this.#isDrawn(reached) ? reached : drag.opensBelow };
+		// back up rather than staying at the furthest point.
+		const reached = this.#furthestDrawn(drag.side, drag.start, furthest);
+		this.#drag = { ...drag, end: reached.number, opensBelow: reached };
 	}
 
 	/** The pointer was let go, anywhere: a comment is started on the lines dragged over. */
@@ -166,7 +167,16 @@ export class LineCommenting {
 		this.#review.threads.writing.pickLines(this.#file.path(), lines, quote);
 	}
 
-	#isDrawn(place: LinePlace): boolean {
-		return this.#file.hunks().some((hunk) => hunk.lines.some((drawn) => samePlace(drawn.place, place)));
+	/** The line of a side drawn here furthest from `start` toward `end`; `start`'s own when none is further. */
+	#furthestDrawn(side: LineSide, start: number, end: number): LinePlace {
+		return this.#file
+			.hunks()
+			.flatMap((hunk) => hunk.lines)
+			.map(({ place }) => place)
+			.filter((place) => place.side === side && isBetween(place.number, start, end))
+			.reduce(
+				(furthest, place) => (Math.abs(place.number - start) > Math.abs(furthest.number - start) ? place : furthest),
+				{ side, number: start }
+			);
 	}
 }
