@@ -6,6 +6,7 @@ from typing import assert_never
 from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
 
 from claude_review.domain import models
+from claude_review.presentation.asgi import HTTP_DISCONNECT
 from claude_review.presentation.dependencies import get_review
 from claude_review.presentation.wire.agent import (
     AgentStatus,
@@ -69,7 +70,7 @@ async def _until_the_caller_leaves(http_request: Request) -> None:
     The request has no body, so after it the only thing left to hear is the
     caller hanging up: a `wait` killed, or timed out by whatever ran it.
     """
-    while (await http_request.receive())["type"] != "http.disconnect":
+    while (await http_request.receive())["type"] != HTTP_DISCONNECT:
         continue
 
 

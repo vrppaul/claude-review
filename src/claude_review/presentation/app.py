@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocketClose
 
+from claude_review.presentation.asgi import HTTP_SCOPE
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
@@ -32,9 +33,6 @@ PAGE_NAME = "index.html"
 ASSETS_NAME = "assets"
 # Where the page asks for those files
 ASSETS_PATH = "/assets"
-# The ASGI connection a file is fetched over; a socket is any other
-HTTP_SCOPE = "http"
-
 # What the review calls itself, in its API description
 API_TITLE = "Claude Review"
 

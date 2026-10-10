@@ -40,8 +40,8 @@ log = structlog.get_logger()
 REFUSAL_STATUS: dict[type[ReviewError], HTTPStatus] = {
     NotFoundError: HTTPStatus.NOT_FOUND,
     InvalidRequestError: HTTPStatus.BAD_REQUEST,
-    TooLargeError: HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
-    RefusedError: HTTPStatus.UNPROCESSABLE_ENTITY,
+    TooLargeError: HTTPStatus.CONTENT_TOO_LARGE,
+    RefusedError: HTTPStatus.UNPROCESSABLE_CONTENT,
     ConflictError: HTTPStatus.CONFLICT,
 }
 

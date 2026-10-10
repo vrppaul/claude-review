@@ -37,7 +37,7 @@ class RefusingHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         assert isinstance(self.server, RefusingReview)
         answer = self.server.answer
-        self.send_response(HTTPStatus.UNPROCESSABLE_ENTITY)
+        self.send_response(HTTPStatus.UNPROCESSABLE_CONTENT)
         self.send_header("Content-Length", str(len(answer)))
         self.end_headers()
         self.wfile.write(answer)
@@ -74,4 +74,4 @@ def test_a_refusal_in_words_is_passed_on_as_said() -> None:
         client.show(SHOWN)
 
     assert str(refused.value).endswith("No such file in this review")
-    assert str(HTTPStatus.UNPROCESSABLE_ENTITY.value) in str(refused.value)
+    assert str(HTTPStatus.UNPROCESSABLE_CONTENT.value) in str(refused.value)

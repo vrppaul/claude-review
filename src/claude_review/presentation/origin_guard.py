@@ -23,10 +23,18 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from claude_review.presentation.asgi import HTTP_RESPONSE_START, HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
 from claude_review.presentation.wire.refusal import Refusal
 
 # Loopback names, as a Host header writes them: an IPv6 address always in brackets
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
+# How a Host header sets an IPv6 address apart from the port after it, and a name from its port
+IPV6_OPENS = "["
+IPV6_CLOSES = "]"
+PORT_SEPARATOR = ":"
+# The headers that say which host a request asked for, and which page sent it
+HOST_HEADER = "host"
+ORIGIN_HEADER = "origin"
 
 # What a browser sends as the Origin of a page that has none of its own: a
 # sandboxed frame, a file opened from disk
@@ -44,7 +52,10 @@ def is_local_host(value: str | None) -> bool:
     """Whether a Host header names this machine over loopback."""
     if not value:
         return False
-    host = value.split("]")[0] + "]" if value.startswith("[") else value.rsplit(":", 1)[0]
+    if value.startswith(IPV6_OPENS):
+        host = value.partition(IPV6_CLOSES)[0] + IPV6_CLOSES
+    else:
+        host = value.rsplit(PORT_SEPARATOR, maxsplit=1)[0]
     return host in LOCAL_HOSTS
 
 
@@ -96,7 +107,7 @@ class SecurityHeaders:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != HTTP_SCOPE:
             await self.app(scope, receive, send)
             return
         await self.app(scope, receive, partial(_send_with_security_headers, send=send))
@@ -104,7 +115,7 @@ class SecurityHeaders:
 
 async def _send_with_security_headers(message: Message, *, send: Send) -> None:
     """Send a message on, the start of a response carrying the page's security headers unless it set its own."""
-    if message["type"] == "http.response.start":
+    if message["type"] == HTTP_RESPONSE_START:
         headers = MutableHeaders(scope=message)
         for name, value in SECURITY_HEADERS.items():
             headers.setdefault(name, value)
@@ -118,18 +129,18 @@ class LocalOriginOnly:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] not in ("http", "websocket"):
+        if scope["type"] not in (HTTP_SCOPE, WEBSOCKET_SCOPE):
             await self.app(scope, receive, send)
             return
 
         headers = Headers(scope=scope)
-        host = headers.get("host")
-        allowed = host is not None and is_local_host(host) and is_own_page(headers.get("origin"), host)
+        host = headers.get(HOST_HEADER)
+        allowed = host is not None and is_local_host(host) and is_own_page(headers.get(ORIGIN_HEADER), host)
         if allowed:
             await self.app(scope, receive, send)
             return
 
-        if scope["type"] == "websocket":
+        if scope["type"] == WEBSOCKET_SCOPE:
             await _reject_socket(send)
         else:
             refused = Refusal(detail=NOT_ITS_PAGE)
@@ -138,4 +149,4 @@ class LocalOriginOnly:
 
 async def _reject_socket(send: Send) -> None:
     """Close the handshake before it becomes a socket."""
-    await send({"type": "websocket.close", "code": POLICY_VIOLATION})
+    await send({"type": WEBSOCKET_CLOSE, "code": POLICY_VIOLATION})

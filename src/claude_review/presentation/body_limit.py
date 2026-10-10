@@ -6,16 +6,20 @@ capped here, as it arrives: by the length it announces, and by what has
 actually come when it announces none.
 """
 
+from http import HTTPStatus
+
 from fastapi import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from claude_review.presentation.asgi import HTTP_REQUEST, HTTP_SCOPE
 from claude_review.services.image_service import MAX_IMAGE_BYTES
 
 # The largest thing sent is a pasted image, uploaded as the body itself. A
 # round of several hundred threads is a fraction of that.
 MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
+# The header a request announces its body's length in, as ASGI hands headers over: lower case, in bytes
+CONTENT_LENGTH_HEADER = b"content-length"
 
-TOO_LARGE = 413
 TOO_LARGE_DETAIL = "The request is larger than anything this review takes"
 
 
@@ -26,7 +30,7 @@ class BodySizeLimit:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != HTTP_SCOPE:
             await self.app(scope, receive, send)
             return
         await self.app(scope, CountedReceive(receive, _announced_length(scope)), send)
@@ -46,18 +50,18 @@ class CountedReceive:
 
     async def __call__(self) -> Message:
         if self._announced is not None and self._announced > MAX_REQUEST_BYTES:
-            raise HTTPException(status_code=TOO_LARGE, detail=TOO_LARGE_DETAIL)
+            raise HTTPException(status_code=HTTPStatus.CONTENT_TOO_LARGE, detail=TOO_LARGE_DETAIL)
         message = await self._receive()
-        if message["type"] == "http.request":
+        if message["type"] == HTTP_REQUEST:
             self._received += len(message.get("body", b""))
             if self._received > MAX_REQUEST_BYTES:
-                raise HTTPException(status_code=TOO_LARGE, detail=TOO_LARGE_DETAIL)
+                raise HTTPException(status_code=HTTPStatus.CONTENT_TOO_LARGE, detail=TOO_LARGE_DETAIL)
         return message
 
 
 def _announced_length(scope: Scope) -> int | None:
     """The length the request says its body has, if it says one that can be read."""
     for name, value in scope["headers"]:
-        if name == b"content-length":
+        if name == CONTENT_LENGTH_HEADER:
             return int(value) if value.isdigit() else None
     return None
