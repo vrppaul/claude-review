@@ -3,37 +3,62 @@
 Schemathesis reads the review's own OpenAPI and draws requests for each
 route, the well formed and the malformed alike. Whatever it sends, the
 review answers or refuses — never a fault of its own — refuses what the
-schema does not allow, answers with the shape the schema gives, and turns a
-method a route does not take away as a router should.
+schema does not allow, answers with the shapes and statuses the schema
+gives, and turns a method a route does not take away naming those it does.
 """
 
 import pytest
 import schemathesis
+from fastapi import FastAPI
 from schemathesis import Case
 from schemathesis.checks import CheckFunction
-from schemathesis.specs.openapi.checks import allow_header_conformance, positive_data_acceptance
+from schemathesis.specs.openapi.checks import positive_data_acceptance
 
-from tests.helpers import LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file
+from tests.helpers import EVENTS_ROUTE, LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file
 
-# What the review holds a request to beyond its schema, and so not checked
-# against the schema alone: a well-formed request may still name a thread, a
-# file or a base the review does not hold, which only the review can refuse;
-# and a route that takes GET takes HEAD too, which no schema lists
-BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance, allow_header_conformance]
-# The agent's long poll: asked for up to ten minutes, it waits them out
-WAITS_FOR_THE_READER = "/api/wait"
+# What the review holds a well-formed request to beyond its schema, which no
+# schema can say: that what it names — a thread, a file, a base — is in the
+# review, that a range starts before it ends, that a message says something
+BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
-schema = schemathesis.pytest.from_fixture("served_schema")
+# The agent's long poll waits out whatever it is asked to, up to ten minutes
+schema = schemathesis.pytest.from_fixture("served_schema").exclude(path=EVENTS_ROUTE)
+
+
+class ReviewsByOperation:
+    """A review for each operation drawn against, built the first time it is asked for.
+
+    What one operation does — sending the review for good, ending it — must
+    not decide what the next one is sent to.
+    """
+
+    def __init__(self, reviews: ReviewFactory) -> None:
+        self._reviews = reviews
+        self._apps: dict[str, FastAPI] = {}
+
+    def app_for(self, operation: str) -> FastAPI:
+        if operation not in self._apps:
+            self._apps[operation] = self._reviews.app([one_line_file()])
+        return self._apps[operation]
 
 
 @pytest.fixture
 def served_schema(reviews: ReviewFactory) -> schemathesis.BaseSchema:
-    app = reviews.app([one_line_file()])
-    return schemathesis.openapi.from_asgi("/openapi.json", app, headers=LOCAL_HEADERS).exclude(
-        path=WAITS_FOR_THE_READER
-    )
+    return schemathesis.openapi.from_asgi("/openapi.json", reviews.app([one_line_file()]), headers=LOCAL_HEADERS)
+
+
+@pytest.fixture
+def reviews_by_operation(reviews: ReviewFactory) -> ReviewsByOperation:
+    return ReviewsByOperation(reviews)
 
 
 @schema.parametrize()
-def test_whatever_a_route_is_sent_it_answers_as_its_schema_says(case: Case) -> None:
-    case.call_and_validate(base_url=LOCAL_ORIGIN, headers=LOCAL_HEADERS, excluded_checks=BEYOND_THE_SCHEMA)
+def test_whatever_a_route_is_sent_it_answers_as_its_schema_says(
+    case: Case, reviews_by_operation: ReviewsByOperation
+) -> None:
+    case.call_and_validate(
+        app=reviews_by_operation.app_for(case.operation.label),
+        base_url=LOCAL_ORIGIN,
+        headers=LOCAL_HEADERS,
+        excluded_checks=BEYOND_THE_SCHEMA,
+    )

@@ -16,11 +16,14 @@ throw away an unsent review by connecting and disconnecting once.
 """
 
 from functools import partial
+from http import HTTPStatus
 from urllib.parse import urlsplit
 
 from starlette.datastructures import Headers, MutableHeaders
-from starlette.responses import PlainTextResponse
+from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from claude_review.presentation.wire.refusal import Refusal
 
 # Loopback names, as a Host header writes them: an IPv6 address always in brackets
 LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
@@ -33,6 +36,8 @@ WEB_SCHEMES = frozenset({"http", "https"})
 
 # The close code for a handshake refused on policy grounds (RFC 6455, 7.4.1)
 POLICY_VIOLATION = 1008
+# What a request from anywhere but this server's own page is told
+NOT_ITS_PAGE = "Not this server's page"
 
 
 def is_local_host(value: str | None) -> bool:
@@ -127,7 +132,8 @@ class LocalOriginOnly:
         if scope["type"] == "websocket":
             await _reject_socket(send)
         else:
-            await PlainTextResponse("Not this server's page", status_code=403)(scope, receive, send)
+            refused = Refusal(detail=NOT_ITS_PAGE)
+            await JSONResponse(refused.model_dump(), status_code=HTTPStatus.FORBIDDEN)(scope, receive, send)
 
 
 async def _reject_socket(send: Send) -> None:

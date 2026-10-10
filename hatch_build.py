@@ -12,6 +12,7 @@ Build contexts this must handle:
 import shutil
 import subprocess
 from pathlib import Path
+from typing import override
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -20,11 +21,17 @@ PNPM_MISSING = (
     "Install pnpm (https://pnpm.io) or install the prebuilt package from PyPI: "
     "uv tool install claude-review"
 )
+PREBUILT_MISSING = (
+    "Prebuilt frontend assets are missing (src/claude_review/static/dist/); "
+    "the package would serve no UI. This sdist is broken — install from PyPI "
+    "instead: uv tool install claude-review"
+)
 
 
 class FrontendBuildHook(BuildHookInterface):
     PLUGIN_NAME = "frontend-build"
 
+    @override
     def initialize(self, version: str, build_data: dict) -> None:
         root = Path(self.root)
         frontend_dir = root / "frontend"
@@ -32,17 +39,14 @@ class FrontendBuildHook(BuildHookInterface):
 
         if not frontend_dir.exists():
             if not prebuilt_index.exists():
-                raise RuntimeError(
-                    "Prebuilt frontend assets are missing (src/claude_review/static/dist/); "
-                    "the package would serve no UI. This sdist is broken — install from PyPI "
-                    "instead: uv tool install claude-review"
-                )
+                raise RuntimeError(PREBUILT_MISSING)
             return
 
         if not shutil.which("pnpm"):
             if version == "editable":
                 # Keep the assets dir present so packaging's force-include doesn't
-                # fail; the server serves no UI until `pnpm build` runs.
+                # fail; the server starts and answers its routes, with no page
+                # until `pnpm build` runs.
                 prebuilt_index.parent.mkdir(parents=True, exist_ok=True)
                 self.app.display_warning(f"Skipping frontend build: {PNPM_MISSING}")
                 return

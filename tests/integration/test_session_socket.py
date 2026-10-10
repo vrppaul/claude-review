@@ -280,6 +280,6 @@ def test_a_binary_frame_is_ignored_and_the_socket_goes_on(review_page: TestClien
 
 
 def test_a_socket_to_no_route_is_closed_rather_than_failing(review_page: TestClient) -> None:
-    """The page's files answer every other path; a socket there is turned away, not a fault of the server."""
+    """A socket opened where no route takes one is turned away, not a fault of the server."""
     with pytest.raises(WebSocketDisconnect), open_session_at(review_page, "/api/nowhere") as socket:
         socket.receive_text()

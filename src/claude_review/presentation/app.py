@@ -5,11 +5,14 @@ from collections.abc import AsyncGenerator
 from functools import partial
 from importlib.metadata import version as installed_version
 from pathlib import Path
+from typing import override
 
 import structlog
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.types import Receive, Scope, Send
+from starlette.websockets import WebSocketClose
 
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
@@ -22,11 +25,15 @@ from claude_review.services.review.review_lifetime import EndReason
 
 log = structlog.get_logger()
 
+# Where the page is built to; empty in a checkout whose page was never built
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
-# The page, and the files its build put beside it, where it asks for them
-PAGE_FILE = STATIC_DIR / "index.html"
-ASSETS_DIR = STATIC_DIR / "assets"
+# The page, and the folder of files its build put beside it
+PAGE_NAME = "index.html"
+ASSETS_NAME = "assets"
+# Where the page asks for those files
 ASSETS_PATH = "/assets"
+# The ASGI connection a file is fetched over; a socket is any other
+HTTP_SCOPE = "http"
 
 # What the review calls itself, in its API description
 API_TITLE = "Claude Review"
@@ -58,27 +65,51 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: Read
     # Whatever a route refuses is answered here, by its kind
     answer_refusals(app)
 
-    if STATIC_DIR.exists():
-        serve_the_page(app)
+    serve_the_page(app, STATIC_DIR)
 
     return app
 
 
-def serve_the_page(app: FastAPI) -> None:
+def serve_the_page(app: FastAPI, built: Path) -> None:
     """Serve the page at the root, and the files its build put beside it — nothing else.
 
     Every other path, and every method a route does not take, is refused by
     the router, as it refuses them: a page served under any path no route
     claims would answer for the routes too, and a wrong method on one would
     be refused by a file server that does not know which methods it takes.
+    A checkout whose page was never built serves the routes and no page.
     """
-    app.add_api_route("/", the_page, methods=["GET"], include_in_schema=False)
-    app.mount(ASSETS_PATH, StaticFiles(directory=ASSETS_DIR), name="assets")
+    page = built / PAGE_NAME
+    if page.is_file():
+        app.add_api_route("/", PageFile(page), methods=["GET"], include_in_schema=False)
+    assets = built / ASSETS_NAME
+    if assets.is_dir():
+        app.mount(ASSETS_PATH, AssetFiles(directory=assets), name=ASSETS_NAME)
 
 
-async def the_page() -> FileResponse:
+class PageFile:
     """The review's page, which asks for everything else itself."""
-    return FileResponse(PAGE_FILE)
+
+    def __init__(self, page: Path) -> None:
+        self._page = page
+
+    async def __call__(self) -> FileResponse:
+        return FileResponse(self._page)
+
+
+class AssetFiles(StaticFiles):
+    """The files the page's build put beside it: fetched, never opened as a socket.
+
+    A socket opened here is turned away the way the router turns away one it
+    has no route for, rather than reaching a file server that cannot answer it.
+    """
+
+    @override
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != HTTP_SCOPE:
+            await WebSocketClose()(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
 
 @contextlib.asynccontextmanager

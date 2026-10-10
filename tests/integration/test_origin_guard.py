@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.presentation.wire.pushes import ShowPush
+from claude_review.presentation.wire.refusal import Refusal
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
@@ -51,6 +52,8 @@ async def test_a_page_on_another_site_cannot_read_the_diff(client: AsyncClient) 
     response = await client.get(DIFF_ROUTE, headers={"Origin": "https://attacker.example"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
+    # Said as every refusal is said, so a caller reads one shape whoever refused
+    assert Refusal.model_validate_json(response.content).detail
 
 
 async def test_a_page_on_another_site_cannot_end_the_review(client: AsyncClient) -> None:
