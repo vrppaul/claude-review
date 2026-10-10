@@ -29,6 +29,7 @@ from tests.helpers import (
     UploadThatBreaksOff,
     http_client,
     line_on_the_wire,
+    opening_of,
     thread_on_the_wire,
     turn_on_the_wire,
 )
@@ -52,7 +53,7 @@ A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Looks off")
 
 @pytest.fixture
 async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    async with http_client(reviews.app([], mode=ReviewMode.FILES)) as agent:
+    async with http_client(reviews.app(opening_of([], mode=ReviewMode.FILES))) as agent:
         yield agent
 
 
@@ -147,7 +148,7 @@ async def test_an_upload_the_browser_breaks_off_is_dropped_without_a_refusal(
     reviews: ReviewFactory, workspace: ReviewWorkspace, logged: list[EventDict]
 ) -> None:
     """Nobody is left to be told no, and a refusal in the log would read as something gone wrong."""
-    review = reviews.app([], mode=ReviewMode.FILES)
+    review = reviews.app(opening_of([], mode=ReviewMode.FILES))
 
     await UploadThatBreaksOff(first_part=PNG).upload(review)
 

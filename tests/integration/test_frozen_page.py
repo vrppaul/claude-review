@@ -13,7 +13,7 @@ from structlog.typing import EventDict
 from claude_review.domain.models import ReviewMode
 from claude_review.presentation.broadcast import PAGE_BACKLOG
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
-from tests.helpers import ReviewServers
+from tests.helpers import ReviewServers, opening_of
 from tests.page_socket import page_socket_held
 
 # How little the page's side of the connection buffers: it reads nothing, so
@@ -29,7 +29,7 @@ CATCH_UP_ROUTE = "/api/catch-up"
 
 
 async def test_a_page_that_stops_reading_is_let_go(servers: ReviewServers, logged: list[EventDict]) -> None:
-    review = await servers.start([], mode=ReviewMode.FILES)
+    review = await servers.start(opening_of([], mode=ReviewMode.FILES))
 
     # The page reads the handshake's answer and nothing after it
     async with (

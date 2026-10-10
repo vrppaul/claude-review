@@ -20,6 +20,7 @@ from tests.helpers import (
     http_client,
     line_on_the_wire,
     one_line_file,
+    opening_of,
     thread_on_the_wire,
     until_an_agent_waits,
 )
@@ -34,7 +35,7 @@ ABANDONED_POLL_SECONDS = SETTLE_SECONDS * 10
 
 async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews: ReviewFactory) -> None:
     """A killed `wait` must not leave behind a poll that swallows the next question."""
-    app = reviews.app([one_line_file()])
+    app = reviews.app(opening_of([one_line_file()]))
     caller = CallerThatLeaves()
     async with http_client(app) as agent:
         abandoned = asyncio.ensure_future(caller.poll(app, ABANDONED_POLL_SECONDS))

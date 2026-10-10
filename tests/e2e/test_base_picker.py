@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
-from tests.helpers import ReviewServers, RunningReview, git
+from tests.helpers import ReviewServers, RunningReview, git, opening_of
 
 
 async def _said(page: Page, testid: str) -> str:
@@ -45,7 +45,7 @@ def picker_repo(tmp_path: Path) -> Path:
 async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review that has already been through one round."""
     # As the command line names it: the repository, and what it is compared against
-    started = await servers.start([], root=picker_repo, title=f"{picker_repo.name}: uncommitted changes")
+    started = await servers.start(opening_of([], root=picker_repo, title=f"{picker_repo.name}: uncommitted changes"))
     async with AsyncClient(base_url=started.url) as agent:
         # The diff taken, and with it the tree round 1 began from written down
         await agent.post("/api/retake", json={})

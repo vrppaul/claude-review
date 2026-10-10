@@ -14,7 +14,7 @@ from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
 
-from tests.helpers import EVENTS_ROUTE, LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file
+from tests.helpers import EVENTS_ROUTE, LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file, opening_of
 
 # What the review holds a well-formed request to beyond its schema, which no
 # schema can say: that what it names — a thread, a file, a base — is in the
@@ -38,13 +38,15 @@ class ReviewsByOperation:
 
     def app_for(self, operation: str) -> FastAPI:
         if operation not in self._apps:
-            self._apps[operation] = self._reviews.app([one_line_file()])
+            self._apps[operation] = self._reviews.app(opening_of([one_line_file()]))
         return self._apps[operation]
 
 
 @pytest.fixture
 def served_schema(reviews: ReviewFactory) -> schemathesis.BaseSchema:
-    return schemathesis.openapi.from_asgi("/openapi.json", reviews.app([one_line_file()]), headers=LOCAL_HEADERS)
+    return schemathesis.openapi.from_asgi(
+        "/openapi.json", reviews.app(opening_of([one_line_file()])), headers=LOCAL_HEADERS
+    )
 
 
 @pytest.fixture

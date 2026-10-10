@@ -25,6 +25,7 @@ from tests.helpers import (
     git,
     http_client,
     line_on_the_wire,
+    opening_of,
     removed_line,
     review_has_ended,
     thread_on_the_wire,
@@ -55,7 +56,7 @@ def _handler_change(path: str = "src/handler.ts") -> list[DiffFile]:
 
 @pytest.fixture
 async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    async with http_client(reviews.app(_handler_change(), title=REVIEW_TITLE)) as agent:
+    async with http_client(reviews.app(opening_of(_handler_change(), title=REVIEW_TITLE))) as agent:
         yield agent
 
 
@@ -200,7 +201,7 @@ def plan_file(tmp_path: Path) -> Path:
 async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real text file, read as a files review reads it."""
     files = await read_text_files([plan_file], named_from=plan_file.parent)
-    async with http_client(reviews.app(files, mode=ReviewMode.FILES)) as agent:
+    async with http_client(reviews.app(opening_of(files, mode=ReviewMode.FILES))) as agent:
         yield agent
 
 
@@ -254,7 +255,7 @@ def transcript_file(tmp_path: Path) -> Path:
 async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real transcript file, read as a conversation review reads it."""
     messages = await read_transcript(transcript_file)
-    async with http_client(reviews.app(messages, mode=ReviewMode.TRANSCRIPT)) as agent:
+    async with http_client(reviews.app(opening_of(messages, mode=ReviewMode.TRANSCRIPT))) as agent:
         yield agent
 
 
@@ -307,7 +308,9 @@ async def repo_backed_client(tmp_path: Path, reviews: ReviewFactory) -> AsyncIte
     """A client whose server can read files, as diff mode's can."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 31)))
-    async with http_client(reviews.app(_handler_change("src/app.py"), root=tmp_path, title=REVIEW_TITLE)) as agent:
+    async with http_client(
+        reviews.app(opening_of(_handler_change("src/app.py"), root=tmp_path, title=REVIEW_TITLE))
+    ) as agent:
         yield agent
 
 
@@ -356,7 +359,7 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: 
         "def f():\n    a = 1\n    b = 99\n    c = 3\n",
     )
 
-    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
         plain = await _changed_lines(client, ignore_whitespace=False)
         ignored = await _changed_lines(client, ignore_whitespace=True)
 
@@ -369,7 +372,7 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
     """A file whose only change is indentation disappears from the review."""
     files = await _committed_then_changed(tmp_git_repo, "def f():\n    return 1\n", "def f():\n        return 1\n")
 
-    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
         plain = (await client.get(DIFF_ROUTE)).json()
         ignored = (await client.get(DIFF_ROUTE, params={"ignore_whitespace": True})).json()
 
@@ -383,7 +386,7 @@ async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, re
         tmp_git_repo, "def f():\n  a = 1\n  b = 2\n", "def f():\n    a = 1\n    b = 99\n"
     )
 
-    async with http_client(reviews.app(files, root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of(files, root=tmp_git_repo))) as client:
         full = (await client.get(DIFF_ROUTE)).json()
         ignored = await _changed_lines(client, ignore_whitespace=True)
         back = await _changed_lines(client, ignore_whitespace=False)
@@ -412,7 +415,7 @@ async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_h
     (tmp_git_repo / ".gitignore").write_text(".env\n")
     (tmp_git_repo / ".env").write_text("SECRET=hunter2\n")
 
-    async with http_client(reviews.app([], root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
         tracked = await client.get("/api/file-window", params={"path": "initial.txt", "start": 1, "end": 1})
         untracked = await client.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
 

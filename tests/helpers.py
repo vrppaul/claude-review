@@ -259,8 +259,15 @@ class FixedClock(Clock):
         return self._moment
 
 
+def opening_of(
+    diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, root: Path | None = None, title: str = ""
+) -> ReviewOpening:
+    """What a review opens on, as the command line reads it: a review of a repository when it names a root."""
+    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=root, base=None)
+
+
 class ReviewFactory:
-    """Builds reviews the way the command line does, each a review of its own.
+    """Hosts reviews the way the command line does, each a review of its own.
 
     A review of a repository is given room to write down its trees, as the
     command line gives it, unless the test is about one that has none.
@@ -273,21 +280,8 @@ class ReviewFactory:
         self._marking_workspace = marking_workspace
         self._reader_files = reader_files
 
-    def hosted(
-        self,
-        diff_files: list[DiffFile],
-        *,
-        mode: ReviewMode = ReviewMode.DIFF,
-        root: Path | None = None,
-        base: str | None = None,
-        title: str = "",
-        keeps_marks: bool = True,
-        clock: Clock | None = None,
-    ) -> HostedReview:
-        opening = ReviewOpening(
-            mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=root, base=base
-        )
-        writes_marks = root is not None and keeps_marks
+    def hosted(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> HostedReview:
+        writes_marks = opening.root is not None and keeps_marks
         return host_review(
             opening,
             workspace=self._marking_workspace if writes_marks else self._workspace,
@@ -295,20 +289,9 @@ class ReviewFactory:
             clock=clock or SystemClock(),
         )
 
-    def app(
-        self,
-        diff_files: list[DiffFile],
-        *,
-        mode: ReviewMode = ReviewMode.DIFF,
-        root: Path | None = None,
-        base: str | None = None,
-        title: str = "",
-        keeps_marks: bool = True,
-        clock: Clock | None = None,
-    ) -> FastAPI:
-        return self.hosted(
-            diff_files, mode=mode, root=root, base=base, title=title, keeps_marks=keeps_marks, clock=clock
-        ).app
+    def app(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> FastAPI:
+        """The app that serves the review, for a test that speaks to it and to nothing else."""
+        return self.hosted(opening, keeps_marks=keeps_marks, clock=clock).app
 
 
 @contextlib.asynccontextmanager
@@ -580,15 +563,8 @@ class ReviewServers:
         self._reviews = reviews
         self._running: list[ServedReview] = []
 
-    async def start(
-        self,
-        diff_files: list[DiffFile],
-        *,
-        mode: ReviewMode = ReviewMode.DIFF,
-        root: Path | None = None,
-        title: str = "",
-    ) -> RunningReview:
-        hosted = self._reviews.hosted(diff_files, mode=mode, root=root, title=title)
+    async def start(self, opening: ReviewOpening) -> RunningReview:
+        hosted = self._reviews.hosted(opening)
         lifetime = hosted.review.lifetime
         # The server the command line runs, so a browser test meets the same one
         server = ReviewServer(hosted.app, lifetime)

@@ -30,6 +30,7 @@ from tests.helpers import (
     line_on_the_wire,
     next_push,
     open_session,
+    opening_of,
     page_client,
     review_has_ended,
     thread_on_the_wire,
@@ -119,7 +120,7 @@ async def test_a_waiting_agent_is_told_the_review_ended(client: AsyncClient) -> 
 
 
 async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
-    async with http_client(reviews.app([], root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
         git(tmp_git_repo, "add", ".")
 
@@ -155,7 +156,7 @@ def test_a_retake_names_the_files_that_changed_since_the_last_one(tmp_git_repo: 
     (tmp_git_repo / "answered.py").write_text("as it was\n")
     (tmp_git_repo / "untouched.py").write_text("as it was\n")
 
-    with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
+    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
 
         with open_session(review_page) as socket:
@@ -170,7 +171,7 @@ def test_a_retake_tells_the_page_how_many_files_the_review_now_holds(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
     """The review's own count: a page reading a narrower base cannot count the review from its screen."""
-    with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
+    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
         (tmp_git_repo / "added.py").write_text("print('hi')\n")
         git(tmp_git_repo, "add", ".")
 
@@ -192,7 +193,7 @@ def test_a_retake_is_measured_from_where_the_round_began(tmp_git_repo: Path, rev
     """
     (tmp_git_repo / "first.py").write_text("one\n")
 
-    with page_client(reviews.app([], root=tmp_git_repo)) as review_page:
+    with page_client(reviews.app(opening_of([], root=tmp_git_repo))) as review_page:
         (tmp_git_repo / "first.py").write_text("two\n")
         review_page.post("/api/retake", json={})
 
@@ -211,7 +212,7 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
 ) -> None:
     """Without a mark to compare against, the review must not claim nothing moved."""
     with (
-        page_client(reviews.app([], root=tmp_git_repo, keeps_marks=False)) as review_page,
+        page_client(reviews.app(opening_of([], root=tmp_git_repo), keeps_marks=False)) as review_page,
         open_session(review_page) as socket,
     ):
         review_page.post("/api/retake", json={})
@@ -227,7 +228,7 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
     on_run = {"file": "a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["def run():"]}
     on_walk = {**on_run, "quote": ["def walk():"]}
 
-    async with http_client(reviews.app([], root=tmp_git_repo)) as client:
+    async with http_client(reviews.app(opening_of([], root=tmp_git_repo))) as client:
         (tmp_git_repo / "a.py").write_text("import sys\ndef run():\n    return 1\n")
         await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
         response = await client.post("/api/anchors/follow", json={"anchors": [on_run, on_walk]}, headers=LOCAL_HEADERS)

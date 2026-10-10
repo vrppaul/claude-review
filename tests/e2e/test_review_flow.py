@@ -13,7 +13,15 @@ from claude_review.domain.models import ReviewMode
 from claude_review.hosting.workspace import ReaderFiles
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
-from tests.helpers import SETTLE_SECONDS, ReviewServers, RunningReview, git, review_has_ended, uncommitted_changes
+from tests.helpers import (
+    SETTLE_SECONDS,
+    ReviewServers,
+    RunningReview,
+    git,
+    opening_of,
+    review_has_ended,
+    uncommitted_changes,
+)
 
 # What the page posts when it sends the review, a round or the last of it
 SUBMIT_RESPONSE = "**/api/submit"
@@ -134,7 +142,7 @@ def e2e_repo(tmp_path: Path) -> Path:
 @pytest.fixture
 async def diff_review(e2e_repo: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing the e2e repo's uncommitted changes."""
-    return await servers.start(await uncommitted_changes(e2e_repo))
+    return await servers.start(opening_of(await uncommitted_changes(e2e_repo)))
 
 
 async def test_a_comment_on_a_line_reaches_the_agent(diff_review: RunningReview, page: Page) -> None:
@@ -286,7 +294,9 @@ def text_files(tmp_path: Path) -> list[Path]:
 @pytest.fixture
 async def files_review(text_files: list[Path], servers: ReviewServers, tmp_path: Path) -> RunningReview:
     """A real server reviewing two text files."""
-    return await servers.start(await read_text_files(text_files, named_from=tmp_path), mode=ReviewMode.FILES)
+    return await servers.start(
+        opening_of(await read_text_files(text_files, named_from=tmp_path), mode=ReviewMode.FILES)
+    )
 
 
 async def test_files_mode_sidebar_shows_files_without_diff_decorations(
@@ -480,7 +490,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
-    return await servers.start(await read_transcript(transcript_file), mode=ReviewMode.TRANSCRIPT)
+    return await servers.start(opening_of(await read_transcript(transcript_file), mode=ReviewMode.TRANSCRIPT))
 
 
 async def test_transcript_mode_sidebar_shows_messages(transcript_review: RunningReview, page: Page) -> None:
@@ -883,7 +893,7 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
 
 async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, servers: ReviewServers, page: Page) -> None:
     """Said, never acted on: the reader decides when to take the diff again."""
-    review = await servers.start(await uncommitted_changes(e2e_repo), root=e2e_repo)
+    review = await servers.start(opening_of(await uncommitted_changes(e2e_repo), root=e2e_repo))
     async with AsyncClient(base_url=review.url) as agent:
         # Taken again, as the agent does after a round: the tree it is compared against is this one
         await agent.post("/api/retake", json={})

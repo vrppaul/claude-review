@@ -13,7 +13,7 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
-from tests.helpers import ReviewFactory, ReviewServers, git, http_client, one_line_file, page_client
+from tests.helpers import ReviewFactory, ReviewServers, git, http_client, one_line_file, opening_of, page_client
 
 
 @pytest.fixture
@@ -72,14 +72,14 @@ async def servers(reviews: ReviewFactory) -> AsyncIterator[ReviewServers]:
 @pytest.fixture
 async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """An agent's way into a review of one file with one line in it."""
-    async with http_client(reviews.app([one_line_file()])) as agent:
+    async with http_client(reviews.app(opening_of([one_line_file()]))) as agent:
         yield agent
 
 
 @pytest.fixture
 def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
     """The review's own page, socket and all, on a review of one file with one line in it."""
-    with page_client(reviews.app([one_line_file()])) as page:
+    with page_client(reviews.app(opening_of([one_line_file()]))) as page:
         yield page
 
 
