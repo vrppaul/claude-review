@@ -132,6 +132,11 @@ const NO_PAGE_LOOKUPS = [
 	}
 ];
 
+// The page makes an HTTP request in one place, which holds every request to the
+// server's schema; its session socket is the other way it talks to the server
+const OWN_REQUESTS = 'Ask the server through lib/api/request.ts, which holds every request to its schema.';
+const REQUEST_CALLERS = ['fetch', 'XMLHttpRequest'].map((name) => ({ name, message: OWN_REQUESTS }));
+
 export default tseslint.config(
 	// Generated from the server by `pnpm api:types`; and the tests, held to formatting alone
 	{ ignores: ['src/lib/types/generated/', 'tests/'] },
@@ -222,6 +227,11 @@ export default tseslint.config(
 		rules: {
 			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_PAGE_LOOKUPS]
 		}
+	},
+	{
+		files: ['src/**/*.ts', 'src/**/*.svelte'],
+		ignores: ['src/lib/api/request.ts'],
+		rules: { 'no-restricted-globals': ['error', ...REQUEST_CALLERS] }
 	},
 	{ files: componentFiles(STILL_TO_CLEAN.shortNames), rules: { 'id-length': 'off' } },
 	{

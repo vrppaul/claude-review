@@ -7,7 +7,7 @@
  * What a failure means for the page is decided by whoever called.
  */
 
-import { read, send, urlOf, type Query } from '$lib/api/request';
+import { read, send, urlOf } from '$lib/api/request';
 import type {
 	AskRequest,
 	CancelRequest,
@@ -29,6 +29,7 @@ import type {
 	SubmitResponse,
 	VersionsResponse
 } from '$lib/types';
+import type { Query } from '$lib/types/routes';
 
 /** What the review is and where it stands: read as the page opens. */
 export function readReview(): Promise<ReviewResponse> {
@@ -44,14 +45,13 @@ export interface DiffQuery {
 
 /** Take the diff against a base, with whitespace counted or not. */
 export function takeDiff(asked: DiffQuery): Promise<DiffResponse> {
-	return read('get', '/api/diff', { query: diffQuery(asked), doing: 'Could not take the diff' });
+	return read('get', '/api/diff', { query: routeQueryOf(asked), doing: 'Could not take the diff' });
 }
 
-/** The diff's query, naming only what the reader changed: the server's defaults go without saying. */
-function diffQuery({ ignoreWhitespace, base }: DiffQuery): Query<'get', '/api/diff'> {
-	const query: Query<'get', '/api/diff'> = {};
+/** The diff route's query, naming only what the reader changed: whitespace counts unless they said otherwise. */
+function routeQueryOf({ ignoreWhitespace, base }: DiffQuery): Query<'get', '/api/diff'> {
+	const query: Query<'get', '/api/diff'> = { base };
 	if (ignoreWhitespace) query.ignore_whitespace = true;
-	if (base !== null) query.base = base;
 	return query;
 }
 

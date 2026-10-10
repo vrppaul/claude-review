@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ApiError } from '$lib/api/request';
-import { keepImage, submitReview, takeDiff } from '$lib/api/review-api';
+import { endReview, imageUrl, keepImage, submitReview, takeDiff } from '$lib/api/review-api';
 import { diffResponse } from './diff';
 import { fakeServer, SERVER_ERROR, UNPROCESSABLE } from './fake-server';
 import { screenshot } from './pasted-images';
@@ -72,5 +72,18 @@ describe('asking the server', () => {
 
 		expect(kept.image_id).toBe('kept.png');
 		expect(server.bodiesSentTo('POST /api/images')).toEqual([image]);
+	});
+
+	it('sends nothing to a route that takes nothing', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/end', null);
+
+		await endReview();
+
+		expect(server.bodiesSentTo('POST /api/end')).toEqual([null]);
+	});
+
+	it('names an image in its path as the path can carry it, whatever the id holds', () => {
+		expect(imageUrl('a b/c?d')).toBe('/api/images/a%20b%2Fc%3Fd');
 	});
 });

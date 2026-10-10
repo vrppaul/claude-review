@@ -194,14 +194,12 @@ async def cancel_panel_message(request: CancelRequest, review: Review = Depends(
     review.take_back(request.message_id)
 
 
-# What POST /images is sent, as the API describes it: the image itself, as
-# bytes, in any format the review keeps
-IMAGE_BODY = {
-    "requestBody": {
-        "required": True,
-        "content": {known.media_type: {"schema": {"type": "string", "format": "binary"}} for known in IMAGE_FORMATS},
-    }
-}
+# An image as the API describes one: the image itself, as bytes, in any
+# format the review keeps
+IMAGE_CONTENT = {known.media_type: {"schema": {"type": "string", "format": "binary"}} for known in IMAGE_FORMATS}
+# What POST /images is sent, and what GET /images/{image_id} answers with
+IMAGE_BODY = {"requestBody": {"required": True, "content": IMAGE_CONTENT}}
+IMAGE_REPLY = {HTTPStatus.OK: {"description": "The image, as it was pasted", "content": IMAGE_CONTENT}}
 
 
 @router.post(
@@ -235,7 +233,11 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
     return bytes(received)
 
 
-@router.get("/images/{image_id}", responses=refusals(UnknownImageError, takes=Takes.PARAMETERS))
+@router.get(
+    "/images/{image_id}",
+    response_class=FileResponse,
+    responses={**IMAGE_REPLY, **refusals(UnknownImageError, takes=Takes.PARAMETERS)},
+)
 async def serve_an_image(image_id: WireId, review: Review = Depends(get_review)) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
