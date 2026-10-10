@@ -77,6 +77,10 @@ REFUSED_FOR_INPUT: dict[Takes, frozenset[HTTPStatus]] = {
     Takes.JSON_BODY: frozenset({UNREADABLE_BODY, WRONG_INPUT, TOO_LARGE_STATUS}),
     Takes.RAW_BODY: frozenset({TOO_LARGE_STATUS}),
 }
+# What FastAPI reads an answer a route documents by: the model it is said
+# in, and the words it is described with
+RESPONSE_MODEL = "model"
+RESPONSE_DESCRIPTION = "description"
 # The OpenAPI extension that marks a refusal a route may give for what it
 # takes in: said where a reader of the API sees it, and where a test can hold
 # it to what the route's description says it takes
@@ -113,7 +117,7 @@ def documented(
 
 def _refusal(status: HTTPStatus, *, for_input: bool) -> dict[str, object]:
     """One status a route may refuse with, as the API describes it."""
-    described: dict[str, object] = {"model": Refusal, "description": status.phrase}
+    described: dict[str, object] = {RESPONSE_MODEL: Refusal, RESPONSE_DESCRIPTION: status.phrase}
     if for_input:
         described[INPUT_REFUSAL_EXTENSION] = True
     return described

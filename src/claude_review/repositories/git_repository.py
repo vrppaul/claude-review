@@ -301,7 +301,7 @@ class GitRepository(ReviewedRepository):
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         """Whether the repository tracks the file at this path."""
         try:
-            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path], variables=None)
+            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path])
         except GitError:
             return False
         return run.exit_code == 0
@@ -352,7 +352,7 @@ async def _own_paths(path: Path) -> OwnPaths | None:
 async def _has_commits(path: Path) -> bool:
     """Whether there is a HEAD to start the index from: a fresh repository has none."""
     try:
-        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD], variables=None)
+        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD])
     except GitError:
         return False
     return run.exit_code == 0
@@ -372,7 +372,7 @@ async def _run(path: Path, arguments: list[str], variables: dict[str, str] | Non
     return run.output
 
 
-async def _execute(path: Path, arguments: list[str], variables: dict[str, str] | None) -> GitRun:
+async def _execute(path: Path, arguments: list[str], variables: dict[str, str] | None = None) -> GitRun:
     """Run git and say how it went, leaving no process behind whatever happens.
 
     `variables` are what the command sets in git's environment; the rest is
