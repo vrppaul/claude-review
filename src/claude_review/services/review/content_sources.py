@@ -180,9 +180,8 @@ class RepositorySource(ContentSource):
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
     @override
-    async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
-        async for moved in self._watcher.changes(self._root, taken_at=lambda: self._content.tree, lifetime=lifetime):
-            yield moved
+    def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
+        return self._watcher.changes(self._root, taken_at=lambda: self._content.tree, lifetime=lifetime)
 
 
 class FixedSource(ContentSource):
@@ -230,10 +229,15 @@ class FixedSource(ContentSource):
         raise NoRepositoryError(msg)
 
     @override
-    async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
+    def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """No tree to watch: nothing in it ever moves."""
-        for moved in ():
-            yield moved
+        return _no_moves()
+
+
+async def _no_moves() -> AsyncIterator[int]:
+    """The moves of a tree there is none of: an iterator that ends at once, having yielded nothing."""
+    for moved in ():
+        yield moved
 
 
 def content_source(
