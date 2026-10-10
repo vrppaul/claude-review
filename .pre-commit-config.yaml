@@ -70,6 +70,20 @@ repos:
         files: ^(src/|pyproject\.toml$)
         pass_filenames: false
         stages: [pre-commit]
+      - id: vulture
+        name: vulture (code nothing calls)
+        entry: uv run vulture
+        language: system
+        files: ^(src/|tests/|pyproject\.toml$)
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: deptry
+        name: deptry (dependencies as declared)
+        entry: uv run deptry src
+        language: system
+        files: ^(src/|pyproject\.toml$)
+        pass_filenames: false
+        stages: [pre-commit]
 
   # Bandit - Security linting for Python
   - repo: https://github.com/PyCQA/bandit

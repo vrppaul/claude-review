@@ -11,7 +11,6 @@ import socket
 import time
 from collections import deque
 from collections.abc import AsyncGenerator
-from types import TracebackType
 from typing import Self
 
 from wsproto import ConnectionType, WSConnection
@@ -105,9 +104,8 @@ class PageSocket:
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(
-        self, error_type: type[BaseException] | None, error: BaseException | None, traceback: TracebackType | None
-    ) -> None:
+    def __exit__(self, *raised: object) -> None:
+        # Closed whether or not the block raised: what it raised goes on up
         self.close()
 
     def _shake_hands(self, port: int, origin: str | None) -> None:

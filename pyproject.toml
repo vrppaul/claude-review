@@ -9,6 +9,7 @@ dependencies = [
     "click>=8.3.2",
     "fastapi>=0.135.3",
     "pydantic>=2.12.5",
+    "starlette>=1.0.0",
     "structlog>=25.5.0",
     "uvicorn>=0.43.0",
     "wsproto>=1.3.2",
@@ -19,6 +20,7 @@ claude-review = "claude_review.cli.main:main"
 
 [dependency-groups]
 dev = [
+    "deptry>=0.25.1",
     "httpx>=0.28.1",
     "hypothesis>=6.168.5",
     "import-linter>=2.15",
@@ -29,6 +31,7 @@ dev = [
     "ruff>=0.15.9",
     "ty>=0.0.28",
     "typos>=1.51.1",
+    "vulture>=2.16",
 ]
 
 [tool.pytest.ini_options]
@@ -148,6 +151,41 @@ layers = [
     "services | repositories",
     "domain",
 ]
+
+[tool.vulture]
+paths = ["src", "tests"]
+min_confidence = 60
+# Called through what they are decorated as, never by name in this code:
+# routes, validators, click commands, fixtures, and whatever a protocol or a
+# base class calls
+ignore_decorators = ["@router.*", "@override", "@model_validator", "@field_validator", "@click.*", "@pytest.fixture"]
+ignore_names = [
+    # Pydantic's own setting
+    "model_config",
+    # Read once written out — by the browser, or by comparing the whole —
+    # never by name here
+    "modified_ns",
+    "sound_on_replies",
+    "seen_release",
+    "max_image_bytes",
+    "max_images_per_message",
+    "max_quoted_lines",
+    "phrase",
+    "review_key",
+    "ended",
+    # A schema's parts, taken apart by TypeAdapter.json_schemas
+    "direction",
+    "adapter",
+    # Matched by value against the type a transcript entry gives
+    "USER",
+    "ASSISTANT",
+    # http.server calls do_<METHOD> by name
+    "do_POST",
+]
+
+[tool.deptry.per_rule_ignores]
+# Uvicorn speaks websockets through it, named in a setting rather than imported
+DEP002 = ["wsproto"]
 
 [tool.typos.default.extend-words]
 # Not misspelt: pieces of words the tests type or read on purpose — a word

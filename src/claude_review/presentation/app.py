@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from functools import partial
 from importlib.metadata import version as installed_version
 from pathlib import Path
+from typing import override
 
 import structlog
 from fastapi import FastAPI
@@ -69,6 +70,7 @@ class PageFiles(StaticFiles):
     no route for, rather than reaching a file server that cannot answer it.
     """
 
+    @override
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
             await WebSocketClose()(scope, receive, send)

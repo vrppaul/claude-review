@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import socket
 from collections.abc import Generator
+from typing import override
 
 import uvicorn
 from fastapi import FastAPI
@@ -87,14 +88,17 @@ class ReviewServer(uvicorn.Server):
         """Wait until the server listens, or stops without ever listening, and say which."""
         return await asyncio.shield(self._came_up)
 
+    @override
     async def startup(self, sockets: list[socket.socket] | None = None) -> None:
         await super().startup(sockets=sockets)
         if self.started:
             self._came_up.set_result(True)
 
+    @override
     async def on_tick(self, counter: int) -> bool:
         return await super().on_tick(counter) or self._lifetime.has_ended
 
+    @override
     @contextlib.contextmanager
     def capture_signals(self) -> Generator[None]:
         yield

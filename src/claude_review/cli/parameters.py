@@ -5,7 +5,7 @@ the typist's to fix, said naming the option or argument it was typed in,
 and no request the review would refuse is ever built.
 """
 
-from typing import Self
+from typing import Self, override
 
 import click
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
@@ -26,6 +26,7 @@ class CheckedParameter(click.ParamType):
         self.name = name
         self._rule = rule
 
+    @override
     def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> str:
         try:
             return self._rule.validate_python(value)
@@ -68,6 +69,7 @@ class LineSpanParameter(click.ParamType):
 
     name = "lines"
 
+    @override
     def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> LineSpan:
         if isinstance(value, LineSpan):
             return value
