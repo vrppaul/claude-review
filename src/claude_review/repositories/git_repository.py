@@ -407,10 +407,10 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
     )
 
 
-def _git_environment(setting: dict[str, str]) -> dict[str, str]:
+def _git_environment(variables: dict[str, str]) -> dict[str, str]:
     """The environment a git command runs in: the inherited one without what is foreign to it, and what it sets."""
     inherited = {name: value for name, value in os.environ.items() if name not in FOREIGN_GIT_VARIABLES}
-    return inherited | setting
+    return inherited | variables
 
 
 async def _stop(process: asyncio.subprocess.Process) -> None:
