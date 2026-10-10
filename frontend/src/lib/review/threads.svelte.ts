@@ -48,7 +48,7 @@ const NO_THREADS: readonly Thread[] = [];
 
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
-	readonly reading = new ThreadReading();
+	readonly reading: ThreadReading;
 	readonly #rounds: Rounds;
 	#all = $state<Thread[]>([]);
 	// Which threads have gone out, and in which round. A round carries what
@@ -74,6 +74,7 @@ export class Threads {
 	 */
 	constructor(rounds: Rounds, kept: KeptThreads) {
 		this.#rounds = rounds;
+		this.reading = new ThreadReading(kept.read);
 		this.#pickUp(kept);
 	}
 
@@ -308,7 +309,6 @@ export class Threads {
 	 */
 	#pickUp(kept: KeptThreads): void {
 		this.#all = kept.threads;
-		this.reading.pickUp(kept.read);
 		for (const [id, round] of Object.entries(kept.sent)) this.#sent.set(id, round);
 		this.#commentIds.continueFrom(kept.issued.comments);
 		this.#turnIds.continueFrom(kept.issued.turns);

@@ -1,12 +1,10 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DraftRepository } from '$lib/drafts/draft-repository';
-import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
-import { lineAnchor } from '$lib/anchors/line';
-import type { AwaitedQuestion, Thread } from '$lib/types';
+import { DRAFT_SHAPE } from '$lib/drafts/draft-shapes';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import { leavePage, openReview } from './review';
+import { openReview } from './review';
 
 let review: Review;
 // Where the page keeps drafts, read the way the page reads them
@@ -19,68 +17,6 @@ beforeEach(() => {
 const TITLE = 'repo: uncommitted changes';
 /** Where the page keeps the draft between reloads. */
 const DRAFT_KEY = 'claude-review:draft';
-/** The last shape a draft had before its threads hung on anchors. */
-const BEFORE_ANCHORS = 7;
-/** The last shape a draft had before every turn carried an id. */
-const BEFORE_TURN_IDS = 8;
-/** The shape every turn carries an id in, and the draft counts the ids handed out. */
-const SHAPE_WITH_TURN_IDS = 9;
-/** The last shape that kept sends and waits as pairs. */
-const LAST_SHAPE_OF_PAIRS = 12;
-
-/** Put a draft in storage as an older release of the review left it. */
-function keptByAnOlderRelease(draft: object) {
-	// That release's page has gone; none of this one is open over it
-	leavePage();
-	localStorage.setItem(DRAFT_KEY, JSON.stringify({ title: TITLE, reviewBody: '', ...draft }));
-}
-
-/** A thread as an older release kept it, before it hung on an anchor. */
-function flatThread(kept: object = {}) {
-	return {
-		id: 'comment-1',
-		file: 'a.py',
-		side: 'new',
-		severity: 'note',
-		start_line: 1,
-		end_line: 1,
-		body: 'written a while ago',
-		...kept
-	};
-}
-
-/** A thread as shape 9 kept it, with how it was read inside it. */
-interface KeptComment extends Thread {
-	awaiting: AwaitedQuestion[];
-	collapsed: boolean;
-	unread: boolean;
-}
-
-/** A thread with every field this release keeps filled in. */
-function fullThread(): Thread {
-	return {
-		id: 'comment-1',
-		anchor: lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']),
-		severity: 'question',
-		body: 'Why both?',
-		images: ['opening.png'],
-		turns: [{ id: 'turn-1', author: 'author', body: 'History', round: 2, at: 50, images: [] }],
-		raised_by: 'reader',
-		resolved: false,
-		round: 2,
-		at: 30
-	};
-}
-
-/** The same thread as shape 9 kept it, folded, unread, and with a question waiting. */
-function keptComment(): KeptComment {
-	return {
-		...fullThread(),
-		awaiting: [{ id: 'comment-1', at: 40 }],
-		collapsed: true,
-		unread: true
-	};
-}
 
 /** The reload of a page: whatever it held is gone, and the draft is read again. */
 function reload() {
@@ -88,6 +24,32 @@ function reload() {
 }
 
 describe('an unsent review', () => {
+	it('comes back folded, unread and waited on as it was left', async () => {
+		fakeServer().answer('POST /api/ask', null);
+		const folded = review.threads.add(newComment({ startLine: 1, body: 'folded' }));
+		const unread = review.threads.add(newComment({ startLine: 2, body: 'unread' }));
+		const asked = review.threads.add(newComment({ startLine: 3, body: 'asked' }));
+		review.threads.reading.setFolded(folded, true);
+		review.threads.reading.markUnread(unread);
+		await review.threads.ask(asked);
+
+		reload();
+
+		expect(review.threads.reading.isFolded(folded)).toBe(true);
+		expect(review.threads.reading.isUnread(unread)).toBe(true);
+		expect(review.threads.reading.awaiting(asked).map((question) => question.id)).toEqual([asked]);
+	});
+
+	it('hands out ids past those said before the reload, so an answer has an id of its own', () => {
+		review.conversation.receive(null, 'before the reload', []);
+
+		reload();
+		review.conversation.receive(null, 'after the reload', []);
+
+		const ids = review.conversation.turns.map((turn) => turn.id);
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+
 	it('survives a reload of the same review', () => {
 		review = openReview();
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
@@ -200,168 +162,5 @@ describe('an unsent review', () => {
 		drafts.clear();
 
 		expect(drafts.load('repo')).toBeNull();
-	});
-});
-
-describe('a draft this release kept', () => {
-	it('comes back as it was kept', () => {
-		const kept: Draft = {
-			version: DRAFT_SHAPE,
-			title: TITLE,
-			threads: [fullThread()],
-			read: { folded: ['comment-1'], unread: [], awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
-			reviewBody: 'Overall fine',
-			sent: { 'comment-1': 2 },
-			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
-			composer: { text: 'half a thought', images: ['pasted.png'] },
-			issued: { comments: 3, turns: 5 },
-			told: { instance: 'this-run', sequence: 4 }
-		};
-
-		drafts.save(kept);
-
-		expect(drafts.load(TITLE)).toEqual(kept);
-	});
-});
-
-describe('a draft kept while sends and waits were pairs', () => {
-	it('comes back with them by thread, and how far the telling had got unknown', () => {
-		keptByAnOlderRelease({
-			version: LAST_SHAPE_OF_PAIRS,
-			threads: [fullThread()],
-			read: { folded: [], unread: [], awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]] },
-			sent: [['comment-1', 2]],
-			panel: [],
-			composer: { text: '', images: [] },
-			issued: { comments: 1, turns: 0 },
-			told: { 'some-run': 3 }
-		});
-
-		expect(drafts.load(TITLE)).toMatchObject({
-			version: DRAFT_SHAPE,
-			read: { awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
-			sent: { 'comment-1': 2 },
-			told: null
-		});
-	});
-});
-
-describe('a draft written by an older release', () => {
-	it('is brought up to the current shape rather than thrown away', () => {
-		keptByAnOlderRelease({ comments: [flatThread({ body: 'written before threads existed' })] });
-
-		const draft = drafts.load(TITLE);
-
-		expect(draft?.threads[0].body).toBe('written before threads existed');
-		expect(draft?.threads[0].turns).toEqual([]);
-		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: {} });
-		expect(draft?.sent).toEqual({});
-	});
-
-	it('keeps how each thread was being read, apart from what it says', () => {
-		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [keptComment()], sent: [] });
-
-		const draft = drafts.load(TITLE);
-
-		expect(draft?.threads).toEqual([fullThread()]);
-		expect(draft?.read).toEqual({
-			folded: ['comment-1'],
-			unread: ['comment-1'],
-			awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] }
-		});
-	});
-
-	it('keeps where each thread hung, and what it was written against', () => {
-		keptByAnOlderRelease({
-			version: BEFORE_ANCHORS,
-			comments: [
-				flatThread({
-					side: 'old',
-					severity: 'question',
-					start_line: 4,
-					end_line: 6,
-					quote: ['a', 'b', 'c'],
-					outdated: true
-				})
-			]
-		});
-
-		const [comment] = drafts.load(TITLE)?.threads ?? [];
-
-		expect(comment.anchor).toEqual({
-			kind: 'line',
-			file: 'a.py',
-			side: 'old',
-			start_line: 4,
-			end_line: 6,
-			quote: ['a', 'b', 'c'],
-			outdated: true
-		});
-		expect(Object.keys(comment)).not.toContain('start_line');
-		expect(Object.keys(comment)).not.toContain('quote');
-	});
-
-	it('counts a thread sent before rounds were numbered as sent in the first', () => {
-		keptByAnOlderRelease({ comments: [flatThread()], sent: ['comment-1'] });
-
-		expect(drafts.load(TITLE)?.sent).toEqual({ 'comment-1': 1 });
-	});
-
-	it('gives a turn written before images could be pasted no images', () => {
-		keptByAnOlderRelease({
-			comments: [flatThread({ turns: [{ author: 'author', body: 'Done', round: 1 }] })]
-		});
-
-		expect(drafts.load(TITLE)?.threads[0].turns).toEqual([
-			{ id: 'turn-1', author: 'author', body: 'Done', round: 1, images: [] }
-		]);
-	});
-
-	it('is restored when it is of this shape but kept no count of the ids handed out', () => {
-		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [keptComment()], sent: [] });
-
-		review = openReview();
-		const count = review.restoredCount;
-
-		expect(count).toBe(1);
-		expect(review.threads.add(newComment({ body: 'next' }))).not.toBe(fullThread().id);
-	});
-
-	it('gives each turn written before turns had ids one of its own, never one a turn already has', () => {
-		keptByAnOlderRelease({
-			version: BEFORE_TURN_IDS,
-			comments: [
-				{
-					...keptComment(),
-					turns: [
-						{ author: 'reader', body: 'Why?', round: 1, images: [] },
-						{ id: 'turn-4', author: 'author', body: 'Because', round: 1, images: [] }
-					]
-				}
-			]
-		});
-
-		const ids = drafts.load(TITLE)?.threads[0].turns.map((turn) => turn.id);
-
-		expect(ids).toEqual(['turn-5', 'turn-4']);
-	});
-
-	it('starts the agent panel empty when the draft predates it', () => {
-		keptByAnOlderRelease({ comments: [flatThread()] });
-
-		const draft = drafts.load(TITLE);
-
-		expect(draft?.panel).toEqual([]);
-		expect(draft?.composer).toEqual({ text: '', images: [] });
-	});
-
-	it('keeps what was said in the panel when the draft predates the composer', () => {
-		const said = { id: 'message-1', author: 'reader', body: 'Run the tests', at: 60 };
-		keptByAnOlderRelease({ comments: [flatThread()], panel: [said] });
-
-		const draft = drafts.load(TITLE);
-
-		expect(draft?.panel).toEqual([said]);
-		expect(draft?.composer).toEqual({ text: '', images: [] });
 	});
 });

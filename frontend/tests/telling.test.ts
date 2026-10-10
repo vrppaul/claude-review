@@ -6,15 +6,13 @@ import { storageKey } from '$lib/utils/preferences';
 import { contextLine, diffFile, hunk } from './diff';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
-import { pushedAt } from './pushes';
+import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 
 // How far the review's telling had got when the page read its facts
 const FACTS_READ_AT = 5;
 // How far the draft a reloaded page opens from had got
 const DRAFT_LEFT_AT = 2;
-// A push that changes nothing a test reads
-const NO_WORK = { type: 'progress', work: null } as const;
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -34,15 +32,6 @@ function reloadedFrom(sequence: number, { attached = false } = {}): Review {
 }
 
 describe('the pushes a review takes in', () => {
-	it('takes in once a push its socket handed over twice', () => {
-		const review = openReview();
-
-		takePush(review, { type: 'chat', message_id: null, body: 'Done.', files: [] }, pushedAt(1));
-		takePush(review, { type: 'chat', message_id: null, body: 'Done.', files: [] }, pushedAt(1));
-
-		expect(review.conversation.turns).toHaveLength(1);
-	});
-
 	it('keeps with its draft how far its socket has got', () => {
 		const review = openReview();
 

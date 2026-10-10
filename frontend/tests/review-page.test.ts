@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FIRST_RETRY, PageConnection } from '$lib/connection/page-connection';
 import { ReviewPage } from '$lib/page/review-page.svelte';
+import { TabClaim } from '$lib/page/tab-claim';
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import { diffResponse, reviewResponse } from './diff';
@@ -8,7 +9,8 @@ import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-se
 import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
 import type { ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
-import { pushedAt } from './pushes';
+import { AnotherTabHolding } from './fake-locks';
+import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 
 const SESSION_URL = 'ws://review.test/api/session';
@@ -16,8 +18,6 @@ const SESSION_URL = 'ws://review.test/api/session';
 const FACTS_READ_AT = 5;
 // How far the draft a reloaded page opens from had got
 const DRAFT_LEFT_AT = 2;
-// A push that changes nothing a test reads
-const NO_WORK: ServerPush = { type: 'progress', work: null };
 
 /** The review an open page holds. */
 function openedReview(page: ReviewPage): Review {
@@ -43,6 +43,21 @@ describe('opening the page', () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+	});
+
+	it('waits while another tab has the review open, saying so, and opens it once that tab is closed', async () => {
+		serving();
+		const anotherTab = new AnotherTabHolding();
+		const page = new ReviewPage(new PageConnection(SESSION_URL), new TabClaim(anotherTab));
+
+		const opening = page.open();
+		expect(page.state.kind).toBe('elsewhere');
+		expect(FakeSocket.opened).toEqual([]);
+
+		anotherTab.closeTheOtherTab();
+		await opening;
+
+		expect(page.state.kind).toBe('open');
 	});
 
 	it('holds its socket while the review is still being read, so a slow read does not end it', async () => {

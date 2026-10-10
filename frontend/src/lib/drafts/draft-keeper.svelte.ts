@@ -7,8 +7,7 @@
  * A review that is over has no draft, and its old one is forgotten, so the
  * next review is not greeted with this one's unsent work.
  *
- * Each tab keeps its own: a second tab on the same review keeps its draft
- * the same way, and a reload finds whichever was kept last.
+ * The review is open in one tab at a time, so one tab keeps its draft.
  */
 
 import type { DraftRepository } from '$lib/drafts/draft-repository';

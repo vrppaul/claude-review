@@ -133,6 +133,11 @@ const NO_PAGE_LOOKUPS = [
 	{
 		selector: 'CallExpression[callee.property.name=/^querySelector(All)?$/] > Literal[value=/^#/]',
 		message: 'Do not find elements by a page-wide id: register them with whoever needs them.'
+	},
+	{
+		selector:
+			'CallExpression[callee.property.name=/^querySelector(All)?$/] > TemplateLiteral > TemplateElement:first-child[value.raw=/^#/]',
+		message: 'Do not find elements by a page-wide id: register them with whoever needs them.'
 	}
 ];
 

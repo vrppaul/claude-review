@@ -25,6 +25,10 @@
   where it was `` `src/a.py`:42-47 ``. The events, `catch-up` and its index
   carry no Markdown any more; the round, which is Markdown, still sets the
   path as code, and a path with a backtick in it no longer breaks it.
+- **A review is open in one tab at a time.** A second tab on the same
+  review says the review is open in another tab, and opens it once that tab
+  is closed, from the draft the first one kept. Two tabs used to keep two
+  drafts in one place, each writing over the other's.
 - **The agent counts as there for ten minutes after it last called**, and
   the review stops offering rounds once it has gone quiet for longer.
 - **A page that stops reading is let go** instead of being held in memory;

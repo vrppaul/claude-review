@@ -3,8 +3,9 @@
  *
  * - Heard: the last push this page's socket handed over. Every socket the
  *   page opens goes on from here, so nothing is handed over twice and
- *   nothing is skipped; and it is kept with the draft, since everything the
- *   pushes up to it added to the draft is in it.
+ *   nothing is skipped; and it is kept with the draft, since what the
+ *   pushes up to it added to the draft is in it — all but the threads a
+ *   retake moves, which follow a moment after its push is heard.
  * - Read: the last push whose effect on the review's facts — its diff, its
  *   agent, its round — the page holds, whether it took the push in or read
  *   the facts after it. A push at or before it has nothing left to change
@@ -17,9 +18,8 @@
 
 import type { TellingPosition } from '$lib/types';
 
-/** A push as it reaches the review: where it stands, and whether the facts read hold it already. */
+/** A push as it reaches the review: whether the facts read hold it already. */
 export interface HeardPush {
-	at: TellingPosition;
 	factsHoldIt: boolean;
 }
 
@@ -61,7 +61,7 @@ export class Telling {
 		this.#heard = at;
 		const factsHoldIt = !comesAfter(at, this.#read);
 		if (!factsHoldIt) this.#read = at;
-		return { at, factsHoldIt };
+		return { factsHoldIt };
 	}
 
 	/**

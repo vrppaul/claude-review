@@ -13,24 +13,35 @@ import { Settings } from '$lib/reader/settings.svelte';
 import { DraftRepository } from '$lib/drafts/draft-repository';
 import type { Review } from '$lib/review/review.svelte';
 import { openKeptReview } from '$lib/page/kept-review';
+import { TabClaim } from '$lib/page/tab-claim';
 import { messageOf } from '$lib/utils/errors';
 
 // What the page says when the review could not be opened and nothing said why
 const OPENING_FAILED = 'Could not open the review';
 
-/** Where the page has got to with its review. */
-export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } | { kind: 'failed'; reason: string };
+/** Where the page has got to with its review: waiting for another tab that has it open, too. */
+export type PageState =
+	| { kind: 'opening' }
+	| { kind: 'elsewhere' }
+	| { kind: 'open'; review: Review }
+	| { kind: 'failed'; reason: string };
 
 export class ReviewPage {
 	readonly #connection: PageConnection;
+	readonly #claim: TabClaim;
 	readonly #settings = new Settings();
 	readonly #layout = new PageLayout();
 	readonly #theme = new PageTheme(this.#settings);
 	readonly #drafts = new DraftRepository();
 	#state = $state<PageState>({ kind: 'opening' });
 
-	constructor(connection: PageConnection) {
+	/**
+	 * @param connection the page's socket
+	 * @param claim how this tab comes to hold the review, which one tab holds at a time
+	 */
+	constructor(connection: PageConnection, claim = new TabClaim(navigator.locks)) {
 		this.#connection = connection;
+		this.#claim = claim;
 	}
 
 	get state(): PageState {
@@ -40,7 +51,9 @@ export class ReviewPage {
 	/**
 	 * Open the review this page was served for, and keep it open.
 	 *
-	 * The socket opens first: holding it is what tells the server the review
+	 * Nothing happens before this tab holds the review: while another tab
+	 * has it open, the page says so and waits for that tab to close. Then
+	 * the socket opens first: holding it is what tells the server the review
 	 * is on screen, and reading the review may take longer than the server
 	 * waits for a reloaded page to come back. The reader's settings come
 	 * before the diff: whether whitespace counts decides which diff is asked
@@ -52,6 +65,8 @@ export class ReviewPage {
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
+		await this.#claim.claim(() => this.#waitForTheOtherTab());
+		this.#state = { kind: 'opening' };
 		this.#connection.open();
 		try {
 			await this.#settings.load();
@@ -82,5 +97,9 @@ export class ReviewPage {
 				reason: messageOf(error, OPENING_FAILED)
 			};
 		}
+	}
+
+	#waitForTheOtherTab(): void {
+		this.#state = { kind: 'elsewhere' };
 	}
 }

@@ -169,8 +169,11 @@ export class Guide {
 		this.#landFrom(0, 1);
 	}
 
+	/** The tour is over, skipped or walked to its end. */
 	endTour(): void {
-		this.#stopTouring();
+		this.#touring = false;
+		// The page is no longer watched, so what it last said goes stale
+		this.#onPage = null;
 	}
 
 	next(): void {
@@ -259,17 +262,10 @@ export class Guide {
 			return;
 		}
 		if (candidate >= this.#steps.length) {
-			this.#stopTouring();
+			this.endTour();
 			return;
 		}
 		this.#stepId = this.#steps[candidate].id;
-	}
-
-	/** The tour is over, skipped or walked to its end. */
-	#stopTouring(): void {
-		this.#touring = false;
-		// The page is no longer watched, so what it last said goes stale
-		this.#onPage = null;
 	}
 
 	/** The count of comment fields on a line, after one of them said something. */

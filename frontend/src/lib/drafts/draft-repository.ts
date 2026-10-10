@@ -37,12 +37,10 @@ export class DraftRepository {
 		}
 	}
 
-	/** Keep the draft as it now stands; what is kept already is not written again. */
+	/** Keep the draft as it now stands. */
 	save(draft: Draft): void {
-		const text = JSON.stringify(draft);
 		try {
-			if (localStorage.getItem(DRAFT_KEY) === text) return;
-			localStorage.setItem(DRAFT_KEY, text);
+			localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 		} catch {
 			// Private windows and blocked site data both throw; the review still works
 		}

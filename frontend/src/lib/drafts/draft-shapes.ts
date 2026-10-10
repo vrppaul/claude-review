@@ -21,8 +21,10 @@ export const DRAFT_SHAPE = 13;
 // The shapes that kept threads as threads, but sends and waits as pairs and
 // the telling not at all or not as now. None was ever released; what they
 // kept of the telling is not trusted.
-const FIRST_SHAPE_OF_THREADS = 10;
-const LAST_SHAPE_OF_PAIRS = 12;
+const THREADS_APART_FROM_READING = 10;
+const TELLING_OF_ONE_RUN = 11;
+const TELLING_BY_RUN = 12;
+const PAIRED_SHAPES = [THREADS_APART_FROM_READING, TELLING_OF_ONE_RUN, TELLING_BY_RUN] as const;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -64,7 +66,7 @@ export interface Draft extends KeptThreads {
 
 /** A draft as shapes 10 to 12 kept it: sends and waits as pairs, and the telling not trusted. */
 interface PairedDraft extends Omit<Draft, 'version' | 'read' | 'sent' | 'told'> {
-	version: number;
+	version: (typeof PAIRED_SHAPES)[number];
 	read: { folded: string[]; unread: string[]; awaiting: [string, AwaitedQuestion[]][] };
 	sent: [string, number][];
 }
@@ -136,8 +138,7 @@ function isCurrent(kept: KeptDraft): kept is Draft {
 }
 
 function isPaired(kept: KeptDraft): kept is PairedDraft {
-	const version = kept.version ?? 0;
-	return version >= FIRST_SHAPE_OF_THREADS && version <= LAST_SHAPE_OF_PAIRS;
+	return PAIRED_SHAPES.some((shape) => shape === kept.version);
 }
 
 function emptyComposer(): Composer {

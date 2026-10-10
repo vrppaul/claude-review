@@ -14,7 +14,7 @@ import {
 
 // How far the review's telling has got when a page that dropped comes back
 const TOLD_SINCE = 9;
-// How far the page says its telling has got, further than its socket brought it
+// Where the page says its telling stands: the connection asks the page rather than counting
 const PAGE_TOLD_AT = 7;
 
 describe('going on with the telling across connections', () => {

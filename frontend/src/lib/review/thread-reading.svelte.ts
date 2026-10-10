@@ -23,6 +23,15 @@ export class ThreadReading {
 	// Questions with the agent, by thread, oldest first
 	readonly #awaiting = new SvelteMap<string, AwaitedQuestion[]>();
 
+	/** @param read how the threads were being read before a reload */
+	constructor(read: ThreadsRead) {
+		for (const threadId of read.folded) this.#folded.add(threadId);
+		for (const threadId of read.unread) this.#unread.add(threadId);
+		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
+			this.#awaiting.set(threadId, waiting);
+		}
+	}
+
 	isFolded(threadId: string): boolean {
 		return this.#folded.has(threadId);
 	}
@@ -82,14 +91,5 @@ export class ThreadReading {
 			unread: [...this.#unread],
 			awaiting: Object.fromEntries(this.#awaiting)
 		};
-	}
-
-	/** Pick up how the threads were being read before a reload. */
-	pickUp(read: ThreadsRead): void {
-		for (const threadId of read.folded) this.#folded.add(threadId);
-		for (const threadId of read.unread) this.#unread.add(threadId);
-		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
-			this.#awaiting.set(threadId, waiting);
-		}
 	}
 }

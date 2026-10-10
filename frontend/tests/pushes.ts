@@ -4,6 +4,9 @@ import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, TellingPosition } from '$lib/types';
 import { THIS_RUN } from './fake-socket';
 
+/** A push that changes nothing a test reads. */
+export const NO_WORK: ServerPush = { type: 'progress', work: null };
+
 /** Where the n-th push of this run of the review stands in its telling. */
 export function pushedAt(sequence: number): TellingPosition {
 	return { instance: THIS_RUN, sequence };
