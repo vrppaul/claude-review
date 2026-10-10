@@ -13,8 +13,12 @@ from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus
 
 # Where each file's part of the diff begins
 FILE_START = re.compile(r"^diff --git ", re.MULTILINE)
-# "@@ -12,7 +12,8 @@ def handler():" — the line each side of a hunk starts at
-HUNK_HEADER = re.compile(r"^@@ -(?P<old_start>\d+)(?:,\d+)? \+(?P<new_start>\d+)(?:,\d+)? @@")
+# "@@ -12,7 +12,8 @@ def handler():" — the line each side of a hunk starts at, and how many lines it has there
+HUNK_HEADER = re.compile(
+    r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+(?P<new_start>\d+)(?:,(?P<new_count>\d+))? @@"
+)
+# The count git leaves out of a hunk header: a side of one line
+OMITTED_COUNT = 1
 # The "a/x b/x" line with both paths quoted, which git does to a path that needs escapes
 QUOTED_PATHS = re.compile(r'(?P<old>"(?:[^"\\]|\\.)*") (?P<new>"(?:[^"\\]|\\.)*")$')
 # A path git quoted, and what is between the quotes
@@ -51,10 +55,11 @@ STATUS_HEADERS = {
     "copy from": FileStatus.ADDED,
 }
 
-# What a line of a hunk is, by its first character. Anything else —
-# "\ No newline at end of file", the empty line the diff ends with — is not
-# a line of the file.
-LINE_KINDS = {"+": LineType.ADD, "-": LineType.DELETE, " ": LineType.CONTEXT}
+# What a line of a hunk is, by its first character. An empty line is a blank
+# line of context that lost the space before it, as git writes one under
+# diff.suppressBlankEmpty and `git apply` reads it. Anything else — "\ No
+# newline at end of file" — is no line of the file.
+LINE_KINDS = {"+": LineType.ADD, "-": LineType.DELETE, " ": LineType.CONTEXT, "": LineType.CONTEXT}
 
 # What git writes as two characters inside a quoted path
 ESCAPED_CHARACTERS = {
@@ -82,8 +87,11 @@ class HunkStart(BaseModel):
     # The header's line in the file's part of the diff
     index: int
     header: str
+    # Each side's start as git writes it, and how many lines the hunk has there
     old_start: int
+    old_count: int
     new_start: int
+    new_count: int
 
 
 def parse_unified_diff(raw: str) -> list[DiffFile]:
@@ -223,7 +231,19 @@ def _hunk_start(index: int, line: str) -> HunkStart | None:
     header = HUNK_HEADER.match(line)
     if header is None:
         return None
-    return HunkStart(index=index, header=line, old_start=int(header["old_start"]), new_start=int(header["new_start"]))
+    return HunkStart(
+        index=index,
+        header=line,
+        old_start=int(header["old_start"]),
+        old_count=_count(header["old_count"]),
+        new_start=int(header["new_start"]),
+        new_count=_count(header["new_count"]),
+    )
+
+
+def _count(written: str | None) -> int:
+    """How many lines a side of a hunk has, as its header says: one when it says nothing."""
+    return OMITTED_COUNT if written is None else int(written)
 
 
 def _hunks(lines: list[str], hunk_starts: list[HunkStart]) -> list[DiffHunk]:
@@ -235,11 +255,19 @@ def _hunks(lines: list[str], hunk_starts: list[HunkStart]) -> list[DiffHunk]:
 
 
 def _hunk(start: HunkStart, body: list[str]) -> DiffHunk:
-    """One hunk, each of its lines numbered on the sides it is on."""
-    old_number, new_number = start.old_start, start.new_start
+    """One hunk: as many lines of each side as its header counts, each numbered on the sides it is on.
+
+    The counts say where the hunk ends, so nothing after it — the end of the
+    diff, a line git adds — is read as one of its lines.
+    """
+    old_start, new_start = _first_line(start.old_start, start.old_count), _first_line(start.new_start, start.new_count)
+    old_left, new_left = start.old_count, start.new_count
+    old_number, new_number = old_start, new_start
     lines: list[DiffLine] = []
 
     for raw in body:
+        if old_left == new_left == 0:
+            break
         kind = LINE_KINDS.get(raw[:1])
         if kind is None:
             continue
@@ -253,9 +281,19 @@ def _hunk(start: HunkStart, body: list[str]) -> DiffHunk:
                 content=raw[1:],
             )
         )
-        if on_old_side:
-            old_number += 1
-        if on_new_side:
-            new_number += 1
+        old_number += on_old_side
+        new_number += on_new_side
+        old_left -= on_old_side
+        new_left -= on_new_side
 
-    return DiffHunk(header=start.header, old_start=start.old_start, new_start=start.new_start, lines=lines)
+    return DiffHunk(header=start.header, old_start=old_start, new_start=new_start, lines=lines)
+
+
+def _first_line(start: int, count: int) -> int:
+    """Where a side of a hunk starts: its first line, or where that would be when the side has none.
+
+    Git starts a side with no lines at the line before it, which is nothing
+    for an empty file; read as a first line, every count of lines above the
+    hunk would come out one short.
+    """
+    return start + 1 if count == 0 else start

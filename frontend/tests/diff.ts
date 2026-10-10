@@ -48,7 +48,7 @@ export function wholeFile(path: string, ...lines: string[]): DiffFile {
 		hunks: [
 			hunk(
 				lines.map((line, index) => contextLine(null, index + 1, line)),
-				{ header: '', old_start: 0 }
+				{ header: '', old_start: 1 }
 			)
 		]
 	});

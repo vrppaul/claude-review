@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Changed
+- **A side of a hunk with no lines starts where its first line would be.**
+  Git writes the line before it — 0 for an added file's old side — and the
+  page counted the lines hidden above such a hunk from there, one short. A
+  hunk's `old_start` and `new_start` are now always the number its first
+  line has, or would have, on that side; the hunk is read by the counts in
+  its header, so a blank line of context git writes without its space is
+  still a line.
 - **Commands and routes renamed, so each name says one thing.** `claude-review
   round` is now `claude-review retake` (`POST /api/retake`), and `claude-review
   context` is now `claude-review catch-up` (`GET /api/catch-up`, a thread at

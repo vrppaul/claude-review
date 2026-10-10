@@ -8,10 +8,10 @@ is no version before it.
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 
-# A whole file has no hunk header to show, no old side to start, and is
-# numbered from its first line
+# A whole file has no hunk header to show, and is numbered from its first
+# line; its old side has no lines, and starts where they would, as any side
+# with none does
 NO_HUNK_HEADER = ""
-NO_OLD_START = 0
 FIRST_LINE = 1
 
 
@@ -21,7 +21,7 @@ def whole_file(path: str, text: str) -> DiffFile:
         DiffLine(kind=LineType.CONTEXT, old_number=None, new_number=number, content=content)
         for number, content in enumerate(_lines_of(text), start=FIRST_LINE)
     ]
-    hunk = DiffHunk(header=NO_HUNK_HEADER, old_start=NO_OLD_START, new_start=FIRST_LINE, lines=lines)
+    hunk = DiffHunk(header=NO_HUNK_HEADER, old_start=FIRST_LINE, new_start=FIRST_LINE, lines=lines)
     return DiffFile(path=path, status=FileStatus.ADDED, hunks=[hunk])
 
 

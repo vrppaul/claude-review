@@ -56,9 +56,9 @@ FOREIGN_GIT_VARIABLES = frozenset(
     }
 )
 
-# How many lines of context a hunk carries: git's own default, which the page
-# counts the lines hidden between hunks by. With none, git starts a side that
-# has no lines at the line before it, and every count above that hunk is one off.
+# How many lines of context a hunk carries: git's own default, so a change is
+# shown with what is around it whatever the reader set; the page widens it on
+# request
 CONTEXT_LINES = 3
 
 # How a diff is written, whatever the reader's configuration says. The parser

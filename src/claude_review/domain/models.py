@@ -65,6 +65,9 @@ class DiffHunk(BaseModel):
     """A contiguous block of changes in a file."""
 
     header: str
+    # The number of each side's first line in the hunk. A side with no lines
+    # in it starts where its first line would be: the line after the one
+    # before the hunk, the first for a file with none.
     old_start: int
     new_start: int
     lines: list[DiffLine]

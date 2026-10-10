@@ -8,7 +8,9 @@ a tab; a path holding a quote, a backslash, a control character or anything
 past plain ASCII is quoted, the first two and the commonest controls
 escaped in two characters and every other byte in octal; a hunk header
 leaves out a count of one and may carry the line of the enclosing function
-after it; a side with no lines is counted from nothing; and a file that
+after it; a side with no lines starts at the line before where its lines
+would be, which the review reads as where they would be; a blank line of
+context may come bare, as under diff.suppressBlankEmpty; and a file that
 does not end in a newline says so after its last line.
 """
 
@@ -62,6 +64,8 @@ TWO_CHARACTER_ESCAPES = {
 FIRST_PRINTABLE = 0x20
 DELETE_CHARACTER = 0x7F
 
+# Where a file's lines are numbered from
+FIRST_LINE = 1
 # How much of a diff is drawn at most: enough for every way the pieces meet
 MOST_FILES = 3
 MOST_HUNKS = 3
@@ -85,10 +89,11 @@ headings = strategy.one_of(strategy.just(""), contents.map(lambda heading: f"{HE
 
 
 class DrawnFile(BaseModel):
-    """A file as drawn: what the parser must read, and whether the file ends without a newline."""
+    """A file as drawn: what the parser must read, and which of its sides end without a newline."""
 
     file: DiffFile
-    ends_without_newline: bool
+    old_side_ends_bare: bool
+    new_side_ends_bare: bool
 
 
 def is_escaped(character: str) -> bool:
@@ -126,8 +131,13 @@ def marker(side: str, path: str | None) -> str:
 
 
 def counted(start: int, count: int) -> str:
-    """One side of a hunk header: where it starts, and how many lines, unless that is one."""
-    return f"{start}" if count == 1 else f"{start},{count}"
+    """One side of a hunk header: where it starts, and how many lines, unless that is one.
+
+    A side with no lines git starts at the line before where its lines would
+    be: nothing, for a file that has none.
+    """
+    written_start = start - 1 if count == 0 else start
+    return f"{written_start}" if count == 1 else f"{written_start},{count}"
 
 
 def hunk_header(old_start: int, new_start: int, lines: list[DiffLine], heading: str) -> str:
@@ -182,7 +192,8 @@ def changed_hunks(draw: strategy.DrawFn) -> list[DiffHunk]:
 def modified_files(draw: strategy.DrawFn) -> DrawnFile:
     return DrawnFile(
         file=DiffFile(path=draw(paths), status=FileStatus.MODIFIED, hunks=draw(changed_hunks())),
-        ends_without_newline=draw(strategy.booleans()),
+        old_side_ends_bare=draw(strategy.booleans()),
+        new_side_ends_bare=draw(strategy.booleans()),
     )
 
 
@@ -198,26 +209,54 @@ def one_sided_files(draw: strategy.DrawFn) -> DrawnFile:
         case _:
             kind = draw(strategy.sampled_from([LineType.ADD, LineType.DELETE]))
     said = draw(strategy.lists(contents, min_size=1, max_size=MOST_LINES))
-    # Git counts the side that has no lines from nothing
-    old_start, new_start = (0, 1) if kind == LineType.ADD else (1, 0)
-    lines = numbered([(kind, content) for content in said], old_start, new_start)
+    # Both sides start at the first line: the one with lines, and the one whose lines would
+    lines = numbered([(kind, content) for content in said], FIRST_LINE, FIRST_LINE)
     hunk = DiffHunk(
-        header=hunk_header(old_start, new_start, lines, draw(headings)),
-        old_start=old_start,
-        new_start=new_start,
+        header=hunk_header(FIRST_LINE, FIRST_LINE, lines, draw(headings)),
+        old_start=FIRST_LINE,
+        new_start=FIRST_LINE,
         lines=lines,
     )
     return DrawnFile(
-        file=DiffFile(path=draw(paths), status=status, hunks=[hunk]), ends_without_newline=draw(strategy.booleans())
+        file=DiffFile(path=draw(paths), status=status, hunks=[hunk]),
+        old_side_ends_bare=draw(strategy.booleans()),
+        new_side_ends_bare=draw(strategy.booleans()),
     )
 
 
-def hunk_as_git_writes_it(hunk: DiffHunk) -> list[str]:
-    return [hunk.header, *(LINE_PREFIX[line.kind] + line.content for line in hunk.lines)]
+def line_as_git_writes_it(line: DiffLine, *, bare_blanks: bool) -> str:
+    """One line of a hunk: its kind's mark and what it says, or nothing for a blank line of context written bare."""
+    if bare_blanks and line.kind == LineType.CONTEXT and not line.content:
+        return ""
+    return LINE_PREFIX[line.kind] + line.content
 
 
-def file_as_git_writes_it(drawn: DrawnFile) -> list[str]:
-    """One file's part of the diff: its header, then its hunks, and the mark of a last line with no newline."""
+def hunk_as_git_writes_it(hunk: DiffHunk, *, bare_blanks: bool, marked: set[int]) -> list[str]:
+    """A hunk's header and lines, git's mark of a side ending without a newline after each marked line."""
+    written = [hunk.header]
+    for index, line in enumerate(hunk.lines):
+        written.append(line_as_git_writes_it(line, bare_blanks=bare_blanks))
+        if index in marked:
+            written.append(NO_NEWLINE_MARKER)
+    return written
+
+
+def last_on_side(hunk: DiffHunk, *, without: LineType) -> int | None:
+    """Where in the hunk the last line of one side is: the last line of any kind but the other side's own."""
+    return max((index for index, line in enumerate(hunk.lines) if line.kind != without), default=None)
+
+
+def marked_ends(drawn: DrawnFile, hunk: DiffHunk) -> set[int]:
+    """The lines of a file's last hunk git marks: the last line of each side that ends without a newline."""
+    ends = [
+        last_on_side(hunk, without=LineType.ADD) if drawn.old_side_ends_bare else None,
+        last_on_side(hunk, without=LineType.DELETE) if drawn.new_side_ends_bare else None,
+    ]
+    return {index for index in ends if index is not None}
+
+
+def file_as_git_writes_it(drawn: DrawnFile, *, bare_blanks: bool) -> list[str]:
+    """One file's part of the diff: its header, then its hunks, the last line of a side with no newline marked."""
     changed = drawn.file
     old_path = None if changed.status == FileStatus.ADDED else changed.path
     new_path = None if changed.status == FileStatus.DELETED else changed.path
@@ -229,22 +268,34 @@ def file_as_git_writes_it(drawn: DrawnFile) -> list[str]:
         f"--- {marker(OLD_SIDE, old_path)}",
         f"+++ {marker(NEW_SIDE, new_path)}",
     ]
-    body = [text for hunk in changed.hunks for text in hunk_as_git_writes_it(hunk)]
-    ending = [NO_NEWLINE_MARKER] if drawn.ends_without_newline else []
-    return header + body + ending
+    last = changed.hunks[-1]
+    body = [
+        text
+        for hunk in changed.hunks
+        for text in hunk_as_git_writes_it(
+            hunk, bare_blanks=bare_blanks, marked=marked_ends(drawn, hunk) if hunk is last else set()
+        )
+    ]
+    return header + body
 
 
-def as_git_writes_it(drawn: list[DrawnFile]) -> str:
-    return "\n".join(text for file in drawn for text in file_as_git_writes_it(file)) + "\n"
+def as_git_writes_it(drawn: list[DrawnFile], *, bare_blanks: bool) -> str:
+    """The whole diff; with bare blanks, as git writes it under diff.suppressBlankEmpty."""
+    return "\n".join(text for file in drawn for text in file_as_git_writes_it(file, bare_blanks=bare_blanks)) + "\n"
 
 
-@given(drawn=strategy.lists(modified_files(), min_size=1, max_size=MOST_FILES, unique_by=lambda drawn: drawn.file.path))
-def test_whatever_git_writes_for_changed_files_is_read_back_as_those_files(drawn: list[DrawnFile]) -> None:
-    assert parse_unified_diff(as_git_writes_it(drawn)) == [file.file for file in drawn]
-
-
-@given(drawn=one_sided_files())
-def test_a_file_with_lines_on_one_side_only_is_read_under_its_path_with_what_happened_to_it(
-    drawn: DrawnFile,
+@given(
+    drawn=strategy.lists(modified_files(), min_size=1, max_size=MOST_FILES, unique_by=lambda drawn: drawn.file.path),
+    bare_blanks=strategy.booleans(),
+)
+def test_whatever_git_writes_for_changed_files_is_read_back_as_those_files(
+    drawn: list[DrawnFile], *, bare_blanks: bool
 ) -> None:
-    assert parse_unified_diff(as_git_writes_it([drawn])) == [drawn.file]
+    assert parse_unified_diff(as_git_writes_it(drawn, bare_blanks=bare_blanks)) == [file.file for file in drawn]
+
+
+@given(drawn=one_sided_files(), bare_blanks=strategy.booleans())
+def test_a_file_with_lines_on_one_side_only_is_read_under_its_path_with_what_happened_to_it(
+    drawn: DrawnFile, *, bare_blanks: bool
+) -> None:
+    assert parse_unified_diff(as_git_writes_it([drawn], bare_blanks=bare_blanks)) == [drawn.file]
