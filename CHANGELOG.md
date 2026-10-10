@@ -2,7 +2,23 @@
 
 ## [Unreleased]
 
+### Added
+- **A comment being written is never lost.** What is typed and pasted into a
+  new comment, a reply or an edit is kept by the review, not by the box that
+  shows it: folding the file or the thread, switching to two columns and
+  back, or reloading the page brings it back as it was, without taking the
+  cursor. Several comments can be started in one file, each on its own lines,
+  as on GitHub; picking lines that already have one brings that one back.
+
 ### Changed
+- **In two columns a thread on an unchanged line sits on the right**, under
+  the side it is about, where its field opened; before, it moved to the left
+  once written.
+- **Under a narrower base, j and k move through every line.** A removed line,
+  which belongs to that base and takes no comment, used to stop them for
+  good; it is passed over like any other line now, and still takes no
+  comment. A comment being written on such a line waits, out of sight, until
+  the whole review is shown again.
 - **`claude-review progress --done` is sent on its own.** Given a text, a
   file, a step or a message beside it, it used to drop them unseen; it now
   refuses, naming `--done`, as `status` with nothing to report does.
@@ -73,6 +89,15 @@
   no longer answered.
 
 ### Fixed
+- **Showing more context no longer moves what is written under a line.** A
+  comment being written jumped under another line and lost its words, and a
+  reply being written was dropped with the image pasted into it; asking for
+  the same lines twice, or a round landing while they were read, drew lines
+  that did not belong there.
+- **A drag over removed lines that is cut short ends on a removed line**, so
+  its thread is drawn; it could end on a line the change kept and be drawn
+  nowhere. An image taken off an edit that is then put away stays on the
+  server, since the comment still shows it.
 - **The reader's own git settings no longer change the review's diff.**
   With `diff.suppressBlankEmpty` set, a blank line of context was dropped and
   every line after it in the hunk numbered one short, so threads landed on
