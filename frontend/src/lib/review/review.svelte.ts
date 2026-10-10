@@ -112,7 +112,7 @@ export class Review {
 		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
-		this.threads = new Threads(this.rounds, kept);
+		this.threads = new Threads(this.rounds, kept, this.commentFields);
 		this.submission = new Submission(this.threads, this.rounds, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, facts.release);
@@ -228,6 +228,7 @@ export class Review {
 			title: this.title,
 			threads: this.threads.all,
 			read: this.threads.reading.kept,
+			writing: this.threads.writing.kept,
 			reviewBody: this.submission.body,
 			sent: this.threads.sentRounds,
 			panel: this.conversation.turns,

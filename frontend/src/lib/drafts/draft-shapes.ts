@@ -7,18 +7,29 @@
  * the review has grown a conversation in the agent panel, and the message
  * being written there; what a thread hangs on has moved into an anchor of
  * its own, and every turn carries an id a question can name; how a thread
- * is read — folded, unread, waited on — has moved out of the thread; and
- * the draft says how far the server's telling had got for it. A draft a
+ * is read — folded, unread, waited on — has moved out of the thread; the
+ * draft says how far the server's telling had got for it; and it keeps
+ * what was being written in the threads and not said yet. A draft a
  * release kept is brought up to date — never thrown away: it is an hour of
  * somebody's reading. The shapes between the last released one and this
  * were never released, and are not read.
  */
 
-import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingPosition, Thread, Turn } from '$lib/types';
+import type {
+	AwaitedQuestion,
+	CommentSeverity,
+	Composer,
+	LineSide,
+	PanelTurn,
+	TellingPosition,
+	Thread,
+	Turn,
+	WrittenAt
+} from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 13;
+export const DRAFT_SHAPE = 14;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -34,10 +45,20 @@ export interface ThreadsRead {
 	awaiting: Record<string, AwaitedQuestion[]>;
 }
 
-/** The threads as a draft keeps them: what they say, how they were read, and which went out. */
+/** A comment being written when the draft was kept: where, and what it held. */
+export interface KeptField {
+	at: WrittenAt;
+	text: string;
+	severity: CommentSeverity;
+	images: string[];
+}
+
+/** The threads as a draft keeps them: what they say, how they were read, which went out, and what was being written. */
 export interface KeptThreads {
 	threads: Thread[];
 	read: ThreadsRead;
+	/** Comments, replies and edits being written, not said yet. */
+	writing: KeptField[];
 	/** The round each thread already sent went out in, by thread. */
 	sent: Record<string, number>;
 	/** How many thread and turn ids have been handed out, deleted ones included. */
@@ -144,6 +165,7 @@ export function emptyDraft(title: string): Draft {
 		title,
 		threads: [],
 		read: { folded: [], unread: [], awaiting: {} },
+		writing: [],
 		reviewBody: '',
 		sent: {},
 		panel: [],
@@ -182,6 +204,8 @@ function fromComments(kept: OlderDraft): Draft {
 				comments.filter((comment) => comment.awaiting.length > 0).map((comment) => [comment.id, comment.awaiting])
 			)
 		},
+		// Nothing being written was kept until the fields were held by the review
+		writing: [],
 		reviewBody: kept.reviewBody ?? '',
 		sent: Object.fromEntries((kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, 1] : entry))),
 		// The panel came after threads did; an older draft simply has nothing said

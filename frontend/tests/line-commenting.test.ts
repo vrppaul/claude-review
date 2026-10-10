@@ -3,6 +3,7 @@ import { LineCommenting } from '$lib/components/line-commenting.svelte';
 import { type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
 import { contextLine, diffFile, hunk } from './diff';
 import { SEND_LIMITS } from './pasted-images';
+import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
 
 // The most lines the review takes in one comment, as the server would say it
@@ -31,13 +32,22 @@ function line(number: number): DrawnLine {
 	return found;
 }
 
+let review: Review;
+
 function commenting(): LineCommenting {
-	const review = openReview({ files: [file], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: LONGEST_RANGE } } });
+	review = openReview({ files: [file], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: LONGEST_RANGE } } });
 	return new LineCommenting(review, {
 		path: () => file.path,
 		hunks: () => [drawn],
 		reviewOwnsRemovedLines: () => true
 	});
+}
+
+/** The comment the picking started. */
+function started() {
+	const [field] = review.threads.writing.onLinesOf(file.path);
+	if (!field) throw new Error('No comment was started');
+	return field;
 }
 
 describe('picking lines to comment on', () => {
@@ -48,7 +58,7 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(20));
 		lines.release();
 
-		expect(lines.label).toBe('Lines 10-12');
+		expect(lines.labelOf(started())).toBe('Lines 10-12');
 	});
 
 	it('stops a drag upwards the same way', () => {
@@ -58,7 +68,7 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(10));
 		lines.release();
 
-		expect(lines.label).toBe('Lines 18-20');
+		expect(lines.labelOf(started())).toBe('Lines 18-20');
 	});
 
 	it('opens the comment under the line the drag stopped at, however far past it the pointer went', () => {
@@ -68,8 +78,8 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(20));
 		lines.release();
 
-		expect(lines.opensUnder({ side: 'new', number: 12 })).toBe(true);
-		expect(lines.opensUnder({ side: 'new', number: 20 })).toBe(false);
+		expect(lines.fieldsUnder({ side: 'new', number: 12 })).toEqual([started()]);
+		expect(lines.fieldsUnder({ side: 'new', number: 20 })).toEqual([]);
 	});
 
 	it('shows the drag as far as it will go', () => {
@@ -89,6 +99,6 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(12));
 		lines.release();
 
-		expect(lines.quote).toEqual(['line 11', 'line 12']);
+		expect(lines.quoteOf(started())).toEqual(['line 11', 'line 12']);
 	});
 });

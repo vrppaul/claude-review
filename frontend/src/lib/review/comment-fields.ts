@@ -1,9 +1,9 @@
 /**
  * What happens to the comment fields on the page, for whoever follows along.
  *
- * A field says when it opens and how it goes — added, asked, or closed
- * unsent — and knows nothing of who is listening. The tour listens; nothing
- * a field does depends on it.
+ * What holds the fields says when one opens and how it goes — added, asked,
+ * or put away unsent — and knows nothing of who is listening. The tour
+ * listens; nothing a field does depends on it.
  */
 
 import type { CommentFieldEvent } from '$lib/types';

@@ -93,6 +93,27 @@ export interface LinePlace {
 	number: number;
 }
 
+/** Lines of one side picked to comment on, and the line the comment field opens under. */
+export interface PickedLines {
+	side: LineSide;
+	startLine: number;
+	endLine: number;
+	/** Where the drag ended, so the field opens beside the pointer rather than at the far end of a long range. */
+	opensBelow: LinePlace;
+}
+
+/**
+ * Where a comment is being written: on lines of a file, as a reply in a
+ * thread, or over the comment that opened a thread.
+ */
+export type WrittenAt =
+	| { kind: 'new'; file: string; lines: PickedLines }
+	| { kind: 'reply'; thread: string }
+	| { kind: 'edit'; thread: string };
+
+/** A comment being written on lines of a file. */
+export type WrittenOnLines = Extract<WrittenAt, { kind: 'new' }>;
+
 /** A comment as the reader writes it, before it has an id and a place in time. */
 export interface NewComment {
 	anchor: Anchor;
@@ -231,13 +252,11 @@ export interface PanelTurn {
 	cancelled?: boolean;
 }
 
-/** Which comment field: one on a line, a reply in a thread, or an edit. */
-export type CommentKind = 'new' | 'reply' | 'edit';
-
 /** What happened to a comment field, for whoever follows along. */
 export interface CommentFieldEvent {
 	type: 'opened' | 'added' | 'asked' | 'closed';
-	kind: CommentKind;
+	/** Which field: one on lines, a reply in a thread, or an edit. */
+	kind: WrittenAt['kind'];
 }
 
 /** The panel message being written: its words and the images pasted into it. */

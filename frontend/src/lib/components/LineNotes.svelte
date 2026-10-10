@@ -15,19 +15,21 @@
 	const review = useReview();
 </script>
 
-<!-- What hangs under a line: its threads, and the comment being written there -->
+<!-- What hangs under a line: its threads, and the comments being written there -->
 {#each commenting.threadsUnder(place) as thread (thread.id)}
 	<CommentThread comment={thread} />
 {/each}
-{#if commenting.opensUnder(place)}
+{#each commenting.fieldsUnder(place) as field (field.key)}
 	<div class="px-3 py-2">
 		<CommentBox
-			kind="new"
-			onSave={(body, severity, images) => commenting.save(body, severity, images)}
-			onAsk={review.answerer.attached ? (body, severity, images) => commenting.ask(body, severity, images) : undefined}
-			onCancel={() => commenting.cancel()}
-			label={commenting.label}
-			suggestFrom={commenting.quote}
+			{field}
+			onSave={(body, severity, images) => commenting.save(field, body, severity, images)}
+			onAsk={review.answerer.attached
+				? (body, severity, images) => commenting.ask(field, body, severity, images)
+				: undefined}
+			onCancel={() => commenting.cancel(field)}
+			label={commenting.labelOf(field)}
+			suggestFrom={commenting.quoteOf(field)}
 		/>
 	</div>
-{/if}
+{/each}

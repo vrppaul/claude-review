@@ -2,8 +2,10 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
-import { tick } from 'svelte';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
+import { newComment } from '../new-comment';
+import type { CommentField } from '$lib/review/comment-field.svelte';
+import type { NewComment } from '$lib/types';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 
@@ -13,12 +15,30 @@ beforeEach(() => {
 	review = openReview();
 });
 
+/** A comment being started on line 5 of a file, as picking the line starts one. */
+function newField(): CommentField {
+	const line = { side: 'new', number: 5 } as const;
+	review.threads.writing.pickLines('a.ts', { side: 'new', startLine: 5, endLine: 5, opensBelow: line });
+	return review.threads.writing.onLinesOf('a.ts')[0];
+}
+
+/** The edit of a comment already written, as its Edit button opens one. */
+function editOf(written: Partial<NewComment>): CommentField {
+	const id = review.threads.add({ ...newComment(), ...written });
+	const thread = review.threads.all.find((candidate) => candidate.id === id);
+	if (!thread) throw new Error('The comment was not written');
+	review.threads.writing.openEdit(thread);
+	const field = review.threads.writing.edit(id);
+	if (!field) throw new Error('No edit was opened');
+	return field;
+}
+
 describe('a comment field', () => {
 	it('saves what was written, without the spaces around it', async () => {
 		const onSave = vi.fn();
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' })
+			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 5' })
 		);
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
@@ -29,14 +49,17 @@ describe('a comment field', () => {
 	});
 
 	it('cannot save an empty comment', () => {
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn() }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn() })
+		);
 
 		expect((getByTestId('save-comment') as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it('closes when the reader cancels', async () => {
 		const onCancel = vi.fn();
-		const { getByTestId } = render(CommentBox, inReview(review, { kind: 'new', onSave: vi.fn(), onCancel }));
+		const { getByTestId } = render(CommentBox, inReview(review, { field: newField(), onSave: vi.fn(), onCancel }));
 
 		await userEvent.click(getByTestId('cancel-comment'));
 
@@ -46,7 +69,7 @@ describe('a comment field', () => {
 	it('says where the comment hangs', () => {
 		const { getByText } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' })
+			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' })
 		);
 
 		expect(getByText('Lines 10-15')).toBeTruthy();
@@ -55,7 +78,7 @@ describe('a comment field', () => {
 	it('reopens with what the comment already says', () => {
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), initialBody: 'existing text' })
+			inReview(review, { field: editOf({ body: 'existing text' }), onSave: vi.fn(), onCancel: vi.fn() })
 		);
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
@@ -69,7 +92,7 @@ describe('suggesting a replacement', () => {
 		const { getByTestId } = render(
 			CommentBox,
 			inReview(review, {
-				kind: 'new',
+				field: newField(),
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Lines 3',
@@ -88,7 +111,7 @@ describe('suggesting a replacement', () => {
 		const { getByTestId } = render(
 			CommentBox,
 			inReview(review, {
-				kind: 'new',
+				field: newField(),
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Line 3',
@@ -106,7 +129,7 @@ describe('suggesting a replacement', () => {
 	it('offers nothing to suggest when no lines were given', () => {
 		const { queryByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' })
+			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' })
 		);
 
 		expect(queryByTestId('suggest-change')).toBeNull();
@@ -116,7 +139,13 @@ describe('suggesting a replacement', () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3', suggestFrom: ['x = 1'] })
+			inReview(review, {
+				field: newField(),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				label: 'Line 3',
+				suggestFrom: ['x = 1']
+			})
 		);
 
 		await user.click(getByTestId('suggest-change'));
@@ -131,7 +160,7 @@ describe('how a comment is meant', () => {
 		const onSave = vi.fn();
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' })
+			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 1' })
 		);
 
 		await user.type(getByTestId('comment-input'), 'Reads well');
@@ -145,7 +174,7 @@ describe('how a comment is meant', () => {
 		const onSave = vi.fn();
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 1' })
+			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 1' })
 		);
 
 		await user.click(getByTestId('severity-question'));
@@ -158,7 +187,7 @@ describe('how a comment is meant', () => {
 	it('reopens for editing with the mark it was saved under', async () => {
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1', initialSeverity: 'blocker' })
+			inReview(review, { field: editOf({ severity: 'blocker' }), onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1' })
 		);
 
 		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
@@ -166,14 +195,12 @@ describe('how a comment is meant', () => {
 });
 
 describe('images in a comment', () => {
-	beforeEach(() => {});
-
 	it('saves a pasted screenshot as the whole comment', async () => {
 		keepingImages();
 		const onSave = vi.fn();
 		const { getByTestId, findByTestId } = render(
 			CommentBox,
-			inReview(review, { kind: 'new', onSave, onCancel: vi.fn(), label: 'Line 5' })
+			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 5' })
 		);
 
 		await paste(getByTestId('comment-input'), screenshot());
@@ -181,85 +208,5 @@ describe('images in a comment', () => {
 		await userEvent.click(getByTestId('save-comment'));
 
 		expect(onSave).toHaveBeenCalledWith('', 'note', [KEPT_AS]);
-	});
-
-	it('lets the server drop what was pasted when the field closes unsent', async () => {
-		// Cancel, a click on another line, a folded thread: each closes the field
-		const server = keepingImages();
-		const { getByTestId, findByTestId, unmount } = render(
-			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
-		);
-
-		await paste(getByTestId('comment-input'), screenshot());
-		await findByTestId('attached-image');
-		unmount();
-
-		expect(server.requests.at(-1)).toMatchObject({
-			method: 'DELETE',
-			path: `/api/images/${KEPT_AS}`
-		});
-	});
-
-	it('keeps what was pasted once the comment is saved', async () => {
-		const server = keepingImages();
-		const { getByTestId, findByTestId, unmount } = render(
-			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
-		);
-
-		await paste(getByTestId('comment-input'), screenshot());
-		await findByTestId('attached-image');
-		await userEvent.click(getByTestId('save-comment'));
-		unmount();
-
-		expect(server.requests).toMatchObject([{ method: 'POST', path: '/api/images' }]);
-	});
-
-	it('leaves the images a comment already had when an edit closes unsent', async () => {
-		const server = keepingImages();
-		const { unmount } = render(
-			CommentBox,
-			inReview(review, {
-				kind: 'new',
-				onSave: vi.fn(),
-				onCancel: vi.fn(),
-				initialBody: 'This',
-				initialImages: ['kept.png']
-			})
-		);
-
-		unmount();
-
-		expect(server.requests).toEqual([]);
-	});
-});
-
-describe('what a comment field says happened to it', () => {
-	it('says it opened, and what became of it, naming which kind of field it is', async () => {
-		const report = vi.spyOn(review.commentFields, 'report');
-		const { getByTestId } = render(
-			CommentBox,
-			inReview(review, { kind: 'new', onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 5' })
-		);
-
-		await userEvent.type(getByTestId('comment-input'), 'Fix this');
-		await userEvent.click(getByTestId('save-comment'));
-
-		expect(report.mock.calls.map(([event]) => event)).toEqual([
-			{ type: 'opened', kind: 'new' },
-			{ type: 'added', kind: 'new' }
-		]);
-	});
-
-	it('says it closed when it goes without being sent', async () => {
-		const report = vi.spyOn(review.commentFields, 'report');
-		const { unmount } = render(CommentBox, inReview(review, { kind: 'reply', onSave: vi.fn(), onCancel: vi.fn() }));
-		await tick();
-
-		unmount();
-		await tick();
-
-		expect(report).toHaveBeenLastCalledWith({ type: 'closed', kind: 'reply' });
 	});
 });

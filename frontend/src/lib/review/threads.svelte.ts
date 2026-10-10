@@ -12,8 +12,10 @@ import { SvelteMap } from 'svelte/reactivity';
 import { askInThread, followAnchors } from '$lib/api/review-api';
 import { anchorFile, sameSpot } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
+import type { CommentFields } from '$lib/review/comment-fields';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
+import { ThreadWriting } from '$lib/review/thread-writing.svelte';
 import type {
 	Anchor,
 	CommentSeverity,
@@ -49,6 +51,8 @@ const NO_THREADS: readonly Thread[] = [];
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
 	readonly reading: ThreadReading;
+	/** What is being written in them, and on lines that have none yet. */
+	readonly writing: ThreadWriting;
 	readonly #rounds: Rounds;
 	#all = $state.raw<Thread[]>([]);
 	// Which threads have gone out, and in which round. A round carries what
@@ -71,10 +75,12 @@ export class Threads {
 	/**
 	 * @param rounds the round each thread and turn is stamped with
 	 * @param kept the threads of an unsent review of the same thing, picked up where it stopped
+	 * @param fieldEvents where what happens to the fields they are written in is told
 	 */
-	constructor(rounds: Rounds, kept: KeptThreads) {
+	constructor(rounds: Rounds, kept: KeptThreads, fieldEvents: CommentFields) {
 		this.#rounds = rounds;
 		this.reading = new ThreadReading(kept.read);
+		this.writing = new ThreadWriting(kept.writing, fieldEvents);
 		this.#pickUp(kept);
 	}
 
@@ -177,6 +183,7 @@ export class Threads {
 	remove(id: string): void {
 		this.#sent.delete(id);
 		this.reading.forget(id);
+		this.writing.forget(id);
 		this.#all = this.#all.filter((thread) => thread.id !== id);
 	}
 

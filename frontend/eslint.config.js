@@ -87,7 +87,6 @@ const STILL_TO_CLEAN = {
 	shortNames: [
 		'AgentPanel',
 		'BasePicker',
-		'CommentBox',
 		'CommentThread',
 		'DiffNotice',
 		'FileList',
@@ -98,7 +97,7 @@ const STILL_TO_CLEAN = {
 		'SettingsMenu',
 		'SubmitBar'
 	],
-	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentBox', 'CommentThread', 'FileList', 'FileSection'],
+	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentThread', 'FileList', 'FileSection'],
 	nestedHelpers: ['SubmitBar'],
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']

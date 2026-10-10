@@ -66,7 +66,10 @@ function drawDiff() {
 }
 
 function drawCommentField() {
-	render(CommentBox, inReview(review, { kind: 'new', onSave: ignore, onCancel: ignore }));
+	const line = { side: 'new', number: 1 } as const;
+	review.threads.writing.pickLines(FILE.path, { side: 'new', startLine: 1, endLine: 1, opensBelow: line });
+	const [field] = review.threads.writing.onLinesOf(FILE.path);
+	render(CommentBox, inReview(review, { field, onSave: ignore, onCancel: ignore }));
 }
 
 /** A thread whose question is with the agent, not answered yet. */

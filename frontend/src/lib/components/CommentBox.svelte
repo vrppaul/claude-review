@@ -1,27 +1,31 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import type { CommentKind, CommentSeverity } from '$lib/types';
-	import { ImageAttachments } from '$lib/review/image-attachments.svelte';
+	import type { CommentSeverity } from '$lib/types';
+	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 
-	const review = useReview();
-
+	// What opens a suggested replacement, and what closes it on a line of its own
 	const SUGGESTION_FENCE = '```suggestion';
+	const FENCE_CLOSE = '\n```';
+	// The tallest the field grows, in pixels, before it scrolls instead
+	const TALLEST = 480;
+	// What the field says when it took off an image it could not show
+	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
+	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
+		{ value: 'note', label: 'Note' },
+		{ value: 'question', label: 'Question' },
+		{ value: 'blocker', label: 'Blocker' }
+	];
 
 	interface Props {
-		/** A comment on a line, a reply in a thread, or an edit of a comment. */
-		kind: CommentKind;
+		/** What is being written: held by the review, so it outlives this field. */
+		field: CommentField;
 		onSave: (body: string, severity: CommentSeverity, images: string[]) => void;
 		/** Hand this one over now, rather than with the rest of the review. */
 		onAsk?: ((body: string, severity: CommentSeverity, images: string[]) => void) | undefined;
 		onCancel: () => void;
 		/** Where the comment hangs, said above the field: "Line 42". */
 		label?: string | undefined;
-		initialBody?: string;
-		initialSeverity?: CommentSeverity;
-		/** Images already on the comment being edited. */
-		initialImages?: string[];
 		/** The lines being commented on, so a suggestion can start from them. */
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
@@ -30,91 +34,44 @@
 		nested?: boolean;
 	}
 
-	let {
-		kind,
-		onSave,
-		onAsk,
-		onCancel,
-		label,
-		initialBody = '',
-		initialSeverity = 'note',
-		initialImages = [],
-		suggestFrom,
-		severityPicker = true,
-		nested = false
-	}: Props = $props();
+	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, nested = false }: Props = $props();
+	const review = useReview();
 
-	const severities: { value: CommentSeverity; label: string }[] = [
-		{ value: 'note', label: 'Note' },
-		{ value: 'question', label: 'Question' },
-		{ value: 'blocker', label: 'Blocker' }
-	];
-
-	// svelte-ignore state_referenced_locally — intentional one-shot capture; component is always recreated
-	let body = $state(initialBody);
-	// svelte-ignore state_referenced_locally — same
-	let severity = $state<CommentSeverity>(initialSeverity);
-	// svelte-ignore state_referenced_locally — same
-	const attachments = new ImageAttachments([...initialImages]);
 	let failed = $state<string | null>(null);
-	// Whether what was written went somewhere. A field closed any other way —
-	// Cancel, a click on another line, a folded thread, another file — lets
-	// the server drop what was pasted into it.
-	let handedOver = false;
-
-	/** A field going with nothing handed over: what was pasted is let go, and the closing said. */
-	function closeUnsaid() {
-		if (handedOver) return;
-		attachments.abandon();
-		review.commentFields.report({ type: 'closed', kind });
-	}
-
-	onDestroy(closeUnsaid);
+	let textarea: HTMLTextAreaElement | undefined = $state();
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
-	const sayable = $derived((body.trim().length > 0 || attachments.images.length > 0) && attachments.uploading === 0);
+	const sayable = $derived(
+		(field.text.trim().length > 0 || field.attachments.images.length > 0) && field.attachments.uploading === 0
+	);
 
-	let textareaEl: HTMLTextAreaElement;
-
-	/** Grow with the text: a suggestion inserts several lines at once, and a
-	 * fixed box scrolls them out of sight with nothing to say so. */
-	function fitToText() {
-		if (!textareaEl) return;
-		textareaEl.style.height = 'auto';
-		textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 480)}px`;
-	}
-
+	// Grow with the text: a suggestion inserts several lines at once, and a
+	// fixed box scrolls them out of sight with nothing to say so
 	$effect(() => {
-		void body;
-		fitToText();
+		void field.text;
+		if (textarea) fitToText(textarea);
 	});
 
-	onMount(() => {
-		textareaEl?.focus();
-		// Commenting on a line near the bottom of the window opened the composer
-		// mostly below it: focused, but with its buttons out of sight.
-		textareaEl?.scrollIntoView({ block: 'nearest' });
-		review.commentFields.report({ type: 'opened', kind });
+	// The cursor goes to the field when it is opened, or asked for again — not
+	// whenever it is drawn: one drawn again, a file unfolded or the page
+	// reloaded, leaves the reader where they are. A field opened near the
+	// bottom of the window is brought up, so its buttons are in sight too.
+	$effect(() => {
+		if (!textarea || !field.focusWanted) return;
+		textarea.focus();
+		textarea.scrollIntoView({ block: 'nearest' });
+		field.focusTaken();
 	});
+
+	function fitToText(element: HTMLTextAreaElement) {
+		element.style.height = 'auto';
+		element.style.height = `${Math.min(element.scrollHeight, TALLEST)}px`;
+	}
 
 	function save() {
 		if (!sayable) return;
-		handedOver = true;
-		onSave(body.trim(), severity, [...attachments.images]);
-		review.commentFields.report({ type: 'added', kind });
-	}
-
-	async function onPaste(event: ClipboardEvent) {
-		failed = null;
-		const refusal = await attachments.takePaste(event, review.limits);
-		if (refusal) failed = refusal;
-	}
-
-	/** An image that cannot be drawn, taken off with a note rather than left broken. */
-	function onImageLost(imageId: string) {
-		attachments.forget(imageId);
-		failed = 'An image could not be shown and was taken off the comment';
+		onSave(field.text.trim(), field.severity, [...field.attachments.images]);
 	}
 
 	/**
@@ -125,35 +82,49 @@
 	 */
 	function ask() {
 		if (!sayable || !onAsk) return;
-		handedOver = true;
-		onAsk(body.trim(), 'question', [...attachments.images]);
-		review.commentFields.report({ type: 'asked', kind });
+		onAsk(field.text.trim(), 'question', [...field.attachments.images]);
+	}
+
+	async function onPaste(event: ClipboardEvent) {
+		failed = null;
+		const refusal = await field.attachments.takePaste(event, review.limits);
+		if (refusal) failed = refusal;
+	}
+
+	/** An image that cannot be drawn, taken off with a note rather than left broken. */
+	function onImageLost(imageId: string) {
+		field.attachments.forget(imageId);
+		failed = IMAGE_LOST;
 	}
 
 	/**
 	 * Start a replacement for the commented lines.
 	 *
-	 * Saying what the code should be instead beats describing it: Claude gets
-	 * something it can apply rather than something it has to interpret.
+	 * Saying what the code should be instead beats describing it: the agent
+	 * gets something it can apply rather than something it has to interpret.
 	 */
 	function suggest() {
-		if (!suggestFrom || body.includes(SUGGESTION_FENCE)) return;
-		const block = `${SUGGESTION_FENCE}\n${suggestFrom.join('\n')}\n\`\`\``;
-		body = body.trim() ? `${body.trim()}\n\n${block}` : block;
-		requestAnimationFrame(() => {
-			textareaEl?.focus();
-			// Land in the block itself rather than after it
-			const at = body.indexOf(SUGGESTION_FENCE) + SUGGESTION_FENCE.length + 1;
-			textareaEl?.setSelectionRange(at, body.length - 4);
-		});
+		if (!suggestFrom || field.text.includes(SUGGESTION_FENCE)) return;
+		const block = `${SUGGESTION_FENCE}\n${suggestFrom.join('\n')}${FENCE_CLOSE}`;
+		const written = field.text.trim();
+		field.text = written ? `${written}\n\n${block}` : block;
+		requestAnimationFrame(() => selectSuggestion());
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-			e.preventDefault();
+	/** Put the cursor in the suggested lines, rather than after the block. */
+	function selectSuggestion() {
+		if (!textarea) return;
+		textarea.focus();
+		const from = field.text.indexOf(SUGGESTION_FENCE) + SUGGESTION_FENCE.length + 1;
+		textarea.setSelectionRange(from, field.text.length - FENCE_CLOSE.length);
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+			event.preventDefault();
 			save();
 		}
-		if (e.key === 'Escape') {
+		if (event.key === 'Escape') {
 			onCancel();
 		}
 	}
@@ -161,7 +132,7 @@
 
 <div
 	class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}
-	data-tour={kind === 'new' ? 'comment-field' : undefined}
+	data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}
 >
 	<div class="flex items-center gap-3">
 		{#if label}
@@ -170,12 +141,12 @@
 		<div class="flex-1"></div>
 		{#if severityPicker}
 			<div data-testid="severity-picker" class="cr-segmented">
-				{#each severities as choice (choice.value)}
+				{#each SEVERITIES as choice (choice.value)}
 					<button
 						data-testid="severity-{choice.value}"
 						class="cr-segment"
-						aria-pressed={severity === choice.value}
-						onclick={() => (severity = choice.value)}
+						aria-pressed={field.severity === choice.value}
+						onclick={() => (field.severity = choice.value)}
 					>
 						{choice.label}
 					</button>
@@ -184,15 +155,15 @@
 		{/if}
 	</div>
 	<textarea
-		bind:this={textareaEl}
+		bind:this={textarea}
 		data-testid="comment-input"
 		class="cr-field cr-comment-body textarea min-h-20 w-full focus:outline-none"
 		placeholder="What should change here?"
-		bind:value={body}
+		bind:value={field.text}
 		onkeydown={handleKeydown}
 		onpaste={onPaste}
 	></textarea>
-	<AttachedImages {attachments} onLost={onImageLost} />
+	<AttachedImages attachments={field.attachments} onLost={onImageLost} />
 	{#if failed}
 		<p data-testid="comment-error" class="text-xs text-error">{failed}</p>
 	{/if}
@@ -201,7 +172,7 @@
 			<button
 				class="btn btn-ghost btn-xs"
 				data-testid="suggest-change"
-				disabled={body.includes(SUGGESTION_FENCE)}
+				disabled={field.text.includes(SUGGESTION_FENCE)}
 				onclick={suggest}
 			>
 				Suggest a change

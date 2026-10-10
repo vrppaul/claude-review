@@ -16,7 +16,7 @@ const BEFORE_TURN_IDS = 8;
 /** The shape every turn carries an id in, and the draft counts the ids handed out. */
 const SHAPE_WITH_TURN_IDS = 9;
 /** A shape between the last one released and this one, which no release ever kept. */
-const NEVER_RELEASED = 12;
+const NEVER_RELEASED = 13;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
@@ -77,6 +77,19 @@ describe('a draft this release kept', () => {
 			title: REVIEW_TITLE,
 			threads: [fullThread()],
 			read: { folded: ['comment-1'], unread: [], awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
+			writing: [
+				{ at: { kind: 'reply', thread: 'comment-1' }, text: 'and another thing', severity: 'note', images: [] },
+				{
+					at: {
+						kind: 'new',
+						file: 'a.py',
+						lines: { side: 'new', startLine: 3, endLine: 4, opensBelow: { side: 'new', number: 4 } }
+					},
+					text: 'half a comment',
+					severity: 'question',
+					images: ['pasted.png']
+				}
+			],
 			reviewBody: 'Overall fine',
 			sent: { 'comment-1': 2 },
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],

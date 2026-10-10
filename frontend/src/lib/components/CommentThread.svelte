@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Thread, CommentSeverity, Turn } from '$lib/types';
 	import { anchorLabel } from '$lib/anchors/views';
+	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
@@ -13,8 +14,6 @@
 
 	let { comment }: Props = $props();
 	const review = useReview();
-	let editing = $state(false);
-	let replying = $state(false);
 	let failed = $state<string | null>(null);
 	let now = $state(Date.now());
 	let container: HTMLElement | undefined = $state();
@@ -23,6 +22,11 @@
 	$effect(() => (container ? review.sections.registerThread(comment.id, container) : undefined));
 
 	const reading = review.threads.reading;
+	const writing = review.threads.writing;
+	// What is being written here, held by the review so that folding the thread
+	// or its file, or reloading the page, keeps it
+	const editing = $derived(writing.edit(comment.id));
+	const replying = $derived(writing.reply(comment.id));
 	const label = $derived(anchorLabel(comment.anchor));
 	const folded = $derived(reading.isFolded(comment.id));
 	const unread = $derived(reading.isUnread(comment.id));
@@ -109,9 +113,9 @@
 		return () => clearInterval(timer);
 	});
 
-	function handleSave(body: string, severity: CommentSeverity, images: string[]) {
+	function saveEdit(edit: CommentField, body: string, severity: CommentSeverity, images: string[]) {
 		review.threads.update(comment.id, body, severity, images);
-		editing = false;
+		writing.added(edit);
 	}
 
 	/** Settling a thread folds it away; it can still be opened and read. */
@@ -119,14 +123,14 @@
 		review.threads.setResolved(comment.id, true);
 	}
 
-	function reply(body: string, images: string[]) {
+	function reply(written: CommentField, body: string, images: string[]) {
 		review.threads.addTurn(comment.id, { author: 'reader', body, images });
-		replying = false;
+		writing.added(written);
 	}
 
-	async function replyAndAsk(body: string, images: string[]) {
+	async function replyAndAsk(written: CommentField, body: string, images: string[]) {
 		review.threads.addTurn(comment.id, { author: 'reader', body, images });
-		replying = false;
+		writing.asked(written);
 		await handOver();
 	}
 
@@ -143,12 +147,9 @@
 <div bind:this={container} data-testid="comment-thread" data-thread-id={comment.id} class="px-3 py-2">
 	{#if editing}
 		<CommentBox
-			kind="edit"
-			onSave={handleSave}
-			onCancel={() => (editing = false)}
-			initialBody={comment.body}
-			initialSeverity={comment.severity}
-			initialImages={comment.images}
+			field={editing}
+			onSave={(body, severity, images) => saveEdit(editing, body, severity, images)}
+			onCancel={() => writing.discard(editing)}
 			{label}
 		/>
 	{:else if folded}
@@ -274,7 +275,7 @@
 					<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 				{/if}
 				<div class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-					<button data-testid="edit-comment" class="btn btn-ghost btn-xs" onclick={() => (editing = true)}>
+					<button data-testid="edit-comment" class="btn btn-ghost btn-xs" onclick={() => writing.openEdit(comment)}>
 						Edit
 					</button>
 					{#if comment.resolved}
@@ -397,10 +398,12 @@
 			{#if replying}
 				<div class="mt-3">
 					<CommentBox
-						kind="reply"
-						onSave={(body, _severity, images) => reply(body, images)}
-						onAsk={review.answerer.attached ? (body, _severity, images) => replyAndAsk(body, images) : undefined}
-						onCancel={() => (replying = false)}
+						field={replying}
+						onSave={(body, _severity, images) => reply(replying, body, images)}
+						onAsk={review.answerer.attached
+							? (body, _severity, images) => replyAndAsk(replying, body, images)
+							: undefined}
+						onCancel={() => writing.discard(replying)}
 						severityPicker={false}
 						nested
 					/>
@@ -410,7 +413,7 @@
 					<button
 						data-testid="open-reply"
 						class="cr-field cr-comment-body block w-full rounded px-3 py-1.5 text-left text-sm"
-						onclick={() => (replying = true)}
+						onclick={() => writing.openReply(comment.id)}
 					>
 						<span class="cr-muted">Write a reply…</span>
 					</button>
