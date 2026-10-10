@@ -145,6 +145,27 @@ describe('widening the context around a hunk', () => {
 	});
 });
 
+describe('lines asked for while the file is drawn again', () => {
+	it('are asked for once, and drawn once', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files: [file] });
+		const windows = fakeServer().hold('GET /api/file-window');
+		const { getByTestId, getAllByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		await user.click(getByTestId('expand-context'));
+
+		// Folded and opened while the lines are on their way, and asked for again
+		await user.click(getByTestId('collapse-file'));
+		await user.click(getByTestId('collapse-file'));
+		expect(getByTestId('expand-context').textContent).toContain('Reading');
+		await user.click(getByTestId('expand-context'));
+		windows.answer(0, { start: 1, lines: ['read once'], total: FILE_LENGTH });
+		await settled();
+
+		expect(windows.requests).toHaveLength(1);
+		expect(getAllByText('read once')).toHaveLength(1);
+	});
+});
+
 describe('lines asked for just before a new diff lands', () => {
 	it('stay out of the new diff, whose lines are counted afresh', async () => {
 		const user = userEvent.setup();

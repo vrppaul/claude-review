@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileBody from '$lib/components/FileBody.svelte';
-import RawView from '$lib/components/RawView.svelte';
-import SplitView from '$lib/components/SplitView.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -23,8 +21,8 @@ const file = diffFile({
 	]
 });
 
-/** What a story step draws a file with: the review's own removed lines, and gaps not to be read into. */
-const AS_A_STEP = { file, language: null, reviewOwnsRemovedLines: true, revealed: null };
+/** How a story step draws a file: as lines, on the review's own removed lines, with gaps not to be read into. */
+const AS_A_STEP = { file, language: null, view: 'raw', reviewOwnsRemovedLines: true, revealed: null } as const;
 
 beforeEach(() => {
 	review = openReview({ files: [file] });
@@ -32,14 +30,14 @@ beforeEach(() => {
 
 describe('a file drawn where what the diff left out is not to be read in', () => {
 	it('says how many lines it leaves out, and offers nothing to show them', () => {
-		const { getByTestId, queryByTestId } = render(RawView, inReview(review, AS_A_STEP));
+		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
 		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
 		expect(queryByTestId('expand-context')).toBeNull();
 	});
 
 	it('says the same in two columns', () => {
-		const { getByTestId, queryByTestId } = render(SplitView, inReview(review, AS_A_STEP));
+		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, { ...AS_A_STEP, view: 'split' }));
 
 		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
 		expect(queryByTestId('expand-context')).toBeNull();
@@ -54,7 +52,7 @@ describe("a file drawn on the review's own removed lines, whatever base is on sc
 
 	it('takes a comment on a removed line', async () => {
 		const user = userEvent.setup();
-		const { getByTestId } = render(RawView, inReview(review, AS_A_STEP));
+		const { getByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
 		await user.click(within(rowHolding('gone = 1')).getAllByRole('button')[0]);
 		await user.type(getByTestId('comment-input'), 'why did this go');
@@ -66,7 +64,7 @@ describe("a file drawn on the review's own removed lines, whatever base is on sc
 	it('draws the threads on removed lines', () => {
 		review.threads.add(newComment({ file: file.path, side: 'old', startLine: 30, body: 'why did this go' }));
 
-		const { getByText } = render(RawView, inReview(review, AS_A_STEP));
+		const { getByText } = render(FileBody, inReview(review, AS_A_STEP));
 
 		expect(getByText('why did this go')).toBeTruthy();
 	});

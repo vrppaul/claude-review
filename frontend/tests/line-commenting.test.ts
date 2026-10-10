@@ -58,7 +58,7 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(20));
 		lines.release();
 
-		expect(lines.labelOf(started())).toBe('Lines 10-12');
+		expect(started().at.lines).toMatchObject({ startLine: 10, endLine: 12 });
 	});
 
 	it('stops a drag upwards the same way', () => {
@@ -68,7 +68,7 @@ describe('picking lines to comment on', () => {
 		lines.enter(line(10));
 		lines.release();
 
-		expect(lines.labelOf(started())).toBe('Lines 18-20');
+		expect(started().at.lines).toMatchObject({ startLine: 18, endLine: 20 });
 	});
 
 	it('opens the comment under the line the drag stopped at, however far past it the pointer went', () => {
@@ -92,13 +92,13 @@ describe('picking lines to comment on', () => {
 		expect(lines.isMarked({ side: 'new', number: 13 })).toBe(false);
 	});
 
-	it('quotes the lines picked, as they read now', () => {
+	it('quotes the lines picked, as they read when picked', () => {
 		const lines = commenting();
 
 		lines.press(line(11));
 		lines.enter(line(12));
 		lines.release();
 
-		expect(lines.quoteOf(started())).toEqual(['line 11', 'line 12']);
+		expect(started().at.quote).toEqual(['line 11', 'line 12']);
 	});
 });

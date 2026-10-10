@@ -20,9 +20,10 @@
 	interface Props {
 		/** What is being written: held by the review, so it outlives this field. */
 		field: CommentField;
-		onSave: (body: string, severity: CommentSeverity, images: string[]) => void;
+		/** Put what is written into the review. */
+		onSave: () => void;
 		/** Hand this one over now, rather than with the rest of the review. */
-		onAsk?: ((body: string, severity: CommentSeverity, images: string[]) => void) | undefined;
+		onAsk?: (() => void) | undefined;
 		onCancel: () => void;
 		/** Where the comment hangs, said above the field: "Line 42". */
 		label?: string | undefined;
@@ -70,19 +71,12 @@
 	}
 
 	function save() {
-		if (!sayable) return;
-		onSave(field.text.trim(), field.severity, [...field.attachments.images]);
+		if (sayable) onSave();
 	}
 
-	/**
-	 * Send this one straight to whoever is answering.
-	 *
-	 * It is a question by definition — asking and then leaving the comment
-	 * marked as a note would say two different things about the same words.
-	 */
+	/** Send this one straight to whoever is answering. */
 	function ask() {
-		if (!sayable || !onAsk) return;
-		onAsk(field.text.trim(), 'question', [...field.attachments.images]);
+		if (sayable && onAsk) onAsk();
 	}
 
 	async function onPaste(event: ClipboardEvent) {

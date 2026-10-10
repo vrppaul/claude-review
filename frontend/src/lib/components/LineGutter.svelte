@@ -20,6 +20,8 @@
 	let { drawn, side, stop, commenting }: Props = $props();
 
 	const shown = $derived(side === 'old' ? drawn.line.old_number : drawn.line.new_number);
+	// A number that takes no comment says so, but is not disabled: the browser
+	// moves no focus onto a disabled button, and j and k would stop at it for good
 	const writable = $derived(commenting.mayComment(drawn.place));
 
 	/** Enter or Space on a line's number opens the comment field there. */
@@ -37,7 +39,7 @@
 	class="cr-gutter-button"
 	tabindex={stop ? 0 : -1}
 	aria-label="Comment on {lineInWords(drawn.place)}"
-	disabled={!writable}
+	aria-disabled={writable ? undefined : 'true'}
 	title={writable ? undefined : NOT_THE_REVIEWS}
 	onmousedown={() => commenting.press(drawn)}
 	onkeydown={commentOnKey}

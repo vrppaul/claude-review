@@ -1,5 +1,7 @@
 <script lang="ts">
-	import type { LinePlace } from '$lib/types';
+	import type { LinePlace, WrittenOnLines } from '$lib/types';
+	import { lineRangeLabel } from '$lib/anchors/line-label';
+	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -13,6 +15,21 @@
 
 	let { commenting, place }: Props = $props();
 	const review = useReview();
+
+	/** Where a comment being written hangs, said above its field. */
+	function labelOf(field: CommentField<WrittenOnLines>): string {
+		const { side, startLine, endLine } = field.at.lines;
+		return lineRangeLabel(side, startLine, endLine);
+	}
+
+	/** Add a comment and hand it straight to whoever is answering. */
+	async function askNow(field: CommentField<WrittenOnLines>) {
+		try {
+			await review.threads.sayAndAsk(field);
+		} catch {
+			// The comment is written either way; the thread offers to ask again
+		}
+	}
 </script>
 
 <!-- What hangs under a line: its threads, and the comments being written there -->
@@ -23,13 +40,11 @@
 	<div class="px-3 py-2">
 		<CommentBox
 			{field}
-			onSave={(body, severity, images) => commenting.save(field, body, severity, images)}
-			onAsk={review.answerer.attached
-				? (body, severity, images) => commenting.ask(field, body, severity, images)
-				: undefined}
-			onCancel={() => commenting.cancel(field)}
-			label={commenting.labelOf(field)}
-			suggestFrom={commenting.quoteOf(field)}
+			onSave={() => review.threads.say(field)}
+			onAsk={review.answerer.attached ? () => askNow(field) : undefined}
+			onCancel={() => review.threads.writing.discard(field)}
+			label={labelOf(field)}
+			suggestFrom={field.at.quote}
 		/>
 	</div>
 {/each}

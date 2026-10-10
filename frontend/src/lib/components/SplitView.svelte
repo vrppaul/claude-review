@@ -1,14 +1,11 @@
 <script lang="ts">
-	import type { DiffFile, LinePlace, LineSide } from '$lib/types';
-	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
-	import { useReview } from '$lib/review/context';
-	import { type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
-	import { withRevealed } from '$lib/utils/expansions';
+	import type { LinePlace, LineSide } from '$lib/types';
+	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { splitRows } from '$lib/utils/split-rows';
+	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
 	import LineGutter from './LineGutter.svelte';
 	import LineNotes from './LineNotes.svelte';
-	import { LineCommenting } from './line-commenting.svelte';
 
 	// The two columns are the two sides, the old on the left: the kind of line each colours as changed
 	const CHANGED_IN: Record<LineSide, 'delete' | 'add'> = { old: 'delete', new: 'add' };
@@ -17,24 +14,12 @@
 	const EDGES: Record<LineSide, string> = { old: 'cr-edge-del', new: 'cr-edge-add' };
 
 	interface Props {
-		file: DiffFile;
-		language: string | null;
-		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-		reviewOwnsRemovedLines: boolean;
-		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
-		revealed: RevealedContext | null;
+		/** The file made ready to draw, by whoever draws it. */
+		drawing: FileDrawing;
 	}
 
-	let { file, language, reviewOwnsRemovedLines, revealed }: Props = $props();
-	const review = useReview();
-
-	const shown = $derived(revealed ? withRevealed(file, revealed.forFile(file.path)) : file);
-	const hunks = $derived(drawnHunks(shown, language, true));
-	const commenting = new LineCommenting(review, {
-		path: () => file.path,
-		hunks: () => hunks,
-		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines
-	});
+	let { drawing }: Props = $props();
+	const commenting = $derived(drawing.commenting);
 
 	/** Whether a cell's line changed in the way its column shows. */
 	function changed(cell: DrawnLine, column: LineSide): boolean {
@@ -71,17 +56,10 @@
 	}
 </script>
 
-<!-- On the window, so a drag let go anywhere — above the sticky header, say — still ends -->
-<svelte:window onmouseup={() => commenting.release()} />
-
 <div data-testid="split-view">
-	{#each hunks as hunk (hunk.key)}
+	{#each drawing.hunks() as hunk (hunk.key)}
 		<div class="border-b border-base-300">
-			<HunkGap
-				gap={hunk.gap}
-				header={hunk.header}
-				onReveal={revealed ? (gap) => revealed.reveal(file.path, gap) : null}
-			/>
+			<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
 
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<!-- Fixed layout with both content columns unsized: the two halves

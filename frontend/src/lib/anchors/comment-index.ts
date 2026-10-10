@@ -25,7 +25,7 @@ export class ThreadsByLine {
 			const { anchor } = thread;
 			// A file's rows are its lines; a thread on anything else has no row
 			if (anchor.kind !== 'line' || anchor.file !== file) continue;
-			if (!sideIsDrawn(anchor, removedLines)) continue;
+			if (!sideIsDrawn(anchor.side, removedLines)) continue;
 			const key = keyOf({ side: anchor.side, number: anchor.end_line });
 			const existing = this.#byLine.get(key);
 			if (existing) existing.push(thread);

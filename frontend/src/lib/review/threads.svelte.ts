@@ -10,8 +10,10 @@
 import { SvelteMap } from 'svelte/reactivity';
 
 import { askInThread, followAnchors } from '$lib/api/review-api';
+import { lineAnchor } from '$lib/anchors/line';
 import { anchorFile, sameSpot } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
+import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
@@ -187,6 +189,29 @@ export class Threads {
 		this.#all = this.#all.filter((thread) => thread.id !== id);
 	}
 
+	/**
+	 * Put what a field holds into the review, and close the field: a comment
+	 * on lines becomes a thread, a reply a turn of its thread, an edit the
+	 * thread's opening comment. Returns the thread it went into.
+	 */
+	say(field: CommentField): string {
+		const thread = this.#writeOut(field, field.severity);
+		this.writing.added(field);
+		return thread;
+	}
+
+	/**
+	 * Put what a field holds into the review as a question, and hand its
+	 * thread straight to whoever is answering. A question by definition:
+	 * asking and then leaving the comment marked as a note would say two
+	 * different things about the same words.
+	 */
+	async sayAndAsk(field: CommentField): Promise<void> {
+		const thread = this.#writeOut(field, 'question');
+		this.writing.asked(field);
+		await this.ask(thread);
+	}
+
 	/** Add what someone said to a thread. */
 	addTurn(id: string, { author, body, images }: NewTurn): void {
 		const turn: Turn = {
@@ -321,6 +346,25 @@ export class Threads {
 		this.#turnIds.continueFrom(kept.issued.turns);
 		for (const thread of this.#all) this.#rounds.reach(thread.round);
 		for (const round of this.#sent.values()) this.#rounds.reach(round + 1);
+	}
+
+	/** Write out what a field holds, meant as this; the thread it went into. */
+	#writeOut(field: CommentField, severity: CommentSeverity): string {
+		const body = field.text.trim();
+		const images = [...field.attachments.images];
+		const { at } = field;
+		switch (at.kind) {
+			case 'new': {
+				const { side, startLine, endLine } = at.lines;
+				return this.add({ anchor: lineAnchor(at.file, side, startLine, endLine, at.quote), body, severity, images });
+			}
+			case 'reply':
+				this.addTurn(at.thread, { author: 'reader', body, images });
+				return at.thread;
+			case 'edit':
+				this.update(at.thread, body, severity, images);
+				return at.thread;
+		}
 	}
 
 	#replace(id: string, change: (thread: Thread) => Thread): void {

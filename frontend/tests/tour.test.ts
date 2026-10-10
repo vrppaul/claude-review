@@ -16,7 +16,7 @@ import { fakeServer } from './fake-server';
 import { guideServer } from './guide-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import { inReview, openReview } from './review';
+import { inReview, leavePage, openReview } from './review';
 
 let review: Review;
 
@@ -36,6 +36,21 @@ function pageWith(...names: TourTarget[]) {
 }
 
 function ignore() {}
+
+/** Open a comment field on a line as picking the line opens one, and let the tour hear it as the page lets it. */
+function openComment(line: number) {
+	const place = { side: 'new', number: line } as const;
+	review.threads.writing.pickLines(FILE.path, { side: 'new', startLine: line, endLine: line, opensBelow: place }, []);
+	review.guide.notice({ type: 'opened', kind: 'new' });
+}
+
+/** Put the comment field on a line away unsaid, and let the tour hear it. */
+function closeComment(line: number) {
+	const field = review.threads.writing.onLinesOf(FILE.path).find(({ at }) => at.lines.startLine === line);
+	if (!field) throw new Error(`No comment is open on line ${line}`);
+	review.threads.writing.discard(field);
+	review.guide.notice({ type: 'closed', kind: 'new' });
+}
 
 /** The header of a review an agent is attached to, once its diff has arrived. */
 async function drawHeader() {
@@ -189,7 +204,7 @@ describe('the tour', () => {
 
 	it('does not wait for a comment that is already open', () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
-		review.guide.notice({ type: 'opened', kind: 'new' });
+		openComment(1);
 
 		review.guide.startTour();
 		review.guide.next();
@@ -233,15 +248,27 @@ describe('the tour', () => {
 		expect(review.guide.touring).toBe(true);
 	});
 
+	it('does not wait for a comment a reload brought back, which is open already', () => {
+		openComment(1);
+		leavePage();
+		review = openReview();
+		pageWith('file-tree', 'line-number', 'comment-field');
+
+		review.guide.startTour();
+		review.guide.next();
+
+		expect(review.guide.step?.id).toBe('comment-save');
+	});
+
 	it('keeps waiting for a comment while another one on a line is still open', () => {
 		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field');
 		review.guide.startTour();
 		review.guide.next();
-		review.guide.notice({ type: 'opened', kind: 'new' });
-		review.guide.notice({ type: 'opened', kind: 'new' });
+		openComment(1);
+		openComment(2);
 
-		review.guide.notice({ type: 'closed', kind: 'new' });
+		closeComment(1);
 
 		expect(review.guide.step?.id).toBe('comment-route');
 	});
@@ -252,7 +279,7 @@ describe('the tour', () => {
 		const { getByText } = render(GuideCard, inReview(review));
 		const before = getByText(STEP_COUNT).textContent;
 
-		review.guide.notice({ type: 'opened', kind: 'new' });
+		openComment(1);
 		flushSync();
 
 		expect(getByText(STEP_COUNT).textContent).not.toBe(before);

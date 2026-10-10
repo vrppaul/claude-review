@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ContextGap } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
+	import type { FileDrawing } from './file-drawing.svelte';
 
 	// What the gap says when the file could not be read and nothing said why
 	const READING_FAILED = 'Could not read the file';
@@ -10,35 +11,35 @@
 		gap: ContextGap;
 		/** The hunk's own header, which says where it is in the file. */
 		header: string;
-		/** Read in the next lines of the gap; null where it is said but not read into, as in a story step. */
-		onReveal: ((gap: ContextGap) => Promise<void>) | null;
+		/** The file the gap is in, which reads the gap in where it may be, and says when it is reading. */
+		drawing: FileDrawing;
 	}
 
-	let { gap, header, onReveal }: Props = $props();
+	let { gap, header, drawing }: Props = $props();
 
 	let failed = $state<string | null>(null);
-	let loading = $state(false);
 
+	const reading = $derived(drawing.isReading(gap));
 	const windowSize = $derived(gap.next === null ? 0 : gap.next.end - gap.next.start + 1);
 	// What a gap that is not read into says of itself
-	const unchanged = $derived(`${gap.hidden} unchanged ${gap.hidden === 1 ? 'line' : 'lines'}`);
+	const unchanged = $derived(`${gap.hidden} unchanged ${linesWord(gap.hidden)}`);
 	const label = $derived(
 		windowSize === gap.hidden
-			? `Show the ${gap.hidden} hidden ${gap.hidden === 1 ? 'line' : 'lines'}`
-			: `Show ${windowSize} more of ${gap.hidden} hidden lines`
+			? `Show the ${gap.hidden} hidden ${linesWord(gap.hidden)}`
+			: `Show ${windowSize} more of ${gap.hidden} hidden ${linesWord(gap.hidden)}`
 	);
 
+	/** "line" or "lines", as many as there are. */
+	function linesWord(count: number): string {
+		return count === 1 ? 'line' : 'lines';
+	}
+
 	async function reveal() {
-		const read = onReveal;
-		if (read === null || loading) return;
-		loading = true;
 		failed = null;
 		try {
-			await read(gap);
+			await drawing.read(gap);
 		} catch (error) {
 			failed = messageOf(error, READING_FAILED);
-		} finally {
-			loading = false;
 		}
 	}
 </script>
@@ -53,17 +54,17 @@
 		</div>
 	{/if}
 	<div data-testid="hunk-gap" class="flex items-center border-y border-base-300 bg-base-200">
-		{#if onReveal}
+		{#if drawing.readsGaps}
 			<button
 				data-testid="expand-context"
 				class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left font-mono text-xs"
-				disabled={loading}
+				disabled={reading}
 				onclick={reveal}
 			>
 				<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
 					<path d="M6 1L3 4h2v4H3l3 3 3-3H7V4h2z" />
 				</svg>
-				{loading ? 'Reading…' : label}
+				{reading ? 'Reading…' : label}
 			</button>
 			{#if failed}
 				<span data-testid="expand-error" class="px-4 text-xs text-error">{failed}</span>

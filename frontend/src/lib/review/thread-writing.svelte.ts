@@ -48,9 +48,18 @@ export class ThreadWriting {
 		return [...this.#fields.values()].filter(isOnLines).filter((field) => field.at.file === file);
 	}
 
-	/** Start a comment on lines of a file — or bring back the one already being written on them. */
-	pickLines(file: string, lines: PickedLines): void {
-		this.#open({ kind: 'new', file, lines }, nothingWritten());
+	/** How many comments are being started on lines, in every file. */
+	get openOnLines(): number {
+		return [...this.#fields.values()].filter(isOnLines).length;
+	}
+
+	/**
+	 * Start a comment on lines of a file — or bring back the one already being written on them.
+	 *
+	 * @param quote what the lines say as they are picked
+	 */
+	pickLines(file: string, lines: PickedLines, quote: string[]): void {
+		this.#open({ kind: 'new', file, lines, quote }, nothingWritten());
 	}
 
 	/** The reply being written in a thread, if one is. */

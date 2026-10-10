@@ -10,11 +10,10 @@
  */
 
 import { ThreadsByLine } from '$lib/anchors/comment-index';
-import { lineAnchor } from '$lib/anchors/line';
-import { lineRangeLabel } from '$lib/anchors/line-label';
+import { sideIsDrawn } from '$lib/anchors/placement';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { CommentSeverity, LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
+import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
 import { type DrawnHunk, type DrawnLine, NO_NUMBER, samePlace } from '$lib/utils/drawn-file';
 
 /** A comment being written on lines of the file. */
@@ -31,16 +30,17 @@ interface Drag {
 
 /** The file a drawing shows, read afresh each time it matters. */
 export interface DrawnFile {
-	path: () => string;
-	hunks: () => DrawnHunk[];
+	path(): string;
+	hunks(): DrawnHunk[];
 	/**
 	 * Whether the removed lines on screen are the review's own. Under a
-	 * narrower base the left-hand side belongs to that base, so a thread on a
-	 * removed line there would be anchored in somebody else's numbering:
-	 * removed lines then take no comment, and the threads on them are not
-	 * drawn. A story step reads the review's own diff, so its are.
+	 * narrower base the left-hand side belongs to that base, so what hangs on
+	 * a removed line there would be anchored in somebody else's numbering:
+	 * removed lines then take no comment, and neither the threads on them nor
+	 * the comments being written on them are drawn. A story step reads the
+	 * review's own diff, so its are.
 	 */
-	reviewOwnsRemovedLines: () => boolean;
+	reviewOwnsRemovedLines(): boolean;
 }
 
 /**
@@ -75,28 +75,16 @@ export class LineCommenting {
 		this.#threads = $derived(
 			new ThreadsByLine(review.threads.onFile(file.path()), file.path(), file.reviewOwnsRemovedLines())
 		);
-		this.#fields = $derived(review.threads.writing.onLinesOf(file.path()));
+		this.#fields = $derived(
+			review.threads.writing
+				.onLinesOf(file.path())
+				.filter((field) => sideIsDrawn(field.at.lines.side, file.reviewOwnsRemovedLines()))
+		);
 	}
 
-	/** Where a comment being written hangs, said above its field. */
-	labelOf(field: LineField): string {
-		const { side, startLine, endLine } = field.at.lines;
-		return lineRangeLabel(side, startLine, endLine);
-	}
-
-	/** What a comment's lines say now: it quotes them, and a suggestion starts from them. */
-	quoteOf(field: LineField): string[] {
-		return this.#file
-			.hunks()
-			.flatMap((hunk) => hunk.lines)
-			.filter(({ place }) => isPicked(place, field.at.lines))
-			.map(({ line }) => line.content);
-	}
-
-	/** Whether a comment may start on a line: one with a number, and a removed one only if it is the review's. */
+	/** Whether a comment may start on a line: one with a number, on a side whose comments are drawn here. */
 	mayComment(place: LinePlace): boolean {
-		if (place.number === NO_NUMBER) return false;
-		return place.side !== 'old' || this.#file.reviewOwnsRemovedLines();
+		return place.number !== NO_NUMBER && sideIsDrawn(place.side, this.#file.reviewOwnsRemovedLines());
 	}
 
 	/** The pointer went down on a line: a drag starts there. */
@@ -168,40 +156,14 @@ export class LineCommenting {
 		return this.threadsUnder(place).length > 0 || this.fieldsUnder(place).length > 0;
 	}
 
-	/**
-	 * Add a comment to the review. The lines travel with it: once the diff
-	 * is taken again they are how the thread finds where it belongs.
-	 */
-	save(field: LineField, body: string, severity: CommentSeverity, images: string[]): void {
-		this.#write(field, body, severity, images);
-		this.#review.threads.writing.added(field);
-	}
-
-	/** Add a comment and hand it straight to whoever is answering. */
-	async ask(field: LineField, body: string, severity: CommentSeverity, images: string[]): Promise<void> {
-		const written = this.#write(field, body, severity, images);
-		this.#review.threads.writing.asked(field);
-		try {
-			await this.#review.threads.ask(written);
-		} catch {
-			// The comment is written either way; the thread offers to ask again
-		}
-	}
-
-	/** Put a comment being written away unsaid. */
-	cancel(field: LineField): void {
-		this.#review.threads.writing.discard(field);
-	}
-
+	/** Start a comment on picked lines, quoting what they say as they are picked. */
 	#pick(lines: PickedLines): void {
-		this.#review.threads.writing.pickLines(this.#file.path(), lines);
-	}
-
-	/** Write a comment on its lines; its thread's id. */
-	#write(field: LineField, body: string, severity: CommentSeverity, images: string[]): string {
-		const { side, startLine, endLine } = field.at.lines;
-		const anchor = lineAnchor(this.#file.path(), side, startLine, endLine, this.quoteOf(field));
-		return this.#review.threads.add({ anchor, body, severity, images });
+		const quote = this.#file
+			.hunks()
+			.flatMap((hunk) => hunk.lines)
+			.filter(({ place }) => isPicked(place, lines))
+			.map(({ line }) => line.content);
+		this.#review.threads.writing.pickLines(this.#file.path(), lines, quote);
 	}
 
 	#isDrawn(place: LinePlace): boolean {

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { Thread, CommentSeverity, Turn } from '$lib/types';
+	import type { Thread, Turn } from '$lib/types';
 	import { anchorLabel } from '$lib/anchors/views';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
+	import { messageOf } from '$lib/utils/errors';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
@@ -11,6 +12,9 @@
 	interface Props {
 		comment: Thread;
 	}
+
+	// What the thread says when it could not be handed over and nothing said why
+	const ASKING_FAILED = 'Could not ask';
 
 	let { comment }: Props = $props();
 	const review = useReview();
@@ -113,33 +117,28 @@
 		return () => clearInterval(timer);
 	});
 
-	function saveEdit(edit: CommentField, body: string, severity: CommentSeverity, images: string[]) {
-		review.threads.update(comment.id, body, severity, images);
-		writing.added(edit);
-	}
-
 	/** Settling a thread folds it away; it can still be opened and read. */
 	function resolve() {
 		review.threads.setResolved(comment.id, true);
 	}
 
-	function reply(written: CommentField, body: string, images: string[]) {
-		review.threads.addTurn(comment.id, { author: 'reader', body, images });
-		writing.added(written);
+	/** Hand the thread over as it stands, and carry on reading. */
+	function handOver() {
+		void asking(review.threads.ask(comment.id));
 	}
 
-	async function replyAndAsk(written: CommentField, body: string, images: string[]) {
-		review.threads.addTurn(comment.id, { author: 'reader', body, images });
-		writing.asked(written);
-		await handOver();
+	/** Add the reply being written, and hand the thread over with it. */
+	function replyAndAsk(written: CommentField) {
+		void asking(review.threads.sayAndAsk(written));
 	}
 
-	async function handOver() {
+	/** Wait for a question to be handed over, and say so if it could not be. */
+	async function asking(handedOver: Promise<void>) {
 		failed = null;
 		try {
-			await review.threads.ask(comment.id);
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not ask';
+			await handedOver;
+		} catch (error) {
+			failed = messageOf(error, ASKING_FAILED);
 		}
 	}
 </script>
@@ -148,7 +147,7 @@
 	{#if editing}
 		<CommentBox
 			field={editing}
-			onSave={(body, severity, images) => saveEdit(editing, body, severity, images)}
+			onSave={() => review.threads.say(editing)}
 			onCancel={() => writing.discard(editing)}
 			{label}
 		/>
@@ -399,10 +398,8 @@
 				<div class="mt-3">
 					<CommentBox
 						field={replying}
-						onSave={(body, _severity, images) => reply(replying, body, images)}
-						onAsk={review.answerer.attached
-							? (body, _severity, images) => replyAndAsk(replying, body, images)
-							: undefined}
+						onSave={() => review.threads.say(replying)}
+						onAsk={review.answerer.attached ? () => replyAndAsk(replying) : undefined}
 						onCancel={() => writing.discard(replying)}
 						severityPicker={false}
 						nested

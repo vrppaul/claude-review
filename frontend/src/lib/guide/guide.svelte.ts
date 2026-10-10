@@ -21,6 +21,15 @@ export interface AnswererPresence {
 	readonly attached: boolean;
 }
 
+/**
+ * The comments being written, as far as the tour cares: how many are open
+ * on lines — counted where they are held, so those a reload brought back
+ * count as well.
+ */
+export interface OpenComments {
+	readonly openOnLines: number;
+}
+
 /** Where a step stands among the steps that are shown, by its id. */
 function indexOfStep(shown: TourStep[], id: string | null): number {
 	const at = shown.findIndex((step) => step.id === id);
@@ -39,6 +48,9 @@ function indexOfStep(shown: TourStep[], id: string | null): number {
 
 export class Guide {
 	readonly #answerer: AnswererPresence;
+	// Comment fields on a line open right now, so a step asking for one that
+	// is already open does not wait for something that has happened
+	readonly #comments: OpenComments;
 	// Which release serves this review
 	readonly #release: string;
 	#card = $state<GuideCard | null>(null);
@@ -51,9 +63,6 @@ export class Guide {
 	// or leaves, and a position would then point at a different step
 	#stepId = $state<string | null>(null);
 	#route = $state<CommentRoute>('review');
-	// Thread fields on a line open right now, so a step asking for one that
-	// is already open does not wait for something that has happened
-	#openNewComments = $state(0);
 	// Which places the page has drawn for a step to light. The page says so
 	// while the tour runs; until it first has, every step counts as shown,
 	// and a step landed on then is checked again once it has.
@@ -61,8 +70,9 @@ export class Guide {
 	readonly #steps: TourStep[];
 	readonly #stepIndex: number;
 
-	constructor(answerer: AnswererPresence, release: string) {
+	constructor(answerer: AnswererPresence, comments: OpenComments, release: string) {
 		this.#answerer = answerer;
+		this.#comments = comments;
 		this.#release = release;
 		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
 		this.#stepIndex = $derived(indexOfStep(this.#steps, this.#stepId));
@@ -191,7 +201,6 @@ export class Guide {
 	 * what it lights.
 	 */
 	notice(event: CommentFieldEvent): void {
-		this.#countOpen(event);
 		const waiting = this.step?.waitsFor;
 		if (!waiting || event.kind !== 'new') return;
 
@@ -221,7 +230,7 @@ export class Guide {
 			this.choose('review');
 		} else if (happened === 'asked' && routes.includes('ask')) {
 			this.choose('ask');
-		} else if (happened === 'closed' && this.#openNewComments === 0) {
+		} else if (happened === 'closed' && this.#comments.openOnLines === 0) {
 			// While another comment on a line is open, that one is still to be sent
 			this.back();
 		}
@@ -237,7 +246,7 @@ export class Guide {
 	#shows(step: TourStep): boolean {
 		const onPage = this.#onPage;
 		if (onPage !== null && !step.targets.some((target) => onPage.has(target))) return false;
-		return !(step.waitsFor?.kind === 'comment-opened' && this.#openNewComments > 0);
+		return !(step.waitsFor?.kind === 'comment-opened' && this.#comments.openOnLines > 0);
 	}
 
 	/** The steps this tour shows, in order: those with something on the page. */
@@ -266,11 +275,5 @@ export class Guide {
 			return;
 		}
 		this.#stepId = this.#steps[candidate].id;
-	}
-
-	/** The count of comment fields on a line, after one of them said something. */
-	#countOpen(event: CommentFieldEvent): void {
-		if (event.kind !== 'new') return;
-		this.#openNewComments = Math.max(0, this.#openNewComments + (event.type === 'opened' ? 1 : -1));
 	}
 }

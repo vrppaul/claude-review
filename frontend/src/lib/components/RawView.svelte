@@ -1,13 +1,10 @@
 <script lang="ts">
-	import type { DiffFile, DiffLine } from '$lib/types';
-	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
+	import type { DiffLine } from '$lib/types';
 	import { useReview } from '$lib/review/context';
-	import { drawnHunks } from '$lib/utils/drawn-file';
-	import { withRevealed } from '$lib/utils/expansions';
+	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
 	import LineGutter from './LineGutter.svelte';
 	import LineNotes from './LineNotes.svelte';
-	import { LineCommenting } from './line-commenting.svelte';
 
 	// Columns a row spans: two numbers, the sign and the code in a diff; one number and the code otherwise
 	const DIFF_COLUMNS = 4;
@@ -18,28 +15,16 @@
 	const TINTS: Record<DiffLine['kind'], string> = { add: 'cr-row-add', delete: 'cr-row-del', context: '' };
 
 	interface Props {
-		file: DiffFile;
-		language: string | null;
-		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-		reviewOwnsRemovedLines: boolean;
-		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
-		revealed: RevealedContext | null;
+		/** The file made ready to draw, by whoever draws it. */
+		drawing: FileDrawing;
 	}
 
-	let { file, language, reviewOwnsRemovedLines, revealed }: Props = $props();
+	let { drawing }: Props = $props();
 	const review = useReview();
 
 	const isDiffMode = $derived(review.mode === 'diff');
 	const columns = $derived(isDiffMode ? DIFF_COLUMNS : PLAIN_COLUMNS);
-	// Lines revealed from the file sit inside the hunk above which they were
-	// read, so numbering, highlighting and anchoring need no special case.
-	const shown = $derived(revealed ? withRevealed(file, revealed.forFile(file.path)) : file);
-	const hunks = $derived(drawnHunks(shown, language, isDiffMode));
-	const commenting = new LineCommenting(review, {
-		path: () => file.path,
-		hunks: () => hunks,
-		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines
-	});
+	const commenting = $derived(drawing.commenting);
 
 	/** A row's tint, with the mark of lines being written about added to the change rather than replacing it. */
 	function rowClass(kind: DiffLine['kind'], marked: boolean): string {
@@ -48,18 +33,11 @@
 	}
 </script>
 
-<!-- On the window, so a drag let go anywhere — above the sticky header, say — still ends -->
-<svelte:window onmouseup={() => commenting.release()} />
-
 <div data-testid="raw-view">
-	{#each hunks as hunk (hunk.key)}
+	{#each drawing.hunks() as hunk (hunk.key)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode}
-				<HunkGap
-					gap={hunk.gap}
-					header={hunk.header}
-					onReveal={revealed ? (gap) => revealed.reveal(file.path, gap) : null}
-				/>
+				<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
 			{/if}
 
 			<!-- Fixed layout so every hunk's gutters line up: the automatic

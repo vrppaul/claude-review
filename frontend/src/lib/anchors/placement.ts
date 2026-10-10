@@ -1,4 +1,4 @@
-import type { DiffFile, LineAnchor, Thread } from '$lib/types';
+import type { DiffFile, LineSide, Thread } from '$lib/types';
 
 /**
  * Whether a thread has a row to hang on in the diff as it is drawn.
@@ -21,7 +21,7 @@ export function isDrawn(
 ): boolean {
 	const { anchor } = thread;
 	// The files are drawn by their lines; a thread on anything else is not here
-	if (anchor.kind !== 'line' || !sideIsDrawn(anchor, removedLines)) {
+	if (anchor.kind !== 'line' || !sideIsDrawn(anchor.side, removedLines)) {
 		return false;
 	}
 
@@ -33,7 +33,10 @@ export function isDrawn(
 	);
 }
 
-/** Whether a thread's side is drawn at all: removed lines are not, under a narrower base. */
-export function sideIsDrawn(anchor: LineAnchor, removedLines: boolean): boolean {
-	return anchor.side !== 'old' || removedLines;
+/**
+ * Whether what hangs on a side is drawn at all — a thread, a comment being
+ * written: what hangs on removed lines is not, under a narrower base.
+ */
+export function sideIsDrawn(side: LineSide, removedLines: boolean): boolean {
+	return side !== 'old' || removedLines;
 }

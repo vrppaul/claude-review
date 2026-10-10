@@ -18,8 +18,23 @@ beforeEach(() => {
 /** A comment being started on line 5 of a file, as picking the line starts one. */
 function newField(): CommentField {
 	const line = { side: 'new', number: 5 } as const;
-	review.threads.writing.pickLines('a.ts', { side: 'new', startLine: 5, endLine: 5, opensBelow: line });
+	review.threads.writing.pickLines('a.ts', { side: 'new', startLine: 5, endLine: 5, opensBelow: line }, ['x = 5']);
 	return review.threads.writing.onLinesOf('a.ts')[0];
+}
+
+/** A field drawn as the page draws it, its words going into the review when saved. */
+function drawnSaving(field: CommentField, label = 'Line 5') {
+	return render(
+		CommentBox,
+		inReview(review, { field, onSave: () => review.threads.say(field), onCancel: vi.fn(), label })
+	);
+}
+
+/** What the comment saved says, as the review holds it. */
+function saved() {
+	const [thread] = review.threads.all;
+	if (!thread) throw new Error('Nothing was saved');
+	return thread;
 }
 
 /** The edit of a comment already written, as its Edit button opens one. */
@@ -35,17 +50,13 @@ function editOf(written: Partial<NewComment>): CommentField {
 
 describe('a comment field', () => {
 	it('saves what was written, without the spaces around it', async () => {
-		const onSave = vi.fn();
-		const { getByTestId } = render(
-			CommentBox,
-			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 5' })
-		);
+		const { getByTestId } = drawnSaving(newField());
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
 		await userEvent.type(input, '  Fix this  ');
 		await userEvent.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Fix this', 'note', []);
+		expect(saved().body).toBe('Fix this');
 	});
 
 	it('cannot save an empty comment', () => {
@@ -157,31 +168,23 @@ describe('suggesting a replacement', () => {
 describe('how a comment is meant', () => {
 	it('is an ordinary note unless said otherwise', async () => {
 		const user = userEvent.setup();
-		const onSave = vi.fn();
-		const { getByTestId } = render(
-			CommentBox,
-			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 1' })
-		);
+		const { getByTestId } = drawnSaving(newField());
 
 		await user.type(getByTestId('comment-input'), 'Reads well');
 		await user.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Reads well', 'note', []);
+		expect(saved()).toMatchObject({ body: 'Reads well', severity: 'note' });
 	});
 
 	it('can be marked as a question', async () => {
 		const user = userEvent.setup();
-		const onSave = vi.fn();
-		const { getByTestId } = render(
-			CommentBox,
-			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 1' })
-		);
+		const { getByTestId } = drawnSaving(newField());
 
 		await user.click(getByTestId('severity-question'));
 		await user.type(getByTestId('comment-input'), 'Is this reachable?');
 		await user.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('Is this reachable?', 'question', []);
+		expect(saved()).toMatchObject({ body: 'Is this reachable?', severity: 'question' });
 	});
 
 	it('reopens for editing with the mark it was saved under', async () => {
@@ -197,16 +200,12 @@ describe('how a comment is meant', () => {
 describe('images in a comment', () => {
 	it('saves a pasted screenshot as the whole comment', async () => {
 		keepingImages();
-		const onSave = vi.fn();
-		const { getByTestId, findByTestId } = render(
-			CommentBox,
-			inReview(review, { field: newField(), onSave, onCancel: vi.fn(), label: 'Line 5' })
-		);
+		const { getByTestId, findByTestId } = drawnSaving(newField());
 
 		await paste(getByTestId('comment-input'), screenshot());
 		await findByTestId('attached-image');
 		await userEvent.click(getByTestId('save-comment'));
 
-		expect(onSave).toHaveBeenCalledWith('', 'note', [KEPT_AS]);
+		expect(saved()).toMatchObject({ body: '', images: [KEPT_AS] });
 	});
 });

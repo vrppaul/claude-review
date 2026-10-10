@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
-import { addedLine, contextLine, diffFile, hunk } from '../diff';
+import { flushSync } from 'svelte';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
@@ -220,3 +221,45 @@ describe('a comment with images of its own', () => {
 		expect(server.requests.filter((request) => request.method === 'DELETE')).toEqual([]);
 	});
 });
+
+describe('a comment being written on a removed line, when a narrower base is read', () => {
+	/** Line 2 replaced, with the text the review's own base removed, or the one round 1 removed. */
+	function replacedLine(removed: string) {
+		return diffFile({
+			path: 'notes/read.txt',
+			hunks: [hunk([contextLine(1, 1, 'keep = 1'), removedLine(2, removed), addedLine(2, 'now = 2')])]
+		});
+	}
+
+	it('waits, undrawn, while that base owns the removed lines, and comes back with the whole review', async () => {
+		const user = userEvent.setup();
+		const ours = replacedLine('ours = 2');
+		review = openReview({ files: [ours] });
+		const server = fakeServer();
+		render(DiffView, inReview(review));
+		await user.click(removedLineNumber(2));
+		await user.type(screen.getByTestId('comment-input'), 'why did this go');
+
+		server.answer(
+			'GET /api/diff',
+			diffResponse({ files: [replacedLine('theirs = 2')], phrase: 'changes since round 1' })
+		);
+		await review.diff.setBase('round:1');
+		flushSync();
+		expect(fieldsSaying()).toEqual([]);
+
+		server.answer('GET /api/diff', diffResponse({ files: [ours] }));
+		await review.diff.showWholeReview();
+		flushSync();
+		expect(fieldsSaying()).toEqual(['why did this go']);
+	});
+});
+
+/** The old-side number of a removed line, to pick it by. */
+function removedLineNumber(number: number): HTMLElement {
+	const gutter = screen
+		.getAllByTestId('old-line-gutter')
+		.find((candidate) => candidate.textContent?.trim() === String(number));
+	if (!gutter) throw new Error(`Removed line ${number} is not drawn`);
+	return gutter;
+}

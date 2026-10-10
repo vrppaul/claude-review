@@ -107,7 +107,13 @@ export interface PickedLines {
  * thread, or over the comment that opened a thread.
  */
 export type WrittenAt =
-	| { kind: 'new'; file: string; lines: PickedLines }
+	| {
+			kind: 'new';
+			file: string;
+			lines: PickedLines;
+			/** What the lines said when they were picked: the comment quotes them, and a suggestion starts from them. */
+			quote: string[];
+	  }
 	| { kind: 'reply'; thread: string }
 	| { kind: 'edit'; thread: string };
 

@@ -493,8 +493,12 @@
 	font: inherit;
 	font-variant-numeric: tabular-nums;
 }
-.cr-gutter-button:hover {
+.cr-gutter-button:not([aria-disabled='true']):hover {
 	background: var(--cr-mark-tint);
+}
+/* A number that takes no comment: still a stop for the keyboard, nothing to press */
+.cr-gutter-button[aria-disabled='true'] {
+	cursor: default;
 }
 
 /*

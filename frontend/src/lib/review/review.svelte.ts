@@ -115,7 +115,7 @@ export class Review {
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
 		this.submission = new Submission(this.threads, this.rounds, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
-		this.guide = new Guide(this.answerer, facts.release);
+		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
