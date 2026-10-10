@@ -6,8 +6,15 @@ from typing import assert_never
 from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
 
 from claude_review.domain import models
+from claude_review.domain.exceptions import (
+    AnchorLinesNotShownError,
+    AnchorTooLongError,
+    UnknownAnchorFileError,
+    UnknownThreadError,
+)
 from claude_review.presentation.asgi import HTTP_DISCONNECT
 from claude_review.presentation.dependencies import get_review
+from claude_review.presentation.refusals import Takes, refusals
 from claude_review.presentation.wire.agent import (
     AgentStatus,
     CancelEvent,
@@ -49,7 +56,7 @@ async def note_the_agent(review: Review = Depends(get_review)) -> None:
 router = APIRouter(dependencies=[Depends(note_the_agent)])
 
 
-@router.get("/events")
+@router.get("/events", responses=refusals(takes=Takes.PARAMETERS))
 async def next_event(
     http_request: Request,
     wait_seconds: float = Query(default=DEFAULT_WAIT_SECONDS, gt=0, le=MAX_WAIT_SECONDS),
@@ -118,7 +125,7 @@ async def review_context(review: Review = Depends(get_review)) -> CatchUpRespons
     )
 
 
-@router.get("/catch-up/threads/{thread_id}")
+@router.get("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
 async def read_thread(
     thread_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID),
     review: Review = Depends(get_review),
@@ -131,13 +138,13 @@ async def read_thread(
     return Thread.of(review.read_thread(thread_id))
 
 
-@router.post("/reply", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/reply", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def reply_to_thread(request: ReplyRequest, review: Review = Depends(get_review)) -> None:
     """Push an answer into a thread of a review that is still open."""
     review.answer_thread(thread_id=request.thread_id, question_id=request.question_id, body=request.body)
 
 
-@router.post("/say", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)) -> None:
     """Push what the agent has to say into a review still open.
 
@@ -148,7 +155,7 @@ async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)
     review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
 
 
-@router.post("/progress", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def report_progress(request: ProgressRequest, review: Review = Depends(get_review)) -> None:
     """Say what is being done, while it is being done.
 
@@ -165,7 +172,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     )
 
 
-@router.post("/show", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/show", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)) -> None:
     """Take the reader to a file, and mark it for a moment when they arrive.
 
@@ -175,7 +182,10 @@ async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)
     review.show(request.file)
 
 
-@router.post("/point")
+@router.post(
+    "/point",
+    responses=refusals(UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError, takes=Takes.JSON_BODY),
+)
 async def raise_a_thread(request: PointRequest, review: Review = Depends(get_review)) -> PointResponse:
     """Put a thread on a line, from the side that wrote the change.
 
@@ -188,7 +198,7 @@ async def raise_a_thread(request: PointRequest, review: Review = Depends(get_rev
     return PointResponse(thread_id=raised)
 
 
-@router.post("/status", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/status", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def report_status(request: StatusRequest, review: Review = Depends(get_review)) -> None:
     """Take what the agent says about itself, and pass it on unchanged.
 

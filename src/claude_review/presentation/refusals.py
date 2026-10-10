@@ -4,10 +4,16 @@ Routes raise what went wrong and never decide how it is said. Every refusal
 is answered the same way, with its message as the `detail` FastAPI uses for
 its own refusals, so a caller reads one shape whoever refused.
 
+The same tables say, in the API's description, how each route may refuse:
+a route names the kinds it raises and what it takes in, and is described
+with their statuses and no others.
+
 A request whose caller went away before it had sent all of it is no refusal:
 nobody is left to answer, and nothing went wrong on either side.
 """
 
+from collections.abc import Set
+from enum import StrEnum, auto
 from functools import partial
 from http import HTTPStatus
 
@@ -27,6 +33,7 @@ from claude_review.domain.exceptions import (
     ReviewError,
     TooLargeError,
 )
+from claude_review.presentation.body_limit import TOO_LARGE_STATUS, BodyTooLargeError
 from claude_review.presentation.wire.refusal import Refusal
 
 log = structlog.get_logger()
@@ -46,6 +53,33 @@ REFUSAL_STATUS: dict[type[ReviewError], HTTPStatus] = {
 }
 
 
+# Every kind of refusal a route may raise, by the status it is answered
+# with: the review's own, and a body larger than anything it takes, which
+# reading the body raises wherever it is read
+ANSWERED_STATUS: dict[type[Exception], HTTPStatus] = {**REFUSAL_STATUS, BodyTooLargeError: TOO_LARGE_STATUS}
+
+
+class Takes(StrEnum):
+    """What a route takes in, which FastAPI reads, and may refuse, before the route is reached."""
+
+    NOTHING = auto()
+    # A query or a path, checked against the route's parameters
+    PARAMETERS = auto()
+    # A JSON body, read and checked against the route's model
+    JSON_BODY = auto()
+
+
+# FastAPI's own answer to a body it cannot read as JSON at all — bytes that
+# are not even text — and to a parameter or a field it found wrong
+UNREADABLE_BODY = HTTPStatus.BAD_REQUEST
+WRONG_INPUT = HTTPStatus.UNPROCESSABLE_CONTENT
+# What may be refused on the way to a route, by what the route takes in
+REFUSED_ON_THE_WAY: dict[Takes, frozenset[HTTPStatus]] = {
+    Takes.NOTHING: frozenset(),
+    Takes.PARAMETERS: frozenset({WRONG_INPUT}),
+    Takes.JSON_BODY: frozenset({UNREADABLE_BODY, WRONG_INPUT, TOO_LARGE_STATUS}),
+}
+
 # What a request is turned away with when it is not from this server's own
 # page: the origin guard's refusal, which any route may answer
 NOT_THIS_PAGE = HTTPStatus.FORBIDDEN
@@ -59,15 +93,34 @@ ALLOW_SEPARATOR = ", "
 CUT_OFF_STATUS = HTTPStatus.BAD_REQUEST
 
 
-def documented_refusals() -> dict[int | str, dict[str, object]]:
-    """What any route may answer instead of doing what it was asked, as the API describes it.
+def refusals(*kinds: type[Exception], takes: Takes = Takes.NOTHING) -> dict[int | str, dict[str, object]]:
+    """What a route may answer instead of doing what it was asked: what it raises, and what it is refused on the way.
 
-    Every refusal is said the same way, whichever route refused, so every
-    route says it may answer each of them — FastAPI's own refusal of what a
-    request had wrong, under 422, among them.
+    A route names the kinds of refusal it raises and what it takes in; the
+    status of each comes from the tables, so a route never restates one.
     """
-    statuses = [*REFUSAL_STATUS.values(), NOT_THIS_PAGE]
-    return {status: {"model": Refusal, "description": status.phrase} for status in statuses}
+    return documented({status_of(kind) for kind in kinds} | REFUSED_ON_THE_WAY[takes])
+
+
+def documented(statuses: Set[HTTPStatus]) -> dict[int | str, dict[str, object]]:
+    """Statuses a route may answer with, as the API describes them: each a refusal, said as every refusal is.
+
+    In order, so the API is described the same way every time it is written.
+    """
+    return {status: {"model": Refusal, "description": status.phrase} for status in sorted(statuses)}
+
+
+def status_of(kind: type[Exception]) -> HTTPStatus:
+    """The status a kind of refusal is answered with: that of the nearest kind the table names, as Starlette picks it.
+
+    Raises:
+        ValueError: if the table names no kind it is, which would make it no refusal at all.
+    """
+    nearest = min((named for named in ANSWERED_STATUS if issubclass(kind, named)), key=kind.__mro__.index, default=None)
+    if nearest is None:
+        msg = f"{kind.__name__} is answered with no status: it is no refusal"
+        raise ValueError(msg)
+    return ANSWERED_STATUS[nearest]
 
 
 def answer_refusals(app: FastAPI) -> None:

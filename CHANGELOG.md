@@ -51,8 +51,9 @@
 - **Requests are read as the API's schema says, and refused as it says.**
   A yes or a no in a JSON body is `true` or `false`: `0`, `1` and the like
   are refused. A round's key is `round:` and the number in plain digits.
-  Every refusal is `{detail}`, in words or field by field, and documented —
-  the origin guard's `403` included, which was plain text. A method a route
+  Every refusal is `{detail}`, in words or field by field, and each route
+  documents only the refusals it can give — the origin guard's `403`, which
+  was plain text, on every route. A method a route
   does not take is answered `405` with an `Allow` naming every method taken
   at that path, and a path no route serves `404`, rather than by the page's
   file server: the page is served at `/` and its files under `/assets`

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from claude_review.domain import models
 from claude_review.presentation.dependencies import get_guide_service, get_settings_service
+from claude_review.presentation.refusals import Takes, refusals
 from claude_review.presentation.wire.base import WireModel
 from claude_review.presentation.wire.records import (
     GuideChange,
@@ -34,7 +35,7 @@ async def reader_settings(
     return await _kept(settings, ReaderSettings)
 
 
-@router.put("/settings")
+@router.put("/settings", responses=refusals(takes=Takes.JSON_BODY))
 async def change_reader_settings(
     request: SettingsChange,
     settings: ReaderRecordService[models.ReaderSettings] = Depends(get_settings_service),
@@ -53,7 +54,7 @@ async def guide_state(
     return await _kept(guide, GuideState)
 
 
-@router.put("/guide")
+@router.put("/guide", responses=refusals(takes=Takes.JSON_BODY))
 async def change_guide_state(
     request: GuideChange,
     guide: ReaderRecordService[models.GuideState] = Depends(get_guide_service),

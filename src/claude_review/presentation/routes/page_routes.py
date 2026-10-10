@@ -6,9 +6,26 @@ import structlog
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
+from claude_review.domain.exceptions import (
+    FileNotInReviewError,
+    FileUnreadableError,
+    ImageAlreadySentError,
+    ImageRefusedError,
+    ImagesNotKeptError,
+    ImageTooLargeError,
+    LineRangeError,
+    NoRepositoryError,
+    PathOutsideRepositoryError,
+    QuestionNotInThreadError,
+    ReviewEndedError,
+    UnknownImageError,
+    UnknownVersionError,
+)
 from claude_review.domain.models import ReviewKey
+from claude_review.presentation.body_limit import BodyTooLargeError
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
+from claude_review.presentation.refusals import Takes, refusals
 from claude_review.presentation.version_words import (
     changes_on_the_wire,
     key_of,
@@ -68,7 +85,7 @@ async def get_the_review(
     )
 
 
-@router.get("/diff")
+@router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))
 async def get_diff(
     *,
     ignore_whitespace: bool = Query(default=False),
@@ -99,7 +116,17 @@ async def offered_versions(review: Review = Depends(get_review)) -> VersionsResp
     return VersionsResponse(versions=[version_on_the_wire(offered, opened_against) for offered in await review.offer()])
 
 
-@router.get("/file-window")
+@router.get(
+    "/file-window",
+    responses=refusals(
+        NoRepositoryError,
+        LineRangeError,
+        PathOutsideRepositoryError,
+        FileNotInReviewError,
+        FileUnreadableError,
+        takes=Takes.PARAMETERS,
+    ),
+)
 async def get_file_window(
     path: str = Query(min_length=1),
     start: int = Query(ge=1),
@@ -111,7 +138,7 @@ async def get_file_window(
     return FileWindowResponse(start=window.start, lines=window.lines, total=window.total)
 
 
-@router.post("/anchors/follow")
+@router.post("/anchors/follow", responses=refusals(takes=Takes.JSON_BODY))
 async def follow_anchors(request: FollowRequest, review: Review = Depends(get_review)) -> FollowResponse:
     """Say where each anchor is in the review's content as it now stands.
 
@@ -124,7 +151,11 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
     return FollowResponse(anchors=[anchor_on_the_wire(anchor) for anchor in followed])
 
 
-@router.post("/ask", status_code=HTTPStatus.NO_CONTENT)
+@router.post(
+    "/ask",
+    status_code=HTTPStatus.NO_CONTENT,
+    responses=refusals(QuestionNotInThreadError, takes=Takes.JSON_BODY),
+)
 async def ask_about_thread(request: AskRequest, review: Review = Depends(get_review)) -> None:
     """Take a question asked in one thread, for whoever is answering to pick up.
 
@@ -134,7 +165,11 @@ async def ask_about_thread(request: AskRequest, review: Review = Depends(get_rev
     review.ask(request.question_id, request.thread.in_the_review())
 
 
-@router.post("/message", status_code=HTTPStatus.NO_CONTENT)
+@router.post(
+    "/message",
+    status_code=HTTPStatus.NO_CONTENT,
+    responses=refusals(ImagesNotKeptError, takes=Takes.JSON_BODY),
+)
 async def take_panel_message(request: MessageRequest, review: Review = Depends(get_review)) -> None:
     """Take what the reader typed in the panel, for the agent to pick up.
 
@@ -150,7 +185,7 @@ async def take_panel_message(request: MessageRequest, review: Review = Depends(g
     )
 
 
-@router.post("/cancel", status_code=HTTPStatus.NO_CONTENT)
+@router.post("/cancel", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def cancel_panel_message(request: CancelRequest, review: Review = Depends(get_review)) -> None:
     """Take back a message the agent has not answered yet.
 
@@ -160,7 +195,7 @@ async def cancel_panel_message(request: CancelRequest, review: Review = Depends(
     review.take_back(request.message_id)
 
 
-@router.post("/images")
+@router.post("/images", responses=refusals(BodyTooLargeError, ImageRefusedError, ImageTooLargeError))
 async def keep_an_image(http_request: Request, review: Review = Depends(get_review)) -> ImageResponse:
     """Keep an image the reader is about to send, and say what it is called.
 
@@ -189,14 +224,18 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
     return bytes(received)
 
 
-@router.get("/images/{image_id}")
+@router.get("/images/{image_id}", responses=refusals(UnknownImageError, takes=Takes.PARAMETERS))
 async def serve_an_image(image_id: str, review: Review = Depends(get_review)) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
 
 
-@router.delete("/images/{image_id}", status_code=HTTPStatus.NO_CONTENT)
+@router.delete(
+    "/images/{image_id}",
+    status_code=HTTPStatus.NO_CONTENT,
+    responses=refusals(UnknownImageError, ImageAlreadySentError, takes=Takes.PARAMETERS),
+)
 async def discard_an_image(image_id: str, review: Review = Depends(get_review)) -> None:
     """Drop an image the reader took off the message before sending it.
 
@@ -207,7 +246,7 @@ async def discard_an_image(image_id: str, review: Review = Depends(get_review)) 
     log.info("image_discarded", image_id=image_id)
 
 
-@router.post("/submit")
+@router.post("/submit", responses=refusals(ReviewEndedError, takes=Takes.JSON_BODY))
 async def submit_review(request: SubmitRequest, review: Review = Depends(get_review)) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.
 
@@ -223,7 +262,7 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
     )
 
 
-@router.post("/retake")
+@router.post("/retake", responses=refusals(NoRepositoryError))
 async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
     """Take the diff again, after the work a round asked for: the agent asks, and so does the page.
 

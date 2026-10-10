@@ -20,7 +20,20 @@ MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
 # The header a request announces its body's length in, as ASGI hands headers over: lower case, in bytes
 CONTENT_LENGTH_HEADER = b"content-length"
 
+# What a body larger than that is answered with, and told
+TOO_LARGE_STATUS = HTTPStatus.CONTENT_TOO_LARGE
 TOO_LARGE_DETAIL = "The request is larger than anything this review takes"
+
+
+class BodyTooLargeError(HTTPException):
+    """Raised from inside the read of a body larger than anything the review takes.
+
+    An HTTP error rather than a refusal of the review's own: FastAPI turns
+    any other error raised while it reads a body into a 400 about parsing.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(status_code=TOO_LARGE_STATUS, detail=TOO_LARGE_DETAIL)
 
 
 class BodySizeLimit:
@@ -50,12 +63,12 @@ class CountedReceive:
 
     async def __call__(self) -> Message:
         if self._announced is not None and self._announced > MAX_REQUEST_BYTES:
-            raise HTTPException(status_code=HTTPStatus.CONTENT_TOO_LARGE, detail=TOO_LARGE_DETAIL)
+            raise BodyTooLargeError
         message = await self._receive()
         if message["type"] == HTTP_REQUEST:
             self._received += len(message.get("body", b""))
             if self._received > MAX_REQUEST_BYTES:
-                raise HTTPException(status_code=HTTPStatus.CONTENT_TOO_LARGE, detail=TOO_LARGE_DETAIL)
+                raise BodyTooLargeError
         return message
 
 
