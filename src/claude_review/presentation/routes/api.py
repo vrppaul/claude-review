@@ -2,7 +2,8 @@
 
 from fastapi import FastAPI
 
-from claude_review.presentation.refusals import NOT_THIS_PAGE, documented
+from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
+from claude_review.presentation.refusals import documented
 from claude_review.presentation.routes import agent_routes, page_routes, reader_routes, session_socket
 
 API_PREFIX = "/api"
@@ -15,4 +16,4 @@ def include_api(app: FastAPI) -> None:
     the origin guard, which stands in front of them all.
     """
     for routes in (page_routes, agent_routes, reader_routes, session_socket):
-        app.include_router(routes.router, prefix=API_PREFIX, responses=documented({NOT_THIS_PAGE}))
+        app.include_router(routes.router, prefix=API_PREFIX, responses=documented({NOT_ITS_PAGE_STATUS}))

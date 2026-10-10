@@ -44,8 +44,9 @@ WEB_SCHEMES = frozenset({"http", "https"})
 
 # The close code for a handshake refused on policy grounds (RFC 6455, 7.4.1)
 POLICY_VIOLATION = 1008
-# What a request from anywhere but this server's own page is told
-NOT_ITS_PAGE = "Not this server's page"
+# What a request from anywhere but this server's own page is answered with, and told
+NOT_ITS_PAGE_STATUS = HTTPStatus.FORBIDDEN
+NOT_ITS_PAGE_DETAIL = "Not this server's page"
 
 
 def is_local_host(value: str | None) -> bool:
@@ -143,8 +144,8 @@ class LocalOriginOnly:
         if scope["type"] == WEBSOCKET_SCOPE:
             await _reject_socket(send)
         else:
-            refused = Refusal(detail=NOT_ITS_PAGE)
-            await JSONResponse(refused.model_dump(), status_code=HTTPStatus.FORBIDDEN)(scope, receive, send)
+            refused = Refusal(detail=NOT_ITS_PAGE_DETAIL)
+            await JSONResponse(refused.model_dump(), status_code=NOT_ITS_PAGE_STATUS)(scope, receive, send)
 
 
 async def _reject_socket(send: Send) -> None:

@@ -3,7 +3,7 @@
 from http import HTTPStatus
 
 import structlog
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.exceptions import (
@@ -22,7 +22,6 @@ from claude_review.domain.exceptions import (
     UnknownVersionError,
 )
 from claude_review.domain.models import ReviewKey
-from claude_review.presentation.body_limit import BodyTooLargeError
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.refusals import Takes, refusals
@@ -34,7 +33,7 @@ from claude_review.presentation.version_words import (
     version_on_the_wire,
 )
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork, CancelRequest, ImageResponse, MessageRequest
-from claude_review.presentation.wire.base import MAX_ID_LENGTH
+from claude_review.presentation.wire.base import MAX_ID_LENGTH, SAFE_ID
 from claude_review.presentation.wire.content import (
     SEND_LIMITS,
     DiffFile,
@@ -53,7 +52,7 @@ from claude_review.presentation.wire.threads import (
     anchor_in_the_review,
     anchor_on_the_wire,
 )
-from claude_review.services.image_service import MAX_IMAGE_BYTES
+from claude_review.services.image_service import IMAGE_FORMATS, MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
 
 log = structlog.get_logger()
@@ -195,7 +194,19 @@ async def cancel_panel_message(request: CancelRequest, review: Review = Depends(
     review.take_back(request.message_id)
 
 
-@router.post("/images", responses=refusals(BodyTooLargeError, ImageRefusedError, ImageTooLargeError))
+# What POST /images is sent, as the API describes it: the image itself, as
+# bytes, in any format the review keeps
+IMAGE_BODY = {
+    "requestBody": {
+        "required": True,
+        "content": {known.media_type: {"schema": {"type": "string", "format": "binary"}} for known in IMAGE_FORMATS},
+    }
+}
+
+
+@router.post(
+    "/images", responses=refusals(ImageRefusedError, ImageTooLargeError, takes=Takes.RAW_BODY), openapi_extra=IMAGE_BODY
+)
 async def keep_an_image(http_request: Request, review: Review = Depends(get_review)) -> ImageResponse:
     """Keep an image the reader is about to send, and say what it is called.
 
@@ -225,7 +236,9 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
 
 
 @router.get("/images/{image_id}", responses=refusals(UnknownImageError, takes=Takes.PARAMETERS))
-async def serve_an_image(image_id: str, review: Review = Depends(get_review)) -> FileResponse:
+async def serve_an_image(
+    image_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID), review: Review = Depends(get_review)
+) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
@@ -236,7 +249,9 @@ async def serve_an_image(image_id: str, review: Review = Depends(get_review)) ->
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(UnknownImageError, ImageAlreadySentError, takes=Takes.PARAMETERS),
 )
-async def discard_an_image(image_id: str, review: Review = Depends(get_review)) -> None:
+async def discard_an_image(
+    image_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID), review: Review = Depends(get_review)
+) -> None:
     """Drop an image the reader took off the message before sending it.
 
     One that went out with a message stays: the agent may still be about to
@@ -262,7 +277,7 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
     )
 
 
-@router.post("/retake", responses=refusals(NoRepositoryError))
+@router.post("/retake", responses=refusals(NoRepositoryError, takes=Takes.NOTHING))
 async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
     """Take the diff again, after the work a round asked for: the agent asks, and so does the page.
 

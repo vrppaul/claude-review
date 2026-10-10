@@ -1509,7 +1509,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1598,7 +1598,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1631,7 +1631,7 @@ export interface operations {
                     "application/json": components["schemas"]["FollowResponse"];
                 };
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1649,7 +1649,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -1658,7 +1658,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1689,7 +1689,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1707,7 +1707,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -1716,7 +1716,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1747,7 +1747,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1765,7 +1765,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -1774,7 +1774,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1805,7 +1805,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1823,7 +1823,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -1832,7 +1832,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1850,7 +1850,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "image/png": string;
+                "image/jpeg": string;
+                "image/gif": string;
+                "image/webp": string;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1870,7 +1877,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -1928,7 +1935,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1984,7 +1991,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2017,7 +2024,7 @@ export interface operations {
                     "application/json": components["schemas"]["SubmitResponse"];
                 };
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2044,7 +2051,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2053,7 +2060,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2158,7 +2165,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2236,7 +2243,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2267,7 +2274,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2285,7 +2292,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2294,7 +2301,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2325,7 +2332,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2343,7 +2350,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2352,7 +2359,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2383,7 +2390,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2401,7 +2408,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2410,7 +2417,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2441,7 +2448,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2459,7 +2466,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2468,7 +2475,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2501,7 +2508,7 @@ export interface operations {
                     "application/json": components["schemas"]["PointResponse"];
                 };
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2528,7 +2535,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2537,7 +2544,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2568,7 +2575,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2586,7 +2593,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2595,7 +2602,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2657,7 +2664,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReaderSettings"];
                 };
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2675,7 +2682,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2684,7 +2691,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2746,7 +2753,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuideState"];
                 };
             };
-            /** @description Bad Request */
+            /** @description Bad Request — refused before the route is reached, for what the request carried */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2764,7 +2771,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Content Too Large */
+            /** @description Content Too Large — refused before the route is reached, for what the request carried */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2773,7 +2780,7 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
-            /** @description Unprocessable Content */
+            /** @description Unprocessable Content — refused before the route is reached, for what the request carried */
             422: {
                 headers: {
                     [name: string]: unknown;

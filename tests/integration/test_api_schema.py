@@ -16,6 +16,7 @@ from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
 
+from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import EVENTS_ROUTE, LOCAL_HEADERS, LOCAL_ORIGIN, ReviewFactory, one_line_file, opening_of
 
@@ -26,6 +27,10 @@ BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
 # The agent's long poll waits out whatever it is asked to, up to ten minutes
 schema = schemathesis.pytest.from_fixture("served_schema").exclude(path=EVENTS_ROUTE)
+
+# An image is uploaded as its bytes, as any binary body is sent
+BINARY_MEDIA_TYPE = "application/octet-stream"
+schemathesis.serializer.alias([known.media_type for known in IMAGE_FORMATS], BINARY_MEDIA_TYPE)
 
 # What the repository under review has changed since its commit: a file
 # edited and a file added, so its diff, its files and its retake have

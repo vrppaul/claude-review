@@ -6,7 +6,8 @@ its own refusals, so a caller reads one shape whoever refused.
 
 The same tables say, in the API's description, how each route may refuse:
 a route names the kinds it raises and what it takes in, and is described
-with their statuses and no others.
+with their statuses and no others, those given before the route is reached
+said to be so.
 
 A request whose caller went away before it had sent all of it is no refusal:
 nobody is left to answer, and nothing went wrong on either side.
@@ -33,7 +34,7 @@ from claude_review.domain.exceptions import (
     ReviewError,
     TooLargeError,
 )
-from claude_review.presentation.body_limit import TOO_LARGE_STATUS, BodyTooLargeError
+from claude_review.presentation.body_limit import TOO_LARGE_STATUS
 from claude_review.presentation.wire.refusal import Refusal
 
 log = structlog.get_logger()
@@ -53,12 +54,6 @@ REFUSAL_STATUS: dict[type[ReviewError], HTTPStatus] = {
 }
 
 
-# Every kind of refusal a route may raise, by the status it is answered
-# with: the review's own, and a body larger than anything it takes, which
-# reading the body raises wherever it is read
-ANSWERED_STATUS: dict[type[Exception], HTTPStatus] = {**REFUSAL_STATUS, BodyTooLargeError: TOO_LARGE_STATUS}
-
-
 class Takes(StrEnum):
     """What a route takes in, which FastAPI reads, and may refuse, before the route is reached."""
 
@@ -67,6 +62,8 @@ class Takes(StrEnum):
     PARAMETERS = auto()
     # A JSON body, read and checked against the route's model
     JSON_BODY = auto()
+    # A body read as it comes, never parsed: only its size is refused on the way
+    RAW_BODY = auto()
 
 
 # FastAPI's own answer to a body it cannot read as JSON at all — bytes that
@@ -78,11 +75,11 @@ REFUSED_ON_THE_WAY: dict[Takes, frozenset[HTTPStatus]] = {
     Takes.NOTHING: frozenset(),
     Takes.PARAMETERS: frozenset({WRONG_INPUT}),
     Takes.JSON_BODY: frozenset({UNREADABLE_BODY, WRONG_INPUT, TOO_LARGE_STATUS}),
+    Takes.RAW_BODY: frozenset({TOO_LARGE_STATUS}),
 }
-
-# What a request is turned away with when it is not from this server's own
-# page: the origin guard's refusal, which any route may answer
-NOT_THIS_PAGE = HTTPStatus.FORBIDDEN
+# What the description of a status says after its own words when it is given
+# before the route is reached, for what the request carried
+ON_THE_WAY_NOTE = " — refused before the route is reached, for what the request carried"
 # The header a refusal of a method names the methods a path does take in
 ALLOW_HEADER = "Allow"
 ALLOW_SEPARATOR = ", "
@@ -93,34 +90,40 @@ ALLOW_SEPARATOR = ", "
 CUT_OFF_STATUS = HTTPStatus.BAD_REQUEST
 
 
-def refusals(*kinds: type[Exception], takes: Takes = Takes.NOTHING) -> dict[int | str, dict[str, object]]:
+def refusals(*kinds: type[ReviewError], takes: Takes) -> dict[int | str, dict[str, object]]:
     """What a route may answer instead of doing what it was asked: what it raises, and what it is refused on the way.
 
     A route names the kinds of refusal it raises and what it takes in; the
     status of each comes from the tables, so a route never restates one.
     """
-    return documented({status_of(kind) for kind in kinds} | REFUSED_ON_THE_WAY[takes])
+    return documented({status_of(kind) for kind in kinds}, on_the_way=REFUSED_ON_THE_WAY[takes])
 
 
-def documented(statuses: Set[HTTPStatus]) -> dict[int | str, dict[str, object]]:
+def documented(
+    statuses: Set[HTTPStatus], *, on_the_way: Set[HTTPStatus] = frozenset()
+) -> dict[int | str, dict[str, object]]:
     """Statuses a route may answer with, as the API describes them: each a refusal, said as every refusal is.
 
-    In order, so the API is described the same way every time it is written.
+    Those given on the way to the route say so. In order, so the API is
+    described the same way every time it is written.
     """
-    return {status: {"model": Refusal, "description": status.phrase} for status in sorted(statuses)}
+    return {
+        status: {"model": Refusal, "description": status.phrase + (ON_THE_WAY_NOTE if status in on_the_way else "")}
+        for status in sorted({*statuses, *on_the_way})
+    }
 
 
-def status_of(kind: type[Exception]) -> HTTPStatus:
+def status_of(kind: type[ReviewError]) -> HTTPStatus:
     """The status a kind of refusal is answered with: that of the nearest kind the table names, as Starlette picks it.
 
     Raises:
         ValueError: if the table names no kind it is, which would make it no refusal at all.
     """
-    nearest = min((named for named in ANSWERED_STATUS if issubclass(kind, named)), key=kind.__mro__.index, default=None)
+    nearest = min((named for named in REFUSAL_STATUS if issubclass(kind, named)), key=kind.__mro__.index, default=None)
     if nearest is None:
         msg = f"{kind.__name__} is answered with no status: it is no refusal"
         raise ValueError(msg)
-    return ANSWERED_STATUS[nearest]
+    return REFUSAL_STATUS[nearest]
 
 
 def answer_refusals(app: FastAPI) -> None:
