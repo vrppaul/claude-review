@@ -6,6 +6,7 @@ changes" is not "changes since" anything, which is why the words are
 written here rather than assembled in the page.
 """
 
+import re
 from typing import assert_never
 
 from claude_review.domain.exceptions import UnknownVersionError
@@ -25,6 +26,9 @@ from claude_review.presentation.wire.content import ChangesSince, ReviewVersion,
 REVIEW_KEY = "review"
 ROUND_PREFIX = "round:"
 REF_PREFIX = "ref:"
+# A round's number as the review writes it: plain digits, no leading zero —
+# the one spelling, so a key names one base and a base has one key
+ROUND_NUMBER = re.compile(r"[1-9][0-9]*")
 
 # What the diff against HEAD shows
 UNCOMMITTED = "uncommitted changes"
@@ -52,7 +56,7 @@ def key_of(text: str) -> VersionKey:
     if text == REVIEW_KEY:
         return ReviewKey()
     number = text.removeprefix(ROUND_PREFIX)
-    if text.startswith(ROUND_PREFIX) and number.isdigit() and int(number) > 0:
+    if text.startswith(ROUND_PREFIX) and ROUND_NUMBER.fullmatch(number):
         return RoundKey(round=int(number))
     name = text.removeprefix(REF_PREFIX)
     if text.startswith(REF_PREFIX) and name:
