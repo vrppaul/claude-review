@@ -10,8 +10,8 @@ from typing import override
 
 from pydantic import BaseModel
 
+from claude_review.domain.interfaces import RecordStore
 from claude_review.domain.models import DiffLayout, ReaderSettings, Theme
-from claude_review.domain.protocols import RecordStoreProtocol
 from claude_review.services.reader_record_service import ReaderRecordService
 
 
@@ -23,7 +23,7 @@ class SettingsChanged(BaseModel):
     ignore_whitespace: bool | None = None
 
 
-class KeptInMemory(RecordStoreProtocol[ReaderSettings]):
+class KeptInMemory(RecordStore[ReaderSettings]):
     """A store that keeps its one record for as long as the test runs."""
 
     def __init__(self, record: ReaderSettings | None = None) -> None:

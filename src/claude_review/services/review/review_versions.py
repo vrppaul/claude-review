@@ -6,6 +6,7 @@ from typing import assert_never
 import structlog
 
 from claude_review.domain.exceptions import UnknownVersionError
+from claude_review.domain.interfaces import Clock, GitError, Repository, StagedTree
 from claude_review.domain.models import (
     HEAD,
     ChangedSinceRound,
@@ -16,7 +17,6 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
-from claude_review.domain.protocols import Clock, GitError, GitRepositoryProtocol, StagedTreeProtocol
 
 log = structlog.get_logger()
 
@@ -34,10 +34,8 @@ class ReviewVersions:
     the review itself.
     """
 
-    def __init__(
-        self, git_repository: GitRepositoryProtocol, clock: Clock, root: Path, review_base: str | None
-    ) -> None:
-        self._git = git_repository
+    def __init__(self, repository: Repository, clock: Clock, root: Path, review_base: str | None) -> None:
+        self._repository = repository
         self._clock = clock
         self._root = root
         # What the review was opened against; None for uncommitted changes
@@ -51,7 +49,7 @@ class ReviewVersions:
         """What the review was opened against; None for the uncommitted changes."""
         return self._review_base
 
-    async def mark(self, round_number: int, staged: StagedTreeProtocol) -> None:
+    async def mark(self, round_number: int, staged: StagedTree) -> None:
         """Write down the tree the diff has just been taken from, as part of a round."""
         try:
             tree = await staged.write_tree()
@@ -60,9 +58,7 @@ class ReviewVersions:
             return
         self._marks.append(TreeSnapshot(round=round_number, tree=tree, at=self._clock.now()))
 
-    async def changed_since_round_began(
-        self, round_number: int, staged: StagedTreeProtocol
-    ) -> ChangedSinceRound | None:
+    async def changed_since_round_began(self, round_number: int, staged: StagedTree) -> ChangedSinceRound | None:
         """Which files have moved since a round began, if it can be said.
 
         None is not an empty list: one says nothing has changed, the other
@@ -135,7 +131,7 @@ class ReviewVersions:
         if name.startswith("-"):
             msg = f"{name} cannot be a base: a revision may not begin with a dash"
             raise UnknownVersionError(msg)
-        if name != HEAD and name not in {ref.name for ref in await self._git.list_refs(self._root)}:
+        if name != HEAD and name not in {ref.name for ref in await self._repository.list_refs(self._root)}:
             msg = f"{name} is not a branch or tag of this repository"
             raise UnknownVersionError(msg)
         return name
@@ -170,7 +166,7 @@ class ReviewVersions:
         """The branches and tags this repository can be read against, HEAD first, left uncounted."""
         listed = [
             VersionOnOffer(key=RefKey(name=ref.name), at=ref.at, changed=None)
-            for ref in await self._git.list_refs(self._root)
+            for ref in await self._repository.list_refs(self._root)
         ]
         return [VersionOnOffer(key=RefKey(name=HEAD), at=None, changed=None), *listed]
 
@@ -183,7 +179,7 @@ class ReviewVersions:
         are one tree.
         """
         try:
-            async with self._git.staged(self._root) as staged:
+            async with self._repository.staged(self._root) as staged:
                 changed = await staged.names_changed_since(list(dict.fromkeys(bases)))
         except GitError as refusal:
             log.warning("counts_refused", reason=str(refusal))

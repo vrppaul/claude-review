@@ -8,8 +8,8 @@ discussed.
 
 from pathlib import Path
 
+from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import PanelEntry, TurnAuthor
-from claude_review.domain.protocols import Clock
 
 
 class Conversation:

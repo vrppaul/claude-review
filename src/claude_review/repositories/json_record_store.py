@@ -9,7 +9,7 @@ from typing import override
 import structlog
 from pydantic import BaseModel, ValidationError
 
-from claude_review.domain.protocols import RecordStoreProtocol
+from claude_review.domain.interfaces import RecordStore
 
 log = structlog.get_logger()
 
@@ -17,7 +17,7 @@ log = structlog.get_logger()
 RECORD_ENCODING = "utf-8"
 
 
-class JsonRecordStore[Record: BaseModel](RecordStoreProtocol[Record]):
+class JsonRecordStore[Record: BaseModel](RecordStore[Record]):
     """Keeps one record as a JSON file, replaced whole on every write.
 
     Several reviews can be open at once, each in its own process. A write goes

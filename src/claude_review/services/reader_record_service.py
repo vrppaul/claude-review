@@ -4,14 +4,14 @@ import asyncio
 
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.interfaces import RecordStore
 from claude_review.domain.models import GuideState, ReaderSettings
-from claude_review.domain.protocols import RecordStoreProtocol
 
 
 class ReaderRecordService[Record: BaseModel]:
     """One record about the reader — their settings, or how far they have been shown around."""
 
-    def __init__(self, store: RecordStoreProtocol[Record], record_type: type[Record]) -> None:
+    def __init__(self, store: RecordStore[Record], record_type: type[Record]) -> None:
         self._store = store
         self._record_type = record_type
         # Two changes at once would each read the record before either wrote,

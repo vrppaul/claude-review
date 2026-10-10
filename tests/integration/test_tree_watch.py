@@ -24,7 +24,7 @@ QUIET_POLLS = 25
 
 
 def _watcher() -> TreeWatcherService:
-    return TreeWatcherService(git_repository=GitRepository(objects=None), poll_seconds=POLL_SECONDS)
+    return TreeWatcherService(GitRepository(objects=None), poll_seconds=POLL_SECONDS)
 
 
 async def _first(

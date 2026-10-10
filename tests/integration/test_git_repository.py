@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.protocols import GitError
+from claude_review.domain.interfaces import GitError
 from claude_review.repositories.git_repository import GitRepository
 from tests.helpers import git
 

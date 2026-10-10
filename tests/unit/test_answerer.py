@@ -9,8 +9,8 @@ Here the lease is a moment long, so a lapse can be watched happen.
 import asyncio
 from typing import override
 
+from claude_review.domain.interfaces import PageChannel
 from claude_review.domain.page_events import AnswererChanged, PageEvent
-from claude_review.domain.protocols import PageChannel
 from claude_review.services.review.answerer import Answerer
 from tests.helpers import FixedClock
 

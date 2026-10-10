@@ -7,23 +7,27 @@ agent reads that round only after the review has ended.
 
 import tempfile
 from pathlib import Path
+from typing import override
 
 import pytest
 
 from claude_review.cli.terminal_announcer import TerminalAnnouncer
+from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.workspace import review_workspace
 from tests.helpers import PNG
 
 
-class ImagesNoted:
+class ImagesNoted(ReviewAnnouncer):
     """Whoever started the review, as a test: it notes where the images were left, and hears nothing else."""
 
     def __init__(self) -> None:
         self.left_in: list[Path] = []
 
+    @override
     async def listening_at(self, url: str) -> None:
         """These reviews are never served."""
 
+    @override
     def images_left_in(self, directory: Path) -> None:
         self.left_in.append(directory)
 

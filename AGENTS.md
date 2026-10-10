@@ -61,8 +61,8 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 DDD-lite with clean layer separation:
 
 - **domain/** — Pydantic models (DiffFile, Thread, ReviewResult). No I/O, no framework imports.
-- **services/** — orchestration: a class where there is a dependency or state to hold, a function where there is not (`read_diff` over the pure `unified_diff` parser, `read_text_files` and `read_transcript` over `whole_file`, `RoundFormatter`, which writes a round the way each kind of review leads into its threads, and `place_words`, which names an anchor's place in plain words or in Markdown — the domain holds the place, never words for it). Depends on domain + repository protocols. `services/review/` is the one owner of a review's state: `Review` (`review.py`) composed of its parts — `ReviewLifetime`, `BrowserPresence` (pages open, no polling), `Answerer`, `AgentInbox` (what the agent waits on), `RoundTracker`, `Conversation`, `ReaderThreads`, and a `ContentSource` (`RepositorySource` or `FixedSource`) holding the `ReviewContent` of the current take and its `ReviewVersions`. It tells pages what happened as domain `PageEvent`s through the `PageChannel` port.
-- **repositories/** — infrastructure boundary (GitRepository). Protocol-based for testability.
+- **services/** — orchestration: a class where there is a dependency or state to hold, a function where there is not (`read_diff` over the pure `unified_diff` parser, `read_text_files` and `read_transcript` over `whole_file`, `RoundFormatter`, which writes a round the way each kind of review leads into its threads, and `place_words`, which names an anchor's place in plain words or in Markdown — the domain holds the place, never words for it). Depends on the domain and its interfaces (`domain/interfaces.py`). `services/review/` is the one owner of a review's state: `Review` (`review.py`) composed of its parts — `ReviewLifetime`, `BrowserPresence` (pages open, no polling), `Answerer`, `AgentInbox` (what the agent waits on), `RoundTracker`, `Conversation`, `ReaderThreads`, and a `ContentSource` (`RepositorySource` or `FixedSource`) holding the `ReviewContent` of the current take and its `ReviewVersions`. It tells pages what happened as domain `PageEvent`s through the `PageChannel` interface.
+- **repositories/** — infrastructure boundary (`GitRepository`, the image and record stores, the system clock), each implementing an interface the domain holds, so the services build on the interface and a test puts a fake in its place.
 - **presentation/** — FastAPI routes + the wire models (`wire/`) + `Depends()` DI. Every model that crosses the wire is a `WireModel` of its own in `wire/` (base, content, threads, agent, pushes, records), built from the domain model of the same shape with `.of()`; the domain never carries wire settings. Routes (`routes/`: page, agent, reader records, session socket, mounted by `include_api`) are thin: they read the wire, call one method of the `Review` they get from `get_review`, and write the answer. `BrowserBroadcast` is the `PageChannel`: it turns each `PageEvent` into its `ServerPush` (`wire/pushes.py`) once and queues it for every open page; `version_words.py` names the bases the page asks by; `api_schema.py` writes the OpenAPI the browser's types come from. The app opens the review (`Review.open`) in its lifespan, so whatever serves it starts it right.
 - **hosting/** — holds one review open on this machine: its directories, its port, its uvicorn server, and the review's parts that run until its `ReviewLifetime` ends. `host_review` (`hosted_review.py`) is where a review is put together — its own `GitRepository`, which writes trees into the review's workspace, its images, its broadcast, its app — for the command line and the tests alike. It prints nothing: what whoever started the review must hear goes through a `ReviewAnnouncer`.
 - **Layers**: `cli` → `hosting` → `presentation` → `services` | `repositories` → `domain`, each building only on those after it; the services and the repositories sit side by side and never import each other. `lint-imports` refuses an import against it.
@@ -78,11 +78,13 @@ class FileStatus(StrEnum):
     MODIFIED = auto()
     ADDED = auto()
 
-# Protocols — interfaces for infrastructure, named by whatever implements them
-class TrackedPathsProtocol(Protocol):
-    async def is_tracked(self, root: Path, relative_path: str) -> bool: ...
+# Interfaces — abstract classes the services build on, implemented by inheriting them
+class TrackedPaths(ABC):
+    @abstractmethod
+    async def is_tracked(self, root: Path, relative_path: str) -> bool:
+        """Whether the repository tracks the file at this path."""
 
-class GitRepository(RepositoryProtocol):
+class GitRepository(ReviewedRepository):
     @override
     async def is_tracked(self, root: Path, relative_path: str) -> bool: ...
 
@@ -108,7 +110,7 @@ async def submit_review(
 - **TODO/Changelog**: track in `TODO.md` / `CHANGELOG.md`
 - **Logging**: DEBUG for timing/perf, INFO for operations, WARNING for recoverable issues, ERROR for failures
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
-- **Protocols**: a class written to a protocol names it as its base and marks each method it implements `@override`, so ty holds the method to the protocol where it is written — and a parameter the protocol asks for that the method does not need is not taken for an unused one
+- **Interfaces**: an interface is an abstract class (`ABC`), never a `typing.Protocol` (ruff refuses it): every implementation inherits it, so the type says what the code does. Every member is `@abstractmethod` (ruff's B027 refuses an empty one that is not), so a class that leaves one out cannot be built; each method an implementation writes is marked `@override`, so ty holds it to the interface where it is written — and a parameter the interface asks for that the method does not need is not taken for an unused one
 - **Commands**: a click command takes its options keyword-only (`*`): click hands them over by name, and nothing calls a command with a bare `True`
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations

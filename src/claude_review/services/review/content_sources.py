@@ -7,16 +7,17 @@ for itself here, so nothing else asks which kind it is.
 """
 
 import asyncio
+from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Protocol, override
+from typing import override
 
 import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.exceptions import NoRepositoryError
+from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
-from claude_review.domain.protocols import Clock, GitError, RepositoryProtocol, StagedTreeProtocol
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent
@@ -47,49 +48,49 @@ class Retaken(BaseModel):
     changes: ChangedSinceRound | None
 
 
-class ContentSource(Protocol):
+class ContentSource(ABC):
     """What a review asks of where its content comes from."""
 
     @property
+    @abstractmethod
     def content(self) -> ReviewContent:
         """The take on screen now."""
-        ...
 
+    @abstractmethod
     async def open(self) -> None:
         """Note what the review opens on: whatever later takes are measured against."""
-        ...
 
+    @abstractmethod
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The diff against a base the review offers — its own when None — with whitespace counted or not."""
-        ...
 
+    @abstractmethod
     async def offer(self) -> list[VersionOnOffer]:
         """The bases the diff can be read against."""
-        ...
 
+    @abstractmethod
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for."""
-        ...
 
+    @abstractmethod
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         """Lines a hunk left out, so the reader can widen its context."""
-        ...
 
+    @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """How many files have moved, each time the tree stops matching the take on screen, until the review ends."""
-        ...
 
 
 class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
 
     def __init__(
-        self, opening: ReviewOpening, root: Path, *, repository: RepositoryProtocol, clock: Clock, rounds: RoundTracker
+        self, opening: ReviewOpening, root: Path, *, repository: ReviewedRepository, clock: Clock, rounds: RoundTracker
     ) -> None:
         self._root = root
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
         self._repository = repository
-        self._watcher = TreeWatcherService(git_repository=repository)
+        self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
         self._versions = ReviewVersions(repository, clock, root, review_base=opening.base)
         self._rounds = rounds
@@ -163,7 +164,7 @@ class RepositorySource(ContentSource):
         )
         return Retaken(file_count=file_count, round=round_number, changes=changes)
 
-    async def _take(self, staged: StagedTreeProtocol, round_number: int) -> int:
+    async def _take(self, staged: StagedTree, round_number: int) -> int:
         """Take the diff from a staging, put it on screen with its tree, mark it for the round; say how many files."""
         files = await read_diff(staged, base=self._versions.review_base, ignore_whitespace=False)
         # Read after the diff, not before: a file saved in between then
@@ -236,7 +237,7 @@ class FixedSource(ContentSource):
 
 
 def content_source(
-    opening: ReviewOpening, *, repository: RepositoryProtocol, clock: Clock, rounds: RoundTracker
+    opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock, rounds: RoundTracker
 ) -> ContentSource:
     """Where this review's content comes from: its repository, when it has one."""
     if opening.root is None:

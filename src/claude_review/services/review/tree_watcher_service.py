@@ -13,8 +13,8 @@ from pathlib import Path
 
 import structlog
 
+from claude_review.domain.interfaces import GitError, Repository
 from claude_review.domain.models import PathState, TreeState
-from claude_review.domain.protocols import GitError, GitRepositoryProtocol
 from claude_review.services.review.review_lifetime import ReviewLifetime
 
 log = structlog.get_logger()
@@ -27,14 +27,14 @@ POLL_SECONDS = 0.5
 class TreeWatcherService:
     """Compare the working tree against the one the current diff was taken at."""
 
-    def __init__(self, git_repository: GitRepositoryProtocol, poll_seconds: float = POLL_SECONDS) -> None:
-        self._git = git_repository
+    def __init__(self, repository: Repository, poll_seconds: float = POLL_SECONDS) -> None:
+        self._repository = repository
         self._poll_seconds = poll_seconds
 
     async def read(self, root: Path) -> TreeState:
         """Take the tree as it stands, to compare against later."""
         try:
-            paths = await self._git.changed_paths(root)
+            paths = await self._repository.changed_paths(root)
         except GitError:
             # A repository mid-rebase answers nothing useful; asking again in
             # half a second is better than treating that as a change

@@ -10,8 +10,8 @@ from typing import override
 import structlog
 from pydantic import BaseModel
 
+from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import HEAD, GitRef
-from claude_review.domain.protocols import GitError, RepositoryProtocol, StagedTreeProtocol
 
 log = structlog.get_logger()
 
@@ -67,7 +67,7 @@ class OwnPaths(BaseModel):
     index: Path
 
 
-class StagedTree(StagedTreeProtocol):
+class GitStagedTree(StagedTree):
     """The working tree as it stands, staged whole into an index of one operation's own.
 
     Everything git is asked within one operation — the diff, the tree written
@@ -142,7 +142,7 @@ class StagedTree(StagedTreeProtocol):
         return changed
 
 
-class GitRepository(RepositoryProtocol):
+class GitRepository(ReviewedRepository):
     """The repository under review, asked through the git command line."""
 
     def __init__(self, *, objects: Path | None) -> None:
@@ -160,7 +160,7 @@ class GitRepository(RepositoryProtocol):
 
     @override
     @contextlib.asynccontextmanager
-    async def staged(self, path: Path) -> AsyncGenerator[StagedTree]:
+    async def staged(self, path: Path) -> AsyncGenerator[GitStagedTree]:
         """Stage the whole working tree into an index of this staging's own, for one operation to read.
 
         The index starts as a copy of the repository's own, so git knows
@@ -188,7 +188,7 @@ class GitRepository(RepositoryProtocol):
 
             await self._seed(path, Path(index), own, environment)
             await _run(path, ["add", "-A"], environment)
-            yield StagedTree(path, environment, keeps_objects=self._objects is not None)
+            yield GitStagedTree(path, environment, keeps_objects=self._objects is not None)
         finally:
             await asyncio.to_thread(_remove_staging, index, throwaway)
 

@@ -14,9 +14,9 @@ from collections.abc import Generator
 
 import structlog
 
+from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.models import AgentStatus, AgentWork, FilePath, ProgressStep
 from claude_review.domain.page_events import AnswererChanged, StatusReported, WorkReported
-from claude_review.domain.protocols import Clock, PageChannel
 
 log = structlog.get_logger()
 

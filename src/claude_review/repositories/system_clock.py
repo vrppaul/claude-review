@@ -3,8 +3,8 @@
 import time
 from typing import override
 
+from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import EpochMillis
-from claude_review.domain.protocols import Clock
 
 NANOSECONDS_PER_MILLISECOND = 1_000_000
 

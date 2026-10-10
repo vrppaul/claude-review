@@ -6,7 +6,8 @@ per kind answers them, and the rest of the review asks this service instead
 of looking inside an anchor.
 """
 
-from typing import Protocol, Self, assert_never, override
+from abc import ABC, abstractmethod
+from typing import Self, assert_never, override
 
 from pydantic import BaseModel
 
@@ -29,20 +30,20 @@ class SideLine(BaseModel):
     content: str
 
 
-class AnchorHandler[Kind: AnchorBase](Protocol):
+class AnchorHandler[Kind: AnchorBase](ABC):
     """What answers for one kind of anchor, against what the review holds."""
 
+    @abstractmethod
     def quote(self, anchor: Kind) -> Kind:
         """The anchor with what it is about read off what the review holds."""
-        ...
 
+    @abstractmethod
     def excerpt(self, anchor: Kind) -> list[str]:
         """What the anchor is on, with what stands around it, as the review holds it; nothing if it holds none."""
-        ...
 
+    @abstractmethod
     def follow(self, anchor: Kind) -> Kind:
         """The anchor moved onto what the review holds now, or marked outdated."""
-        ...
 
 
 class LineAnchorHandler(AnchorHandler[LineAnchor]):

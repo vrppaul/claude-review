@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
 
+from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import (
     FIRST_ROUND,
     AnchorKind,
@@ -42,7 +43,6 @@ from claude_review.domain.models import (
     Turn,
     TurnAuthor,
 )
-from claude_review.domain.protocols import Clock
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer

@@ -18,7 +18,7 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
-from claude_review.domain.protocols import ImageStoreProtocol
+from claude_review.domain.interfaces import ImageStore
 from claude_review.services.image_service import (
     MAX_IMAGE_BYTES,
     MAX_IMAGE_MEGABYTES,
@@ -39,7 +39,7 @@ FULL = ImageQuota(image_bytes=len(PNG), review_bytes=0)
 SETTLED_SECONDS = 1
 
 
-class MemoryImageStore(ImageStoreProtocol):
+class MemoryImageStore(ImageStore):
     """An image store that keeps bytes in a dictionary."""
 
     def __init__(self) -> None:

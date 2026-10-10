@@ -20,7 +20,7 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
-from claude_review.domain.protocols import ImageStoreProtocol
+from claude_review.domain.interfaces import ImageStore
 
 log = structlog.get_logger()
 
@@ -123,7 +123,7 @@ class ImageService:
     the review under its limit without counting the directory on every upload.
     """
 
-    def __init__(self, store: ImageStoreProtocol, quota: ImageQuota) -> None:
+    def __init__(self, store: ImageStore, quota: ImageQuota) -> None:
         self._store = store
         self._quota = quota
         self._kept: dict[str, StoredImage] = {}

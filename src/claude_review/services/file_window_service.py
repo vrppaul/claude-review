@@ -17,7 +17,7 @@ from claude_review.domain.exceptions import (
     LineRangeError,
     PathOutsideRepositoryError,
 )
-from claude_review.domain.protocols import TrackedPathsProtocol
+from claude_review.domain.interfaces import TrackedPaths
 
 MAX_WINDOW_LINES = 2000
 
@@ -38,8 +38,8 @@ class FileWindow(BaseModel):
 class FileWindowService:
     """Reads line ranges out of files inside one repository."""
 
-    def __init__(self, git_repository: TrackedPathsProtocol) -> None:
-        self._git = git_repository
+    def __init__(self, repository: TrackedPaths) -> None:
+        self._repository = repository
 
     async def read_window(
         self,
@@ -77,7 +77,7 @@ class FileWindowService:
         # as that, before anything is asked about the file it names.
         path = await asyncio.to_thread(self._resolve_inside, root, relative_path)
 
-        if relative_path not in in_review and not await self._git.is_tracked(root, relative_path):
+        if relative_path not in in_review and not await self._repository.is_tracked(root, relative_path):
             msg = f"not a file in this review: {relative_path}"
             raise FileNotInReviewError(msg)
 

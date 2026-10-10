@@ -12,8 +12,8 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import override
 
+from claude_review.domain.interfaces import Repository, StagedTree
 from claude_review.domain.models import ChangedSinceRound, GitRef, RoundKey, VersionOnOffer
-from claude_review.domain.protocols import GitRepositoryProtocol, StagedTreeProtocol
 from claude_review.services.review.review_versions import ReviewVersions
 from tests.helpers import FixedClock
 
@@ -24,7 +24,7 @@ MARKED_AT = 1_791_000_000_000
 MOVED_SINCE = "moved-since-{base}.py"
 
 
-class TreeThatMoves(StagedTreeProtocol):
+class TreeThatMoves(StagedTree):
     """A staged tree that is a new one each time it is written down, one file away from any base, named for it."""
 
     def __init__(self, repository: RepositoryThatMoves) -> None:
@@ -43,7 +43,7 @@ class TreeThatMoves(StagedTreeProtocol):
         return {base: [MOVED_SINCE.format(base=base)] for base in bases}
 
 
-class RepositoryThatMoves(GitRepositoryProtocol):
+class RepositoryThatMoves(Repository):
     """A repository whose working tree moves between any two stagings."""
 
     def __init__(self) -> None:

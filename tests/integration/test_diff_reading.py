@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import DiffFile, FileStatus, LineType
-from claude_review.domain.protocols import GitError
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git

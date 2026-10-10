@@ -16,7 +16,7 @@ from claude_review.domain.exceptions import (
     LineRangeError,
     PathOutsideRepositoryError,
 )
-from claude_review.domain.protocols import TrackedPathsProtocol
+from claude_review.domain.interfaces import TrackedPaths
 from claude_review.services.file_window_service import MAX_FILE_BYTES, FileWindowService
 
 # How many lines the reviewed source file holds, and the long one
@@ -24,7 +24,7 @@ SOURCE_LINES = 20
 LONG_FILE_LINES = 200_000
 
 
-class TrackedPaths(TrackedPathsProtocol):
+class RepositoryThatTracks(TrackedPaths):
     """A repository that tracks the paths it is given and nothing else."""
 
     def __init__(self, tracked: set[str]) -> None:
@@ -37,7 +37,7 @@ class TrackedPaths(TrackedPathsProtocol):
 
 @pytest.fixture
 def service() -> FileWindowService:
-    return FileWindowService(TrackedPaths({"docs/guide.md"}))
+    return FileWindowService(RepositoryThatTracks({"docs/guide.md"}))
 
 
 @pytest.fixture

@@ -8,7 +8,8 @@ is on, with the lines around it. Each kind of review leads into its threads
 its own way; the round around them is the same.
 """
 
-from typing import Protocol, Self, override
+from abc import ABC, abstractmethod
+from typing import Self, override
 
 from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread
 from claude_review.services.anchor_service import AnchorService
@@ -28,21 +29,26 @@ TAG_SEPARATOR = ", "
 EMPHASIS = "_"
 
 
-class ThreadLead(Protocol):
+class ThreadLead(ABC):
     """How a round leads into each thread, for one kind of review."""
 
-    # What the round is headed as
-    title: str
+    @property
+    @abstractmethod
+    def title(self) -> str:
+        """What the round is headed as."""
 
+    @abstractmethod
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:
         """What comes before everything said in the thread."""
-        ...
 
 
 class PlaceLead(ThreadLead):
     """The agent has the files: name the place, and carry the old lines once they have moved."""
 
-    title = FILES_ROUND_TITLE
+    @property
+    @override
+    def title(self) -> str:
+        return FILES_ROUND_TITLE
 
     @override
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:
@@ -57,7 +63,10 @@ class PlaceLead(ThreadLead):
 class ExcerptLead(ThreadLead):
     """The agent does not have the conversation: quote what each thread is on, with the lines around it."""
 
-    title = CONVERSATION_ROUND_TITLE
+    @property
+    @override
+    def title(self) -> str:
+        return CONVERSATION_ROUND_TITLE
 
     @override
     def lead(self, thread: Thread, anchors: AnchorService) -> list[str]:

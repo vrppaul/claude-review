@@ -16,7 +16,7 @@ import click
 import structlog
 
 from claude_review.cli.review_client import ReviewCallError
-from claude_review.domain.protocols import GitError
+from claude_review.domain.interfaces import GitError
 from claude_review.hosting.errors import PortUnavailableError, ServerStartError
 from claude_review.services.unreadable_content import UnreadableContentError
 

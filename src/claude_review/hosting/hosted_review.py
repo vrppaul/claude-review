@@ -3,8 +3,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import GuideState, ReaderSettings
-from claude_review.domain.protocols import Clock
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.app import create_app
 from claude_review.presentation.broadcast import PAGE_BACKLOG, BrowserBroadcast

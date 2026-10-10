@@ -25,6 +25,7 @@ from typing import assert_never, override
 import structlog
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.interfaces import PageChannel
 from claude_review.domain.page_events import (
     AgentSaid,
     AnswererChanged,
@@ -38,7 +39,6 @@ from claude_review.domain.page_events import (
     TreeMoved,
     WorkReported,
 )
-from claude_review.domain.protocols import PageChannel
 from claude_review.presentation.version_words import changes_on_the_wire
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.pushes import (

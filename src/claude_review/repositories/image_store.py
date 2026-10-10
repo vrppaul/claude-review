@@ -4,10 +4,10 @@ import asyncio
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.protocols import ImageStoreProtocol
+from claude_review.domain.interfaces import ImageStore
 
 
-class DirectoryImageStore(ImageStoreProtocol):
+class DirectoryImageStore(ImageStore):
     """Keeps images as files in one directory of the review's workspace.
 
     The only place that touches the disk for images. Names come from the

@@ -14,6 +14,7 @@ from contextlib import AbstractContextManager
 import structlog
 
 from claude_review.domain.exceptions import ReviewEndedError
+from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
 from claude_review.domain.models import (
     AgentEvent,
     AgentWork,
@@ -39,7 +40,6 @@ from claude_review.domain.page_events import (
     ThreadRaised,
     TreeMoved,
 )
-from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -67,7 +67,7 @@ class Review:
         self,
         opening: ReviewOpening,
         *,
-        repository: RepositoryProtocol,
+        repository: ReviewedRepository,
         images: ImageService,
         page: PageChannel,
         clock: Clock,
