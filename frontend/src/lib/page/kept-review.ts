@@ -12,14 +12,13 @@ import type { DiffResponse, ReviewResponse } from '$lib/types';
 export interface KeptReview {
 	review: Review;
 	keeper: DraftKeeper;
-	/** Stop keeping the draft, and stop taking in another tab's. */
+	/** Stop keeping the draft. */
 	stopKeeping: () => void;
 }
 
 /**
  * Open a review on what the server says it is, its first diff, and whatever
- * unsent draft of it this browser kept — and keep its draft from then on,
- * taking in another tab's as it is kept.
+ * unsent draft of it this browser kept — and keep its draft from then on.
  */
 export function openKeptReview(
 	facts: ReviewResponse,
@@ -27,8 +26,7 @@ export function openKeptReview(
 	reader: ReaderParts,
 	drafts: DraftRepository
 ): KeptReview {
-	const draft = drafts.load(facts.title);
-	const review = new Review({ facts, firstDiff, draft }, reader);
-	const keeper = new DraftKeeper(drafts, review, draft);
+	const review = new Review({ facts, firstDiff, draft: drafts.load(facts.title) }, reader);
+	const keeper = new DraftKeeper(drafts, review);
 	return { review, keeper, stopKeeping: keeper.start() };
 }

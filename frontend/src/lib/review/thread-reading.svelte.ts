@@ -80,18 +80,15 @@ export class ThreadReading {
 		return {
 			folded: [...this.#folded],
 			unread: [...this.#unread],
-			awaiting: [...this.#awaiting]
+			awaiting: Object.fromEntries(this.#awaiting)
 		};
 	}
 
-	/** Take in how the threads were being read, kept before a reload or in another tab. */
-	adopt(read: ThreadsRead): void {
-		this.#folded.clear();
-		this.#unread.clear();
-		this.#awaiting.clear();
+	/** Pick up how the threads were being read before a reload. */
+	pickUp(read: ThreadsRead): void {
 		for (const threadId of read.folded) this.#folded.add(threadId);
 		for (const threadId of read.unread) this.#unread.add(threadId);
-		for (const [threadId, waiting] of read.awaiting) {
+		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
 			this.#awaiting.set(threadId, waiting);
 		}
 	}

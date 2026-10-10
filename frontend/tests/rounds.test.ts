@@ -5,7 +5,6 @@ import { fakeServer, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
-import { pushedAt } from './pushes';
 
 let review: Review;
 
@@ -59,7 +58,7 @@ describe('sending a round rather than ending the review', () => {
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 		await review.submission.submit(false);
 
-		review.threads.receiveReply(id, 'Tightened', null, pushedAt(1));
+		review.threads.receiveReply(id, 'Tightened', null);
 		review.threads.addTurn(id, { author: 'reader', body: 'Still reads oddly', images: [] });
 		await review.submission.submit(false);
 
@@ -78,7 +77,7 @@ describe('sending a round rather than ending the review', () => {
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 		await review.submission.submit(false);
 
-		review.threads.receiveReply(id, 'Tightened', null, pushedAt(2));
+		review.threads.receiveReply(id, 'Tightened', null);
 		review.threads.add(newComment({ file: 'b.py', startLine: 2, body: 'and this' }));
 		await review.submission.submit(false);
 

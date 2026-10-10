@@ -6,7 +6,6 @@
 import { endReview, submitReview } from '$lib/api/review-api';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { Draft } from '$lib/drafts/draft-shapes';
 import type { SubmitResponse } from '$lib/types';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 
@@ -17,11 +16,11 @@ export class Submission {
 	#body: string;
 	#finished = $state(false);
 
-	/** @param draft an unsent review of the same thing, with its summary */
-	constructor(threads: Threads, rounds: Rounds, draft: Draft | null) {
+	/** @param body the summary of an unsent review of the same thing, picked up where it stopped */
+	constructor(threads: Threads, rounds: Rounds, body: string) {
 		this.#threads = threads;
 		this.#rounds = rounds;
-		this.#body = $state(draft?.reviewBody ?? '');
+		this.#body = $state(body);
 	}
 
 	get body(): string {
@@ -45,11 +44,6 @@ export class Submission {
 
 	setBody(text: string): void {
 		this.#body = text;
-	}
-
-	/** Take in the summary another tab on the same review was writing. */
-	adopt(draft: Draft): void {
-		this.#body = draft.reviewBody;
 	}
 
 	/**

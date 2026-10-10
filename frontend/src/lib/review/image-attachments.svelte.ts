@@ -10,7 +10,11 @@
 import type { SendLimits } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
 import { discardImage, keepImage } from '$lib/api/review-api';
+import { messageOf } from '$lib/utils/errors';
 import { imagesAmong, wholeMegabytes } from '$lib/utils/images';
+
+// What a field says when an image could not be attached and nothing said why
+const ATTACHING_FAILED = 'Could not attach the image';
 
 export class ImageAttachments {
 	#images = $state<string[]>([]);
@@ -98,16 +102,6 @@ export class ImageAttachments {
 		this.#images = [];
 	}
 
-	/**
-	 * Start over with these images, as when a draft is picked up.
-	 *
-	 * Uploads still on their way keep their count: each takes itself off it
-	 * when it lands, and zeroing it here would leave it below nothing.
-	 */
-	reset(images: string[]) {
-		this.#images = images;
-	}
-
 	async #attachOne(file: File): Promise<string | null> {
 		this.#uploading += 1;
 		try {
@@ -116,7 +110,7 @@ export class ImageAttachments {
 			this.#images = [...this.#images, imageId];
 			return null;
 		} catch (error) {
-			return error instanceof Error ? error.message : 'Could not attach the image';
+			return messageOf(error, ATTACHING_FAILED);
 		} finally {
 			this.#uploading -= 1;
 		}

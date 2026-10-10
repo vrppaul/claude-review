@@ -3,7 +3,6 @@ import { FIRST_RETRY, PageConnection } from '$lib/connection/page-connection';
 import { ReviewPage } from '$lib/page/review-page.svelte';
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
-import { storageKey } from '$lib/utils/preferences';
 import { diffResponse, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
@@ -13,8 +12,6 @@ import { pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 
 const SESSION_URL = 'ws://review.test/api/session';
-// Where the page keeps its draft
-const DRAFT_KEY = storageKey('draft');
 // How far the review's telling had got when the page read its facts
 const FACTS_READ_AT = 5;
 // How far the draft a reloaded page opens from had got
@@ -97,24 +94,18 @@ describe('opening the page', () => {
 		expect(openedReview(page).threads.all[0].turns.at(-1)?.body).toBe('Because.');
 	});
 
-	it('takes in once what another tab took in first', async () => {
+	it('takes in once a push its socket handed over twice', async () => {
 		serving();
 		const page = new ReviewPage(new PageConnection(SESSION_URL));
 		await page.open();
 		latestSocket().accept();
 		latestSocket().say(welcome({ resumed: true }));
-		const review = openedReview(page);
 		const chat: ServerPush = { type: 'chat', message_id: null, body: 'Done.', files: [] };
-		// The other tab's socket hands it the answer first, and it keeps its draft
-		const elsewhere = openReview();
-		takePush(elsewhere, chat, pushedAt(1));
-		const theirs = JSON.stringify(elsewhere.draft);
-		leavePage();
-		window.dispatchEvent(new StorageEvent('storage', { key: DRAFT_KEY, newValue: theirs }));
+		latestSocket().deliver(chat, 1);
 
 		latestSocket().deliver(chat, 1);
 
-		expect(review.conversation.turns.filter((turn) => turn.body === 'Done.')).toHaveLength(1);
+		expect(openedReview(page).conversation.turns.filter((turn) => turn.body === 'Done.')).toHaveLength(1);
 	});
 
 	it('reads the review again when its socket comes back without what it missed', async () => {

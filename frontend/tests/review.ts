@@ -1,4 +1,5 @@
 /** A review opened the way the page opens one, for a test to read and draw. */
+import { flushSync } from 'svelte';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
@@ -28,6 +29,8 @@ let openPage: KeptReview | null = null;
  * it was about to keep is kept first.
  */
 export function leavePage(): void {
+	// What the page changed last is noticed before it goes, as in a browser
+	flushSync();
 	openPage?.keeper.flush();
 	openPage?.stopKeeping();
 	openPage = null;

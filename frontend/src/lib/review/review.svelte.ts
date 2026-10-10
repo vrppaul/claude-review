@@ -34,7 +34,7 @@ import type {
 	SendLimits,
 	SessionHello
 } from '$lib/types';
-import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
+import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { reviewWeight } from '$lib/review/weight';
 
 /** What a review opens on: what the server says it is, its first diff, and any unsent draft. */
@@ -103,13 +103,15 @@ export class Review {
 		this.layout = reader.layout;
 		this.sound = reader.sound;
 
+		// What the review picks up: the draft it opened from, or nothing yet
+		const kept = draft ?? emptyDraft(facts.title);
 		this.rounds = new Rounds(facts.round);
-		this.telling = new Telling(facts, draft);
+		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
-		this.threads = new Threads(this.rounds, draft);
-		this.submission = new Submission(this.threads, this.rounds, draft);
-		this.conversation = new Conversation(draft);
+		this.threads = new Threads(this.rounds, kept);
+		this.submission = new Submission(this.threads, this.rounds, kept.reviewBody);
+		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, facts.release);
 		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
@@ -142,14 +144,6 @@ export class Review {
 	noteAnswerer(attached: boolean): void {
 		this.answerer.setAttached(attached);
 		if (attached) this.layout.agentPanel.offer();
-	}
-
-	/** Take in the draft another tab on the same review has just kept. */
-	adopt(draft: Draft): void {
-		this.telling.adopt(draft.told);
-		this.threads.adopt(draft);
-		this.submission.adopt(draft);
-		this.conversation.adopt(draft);
 	}
 
 	get restoredCount(): number {
@@ -235,7 +229,7 @@ export class Review {
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,
-			told: this.telling.kept
+			told: this.telling.heard
 		};
 	}
 

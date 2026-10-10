@@ -11,7 +11,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
-import { pushedAt, told } from './pushes';
+import { told } from './pushes';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -192,7 +192,7 @@ describe('catching up on what the server could not hand over again', () => {
 
 		await catchUp(review, GOES_ON_FROM);
 
-		expect(review.conversation.turns.at(-1)?.body).toMatch(/could not be read again/);
+		expect(review.conversation.turns.at(-1)?.body).toMatch(/catching up failed/);
 	});
 });
 
@@ -214,7 +214,7 @@ describe('what the page tells the server it holds', () => {
 
 	it('is not said again for how the page reads, which the server has no use for', () => {
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
-		review.threads.receiveReply(id, 'Because.', null, pushedAt(1));
+		review.threads.receiveReply(id, 'Because.', null);
 		const said: SessionHello[] = [];
 		const stop = review.tellServerThrough({ greet: (hello) => said.push(hello) });
 		flushSync();

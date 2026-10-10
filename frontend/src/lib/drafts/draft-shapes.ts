@@ -7,21 +7,22 @@
  * the review has grown a conversation in the agent panel, and the message
  * being written there; what a thread hangs on has moved into an anchor of
  * its own, and every turn carries an id a question can name; how a thread
- * is read — folded, unread, waited on — has moved out of the thread. A
- * draft is brought up to date — never thrown away: it is an hour of
- * somebody's reading.
+ * is read — folded, unread, waited on — has moved out of the thread; and
+ * the draft says how far the server's telling had got for it. A draft is
+ * brought up to date — never thrown away: it is an hour of somebody's
+ * reading.
  */
 
-import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingByRun, Thread, Turn } from '$lib/types';
+import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingPosition, Thread, Turn } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 12;
-// The shapes since threads were kept as threads, before drafts kept how far
-// the telling had got in each run: neither was ever released, and what the
-// later one kept of the telling is not trusted
-const THREADS_KEPT_AS_THREADS = 10;
-const ONE_RUN_TOLD = 11;
+export const DRAFT_SHAPE = 13;
+// The shapes that kept threads as threads, but sends and waits as pairs and
+// the telling not at all or not as now. None was ever released; what they
+// kept of the telling is not trusted.
+const FIRST_SHAPE_OF_THREADS = 10;
+const LAST_SHAPE_OF_PAIRS = 12;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -33,33 +34,39 @@ export interface IssuedIds {
 export interface ThreadsRead {
 	folded: string[];
 	unread: string[];
-	/** Questions with the agent, by thread, oldest first. */
-	awaiting: [string, AwaitedQuestion[]][];
+	/** Questions with the agent, oldest first, by the thread they were asked in. */
+	awaiting: Record<string, AwaitedQuestion[]>;
+}
+
+/** The threads as a draft keeps them: what they say, how they were read, and which went out. */
+export interface KeptThreads {
+	threads: Thread[];
+	read: ThreadsRead;
+	/** The round each thread already sent went out in, by thread. */
+	sent: Record<string, number>;
+	/** How many thread and turn ids have been handed out, deleted ones included. */
+	issued: IssuedIds;
 }
 
 /** An unsent review, as it is kept between reloads. */
-export interface Draft {
+export interface Draft extends KeptThreads {
 	version: typeof DRAFT_SHAPE;
 	/** What the review was of, so a draft is not restored onto a different one. */
 	title: string;
-	threads: Thread[];
-	read: ThreadsRead;
 	reviewBody: string;
-	/** Threads already sent, and the round each went out in. */
-	sent: [string, number][];
 	/** What was said in the agent panel, which outlives a reload like the rest. */
 	panel: PanelTurn[];
 	/** What is being written in the panel, not yet sent. */
 	composer: Composer;
-	/** How many thread and turn ids have been handed out, deleted ones included. */
-	issued: IssuedIds;
-	/** In each run of the review, the last push whose effect the draft holds. */
-	told: TellingByRun;
+	/** The last push whose effect the draft holds; none when nobody can tell. */
+	told: TellingPosition | null;
 }
 
-/** A draft as it was kept before it said how far the telling had got in each run. */
-interface UntoldDraft extends Omit<Draft, 'version' | 'told'> {
-	version: typeof THREADS_KEPT_AS_THREADS | typeof ONE_RUN_TOLD;
+/** A draft as shapes 10 to 12 kept it: sends and waits as pairs, and the telling not trusted. */
+interface PairedDraft extends Omit<Draft, 'version' | 'read' | 'sent' | 'told'> {
+	version: number;
+	read: { folded: string[]; unread: string[]; awaiting: [string, AwaitedQuestion[]][] };
+	sent: [string, number][];
 }
 
 /** A thread as drafts kept it until how it was read moved out of it. */
@@ -114,7 +121,7 @@ interface OlderDraft {
 }
 
 /** A draft in any shape it has been kept in. */
-export type KeptDraft = Draft | UntoldDraft | OlderDraft;
+export type KeptDraft = Draft | PairedDraft | OlderDraft;
 
 /** Whether what was read from storage is a draft at all, in any shape. */
 export function isKeptDraft(value: unknown): value is KeptDraft {
@@ -128,20 +135,48 @@ function isCurrent(kept: KeptDraft): kept is Draft {
 	return kept.version === DRAFT_SHAPE;
 }
 
-function isUntold(kept: KeptDraft): kept is UntoldDraft {
-	return kept.version === THREADS_KEPT_AS_THREADS || kept.version === ONE_RUN_TOLD;
+function isPaired(kept: KeptDraft): kept is PairedDraft {
+	const version = kept.version ?? 0;
+	return version >= FIRST_SHAPE_OF_THREADS && version <= LAST_SHAPE_OF_PAIRS;
 }
 
-export function emptyComposer(): Composer {
+function emptyComposer(): Composer {
 	return { text: '', images: [] };
+}
+
+/** The draft of a review nothing has been written in yet. */
+export function emptyDraft(title: string): Draft {
+	return {
+		version: DRAFT_SHAPE,
+		title,
+		threads: [],
+		read: { folded: [], unread: [], awaiting: {} },
+		reviewBody: '',
+		sent: {},
+		panel: [],
+		composer: emptyComposer(),
+		issued: { comments: 0, turns: 0 },
+		told: null
+	};
 }
 
 /** A draft of the current shape, whichever shape it was kept in. */
 export function upToDate(kept: KeptDraft): Draft {
 	if (isCurrent(kept)) return kept;
-	// Kept before it said how far the telling had got in each run: nobody can tell now
-	if (isUntold(kept)) return { ...kept, version: DRAFT_SHAPE, told: {} };
+	if (isPaired(kept)) return fromPairs(kept);
 	return fromComments(kept);
+}
+
+/** A draft of the current shape, out of one that kept sends and waits as pairs. */
+function fromPairs(kept: PairedDraft): Draft {
+	return {
+		...kept,
+		version: DRAFT_SHAPE,
+		read: { ...kept.read, awaiting: Object.fromEntries(kept.read.awaiting) },
+		sent: Object.fromEntries(kept.sent),
+		// What it kept of the telling, if anything, nobody can trust now
+		told: null
+	};
 }
 
 /** A draft of the current shape, out of one that kept its threads as comments. */
@@ -163,18 +198,18 @@ function fromComments(kept: OlderDraft): Draft {
 		read: {
 			folded: comments.filter((comment) => comment.collapsed).map(idOf),
 			unread: comments.filter((comment) => comment.unread).map(idOf),
-			awaiting: comments
-				.filter((comment) => comment.awaiting.length > 0)
-				.map((comment) => [comment.id, comment.awaiting])
+			awaiting: Object.fromEntries(
+				comments.filter((comment) => comment.awaiting.length > 0).map((comment) => [comment.id, comment.awaiting])
+			)
 		},
 		reviewBody: kept.reviewBody ?? '',
-		sent: (kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, 1] : entry)),
+		sent: Object.fromEntries((kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, 1] : entry))),
 		// The panel came after threads did; an older draft simply has nothing said
 		panel: kept.panel ?? [],
 		// The panel kept nothing half-written until it could hold images
 		composer: kept.composer ?? emptyComposer(),
 		issued,
-		told: {}
+		told: null
 	};
 }
 

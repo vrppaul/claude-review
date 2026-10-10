@@ -1,7 +1,12 @@
 /** A server that remembers which release a reader was shown, as `/api/guide` does. */
 
-import type { GuideState } from '$lib/types';
+import type { GuideChange, GuideState } from '$lib/types';
 import { fakeServer, type FakeServer, type ReceivedRequest } from './fake-server';
+
+/** Whether what the page sent says which release the reader was shown. */
+function isGuideChange(body: unknown): body is GuideChange {
+	return typeof body === 'object' && body !== null && 'seen_release' in body && typeof body.seen_release === 'string';
+}
 
 /** What `/api/guide` keeps for this reader: the release they were last shown. */
 class GuideMemory {
@@ -18,7 +23,8 @@ class GuideMemory {
 	}
 
 	write(request: ReceivedRequest): GuideState {
-		this.seen = (request.body as GuideState).seen_release;
+		if (!isGuideChange(request.body)) throw new Error('The page sent no release for the guide to keep');
+		this.seen = request.body.seen_release;
 		this.stored = true;
 		return { seen_release: this.seen };
 	}

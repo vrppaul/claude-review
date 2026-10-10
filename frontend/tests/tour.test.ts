@@ -17,7 +17,6 @@ import { guideServer } from './guide-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
-import { pushedAt } from './pushes';
 
 let review: Review;
 
@@ -80,7 +79,7 @@ async function drawAwaitedQuestion() {
 
 function drawAnswer() {
 	const id = review.threads.add(newComment({ file: FILE.path, body: 'Why 3?' }));
-	review.threads.receiveReply(id, 'It was 2 before the retry path', null, pushedAt(1));
+	review.threads.receiveReply(id, 'It was 2 before the retry path', null);
 	render(CommentThread, inReview(review, { comment: review.threads.all[0] }));
 }
 
@@ -279,6 +278,16 @@ describe('the tour', () => {
 		pageWith('file-tree', 'line-number');
 		review.guide.startTour();
 		review.guide.endTour();
+
+		review.guide.startTour();
+
+		expect(review.guide.step?.id).toBe('review-base');
+	});
+
+	it('asks the page afresh what it has drawn when the tour is taken again after its last step', () => {
+		pageWith('file-tree', 'line-number');
+		review.guide.startTour();
+		while (review.guide.touring) review.guide.next();
 
 		review.guide.startTour();
 

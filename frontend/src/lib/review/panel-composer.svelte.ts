@@ -7,7 +7,6 @@
  * the server with nothing on screen pointing at it.
  */
 
-import { type Draft, emptyComposer } from '$lib/drafts/draft-shapes';
 import type { Composer } from '$lib/types';
 import { ImageAttachments } from '$lib/review/image-attachments.svelte';
 
@@ -15,9 +14,8 @@ export class PanelComposer {
 	#text: string;
 	readonly attachments: ImageAttachments;
 
-	/** @param draft an unsent review of the same thing, with its half-written message */
-	constructor(draft: Draft | null) {
-		const kept = draft?.composer ?? emptyComposer();
+	/** @param kept the half-written message of an unsent review of the same thing */
+	constructor(kept: Composer) {
 		this.#text = $state(kept.text);
 		this.attachments = new ImageAttachments(kept.images);
 	}
@@ -36,12 +34,6 @@ export class PanelComposer {
 
 	setText(text: string): void {
 		this.#text = text;
-	}
-
-	/** Take in what another tab on the same review was writing. */
-	adopt(draft: Draft): void {
-		this.#text = draft.composer.text;
-		this.attachments.reset(draft.composer.images);
 	}
 
 	/**

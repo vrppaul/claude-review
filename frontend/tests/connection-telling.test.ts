@@ -14,8 +14,8 @@ import {
 
 // How far the review's telling has got when a page that dropped comes back
 const TOLD_SINCE = 9;
-// How far another tab had got, whose draft the page took in meanwhile
-const TOLD_IN_ANOTHER_TAB = 7;
+// How far the page says its telling has got, further than its socket brought it
+const PAGE_TOLD_AT = 7;
 
 describe('going on with the telling across connections', () => {
 	beforeEach(() => {
@@ -119,16 +119,16 @@ describe('going on with the telling across connections', () => {
 		connection.close();
 	});
 
-	it('comes back from where the page has got, though another tab brought it there', () => {
+	it('comes back from where the page says its telling stands, not from where its socket was', () => {
 		const page = new RecordingPage();
 		const connection = connected(page);
 		latestSocket().accept();
 		latestSocket().say(welcome({ sequence: TOLD_BEFORE, resumed: true }));
 
-		page.position = { instance: THIS_RUN, sequence: TOLD_IN_ANOTHER_TAB };
+		page.position = { instance: THIS_RUN, sequence: PAGE_TOLD_AT };
 		dropAndComeBack();
 
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_IN_ANOTHER_TAB}`);
+		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${PAGE_TOLD_AT}`);
 		connection.close();
 	});
 

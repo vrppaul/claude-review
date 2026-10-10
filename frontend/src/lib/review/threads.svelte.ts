@@ -11,7 +11,7 @@ import { SvelteMap } from 'svelte/reactivity';
 
 import { askInThread, followAnchors } from '$lib/api/review-api';
 import { anchorFile, sameSpot } from '$lib/anchors/views';
-import type { Draft, IssuedIds } from '$lib/drafts/draft-shapes';
+import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
 import type {
@@ -20,13 +20,11 @@ import type {
 	FollowOutcome,
 	NewComment,
 	NewTurn,
-	TellingPosition,
 	Thread,
 	ThreadInput,
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
-import { samePosition } from '$lib/utils/telling';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
@@ -43,11 +41,6 @@ function lastAnsweredAt(thread: Thread): number {
 function questionIdOf(thread: Thread): string {
 	const last = thread.turns.at(-1);
 	return last?.author === 'reader' ? last.id : thread.id;
-}
-
-/** Whether a thread holds the answer a push brought. */
-function holdsAnswer(thread: Thread, pushedAt: TellingPosition): boolean {
-	return thread.turns.some((turn) => turn.pushedAt && samePosition(turn.pushedAt, pushedAt));
 }
 
 /** What a file with no threads holds. */
@@ -77,11 +70,11 @@ export class Threads {
 
 	/**
 	 * @param rounds the round each thread and turn is stamped with
-	 * @param draft an unsent review of the same thing, picked up where it stopped
+	 * @param kept the threads of an unsent review of the same thing, picked up where it stopped
 	 */
-	constructor(rounds: Rounds, draft: Draft | null) {
+	constructor(rounds: Rounds, kept: KeptThreads) {
 		this.#rounds = rounds;
-		if (draft !== null) this.adopt(draft);
+		this.#pickUp(kept);
 	}
 
 	get all(): Thread[] {
@@ -117,9 +110,9 @@ export class Threads {
 		return this.#byFile.get(path) ?? NO_THREADS;
 	}
 
-	/** Every thread sent so far, and the round it went out in, as the draft keeps them. */
-	get sentRounds(): [string, number][] {
-		return [...this.#sent];
+	/** The round every thread sent so far went out in, by thread, as the draft keeps them. */
+	get sentRounds(): Record<string, number> {
+		return Object.fromEntries(this.#sent);
 	}
 
 	/** How many thread and turn ids have been handed out, deleted ones included. */
@@ -150,17 +143,14 @@ export class Threads {
 	}
 
 	/**
-	 * Take a thread the agent raised and put it on the diff. Says whether it
-	 * is new here: the server names it, and a thread already held — taken in
-	 * with another tab's draft — is not raised twice.
+	 * Take a thread the agent raised and put it on the diff.
 	 *
 	 * It arrives already sent: the reader has not written it, so it must not
 	 * swell "unsent" or travel back to the side that wrote it. The moment
 	 * they answer or edit it, it stops being sent — as any thread does — and
 	 * goes with the next round, so the reply arrives with what it replies to.
 	 */
-	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): boolean {
-		if (this.#all.some((held) => held.id === id)) return false;
+	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): void {
 		const thread: Thread = {
 			id,
 			anchor,
@@ -176,7 +166,6 @@ export class Threads {
 		this.#all = [...this.#all, thread];
 		this.reading.markUnread(id);
 		this.#sent.set(id, this.#rounds.current);
-		return true;
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {
@@ -235,16 +224,14 @@ export class Threads {
 
 	/**
 	 * Take an answer that came back and put it under the question it answers.
-	 * Says whether it is new here: an answer taken in already — with another
-	 * tab's draft — is not taken in twice.
+	 * Says whether there was a thread to put it in.
 	 *
 	 * An answerer that names the question is believed; one that does not gets
 	 * the oldest question still waiting, which is the order they were handed
 	 * over in.
 	 */
-	receiveReply(id: string, text: string, questionId: string | null, pushedAt: TellingPosition): boolean {
-		const thread = this.#all.find((candidate) => candidate.id === id);
-		if (!thread || holdsAnswer(thread, pushedAt)) return false;
+	receiveReply(id: string, text: string, questionId: string | null): boolean {
+		if (!this.#all.some((thread) => thread.id === id)) return false;
 
 		const answers = questionId ?? this.reading.awaiting(id)[0]?.id;
 		const turn: Turn = {
@@ -254,8 +241,7 @@ export class Threads {
 			round: this.#rounds.current,
 			at: Date.now(),
 			answers,
-			images: [],
-			pushedAt
+			images: []
 		};
 		// Not marked unsent: the answer came from the side that reads the
 		// rounds, so sending it back would only repeat what they wrote
@@ -302,7 +288,7 @@ export class Threads {
 		let outdated = 0;
 		this.#all = this.#all.map((thread) => {
 			const moved = movedTo[thread.id];
-			// Written while the answer was on its way, so already on the new diff
+			// Written while the answer was on its way, so not asked about: left as written
 			if (!moved) return thread;
 			if (moved.outdated && !thread.anchor.outdated) outdated += 1;
 			else if (!sameSpot(moved, thread.anchor)) followed += 1;
@@ -312,21 +298,20 @@ export class Threads {
 	}
 
 	/**
-	 * Take in an unsent review of the same thing: kept before a reload, or
-	 * written in another tab.
+	 * Pick up the threads of an unsent review of the same thing, kept before
+	 * a reload.
 	 *
 	 * A round the server has forgotten is still written all over the draft:
 	 * every thread knows the round it was written in, and every sent thread
 	 * the round it went out in. A restarted server comes back at round one
 	 * and would number the next round wrongly for everyone.
 	 */
-	adopt(draft: Draft): void {
-		this.#all = draft.threads;
-		this.reading.adopt(draft.read);
-		this.#sent.clear();
-		for (const [id, round] of draft.sent) this.#sent.set(id, round);
-		this.#commentIds.continueFrom(draft.issued.comments);
-		this.#turnIds.continueFrom(draft.issued.turns);
+	#pickUp(kept: KeptThreads): void {
+		this.#all = kept.threads;
+		this.reading.pickUp(kept.read);
+		for (const [id, round] of Object.entries(kept.sent)) this.#sent.set(id, round);
+		this.#commentIds.continueFrom(kept.issued.comments);
+		this.#turnIds.continueFrom(kept.issued.turns);
 		for (const thread of this.#all) this.#rounds.reach(thread.round);
 		for (const round of this.#sent.values()) this.#rounds.reach(round + 1);
 	}

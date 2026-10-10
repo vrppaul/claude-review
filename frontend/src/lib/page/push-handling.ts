@@ -19,25 +19,23 @@ type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' 
  * Take in what the server said while the review is open.
  *
  * What a push adds to the draft — an answer, a raised thread, a note — is
- * added once, however often the push arrives. What it says of the review's
- * facts — its agent, its round, its diff — is taken in only when the facts
- * the page read do not hold it already.
+ * always added. What it says of the review's facts — its agent, its round,
+ * its diff — is taken in only when the facts the page read do not hold it
+ * already: a page opening from a draft is handed what was said since the
+ * draft, some of it before the facts were read.
  */
 function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 	switch (push.type) {
 		case 'reply':
-			if (review.threads.receiveReply(push.thread_id, push.body, push.question_id, heard.at)) {
-				review.sound.announce();
-			}
+			if (review.threads.receiveReply(push.thread_id, push.body, push.question_id)) review.sound.announce();
 			return;
 		case 'chat':
-			if (review.conversation.receive(push.message_id, push.body, push.files, heard.at)) {
-				review.layout.agentPanel.noteAnswer();
-				review.sound.announce();
-			}
+			review.conversation.receive(push.message_id, push.body, push.files);
+			review.layout.agentPanel.noteAnswer();
+			review.sound.announce();
 			return;
 		case 'point':
-			raise(review, push, heard.at);
+			raise(review, push);
 			return;
 		case 'diff':
 			landed(review, push, heard).catch((error) => {
@@ -90,10 +88,10 @@ function unknown(push: never): void {
 }
 
 /** Put a thread the agent raised onto the diff, and say so in the panel. */
-function raise(review: Review, push: PointPush, pushedAt: TellingPosition): void {
+function raise(review: Review, push: PointPush): void {
 	// The server quoted it from the diff it checked the lines against
-	if (!review.threads.raise(push.thread_id, push.anchor, push.body, push.severity)) return;
-	review.conversation.note(raisedNote(push.anchor), { threads: [push.thread_id], pushedAt });
+	review.threads.raise(push.thread_id, push.anchor, push.body, push.severity);
+	review.conversation.note(raisedNote(push.anchor), [push.thread_id]);
 	review.sound.announce();
 }
 
@@ -111,7 +109,7 @@ async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise
 	if (!heard.factsHoldIt) review.noteRetake(moved, push.changes);
 	// The conversation is about code that has just changed under it, so the
 	// panel says where one lot of answers stops applying
-	review.conversation.note(retakenNote(push.file_count, moved), { pushedAt: heard.at });
+	review.conversation.note(retakenNote(push.file_count, moved));
 }
 
 /** Take in a push the connection hands over, unless this page's socket handed it over before. */

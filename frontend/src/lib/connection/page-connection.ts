@@ -14,8 +14,8 @@
  *
  * Every push arrives numbered. Once the page can take pushes, each
  * connection names where its telling stands — the run of the review it was
- * reading and the last push it took in, which the page alone knows: it may
- * have taken in another tab's draft since — and is handed what came after.
+ * reading and the last push it took in, which the page keeps — and is
+ * handed what came after.
  * When the review cannot hand over all of it, the page is asked to catch up,
  * and what arrives meanwhile waits until it has.
  */

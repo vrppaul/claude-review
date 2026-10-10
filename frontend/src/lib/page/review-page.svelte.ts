@@ -13,6 +13,10 @@ import { Settings } from '$lib/reader/settings.svelte';
 import { DraftRepository } from '$lib/drafts/draft-repository';
 import type { Review } from '$lib/review/review.svelte';
 import { openKeptReview } from '$lib/page/kept-review';
+import { messageOf } from '$lib/utils/errors';
+
+// What the page says when the review could not be opened and nothing said why
+const OPENING_FAILED = 'Could not open the review';
 
 /** Where the page has got to with its review. */
 export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } | { kind: 'failed'; reason: string };
@@ -75,7 +79,7 @@ export class ReviewPage {
 		} catch (error) {
 			this.#state = {
 				kind: 'failed',
-				reason: error instanceof Error ? error.message : 'Could not open the review'
+				reason: messageOf(error, OPENING_FAILED)
 			};
 		}
 	}

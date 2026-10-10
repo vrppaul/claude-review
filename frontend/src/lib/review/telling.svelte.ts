@@ -1,26 +1,21 @@
 /**
- * How far the server's telling has got for this page, held three ways.
+ * How far the server's telling has got for this page, held two ways.
  *
- * - Heard: the last push this page's own socket handed over. Every socket
- *   the page opens goes on from here, so nothing is handed over twice and
- *   nothing is skipped.
+ * - Heard: the last push this page's socket handed over. Every socket the
+ *   page opens goes on from here, so nothing is handed over twice and
+ *   nothing is skipped; and it is kept with the draft, since everything the
+ *   pushes up to it added to the draft is in it.
  * - Read: the last push whose effect on the review's facts — its diff, its
  *   agent, its round — the page holds, whether it took the push in or read
  *   the facts after it. A push at or before it has nothing left to change
  *   there.
- * - Kept: in each run of the review, the last push whose effect on the
- *   draft the draft holds, this page's or another tab's taken in with it.
- *   Kept with the draft, so a page opening from it is handed what came
- *   after.
  *
- * What a push adds to the draft — an answer, a raised thread, a note — is
- * kept once however often it arrives, so a page may be handed a push whose
- * effect another tab's draft already brought it.
+ * A page opening from a draft goes on from where the draft left off when
+ * that is before its facts: what was said in between still belongs in the
+ * draft, though the facts hold it already.
  */
 
-import type { Draft } from '$lib/drafts/draft-shapes';
-import type { ReviewResponse, TellingByRun, TellingPosition } from '$lib/types';
-import { comesAfter, countedIn, furtherByRun } from '$lib/utils/telling';
+import type { TellingPosition } from '$lib/types';
 
 /** A push as it reaches the review: where it stands, and whether the facts read hold it already. */
 export interface HeardPush {
@@ -29,30 +24,30 @@ export interface HeardPush {
 }
 
 /**
- * Where a review opening takes up the telling: where its draft left off,
- * if that is earlier than its facts — what was said in between is handed
- * over for the draft — and otherwise where its facts were read.
+ * Whether a position comes after another in the same run of the review.
+ * Each run numbers its pushes afresh, so positions in different runs are
+ * never compared.
  */
-function startingPosition(facts: TellingPosition, kept: TellingByRun): TellingPosition {
-	const keptHere = kept[facts.instance];
-	return keptHere === undefined || keptHere >= facts.sequence ? facts : { ...facts, sequence: keptHere };
+function comesAfter(position: TellingPosition, other: TellingPosition): boolean {
+	return position.instance === other.instance && position.sequence > other.sequence;
+}
+
+/** Where a review opening goes on from: where its draft left off, if that is earlier than its facts. */
+function startingPosition(facts: TellingPosition, told: TellingPosition | null): TellingPosition {
+	return told !== null && comesAfter(facts, told) ? told : facts;
 }
 
 export class Telling {
 	#heard: TellingPosition;
 	#read: TellingPosition;
-	#kept: TellingByRun;
 
 	/**
-	 * @param facts what the server said the review is, and how far its telling had got
-	 * @param draft an unsent review of the same thing, and how far its telling had got
+	 * @param facts how far the telling had got when the review's facts were read
+	 * @param told how far it had got for the draft the review opened from, if it opened from one
 	 */
-	constructor(facts: ReviewResponse, draft: Draft | null) {
-		const read = { instance: facts.instance, sequence: facts.sequence };
-		const kept = draft?.told ?? {};
-		this.#heard = startingPosition(read, kept);
-		this.#read = read;
-		this.#kept = $state(kept);
+	constructor(facts: TellingPosition, told: TellingPosition | null) {
+		this.#heard = $state(startingPosition(facts, told));
+		this.#read = facts;
 	}
 
 	/** The last push this page's socket handed over: where the next socket goes on from. */
@@ -60,16 +55,10 @@ export class Telling {
 		return this.#heard;
 	}
 
-	/** How far the draft's effects go, in each run of the review: what the draft keeps. */
-	get kept(): TellingByRun {
-		return this.#kept;
-	}
-
 	/** Note that a push has arrived. Null when this page's socket handed it over before. */
 	hear(at: TellingPosition): HeardPush | null {
 		if (!comesAfter(at, this.#heard)) return null;
 		this.#heard = at;
-		this.#kept = countedIn(this.#kept, at);
 		const factsHoldIt = !comesAfter(at, this.#read);
 		if (!factsHoldIt) this.#read = at;
 		return { at, factsHoldIt };
@@ -82,11 +71,5 @@ export class Telling {
 	continueFrom(at: TellingPosition): void {
 		this.#heard = at;
 		this.#read = at;
-		this.#kept = countedIn(this.#kept, at);
-	}
-
-	/** Take in how far another tab's draft had got: what it holds is in this draft now too. */
-	adopt(kept: TellingByRun): void {
-		this.#kept = furtherByRun(this.#kept, kept);
 	}
 }

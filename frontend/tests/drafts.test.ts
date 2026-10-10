@@ -7,7 +7,6 @@ import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { leavePage, openReview } from './review';
-import { pushedAt } from './pushes';
 
 let review: Review;
 // Where the page keeps drafts, read the way the page reads them
@@ -26,6 +25,8 @@ const BEFORE_ANCHORS = 7;
 const BEFORE_TURN_IDS = 8;
 /** The shape every turn carries an id in, and the draft counts the ids handed out. */
 const SHAPE_WITH_TURN_IDS = 9;
+/** The last shape that kept sends and waits as pairs. */
+const LAST_SHAPE_OF_PAIRS = 12;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
@@ -157,7 +158,7 @@ describe('an unsent review', () => {
 		review = openReview();
 		const id = review.threads.add(newComment({ body: 'Why?' }));
 		review.threads.addTurn(id, { author: 'reader', body: 'Still asking', images: [] });
-		review.threads.receiveReply(id, 'Because', null, pushedAt(1));
+		review.threads.receiveReply(id, 'Because', null);
 
 		reload();
 		review.threads.addTurn(id, { author: 'reader', body: 'Thanks', images: [] });
@@ -188,13 +189,13 @@ describe('an unsent review', () => {
 			version: DRAFT_SHAPE,
 			title: 'repo',
 			threads: [],
-			read: { folded: [], unread: [], awaiting: [] },
+			read: { folded: [], unread: [], awaiting: {} },
 			reviewBody: 'x',
-			sent: [],
+			sent: {},
 			panel: [],
 			composer: { text: '', images: [] },
 			issued: { comments: 0, turns: 0 },
-			told: {}
+			told: null
 		});
 		drafts.clear();
 
@@ -208,18 +209,40 @@ describe('a draft this release kept', () => {
 			version: DRAFT_SHAPE,
 			title: TITLE,
 			threads: [fullThread()],
-			read: { folded: ['comment-1'], unread: [], awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]] },
+			read: { folded: ['comment-1'], unread: [], awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
 			reviewBody: 'Overall fine',
-			sent: [['comment-1', 2]],
+			sent: { 'comment-1': 2 },
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
 			composer: { text: 'half a thought', images: ['pasted.png'] },
 			issued: { comments: 3, turns: 5 },
-			told: {}
+			told: { instance: 'this-run', sequence: 4 }
 		};
 
 		drafts.save(kept);
 
 		expect(drafts.load(TITLE)).toEqual(kept);
+	});
+});
+
+describe('a draft kept while sends and waits were pairs', () => {
+	it('comes back with them by thread, and how far the telling had got unknown', () => {
+		keptByAnOlderRelease({
+			version: LAST_SHAPE_OF_PAIRS,
+			threads: [fullThread()],
+			read: { folded: [], unread: [], awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]] },
+			sent: [['comment-1', 2]],
+			panel: [],
+			composer: { text: '', images: [] },
+			issued: { comments: 1, turns: 0 },
+			told: { 'some-run': 3 }
+		});
+
+		expect(drafts.load(TITLE)).toMatchObject({
+			version: DRAFT_SHAPE,
+			read: { awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
+			sent: { 'comment-1': 2 },
+			told: null
+		});
 	});
 });
 
@@ -231,8 +254,8 @@ describe('a draft written by an older release', () => {
 
 		expect(draft?.threads[0].body).toBe('written before threads existed');
 		expect(draft?.threads[0].turns).toEqual([]);
-		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: [] });
-		expect(draft?.sent).toEqual([]);
+		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: {} });
+		expect(draft?.sent).toEqual({});
 	});
 
 	it('keeps how each thread was being read, apart from what it says', () => {
@@ -244,7 +267,7 @@ describe('a draft written by an older release', () => {
 		expect(draft?.read).toEqual({
 			folded: ['comment-1'],
 			unread: ['comment-1'],
-			awaiting: [['comment-1', [{ id: 'comment-1', at: 40 }]]]
+			awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] }
 		});
 	});
 
@@ -281,7 +304,7 @@ describe('a draft written by an older release', () => {
 	it('counts a thread sent before rounds were numbered as sent in the first', () => {
 		keptByAnOlderRelease({ comments: [flatThread()], sent: ['comment-1'] });
 
-		expect(drafts.load(TITLE)?.sent).toEqual([['comment-1', 1]]);
+		expect(drafts.load(TITLE)?.sent).toEqual({ 'comment-1': 1 });
 	});
 
 	it('gives a turn written before images could be pasted no images', () => {
