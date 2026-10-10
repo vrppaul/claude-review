@@ -42,9 +42,9 @@ async def session(
 ) -> None:
     """Hold the review open for as long as the page has it on screen, and tell the page what happens.
 
-    A page names the run of the review it reads and the last push it took
-    in — handed down its own socket, or kept in another tab's draft it took
-    in — and is handed what came after. One that names nothing yet only
+    A page names the run of the review it reads and how far it had got in
+    it — by the pushes it took in, the facts it read, or the draft it opened
+    from — and is handed what came after. One that names nothing yet only
     holds the review on screen while it opens.
     """
     await websocket.accept()

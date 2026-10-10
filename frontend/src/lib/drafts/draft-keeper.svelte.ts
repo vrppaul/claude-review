@@ -2,12 +2,16 @@
  * Keeping the draft as the review changes, without the review saying so.
  *
  * Whatever changes the threads, the summary or the panel changes the
- * review's snapshot of its draft; this keeps it a moment after the last
+ * review's snapshot of its draft, and so does every push heard: the draft
+ * notes how far the telling had got. This keeps it a moment after the last
  * change rather than on every keystroke, and at once when the page goes.
  * A review that is over has no draft, and its old one is forgotten, so the
  * next review is not greeted with this one's unsent work.
  *
- * The review is open in one tab at a time, so one tab keeps its draft.
+ * Every tab open on a review keeps its draft this way, in the one place
+ * drafts are kept, and a reload finds whichever was kept last: a tab left
+ * open beside the one being read keeps its own a moment after every push.
+ * Nothing guards against it, on purpose: a review is read in one tab.
  */
 
 import type { DraftRepository } from '$lib/drafts/draft-repository';

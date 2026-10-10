@@ -13,12 +13,6 @@
 	<div class="flex items-center justify-center min-h-screen">
 		<span class="loading loading-spinner loading-lg"></span>
 	</div>
-{:else if page.state.kind === 'elsewhere'}
-	<div class="flex items-center justify-center min-h-screen">
-		<div data-testid="open-elsewhere" class="alert max-w-md">
-			<span>This review is open in another tab. It opens here once that tab is closed.</span>
-		</div>
-	</div>
 {:else if page.state.kind === 'failed'}
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="alert alert-error max-w-md">
