@@ -6,7 +6,7 @@
 	import { highlightFile } from '$lib/utils/highlight';
 	import { getLineNumber, LineSelection, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
 	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
-	import { withRevealed } from '$lib/utils/expansions';
+	import { gapsOf, withRevealed } from '$lib/utils/expansions';
 	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
@@ -24,6 +24,8 @@
 	const review = useReview();
 
 	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
+	// What the diff still leaves out above each hunk, as drawn
+	const gaps = $derived(gapsOf(shown.hunks));
 	const highlighted = $derived(
 		highlightFile(shown, language).map((hunkHtml, i) => applyWordMarks(shown.hunks[i].lines, hunkHtml))
 	);
@@ -155,7 +157,11 @@
 <div data-testid="split-view">
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
-			<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} header={hunk.header} />
+			<HunkGap
+				gap={gaps[hunkIdx]}
+				header={hunk.header}
+				onReveal={(gap) => review.diff.revealed.reveal(file.path, gap)}
+			/>
 
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<!-- Fixed layout with both content columns unsized: the two halves

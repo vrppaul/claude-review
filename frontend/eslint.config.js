@@ -93,7 +93,6 @@ const STILL_TO_CLEAN = {
 		'FileList',
 		'FileSection',
 		'FinishReview',
-		'HunkGap',
 		'KeyboardShortcuts',
 		'RawView',
 		'RepliesMenu',

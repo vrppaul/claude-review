@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import DiffView from '$lib/components/DiffView.svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import type { DiffFile } from '$lib/types';
-import { addedLine, diffFile, hunk, removedLine } from '../diff';
+import { addedLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { settled } from '../settled';
 
 let review: Review;
 
@@ -17,16 +19,16 @@ beforeEach(() => {
 /** How many lines long the file is, as the server says when it hands a window of it. */
 const FILE_LENGTH = 40;
 
-const file = diffFile({
-	path: 'src/app.py',
-	hunks: [
-		hunk([removedLine(30, 'x = 1'), addedLine(30, 'x = 2')], {
-			header: '@@ -30,2 +30,2 @@',
-			old_start: 30,
-			new_start: 30
-		})
-	]
-});
+/** A hunk that replaces one line, this far down the file. */
+function replacedAt(line: number) {
+	return hunk([removedLine(line, 'x = 1'), addedLine(line, 'x = 2')], {
+		header: `@@ -${line},1 +${line},1 @@`,
+		old_start: line,
+		new_start: line
+	});
+}
+
+const file = diffFile({ path: 'src/app.py', hunks: [replacedAt(30)] });
 
 describe('widening the context around a hunk', () => {
 	beforeEach(() => {
@@ -75,7 +77,7 @@ describe('widening the context around a hunk', () => {
 		const distant: DiffFile = {
 			...file,
 			path: 'src/long.py',
-			hunks: [{ ...file.hunks[0], new_start: 501, old_start: 501 }]
+			hunks: [replacedAt(501)]
 		};
 		review = openReview({ files: [distant] });
 
@@ -103,7 +105,7 @@ describe('widening the context around a hunk', () => {
 		const fromTop: DiffFile = {
 			...file,
 			path: 'src/top.py',
-			hunks: [{ ...file.hunks[0], new_start: 1, old_start: 1 }]
+			hunks: [replacedAt(1)]
 		};
 		review = openReview({ files: [fromTop] });
 
@@ -138,5 +140,25 @@ describe('widening the context around a hunk', () => {
 		// break, and a marker saying otherwise is punctuation mid-sentence
 		expect(queryByTestId('hunk-header')).toBeNull();
 		expect(queryByTestId('hunk-gap')).toBeNull();
+	});
+});
+
+describe('lines asked for just before a new diff lands', () => {
+	it('stay out of the new diff, whose lines are counted afresh', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files: [file] });
+		const server = fakeServer();
+		const windows = server.hold('GET /api/file-window');
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('expand-context'));
+
+		// A round lands while the lines are on their way: the file now changes
+		// above the hunk too, so what was hidden above it is not hidden any more
+		server.answer('GET /api/diff', diffResponse({ files: [{ ...file, hunks: [replacedAt(15), replacedAt(30)] }] }));
+		await review.diff.take();
+		windows.answer(0, { start: 1, lines: ['read for the last diff'], total: FILE_LENGTH });
+		await settled();
+
+		expect(getByTestId('diff-view').textContent).not.toContain('read for the last diff');
 	});
 });

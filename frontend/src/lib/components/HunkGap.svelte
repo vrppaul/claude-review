@@ -1,42 +1,39 @@
 <script lang="ts">
-	import type { DiffHunk } from '$lib/types';
-	import { hiddenAbove, nextWindow } from '$lib/utils/expansions';
-	import { useReview } from '$lib/review/context';
+	import type { ContextGap } from '$lib/utils/expansions';
+	import { messageOf } from '$lib/utils/errors';
+
+	// What the gap says when the file could not be read and nothing said why
+	const READING_FAILED = 'Could not read the file';
 
 	interface Props {
-		path: string;
-		hunks: DiffHunk[];
-		index: number;
+		/** What the diff left out above the hunk. */
+		gap: ContextGap;
+		/** The hunk's own header, which says where it is in the file. */
 		header: string;
+		/** Read in the next lines of the gap. */
+		onReveal: (gap: ContextGap) => Promise<void>;
 	}
 
-	let { path, hunks, index, header }: Props = $props();
-	const review = useReview();
+	let { gap, header, onReveal }: Props = $props();
 
 	let failed = $state<string | null>(null);
 	let loading = $state(false);
 
-	const revealed = $derived(review.diff.revealed.revealedCount(path, index));
-	const hidden = $derived(hiddenAbove(hunks, index, revealed));
-	const shownNext = $derived(nextWindow(hunks, index, revealed));
+	const windowSize = $derived(gap.next === null ? 0 : gap.next.end - gap.next.start + 1);
 	const label = $derived(
-		shownNext === null
-			? ''
-			: shownNext.end - shownNext.start + 1 === hidden
-				? `Show the ${hidden} hidden ${hidden === 1 ? 'line' : 'lines'}`
-				: `Show ${shownNext.end - shownNext.start + 1} more of ${hidden} hidden lines`
+		windowSize === gap.hidden
+			? `Show the ${gap.hidden} hidden ${gap.hidden === 1 ? 'line' : 'lines'}`
+			: `Show ${windowSize} more of ${gap.hidden} hidden lines`
 	);
 
 	async function reveal() {
-		if (!shownNext || loading) return;
+		if (loading) return;
 		loading = true;
 		failed = null;
 		try {
-			// How far the old numbering runs behind the new one at this hunk
-			const oldOffset = hunks[index].old_start - hunks[index].new_start;
-			await review.diff.revealed.reveal(path, index, shownNext.start, shownNext.end, oldOffset);
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not read the file';
+			await onReveal(gap);
+		} catch (error) {
+			failed = messageOf(error, READING_FAILED);
 		} finally {
 			loading = false;
 		}
@@ -46,7 +43,7 @@
 <!-- The jump and what it says are one thing: with nothing hidden above this
 	hunk the code runs on unbroken, and a marker saying otherwise is a line of
 	punctuation in the middle of a sentence. -->
-{#if hidden > 0}
+{#if gap.hidden > 0}
 	{#if header}
 		<div data-testid="hunk-header" class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
 			{header}

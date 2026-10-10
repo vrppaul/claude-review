@@ -13,12 +13,12 @@ import { TreeMoved } from '$lib/review/tree-moved.svelte';
 import type { DiffFile, DiffResponse, ReviewVersion } from '$lib/types';
 
 export class ReviewDiff {
-	/** Lines revealed above the hunks of this diff. */
-	readonly revealed = new RevealedContext();
 	/** Files changed on disk since this diff was taken. */
 	readonly treeMoved = new TreeMoved();
 
 	readonly #whitespaceIgnored: () => boolean;
+	// Lines revealed above the hunks of the diff on screen; every diff starts with none
+	#revealed = $state.raw(new RevealedContext());
 	#files = $state.raw<DiffFile[]>([]);
 	// Which base the diff on screen was taken against, by the key the server
 	// named it with. Null in a review compared against nothing.
@@ -52,6 +52,11 @@ export class ReviewDiff {
 
 	get files(): DiffFile[] {
 		return this.#files;
+	}
+
+	/** Lines revealed above the hunks of the diff on screen. */
+	get revealed(): RevealedContext {
+		return this.#revealed;
 	}
 
 	/** Which base the diff on screen was taken against. */
@@ -138,7 +143,7 @@ export class ReviewDiff {
 
 	/** Put a diff that has arrived on screen, with everything that came with it. */
 	#show(data: DiffResponse, base: string | null): void {
-		this.revealed.forget();
+		this.#revealed = new RevealedContext();
 		this.#files = data.files;
 		this.#base = base;
 		this.#reviewKey = data.review_key;

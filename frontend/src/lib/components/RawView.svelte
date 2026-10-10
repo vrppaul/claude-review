@@ -4,7 +4,7 @@
 	import { lineRangeLabel } from '$lib/anchors/line-label';
 	import { lineAnchor } from '$lib/anchors/line';
 	import { highlightFile } from '$lib/utils/highlight';
-	import { withRevealed } from '$lib/utils/expansions';
+	import { gapsOf, withRevealed } from '$lib/utils/expansions';
 	import { hunkOffsets } from '$lib/utils/hunk-offsets';
 	import { applyWordMarks } from '$lib/utils/word-diff';
 	import { getLineNumber, LineSelection, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
@@ -30,6 +30,8 @@
 	// Lines revealed from the file sit inside the hunk above which they were
 	// read, so numbering, highlighting and anchoring need no special case.
 	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
+	// What the diff still leaves out above each hunk, as drawn
+	const gaps = $derived(gapsOf(shown.hunks));
 	const highlighted = $derived(
 		highlightFile(shown, language).map((hunkHtml, i) =>
 			isDiffMode ? applyWordMarks(shown.hunks[i].lines, hunkHtml) : hunkHtml
@@ -142,7 +144,11 @@
 	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode}
-				<HunkGap path={file.path} hunks={file.hunks} index={hunkIdx} header={hunk.header} />
+				<HunkGap
+					gap={gaps[hunkIdx]}
+					header={hunk.header}
+					onReveal={(gap) => review.diff.revealed.reveal(file.path, gap)}
+				/>
 			{/if}
 
 			<!-- Fixed layout so every hunk's gutters line up: the automatic

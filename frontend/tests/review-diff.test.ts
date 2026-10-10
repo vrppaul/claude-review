@@ -3,12 +3,18 @@ import { contextLine, addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer, keepingSettings, SERVER_ERROR } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
+import { gapsOf } from '$lib/utils/expansions';
 
 let review: Review;
 
 beforeEach(() => {
 	review = openReview();
 });
+
+/** A hunk of one added line, this far down the file. */
+function hunkAt(newStart: number) {
+	return hunk([addedLine(newStart, 'added')], { old_start: newStart, new_start: newStart });
+}
 
 const files = [
 	diffFile({
@@ -114,24 +120,24 @@ describe('retaking the diff', () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await review.diff.revealed.reveal('a.ts', 0, 1, 2, 0);
-		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(2);
+		await review.diff.revealed.reveal('a.ts', gapsOf([hunkAt(3)])[0]);
+		expect(review.diff.revealed.forFile('a.ts').size).toBe(1);
 
 		await review.diff.take();
 
-		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(0);
+		expect(review.diff.revealed.forFile('a.ts').size).toBe(0);
 	});
 
 	it('drops lines revealed against hunks whitespace renumbered', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await review.diff.revealed.reveal('a.ts', 0, 1, 2, 0);
-		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(2);
+		await review.diff.revealed.reveal('a.ts', gapsOf([hunkAt(3)])[0]);
+		expect(review.diff.revealed.forFile('a.ts').size).toBe(1);
 
 		await review.setIgnoreWhitespace(true);
 
-		expect(review.diff.revealed.revealedCount('a.ts', 0)).toBe(0);
+		expect(review.diff.revealed.forFile('a.ts').size).toBe(0);
 	});
 });
 
