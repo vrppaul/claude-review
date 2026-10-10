@@ -16,7 +16,9 @@ npx skills add vrppaul/claude-review -g -y
 /plugin marketplace add vrppaul/claude-review
 ```
 
-Type `/review-ui` and the CLI is installed automatically on first use.
+Type `/review-ui` and the CLI is installed automatically on first use, with
+[uv](https://docs.astral.sh/uv/getting-started/installation/), which needs to
+be on the machine already.
 
 ## Review Modes
 
@@ -196,6 +198,8 @@ waits on through the timeouts — so it can be driven from a loop. The
 `/review-ui` skill documents the loop.
 
 ### Manual install (optional)
+
+With [uv](https://docs.astral.sh/uv/getting-started/installation/) installed:
 
 ```bash
 uv tool install claude-review

@@ -39,7 +39,15 @@ somebody who is waiting.
 
 ## Steps
 
-1. Install or upgrade `claude-review` to the latest version:
+1. Install or upgrade `claude-review` to the latest version. It is installed
+   with uv, so check first that uv is there:
+   ```bash
+   command -v uv
+   ```
+   If that prints nothing, stop here and tell the user plainly: the review is
+   installed with uv, which this machine does not have; they can install it
+   as https://docs.astral.sh/uv/getting-started/installation/ says, then run
+   `/review-ui` again. Do not install uv yourself. Otherwise:
    ```bash
    uv tool install --upgrade claude-review
    ```
