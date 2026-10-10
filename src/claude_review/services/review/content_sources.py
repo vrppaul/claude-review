@@ -23,8 +23,8 @@ from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundTracker
+from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import ReviewOpening
-from claude_review.services.tree_watcher_service import TreeWatcherService
 
 log = structlog.get_logger()
 

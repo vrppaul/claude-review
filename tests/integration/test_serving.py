@@ -16,8 +16,8 @@ from claude_review.hosting.serving import serve_review
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review.browser_presence import BrowserPresence
 from claude_review.services.review.content_sources import RepositorySource
+from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import ReviewOpening, open_diff
-from claude_review.services.tree_watcher_service import TreeWatcherService
 from tests.helpers import SETTLE_SECONDS
 from tests.page_socket import page_socket_held
 

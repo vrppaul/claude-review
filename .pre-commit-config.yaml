@@ -63,6 +63,13 @@ repos:
         types: [python]
         pass_filenames: false
         stages: [pre-commit]
+      - id: import-layers
+        name: import-linter (the package's layers)
+        entry: uv run lint-imports
+        language: system
+        files: ^(src/|pyproject\.toml$)
+        pass_filenames: false
+        stages: [pre-commit]
 
   # Bandit - Security linting for Python
   - repo: https://github.com/PyCQA/bandit

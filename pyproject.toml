@@ -21,6 +21,7 @@ claude-review = "claude_review.cli.main:main"
 dev = [
     "httpx>=0.28.1",
     "hypothesis>=6.168.5",
+    "import-linter>=2.15",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
@@ -128,6 +129,25 @@ known-first-party = ["claude_review"]
 "src/claude_review/presentation/broadcast.py" = ["C901"]
 # Builders take every field of what they build as an optional keyword
 "tests/helpers.py" = ["PLR0913"]
+
+[tool.importlinter]
+root_package = "claude_review"
+
+[[tool.importlinter.contracts]]
+name = "The package's parts build on each other in one direction"
+type = "layers"
+containers = ["claude_review"]
+# Each part may build on those below it, never on one above. The services
+# and the repositories sit side by side: both build on the domain, and
+# neither knows the other — the services reach the repository through its
+# protocol, which the domain holds.
+layers = [
+    "cli",
+    "hosting",
+    "presentation",
+    "services | repositories",
+    "domain",
+]
 
 [tool.typos.default.extend-words]
 # Not misspelt: pieces of words the tests type or read on purpose — a word

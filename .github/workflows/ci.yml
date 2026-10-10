@@ -20,6 +20,7 @@ jobs:
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
       - run: uv run ty check src/ tests/
+      - run: uv run lint-imports
       # The code rules no linter here can be told to keep
       - run: uv run python scripts/check_code_rules.py src tests scripts
       - run: uv run typos
