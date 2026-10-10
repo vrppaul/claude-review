@@ -13,18 +13,20 @@ from http import HTTPStatus
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, Field
 
 from claude_review.domain.exceptions import ReviewError
+from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
 from claude_review.presentation.refusals import (
-    ON_THE_WAY_EXTENSION,
-    REFUSED_ON_THE_WAY,
+    INPUT_REFUSAL_EXTENSION,
+    REFUSED_FOR_INPUT,
     Takes,
     answer_refusals,
     status_of,
 )
 from claude_review.presentation.wire.refusal import Refusal
-from tests.helpers import http_client
+from claude_review.services.image_service import IMAGE_FORMATS
+from tests.helpers import IMAGES_ROUTE, http_client
 
 # Where the API's description keeps the model every refusal is said in
 REFUSAL_SCHEMA = f"#/components/schemas/{Refusal.__name__}"
@@ -33,6 +35,10 @@ REASON = "refused for the test"
 REFUSING_ROUTE = "/refuse/{kind_name}"
 # The body FastAPI reads as JSON and checks against a model
 JSON_MEDIA_TYPE = "application/json"
+# The types of which no value is refused unless something bounds it: any text, or nothing at all
+UNBOUNDED_TYPES = {"string", "null"}
+# Where a parameter that is part of the path sits: it is never missing, though the description calls it required
+PATH_LOCATION = "path"
 
 
 class SchemaReference(BaseModel):
@@ -51,7 +57,7 @@ class Answer(BaseModel):
     """One answer an operation describes."""
 
     content: dict[str, MediaType] = Field(default_factory=dict)
-    refused_on_the_way: bool = Field(default=False, alias=ON_THE_WAY_EXTENSION)
+    refused_for_input: bool = Field(default=False, alias=INPUT_REFUSAL_EXTENSION)
 
     def is_refusal(self) -> bool:
         """Whether the answer is a refusal, said as every refusal is."""
@@ -61,13 +67,45 @@ class Answer(BaseModel):
 class RequestBody(BaseModel):
     """The body an operation is sent, by the media types it may come in."""
 
-    content: dict[str, JsonValue]
+    required: bool = False
+    content: dict[str, MediaType]
+
+
+class ParameterSchema(BaseModel):
+    """What the test reads of a parameter's schema: its type, what bounds it, and the choices it allows."""
+
+    type: str | None = None
+    max_length: int | None = Field(default=None, alias="maxLength")
+    min_length: int | None = Field(default=None, alias="minLength")
+    pattern: str | None = None
+    any_of: list[ParameterSchema] = Field(default_factory=list, alias="anyOf")
+
+    def can_be_wrong(self) -> bool:
+        """Whether some value sent for it would be refused: any but a bare string, or a string bound some way."""
+        if self.any_of:
+            return any(option.can_be_wrong() for option in self.any_of)
+        if self.type in UNBOUNDED_TYPES:
+            return any(bound is not None for bound in (self.max_length, self.min_length, self.pattern))
+        return True
+
+
+class Parameter(BaseModel):
+    """One parameter of an operation: whether it must be sent, and what it may be."""
+
+    location: str = Field(alias="in")
+    required: bool = False
+    schema_: ParameterSchema = Field(alias="schema")
+
+    def can_be_refused(self) -> bool:
+        """Whether FastAPI may refuse the request for it: missing when it must be sent, or wrong."""
+        can_be_missing = self.required and self.location != PATH_LOCATION
+        return can_be_missing or self.schema_.can_be_wrong()
 
 
 class Operation(BaseModel):
     """What the test reads of one operation in the API's description: what it takes in, and what it answers."""
 
-    parameters: list[JsonValue] = Field(default_factory=list)
+    parameters: list[Parameter] = Field(default_factory=list)
     request_body: RequestBody | None = Field(default=None, alias="requestBody")
     responses: dict[str, Answer]
 
@@ -80,14 +118,14 @@ class Operation(BaseModel):
         """What the operation takes in, as the description says: a body, JSON or not, parameters, or nothing."""
         if self.request_body is not None:
             return Takes.JSON_BODY if JSON_MEDIA_TYPE in self.request_body.content else Takes.RAW_BODY
-        return Takes.PARAMETERS if self.parameters else Takes.NOTHING
+        return Takes.PARAMETERS if any(parameter.can_be_refused() for parameter in self.parameters) else Takes.NOTHING
 
-    def refused_on_the_way(self) -> frozenset[HTTPStatus]:
-        """The refusals the operation says it may meet before its route is reached."""
+    def refused_for_input(self) -> frozenset[HTTPStatus]:
+        """The refusals the operation says it may give for what it takes in."""
         return frozenset(
             HTTPStatus(int(status))
             for status, answer in self.responses.items()
-            if answer.is_refusal() and answer.refused_on_the_way
+            if answer.is_refusal() and answer.refused_for_input
         )
 
 
@@ -130,15 +168,26 @@ def _unsaid(status: HTTPStatus, *, among: dict[str, Operation]) -> list[str]:
 
 
 def test_every_route_says_the_origin_guard_may_refuse_it(described: Description) -> None:
-    assert _unsaid(HTTPStatus.FORBIDDEN, among=described.operations()) == []
+    assert _unsaid(NOT_ITS_PAGE_STATUS, among=described.operations()) == []
 
 
-def test_what_a_route_is_refused_on_the_way_is_what_it_takes_in_and_no_more(described: Description) -> None:
+def test_an_image_upload_says_it_takes_an_image_in_every_format_the_review_keeps(described: Description) -> None:
+    """Said, a client knows what to send, and the schema test sends it images."""
+    upload = described.operations()[f"POST {IMAGES_ROUTE}"]
+
+    assert upload.request_body is not None
+    assert upload.request_body.required
+    assert set(upload.request_body.content) == {known.media_type for known in IMAGE_FORMATS}
+
+
+def test_what_a_route_is_refused_for_what_it_takes_in_is_what_it_takes_in_and_no_more(
+    described: Description,
+) -> None:
     """A route taking nothing says it meets no such refusal; one taking parameters or a body, exactly those it may."""
     unlike = {
-        name: sorted(operation.refused_on_the_way())
+        name: sorted(operation.refused_for_input())
         for name, operation in described.operations().items()
-        if operation.refused_on_the_way() != REFUSED_ON_THE_WAY[operation.takes()]
+        if operation.refused_for_input() != REFUSED_FOR_INPUT[operation.takes()]
     }
 
     assert unlike == {}

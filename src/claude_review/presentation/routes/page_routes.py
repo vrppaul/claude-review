@@ -3,7 +3,7 @@
 from http import HTTPStatus
 
 import structlog
-from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.exceptions import (
@@ -33,7 +33,7 @@ from claude_review.presentation.version_words import (
     version_on_the_wire,
 )
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork, CancelRequest, ImageResponse, MessageRequest
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, SAFE_ID
+from claude_review.presentation.wire.base import MAX_ID_LENGTH, PathId
 from claude_review.presentation.wire.content import (
     SEND_LIMITS,
     DiffFile,
@@ -236,9 +236,7 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
 
 
 @router.get("/images/{image_id}", responses=refusals(UnknownImageError, takes=Takes.PARAMETERS))
-async def serve_an_image(
-    image_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID), review: Review = Depends(get_review)
-) -> FileResponse:
+async def serve_an_image(image_id: PathId, review: Review = Depends(get_review)) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
@@ -249,9 +247,7 @@ async def serve_an_image(
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(UnknownImageError, ImageAlreadySentError, takes=Takes.PARAMETERS),
 )
-async def discard_an_image(
-    image_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID), review: Review = Depends(get_review)
-) -> None:
+async def discard_an_image(image_id: PathId, review: Review = Depends(get_review)) -> None:
     """Drop an image the reader took off the message before sending it.
 
     One that went out with a message stays: the agent may still be about to

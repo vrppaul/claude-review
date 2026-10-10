@@ -8,6 +8,7 @@ id and text bounded — live on the wire alone.
 
 from typing import Annotated, Self
 
+from fastapi import Path as PathParameter
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
 
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
@@ -45,6 +46,8 @@ SAFE_ID = r"^[A-Za-z0-9._-]+$"
 
 # An id as a request names it: a thread, a turn, a question, a message, an image
 WireId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
+# An id as a route's path names it: a thread, an image — bounded as one in a body is
+PathId = Annotated[str, PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
 
 # A yes or a no as JSON says it: true or false, never 0, 1 or "yes", which
 # pydantic would otherwise read as one

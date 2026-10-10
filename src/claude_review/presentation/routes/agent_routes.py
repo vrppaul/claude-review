@@ -3,7 +3,7 @@
 from http import HTTPStatus
 from typing import assert_never
 
-from fastapi import APIRouter, Depends, Path as PathParameter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from claude_review.domain import models
 from claude_review.domain.exceptions import (
@@ -36,7 +36,7 @@ from claude_review.presentation.wire.agent import (
     ThreadQuestion,
     TimeoutEvent,
 )
-from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_ID_LENGTH, MAX_WAIT_SECONDS, SAFE_ID
+from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, PathId
 from claude_review.presentation.wire.threads import (
     PointRequest,
     PointResponse,
@@ -127,7 +127,7 @@ async def review_context(review: Review = Depends(get_review)) -> CatchUpRespons
 
 @router.get("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
 async def read_thread(
-    thread_id: str = PathParameter(max_length=MAX_ID_LENGTH, pattern=SAFE_ID),
+    thread_id: PathId,
     review: Review = Depends(get_review),
 ) -> Thread:
     """Hand over one thread the review holds, in full: every turn, its lines, its images.

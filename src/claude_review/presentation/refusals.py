@@ -6,8 +6,8 @@ its own refusals, so a caller reads one shape whoever refused.
 
 The same tables say, in the API's description, how each route may refuse:
 a route names the kinds it raises and what it takes in, and is described
-with their statuses and no others, those given before the route is reached
-said to be so.
+with their statuses and no others, those it may be refused for what it
+takes in said to be so.
 
 A request whose caller went away before it had sent all of it is no refusal:
 nobody is left to answer, and nothing went wrong on either side.
@@ -55,14 +55,14 @@ REFUSAL_STATUS: dict[type[ReviewError], HTTPStatus] = {
 
 
 class Takes(StrEnum):
-    """What a route takes in, which FastAPI reads, and may refuse, before the route is reached."""
+    """What a route takes in, and so what it may be refused for it: by FastAPI on the way, or as the body is read."""
 
     NOTHING = auto()
     # A query or a path, checked against the route's parameters
     PARAMETERS = auto()
     # A JSON body, read and checked against the route's model
     JSON_BODY = auto()
-    # A body read as it comes, never parsed: only its size is refused on the way
+    # A body read as it comes, never parsed: only its size is refused
     RAW_BODY = auto()
 
 
@@ -70,17 +70,17 @@ class Takes(StrEnum):
 # are not even text — and to a parameter or a field it found wrong
 UNREADABLE_BODY = HTTPStatus.BAD_REQUEST
 WRONG_INPUT = HTTPStatus.UNPROCESSABLE_CONTENT
-# What may be refused on the way to a route, by what the route takes in
-REFUSED_ON_THE_WAY: dict[Takes, frozenset[HTTPStatus]] = {
+# What a route may be refused for what it takes in
+REFUSED_FOR_INPUT: dict[Takes, frozenset[HTTPStatus]] = {
     Takes.NOTHING: frozenset(),
     Takes.PARAMETERS: frozenset({WRONG_INPUT}),
     Takes.JSON_BODY: frozenset({UNREADABLE_BODY, WRONG_INPUT, TOO_LARGE_STATUS}),
     Takes.RAW_BODY: frozenset({TOO_LARGE_STATUS}),
 }
-# The OpenAPI extension that marks a refusal given before the route is
-# reached, for what the request carried: said where a reader of the API sees
-# it, and where a test can hold it to what the route takes in
-ON_THE_WAY_EXTENSION = "x-refused-before-the-route"
+# The OpenAPI extension that marks a refusal a route may give for what it
+# takes in: said where a reader of the API sees it, and where a test can hold
+# it to what the route's description says it takes
+INPUT_REFUSAL_EXTENSION = "x-refused-for-its-input"
 # The header a refusal of a method names the methods a path does take in
 ALLOW_HEADER = "Allow"
 ALLOW_SEPARATOR = ", "
@@ -97,25 +97,25 @@ def refusals(*kinds: type[ReviewError], takes: Takes) -> dict[int | str, dict[st
     A route names the kinds of refusal it raises and what it takes in; the
     status of each comes from the tables, so a route never restates one.
     """
-    return documented({status_of(kind) for kind in kinds}, on_the_way=REFUSED_ON_THE_WAY[takes])
+    return documented({status_of(kind) for kind in kinds}, for_input=REFUSED_FOR_INPUT[takes])
 
 
 def documented(
-    statuses: Set[HTTPStatus], *, on_the_way: Set[HTTPStatus] = frozenset()
+    statuses: Set[HTTPStatus], *, for_input: Set[HTTPStatus] = frozenset()
 ) -> dict[int | str, dict[str, object]]:
     """Statuses a route may answer with, as the API describes them: each a refusal, said as every refusal is.
 
-    Those given on the way to the route say so. In order, so the API is
+    Those a route may give for what it takes in say so. In order, so the API is
     described the same way every time it is written.
     """
-    return {status: _refusal(status, on_the_way=status in on_the_way) for status in sorted({*statuses, *on_the_way})}
+    return {status: _refusal(status, for_input=status in for_input) for status in sorted({*statuses, *for_input})}
 
 
-def _refusal(status: HTTPStatus, *, on_the_way: bool) -> dict[str, object]:
+def _refusal(status: HTTPStatus, *, for_input: bool) -> dict[str, object]:
     """One status a route may refuse with, as the API describes it."""
     described: dict[str, object] = {"model": Refusal, "description": status.phrase}
-    if on_the_way:
-        described[ON_THE_WAY_EXTENSION] = True
+    if for_input:
+        described[INPUT_REFUSAL_EXTENSION] = True
     return described
 
 

@@ -59,8 +59,8 @@
   A yes or a no in a JSON body is `true` or `false`: `0`, `1` and the like
   are refused. A round's key is `round:` and the number in plain digits.
   Every refusal is `{detail}`, in words or field by field, and each route
-  documents only the refusals it can give, those met before the route is
-  reached marked `x-refused-before-the-route` — the origin guard's `403`,
+  documents only the refusals it can give, those for what it takes in
+  marked `x-refused-for-its-input` — the origin guard's `403`,
   which was plain text, on every route. `POST /api/images` describes the
   image it takes as its body, and an image's id in a path is bounded as
   every other id is. A method a route does not take is answered `405` with
