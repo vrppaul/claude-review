@@ -47,6 +47,7 @@ from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
+from claude_review.presentation.asgi import HTTP_DISCONNECT, HTTP_REQUEST, HTTP_SCOPE
 from claude_review.presentation.wire.content import ReviewResponse
 from claude_review.presentation.wire.pushes import Push, ServerPush
 from claude_review.presentation.wire.session import Delivery, SessionMessage, Welcome
@@ -474,9 +475,9 @@ class CallerThatLeaves:
         """The request, then nothing until the caller goes away."""
         if not self._asked:
             self._asked = True
-            return {"type": "http.request", "body": b"", "more_body": False}
+            return {"type": HTTP_REQUEST, "body": b"", "more_body": False}
         await self.gone.wait()
-        return {"type": "http.disconnect"}
+        return {"type": HTTP_DISCONNECT}
 
     async def send(self, message: Message) -> None:
         """Whatever is answered goes nowhere: nobody is there to read it."""
@@ -502,8 +503,8 @@ class UploadThatBreaksOff:
         """The first part of the image, then the browser gone."""
         if not self._sent_first_part:
             self._sent_first_part = True
-            return {"type": "http.request", "body": self._first_part, "more_body": True}
-        return {"type": "http.disconnect"}
+            return {"type": HTTP_REQUEST, "body": self._first_part, "more_body": True}
+        return {"type": HTTP_DISCONNECT}
 
     async def send(self, message: Message) -> None:
         """Whatever is answered goes nowhere: nobody is there to read it."""
@@ -516,7 +517,7 @@ class UploadThatBreaksOff:
 def _request_scope(method: str, route: str, query: Mapping[str, float] | None = None) -> Scope:
     """A request as a server hands it to the app, from the review's own machine."""
     return {
-        "type": "http",
+        "type": HTTP_SCOPE,
         "asgi": {"version": ASGI_VERSION},
         "http_version": HTTP_VERSION,
         "method": method,

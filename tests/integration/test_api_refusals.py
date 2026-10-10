@@ -78,6 +78,7 @@ class ParameterSchema(BaseModel):
     max_length: int | None = Field(default=None, alias="maxLength")
     min_length: int | None = Field(default=None, alias="minLength")
     pattern: str | None = None
+    choices: list[str] | None = Field(default=None, alias="enum")
     any_of: list[ParameterSchema] = Field(default_factory=list, alias="anyOf")
 
     def can_be_wrong(self) -> bool:
@@ -85,7 +86,7 @@ class ParameterSchema(BaseModel):
         if self.any_of:
             return any(option.can_be_wrong() for option in self.any_of)
         if self.type in UNBOUNDED_TYPES:
-            return any(bound is not None for bound in (self.max_length, self.min_length, self.pattern))
+            return any(bound is not None for bound in (self.max_length, self.min_length, self.pattern, self.choices))
         return True
 
 
