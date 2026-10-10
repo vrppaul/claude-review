@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 from claude_review.services.unified_diff import parse_unified_diff
+from tests.helpers import added_line, context_line, removed_line
 
 # What git puts before each side's path, and in place of a side that is not there
 OLD_SIDE = "a/"
@@ -73,6 +74,10 @@ MOST_LINES = 6
 MOST_SEGMENTS = 3
 LONGEST_SEGMENT = 8
 LONGEST_SKIP = 20
+# A file whose hunk ends in a blank line, which git writes bare under
+# diff.suppressBlankEmpty: a line changed two above the blank one that ends the file
+ENDS_IN_A_BLANK = "notes.txt"
+BLANK_ENDED_HUNK = [removed_line(1, "one"), added_line(1, "ONE"), context_line(2, 2, "two"), context_line(3, 3, "")]
 
 # One part of a path between slashes: never only dots or spaces, which git would not write as a name
 segments = strategy.text(
@@ -140,9 +145,14 @@ def counted(start: int, count: int) -> str:
     return f"{written_start}" if count == 1 else f"{written_start},{count}"
 
 
+def count_on_side(lines: list[DiffLine], *, without: LineType) -> int:
+    """How many of the lines are on one side: every line but the other side's own."""
+    return len([line for line in lines if line.kind != without])
+
+
 def hunk_header(old_start: int, new_start: int, lines: list[DiffLine], heading: str) -> str:
-    old_count = sum(line.kind != LineType.ADD for line in lines)
-    new_count = sum(line.kind != LineType.DELETE for line in lines)
+    old_count = count_on_side(lines, without=LineType.ADD)
+    new_count = count_on_side(lines, without=LineType.DELETE)
     return f"@@ -{counted(old_start, old_count)} +{counted(new_start, new_count)} @@{heading}"
 
 
@@ -160,8 +170,10 @@ def numbered(kinds_and_contents: list[tuple[LineType, str]], old_start: int, new
                 content=content,
             )
         )
-        old_number += on_old_side
-        new_number += on_new_side
+        if on_old_side:
+            old_number += 1
+        if on_new_side:
+            new_number += 1
     return lines
 
 
@@ -183,8 +195,8 @@ def changed_hunks(draw: strategy.DrawFn) -> list[DiffHunk]:
                 lines=lines,
             )
         )
-        old_next = old_start + sum(line.kind != LineType.ADD for line in lines)
-        new_next = new_start + sum(line.kind != LineType.DELETE for line in lines)
+        old_next = old_start + count_on_side(lines, without=LineType.ADD)
+        new_next = new_start + count_on_side(lines, without=LineType.DELETE)
     return hunks
 
 
@@ -294,22 +306,21 @@ def test_whatever_git_writes_for_changed_files_is_read_back_as_those_files(
     assert parse_unified_diff(as_git_writes_it(drawn, bare_blanks=bare_blanks)) == [file.file for file in drawn]
 
 
-def test_a_hunk_is_only_as_long_as_its_header_counts() -> None:
-    """Git never writes fewer lines than it counts, and the end of the diff is no line of the last hunk."""
-    written = ["one", "two"]
-    side = counted(FIRST_LINE, len(written) + 1)
-    path = "counted.txt"
-    diff = [
-        f"diff --git {OLD_SIDE}{path} {NEW_SIDE}{path}",
-        f"--- {OLD_SIDE}{path}",
-        f"+++ {NEW_SIDE}{path}",
-        f"@@ -{side} +{side} @@",
-        *(LINE_PREFIX[LineType.CONTEXT] + line for line in written),
-    ]
+def test_a_blank_line_that_ends_a_hunk_is_one_of_its_lines_and_the_end_of_the_diff_is_not() -> None:
+    """Written bare, the blank is an empty line, and so is what follows the line break that ends the diff."""
+    hunk = DiffHunk(
+        header=hunk_header(FIRST_LINE, FIRST_LINE, BLANK_ENDED_HUNK, heading=""),
+        old_start=FIRST_LINE,
+        new_start=FIRST_LINE,
+        lines=BLANK_ENDED_HUNK,
+    )
+    drawn = DrawnFile(
+        file=DiffFile(path=ENDS_IN_A_BLANK, status=FileStatus.MODIFIED, hunks=[hunk]),
+        old_side_ends_bare=False,
+        new_side_ends_bare=False,
+    )
 
-    [changed] = parse_unified_diff("\n".join(diff) + "\n")
-
-    assert [line.content for line in changed.hunks[0].lines] == written
+    assert parse_unified_diff(as_git_writes_it([drawn], bare_blanks=True)) == [drawn.file]
 
 
 @given(drawn=one_sided_files(), bare_blanks=strategy.booleans())

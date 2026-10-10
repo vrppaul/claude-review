@@ -102,8 +102,7 @@ def parse_unified_diff(raw: str) -> list[DiffFile]:
 
 def _file(part: str) -> DiffFile | None:
     """One file's part of the diff, or None when no path can be read from it."""
-    # Without the line break that ends the part, so an empty line is one git wrote
-    lines = part.removesuffix("\n").split("\n")
+    lines = part.split("\n")
     hunk_starts = [start for index, line in enumerate(lines) if (start := _hunk_start(index, line)) is not None]
     # Only what comes before the first hunk is the header. A removed line
     # reading "-- x" arrives as "--- x", and would otherwise pass for a path.
@@ -258,8 +257,9 @@ def _hunks(lines: list[str], hunk_starts: list[HunkStart]) -> list[DiffHunk]:
 def _hunk(start: HunkStart, body: list[str]) -> DiffHunk:
     """One hunk: as many lines of each side as its header counts, each numbered on the sides it is on.
 
-    The counts say where the hunk ends, so nothing after it — the end of the
-    diff, a line git adds — is read as one of its lines.
+    The counts say where the hunk ends, so what follows its last line — the
+    empty line after the break that ends the diff — is never read as a
+    blank line of its own.
     """
     old_start, new_start = _first_line(start.old_start, start.old_count), _first_line(start.new_start, start.new_count)
     old_left, new_left = start.old_count, start.new_count
