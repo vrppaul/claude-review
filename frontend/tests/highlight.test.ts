@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectLanguage, highlightFile } from '$lib/utils/highlight';
+import { highlightFile, languageOf } from '$lib/utils/highlight';
 import type { DiffFile, DiffLine } from '$lib/types';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
 
@@ -101,12 +101,16 @@ describe("the colours of a file's code", () => {
 
 describe('which language a file is read as', () => {
 	it("is told by the file's extension", () => {
-		expect(detectLanguage('src/a.py')).toBe('python');
-		expect(detectLanguage('src/a.rs')).toBe('rust');
+		expect(languageOf('diff', 'src/a.py')).toBe('python');
+		expect(languageOf('files', 'src/a.rs')).toBe('rust');
 	});
 
 	it('is none for an extension nobody knows', () => {
-		expect(detectLanguage('LICENSE')).toBeNull();
-		expect(detectLanguage('a.unknownext')).toBeNull();
+		expect(languageOf('diff', 'LICENSE')).toBeNull();
+		expect(languageOf('files', 'a.unknownext')).toBeNull();
+	});
+
+	it("is markdown for a transcript's messages, whose labels have no extension", () => {
+		expect(languageOf('transcript', 'user (22:41) #1')).toBe('markdown');
 	});
 });

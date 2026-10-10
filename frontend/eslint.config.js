@@ -90,14 +90,13 @@ const STILL_TO_CLEAN = {
 		'CommentThread',
 		'DiffNotice',
 		'FileList',
-		'FileSection',
 		'FinishReview',
 		'KeyboardShortcuts',
 		'RepliesMenu',
 		'SettingsMenu',
 		'SubmitBar'
 	],
-	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentThread', 'FileList', 'FileSection'],
+	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentThread', 'FileList'],
 	nestedHelpers: ['SubmitBar'],
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']

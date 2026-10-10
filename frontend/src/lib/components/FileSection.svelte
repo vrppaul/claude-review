@@ -1,17 +1,19 @@
 <script lang="ts">
-	import type { ContentViewMode } from '$lib/reader/page-layout.svelte';
 	import type { DiffFile } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
-	import { detectLanguage } from '$lib/utils/highlight';
+	import { messageOf } from '$lib/utils/errors';
+	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
 	import { whenNearViewport } from '$lib/dom/scroll';
 	import { useReview } from '$lib/review/context';
 	import ContentViewToggle from './ContentViewToggle.svelte';
-	import FileNotes from './FileNotes.svelte';
-	import PreviewView from './PreviewView.svelte';
-	import RawView from './RawView.svelte';
-	import SplitView from './SplitView.svelte';
-	import SideBySideView from './SideBySideView.svelte';
+	import FileBody, { type FileView } from './FileBody.svelte';
+
+	// What a file's header and each of its rows take up, in pixels, as drawn
+	const HEADER_HEIGHT = 41;
+	const ROW_HEIGHT = 21;
+	// What the file says when the round's diff could not be taken and nothing said why
+	const CHANGES_NOT_TAKEN = 'Could not take the diff against that round';
 
 	interface Props {
 		file: DiffFile;
@@ -23,13 +25,9 @@
 	const review = useReview();
 
 	const isDiffMode = $derived(review.mode === 'diff');
-	const isTranscriptMode = $derived(review.mode === 'transcript');
-	// Transcript entries are labels like "user (22:41) #1", so they carry no
-	// extension. Their text is Claude's prose, which reads best as markdown.
-	const language = $derived(isTranscriptMode ? 'markdown' : detectLanguage(file.path));
+	const language = $derived(languageOf(review.mode, file.path));
 	const hasRenderablePreview = $derived(isRenderable(language));
-	// Content with nothing to render always shows raw, whatever the preference
-	const viewMode = $derived<ContentViewMode>(hasRenderablePreview ? review.layout.contentView.mode : 'raw');
+	const view = $derived(viewOf());
 
 	// Files reads the review's own diff unless a narrower base is chosen, whose removed lines are that base's
 	const reviewOwnsRemovedLines = $derived(!review.diff.narrowed);
@@ -41,17 +39,29 @@
 
 	// Rough height so the browser can leave an off-screen file undrawn without
 	// the scrollbar lurching once it renders for real. One row plus the header.
-	const rowCount = $derived(file.hunks.reduce((n, hunk) => n + hunk.lines.length, 0));
-	const estimatedHeight = $derived(collapsed ? 41 : 41 + Math.max(rowCount, 1) * 21);
+	const rowCount = $derived(file.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
+	const bodyHeight = $derived(collapsed ? 0 : Math.max(rowCount, 1) * ROW_HEIGHT);
 
 	let changedSinceFailed = $state<string | null>(null);
+
+	/**
+	 * How the file is drawn, as the reader chose: content with nothing to
+	 * render shows its lines whatever the preference, and only a diff with
+	 * lines in it reads across two columns.
+	 */
+	function viewOf(): FileView {
+		const contentView = review.layout.contentView.mode;
+		if (hasRenderablePreview && contentView !== 'raw') return contentView;
+		const twoColumns = isDiffMode && review.settings.current.diff_layout === 'split' && file.hunks.length > 0;
+		return twoColumns ? 'split' : 'raw';
+	}
 
 	async function showChangesSince() {
 		changedSinceFailed = null;
 		try {
 			await review.showChangesSinceRetake();
 		} catch (error) {
-			changedSinceFailed = error instanceof Error ? error.message : 'Could not take the diff against that round';
+			changedSinceFailed = messageOf(error, CHANGES_NOT_TAKEN);
 		}
 	}
 
@@ -63,9 +73,7 @@
 
 	$effect(() => {
 		if (!element || built) return;
-		return whenNearViewport(element, scrollRoot, () => {
-			built = true;
-		});
+		return whenNearViewport(element, scrollRoot, () => (built = true));
 	});
 </script>
 
@@ -74,7 +82,7 @@
 	data-testid="file-section"
 	data-path={file.path}
 	class="cr-section border-b border-base-300"
-	style="contain-intrinsic-size: auto {estimatedHeight}px"
+	style="contain-intrinsic-size: auto {HEADER_HEIGHT + bodyHeight}px"
 >
 	<div
 		class="sticky top-0 z-10 flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2 {viewed
@@ -154,18 +162,9 @@
 
 	{#if !collapsed}
 		{#if built}
-			<FileNotes {file} />
-			{#if viewMode === 'preview'}
-				<PreviewView {file} />
-			{:else if viewMode === 'side-by-side'}
-				<SideBySideView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
-			{:else if isDiffMode && review.settings.current.diff_layout === 'split' && file.hunks.length > 0}
-				<SplitView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
-			{:else}
-				<RawView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
-			{/if}
+			<FileBody {file} {language} {view} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
 		{:else}
-			<div data-testid="file-placeholder" style="height: {estimatedHeight - 41}px"></div>
+			<div data-testid="file-placeholder" style="height: {bodyHeight}px"></div>
 		{/if}
 	{/if}
 </section>

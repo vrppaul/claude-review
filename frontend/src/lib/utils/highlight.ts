@@ -1,6 +1,6 @@
 import hljs from 'highlight.js/lib/core';
 
-import type { DiffFile, DiffLine } from '$lib/types';
+import type { DiffFile, DiffLine, ReviewMode } from '$lib/types';
 import { escapeMarkup } from '$lib/utils/safe-markup';
 
 export { hljs };
@@ -59,11 +59,28 @@ const EXT_TO_LANG: Record<string, string> = {
 	'.svelte': 'html'
 };
 
-export function detectLanguage(filePath: string): string | null {
+/** What a file is highlighted as, by its extension. */
+function detectLanguage(filePath: string): string | null {
 	const dot = filePath.lastIndexOf('.');
 	if (dot === -1) return null;
 	const ext = filePath.slice(dot).toLowerCase();
 	return EXT_TO_LANG[ext] ?? null;
+}
+
+/**
+ * What each kind of review reads its files as. A diff and plain files go by
+ * their names; a transcript's entries are labels like "user (22:41) #1",
+ * with no extension, and their text is prose, which reads best as markdown.
+ */
+const LANGUAGE_IN: Record<ReviewMode, (path: string) => string | null> = {
+	diff: detectLanguage,
+	files: detectLanguage,
+	transcript: () => 'markdown'
+};
+
+/** What a file of this kind of review is highlighted and rendered as, if anything. */
+export function languageOf(mode: ReviewMode, path: string): string | null {
+	return LANGUAGE_IN[mode](path);
 }
 
 /**
