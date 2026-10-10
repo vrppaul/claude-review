@@ -13,6 +13,7 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
+from claude_review.repositories.git_repository import FOREIGN_GIT_VARIABLES
 from tests.helpers import ReviewFactory, ReviewServers, git, http_client, one_line_file, opening_of, page_client
 
 
@@ -81,6 +82,26 @@ def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
     """The review's own page, socket and all, on a review of one file with one line in it."""
     with page_client(reviews.app(opening_of([one_line_file()]))) as page:
         yield page
+
+
+# Where git would read settings of the machine's and of whoever runs the
+# tests: nowhere, so a developer's own git does not decide what a test reads
+NO_GIT_SETTINGS_FILE = "/dev/null"
+# What git reads as yes in a variable of its environment
+GIT_YES = "1"
+
+
+@pytest.fixture(autouse=True)
+def git_as_it_comes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run every git a test runs with none of the developer's settings or environment.
+
+    Each test repository sets what it needs in its own configuration; what
+    a test means to hold the review to, it sets itself.
+    """
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", NO_GIT_SETTINGS_FILE)
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", GIT_YES)
+    for name in FOREIGN_GIT_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture(autouse=True)

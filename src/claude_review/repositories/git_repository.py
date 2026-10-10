@@ -29,6 +29,33 @@ PORCELAIN_PATH_START = 3
 # parser would drop the line and number every line after it one short
 GIT_SETTINGS = ["-c", "core.quotePath=true", "-c", "diff.suppressBlankEmpty=false"]
 
+# What in the environment would point git at another repository, index or
+# object store — what `git rev-parse --local-env-vars` lists — or rewrite the
+# diff it prints. Inherited from a git hook or the reader's shell, each would
+# redirect or reshape what the review reads, so none is passed on: a command
+# sets the ones it means.
+FOREIGN_GIT_VARIABLES = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_CONFIG",
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_CONFIG_COUNT",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_IMPLICIT_WORK_TREE",
+        "GIT_GRAFT_FILE",
+        "GIT_INDEX_FILE",
+        "GIT_NO_REPLACE_OBJECTS",
+        "GIT_REPLACE_REF_BASE",
+        "GIT_PREFIX",
+        "GIT_SHALLOW_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_DIFF_OPTS",
+        "GIT_EXTERNAL_DIFF",
+    }
+)
+
 # How many lines of context a hunk carries: git's own default, which the page
 # counts the lines hidden between hunks by. With none, git starts a side that
 # has no lines at the line before it, and every count above that hunk is one off.
@@ -37,7 +64,11 @@ CONTEXT_LINES = 3
 # How a diff is written, whatever the reader's configuration says. The parser
 # reads one format: a diff tool of the reader's own, colours, other prefixes,
 # paths relative to a subdirectory or another amount of context must not
-# stand in for it.
+# stand in for it. Nor may the reader's choices of what to show: a file is
+# shown as it is stored, never as a converter of theirs renders it, whose
+# lines would not be the file's; a copy as the new file it is, never as
+# changes to the file it was copied from; a submodule as the commit it moved
+# to, never as its log or its own files.
 DIFF_STAGED = [
     "diff",
     "--cached",
@@ -47,6 +78,9 @@ DIFF_STAGED = [
     "--src-prefix=a/",
     "--dst-prefix=b/",
     f"--unified={CONTEXT_LINES}",
+    "--find-renames",
+    "--no-textconv",
+    "--submodule=short",
 ]
 
 # Ends the options, so a revision that follows can never be read as one
@@ -189,7 +223,7 @@ class GitRepository(ReviewedRepository):
         try:
             throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
             objects = throwaway or str(self._objects)
-            environment = {**os.environ, "GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
+            environment = {"GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
             own = await _own_paths(path)
             # Whichever store is written to, the repository's own stays readable
             if own is not None:
@@ -250,7 +284,7 @@ class GitRepository(ReviewedRepository):
         listed = await _run(
             path,
             ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"],
-            {**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            {"GIT_OPTIONAL_LOCKS": "0"},
         )
         # Each entry is two status letters, a space, then the path
         return [entry[PORCELAIN_PATH_START:] for entry in listed.split("\0") if entry]
@@ -333,6 +367,8 @@ async def _run(path: Path, arguments: list[str], environment: dict[str, str] | N
 async def _execute(path: Path, arguments: list[str], environment: dict[str, str] | None) -> GitRun:
     """Run git and say how it went, leaving no process behind whatever happens.
 
+    `environment` is what the command sets in git's environment; the rest is
+    inherited, but for what would point git elsewhere or reshape its diff.
     Output is decoded as UTF-8 with anything else replaced: one file in
     another encoding costs its own odd characters, not the review.
 
@@ -347,7 +383,7 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
             cwd=path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=environment,
+            env=_git_environment(environment or {}),
         )
     except (FileNotFoundError, NotADirectoryError) as failure:
         msg = f"git operation failed: {failure}"
@@ -369,6 +405,12 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
         output=output.decode(errors="replace"),
         errors=errors.decode(errors="replace"),
     )
+
+
+def _git_environment(setting: dict[str, str]) -> dict[str, str]:
+    """The environment a git command runs in: the inherited one without what is foreign to it, and what it sets."""
+    inherited = {name: value for name, value in os.environ.items() if name not in FOREIGN_GIT_VARIABLES}
+    return inherited | setting
 
 
 async def _stop(process: asyncio.subprocess.Process) -> None:
