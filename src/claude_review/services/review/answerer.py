@@ -59,7 +59,7 @@ class Answerer:
 
     def heard(self) -> None:
         """Note that the agent called: it is there, for another lease from now."""
-        self._set_attached(True)
+        self._set_attached(attached=True)
         if self._lapse is not None:
             self._lapse.cancel()
         self._lapse = asyncio.get_running_loop().call_later(self._lease_seconds, self._lease_ran_out)
@@ -109,9 +109,9 @@ class Answerer:
     def _lease_ran_out(self) -> None:
         self._lapse = None
         if self._waits == 0:
-            self._set_attached(False)
+            self._set_attached(attached=False)
 
-    def _set_attached(self, attached: bool) -> None:
+    def _set_attached(self, *, attached: bool) -> None:
         """Say whether the agent is there, and tell the pages when that changes."""
         if attached == self._attached:
             return

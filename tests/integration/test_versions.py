@@ -8,6 +8,7 @@ which is the question a round leaves behind.
 
 import asyncio
 import time
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
@@ -79,15 +80,16 @@ async def test_a_branch_is_dated_in_the_same_unit_as_everything_else(
 
 async def test_the_review_says_how_many_files_a_base_would_show(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
     """The count is the reason to pick one base over another."""
-    (tmp_git_repo / "before.py").write_text("was here\n")
+    before, after = "before.py", "after.py"
+    (tmp_git_repo / before).write_text("was here\n")
     async with http_client(reviews.app([], root=tmp_git_repo)) as client:
         await _begin_next_round(client)
-        (tmp_git_repo / "after.py").write_text("came later\n")
+        (tmp_git_repo / after).write_text("came later\n")
         await _mark(client)
 
         by_key = {version["key"]: version for version in await _offered(client)}
 
-    assert by_key["review"]["changed"] == 2, "both files are uncommitted"
+    assert by_key["review"]["changed"] == len((before, after)), "both files are uncommitted"
     assert by_key["round:1"]["changed"] == 1, "only one of them arrived after round 1 began"
 
 
@@ -129,7 +131,7 @@ async def test_a_base_nobody_offered_is_refused(tmp_git_repo: Path, reviews: Rev
 
         asked = await client.get(DIFF_ROUTE, params={"base": base}, headers=LOCAL_HEADERS)
 
-    assert asked.status_code == 400
+    assert asked.status_code == HTTPStatus.BAD_REQUEST
 
 
 async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
@@ -189,7 +191,7 @@ async def test_a_ref_whose_name_begins_with_a_dash_is_never_a_base(
         asked = await client.get(DIFF_ROUTE, params={"base": f"ref:--output={target}"}, headers=LOCAL_HEADERS)
 
     assert [version for version in offered if version["label"].startswith("-")] == []
-    assert asked.status_code == 400
+    assert asked.status_code == HTTPStatus.BAD_REQUEST
     # Off the loop: touching the filesystem from an async test blocks it, and
     # what this asserts is precisely that nothing touched the filesystem
     assert not await asyncio.to_thread(target.exists)

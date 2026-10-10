@@ -7,16 +7,16 @@ for itself here, so nothing else asks which kind it is.
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, override
 
 import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
-from claude_review.domain.page_events import TreeMoved
-from claude_review.domain.protocols import Clock, GitError, PageChannel, RepositoryProtocol, StagedTreeProtocol
+from claude_review.domain.protocols import Clock, GitError, RepositoryProtocol, StagedTreeProtocol
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent
@@ -75,23 +75,16 @@ class ContentSource(Protocol):
         """Lines a hunk left out, so the reader can widen its context."""
         ...
 
-    async def tell_when_the_tree_moves(self, lifetime: ReviewLifetime) -> None:
-        """Tell the pages each time the tree stops matching the take on screen, until the review ends."""
+    def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
+        """How many files have moved, each time the tree stops matching the take on screen, until the review ends."""
         ...
 
 
-class RepositorySource:
+class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
 
     def __init__(
-        self,
-        opening: ReviewOpening,
-        root: Path,
-        *,
-        repository: RepositoryProtocol,
-        clock: Clock,
-        rounds: RoundTracker,
-        page: PageChannel,
+        self, opening: ReviewOpening, root: Path, *, repository: RepositoryProtocol, clock: Clock, rounds: RoundTracker
     ) -> None:
         self._root = root
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
@@ -100,14 +93,15 @@ class RepositorySource:
         self._windows = FileWindowService(repository)
         self._versions = ReviewVersions(repository, clock, root, review_base=opening.base)
         self._rounds = rounds
-        self._page = page
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
 
     @property
+    @override
     def content(self) -> ReviewContent:
         return self._content
 
+    @override
     async def open(self) -> None:
         """Take the diff the review opens on, and leave round one's mark from the same staging.
 
@@ -123,6 +117,7 @@ class RepositorySource:
             log.warning("opening_mark_refused", reason=str(refusal))
             self._content = ReviewContent(self._content.files, await self._watcher.read(self._root))
 
+    @override
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The diff against a base, from git when only git can say it.
 
@@ -143,9 +138,11 @@ class RepositorySource:
                 files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
         return DiffView(files=files, shown=shown, moved=await self._watcher.drift(self._root, content.tree))
 
+    @override
     async def offer(self) -> list[VersionOnOffer]:
         return await self._versions.offer()
 
+    @override
     async def retake(self) -> Retaken:
         """Take the diff again, under the round it was taken in.
 
@@ -177,28 +174,32 @@ class RepositorySource:
         await self._versions.mark(round_number, staged)
         return len(files)
 
+    @override
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
-    async def tell_when_the_tree_moves(self, lifetime: ReviewLifetime) -> None:
-        """Say when the tree stops matching the diff. Never act on it: the reader decides when to take it again."""
+    @override
+    async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         async for moved in self._watcher.changes(self._root, taken_at=lambda: self._content.tree, lifetime=lifetime):
-            self._page.tell(TreeMoved(moved_count=moved))
+            yield moved
 
 
-class FixedSource:
+class FixedSource(ContentSource):
     """Files or a conversation, read once: nothing to compare against, nothing to take again."""
 
     def __init__(self, opening: ReviewOpening) -> None:
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
 
     @property
+    @override
     def content(self) -> ReviewContent:
         return self._content
 
+    @override
     async def open(self) -> None:
         """Nothing to note: what was read is all there will be."""
 
+    @override
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The content as it was read; whitespace is part of it.
 
@@ -210,28 +211,34 @@ class FixedSource:
             raise NoRepositoryError(msg)
         return DiffView(files=self._content.files, shown=None, moved=0)
 
+    @override
     async def offer(self) -> list[VersionOnOffer]:
         """No bases: not a failure, only nothing to choose between."""
         return []
 
+    @override
     async def retake(self) -> Retaken:
         """Raises: NoRepositoryError, always."""
         msg = "No repository to retake the diff from"
         raise NoRepositoryError(msg)
 
+    @override
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         """Raises: NoRepositoryError, always."""
         msg = "No repository to read from"
         raise NoRepositoryError(msg)
 
-    async def tell_when_the_tree_moves(self, lifetime: ReviewLifetime) -> None:
-        """No tree to watch."""
+    @override
+    async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
+        """No tree to watch: nothing in it ever moves."""
+        for moved in ():
+            yield moved
 
 
 def content_source(
-    opening: ReviewOpening, *, repository: RepositoryProtocol, clock: Clock, rounds: RoundTracker, page: PageChannel
+    opening: ReviewOpening, *, repository: RepositoryProtocol, clock: Clock, rounds: RoundTracker
 ) -> ContentSource:
     """Where this review's content comes from: its repository, when it has one."""
     if opening.root is None:
         return FixedSource(opening)
-    return RepositorySource(opening, opening.root, repository=repository, clock=clock, rounds=rounds, page=page)
+    return RepositorySource(opening, opening.root, repository=repository, clock=clock, rounds=rounds)

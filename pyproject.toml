@@ -95,6 +95,11 @@ select = [
     "RET",      # returns that say what they return
     "SLF",      # nothing reaches into another object's private members
     "TRY",      # exceptions raised and caught as meant
+    "FBT",      # no bare True or False whose meaning only the signature knows
+    "ARG",      # every parameter used: one a protocol asks for and the method does not need is an override
+    "C90",      # no function too tangled to follow
+    "PLR0913",  # no function asking for more than five things
+    "PLR2004",  # no number in a comparison without a name
 ]
 ignore = [
     "B008",     # function call in argument defaults (common in FastAPI)
@@ -115,6 +120,14 @@ known-first-party = ["claude_review"]
 "scripts/**" = ["T20", "INP001"]
 # OpenAPI documents are JSON of any shape, and their writer says so
 "src/claude_review/presentation/api_schema.py" = ["TID251"]
+# A command takes one parameter per option, which click hands over by name
+"src/claude_review/cli/agent_commands.py" = ["PLR0913"]
+# One flat match from each page event to its push, closed by assert_never:
+# McCabe counts every case, and splitting it would hide the one place each
+# event becomes what a page reads
+"src/claude_review/presentation/broadcast.py" = ["C901"]
+# Builders take every field of what they build as an optional keyword
+"tests/helpers.py" = ["PLR0913"]
 
 [tool.typos.default.extend-words]
 # Not misspelt: pieces of words the tests type or read on purpose — a word

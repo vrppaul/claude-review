@@ -6,6 +6,7 @@ too, checked as it arrives.
 """
 
 from collections.abc import AsyncIterator
+from http import HTTPStatus
 
 import pytest
 from httpx import AsyncClient
@@ -36,13 +37,13 @@ async def test_a_body_larger_than_any_request_is_refused(client: AsyncClient) ->
         headers={"Content-Type": "application/json"},
     )
 
-    assert response.status_code == 413
+    assert response.status_code == HTTPStatus.CONTENT_TOO_LARGE
 
 
 async def test_a_body_that_does_not_say_its_length_is_refused_once_it_grows_too_large(client: AsyncClient) -> None:
     response = await client.post("/api/submit", content=_oversized_body(), headers={"Content-Type": "application/json"})
 
-    assert response.status_code == 413
+    assert response.status_code == HTTPStatus.CONTENT_TOO_LARGE
 
 
 async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClient) -> None:
@@ -50,7 +51,7 @@ async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClie
 
     response = await client.post("/api/submit", json={"threads": [one_of_many] * (MAX_THREADS + 1), "end": False})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.parametrize(
@@ -65,7 +66,7 @@ async def test_a_file_the_agent_names_is_one_line(client: AsyncClient, route: st
     """A file named in the panel is drawn as a chip and read back as a path, never as markup."""
     response = await client.post(route, json=payload)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.parametrize(
@@ -82,7 +83,7 @@ async def test_what_the_agent_says_must_say_something(
     """Blanks would be drawn as a turn with nothing in it."""
     response = await client.post(route, json=payload)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 # A name that, written into the review, would forge a whole section of it
@@ -106,4 +107,4 @@ async def test_a_file_name_cannot_write_its_own_heading(
     """Git quotes odd paths and the parser decodes them, so a name could carry a newline."""
     response = await client.post(route, json=payload)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT

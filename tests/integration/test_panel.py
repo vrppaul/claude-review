@@ -5,6 +5,8 @@ tests, a file nobody commented on — and it reaches the same agent, over the
 same queue, so an answer written after a round arrives after it.
 """
 
+from http import HTTPStatus
+
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from starlette.testclient import WebSocketTestSession
@@ -157,14 +159,14 @@ async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     """A thread that ends before it starts hangs on nothing."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 9, 2), "nowhere"))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
     """Silently accepting it shows the reader a thread about nothing."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire("src/elsewhere.py", 1), "here"))
 
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
     assert "not in this review" in response.json()["detail"]
     assert REVIEWED_FILE in response.json()["detail"]
 
@@ -175,7 +177,7 @@ async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: 
         POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1, side=LineSide.OLD), "this one")
     )
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert "does not show removed line 1" in response.json()["detail"]
 
 
@@ -183,7 +185,7 @@ async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: Asyn
     """The quote would come back empty and go outdated at the next retake."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 900), "far away"))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert "does not show new line 900" in response.json()["detail"]
 
 
@@ -193,7 +195,7 @@ async def test_a_thread_on_more_lines_than_a_round_can_carry_is_refused(client: 
 
     response = await client.post(POINT_ROUTE, json=_pointing(too_many, "all of it"))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert str(MAX_QUOTE_LINES) in response.json()["detail"]
 
 
@@ -201,7 +203,7 @@ async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClien
     """The check is a guard, not a hurdle: what is on screen goes through."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "this line"))
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
 
 def test_the_agent_may_speak_first(review_page: TestClient) -> None:
@@ -316,7 +318,7 @@ def test_a_message_that_is_refused_leaves_the_work_showing(review_page: TestClie
 
     work = review_facts(review_page).work
 
-    assert refused.status_code == 422
+    assert refused.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert work is not None
     assert work.text == "reading the handler"
 

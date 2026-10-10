@@ -5,12 +5,13 @@ import shutil
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import override
 
 import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.models import HEAD, GitRef
-from claude_review.domain.protocols import GitError
+from claude_review.domain.protocols import GitError, RepositoryProtocol, StagedTreeProtocol
 
 log = structlog.get_logger()
 
@@ -66,7 +67,7 @@ class OwnPaths(BaseModel):
     index: Path
 
 
-class StagedTree:
+class StagedTree(StagedTreeProtocol):
     """The working tree as it stands, staged whole into an index of one operation's own.
 
     Everything git is asked within one operation — the diff, the tree written
@@ -81,6 +82,7 @@ class StagedTree:
         self._environment = environment
         self._keeps_objects = keeps_objects
 
+    @override
     async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
         """The unified diff from a base to the working tree, untracked files included.
 
@@ -96,6 +98,7 @@ class StagedTree:
             arguments += [END_OF_OPTIONS, base]
         return await _run(self._path, arguments, self._environment)
 
+    @override
     async def write_tree(self) -> str:
         """Write the tree down and return its id.
 
@@ -113,6 +116,7 @@ class StagedTree:
             raise GitError(msg)
         return (await _run(self._path, ["write-tree"], self._environment)).strip()
 
+    @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         """Which paths differ between each of these bases and the working tree.
 
@@ -138,7 +142,7 @@ class StagedTree:
         return changed
 
 
-class GitRepository:
+class GitRepository(RepositoryProtocol):
     """The repository under review, asked through the git command line."""
 
     def __init__(self, *, objects: Path | None) -> None:
@@ -154,6 +158,7 @@ class GitRepository:
         """
         self._objects = objects
 
+    @override
     @contextlib.asynccontextmanager
     async def staged(self, path: Path) -> AsyncGenerator[StagedTree]:
         """Stage the whole working tree into an index of this staging's own, for one operation to read.
@@ -187,6 +192,7 @@ class GitRepository:
         finally:
             await asyncio.to_thread(_remove_staging, index, throwaway)
 
+    @override
     async def list_refs(self, path: Path) -> list[GitRef]:
         """The branches and tags worth offering as a base, most recent first.
 
@@ -221,6 +227,7 @@ class GitRepository:
                 refs.append(GitRef(name=name, at=int(at) * MILLISECONDS_PER_SECOND))
         return refs
 
+    @override
     async def changed_paths(self, path: Path) -> list[str]:
         """Every path where the working tree differs from HEAD.
 
@@ -239,6 +246,7 @@ class GitRepository:
         # Each entry is two status letters, a space, then the path
         return [entry[PORCELAIN_PATH_START:] for entry in listed.split("\0") if entry]
 
+    @override
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         """Whether the repository tracks the file at this path."""
         try:
@@ -247,6 +255,7 @@ class GitRepository:
             return False
         return run.exit_code == 0
 
+    @override
     async def top_level(self, path: Path) -> Path | None:
         """The root of the repository containing ``path``.
 

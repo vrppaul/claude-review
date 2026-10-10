@@ -53,7 +53,7 @@ review_port = click.option(
     is_flag=True,
     help="Wait on through every timeout: print only what the reader hands over, or that the review closed.",
 )
-def wait_command(client: ReviewClient, seconds: float, until_event: bool) -> None:
+def wait_command(*, client: ReviewClient, seconds: float, until_event: bool) -> None:
     """Wait for whatever the reader hands over next.
 
     Prints one JSON object and exits, so a caller can loop: a "question"
@@ -79,7 +79,7 @@ def wait_command(client: ReviewClient, seconds: float, until_event: bool) -> Non
     help="Question being answered, from the event. Omitted, the oldest one still waiting takes it.",
 )
 @click.argument("body", required=True, type=SAID)
-def reply_command(client: ReviewClient, thread: str, question: str | None, body: str) -> None:
+def reply_command(*, client: ReviewClient, thread: str, question: str | None, body: str) -> None:
     """Answer a question the reader asked about a comment thread.
 
     A thread can have several questions waiting at once, so naming the one
@@ -93,7 +93,7 @@ def reply_command(client: ReviewClient, thread: str, question: str | None, body:
 @review_port
 @click.option("--thread", type=ID, default=None, help="One thread, in full, rather than the index.")
 @click.option("--json", "as_json", is_flag=True, help="The whole thing as JSON, for a program to read.")
-def catch_up_command(client: ReviewClient, thread: str | None, as_json: bool) -> None:
+def catch_up_command(*, client: ReviewClient, thread: str | None, as_json: bool) -> None:
     """Catch up on a review already under way.
 
     `wait` hands over what happens next, never what already happened, so an
@@ -128,7 +128,7 @@ def catch_up_command(client: ReviewClient, thread: str | None, as_json: bool) ->
     help="A file worth opening at what you said. Repeatable; each becomes a chip the reader can jump by.",
 )
 @click.argument("body", required=True, type=SAID)
-def say_command(client: ReviewClient, message: str | None, files: tuple[str, ...], body: str) -> None:
+def say_command(*, client: ReviewClient, message: str | None, files: tuple[str, ...], body: str) -> None:
     """Say something in the agent panel.
 
     The panel is where the review is discussed rather than any one line of
@@ -151,6 +151,7 @@ def say_command(client: ReviewClient, message: str | None, files: tuple[str, ...
 @click.option("--done", is_flag=True, help="Take the line away: the work is finished.")
 @click.argument("text", required=False, type=WORK, default="")
 def progress_command(
+    *,
     client: ReviewClient,
     message: str | None,
     files: tuple[str, ...],
@@ -184,7 +185,7 @@ def progress_command(
 @click.command("show")
 @review_port
 @click.option("--file", "path", required=True, type=FILE, help="File to bring into view, as the diff names it.")
-def show_command(client: ReviewClient, path: str) -> None:
+def show_command(*, client: ReviewClient, path: str) -> None:
     """Take the reader to a file, and mark it for a moment when they arrive.
 
     This moves somebody else's screen, so send it only when they asked to be
@@ -212,7 +213,7 @@ def show_command(client: ReviewClient, path: str) -> None:
 )
 @click.argument("body", required=True, type=SAID)
 def point_command(
-    client: ReviewClient, path: str, lines: LineSpan, side: LineSide, severity: CommentSeverity, body: str
+    *, client: ReviewClient, path: str, lines: LineSpan, side: LineSide, severity: CommentSeverity, body: str
 ) -> None:
     """Raise a thread on a line of the review, from this side.
 
@@ -236,7 +237,7 @@ def point_command(
     default=None,
     help='How much of the context window is spent, in your own words (e.g. "53% of 1M").',
 )
-def status_command(client: ReviewClient, model: str | None, context: str | None) -> None:
+def status_command(*, client: ReviewClient, model: str | None, context: str | None) -> None:
     """Say what only this side can know, for the panel to show.
 
     The review can measure what handing it over costs, because it holds the
@@ -252,7 +253,7 @@ def status_command(client: ReviewClient, model: str | None, context: str | None)
 
 @click.command("retake")
 @review_port
-def retake_command(client: ReviewClient) -> None:
+def retake_command(*, client: ReviewClient) -> None:
     """Take the diff again, after making the changes a round asked for.
 
     The reviews on screen reload it, keeping their threads: a comment whose

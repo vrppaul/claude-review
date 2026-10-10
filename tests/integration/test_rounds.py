@@ -59,7 +59,7 @@ async def test_a_send_has_to_say_whether_it_is_the_last(client: AsyncClient) -> 
     """Guessed, it would end a review the reader meant to keep, or keep one they meant to end."""
     response = await client.post("/api/submit", json={"threads": [A_THREAD]}, headers=LOCAL_HEADERS)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert not await review_has_ended(client)
 
 
@@ -126,7 +126,7 @@ async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, r
         retaken = await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
         diff = await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)
 
-    assert retaken.status_code == 200
+    assert retaken.status_code == HTTPStatus.OK
     assert retaken.json()["file_count"] == 1
     assert [served["path"] for served in diff.json()["files"]] == ["added.py"]
 
@@ -134,7 +134,7 @@ async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, r
 async def test_a_review_without_a_repository_cannot_retake_its_diff(client: AsyncClient) -> None:
     response = await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
 
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClient) -> None:

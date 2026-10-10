@@ -20,7 +20,7 @@ comes back as any other does.
 import asyncio
 import secrets
 from collections import deque
-from typing import assert_never
+from typing import assert_never, override
 
 import structlog
 from pydantic import BaseModel, ConfigDict
@@ -38,6 +38,7 @@ from claude_review.domain.page_events import (
     TreeMoved,
     WorkReported,
 )
+from claude_review.domain.protocols import PageChannel
 from claude_review.presentation.version_words import changes_on_the_wire
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.pushes import (
@@ -89,7 +90,7 @@ class Told(BaseModel):
     said: str
 
 
-class BrowserBroadcast:
+class BrowserBroadcast(PageChannel):
     """The pages listening to the review, each with the pushes not yet sent to it, and the last pushes told."""
 
     def __init__(self, backlog: int) -> None:
@@ -102,6 +103,7 @@ class BrowserBroadcast:
         self._journal: deque[Told] = deque(maxlen=backlog * JOURNAL_DEPTH)
         self._sequence = 0
 
+    @override
     def tell(self, event: PageEvent) -> None:
         """Tell every page open now, in the words of its push, written once and numbered."""
         self._sequence += 1

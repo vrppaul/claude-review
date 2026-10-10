@@ -3,11 +3,13 @@
 import asyncio
 import tempfile
 from pathlib import Path
+from typing import override
 
 import pytest
 from httpx import URL, AsyncClient
 from structlog.typing import EventDict
 
+from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.errors import ServerStartError
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.hosting.serving import serve_review
@@ -25,15 +27,17 @@ THE_ROUND = "Rename the helper."
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
 
 
-class RecordingAnnouncer:
+class RecordingAnnouncer(ReviewAnnouncer):
     """Whoever started the review, as a test: it holds on to what it is told."""
 
     def __init__(self) -> None:
         self.address: asyncio.Future[str] = asyncio.get_running_loop().create_future()
 
+    @override
     async def listening_at(self, url: str) -> None:
         self.address.set_result(url)
 
+    @override
     def images_left_in(self, directory: Path) -> None:
         """Nothing is pasted in these reviews."""
 

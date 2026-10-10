@@ -7,6 +7,7 @@ is read back the way the reader meets it — by what it refuses next.
 
 import asyncio
 from pathlib import Path
+from typing import override
 
 import pytest
 
@@ -17,6 +18,7 @@ from claude_review.domain.exceptions import (
     ImageTooLargeError,
     UnknownImageError,
 )
+from claude_review.domain.protocols import ImageStoreProtocol
 from claude_review.services.image_service import (
     MAX_IMAGE_BYTES,
     MAX_IMAGE_MEGABYTES,
@@ -37,16 +39,18 @@ FULL = ImageQuota(image_bytes=len(PNG), review_bytes=0)
 SETTLED_SECONDS = 1
 
 
-class MemoryImageStore:
+class MemoryImageStore(ImageStoreProtocol):
     """An image store that keeps bytes in a dictionary."""
 
     def __init__(self) -> None:
         self.files: dict[str, bytes] = {}
 
+    @override
     async def write(self, name: str, content: bytes) -> Path:
         self.files[name] = content
         return STORE_ROOT / name
 
+    @override
     async def remove(self, name: str) -> None:
         self.files.pop(name, None)
 
@@ -59,6 +63,7 @@ class HeldImageStore(MemoryImageStore):
         self.writing = asyncio.Event()
         self.released = asyncio.Event()
 
+    @override
     async def write(self, name: str, content: bytes) -> Path:
         self.writing.set()
         await self.released.wait()
@@ -72,6 +77,7 @@ class InterruptedImageStore(MemoryImageStore):
         super().__init__()
         self.interrupted = False
 
+    @override
     async def write(self, name: str, content: bytes) -> Path:
         if not self.interrupted:
             self.interrupted = True
@@ -82,6 +88,7 @@ class InterruptedImageStore(MemoryImageStore):
 class StuckImageStore(MemoryImageStore):
     """A store whose files cannot be removed, the way a read-only disk refuses."""
 
+    @override
     async def remove(self, name: str) -> None:
         raise PermissionError(name)
 

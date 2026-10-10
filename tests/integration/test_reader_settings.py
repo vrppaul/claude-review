@@ -7,6 +7,7 @@ server keeps them in the reader's own files instead.
 
 import asyncio
 from contextlib import AbstractAsyncContextManager
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
@@ -93,7 +94,7 @@ async def test_a_choice_sent_as_null_is_a_choice_not_sent(reviews: ReviewFactory
         await client.put("/api/settings", json={"theme": "dark"})
         response = await client.put("/api/settings", json={"theme": None, "diff_layout": "split"})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert (response.json()["theme"], response.json()["diff_layout"]) == ("dark", "split")
 
 

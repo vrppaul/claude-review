@@ -37,6 +37,7 @@ from claude_review.domain.page_events import (
     RoundBegan,
     ThreadAnswered,
     ThreadRaised,
+    TreeMoved,
 )
 from claude_review.domain.protocols import Clock, PageChannel, RepositoryProtocol
 from claude_review.services.exit_report import exit_report
@@ -44,8 +45,8 @@ from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
 from claude_review.services.place_words import place_in_words
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
-from claude_review.services.review.answerer import Answerer
-from claude_review.services.review.browser_presence import BrowserPresence
+from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
+from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
 from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken, content_source
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
@@ -69,9 +70,6 @@ class Review:
         repository: RepositoryProtocol,
         images: ImageService,
         page: PageChannel,
-        presence: BrowserPresence,
-        answerer: Answerer,
-        lifetime: ReviewLifetime,
         clock: Clock,
     ) -> None:
         self._mode = opening.mode
@@ -79,17 +77,15 @@ class Review:
         self._opened_against = opening.base
         self._page = page
         self._images = images
-        self._presence = presence
-        self._lifetime = lifetime
+        self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)
+        self._lifetime = ReviewLifetime()
         self._rounds = RoundTracker()
-        self._answerer = answerer
-        self._inbox = AgentInbox(lifetime)
+        self._answerer = Answerer(page, clock, lease_seconds=ANSWERER_LEASE_SECONDS)
+        self._inbox = AgentInbox(self._lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
         self._handover = ThreadHandover(images)
-        self._source: ContentSource = content_source(
-            opening, repository=repository, clock=clock, rounds=self._rounds, page=page
-        )
+        self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
         self._formatter = RoundFormatter.for_mode(opening.mode)
@@ -326,9 +322,13 @@ class Review:
             self._lifetime.end(EndReason.BROWSER_CLOSED)
 
     async def tell_when_the_tree_moves(self) -> None:
-        """Watch the tree under the review once a page is there to be told, until the review ends."""
+        """Tell the pages each time the tree stops matching the diff, from the first page on, until the review ends.
+
+        Said, never acted on: the reader decides when to take the diff again.
+        """
         if await self._lifetime.before_the_end(self._presence.until_first_page()):
-            await self._source.tell_when_the_tree_moves(self._lifetime)
+            async for moved in self._source.tree_moves(self._lifetime):
+                self._page.tell(TreeMoved(moved_count=moved))
 
     def exit_report(self) -> str:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""

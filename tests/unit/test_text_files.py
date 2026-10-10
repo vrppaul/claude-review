@@ -44,9 +44,7 @@ class TestReadFiles:
 
         result = await read_text_files([tmp_path / "alpha.md", tmp_path / "beta.md"], named_from=tmp_path)
 
-        assert len(result) == 2
-        assert result[0].hunks[0].lines[0].content == "alpha"
-        assert result[1].hunks[0].lines[0].content == "beta"
+        assert [file.hunks[0].lines[0].content for file in result] == ["alpha", "beta"]
 
     async def test_empty_files_are_excluded(self, tmp_path: Path) -> None:
         """Empty files have nothing to review, so they are skipped."""
@@ -78,7 +76,7 @@ class TestReadFiles:
 
         result = await read_text_files([text_file], named_from=tmp_path)
 
-        assert len(result[0].hunks[0].lines) == 2
+        assert [line.content for line in result[0].hunks[0].lines] == ["line one", "line two"]
 
     async def test_file_without_trailing_newline(self, tmp_path: Path) -> None:
         """Files not ending with \\n are handled identically."""
@@ -87,8 +85,7 @@ class TestReadFiles:
 
         result = await read_text_files([text_file], named_from=tmp_path)
 
-        assert len(result[0].hunks[0].lines) == 2
-        assert result[0].hunks[0].lines[-1].content == "line two"
+        assert [line.content for line in result[0].hunks[0].lines] == ["line one", "line two"]
 
 
 async def test_a_file_under_the_directory_it_is_named_from_reads_relatively(tmp_path: Path) -> None:

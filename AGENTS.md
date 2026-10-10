@@ -74,9 +74,13 @@ class FileStatus(StrEnum):
     MODIFIED = auto()
     ADDED = auto()
 
-# Protocols — interfaces for infrastructure
-class GitRepositoryProtocol(Protocol):
-    async def get_raw_diff(self, path: Path) -> str: ...
+# Protocols — interfaces for infrastructure, named by whatever implements them
+class TrackedPathsProtocol(Protocol):
+    async def is_tracked(self, root: Path, relative_path: str) -> bool: ...
+
+class GitRepository(RepositoryProtocol):
+    @override
+    async def is_tracked(self, root: Path, relative_path: str) -> bool: ...
 
 # Presentation — FastAPI routes with Depends() DI
 @router.post("/submit")
@@ -100,6 +104,8 @@ async def submit_review(
 - **TODO/Changelog**: track in `TODO.md` / `CHANGELOG.md`
 - **Logging**: DEBUG for timing/perf, INFO for operations, WARNING for recoverable issues, ERROR for failures
 - **Type hints**: all function signatures, modern syntax (`str | None`, `list[X]`)
+- **Protocols**: a class written to a protocol names it as its base and marks each method it implements `@override`, so ty holds the method to the protocol where it is written — and a parameter the protocol asks for that the method does not need is not taken for an unused one
+- **Commands**: a click command takes its options keyword-only (`*`): click hands them over by name, and nothing calls a command with a bare `True`
 - **Async**: `async`/`await` for all I/O, no sync blocking calls
 - **Enums**: use `StrEnum` with `auto()` for all string enumerations
 - **Wire types**: the browser's types for what crosses the wire are generated from the server's schemas into `frontend/src/lib/types/generated/` — `http.ts` from the routes' OpenAPI, `socket.ts` from a document of the session socket's messages (`presentation/api_schema.py` writes both). Change a schema → run `pnpm api:types`; never edit the generated files by hand. `types/index.ts` names the generated schemas for the rest of the browser

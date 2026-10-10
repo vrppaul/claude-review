@@ -3,6 +3,7 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from http import HTTPStatus
 from importlib.metadata import version
 from pathlib import Path
 
@@ -73,11 +74,12 @@ async def _changed_lines(client: AsyncClient, *, ignore_whitespace: bool) -> lis
 async def test_the_diff_serves_every_file_with_its_lines(client: AsyncClient) -> None:
     response = await client.get(DIFF_ROUTE)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     [handler] = response.json()["files"]
     assert (handler["path"], handler["status"]) == ("src/handler.ts", "modified")
     [hunk] = handler["hunks"]
-    assert len(hunk["lines"]) == 5
+    [changed] = _handler_change()
+    assert [line["content"] for line in hunk["lines"]] == [line.content for line in changed.hunks[0].lines]
 
 
 async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient) -> None:
@@ -91,20 +93,16 @@ async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient)
 
 
 async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/submit",
-        json={
-            "threads": [
-                thread_on_the_wire(line_on_the_wire("src/handler.ts", 42), "Wrong null check", thread_id="comment-1"),
-                thread_on_the_wire(line_on_the_wire("src/handler.ts", 67, 70), "Add max retry", thread_id="comment-2"),
-            ],
-            "end": True,
-        },
-    )
+    threads = [
+        thread_on_the_wire(line_on_the_wire("src/handler.ts", 42), "Wrong null check", thread_id="comment-1"),
+        thread_on_the_wire(line_on_the_wire("src/handler.ts", 67, 70), "Add max retry", thread_id="comment-2"),
+    ]
 
-    assert response.status_code == 200
+    response = await client.post("/api/submit", json={"threads": threads, "end": True})
+
+    assert response.status_code == HTTPStatus.OK
     sent = response.json()
-    assert sent["comment_count"] == 2
+    assert sent["comment_count"] == len(threads)
     assert "### `src/handler.ts`:42" in sent["markdown"]
     assert "### `src/handler.ts`:67-70" in sent["markdown"]
     assert "Wrong null check" in sent["markdown"]
@@ -114,7 +112,7 @@ async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: As
 async def test_a_review_sent_with_nothing_in_it_says_nothing(client: AsyncClient) -> None:
     response = await client.post("/api/submit", json={"threads": [], "end": True})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert (response.json()["comment_count"], response.json()["markdown"]) == (0, "")
 
 
@@ -128,8 +126,8 @@ async def test_a_review_can_be_sent_only_once(client: AsyncClient) -> None:
     first = await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
     second = await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
 
-    assert first.status_code == 200
-    assert second.status_code == 409
+    assert first.status_code == HTTPStatus.OK
+    assert second.status_code == HTTPStatus.CONFLICT
 
 
 async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_end(client: AsyncClient) -> None:
@@ -156,13 +154,13 @@ async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_
 async def test_a_comment_on_no_line_is_refused(client: AsyncClient, anchor: dict[str, object]) -> None:
     response = await client.post("/api/submit", json={"threads": [{**A_NOTE, "anchor": anchor}], "end": True})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_comment_that_says_nothing_is_refused(client: AsyncClient) -> None:
     response = await client.post("/api/submit", json={"threads": [{**A_NOTE, "body": ""}], "end": True})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
@@ -171,20 +169,22 @@ async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
         "/api/submit", json={"threads": [], "body": "Wrong approach, reconsider the design.", "end": True}
     )
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["comment_count"] == 1
     assert "Wrong approach" in response.json()["markdown"]
     assert await review_has_ended(client)
 
 
 async def test_the_summary_comes_before_the_comments(client: AsyncClient) -> None:
+    threads = [{**A_NOTE, "body": "Fix this"}]
+
     response = await client.post(
-        "/api/submit",
-        json={"threads": [{**A_NOTE, "body": "Fix this"}], "body": "Generally good, one issue.", "end": True},
+        "/api/submit", json={"threads": threads, "body": "Generally good, one issue.", "end": True}
     )
 
     markdown = response.json()["markdown"]
-    assert response.json()["comment_count"] == 2
+    # The summary counts as one
+    assert response.json()["comment_count"] == len(threads) + 1
     assert markdown.index("Generally good") < markdown.index("### `x.py`:1")
 
 
@@ -208,7 +208,7 @@ async def test_a_review_of_files_tells_the_page_it_is_one(files_mode_client: Asy
     """The page draws files differently from a diff, so it is told which it has."""
     response = await files_mode_client.get(REVIEW_ROUTE)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["mode"] == "files"
 
 
@@ -224,7 +224,7 @@ async def test_a_comment_on_a_line_of_a_file_reaches_the_agent_under_that_line(
         json={"threads": [thread_on_the_wire(line_on_the_wire(file_path, 3), "Needs more detail")], "end": True},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     sent = response.json()
     assert sent["comment_count"] == 1
     assert f"### `{file_path}`:3" in sent["markdown"]
@@ -263,7 +263,7 @@ async def test_a_review_of_a_conversation_serves_its_messages_newest_first(
 ) -> None:
     response = await transcript_mode_client.get(DIFF_ROUTE)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert (await transcript_mode_client.get(REVIEW_ROUTE)).json()["mode"] == "transcript"
     newest, oldest = response.json()["files"]
     assert "assistant" in newest["path"]
@@ -285,7 +285,7 @@ async def test_a_comment_on_a_message_reaches_the_agent_with_the_message_quoted(
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     sent = response.json()
     assert sent["comment_count"] == 1
     assert "## Transcript Review" in sent["markdown"]
@@ -298,7 +298,7 @@ async def test_the_review_says_what_is_under_review(client: AsyncClient) -> None
     """The UI can name the thing being reviewed, not just list its files."""
     response = await client.get(REVIEW_ROUTE)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["title"] == REVIEW_TITLE
 
 
@@ -315,27 +315,27 @@ async def test_file_window_serves_lines_the_diff_left_out(repo_backed_client: As
     """Context around a hunk can be widened without reloading the review."""
     response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 4, "end": 6})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json() == {"start": 4, "lines": ["line 4", "line 5", "line 6"], "total": 30}
 
 
 async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: AsyncClient) -> None:
     response = await repo_backed_client.get("/api/file-window", params={"path": "../outside.txt", "start": 1, "end": 1})
 
-    assert response.status_code == 400
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: AsyncClient) -> None:
     response = await repo_backed_client.get("/api/file-window", params={"path": "src/app.py", "start": 0, "end": 3})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -> None:
     """Files and transcript modes have no tree to widen context from."""
     response = await client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
 
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 async def _committed_then_changed(repo: Path, committed: str, changed: str) -> list[DiffFile]:
@@ -361,7 +361,7 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: 
         ignored = await _changed_lines(client, ignore_whitespace=True)
 
     # Reindenting three lines buries the one that changed among six others
-    assert len(plain) == 6
+    assert plain == ["  a = 1", "  b = 2", "  c = 3", "    a = 1", "    b = 99", "    c = 3"]
     assert ignored == ["  b = 2", "    b = 99"]
 
 
@@ -417,4 +417,4 @@ async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_h
         untracked = await client.get("/api/file-window", params={"path": ".env", "start": 1, "end": 1})
 
     assert tracked.json()["lines"] == ["initial content"]
-    assert untracked.status_code == 404
+    assert untracked.status_code == HTTPStatus.NOT_FOUND

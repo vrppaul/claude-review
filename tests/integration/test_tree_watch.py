@@ -60,10 +60,11 @@ async def test_every_file_that_moved_is_counted_once(tmp_git_repo: Path) -> None
     watcher = _watcher()
     taken_at = await watcher.read(tmp_git_repo)
 
-    (tmp_git_repo / "initial.txt").write_text("one\n")
-    (tmp_git_repo / "second.txt").write_text("two\n")
+    moved = ["initial.txt", "second.txt"]
+    for name in moved:
+        (tmp_git_repo / name).write_text(f"{name} moved\n")
 
-    assert await _first(watcher, tmp_git_repo, taken_at) == 2
+    assert await _first(watcher, tmp_git_repo, taken_at) == len(moved)
 
 
 async def test_a_tree_that_has_not_moved_is_not_reported(tmp_git_repo: Path) -> None:

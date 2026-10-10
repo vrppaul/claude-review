@@ -6,10 +6,12 @@ change in one is there in the next.
 """
 
 import asyncio
+from typing import override
 
 from pydantic import BaseModel
 
 from claude_review.domain.models import DiffLayout, ReaderSettings, Theme
+from claude_review.domain.protocols import RecordStoreProtocol
 from claude_review.services.reader_record_service import ReaderRecordService
 
 
@@ -21,15 +23,17 @@ class SettingsChanged(BaseModel):
     ignore_whitespace: bool | None = None
 
 
-class KeptInMemory:
+class KeptInMemory(RecordStoreProtocol[ReaderSettings]):
     """A store that keeps its one record for as long as the test runs."""
 
     def __init__(self, record: ReaderSettings | None = None) -> None:
         self.record = record
 
+    @override
     async def read(self) -> ReaderSettings | None:
         return self.record
 
+    @override
     async def write(self, record: ReaderSettings) -> None:
         self.record = record
 
@@ -70,6 +74,7 @@ async def test_two_changes_at_once_both_stay() -> None:
 class SlowToWrite(KeptInMemory):
     """A store whose write lets everything else run first, as a disk write does."""
 
+    @override
     async def write(self, record: ReaderSettings) -> None:
         await asyncio.sleep(0)
         self.record = record

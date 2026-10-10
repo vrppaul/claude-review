@@ -4,9 +4,12 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
+from typing import override
 
 import structlog
 from pydantic import BaseModel, ValidationError
+
+from claude_review.domain.protocols import RecordStoreProtocol
 
 log = structlog.get_logger()
 
@@ -14,7 +17,7 @@ log = structlog.get_logger()
 RECORD_ENCODING = "utf-8"
 
 
-class JsonRecordStore[Record: BaseModel]:
+class JsonRecordStore[Record: BaseModel](RecordStoreProtocol[Record]):
     """Keeps one record as a JSON file, replaced whole on every write.
 
     Several reviews can be open at once, each in its own process. A write goes
@@ -26,6 +29,7 @@ class JsonRecordStore[Record: BaseModel]:
         self._path = path
         self._record_type = record_type
 
+    @override
     async def read(self) -> Record | None:
         try:
             text = await asyncio.to_thread(self._path.read_text, encoding=RECORD_ENCODING)
@@ -42,6 +46,7 @@ class JsonRecordStore[Record: BaseModel]:
             log.warning("record_unreadable", path=str(self._path), reason=str(error))
             return None
 
+    @override
     async def write(self, record: Record) -> None:
         await asyncio.to_thread(self._replace, record.model_dump_json(indent=2))
 

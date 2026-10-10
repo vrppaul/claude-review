@@ -6,6 +6,7 @@ arbitrary path the browser named.
 """
 
 from pathlib import Path
+from typing import override
 
 import pytest
 
@@ -15,15 +16,21 @@ from claude_review.domain.exceptions import (
     LineRangeError,
     PathOutsideRepositoryError,
 )
+from claude_review.domain.protocols import TrackedPathsProtocol
 from claude_review.services.file_window_service import MAX_FILE_BYTES, FileWindowService
 
+# How many lines the reviewed source file holds, and the long one
+SOURCE_LINES = 20
+LONG_FILE_LINES = 200_000
 
-class TrackedPaths:
+
+class TrackedPaths(TrackedPathsProtocol):
     """A repository that tracks the paths it is given and nothing else."""
 
     def __init__(self, tracked: set[str]) -> None:
         self._tracked = tracked
 
+    @override
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         return relative_path in self._tracked
 
@@ -36,23 +43,27 @@ def service() -> FileWindowService:
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
     (tmp_path / "src").mkdir()
-    (tmp_path / "src" / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 21)))
+    (tmp_path / "src" / "app.py").write_text(
+        "".join(f"line {line_number}\n" for line_number in range(1, SOURCE_LINES + 1))
+    )
     return tmp_path
 
 
 async def test_lines_are_read_by_their_number_in_the_file(service: FileWindowService, root: Path) -> None:
     """Lines are returned by their number in the file, counting from one."""
-    window = await service.read_window(root, "src/app.py", start=3, end=5, in_review=frozenset({"src/app.py"}))
+    first, last = 3, 5
+
+    window = await service.read_window(root, "src/app.py", start=first, end=last, in_review=frozenset({"src/app.py"}))
 
     assert window.lines == ["line 3", "line 4", "line 5"]
-    assert window.start == 3
+    assert window.start == first
 
 
 async def test_the_reader_is_told_how_long_the_file_is(service: FileWindowService, root: Path) -> None:
     """The caller needs the total to know how much is left below the last hunk."""
     window = await service.read_window(root, "src/app.py", start=1, end=2, in_review=frozenset({"src/app.py"}))
 
-    assert window.total == 20
+    assert window.total == SOURCE_LINES
 
 
 async def test_a_window_past_the_end_stops_at_the_last_line(service: FileWindowService, root: Path) -> None:
@@ -143,12 +154,12 @@ async def test_a_window_near_the_top_of_a_long_file_still_says_how_long_it_is(
 ) -> None:
     """The reader is told how far the file goes, so the gap below a hunk can say so."""
     long_file = root / "long.txt"
-    long_file.write_text("".join(f"line {line_number}\n" for line_number in range(1, 200_001)))
+    long_file.write_text("".join(f"line {line_number}\n" for line_number in range(1, LONG_FILE_LINES + 1)))
 
     window = await service.read_window(root, "long.txt", start=2, end=4, in_review=frozenset({"long.txt"}))
 
     assert window.lines == ["line 2", "line 3", "line 4"]
-    assert window.total == 200_000
+    assert window.total == LONG_FILE_LINES
 
 
 async def test_a_tracked_file_another_base_shows_can_be_widened(service: FileWindowService, root: Path) -> None:

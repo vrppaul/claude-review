@@ -59,7 +59,7 @@ def test_comments_across_files_keep_the_order_they_were_written_in() -> None:
 
     result = _formatted(threads)
 
-    assert result.comment_count == 3
+    assert result.comment_count == len(threads)
     first = result.markdown.index("### `src/a.py`:1\nFix A")
     second = result.markdown.index("### `src/b.py`:5\nFix B")
     third = result.markdown.index("### `src/a.py`:20-25\nFix A again")
@@ -89,9 +89,12 @@ def test_a_summary_alone_is_a_review() -> None:
 
 
 def test_the_summary_comes_before_the_comments() -> None:
-    result = _formatted([thread(line_anchor("x.py", 1), "Fix this line")], body="Generally good.")
+    threads = [thread(line_anchor("x.py", 1), "Fix this line")]
 
-    assert result.comment_count == 2
+    result = _formatted(threads, body="Generally good.")
+
+    # The summary counts as one
+    assert result.comment_count == len(threads) + 1
     assert result.markdown.index("Generally good") < result.markdown.index("### `x.py`:1")
 
 
@@ -134,7 +137,7 @@ def test_same_line_number_on_both_sides_stays_distinguishable() -> None:
 
     assert "### `src/a.py`:42 (removed)\nThe old one" in result.markdown
     assert "### `src/a.py`:42\nThe new one" in result.markdown
-    assert result.comment_count == 2
+    assert result.comment_count == len(threads)
 
 
 def test_a_question_is_marked_as_one() -> None:

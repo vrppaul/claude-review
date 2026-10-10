@@ -19,6 +19,11 @@ async def _said(page: Page, testid: str) -> str:
     return " ".join((await page.get_by_test_id(testid).text_content() or "").split())
 
 
+# What the review holds once round 1 is answered, and what of it changed after round 1 began
+FILES_IN_THE_REVIEW = ("read.py", "untouched.py")
+FILES_SINCE_ROUND_ONE = ("read.py",)
+
+
 @pytest.fixture
 def picker_repo(tmp_path: Path) -> Path:
     """A repository with work in it, some of it done after round 1."""
@@ -64,7 +69,7 @@ async def test_a_round_can_be_read_against_and_left_again(review: RunningReview,
     """The whole point: what the agent did about round 1, and the way back."""
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
-    assert await page.locator('[data-testid="file-item"]').count() == 2
+    assert await page.locator('[data-testid="file-item"]').count() == len(FILES_IN_THE_REVIEW)
 
     await page.click('[data-testid="base-picker"]')
     await page.wait_for_selector('[data-testid="base-list"]')
@@ -72,12 +77,12 @@ async def test_a_round_can_be_read_against_and_left_again(review: RunningReview,
 
     await page.wait_for_selector('[data-testid="narrowed-to"]')
     assert "changes since round 1" in await _said(page, "narrowed-to")
-    assert await page.locator('[data-testid="file-item"]').count() == 1
+    assert await page.locator('[data-testid="file-item"]').count() == len(FILES_SINCE_ROUND_ONE)
 
     await page.click('[data-testid="show-everything"]')
 
     await page.wait_for_selector('[data-testid="narrowed-to"]', state="detached")
-    assert await page.locator('[data-testid="file-item"]').count() == 2
+    assert await page.locator('[data-testid="file-item"]').count() == len(FILES_IN_THE_REVIEW)
 
 
 async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(review: RunningReview, page: Page) -> None:

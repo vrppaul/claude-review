@@ -58,7 +58,7 @@ async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
 
 async def _upload(client: AsyncClient, content: bytes) -> str:
     response = await client.post("/api/images", content=content, headers={"Content-Type": "image/png"})
-    assert response.status_code == 200, response.text
+    assert response.status_code == HTTPStatus.OK, response.text
     return response.json()["image_id"]
 
 
@@ -73,7 +73,7 @@ async def test_an_image_is_kept_and_served_back(client: AsyncClient) -> None:
 
     served = await client.get(f"/api/images/{image_id}")
 
-    assert served.status_code == 200
+    assert served.status_code == HTTPStatus.OK
     assert served.content == PNG
     assert served.headers["content-type"] == "image/png"
 
@@ -81,7 +81,7 @@ async def test_an_image_is_kept_and_served_back(client: AsyncClient) -> None:
 async def test_what_is_not_an_image_is_refused(client: AsyncClient) -> None:
     response = await client.post("/api/images", content=b"<svg onload=alert(1)>")
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.parametrize("content", [JPEG, GIF, WEBP], ids=["jpeg", "gif", "webp"])
@@ -92,7 +92,7 @@ async def test_every_format_a_browser_pastes_is_kept(client: AsyncClient, conten
 
 
 async def test_an_empty_upload_is_refused(client: AsyncClient) -> None:
-    assert (await client.post("/api/images", content=b"")).status_code == 422
+    assert (await client.post("/api/images", content=b"")).status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_review_full_of_images_takes_no_more(client: AsyncClient) -> None:
@@ -102,7 +102,7 @@ async def test_a_review_full_of_images_takes_no_more(client: AsyncClient) -> Non
 
     response = await client.post("/api/images", content=PNG)
 
-    assert response.status_code == 413
+    assert response.status_code == HTTPStatus.CONTENT_TOO_LARGE
 
 
 async def test_a_message_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
@@ -113,7 +113,7 @@ async def test_a_message_carries_no_more_images_than_it_may(client: AsyncClient)
         "/api/message", json={"message_id": "panel-1", "body": "These", "images": [image_id] * ONE_TOO_MANY}
     )
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_question_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
@@ -122,7 +122,7 @@ async def test_a_question_carries_no_more_images_than_it_may(client: AsyncClient
 
     response = await client.post("/api/ask", json={"question_id": FIRST_THREAD_ID, "thread": crowded})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_thread_in_a_round_carries_no_more_images_than_it_may(client: AsyncClient) -> None:
@@ -131,7 +131,7 @@ async def test_a_thread_in_a_round_carries_no_more_images_than_it_may(client: As
 
     response = await client.post("/api/submit", json={"threads": [crowded], "end": True})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_an_image_too_large_is_refused_before_it_is_written(
@@ -139,7 +139,7 @@ async def test_an_image_too_large_is_refused_before_it_is_written(
 ) -> None:
     response = await client.post("/api/images", content=PNG + b"\x00" * MAX_IMAGE_BYTES)
 
-    assert response.status_code == 413
+    assert response.status_code == HTTPStatus.CONTENT_TOO_LARGE
     assert await _files_in(workspace.images) == []
 
 
@@ -178,7 +178,7 @@ async def test_an_image_can_be_the_whole_message(client: AsyncClient) -> None:
 async def test_a_message_with_neither_words_nor_images_is_refused(client: AsyncClient) -> None:
     response = await client.post("/api/message", json={"message_id": "panel-1", "body": "  "})
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_message_naming_an_image_never_kept_is_refused(client: AsyncClient) -> None:
@@ -186,12 +186,12 @@ async def test_a_message_naming_an_image_never_kept_is_refused(client: AsyncClie
 
     response = await client.post("/api/message", json=message)
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_an_image_never_kept_is_not_there(client: AsyncClient) -> None:
-    assert (await client.get(f"/api/images/{NEVER_KEPT}")).status_code == 404
-    assert (await client.delete(f"/api/images/{NEVER_KEPT}")).status_code == 404
+    assert (await client.get(f"/api/images/{NEVER_KEPT}")).status_code == HTTPStatus.NOT_FOUND
+    assert (await client.delete(f"/api/images/{NEVER_KEPT}")).status_code == HTTPStatus.NOT_FOUND
 
 
 async def test_a_refusal_says_why(client: AsyncClient) -> None:
@@ -229,8 +229,8 @@ async def test_an_image_already_sent_stays(client: AsyncClient) -> None:
 
     response = await client.delete(f"/api/images/{image_id}")
 
-    assert response.status_code == 409
-    assert (await client.get(f"/api/images/{image_id}")).status_code == 200
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert (await client.get(f"/api/images/{image_id}")).status_code == HTTPStatus.OK
 
 
 async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
@@ -256,7 +256,7 @@ async def test_an_image_lost_from_a_thread_does_not_hold_up_the_round(client: As
     """A thread outlives a restart in the reader's draft; its screenshots do not."""
     response = await client.post("/api/submit", json={"threads": [{**A_THREAD, "images": [NEVER_KEPT]}], "end": True})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert NEVER_KEPT not in response.json()["markdown"]
 
 
@@ -282,4 +282,4 @@ async def test_a_question_asked_in_a_reply_hands_the_agent_the_images_of_that_re
     [path] = event["question"]["images"]
     assert Path(path).name == image_id
     # Asked, so handed over: the agent may open it at any time from now on
-    assert (await client.delete(f"/api/images/{image_id}")).status_code == 409
+    assert (await client.delete(f"/api/images/{image_id}")).status_code == HTTPStatus.CONFLICT

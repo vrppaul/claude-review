@@ -58,6 +58,11 @@ def _turn_texts(turns: list[DiffFile]) -> list[list[str]]:
     return [[line.content for hunk in turn.hunks for line in hunk.lines] for turn in turns]
 
 
+def _first_lines(turns: list[DiffFile]) -> list[str]:
+    """What each turn says first, newest turn first."""
+    return [turn.hunks[0].lines[0].content for turn in turns]
+
+
 def _names_by_first_line(turns: list[DiffFile]) -> dict[str, str]:
     """The name each turn is reviewed under, found by the first line it says."""
     return {turn.hunks[0].lines[0].content: turn.path for turn in turns}
@@ -87,9 +92,8 @@ class TestRead:
         )
 
         result = await read_transcript(conversation)
-        contents = [message.hunks[0].lines[0].content for message in result]
 
-        assert contents == ["second question", "first answer", "first question"]
+        assert _first_lines(result) == ["second question", "first answer", "first question"]
 
     async def test_consecutive_same_role_merged(self, tmp_path: Path) -> None:
         """Consecutive text entries from same role merge into one turn."""
@@ -104,7 +108,7 @@ class TestRead:
 
         result = await read_transcript(conversation)
 
-        assert len(result) == 2
+        assert _first_lines(result) == ["Here is part one", "do something"]
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "part one" in content
         assert "part two" in content
@@ -121,7 +125,7 @@ class TestRead:
         )
 
         result = await read_transcript(conversation)
-        assert len(result) == 2
+        assert _first_lines(result) == ["Here is my answer", "question"]
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "my answer" in content
         assert "think" not in content
@@ -141,11 +145,7 @@ class TestRead:
 
         result = await read_transcript(conversation)
 
-        assert len(result) == 3
-        # Newest first
-        assert result[0].hunks[0].lines[0].content == "the answer is 42"
-        assert result[1].hunks[0].lines[0].content == "let me check"
-        assert result[2].hunks[0].lines[0].content == "question"
+        assert _first_lines(result) == ["the answer is 42", "let me check", "question"]
 
     async def test_system_command_messages_excluded(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
@@ -160,7 +160,7 @@ class TestRead:
 
         result = await read_transcript(conversation)
 
-        assert len(result) == 2
+        assert _first_lines(result) == ["real answer", "real question"]
         user_content = "\n".join(line.content for line in result[1].hunks[0].lines)
         assert "real question" in user_content
         assert "command" not in user_content
@@ -177,7 +177,7 @@ class TestRead:
         )
 
         result = await read_transcript(conversation)
-        assert len(result) == 2
+        assert _first_lines(result) == ["world", "hello"]
 
     async def test_content_preserved_line_by_line(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_user("line one\nline two\nline three")])
@@ -311,4 +311,4 @@ class TestLabels:
 
         paths = [turn.path for turn in await read_transcript(transcript)]
 
-        assert len(set(paths)) == 3
+        assert len(set(paths)) == len(paths)

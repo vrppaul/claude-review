@@ -165,20 +165,20 @@ async def test_an_id_that_could_not_be_read_back_is_refused(client: AsyncClient)
     """A thread is read back at a path of its own, where a slash would name another route."""
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "thread_id": "a/b"}, question_id="a/b"))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_question_naming_nothing_in_its_thread_is_refused(client: AsyncClient) -> None:
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER]}, question_id="turn-9"))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_question_cannot_ask_what_the_agent_said(client: AsyncClient) -> None:
     """A question is the reader's; naming the agent's own answer asks nothing."""
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER]}, question_id=ANSWER_ID))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_questions_are_handed_out_in_the_order_they_were_asked(
@@ -196,7 +196,7 @@ async def test_questions_are_handed_out_in_the_order_they_were_asked(
 async def test_a_question_needs_something_asked(client: AsyncClient) -> None:
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "body": ""}))
 
-    assert response.status_code == 422
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> None:

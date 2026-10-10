@@ -166,11 +166,12 @@ def test_quoting_a_removed_line_the_diff_does_not_show_says_removed() -> None:
 
 def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:
     """A closing brace stands everywhere; the one that moved least is the one meant."""
-    files = _braces_at((3, 10), line_count=11)
+    far, near = 3, 10
+    files = _braces_at((far, near), line_count=near + 1)
 
-    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 9, quote=[CLOSING_BRACE]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, near - 1, quote=[CLOSING_BRACE]))
 
-    assert followed.start_line == 10
+    assert followed.start_line == near
 
 
 def test_a_range_is_followed_only_where_its_lines_stand_together() -> None:
@@ -208,11 +209,13 @@ def test_a_range_with_one_line_rewritten_is_outdated() -> None:
 
 def test_a_quote_as_near_to_two_places_follows_the_earlier() -> None:
     """Nothing tells the two apart, so the choice is at least the same every time."""
-    files = _braces_at((3, 7), line_count=9)
+    earlier, later = 3, 7
+    files = _braces_at((earlier, later), line_count=later + 2)
+    halfway = (earlier + later) // 2
 
-    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, 5, quote=[CLOSING_BRACE]))
+    followed = AnchorService.of_diff(files).follow(line_anchor(FILE, halfway, quote=[CLOSING_BRACE]))
 
-    assert followed.start_line == 3
+    assert followed.start_line == earlier
 
 
 def _file_of(contents: list[str]) -> list[DiffFile]:

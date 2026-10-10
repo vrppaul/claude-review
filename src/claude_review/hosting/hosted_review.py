@@ -13,10 +13,7 @@ from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecords, ReaderRecordService
-from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
-from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
 from claude_review.services.review.review import Review
-from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review_opening import ReviewOpening
 
 
@@ -44,9 +41,6 @@ def host_review(
         repository=GitRepository(objects=workspace.objects),
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
         page=broadcast,
-        presence=BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS),
-        answerer=Answerer(broadcast, clock, lease_seconds=ANSWERER_LEASE_SECONDS),
-        lifetime=ReviewLifetime(),
         clock=clock,
     )
     return HostedReview(review=review, app=create_app(review, broadcast, _reader_records(reader_files)))

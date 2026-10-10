@@ -6,7 +6,7 @@ per kind answers them, and the rest of the review asks this service instead
 of looking inside an anchor.
 """
 
-from typing import Protocol, Self, assert_never
+from typing import Protocol, Self, assert_never, override
 
 from pydantic import BaseModel
 
@@ -45,7 +45,7 @@ class AnchorHandler[Kind: AnchorBase](Protocol):
         ...
 
 
-class LineAnchorHandler:
+class LineAnchorHandler(AnchorHandler[LineAnchor]):
     """Line anchors, read against the review's own diff."""
 
     def __init__(self, diff_files: list[DiffFile]) -> None:
@@ -53,6 +53,7 @@ class LineAnchorHandler:
         # Each side of each file, read off the diff once however many anchors ask
         self._side_lines: dict[LineSide, dict[str, list[SideLine]]] = {side: {} for side in LineSide}
 
+    @override
     def quote(self, anchor: LineAnchor) -> LineAnchor:
         """The anchor with the lines it names read off the diff.
 
@@ -84,6 +85,7 @@ class LineAnchorHandler:
 
         return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
 
+    @override
     def excerpt(self, anchor: LineAnchor) -> list[str]:
         """The anchor's lines and `EXCERPT_REACH` more either side, from the side of the file it is on.
 
@@ -96,6 +98,7 @@ class LineAnchorHandler:
         around = range(anchor.start_line - EXCERPT_REACH, anchor.end_line + EXCERPT_REACH + 1)
         return [line.content for line in self._lines_of(shown, anchor.side) if line.number in around]
 
+    @override
     def follow(self, anchor: LineAnchor) -> LineAnchor:
         """Where the anchor's lines are in the diff as it now stands.
 

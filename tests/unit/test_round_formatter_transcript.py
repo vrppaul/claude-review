@@ -87,7 +87,8 @@ def test_the_summary_comes_before_the_comments() -> None:
 
     result = _formatted(threads, "General feedback here.", files)
 
-    assert result.comment_count == 2
+    # The summary counts as one
+    assert result.comment_count == len(threads) + 1
     body_pos = result.markdown.index("General feedback here.")
     inline_pos = result.markdown.index("Inline note")
     assert body_pos < inline_pos
@@ -128,7 +129,7 @@ def test_each_comment_quotes_its_own_message() -> None:
     assert "Wrong approach" in result.markdown
     assert "> def authenticate(token):" in result.markdown
     assert "Don't use JWT" in result.markdown
-    assert result.comment_count == 2
+    assert result.comment_count == len(threads)
 
 
 def test_a_conversation_is_quoted_not_numbered() -> None:

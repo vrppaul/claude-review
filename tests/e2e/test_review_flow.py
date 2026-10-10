@@ -23,6 +23,10 @@ AGENT_WAIT_SECONDS = 15
 BRIEF_AGENT_WAIT_SECONDS = 3
 
 RAISED_BODY = "I kept the old name; renaming it broke two callers."
+# The files the e2e repository's uncommitted changes touch
+CHANGED_FILES = ("main.py", "new_file.ts")
+# The turns of the conversation the transcript is written with: a question, and its answer
+TRANSCRIPT_TURNS = 2
 
 
 def _section(page: Page, path_suffix: str) -> Locator:
@@ -177,7 +181,7 @@ async def test_comments_on_several_files_are_each_filed_under_their_own(diff_rev
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    assert len(await page.get_by_test_id("file-item").all()) >= 2
+    assert len(await page.get_by_test_id("file-item").all()) == len(CHANGED_FILES)
 
     # Both files are already on screen, so neither comment needs navigation
     await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Comment on main")
@@ -285,16 +289,18 @@ async def files_review(text_files: list[Path], servers: ReviewServers, tmp_path:
     return await servers.start(await read_text_files(text_files, named_from=tmp_path), mode=ReviewMode.FILES)
 
 
-async def test_files_mode_sidebar_shows_files_without_diff_decorations(files_review: RunningReview, page: Page) -> None:
+async def test_files_mode_sidebar_shows_files_without_diff_decorations(
+    files_review: RunningReview, text_files: list[Path], page: Page
+) -> None:
     """Sidebar shows plain file list — no status badges, no +/- stats."""
     await page.goto(files_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
     heading = await page.get_by_test_id("sidebar-heading").text_content()
-    assert heading == "2 files"
+    assert heading == f"{len(text_files)} files"
 
     file_buttons = await page.get_by_test_id("file-item").all()
-    assert len(file_buttons) == 2
+    assert len(file_buttons) == len(text_files)
 
 
 async def test_a_comment_on_a_file_reaches_the_agent(files_review: RunningReview, page: Page) -> None:
@@ -311,7 +317,9 @@ async def test_a_comment_on_a_file_reaches_the_agent(files_review: RunningReview
     assert "Plan needs more detail" in sent
 
 
-async def test_comments_on_several_files_all_reach_the_agent(files_review: RunningReview, page: Page) -> None:
+async def test_comments_on_several_files_all_reach_the_agent(
+    files_review: RunningReview, text_files: list[Path], page: Page
+) -> None:
     """Comments on different files all appear in the submission output."""
     await page.goto(files_review.url)
     await page.get_by_test_id("sidebar").wait_for()
@@ -320,7 +328,7 @@ async def test_comments_on_several_files_all_reach_the_agent(files_review: Runni
     await _click_line_and_comment(page, line_cell, "Comment on plan")
 
     file_buttons = await page.get_by_test_id("file-item").all()
-    assert len(file_buttons) >= 2
+    assert len(file_buttons) == len(text_files)
     await file_buttons[1].click()
     await page.get_by_test_id("line-gutter").first.wait_for()
 
@@ -481,10 +489,10 @@ async def test_transcript_mode_sidebar_shows_messages(transcript_review: Running
     await page.get_by_test_id("sidebar").wait_for()
 
     heading = await page.get_by_test_id("sidebar-heading").text_content()
-    assert heading == "2 messages"
+    assert heading == f"{TRANSCRIPT_TURNS} messages"
 
     file_buttons = await page.get_by_test_id("file-item").all()
-    assert len(file_buttons) == 2
+    assert len(file_buttons) == TRANSCRIPT_TURNS
 
 
 async def test_a_comment_on_a_message_reaches_the_agent(transcript_review: RunningReview, page: Page) -> None:
@@ -587,7 +595,7 @@ async def test_scrolling_to_a_file_from_the_sidebar_shows_its_lines(diff_review:
     await items[-1].click()
 
     visible_sections = page.get_by_test_id("file-section")
-    assert await visible_sections.count() >= 2
+    assert await visible_sections.count() == len(CHANGED_FILES)
     await page.get_by_test_id("raw-view").last.wait_for()
 
 

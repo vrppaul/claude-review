@@ -5,6 +5,8 @@ nothing. Whatever the review tells it must back up into that page's own
 bounded backlog and get it let go, not pile up in the server's memory.
 """
 
+from http import HTTPStatus
+
 from httpx import AsyncClient
 from structlog.typing import EventDict
 
@@ -39,4 +41,4 @@ async def test_a_page_that_stops_reading_is_let_go(servers: ReviewServers, logge
         still_there = await agent.get(CATCH_UP_ROUTE)
 
     assert "page_fell_behind" in [entry["event"] for entry in logged]
-    assert still_there.status_code == 200, "a page that stopped reading must not stop the review"
+    assert still_there.status_code == HTTPStatus.OK, "a page that stopped reading must not stop the review"

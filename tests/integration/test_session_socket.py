@@ -42,6 +42,8 @@ SHOWN = ShowPush(file=REVIEWED_FILE)
 ANSWER = "It moved to config"
 # A run of the review other than the one serving
 ANOTHER_RUN = "another-run"
+# The round a page had reached before its server restarted
+ROUND_THE_PAGE_KEPT = 4
 
 
 def _coming_back(welcome: Welcome) -> str:
@@ -95,29 +97,29 @@ def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClie
 def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) -> None:
     """A restarted server comes back at round one; the browser knows better."""
     with open_session(review_page) as socket:
-        socket.send_json({"round": 4})
-        until_the_review_is_on_round(review_page, 4)
+        socket.send_json({"round": ROUND_THE_PAGE_KEPT})
+        until_the_review_is_on_round(review_page, ROUND_THE_PAGE_KEPT)
 
-    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == 4
+    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == ROUND_THE_PAGE_KEPT
 
 
 def test_the_next_round_after_a_restart_carries_the_number_the_browser_kept(review_page: TestClient) -> None:
     """Numbered from the browser's count, not the restarted server's, and the count moves on."""
     with open_session(review_page) as socket:
-        socket.send_json({"round": 4})
-        until_the_review_is_on_round(review_page, 4)
+        socket.send_json({"round": ROUND_THE_PAGE_KEPT})
+        until_the_review_is_on_round(review_page, ROUND_THE_PAGE_KEPT)
 
         sent = review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False}).json()
 
-        assert sent["markdown"].startswith("## Code Review Comments — round 4")
-        assert next_push(socket, RoundPush) == RoundPush(number=5)
+        assert sent["markdown"].startswith(f"## Code Review Comments — round {ROUND_THE_PAGE_KEPT}")
+        assert next_push(socket, RoundPush) == RoundPush(number=ROUND_THE_PAGE_KEPT + 1)
 
 
 def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestClient) -> None:
     """One reader starting at round one must not undo the rounds already sent."""
     with open_session(review_page) as reading:
-        reading.send_json({"round": 3})
-        until_the_review_is_on_round(review_page, 3)
+        reading.send_json({"round": ROUND_THE_PAGE_KEPT})
+        until_the_review_is_on_round(review_page, ROUND_THE_PAGE_KEPT)
 
     with open_session(review_page) as fresh:
         fresh.send_json({"round": 1})
@@ -125,7 +127,7 @@ def test_a_browser_opened_fresh_does_not_drag_the_review_back(review_page: TestC
         fresh.send_json({"threads": [A_THREAD]})
         until_the_review_holds_threads(review_page, 1)
 
-    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == 3
+    assert review_page.get(CATCH_UP_ROUTE).json()["round"] == ROUND_THE_PAGE_KEPT
 
 
 def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None:
@@ -179,7 +181,7 @@ def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestCl
     read = review_page.get(thread_route(FIRST_THREAD_ID)).json()
 
     assert [Path(path).name for path in read["images"]] == [image_id]
-    assert review_page.delete(f"/api/images/{image_id}").status_code == 409
+    assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.CONFLICT
 
 
 def test_an_agent_reading_the_index_is_handed_nothing(review_page: TestClient) -> None:
@@ -199,7 +201,7 @@ def test_a_thread_the_review_does_not_hold_is_not_found(review_page: TestClient)
     """An empty answer would read as a thread with nothing in it."""
     response = review_page.get(thread_route("comment-404"))
 
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_a_thread_the_server_cannot_read_costs_only_itself(review_page: TestClient) -> None:

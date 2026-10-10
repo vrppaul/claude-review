@@ -10,8 +10,10 @@ offered depends on the marks alone.
 import contextlib
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import override
 
 from claude_review.domain.models import ChangedSinceRound, GitRef, RoundKey, VersionOnOffer
+from claude_review.domain.protocols import GitRepositoryProtocol, StagedTreeProtocol
 from claude_review.services.review.review_versions import ReviewVersions
 from tests.helpers import FixedClock
 
@@ -22,23 +24,26 @@ MARKED_AT = 1_791_000_000_000
 MOVED_SINCE = "moved-since-{base}.py"
 
 
-class TreeThatMoves:
+class TreeThatMoves(StagedTreeProtocol):
     """A staged tree that is a new one each time it is written down, one file away from any base, named for it."""
 
     def __init__(self, repository: RepositoryThatMoves) -> None:
         self._repository = repository
 
+    @override
     async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
         return ""
 
+    @override
     async def write_tree(self) -> str:
         return self._repository.next_tree()
 
+    @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         return {base: [MOVED_SINCE.format(base=base)] for base in bases}
 
 
-class RepositoryThatMoves:
+class RepositoryThatMoves(GitRepositoryProtocol):
     """A repository whose working tree moves between any two stagings."""
 
     def __init__(self) -> None:
@@ -48,16 +53,20 @@ class RepositoryThatMoves:
         self._written += 1
         return f"tree-{self._written}"
 
+    @override
     @contextlib.asynccontextmanager
     async def staged(self, path: Path) -> AsyncIterator[TreeThatMoves]:
         yield TreeThatMoves(self)
 
+    @override
     async def list_refs(self, path: Path) -> list[GitRef]:
         return []
 
+    @override
     async def top_level(self, path: Path) -> Path | None:
         return path
 
+    @override
     async def changed_paths(self, path: Path) -> list[str]:
         return []
 

@@ -70,6 +70,7 @@ async def get_the_review(
 
 @router.get("/diff")
 async def get_diff(
+    *,
     ignore_whitespace: bool = Query(default=False),
     base: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
     review: Review = Depends(get_review),

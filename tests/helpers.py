@@ -14,6 +14,7 @@ import threading
 import time
 from collections.abc import AsyncGenerator, Iterator, Mapping
 from pathlib import Path
+from typing import override
 from urllib.parse import urlencode
 
 from anyio import EndOfStream
@@ -247,12 +248,13 @@ def thread_on_the_wire(
     }
 
 
-class FixedClock:
+class FixedClock(Clock):
     """A clock that always says the same moment, so a test can say when things happened."""
 
     def __init__(self, moment: EpochMillis) -> None:
         self._moment = moment
 
+    @override
     def now(self) -> EpochMillis:
         return self._moment
 

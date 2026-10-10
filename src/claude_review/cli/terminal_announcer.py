@@ -3,9 +3,12 @@
 import asyncio
 import webbrowser
 from pathlib import Path
+from typing import override
 
 import click
 import structlog
+
+from claude_review.hosting.announcer import ReviewAnnouncer
 
 log = structlog.get_logger()
 
@@ -14,12 +17,13 @@ log = structlog.get_logger()
 READY_ANNOUNCEMENT = "Review ready at "
 
 
-class TerminalAnnouncer:
+class TerminalAnnouncer(ReviewAnnouncer):
     """Says on stderr where the review is and what it left behind, and opens the review if asked."""
 
     def __init__(self, *, open_browser: bool) -> None:
         self._open_browser = open_browser
 
+    @override
     async def listening_at(self, url: str) -> None:
         """Say where the review is, and open it if asked.
 
@@ -32,6 +36,7 @@ class TerminalAnnouncer:
         if self._open_browser:
             await asyncio.to_thread(_open_browser, url)
 
+    @override
     def images_left_in(self, directory: Path) -> None:
         click.echo(
             f"Images pasted in this review stay in {directory} until the system clears its temporary files.", err=True

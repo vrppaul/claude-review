@@ -46,9 +46,11 @@ class ReviewCommands(click.Group):
     before anything is called.
     """
 
+    @override
     def list_commands(self, ctx: click.Context) -> list[str]:
         return sorted(COMMAND_MODULES)
 
+    @override
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         module = COMMAND_MODULES.get(cmd_name)
         return None if module is None else importlib.import_module(module).COMMANDS[cmd_name]
@@ -64,7 +66,7 @@ class ReviewCommands(click.Group):
 @click.group(cls=ReviewCommands)
 @click.version_option(package_name="claude-review")
 @click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
-def main(verbose: bool) -> None:
+def main(*, verbose: bool) -> None:
     """Browser-based code review tool for Claude Code."""
     _configure_logging(verbose=verbose)
 

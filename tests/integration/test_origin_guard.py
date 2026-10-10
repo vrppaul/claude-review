@@ -6,6 +6,8 @@ that domain at 127.0.0.1 and the browser will then treat this server as
 same-origin; and the same-origin policy never applies to WebSockets at all.
 """
 
+from http import HTTPStatus
+
 import pytest
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
@@ -31,24 +33,24 @@ LOCALHOST_PAGE_HEADERS = {"Origin": "http://localhost:8000", "Host": "localhost:
 
 
 async def test_the_review_answers_its_own_page(client: AsyncClient) -> None:
-    assert (await client.get(DIFF_ROUTE)).status_code == 200
+    assert (await client.get(DIFF_ROUTE)).status_code == HTTPStatus.OK
 
 
 async def test_a_rebound_domain_is_refused(client: AsyncClient) -> None:
     """The name the page asked for is in the Host header, and it is not ours."""
     response = await client.get(DIFF_ROUTE, headers={"Host": "attacker.example"})
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_localhost_is_the_same_machine(client: AsyncClient) -> None:
-    assert (await client.get(DIFF_ROUTE, headers={"Host": "localhost:8000"})).status_code == 200
+    assert (await client.get(DIFF_ROUTE, headers={"Host": "localhost:8000"})).status_code == HTTPStatus.OK
 
 
 async def test_a_page_on_another_site_cannot_read_the_diff(client: AsyncClient) -> None:
     response = await client.get(DIFF_ROUTE, headers={"Origin": "https://attacker.example"})
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_a_page_on_another_site_cannot_end_the_review(client: AsyncClient) -> None:
@@ -58,46 +60,46 @@ async def test_a_page_on_another_site_cannot_end_the_review(client: AsyncClient)
         headers={"Origin": "https://attacker.example"},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_the_reviews_own_page_is_allowed(client: AsyncClient) -> None:
     response = await client.get(DIFF_ROUTE, headers={"Origin": LOCAL_ORIGIN})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
 
 async def test_a_page_on_another_port_of_this_machine_cannot_read_the_diff(client: AsyncClient) -> None:
     """Loopback is not one page: any local server's page is a different origin."""
     response = await client.get(DIFF_ROUTE, headers=NEIGHBOUR_HEADERS)
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_a_page_on_another_port_of_this_machine_cannot_end_the_review(client: AsyncClient) -> None:
     response = await client.post("/api/end", headers=NEIGHBOUR_HEADERS)
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_a_page_without_an_origin_of_its_own_is_refused(client: AsyncClient) -> None:
     """A sandboxed frame or a file page says "null"; it is nobody's page."""
     response = await client.get(DIFF_ROUTE, headers={"Origin": "null"})
 
-    assert response.status_code == 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_the_reviews_own_page_over_ipv6_loopback_is_allowed(client: AsyncClient) -> None:
     response = await client.get(DIFF_ROUTE, headers={"Origin": "http://[::1]:8000", "Host": "[::1]:8000"})
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
 
 async def test_a_command_line_client_has_no_origin_and_is_allowed(client: AsyncClient) -> None:
     """`claude-review wait` is not a browser and sends no Origin."""
     response = await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
 
 def test_a_page_on_another_site_cannot_open_the_session_socket(review_page: TestClient) -> None:

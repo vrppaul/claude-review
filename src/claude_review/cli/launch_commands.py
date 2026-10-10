@@ -47,7 +47,7 @@ no_open_option = click.option("--no-open", is_flag=True, help="Don't open the br
 )
 @port_option
 @no_open_option
-def diff_command(location: Path, base: str | None, port: int | None, no_open: bool) -> None:
+def diff_command(*, location: Path, base: str | None, port: int | None, no_open: bool) -> None:
     """Review git changes.
 
     LOCATION is any directory in the repository, the current one by default:
@@ -60,7 +60,7 @@ def diff_command(location: Path, base: str | None, port: int | None, no_open: bo
 @click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path))
 @port_option
 @no_open_option
-def files_command(paths: tuple[Path, ...], port: int | None, no_open: bool) -> None:
+def files_command(*, paths: tuple[Path, ...], port: int | None, no_open: bool) -> None:
     """Review text files — plans, docs, configs, source code."""
     # Named for the reader as they named them: from where they ran the command
     _launch(open_files(list(paths), named_from=Path.cwd()), port=port, no_open=no_open)
@@ -70,7 +70,7 @@ def files_command(paths: tuple[Path, ...], port: int | None, no_open: bool) -> N
 @click.argument("path", required=True, type=click.Path(exists=True, path_type=Path))
 @port_option
 @no_open_option
-def transcript_command(path: Path, port: int | None, no_open: bool) -> None:
+def transcript_command(*, path: Path, port: int | None, no_open: bool) -> None:
     """Review a conversation transcript JSONL file."""
     _launch(open_transcript(path), port=port, no_open=no_open)
 
