@@ -763,9 +763,15 @@ export interface components {
         DiffHunk: {
             /** Header */
             header: string;
-            /** Old Start */
+            /**
+             * Old Start
+             * @description The number of this side's first line in the hunk. A side with no lines in it starts where its first line would be: the line after the one before the hunk, the first for a file with none.
+             */
             old_start: number;
-            /** New Start */
+            /**
+             * New Start
+             * @description The number of this side's first line in the hunk. A side with no lines in it starts where its first line would be: the line after the one before the hunk, the first for a file with none.
+             */
             new_start: number;
             /** Lines */
             lines: components["schemas"]["DiffLine"][];

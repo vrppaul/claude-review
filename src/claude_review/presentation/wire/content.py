@@ -2,6 +2,8 @@
 
 from enum import StrEnum, auto
 
+from pydantic import Field
+
 from claude_review.domain.models import MAX_QUOTE_LINES, EpochMillis, FileStatus, LineType, ReviewMode
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.base import WireBool, WireModel
@@ -17,12 +19,19 @@ class DiffLine(WireModel):
     content: str
 
 
+# What a hunk's start says on either side: the browser counts the lines hidden above a hunk from it
+HUNK_START_MEANING = (
+    "The number of this side's first line in the hunk. A side with no lines in it starts where its"
+    " first line would be: the line after the one before the hunk, the first for a file with none."
+)
+
+
 class DiffHunk(WireModel):
     """A contiguous block of changes in a file."""
 
     header: str
-    old_start: int
-    new_start: int
+    old_start: int = Field(description=HUNK_START_MEANING)
+    new_start: int = Field(description=HUNK_START_MEANING)
     lines: list[DiffLine]
 
 

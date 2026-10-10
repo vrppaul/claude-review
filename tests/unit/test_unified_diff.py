@@ -294,6 +294,24 @@ def test_whatever_git_writes_for_changed_files_is_read_back_as_those_files(
     assert parse_unified_diff(as_git_writes_it(drawn, bare_blanks=bare_blanks)) == [file.file for file in drawn]
 
 
+def test_a_hunk_is_only_as_long_as_its_header_counts() -> None:
+    """Git never writes fewer lines than it counts, and the end of the diff is no line of the last hunk."""
+    written = ["one", "two"]
+    side = counted(FIRST_LINE, len(written) + 1)
+    path = "counted.txt"
+    diff = [
+        f"diff --git {OLD_SIDE}{path} {NEW_SIDE}{path}",
+        f"--- {OLD_SIDE}{path}",
+        f"+++ {NEW_SIDE}{path}",
+        f"@@ -{side} +{side} @@",
+        *(LINE_PREFIX[LineType.CONTEXT] + line for line in written),
+    ]
+
+    [changed] = parse_unified_diff("\n".join(diff) + "\n")
+
+    assert [line.content for line in changed.hunks[0].lines] == written
+
+
 @given(drawn=one_sided_files(), bare_blanks=strategy.booleans())
 def test_a_file_with_lines_on_one_side_only_is_read_under_its_path_with_what_happened_to_it(
     drawn: DrawnFile, *, bare_blanks: bool

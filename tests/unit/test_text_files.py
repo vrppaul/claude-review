@@ -10,9 +10,17 @@ import pytest
 
 from claude_review.services.text_files import read_text_files
 from claude_review.services.unreadable_content import UnreadableContentError
+from claude_review.services.whole_file import FIRST_LINE, whole_file
 
 # Bytes no UTF-8 text starts with, as an image or a compiled file does
 NOT_UTF8 = b"\x89PNG\r\n\x1a\n\xff\xfe"
+
+
+def test_a_file_read_whole_starts_both_sides_of_its_hunk_at_its_first_line() -> None:
+    """Its old side has no lines, and starts where they would, as any side with none does."""
+    [hunk] = whole_file("plan.md", "Step 1\n").hunks
+
+    assert (hunk.old_start, hunk.new_start) == (FIRST_LINE, FIRST_LINE)
 
 
 class TestReadFiles:

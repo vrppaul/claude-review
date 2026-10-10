@@ -35,7 +35,7 @@ const jumpingFile = diffFile({
 const secondFile = diffFile({
 	path: 'src/other.ts',
 	status: 'added',
-	hunks: [hunk([addedLine(1, 'export const x = 1;')], { old_start: 0 })]
+	hunks: [hunk([addedLine(1, 'export const x = 1;')])]
 });
 
 const plan = wholeFile('/tmp/plan.md', '# My Plan', 'Step one');
