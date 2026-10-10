@@ -60,6 +60,12 @@
   only, so `/index.html` and `HEAD /` are no longer answered.
 
 ### Fixed
+- **The reader's own git settings no longer change the review's diff.**
+  With `diff.suppressBlankEmpty` set, a blank line of context was dropped and
+  every line after it in the hunk numbered one short, so threads landed on
+  the wrong lines. The diff now always carries git's default three lines of
+  context, whatever `diff.context` says: with none, the lines hidden between
+  hunks were counted one off. Wider context is a click away, as before.
 - **A review sent for good lets go of its page's socket.** A tab left open
   after the review used to connect to whatever review ran next on the same
   port, tell it the old review's round and threads, and hold it open after

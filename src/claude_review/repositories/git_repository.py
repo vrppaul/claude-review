@@ -24,12 +24,20 @@ MILLISECONDS_PER_SECOND = 1000
 PORCELAIN_PATH_START = 3
 
 # Settings every command runs with, whatever the reader's configuration says:
-# a path outside plain ASCII keeps git's own quoting, which the parser decodes
-GIT_SETTINGS = ["-c", "core.quotePath=true"]
+# a path outside plain ASCII keeps git's own quoting, which the parser decodes,
+# and a blank line of context keeps the space that marks it, without which the
+# parser would drop the line and number every line after it one short
+GIT_SETTINGS = ["-c", "core.quotePath=true", "-c", "diff.suppressBlankEmpty=false"]
+
+# How many lines of context a hunk carries: git's own default, which the page
+# counts the lines hidden between hunks by. With none, git starts a side that
+# has no lines at the line before it, and every count above that hunk is one off.
+CONTEXT_LINES = 3
 
 # How a diff is written, whatever the reader's configuration says. The parser
-# reads one format: a diff tool of the reader's own, colours, other prefixes
-# or paths relative to a subdirectory must not stand in for it.
+# reads one format: a diff tool of the reader's own, colours, other prefixes,
+# paths relative to a subdirectory or another amount of context must not
+# stand in for it.
 DIFF_STAGED = [
     "diff",
     "--cached",
@@ -38,6 +46,7 @@ DIFF_STAGED = [
     "--no-relative",
     "--src-prefix=a/",
     "--dst-prefix=b/",
+    f"--unified={CONTEXT_LINES}",
 ]
 
 # Ends the options, so a revision that follows can never be read as one
