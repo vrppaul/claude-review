@@ -123,6 +123,13 @@ def git(repo: Path, *args: str) -> str:
     return result.stdout
 
 
+def write_files(root: Path, files: dict[str, str]) -> None:
+    """Write each file under the root, by its path there, with what it holds."""
+    for path, text in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_text(text)
+
+
 async def uncommitted_changes(repo: Path) -> list[DiffFile]:
     """The diff of a repository's uncommitted changes, read the way a review opens on them."""
     return (await open_diff(repo, None, GitRepository(objects=None))).diff_files

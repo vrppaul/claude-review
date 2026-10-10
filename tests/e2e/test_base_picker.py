@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
-from tests.helpers import ReviewServers, RunningReview, git, opening_of
+from tests.helpers import ReviewServers, RunningReview, git, opening_of, write_files
 
 
 async def _said(page: Page, testid: str) -> str:
@@ -19,9 +19,16 @@ async def _said(page: Page, testid: str) -> str:
     return " ".join((await page.get_by_test_id(testid).text_content() or "").split())
 
 
+# The repository's files as committed, as they stand when round 1 begins, and
+# what the work answering round 1 changes
+READ_FILE = "read.py"
+UNTOUCHED_FILE = "untouched.py"
+COMMITTED_FILES = {READ_FILE: "first pass\n"}
+BEFORE_ROUND_ONE = {READ_FILE: "first pass\nsecond pass\n", UNTOUCHED_FILE: "nobody comes back to this\n"}
+ANSWERING_ROUND_ONE = {READ_FILE: "first pass\nsecond pass\nand what round 1 asked for\n"}
 # What the review holds once round 1 is answered, and what of it changed after round 1 began
-FILES_IN_THE_REVIEW = ("read.py", "untouched.py")
-FILES_SINCE_ROUND_ONE = ("read.py",)
+FILES_IN_THE_REVIEW = tuple(BEFORE_ROUND_ONE)
+FILES_SINCE_ROUND_ONE = tuple(ANSWERING_ROUND_ONE)
 
 
 @pytest.fixture
@@ -32,12 +39,11 @@ def picker_repo(tmp_path: Path) -> Path:
     git(repo, "init", "-b", "main")
     git(repo, "config", "user.email", "test@test.com")
     git(repo, "config", "user.name", "Test")
-    (repo / "read.py").write_text("first pass\n")
+    write_files(repo, COMMITTED_FILES)
     git(repo, "add", ".")
     git(repo, "commit", "-m", "initial")
 
-    (repo / "read.py").write_text("first pass\nsecond pass\n")
-    (repo / "untouched.py").write_text("nobody comes back to this\n")
+    write_files(repo, BEFORE_ROUND_ONE)
     return repo
 
 
@@ -50,7 +56,7 @@ async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
         # The diff taken, and with it the tree round 1 began from written down
         await agent.post("/api/retake", json={})
         # The work that answers round 1, done after its tree was written down
-        (picker_repo / "read.py").write_text("first pass\nsecond pass\nand what round 1 asked for\n")
+        write_files(picker_repo, ANSWERING_ROUND_ONE)
         # Taken again after the work, as the agent does: this is the diff on screen
         await agent.post("/api/retake", json={})
     return started
@@ -90,7 +96,7 @@ async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(revi
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
 
-    section = page.locator('[data-testid="file-section"][data-path$="untouched.py"]')
+    section = page.locator(f'[data-testid="file-section"][data-path$="{UNTOUCHED_FILE}"]')
     await section.get_by_test_id("line-gutter").first.click()
     await page.get_by_test_id("comment-input").fill("nobody has been back to this one")
     await page.get_by_test_id("save-comment").click()

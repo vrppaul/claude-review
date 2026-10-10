@@ -21,6 +21,7 @@ from tests.helpers import (
     opening_of,
     review_has_ended,
     uncommitted_changes,
+    write_files,
 )
 
 # What the page posts when it sends the review, a round or the last of it
@@ -31,10 +32,45 @@ AGENT_WAIT_SECONDS = 15
 BRIEF_AGENT_WAIT_SECONDS = 3
 
 RAISED_BODY = "I kept the old name; renaming it broke two callers."
+# The e2e repository: its files as committed, and the changes made since —
+# one file edited, one added
+MAIN_FILE = "main.py"
+NEW_FILE = "new_file.ts"
+UTILS_FILE = "utils.py"
+COMMITTED_FILES = {
+    MAIN_FILE: "def hello():\n    return 'hello'\n\ndef world():\n    return 'world'\n",
+    UTILS_FILE: "# utils\n",
+}
+CHANGES = {
+    MAIN_FILE: "def hello():\n    return 'hi'\n\ndef world():\n    return 'world'\n",
+    NEW_FILE: "export const x = 1;\nexport const y = 2;\nexport const z = 3;\n",
+}
 # The files the e2e repository's uncommitted changes touch
-CHANGED_FILES = ("main.py", "new_file.ts")
-# The turns of the conversation the transcript is written with: a question, and its answer
-TRANSCRIPT_TURNS = 2
+CHANGED_FILES = tuple(CHANGES)
+# What the sidebar's filter is typed with to find the added file alone
+NEW_FILE_TYPED = Path(NEW_FILE).stem
+# The conversation the transcript is written with, one entry a line: a question, and its answer
+TRANSCRIPT_LINES = [
+    json.dumps(
+        {
+            "type": "user",
+            "message": {
+                "role": "user",
+                "content": "can you refactor the auth module?\nuse JWT instead of sessions",
+            },
+        }
+    ),
+    json.dumps(
+        {
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
+            },
+        }
+    ),
+]
+TRANSCRIPT_TURNS = len(TRANSCRIPT_LINES)
 
 
 def _section(page: Page, path_suffix: str) -> Locator:
@@ -127,14 +163,12 @@ def e2e_repo(tmp_path: Path) -> Path:
     git(tmp_path, "config", "user.email", "test@test.com")
     git(tmp_path, "config", "user.name", "Test")
 
-    (tmp_path / "main.py").write_text("def hello():\n    return 'hello'\n\ndef world():\n    return 'world'\n")
-    (tmp_path / "utils.py").write_text("# utils\n")
+    write_files(tmp_path, COMMITTED_FILES)
     git(tmp_path, "add", ".")
     git(tmp_path, "commit", "-m", "initial")
 
-    (tmp_path / "main.py").write_text("def hello():\n    return 'hi'\n\ndef world():\n    return 'world'\n")
-    (tmp_path / "new_file.ts").write_text("export const x = 1;\nexport const y = 2;\nexport const z = 3;\n")
-    git(tmp_path, "add", "new_file.ts")
+    write_files(tmp_path, CHANGES)
+    git(tmp_path, "add", NEW_FILE)
 
     return tmp_path
 
@@ -167,10 +201,10 @@ async def test_a_comment_dragged_over_lines_names_the_range(diff_review: Running
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    gutters = _section(page, "main.py").get_by_test_id("line-gutter")
+    gutters = _section(page, MAIN_FILE).get_by_test_id("line-gutter")
     await gutters.first.dispatch_event("mousedown")
     await gutters.nth(4).dispatch_event("mouseenter")
-    await _section(page, "main.py").get_by_test_id("raw-view").dispatch_event("mouseup")
+    await _section(page, MAIN_FILE).get_by_test_id("raw-view").dispatch_event("mouseup")
 
     await page.get_by_test_id("comment-input").fill("Refactor this range")
     await page.get_by_test_id("save-comment").click()
@@ -181,7 +215,7 @@ async def test_a_comment_dragged_over_lines_names_the_range(diff_review: Running
 
     assert "Refactor this range" in sent
     # From the first line of the hunk to the fourth of the new file
-    assert "### `main.py`:1-4" in sent
+    assert f"### `{MAIN_FILE}`:1-4" in sent
 
 
 async def test_comments_on_several_files_are_each_filed_under_their_own(diff_review: RunningReview, page: Page) -> None:
@@ -192,16 +226,16 @@ async def test_comments_on_several_files_are_each_filed_under_their_own(diff_rev
     assert len(await page.get_by_test_id("file-item").all()) == len(CHANGED_FILES)
 
     # Both files are already on screen, so neither comment needs navigation
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Comment on main")
-    await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "Comment on new file")
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Comment on main")
+    await _click_line_and_comment(page, _first_gutter(page, NEW_FILE), "Comment on new file")
 
     sent = await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
-    assert "main.py" in sent
-    assert "new_file.ts" in sent
+    assert MAIN_FILE in sent
+    assert NEW_FILE in sent
     # Each comment is filed under the file it was left on, not both under one
-    assert sent.index("Comment on main") < sent.index("new_file.ts")
+    assert sent.index("Comment on main") < sent.index(NEW_FILE)
 
 
 async def test_a_summary_and_a_comment_are_sent_together(diff_review: RunningReview, page: Page) -> None:
@@ -463,27 +497,7 @@ async def test_code_files_offer_no_markdown_preview(diff_review: RunningReview, 
 def transcript_file(tmp_path: Path) -> Path:
     """Create a JSONL conversation file for transcript-mode testing."""
     conversation = tmp_path / "conversation.jsonl"
-    lines = [
-        json.dumps(
-            {
-                "type": "user",
-                "message": {
-                    "role": "user",
-                    "content": "can you refactor the auth module?\nuse JWT instead of sessions",
-                },
-            }
-        ),
-        json.dumps(
-            {
-                "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
-                },
-            }
-        ),
-    ]
-    conversation.write_text("\n".join(lines))
+    conversation.write_text("\n".join(TRANSCRIPT_LINES))
     return conversation
 
 
@@ -537,14 +551,14 @@ async def test_folding_a_file_hides_its_lines(diff_review: RunningReview, page: 
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    main = _section(page, "main.py")
+    main = _section(page, MAIN_FILE)
     await main.get_by_test_id("raw-view").wait_for()
 
     await main.get_by_test_id("collapse-file").click()
     await main.get_by_test_id("raw-view").wait_for(state="detached")
 
     # The other files are untouched
-    assert await _section(page, "new_file.ts").get_by_test_id("raw-view").is_visible()
+    assert await _section(page, NEW_FILE).get_by_test_id("raw-view").is_visible()
 
 
 async def test_marking_a_file_viewed_folds_it(diff_review: RunningReview, page: Page) -> None:
@@ -552,7 +566,7 @@ async def test_marking_a_file_viewed_folds_it(diff_review: RunningReview, page: 
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    main = _section(page, "main.py")
+    main = _section(page, MAIN_FILE)
     await main.get_by_test_id("raw-view").wait_for()
 
     await main.get_by_test_id("viewed-toggle").check()
@@ -564,13 +578,13 @@ async def test_filtering_the_sidebar_narrows_the_list(diff_review: RunningReview
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await page.get_by_test_id("file-filter").fill("new_file")
+    await page.get_by_test_id("file-filter").fill(NEW_FILE_TYPED)
 
     items = await page.get_by_test_id("file-item").all()
     assert len(items) == 1
     text = await items[0].text_content()
     assert text is not None
-    assert "new_file.ts" in text
+    assert NEW_FILE in text
 
 
 async def test_sidebar_counts_files_marked_viewed(diff_review: RunningReview, page: Page) -> None:
@@ -578,7 +592,7 @@ async def test_sidebar_counts_files_marked_viewed(diff_review: RunningReview, pa
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await _section(page, "main.py").get_by_test_id("viewed-toggle").check()
+    await _section(page, MAIN_FILE).get_by_test_id("viewed-toggle").check()
 
     heading = page.get_by_test_id("sidebar-heading")
     await heading.filter(has_text="1 viewed").wait_for()
@@ -589,7 +603,7 @@ async def test_a_file_further_down_the_stream_is_readable(diff_review: RunningRe
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    last = _section(page, "new_file.ts")
+    last = _section(page, NEW_FILE)
     await last.scroll_into_view_if_needed()
 
     await last.get_by_test_id("raw-view").wait_for()
@@ -617,7 +631,7 @@ async def test_split_layout_faces_the_two_versions(diff_review: RunningReview, p
     await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("layout-split").click()
 
-    main = _section(page, "main.py")
+    main = _section(page, MAIN_FILE)
     await main.get_by_test_id("split-view").wait_for()
     assert await main.get_by_test_id("raw-view").count() == 0
 
@@ -629,7 +643,7 @@ async def test_comment_left_in_split_layout_reaches_claude(diff_review: RunningR
 
     await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("layout-split").click()
-    main = _section(page, "main.py")
+    main = _section(page, MAIN_FILE)
     await main.get_by_test_id("split-view").wait_for()
 
     await _click_line_and_comment(page, main.get_by_test_id("line-gutter").first, "Split comment")
@@ -715,7 +729,7 @@ async def test_a_suggestion_reaches_claude_as_a_replacement(diff_review: Running
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await _first_gutter(page, "main.py").click()
+    await _first_gutter(page, MAIN_FILE).click()
     await page.get_by_test_id("comment-input").fill("Return the greeting we agreed on")
     await page.get_by_test_id("suggest-change").click()
 
@@ -748,7 +762,7 @@ async def test_comments_survive_a_reload(diff_review: RunningReview, page: Page)
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Written before the reload")
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Written before the reload")
 
     await page.reload()
     await page.get_by_test_id("restored-notice").wait_for()
@@ -769,7 +783,7 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(diff_review: Runni
     waiting = asyncio.create_task(_next_event(diff_review))
     await page.get_by_test_id("panel-input").wait_for()
 
-    await _first_gutter(page, "main.py").click()
+    await _first_gutter(page, MAIN_FILE).click()
     await page.get_by_test_id("comment-input").fill("Was the old greeting used anywhere else?")
     await page.get_by_test_id("ask-now").click()
     await page.get_by_test_id("awaiting-answer").wait_for()
@@ -804,7 +818,7 @@ async def test_a_round_is_sent_without_ending_the_review(diff_review: RunningRev
     waiting = asyncio.create_task(_next_event(diff_review))
     await page.get_by_test_id("panel-input").wait_for()
 
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Shorten this greeting")
     await _send(page)
 
     handed_over = await waiting
@@ -831,12 +845,12 @@ async def test_a_second_round_carries_only_what_is_new(diff_review: RunningRevie
     first = asyncio.create_task(_next_event(diff_review))
     await page.get_by_test_id("panel-input").wait_for()
 
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Shorten this greeting")
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Shorten this greeting")
     await _send(page)
     await first
 
     second = asyncio.create_task(_next_event(diff_review))
-    await _click_line_and_comment(page, _first_gutter(page, "new_file.ts"), "And name this properly")
+    await _click_line_and_comment(page, _first_gutter(page, NEW_FILE), "And name this properly")
     await _send(page)
 
     round_two = await second
@@ -879,7 +893,7 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
     waiting = asyncio.create_task(_next_event(diff_review))
     await page.get_by_test_id("panel-input").wait_for()
 
-    await _click_line_and_comment(page, _first_gutter(page, "main.py"), "Is this greeting used?")
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Is this greeting used?")
 
     await page.get_by_test_id("panel-input").fill("Look again at @")
     await page.get_by_test_id("thread-option").first.click()
@@ -897,7 +911,7 @@ async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, serv
     async with AsyncClient(base_url=review.url) as agent:
         # Taken again, as the agent does after a round: the tree it is compared against is this one
         await agent.post("/api/retake", json={})
-    (e2e_repo / "main.py").write_text("def hello():\n    return 'hey'\n")
+    (e2e_repo / MAIN_FILE).write_text("def hello():\n    return 'hey'\n")
     (e2e_repo / "utils.py").write_text("# utils, rewritten\n")
 
     await page.goto(review.url)
@@ -919,10 +933,10 @@ async def test_a_thread_the_author_raises_lands_on_the_line(diff_review: Running
     waiting = asyncio.create_task(_next_event(diff_review, BRIEF_AGENT_WAIT_SECONDS))
     await page.get_by_test_id("panel-input").wait_for()
 
-    pointed = await _agent(diff_review, "point", "--file", "main.py", "--lines", "1", RAISED_BODY)
+    pointed = await _agent(diff_review, "point", "--file", MAIN_FILE, "--lines", "1", RAISED_BODY)
     assert json.loads(pointed)["thread_id"] == "raised-1"
 
-    main = _section(page, "main.py")
+    main = _section(page, MAIN_FILE)
     await main.get_by_text(RAISED_BODY).wait_for()
     # Drawn as the author's, and not counted as the reader's unsent work
     await main.get_by_test_id("comment-raised").wait_for()
