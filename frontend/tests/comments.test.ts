@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { lineAnchor } from '$lib/anchors/line';
 import type { LineSide } from '$lib/types';
-import { indexByRow } from '$lib/anchors/comment-index';
+import { ThreadsByLine } from '$lib/anchors/comment-index';
 import { fakeServer, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -18,7 +18,7 @@ const ENDED = { markdown: '## Comments', comment_count: 1, round: 1, ended: true
 
 /** The threads drawn under one row of a file. */
 function threadsOn(file: string, side: LineSide, line: number) {
-	return indexByRow(review.threads.all, file).get(`${side}:${line}`) ?? [];
+	return new ThreadsByLine(review.threads.all, file, true).at({ side, number: line });
 }
 
 describe('the comments of a review', () => {

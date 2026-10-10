@@ -31,6 +31,9 @@
 	// Content with nothing to render always shows raw, whatever the preference
 	const viewMode = $derived<ContentViewMode>(hasRenderablePreview ? review.layout.contentView.mode : 'raw');
 
+	// Files reads the review's own diff unless a narrower base is chosen, whose removed lines are that base's
+	const reviewOwnsRemovedLines = $derived(!review.diff.narrowed);
+
 	const stats = $derived(fileStats(file));
 	const commentCount = $derived(review.threads.onFile(file.path).length);
 	const collapsed = $derived(review.reading.isFolded(file.path));
@@ -155,11 +158,11 @@
 			{#if viewMode === 'preview'}
 				<PreviewView {file} />
 			{:else if viewMode === 'side-by-side'}
-				<SideBySideView {file} {language} />
+				<SideBySideView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
 			{:else if isDiffMode && review.settings.current.diff_layout === 'split' && file.hunks.length > 0}
-				<SplitView {file} {language} />
+				<SplitView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
 			{:else}
-				<RawView {file} {language} />
+				<RawView {file} {language} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
 			{/if}
 		{:else}
 			<div data-testid="file-placeholder" style="height: {estimatedHeight - 41}px"></div>

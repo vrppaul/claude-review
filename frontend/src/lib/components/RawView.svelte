@@ -1,153 +1,64 @@
 <script lang="ts">
-	import type { CommentSeverity, DiffFile, DiffLine } from '$lib/types';
-	import { indexByRow } from '$lib/anchors/comment-index';
-	import { lineRangeLabel } from '$lib/anchors/line-label';
-	import { lineAnchor } from '$lib/anchors/line';
-	import { highlightFile } from '$lib/utils/highlight';
-	import { gapsOf, withRevealed } from '$lib/utils/expansions';
-	import { hunkOffsets } from '$lib/utils/hunk-offsets';
-	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { getLineNumber, LineSelection, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
-	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
+	import type { DiffFile, DiffLine } from '$lib/types';
+	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 	import { useReview } from '$lib/review/context';
-	import CommentBox from './CommentBox.svelte';
-	import CommentThread from './CommentThread.svelte';
+	import { drawnHunks } from '$lib/utils/drawn-file';
+	import { withRevealed } from '$lib/utils/expansions';
 	import HunkGap from './HunkGap.svelte';
+	import LineGutter from './LineGutter.svelte';
+	import LineNotes from './LineNotes.svelte';
+	import { LineCommenting } from './line-commenting.svelte';
+
+	// Columns a row spans: two numbers, the sign and the code in a diff; one number and the code otherwise
+	const DIFF_COLUMNS = 4;
+	const PLAIN_COLUMNS = 2;
+	// The sign a diff writes before each kind of line
+	const SIGNS: Record<DiffLine['kind'], string> = { add: '+', delete: '-', context: ' ' };
+	// How a row is tinted for the change on it
+	const TINTS: Record<DiffLine['kind'], string> = { add: 'cr-row-add', delete: 'cr-row-del', context: '' };
 
 	interface Props {
 		file: DiffFile;
 		language: string | null;
+		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
+		reviewOwnsRemovedLines: boolean;
+		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
+		revealed: RevealedContext | null;
 	}
 
-	let { file, language }: Props = $props();
+	let { file, language, reviewOwnsRemovedLines, revealed }: Props = $props();
 	const review = useReview();
 
 	const isDiffMode = $derived(review.mode === 'diff');
-	const colSpan = $derived(isDiffMode ? 4 : 2);
-	// Markup per hunk per line, computed once per file rather than per row.
-	// A row coloured end to end says a line changed but not where, so what
-	// actually differs inside a replaced line is marked on top of the syntax.
+	const columns = $derived(isDiffMode ? DIFF_COLUMNS : PLAIN_COLUMNS);
 	// Lines revealed from the file sit inside the hunk above which they were
 	// read, so numbering, highlighting and anchoring need no special case.
-	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
-	// What the diff still leaves out above each hunk, as drawn
-	const gaps = $derived(gapsOf(shown.hunks));
-	const highlighted = $derived(
-		highlightFile(shown, language).map((hunkHtml, i) =>
-			isDiffMode ? applyWordMarks(shown.hunks[i].lines, hunkHtml) : hunkHtml
-		)
-	);
-	// Comments indexed by the row they belong to, rather than scanned per line
-	const commentsByRow = $derived(
-		indexByRow(review.threads.onFile(file.path), file.path, { removedLines: !review.diff.narrowed })
-	);
-	// Every line of the file in the order the rows count them, hunk after hunk
-	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
-	const selection = new LineSelection({
-		mayCommentOnRemoved: () => !review.diff.narrowed,
-		longestRange: () => review.longestQuotedRange,
-		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
+	const shown = $derived(revealed ? withRevealed(file, revealed.forFile(file.path)) : file);
+	const hunks = $derived(drawnHunks(shown, language, isDiffMode));
+	const commenting = new LineCommenting(review, {
+		path: () => file.path,
+		hunks: () => hunks,
+		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines
 	});
 
-	const offsets = $derived(hunkOffsets(shown.hunks));
-
-	$effect(() => {
-		void file.path;
-		selection.reset();
-	});
-
-	// Window-level listener so mouseup is caught even if the cursor
-	// leaves this component (e.g. dragging above the sticky header)
-	$effect(() => {
-		const handler = () => selection.handleMouseUp();
-		window.addEventListener('mouseup', handler);
-		return () => window.removeEventListener('mouseup', handler);
-	});
-
-	/** Enter or Space on a line's number opens the composer there. */
-	function commentOnKey(event: KeyboardEvent, line: DiffLine, index: number) {
-		if (event.key !== 'Enter' && event.key !== ' ') return;
-		event.preventDefault();
-		selection.commentOnLine(line, index);
-	}
-
-	/** The current text of the lines being commented on. */
-	const selectedText = $derived.by(() => {
-		const at = selection.commentingAt;
-		if (!at) return undefined;
-		return shown.hunks
-			.flatMap((hunk) => hunk.lines)
-			.filter(
-				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.startLine && getLineNumber(line) <= at.endLine
-			)
-			.map((line) => line.content);
-	});
-
-	/** Where the comment being written hangs, said above its field. */
-	const commentingLabel = $derived(
-		selection.commentingAt
-			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.startLine, selection.commentingAt.endLine)
-			: undefined
-	);
-
-	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
-		if (!selection.commentingAt) return;
-		const { side, startLine, endLine } = selection.commentingAt;
-		// The lines travel with the comment: once the diff is taken again
-		// they are how the thread finds where it belongs
-		review.threads.add({
-			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
-			body,
-			severity,
-			images
-		});
-		selection.clearCommenting();
-	}
-
-	/** Write the comment and hand it straight to whoever is answering. */
-	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
-		if (!selection.commentingAt) return;
-		const { side, startLine, endLine } = selection.commentingAt;
-		const id = review.threads.add({
-			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
-			body,
-			severity,
-			images
-		});
-		selection.clearCommenting();
-		try {
-			await review.threads.ask(id);
-		} catch {
-			// The comment is written either way; the thread offers to ask again
-		}
-	}
-
-	/**
-	 * A row's tint, edge and gutter colour.
-	 *
-	 * Selection is added to the change rather than replacing it: a line keeps
-	 * showing what changed on it while you are writing about it.
-	 */
+	/** A row's tint, with the mark of lines being written about added to the change rather than replacing it. */
 	function rowClass(kind: DiffLine['kind'], marked: boolean): string {
-		const change = !isDiffMode ? '' : kind === 'add' ? 'cr-row-add' : kind === 'delete' ? 'cr-row-del' : '';
+		const change = isDiffMode ? TINTS[kind] : '';
 		return marked ? `${change} cr-row-marked` : change;
-	}
-
-	function linePrefix(kind: DiffLine['kind']): string {
-		if (kind === 'add') return '+';
-		if (kind === 'delete') return '-';
-		return ' ';
 	}
 </script>
 
+<!-- On the window, so a drag let go anywhere — above the sticky header, say — still ends -->
+<svelte:window onmouseup={() => commenting.release()} />
+
 <div data-testid="raw-view">
-	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
+	{#each hunks as hunk (hunk.key)}
 		<div class="border-b border-base-300">
 			{#if isDiffMode}
 				<HunkGap
-					gap={gaps[hunkIdx]}
+					gap={hunk.gap}
 					header={hunk.header}
-					onReveal={(gap) => review.diff.revealed.reveal(file.path, gap)}
+					onReveal={revealed ? (gap) => revealed.reveal(file.path, gap) : null}
 				/>
 			{/if}
 
@@ -166,75 +77,34 @@
 					<col />
 				</colgroup>
 				<tbody>
-					{#each hunk.lines as line, lineIdx (`${hunkIdx}-${lineIdx}`)}
-						{@const flatIdx = offsets[hunkIdx] + lineIdx}
-						{@const lineNumber = getLineNumber(line)}
-						{@const side = lineSide(line)}
-						{@const lineComments = commentsByRow.get(`${side}:${lineNumber}`)}
-						{@const inRange = selection.isHighlighted(side, lineNumber)}
-						{@const showCommentBox = selection.commentingAt?.opensBelow === flatIdx}
+					{#each hunk.lines as drawn (drawn.key)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
-							class="cr-row {rowClass(line.kind, inRange)} hover:brightness-110"
-							onmouseenter={() => selection.handleMouseEnter(line, flatIdx)}
+							class="cr-row {rowClass(drawn.line.kind, commenting.isMarked(drawn.place))} hover:brightness-110"
+							onmouseenter={() => commenting.enter(drawn)}
 						>
 							{#if isDiffMode}
 								<td class="cr-gutter w-12 p-0 text-right select-none">
-									<button
-										data-testid="old-line-gutter"
-										class="cr-gutter-button"
-										tabindex="-1"
-										aria-label="Comment on line {line.old_number ?? ''}"
-										onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-										onkeydown={(e) => commentOnKey(e, line, flatIdx)}
-									>
-										{line.old_number ?? ''}
-									</button>
+									<LineGutter {drawn} side="old" stop={false} {commenting} />
 								</td>
 							{/if}
 							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
-								<button
-									data-testid="line-gutter"
-									data-role={LINE_NUMBER_ROLE}
-									data-tour="line-number"
-									class="cr-gutter-button"
-									aria-label="Comment on line {line.new_number ?? line.old_number ?? ''}"
-									disabled={line.kind === 'delete' && review.diff.narrowed}
-									title={line.kind === 'delete' && review.diff.narrowed
-										? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
-										: undefined}
-									onmousedown={() => selection.handleMouseDown(line, flatIdx)}
-									onkeydown={(e) => commentOnKey(e, line, flatIdx)}
-								>
-									{line.new_number ?? ''}
-								</button>
+								<LineGutter {drawn} side="new" stop {commenting} />
 							</td>
 							{#if isDiffMode}
 								<td class="cr-sign w-4 px-1 text-center select-none">
-									{linePrefix(line.kind)}
+									{SIGNS[drawn.line.kind]}
 								</td>
 							{/if}
 							<td class="cr-code-cell px-2 pr-4 whitespace-pre-wrap">
-								{@html highlighted[hunkIdx][lineIdx]}
+								{@html drawn.markup}
 							</td>
 						</tr>
 
-						{#if lineComments || showCommentBox}
+						{#if commenting.hasNotes(drawn.place)}
 							<tr>
-								<td colspan={colSpan}>
-									{#each lineComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
-									{/each}
-									{#if showCommentBox}
-										<CommentBox
-											kind="new"
-											onSave={handleSaveComment}
-											onAsk={review.answerer.attached ? handleAskComment : undefined}
-											onCancel={() => selection.clearCommenting()}
-											label={commentingLabel}
-											suggestFrom={selectedText}
-										/>
-									{/if}
+								<td colspan={columns}>
+									<LineNotes {commenting} place={drawn.place} />
 								</td>
 							</tr>
 						{/if}

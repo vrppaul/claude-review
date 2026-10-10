@@ -10,8 +10,8 @@
 		gap: ContextGap;
 		/** The hunk's own header, which says where it is in the file. */
 		header: string;
-		/** Read in the next lines of the gap. */
-		onReveal: (gap: ContextGap) => Promise<void>;
+		/** Read in the next lines of the gap; null where it is said but not read into, as in a story step. */
+		onReveal: ((gap: ContextGap) => Promise<void>) | null;
 	}
 
 	let { gap, header, onReveal }: Props = $props();
@@ -20,6 +20,8 @@
 	let loading = $state(false);
 
 	const windowSize = $derived(gap.next === null ? 0 : gap.next.end - gap.next.start + 1);
+	// What a gap that is not read into says of itself
+	const unchanged = $derived(`${gap.hidden} unchanged ${gap.hidden === 1 ? 'line' : 'lines'}`);
 	const label = $derived(
 		windowSize === gap.hidden
 			? `Show the ${gap.hidden} hidden ${gap.hidden === 1 ? 'line' : 'lines'}`
@@ -27,11 +29,12 @@
 	);
 
 	async function reveal() {
-		if (loading) return;
+		const read = onReveal;
+		if (read === null || loading) return;
 		loading = true;
 		failed = null;
 		try {
-			await onReveal(gap);
+			await read(gap);
 		} catch (error) {
 			failed = messageOf(error, READING_FAILED);
 		} finally {
@@ -50,19 +53,23 @@
 		</div>
 	{/if}
 	<div data-testid="hunk-gap" class="flex items-center border-y border-base-300 bg-base-200">
-		<button
-			data-testid="expand-context"
-			class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left font-mono text-xs"
-			disabled={loading}
-			onclick={reveal}
-		>
-			<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-				<path d="M6 1L3 4h2v4H3l3 3 3-3H7V4h2z" />
-			</svg>
-			{loading ? 'Reading…' : label}
-		</button>
-		{#if failed}
-			<span data-testid="expand-error" class="px-4 text-xs text-error">{failed}</span>
+		{#if onReveal}
+			<button
+				data-testid="expand-context"
+				class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left font-mono text-xs"
+				disabled={loading}
+				onclick={reveal}
+			>
+				<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+					<path d="M6 1L3 4h2v4H3l3 3 3-3H7V4h2z" />
+				</svg>
+				{loading ? 'Reading…' : label}
+			</button>
+			{#if failed}
+				<span data-testid="expand-error" class="px-4 text-xs text-error">{failed}</span>
+			{/if}
+		{:else}
+			<span class="cr-muted px-4 py-1.5 font-mono text-xs">⋯ {unchanged}</span>
 		{/if}
 	</div>
 {/if}

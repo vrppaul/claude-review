@@ -1,166 +1,86 @@
 <script lang="ts">
-	import type { CommentSeverity, DiffFile, DiffLine, LineSide } from '$lib/types';
-	import { indexByRow } from '$lib/anchors/comment-index';
-	import { lineRangeLabel } from '$lib/anchors/line-label';
-	import { lineAnchor } from '$lib/anchors/line';
-	import { highlightFile } from '$lib/utils/highlight';
-	import { getLineNumber, LineSelection, lineSide, rowOfLine } from '$lib/components/line-selection.svelte';
-	import { buildSplitRows, type SplitCell } from '$lib/utils/split-rows';
-	import { gapsOf, withRevealed } from '$lib/utils/expansions';
-	import { hunkOffsets } from '$lib/utils/hunk-offsets';
-	import { applyWordMarks } from '$lib/utils/word-diff';
-	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
+	import type { DiffFile, LinePlace, LineSide } from '$lib/types';
+	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 	import { useReview } from '$lib/review/context';
-	import CommentBox from './CommentBox.svelte';
-	import CommentThread from './CommentThread.svelte';
+	import { type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
+	import { withRevealed } from '$lib/utils/expansions';
+	import { splitRows } from '$lib/utils/split-rows';
 	import HunkGap from './HunkGap.svelte';
+	import LineGutter from './LineGutter.svelte';
+	import LineNotes from './LineNotes.svelte';
+	import { LineCommenting } from './line-commenting.svelte';
+
+	// The two columns are the two sides, the old on the left: the kind of line each colours as changed
+	const CHANGED_IN: Record<LineSide, 'delete' | 'add'> = { old: 'delete', new: 'add' };
+	// How a cell is tinted, and how its edge is coloured, when its line changed
+	const TINTS: Record<LineSide, string> = { old: 'cr-cell-del', new: 'cr-cell-add' };
+	const EDGES: Record<LineSide, string> = { old: 'cr-edge-del', new: 'cr-edge-add' };
 
 	interface Props {
 		file: DiffFile;
 		language: string | null;
+		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
+		reviewOwnsRemovedLines: boolean;
+		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
+		revealed: RevealedContext | null;
 	}
 
-	let { file, language }: Props = $props();
+	let { file, language, reviewOwnsRemovedLines, revealed }: Props = $props();
 	const review = useReview();
 
-	const shown = $derived(withRevealed(file, review.diff.revealed.forFile(file.path)));
-	// What the diff still leaves out above each hunk, as drawn
-	const gaps = $derived(gapsOf(shown.hunks));
-	const highlighted = $derived(
-		highlightFile(shown, language).map((hunkHtml, i) => applyWordMarks(shown.hunks[i].lines, hunkHtml))
-	);
-	const commentsByRow = $derived(
-		indexByRow(review.threads.onFile(file.path), file.path, { removedLines: !review.diff.narrowed })
-	);
-	const rowsPerHunk = $derived(shown.hunks.map((hunk) => buildSplitRows(hunk.lines)));
-	const offsets = $derived(hunkOffsets(shown.hunks));
-
-	// Every line of the file in the order the rows count them, hunk after hunk
-	const rows = $derived(shown.hunks.flatMap((hunk) => hunk.lines));
-	const selection = new LineSelection({
-		mayCommentOnRemoved: () => !review.diff.narrowed,
-		longestRange: () => review.longestQuotedRange,
-		rowOf: (side, lineNumber) => rowOfLine(rows, side, lineNumber)
+	const shown = $derived(revealed ? withRevealed(file, revealed.forFile(file.path)) : file);
+	const hunks = $derived(drawnHunks(shown, language, true));
+	const commenting = new LineCommenting(review, {
+		path: () => file.path,
+		hunks: () => hunks,
+		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines
 	});
 
-	$effect(() => {
-		void file.path;
-		selection.reset();
-	});
-
-	// Window-level so a drag that leaves the table still ends
-	$effect(() => {
-		const handler = () => selection.handleMouseUp();
-		window.addEventListener('mouseup', handler);
-		return () => window.removeEventListener('mouseup', handler);
-	});
-
-	/** Enter or Space on a line's number opens the composer there. */
-	function commentOnKey(event: KeyboardEvent, line: DiffLine, index: number) {
-		if (event.key !== 'Enter' && event.key !== ' ') return;
-		event.preventDefault();
-		selection.commentOnLine(line, index);
+	/** Whether a cell's line changed in the way its column shows. */
+	function changed(cell: DrawnLine, column: LineSide): boolean {
+		return cell.line.kind === CHANGED_IN[column];
 	}
 
-	/** The current text of the lines being commented on. */
-	const selectedText = $derived.by(() => {
-		const at = selection.commentingAt;
-		if (!at) return undefined;
-		return shown.hunks
-			.flatMap((hunk) => hunk.lines)
-			.filter(
-				(line) => lineSide(line) === at.side && getLineNumber(line) >= at.startLine && getLineNumber(line) <= at.endLine
-			)
-			.map((line) => line.content);
-	});
-
-	/** Where the comment being written hangs, said above its field. */
-	const commentingLabel = $derived(
-		selection.commentingAt
-			? lineRangeLabel(selection.commentingAt.side, selection.commentingAt.startLine, selection.commentingAt.endLine)
-			: undefined
-	);
-
-	function handleSaveComment(body: string, severity: CommentSeverity, images: string[]) {
-		if (!selection.commentingAt) return;
-		const { side, startLine, endLine } = selection.commentingAt;
-		// The lines travel with the comment: once the diff is taken again
-		// they are how the thread finds where it belongs
-		review.threads.add({
-			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
-			body,
-			severity,
-			images
-		});
-		selection.clearCommenting();
+	/**
+	 * A cell's tint. The mark of lines being written about is added to the
+	 * change rather than replacing it, so a line keeps showing what changed on
+	 * it while it is written about.
+	 */
+	function tint(cell: DrawnLine | null, column: LineSide): string {
+		if (cell === null) return 'cr-cell-absent';
+		const change = changed(cell, column) ? TINTS[column] : '';
+		return commenting.isMarked(cell.place) ? `${change} cr-cell-marked` : change;
 	}
 
-	/** Write the comment and hand it straight to whoever is answering. */
-	async function handleAskComment(body: string, severity: CommentSeverity, images: string[]) {
-		if (!selection.commentingAt) return;
-		const { side, startLine, endLine } = selection.commentingAt;
-		const id = review.threads.add({
-			anchor: lineAnchor(file.path, side, startLine, endLine, selectedText ?? []),
-			body,
-			severity,
-			images
-		});
-		selection.clearCommenting();
-		try {
-			await review.threads.ask(id);
-		} catch {
-			// The comment is written either way; the thread offers to ask again
-		}
+	function edge(cell: DrawnLine | null, column: LineSide): string {
+		if (cell === null) return 'cr-edge';
+		if (commenting.isMarked(cell.place)) return 'cr-edge cr-edge-marked';
+		return changed(cell, column) ? `cr-edge ${EDGES[column]}` : 'cr-edge';
 	}
 
-	function cellSide(cell: SplitCell): LineSide {
-		return lineSide(cell.line);
-	}
-
-	function commentsFor(cell: SplitCell | undefined): ReturnType<typeof commentsByRow.get> {
-		if (!cell) return undefined;
-		return commentsByRow.get(`${cellSide(cell)}:${getLineNumber(cell.line)}`);
-	}
-
-	function marked(cell: SplitCell): boolean {
-		return selection.isHighlighted(cellSide(cell), getLineNumber(cell.line));
-	}
-
-	/** Selection is added to the change rather than replacing it, so a line
-	 * keeps showing what changed on it while you are writing about it. */
-	function tint(cell: SplitCell | undefined, kind: DiffLine['kind']): string {
-		if (!cell) return 'cr-cell-absent';
-		const change = cell.line.kind === kind ? `cr-cell-${kind === 'add' ? 'add' : 'del'}` : '';
-		return marked(cell) ? `${change} cr-cell-marked` : change;
-	}
-
-	function edge(cell: SplitCell | undefined, kind: DiffLine['kind']): string {
-		if (!cell) return 'cr-edge';
-		if (marked(cell)) return 'cr-edge cr-edge-marked';
-		return cell.line.kind === kind ? `cr-edge cr-edge-${kind === 'add' ? 'add' : 'del'}` : 'cr-edge';
+	/**
+	 * The line whose notes a column's half shows under a row, if it has any.
+	 * A note sits under the side it is about — in two columns the old and the
+	 * new line share a number, and a note in the wrong half says nothing about
+	 * which one is meant — so the left half shows notes on removed lines only:
+	 * an unchanged line is on the new side, and so are its notes.
+	 */
+	function notedIn(cell: DrawnLine | null, column: LineSide): LinePlace | null {
+		if (cell === null || cell.place.side !== column || !commenting.hasNotes(cell.place)) return null;
+		return cell.place;
 	}
 </script>
 
-{#snippet composer()}
-	<div class="px-3 py-2">
-		<CommentBox
-			kind="new"
-			onSave={handleSaveComment}
-			onAsk={review.answerer.attached ? handleAskComment : undefined}
-			onCancel={() => selection.clearCommenting()}
-			label={commentingLabel}
-			suggestFrom={selectedText}
-		/>
-	</div>
-{/snippet}
+<!-- On the window, so a drag let go anywhere — above the sticky header, say — still ends -->
+<svelte:window onmouseup={() => commenting.release()} />
 
 <div data-testid="split-view">
-	{#each shown.hunks as hunk, hunkIdx (hunkIdx)}
+	{#each hunks as hunk (hunk.key)}
 		<div class="border-b border-base-300">
 			<HunkGap
-				gap={gaps[hunkIdx]}
+				gap={hunk.gap}
 				header={hunk.header}
-				onReveal={(gap) => review.diff.revealed.reveal(file.path, gap)}
+				onReveal={revealed ? (gap) => revealed.reveal(file.path, gap) : null}
 			/>
 
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
@@ -173,99 +93,58 @@
 					<col />
 				</colgroup>
 				<tbody>
-					{#each rowsPerHunk[hunkIdx] as row, rowIdx (rowIdx)}
-						{@const leftComments = commentsFor(row.left)}
-						{@const rightComments = row.left?.line === row.right?.line ? undefined : commentsFor(row.right)}
-						{@const boxAt = selection.commentingAt?.opensBelow}
-						{@const showBox =
-							(row.left && offsets[hunkIdx] + row.left.index === boxAt) ||
-							(row.right && offsets[hunkIdx] + row.right.index === boxAt)}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
+					{#each splitRows(hunk.lines) as row (row.key)}
+						{@const leftNotes = notedIn(row.left, 'old')}
+						{@const rightNotes = notedIn(row.right, 'new')}
 						<tr data-testid="split-row" class="cr-side-del">
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'delete')} {tint(row.left, 'delete')}"
-								onmouseenter={() =>
-									row.left && selection.handleMouseEnter(row.left.line, offsets[hunkIdx] + row.left.index)}
+								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'old')} {tint(row.left, 'old')}"
+								onmouseenter={() => row.left && commenting.enter(row.left)}
 							>
 								{#if row.left}
-									{@const cell = row.left}
 									<!-- One keyboard stop per row: the new side's number, or this
 										one when the row has nothing on the new side -->
-									<button
-										data-testid={row.right ? 'old-line-gutter' : 'line-gutter'}
-										class="cr-gutter-button"
-										tabindex={row.right ? -1 : 0}
-										aria-label="Comment on removed line {cell.line.old_number ?? ''}"
-										disabled={review.diff.narrowed}
-										title={review.diff.narrowed
-											? 'A removed line belongs to the base on screen. Show the whole diff to write here.'
-											: undefined}
-										onmousedown={() => selection.handleMouseDown(cell.line, offsets[hunkIdx] + cell.index)}
-										onkeydown={(e) => commentOnKey(e, cell.line, offsets[hunkIdx] + cell.index)}
-									>
-										{cell.line.old_number ?? ''}
-									</button>
+									<LineGutter drawn={row.left} side="old" stop={row.right === null} {commenting} />
 								{/if}
 							</td>
 							<td
 								data-testid="split-old-code"
-								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(row.left, 'delete')}"
+								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(row.left, 'old')}"
 							>
-								{#if row.left}{@html highlighted[hunkIdx][row.left.index]}{/if}
+								{#if row.left}{@html row.left.markup}{/if}
 							</td>
 
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
-								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(row.right, 'add')} {tint(
+								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(row.right, 'new')} {tint(
 									row.right,
-									'add'
+									'new'
 								)}"
-								onmouseenter={() =>
-									row.right && selection.handleMouseEnter(row.right.line, offsets[hunkIdx] + row.right.index)}
+								onmouseenter={() => row.right && commenting.enter(row.right)}
 							>
 								{#if row.right}
-									{@const cell = row.right}
-									<button
-										data-testid="line-gutter"
-										data-role={LINE_NUMBER_ROLE}
-										data-tour="line-number"
-										class="cr-gutter-button"
-										aria-label="Comment on line {cell.line.new_number ?? ''}"
-										onmousedown={() => selection.handleMouseDown(cell.line, offsets[hunkIdx] + cell.index)}
-										onkeydown={(e) => commentOnKey(e, cell.line, offsets[hunkIdx] + cell.index)}
-									>
-										{cell.line.new_number ?? ''}
-									</button>
+									<LineGutter drawn={row.right} side="new" stop {commenting} />
 								{/if}
 							</td>
 							<td
 								data-testid="split-new-code"
-								class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'add')}"
+								class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'new')}"
 							>
-								{#if row.right}{@html highlighted[hunkIdx][row.right.index]}{/if}
+								{#if row.right}{@html row.right.markup}{/if}
 							</td>
 						</tr>
 
-						{#if leftComments || rightComments || showBox}
-							<!-- A comment sits under the side it is about: in two columns the
-								old and the new line share a number, and a box in the wrong half
-								says nothing about which one is meant. -->
+						{#if leftNotes || rightNotes}
 							<tr>
 								<td colspan="2" class="align-top">
-									{#each leftComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
-									{/each}
-									{#if showBox && selection.commentingAt?.side === 'old'}
-										{@render composer()}
+									{#if leftNotes}
+										<LineNotes {commenting} place={leftNotes} />
 									{/if}
 								</td>
 								<td colspan="2" class="align-top">
-									{#each rightComments ?? [] as comment (comment.id)}
-										<CommentThread {comment} />
-									{/each}
-									{#if showBox && selection.commentingAt?.side === 'new'}
-										{@render composer()}
+									{#if rightNotes}
+										<LineNotes {commenting} place={rightNotes} />
 									{/if}
 								</td>
 							</tr>

@@ -84,6 +84,15 @@ export type AnchorKind = Anchor['kind'];
 /** Lines of one side of a file in the review's own diff. */
 export type LineAnchor = Extract<Anchor, { kind: 'line' }>;
 
+/**
+ * Where a line of a diff is: the side it belongs to, and its number there.
+ * A removed line is on the old side; every other line is on the new one.
+ */
+export interface LinePlace {
+	side: LineSide;
+	number: number;
+}
+
 /** A comment as the reader writes it, before it has an id and a place in time. */
 export interface NewComment {
 	anchor: Anchor;

@@ -1,4 +1,9 @@
-import type { LineSide } from '$lib/types';
+import type { LinePlace, LineSide } from '$lib/types';
+
+/** One line, inside a sentence: "line 42", or "removed line 42" on the old side. */
+export function lineInWords(place: LinePlace): string {
+	return `${place.side === 'old' ? 'removed line' : 'line'} ${place.number}`;
+}
 
 /**
  * Human label for a commented range: "Line 42", "Lines 42-47", or the

@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import type { DiffFile } from '$lib/types';
-import { addedLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { newComment } from '../new-comment';
+import { keepingImages, paste, screenshot } from '../pasted-images';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
@@ -160,5 +162,70 @@ describe('lines asked for just before a new diff lands', () => {
 		await settled();
 
 		expect(getByTestId('diff-view').textContent).not.toContain('read for the last diff');
+	});
+});
+
+describe('what hangs under a line, when lines are revealed above it', () => {
+	/** Two hunks, far apart: lines 30 and 60 replaced, each with an unchanged line after it. */
+	const twoHunks = diffFile({
+		path: 'src/app.py',
+		hunks: [
+			hunk([removedLine(30, 'x = 1'), addedLine(30, 'x = 2'), contextLine(31, 31, 'kept = 31')], {
+				old_start: 30,
+				new_start: 30
+			}),
+			hunk([removedLine(60, 'y = 1'), addedLine(60, 'y = 2'), contextLine(61, 61, 'kept = 61')], {
+				old_start: 60,
+				new_start: 60
+			})
+		]
+	});
+	// The lines read in above the first hunk
+	const revealedAbove = Array.from({ length: 20 }, (_, offset) => `revealed ${10 + offset}`);
+
+	/** The text of the row right above an element drawn under a line. */
+	function rowAbove(element: HTMLElement): string {
+		return element.closest('tr')?.previousElementSibling?.textContent ?? '';
+	}
+
+	/** Reveal lines above the first hunk. */
+	async function revealAboveTheFirstHunk(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+		await user.click(screen.getAllByTestId('expand-context')[0]);
+		await settled();
+	}
+
+	beforeEach(() => {
+		review = openReview({ files: [twoHunks] });
+		keepingImages().answer('GET /api/file-window', { start: 10, lines: revealedAbove, total: FILE_LENGTH });
+	});
+
+	it('keeps the comment being written under its own line, words and all', async () => {
+		const user = userEvent.setup();
+		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks, scrollRoot: null }));
+		const line61 = getAllByTestId('line-gutter').find((gutter) => gutter.textContent?.trim() === '61');
+		if (!line61) throw new Error('Line 61 is not drawn');
+		await user.click(line61);
+		await user.type(getByTestId('comment-input'), 'half a thought');
+
+		await revealAboveTheFirstHunk(user);
+
+		const field = getByTestId('comment-input') as HTMLTextAreaElement;
+		expect(field.value).toBe('half a thought');
+		expect(rowAbove(field)).toContain('kept = 61');
+	});
+
+	it('keeps a reply being written, and what was pasted into it', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'src/app.py', startLine: 31, body: 'why kept' }));
+		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks, scrollRoot: null }));
+		await user.click(getByTestId('open-reply'));
+		await user.type(getByTestId('comment-input'), 'my reply');
+		await paste(getByTestId('comment-input'), screenshot());
+		await within(getByTestId('comment-thread')).findByTestId('attached-image');
+
+		await revealAboveTheFirstHunk(user);
+
+		expect((getByTestId('comment-input') as HTMLTextAreaElement).value).toBe('my reply');
+		expect(getAllByTestId('attached-image')).toHaveLength(1);
 	});
 });

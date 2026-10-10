@@ -94,13 +94,11 @@ const STILL_TO_CLEAN = {
 		'FileSection',
 		'FinishReview',
 		'KeyboardShortcuts',
-		'RawView',
 		'RepliesMenu',
 		'SettingsMenu',
-		'SplitView',
 		'SubmitBar'
 	],
-	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentBox', 'CommentThread', 'FileList', 'FileSection', 'RawView'],
+	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentBox', 'CommentThread', 'FileList', 'FileSection'],
 	nestedHelpers: ['SubmitBar'],
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']

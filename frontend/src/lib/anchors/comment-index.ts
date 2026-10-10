@@ -1,30 +1,44 @@
-import type { Thread } from '$lib/types';
+import type { LinePlace, Thread } from '$lib/types';
 import { sideIsDrawn } from '$lib/anchors/placement';
 
+/** What a line with no threads under it holds. */
+const NO_THREADS: readonly Thread[] = [];
+
 /**
- * A file's comments keyed by the row they hang under, as "side:line".
+ * A file's threads by the line they hang under: the last line of what each
+ * is about, on its side.
  *
- * Asking row by row turned one comment into a scan of the whole list per
+ * Asking line by line turned one thread into a scan of the whole list per
  * line, which a long file pays for on every keystroke that changes it.
- *
- * With `removedLines` off, threads on the old side are left out — see
- * `isDrawn`: under a narrower base those numbers belong to something else.
  */
-export function indexByRow(
-	threads: readonly Thread[],
-	file: string,
-	{ removedLines = true }: { removedLines?: boolean } = {}
-): Map<string, Thread[]> {
-	const index = new Map<string, Thread[]>();
-	for (const thread of threads) {
-		const { anchor } = thread;
-		// A file's rows are its lines; a thread on anything else has no row
-		if (anchor.kind !== 'line' || anchor.file !== file) continue;
-		if (!sideIsDrawn(anchor, removedLines)) continue;
-		const key = `${anchor.side}:${anchor.end_line}`;
-		const existing = index.get(key);
-		if (existing) existing.push(thread);
-		else index.set(key, [thread]);
+export class ThreadsByLine {
+	readonly #byLine = new Map<string, Thread[]>();
+
+	/**
+	 * @param threads the threads to place, of any file
+	 * @param file the file whose lines they are placed under
+	 * @param removedLines whether threads on removed lines are drawn — see `isDrawn`: under a narrower
+	 *   base those numbers belong to something else
+	 */
+	constructor(threads: readonly Thread[], file: string, removedLines: boolean) {
+		for (const thread of threads) {
+			const { anchor } = thread;
+			// A file's rows are its lines; a thread on anything else has no row
+			if (anchor.kind !== 'line' || anchor.file !== file) continue;
+			if (!sideIsDrawn(anchor, removedLines)) continue;
+			const key = keyOf({ side: anchor.side, number: anchor.end_line });
+			const existing = this.#byLine.get(key);
+			if (existing) existing.push(thread);
+			else this.#byLine.set(key, [thread]);
+		}
 	}
-	return index;
+
+	/** The threads hanging under a line, in the order they were written. */
+	at(place: LinePlace): readonly Thread[] {
+		return this.#byLine.get(keyOf(place)) ?? NO_THREADS;
+	}
+}
+
+function keyOf(place: LinePlace): string {
+	return `${place.side}:${place.number}`;
 }

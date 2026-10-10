@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
+	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 	import { assembleText } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -8,9 +9,13 @@
 	interface Props {
 		file: DiffFile;
 		language: string | null;
+		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
+		reviewOwnsRemovedLines: boolean;
+		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
+		revealed: RevealedContext | null;
 	}
 
-	let { file, language }: Props = $props();
+	let { file, language, reviewOwnsRemovedLines, revealed }: Props = $props();
 	const review = useReview();
 
 	const renderedText = $derived(assembleText(file, review.mode));
@@ -40,7 +45,7 @@
 
 <div data-testid="side-by-side-view" class="flex min-h-0 flex-1">
 	<div bind:this={leftPane} class="w-1/2 overflow-auto border-r border-base-300" onscroll={() => syncScroll('left')}>
-		<RawView {file} {language} />
+		<RawView {file} {language} {reviewOwnsRemovedLines} {revealed} />
 	</div>
 	<div bind:this={rightPane} class="w-1/2 overflow-auto p-4" onscroll={() => syncScroll('right')}>
 		<MarkdownRenderer text={renderedText} />

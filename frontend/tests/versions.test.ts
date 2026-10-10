@@ -1,13 +1,14 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { render, screen, within } from '@testing-library/svelte';
+import { userEvent } from '@testing-library/user-event';
 import { isDrawn } from '$lib/anchors/placement';
-import { LineSelection } from '$lib/components/line-selection.svelte';
+import FileSection from '$lib/components/FileSection.svelte';
 import type { Thread, DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
-import { SEND_LIMITS } from './pasted-images';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
-import { openReview } from './review';
+import { inReview, openReview } from './review';
 
 let review: Review;
 
@@ -156,32 +157,45 @@ describe('a thread the base on screen cannot draw', () => {
 });
 
 describe("a base that is not the review's own", () => {
-	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
-		serving(['answered.py'], SINCE_ROUND_ONE);
+	/** A file whose line 17 the change removed, with the line after it kept. */
+	const answered = diffFile({
+		path: 'answered.py',
+		hunks: [hunk([removedLine(17, 'gone'), contextLine(18, 17, 'here')], { old_start: 17, new_start: 17 })]
+	});
+
+	/** The base on screen narrowed to a round, and this file drawn as Files draws it. */
+	async function drawnUnderRoundOne() {
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse({ files: [answered], phrase: SINCE_ROUND_ONE }));
 		await review.diff.setBase('round:1');
-		const selection = new LineSelection({
-			mayCommentOnRemoved: () => !review.diff.narrowed,
-			longestRange: () => SEND_LIMITS.max_quoted_lines,
-			rowOf: () => undefined
-		});
+		return render(FileSection, inReview(review, { file: answered, scrollRoot: null }));
+	}
 
-		selection.handleMouseDown(removedLine(17, 'gone'), 0);
+	/** The numbers in the gutters of the row holding this text. */
+	function guttersOf(text: string): HTMLElement[] {
+		const row = screen.getByText(text).closest('tr');
+		if (!row) throw new Error(`No row holds ${text}`);
+		return within(row).getAllByRole('button');
+	}
 
-		expect(selection.commentingAt).toBeNull();
+	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
+		const user = userEvent.setup();
+		const { queryByTestId } = await drawnUnderRoundOne();
+
+		for (const gutter of guttersOf('gone')) await user.click(gutter);
+
+		expect(queryByTestId('comment-input')).toBeNull();
 	});
 
 	it('takes a thread on a line of the working tree, which every base shares', async () => {
-		serving(['answered.py'], SINCE_ROUND_ONE);
-		await review.diff.setBase('round:1');
-		const selection = new LineSelection({
-			mayCommentOnRemoved: () => !review.diff.narrowed,
-			longestRange: () => SEND_LIMITS.max_quoted_lines,
-			rowOf: () => undefined
-		});
+		const user = userEvent.setup();
+		const { getByTestId } = await drawnUnderRoundOne();
 
-		selection.commentOnLine(contextLine(17, 17, 'here'), 0);
+		await user.click(guttersOf('here')[0]);
+		await user.type(getByTestId('comment-input'), 'still here');
+		await user.click(getByTestId('save-comment'));
 
-		expect(selection.commentingAt?.side).toBe('new');
+		expect(review.threads.all[0].anchor).toMatchObject({ side: 'new', start_line: 17 });
 	});
 
 	it('unfolds every file when there is no way to tell which ones moved', () => {

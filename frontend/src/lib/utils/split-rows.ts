@@ -1,14 +1,12 @@
-import type { DiffLine } from '$lib/types';
+import type { DrawnLine } from '$lib/utils/drawn-file';
 
-export interface SplitCell {
-	line: DiffLine;
-	/** Position in the hunk's flat line list, so a comment can anchor to it. */
-	index: number;
-}
-
+/** One row of two columns: the line before on the left, the line after on the right. */
 export interface SplitRow {
-	left?: SplitCell;
-	right?: SplitCell;
+	/** What the row is known by: the lines on it. */
+	key: string;
+	/** Null where the change has nothing on that side of the row. */
+	left: DrawnLine | null;
+	right: DrawnLine | null;
 }
 
 /**
@@ -19,37 +17,38 @@ export interface SplitRow {
  * replacement is read across rather than down; whichever run is longer leaves
  * the other side of the surplus rows empty.
  */
-export function buildSplitRows(lines: DiffLine[]): SplitRow[] {
+export function splitRows(lines: DrawnLine[]): SplitRow[] {
 	const rows: SplitRow[] = [];
 	let index = 0;
 
 	while (index < lines.length) {
-		if (lines[index].kind === 'context') {
-			rows.push({
-				left: { line: lines[index], index },
-				right: { line: lines[index], index }
-			});
+		if (lines[index].line.kind === 'context') {
+			rows.push(rowOf(lines[index], lines[index]));
 			index += 1;
 			continue;
 		}
 
-		const removals: SplitCell[] = [];
-		while (index < lines.length && lines[index].kind === 'delete') {
-			removals.push({ line: lines[index], index });
+		const removals: DrawnLine[] = [];
+		while (index < lines.length && lines[index].line.kind === 'delete') {
+			removals.push(lines[index]);
 			index += 1;
 		}
 
-		const additions: SplitCell[] = [];
-		while (index < lines.length && lines[index].kind === 'add') {
-			additions.push({ line: lines[index], index });
+		const additions: DrawnLine[] = [];
+		while (index < lines.length && lines[index].line.kind === 'add') {
+			additions.push(lines[index]);
 			index += 1;
 		}
 
 		const height = Math.max(removals.length, additions.length);
 		for (let offset = 0; offset < height; offset += 1) {
-			rows.push({ left: removals[offset], right: additions[offset] });
+			rows.push(rowOf(removals.at(offset) ?? null, additions.at(offset) ?? null));
 		}
 	}
 
 	return rows;
+}
+
+function rowOf(left: DrawnLine | null, right: DrawnLine | null): SplitRow {
+	return { key: `${left?.key ?? ''}|${right?.key ?? ''}`, left, right };
 }
