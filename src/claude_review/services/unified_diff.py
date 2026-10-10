@@ -247,8 +247,9 @@ def _count(written: str | None) -> int:
 
 
 def _hunks(lines: list[str], hunk_starts: list[HunkStart]) -> list[DiffHunk]:
-    """Every hunk of a file, each running from its header to the next one."""
-    # Each hunk ends where the next begins, the last where the file's part does
+    """Every hunk of a file, each read from the lines that follow its header, as far as its counts go."""
+    # The lines a hunk may be read from run to the next header, the last
+    # hunk's to the end of the file's part; its counts say where it ends
     boundaries = [*(start.index for start in hunk_starts), len(lines)]
     ends = boundaries[1:]
     return [_hunk(start, lines[start.index + 1 : end]) for start, end in zip(hunk_starts, ends, strict=True)]
@@ -258,8 +259,8 @@ def _hunk(start: HunkStart, body: list[str]) -> DiffHunk:
     """One hunk: as many lines of each side as its header counts, each numbered on the sides it is on.
 
     The counts say where the hunk ends, so what follows its last line — the
-    empty line after the break that ends the diff — is never read as a
-    blank line of its own.
+    empty piece after the line break that ends the file's part of the diff —
+    is never read as a blank line of its own.
     """
     old_start, new_start = _first_line(start.old_start, start.old_count), _first_line(start.new_start, start.new_count)
     old_left, new_left = start.old_count, start.new_count

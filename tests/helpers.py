@@ -8,6 +8,7 @@ rearranged.
 
 import asyncio
 import contextlib
+from http import HTTPMethod
 import queue
 import subprocess
 import threading
@@ -494,7 +495,7 @@ class CallerThatLeaves:
 
     async def poll(self, app: FastAPI, wait_seconds: float) -> None:
         """Ask the review for its next event, as this caller."""
-        scope = _request_scope("GET", EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
+        scope = _request_scope(HTTPMethod.GET, EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
         await app(scope, self.receive, self.send)
 
 
@@ -521,10 +522,10 @@ class UploadThatBreaksOff:
 
     async def upload(self, app: FastAPI) -> None:
         """Paste the image into the review, as this browser."""
-        await app(_request_scope("POST", IMAGES_ROUTE), self.receive, self.send)
+        await app(_request_scope(HTTPMethod.POST, IMAGES_ROUTE), self.receive, self.send)
 
 
-def _request_scope(method: str, route: str, query: Mapping[str, float] | None = None) -> Scope:
+def _request_scope(method: HTTPMethod, route: str, query: Mapping[str, float] | None = None) -> Scope:
     """A request as a server hands it to the app, from the review's own machine."""
     return {
         "type": HTTP_SCOPE,

@@ -122,8 +122,8 @@ async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: As
     assert response.status_code == HTTPStatus.OK
     sent = response.json()
     assert sent["comment_count"] == len(threads)
-    assert "### `src/handler.ts`:42" in sent["markdown"]
-    assert "### `src/handler.ts`:67-70" in sent["markdown"]
+    assert f"### `{HANDLER_FILE}`:42" in sent["markdown"]
+    assert f"### `{HANDLER_FILE}`:67-70" in sent["markdown"]
     assert "Wrong null check" in sent["markdown"]
     assert "Add max retry" in sent["markdown"]
 
@@ -366,7 +366,7 @@ async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: A
 
 
 async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -> None:
-    """Files and transcript modes have no tree to widen context from."""
+    """A review of files read once has no tree to widen context from."""
     response = await client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
