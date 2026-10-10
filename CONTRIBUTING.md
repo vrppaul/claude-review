@@ -33,7 +33,7 @@ uv run pytest                        # all Python tests
 cd frontend && pnpm test             # frontend tests
 
 # Lint & type check
-uv run ruff check src/ tests/        # Python lint
+uv run ruff check src/               # Python lint (the tests are formatted, never linted)
 uv run ruff format src/ tests/       # Python format
 uv run ty check src/                 # Python type check
 cd frontend && pnpm lint             # frontend lint

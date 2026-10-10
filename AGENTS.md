@@ -16,8 +16,7 @@ uv run ty check src/                 # Type check Python
 uv run lint-imports                  # The package's parts import in one direction only (pyproject.toml's contract)
 uv run vulture                       # Code nothing calls (what frameworks call is listed in pyproject.toml)
 uv run deptry src                    # Every import declared as a dependency, every dependency imported
-uv run deptry tests --exclude '\.venv' --known-first-party claude_review --known-first-party tests --ignore DEP002,DEP004  # What the tests import is declared, not only installed with something else
-uv run python scripts/check_code_rules.py src tests scripts  # No function inside another, no name too short
+uv run python scripts/check_code_rules.py src scripts  # No function inside another, no name too short
 uv run typos                         # Spelling, in code and prose alike
 uv run claude-review diff                    # Run the tool (diff mode)
 uv run claude-review diff --base HEAD~3      # Diff since a specific commit
@@ -103,6 +102,7 @@ async def submit_review(
 
 - **TDD**: write tests BEFORE implementation. Tests encode functional requirements, not implementation details.
 - **Test what the user cares about**: "diff shows all changed files", not "parse_hunk returns a list"
+- **Tests and the gates**: the tests are held to formatting alone (`ruff format`, Prettier). No linter, type checker or spelling check reads them — ruff, ty, the code rules, typos, eslint and svelte-check are each told so in their own configuration. vulture and knip read them only for what of the package and the page they use, and report nothing in them.
 - **Modules**: `__init__.py` must be empty — no code, no re-exports, nothing
 - **Error handling**: specific exceptions, not generic `Exception`. Whatever the review refuses is a `ReviewError` of one kind (`NotFoundError`, `InvalidRequestError`, `RefusedError` ⊃ `TooLargeError`, `ConflictError`, in `domain/exceptions.py`); routes raise it and never catch it or raise `HTTPException` — `presentation/refusals.py` is the one table from kind to status
 - **Time**: every moment the review says is `EpochMillis`, read from the `Clock` the review is built with (`FixedClock` in tests) — never `time.time()` in a route or service. Nothing waits on the clock: a grace period is a timeout on an event, not a comparison of moments

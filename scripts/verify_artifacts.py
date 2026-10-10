@@ -20,6 +20,9 @@ from pathlib import Path
 from typing import NoReturn
 
 ROOT = Path(__file__).parent.parent
+# Where the wheel keeps the built page, and the files built beside it
+WHEEL_PAGE = "claude_review/static/dist/index.html"
+WHEEL_ASSETS = "claude_review/static/dist/assets/"
 
 
 def fail(message: str) -> NoReturn:
@@ -52,9 +55,9 @@ def check_no_sourcemaps(name: str, files: list[str]) -> None:
 def check_wheel(wheel: Path) -> None:
     with zipfile.ZipFile(wheel) as archive:
         files = archive.namelist()
-    if "claude_review/static/dist/index.html" not in files:
+    if WHEEL_PAGE not in files:
         fail(f"{wheel.name} is missing the UI entry point (static/dist/index.html)")
-    assets = [path for path in files if path.startswith("claude_review/static/dist/assets/")]
+    assets = [path for path in files if path.startswith(WHEEL_ASSETS)]
     for extension in (".js", ".css"):
         if not any(asset.endswith(extension) for asset in assets):
             fail(f"{wheel.name} is missing built {extension} assets, got: {assets}")

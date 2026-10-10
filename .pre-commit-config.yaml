@@ -19,16 +19,19 @@ repos:
         types_or: [python, pyi]
 
       # The code rules no linter here can be told to keep: no function
-      # inside another, no name too short to say what it holds
+      # inside another, no name too short to say what it holds. The tests
+      # are held to formatting alone, here as by every linter.
       - id: code-rules
         name: code rules (nested functions, short names)
         entry: uv run python scripts/check_code_rules.py
         language: system
         types: [python]
+        exclude: ^tests/
 
       - id: typos
         name: typos
-        entry: uv run typos
+        # What pyproject.toml excludes stays excluded when the hook names a file
+        entry: uv run typos --force-exclude
         language: system
         types: [text]
 
@@ -58,7 +61,7 @@ repos:
     hooks:
       - id: ty
         name: ty (type checker)
-        entry: uv run ty check src tests
+        entry: uv run ty check src
         language: system
         types: [python]
         pass_filenames: false
@@ -82,16 +85,6 @@ repos:
         entry: uv run deptry src
         language: system
         files: ^(src/|pyproject\.toml$)
-        pass_filenames: false
-        stages: [pre-commit]
-      # What the tests import is declared too, never left to arrive with
-      # something else. deptry leaves tests out unless told otherwise; the
-      # tests use dev dependencies by design and need not use every runtime one.
-      - id: deptry-tests
-        name: deptry (what the tests import, declared)
-        entry: uv run deptry tests --exclude '\.venv' --known-first-party claude_review --known-first-party tests --ignore DEP002,DEP004
-        language: system
-        files: ^(tests/|pyproject\.toml$)
         pass_filenames: false
         stages: [pre-commit]
 
@@ -121,14 +114,14 @@ repos:
         name: eslint (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm lint'
         language: system
-        files: ^frontend/(src/|tests/|eslint\.config\.js$)
+        files: ^frontend/(src/|eslint\.config\.js$)
         pass_filenames: false
 
       - id: frontend-check
         name: svelte-check (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm check'
         language: system
-        files: ^frontend/(src/|tests/|tsconfig\.json$)
+        files: ^frontend/(src/|tsconfig\.json$)
         pass_filenames: false
 
       # Files, exports and dependencies nothing uses

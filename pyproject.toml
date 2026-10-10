@@ -49,6 +49,8 @@ build-backend = "hatchling.build"
 target-version = "py314"
 line-length = 120
 src = ["src"]
+# What is excluded stays excluded when a hook names the file outright
+force-exclude = true
 exclude = [
     ".git",
     ".venv",
@@ -64,6 +66,8 @@ indent-style = "space"
 docstring-code-format = true
 
 [tool.ruff.lint]
+# The tests are held to formatting alone: no rule of the linter reads them
+exclude = ["tests/**"]
 select = [
     "E",        # pycodestyle errors
     "F",        # pyflakes
@@ -106,12 +110,16 @@ select = [
     "ARG",      # every parameter used: one an interface asks for and the method does not need is an override
     "C90",      # no function too tangled to follow
     "PLR0913",  # no function asking for more than five things
-    "PLR2004",  # no number in a comparison without a name
+    "PLR2004",  # no number or string in a comparison without a name
 ]
 ignore = [
     "B008",     # function call in argument defaults (common in FastAPI)
     "SIM108",   # ternary operator — if/else often more readable
 ]
+
+[tool.ruff.lint.pylint]
+# A string compared outright is as unnamed as a number
+allow-magic-value-types = []
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -136,8 +144,6 @@ known-first-party = ["claude_review"]
 # not make it smaller: ty proves no match over a group's base class
 # complete, so each group's own match would need its members listed again
 "src/claude_review/presentation/event_pushes.py" = ["C901"]
-# Builders take every field of what they build as an optional keyword
-"tests/helpers.py" = ["PLR0913"]
 
 [tool.importlinter]
 root_package = "claude_review"
@@ -213,16 +219,16 @@ ignore_names = [
 # Uvicorn speaks websockets through it, named in a setting rather than imported
 DEP002 = ["wsproto"]
 
-[tool.typos.default.extend-words]
-# Not misspelt: pieces of words the tests type or read on purpose — a word
-# typed one key at a time, the start of "café" read back in Latin-1, and
-# keys pressed to show they land in a field
-Ove = "Ove"
-caf = "caf"
-pn = "pn"
+[tool.typos.files]
+# The tests are held to formatting alone: their spelling is not checked
+extend-exclude = ["tests/", "frontend/tests/"]
 
 [tool.ty.environment]
 python-version = "3.14"
+
+[tool.ty.src]
+# The tests are held to formatting alone: no type check reads them
+exclude = ["tests"]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]

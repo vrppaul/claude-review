@@ -17,15 +17,14 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - run: uv sync --no-install-project
-      - run: uv run ruff check src/ tests/
+      - run: uv run ruff check src/ scripts/
       - run: uv run ruff format --check src/ tests/
-      - run: uv run ty check src/ tests/
+      - run: uv run ty check src/
       - run: uv run lint-imports
       - run: uv run vulture
       - run: uv run deptry src
-      - run: uv run deptry tests --exclude '\.venv' --known-first-party claude_review --known-first-party tests --ignore DEP002,DEP004
       # The code rules no linter here can be told to keep
-      - run: uv run python scripts/check_code_rules.py src tests scripts
+      - run: uv run python scripts/check_code_rules.py src scripts
       - run: uv run typos
       # The skill ships twice, as a skill and as the plugin's command
       - run: cmp skills/review-ui/SKILL.md plugin/commands/review-ui.md

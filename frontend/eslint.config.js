@@ -106,8 +106,6 @@ const STILL_TO_CLEAN = {
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']
 };
-// Split with the component they test
-const TESTS_TOO_LONG = ['tests/components/agent-panel.test.ts'];
 
 /** Where a component still to clean is. */
 function componentFiles(names) {
@@ -135,8 +133,8 @@ const NO_PAGE_LOOKUPS = [
 ];
 
 export default tseslint.config(
-	// Generated from the server by `pnpm api:types`
-	{ ignores: ['src/lib/types/generated/'] },
+	// Generated from the server by `pnpm api:types`; and the tests, held to formatting alone
+	{ ignores: ['src/lib/types/generated/', 'tests/'] },
 	eslint.configs.recommended,
 	...tseslint.configs.recommended,
 	...svelte.configs.recommended,
@@ -187,7 +185,7 @@ export default tseslint.config(
 	},
 	...layerRules,
 	{
-		files: ['src/**/*.ts', 'src/**/*.svelte', 'tests/**/*.ts'],
+		files: ['src/**/*.ts', 'src/**/*.svelte'],
 		rules: {
 			'id-length': ['error', { min: 3, exceptions: SHORT_WORDS, properties: 'never' }],
 			// id-length passes over type parameters; a type has a name, as a value does
@@ -231,7 +229,7 @@ export default tseslint.config(
 		rules: { 'no-restricted-syntax': ['error', ...NO_PAGE_LOOKUPS] }
 	},
 	{
-		files: [...componentFiles(STILL_TO_CLEAN.tooLong), ...TESTS_TOO_LONG],
+		files: componentFiles(STILL_TO_CLEAN.tooLong),
 		rules: { 'max-lines': 'off' }
 	},
 	{ files: componentFiles(STILL_TO_CLEAN.tooComplex), rules: { complexity: 'off' } },

@@ -14,6 +14,21 @@ const config: KnipConfig = {
 	// what --production looks at
 	project: ['src/**/*.{ts,svelte,css}!', 'tests/**/*.ts'],
 	ignore: ['src/lib/types/generated/**'],
+	// The tests are read for what of the page they use, and are themselves
+	// held to formatting alone: nothing unused in them is reported
+	ignoreIssues: {
+		'tests/**': [
+			'files',
+			'exports',
+			'nsExports',
+			'types',
+			'nsTypes',
+			'enumMembers',
+			'namespaceMembers',
+			'duplicates',
+			'cycles'
+		]
+	},
 	// Run by the api:types script, from the Python side of the repository
 	ignoreBinaries: ['uv'],
 	compilers: { css: stylesheetImports }

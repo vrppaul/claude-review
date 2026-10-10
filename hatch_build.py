@@ -26,6 +26,8 @@ PREBUILT_MISSING = (
     "the package would serve no UI. This sdist is broken — install from PyPI "
     "instead: uv tool install claude-review"
 )
+# What hatch calls the build an editable install asks for: no distribution comes of it
+EDITABLE_BUILD = "editable"
 
 
 class FrontendBuildHook(BuildHookInterface):
@@ -43,7 +45,7 @@ class FrontendBuildHook(BuildHookInterface):
             return
 
         if not shutil.which("pnpm"):
-            if version == "editable":
+            if version == EDITABLE_BUILD:
                 # Keep the assets dir present so packaging's force-include doesn't
                 # fail; the server starts and answers its routes, with no page
                 # until `pnpm build` runs.

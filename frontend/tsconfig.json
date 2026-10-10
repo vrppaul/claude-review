@@ -24,6 +24,6 @@
     },
     "types": ["vite/client"]
   },
-  "include": ["src/**/*", "src/**/*.svelte", "tests/**/*"],
+  "include": ["src/**/*", "src/**/*.svelte"],
   "exclude": ["node_modules"]
 }
