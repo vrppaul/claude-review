@@ -11,7 +11,6 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.presentation.refusals import ALLOW_HEADER, ALLOW_SEPARATOR
 from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
@@ -28,6 +27,7 @@ from tests.helpers import (
     git,
     http_client,
     line_on_the_wire,
+    methods_allowed,
     opening_of,
     removed_line,
     repository_opening,
@@ -459,4 +459,4 @@ async def test_a_method_a_path_does_not_take_is_refused_naming_every_method_it_d
     response = await client.put(f"{IMAGES_ROUTE}/{NO_SUCH_IMAGE}")
 
     assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED
-    assert set(response.headers[ALLOW_HEADER].split(ALLOW_SEPARATOR)) == {HTTPMethod.GET, HTTPMethod.DELETE}
+    assert methods_allowed(response) == {HTTPMethod.GET, HTTPMethod.DELETE}

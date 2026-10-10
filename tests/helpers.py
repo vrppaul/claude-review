@@ -20,7 +20,7 @@ from urllib.parse import urlencode
 from anyio import EndOfStream
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
@@ -81,6 +81,16 @@ DIFF_ROUTE = "/api/diff"
 CATCH_UP_ROUTE = "/api/catch-up"
 EVENTS_ROUTE = "/api/events"
 IMAGES_ROUTE = "/api/images"
+
+
+# How a refusal of a method says which methods are taken, and how it parts them
+ALLOW = "allow"
+METHOD_SEPARATOR = ","
+
+
+def methods_allowed(response: Response) -> set[str]:
+    """The methods a refusal of a method names as taken, read as any client reads its Allow header."""
+    return {method.strip() for method in response.headers[ALLOW].split(METHOD_SEPARATOR)}
 
 
 def thread_route(thread_id: str) -> str:

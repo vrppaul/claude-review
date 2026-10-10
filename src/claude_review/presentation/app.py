@@ -3,6 +3,7 @@
 import contextlib
 from collections.abc import AsyncGenerator
 from functools import partial
+from http import HTTPMethod, HTTPStatus
 from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import override
@@ -11,6 +12,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException
 from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocketClose
 
@@ -18,7 +20,7 @@ from claude_review.presentation.asgi import HTTP_SCOPE
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
-from claude_review.presentation.refusals import answer_refusals
+from claude_review.presentation.refusals import ALLOW_HEADER, ALLOW_SEPARATOR, answer_refusals
 from claude_review.presentation.routes.api import include_api
 from claude_review.services.reader_record_service import ReaderRecords
 from claude_review.services.review.review import Review
@@ -33,6 +35,8 @@ PAGE_NAME = "index.html"
 ASSETS_NAME = "assets"
 # Where the page asks for those files
 ASSETS_PATH = "/assets"
+# What is asked of a file: to be fetched, or about
+FILE_METHODS = frozenset({HTTPMethod.GET, HTTPMethod.HEAD})
 # What the review calls itself, in its API description
 API_TITLE = "Claude Review"
 
@@ -100,6 +104,8 @@ class AssetFiles(StaticFiles):
 
     A socket opened here is turned away the way the router turns away one it
     has no route for, rather than reaching a file server that cannot answer it.
+    Any other method is refused naming the ones a file takes, which the file
+    server would leave unsaid.
     """
 
     @override
@@ -107,6 +113,9 @@ class AssetFiles(StaticFiles):
         if scope["type"] != HTTP_SCOPE:
             await WebSocketClose()(scope, receive, send)
             return
+        if scope["method"] not in FILE_METHODS:
+            taken = ALLOW_SEPARATOR.join(sorted(FILE_METHODS))
+            raise HTTPException(HTTPStatus.METHOD_NOT_ALLOWED, headers={ALLOW_HEADER: taken})
         await super().__call__(scope, receive, send)
 
 

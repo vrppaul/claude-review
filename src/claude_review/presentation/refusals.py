@@ -155,11 +155,12 @@ async def answer_with_every_method(request: Request, error: Exception) -> Respon
 
     The router names only the methods of the first route it found at the
     path, so a path one route reads and another writes would say it can only
-    be read.
+    be read. What refused names what it takes, and so does every route at
+    the path: the page's files, which no route serves, say so themselves.
     """
     match error:
         case HTTPException(status_code=HTTPStatus.METHOD_NOT_ALLOWED):
-            taken = ALLOW_SEPARATOR.join(sorted(methods_taken_at(request)))
+            taken = ALLOW_SEPARATOR.join(sorted(methods_named_by(error) | methods_taken_at(request)))
             return await http_exception_handler(
                 request, HTTPException(error.status_code, error.detail, headers={ALLOW_HEADER: taken})
             )
@@ -167,6 +168,12 @@ async def answer_with_every_method(request: Request, error: Exception) -> Respon
             return await http_exception_handler(request, error)
         case _:
             raise error
+
+
+def methods_named_by(error: HTTPException) -> set[str]:
+    """The methods a refusal of a method already names in its own Allow header, if it has one."""
+    named = (error.headers or {}).get(ALLOW_HEADER)
+    return set(named.split(ALLOW_SEPARATOR)) if named else set()
 
 
 def methods_taken_at(request: Request) -> set[str]:
