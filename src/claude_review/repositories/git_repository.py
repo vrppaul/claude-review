@@ -24,16 +24,16 @@ MILLISECONDS_PER_SECOND = 1000
 PORCELAIN_PATH_START = 3
 
 # Settings every command runs with, whatever the reader's configuration says:
-# a path outside plain ASCII keeps git's own quoting, which the parser decodes,
-# and a blank line of context keeps the space that marks it, without which the
-# parser would drop the line and number every line after it one short
-GIT_SETTINGS = ["-c", "core.quotePath=true", "-c", "diff.suppressBlankEmpty=false"]
+# a path outside plain ASCII keeps git's own quoting, which the parser decodes
+GIT_SETTINGS = ["-c", "core.quotePath=true"]
 
-# What in the environment would point git at another repository, index or
-# object store — what `git rev-parse --local-env-vars` lists — or rewrite the
-# diff it prints. Inherited from a git hook or the reader's shell, each would
-# redirect or reshape what the review reads, so none is passed on: a command
-# sets the ones it means.
+# What in the environment would change which repository, index, object
+# store or settings git reads — what `git rev-parse --local-env-vars` lists —
+# how it matches a path, or the diff it prints. Inherited from a git hook or
+# the reader's shell, each would redirect or reshape what the review reads, so
+# none is passed on: a command sets the ones it means. A `safe.directory`
+# handed down in GIT_CONFIG_PARAMETERS goes with the rest; one in the reader's
+# own configuration still holds.
 FOREIGN_GIT_VARIABLES = frozenset(
     {
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -53,8 +53,16 @@ FOREIGN_GIT_VARIABLES = frozenset(
         "GIT_COMMON_DIR",
         "GIT_DIFF_OPTS",
         "GIT_EXTERNAL_DIFF",
+        "GIT_GLOB_PATHSPECS",
+        "GIT_NOGLOB_PATHSPECS",
+        "GIT_ICASE_PATHSPECS",
+        "GIT_LITERAL_PATHSPECS",
     }
 )
+
+# What every command sets: a path the review names is that path, never a
+# pattern — "[ab].py" is the file of that name, not a.py beside it
+EVERY_COMMAND_SETS = {"GIT_LITERAL_PATHSPECS": "1"}
 
 # How many lines of context a hunk carries: git's own default, so a change is
 # shown with what is around it whatever the reader set; the page widens it on
@@ -120,9 +128,9 @@ class GitStagedTree(StagedTree):
     touched.
     """
 
-    def __init__(self, path: Path, environment: dict[str, str], *, keeps_objects: bool) -> None:
+    def __init__(self, path: Path, variables: dict[str, str], *, keeps_objects: bool) -> None:
         self._path = path
-        self._environment = environment
+        self._variables = variables
         self._keeps_objects = keeps_objects
 
     @override
@@ -139,7 +147,7 @@ class GitStagedTree(StagedTree):
         arguments = [*DIFF_STAGED, *(["-w"] if ignore_whitespace else [])]
         if base is not None:
             arguments += [END_OF_OPTIONS, base]
-        return await _run(self._path, arguments, self._environment)
+        return await _run(self._path, arguments, self._variables)
 
     @override
     async def write_tree(self) -> str:
@@ -157,7 +165,7 @@ class GitStagedTree(StagedTree):
         if not self._keeps_objects:
             msg = "a tree written down needs an object store that outlives the staging that wrote it"
             raise GitError(msg)
-        return (await _run(self._path, ["write-tree"], self._environment)).strip()
+        return (await _run(self._path, ["write-tree"], self._variables)).strip()
 
     @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
@@ -173,7 +181,7 @@ class GitStagedTree(StagedTree):
         for base in bases:
             try:
                 listed = await _run(
-                    self._path, [*DIFF_STAGED, "--name-only", "-z", END_OF_OPTIONS, base], self._environment
+                    self._path, [*DIFF_STAGED, "--name-only", "-z", END_OF_OPTIONS, base], self._variables
                 )
             except GitError:
                 # One base git will not read — a repository with no HEAD, a
@@ -223,15 +231,15 @@ class GitRepository(ReviewedRepository):
         try:
             throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
             objects = throwaway or str(self._objects)
-            environment = {"GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
+            variables = {"GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
             own = await _own_paths(path)
             # Whichever store is written to, the repository's own stays readable
             if own is not None:
-                environment["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(own.objects)
+                variables["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(own.objects)
 
-            await self._seed(path, Path(index), own, environment)
-            await _run(path, ["add", "-A"], environment)
-            yield GitStagedTree(path, environment, keeps_objects=self._objects is not None)
+            await self._seed(path, Path(index), own, variables)
+            await _run(path, ["add", "-A"], variables)
+            yield GitStagedTree(path, variables, keeps_objects=self._objects is not None)
         finally:
             await asyncio.to_thread(_remove_staging, index, throwaway)
 
@@ -293,7 +301,7 @@ class GitRepository(ReviewedRepository):
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         """Whether the repository tracks the file at this path."""
         try:
-            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path], environment=None)
+            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path], variables=None)
         except GitError:
             return False
         return run.exit_code == 0
@@ -312,7 +320,7 @@ class GitRepository(ReviewedRepository):
             return None
         return Path(found.strip()) if found.strip() else None
 
-    async def _seed(self, path: Path, index: Path, own: OwnPaths | None, environment: dict[str, str]) -> None:
+    async def _seed(self, path: Path, index: Path, own: OwnPaths | None, variables: dict[str, str]) -> None:
         """Start a staging's index from the repository's own, from HEAD when it has none, or from nothing.
 
         Nothing is no file at all: git reads an empty file as a broken index,
@@ -324,7 +332,7 @@ class GitRepository(ReviewedRepository):
             # and a copy dated now would have it trust a stale stat instead
             await asyncio.to_thread(shutil.copy2, own.index, index)
         elif await _has_commits(path):
-            await _run(path, ["read-tree", HEAD], environment)
+            await _run(path, ["read-tree", HEAD], variables)
         else:
             await asyncio.to_thread(index.unlink)
 
@@ -344,19 +352,19 @@ async def _own_paths(path: Path) -> OwnPaths | None:
 async def _has_commits(path: Path) -> bool:
     """Whether there is a HEAD to start the index from: a fresh repository has none."""
     try:
-        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD], environment=None)
+        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD], variables=None)
     except GitError:
         return False
     return run.exit_code == 0
 
 
-async def _run(path: Path, arguments: list[str], environment: dict[str, str] | None = None) -> str:
+async def _run(path: Path, arguments: list[str], variables: dict[str, str] | None = None) -> str:
     """What a git command printed.
 
     Raises:
         GitError: if it could not run, ran out of time, or failed.
     """
-    run = await _execute(path, arguments, environment)
+    run = await _execute(path, arguments, variables)
     if run.exit_code != 0:
         log.warning("git_command_failed", command=arguments[0], exit_code=run.exit_code)
         msg = f"git command failed: {run.errors.strip()}"
@@ -364,10 +372,10 @@ async def _run(path: Path, arguments: list[str], environment: dict[str, str] | N
     return run.output
 
 
-async def _execute(path: Path, arguments: list[str], environment: dict[str, str] | None) -> GitRun:
+async def _execute(path: Path, arguments: list[str], variables: dict[str, str] | None) -> GitRun:
     """Run git and say how it went, leaving no process behind whatever happens.
 
-    `environment` is what the command sets in git's environment; the rest is
+    `variables` are what the command sets in git's environment; the rest is
     inherited, but for what would point git elsewhere or reshape its diff.
     Output is decoded as UTF-8 with anything else replaced: one file in
     another encoding costs its own odd characters, not the review.
@@ -383,7 +391,7 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
             cwd=path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=_git_environment(environment or {}),
+            env=_git_environment(variables or {}),
         )
     except (FileNotFoundError, NotADirectoryError) as failure:
         msg = f"git operation failed: {failure}"
@@ -410,7 +418,7 @@ async def _execute(path: Path, arguments: list[str], environment: dict[str, str]
 def _git_environment(variables: dict[str, str]) -> dict[str, str]:
     """The environment a git command runs in: the inherited one without what is foreign to it, and what it sets."""
     inherited = {name: value for name, value in os.environ.items() if name not in FOREIGN_GIT_VARIABLES}
-    return inherited | variables
+    return inherited | EVERY_COMMAND_SETS | variables
 
 
 async def _stop(process: asyncio.subprocess.Process) -> None:

@@ -81,6 +81,9 @@
   commit it moved to, whatever `diff.submodule` asks. A review started from
   a git hook reads its own repository: the hook's `GIT_DIR`, `GIT_INDEX_FILE`
   and the like no longer point git elsewhere.
+- **A path the review asks git about is that path, never a pattern.** An
+  untracked file named like `[ab].py` passed for the tracked `a.py` it
+  matched, so the context of a hunk could be widened into it.
 - **A review sent for good lets go of its page's socket.** A tab left open
   after the review used to connect to whatever review ran next on the same
   port, tell it the old review's round and threads, and hold it open after

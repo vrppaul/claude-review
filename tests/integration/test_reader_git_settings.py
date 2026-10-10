@@ -1,11 +1,12 @@
-"""The reader's own git settings do not change the diff the review reads.
+"""The reader's own git settings do not change what the review reads.
 
 Git takes settings from the repository, the reader's home and the
 environment as well as from its command line, and some of them change how a
-diff is written or which repository is read. The review reads one format —
-a blank line of context marked as context, git's own three lines of context
-around a change, a file as it is stored, a copy as the new file it is — from
-the repository it was opened on.
+diff is written, which repository or index is read, or how a path is
+matched. The review reads one format — git's own three lines of context
+around a change, a file as it is stored, a copy as the new file it is, a
+submodule as the commit it moved to — from the repository it was opened on,
+and a path it names is that path.
 """
 
 from pathlib import Path
@@ -14,7 +15,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from claude_review.domain.models import DiffFile, DiffLine, FileStatus
-from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.git_repository import FOREIGN_GIT_VARIABLES, GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import added_line, context_line, git, removed_line, write_files
 
@@ -39,6 +40,17 @@ DEFAULT_HUNK = [
 COPIED_FILE = "copied.txt"
 # Where git's attributes name the diff driver a file is shown with
 ATTRIBUTES_FILE = ".gitattributes"
+# A file another repository tracks and the reviewed one does not
+SECRET_FILE = ".env"
+SECRET_TEXT = "TOKEN=1\n"
+# A tracked file, and an untracked one whose name read as a pattern would match it
+TRACKED_FILE = "a.py"
+PATTERN_NAMED_FILE = "[ab].py"
+# Where the submodule sits, what it holds, and the setting that would show it as its own files
+SUBMODULE_PATH = "sub"
+SUBMODULE_FILE = "inside.txt"
+# Who commits in the repositories a test makes beside the reviewed one
+AUTHOR_SETTINGS = ["-c", "user.email=test@test.com", "-c", "user.name=Test"]
 
 
 class ReaderSetup(BaseModel):
@@ -122,6 +134,67 @@ async def test_the_review_reads_the_repository_it_was_opened_on_wherever_the_env
     elsewhere = tmp_path_factory.mktemp("elsewhere")
     git(elsewhere, "init", "-b", "main")
     monkeypatch.setenv("GIT_DIR", str(elsewhere / ".git"))
-    monkeypatch.setenv("GIT_INDEX_FILE", str(elsewhere / ".git" / "index"))
 
     assert await _hunk_lines(tmp_git_repo) == DEFAULT_HUNK
+
+
+async def test_an_inherited_index_does_not_decide_what_the_repository_keeps(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Read from another repository's index, an untracked secret would pass for kept, and its lines could be read."""
+    elsewhere = tmp_path_factory.mktemp("elsewhere")
+    git(elsewhere, "init", "-b", "main")
+    write_files(elsewhere, {SECRET_FILE: SECRET_TEXT})
+    git(elsewhere, "add", SECRET_FILE)
+    write_files(tmp_git_repo, {SECRET_FILE: SECRET_TEXT})
+    monkeypatch.setenv("GIT_INDEX_FILE", str(elsewhere / ".git" / "index"))
+
+    assert await GitRepository(objects=None).is_tracked(tmp_git_repo, SECRET_FILE) is False
+
+
+def test_every_variable_git_reads_its_repository_by_is_left_out(tmp_git_repo: Path) -> None:
+    """A newer git that names one more fails here, rather than being let through unseen."""
+    named = set(git(tmp_git_repo, "rev-parse", "--local-env-vars").split())
+
+    assert named <= FOREIGN_GIT_VARIABLES
+
+
+async def test_a_path_the_review_names_is_that_path_never_a_pattern(tmp_git_repo: Path) -> None:
+    """Read as a pattern, an untracked file's name would match the tracked file it resembles."""
+    write_files(tmp_git_repo, {TRACKED_FILE: _written(COMMITTED_LINES)})
+    git(tmp_git_repo, "add", TRACKED_FILE)
+    git(tmp_git_repo, "commit", "-m", "tracked")
+    write_files(tmp_git_repo, {PATTERN_NAMED_FILE: SECRET_TEXT})
+
+    assert await GitRepository(objects=None).is_tracked(tmp_git_repo, PATTERN_NAMED_FILE) is False
+
+
+async def test_how_the_reader_matches_paths_does_not_stop_git(
+    tmp_git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Git refuses to run with a literal path and another way of matching both set."""
+    write_files(tmp_git_repo, {TRACKED_FILE: _written(COMMITTED_LINES)})
+    git(tmp_git_repo, "add", TRACKED_FILE)
+    git(tmp_git_repo, "commit", "-m", "tracked")
+    monkeypatch.setenv("GIT_ICASE_PATHSPECS", "1")
+
+    assert await GitRepository(objects=None).is_tracked(tmp_git_repo, TRACKED_FILE) is True
+
+
+async def test_a_submodule_is_read_as_the_commit_it_moved_to(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Shown as its own files, a submodule would put files in the review that the repository does not hold."""
+    inner = tmp_path_factory.mktemp("inner")
+    git(inner, "init", "-b", "main")
+    write_files(inner, {SUBMODULE_FILE: "first\n"})
+    git(inner, "add", SUBMODULE_FILE)
+    git(inner, *AUTHOR_SETTINGS, "commit", "-m", "first")
+    git(tmp_git_repo, "-c", "protocol.file.allow=always", "submodule", "add", str(inner), SUBMODULE_PATH)
+    git(tmp_git_repo, "commit", "-m", "submodule")
+    moved = tmp_git_repo / SUBMODULE_PATH
+    write_files(moved, {SUBMODULE_FILE: "second\n"})
+    git(moved, *AUTHOR_SETTINGS, "commit", "-am", "second")
+    git(tmp_git_repo, "config", "diff.submodule", "diff")
+
+    assert [changed.path for changed in await _diff(tmp_git_repo)] == [SUBMODULE_PATH]
