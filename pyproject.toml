@@ -140,6 +140,8 @@ known-first-party = ["claude_review"]
 
 [tool.importlinter]
 root_package = "claude_review"
+# The packages it imports are part of the graph, so a contract can forbid one
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "The package's parts build on each other in one direction"
@@ -156,6 +158,15 @@ layers = [
     "services | repositories",
     "domain",
 ]
+
+[[tool.importlinter.contracts]]
+name = "What a review is and does knows no web server and no command line"
+type = "forbidden"
+# The review is served over HTTP and started from a terminal, and neither is
+# what it is: the domain, the services and the repositories build on no
+# framework the presentation, the hosting or the command line are built on
+source_modules = ["claude_review.domain", "claude_review.services", "claude_review.repositories"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto", "click"]
 
 [tool.vulture]
 paths = ["src", "tests"]
