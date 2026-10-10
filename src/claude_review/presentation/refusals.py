@@ -169,7 +169,11 @@ def methods_taken_at(request: Request) -> set[str]:
     """Every method some route takes at the path asked for."""
     taken: set[str] = set()
     for route in request.app.routes:
-        if isinstance(route, Route) and route.methods and route.matches(request.scope)[0] == Match.PARTIAL:
+        if not isinstance(route, Route) or not route.methods:
+            continue
+        # A route whose path matches and whose methods do not matches in part
+        matched, _ = route.matches(request.scope)
+        if matched == Match.PARTIAL:
             taken |= route.methods
     return taken
 

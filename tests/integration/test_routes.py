@@ -3,7 +3,7 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
-from http import HTTPStatus
+from http import HTTPMethod, HTTPStatus
 from importlib.metadata import version
 from pathlib import Path
 
@@ -11,12 +11,14 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.presentation.refusals import ALLOW_HEADER, ALLOW_SEPARATOR
 from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
+    IMAGES_ROUTE,
     REVIEW_ROUTE,
     WAIT_FOR_EVENT,
     ReviewFactory,
@@ -47,6 +49,9 @@ CHANGED_APP_TEXT = "changed"
 # The lines of it a test asks for that the diff leaves out
 WIDENED_FROM = 4
 WIDENED_TO = 6
+
+# An image no review keeps: its path is reached, whatever it then answers
+NO_SUCH_IMAGE = "never-pasted"
 
 A_NOTE = thread_on_the_wire(line_on_the_wire("x.py", 1), "fix this")
 
@@ -447,3 +452,11 @@ async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_h
 
     assert tracked.json()["lines"] == ["initial content"]
     assert untracked.status_code == HTTPStatus.NOT_FOUND
+
+
+async def test_a_method_a_path_does_not_take_is_refused_naming_every_method_it_does(client: AsyncClient) -> None:
+    """One route reads an image and another discards it: the refusal names both, not only the first one found."""
+    response = await client.put(f"{IMAGES_ROUTE}/{NO_SUCH_IMAGE}")
+
+    assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert set(response.headers[ALLOW_HEADER].split(ALLOW_SEPARATOR)) == {HTTPMethod.GET, HTTPMethod.DELETE}
