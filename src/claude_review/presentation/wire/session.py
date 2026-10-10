@@ -16,7 +16,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from claude_review.presentation.wire.base import WireModel
+from claude_review.presentation.wire.base import WireBool, WireModel
 from claude_review.presentation.wire.pushes import ServerPush
 
 
@@ -44,7 +44,7 @@ class Welcome(WireModel):
     type: Literal[SessionMessageKind.WELCOME] = SessionMessageKind.WELCOME
     instance: str
     sequence: int
-    resumed: bool
+    resumed: WireBool
 
 
 class Delivery(WireModel):

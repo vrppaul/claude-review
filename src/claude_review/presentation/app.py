@@ -5,13 +5,11 @@ from collections.abc import AsyncGenerator
 from functools import partial
 from importlib.metadata import version as installed_version
 from pathlib import Path
-from typing import override
 
 import structlog
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.types import Receive, Scope, Send
-from starlette.websockets import WebSocketClose
 
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
@@ -25,6 +23,10 @@ from claude_review.services.review.review_lifetime import EndReason
 log = structlog.get_logger()
 
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
+# The page, and the files its build put beside it, where it asks for them
+PAGE_FILE = STATIC_DIR / "index.html"
+ASSETS_DIR = STATIC_DIR / "assets"
+ASSETS_PATH = "/assets"
 
 # What the review calls itself, in its API description
 API_TITLE = "Claude Review"
@@ -57,25 +59,26 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: Read
     answer_refusals(app)
 
     if STATIC_DIR.exists():
-        app.mount("/", PageFiles(directory=STATIC_DIR, html=True), name="static")
+        serve_the_page(app)
 
     return app
 
 
-class PageFiles(StaticFiles):
-    """The page's own files, served under every path no route claims.
+def serve_the_page(app: FastAPI) -> None:
+    """Serve the page at the root, and the files its build put beside it — nothing else.
 
-    Files are fetched, never opened as sockets: a socket opened anywhere but
-    the review's own is turned away the way a router turns away one it has
-    no route for, rather than reaching a file server that cannot answer it.
+    Every other path, and every method a route does not take, is refused by
+    the router, as it refuses them: a page served under any path no route
+    claims would answer for the routes too, and a wrong method on one would
+    be refused by a file server that does not know which methods it takes.
     """
+    app.add_api_route("/", the_page, methods=["GET"], include_in_schema=False)
+    app.mount(ASSETS_PATH, StaticFiles(directory=ASSETS_DIR), name="assets")
 
-    @override
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "websocket":
-            await WebSocketClose()(scope, receive, send)
-            return
-        await super().__call__(scope, receive, send)
+
+async def the_page() -> FileResponse:
+    """The review's page, which asks for everything else itself."""
+    return FileResponse(PAGE_FILE)
 
 
 @contextlib.asynccontextmanager

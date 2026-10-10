@@ -3,7 +3,7 @@
 from pydantic import ConfigDict, Field
 
 from claude_review.domain.models import DiffLayout, Theme
-from claude_review.presentation.wire.base import WireModel
+from claude_review.presentation.wire.base import WireBool, WireModel
 
 # A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
 MAX_RELEASE_LENGTH = 50
@@ -15,9 +15,9 @@ class ReaderSettings(WireModel):
     theme: Theme
     diff_layout: DiffLayout
     # Leave out changes that only alter whitespace
-    ignore_whitespace: bool
+    ignore_whitespace: WireBool
     # A tick when an answer arrives while the review is in a background tab
-    sound_on_replies: bool
+    sound_on_replies: WireBool
 
 
 class GuideState(WireModel):
@@ -36,7 +36,7 @@ class KeptRecord[Record: WireModel](WireModel):
     """
 
     record: Record
-    stored: bool
+    stored: WireBool
 
 
 class SettingsChange(WireModel):
@@ -50,8 +50,8 @@ class SettingsChange(WireModel):
 
     theme: Theme | None = None
     diff_layout: DiffLayout | None = None
-    ignore_whitespace: bool | None = None
-    sound_on_replies: bool | None = None
+    ignore_whitespace: WireBool | None = None
+    sound_on_replies: WireBool | None = None
 
 
 class GuideChange(WireModel):

@@ -12,6 +12,7 @@ from claude_review.presentation.wire.base import (
     MAX_FILES_NAMED,
     MAX_TEXT_LENGTH,
     AgentText,
+    WireBool,
     WireId,
     WireModel,
 )
@@ -48,7 +49,7 @@ class ProgressStep(WireModel):
     """One branch of the work: something being done, or something done."""
 
     text: StepText
-    done: bool = False
+    done: WireBool = False
 
     def in_the_review(self) -> models.ProgressStep:
         return models.ProgressStep.model_validate(self, from_attributes=True)
@@ -120,7 +121,7 @@ class CatchUpResponse(WireModel):
     title: str
     round: int
     file_count: int
-    answerer_attached: bool
+    answerer_attached: WireBool
     agent: AgentStatus
     threads: list[ThreadSummary]
     panel: list[PanelEntry]

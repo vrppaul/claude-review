@@ -26,6 +26,7 @@ from claude_review.presentation.wire.agent import (
     StatusRequest,
 )
 from claude_review.presentation.wire.content import RetakeResponse
+from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
 from claude_review.presentation.wire.threads import PointRequest, PointResponse, Thread
 
 # How long an ordinary call may take: the review answers at once
@@ -70,19 +71,6 @@ RETAKE_ANSWER = TypeAdapter(RetakeResponse)
 
 class ReviewCallError(Exception):
     """Raised when a call to the review fails; the message says how, in a line."""
-
-
-class FieldRefusal(BaseModel):
-    """One field a request had wrong, as pydantic and FastAPI both describe it."""
-
-    loc: tuple[str | int, ...]
-    msg: str
-
-
-class Refusal(BaseModel):
-    """Why the review refused a request: said in words, or field by field."""
-
-    detail: str | list[FieldRefusal]
 
 
 class ReviewClient:

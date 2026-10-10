@@ -20,6 +20,7 @@ from claude_review.presentation.wire.base import (
     MAX_THREADS,
     AgentText,
     ImageIds,
+    WireBool,
     WireId,
     WireModel,
 )
@@ -41,7 +42,7 @@ class LineAnchor(WireModel):
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
     quote: list[str] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
-    outdated: bool = False
+    outdated: WireBool = False
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
@@ -89,7 +90,7 @@ class Thread(WireModel):
     images: list[Path]
     turns: list[Turn]
     raised_by: TurnAuthor
-    resolved: bool
+    resolved: WireBool
 
     @model_validator(mode="before")
     @classmethod
@@ -144,7 +145,7 @@ class ThreadInput(SaysSomething):
     # Who opened it. Sent back so a thread the author raised is not read as
     # something the reader wrote.
     raised_by: TurnAuthor
-    resolved: bool
+    resolved: WireBool
 
     def in_the_review(self) -> models.ThreadDraft:
         """The thread as the review holds what the page holds."""
@@ -158,7 +159,7 @@ class SubmitRequest(WireModel):
     body: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
     # Whether this send is the last one. False sends a round and leaves the
     # review open, which only makes sense while something is answering it.
-    end: bool
+    end: WireBool
 
 
 class SubmitResponse(WireModel):
@@ -168,7 +169,7 @@ class SubmitResponse(WireModel):
     comment_count: int
     # Which round was just sent, and which one is being written now
     round: int
-    ended: bool
+    ended: WireBool
 
 
 class AskRequest(WireModel):
@@ -253,8 +254,8 @@ class ThreadSummary(WireModel):
     severity: CommentSeverity
     body: str
     raised_by: TurnAuthor
-    resolved: bool
-    outdated: bool
+    resolved: WireBool
+    outdated: WireBool
     turn_count: int
 
     @classmethod

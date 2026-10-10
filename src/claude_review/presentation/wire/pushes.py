@@ -7,7 +7,7 @@ from pydantic import ConfigDict, Field
 
 from claude_review.domain.models import CommentSeverity, FilePath
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.base import WireModel
+from claude_review.presentation.wire.base import WireBool, WireModel
 from claude_review.presentation.wire.content import ChangesSince
 from claude_review.presentation.wire.threads import Anchor
 
@@ -56,7 +56,7 @@ class ReplyPush(Push):
 
 class AnswererPush(Push):
     type: Literal[PushKind.ANSWERER] = PushKind.ANSWERER
-    attached: bool
+    attached: WireBool
 
 
 class ChatPush(Push):

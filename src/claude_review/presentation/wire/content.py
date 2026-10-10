@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 
 from claude_review.domain.models import MAX_QUOTE_LINES, EpochMillis, FileStatus, LineType, ReviewMode
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.base import WireModel
+from claude_review.presentation.wire.base import WireBool, WireModel
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
 
@@ -32,7 +32,7 @@ class DiffFile(WireModel):
     path: str
     status: FileStatus
     hunks: list[DiffHunk]
-    is_binary: bool
+    is_binary: WireBool
     old_mode: str | None
     new_mode: str | None
 
@@ -108,7 +108,7 @@ class ReviewResponse(WireModel):
     mode: ReviewMode
     # Which round is being written, and whether anything is there to answer it
     round: int
-    answerer_attached: bool
+    answerer_attached: WireBool
     # What the agent last said about itself, and what it says it is doing now
     agent: AgentStatus
     work: AgentWork | None

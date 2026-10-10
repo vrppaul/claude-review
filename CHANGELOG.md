@@ -48,6 +48,13 @@
   the repository's own index: much faster on large trees. Like `git diff`, it
   leaves out edits to files marked assume-unchanged or skip-worktree.
 
+- **Requests are read as the API's schema says, and refused as it says.**
+  A yes or a no is `true` or `false`: `0`, `1` and the like are refused. A
+  round's key is `round:` and the number in plain digits. Every route
+  documents its refusals — `{detail}`, in words or field by field — and a
+  method a route does not take is answered `405` with `Allow`, a path no
+  route serves `404`, rather than by the page's file server.
+
 ### Fixed
 - **A review sent for good lets go of its page's socket.** A tab left open
   after the review used to connect to whatever review ran next on the same
