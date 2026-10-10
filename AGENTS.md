@@ -16,6 +16,7 @@ uv run ty check src/                 # Type check Python
 uv run lint-imports                  # The package's parts import in one direction only (pyproject.toml's contract)
 uv run vulture                       # Code nothing calls (what frameworks call is listed in pyproject.toml)
 uv run deptry src                    # Every import declared as a dependency, every dependency imported
+uv run deptry tests --exclude '\.venv' --known-first-party claude_review --known-first-party tests --ignore DEP002,DEP004  # What the tests import is declared, not only installed with something else
 uv run python scripts/check_code_rules.py src tests scripts  # No function inside another, no name too short
 uv run typos                         # Spelling, in code and prose alike
 uv run claude-review diff                    # Run the tool (diff mode)

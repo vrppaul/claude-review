@@ -84,6 +84,16 @@ repos:
         files: ^(src/|pyproject\.toml$)
         pass_filenames: false
         stages: [pre-commit]
+      # What the tests import is declared too, never left to arrive with
+      # something else. deptry leaves tests out unless told otherwise; the
+      # tests use dev dependencies by design and need not use every runtime one.
+      - id: deptry-tests
+        name: deptry (what the tests import, declared)
+        entry: uv run deptry tests --exclude '\.venv' --known-first-party claude_review --known-first-party tests --ignore DEP002,DEP004
+        language: system
+        files: ^(tests/|pyproject\.toml$)
+        pass_filenames: false
+        stages: [pre-commit]
 
   # Bandit - Security linting for Python
   - repo: https://github.com/PyCQA/bandit
