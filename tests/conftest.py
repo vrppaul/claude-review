@@ -1,5 +1,6 @@
 """Shared fixtures for tests."""
 
+import os
 from collections.abc import AsyncIterator, Iterator
 from importlib.metadata import version
 from pathlib import Path
@@ -13,8 +14,16 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
-from claude_review.repositories.git_repository import FOREIGN_GIT_VARIABLES
-from tests.helpers import ReviewFactory, ReviewServers, git, http_client, one_line_file, opening_of, page_client
+from tests.helpers import (
+    GIT_YES,
+    ReviewFactory,
+    ReviewServers,
+    git,
+    http_client,
+    one_line_file,
+    opening_of,
+    page_client,
+)
 
 
 @pytest.fixture
@@ -87,8 +96,8 @@ def review_page(reviews: ReviewFactory) -> Iterator[TestClient]:
 # Where git would read settings of the machine's and of whoever runs the
 # tests: nowhere, so a developer's own git does not decide what a test reads
 NO_GIT_SETTINGS_FILE = "/dev/null"
-# What git reads as yes in a variable of its environment
-GIT_YES = "1"
+# What the variables of git's own in the environment are named with
+GIT_VARIABLE_PREFIX = "GIT_"
 
 
 @pytest.fixture(autouse=True)
@@ -98,10 +107,11 @@ def git_as_it_comes(monkeypatch: pytest.MonkeyPatch) -> None:
     Each test repository sets what it needs in its own configuration; what
     a test means to hold the review to, it sets itself.
     """
+    inherited = [name for name in os.environ if name.startswith(GIT_VARIABLE_PREFIX)]
+    for name in inherited:
+        monkeypatch.delenv(name)
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", NO_GIT_SETTINGS_FILE)
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", GIT_YES)
-    for name in FOREIGN_GIT_VARIABLES:
-        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture(autouse=True)

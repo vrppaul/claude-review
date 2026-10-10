@@ -117,6 +117,10 @@ GLANCE_AT_EVENTS = {"wait_seconds": GLANCE_SECONDS}
 STARTUP_SECONDS = 5.0
 
 
+# What git reads as yes in a variable of its environment
+GIT_YES = "1"
+
+
 def git(repo: Path, *args: str) -> str:
     """Run a git command in the given repo and return stdout."""
     result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)

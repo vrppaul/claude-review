@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from claude_review.domain.models import DiffFile, DiffLine, FileStatus
 from claude_review.repositories.git_repository import FOREIGN_GIT_VARIABLES, GitRepository
 from claude_review.services.diff_reading import read_diff
-from tests.helpers import added_line, context_line, git, removed_line, write_files
+from tests.helpers import GIT_YES, added_line, context_line, git, removed_line, write_files
 
 # A file with a blank line in it, and the line below the blank that changes
 REVIEWED_FILE = "notes.txt"
@@ -46,6 +46,8 @@ SECRET_TEXT = "TOKEN=1\n"
 # A tracked file, and an untracked one whose name read as a pattern would match it
 TRACKED_FILE = "a.py"
 PATTERN_NAMED_FILE = "[ab].py"
+# The ways of matching a path a reader may set for every git they run, which git refuses beside a literal path
+MATCHING_VARIABLES = ["GIT_GLOB_PATHSPECS", "GIT_ICASE_PATHSPECS"]
 # Where the submodule sits, what it holds, and the setting that would show it as its own files
 SUBMODULE_PATH = "sub"
 SUBMODULE_FILE = "inside.txt"
@@ -169,14 +171,15 @@ async def test_a_path_the_review_names_is_that_path_never_a_pattern(tmp_git_repo
     assert await GitRepository(objects=None).is_tracked(tmp_git_repo, PATTERN_NAMED_FILE) is False
 
 
+@pytest.mark.parametrize("matching", MATCHING_VARIABLES)
 async def test_how_the_reader_matches_paths_does_not_stop_git(
-    tmp_git_repo: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_git_repo: Path, matching: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Git refuses to run with a literal path and another way of matching both set."""
     write_files(tmp_git_repo, {TRACKED_FILE: _written(COMMITTED_LINES)})
     git(tmp_git_repo, "add", TRACKED_FILE)
     git(tmp_git_repo, "commit", "-m", "tracked")
-    monkeypatch.setenv("GIT_ICASE_PATHSPECS", "1")
+    monkeypatch.setenv(matching, GIT_YES)
 
     assert await GitRepository(objects=None).is_tracked(tmp_git_repo, TRACKED_FILE) is True
 

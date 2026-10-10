@@ -27,13 +27,16 @@ PORCELAIN_PATH_START = 3
 # a path outside plain ASCII keeps git's own quoting, which the parser decodes
 GIT_SETTINGS = ["-c", "core.quotePath=true"]
 
-# What in the environment would change which repository, index, object
-# store or settings git reads — what `git rev-parse --local-env-vars` lists —
-# how it matches a path, or the diff it prints. Inherited from a git hook or
-# the reader's shell, each would redirect or reshape what the review reads, so
-# none is passed on: a command sets the ones it means. A `safe.directory`
-# handed down in GIT_CONFIG_PARAMETERS goes with the rest; one in the reader's
-# own configuration still holds.
+# What in the environment would point git elsewhere or change what it says,
+# inherited from a git hook or the reader's shell: none is passed on, and a
+# command sets the ones it means. They are what `git rev-parse
+# --local-env-vars` lists, which say which repository, index, object store
+# and settings git reads; GIT_DIFF_OPTS, which beats --unified on the
+# command line; and the ways of matching a path git refuses to run beside
+# the literal one every command sets. A `safe.directory` handed down in
+# GIT_CONFIG_PARAMETERS goes with the rest; one in the reader's own
+# configuration still holds. What an option of every diff already
+# overrides, as --no-ext-diff does an external diff tool, needs no place here.
 FOREIGN_GIT_VARIABLES = frozenset(
     {
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -52,11 +55,8 @@ FOREIGN_GIT_VARIABLES = frozenset(
         "GIT_SHALLOW_FILE",
         "GIT_COMMON_DIR",
         "GIT_DIFF_OPTS",
-        "GIT_EXTERNAL_DIFF",
         "GIT_GLOB_PATHSPECS",
-        "GIT_NOGLOB_PATHSPECS",
         "GIT_ICASE_PATHSPECS",
-        "GIT_LITERAL_PATHSPECS",
     }
 )
 
