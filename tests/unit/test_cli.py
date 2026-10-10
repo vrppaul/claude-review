@@ -31,7 +31,8 @@ BLANK = "   "
 LOAD_AN_AGENTS_COMMAND = (
     "import sys; from claude_review.cli.main import main; main.get_command(None, 'wait'); print(*sys.modules)"
 )
-SERVER_MODULE = "uvicorn"
+# The server and the web framework under it: an agent's command calls a review in another process, and needs neither
+WEB_STACK = {"uvicorn", "fastapi", "starlette"}
 
 
 @pytest.fixture
@@ -137,10 +138,10 @@ def test_a_value_the_review_would_refuse_is_refused_naming_where_it_was_typed(
     assert "would refuse" in result.output
 
 
-def test_an_agents_command_does_not_load_the_server() -> None:
-    """It runs many times a minute, and the server it would load is in another process."""
+def test_an_agents_command_does_not_load_the_server_or_its_framework() -> None:
+    """It runs many times a minute, and whatever serves the review is in another process."""
     loaded = subprocess.run(
         [sys.executable, "-c", LOAD_AN_AGENTS_COMMAND], capture_output=True, text=True, check=True
     ).stdout.split()
 
-    assert SERVER_MODULE not in loaded
+    assert WEB_STACK.isdisjoint(loaded)

@@ -169,6 +169,15 @@ type = "forbidden"
 source_modules = ["claude_review.domain", "claude_review.services", "claude_review.repositories"]
 forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto", "click"]
 
+[[tool.importlinter.contracts]]
+name = "What crosses the wire builds on no web stack, so an agent's command stays light"
+type = "forbidden"
+# The agent's commands read and write the same wire models the routes do,
+# and run many times a minute: the models build on pydantic alone, never on
+# the server or the framework that serves them
+source_modules = ["claude_review.presentation.wire"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto"]
+
 [tool.vulture]
 paths = ["src", "tests"]
 min_confidence = 60
