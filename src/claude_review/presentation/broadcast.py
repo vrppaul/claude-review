@@ -20,42 +20,15 @@ comes back as any other does.
 import asyncio
 import secrets
 from collections import deque
-from typing import assert_never, override
+from typing import override
 
 import structlog
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.interfaces import PageChannel
-from claude_review.domain.page_events import (
-    AgentSaid,
-    AnswererChanged,
-    DiffRetaken,
-    FileShown,
-    PageEvent,
-    RoundBegan,
-    StatusReported,
-    ThreadAnswered,
-    ThreadRaised,
-    TreeMoved,
-    WorkReported,
-)
-from claude_review.presentation.version_words import changes_on_the_wire
-from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.pushes import (
-    AnswererPush,
-    ChangedPush,
-    ChatPush,
-    DiffPush,
-    PointPush,
-    ProgressPush,
-    ReplyPush,
-    RoundPush,
-    ServerPush,
-    ShowPush,
-    StatusPush,
-)
+from claude_review.domain.page_events import PageEvent
+from claude_review.presentation.event_pushes import push_of
 from claude_review.presentation.wire.session import Delivery, Resume, Welcome
-from claude_review.presentation.wire.threads import anchor_on_the_wire
 
 log = structlog.get_logger()
 
@@ -153,35 +126,3 @@ class BrowserBroadcast(PageChannel):
         self._listeners.discard(queue)
         queue.shutdown(immediate=True)
         log.warning("page_fell_behind", backlog=self._backlog)
-
-
-def push_of(event: PageEvent) -> ServerPush:
-    """The push a page reads for what happened."""
-    match event:
-        case ThreadAnswered():
-            return ReplyPush(thread_id=event.thread_id, question_id=event.question_id, body=event.body)
-        case AnswererChanged():
-            return AnswererPush(attached=event.attached)
-        case AgentSaid():
-            return ChatPush(message_id=event.message_id, body=event.body, files=event.files)
-        case WorkReported():
-            return ProgressPush(work=AgentWork.of(event.work) if event.work is not None else None)
-        case FileShown():
-            return ShowPush(file=event.file)
-        case StatusReported():
-            return StatusPush(agent=AgentStatus.of(event.agent))
-        case ThreadRaised():
-            return PointPush(
-                thread_id=event.thread_id,
-                anchor=anchor_on_the_wire(event.anchor),
-                body=event.body,
-                severity=event.severity,
-            )
-        case TreeMoved():
-            return ChangedPush(moved_count=event.moved_count)
-        case RoundBegan():
-            return RoundPush(number=event.number)
-        case DiffRetaken():
-            return DiffPush(file_count=event.file_count, changes=changes_on_the_wire(event.changes))
-        case _:
-            assert_never(event)

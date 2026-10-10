@@ -128,10 +128,11 @@ known-first-party = ["claude_review"]
 "src/claude_review/presentation/api_schema.py" = ["TID251"]
 # A command takes one parameter per option, which click hands over by name
 "src/claude_review/cli/agent_commands.py" = ["PLR0913"]
-# One flat match from each page event to its push, closed by assert_never:
-# McCabe counts every case, and splitting it would hide the one place each
-# event becomes what a page reads
-"src/claude_review/presentation/broadcast.py" = ["C901"]
+# The module is one match from each page event to its push. McCabe counts
+# every case as a branch; ty proves the match covers the closed union of
+# events (assert_never), so it is one dispatch, and grouping the events to
+# please the count would make each new event an edit in three places
+"src/claude_review/presentation/event_pushes.py" = ["C901"]
 # Builders take every field of what they build as an optional keyword
 "tests/helpers.py" = ["PLR0913"]
 

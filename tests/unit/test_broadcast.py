@@ -13,7 +13,8 @@ from hypothesis import given, strategies as strategy
 
 from claude_review.domain.models import AgentWork
 from claude_review.domain.page_events import FileShown, WorkReported
-from claude_review.presentation.broadcast import JOURNAL_DEPTH, BrowserBroadcast, push_of
+from claude_review.presentation.broadcast import JOURNAL_DEPTH, BrowserBroadcast
+from claude_review.presentation.event_pushes import push_of
 from claude_review.presentation.wire.pushes import ShowPush
 from claude_review.presentation.wire.session import Delivery, Resume, Welcome
 from tests.helpers import message_said
