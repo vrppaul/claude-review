@@ -13,15 +13,15 @@ const LAYERS = {
 	utils: ['types'],
 	// What the page does to the document itself: focus, scroll, the tab, and
 	// where each file and thread is drawn
-	dom: ['types'],
+	dom: [],
 	api: ['types'],
 	connection: ['types'],
 	anchors: ['types'],
 	drafts: ['types', 'utils'],
 	reader: ['types', 'utils', 'api'],
-	guide: ['types', 'utils', 'api'],
+	guide: ['types', 'api'],
 	review: ['types', 'utils', 'dom', 'anchors', 'api', 'drafts', 'guide', 'reader'],
-	page: ['types', 'utils', 'anchors', 'api', 'connection', 'drafts', 'guide', 'reader', 'review']
+	page: ['types', 'utils', 'api', 'connection', 'drafts', 'reader', 'review']
 };
 const PARTS = [...Object.keys(LAYERS), 'components'];
 
@@ -117,27 +117,20 @@ function componentFiles(names) {
 // What the page's own code may not do to find an element: a test id is the
 // tests' to rename, and an id is page-wide. Elements announce themselves to
 // whoever needs them; a selector that cannot be avoided reads a data-role.
+const BY_TEST_ID = 'Do not find elements by test id: register them, or give them a data-role.';
+const BY_PAGE_WIDE_ID = 'Do not find elements by a page-wide id: register them with whoever needs them.';
+// Every call that finds elements by a selector
+const SELECTOR_CALL = 'CallExpression[callee.property.name=/^(querySelector(All)?|closest|matches)$/]';
+// What in a selector names an id: `#name`, or `[id=…]`
+const NAMES_AN_ID = '/#|\\[id\\b/';
 const NO_PAGE_LOOKUPS = [
+	{ selector: 'Literal[value=/data-testid/]', message: BY_TEST_ID },
+	{ selector: 'TemplateElement[value.raw=/data-testid/]', message: BY_TEST_ID },
+	{ selector: "CallExpression[callee.property.name='getElementById']", message: BY_PAGE_WIDE_ID },
+	{ selector: `${SELECTOR_CALL} > Literal[value=${NAMES_AN_ID}]`, message: BY_PAGE_WIDE_ID },
 	{
-		selector: 'Literal[value=/data-testid/]',
-		message: 'Do not find elements by test id: register them, or give them a data-role.'
-	},
-	{
-		selector: 'TemplateElement[value.raw=/data-testid/]',
-		message: 'Do not find elements by test id: register them, or give them a data-role.'
-	},
-	{
-		selector: "CallExpression[callee.property.name='getElementById']",
-		message: 'Do not find elements by a page-wide id: register them with whoever needs them.'
-	},
-	{
-		selector: 'CallExpression[callee.property.name=/^querySelector(All)?$/] > Literal[value=/^#/]',
-		message: 'Do not find elements by a page-wide id: register them with whoever needs them.'
-	},
-	{
-		selector:
-			'CallExpression[callee.property.name=/^querySelector(All)?$/] > TemplateLiteral > TemplateElement:first-child[value.raw=/^#/]',
-		message: 'Do not find elements by a page-wide id: register them with whoever needs them.'
+		selector: `${SELECTOR_CALL} > TemplateLiteral > TemplateElement[value.raw=${NAMES_AN_ID}]`,
+		message: BY_PAGE_WIDE_ID
 	}
 ];
 

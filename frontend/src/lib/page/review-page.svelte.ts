@@ -1,19 +1,20 @@
 /**
  * The page: what it holds before any review is open — the reader's settings
- * and layout, the theme, the socket — and the opening of the review itself.
+ * and layout, the theme, the socket — the opening of the review itself, and
+ * letting it go once it is over.
  */
 
 import { readReview, takeDiff } from '$lib/api/review-api';
 import type { PageConnection } from '$lib/connection/page-connection';
-import { catchUp, takePush } from '$lib/page/push-handling';
+import { catchUp, followKeptThreads, takePush } from '$lib/page/push-handling';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
-import { DraftRepository } from '$lib/drafts/draft-repository';
 import type { Review } from '$lib/review/review.svelte';
 import { openKeptReview } from '$lib/page/kept-review';
 import { messageOf } from '$lib/utils/errors';
+import { stopsTogether } from '$lib/utils/stops';
 
 // What the page says when the review could not be opened and nothing said why
 const OPENING_FAILED = 'Could not open the review';
@@ -26,8 +27,10 @@ export class ReviewPage {
 	readonly #settings = new Settings();
 	readonly #layout = new PageLayout();
 	readonly #theme = new PageTheme(this.#settings);
-	readonly #drafts = new DraftRepository();
-	#state = $state<PageState>({ kind: 'opening' });
+	#state = $state.raw<PageState>({ kind: 'opening' });
+	// How to let go of the review open now: stop telling the server what it
+	// holds, and stop keeping its draft
+	#letGo: (() => void) | null = null;
 
 	constructor(connection: PageConnection) {
 		this.#connection = connection;
@@ -48,7 +51,8 @@ export class ReviewPage {
 	 * had got, and a diff read after them holds everything told by then.
 	 * Once the review is open, the socket goes on from where its draft or its
 	 * facts left the telling, so whatever was said meanwhile is handed over
-	 * rather than missed.
+	 * rather than missed, and the threads its draft brought back follow onto
+	 * the diff it opened on.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -61,19 +65,20 @@ export class ReviewPage {
 				base: null
 			});
 			// An unsent review of the same thing is picked up where it stopped
-			const { review } = openKeptReview(
-				facts,
-				firstDiff,
-				{ settings: this.#settings, layout: this.#layout, sound: new ReplySound(this.#settings) },
-				this.#drafts
-			);
-			review.tellServerThrough(this.#connection);
+			const { review, stopKeeping } = openKeptReview(facts, firstDiff, {
+				settings: this.#settings,
+				layout: this.#layout,
+				sound: new ReplySound(this.#settings)
+			});
+			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping);
 			this.#connection.deliverTo({
 				told: () => review.telling.heard,
 				take: (push, at) => takePush(review, push, at),
 				catchUp: (from) => catchUp(review, from)
 			});
 			this.#state = { kind: 'open', review };
+			void followKeptThreads(review);
+			void review.submission.over.then(() => this.close());
 			// A first review is welcomed; a newer release says what changed
 			void review.guide.open();
 		} catch (error) {
@@ -82,5 +87,20 @@ export class ReviewPage {
 				reason: messageOf(error, OPENING_FAILED)
 			};
 		}
+	}
+
+	/**
+	 * Let go of the review: nothing more is said to the server or heard from
+	 * it, and nothing more of its draft is kept once what was waiting to be
+	 * kept is. Done once the review is over, for the socket would otherwise
+	 * come back to whatever runs next on this port — the next review of the
+	 * same repository, as like as not — tell it this review's round and
+	 * threads, and hold it open after its own page has closed. The page
+	 * itself stays on screen as it is.
+	 */
+	close(): void {
+		this.#letGo?.();
+		this.#letGo = null;
+		this.#connection.close();
 	}
 }

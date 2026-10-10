@@ -1,13 +1,22 @@
 /**
  * What each push from the server does to the review on screen, and what the
- * page does when pushes were missed.
+ * page does when pushes were missed — by its socket, or by the draft it
+ * opened from.
  *
  * The connection has already read a push and checked its kind; this decides
  * what it means. The compiler refuses a kind left out of the switch.
  */
 
 import { readReview } from '$lib/api/review-api';
-import { caughtUpNote, diffNotTakenNote, notCaughtUpNote, raisedNote, retakenNote } from '$lib/review/panel-notes';
+import {
+	caughtUpNote,
+	diffNotTakenNote,
+	keptThreadsFollowedNote,
+	keptThreadsNotFollowedNote,
+	notCaughtUpNote,
+	raisedNote,
+	retakenNote
+} from '$lib/review/panel-notes';
 import type { Review } from '$lib/review/review.svelte';
 import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
@@ -137,5 +146,22 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {
 		review.conversation.note(notCaughtUpNote(error));
+	}
+}
+
+/**
+ * Follow the threads a review picked up from its draft onto the diff it
+ * opened on. The draft may hold them on an older diff: the page went while
+ * a retake was moving them, or moving them failed. Following finds each by
+ * its lines, so threads already in place stay where they are, and the panel
+ * speaks only when one moved.
+ */
+export async function followKeptThreads(review: Review): Promise<void> {
+	if (review.threads.count === 0) return;
+	try {
+		const said = keptThreadsFollowedNote(await review.followThreads());
+		if (said !== null) review.conversation.note(said);
+	} catch (error) {
+		review.conversation.note(keptThreadsNotFollowedNote(error));
 	}
 }

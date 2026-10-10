@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import { flushSync } from 'svelte';
-import { DraftRepository } from '$lib/drafts/draft-repository';
-import { storageKey } from '$lib/utils/preferences';
+import { readDraft } from '$lib/drafts/draft-storage';
 import type { Review } from '$lib/review/review.svelte';
+import { REVIEW_TITLE } from './diff';
 import { newComment } from './new-comment';
 import { openReview } from './review';
-
-const DRAFT_KEY = storageKey('draft');
-const TITLE = 'repo: uncommitted changes';
+import { DRAFT_KEY } from './stored-draft';
 // Longer than the keeper waits after the last change
 const AFTER_A_PAUSE = 1000;
 
@@ -40,7 +38,7 @@ describe('keeping the draft', () => {
 		vi.advanceTimersByTime(AFTER_A_PAUSE);
 
 		expect(draftWrites(written)).toBe(1);
-		expect(new DraftRepository().load(TITLE)?.reviewBody).toBe('Overall');
+		expect(readDraft(REVIEW_TITLE)?.reviewBody).toBe('Overall');
 	});
 
 	it('keeps it at once when the page goes', () => {
@@ -49,7 +47,7 @@ describe('keeping the draft', () => {
 
 		window.dispatchEvent(new Event('pagehide'));
 
-		expect(new DraftRepository().load(TITLE)?.reviewBody).toBe('Overall fine');
+		expect(readDraft(REVIEW_TITLE)?.reviewBody).toBe('Overall fine');
 	});
 
 	it('brings no draft back as the page goes with nothing waiting to be kept', () => {

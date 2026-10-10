@@ -170,7 +170,7 @@ export type DiffPush = SocketSchemas['DiffPush'];
 
 /**
  * How far the review's telling has got, as a page holds it: which run of the
- * review, and the number of the last push taken in. Numbers start again
+ * review, and the number of the last push it covers. Numbers start again
  * with each run, so they mean nothing without it.
  */
 export interface TellingPosition {

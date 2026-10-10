@@ -14,8 +14,8 @@
  *
  * Every push arrives numbered. Once the page can take pushes, each
  * connection names where its telling stands — the run of the review it was
- * reading and the last push it took in, which the page keeps — and is
- * handed what came after.
+ * reading and how far it had heard it, which the page keeps — and is handed
+ * what came after.
  * When the review cannot hand over all of it, the page is asked to catch up,
  * and what arrives meanwhile waits until it has.
  */
@@ -42,7 +42,7 @@ export function sessionUrl(page: Location): string {
 
 /** What the page does with what the connection brings it. */
 export interface PushReceiver {
-	/** Where the page's telling stands: the run of the review, and the last push it took in. */
+	/** Where the page's telling stands: the run of the review, and how far the page has heard it. */
 	told(): TellingPosition;
 	/** Take in one push, and where it stands in the telling. */
 	take(push: ServerPush, at: TellingPosition): void;
@@ -87,10 +87,11 @@ export class PageConnection {
 	#catchingUp = false;
 	// What the page last said it holds. Said again on every connection,
 	// because a connection may be to a server that has just come up knowing
-	// nothing.
+	// nothing. Then when it was last said, and what says the latest once it
+	// may be said again.
 	#hello: SessionHello | null = null;
-	#toldAt = 0;
-	#telling: ReturnType<typeof setTimeout> | null = null;
+	#helloSaidAt = 0;
+	#helloTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(url: string) {
 		this.#url = url;
@@ -110,8 +111,8 @@ export class PageConnection {
 	close(): void {
 		this.#closed = true;
 		this.#stopRetrying();
-		if (this.#telling !== null) clearTimeout(this.#telling);
-		this.#telling = null;
+		if (this.#helloTimer !== null) clearTimeout(this.#helloTimer);
+		this.#helloTimer = null;
 		this.#letGoOfHolding();
 		this.#socket?.close();
 		this.#socket = null;
@@ -154,7 +155,7 @@ export class PageConnection {
 		this.#socket = socket;
 	}
 
-	/** Where to connect: naming, once the page can say it, the run of the review and the last push it took in. */
+	/** Where to connect: naming, once the page can say it, the run of the review and how far the page has heard it. */
 	#address(): string {
 		const told = this.#receiver?.told();
 		if (told === undefined) return this.#url;
@@ -248,18 +249,18 @@ export class PageConnection {
 		if (this.#hello === null || this.#socket?.readyState !== WebSocket.OPEN) {
 			return;
 		}
-		const due = this.#toldAt + HELLO_AT_MOST_EVERY - Date.now();
+		const due = this.#helloSaidAt + HELLO_AT_MOST_EVERY - Date.now();
 		if (due > 0) {
 			// Trailing rather than dropped: the last state is the one that matters
-			this.#telling ??= setTimeout(() => this.#sayHelloLater(), due);
+			this.#helloTimer ??= setTimeout(() => this.#sayHelloLater(), due);
 			return;
 		}
-		this.#toldAt = Date.now();
+		this.#helloSaidAt = Date.now();
 		this.#socket.send(JSON.stringify(this.#hello));
 	}
 
 	#sayHelloLater(): void {
-		this.#telling = null;
+		this.#helloTimer = null;
 		this.#sayHello();
 	}
 }

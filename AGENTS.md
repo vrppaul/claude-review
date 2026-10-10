@@ -106,6 +106,7 @@ async def submit_review(
 - **Test selectors**: use `data-testid` attributes for targeting elements to interact with (click, type, check disabled). Use `getByText` / `text=` only for asserting visible content the user sees. Never use CSS class selectors in tests. Add `data-testid` to every new button, input, textarea, and container.
 - **Finding elements in the page's own code**: never by test id or by a page-wide id. An element announces itself to whoever needs it (`FileSections` holds every file section and thread); a selector that cannot be avoided reads a `data-role`. eslint refuses the rest.
 - **Frontend layers**: the parts of `frontend/src/lib` build on each other in one direction, as `LAYERS` in `frontend/eslint.config.js` lists them; an import against it fails the lint. Components build on everything and are built on by nothing but components.
+- **Rune state**: an object or array only ever replaced whole — what the server sent, a list rebuilt with `map`/`filter`/spread — is `$state.raw`, never deep `$state`, which wraps every line of a diff in a proxy and pays for it on every read.
 
 ## Boundaries
 

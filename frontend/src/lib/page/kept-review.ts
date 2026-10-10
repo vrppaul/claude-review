@@ -4,15 +4,14 @@
  */
 
 import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
-import type { DraftRepository } from '$lib/drafts/draft-repository';
+import { readDraft } from '$lib/drafts/draft-storage';
 import { type ReaderParts, Review } from '$lib/review/review.svelte';
 import type { DiffResponse, ReviewResponse } from '$lib/types';
 
-/** A review on screen, and what keeps its draft. */
+/** A review on screen, and how to stop keeping its draft. */
 export interface KeptReview {
 	review: Review;
-	keeper: DraftKeeper;
-	/** Stop keeping the draft. */
+	/** Stop keeping the draft, keeping first what was waiting to be kept. */
 	stopKeeping: () => void;
 }
 
@@ -20,13 +19,7 @@ export interface KeptReview {
  * Open a review on what the server says it is, its first diff, and whatever
  * unsent draft of it this browser kept — and keep its draft from then on.
  */
-export function openKeptReview(
-	facts: ReviewResponse,
-	firstDiff: DiffResponse,
-	reader: ReaderParts,
-	drafts: DraftRepository
-): KeptReview {
-	const review = new Review({ facts, firstDiff, draft: drafts.load(facts.title) }, reader);
-	const keeper = new DraftKeeper(drafts, review);
-	return { review, keeper, stopKeeping: keeper.start() };
+export function openKeptReview(facts: ReviewResponse, firstDiff: DiffResponse, reader: ReaderParts): KeptReview {
+	const review = new Review({ facts, firstDiff, draft: readDraft(facts.title) }, reader);
+	return { review, stopKeeping: new DraftKeeper(review).start() };
 }

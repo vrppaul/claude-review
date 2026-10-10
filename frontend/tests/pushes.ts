@@ -13,7 +13,7 @@ export function pushedAt(sequence: number): TellingPosition {
 }
 
 /** Hand the review the next push the server tells, as its socket would. */
-export function told(review: Review, push: ServerPush): void {
+export function handOverNext(review: Review, push: ServerPush): void {
 	const { heard } = review.telling;
 	takePush(review, push, { ...heard, sequence: heard.sequence + 1 });
 }

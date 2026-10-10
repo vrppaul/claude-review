@@ -6,7 +6,6 @@ import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
 import type { Review } from '$lib/review/review.svelte';
 import type { DiffFile, DiffResponse, ReviewResponse } from '$lib/types';
-import { DraftRepository } from '$lib/drafts/draft-repository';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
 
@@ -31,7 +30,6 @@ let openPage: KeptReview | null = null;
 export function leavePage(): void {
 	// What the page changed last is noticed before it goes, as in a browser
 	flushSync();
-	openPage?.keeper.flush();
 	openPage?.stopKeeping();
 	openPage = null;
 }
@@ -44,12 +42,11 @@ export function leavePage(): void {
  */
 export function openReview({ files = [], facts, diff, settings = new Settings() }: Opened = {}): Review {
 	leavePage();
-	openPage = openKeptReview(
-		reviewResponse(facts),
-		diffResponse({ files, ...diff }),
-		{ settings, layout: new PageLayout(), sound: new ReplySound(settings) },
-		new DraftRepository()
-	);
+	openPage = openKeptReview(reviewResponse(facts), diffResponse({ files, ...diff }), {
+		settings,
+		layout: new PageLayout(),
+		sound: new ReplySound(settings)
+	});
 	return openPage.review;
 }
 

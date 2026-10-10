@@ -17,8 +17,8 @@ export class Answerer {
 
 	constructor(attached: boolean, status: AgentStatus, work: AgentWork | null) {
 		this.#attached = $state(attached);
-		this.#status = $state(status);
-		this.#work = $state(work);
+		this.#status = $state.raw(status);
+		this.#work = $state.raw(work);
 	}
 
 	/** Whether an agent is waiting on the review, so a round can be sent. */

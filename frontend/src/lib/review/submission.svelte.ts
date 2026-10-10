@@ -15,6 +15,8 @@ export class Submission {
 	// The summary: about the change as a whole, not one line of it
 	#body: string;
 	#finished = $state(false);
+	// Settled once the review is over, for whoever lets go of it then
+	readonly #over = Promise.withResolvers<void>();
 
 	/** @param body the summary of an unsent review of the same thing, picked up where it stopped */
 	constructor(threads: Threads, rounds: Rounds, body: string) {
@@ -30,6 +32,11 @@ export class Submission {
 	/** Whether the review is over — sent for good, or ended — and the page is done. */
 	get finished(): boolean {
 		return this.#finished;
+	}
+
+	/** Settles once the review is over: sent for good, or ended. */
+	get over(): Promise<void> {
+		return this.#over.promise;
 	}
 
 	/** Whether there is anything to send at all. */
@@ -63,7 +70,7 @@ export class Submission {
 		});
 
 		if (end) {
-			this.#finished = true;
+			this.#finish();
 			return result;
 		}
 
@@ -78,6 +85,11 @@ export class Submission {
 	/** End a review that was being worked through in rounds. */
 	async end(): Promise<void> {
 		await endReview();
+		this.#finish();
+	}
+
+	#finish(): void {
 		this.#finished = true;
+		this.#over.resolve();
 	}
 }

@@ -9,7 +9,7 @@ import type { ChangesSince, FollowOutcome } from '$lib/types';
 
 export class LastRetake {
 	// How the threads fared, while it is still worth saying
-	#outcome = $state<FollowOutcome | null>(null);
+	#outcome = $state.raw<FollowOutcome | null>(null);
 	// Which files the retake rewrote. This is what takes a tick off a file
 	// the agent rewrote — without it a file read to the end keeps its mark
 	// through the rewrite, and gets walked past.

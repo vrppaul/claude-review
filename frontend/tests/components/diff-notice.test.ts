@@ -7,6 +7,7 @@ import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { settled } from '../settled';
 
 let review: Review;
 
@@ -161,7 +162,7 @@ describe('threads the base on screen cannot draw', () => {
 
 		await review.diff.setBase('review');
 		await review.diff.setBase('round:1');
-		await new Promise((settle) => setTimeout(settle));
+		await settled();
 
 		expect(queryByTestId('off-screen-list')).toBeNull();
 	});

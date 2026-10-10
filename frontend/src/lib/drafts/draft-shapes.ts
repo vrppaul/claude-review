@@ -8,9 +8,10 @@
  * being written there; what a thread hangs on has moved into an anchor of
  * its own, and every turn carries an id a question can name; how a thread
  * is read — folded, unread, waited on — has moved out of the thread; and
- * the draft says how far the server's telling had got for it. A draft is
- * brought up to date — never thrown away: it is an hour of somebody's
- * reading.
+ * the draft says how far the server's telling had got for it. A draft a
+ * release kept is brought up to date — never thrown away: it is an hour of
+ * somebody's reading. The shapes between the last released one and this
+ * were never released, and are not read.
  */
 
 import type { AwaitedQuestion, Composer, LineSide, PanelTurn, TellingPosition, Thread, Turn } from '$lib/types';
@@ -18,13 +19,6 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 
 /** The shape drafts are kept in now. */
 export const DRAFT_SHAPE = 13;
-// The shapes that kept threads as threads, but sends and waits as pairs and
-// the telling not at all or not as now. None was ever released; what they
-// kept of the telling is not trusted.
-const THREADS_APART_FROM_READING = 10;
-const TELLING_OF_ONE_RUN = 11;
-const TELLING_BY_RUN = 12;
-const PAIRED_SHAPES = [THREADS_APART_FROM_READING, TELLING_OF_ONE_RUN, TELLING_BY_RUN] as const;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -60,15 +54,13 @@ export interface Draft extends KeptThreads {
 	panel: PanelTurn[];
 	/** What is being written in the panel, not yet sent. */
 	composer: Composer;
-	/** The last push whose effect the draft holds; none when nobody can tell. */
+	/**
+	 * The last push the draft heard; none when nobody can tell. What each push
+	 * up to it adds is in the draft — not the threads a retake moves, which
+	 * follow a moment after its push is heard, and which a review opened from
+	 * the draft follows again.
+	 */
 	told: TellingPosition | null;
-}
-
-/** A draft as shapes 10 to 12 kept it: sends and waits as pairs, and the telling not trusted. */
-interface PairedDraft extends Omit<Draft, 'version' | 'read' | 'sent' | 'told'> {
-	version: (typeof PAIRED_SHAPES)[number];
-	read: { folded: string[]; unread: string[]; awaiting: [string, AwaitedQuestion[]][] };
-	sent: [string, number][];
 }
 
 /** A thread as drafts kept it until how it was read moved out of it. */
@@ -122,23 +114,23 @@ interface OlderDraft {
 	issued?: IssuedIds;
 }
 
-/** A draft in any shape it has been kept in. */
-export type KeptDraft = Draft | PairedDraft | OlderDraft;
+/** A draft in any shape a release has kept it in. */
+export type KeptDraft = Draft | OlderDraft;
 
-/** Whether what was read from storage is a draft at all, in any shape. */
+/**
+ * Whether what was read from storage is a draft a release kept, in any
+ * shape. Threads kept as threads are the current shape: every shape that
+ * kept them so before it went unreleased.
+ */
 export function isKeptDraft(value: unknown): value is KeptDraft {
 	if (typeof value !== 'object' || value === null) return false;
 	if (!('title' in value) || typeof value.title !== 'string') return false;
-	if ('threads' in value) return Array.isArray(value.threads);
+	if ('threads' in value) return 'version' in value && value.version === DRAFT_SHAPE && Array.isArray(value.threads);
 	return 'comments' in value && Array.isArray(value.comments);
 }
 
 function isCurrent(kept: KeptDraft): kept is Draft {
 	return kept.version === DRAFT_SHAPE;
-}
-
-function isPaired(kept: KeptDraft): kept is PairedDraft {
-	return PAIRED_SHAPES.some((shape) => shape === kept.version);
 }
 
 function emptyComposer(): Composer {
@@ -164,20 +156,7 @@ export function emptyDraft(title: string): Draft {
 /** A draft of the current shape, whichever shape it was kept in. */
 export function upToDate(kept: KeptDraft): Draft {
 	if (isCurrent(kept)) return kept;
-	if (isPaired(kept)) return fromPairs(kept);
 	return fromComments(kept);
-}
-
-/** A draft of the current shape, out of one that kept sends and waits as pairs. */
-function fromPairs(kept: PairedDraft): Draft {
-	return {
-		...kept,
-		version: DRAFT_SHAPE,
-		read: { ...kept.read, awaiting: Object.fromEntries(kept.read.awaiting) },
-		sent: Object.fromEntries(kept.sent),
-		// What it kept of the telling, if anything, nobody can trust now
-		told: null
-	};
 }
 
 /** A draft of the current shape, out of one that kept its threads as comments. */

@@ -45,7 +45,7 @@ export class Guide {
 	// The ? list: the tour, the news and the keys. Opened by the key or by the
 	// button in the header — a browser extension may have the key for itself.
 	#helpOpen = $state(false);
-	#news = $state<ReleaseNews | undefined>(undefined);
+	#news = $state.raw<ReleaseNews | undefined>(undefined);
 	#touring = $state(false);
 	// The step on screen, by name: the tour's steps change when an agent joins
 	// or leaves, and a position would then point at a different step
@@ -57,7 +57,7 @@ export class Guide {
 	// Which places the page has drawn for a step to light. The page says so
 	// while the tour runs; until it first has, every step counts as shown,
 	// and a step landed on then is checked again once it has.
-	#onPage = $state<ReadonlySet<TourTarget> | null>(null);
+	#onPage = $state.raw<ReadonlySet<TourTarget> | null>(null);
 	readonly #steps: TourStep[];
 	readonly #stepIndex: number;
 

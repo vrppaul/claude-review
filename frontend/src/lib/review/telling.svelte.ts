@@ -1,11 +1,14 @@
 /**
  * How far the server's telling has got for this page, held two ways.
  *
- * - Heard: the last push this page's socket handed over. Every socket the
- *   page opens goes on from here, so nothing is handed over twice and
- *   nothing is skipped; and it is kept with the draft, since what the
- *   pushes up to it added to the draft is in it — all but the threads a
- *   retake moves, which follow a moment after its push is heard.
+ * - Heard: how far this page has heard the telling — from where its draft
+ *   or its facts left it, through every push its socket handed over since,
+ *   or from where the telling went on after a gap. Every socket the page
+ *   opens goes on from here, so nothing is handed over twice and nothing is
+ *   skipped; and it is kept with the draft, since what the pushes up to it
+ *   added to the draft is in it — all but the threads a retake moves, which
+ *   follow a moment after its push is heard, and again when a review opens
+ *   from the draft.
  * - Read: the last push whose effect on the review's facts — its diff, its
  *   agent, its round — the page holds, whether it took the push in or read
  *   the facts after it. A push at or before it has nothing left to change
@@ -46,11 +49,11 @@ export class Telling {
 	 * @param told how far it had got for the draft the review opened from, if it opened from one
 	 */
 	constructor(facts: TellingPosition, told: TellingPosition | null) {
-		this.#heard = $state(startingPosition(facts, told));
+		this.#heard = $state.raw(startingPosition(facts, told));
 		this.#read = facts;
 	}
 
-	/** The last push this page's socket handed over: where the next socket goes on from. */
+	/** How far this page has heard the telling: where the next socket goes on from. */
 	get heard(): TellingPosition {
 		return this.#heard;
 	}

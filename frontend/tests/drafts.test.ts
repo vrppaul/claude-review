@@ -1,22 +1,19 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { DraftRepository } from '$lib/drafts/draft-repository';
-import { DRAFT_SHAPE } from '$lib/drafts/draft-shapes';
+import { flushSync } from 'svelte';
+import { emptyDraft } from '$lib/drafts/draft-shapes';
+import { forgetDraft, keepDraft, readDraft } from '$lib/drafts/draft-storage';
+import { REVIEW_TITLE } from './diff';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
+import { DRAFT_KEY } from './stored-draft';
 
 let review: Review;
-// Where the page keeps drafts, read the way the page reads them
-const drafts = new DraftRepository();
 
 beforeEach(() => {
 	review = openReview();
 });
-
-const TITLE = 'repo: uncommitted changes';
-/** Where the page keeps the draft between reloads. */
-const DRAFT_KEY = 'claude-review:draft';
 
 /** The reload of a page: whatever it held is gone, and the draft is read again. */
 function reload() {
@@ -40,11 +37,13 @@ describe('an unsent review', () => {
 		expect(review.threads.reading.awaiting(asked).map((question) => question.id)).toEqual([asked]);
 	});
 
-	it('hands out ids past those said before the reload, so an answer has an id of its own', () => {
-		review.conversation.receive(null, 'before the reload', []);
+	it('hands out ids past those said before the reload, so an answer or a note has an id of its own', () => {
+		review.conversation.receive(null, 'answered before the reload', []);
+		review.conversation.note('noted before the reload');
 
 		reload();
-		review.conversation.receive(null, 'after the reload', []);
+		review.conversation.receive(null, 'answered after the reload', []);
+		review.conversation.note('noted after the reload');
 
 		const ids = review.conversation.turns.map((turn) => turn.id);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -74,11 +73,14 @@ describe('an unsent review', () => {
 		expect(review.threads.all).toEqual([]);
 	});
 
-	it('does not come back after it has been sent', async () => {
+	it('does not come back after it has been sent, though it was kept before', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/submit', { markdown: '## x', comment_count: 1, round: 1, ended: true });
 		review = openReview();
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		flushSync();
+		window.dispatchEvent(new Event('pagehide'));
+		expect(readDraft(REVIEW_TITLE)?.threads).toHaveLength(1);
 
 		await review.submission.submit(true);
 
@@ -143,24 +145,14 @@ describe('an unsent review', () => {
 	it('ignores a draft that is not what it should be', () => {
 		localStorage.setItem(DRAFT_KEY, 'not json at all');
 
-		expect(drafts.load(TITLE)).toBeNull();
+		expect(readDraft(REVIEW_TITLE)).toBeNull();
 	});
 
 	it('is forgotten when asked', () => {
-		drafts.save({
-			version: DRAFT_SHAPE,
-			title: 'repo',
-			threads: [],
-			read: { folded: [], unread: [], awaiting: {} },
-			reviewBody: 'x',
-			sent: {},
-			panel: [],
-			composer: { text: '', images: [] },
-			issued: { comments: 0, turns: 0 },
-			told: null
-		});
-		drafts.clear();
+		keepDraft({ ...emptyDraft(REVIEW_TITLE), reviewBody: 'Overall fine' });
 
-		expect(drafts.load('repo')).toBeNull();
+		forgetDraft();
+
+		expect(readDraft(REVIEW_TITLE)).toBeNull();
 	});
 });

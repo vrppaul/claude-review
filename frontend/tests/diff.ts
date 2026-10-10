@@ -66,10 +66,13 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 	};
 }
 
+/** What the review a test opens is of, unless it says otherwise: the title its draft is kept under. */
+export const REVIEW_TITLE = 'repo: uncommitted changes';
+
 /** What the server says the review is, as a page opening reads it: a diff in its first round. */
 export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {
 	return {
-		title: 'repo: uncommitted changes',
+		title: REVIEW_TITLE,
 		mode: 'diff',
 		round: 1,
 		answerer_attached: false,

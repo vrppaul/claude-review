@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DraftRepository } from '$lib/drafts/draft-repository';
+import { readDraft } from '$lib/drafts/draft-storage';
 import { threadsIn } from '$lib/anchors/thread-token';
 import { anchorToken } from '$lib/anchors/views';
 import { formatWeight } from '$lib/review/weight';
@@ -154,7 +154,7 @@ describe('the panel talks to the agent about the review', () => {
 		await say('and a message');
 		leavePage();
 
-		const kept = new DraftRepository().load(TITLE);
+		const kept = readDraft(TITLE);
 		expect(kept?.threads).toHaveLength(1);
 		expect(kept?.panel).toHaveLength(1);
 	});

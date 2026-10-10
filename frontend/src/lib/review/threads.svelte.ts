@@ -50,7 +50,7 @@ export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
 	readonly reading: ThreadReading;
 	readonly #rounds: Rounds;
-	#all = $state<Thread[]>([]);
+	#all = $state.raw<Thread[]>([]);
 	// Which threads have gone out, and in which round. A round carries what
 	// is new since the last one, not the whole review again — and the reader
 	// can see which of what is on screen the answering side has already read.

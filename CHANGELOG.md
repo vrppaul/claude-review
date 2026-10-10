@@ -48,6 +48,15 @@
   the repository's own index: much faster on large trees. Like `git diff`, it
   leaves out edits to files marked assume-unchanged or skip-worktree.
 
+### Fixed
+- **A review sent for good lets go of its page's socket.** A tab left open
+  after the review used to connect to whatever review ran next on the same
+  port, tell it the old review's round and threads, and hold it open after
+  its own tab was closed.
+- **Threads brought back from a draft follow the diff the review opens on.**
+  A reload while a retake was moving them, or a move that failed, used to
+  leave them on their old lines.
+
 ## [1.5.0] - 2026-10-05
 
 ### Added

@@ -17,7 +17,7 @@ import { imagesAmong, wholeMegabytes } from '$lib/utils/images';
 const ATTACHING_FAILED = 'Could not attach the image';
 
 export class ImageAttachments {
-	#images = $state<string[]>([]);
+	#images = $state.raw<string[]>([]);
 	#uploading = $state(0);
 	// What this instance uploaded itself, as opposed to images it was handed
 	// with an edit or a draft: the only ones it may let the server drop

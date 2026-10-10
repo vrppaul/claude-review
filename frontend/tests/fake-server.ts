@@ -8,7 +8,7 @@
  */
 import { vi } from 'vitest';
 import type { paths } from '$lib/types/generated/http';
-import type { ReaderSettings } from '$lib/types';
+import type { ReaderSettings, SettingsChange } from '$lib/types';
 
 /** What a route answers when it did what it was asked and has nothing to add: no body at all. */
 type Done = null;
@@ -215,12 +215,37 @@ export const NEW_READER: ReaderSettings = {
 	sound_on_replies: false
 };
 
+// Every choice a change of the reader's settings may carry
+const SETTINGS_FIELDS: readonly string[] = [
+	'theme',
+	'diff_layout',
+	'ignore_whitespace',
+	'sound_on_replies'
+] satisfies (keyof SettingsChange)[];
+
+/** Whether what the page sent is a change of the reader's choices, and nothing else. */
+function isSettingsChange(body: unknown): body is SettingsChange {
+	return (
+		typeof body === 'object' && body !== null && Object.keys(body).every((field) => SETTINGS_FIELDS.includes(field))
+	);
+}
+
+/** The settings once a change is taken on top of them: a choice sent as null is one not sent, as the server reads it. */
+function changedBy(settings: ReaderSettings, change: SettingsChange): ReaderSettings {
+	return {
+		theme: change.theme ?? settings.theme,
+		diff_layout: change.diff_layout ?? settings.diff_layout,
+		ignore_whitespace: change.ignore_whitespace ?? settings.ignore_whitespace,
+		sound_on_replies: change.sound_on_replies ?? settings.sound_on_replies
+	};
+}
+
 /** Have the server take every settings change on top of these, and answer with the result. */
 export function keepingSettings(server: FakeServer, settings: ReaderSettings = NEW_READER): void {
-	server.answerWith('PUT /api/settings', (request) => ({
-		...settings,
-		...(request.body as Partial<ReaderSettings>)
-	}));
+	server.answerWith('PUT /api/settings', (request) => {
+		if (!isSettingsChange(request.body)) throw new Error('The page sent something other than a settings change');
+		return changedBy(settings, request.body);
+	});
 }
 
 /** A server taking every message sent from the agent panel, and every one taken back. */

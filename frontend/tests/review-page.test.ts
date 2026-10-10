@@ -10,12 +10,29 @@ import type { ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
 import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
+import { settled } from './settled';
 
 const SESSION_URL = 'ws://review.test/api/session';
 // How far the review's telling had got when the page read its facts
 const FACTS_READ_AT = 5;
 // How far the draft a reloaded page opens from had got
 const DRAFT_LEFT_AT = 2;
+// Where a thread was written, and where the diff the page opens on has it now
+const WRITTEN_AT_LINE = 3;
+const NOW_AT_LINE = 7;
+// Longer than a page waits before it tries its socket again, however often it has
+const LONGER_THAN_ANY_RETRY = 60_000;
+
+// The pages a test opened: each is let go once the test is over, so none
+// keeps its draft into the next
+const openedPages: ReviewPage[] = [];
+
+/** A page on the review's socket, let go of once the test is over. */
+function newPage(): ReviewPage {
+	const page = new ReviewPage(new PageConnection(SESSION_URL));
+	openedPages.push(page);
+	return page;
+}
 
 /** The review an open page holds. */
 function openedReview(page: ReviewPage): Review {
@@ -40,13 +57,14 @@ describe('opening the page', () => {
 	});
 
 	afterEach(() => {
+		for (const page of openedPages.splice(0)) page.close();
 		vi.unstubAllGlobals();
 	});
 
 	it('holds its socket while the review is still being read, so a slow read does not end it', async () => {
 		const server = serving();
 		const facts = server.hold('GET /api/review');
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		const page = newPage();
 
 		const opening = page.open();
 		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
@@ -60,7 +78,7 @@ describe('opening the page', () => {
 	it('reads the diff only once it knows how far the telling had got, so the diff holds all of it', async () => {
 		const server = serving();
 		const facts = server.hold('GET /api/review');
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		const page = newPage();
 
 		const opening = page.open();
 		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
@@ -81,7 +99,8 @@ describe('opening the page', () => {
 		// And then the reload, while the review's telling goes on to the fifth
 		leavePage();
 		server.answer('GET /api/review', reviewResponse({ sequence: FACTS_READ_AT }));
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		server.answer('POST /api/anchors/follow', { anchors: [before.threads.all[0].anchor] });
+		const page = newPage();
 
 		await page.open();
 		latestSocket().accept();
@@ -94,7 +113,7 @@ describe('opening the page', () => {
 
 	it('takes in once a push its socket handed over twice', async () => {
 		serving();
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		const page = newPage();
 		await page.open();
 		latestSocket().accept();
 		latestSocket().say(welcome({ resumed: true }));
@@ -109,7 +128,7 @@ describe('opening the page', () => {
 	it('reads the review again when its socket comes back without what it missed', async () => {
 		const server = serving();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		const page = newPage();
 		await page.open();
 		latestSocket().accept();
 		latestSocket().say(welcome({ resumed: true }));
@@ -127,9 +146,60 @@ describe('opening the page', () => {
 		expect(review.telling.heard).toEqual({ instance: THIS_RUN, sequence: 5 });
 	});
 
+	it('follows the threads its draft brought back onto the diff it opened on', async () => {
+		const server = serving();
+		// Written before a reload that came while a retake was still moving it
+		const before = openReview();
+		before.threads.add(newComment({ startLine: WRITTEN_AT_LINE, quote: ['x = 1'] }));
+		leavePage();
+		const moved = { ...before.threads.all[0].anchor, start_line: NOW_AT_LINE, end_line: NOW_AT_LINE };
+		server.answer('POST /api/anchors/follow', { anchors: [moved] });
+		const page = newPage();
+
+		await page.open();
+
+		const review = openedReview(page);
+		await vi.waitFor(() => expect(review.threads.all[0].anchor.start_line).toBe(NOW_AT_LINE));
+		expect(review.conversation.turns.at(-1)?.body).toContain('1 thread followed its lines');
+	});
+
+	it('says nothing in the panel when the threads its draft brought back are where they were', async () => {
+		const server = serving();
+		const before = openReview();
+		before.threads.add(newComment({ body: 'Why?' }));
+		leavePage();
+		server.answer('POST /api/anchors/follow', { anchors: [before.threads.all[0].anchor] });
+		const page = newPage();
+
+		await page.open();
+		await settled();
+
+		expect(server.requestsTo('POST /api/anchors/follow')).toHaveLength(1);
+		expect(openedReview(page).conversation.turns).toEqual([]);
+	});
+
+	it('lets go of its socket once the review is sent for good, so the next review on the port never hears of it', async () => {
+		serving().answer('POST /api/submit', { markdown: '## Review', comment_count: 0, round: 1, ended: true });
+		const page = newPage();
+		await page.open();
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+
+		await openedReview(page).submission.submit(true);
+		await vi.waitFor(() => expect(latestSocket().readyState).toBe(FakeSocket.CLOSED));
+		const opened = FakeSocket.opened.length;
+		vi.useFakeTimers();
+		// The review's server goes, and another comes up on the same port
+		latestSocket().drop();
+		vi.advanceTimersByTime(LONGER_THAN_ANY_RETRY);
+		vi.useRealTimers();
+
+		expect(FakeSocket.opened).toHaveLength(opened);
+	});
+
 	it('says why when the review cannot be opened', async () => {
 		serving().fail('GET /api/review', SERVER_ERROR);
-		const page = new ReviewPage(new PageConnection(SESSION_URL));
+		const page = newPage();
 
 		await page.open();
 

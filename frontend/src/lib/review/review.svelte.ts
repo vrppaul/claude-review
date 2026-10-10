@@ -35,7 +35,7 @@ import type {
 	SessionHello
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
-import { reviewWeight } from '$lib/review/weight';
+import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
 
 /** What a review opens on: what the server says it is, its first diff, and any unsent draft. */
 export interface Opening {
@@ -85,6 +85,9 @@ export class Review {
 	// How many threads came back from the draft, so the reader is told rather
 	// than left to wonder where they came from; zero once they have seen it
 	#restoredCount: number;
+	// What handing the diff on screen over costs, in characters: counted once
+	// a diff, not again whenever a thread changes
+	readonly #diffCharacters: number;
 	// What handing this review over costs, as far as this side can tell
 	readonly #weight: number;
 	// What the page tells the server it holds: the round it has reached, and
@@ -115,7 +118,8 @@ export class Review {
 		this.guide = new Guide(this.answerer, facts.release);
 		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
-		this.#weight = $derived(reviewWeight(this.diff.files, this.threads.all));
+		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
+		this.#weight = $derived(tokensOf(this.#diffCharacters + threadCharacters(this.threads.all)));
 		this.#hello = $derived({
 			round: this.rounds.current,
 			threads: this.threads.onTheWire

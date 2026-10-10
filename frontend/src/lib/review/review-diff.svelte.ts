@@ -19,7 +19,7 @@ export class ReviewDiff {
 	readonly treeMoved = new TreeMoved();
 
 	readonly #whitespaceIgnored: () => boolean;
-	#files = $state<DiffFile[]>([]);
+	#files = $state.raw<DiffFile[]>([]);
 	// Which base the diff on screen was taken against, by the key the server
 	// named it with. Null in a review compared against nothing.
 	#base = $state<string | null>(null);
@@ -31,7 +31,7 @@ export class ReviewDiff {
 	// its way — a round landing — is taken against what they picked, not
 	// against what is still on screen.
 	#requestedBase: string | null = null;
-	#versions = $state<ReviewVersion[]>([]);
+	#versions = $state.raw<ReviewVersion[]>([]);
 	// What the header says the diff on screen is. It comes with the diff rather
 	// than out of the version list, so the header can speak before it knows
 	// everything the diff could be compared against.

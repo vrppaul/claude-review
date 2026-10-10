@@ -56,7 +56,7 @@ function choseAnything(kept: ReaderSettings): boolean {
 
 /** The reader's settings: here at once, and on the server for every later review. */
 export class Settings {
-	#current = $state<ReaderSettings>({
+	#current = $state.raw<ReaderSettings>({
 		...NEW_READER,
 		theme: readChoice(THEME_CACHE, THEMES, NEW_READER.theme)
 	});

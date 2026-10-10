@@ -14,8 +14,8 @@
  * Nothing guards against it, on purpose: a review is read in one tab.
  */
 
-import type { DraftRepository } from '$lib/drafts/draft-repository';
 import type { Draft } from '$lib/drafts/draft-shapes';
+import { forgetDraft, keepDraft } from '$lib/drafts/draft-storage';
 import { stopsTogether } from '$lib/utils/stops';
 
 // How long the draft waits after a change before it is kept: long enough
@@ -30,16 +30,14 @@ export interface Drafted {
 }
 
 export class DraftKeeper {
-	readonly #repository: DraftRepository;
 	readonly #review: Drafted;
 	#waiting: ReturnType<typeof setTimeout> | null = null;
 
-	constructor(repository: DraftRepository, review: Drafted) {
-		this.#repository = repository;
+	constructor(review: Drafted) {
 		this.#review = review;
 	}
 
-	/** Keep the draft from now on; returns how to stop. */
+	/** Keep the draft from now on. Returns how to stop, which first keeps what was waiting to be kept. */
 	start(): () => void {
 		window.addEventListener('pagehide', this.#leaving);
 		return stopsTogether(
@@ -47,8 +45,17 @@ export class DraftKeeper {
 				$effect(() => this.#changed(this.#review.draft));
 			}),
 			() => window.removeEventListener('pagehide', this.#leaving),
-			() => this.#stopWaiting()
+			() => this.#flush()
 		);
+	}
+
+	#changed(draft: Draft | null): void {
+		this.#stopWaiting();
+		if (draft === null) {
+			forgetDraft();
+			return;
+		}
+		this.#waiting = setTimeout(() => this.#flush(), KEPT_AFTER);
 	}
 
 	/**
@@ -56,24 +63,11 @@ export class DraftKeeper {
 	 * a page closing over a review sent from another tab does not bring its
 	 * draft back.
 	 */
-	flush(): void {
+	#flush(): void {
 		if (this.#waiting === null) return;
 		this.#stopWaiting();
-		this.#keep();
-	}
-
-	#changed(draft: Draft | null): void {
-		this.#stopWaiting();
-		if (draft === null) {
-			this.#repository.clear();
-			return;
-		}
-		this.#waiting = setTimeout(() => this.flush(), KEPT_AFTER);
-	}
-
-	#keep(): void {
 		const draft = this.#review.draft;
-		if (draft !== null) this.#repository.save(draft);
+		if (draft !== null) keepDraft(draft);
 	}
 
 	#stopWaiting(): void {
@@ -82,5 +76,5 @@ export class DraftKeeper {
 	}
 
 	// The page going: what is waiting to be kept is kept now
-	readonly #leaving = (): void => this.flush();
+	readonly #leaving = (): void => this.#flush();
 }

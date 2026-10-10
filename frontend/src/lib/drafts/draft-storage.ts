@@ -1,0 +1,55 @@
+/**
+ * Where an unsent review is kept across a reload: read, written and
+ * forgotten here, and nowhere else.
+ *
+ * Comments live only in the page until they are sent, so a stray reload, a
+ * closed tab or a crash used to take an hour of reading with it. The draft
+ * is tied to what was being reviewed: opening a different review does not
+ * inherit it.
+ */
+
+import { type Draft, isKeptDraft, upToDate } from '$lib/drafts/draft-shapes';
+import { storageKey } from '$lib/utils/preferences';
+
+const DRAFT_KEY = storageKey('draft');
+
+/** A draft of this review, read from what was kept; null for none or another review's. */
+function draftOf(kept: string | null, title: string): Draft | null {
+	if (kept === null) return null;
+	try {
+		const parsed: unknown = JSON.parse(kept);
+		if (!isKeptDraft(parsed) || parsed.title !== title) return null;
+		return upToDate(parsed);
+	} catch {
+		// Not a draft this page can read: nothing to pick up
+		return null;
+	}
+}
+
+/** The draft of this review, brought up to the current shape; null when there is none. */
+export function readDraft(title: string): Draft | null {
+	try {
+		return draftOf(localStorage.getItem(DRAFT_KEY), title);
+	} catch {
+		// Private windows and blocked site data both throw: nothing was kept
+		return null;
+	}
+}
+
+/** Keep the draft as it now stands. */
+export function keepDraft(draft: Draft): void {
+	try {
+		localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+	} catch {
+		// Private windows and blocked site data both throw; the review still works
+	}
+}
+
+/** Forget the draft: the review it was of is over. */
+export function forgetDraft(): void {
+	try {
+		localStorage.removeItem(DRAFT_KEY);
+	} catch {
+		// Nothing to do: the draft simply outlives the review
+	}
+}

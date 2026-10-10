@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
-import { catchUp } from '$lib/page/push-handling';
+import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
@@ -11,16 +11,12 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
-import { told } from './pushes';
+import { handOverNext } from './pushes';
+import { settled } from './settled';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
 	return diffFile({ path, hunks: [hunk([contextLine(1, 1, 'x')])] });
-}
-
-/** Let a push whose work goes on after it is taken — a retake — finish it. */
-function settled(): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve));
 }
 
 let review: Review;
@@ -33,25 +29,25 @@ describe('what the server pushes, taken in', () => {
 	it('puts an answer under the thread it answers, unread', () => {
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
 
-		told(review, { type: 'reply', thread_id: id, question_id: null, body: 'Because.' });
+		handOverNext(review, { type: 'reply', thread_id: id, question_id: null, body: 'Because.' });
 
 		expect(review.threads.all[0].turns.at(-1)?.body).toBe('Because.');
 		expect(review.threads.unread.map((thread) => thread.id)).toEqual([id]);
 	});
 
 	it('offers the panel when an agent turns up, and stops offering rounds when it goes', () => {
-		told(review, { type: 'answerer', attached: true });
+		handOverNext(review, { type: 'answerer', attached: true });
 		expect(review.answerer.attached).toBe(true);
 		expect(review.layout.agentPanel.open).toBe(true);
 
-		told(review, { type: 'answerer', attached: false });
+		handOverNext(review, { type: 'answerer', attached: false });
 		expect(review.answerer.attached).toBe(false);
 	});
 
 	it('counts an answer in the panel while the panel is shut', () => {
 		review.layout.agentPanel.setOpen(false);
 
-		told(review, { type: 'chat', message_id: null, body: 'Done.', files: [] });
+		handOverNext(review, { type: 'chat', message_id: null, body: 'Done.', files: [] });
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('Done.');
 		expect(review.layout.agentPanel.unread).toBe(1);
@@ -60,7 +56,7 @@ describe('what the server pushes, taken in', () => {
 	it('says the tree moved, the moment it does, without touching the diff', () => {
 		const { getByTestId } = render(DiffNotice, inReview(review));
 
-		told(review, { type: 'changed', moved_count: 3 });
+		handOverNext(review, { type: 'changed', moved_count: 3 });
 		flushSync();
 
 		expect(getByTestId('tree-moved').textContent).toContain('3');
@@ -68,18 +64,19 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('moves on to the round the server began, never back', () => {
-		told(review, { type: 'round', number: 3 });
-		told(review, { type: 'round', number: 2 });
+		handOverNext(review, { type: 'round', number: 3 });
+		handOverNext(review, { type: 'round', number: 2 });
 
 		expect(review.rounds.current).toBe(3);
 	});
 
-	it('puts a thread the agent raised on the diff, and says so in the panel', () => {
+	it('puts a thread the agent raised on the diff, unread, and says so in the panel', () => {
 		const anchor = newComment({ file: 'a.py' }).anchor;
 
-		told(review, { type: 'point', thread_id: 'raised-1', anchor, body: 'Look', severity: 'note' });
+		handOverNext(review, { type: 'point', thread_id: 'raised-1', anchor, body: 'Look', severity: 'note' });
 
 		expect(review.threads.all[0].raised_by).toBe('author');
+		expect(review.threads.unread.map((thread) => thread.id)).toEqual(['raised-1']);
 		expect(review.conversation.turns.at(-1)?.threads).toEqual(['raised-1']);
 	});
 
@@ -90,7 +87,7 @@ describe('what the server pushes, taken in', () => {
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], base_key: 'round:1' }));
 		const retake: ServerPush = { type: 'diff', file_count: 3, changes: null };
 
-		told(review, retake);
+		handOverNext(review, retake);
 		await settled();
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 3 files');
@@ -102,8 +99,8 @@ describe('what the server pushes, taken in', () => {
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
 		const retake: ServerPush = { type: 'diff', file_count: 1, changes: null };
 
-		told(review, retake);
-		told(review, retake);
+		handOverNext(review, retake);
+		handOverNext(review, retake);
 		await settled();
 		expect(follows.requests).toHaveLength(1);
 
@@ -117,11 +114,25 @@ describe('what the server pushes, taken in', () => {
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], moved: 2 }));
 
-		told(review, { type: 'changed', moved_count: 1 });
-		told(review, { type: 'diff', file_count: 1, changes: null });
+		handOverNext(review, { type: 'changed', moved_count: 1 });
+		handOverNext(review, { type: 'diff', file_count: 1, changes: null });
 		await settled();
 
 		expect(review.diff.treeMoved.count).toBe(2);
+	});
+
+	it('says the tree moved after a retake, though the reader waved away as many files before it', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/anchors/follow', { anchors: [] });
+		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
+		handOverNext(review, { type: 'changed', moved_count: 1 });
+		review.diff.treeMoved.dismiss();
+
+		handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+		await settled();
+		handOverNext(review, { type: 'changed', moved_count: 1 });
+
+		expect(review.diff.treeMoved.count).toBe(1);
 	});
 
 	it('says one file as one', async () => {
@@ -129,7 +140,7 @@ describe('what the server pushes, taken in', () => {
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
 
-		told(review, { type: 'diff', file_count: 1, changes: null });
+		handOverNext(review, { type: 'diff', file_count: 1, changes: null });
 		await settled();
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 1 file');
@@ -138,6 +149,8 @@ describe('what the server pushes, taken in', () => {
 
 // Where the telling goes on after what could not be handed over
 const GOES_ON_FROM = { instance: THIS_RUN, sequence: 0 };
+// A review restarted on the same port: another run, numbering its pushes afresh
+const NEXT_RUN = 'next-run';
 
 /** A server the page can catch up from: the review as it now stands, and its threads where they were. */
 function caughtUpFrom(): FakeServer {
@@ -175,6 +188,23 @@ describe('catching up on what the server could not hand over again', () => {
 
 		expect(review.threads.all.find((thread) => thread.id === id)?.anchor.start_line).toBe(2);
 		expect(review.conversation.turns.at(-1)?.body).toContain('1 thread followed its lines');
+	});
+
+	it('takes the diff again, in case a retake was among what was missed', async () => {
+		caughtUpFrom().answer('GET /api/diff', diffResponse({ files: [untouched('c.py')] }));
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(review.diff.files.map((file) => file.path)).toEqual(['c.py']);
+	});
+
+	it('takes in what a restarted review says of its facts from then on', async () => {
+		caughtUpFrom();
+
+		await catchUp(review, { instance: NEXT_RUN, sequence: 0 });
+		takePush(review, { type: 'round', number: 4 }, { instance: NEXT_RUN, sequence: 1 });
+
+		expect(review.rounds.current).toBe(4);
 	});
 
 	it('says in the panel that what was said meanwhile may be missing, and leaves the ticks alone', async () => {

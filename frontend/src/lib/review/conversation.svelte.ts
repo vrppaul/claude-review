@@ -43,7 +43,7 @@ export class Conversation {
 	 */
 	constructor(said: PanelTurn[], composer: Composer) {
 		this.composer = new PanelComposer(composer);
-		this.#turns = $state(said);
+		this.#turns = $state.raw(said);
 		this.#working = $derived(workingOn(this.#turns));
 		// Past the highest id already handed out, so an answer cannot land under
 		// a message that only shares its number
