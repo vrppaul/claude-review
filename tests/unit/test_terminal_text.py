@@ -61,3 +61,15 @@ def test_json_made_safe_reads_back_as_it_was() -> None:
     printed = terminal_text(json.dumps(said, ensure_ascii=False))
 
     assert json.loads(printed) == said
+
+
+def test_a_line_ended_as_windows_ends_it_is_kept() -> None:
+    """A carriage return before a new line only ends the line, as every line of a file written on Windows ends."""
+    text = "first line\r\nsecond line\r\n"
+
+    assert terminal_text(text) == text
+
+
+def test_a_carriage_return_that_ends_no_line_is_shown() -> None:
+    """Alone, it sends the cursor back to write over what was printed: what is shown is not what is there."""
+    assert terminal_text("rm -rf ~\rls\r\n") == "rm -rf ~\\u000dls\r\n"
