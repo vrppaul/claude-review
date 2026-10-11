@@ -1,5 +1,6 @@
 """The app one review is served by: its page, the routes its page and its agent call, and the guards before them."""
 
+import asyncio
 import contextlib
 from collections.abc import AsyncGenerator
 from functools import partial
@@ -10,7 +11,7 @@ from typing import override
 
 import structlog
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 from starlette.types import Receive, Scope, Send
@@ -19,9 +20,15 @@ from starlette.websockets import WebSocketClose
 from claude_review.presentation.asgi import HTTP_SCOPE
 from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
-from claude_review.presentation.origin_guard import LocalOriginOnly, SecurityHeaders
+from claude_review.presentation.origin_guard import LocalOriginOnly
 from claude_review.presentation.refusals import ALLOW_HEADER, ALLOW_SEPARATOR, answer_refusals
 from claude_review.presentation.routes.api import include_api
+from claude_review.presentation.security_headers import (
+    POLICY_HEADER,
+    SecurityHeaders,
+    content_security_policy,
+    inline_script_hashes,
+)
 from claude_review.services.reader_record_service import ReaderRecords
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_lifetime import EndReason
@@ -30,8 +37,9 @@ log = structlog.get_logger()
 
 # Where the page is built to; empty in a checkout whose page was never built
 STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
-# The page, and the folder of files its build put beside it
+# The page, what its build writes it in, and the folder of files its build put beside it
 PAGE_NAME = "index.html"
+PAGE_ENCODING = "utf-8"
 ASSETS_NAME = "assets"
 # Where the page is served, and where it asks for those files
 PAGE_PATH = "/"
@@ -93,13 +101,20 @@ def serve_the_page(app: FastAPI, built: Path) -> None:
 
 
 class PageFile:
-    """The review's page, which asks for everything else itself."""
+    """The review's page, which asks for everything else itself, served with the policy of what it may run.
+
+    Read whole each time it is asked for, as the files beside it are, so a
+    page built again is served as built: the policy names each of its inline
+    scripts by its hash, and so is taken from the very bytes served.
+    """
 
     def __init__(self, page: Path) -> None:
         self._page = page
 
-    async def __call__(self) -> FileResponse:
-        return FileResponse(self._page)
+    async def __call__(self) -> HTMLResponse:
+        document = await asyncio.to_thread(self._page.read_bytes)
+        policy = content_security_policy(inline_script_hashes(document.decode(PAGE_ENCODING)))
+        return HTMLResponse(document, headers={POLICY_HEADER: policy})
 
 
 class AssetFiles(StaticFiles):

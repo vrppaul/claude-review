@@ -21,14 +21,13 @@ keeps to this server, until the review's own page cannot load.
 """
 
 import re
-from functools import partial
 from http import HTTPStatus
 
-from starlette.datastructures import Headers, MutableHeaders
+from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp, Receive, Scope, Send
 
-from claude_review.presentation.asgi import HTTP_RESPONSE_START, HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
+from claude_review.presentation.asgi import HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
 from claude_review.presentation.wire.refusal import Refusal
 
 # This machine's names over loopback, as a Host header writes them: an IPv6
@@ -102,51 +101,6 @@ def admits(*, host: str | None, origin: str | None, fetch_site: str | None, open
 def is_own_page(origin: str | None, host: str) -> bool:
     """Whether a request names no page, or the page this server serves, written as a browser writes it."""
     return origin is None or origin.lower() == OWN_ORIGIN_PREFIX + host.lower()
-
-
-# The page loads nothing from anywhere else, so it can say so. This is
-# defence in depth behind escaping, not a substitute for it: the inline
-# script that applies the theme before first paint needs 'unsafe-inline',
-# which leaves script injection possible — but not exfiltration, since
-# connect-src and img-src stay on this origin.
-SECURITY_HEADERS = {
-    "content-security-policy": (
-        "default-src 'none'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; "
-        "font-src 'self' data:; "
-        "connect-src 'self'; "
-        "base-uri 'none'; "
-        "form-action 'none'; "
-        "frame-ancestors 'none'"
-    ),
-    "x-frame-options": "DENY",
-    "x-content-type-options": "nosniff",
-    "referrer-policy": "no-referrer",
-}
-
-
-class SecurityHeaders:
-    """Say what the review's page is allowed to do, and who may frame it."""
-
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != HTTP_SCOPE:
-            await self.app(scope, receive, send)
-            return
-        await self.app(scope, receive, partial(_send_with_security_headers, send=send))
-
-
-async def _send_with_security_headers(message: Message, *, send: Send) -> None:
-    """Send a message on, the start of a response carrying the page's security headers unless it set its own."""
-    if message["type"] == HTTP_RESPONSE_START:
-        headers = MutableHeaders(scope=message)
-        for name, value in SECURITY_HEADERS.items():
-            headers.setdefault(name, value)
-    await send(message)
 
 
 class LocalOriginOnly:
