@@ -75,4 +75,13 @@ export class Telling {
 		this.#heard = at;
 		this.#read = at;
 	}
+
+	/**
+	 * Note that the facts were read again, as the telling stood at `at`: a
+	 * push told up to it, and handed over only now, has nothing left to change
+	 * in them — a retake among them was taken with the diff read after them.
+	 */
+	factsReadAt(at: TellingPosition): void {
+		if (comesAfter(at, this.#read)) this.#read = at;
+	}
 }

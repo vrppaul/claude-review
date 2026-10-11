@@ -145,7 +145,9 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
 export async function catchUp(review: Review, from: TellingPosition): Promise<void> {
 	review.telling.continueFrom(from);
 	try {
-		review.learn(await readReview());
+		const facts = await readReview();
+		review.learn(facts);
+		review.telling.factsReadAt({ instance: facts.instance, sequence: facts.sequence });
 		const moved = await review.takeRetakenDiff();
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {

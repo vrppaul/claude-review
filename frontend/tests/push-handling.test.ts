@@ -11,7 +11,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
-import { handOverNext } from './pushes';
+import { handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
 
 /** A file whose first line the change left alone. */
@@ -215,6 +215,18 @@ describe('catching up on what the server could not hand over again', () => {
 
 		expect(review.conversation.turns.at(-1)?.body).toMatch(/anything said meanwhile may be missing/);
 		expect(review.reading.isViewed('a.py')).toBe(true);
+	});
+
+	it('does not take a retake in again that the facts it read hold already', async () => {
+		const server = caughtUpFrom();
+		server.answer('GET /api/review', reviewResponse({ sequence: 2 }));
+		await catchUp(review, GOES_ON_FROM);
+
+		// Told while the page caught up, and handed over once it had
+		takePush(review, { type: 'diff', file_count: 2, changes: null }, pushedAt(1));
+		await settled();
+
+		expect(server.requestsTo('GET /api/diff')).toHaveLength(1);
 	});
 
 	it('says so when the review cannot be read again', async () => {
