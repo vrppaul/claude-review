@@ -103,7 +103,7 @@ export function sendMessage(request: MessageRequest): Promise<void> {
 
 /** Take back a message the agent has not answered yet. */
 export function cancelMessage(request: CancelRequest): Promise<void> {
-	return send('post', '/api/cancel', { body: request, doing: 'Could not stop it' });
+	return send('post', '/api/cancel', { body: request, doing: 'Could not take it back' });
 }
 
 /** Where the server hands a kept image back. */

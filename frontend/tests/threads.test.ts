@@ -121,8 +121,21 @@ describe('a thread is a conversation', () => {
 
 		await user.click(getByTestId('take-back-question'));
 
-		expect(await findByTestId('take-back-error')).toBeTruthy();
+		// In the words of the button that was pressed
+		expect((await findByTestId('take-back-error')).textContent).toContain('Could not take it back');
 		expect(getByTestId('awaiting-answer')).toBeTruthy();
+	});
+
+	it('offers no Ask now in a reply while the review cannot be reached, as a new comment offers none', async () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.writing.openReply(id);
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+		expect(getByTestId('ask-now')).toBeTruthy();
+
+		review.link.lost();
+		flushSync();
+
+		expect(queryByTestId('ask-now')).toBeNull();
 	});
 
 	it('shows the answer in the thread it belongs to', async () => {

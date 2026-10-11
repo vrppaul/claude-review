@@ -119,7 +119,7 @@
 			<CommentBox
 				field={replying}
 				onSave={() => reply(replying)}
-				onAsk={review.answerer.attached ? () => replyAndAsk(replying) : undefined}
+				onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
 				onCancel={() => putAway(replying)}
 				severityPicker={false}
 				nested
