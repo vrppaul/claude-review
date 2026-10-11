@@ -75,7 +75,7 @@
 				{#each step.fork as option (option.label)}
 					<li class="cr-guide-fork">
 						<span class={['cr-guide-route', option.primary && 'cr-guide-route-primary']}>{option.label}</span>
-						<span class="cr-guide-body text-xs">{option.says}</span>
+						<span class="cr-guide-body">{option.says}</span>
 					</li>
 				{/each}
 			</ol>
