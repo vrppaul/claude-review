@@ -101,6 +101,16 @@ async def test_the_diff_serves_every_file_with_its_lines(client: AsyncClient) ->
     assert [line["content"] for line in hunk["lines"]] == [line.content for line in changed.hunks[0].lines]
 
 
+async def test_a_file_whose_name_no_thread_may_carry_is_served_as_read_only(reviews: ReviewFactory) -> None:
+    """Git hands out names with a tab or an escape in them; a thread naming one would sink its whole round."""
+    named_with_a_tab = diff_file("tab\there.py", [added_line(1, "x = 1")])
+
+    async with http_client(reviews.app(opening_of([named_with_a_tab, *_handler_change()]))) as client:
+        served = (await client.get(DIFF_ROUTE)).json()["files"]
+
+    assert [(file["path"], file["commentable"]) for file in served] == [("tab\there.py", False), (HANDLER_FILE, True)]
+
+
 async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient) -> None:
     """A line kept, a line removed and a line added each carry the numbers of the sides they are on."""
     lines = (await client.get(DIFF_ROUTE)).json()["files"][0]["hunks"][0]["lines"]

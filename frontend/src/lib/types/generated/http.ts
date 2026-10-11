@@ -759,6 +759,8 @@ export interface components {
             old_mode: string | null;
             /** New Mode */
             new_mode: string | null;
+            /** Commentable */
+            commentable: boolean;
         };
         /**
          * DiffHunk

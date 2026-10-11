@@ -29,6 +29,10 @@ export type Reach = 'row-stop' | 'tab' | 'pointer';
 /** A comment being written on lines of the file. */
 type LineField = CommentField<WrittenOnLines>;
 
+// Why a line takes no comment, said by its number when asked, and by the file of itself
+const REMOVED_LINE_NOT_THE_REVIEWS = 'A removed line belongs to the base on screen. Show the whole diff to write here.';
+export const FILE_NOT_COMMENTABLE = 'This file cannot be commented on: its name holds control characters.';
+
 /** A drag across lines of one side, from where it began to where it has reached. */
 interface Drag {
 	side: LineSide;
@@ -51,6 +55,12 @@ export interface DrawnFile {
 	 * review's own diff, so its are.
 	 */
 	reviewOwnsRemovedLines: () => boolean;
+	/**
+	 * Whether a comment may name the file at all. A path holding a control
+	 * character is drawn, but a thread naming it would be refused, and the
+	 * whole round with it: its lines are only to be read.
+	 */
+	commentable: () => boolean;
 }
 
 /**
@@ -115,9 +125,20 @@ export class LineCommenting {
 		);
 	}
 
-	/** Whether a comment may start on a line: one with a number, on a side whose comments are drawn here. */
+	/** Whether a comment may start on a line: one with a number, that nothing keeps comments off. */
 	mayComment(place: LinePlace): boolean {
-		return place.number !== NO_NUMBER && sideIsDrawn(place.side, this.#file.reviewOwnsRemovedLines());
+		return place.number !== NO_NUMBER && this.whyNot(place) === null;
+	}
+
+	/**
+	 * Why no comment may start on a line, in words; null when one may: the
+	 * file is not one a comment may name, or the line is on a side whose
+	 * comments are not drawn here.
+	 */
+	whyNot(place: LinePlace): string | null {
+		if (!this.#file.commentable()) return FILE_NOT_COMMENTABLE;
+		if (!sideIsDrawn(place.side, this.#file.reviewOwnsRemovedLines())) return REMOVED_LINE_NOT_THE_REVIEWS;
+		return null;
 	}
 
 	/** The pointer went down on a line: a drag starts there. */

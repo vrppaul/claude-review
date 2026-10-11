@@ -121,3 +121,25 @@ describe('a file the last round rewrote', () => {
 		expect((await findByTestId('changed-since-error')).textContent).toContain(String(BAD_REQUEST));
 	});
 });
+
+describe('a file whose name holds control characters', () => {
+	const named = diffFile({ path: 'tab\there.py', commentable: false, hunks: [hunk([addedLine(1, 'x = 1')])] });
+
+	it('says it cannot be commented on, and its lines take no comment', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [named] });
+		const { getByTestId, getAllByTestId, queryByTestId } = render(
+			FileSection,
+			inReview(review, { file: named, scrollRoot: null })
+		);
+
+		expect(getByTestId('not-commentable-note').textContent).toContain('This file cannot be commented on');
+		const [lineNumber] = getAllByTestId('line-gutter');
+		expect(lineNumber.getAttribute('aria-disabled')).toBe('true');
+		expect(lineNumber.getAttribute('title')).toContain('control characters');
+
+		await user.click(lineNumber);
+
+		expect(queryByTestId('comment-input')).toBeNull();
+	});
+});

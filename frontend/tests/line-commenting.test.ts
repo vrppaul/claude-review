@@ -39,7 +39,8 @@ function commenting(): LineCommenting {
 	return new LineCommenting(review, {
 		path: () => file.path,
 		hunks: () => [drawn],
-		reviewOwnsRemovedLines: () => true
+		reviewOwnsRemovedLines: () => true,
+		commentable: () => true
 	});
 }
 
@@ -129,7 +130,8 @@ describe('picking removed lines', () => {
 		return new LineCommenting(review, {
 			path: () => removals.path,
 			hunks: () => [drawnRemovals],
-			reviewOwnsRemovedLines: () => true
+			reviewOwnsRemovedLines: () => true,
+			commentable: () => true
 		});
 	}
 
@@ -175,7 +177,8 @@ describe('picking lines across what the diff left out', () => {
 		return new LineCommenting(review, {
 			path: () => apart.path,
 			hunks: () => hunks,
-			reviewOwnsRemovedLines: () => true
+			reviewOwnsRemovedLines: () => true,
+			commentable: () => true
 		});
 	}
 
@@ -217,5 +220,25 @@ describe('picking lines across what the diff left out', () => {
 		const [field] = review.threads.writing.onLinesOf(apart.path);
 		expect(field.at.lines).toMatchObject({ startLine: 13, endLine: 38 });
 		expect(field.at.quote).toHaveLength(26);
+	});
+});
+
+describe('a file no comment may name', () => {
+	it('takes no comment, by the mouse or by the keyboard', () => {
+		review = openReview({ files: [file] });
+		const lines = new LineCommenting(review, {
+			path: () => file.path,
+			hunks: () => [drawn],
+			reviewOwnsRemovedLines: () => true,
+			commentable: () => false
+		});
+
+		lines.press(line(11));
+		lines.enter(line(12));
+		lines.release();
+		lines.commentOn(line(13));
+
+		expect(review.threads.writing.onLinesOf(file.path)).toEqual([]);
+		expect(lines.isMarked({ side: 'new', number: 12 })).toBe(false);
 	});
 });

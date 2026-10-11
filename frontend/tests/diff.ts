@@ -3,7 +3,7 @@ import { THIS_RUN } from './fake-socket';
 import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
-/** A file as the diff carries it: modified, text, with no lines unless given some. */
+/** A file as the diff carries it: modified, text, open to comments, with no lines unless given some. */
 export function diffFile(given: Partial<DiffFile> = {}): DiffFile {
 	return {
 		path: 'file.ts',
@@ -12,6 +12,7 @@ export function diffFile(given: Partial<DiffFile> = {}): DiffFile {
 		is_binary: false,
 		old_mode: null,
 		new_mode: null,
+		commentable: true,
 		...given
 	};
 }

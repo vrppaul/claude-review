@@ -205,6 +205,8 @@ ignore_names = [
     "phrase",
     "review_key",
     "ended",
+    # and read off the review's own model by the wire's, field by field
+    "commentable",
     # A schema's parts, taken apart by TypeAdapter.json_schemas
     "direction",
     "adapter",

@@ -54,6 +54,10 @@ export class FileDrawing implements DrawnFile {
 		return this.#source.reviewOwnsRemovedLines();
 	}
 
+	commentable(): boolean {
+		return this.#source.file().commentable;
+	}
+
 	/** Whether what the diff left out may be read in here, or only said. */
 	get readsGaps(): boolean {
 		return this.#source.revealed() !== null;

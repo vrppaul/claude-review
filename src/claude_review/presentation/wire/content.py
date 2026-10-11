@@ -46,6 +46,8 @@ class DiffFile(WireModel):
     is_binary: WireBool
     old_mode: str | None
     new_mode: str | None
+    # Whether a thread may name it: a path holding a control character is shown, but only to be read
+    commentable: WireBool
 
 
 class SendLimits(WireModel):

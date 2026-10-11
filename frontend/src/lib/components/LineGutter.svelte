@@ -5,9 +5,6 @@
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import type { LineCommenting, Reach } from './line-commenting.svelte';
 
-	// What a number that takes no comment says when asked why
-	const NOT_THE_REVIEWS = 'A removed line belongs to the base on screen. Show the whole diff to write here.';
-
 	interface Props {
 		drawn: DrawnLine;
 		/** Which side's number it shows: a line the change kept has one on each. */
@@ -20,9 +17,9 @@
 
 	const shown = $derived(side === 'old' ? drawn.line.old_number : drawn.line.new_number);
 	const isRowStop = $derived(reach === 'row-stop');
-	// A number that takes no comment says so, but is not disabled: the browser
+	// A number that takes no comment says why, but is not disabled: the browser
 	// moves no focus onto a disabled button, and j and k would stop at it for good
-	const writable = $derived(commenting.mayComment(drawn.place));
+	const refusal = $derived(commenting.whyNot(drawn.place));
 
 	/** Enter or Space on a line's number opens the comment field there. */
 	function commentOnKey(event: KeyboardEvent) {
@@ -42,8 +39,8 @@
 		class="cr-gutter-button"
 		tabindex={reach === 'pointer' ? -1 : 0}
 		aria-label="Comment on {lineInWords(drawn.place)}"
-		aria-disabled={writable ? undefined : 'true'}
-		title={writable ? undefined : NOT_THE_REVIEWS}
+		aria-disabled={refusal === null ? undefined : 'true'}
+		title={refusal ?? undefined}
 		onmousedown={() => commenting.press(drawn)}
 		onkeydown={commentOnKey}
 	>

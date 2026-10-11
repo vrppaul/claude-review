@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 from claude_review.domain.exceptions import QuestionNotInThreadError
 
@@ -92,6 +92,20 @@ class DiffFile(BaseModel):
     old_mode: str | None = None
     new_mode: str | None = None
 
+    @property
+    def commentable(self) -> bool:
+        """Whether a thread may hang on the file: whether its path is one a thread may name.
+
+        Git hands out names no thread can carry — a tab, a newline, an escape
+        in them — and such a file is still shown, but only to be read: one
+        thread on it would have its whole round refused.
+        """
+        try:
+            FILE_PATHS.validate_python(self.path)
+        except ValidationError:
+            return False
+        return True
+
 
 class CommentSeverity(StrEnum):
     """How the reader means a comment to be taken.
@@ -137,6 +151,9 @@ MAX_PATH_LENGTH = 4096
 
 # A file as the review names it: one line, never markup
 FilePath = Annotated[str, Field(min_length=1, max_length=MAX_PATH_LENGTH, pattern=SAFE_PATH)]
+
+# The rule a file path is held to, for a path the review is handed rather than sent
+FILE_PATHS: TypeAdapter[FilePath] = TypeAdapter(FilePath)
 
 # A moment, in milliseconds since the epoch: the one unit the review says
 # every time in, so the browser reads them all the same way

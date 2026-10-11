@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
+	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -22,6 +23,12 @@
 </script>
 
 <!-- What the lines cannot show, above whichever way the lines are drawn -->
+{#if !file.commentable}
+	<div data-testid="not-commentable-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 text-xs">
+		{FILE_NOT_COMMENTABLE}
+	</div>
+{/if}
+
 {#if modeChange}
 	<div data-testid="mode-change-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs">
 		Permission changed: {modeChange}

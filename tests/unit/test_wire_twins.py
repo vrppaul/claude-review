@@ -15,7 +15,8 @@ from claude_review.presentation.wire import agent, content, records, threads
 TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.DiffLine, content.DiffLine, frozenset()),
     (models.DiffHunk, content.DiffHunk, frozenset()),
-    (models.DiffFile, content.DiffFile, frozenset()),
+    # Whether a thread may name it, which the review's model answers from its path rather than keeps
+    (models.DiffFile, content.DiffFile, frozenset({"commentable"})),
     (models.LineAnchor, threads.LineAnchor, frozenset()),
     (models.Turn, threads.Turn, frozenset()),
     # The place a thread hangs on, in plain words
