@@ -1130,6 +1130,8 @@ export interface components {
         ReviewResponse: {
             /** Title */
             title: string;
+            /** Identity */
+            identity: string;
             mode: components["schemas"]["ReviewMode"];
             /** Round */
             round: number;

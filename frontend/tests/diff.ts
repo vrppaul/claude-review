@@ -67,13 +67,16 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 	};
 }
 
-/** What the review a test opens is of, unless it says otherwise: the title its draft is kept under. */
+/** What the review a test opens is of, unless it says otherwise. */
 export const REVIEW_TITLE = 'repo: uncommitted changes';
+/** What the review a test opens names itself, unless it says otherwise: the name its draft is kept under. */
+export const REVIEW_IDENTITY = 'review-under-test';
 
 /** What the server says the review is, as a page opening reads it: a diff in its first round. */
 export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {
 	return {
 		title: REVIEW_TITLE,
+		identity: REVIEW_IDENTITY,
 		mode: 'diff',
 		round: 1,
 		answerer_attached: false,

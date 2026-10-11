@@ -11,6 +11,9 @@ class ReviewStanding(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     title: str
+    # What makes it the same review when it is opened again, in short: the
+    # name its page keeps the reader's unsent work under
+    identity: str
     mode: ReviewMode
     # What it was opened against: a commit or a ref, or None for the uncommitted changes
     opened_against: str | None

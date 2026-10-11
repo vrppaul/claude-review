@@ -74,6 +74,7 @@ class Review:
     ) -> None:
         self._mode = opening.mode
         self._title = opening.title
+        self._identity = opening.identity_digest
         self._opened_against = opening.opened_against
         self._page = page
         self._images = images
@@ -99,6 +100,7 @@ class Review:
         """What the review is and where it has got to, in one piece."""
         return ReviewStanding(
             title=self._title,
+            identity=self._identity,
             mode=self._mode,
             opened_against=self._opened_against,
             round=self._rounds.current,

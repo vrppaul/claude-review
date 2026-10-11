@@ -123,6 +123,10 @@ class ReviewResponse(WireModel):
     """
 
     title: str
+    # What makes it the same review whenever it is opened, as a name that says
+    # nothing of what it is made of: the page keeps the reader's unsent work
+    # under it, and knows by it a review on this port that is not its own
+    identity: str
     mode: ReviewMode
     # Which round is being written, and whether anything is there to answer it
     round: int

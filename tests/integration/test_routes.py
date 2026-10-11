@@ -11,7 +11,8 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import DiffFile, ReviewMode
-from claude_review.services.review_opening import ReviewOpening
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.helpers import (
@@ -329,6 +330,44 @@ async def test_the_review_says_what_is_under_review(client: AsyncClient) -> None
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["title"] == REVIEW_TITLE
+
+
+async def _identity_of(reviews: ReviewFactory, opening: ReviewOpening) -> str:
+    """The name a review gives itself to the page that opens it."""
+    async with http_client(reviews.app(opening)) as client:
+        return (await client.get(REVIEW_ROUTE)).json()["identity"]
+
+
+def _changed_repository(root: Path) -> Path:
+    """A repository with one commit and a change on top of it."""
+    root.mkdir(parents=True)
+    git(root, "init", "-b", "main")
+    write_files(root, {"a.py": "x = 1\n"})
+    git(root, "add", ".")
+    git(root, "-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "initial")
+    write_files(root, {"a.py": "x = 2\n"})
+    return root
+
+
+async def test_the_review_names_itself_the_same_whenever_it_is_opened_and_apart_from_any_other(
+    tmp_path: Path, reviews: ReviewFactory
+) -> None:
+    """A page keeps the reader's unsent work under this name: the same review opened again finds it, another never does.
+
+    Two repositories of one name have one title, and land on one port when
+    the reader names it: the name must tell them apart all the same.
+    """
+    one = _changed_repository(tmp_path / "one" / "app")
+    namesake = _changed_repository(tmp_path / "two" / "app")
+
+    first = await _identity_of(reviews, await repository_opening(one))
+    again = await _identity_of(reviews, await repository_opening(one))
+    against_head = await _identity_of(reviews, await open_diff(one, "HEAD", GitRepository(objects=None)))
+    of_the_namesake = await _identity_of(reviews, await repository_opening(namesake))
+
+    assert first == again
+    assert first not in {against_head, of_the_namesake}
+    assert str(one) not in first, "the name says nothing of what it is made of"
 
 
 def _app_line(number: int) -> str:

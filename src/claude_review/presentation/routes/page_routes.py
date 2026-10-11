@@ -73,6 +73,7 @@ async def get_the_review(
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
+        identity=standing.identity,
         mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,

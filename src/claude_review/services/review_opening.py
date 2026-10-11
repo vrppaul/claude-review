@@ -8,6 +8,7 @@ were named.
 """
 
 import asyncio
+import hashlib
 from pathlib import Path
 
 import structlog
@@ -36,6 +37,9 @@ MORE_FILES = "{named} + {unnamed} more"
 CONVERSATION_TITLE = "Conversation {name}"
 # What parts the pieces an identity is made of: no path holds a line break
 IDENTITY_SEPARATOR = "\n"
+# How long a digest of an identity is, in bytes: far more than enough to tell
+# apart every review one reader ever opens
+IDENTITY_DIGEST_BYTES = 16
 # What a diff of the uncommitted changes adds to its root in its identity: no base
 NO_BASE = ""
 
@@ -64,15 +68,19 @@ class ReviewOpening(BaseModel):
 
     mode: ReviewMode
     diff_files: list[DiffFile]
-    # What the header says is under review. It is also what an unsent draft
-    # is kept under, so it must not change between two openings of the same thing.
+    # What the header says is under review
     title: str
     # What makes it the same review when it is opened again: that lands it on
-    # the same port, and so on the draft its reader left in it
+    # the same port, and its page on the draft its reader left in it
     identity: str
     # Where a diff review reads from; a review of files or of a conversation
     # has no repository
     repository: OpenedRepository | None
+
+    @property
+    def identity_digest(self) -> str:
+        """The identity in short, a name that says nothing of the paths it is made of: how a page knows its review."""
+        return hashlib.blake2s(self.identity.encode(), digest_size=IDENTITY_DIGEST_BYTES).hexdigest()
 
     @property
     def opened_against(self) -> str | None:
@@ -155,10 +163,18 @@ def _resolved_once(paths: list[Path]) -> list[Path]:
     return list(dict.fromkeys(path.resolve() for path in paths))
 
 
+def changes_since(base: str | None) -> str:
+    """What a diff against `base` shows, in words: the uncommitted changes when there is no base.
+
+    The words of the review's title and of the bases its page offers, written
+    once for both.
+    """
+    return SINCE_A_BASE.format(base=base) if base else UNCOMMITTED
+
+
 def _diff_title(root: Path, base: str | None) -> str:
     """Name the repository under review and what it is compared against."""
-    against = SINCE_A_BASE.format(base=base) if base else UNCOMMITTED
-    return DIFF_TITLE.format(repository=root.name or root, against=against)
+    return DIFF_TITLE.format(repository=root.name or root, against=changes_since(base))
 
 
 def _files_title(paths: list[Path]) -> str:

@@ -3,7 +3,8 @@
 The review keeps its bases typed; the page asks for one by a short key it
 never has to build itself, and is told what to call it. "Uncommitted
 changes" is not "changes since" anything, which is why the words are
-written here rather than assembled in the page.
+written on this side rather than assembled in the page — in the same words
+the review's title says what it is compared against.
 """
 
 import re
@@ -20,6 +21,7 @@ from claude_review.domain.models import (
     VersionOnOffer,
 )
 from claude_review.presentation.wire.content import ChangesSince, ReviewVersion, VersionKind
+from claude_review.services.review_opening import UNCOMMITTED, changes_since
 
 # The keys, as the page holds them: the review's own base, and the prefixes
 # a round's and a ref's are written with
@@ -29,9 +31,8 @@ REF_PREFIX = "ref:"
 # A round's number as the review writes it: plain digits, no leading zero —
 # the one spelling, so a key names one base and a base has one key
 ROUND_NUMBER = re.compile(r"[1-9][0-9]*")
-
-# What the diff against HEAD shows
-UNCOMMITTED = "uncommitted changes"
+# What a round is called as a base
+ROUND_LABEL = "round {number}"
 
 
 def key_text(key: VersionKey) -> str:
@@ -69,11 +70,12 @@ def phrase_of(key: VersionKey, opened_against: str | None) -> str:
     """What the header says while this base is the one in force."""
     match key:
         case ReviewKey():
-            return f"changes since {opened_against}" if opened_against else UNCOMMITTED
+            return changes_since(opened_against)
         case RoundKey():
-            return f"changes since round {key.round}"
+            return changes_since(ROUND_LABEL.format(number=key.round))
         case RefKey():
-            return UNCOMMITTED if key.name == HEAD else f"changes since {key.name}"
+            # What differs from HEAD is what is not committed yet
+            return changes_since(None if key.name == HEAD else key.name)
         case _:
             assert_never(key)
 
@@ -84,7 +86,7 @@ def label_of(key: VersionKey, opened_against: str | None) -> str:
         case ReviewKey():
             return opened_against or UNCOMMITTED
         case RoundKey():
-            return f"round {key.round}"
+            return ROUND_LABEL.format(number=key.round)
         case RefKey():
             return key.name
         case _:
