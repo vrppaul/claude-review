@@ -4,8 +4,10 @@ import {
 	anchorLabel,
 	anchorMentionsIn,
 	anchorPlace,
+	anchorReplaces,
 	anchorShortPlace,
 	anchorToken,
+	anchorWrittenAgainst,
 	sameSpot
 } from '$lib/anchors/views';
 
@@ -39,5 +41,12 @@ describe('a thread on lines is named the same way wherever it is shown', () => {
 
 		expect(sameSpot(range, quoted)).toBe(true);
 		expect(sameSpot(range, removed)).toBe(false);
+	});
+
+	it('was written against the lines it quotes, and a suggestion in it replaces them', () => {
+		const quoted = lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']);
+
+		expect(anchorWrittenAgainst(quoted)).toEqual(['x = 1', 'y = 2']);
+		expect(anchorReplaces(quoted)).toEqual(['x = 1', 'y = 2']);
 	});
 });

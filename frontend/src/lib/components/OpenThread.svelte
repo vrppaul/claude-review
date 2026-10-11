@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
+	import { anchorWrittenAgainst } from '$lib/anchors/views';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
@@ -34,6 +35,8 @@
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour
 	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
+	// What it was written against, kept for when the place it hangs on is gone
+	const writtenAgainst = $derived(anchorWrittenAgainst(thread.anchor));
 
 	/** Looking at the thread — clicking in it, or moving the keyboard into it — is what makes its answer read. */
 	function markRead() {
@@ -69,11 +72,11 @@
 >
 	<ThreadHeading {thread} />
 
-	{#if thread.anchor.outdated && thread.anchor.quote.length > 0}
-		<!-- One that has lost its lines keeps its own copy of them -->
+	{#if thread.anchor.outdated && writtenAgainst.length > 0}
+		<!-- One that has lost its place keeps its own copy of what was there -->
 		<div data-testid="stale-quote" class="cr-stale-quote mb-3 rounded-r px-3 py-2">
 			<p class="cr-muted mb-1 text-xs">what it was written against</p>
-			{#each thread.anchor.quote as line, index (index)}
+			{#each writtenAgainst as line, index (index)}
 				<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
 			{/each}
 		</div>

@@ -2,11 +2,12 @@
  * What the browser needs to know about each kind of anchor.
  *
  * A thread is named in its own header, in menus and in the panel, a panel
- * message mentions it by a token, and it is drawn under the lines of a file
- * it hangs on. Each kind of anchor answers those questions in its own
- * module, so naming, matching, mentioning and drawing a thread never ask
- * what it hangs on; bringing one into view moves the page, which is the
- * review's `Navigator`.
+ * message mentions it by a token, it is drawn under the lines of a file it
+ * hangs on, it shows what it was written against once that is gone, and a
+ * suggestion in it shows what it replaces. Each kind of anchor answers those
+ * questions in its own module, so naming, matching, mentioning and drawing a
+ * thread never ask what it hangs on; bringing one into view moves the page,
+ * which is the review's `Navigator`.
  *
  * Each answer is a function property rather than a method, so a kind's view
  * is held to anchors of that kind: methods are compared loosely, and with a
@@ -40,6 +41,10 @@ export interface AnchorView<Kind extends Anchor> {
 	mentionsIn: (text: string, anchor: Kind) => number[];
 	/** Whether two anchors of this kind hang on the same spot. */
 	sameSpot: (one: Kind, other: Kind) => boolean;
+	/** What the comment was written against, as it read then: shown once the place it hangs on is gone. */
+	writtenAgainst: (anchor: Kind) => string[];
+	/** What a suggestion in the thread replaces, a line to each. */
+	replaces: (anchor: Kind) => string[];
 	/**
 	 * The lines of a file it hangs on. Every kind hangs on lines so far: a kind
 	 * drawn somewhere else makes this an answer of several kinds, and each part
@@ -81,6 +86,16 @@ export function anchorMentionsIn(text: string, anchor: Anchor): number[] {
 /** Whether two anchors hang on the same spot. */
 export function sameSpot(one: Anchor, other: Anchor): boolean {
 	return viewOf(one).sameSpot(one, other);
+}
+
+/** What a comment on an anchor was written against, as it read then. */
+export function anchorWrittenAgainst(anchor: Anchor): string[] {
+	return viewOf(anchor).writtenAgainst(anchor);
+}
+
+/** What a suggestion in a thread on an anchor replaces. */
+export function anchorReplaces(anchor: Anchor): string[] {
+	return viewOf(anchor).replaces(anchor);
 }
 
 /** The lines of a file an anchor hangs on. */

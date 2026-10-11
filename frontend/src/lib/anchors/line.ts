@@ -36,7 +36,10 @@ function sameSpot(one: LineAnchor, other: LineAnchor): boolean {
 	);
 }
 
-/** How a thread on lines of a file is named, mentioned and told apart. */
+/**
+ * How a thread on lines of a file is named, mentioned and told apart. It was
+ * written against the lines it quotes, and a suggestion in it replaces them.
+ */
 export const lineAnchorView: AnchorView<LineAnchor> = {
 	label,
 	place: (anchor) => `${anchor.file} · ${label(anchor)}`,
@@ -44,6 +47,8 @@ export const lineAnchorView: AnchorView<LineAnchor> = {
 	token,
 	mentionsIn,
 	sameSpot,
+	writtenAgainst: (anchor) => anchor.quote,
+	replaces: (anchor) => anchor.quote,
 	linesOf: (anchor) => anchor
 };
 

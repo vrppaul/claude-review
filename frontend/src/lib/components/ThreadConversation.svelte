@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
+	import { anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
@@ -18,6 +19,8 @@
 	const review = useReview();
 
 	const exchanges = $derived(exchangesOf(thread));
+	// What a suggestion in the thread replaces: what the comment was written on
+	const replaced = $derived(anchorReplaces(thread.anchor));
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
@@ -54,7 +57,7 @@
 				{/if}
 				{#each splitSuggestions(exchange.asked) as part, partIndex (partIndex)}
 					{#if part.kind === 'suggestion'}
-						<SuggestionDiff replaced={thread.anchor.quote} suggested={part.text} />
+						<SuggestionDiff {replaced} suggested={part.text} />
 					{:else}
 						<MarkdownRenderer text={part.text} dense />
 					{/if}
