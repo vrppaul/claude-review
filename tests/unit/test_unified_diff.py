@@ -11,7 +11,9 @@ leaves out a count of one and may carry the line of the enclosing function
 after it; a side with no lines starts at the line before where its lines
 would be, which the review reads as where they would be; a blank line of
 context may come bare, as under diff.suppressBlankEmpty; and a file that
-does not end in a newline says so after its last line.
+does not end in a newline says so after its last line. A file git shows no
+line of — moved or copied whole, made runnable, binary, or added or deleted
+empty — has a header and nothing after it, and is read from the header alone.
 """
 
 import string
@@ -40,6 +42,22 @@ DELETED_FILE_HEADER = "deleted file mode 100644"
 INDEX_LINE = "index 1234567..89abcde 100644"
 # What sets the line of the enclosing function apart from the hunk header before it
 HEADING_SEPARATOR = " "
+# What git writes in place of hunks for a file it shows no line of: where a
+# file moved or was copied to, a change of mode, and binary content
+SIMILARITY_LINE = "similarity index 100%"
+RENAMED_FROM = "rename from "
+RENAMED_TO = "rename to "
+COPIED_FROM = "copy from "
+COPIED_TO = "copy to "
+OLD_MODE = "old mode "
+NEW_MODE = "new mode "
+BINARY_LINE = "Binary files {old} and {new} differ"
+# Git's modes for a file, for one anyone may run, and for a link
+FILE_MODE = "100644"
+RUNNABLE_MODE = "100755"
+LINK_MODE = "120000"
+# What the header of a file added or deleted whole says, by what happened to it
+STATUS_HEADER = {FileStatus.ADDED: NEW_FILE_HEADER, FileStatus.DELETED: DELETED_FILE_HEADER}
 
 # The characters git writes in a path as they are, some it quotes for being
 # past plain ASCII, and some it quotes for being a quote, a backslash or a control
@@ -86,6 +104,11 @@ segments = strategy.text(
     max_size=LONGEST_SEGMENT,
 ).filter(lambda segment: segment.strip(". ") != "")
 paths = strategy.lists(segments, min_size=1, max_size=MOST_SEGMENTS).map("/".join)
+# A path holding what git writes between the two halves of the line that
+# opens a file's part, so that line splits in more than one place: drawn as
+# often as any other path where that line is all there is to read
+SIDE_MARK = " b/"
+header_paths = strategy.one_of(paths, strategy.tuples(paths, paths).map(SIDE_MARK.join))
 # What a line says: anything but the line break that ends it
 contents = strategy.text(alphabet=strategy.characters(exclude_characters="\n"))
 kinds = strategy.sampled_from(list(LineType))
@@ -99,6 +122,13 @@ class DrawnFile(BaseModel):
     file: DiffFile
     old_side_ends_bare: bool
     new_side_ends_bare: bool
+
+
+class WrittenPart(BaseModel):
+    """One file's part of the diff as git writes it, and the file the parser must read from it."""
+
+    file: DiffFile
+    written: list[str]
 
 
 def is_escaped(character: str) -> bool:
@@ -296,6 +326,83 @@ def as_git_writes_it(drawn: list[DrawnFile], *, bare_blanks: bool) -> str:
     return "\n".join(text for file in drawn for text in file_as_git_writes_it(file, bare_blanks=bare_blanks)) + "\n"
 
 
+def paths_line(old_path: str, new_path: str) -> str:
+    """The line that opens a file's part of the diff, naming it before and after."""
+    return f"diff --git {as_git_quotes_it(OLD_SIDE + old_path)} {as_git_quotes_it(NEW_SIDE + new_path)}"
+
+
+@strategy.composite
+def moved_files(draw: strategy.DrawFn) -> WrittenPart:
+    """A file renamed or copied without a change: no markers, no hunks, only where it was and where it went."""
+    old_path, new_path = draw(strategy.lists(header_paths, min_size=2, max_size=2, unique=True))
+    renamed = draw(strategy.booleans())
+    from_header, to_header = (RENAMED_FROM, RENAMED_TO) if renamed else (COPIED_FROM, COPIED_TO)
+    return WrittenPart(
+        file=DiffFile(
+            path=new_path,
+            old_path=old_path if renamed else None,
+            status=FileStatus.RENAMED if renamed else FileStatus.ADDED,
+            hunks=[],
+        ),
+        written=[
+            paths_line(old_path, new_path),
+            SIMILARITY_LINE,
+            from_header + as_git_quotes_it(old_path),
+            to_header + as_git_quotes_it(new_path),
+        ],
+    )
+
+
+@strategy.composite
+def files_made_runnable(draw: strategy.DrawFn) -> WrittenPart:
+    """A file whose mode alone changed: its path is only in the line that opens its part."""
+    path = draw(header_paths)
+    return WrittenPart(
+        file=DiffFile(path=path, status=FileStatus.MODIFIED, hunks=[], old_mode=FILE_MODE, new_mode=RUNNABLE_MODE),
+        written=[paths_line(path, path), OLD_MODE + FILE_MODE, NEW_MODE + RUNNABLE_MODE],
+    )
+
+
+@strategy.composite
+def binary_files(draw: strategy.DrawFn) -> WrittenPart:
+    """A binary file added, deleted or changed: a line saying the sides differ, and no markers."""
+    path = draw(header_paths)
+    status = draw(strategy.sampled_from([FileStatus.ADDED, FileStatus.DELETED, FileStatus.MODIFIED]))
+    old_side = NO_FILE if status == FileStatus.ADDED else as_git_quotes_it(OLD_SIDE + path)
+    new_side = NO_FILE if status == FileStatus.DELETED else as_git_quotes_it(NEW_SIDE + path)
+    return WrittenPart(
+        file=DiffFile(path=path, status=status, hunks=[], is_binary=True),
+        written=[
+            paths_line(path, path),
+            *([STATUS_HEADER[status]] if status in STATUS_HEADER else []),
+            INDEX_LINE,
+            BINARY_LINE.format(old=old_side, new=new_side),
+        ],
+    )
+
+
+@strategy.composite
+def empty_files(draw: strategy.DrawFn) -> WrittenPart:
+    """A file added or deleted with nothing in it: git writes its header and nothing after."""
+    path = draw(header_paths)
+    status = draw(strategy.sampled_from([FileStatus.ADDED, FileStatus.DELETED]))
+    return WrittenPart(
+        file=DiffFile(path=path, status=status, hunks=[]),
+        written=[paths_line(path, path), STATUS_HEADER[status], INDEX_LINE],
+    )
+
+
+def with_its_hunks(drawn: DrawnFile) -> WrittenPart:
+    """A file drawn with hunks, as git writes it."""
+    return WrittenPart(file=drawn.file, written=file_as_git_writes_it(drawn, bare_blanks=False))
+
+
+# Any file's part of the diff: one git shows no line of, or one with hunks, so the parts meet every other kind
+written_parts = strategy.one_of(
+    moved_files(), files_made_runnable(), binary_files(), empty_files(), modified_files().map(with_its_hunks)
+)
+
+
 @given(
     drawn=strategy.lists(modified_files(), min_size=1, max_size=MOST_FILES, unique_by=lambda drawn: drawn.file.path),
     bare_blanks=strategy.booleans(),
@@ -321,6 +428,14 @@ def test_a_blank_line_that_ends_a_hunk_is_one_of_its_lines_and_the_end_of_the_di
     )
 
     assert parse_unified_diff(as_git_writes_it([drawn], bare_blanks=True)) == [drawn.file]
+
+
+@given(parts=strategy.lists(written_parts, min_size=1, max_size=MOST_FILES, unique_by=lambda part: part.file.path))
+def test_a_file_git_shows_no_line_of_is_read_from_its_header_beside_any_other(parts: list[WrittenPart]) -> None:
+    """Its path is in the header alone — where it went, or both halves of the line that opens its part."""
+    raw = "\n".join(line for part in parts for line in part.written) + "\n"
+
+    assert parse_unified_diff(raw) == [part.file for part in parts]
 
 
 @given(drawn=one_sided_files(), bare_blanks=strategy.booleans())
@@ -378,9 +493,6 @@ index 0000000..957dd0a
 +now a file
 +second
 """
-# Git's modes for a file and for a link
-FILE_MODE = "100644"
-LINK_MODE = "120000"
 
 
 def test_a_file_turned_into_a_link_is_one_file_whose_lines_become_the_link() -> None:
