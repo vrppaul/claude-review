@@ -204,3 +204,15 @@ async def test_a_file_saved_as_the_index_was_written_is_still_seen_changed(tmp_g
     diff = await _raw_diff(GitRepository(objects=None), tmp_git_repo)
 
     assert "settled CONTENT" in diff
+
+
+async def test_a_base_that_reads_as_an_option_is_never_taken_for_one(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """`--output=` would have git diff write a file wherever it names: a base is a revision, or nothing git reads."""
+    target = tmp_path_factory.mktemp("outside") / "written-by-git"
+
+    with pytest.raises(GitError):
+        await _raw_diff(GitRepository(objects=None), tmp_git_repo, base=f"--output={target}")
+
+    assert not target.exists()
