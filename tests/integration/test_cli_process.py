@@ -9,6 +9,7 @@ question about it, not about the app it serves.
 import json
 import os
 import queue
+import shutil
 import socket
 import subprocess
 import sys
@@ -139,6 +140,16 @@ class CliProcess:
         for reader in self._readers:
             reader.join(timeout=COMMAND_SECONDS)
         return "".join(self._printed)
+
+    def said(self) -> str:
+        """Everything written to stderr and not yet read, once the process has ended."""
+        self.finish()
+        for reader in self._readers:
+            reader.join(timeout=COMMAND_SECONDS)
+        lines = []
+        while not self._said.empty():
+            lines.append(self._said.get_nowait())
+        return "".join(lines)
 
     def terminate(self) -> None:
         """Stop it the way `kill` does."""
@@ -562,6 +573,49 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
 
     assert "Rename the helper." in review.printed()
     assert not list(temporary.glob("*.claude-review-objects"))
+
+
+# A git that never finishes staging, as on a tree of a million files: `add`
+# waits, every other command is the real git's
+GIT_THAT_HANGS_STAGING = """#!/bin/sh
+case " $* " in
+  *" add -A "*) exec sleep 60 ;;
+esac
+exec {real_git} "$@"
+"""
+# What the pieces of a staging are called in the temporary directory
+STAGING_LEFTOVERS = ("*.git-index", "*.git-objects")
+# What a script needs to be run
+RUNNABLE = 0o755
+# How often a test looks for what a process has written
+LOOK_EVERY_SECONDS = 0.05
+
+
+def test_a_review_stopped_while_it_opens_leaves_nothing_of_its_staging_behind(
+    changed_repo: Path, cli: CliProcesses, tmp_path: Path
+) -> None:
+    """`kill` while git stages a huge tree: what the staging wrote goes with the process, not left in /tmp."""
+    temporary = tmp_path / "temporary"
+    temporary.mkdir()
+    programs = tmp_path / "programs"
+    programs.mkdir()
+    (programs / "git").write_text(GIT_THAT_HANGS_STAGING.format(real_git=shutil.which("git")))
+    (programs / "git").chmod(RUNNABLE)
+    review = cli.start(
+        "diff",
+        str(changed_repo),
+        "--no-open",
+        environment={"TMPDIR": str(temporary), "PATH": f"{programs}{os.pathsep}{os.environ['PATH']}"},
+    )
+    deadline = time.monotonic() + STARTUP_SECONDS
+    while not list(temporary.glob(STAGING_LEFTOVERS[0])) and time.monotonic() < deadline:
+        time.sleep(LOOK_EVERY_SECONDS)
+
+    review.terminate()
+
+    assert review.finish() == 1, "stopped in a line, not ended where it stood by the signal"
+    assert "Traceback" not in review.said()
+    assert [left for pattern in STAGING_LEFTOVERS for left in temporary.glob(pattern)] == []
 
 
 def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) -> dict:

@@ -7,3 +7,7 @@ class ServerStartError(Exception):
 
 class PortUnavailableError(Exception):
     """Raised when the review server cannot take the requested port."""
+
+
+class ReviewStoppedError(Exception):
+    """Raised when Ctrl+C or `kill` stopped a review before it ever ran."""
