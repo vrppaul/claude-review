@@ -5,6 +5,8 @@ be loaded and reviewed — not the internal data structures used to represent it
 """
 
 import json
+import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -327,3 +329,40 @@ class TestLabels:
         paths = [turn.path for turn in await read_transcript(transcript)]
 
         assert len(set(paths)) == len(paths)
+
+
+# Two time zones a reader may open the same transcript in, nine hours apart
+TIME_ZONES = ("UTC", "Asia/Tokyo")
+# A moment in the conversation, and the ids Claude Code gave the entries said then
+SAID_AT = "2026-04-04T18:05:44.342Z"
+QUESTION_ID = "f260656f-4a3e-4b81-aacb-ae9abb0c7c12"
+ANSWER_ID = "a8769bec-5a5d-47b2-9593-153bf1e7f073"
+
+
+@pytest.fixture
+def time_zone(monkeypatch: pytest.MonkeyPatch) -> Iterator[pytest.MonkeyPatch]:
+    """Let a test read in another time zone, and put the machine's back after it."""
+    yield monkeypatch
+    monkeypatch.undo()
+    time.tzset()
+
+
+async def test_a_turn_is_named_by_the_id_its_transcript_gives_it_in_every_time_zone(
+    tmp_path: Path, time_zone: pytest.MonkeyPatch
+) -> None:
+    """Threads and the unsent draft hang on the name: read in another time zone, the same turn is the same turn."""
+    transcript = _write_jsonl(
+        tmp_path,
+        [
+            {**_user("what changed?", timestamp=SAID_AT), "uuid": QUESTION_ID},
+            {**_assistant("the parser", timestamp=SAID_AT), "uuid": ANSWER_ID},
+        ],
+    )
+    names_by_zone = []
+    for zone in TIME_ZONES:
+        time_zone.setenv("TZ", zone)
+        time.tzset()
+        names_by_zone.append([turn.path for turn in await read_transcript(transcript)])
+
+    assert names_by_zone[0] == names_by_zone[1]
+    assert names_by_zone[0] == [f"assistant {ANSWER_ID[:8]}", f"user {QUESTION_ID[:8]}"]

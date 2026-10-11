@@ -34,6 +34,9 @@ TEXT_BLOCK = "text"
 ENTRY_END = "\n"
 # What the transcript is written in
 TRANSCRIPT_ENCODING = "utf-8"
+# How much of an entry's id names the turn it begins: enough to tell a
+# conversation's turns apart, as a short commit id tells commits apart
+TURN_ID_LENGTH = 8
 
 
 class ContentBlock(BaseModel):
@@ -55,6 +58,8 @@ class TranscriptEntry(BaseModel):
     type: str
     message: EntryMessage | None = None
     timestamp: str = ""
+    # The entry's own id, which Claude Code gives every one it writes
+    uuid: str | None = None
     # Written in the user's name by the tool itself: a skill's instructions, a
     # pasted image's note, a subagent's report
     is_meta: bool = Field(default=False, alias="isMeta")
@@ -75,6 +80,8 @@ class ConversationTurn(BaseModel):
     speaker: Speaker
     text: str
     timestamp: str
+    # The id of the entry it began with, when the transcript gives one
+    entry_id: str | None
 
 
 async def read_transcript(path: Path) -> list[DiffFile]:
@@ -174,7 +181,7 @@ def _merge_turns(entries: list[TranscriptEntry]) -> list[ConversationTurn]:
         if has_tools:
             last_had_tools = True
             if text:
-                turns.append(ConversationTurn(speaker=speaker, text=text, timestamp=entry.timestamp))
+                turns.append(_turn(speaker, text, entry))
             continue
 
         if not text:
@@ -183,11 +190,16 @@ def _merge_turns(entries: list[TranscriptEntry]) -> list[ConversationTurn]:
         if turns and turns[-1].speaker == speaker and not last_had_tools:
             turns[-1] = turns[-1].model_copy(update={"text": f"{turns[-1].text}\n{text}"})
         else:
-            turns.append(ConversationTurn(speaker=speaker, text=text, timestamp=entry.timestamp))
+            turns.append(_turn(speaker, text, entry))
 
         last_had_tools = False
 
     return turns
+
+
+def _turn(speaker: Speaker, text: str, entry: TranscriptEntry) -> ConversationTurn:
+    """A turn that begins with this entry."""
+    return ConversationTurn(speaker=speaker, text=text, timestamp=entry.timestamp, entry_id=entry.uuid)
 
 
 def _has_tool_blocks(entry: TranscriptEntry) -> bool:
@@ -212,19 +224,28 @@ def _extract_text(entry: TranscriptEntry) -> str:
 
 
 def _labels(turns: list[ConversationTurn]) -> list[str]:
-    """Name each turn by who spoke and when: 'user (18:05:44)'.
+    """Name each turn by who spoke and the id of the entry it began with: 'user f260656f'.
 
-    The name is what threads and the unsent draft hang on, so it never
-    depends on how much of the conversation came after: two turns in the
-    same second are told apart by their order, counted from the start.
+    The name is what threads and the unsent draft hang on, so it depends
+    neither on how much of the conversation came after nor on the time zone
+    the transcript is read in. A turn whose entry has no id is named by when
+    it was said, in local time: 'user (18:05:44)'. Two turns that would
+    share a name are told apart by their order, counted from the start.
     """
     seen: Counter[str] = Counter()
     labels = []
     for turn in turns:
-        label = f"{turn.speaker}{_said_at(turn.timestamp)}"
+        label = f"{turn.speaker}{_told_apart_by(turn)}"
         seen[label] += 1
         labels.append(label if seen[label] == 1 else f"{label} #{seen[label]}")
     return labels
+
+
+def _told_apart_by(turn: ConversationTurn) -> str:
+    """What tells a turn apart after who spoke: the id of the entry it began with, or when it was said."""
+    if turn.entry_id:
+        return f" {turn.entry_id[:TURN_ID_LENGTH]}"
+    return _said_at(turn.timestamp)
 
 
 def _said_at(timestamp: str) -> str:
