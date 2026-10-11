@@ -13,7 +13,7 @@ from contextlib import AbstractContextManager
 
 import structlog
 
-from claude_review.domain.exceptions import ReviewEndedError
+from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
 from claude_review.domain.models import (
     AgentEvent,
@@ -200,7 +200,7 @@ class Review:
         """
         asked = thread.part_asked(question_id)
         self._check_quotes([thread])
-        handed = self._handover.thread(thread)
+        handed = self._hand_over(thread)
         # Handed over with the thread already; named again, they are the same
         # files. Like every image in the thread, one this review no longer keeps
         # is left out: after a restart a screenshot is gone however recently it
@@ -227,7 +227,7 @@ class Review:
             PanelMessage(
                 message_id=message_id,
                 body=body,
-                threads=[self._handover.thread(thread) for thread in threads],
+                threads=[self._hand_over(thread) for thread in threads],
                 images=handed,
             )
         )
@@ -248,12 +248,24 @@ class Review:
         log.info("panel_answer", message_id=message_id, unprompted=message_id is None)
 
     def answer_thread(self, *, thread_id: str, question_id: str | None, body: str) -> None:
-        """Tell the pages the answer to a question asked in a thread."""
+        """Tell the pages the answer to a question asked in a thread.
+
+        Raises:
+            UnknownThreadError: if the review never heard of the thread: no page would show the answer.
+        """
+        self._threads.require(thread_id)
         self._page.tell(ThreadAnswered(thread_id=thread_id, question_id=question_id, body=body))
         log.info("thread_reply", thread_id=thread_id, question_id=question_id)
 
     def show(self, file: FilePath) -> None:
-        """Take the reader to a file, which they asked to be taken to."""
+        """Take the reader to a file, which they asked to be taken to.
+
+        Raises:
+            UnknownFileError: if the review holds no such file: the page would take them nowhere.
+        """
+        if file not in self._source.content.paths:
+            msg = f"{file} is not in this review"
+            raise UnknownFileError(msg)
         self._page.tell(FileShown(file=file))
         log.info("file_shown", file=file)
 
@@ -279,7 +291,7 @@ class Review:
         Raises:
             UnknownThreadError: if the page holds no such thread.
         """
-        return self._handover.thread(self._threads.find(thread_id))
+        return self._hand_over(self._threads.find(thread_id))
 
     def submit(self, *, threads: list[ThreadDraft], body: str | None, ends: bool) -> RoundSubmission:
         """Send what has been written as a round, and either end the review or carry on to the next round.
@@ -295,7 +307,7 @@ class Review:
 
         number = self._rounds.current
         result = self._formatter.format(
-            [self._handover.thread(thread) for thread in threads],
+            [self._hand_over(thread) for thread in threads],
             body,
             round_number=number,
             anchors=self._source.content.anchors,
@@ -353,3 +365,8 @@ class Review:
         anchors = self._source.content.anchors
         for thread in threads:
             anchors.check_quote(thread.anchor)
+
+    def _hand_over(self, thread: ThreadDraft) -> Thread:
+        """A thread as the agent is handed it, which the agent may answer in from now on."""
+        self._threads.handed(thread.thread_id)
+        return self._handover.thread(thread)

@@ -10,6 +10,7 @@ from claude_review.domain.exceptions import (
     AnchorLinesNotShownError,
     AnchorTooLongError,
     UnknownAnchorFileError,
+    UnknownFileError,
     UnknownThreadError,
 )
 from claude_review.presentation.asgi import HTTP_DISCONNECT
@@ -140,7 +141,7 @@ async def read_thread(
     return Thread.of(review.read_thread(thread_id))
 
 
-@router.post("/reply", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
+@router.post("/reply", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownThreadError, takes=Takes.JSON_BODY))
 async def reply_to_thread(request: ReplyRequest, review: Review = Depends(get_review)) -> None:
     """Push an answer into a thread of a review that is still open."""
     review.answer_thread(thread_id=request.thread_id, question_id=request.question_id, body=request.body)
@@ -174,7 +175,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     )
 
 
-@router.post("/show", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
+@router.post("/show", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY))
 async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)) -> None:
     """Take the reader to a file, and mark it for a moment when they arrive.
 

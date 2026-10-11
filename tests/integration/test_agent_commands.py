@@ -6,6 +6,7 @@ on a thread of its own, as it would in a process of its own.
 """
 
 import asyncio
+from http import HTTPStatus
 
 import pytest
 from click.testing import CliRunner, Result
@@ -15,6 +16,9 @@ from claude_review.cli.main import main
 from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
 from tests.helpers import REVIEW_ROUTE, REVIEWED_FILE, ReviewServers, RunningReview, one_line_file, opening_of
+
+# What a command that ran and failed exits with
+FAILED = 1
 
 
 @pytest.fixture
@@ -60,3 +64,23 @@ async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningR
         ProgressStep(text="read the handler", done=True),
         ProgressStep(text="two subagents out", done=False),
     ]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "named"),
+    [
+        (["reply", "--thread", "comment-99", "Because"], "comment-99"),
+        (["show", "--file", "src/elsewhere.py"], "src/elsewhere.py"),
+    ],
+    ids=["a-thread", "a-file"],
+)
+async def test_what_the_review_does_not_hold_fails_in_a_line_naming_it(
+    review: RunningReview, arguments: list[str], named: str
+) -> None:
+    """An answer or a jump to nowhere would vanish on the page, while the agent took it as done."""
+    result = await _run(review, *arguments)
+
+    assert result.exit_code == FAILED
+    assert isinstance(result.exception, SystemExit), "failed with a traceback rather than a line"
+    assert named in result.output
+    assert str(HTTPStatus.NOT_FOUND.value) in result.output

@@ -13,7 +13,7 @@ from structlog.typing import EventDict
 from claude_review.domain.models import ReviewMode
 from claude_review.presentation.broadcast import PAGE_BACKLOG
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
-from tests.helpers import ReviewServers, opening_of
+from tests.helpers import FIRST_THREAD_ID, ReviewServers, line_on_the_wire, opening_of, thread_on_the_wire
 from tests.page_socket import page_socket_held
 
 # How little the page's side of the connection buffers: it reads nothing, so
@@ -25,6 +25,9 @@ ANSWER_COUNT = PAGE_BACKLOG * 4
 # Each answer as long as one may be
 ANSWER = "x" * MAX_TEXT_LENGTH
 REPLY_ROUTE = "/api/reply"
+ASK_ROUTE = "/api/ask"
+# The thread the reader asked about before the laptop went to sleep, which every answer is given in
+ASKED = {"question_id": FIRST_THREAD_ID, "thread": thread_on_the_wire(line_on_the_wire("a.py", 1), "Why?")}
 CATCH_UP_ROUTE = "/api/catch-up"
 
 
@@ -36,8 +39,9 @@ async def test_a_page_that_stops_reading_is_let_go(servers: ReviewServers, logge
         page_socket_held(review.port, receive_buffer=PAGE_RECEIVE_BUFFER),
         AsyncClient(base_url=review.url) as agent,
     ):
+        await agent.post(ASK_ROUTE, json=ASKED)
         for _ in range(ANSWER_COUNT):
-            await agent.post(REPLY_ROUTE, json={"thread_id": "comment-1", "body": ANSWER})
+            await agent.post(REPLY_ROUTE, json={"thread_id": FIRST_THREAD_ID, "body": ANSWER})
         still_there = await agent.get(CATCH_UP_ROUTE)
 
     assert "page_fell_behind" in [entry["event"] for entry in logged]

@@ -17,7 +17,6 @@ A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why one?")
 # Every request that is answered by being done, with a body it takes
 DONE_BY_ASKING = [
     ("/api/ask", {"question_id": FIRST_THREAD_ID, "thread": A_THREAD}),
-    ("/api/reply", {"thread_id": FIRST_THREAD_ID, "body": "Because"}),
     ("/api/message", {"message_id": "panel-1", "body": "Still there?"}),
     ("/api/say", {"body": "Tests are green."}),
     ("/api/progress", {"text": "reading the handler"}),
@@ -31,6 +30,15 @@ DONE_BY_ASKING = [
 @pytest.mark.parametrize(("route", "body"), DONE_BY_ASKING)
 async def test_a_request_that_went_through_says_nothing_more(client: AsyncClient, route: str, body: dict) -> None:
     response = await client.post(route, json=body)
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert response.content == b""
+
+
+async def test_an_answer_that_went_through_says_nothing_more(client: AsyncClient) -> None:
+    await client.post("/api/ask", json={"question_id": FIRST_THREAD_ID, "thread": A_THREAD})
+
+    response = await client.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": "Because"})
 
     assert response.status_code == HTTPStatus.NO_CONTENT
     assert response.content == b""

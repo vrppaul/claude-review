@@ -23,6 +23,7 @@ from tests.helpers import (
     review_has_ended,
     thread_on_the_wire,
     turn_on_the_wire,
+    until_the_review_holds_threads,
 )
 
 ASK_ROUTE = "/api/ask"
@@ -220,8 +221,10 @@ async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> N
 
 
 def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> None:
-    """Without it the browser files the answer under whatever was asked last."""
+    """Without it the browser files the answer under the oldest question still waiting."""
     with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
         review_page.post(
             "/api/reply",
             json={"thread_id": "comment-1", "question_id": "turn-2", "body": "It moved to config"},
@@ -235,11 +238,30 @@ def test_an_answer_says_which_question_it_answers(review_page: TestClient) -> No
 def test_an_answer_that_names_no_question_still_arrives(review_page: TestClient) -> None:
     """A person answering by hand should not have to quote an id."""
     with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
         review_page.post("/api/reply", json={"thread_id": "comment-1", "body": "It moved to config"})
 
         assert next_push(socket, ReplyPush) == ReplyPush(
             thread_id="comment-1", question_id=None, body="It moved to config"
         )
+
+
+async def test_an_answer_to_a_thread_the_review_never_heard_of_is_refused(client: AsyncClient) -> None:
+    """The page would drop it, and the agent would never learn that its answer went nowhere."""
+    response = await client.post("/api/reply", json={"thread_id": "comment-99", "body": "Because"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "comment-99" in response.json()["detail"]
+
+
+async def test_a_thread_asked_about_can_be_answered_before_the_page_says_it_holds_it(client: AsyncClient) -> None:
+    """A page says what it holds at most once a second, and a question is word enough that the thread is there."""
+    await client.post(ASK_ROUTE, json=_asking(A_THREAD))
+
+    response = await client.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": "Because"})
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient) -> None:

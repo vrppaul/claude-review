@@ -55,6 +55,8 @@ def test_a_page_coming_back_is_handed_what_was_said_while_it_was_away(review_pag
     """A laptop asleep drops the socket; the answer given meanwhile must still reach the page."""
     with open_session(review_page) as away:
         last_seen = welcome_of(away)
+        away.send_json({"threads": [thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why?")]})
+        until_the_review_holds_threads(review_page, 1)
     review_page.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": ANSWER})
 
     with open_session_at(review_page, _coming_back(last_seen)) as back:
@@ -237,6 +239,20 @@ def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_ou
     )
 
     assert raised.json()["thread_id"] == "raised-8"
+
+
+def test_a_thread_the_server_cannot_read_can_still_be_answered_in(review_page: TestClient) -> None:
+    """The browser holds it and draws the answer in it, whatever the server could not make of it."""
+    unreadable = thread_on_the_wire(
+        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)}, "Why this?"
+    )
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [unreadable]})
+        until_the_review_is_on_round(review_page, 2)
+
+    answered = review_page.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": "Because"})
+
+    assert answered.status_code == HTTPStatus.NO_CONTENT
 
 
 def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> None:

@@ -159,6 +159,15 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
     assert pushed.severity == CommentSeverity.QUESTION
 
 
+async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient) -> None:
+    """The reader may ask about it like any other, and the review knows it before the page says it holds it."""
+    raised = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "Kept on purpose"))
+
+    response = await client.post("/api/reply", json={"thread_id": raised.json()["thread_id"], "body": "Because"})
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+
+
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
     first = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "one"))
@@ -360,6 +369,14 @@ def test_a_file_can_be_brought_into_view_when_asked(review_page: TestClient) -> 
         review_page.post("/api/show", json={"file": REVIEWED_FILE})
 
         assert next_push(socket, ShowPush) == ShowPush(file=REVIEWED_FILE)
+
+
+async def test_a_file_not_in_the_review_is_not_shown(client: AsyncClient) -> None:
+    """The page would go nowhere, and the agent would believe the reader had been taken there."""
+    response = await client.post("/api/show", json={"file": "src/elsewhere.py"})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "src/elsewhere.py" in response.json()["detail"]
 
 
 def test_the_agent_says_what_only_the_agent_knows(review_page: TestClient) -> None:

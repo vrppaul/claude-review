@@ -72,6 +72,10 @@ class UnknownAnchorFileError(NotFoundError):
     """Raised when an anchor names a file this review does not hold."""
 
 
+class UnknownFileError(NotFoundError):
+    """Raised when the reader is to be taken to a file this review does not hold."""
+
+
 class AnchorTooLongError(RefusedError):
     """Raised when an anchor names more lines than a thread may quote."""
 
