@@ -42,7 +42,7 @@ NEIGHBOUR_ON_THE_SAME_ADDRESS_HEADERS = {"Origin": "http://127.0.0.1:5173", "Hos
 # as a browser that says where a request comes from sends it
 LOCALHOST_PAGE_HEADERS = {"Origin": "http://localhost:8000", "Host": "localhost:8000", "Sec-Fetch-Site": "same-origin"}
 
-# The header a browser says where a request comes from in (Fetch Metadata),
+# The header in which a browser says where a request comes from (Fetch Metadata),
 # and what it says of a page on another port of this machine and of one anywhere else
 FETCH_SITE = "Sec-Fetch-Site"
 ANOTHER_PORT = "same-site"
@@ -148,7 +148,7 @@ async def test_a_page_elsewhere_cannot_read_the_review_by_a_request_that_sends_n
 
 
 async def test_a_page_on_another_port_cannot_take_what_the_reader_handed_the_agent(client: AsyncClient) -> None:
-    """Nor pass for the agent: the review does not offer rounds to an agent that is not there."""
+    """Nor make the review think an agent is there, so offering the reader rounds nobody will answer."""
     await client.post("/api/message", json=A_MESSAGE)
 
     taken = await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS, headers={FETCH_SITE: ANOTHER_PORT})
