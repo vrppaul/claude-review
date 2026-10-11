@@ -9,6 +9,8 @@
  * back by the same rule finds every line of it.
  */
 
+import { commonTokens, type Token } from '$lib/utils/common-tokens';
+
 export interface CommentPart {
 	kind: 'prose' | 'suggestion';
 	text: string;
@@ -85,4 +87,48 @@ function fenceAround(text: string): string {
 		0
 	);
 	return BACKTICK.repeat(Math.max(SHORTEST_FENCE, longestRun + 1));
+}
+
+/** How a line of a suggestion stands against the lines it replaces. */
+type LineChange = 'kept' | 'removed' | 'added';
+
+/** A line of a suggestion as it is drawn: kept as it was, taken away, or put there. */
+export interface SuggestedLine {
+	change: LineChange;
+	text: string;
+}
+
+/**
+ * What a suggestion changes, line by line, in order: the lines it leaves as
+ * they were, between the lines it takes away and the lines it puts there —
+ * read as a diff reads, so a suggestion that changes one line of three marks
+ * that one, not all six.
+ */
+export function suggestedChange(replaced: readonly string[], suggested: string): SuggestedLine[] {
+	const { before, after } = commonTokens(replaced, suggested.split(LINE_BREAK));
+	// The lines both sides keep stand in the same order in each, so each side
+	// cut at them has as many stretches as the other, the nth facing the nth
+	const removed = stretchesBetweenKept(before);
+	const kept = after.filter((line) => line.kept).map((line) => line.text);
+	return stretchesBetweenKept(after).flatMap((added, at) => stretchOf(removed.at(at) ?? [], added, kept.at(at)));
+}
+
+/** A side's lines that are not kept, cut at the lines that are: one stretch more than the lines kept. */
+function stretchesBetweenKept(lines: readonly Token[]): string[][] {
+	const stretches: string[][] = [[]];
+	for (const line of lines) {
+		if (line.kept) stretches.push([]);
+		else stretches.at(-1)?.push(line.text);
+	}
+	return stretches;
+}
+
+/** One stretch drawn: what was taken away, what was put there, and the kept line after them, if one follows. */
+function stretchOf(removed: string[], added: string[], keptAfter: string | undefined): SuggestedLine[] {
+	const keptLine: SuggestedLine[] = keptAfter === undefined ? [] : [{ change: 'kept', text: keptAfter }];
+	return [
+		...removed.map((text): SuggestedLine => ({ change: 'removed', text })),
+		...added.map((text): SuggestedLine => ({ change: 'added', text })),
+		...keptLine
+	];
 }

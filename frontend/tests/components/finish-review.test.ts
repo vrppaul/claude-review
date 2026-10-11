@@ -97,6 +97,26 @@ describe('finishing a review', () => {
 		expect(getByTestId('modal-comment-ref').textContent).toContain('src/app.ts');
 	});
 
+	it('shows a suggestion as the change it makes, never as its fence', () => {
+		review.threads.add(
+			newComment({
+				file: 'src/app.ts',
+				startLine: 42,
+				quote: ['const limit = 3;'],
+				body: 'Name it:\n\n```suggestion\nconst limit = MAX_LINES;\n```'
+			})
+		);
+
+		const { getByTestId, getAllByTestId } = render(FinishReview, inReview(review));
+
+		expect(getByTestId('finish-comment').textContent).not.toContain('```');
+		expect(getByTestId('finish-comment').textContent).toContain('Name it:');
+		expect(getAllByTestId('suggestion-line').map((line) => line.textContent)).toEqual([
+			'−const limit = 3;',
+			'+const limit = MAX_LINES;'
+		]);
+	});
+
 	it('cannot be sent with nothing written', () => {
 		const { getByTestId } = render(FinishReview, inReview(review));
 

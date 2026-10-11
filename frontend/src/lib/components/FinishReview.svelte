@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Thread } from '$lib/types';
-	import { anchorPlace } from '$lib/anchors/views';
+	import type { Anchor, Thread } from '$lib/types';
+	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
+	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { counted } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
+	import SuggestionDiff from './SuggestionDiff.svelte';
 
 	const review = useReview();
 
@@ -26,6 +28,17 @@
 		review.navigator.reveal(thread);
 	}
 </script>
+
+<!-- What a comment says, in full: its words as written, and a suggestion as the change it makes -->
+{#snippet said(body: string, anchor: Anchor)}
+	{#each splitSuggestions(body) as part, partIndex (partIndex)}
+		{#if part.kind === 'suggestion'}
+			<SuggestionDiff replaced={anchorReplaces(anchor)} suggested={part.text} />
+		{:else}
+			<span class="cr-comment-body mt-0.5 block whitespace-pre-wrap">{part.text}</span>
+		{/if}
+	{/each}
+{/snippet}
 
 <!-- What has been written, a summary, and the two ways out -->
 <div class="flex max-h-[70vh] flex-col">
@@ -53,7 +66,7 @@
 					{#each open as { field, anchor } (field.key)}
 						<li data-testid="open-field" class="px-2 py-1.5">
 							<span class="cr-comment-ref font-mono text-xs">{anchorPlace(anchor)}</span>
-							<span class="cr-comment-body mt-0.5 block whitespace-pre-wrap">{field.text}</span>
+							{@render said(field.text, anchor)}
 						</li>
 					{/each}
 				</ul>
@@ -92,7 +105,7 @@
 									<span class="cr-faint shrink-0 text-xs">round {sent}</span>
 								{/if}
 							</span>
-							<span class="cr-comment-body mt-0.5 block whitespace-pre-wrap">{thread.body}</span>
+							{@render said(thread.body, thread.anchor)}
 						</button>
 					</li>
 				{/each}

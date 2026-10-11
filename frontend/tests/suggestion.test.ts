@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fastCheck from 'fast-check';
-import { hasSuggestion, splitSuggestions, withSuggestion } from '$lib/utils/suggestion';
+import { hasSuggestion, splitSuggestions, suggestedChange, withSuggestion } from '$lib/utils/suggestion';
 
 describe('a suggestion put into a comment', () => {
 	it('stands where its lines are, so the field can select them to be edited', () => {
@@ -75,6 +75,43 @@ describe('a suggestion of any text', () => {
 					{ kind: 'suggestion', text: suggested }
 				]);
 			})
+		);
+	});
+});
+
+describe('what a suggestion changes', () => {
+	it('marks only the lines it changes, between the lines it keeps', () => {
+		const lines = suggestedChange(['first();', 'second();', 'third();'], 'first();\nsecond(again);\nthird();');
+
+		expect(lines).toEqual([
+			{ change: 'kept', text: 'first();' },
+			{ change: 'removed', text: 'second();' },
+			{ change: 'added', text: 'second(again);' },
+			{ change: 'kept', text: 'third();' }
+		]);
+	});
+
+	it('takes everything away and puts everything there when nothing is kept', () => {
+		expect(suggestedChange(['a', 'b'], 'c')).toEqual([
+			{ change: 'removed', text: 'a' },
+			{ change: 'removed', text: 'b' },
+			{ change: 'added', text: 'c' }
+		]);
+	});
+
+	it('reads back every line of both sides, each once, whatever they hold', () => {
+		fastCheck.assert(
+			fastCheck.property(
+				fastCheck.array(fastCheck.constantFrom('a', 'b', 'c', '')),
+				fastCheck.array(fastCheck.constantFrom('a', 'b', 'c', ''), { minLength: 1 }),
+				(replaced, suggested) => {
+					const lines = suggestedChange(replaced, suggested.join('\n'));
+					const before = lines.filter((line) => line.change !== 'added').map((line) => line.text);
+					const after = lines.filter((line) => line.change !== 'removed').map((line) => line.text);
+					expect(before).toEqual(replaced);
+					expect(after).toEqual(suggested);
+				}
+			)
 		);
 	});
 });

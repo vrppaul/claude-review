@@ -630,16 +630,19 @@
 }
 
 /*
- * A suggestion is a change, so it is shown as one: the lines it replaces
- * above the lines it puts there, marked the way the diff marks them.
+ * A suggestion is a change, so it is shown as one: what it takes away and
+ * what it puts there, marked the way the diff marks them, between the lines
+ * it keeps.
  */
 /* A line wider than the thread scrolls inside the block, which clips it to its rounded corners */
 .cr-suggestion {
+	display: block;
 	border: 1px solid var(--color-base-300);
 	border-radius: var(--radius-box);
 	overflow-x: auto;
 }
 .cr-sugg-row {
+	display: block;
 	font-family: var(--font-mono);
 	font-size: var(--cr-code-size);
 	line-height: var(--cr-code-leading);
