@@ -4,9 +4,9 @@ import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import type { DiffFile } from '$lib/types';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, wholeFile } from '../diff';
 import { newComment } from '../new-comment';
-import { keepingImages, paste, screenshot } from '../pasted-images';
+import { keepingImages, paste, screenshot, SEND_LIMITS } from '../pasted-images';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
@@ -37,23 +37,30 @@ describe('widening the context around a hunk', () => {
 		review = openReview({ files: [file] });
 	});
 
-	it('offers to show the lines the diff left out', () => {
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+	it('offers to read up from the change, or all of it, where nothing is above it', () => {
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 
-		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
+		expect(getByTestId('hunk-gap').textContent).toContain('29 hidden lines');
+		expect(getByTestId('expand-up').textContent).toContain('20');
+		expect(getByTestId('expand-all').textContent).toContain('Show all');
+		expect(queryByTestId('expand-down')).toBeNull();
 	});
 
-	it('reads the lines and shows them above the hunk', async () => {
+	it('reads the lines a step up and shows them above the hunk', async () => {
 		const user = userEvent.setup();
-		fakeServer().answer('GET /api/file-window', {
+		const server = fakeServer();
+		server.answer('GET /api/file-window', {
 			start: 10,
 			lines: ['before one', 'before two'],
 			total: FILE_LENGTH
 		});
 
 		const { getByTestId, getByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-up'));
 
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/app.py', start: '10', end: '29' } }
+		]);
 		expect(getByText('before one')).toBeTruthy();
 		expect(getByText('before two')).toBeTruthy();
 	});
@@ -62,12 +69,15 @@ describe('widening the context around a hunk', () => {
 		const user = userEvent.setup();
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: [], total: FILE_LENGTH });
+		const near = diffFile({ path: 'src/near.py', hunks: [replacedAt(15)] });
+		review = openReview({ files: [near] });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
-		await user.click(getByTestId('expand-context'));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file: near, scrollRoot: null }));
+		expect(queryByTestId('expand-up')).toBeNull();
+		await user.click(getByTestId('expand-all'));
 
 		expect(server.requests).toMatchObject([
-			{ path: '/api/file-window', query: { path: 'src/app.py', start: '1', end: '29' } }
+			{ path: '/api/file-window', query: { path: 'src/near.py', start: '1', end: '14' } }
 		]);
 	});
 
@@ -84,13 +94,84 @@ describe('widening the context around a hunk', () => {
 		review = openReview({ files: [distant] });
 
 		const { getByTestId } = render(FileSection, inReview(review, { file: distant, scrollRoot: null }));
-		expect(getByTestId('expand-context').textContent).toContain('of 500 hidden lines');
+		expect(getByTestId('hunk-gap').textContent).toContain('500 hidden lines');
 
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-up'));
 
 		expect(server.requests).toMatchObject([
 			{ path: '/api/file-window', query: { path: 'src/long.py', start: '481', end: '500' } }
 		]);
+	});
+
+	it('reads down from the change above a gap as well as up from the change below it', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 11, lines: ['after the first change'], total: 900 });
+		const apart = diffFile({ path: 'src/apart.py', hunks: [replacedAt(10), replacedAt(100)] });
+		review = openReview({ files: [apart] });
+
+		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: apart, scrollRoot: null }));
+		const [, between] = getAllByTestId('hunk-gap');
+		if (!between) throw new Error('No gap between the two changes');
+		expect(within(between).getByTestId('expand-up').getAttribute('aria-label')).toContain('Show 20 more lines');
+		await user.click(within(between).getByTestId('expand-down'));
+
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/apart.py', start: '11', end: '30' } }
+		]);
+		expect(getByText('after the first change')).toBeTruthy();
+	});
+
+	it('reads all of a long gap at once, as much as one read of the file hands back', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 451, lines: [], total: 900 });
+		const distant = diffFile({ path: 'src/long.py', hunks: [replacedAt(501)] });
+		review = openReview({ files: [distant], facts: { limits: { ...SEND_LIMITS, max_window_lines: 50 } } });
+
+		const { getByTestId } = render(FileSection, inReview(review, { file: distant, scrollRoot: null }));
+		expect(getByTestId('expand-all').textContent).toContain('Show 50');
+		await user.click(getByTestId('expand-all'));
+
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/long.py', start: '451', end: '500' } }
+		]);
+	});
+
+	it('offers the lines below the last change, and says how many once a read has told', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 32, lines: ['after one'], total: FILE_LENGTH });
+		const goesOn = diffFile({
+			path: 'src/goes-on.py',
+			hunks: [
+				hunk([removedLine(30, 'x = 1'), addedLine(30, 'x = 2'), contextLine(31, 31, 'kept')], {
+					old_start: 30,
+					new_start: 30
+				})
+			]
+		});
+		review = openReview({ files: [goesOn] });
+
+		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: goesOn, scrollRoot: null }));
+		const below = getAllByTestId('hunk-gap').at(-1);
+		if (!below) throw new Error('No gap below the change');
+		expect(below.textContent).toContain('The file may go on below');
+		await user.click(within(below).getByTestId('expand-down'));
+
+		expect(server.requests).toMatchObject([
+			{ path: '/api/file-window', query: { path: 'src/goes-on.py', start: '32', end: '51' } }
+		]);
+		expect(getByText('after one')).toBeTruthy();
+		// Lines 33 to 40 are still below
+		expect(getAllByTestId('hunk-gap').at(-1)?.textContent).toContain('Show the 8 hidden lines');
+	});
+
+	it('offers nothing below a change that ends the file', () => {
+		const { getAllByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+
+		// Only the gap above the change: the diff would have carried the lines after it
+		expect(getAllByTestId('hunk-gap')).toHaveLength(1);
 	});
 
 	it('says so when the file could not be read', async () => {
@@ -98,7 +179,7 @@ describe('widening the context around a hunk', () => {
 		fakeServer().refuse('GET /api/file-window', BAD_REQUEST);
 
 		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-up'));
 
 		expect(getByTestId('expand-error')).toBeTruthy();
 	});
@@ -117,7 +198,7 @@ describe('widening the context around a hunk', () => {
 	});
 
 	it('leaves plain files alone, since nothing of them is hidden', () => {
-		const plain: DiffFile = { ...file, path: '/tmp/plan.md' };
+		const plain = wholeFile('/tmp/plan.md', '# Plan', 'Ship it.');
 		review = openReview({ files: [plain], facts: { mode: 'files' } });
 
 		const { queryByTestId } = render(FileSection, inReview(review, { file: plain, scrollRoot: null }));
@@ -127,16 +208,16 @@ describe('widening the context around a hunk', () => {
 
 	it('takes the jump marker away once nothing is hidden any more', async () => {
 		const user = userEvent.setup();
-		// Every one of the 29 lines above the hunk
+		// Every one of the 29 lines above the hunk, in a file that ends with its change
 		fakeServer().answer('GET /api/file-window', {
 			start: 1,
 			lines: Array.from({ length: 29 }, (_, offset) => `line ${offset + 1}`),
-			total: FILE_LENGTH
+			total: 30
 		});
 		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 		expect(getByTestId('hunk-header')).toBeTruthy();
 
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-all'));
 
 		// The code now runs from the top of the file into the hunk without a
 		// break, and a marker saying otherwise is punctuation mid-sentence
@@ -151,13 +232,13 @@ describe('lines asked for while the file is drawn again', () => {
 		review = openReview({ files: [file] });
 		const windows = fakeServer().hold('GET /api/file-window');
 		const { getByTestId, getAllByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-up'));
 
 		// Folded and opened while the lines are on their way, and asked for again
 		await user.click(getByTestId('collapse-file'));
 		await user.click(getByTestId('collapse-file'));
-		expect(getByTestId('expand-context').textContent).toContain('Reading');
-		await user.click(getByTestId('expand-context'));
+		expect(getByTestId('hunk-gap').textContent).toContain('Reading');
+		await user.click(getByTestId('expand-up'));
 		windows.answer(0, { start: 1, lines: ['read once'], total: FILE_LENGTH });
 		await settled();
 
@@ -173,7 +254,7 @@ describe('lines asked for just before a new diff lands', () => {
 		const server = fakeServer();
 		const windows = server.hold('GET /api/file-window');
 		const { getByTestId } = render(DiffView, inReview(review));
-		await user.click(getByTestId('expand-context'));
+		await user.click(getByTestId('expand-up'));
 
 		// A round lands while the lines are on their way: the file now changes
 		// above the hunk too, so what was hidden above it is not hidden any more
@@ -211,7 +292,7 @@ describe('what hangs under a line, when lines are revealed above it', () => {
 
 	/** Reveal lines above the first hunk. */
 	async function revealAboveTheFirstHunk(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-		await user.click(screen.getAllByTestId('expand-context')[0]);
+		await user.click(screen.getAllByTestId('expand-up')[0]);
 		await settled();
 	}
 

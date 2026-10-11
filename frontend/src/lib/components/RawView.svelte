@@ -101,4 +101,7 @@
 			</table>
 		</div>
 	{/each}
+	{#if isDiffMode && drawing.end}
+		<HunkGap gap={drawing.end} header="" {drawing} />
+	{/if}
 </div>

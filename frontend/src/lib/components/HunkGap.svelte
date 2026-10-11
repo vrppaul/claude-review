@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ContextGap } from '$lib/utils/expansions';
+	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
 	import { counted } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
@@ -9,9 +9,9 @@
 	const READING_FAILED = 'Could not read the file';
 
 	interface Props {
-		/** What the diff left out above the hunk. */
+		/** What the diff left out above a hunk, between two, or below the last. */
 		gap: ContextGap;
-		/** The hunk's own header, which says where it is in the file. */
+		/** The header of the hunk below it, which says where that hunk is in the file; empty below the last. */
 		header: string;
 		/** The file the gap is in, which reads the gap in where it may be, and says when it is reading. */
 		drawing: FileDrawing;
@@ -22,16 +22,26 @@
 	let failed = $state<string | null>(null);
 
 	const reading = $derived(drawing.isReading(gap));
-	const windowSize = $derived(gap.next === null ? 0 : gap.next.end - gap.next.start + 1);
-	// What a gap that is not read into says of itself
-	const unchanged = $derived(counted(gap.hidden, 'unchanged line', 'unchanged lines'));
-	const hidden = $derived(counted(gap.hidden, 'hidden line', 'hidden lines'));
-	const label = $derived(windowSize === gap.hidden ? `Show the ${hidden}` : `Show ${windowSize} more of ${hidden}`);
+	const hidden = $derived(hiddenIn(gap));
+	// A gap this short is read whole in one go; a longer one a step up from
+	// the change below it, a step down from the change above, or all at once
+	const inOneGo = $derived(hidden !== null && hidden <= EXPAND_STEP ? drawing.readOf(gap, 'all') : null);
+	const stepUp = $derived(inOneGo ? null : drawing.readOf(gap, 'up'));
+	const stepDown = $derived(inOneGo ? null : drawing.readOf(gap, 'down'));
+	const allAtOnce = $derived(inOneGo ? null : drawing.readOf(gap, 'all'));
+	// Drawn while lines are hidden; below the last hunk, where how many is not
+	// known yet, only where they can be read in to find out
+	const drawn = $derived(hidden === null ? drawing.readsGaps : hidden > 0);
+	// What a gap says of itself: how much it hides, as far as that is known
+	const unchanged = $derived(counted(hidden ?? 0, 'unchanged line', 'unchanged lines'));
+	const hiddenLines = $derived(
+		hidden === null ? 'The file may go on below' : counted(hidden, 'hidden line', 'hidden lines')
+	);
 
-	async function reveal() {
+	async function widen(read: GapRead) {
 		failed = null;
 		try {
-			await drawing.read(gap);
+			await drawing.read(read);
 		} catch (error) {
 			failed = messageOf(error, READING_FAILED);
 		}
@@ -41,29 +51,76 @@
 <!-- The jump and what it says are one thing: with nothing hidden above this
 	hunk the code runs on unbroken, and a marker saying otherwise is a line of
 	punctuation in the middle of a sentence. -->
-{#if gap.hidden > 0}
+{#if drawn}
 	{#if header}
 		<div data-testid="hunk-header" class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
 			{header}
 		</div>
 	{/if}
-	<div data-testid="hunk-gap" class="flex items-center border-y border-base-300 bg-base-200">
+	<div data-testid="hunk-gap" class="flex items-center gap-1 border-y border-base-300 bg-base-200 font-mono text-xs">
 		{#if drawing.readsGaps}
-			<button
-				type="button"
-				data-testid="expand-context"
-				class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left font-mono text-xs"
-				disabled={reading}
-				onclick={reveal}
-			>
-				<Icon name="expand" class="h-3 w-3 shrink-0" />
-				{reading ? 'Reading…' : label}
-			</button>
+			{#if inOneGo}
+				<button
+					type="button"
+					data-testid="expand-all"
+					class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left"
+					disabled={reading}
+					onclick={() => widen(inOneGo)}
+				>
+					<Icon name="expand" class="h-3 w-3 shrink-0" />
+					{reading ? 'Reading…' : `Show the ${hiddenLines}`}
+				</button>
+			{:else}
+				<span class="cr-muted flex flex-1 items-center gap-2 px-4 py-1.5">
+					<Icon name="expand" class="h-3 w-3 shrink-0" />
+					{reading ? 'Reading…' : hiddenLines}
+				</span>
+				{#if stepUp}
+					{@const said = `Show ${sizeOf(stepUp)} more lines, up from the change below`}
+					<button
+						type="button"
+						data-testid="expand-up"
+						class="cr-expand px-3 py-1.5"
+						title={said}
+						aria-label={said}
+						disabled={reading}
+						onclick={() => widen(stepUp)}
+					>
+						↑ {sizeOf(stepUp)}
+					</button>
+				{/if}
+				{#if stepDown}
+					{@const said = `Show ${sizeOf(stepDown)} more lines, down from the change above`}
+					<button
+						type="button"
+						data-testid="expand-down"
+						class="cr-expand px-3 py-1.5"
+						title={said}
+						aria-label={said}
+						disabled={reading}
+						onclick={() => widen(stepDown)}
+					>
+						↓ {sizeOf(stepDown)}
+					</button>
+				{/if}
+				{#if allAtOnce}
+					<!-- As many as one read of the file hands back: every hidden line, unless there are more -->
+					<button
+						type="button"
+						data-testid="expand-all"
+						class="cr-expand px-3 py-1.5"
+						disabled={reading}
+						onclick={() => widen(allAtOnce)}
+					>
+						{sizeOf(allAtOnce) === hidden ? 'Show all' : `Show ${sizeOf(allAtOnce)}`}
+					</button>
+				{/if}
+			{/if}
 			{#if failed}
-				<span data-testid="expand-error" class="px-4 text-xs text-error">{failed}</span>
+				<span data-testid="expand-error" class="px-4 text-error">{failed}</span>
 			{/if}
 		{:else}
-			<span class="cr-muted px-4 py-1.5 font-mono text-xs">⋯ {unchanged}</span>
+			<span class="cr-muted px-4 py-1.5">⋯ {unchanged}</span>
 		{/if}
 	</div>
 {/if}

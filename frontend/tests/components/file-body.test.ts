@@ -33,14 +33,16 @@ describe('a file drawn where what the diff left out is not to be read in', () =>
 		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
 		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
-		expect(queryByTestId('expand-context')).toBeNull();
+		expect(queryByTestId('expand-up')).toBeNull();
+		expect(queryByTestId('expand-all')).toBeNull();
 	});
 
 	it('says the same in two columns', () => {
 		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, { ...AS_A_STEP, view: 'split' }));
 
 		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
-		expect(queryByTestId('expand-context')).toBeNull();
+		expect(queryByTestId('expand-up')).toBeNull();
+		expect(queryByTestId('expand-all')).toBeNull();
 	});
 });
 

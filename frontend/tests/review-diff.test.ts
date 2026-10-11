@@ -3,7 +3,8 @@ import { contextLine, addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer, keepingSettings, SERVER_ERROR } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
-import { gapAbove } from '$lib/utils/expansions';
+import { SEND_LIMITS } from './pasted-images';
+import { gapAbove, type GapRead, hunkKey, readOf } from '$lib/utils/expansions';
 
 let review: Review;
 
@@ -14,6 +15,17 @@ beforeEach(() => {
 /** A hunk of one added line, this far down the file. */
 function hunkAt(newStart: number) {
 	return hunk([addedLine(newStart, 'added')], { old_start: newStart, new_start: newStart });
+}
+
+/** Read lines of a.ts into a gap, as its controls do. */
+async function reveal(read: GapRead | null): Promise<void> {
+	if (read === null) throw new Error('Nothing in the gap to read');
+	await review.diff.revealed.reveal('a.ts', read);
+}
+
+/** Read in the lines above a hunk at line 3 of a.ts, as its gap's ↑ does. */
+async function revealAboveTheHunk(): Promise<void> {
+	await reveal(readOf(gapAbove(hunkAt(3), undefined), 'up', SEND_LIMITS.max_window_lines));
 }
 
 const files = [
@@ -116,28 +128,52 @@ describe('retaking the diff', () => {
 		expect(review.reading.isViewed('src/a.ts')).toBe(true);
 	});
 
+	it("keeps lines read up from a hunk in the file's order, the later read above the earlier", async () => {
+		const server = fakeServer();
+		const gap = gapAbove(hunkAt(50), undefined);
+		server.answer('GET /api/file-window', { start: 30, lines: ['line 30', 'line 31'], total: 60 });
+		await reveal(readOf(gap, 'up', SEND_LIMITS.max_window_lines));
+		server.answer('GET /api/file-window', { start: 10, lines: ['line 10', 'line 11'], total: 60 });
+		await reveal(readOf(gap, 'up', SEND_LIMITS.max_window_lines));
+
+		const above = review.diff.revealed.forFile('a.ts').above.get(gap.key) ?? [];
+		expect(above.map((line) => line.content)).toEqual(['line 10', 'line 11', 'line 30', 'line 31']);
+	});
+
+	it("keeps lines read down from a hunk in the file's order, the later read below the earlier", async () => {
+		const server = fakeServer();
+		const gap = gapAbove(hunkAt(50), hunkAt(3));
+		server.answer('GET /api/file-window', { start: 4, lines: ['line 4', 'line 5'], total: 60 });
+		await reveal(readOf(gap, 'down', SEND_LIMITS.max_window_lines));
+		server.answer('GET /api/file-window', { start: 24, lines: ['line 24', 'line 25'], total: 60 });
+		await reveal(readOf(gap, 'down', SEND_LIMITS.max_window_lines));
+
+		const below = review.diff.revealed.forFile('a.ts').below.get(hunkKey(hunkAt(3))) ?? [];
+		expect(below.map((line) => line.content)).toEqual(['line 4', 'line 5', 'line 24', 'line 25']);
+	});
+
 	it('drops lines revealed against hunks a round replaced', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await review.diff.revealed.reveal('a.ts', gapAbove(hunkAt(3), undefined));
-		expect(review.diff.revealed.forFile('a.ts').size).toBe(1);
+		await revealAboveTheHunk();
+		expect(review.diff.revealed.forFile('a.ts').above.size).toBe(1);
 
 		await review.diff.take();
 
-		expect(review.diff.revealed.forFile('a.ts').size).toBe(0);
+		expect(review.diff.revealed.forFile('a.ts').above.size).toBe(0);
 	});
 
 	it('drops lines revealed against hunks whitespace renumbered', async () => {
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
-		await review.diff.revealed.reveal('a.ts', gapAbove(hunkAt(3), undefined));
-		expect(review.diff.revealed.forFile('a.ts').size).toBe(1);
+		await revealAboveTheHunk();
+		expect(review.diff.revealed.forFile('a.ts').above.size).toBe(1);
 
 		await review.setIgnoreWhitespace(true);
 
-		expect(review.diff.revealed.forFile('a.ts').size).toBe(0);
+		expect(review.diff.revealed.forFile('a.ts').above.size).toBe(0);
 	});
 });
 

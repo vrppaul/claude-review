@@ -89,7 +89,7 @@ describe('a diff on screen', () => {
 		const { getByText, getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByText('@@ -30,3 +30,4 @@')).toBeTruthy();
-		expect(getByTestId('expand-context').textContent).toContain('29 hidden lines');
+		expect(getByTestId('hunk-gap').textContent).toContain('29 hidden lines');
 	});
 
 	it('leaves the marker out where the code runs on unbroken', () => {

@@ -1204,7 +1204,7 @@ export interface components {
         };
         /**
          * SendLimits
-         * @description The limits the browser checks before it sends: an image, or the lines a comment covers.
+         * @description The limits the browser checks before it sends: an image, the lines a comment covers, a read of a file.
          *
          *     Told by the server rather than repeated in the browser, so the two
          *     cannot drift apart — and a comment the server would refuse is never
@@ -1217,6 +1217,8 @@ export interface components {
             max_images_per_message: number;
             /** Max Quoted Lines */
             max_quoted_lines: number;
+            /** Max Window Lines */
+            max_window_lines: number;
         };
         /**
          * SettingsChange

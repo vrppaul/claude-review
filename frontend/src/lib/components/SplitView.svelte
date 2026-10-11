@@ -140,4 +140,7 @@
 			</table>
 		</div>
 	{/each}
+	{#if drawing.end}
+		<HunkGap gap={drawing.end} header="" {drawing} />
+	{/if}
 </div>

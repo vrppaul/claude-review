@@ -44,6 +44,18 @@ describe('split layout', () => {
 		review = openReview({ files: [file] });
 	});
 
+	it('offers the lines below the last change in two columns too', async () => {
+		// The hunk ends on an unchanged line, so the file may go on below it
+		const goesOn = diffFile({ path: 'src/goes-on.ts', hunks: [hunk([removedLine(1, 'a'), contextLine(2, 1, 'b')])] });
+		review = openReview({ files: [goesOn] });
+		await inTwoColumns();
+
+		const { getByTestId } = render(FileSection, inReview(review, { file: goesOn, scrollRoot: null }));
+
+		expect(getByTestId('split-view')).toBeTruthy();
+		expect(getByTestId('expand-down')).toBeTruthy();
+	});
+
 	it('reads down one column until asked for two', () => {
 		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 

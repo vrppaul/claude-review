@@ -9,7 +9,8 @@ const BYTES_PER_MEGABYTE = 1024 * 1024;
 export const SEND_LIMITS: SendLimits = {
 	max_image_bytes: 10 * BYTES_PER_MEGABYTE,
 	max_images_per_message: 10,
-	max_quoted_lines: 200
+	max_quoted_lines: 200,
+	max_window_lines: 2000
 };
 
 /** The id the server keeps a pasted screenshot under. */
