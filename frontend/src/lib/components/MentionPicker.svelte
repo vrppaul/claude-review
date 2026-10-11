@@ -30,6 +30,11 @@
 		const state = threadState(thread);
 		return state ? `${thread.body} · ${state}` : thread.body;
 	}
+
+	/** Bring an option into the list's view while it is the one highlighted: the arrow keys move past what the list shows. */
+	function showIfHighlighted(option: HTMLElement, highlighted: boolean) {
+		if (highlighted) option.scrollIntoView({ block: 'nearest' });
+	}
 </script>
 
 <!-- Threads in the order the diff has them, then files; the keyboard stays in the field, which moves the highlight -->
@@ -53,6 +58,7 @@
 				data-testid={pick.kind === 'thread' ? 'thread-option' : 'file-option'}
 				class="cr-option"
 				onclick={() => onTake(pick)}
+				{@attach (option: HTMLElement) => showIfHighlighted(option, index === mentions.highlighted)}
 			>
 				{#if pick.kind === 'thread'}
 					<span class="cr-comment-ref block truncate font-mono text-xs">{anchorShortPlace(pick.thread.anchor)}</span>

@@ -150,6 +150,24 @@ describe('the agent panel', () => {
 		expect(document.activeElement).toBe(field);
 	});
 
+	it('keeps the option the arrow keys move to in view in the list', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
+
+		const { getByTestId, getAllByRole } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Look at @');
+		const [first, second] = getAllByRole('option');
+		const firstShown = vi.fn();
+		const secondShown = vi.fn();
+		first.scrollIntoView = firstShown;
+		second.scrollIntoView = secondShown;
+
+		await user.keyboard('{ArrowDown}');
+
+		expect(secondShown).toHaveBeenCalledWith({ block: 'nearest' });
+		expect(firstShown).not.toHaveBeenCalled();
+	});
+
 	it('sends the thread the message points at', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();
