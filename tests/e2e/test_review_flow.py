@@ -54,6 +54,17 @@ MOVED_AFTER_THE_RETAKE = {MAIN_FILE: "def hello():\n    return 'hey'\n", UTILS_F
 NEW_FILE_TYPED = Path(NEW_FILE).stem
 # What has the keyboard, by what it says it does
 FOCUSED_LABEL = "document.activeElement?.getAttribute('aria-label')"
+# A review long enough that its last file stands far further below the screen
+# than a file is built ahead of being reached: files added whole, each of many lines
+LONG_FILE_COUNT = 8
+LONG_FILE_LINES = 60
+LONG_FILES = {
+    f"module_{number}.py": "".join(f"value_{line} = {line}\n" for line in range(LONG_FILE_LINES))
+    for number in range(LONG_FILE_COUNT)
+}
+FIRST_LONG_FILE, *_, LAST_LONG_FILE = LONG_FILES
+# What a round heads each thread with
+THREAD_HEADING = "### "
 # A point on the page, in pixels, that no dialog in the middle of it covers
 OUTSIDE_THE_DIALOG = 5
 # The conversation the transcript is written with, one entry a line: a question, and its answer
@@ -153,6 +164,13 @@ async def _agent_hears_it_ended(review: RunningReview) -> bool:
         except TransportError:
             return True
     return False
+
+
+def _heading_above(sent: str, said: str) -> str:
+    """The heading of the thread in a round that says something: the last one above it."""
+    lines = sent.splitlines()
+    said_at = next(number for number, line in enumerate(lines) if said in line)
+    return next(line for line in reversed(lines[:said_at]) if line.startswith(THREAD_HEADING))
 
 
 async def _click_line_and_comment(page: Page, line_locator: Locator, text: str) -> None:
@@ -370,22 +388,20 @@ async def test_comments_on_several_files_all_reach_the_agent(
     await page.goto(files_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Comment on plan")
+    await _click_line_and_comment(page, _first_gutter(page, "plan.md"), "Comment on plan")
 
     file_buttons = await page.get_by_test_id("file-item").all()
     assert len(file_buttons) == len(text_files)
     await file_buttons[1].click()
-    await page.get_by_test_id("line-gutter").first.wait_for()
+    await _first_gutter(page, "notes.md").wait_for()
 
-    line_cell = page.get_by_test_id("line-gutter").first
-    await _click_line_and_comment(page, line_cell, "Comment on notes")
+    await _click_line_and_comment(page, _first_gutter(page, "notes.md"), "Comment on notes")
 
     sent = await _send(page)
     await page.get_by_test_id("submitted-banner").wait_for()
 
-    assert "Comment on plan" in sent
-    assert "Comment on notes" in sent
+    assert "plan.md" in _heading_above(sent, "Comment on plan")
+    assert "notes.md" in _heading_above(sent, "Comment on notes")
 
 
 async def test_a_markdown_file_can_be_read_raw_rendered_or_both(files_review: RunningReview, page: Page) -> None:
@@ -600,29 +616,41 @@ async def test_sidebar_counts_files_marked_viewed(diff_review: RunningReview, pa
     await heading.filter(has_text="1 viewed").wait_for()
 
 
-async def test_a_file_further_down_the_stream_is_readable(diff_review: RunningReview, page: Page) -> None:
-    """Files build as they are approached, so scrolling to one shows its lines."""
-    await page.goto(diff_review.url)
-    await page.get_by_test_id("sidebar").wait_for()
+@pytest.fixture
+async def long_review(tmp_path: Path, servers: ReviewServers) -> RunningReview:
+    """A real server reviewing more lines than are built before the reader comes near them."""
+    repository = committed_repository(tmp_path, {"README.md": "# A long review\n"})
+    write_files(repository, LONG_FILES)
+    return await servers.start(await repository_opening(repository))
 
-    last = _section(page, NEW_FILE)
+
+async def test_a_file_further_down_the_stream_is_built_as_it_is_approached_and_not_before(
+    long_review: RunningReview, page: Page
+) -> None:
+    """A review of sixty files would build tens of thousands of rows before showing anything."""
+    await page.goto(long_review.url)
+    await _section(page, FIRST_LONG_FILE).get_by_test_id("raw-view").wait_for()
+    last = _section(page, LAST_LONG_FILE)
+
+    assert await last.get_by_test_id("file-placeholder").count() == 1
+    assert await last.get_by_test_id("line-gutter").count() == 0
+
     await last.scroll_into_view_if_needed()
 
     await last.get_by_test_id("raw-view").wait_for()
-    assert await last.get_by_test_id("line-gutter").count() > 0
+    assert await last.get_by_test_id("line-gutter").count() == LONG_FILE_LINES
 
 
-async def test_scrolling_to_a_file_from_the_sidebar_shows_its_lines(diff_review: RunningReview, page: Page) -> None:
+async def test_scrolling_to_a_file_from_the_sidebar_shows_its_lines(long_review: RunningReview, page: Page) -> None:
     """The sidebar moves the reader, and the file it lands on is ready to read."""
-    await page.goto(diff_review.url)
+    await page.goto(long_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
-    items = await page.get_by_test_id("file-item").all()
-    await items[-1].click()
+    await page.get_by_test_id("file-item").filter(has_text=LAST_LONG_FILE).click()
 
-    visible_sections = page.get_by_test_id("file-section")
-    assert await visible_sections.count() == len(CHANGED_FILES)
-    await page.get_by_test_id("raw-view").last.wait_for()
+    last = _section(page, LAST_LONG_FILE)
+    await expect(last).to_be_in_viewport()
+    await last.get_by_test_id("raw-view").wait_for()
 
 
 async def test_split_layout_faces_the_two_versions(diff_review: RunningReview, page: Page) -> None:
