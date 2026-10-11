@@ -12,6 +12,7 @@ import click
 import structlog
 
 from claude_review.cli.terminal_announcer import TerminalAnnouncer
+from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import ReviewMode
 from claude_review.hosting.ports import ANY_FREE_PORT, HIGHEST_PORT
 from claude_review.hosting.serving import serve_review, stop_signals
@@ -80,7 +81,7 @@ def _launch(opening: Awaitable[ReviewOpening], *, port: int | None, no_open: boo
     announcer = TerminalAnnouncer(open_browser=not no_open)
     handed_back = asyncio.run(_open_and_serve(opening, port=port, announcer=announcer))
     if handed_back:
-        click.echo(handed_back)
+        click.echo(terminal_text(handed_back))
 
 
 async def _open_and_serve(opening: Awaitable[ReviewOpening], *, port: int | None, announcer: TerminalAnnouncer) -> str:

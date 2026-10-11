@@ -6,7 +6,10 @@ on a thread of its own, as it would in a process of its own.
 """
 
 import asyncio
+import json
+import unicodedata
 from http import HTTPStatus
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner, Result
@@ -15,10 +18,28 @@ from httpx import AsyncClient
 from claude_review.cli.main import main
 from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
-from tests.helpers import REVIEW_ROUTE, REVIEWED_FILE, ReviewServers, RunningReview, one_line_file, opening_of
+from tests.helpers import (
+    REVIEW_ROUTE,
+    REVIEWED_FILE,
+    ReviewServers,
+    RunningReview,
+    one_line_file,
+    opening_of,
+    repository_opening,
+)
 
 # What a command that ran and failed exits with
 FAILED = 1
+
+# What a reader pasted from a terminal, or a file holds: a clipboard write
+# (OSC 52), a screen cleared (CSI), and the same cleared by one C1 control
+ESCAPE = "\x1b"
+HOSTILE = f"Look {ESCAPE}]52;c;ZWNobyBwd25lZA==\x07 {ESCAPE}[2J \x9b2J"
+# Unicode's category for a control character: C0, DEL and C1 alike
+CONTROL_CATEGORY = "Cc"
+# What a terminal is meant to act on in printed text: a new line, a tab
+MEANT = "\n\t"
+MESSAGE_ROUTE = "/api/message"
 
 
 @pytest.fixture
@@ -30,6 +51,15 @@ async def review(servers: ReviewServers) -> RunningReview:
 async def _run(review: RunningReview, command: str, *arguments: str) -> Result:
     """Run one of the agent's commands against the review, as the agent types it."""
     return await asyncio.to_thread(CliRunner().invoke, main, [command, "--port", str(review.port), *arguments])
+
+
+def _controls_in(printed: str) -> list[str]:
+    """Every control character a terminal would act on, other than a new line or a tab."""
+    return [
+        character
+        for character in printed
+        if unicodedata.category(character) == CONTROL_CATEGORY and character not in MEANT
+    ]
 
 
 async def _facts(review: RunningReview) -> ReviewResponse:
@@ -84,3 +114,43 @@ async def test_what_the_review_does_not_hold_fails_in_a_line_naming_it(
     assert isinstance(result.exception, SystemExit), "failed with a traceback rather than a line"
     assert named in result.output
     assert str(HTTPStatus.NOT_FOUND.value) in result.output
+
+
+@pytest.mark.parametrize("command", [["wait", "--seconds", "5"], ["catch-up"]], ids=["handed-over", "caught-up"])
+async def test_what_the_reader_wrote_is_printed_to_be_read_never_obeyed(
+    review: RunningReview, command: list[str]
+) -> None:
+    """Pasted from a terminal, it may hold what a terminal acts on: shown, it cannot write the agent's clipboard."""
+    async with AsyncClient(base_url=review.url) as page:
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE})
+
+    result = await _run(review, *command)
+
+    assert result.exit_code == 0, result.output
+    assert _controls_in(result.output) == []
+    assert "\\u001b]52" in result.output
+
+
+async def test_what_is_handed_over_as_json_says_what_was_written(review: RunningReview) -> None:
+    """Made safe for the terminal, it is still the JSON of what the reader wrote."""
+    async with AsyncClient(base_url=review.url) as page:
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE})
+
+    result = await _run(review, "wait", "--seconds", "5")
+
+    assert json.loads(result.output)["message"]["body"] == HOSTILE
+
+
+async def test_a_file_named_with_a_control_is_printed_to_be_read_never_obeyed(
+    servers: ReviewServers, tmp_git_repo: Path
+) -> None:
+    """A name is the repository's to choose, and the diff taken again prints the names that changed."""
+    named = "clear\x9b2J.py"
+    review = await servers.start(await repository_opening(tmp_git_repo))
+    (tmp_git_repo / named).write_text("print()\n")
+
+    result = await _run(review, "retake")
+
+    assert result.exit_code == 0, result.output
+    assert _controls_in(result.output) == []
+    assert json.loads(result.output)["changes"]["paths"] == [named]

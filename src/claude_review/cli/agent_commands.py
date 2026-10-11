@@ -20,6 +20,7 @@ from claude_review.cli.parameters import (
 )
 from claude_review.cli.rendering import render_catch_up, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
+from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.wire.agent import (
@@ -78,7 +79,7 @@ def wait_command(*, client: ReviewClient, seconds: float, until_event: bool) -> 
     event = client.next_event(seconds)
     while until_event and isinstance(event, TimeoutEvent):
         event = client.next_event(seconds)
-    click.echo(EVENTS.dump_json(event).decode())
+    click.echo(terminal_text(EVENTS.dump_json(event).decode()))
 
 
 @click.command("reply")
@@ -118,10 +119,11 @@ def catch_up_command(*, client: ReviewClient, thread: str | None, as_json: bool)
     """
     if thread is not None:
         read = client.thread(thread)
-        click.echo(read.model_dump_json() if as_json else render_thread(read))
+        printed = read.model_dump_json() if as_json else render_thread(read)
     else:
         seen = client.catch_up()
-        click.echo(seen.model_dump_json() if as_json else render_catch_up(seen))
+        printed = seen.model_dump_json() if as_json else render_catch_up(seen)
+    click.echo(terminal_text(printed))
 
 
 @click.command("say")
@@ -316,7 +318,7 @@ def retake_command(*, client: ReviewClient) -> None:
     which files changed since the round began. A diff review only: files and
     conversations have no diff to take again.
     """
-    click.echo(client.retake().model_dump_json())
+    click.echo(terminal_text(client.retake().model_dump_json()))
 
 
 COMMANDS = {

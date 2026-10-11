@@ -16,6 +16,7 @@ import click
 import structlog
 
 from claude_review.cli.review_client import ReviewCallError
+from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import GitError
 from claude_review.hosting.errors import PortUnavailableError, ReviewStoppedError, ServerStartError
@@ -69,7 +70,8 @@ class ReviewCommands(click.Group):
         try:
             return super().invoke(ctx)
         except EXPLAINED_FAILURES as failure:
-            raise click.ClickException(str(failure)) from failure
+            # What failed may be named in the repository's words: a file, a ref, what git said
+            raise click.ClickException(terminal_text(str(failure))) from failure
 
 
 @click.group(cls=ReviewCommands)

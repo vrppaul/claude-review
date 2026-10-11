@@ -77,6 +77,11 @@ NO_SUCH_THREAD = "comment-99"
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}
 # A page on somebody else's site
 FOREIGN_ORIGIN = "https://attacker.example"
+# What writes "echo pwned" into the clipboard of a terminal that prints it (OSC 52), as a reader may paste it
+ESCAPE = "\x1b"
+CLIPBOARD_WRITE = f"{ESCAPE}]52;c;ZWNobyBwd25lZA==\x07"
+# How a terminal control is shown when printed: written out, as JSON writes one
+SHOWN_ESCAPE = "\\u001b"
 
 
 class CliProcess:
@@ -301,6 +306,15 @@ def test_a_base_that_names_no_commit_is_refused_in_one_readable_line(changed_rep
     assert result.returncode == 1
     assert "Traceback" not in result.stderr
     assert "no-such-ref" in result.stderr
+
+
+def test_a_failure_said_in_words_the_reader_typed_is_shown_never_obeyed(changed_repo: Path, cli: CliProcesses) -> None:
+    """What failed is named in its own words — a base, a file, what git said — and they may hold a terminal's controls."""
+    result = cli.run("diff", str(changed_repo), "--base", f"main{CLIPBOARD_WRITE}", "--no-open")
+
+    assert result.returncode == 1
+    assert ESCAPE not in result.stderr
+    assert SHOWN_ESCAPE in result.stderr
 
 
 def test_version_is_reported(cli: CliProcesses) -> None:
@@ -555,6 +569,19 @@ def test_what_the_agent_never_took_is_written_out_when_the_review_ends(
 
     assert "Rename the helper." in printed
     assert "Also check the docs." in printed
+
+
+def test_what_the_review_prints_as_it_ends_is_shown_never_obeyed(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """The last round carries what the reader wrote and the code quoted; the terminal reading it must obey neither."""
+    review = cli.review(changed_repo, port)
+
+    _post(port, "/api/submit", {"threads": [], "body": f"Rename it {CLIPBOARD_WRITE}", "end": True})
+    printed = review.printed()
+
+    assert ESCAPE not in printed
+    assert SHOWN_ESCAPE in printed
 
 
 def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
