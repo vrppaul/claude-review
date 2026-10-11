@@ -28,6 +28,13 @@ ASIDE = " — "
 TAG_SEPARATOR = ", "
 # Markdown's mark for words set apart, as a thread's tags are when no heading carries them
 EMPHASIS = "_"
+# What a round is called after its title, once there has been more than one
+ROUND_NUMBERED = "round {number}"
+# What a thread whose lines have moved says above the lines it was written against
+WRITTEN_AGAINST = "Written against these lines, which have since changed:"
+# What ends a line of Markdown, and what ends a paragraph: an empty line after it
+LINE_END = "\n"
+PARAGRAPH_END = "\n\n"
 
 
 class ThreadLead(ABC):
@@ -114,11 +121,11 @@ class RoundFormatter:
         if count == 0:
             return ReviewResult(markdown="", comment_count=0)
 
-        parts = [f"{self._heading(round_number)}\n"]
+        parts = [self._heading(round_number) + LINE_END]
         if summary:
-            parts.append(f"{summary}\n")
+            parts.append(summary + LINE_END)
         parts.extend(self._thread(thread, anchors) for thread in threads)
-        return ReviewResult(markdown="\n".join(parts), comment_count=count)
+        return ReviewResult(markdown=LINE_END.join(parts), comment_count=count)
 
     def _heading(self, round_number: int) -> str:
         """Name the round, once there has been more than one.
@@ -127,10 +134,10 @@ class RoundFormatter:
         there are others when there are not.
         """
         title = f"{ROUND_HEADING} {self._lead.title}"
-        return title if round_number <= FIRST_ROUND else f"{title}{ASIDE}round {round_number}"
+        return title if round_number <= FIRST_ROUND else f"{title}{ASIDE}{ROUND_NUMBERED.format(number=round_number)}"
 
     def _thread(self, thread: Thread, anchors: AnchorService) -> str:
-        return "\n".join([*self._lead.lead(thread, anchors), *format_conversation(thread)]) + "\n"
+        return LINE_END.join([*self._lead.lead(thread, anchors), *format_conversation(thread)]) + LINE_END
 
 
 def _written_against(quote: list[str]) -> str:
@@ -139,4 +146,4 @@ def _written_against(quote: list[str]) -> str:
     Once the diff has been retaken those lines may be gone, and a file and a
     line number then point at whatever moved into their place.
     """
-    return f"Written against these lines, which have since changed:\n\n{code_block(quote)}\n"
+    return f"{WRITTEN_AGAINST}{PARAGRAPH_END}{code_block(quote)}{LINE_END}"

@@ -21,6 +21,12 @@ FILES_NAMED_IN_REFUSAL = 5
 # How many lines either side of its own an excerpt of lines quotes, so a
 # comment on one sentence is read with the ones it follows from
 EXCERPT_REACH = 2
+# How a refusal names the files of the review, each side's lines, and one
+# line or more
+FILES_SEPARATOR = ", "
+SIDE_WORDS = {LineSide.OLD: "removed", LineSide.NEW: "new"}
+ONE_LINE = "line"
+SEVERAL_LINES = "lines"
 
 
 class SideLine(BaseModel):
@@ -80,7 +86,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
 
         shown = self._files.get(anchor.file)
         if shown is None:
-            listed = ", ".join(list(self._files)[:FILES_NAMED_IN_REFUSAL])
+            listed = FILES_SEPARATOR.join(list(self._files)[:FILES_NAMED_IN_REFUSAL])
             msg = f"{anchor.file} is not in this review. It has: {listed}"
             raise UnknownAnchorFileError(msg)
 
@@ -88,9 +94,9 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         wanted = range(anchor.start_line, anchor.end_line + 1)
         missing = [number for number in wanted if number not in on_screen]
         if missing:
-            side = "removed" if anchor.side == LineSide.OLD else "new"
-            plural = "s" if len(missing) > 1 else ""
-            msg = f"{anchor.file} does not show {side} line{plural} {line_span(missing[0], missing[-1])}"
+            lines = ONE_LINE if len(missing) == 1 else SEVERAL_LINES
+            span = line_span(missing[0], missing[-1])
+            msg = f"{anchor.file} does not show {SIDE_WORDS[anchor.side]} {lines} {span}"
             raise AnchorLinesNotShownError(msg)
 
         return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)

@@ -7,13 +7,26 @@ from claude_review.domain.models import FIRST_ROUND, CommentSeverity, Thread, Tu
 # The agent reading this wrote the change, so its own turns are addressed to
 # it as "You"
 TURN_LABELS = {TurnAuthor.AUTHOR: "You", TurnAuthor.READER: "Reviewer"}
-# What starts every line of a Markdown blockquote
+# What starts every line of a Markdown blockquote, and a quoted line that says something
 QUOTE_MARK = ">"
+QUOTED_LINE = f"{QUOTE_MARK} {{line}}"
+# How a turn is headed: who said it, in bold, inside the quote. A turn of one
+# line follows its label; a longer one is quoted below it.
+TURN_LABEL = f"{QUOTE_MARK} **{{author}}:**"
+ONE_LINE_TURN = "{label} {line}"
+LONGER_TURN = "{label}\n{quote}"
+# How a screenshot is named, as a file the agent can open
+IMAGE_LINE = "Image: {path}"
+# What a thread is tagged with once settled, and once the lines it hangs on are gone
+RESOLVED_TAG = "resolved"
+OUTDATED_TAG = "outdated"
+# What ends each line written out
+LINE_SEPARATOR = "\n"
 
 
 def format_opening(body: str, images: list[Path]) -> str:
     """What the comment that opened a thread said, as written, with its screenshots."""
-    return "\n".join(part for part in (body, *image_lines(images)) if part)
+    return LINE_SEPARATOR.join(part for part in (body, *image_lines(images)) if part)
 
 
 def format_turn(turn: Turn) -> str:
@@ -23,21 +36,21 @@ def format_turn(turn: Turn) -> str:
     it, so the instruction and the discussion of it do not read as one
     paragraph.
     """
-    label = f"{QUOTE_MARK} **{TURN_LABELS[turn.author]}:**"
+    label = TURN_LABEL.format(author=TURN_LABELS[turn.author])
     lines = [*turn.body.splitlines(), *image_lines(turn.images)]
     if len(lines) == 1:
-        return f"{label} {lines[0]}"
-    return f"{label}\n{blockquote(lines)}"
+        return ONE_LINE_TURN.format(label=label, line=lines[0])
+    return LONGER_TURN.format(label=label, quote=blockquote(lines))
 
 
 def blockquote(lines: list[str]) -> str:
     """The lines as one Markdown blockquote: the mark on every line, blank ones included, or the quote breaks."""
-    return "\n".join(f"{QUOTE_MARK} {line}" if line else QUOTE_MARK for line in lines)
+    return LINE_SEPARATOR.join(QUOTED_LINE.format(line=line) if line else QUOTE_MARK for line in lines)
 
 
 def image_lines(images: list[Path]) -> list[str]:
     """Name each screenshot as a file the agent can open."""
-    return [f"Image: {path}" for path in images]
+    return [IMAGE_LINE.format(path=path) for path in images]
 
 
 def thread_tags(thread: Thread) -> list[str]:
@@ -55,9 +68,9 @@ def tags_of(severity: CommentSeverity, *, resolved: bool, outdated: bool) -> lis
     """The tags a thread of this severity and standing carries, wherever it is listed."""
     tags = [str(severity)] if severity != CommentSeverity.NOTE else []
     if resolved:
-        tags.append("resolved")
+        tags.append(RESOLVED_TAG)
     if outdated:
-        tags.append("outdated")
+        tags.append(OUTDATED_TAG)
     return tags
 
 
