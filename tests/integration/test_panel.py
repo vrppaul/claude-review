@@ -71,7 +71,7 @@ async def test_a_message_reaches_whoever_is_waiting(client: AsyncClient) -> None
     """What is typed in the panel is handed over as its own kind of event."""
     await client.post("/api/message", json=MESSAGE)
 
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert event["type"] == "message"
     assert event["message"]["body"] == "Run the tests and say what fails."
@@ -82,7 +82,7 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
     """A chip is a reference; what travels is the thread it refers to."""
     await client.post("/api/message", json={**MESSAGE, "threads": [THREAD]})
 
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [thread] = event["message"]["threads"]
     assert thread["thread_id"] == "comment-1"
@@ -98,7 +98,7 @@ async def test_questions_rounds_and_messages_keep_one_order(client: AsyncClient)
 
     handed_in_order = ["question", "round", "message"]
 
-    taken = [(await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["type"] for _ in handed_in_order]
+    taken = [(await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["type"] for _ in handed_in_order]
 
     assert taken == handed_in_order
 
@@ -118,8 +118,8 @@ async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> 
     await client.post("/api/message", json=MESSAGE)
     await client.post("/api/cancel", json={"message_id": "panel-1"})
 
-    first = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
-    second = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    first = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    second = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert first["type"] == "message"
     assert second["type"] == "cancel"
@@ -428,7 +428,7 @@ def test_one_thread_can_be_asked_for_on_its_own(review_page: TestClient) -> None
         socket.send_json({"threads": [A_DISCUSSED_THREAD, {**A_DISCUSSED_THREAD, "thread_id": "comment-2"}]})
         until_the_review_holds_threads(review_page, 2)
 
-    read = review_page.get(thread_route("comment-2")).json()
+    read = review_page.post(thread_route("comment-2")).json()
 
     assert read["thread_id"] == "comment-2"
     assert [turn["body"] for turn in read["turns"]] == ["It moved to the caller."]

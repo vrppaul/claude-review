@@ -131,9 +131,9 @@ async def test_a_page_on_another_port_cannot_take_what_the_reader_handed_the_age
     """Nor pass for the agent: the review does not offer rounds to an agent that is not there."""
     await client.post("/api/message", json=A_MESSAGE)
 
-    taken = await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS, headers={FETCH_SITE: ANOTHER_PORT})
+    taken = await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS, headers={FETCH_SITE: ANOTHER_PORT})
     attached = (await client.get(REVIEW_ROUTE)).json()["answerer_attached"]
-    event = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    event = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert taken.status_code == HTTPStatus.FORBIDDEN
     assert attached is False
@@ -176,7 +176,7 @@ async def test_the_reviews_own_page_over_ipv6_loopback_is_allowed(client: AsyncC
 
 async def test_a_command_line_client_has_no_origin_and_is_allowed(client: AsyncClient) -> None:
     """`claude-review wait` is not a browser and sends no Origin."""
-    response = await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+    response = await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
     assert response.status_code == HTTPStatus.OK
 

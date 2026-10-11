@@ -6,11 +6,14 @@ reader handed over is still the agent's to read through all of that.
 """
 
 import asyncio
+from http import HTTPMethod, HTTPStatus
 
+import pytest
 from httpx import AsyncClient
 
 from tests.helpers import (
     EVENTS_ROUTE,
+    FIRST_THREAD_ID,
     GLANCE_AT_EVENTS,
     LOCAL_HEADERS,
     REVIEWED_FILE,
@@ -19,9 +22,11 @@ from tests.helpers import (
     ReviewFactory,
     http_client,
     line_on_the_wire,
+    methods_allowed,
     one_line_file,
     opening_of,
     thread_on_the_wire,
+    thread_route,
     until_an_agent_waits,
 )
 
@@ -45,7 +50,7 @@ async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews
         # Over once its caller has gone, rather than waiting out its time
         await asyncio.wait_for(abandoned, timeout=SETTLE_SECONDS)
         await agent.post("/api/message", json=A_MESSAGE)
-        event = (await agent.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event["type"] == "message"
     assert event["message"]["body"] == A_MESSAGE["body"]
@@ -59,8 +64,8 @@ async def test_the_last_round_reaches_an_agent_that_asks_after_the_review_ended(
     """
     await client.post("/api/submit", json={"threads": [A_THREAD], "end": True}, headers=LOCAL_HEADERS)
 
-    first = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
-    second = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    first = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    second = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert first["type"] == "round"
     assert "Still reads oddly." in first["round"]["markdown"]
@@ -71,13 +76,22 @@ async def test_an_event_carries_only_what_it_is(client: AsyncClient) -> None:
     """A message is not also an empty question, round and cancel."""
     await client.post("/api/message", json=A_MESSAGE)
 
-    event = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    event = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert set(event) == {"type", "message"}
 
 
 async def test_nothing_handed_over_says_so_and_nothing_else(client: AsyncClient) -> None:
     """The caller decides whether to keep waiting, rather than hanging forever."""
-    event = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    event = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event == {"type": "timeout"}
+
+
+@pytest.mark.parametrize("route", [EVENTS_ROUTE, thread_route(FIRST_THREAD_ID)], ids=["an-event", "a-thread"])
+async def test_what_hands_something_over_to_the_agent_is_never_a_read(client: AsyncClient, route: str) -> None:
+    """A read must change nothing: a link, an image or a prefetch takes nothing meant for the agent."""
+    response = await client.get(route)
+
+    assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert methods_allowed(response) == {HTTPMethod.POST}

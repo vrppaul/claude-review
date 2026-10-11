@@ -56,17 +56,18 @@ async def note_the_agent(review: Review = Depends(get_review)) -> None:
 router = APIRouter(dependencies=[Depends(note_the_agent)])
 
 
-@router.get("/events", responses=refusals(takes=Takes.PARAMETERS))
+@router.post("/events", responses=refusals(takes=Takes.PARAMETERS))
 async def next_event(
     http_request: Request,
     wait_seconds: float = Query(default=DEFAULT_WAIT_SECONDS, gt=0, le=MAX_WAIT_SECONDS),
     review: Review = Depends(get_review),
 ) -> EventResponse:
-    """Wait for the next thing the reader hands over.
+    """Wait for the next thing the reader hands over, and take it.
 
     A long poll rather than a socket: the caller is a command in a shell,
     and blocking until there is something to do is exactly its shape.
     Returning "timeout" lets the caller decide whether to keep waiting.
+    A POST, since what it answers with is taken: a read must change nothing.
     """
     return _envelope(await review.next_event(within=wait_seconds, caller_left=_until_the_caller_leaves(http_request)))
 
@@ -125,7 +126,7 @@ async def review_context(review: Review = Depends(get_review)) -> CatchUpRespons
     )
 
 
-@router.get("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
+@router.post("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
 async def read_thread(
     thread_id: WireId,
     review: Review = Depends(get_review),
@@ -133,7 +134,8 @@ async def read_thread(
     """Hand over one thread the review holds, in full: every turn, its lines, its images.
 
     Read, so handed over: the agent may open its images from now on, and
-    the reader can no longer take them off.
+    the reader can no longer take them off. A POST for that: a read must
+    change nothing.
     """
     return Thread.of(review.read_thread(thread_id))
 

@@ -73,7 +73,7 @@ async def test_a_send_has_to_say_whether_it_is_the_last(client: AsyncClient) -> 
 
 
 async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
-    waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS))
+    waiting = asyncio.ensure_future(client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS))
     await until_an_agent_waits(client, LOCAL_HEADERS)
 
     await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
@@ -119,7 +119,7 @@ async def test_ending_the_review_closes_it(client: AsyncClient) -> None:
 
 
 async def test_a_waiting_agent_is_told_the_review_ended(client: AsyncClient) -> None:
-    waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS))
+    waiting = asyncio.ensure_future(client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS))
     await until_an_agent_waits(client, LOCAL_HEADERS)
 
     await client.post("/api/end", json={}, headers=LOCAL_HEADERS)
@@ -150,7 +150,7 @@ def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClie
     """Rounds are only offered when an agent is actually waiting on them."""
     with open_session(review_page) as socket:
         before = review_page.get(REVIEW_ROUTE).json()["answerer_attached"]
-        review_page.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+        review_page.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
         assert next_push(socket, AnswererPush) == AnswererPush(attached=True)
 

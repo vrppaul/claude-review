@@ -151,7 +151,7 @@ async def test_a_review_can_be_sent_only_once(client: AsyncClient) -> None:
 
 async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_end(client: AsyncClient) -> None:
     """What was handed over outranks the review ending, or the last round would be dropped for it."""
-    waiting = asyncio.ensure_future(client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT))
+    waiting = asyncio.ensure_future(client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT))
     await until_an_agent_waits(client)
 
     await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})

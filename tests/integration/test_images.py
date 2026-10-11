@@ -161,7 +161,7 @@ async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient)
     image_id = await _upload(client, PNG)
     await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
 
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["message"]["images"]
     assert Path(path).is_absolute()
@@ -267,7 +267,7 @@ async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> Non
     pictured = {**A_THREAD, "body": "", "images": [image_id]}
 
     await client.post("/api/ask", json={"question_id": FIRST_THREAD_ID, "thread": pictured})
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["question"]["images"]
     assert Path(path).name == image_id
@@ -278,7 +278,7 @@ async def test_a_question_asked_in_a_reply_hands_the_agent_the_images_of_that_re
     reply = turn_on_the_wire(TurnAuthor.READER, "Still like this", turn_id="turn-1", images=[image_id])
 
     await client.post("/api/ask", json={"question_id": "turn-1", "thread": {**A_THREAD, "turns": [reply]}})
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     [path] = event["question"]["images"]
     assert Path(path).name == image_id

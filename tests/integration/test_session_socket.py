@@ -178,7 +178,7 @@ def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestCl
     with open_session(review_page) as socket:
         socket.send_json({"threads": [pictured]})
         until_the_review_holds_threads(review_page, 1)
-    read = review_page.get(thread_route(FIRST_THREAD_ID)).json()
+    read = review_page.post(thread_route(FIRST_THREAD_ID)).json()
 
     assert [Path(path).name for path in read["images"]] == [image_id]
     assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.CONFLICT
@@ -199,7 +199,7 @@ def test_an_agent_reading_the_index_is_handed_nothing(review_page: TestClient) -
 
 def test_a_thread_the_review_does_not_hold_is_not_found(review_page: TestClient) -> None:
     """An empty answer would read as a thread with nothing in it."""
-    response = review_page.get(thread_route("comment-404"))
+    response = review_page.post(thread_route("comment-404"))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 

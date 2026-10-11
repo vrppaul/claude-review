@@ -49,7 +49,7 @@ def _asking(thread: dict[str, object], question_id: str = FIRST_THREAD_ID) -> di
 
 async def _question_taken(client: AsyncClient) -> dict:
     """The question as the agent is handed it."""
-    return (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["question"]
+    return (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["question"]
 
 
 async def test_a_question_waits_for_whoever_is_answering(client: AsyncClient) -> None:
@@ -64,7 +64,7 @@ async def test_a_question_waits_for_whoever_is_answering(client: AsyncClient) ->
 async def test_the_answerer_is_handed_the_question_in_its_thread(client: AsyncClient) -> None:
     await client.post(ASK_ROUTE, json=_asking(A_THREAD))
 
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
     assert event["type"] == "question"
     assert event["question"]["body"] == OPENING
@@ -204,7 +204,7 @@ async def test_a_question_carries_which_question_it_is(client: AsyncClient) -> N
     asked_in_a_reply = {**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}
     await client.post(ASK_ROUTE, json=_asking(asked_in_a_reply, question_id=FOLLOW_UP_ID), headers=LOCAL_HEADERS)
 
-    event = (await client.get(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS)).json()
+    event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT, headers=LOCAL_HEADERS)).json()
 
     assert event["question"]["question_id"] == FOLLOW_UP_ID
 

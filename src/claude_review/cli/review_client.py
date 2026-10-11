@@ -82,7 +82,7 @@ class ReviewClient:
     def next_event(self, wait_seconds: float) -> EventResponse:
         """The next thing the reader hands over, or why there is none, waiting up to `wait_seconds`."""
         route = f"{EVENTS_ROUTE}?{urlencode({WAIT_SECONDS_PARAMETER: wait_seconds})}"
-        return self._read(EVENTS, self._call(HTTPMethod.GET, route, timeout=wait_seconds + WAIT_MARGIN_SECONDS))
+        return self._read(EVENTS, self._call(HTTPMethod.POST, route, timeout=wait_seconds + WAIT_MARGIN_SECONDS))
 
     def catch_up(self) -> CatchUpResponse:
         """The review as it stands: an index of its threads, and the panel in short."""
@@ -91,7 +91,7 @@ class ReviewClient:
     def thread(self, thread_id: str) -> Thread:
         """One thread in full, its images handed over."""
         route = f"{THREADS_ROUTE}/{quote(thread_id, safe='')}"
-        return self._read(THREAD_ANSWER, self._call(HTTPMethod.GET, route))
+        return self._read(THREAD_ANSWER, self._call(HTTPMethod.POST, route))
 
     def reply(self, request: ReplyRequest) -> None:
         self._call(HTTPMethod.POST, REPLY_ROUTE, request)

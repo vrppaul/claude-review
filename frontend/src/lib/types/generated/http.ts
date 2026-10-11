@@ -313,17 +313,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Next Event
-         * @description Wait for the next thing the reader hands over.
+         * @description Wait for the next thing the reader hands over, and take it.
          *
          *     A long poll rather than a socket: the caller is a command in a shell,
          *     and blocking until there is something to do is exactly its shape.
          *     Returning "timeout" lets the caller decide whether to keep waiting.
+         *     A POST, since what it answers with is taken: a read must change nothing.
          */
-        get: operations["next_event_api_events_get"];
-        put?: never;
-        post?: never;
+        post: operations["next_event_api_events_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -364,16 +365,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Read Thread
          * @description Hand over one thread the review holds, in full: every turn, its lines, its images.
          *
          *     Read, so handed over: the agent may open its images from now on, and
-         *     the reader can no longer take them off.
+         *     the reader can no longer take them off. A POST for that: a read must
+         *     change nothing.
          */
-        get: operations["read_thread_api_catch_up_threads__thread_id__get"];
-        put?: never;
-        post?: never;
+        post: operations["read_thread_api_catch_up_threads__thread_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2145,7 +2147,7 @@ export interface operations {
             };
         };
     };
-    next_event_api_events_get: {
+    next_event_api_events_post: {
         parameters: {
             query?: {
                 wait_seconds?: number;
@@ -2214,7 +2216,7 @@ export interface operations {
             };
         };
     };
-    read_thread_api_catch_up_threads__thread_id__get: {
+    read_thread_api_catch_up_threads__thread_id__post: {
         parameters: {
             query?: never;
             header?: never;

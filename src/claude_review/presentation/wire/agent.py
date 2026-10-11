@@ -214,7 +214,7 @@ class ReplyRequest(WireModel):
 
 
 class EventKind(StrEnum):
-    """What GET /api/events can answer, as the `type` the agent's loop reads.
+    """What POST /api/events can answer, as the `type` the agent's loop reads.
 
     QUESTION — a question asked in one thread.
     ROUND — a round of the review, sent.
@@ -260,7 +260,7 @@ class ClosedEvent(WireModel):
     type: Literal[EventKind.CLOSED] = EventKind.CLOSED
 
 
-# Response for GET /api/events, the long poll an answerer waits on: one kind
+# Response for POST /api/events, the long poll an answerer waits on: one kind
 # of event, carrying only what that kind is
 type EventResponse = Annotated[
     QuestionEvent | RoundEvent | MessageEvent | CancelEvent | TimeoutEvent | ClosedEvent,

@@ -495,7 +495,7 @@ class CallerThatLeaves:
 
     async def poll(self, app: FastAPI, wait_seconds: float) -> None:
         """Ask the review for its next event, as this caller."""
-        scope = _request_scope(HTTPMethod.GET, EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
+        scope = _request_scope(HTTPMethod.POST, EVENTS_ROUTE, query={"wait_seconds": wait_seconds})
         await app(scope, self.receive, self.send)
 
 
@@ -551,7 +551,7 @@ async def review_has_ended(client: AsyncClient) -> bool:
     is left.
     """
     while True:
-        event = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+        event = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
         if event["type"] == "closed":
             return True
         if event["type"] == "timeout":
