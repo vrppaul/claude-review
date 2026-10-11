@@ -99,3 +99,22 @@ describe('the keyboard in one column', () => {
 		expect(stops[0].getAttribute('aria-label')).toBe('Comment on removed line 30');
 	});
 });
+
+describe('a comment no line drawn here can hang under', () => {
+	beforeEach(() => {
+		// Line 9 is nowhere in the diff, which starts at line 30
+		review.threads.add(newComment({ file: 'src/app.py', startLine: 9, quote: ['z = 3'], body: 'off its line' }));
+	});
+
+	it('is drawn at the head of the file, where the lines are drawn', () => {
+		const { getByTestId } = render(FileBody, inReview(review, AS_A_STEP));
+
+		expect(getByTestId('threads-off-their-lines').textContent).toContain('off its line');
+	});
+
+	it('is left to the count a rendered preview gives, which draws no lines', () => {
+		const { queryByTestId } = render(FileBody, inReview(review, { ...AS_A_STEP, view: 'preview' }));
+
+		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+	});
+});

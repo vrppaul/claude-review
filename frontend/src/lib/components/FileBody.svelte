@@ -35,8 +35,9 @@
 <!-- On the window, so a drag let go anywhere — above the sticky header, say — still ends -->
 <svelte:window onmouseup={() => drawing.commenting.release()} />
 
-<!-- A file drawn as whoever draws it says: everything it is drawn by comes in here -->
-<FileNotes {file} />
+<!-- A file drawn as whoever draws it says: everything it is drawn by comes in here. A
+	rendered preview draws no lines, and says how many comments it leaves out instead. -->
+<FileNotes {file} unplaced={view === 'preview' ? [] : drawing.commenting.unplaced} />
 {#if view === 'preview'}
 	<PreviewView {file} />
 {:else if view === 'side-by-side'}

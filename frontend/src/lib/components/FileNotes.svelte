@@ -1,12 +1,16 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
+	import type { DiffFile, Thread } from '$lib/types';
+	import { counted } from '$lib/utils/words';
+	import CommentThread from './CommentThread.svelte';
 	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
 
 	interface Props {
 		file: DiffFile;
+		/** Threads that no line drawn here can hang under. */
+		unplaced: readonly Thread[];
 	}
 
-	let { file }: Props = $props();
+	let { file, unplaced }: Props = $props();
 
 	const modeChange = $derived(file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null);
 	// A file can change without producing lines: binary content, or a bare
@@ -32,6 +36,18 @@
 {#if modeChange}
 	<div data-testid="mode-change-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs">
 		Permission changed: {modeChange}
+	</div>
+{/if}
+
+{#if unplaced.length > 0}
+	<!-- Never off the screen: whole, with everything that can be done to them, where the file starts -->
+	<div data-testid="threads-off-their-lines" class="border-b border-base-300">
+		<p class="cr-muted px-4 pt-2 text-xs">
+			{counted(unplaced.length, 'comment on a line no longer shown', 'comments on lines no longer shown')}
+		</p>
+		{#each unplaced as thread (thread.id)}
+			<CommentThread {thread} />
+		{/each}
 	</div>
 {/if}
 

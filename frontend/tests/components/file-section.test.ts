@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
@@ -7,6 +7,7 @@ import { BAD_REQUEST, fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { lineAnchor } from '$lib/anchors/line';
 
 const file = diffFile({
 	path: 'src/core/session.py',
@@ -141,5 +142,55 @@ describe('a file whose name holds control characters', () => {
 		await user.click(lineNumber);
 
 		expect(queryByTestId('comment-input')).toBeNull();
+	});
+});
+
+describe('a comment whose line the diff no longer shows', () => {
+	// The agent put the removed line back: old line 2 is an unchanged line again
+	const restored = diffFile({
+		path: 'src/core/session.py',
+		hunks: [hunk([contextLine(1, 1, 'import os'), contextLine(2, 2, 'x = 1'), addedLine(3, 'y = 2')])]
+	});
+	const onTheRemovedLine = {
+		...newComment({ file: 'src/core/session.py', body: 'why did this go' }),
+		anchor: { ...lineAnchor('src/core/session.py', 'old', 2, 2, ['x = 1']), outdated: true }
+	};
+
+	it('is drawn at the head of its file, whole, rather than nowhere', () => {
+		const review = openReview({ files: [restored] });
+		review.threads.add(onTheRemovedLine);
+		review.threads.add(newComment({ file: 'src/core/session.py', startLine: 3, body: 'on a line still there' }));
+
+		const { getByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+
+		const head = getByTestId('threads-off-their-lines');
+		expect(head.textContent).toContain('1 comment on a line no longer shown');
+		expect(within(head).getAllByTestId('comment-thread')).toHaveLength(1);
+		expect(head.textContent).toContain('why did this go');
+		expect(head.textContent).not.toContain('on a line still there');
+	});
+
+	it('is drawn at the head of its file when the line it was read in on is not read in any more', () => {
+		// Written on line 9, read in above the hunk before whitespace was left out and the diff taken afresh
+		const review = openReview({ files: [restored] });
+		review.threads.add(newComment({ file: 'src/core/session.py', startLine: 9, quote: ['z = 3'], body: 'read in' }));
+
+		const { getByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+
+		expect(getByTestId('threads-off-their-lines').textContent).toContain('read in');
+	});
+
+	it('is left to the notice above the diff under a narrower base, which names every thread it cannot draw', async () => {
+		const review = openReview({ files: [restored] });
+		review.threads.add({
+			...onTheRemovedLine,
+			anchor: { ...lineAnchor('src/core/session.py', 'new', 9, 9, ['gone']), outdated: true }
+		});
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [restored], phrase: 'changes since round 1' }));
+		await review.diff.setBase('round:1');
+
+		const { queryByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+
+		expect(queryByTestId('threads-off-their-lines')).toBeNull();
 	});
 });

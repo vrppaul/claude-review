@@ -111,6 +111,7 @@ export class LineCommenting {
 	#drag = $state<Drag | null>(null);
 	readonly #drawn: DrawnNumbers;
 	readonly #threads: ThreadsByLine;
+	readonly #unplaced: readonly Thread[];
 	readonly #fields: LineField[];
 
 	constructor(review: Review, file: DrawnFile) {
@@ -118,6 +119,7 @@ export class LineCommenting {
 		this.#file = file;
 		this.#drawn = $derived(drawnNumbers(file.hunks()));
 		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.reviewOwnsRemovedLines()));
+		this.#unplaced = $derived(this.#withoutTheirLine());
 		this.#fields = $derived(
 			review.threads.writing
 				.onLinesOf(file.path())
@@ -198,6 +200,16 @@ export class LineCommenting {
 		return this.#threads.at(place);
 	}
 
+	/**
+	 * Threads with no line drawn here to hang under: drawn at the head of the
+	 * file instead, so no thread ever leaves the screen — one on a removed
+	 * line the agent put back, or on a line read in above a hunk that a new
+	 * diff no longer has.
+	 */
+	get unplaced(): readonly Thread[] {
+		return this.#unplaced;
+	}
+
 	/** The comments being written that open under a line, in the order they were started. */
 	fieldsUnder(place: LinePlace): LineField[] {
 		return this.#fields.filter((field) => samePlace(field.at.lines.opensBelow, place));
@@ -206,6 +218,20 @@ export class LineCommenting {
 	/** Whether anything hangs under a line: a thread, or a comment being written. */
 	hasNotes(place: LinePlace): boolean {
 		return this.threadsUnder(place).length > 0 || this.fieldsUnder(place).length > 0;
+	}
+
+	/**
+	 * The threads of the file whose last line is not drawn here. Under a
+	 * narrower base there are none: the notice above the diff names every
+	 * thread that base cannot draw, and takes the reader to it on the whole
+	 * diff.
+	 */
+	#withoutTheirLine(): readonly Thread[] {
+		if (!this.#file.reviewOwnsRemovedLines()) return [];
+		return this.#review.threads
+			.onLinesOf(this.#file.path())
+			.filter(({ lines }) => !this.#drawn[lines.side].has(lines.end_line))
+			.map(({ thread }) => thread);
 	}
 
 	/** Start a comment on picked lines, quoting what they say as they are picked. */
