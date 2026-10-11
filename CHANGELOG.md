@@ -11,6 +11,29 @@
   as on GitHub; picking lines that already have one brings that one back.
 
 ### Changed
+- **Every menu is one kind of pane, with an arrow pointing at what opened
+  it**: the list of bases, the settings, the replies, the pane the review
+  is finished from, and the @-picker in the agent panel. Opened, it takes
+  the keyboard; Escape closes it and gives the keyboard back to its button;
+  a press anywhere else closes it and still lands where it was aimed. The
+  pane the review is finished from no longer lays an invisible layer over
+  the page that swallowed the click closing it.
+- **The list of keys is a real dialog**: while it is open the keyboard
+  stays inside it and the review under it takes no key or press. Escape, a
+  press outside, or `?` again closes it. Every key it lists is the key the
+  review answers, from one table.
+- **How long ago is said one way everywhere**: "12s ago", "3m ago", "1h
+  ago", "2d ago". A question waited on for an hour said "asked 3600s ago",
+  and a base taken a moment ago "0m ago". One clock ticks for the whole
+  review, and only while something on screen says how long ago.
+- **Colours keep to one meaning each.** A warning — the tree moved on, a
+  blocker — is yellow; orange is a modified file's letter alone; a moved
+  file's R is quiet grey rather than the reader's blue. A chip saying the
+  reader sees less than the whole diff — a narrower base, whitespace hidden
+  — takes their mark's tint and reads plainly.
+- **The @-picker is a list to a screen reader**, which hears which thread
+  or file is highlighted as the arrow keys move; the comment fields and the
+  file filter say what they are.
 - **In two columns a thread on an unchanged line sits on the right**, under
   the side it is about, where its field opened; before, it moved to the left
   once written.
@@ -89,6 +112,13 @@
   no longer answered.
 
 ### Fixed
+- **In two columns a removed line facing the line that replaced it takes a
+  comment from the keyboard again**: Tab reaches its number, Enter opens
+  the field. j and k still stop once a row.
+- **A chain of folders in the file tree is one row however long**:
+  `src/lib/components` read as "src/lib" and then "components".
+- **Ctrl+Enter in a comment field no longer takes Ctrl+Shift+Enter**, which
+  finishes the review, for its own.
 - **Showing more context no longer moves what is written under a line.** A
   comment being written jumped under another line and lost its words, and a
   reply being written was dropped with the image pasted into it; asking for
