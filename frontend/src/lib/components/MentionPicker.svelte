@@ -41,7 +41,7 @@
 	data-testid="thread-picker"
 	class="right-0"
 >
-	<div class="max-h-60 overflow-y-auto">
+	<div class="max-h-60 overflow-y-auto p-1">
 		{#each mentions.candidates as pick, index (keyOf(pick))}
 			<button
 				type="button"
