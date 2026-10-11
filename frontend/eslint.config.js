@@ -134,8 +134,15 @@ export default tseslint.config(
 	// Generated from the server by `pnpm api:types`; and the tests, held to formatting alone
 	{ ignores: ['src/lib/types/generated/', 'tests/'] },
 	eslint.configs.recommended,
-	...tseslint.configs.recommended,
+	...tseslint.configs.strictTypeChecked,
 	...svelte.configs.recommended,
+	{
+		// The rules that read types read them from the page's own TypeScript program
+		files: ['src/**/*.ts', 'src/**/*.svelte'],
+		languageOptions: {
+			parserOptions: { projectService: true, extraFileExtensions: ['.svelte'], tsconfigRootDir: import.meta.dirname }
+		}
+	},
 	{
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
@@ -200,6 +207,22 @@ export default tseslint.config(
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
 			'@typescript-eslint/method-signature-style': ['error', 'property'],
+			// A number has one way to be written into text; anything else — an object, a maybe-missing
+			// value, a yes or no — is said on purpose, or it would come out as [object Object] or undefined
+			'@typescript-eslint/restrict-template-expressions': [
+				'error',
+				{
+					allowAny: false,
+					allowBoolean: false,
+					allowNever: false,
+					allowNullish: false,
+					allowNumber: true,
+					allowRegExp: false
+				}
+			],
+			// A handler is one expression here — a body of statements would be a helper of its own —
+			// and what it hands back is nobody's to read
+			'@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
 			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
 			// A switch over every kind of a union is one decision, not one per kind
 			complexity: ['error', { max: 10, variant: 'modified' }],
@@ -227,6 +250,31 @@ export default tseslint.config(
 		files: ['src/**/*.ts', 'src/**/*.svelte'],
 		ignores: ['src/lib/api/request.ts'],
 		rules: { 'no-restricted-globals': ['error', ...REQUEST_CALLERS] }
+	},
+	{
+		// The one place the page takes the server's JSON to be the shape its schema names: both are
+		// generated from that schema and ship together, and replies are not checked as they arrive
+		files: ['src/lib/api/request.ts'],
+		rules: { '@typescript-eslint/no-unsafe-return': 'off' }
+	},
+	{
+		// What the rules that read types cannot see in a component. Their TypeScript program reads
+		// every .svelte import through Svelte's own catch-all declaration, which says nothing of a
+		// component's props (a callback handed to a child takes any) or of what its module script
+		// exports; it does not narrow inside {:else}, types a <svelte:window> handler's event as any,
+		// takes `= $bindable()` for a default value, and reads `{@render}` of a snippet as using what a
+		// call that returns nothing returns. svelte-check, which reads components as Svelte does, holds
+		// their types.
+		files: ['**/*.svelte'],
+		rules: {
+			'@typescript-eslint/no-unsafe-argument': 'off',
+			'@typescript-eslint/no-unsafe-assignment': 'off',
+			'@typescript-eslint/no-unsafe-call': 'off',
+			'@typescript-eslint/no-unsafe-member-access': 'off',
+			'@typescript-eslint/no-unsafe-return': 'off',
+			'@typescript-eslint/no-useless-default-assignment': 'off',
+			'@typescript-eslint/no-confusing-void-expression': 'off'
+		}
 	},
 	{
 		ignores: ['node_modules/', 'dist/']

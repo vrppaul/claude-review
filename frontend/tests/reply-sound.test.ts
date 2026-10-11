@@ -20,19 +20,19 @@ class SilentPart {
 	}
 }
 
-/** A sound card that counts the ticks it is asked to play, and plays none. */
+/** A sound card that counts the ticks it is asked to play — the tones started — and plays none. */
 class CountingSound {
 	static played = 0;
 	readonly currentTime = 0;
 	readonly destination = new SilentPart();
 	readonly close = vi.fn();
 
-	constructor() {
-		CountingSound.played += 1;
-	}
-
 	createOscillator(): SilentPart {
-		return new SilentPart();
+		const tone = new SilentPart();
+		tone.start.mockImplementation(() => {
+			CountingSound.played += 1;
+		});
+		return tone;
 	}
 
 	createGain(): SilentPart {
@@ -80,5 +80,12 @@ describe('the tick an answer makes', () => {
 		sound.announce();
 
 		expect(CountingSound.played).toBe(2);
+	});
+
+	it('leaves a browser with no sound at all reading on', async () => {
+		vi.stubGlobal('AudioContext', undefined);
+		const sound = await heardAnswers();
+
+		expect(() => sound.announce()).not.toThrow();
 	});
 });

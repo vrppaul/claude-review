@@ -22,10 +22,7 @@ const TICK_STOPS_AFTER_SECONDS = 0.13;
 const TICK_AT_MOST_EVERY = 1000;
 
 function tick(): void {
-	const Sound = window.AudioContext ?? window.webkitAudioContext;
-	if (!Sound) return;
-
-	const context = new Sound();
+	const context = new AudioContext();
 	const tone = context.createOscillator();
 	const level = context.createGain();
 
@@ -57,7 +54,7 @@ export class ReplySound {
 		try {
 			tick();
 		} catch {
-			// Autoplay policy, no output device: not worth breaking a review over
+			// No sound in this browser, its autoplay policy, no output device: not worth breaking a review over
 		}
 	}
 }

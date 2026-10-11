@@ -14,7 +14,17 @@
  * on its side answers with plain text, not a reason.
  */
 
-import type { FileRoute, JsonMediaType, JsonRoute, Method, Parts, ReplyOf, SilentRoute } from '$lib/types/routes';
+import type {
+	FileRoute,
+	JsonMediaType,
+	JsonRoute,
+	Method,
+	Parts,
+	PathNames,
+	QueryWords,
+	ReplyOf,
+	SilentRoute
+} from '$lib/types/routes';
 
 /** A request the server refused, with what the reader is told about it. */
 export class ApiError extends Error {
@@ -35,11 +45,12 @@ type Errand<Verb extends Method, Path extends JsonRoute<Verb> | SilentRoute<Verb
 
 /**
  * What a request carries, whatever its route, once the compiler has held it
- * to its route: each part is read as it comes.
+ * to its route: a query and the names in a path as every route's schema has
+ * them, and a body, read as it comes.
  */
 interface Carried {
-	query?: unknown;
-	pathParameters?: unknown;
+	query?: QueryWords;
+	pathParameters?: PathNames;
 	body?: unknown;
 	doing: string;
 }
@@ -82,16 +93,16 @@ function addressOf(path: string, { query, pathParameters }: Address): string {
 	const filled = path.replace(NAMED_IN_PATH, (_, name: string) => encodeURIComponent(String(names.get(name))));
 	const asked = new URLSearchParams();
 	for (const [name, value] of entriesOf(query)) {
-		// A query leaves out what it does not say; null says nothing too
-		if (value !== null && value !== undefined) asked.set(name, String(value));
+		// A query leaves out what it does not say: null says nothing
+		if (value !== null) asked.set(name, String(value));
 	}
 	const written = asked.toString();
 	return written ? `${filled}?${written}` : filled;
 }
 
 /** The named values a part holds, none when it is not there. */
-function entriesOf(part: unknown): [string, unknown][] {
-	return typeof part === 'object' && part !== null ? Object.entries(part) : [];
+function entriesOf<Value>(part: Readonly<Record<string, Value>> | undefined): [string, Value][] {
+	return part ? Object.entries(part) : [];
 }
 
 /** Make the request and hand back the server's answer, or throw what the server said if it refused. */
@@ -115,8 +126,10 @@ function bodyOf(body: unknown): RequestInit {
 /** Why the server refused, in words the reader can act on. */
 async function reasonOf(response: Response, doing: string): Promise<string> {
 	try {
-		const said: { detail?: unknown } = await response.json();
-		if (typeof said.detail === 'string') return said.detail;
+		const said: unknown = await response.json();
+		if (typeof said === 'object' && said !== null && 'detail' in said && typeof said.detail === 'string') {
+			return said.detail;
+		}
 	} catch {
 		// Not JSON: the status is all there is
 	}

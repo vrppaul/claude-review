@@ -33,7 +33,7 @@ export class Submission {
 	#failed = $state<string | null>(null);
 	#finished = $state(false);
 	// Settled once the review is over, for whoever lets go of it then
-	readonly #over = Promise.withResolvers<void>();
+	readonly #over: PromiseWithResolvers<void> = Promise.withResolvers();
 
 	/**
 	 * @param answerer whoever answers the review, whose presence decides between a round and the end

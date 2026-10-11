@@ -41,13 +41,22 @@ type Operation<Verb extends Method, Path extends keyof paths> = paths[Path][Verb
 export type ReplyOf<Verb extends Method, Path extends keyof paths> =
 	Operation<Verb, Path> extends { responses: JsonReply<infer Body> } ? Body : never;
 
+/**
+ * What any query may say, by name: a word, a number, or a yes or no; null for
+ * saying nothing. A route whose query took anything else would take none here
+ * until this said how to write it.
+ */
+export type QueryWords = Readonly<Record<string, string | number | boolean | null>>;
+/** What fills the names a path has a place for. */
+export type PathNames = Readonly<Record<string, string | number>>;
+
 /** What a route takes in its query, as its schema names it. */
 export type Query<Verb extends Method, Path extends keyof paths> =
-	Operation<Verb, Path> extends { parameters: { query?: infer Taken } } ? Taken : never;
+	Operation<Verb, Path> extends { parameters: { query?: infer Taken extends QueryWords } } ? Taken : never;
 
 /** What a route takes in its path: the names its path has a place for. */
 type NamedInPath<Verb extends Method, Path extends keyof paths> =
-	Operation<Verb, Path> extends { parameters: { path?: infer Named } } ? Named : never;
+	Operation<Verb, Path> extends { parameters: { path?: infer Named extends PathNames } } ? Named : never;
 
 /** What a route takes as its body: JSON of its model, or a file as it is, an image say. */
 type Body<Verb extends Method, Path extends keyof paths> =
