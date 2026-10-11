@@ -8,6 +8,7 @@ rearranged.
 
 import asyncio
 import contextlib
+from abc import ABC, abstractmethod
 from http import HTTPMethod
 import queue
 import subprocess
@@ -50,8 +51,9 @@ from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.asgi import HTTP_DISCONNECT, HTTP_REQUEST, HTTP_SCOPE
+from claude_review.presentation.wire.agent import AgentWork
 from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import Push, ServerPush
+from claude_review.presentation.wire.pushes import ProgressPush, Push, ServerPush
 from claude_review.presentation.wire.session import Delivery, SessionMessage, Welcome
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
@@ -145,6 +147,18 @@ def write_files(root: Path, files: dict[str, str]) -> None:
     for path, text in files.items():
         (root / path).parent.mkdir(parents=True, exist_ok=True)
         (root / path).write_text(text)
+
+
+def committed_repository(root: Path, files: dict[str, str]) -> Path:
+    """A repository at `root` whose first commit holds these files, made the one way every test makes one."""
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-b", "main")
+    git(root, "config", "user.email", "test@test.com")
+    git(root, "config", "user.name", "Test")
+    write_files(root, files)
+    git(root, "add", ".")
+    git(root, "commit", "-m", "initial")
+    return root
 
 
 async def repository_opening(repo: Path) -> ReviewOpening:
@@ -369,14 +383,48 @@ def message_said(said: str | bytes) -> SessionMessage:
     return SESSION_MESSAGES.validate_json(said)
 
 
+class PushSource(ABC):
+    """A page's session socket as a test reads it: what the review says, a message at a time."""
+
+    @abstractmethod
+    def receive(self, *, timeout: float) -> str:
+        """The next message the review says, within `timeout` seconds.
+
+        Raises:
+            TimeoutError: if none arrives in time.
+        """
+
+
+class HeldSession(PushSource):
+    """The session socket the test client holds, read with an end to every wait.
+
+    The test client's read blocks until something arrives, so each read
+    runs on a thread of its own; a thread left waiting is let go when the
+    socket closes.
+    """
+
+    def __init__(self, socket: WebSocketTestSession) -> None:
+        self._socket = socket
+
+    @override
+    def receive(self, *, timeout: float) -> str:
+        received: queue.Queue[str] = queue.Queue()
+        threading.Thread(target=_receive_into, args=(self._socket, received), daemon=True).start()
+        try:
+            return received.get(timeout=timeout)
+        except queue.Empty:
+            failure = "nothing was said down the socket"
+            raise TimeoutError(failure) from None
+
+
 def welcome_of(socket: WebSocketTestSession) -> Welcome:
     """The welcome every connection starts with."""
-    message = message_said(_receive_within(socket, SETTLE_SECONDS))
+    message = message_said(HeldSession(socket).receive(timeout=SETTLE_SECONDS))
     assert isinstance(message, Welcome), f"a connection began with {message.type}, not a welcome"
     return message
 
 
-def next_push[PushT: Push](socket: WebSocketTestSession, kind: type[PushT]) -> PushT:
+def next_push[PushT: Push](socket: WebSocketTestSession | PushSource, kind: type[PushT]) -> PushT:
     """Read what the server pushes until a push of one kind arrives.
 
     The socket carries more than any one test is about — a review is told
@@ -391,7 +439,7 @@ def next_push[PushT: Push](socket: WebSocketTestSession, kind: type[PushT]) -> P
     raise AssertionError(failure)
 
 
-def pushes_until(socket: WebSocketTestSession, kind: type[Push]) -> list[ServerPush]:
+def pushes_until(socket: WebSocketTestSession | PushSource, kind: type[Push]) -> list[ServerPush]:
     """Everything the server pushes, up to and including the first push of one kind."""
     pushed: list[ServerPush] = []
     for push in _pushes(socket):
@@ -402,28 +450,25 @@ def pushes_until(socket: WebSocketTestSession, kind: type[Push]) -> list[ServerP
     raise AssertionError(failure)
 
 
-def _pushes(socket: WebSocketTestSession) -> Iterator[ServerPush]:
+def work_pushed(socket: WebSocketTestSession | PushSource) -> AgentWork:
+    """The work the next progress push says is under way."""
+    work = next_push(socket, ProgressPush).work
+    assert work is not None, "the progress push said the work was over"
+    return work
+
+
+def _pushes(socket: WebSocketTestSession | PushSource) -> Iterator[ServerPush]:
     """Every push delivered down a socket as it arrives, passing over welcomes, for as long as a test waits."""
+    source = socket if isinstance(socket, PushSource) else HeldSession(socket)
     deadline = time.monotonic() + SETTLE_SECONDS
     while (remaining := deadline - time.monotonic()) > 0:
-        message = message_said(_receive_within(socket, remaining))
+        try:
+            said = source.receive(timeout=remaining)
+        except TimeoutError:
+            return
+        message = message_said(said)
         if isinstance(message, Delivery):
             yield message.push
-
-
-def _receive_within(socket: WebSocketTestSession, seconds: float) -> str:
-    """One message, read off a thread of its own so that waiting for it has an end.
-
-    The test client's read blocks until something arrives. A thread left
-    waiting is let go when the socket closes.
-    """
-    received: queue.Queue[str] = queue.Queue()
-    threading.Thread(target=_receive_into, args=(socket, received), daemon=True).start()
-    try:
-        return received.get(timeout=seconds)
-    except queue.Empty:
-        failure = "nothing was said down the socket"
-        raise AssertionError(failure) from None
 
 
 def _receive_into(socket: WebSocketTestSession, received: queue.Queue[str]) -> None:

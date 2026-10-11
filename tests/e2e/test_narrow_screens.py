@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from playwright.async_api import FloatRect, Locator, Page
 
-from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # A file whose header is long: its path alone is wider than the diff on a laptop's screen, and as
 # Markdown it carries the choice of how it is shown as well
@@ -32,12 +32,7 @@ PATH_SHARE = 0.5
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
     """A repository with a file of a long path and a short one, both changed."""
-    git(tmp_path, "init", "-b", "main")
-    git(tmp_path, "config", "user.email", "test@test.com")
-    git(tmp_path, "config", "user.name", "Test")
-    write_files(tmp_path, COMMITTED)
-    git(tmp_path, "add", ".")
-    git(tmp_path, "commit", "-m", "initial")
+    committed_repository(tmp_path, COMMITTED)
     write_files(tmp_path, CHANGED)
     return tmp_path
 

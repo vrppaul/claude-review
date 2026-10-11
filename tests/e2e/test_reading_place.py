@@ -14,7 +14,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page
 
-from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # Three files, each changed far down: one above the file being read, and one
 # below it changed on enough lines that the line read can be scrolled to the top
@@ -48,15 +48,8 @@ def _grown(path: str) -> str:
 @pytest.fixture
 def three_files(tmp_path: Path) -> Path:
     """A repository where every file changed far down."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    git(repo, "init", "-b", "main")
-    git(repo, "config", "user.email", "test@test.com")
-    git(repo, "config", "user.name", "Test")
     paths = (ABOVE_FILE, READ_FILE, BELOW_FILE)
-    write_files(repo, {path: _lines(path) for path in paths})
-    git(repo, "add", ".")
-    git(repo, "commit", "-m", "initial")
+    repo = committed_repository(tmp_path / "repo", {path: _lines(path) for path in paths})
     write_files(repo, {path: _lines(path, {CHANGED_LINE: "changed"}) for path in (ABOVE_FILE, READ_FILE)})
     write_files(repo, {BELOW_FILE: _lines(BELOW_FILE, dict.fromkeys(CHANGED_BELOW, "changed"))})
     return repo

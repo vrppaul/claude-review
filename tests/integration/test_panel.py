@@ -9,10 +9,9 @@ from http import HTTPStatus
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
-from claude_review.presentation.wire.agent import AgentWork, ProgressStep
+from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
@@ -27,6 +26,7 @@ from tests.helpers import (
     http_client,
     line_on_the_wire,
     next_push,
+    work_pushed,
     one_line_file,
     open_session,
     opening_of,
@@ -53,13 +53,6 @@ THREAD = thread_on_the_wire(
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
 
 POINT_ROUTE = "/api/point"
-
-
-def _work_pushed(socket: WebSocketTestSession) -> AgentWork:
-    """The work the next progress push says is under way."""
-    work = next_push(socket, ProgressPush).work
-    assert work is not None, "the progress push said the work was over"
-    return work
 
 
 def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
@@ -245,7 +238,7 @@ def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) ->
             "/api/progress",
             json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
         )
-        work = _work_pushed(socket)
+        work = work_pushed(socket)
 
     assert work.text == "rewriting the answer handler"
     assert work.files == ["a.ts", "b.ts"]
@@ -262,7 +255,7 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
                 "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
             },
         )
-        work = _work_pushed(socket)
+        work = work_pushed(socket)
 
     assert work.steps == [
         ProgressStep(text="ran the tests", done=True),
@@ -277,7 +270,7 @@ def test_work_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
         open_session(review_page) as socket,
     ):
         review_page.post("/api/progress", json={"text": "reading the handler"})
-        work = _work_pushed(socket)
+        work = work_pushed(socket)
 
     assert work.at == A_MOMENT
 

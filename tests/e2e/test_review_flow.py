@@ -17,6 +17,7 @@ from tests.helpers import (
     SETTLE_SECONDS,
     ReviewServers,
     RunningReview,
+    committed_repository,
     git,
     opening_of,
     repository_opening,
@@ -165,14 +166,7 @@ async def _click_line_and_comment(page: Page, line_locator: Locator, text: str) 
 @pytest.fixture
 def e2e_repo(tmp_path: Path) -> Path:
     """Create a git repo with several types of changes for e2e testing."""
-    git(tmp_path, "init", "-b", "main")
-    git(tmp_path, "config", "user.email", "test@test.com")
-    git(tmp_path, "config", "user.name", "Test")
-
-    write_files(tmp_path, COMMITTED_FILES)
-    git(tmp_path, "add", ".")
-    git(tmp_path, "commit", "-m", "initial")
-
+    committed_repository(tmp_path, COMMITTED_FILES)
     write_files(tmp_path, CHANGES)
     git(tmp_path, "add", NEW_FILE)
 

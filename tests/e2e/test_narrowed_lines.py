@@ -12,7 +12,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
-from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 READ_FILE = "read.py"
 COMMITTED_FILES = {READ_FILE: "keep one\nfirst two\nkeep three\nkeep four\n"}
@@ -26,14 +26,7 @@ FOCUSED_ROW = "(document.activeElement.closest('tr') || document.activeElement).
 @pytest.fixture
 def narrowed_repo(tmp_path: Path) -> Path:
     """A repository whose line 2 changed before round 1 and was removed after it."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    git(repo, "init", "-b", "main")
-    git(repo, "config", "user.email", "test@test.com")
-    git(repo, "config", "user.name", "Test")
-    write_files(repo, COMMITTED_FILES)
-    git(repo, "add", ".")
-    git(repo, "commit", "-m", "initial")
+    repo = committed_repository(tmp_path / "repo", COMMITTED_FILES)
     write_files(repo, BEFORE_ROUND_ONE)
     return repo
 

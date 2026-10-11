@@ -4,10 +4,7 @@ import asyncio
 
 from claude_review.domain.page_events import ReviewEnded
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from tests.helpers import SETTLE_SECONDS, RecordingPage
-
-# Long enough to be sure nothing ended the review, short enough to cost nothing
-GLANCE_SECONDS = 0.01
+from tests.helpers import GLANCE_SECONDS, SETTLE_SECONDS, RecordingPage
 
 
 def test_a_review_runs_until_something_ends_it() -> None:

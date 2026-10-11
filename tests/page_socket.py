@@ -11,14 +11,14 @@ import socket
 import time
 from collections import deque
 from collections.abc import AsyncGenerator
-from typing import Self
+from typing import Self, override
 
 from wsproto import ConnectionType, WSConnection
 from wsproto.connection import ConnectionState
 from wsproto.events import CloseConnection, Event, Ping, RejectConnection, Request, TextMessage
 from wsproto.frame_protocol import CloseReason
 
-from tests.helpers import LOOPBACK, SESSION_ROUTE
+from tests.helpers import LOOPBACK, SESSION_ROUTE, PushSource
 
 # How much is taken off the connection at a time
 READ_BYTES = 65536
@@ -37,7 +37,7 @@ class HandshakeRefusedError(Exception):
         self.status_code = status_code
 
 
-class PageSocket:
+class PageSocket(PushSource):
     """A page's session socket: what the review pushes is read off it, what the page says is sent on it."""
 
     def __init__(self, port: int, *, origin: str | None = None, receive_buffer: int | None = None) -> None:
@@ -78,6 +78,7 @@ class PageSocket:
     def send(self, text: str) -> None:
         self._send_event(TextMessage(data=text))
 
+    @override
     def receive(self, *, timeout: float) -> str:
         """The next message the review sends, within `timeout` seconds.
 

@@ -18,7 +18,7 @@ from tests.helpers import (
     GIT_YES,
     ReviewFactory,
     ReviewServers,
-    git,
+    committed_repository,
     http_client,
     one_line_file,
     opening_of,
@@ -29,15 +29,7 @@ from tests.helpers import (
 @pytest.fixture
 def tmp_git_repo(tmp_path: Path) -> Path:
     """Create a temporary git repo with an initial commit."""
-    git(tmp_path, "init", "-b", "main")
-    git(tmp_path, "config", "user.email", "test@test.com")
-    git(tmp_path, "config", "user.name", "Test")
-
-    (tmp_path / "initial.txt").write_text("initial content\n")
-    git(tmp_path, "add", ".")
-    git(tmp_path, "commit", "-m", "initial")
-
-    return tmp_path
+    return committed_repository(tmp_path, {"initial.txt": "initial content\n"})
 
 
 @pytest.fixture

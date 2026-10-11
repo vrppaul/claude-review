@@ -23,6 +23,7 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     ReviewFactory,
     added_line,
+    committed_repository,
     context_line,
     diff_file,
     git,
@@ -340,11 +341,7 @@ async def _identity_of(reviews: ReviewFactory, opening: ReviewOpening) -> str:
 
 def _changed_repository(root: Path) -> Path:
     """A repository with one commit and a change on top of it."""
-    root.mkdir(parents=True)
-    git(root, "init", "-b", "main")
-    write_files(root, {"a.py": "x = 1\n"})
-    git(root, "add", ".")
-    git(root, "-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "initial")
+    committed_repository(root, {"a.py": "x = 1\n"})
     write_files(root, {"a.py": "x = 2\n"})
     return root
 

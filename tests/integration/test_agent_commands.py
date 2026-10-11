@@ -18,8 +18,7 @@ from httpx import AsyncClient
 from claude_review.cli.main import main
 from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import PointPush, Push, ReplyPush
-from claude_review.presentation.wire.session import Delivery
+from claude_review.presentation.wire.pushes import PointPush, ReplyPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
@@ -28,13 +27,13 @@ from tests.helpers import (
     ReviewServers,
     RunningReview,
     line_on_the_wire,
-    message_said,
+    next_push,
     one_line_file,
     opening_of,
     repository_opening,
     thread_on_the_wire,
 )
-from tests.page_socket import PageSocket, page_socket_held
+from tests.page_socket import page_socket_held
 
 # What a command that ran and failed exits with
 FAILED = 1
@@ -57,9 +56,6 @@ MARKDOWN = "Renamed `parse_hunk` to `read_hunk`; it costs $5 less — готов
 FROM_STDIN = "-"
 # A heredoc ends what it hands over with a line break of its own
 FROM_A_HEREDOC = f"{MARKDOWN}\n"
-# How long a push takes to reach the page, at most, and how many to read past to it
-PUSH_SECONDS = 10.0
-PUSHES_READ = 5
 
 
 @pytest.fixture
@@ -73,16 +69,6 @@ async def _run(review: RunningReview, command: str, *arguments: str, typed: str 
     return await asyncio.to_thread(
         CliRunner().invoke, main, [command, "--port", str(review.port), *arguments], input=typed
     )
-
-
-async def _next_push[PushT: Push](page: PageSocket, kind: type[PushT]) -> PushT:
-    """Read what the review pushes to the page, on a thread, until a push of one kind arrives."""
-    for _ in range(PUSHES_READ):
-        said = message_said(await asyncio.to_thread(page.receive, timeout=PUSH_SECONDS))
-        if isinstance(said, Delivery) and isinstance(said.push, kind):
-            return said.push
-    failure = f"no {kind.__name__} arrived"
-    raise AssertionError(failure)
 
 
 def _controls_in(printed: str) -> list[str]:
@@ -212,7 +198,7 @@ async def test_an_answer_can_come_from_stdin_as_written(review: RunningReview) -
     async with AsyncClient(base_url=review.url) as reader, page_socket_held(review.port) as page:
         await reader.post(ASK_ROUTE, json=asked)
         result = await _run(review, "reply", "--thread", FIRST_THREAD_ID, FROM_STDIN, typed=FROM_A_HEREDOC)
-        answered = await _next_push(page, ReplyPush)
+        answered = await asyncio.to_thread(next_push, page, ReplyPush)
 
     assert result.exit_code == 0, result.output
     assert answered.body == MARKDOWN
@@ -221,7 +207,7 @@ async def test_an_answer_can_come_from_stdin_as_written(review: RunningReview) -
 async def test_a_thread_raised_can_say_what_it_says_from_stdin_as_written(review: RunningReview) -> None:
     async with page_socket_held(review.port) as page:
         result = await _run(review, "point", "--file", REVIEWED_FILE, "--lines", "1", FROM_STDIN, typed=FROM_A_HEREDOC)
-        raised = await _next_push(page, PointPush)
+        raised = await asyncio.to_thread(next_push, page, PointPush)
 
     assert result.exit_code == 0, result.output
     assert raised.body == MARKDOWN

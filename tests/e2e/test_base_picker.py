@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
-from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 
 async def _said(page: Page, testid: str) -> str:
@@ -34,15 +34,7 @@ FILES_SINCE_ROUND_ONE = tuple(ANSWERING_ROUND_ONE)
 @pytest.fixture
 def picker_repo(tmp_path: Path) -> Path:
     """A repository with work in it, some of it done after round 1."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    git(repo, "init", "-b", "main")
-    git(repo, "config", "user.email", "test@test.com")
-    git(repo, "config", "user.name", "Test")
-    write_files(repo, COMMITTED_FILES)
-    git(repo, "add", ".")
-    git(repo, "commit", "-m", "initial")
-
+    repo = committed_repository(tmp_path / "repo", COMMITTED_FILES)
     write_files(repo, BEFORE_ROUND_ONE)
     return repo
 

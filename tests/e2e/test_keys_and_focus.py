@@ -13,7 +13,7 @@ import pytest
 from playwright.async_api import Page
 
 from claude_review.hosting.workspace import ReaderFiles
-from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
+from tests.helpers import ReviewServers, RunningReview, committed_repository, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
 CHANGED_FILE = "main.py"
@@ -41,20 +41,10 @@ COMMENT_ON_A_LINE = "Comment on a line"
 ADD_IT = "Add it to the review"
 
 
-def _commit_initial(repository: Path, files: dict[str, str]) -> None:
-    """Make a repository whose first commit holds these files."""
-    git(repository, "init", "-b", "main")
-    git(repository, "config", "user.email", "test@test.com")
-    git(repository, "config", "user.name", "Test")
-    write_files(repository, files)
-    git(repository, "add", ".")
-    git(repository, "commit", "-m", "initial")
-
-
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
     """A repository with one file changed and not committed."""
-    _commit_initial(tmp_path, COMMITTED)
+    committed_repository(tmp_path, COMMITTED)
     write_files(tmp_path, CHANGED)
     return tmp_path
 
@@ -68,7 +58,7 @@ async def review(repository: Path, servers: ReviewServers) -> RunningReview:
 async def gapped(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A review of one long file changed near its end, with the lines above the change left out."""
     lines = [f"line_{number} = {number}" for number in range(1, LONG_FILE_LINES + 1)]
-    _commit_initial(tmp_path, {LONG_FILE: "\n".join(lines) + "\n"})
+    committed_repository(tmp_path, {LONG_FILE: "\n".join(lines) + "\n"})
     lines[CHANGED_NEAR_THE_END - 1] = "changed = True"
     write_files(tmp_path, {LONG_FILE: "\n".join(lines) + "\n"})
     return await servers.start(await repository_opening(tmp_path))
@@ -77,7 +67,7 @@ async def gapped(tmp_path: Path, servers: ReviewServers) -> RunningReview:
 @pytest.fixture
 async def several_files(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A review of several files, each added whole: a stream of file sections to jump between."""
-    _commit_initial(tmp_path, COMMITTED)
+    committed_repository(tmp_path, COMMITTED)
     lines = "".join(f"line {number}\n" for number in range(JUMPED_FILE_LINES))
     write_files(tmp_path, dict.fromkeys(JUMPED_TO, lines))
     git(tmp_path, "add", ".")
