@@ -14,6 +14,7 @@ from claude_review.domain.page_events import (
     DiffRetaken,
     FileShown,
     PageEvent,
+    ReviewEnded,
     RoundBegan,
     StatusReported,
     ThreadAnswered,
@@ -28,6 +29,7 @@ from claude_review.presentation.wire.pushes import (
     ChangedPush,
     ChatPush,
     DiffPush,
+    EndedPush,
     PointPush,
     ProgressPush,
     ReplyPush,
@@ -67,5 +69,7 @@ def push_of(event: PageEvent) -> ServerPush:
             return RoundPush(number=event.number)
         case DiffRetaken():
             return DiffPush(file_count=event.file_count, changes=changes_on_the_wire(event.changes))
+        case ReviewEnded():
+            return EndedPush(finished=event.finished)
         case _:
             assert_never(event)

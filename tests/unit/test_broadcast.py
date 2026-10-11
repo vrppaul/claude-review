@@ -34,6 +34,8 @@ SHOWN = FileShown(file=SHOWN_FILE)
 FEW = 3
 # A run of the review other than the one listening
 ANOTHER_RUN = "another-run"
+# What the review listened to names itself
+REVIEW_IDENTITY = "review-under-test"
 # How far past what is kept the tests tell, to cover pages gone a long while
 TOLD_AT_MOST = KEPT * 3
 
@@ -68,7 +70,7 @@ def _told_times(broadcast: BrowserBroadcast, count: int) -> None:
 
 def test_a_push_says_what_was_true_when_it_was_pushed() -> None:
     """Every page open is told the same, and nothing changed afterwards reaches one still to be sent it."""
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     tabs = [broadcast.listen(resume=None), broadcast.listen(resume=None)]
     work = AgentWork(message_id=None, text=READING, files=[], steps=[], at=REPORTED_AT)
     as_told = push_of(WorkReported(work=work.model_copy()))
@@ -82,7 +84,7 @@ def test_a_push_says_what_was_true_when_it_was_pushed() -> None:
 
 
 def test_a_page_opening_is_welcomed_with_how_far_the_telling_has_got() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     _told_times(broadcast, FEW)
 
     opened = broadcast.listen(resume=None)
@@ -93,7 +95,7 @@ def test_a_page_opening_is_welcomed_with_how_far_the_telling_has_got() -> None:
 
 
 def test_every_push_is_numbered_in_the_order_it_was_told() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     outbox = broadcast.listen(resume=None)
     _welcome(outbox)
 
@@ -107,7 +109,7 @@ def test_every_push_is_numbered_in_the_order_it_was_told() -> None:
 @given(told=strategy.integers(min_value=0, max_value=TOLD_AT_MOST), data=strategy.data())
 def test_a_page_coming_back_is_handed_exactly_what_it_missed(told: int, data: strategy.DataObject) -> None:
     missed = data.draw(strategy.integers(min_value=0, max_value=min(told, KEPT)))
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     instance = _instance(broadcast)
     _told_times(broadcast, told)
 
@@ -122,7 +124,7 @@ def test_a_page_that_missed_more_than_is_kept_is_told_it_was_not_handed_it(
     told: int, data: strategy.DataObject
 ) -> None:
     after = data.draw(strategy.integers(min_value=0, max_value=told - KEPT - 1))
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     instance = _instance(broadcast)
     _told_times(broadcast, told)
 
@@ -140,7 +142,7 @@ def test_a_page_that_missed_more_than_is_kept_is_told_it_was_not_handed_it(
 )
 def test_a_page_from_another_run_is_not_resumed(resume: Resume | None) -> None:
     """A review restarted on the same port numbers its pushes afresh: the old numbers mean nothing."""
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     _told_times(broadcast, FEW)
 
     back = broadcast.listen(resume=resume)
@@ -150,7 +152,7 @@ def test_a_page_from_another_run_is_not_resumed(resume: Resume | None) -> None:
 
 
 def test_a_page_claiming_more_than_was_told_is_not_resumed() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     instance = _instance(broadcast)
     _told_times(broadcast, FEW)
 
@@ -161,7 +163,7 @@ def test_a_page_claiming_more_than_was_told_is_not_resumed() -> None:
 
 def test_a_page_that_falls_too_far_behind_is_let_go() -> None:
     """Held, its backlog would grow without end."""
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     stuck = broadcast.listen(resume=None)
 
     _told_times(broadcast, LET_GO_AFTER)
@@ -171,7 +173,7 @@ def test_a_page_that_falls_too_far_behind_is_let_go() -> None:
 
 
 def test_a_page_let_go_is_told_nothing_more() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     stuck = broadcast.listen(resume=None)
     keeping_up = broadcast.listen(resume=None)
     _welcome(keeping_up)
@@ -186,7 +188,7 @@ def test_a_page_let_go_is_told_nothing_more() -> None:
 
 
 def test_a_page_let_go_for_falling_behind_is_handed_what_it_missed_when_it_comes_back() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     stuck = broadcast.listen(resume=None)
     last_seen = _welcome(stuck)
 
@@ -198,7 +200,7 @@ def test_a_page_let_go_for_falling_behind_is_handed_what_it_missed_when_it_comes
 
 
 def test_a_page_handed_a_backlog_of_what_it_missed_still_has_room_for_what_comes_next() -> None:
-    broadcast = BrowserBroadcast(backlog=BACKLOG)
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     instance = _instance(broadcast)
     _told_times(broadcast, BACKLOG)
     back = broadcast.listen(resume=Resume(instance=instance, after=0))

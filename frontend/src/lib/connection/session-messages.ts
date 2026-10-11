@@ -25,7 +25,8 @@ const PUSH_KINDS: Record<ServerPush['type'], true> = {
 	point: true,
 	changed: true,
 	round: true,
-	diff: true
+	diff: true,
+	ended: true
 };
 
 /** How each kind of message is checked, once its kind is known: a delivery by the push it carries. */

@@ -11,6 +11,7 @@
 import { endReview, submitReview } from '$lib/api/review-api';
 import type { Answerer } from '$lib/review/answerer.svelte';
 import type { Rounds } from '$lib/review/rounds.svelte';
+import type { ServerLink } from '$lib/review/server-link.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { SubmitResponse } from '$lib/types';
 import { threadOnTheWire } from '$lib/api/thread-wire';
@@ -23,6 +24,7 @@ export class Submission {
 	readonly #threads: Threads;
 	readonly #rounds: Rounds;
 	readonly #answerer: Answerer;
+	readonly #link: ServerLink;
 	// The summary: about the change as a whole, not one line of it
 	#body: string;
 	// Whether the pane the review is sent from is open
@@ -31,18 +33,19 @@ export class Submission {
 	#sending = $state(false);
 	// Why the last send did not go, until the next one is tried
 	#failed = $state<string | null>(null);
-	#finished = $state(false);
-	// Settled once the review is over, for whoever lets go of it then
+	// Settled once this page has sent the review for good, or ended it
 	readonly #over: PromiseWithResolvers<void> = Promise.withResolvers();
 
 	/**
 	 * @param answerer whoever answers the review, whose presence decides between a round and the end
+	 * @param link the page's tie to the review, which this ends once the review is sent for good
 	 * @param body the summary of an unsent review of the same thing, picked up where it stopped
 	 */
-	constructor(threads: Threads, rounds: Rounds, answerer: Answerer, body: string) {
+	constructor(threads: Threads, rounds: Rounds, answerer: Answerer, link: ServerLink, body: string) {
 		this.#threads = threads;
 		this.#rounds = rounds;
 		this.#answerer = answerer;
+		this.#link = link;
 		this.#body = $state(body);
 	}
 
@@ -50,12 +53,7 @@ export class Submission {
 		return this.#body;
 	}
 
-	/** Whether the review is over — sent for good, or ended — and the page is done. */
-	get finished(): boolean {
-		return this.#finished;
-	}
-
-	/** Settles once the review is over: sent for good, or ended. */
+	/** Settles once this page has sent the review for good, or ended it. */
 	get over(): Promise<void> {
 		return this.#over.promise;
 	}
@@ -77,7 +75,7 @@ export class Submission {
 
 	/** Whether sending now would send something: a round needs news, the end needs anything at all. */
 	get canSend(): boolean {
-		return !this.#sending && (this.inRounds ? this.hasUnsent : this.hasContent);
+		return !this.#sending && this.#link.ending === null && (this.inRounds ? this.hasUnsent : this.hasContent);
 	}
 
 	/** Whether a send is on its way. */
@@ -165,7 +163,7 @@ export class Submission {
 	}
 
 	#finish(): void {
-		this.#finished = true;
+		this.#link.end('finished');
 		this.#over.resolve();
 	}
 }

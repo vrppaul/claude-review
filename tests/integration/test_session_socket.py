@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.pushes import ReplyPush, RoundPush, ShowPush
+from claude_review.presentation.wire.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
 from claude_review.presentation.wire.session import Welcome
 from tests.helpers import (
     CATCH_UP_ROUTE,
@@ -85,6 +85,23 @@ def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_mis
     elsewhere = serving.model_copy(update={"instance": ANOTHER_RUN})
     with open_session_at(review_page, _coming_back(elsewhere)) as back:
         assert not welcome_of(back).resumed
+
+
+def test_a_page_is_welcomed_by_the_name_of_the_review_it_reached(review_page: TestClient) -> None:
+    """Another review may answer on the same port: the page must know it is not its own before saying anything."""
+    with open_session(review_page) as socket:
+        welcome = welcome_of(socket)
+
+    assert welcome.identity == review_facts(review_page).identity
+
+
+def test_every_page_open_hears_that_the_review_is_over_once_it_is_sent_for_good(review_page: TestClient) -> None:
+    """A tab left open on a review that ended would otherwise try to reach it again, for ever."""
+    with open_session(review_page) as first, open_session(review_page) as second:
+        review_page.post("/api/submit", json={"threads": [], "body": "Fine", "end": True})
+
+        assert next_push(first, EndedPush) == EndedPush(finished=True)
+        assert next_push(second, EndedPush) == EndedPush(finished=True)
 
 
 def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClient) -> None:

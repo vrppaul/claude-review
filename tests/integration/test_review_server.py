@@ -11,7 +11,7 @@ from claude_review.hosting.errors import ServerStartError
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from tests.helpers import SETTLE_SECONDS, ReviewFactory, opening_of
+from tests.helpers import SETTLE_SECONDS, RecordingPage, ReviewFactory, opening_of
 
 
 def _listening() -> socket.socket:
@@ -22,7 +22,7 @@ def _listening() -> socket.socket:
 
 
 async def test_the_server_stops_once_the_review_ends(reviews: ReviewFactory) -> None:
-    lifetime = ReviewLifetime()
+    lifetime = ReviewLifetime(RecordingPage())
     server = ReviewServer(reviews.app(opening_of([], mode=ReviewMode.FILES)), lifetime)
     serving = asyncio.ensure_future(server.serve_until_ended(_listening()))
     assert await server.came_up()
@@ -35,7 +35,7 @@ async def test_the_server_stops_once_the_review_ends(reviews: ReviewFactory) -> 
 
 async def test_a_server_that_cannot_listen_ends_the_review_and_says_it_never_came_up(reviews: ReviewFactory) -> None:
     """A review nobody can open must end, and say why, rather than wait for a browser that cannot come."""
-    lifetime = ReviewLifetime()
+    lifetime = ReviewLifetime(RecordingPage())
     server = ReviewServer(reviews.app(opening_of([], mode=ReviewMode.FILES)), lifetime)
     closed = _listening()
     closed.close()

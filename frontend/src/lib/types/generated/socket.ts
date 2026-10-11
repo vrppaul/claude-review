@@ -185,6 +185,24 @@ export interface components {
             changes: components["schemas"]["ChangesSince"] | null;
         };
         /**
+         * EndedPush
+         * @description The review is over, and this is the last thing told: the page lets go of it rather than reach for it again.
+         *
+         *     `finished`: the reader sent it for good, or ended it once everything had
+         *     gone, and the page's draft of it is done with. Otherwise it stopped under
+         *     them — Ctrl+C, its server stopping, a fault — and the draft is kept for
+         *     when the review is opened again.
+         */
+        EndedPush: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ended";
+            /** Finished */
+            finished: boolean;
+        };
+        /**
          * LineSide
          * @description Which version of the file a line belongs to.
          *
@@ -267,7 +285,7 @@ export interface components {
             /** Number */
             number: number;
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"];
+        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
          * @description What the browser says on connecting, and whenever its threads change.
@@ -359,11 +377,14 @@ export interface components {
         };
         /**
          * Welcome
-         * @description Which run of the review the page reached, how far its telling has got, and whether the page missed nothing.
+         * @description Which review, and which run of it, the page reached; how far its telling has got; whether it missed nothing.
          *
-         *     `sequence` is the number of the last push told before this connection.
-         *     A page handed what it missed reads on from its own last number; one that
-         *     was not reads on from here.
+         *     `identity` names the review as GET /api/review does: another review may
+         *     answer on the same port once this one is over, and a page must know it
+         *     is not its own before it says anything to it. `sequence` is the number
+         *     of the last push told before this connection. A page handed what it
+         *     missed reads on from its own last number; one that was not reads on
+         *     from here.
          */
         Welcome: {
             /**
@@ -371,6 +392,8 @@ export interface components {
              * @enum {string}
              */
             type: "welcome";
+            /** Identity */
+            identity: string;
             /** Instance */
             instance: string;
             /** Sequence */

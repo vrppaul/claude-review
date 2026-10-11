@@ -1,5 +1,5 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
-import { THIS_RUN } from './fake-socket';
+import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
 import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
@@ -69,8 +69,6 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 
 /** What the review a test opens is of, unless it says otherwise. */
 export const REVIEW_TITLE = 'repo: uncommitted changes';
-/** What the review a test opens names itself, unless it says otherwise: the name its draft is kept under. */
-export const REVIEW_IDENTITY = 'review-under-test';
 
 /** What the server says the review is, as a page opening reads it: a diff in its first round. */
 export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {

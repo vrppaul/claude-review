@@ -22,6 +22,7 @@ import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { Rounds } from '$lib/review/rounds.svelte';
+import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
 import { Navigator } from '$lib/review/navigator';
@@ -71,6 +72,8 @@ export class Review {
 	readonly sound: ReplySound;
 
 	readonly rounds: Rounds;
+	/** Whether the review still runs for this page, and how it ended once it has. */
+	readonly link = new ServerLink();
 	/** How far the server's telling has got for this page. */
 	readonly telling: Telling;
 	readonly answerer: Answerer;
@@ -121,7 +124,7 @@ export class Review {
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.reading = new ReadingProgress(kept.files);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
-		this.submission = new Submission(this.threads, this.rounds, this.answerer, kept.reviewBody);
+		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
@@ -132,7 +135,8 @@ export class Review {
 			round: this.rounds.current,
 			threads: this.threads.onTheWire
 		});
-		this.#draft = $derived(this.submission.finished ? null : this.#snapshot());
+		// A review stopped under the reader keeps its draft for when it is opened again
+		this.#draft = $derived(this.link.ending === 'finished' ? null : this.#snapshot());
 		if (this.answerer.attached) this.layout.agentPanel.offer();
 	}
 

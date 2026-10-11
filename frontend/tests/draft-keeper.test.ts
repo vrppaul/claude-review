@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 import { flushSync } from 'svelte';
 import { readDraft } from '$lib/drafts/draft-storage';
 import type { Review } from '$lib/review/review.svelte';
-import { REVIEW_IDENTITY, REVIEW_TITLE } from './diff';
+import { REVIEW_TITLE } from './diff';
+import { REVIEW_IDENTITY } from './fake-socket';
 import { newComment } from './new-comment';
 import { openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';

@@ -92,6 +92,18 @@ class DiffRetaken(PageEventBase):
     changes: ChangedSinceRound | None
 
 
+class ReviewEnded(PageEventBase):
+    """The review is over, and nothing more will be told.
+
+    Finished, the reader sent it for good or ended it once everything had
+    gone, and what a page holds of it is done with. Otherwise it stopped
+    under them — Ctrl+C, its server stopping, a fault — and what a page has
+    not sent is still theirs, for when the review is opened again.
+    """
+
+    finished: bool
+
+
 # Everything the review tells its pages
 type PageEvent = (
     ThreadAnswered
@@ -104,4 +116,5 @@ type PageEvent = (
     | TreeMoved
     | RoundBegan
     | DiffRetaken
+    | ReviewEnded
 )

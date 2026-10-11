@@ -57,6 +57,37 @@ describe('sending the review', () => {
 	});
 });
 
+describe('a review that is over', () => {
+	it('says it was sent, wherever it was sent from', () => {
+		const review = openReview({ files: [file] });
+
+		review.link.end('finished');
+		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
+
+		expect(getByTestId('submitted-banner').textContent).toContain('Review sent');
+		expect(queryByTestId('top-bar')).toBeNull();
+	});
+
+	it('says one stopped under the reader keeps what was not sent', () => {
+		const review = openReview({ files: [file] });
+
+		review.link.end('stopped');
+		const { getByTestId } = render(ReviewHeader, inReview(review));
+
+		expect(getByTestId('review-stopped').textContent).toContain('What you had not sent is kept');
+	});
+
+	it('says another review answers here now, and that what was not sent is kept', () => {
+		const review = openReview({ files: [file] });
+
+		review.link.end('replaced');
+		const { getByTestId } = render(ReviewHeader, inReview(review));
+
+		expect(getByTestId('review-replaced').textContent).toContain('another review is running here now');
+		expect(getByTestId('review-replaced').textContent).toContain('What you had not sent is kept');
+	});
+});
+
 describe('the review header', () => {
 	it('says what is under review', () => {
 		const review = openReview({

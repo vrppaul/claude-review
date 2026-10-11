@@ -18,6 +18,12 @@
  * what came after.
  * When the review cannot hand over all of it, the page is asked to catch up,
  * and what arrives meanwhile waits until it has.
+ *
+ * The port outlives the review: once it is over, the next review of the
+ * same thing — or of anything, on a port named twice — may answer there.
+ * The page says nothing until the review that welcomes it names itself as
+ * its own; one that names itself otherwise is let go for good, unheard and
+ * untold, so it is neither handed this page's threads nor held open by it.
  */
 
 import { decodeSessionMessage } from '$lib/connection/session-messages';
@@ -42,6 +48,8 @@ export function sessionUrl(page: Location): string {
 
 /** What the page does with what the connection brings it. */
 export interface PushReceiver {
+	/** Which review the page shows, by the name the review gives itself. */
+	identity: string;
 	/** Where the page's telling stands: the run of the review, and how far the page has heard it. */
 	told: () => TellingPosition;
 	/** Take in one push, and where it stands in the telling. */
@@ -53,6 +61,8 @@ export interface PushReceiver {
 	 * itself.
 	 */
 	catchUp: (from: TellingPosition) => Promise<void>;
+	/** Another review answered on the port: the page's own is over, and the connection has let go of it. */
+	strayed: () => void;
 }
 
 /** A push waiting to be handed over, with where it stands in the telling. */
@@ -77,7 +87,8 @@ export class PageConnection {
 	// it is open: a review with no socket at all is a review the server ends
 	#holding: WebSocket | null = null;
 	// Which run of the review the socket open now is talking to, as its
-	// welcome said: what a delivery's number counts in
+	// welcome said: what a delivery's number counts in. None until the page's
+	// own review has welcomed it, and nothing is said before then.
 	#instance: string | null = null;
 	// What arrives while the page catches up, handed over once it has
 	#held: HeldPush[] = [];
@@ -167,7 +178,6 @@ export class PageConnection {
 		if (socket !== this.#socket) return;
 		this.#letGoOfHolding();
 		this.#retryDelay = FIRST_RETRY;
-		this.#sayHello();
 	}
 
 	#letGoOfHolding(): void {
@@ -186,12 +196,20 @@ export class PageConnection {
 	}
 
 	/**
-	 * A connection made. One handed what it missed reads on from where it
-	 * was; any other has missed something it cannot be handed, and reads on
-	 * from where the review's telling has got, once the page has caught up.
+	 * A connection made — to the page's own review, or to another that runs
+	 * on the port now, which is let go of. One handed what it missed reads on
+	 * from where it was; any other has missed something it cannot be handed,
+	 * and reads on from where the review's telling has got, once the page has
+	 * caught up. Either way the page says what it holds.
 	 */
 	#welcomed(welcome: Welcome, receiver: PushReceiver): void {
+		if (welcome.identity !== receiver.identity) {
+			this.close();
+			receiver.strayed();
+			return;
+		}
 		this.#instance = welcome.instance;
+		this.#sayHello();
 		if (welcome.resumed) return;
 		this.#resumedAt = { instance: welcome.instance, sequence: welcome.sequence };
 		this.#serve(receiver);
@@ -246,7 +264,7 @@ export class PageConnection {
 	}
 
 	#sayHello(): void {
-		if (this.#hello === null || this.#socket?.readyState !== WebSocket.OPEN) {
+		if (this.#hello === null || this.#instance === null || this.#socket?.readyState !== WebSocket.OPEN) {
 			return;
 		}
 		const due = this.#helloSaidAt + HELLO_AT_MOST_EVERY - Date.now();

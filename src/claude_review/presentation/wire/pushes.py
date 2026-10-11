@@ -25,6 +25,7 @@ class PushKind(StrEnum):
     CHANGED — the working tree moved away from the diff on screen.
     ROUND — the round now being written.
     DIFF — the diff was taken again.
+    ENDED — the review is over.
     """
 
     REPLY = auto()
@@ -37,6 +38,7 @@ class PushKind(StrEnum):
     CHANGED = auto()
     ROUND = auto()
     DIFF = auto()
+    ENDED = auto()
 
 
 class Push(WireModel):
@@ -121,6 +123,19 @@ class DiffPush(Push):
     changes: ChangesSince | None
 
 
+class EndedPush(Push):
+    """The review is over, and this is the last thing told: the page lets go of it rather than reach for it again.
+
+    `finished`: the reader sent it for good, or ended it once everything had
+    gone, and the page's draft of it is done with. Otherwise it stopped under
+    them — Ctrl+C, its server stopping, a fault — and the draft is kept for
+    when the review is opened again.
+    """
+
+    type: Literal[PushKind.ENDED] = PushKind.ENDED
+    finished: WireBool
+
+
 # What the server pushes down the session socket, told apart by `type`
 type ServerPush = Annotated[
     ReplyPush
@@ -132,6 +147,7 @@ type ServerPush = Annotated[
     | PointPush
     | ChangedPush
     | RoundPush
-    | DiffPush,
+    | DiffPush
+    | EndedPush,
     Field(discriminator="type"),
 ]

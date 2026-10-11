@@ -32,16 +32,20 @@ class SessionMessageKind(StrEnum):
 
 
 class Welcome(WireModel):
-    """Which run of the review the page reached, how far its telling has got, and whether the page missed nothing.
+    """Which review, and which run of it, the page reached; how far its telling has got; whether it missed nothing.
 
-    `sequence` is the number of the last push told before this connection.
-    A page handed what it missed reads on from its own last number; one that
-    was not reads on from here.
+    `identity` names the review as GET /api/review does: another review may
+    answer on the same port once this one is over, and a page must know it
+    is not its own before it says anything to it. `sequence` is the number
+    of the last push told before this connection. A page handed what it
+    missed reads on from its own last number; one that was not reads on
+    from here.
     """
 
     model_config = ConfigDict(frozen=True)
 
     type: Literal[SessionMessageKind.WELCOME] = SessionMessageKind.WELCOME
+    identity: str
     instance: str
     sequence: int
     resumed: WireBool

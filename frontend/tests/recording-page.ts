@@ -2,7 +2,7 @@
 import { vi } from 'vitest';
 import { FIRST_RETRY, PageConnection, type PushReceiver } from '$lib/connection/page-connection';
 import type { ServerPush, TellingPosition } from '$lib/types';
-import { latestSocket, THIS_RUN } from './fake-socket';
+import { latestSocket, REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
 
 // Pushes as the server sends them
 export const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, body: 'first' };
@@ -20,10 +20,13 @@ export const TOLD_BEFORE = 3;
  * with every push it takes in, as a review's does.
  */
 export class RecordingPage implements PushReceiver {
+	readonly identity = REVIEW_IDENTITY;
 	readonly heard: ServerPush[] = [];
 	readonly heardAt: TellingPosition[] = [];
 	readonly caughtUpFrom: TellingPosition[] = [];
 	position: TellingPosition = { instance: THIS_RUN, sequence: TOLD_BEFORE };
+	/** Whether another review answered on the port, and the connection let go. */
+	strayedOff = false;
 	#finish: (() => void) | null = null;
 
 	get catchUps(): number {
@@ -44,6 +47,10 @@ export class RecordingPage implements PushReceiver {
 		this.caughtUpFrom.push(from);
 		this.position = from;
 		return new Promise((resolve) => (this.#finish = resolve));
+	}
+
+	strayed(): void {
+		this.strayedOff = true;
 	}
 
 	/** The page has caught up; what the connection held is handed over once it hears so. */

@@ -76,13 +76,17 @@ export class ReviewPage {
 			});
 			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping);
 			this.#connection.deliverTo({
+				identity: review.identity,
 				told: () => review.telling.heard,
 				take: (push, at) => takePush(review, push, at),
-				catchUp: (from) => catchUp(review, from)
+				catchUp: (from) => catchUp(review, from),
+				strayed: () => review.link.end('replaced')
 			});
 			this.#state = { kind: 'open', review };
 			void followKeptThreads(review);
-			void review.submission.over.then(() => this.#over());
+			// However it ended, the page lets go; the tab it was sent from shuts too
+			void review.link.ended.then(() => this.close());
+			void review.submission.over.then(() => this.#closeTab());
 			// A first review is welcomed; a newer release says what changed
 			void review.guide.open();
 		} catch (error) {
@@ -98,19 +102,12 @@ export class ReviewPage {
 	 * it, and nothing more of its draft is kept once what was waiting to be
 	 * kept is. Done once the review is over, for the socket would otherwise
 	 * come back to whatever runs next on this port — the next review of the
-	 * same repository, as like as not — tell it this review's round and
-	 * threads, and hold it open after its own page has closed. The page
-	 * itself stays on screen as it is.
+	 * same repository, as like as not — and hold it open after its own page
+	 * has closed. The page itself stays on screen as it is.
 	 */
 	close(): void {
 		this.#letGo?.();
 		this.#letGo = null;
 		this.#connection.close();
-	}
-
-	/** The review is over: let go of it, and shut the tab, where the browser lets a page do that. */
-	#over(): void {
-		this.close();
-		this.#closeTab();
 	}
 }

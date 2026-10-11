@@ -117,7 +117,7 @@ describe('finishing a review', () => {
 		await userEvent.click(getByTestId('modal-submit'));
 
 		expect(server.requestsTo('POST /api/submit')).toHaveLength(1);
-		expect(review.submission.finished).toBe(true);
+		expect(review.link.ending).toBe('finished');
 	});
 });
 

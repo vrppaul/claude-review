@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
 
-from claude_review.domain.interfaces import Clock
+from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.models import (
     FIRST_ROUND,
     AnchorKind,
@@ -44,6 +44,7 @@ from claude_review.domain.models import (
     Turn,
     TurnAuthor,
 )
+from claude_review.domain.page_events import PageEvent
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
@@ -269,6 +270,17 @@ def thread_on_the_wire(
         "raised_by": raised_by,
         "resolved": resolved,
     }
+
+
+class RecordingPage(PageChannel):
+    """Pages on screen, as a test: what they are told, in order."""
+
+    def __init__(self) -> None:
+        self.told: list[PageEvent] = []
+
+    @override
+    def tell(self, event: PageEvent) -> None:
+        self.told.append(event)
 
 
 class FixedClock(Clock):

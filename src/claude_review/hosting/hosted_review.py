@@ -35,7 +35,7 @@ def host_review(
     workspace rather than into the repository under review, and its images
     are kept there too.
     """
-    broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG)
+    broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     review = Review(
         opening,
         repository=GitRepository(objects=workspace.objects),

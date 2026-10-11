@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import type { Ending } from '$lib/review/server-link.svelte';
 	import { counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import { finishingTitle } from './finishing';
@@ -11,18 +12,49 @@
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
 
+	/** What the header says in place of everything else once the review is over. */
+	interface Over {
+		testId: string;
+		said: string;
+		/** Whether it ended under the reader, with their unsent work waiting for them: a warning, not a done deal. */
+		underTheReader: boolean;
+	}
+
+	// By how the review ended
+	const OVER: Record<Ending, Over> = {
+		finished: { testId: 'submitted-banner', said: 'Review sent. You can close this tab.', underTheReader: false },
+		stopped: {
+			testId: 'review-stopped',
+			said: 'The review has stopped. What you had not sent is kept, and comes back when you open it again.',
+			underTheReader: true
+		},
+		replaced: {
+			testId: 'review-replaced',
+			said: 'This review is over: another review is running here now. What you had not sent is kept for when you open this one again.',
+			underTheReader: true
+		}
+	};
+
 	const review = useReview();
 
 	const inRounds = $derived(review.submission.inRounds);
+	const over = $derived(review.link.ending === null ? null : OVER[review.link.ending]);
 </script>
 
-{#if review.submission.finished}
+{#if over}
 	<div
-		data-testid="submitted-banner"
-		class="flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 bg-base-200 px-4"
+		data-testid={over.testId}
+		class={[
+			'flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 px-4',
+			over.underTheReader ? 'cr-over-under-the-reader' : 'bg-base-200'
+		]}
 	>
-		<Icon name="check" class="h-4 w-4 text-(--cr-mark)" />
-		<p class="font-semibold">Review sent. You can close this tab.</p>
+		{#if over.underTheReader}
+			<Icon name="notice" class="h-4 w-4" />
+		{:else}
+			<Icon name="check" class="h-4 w-4 text-(--cr-mark)" />
+		{/if}
+		<p class="font-semibold">{over.said}</p>
 	</div>
 {:else}
 	<header data-testid="top-bar" class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4">

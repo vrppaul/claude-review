@@ -66,8 +66,10 @@ class Told(BaseModel):
 class BrowserBroadcast(PageChannel):
     """The pages listening to the review, each with the pushes not yet sent to it, and the last pushes told."""
 
-    def __init__(self, backlog: int) -> None:
+    def __init__(self, backlog: int, identity: str) -> None:
         self._backlog = backlog
+        # Which review this is, as its page knows it: what every welcome names
+        self._identity = identity
         self._listeners: set[asyncio.Queue[str]] = set()
         # Which run of the review this is: a review restarted on the same
         # port numbers its pushes afresh, and a page must not mistake one
@@ -98,7 +100,9 @@ class BrowserBroadcast(PageChannel):
         handed = missed or []
         # What it missed waits already; a backlog on top of it is what it may fall behind by
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog + WELCOME_PLACES + len(handed))
-        welcome = Welcome(instance=self._instance, sequence=self._sequence, resumed=missed is not None)
+        welcome = Welcome(
+            identity=self._identity, instance=self._instance, sequence=self._sequence, resumed=missed is not None
+        )
         queue.put_nowait(welcome.model_dump_json())
         for told in handed:
             queue.put_nowait(told.said)

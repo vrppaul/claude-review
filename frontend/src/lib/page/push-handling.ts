@@ -22,7 +22,7 @@ import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
 
 /** A push that says something of the review's facts, which the draft does not keep. */
-type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' }>;
+type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' | 'ended' }>;
 
 /**
  * Take in what the server said while the review is open.
@@ -50,6 +50,10 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 			// A round landing half-applied is worse than not at all: the code
 			// under the reader has moved and their threads have not
 			landed(review, push, heard).catch((error: unknown) => review.conversation.note(diffNotTakenNote(error)));
+			return;
+		case 'ended':
+			// Facts are read from a review still running: they never hold its end
+			review.link.end(push.finished ? 'finished' : 'stopped');
 			return;
 		default:
 			if (!heard.factsHoldIt) learnFrom(review, push);

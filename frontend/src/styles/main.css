@@ -814,6 +814,18 @@
 }
 
 /*
+ * A review that ended under the reader — stopped, or another one running
+ * on its port now — with what they had not sent waiting for them: the
+ * warning's colour, not the mark's of a review sent.
+ */
+.cr-over-under-the-reader {
+	background: var(--cr-warning-tint);
+}
+.cr-over-under-the-reader svg {
+	color: var(--color-warning);
+}
+
+/*
  * A thread the agent raised.
  *
  * Not the reader's mark colour: the marks in a review are theirs, and one

@@ -146,16 +146,18 @@ describe('the session socket', () => {
 		expect(FakeSocket.opened).toHaveLength(1);
 	});
 
-	it('says hello on every connection, to a server that may have just come up', () => {
-		const connection = opened();
+	it('says hello on every connection once its own review has welcomed it, to a server that may have just come up', () => {
+		const connection = connected();
 		connection.greet(inRound(3));
 
 		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
 		expect(latestSocket().said).toEqual([inRound(3)]);
 
 		latestSocket().drop();
 		vi.advanceTimersByTime(FIRST_RETRY);
 		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 
 		expect(latestSocket().said).toEqual([inRound(3)]);
@@ -163,9 +165,10 @@ describe('the session socket', () => {
 	});
 
 	it('tells the server what changed at most once a second, ending on the latest', () => {
-		const connection = opened();
+		const connection = connected();
 		const socket = latestSocket();
 		socket.accept();
+		socket.say(welcome({ resumed: true }));
 		connection.greet(inRound(1));
 
 		connection.greet(inRound(2));
@@ -178,16 +181,35 @@ describe('the session socket', () => {
 		connection.close();
 	});
 
-	it('says nothing before the connection is open, and what it holds once it is', () => {
-		const connection = opened();
+	it('says nothing before its own review has welcomed it, and what it holds once it has', () => {
+		const connection = connected();
 
+		connection.greet(inRound(1));
+		latestSocket().accept();
 		connection.greet(inRound(2));
 		vi.advanceTimersByTime(HELLO_AT_MOST_EVERY);
 		expect(latestSocket().said).toEqual([]);
 
-		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
 
 		expect(latestSocket().said).toEqual([inRound(2)]);
 		connection.close();
+	});
+
+	it('says nothing to another review answering on its port, and lets go of it for good', () => {
+		const page = new RecordingPage();
+		const connection = connected(page);
+		connection.greet(inRound(2));
+		const socket = latestSocket();
+		socket.accept();
+
+		socket.say(welcome({ identity: 'the-next-review-on-this-port' }));
+		vi.advanceTimersByTime(LONGEST_RETRY);
+
+		expect(socket.said).toEqual([]);
+		expect(socket.readyState).toBe(FakeSocket.CLOSED);
+		expect(FakeSocket.opened.at(-1)).toBe(socket);
+		expect(page.strayedOff).toBe(true);
+		expect(page.catchUps).toBe(0);
 	});
 });

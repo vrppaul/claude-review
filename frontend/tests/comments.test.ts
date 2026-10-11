@@ -263,7 +263,7 @@ describe('ending the review', () => {
 			}
 		]);
 		expect(result.comment_count).toBe(1);
-		expect(review.submission.finished).toBe(true);
+		expect(review.link.ending).toBe('finished');
 	});
 
 	it('sends the summary with the comments', async () => {
@@ -293,6 +293,6 @@ describe('ending the review', () => {
 		review.threads.add(newComment({ body: 'test' }));
 
 		await expect(review.submission.submit(true)).rejects.toThrow(`Could not send the review: ${SERVER_ERROR}`);
-		expect(review.submission.finished).toBe(false);
+		expect(review.link.ending).toBeNull();
 	});
 });

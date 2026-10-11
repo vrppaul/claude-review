@@ -79,7 +79,7 @@ class Review:
         self._page = page
         self._images = images
         self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)
-        self._lifetime = ReviewLifetime()
+        self._lifetime = ReviewLifetime(page)
         self._rounds = RoundTracker()
         self._answerer = Answerer(page, clock, lease_seconds=ANSWERER_LEASE_SECONDS)
         self._inbox = AgentInbox(self._lifetime)

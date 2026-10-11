@@ -3,7 +3,8 @@
 A review ends in several ways: the reader sends it for good, closes its tab,
 the process is stopped, or its server stops on its own. Whichever comes
 first ends it for everyone at once — the server, the agent waiting on it,
-the watcher of the tree — and the reason is said once, by that first one.
+the watcher of the tree, the pages still open on it — and the reason is
+said once, by that first one.
 """
 
 import asyncio
@@ -12,6 +13,9 @@ from collections.abc import Awaitable
 from enum import StrEnum, auto
 
 import structlog
+
+from claude_review.domain.interfaces import PageChannel
+from claude_review.domain.page_events import ReviewEnded
 
 log = structlog.get_logger()
 
@@ -36,7 +40,9 @@ class EndReason(StrEnum):
 class ReviewLifetime:
     """Whether a review is still running, and why it ended once it has."""
 
-    def __init__(self) -> None:
+    def __init__(self, page: PageChannel) -> None:
+        # Where the pages open on the review are told it is over, the moment it is
+        self._page = page
         self._ended = asyncio.Event()
         self._reason: EndReason | None = None
 
@@ -50,11 +56,17 @@ class ReviewLifetime:
         return self._reason
 
     def end(self, reason: EndReason) -> None:
-        """End the review, unless something has already: the first reason is the one kept."""
+        """End the review, unless something has already: the first reason is the one kept.
+
+        The pages are told before anything waiting on the end hears of it, so
+        the server stopping cannot close their sockets ahead of the news: a
+        page never told keeps trying to reach a review that is gone.
+        """
         if self.has_ended:
             return
         self._reason = reason
         log.info("review_ended", reason=reason)
+        self._page.tell(ReviewEnded(finished=reason is EndReason.FINISHED))
         self._ended.set()
 
     async def until_ended(self) -> None:

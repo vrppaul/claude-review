@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { flushSync } from 'svelte';
 import { FIRST_RETRY, PageConnection } from '$lib/connection/page-connection';
+import { readDraft } from '$lib/drafts/draft-storage';
 import { ReviewPage } from '$lib/page/review-page.svelte';
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
-import { diffResponse, reviewResponse } from './diff';
+import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
-import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
+import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import type { ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
 import { NO_WORK, pushedAt } from './pushes';
@@ -32,6 +34,27 @@ function newPage(closeTab: () => void = () => undefined): ReviewPage {
 	const page = new ReviewPage(new PageConnection(SESSION_URL), closeTab);
 	openedPages.push(page);
 	return page;
+}
+
+/** A page opened on its review and welcomed on its socket, with a thread written in it. */
+async function openWithAThread(closeTab: () => void = () => undefined): Promise<ReviewPage> {
+	const page = newPage(closeTab);
+	await page.open();
+	latestSocket().accept();
+	latestSocket().say(welcome({ resumed: true }));
+	openedReview(page).threads.add(newComment({ body: 'not sent yet' }));
+	flushSync();
+	return page;
+}
+
+/** Leave the socket to come back on its own, for longer than it ever waits, and say how many it opened meanwhile. */
+function socketsOpenedAfterLongWait(): number {
+	const opened = FakeSocket.opened.length;
+	vi.useFakeTimers();
+	latestSocket().drop();
+	vi.advanceTimersByTime(LONGER_THAN_ANY_RETRY);
+	vi.useRealTimers();
+	return FakeSocket.opened.length - opened;
 }
 
 /** The review an open page holds. */
@@ -212,6 +235,52 @@ describe('opening the page', () => {
 		await openedReview(page).submission.submit(true);
 		await settled();
 		expect(closeTab).toHaveBeenCalledOnce();
+	});
+
+	it('lets go of a review stopped under it, keeping what was not sent for when it is opened again', async () => {
+		serving();
+		const closeTab = vi.fn();
+		const page = await openWithAThread(closeTab);
+
+		latestSocket().deliver({ type: 'ended', finished: false }, 1);
+		await settled();
+
+		expect(openedReview(page).link.ending).toBe('stopped');
+		expect(socketsOpenedAfterLongWait()).toBe(0);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads.map((thread) => thread.body)).toEqual(['not sent yet']);
+		expect(closeTab).not.toHaveBeenCalled();
+	});
+
+	it('lets go of a review sent for good from another tab, forgetting its draft, and leaves its own tab open', async () => {
+		serving();
+		const closeTab = vi.fn();
+		const page = await openWithAThread(closeTab);
+
+		latestSocket().deliver({ type: 'ended', finished: true }, 1);
+		await settled();
+
+		expect(openedReview(page).link.ending).toBe('finished');
+		expect(socketsOpenedAfterLongWait()).toBe(0);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
+		expect(closeTab).not.toHaveBeenCalled();
+	});
+
+	it('hands another review reached on its port nothing of its own, and says its own is over', async () => {
+		serving();
+		const page = await openWithAThread();
+
+		vi.useFakeTimers();
+		latestSocket().drop();
+		vi.advanceTimersByTime(FIRST_RETRY);
+		vi.useRealTimers();
+		const elsewhere = latestSocket();
+		elsewhere.accept();
+		elsewhere.say(welcome({ identity: 'the-next-review-on-this-port', sequence: 0 }));
+		await settled();
+
+		expect(elsewhere.said).toEqual([]);
+		expect(openedReview(page).link.ending).toBe('replaced');
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads).toHaveLength(1);
 	});
 
 	it('says why when the review cannot be opened', async () => {

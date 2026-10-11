@@ -2,10 +2,12 @@ import type { ServerPush, SessionMessage, Welcome } from '$lib/types';
 
 /** Which run of the review the fake server is. */
 export const THIS_RUN = 'this-run';
+/** What the review a test opens names itself, unless it says otherwise: the name its draft is kept under. */
+export const REVIEW_IDENTITY = 'review-under-test';
 
-/** What the server says first on a connection: to this run, handed nothing it missed unless told otherwise. */
+/** What the server says first on a connection: to this review and run, handed nothing it missed unless told otherwise. */
 export function welcome(given: Partial<Welcome> = {}): Welcome {
-	return { type: 'welcome', instance: THIS_RUN, sequence: 0, resumed: false, ...given };
+	return { type: 'welcome', identity: REVIEW_IDENTITY, instance: THIS_RUN, sequence: 0, resumed: false, ...given };
 }
 
 /** The session socket, as far as a test needs one. */

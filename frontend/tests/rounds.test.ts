@@ -37,7 +37,7 @@ describe('sending a round rather than ending the review', () => {
 		await review.submission.submit(false);
 
 		expect(review.threads.count).toBe(1);
-		expect(review.submission.finished).toBe(false);
+		expect(review.link.ending).toBeNull();
 	});
 
 	it('carries what is new since the last round, not the review again', async () => {

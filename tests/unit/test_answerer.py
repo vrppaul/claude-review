@@ -7,12 +7,10 @@ Here the lease is a moment long, so a lapse can be watched happen.
 """
 
 import asyncio
-from typing import override
 
-from claude_review.domain.interfaces import PageChannel
-from claude_review.domain.page_events import AnswererChanged, PageEvent
+from claude_review.domain.page_events import AnswererChanged
 from claude_review.services.review.answerer import Answerer
-from tests.helpers import FixedClock
+from tests.helpers import FixedClock, RecordingPage
 
 # A lease short enough for a test to outlast it several times over
 LEASE_SECONDS = 0.05
@@ -20,17 +18,6 @@ LEASE_SECONDS = 0.05
 OUTLAST_SECONDS = LEASE_SECONDS * 4
 # When anything the agent says is dated, here
 A_MOMENT = 1_791_000_000_000
-
-
-class RecordingPage(PageChannel):
-    """Pages on screen, as a test: what they are told, in order."""
-
-    def __init__(self) -> None:
-        self.told: list[PageEvent] = []
-
-    @override
-    def tell(self, event: PageEvent) -> None:
-        self.told.append(event)
 
 
 def _answerer(page: RecordingPage) -> Answerer:

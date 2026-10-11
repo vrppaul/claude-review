@@ -1,6 +1,6 @@
 /** The draft as the page keeps it in the browser's storage, for a test that writes it there by hand. */
 import { storageKey } from '$lib/utils/preferences';
-import { REVIEW_IDENTITY } from './diff';
+import { REVIEW_IDENTITY } from './fake-socket';
 
 /** Where the page keeps the draft of the review a test opens. */
 export const DRAFT_KEY = storageKey(`draft:${REVIEW_IDENTITY}`);
