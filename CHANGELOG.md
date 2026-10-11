@@ -114,7 +114,9 @@
 ### Fixed
 - **In two columns a removed line facing the line that replaced it takes a
   comment from the keyboard again**: Tab reaches its number, Enter opens
-  the field. j and k still stop once a row.
+  the field. j and k still stop once a row. In one column j on a removed
+  line puts the focus round its number; it was a flat line on the edge of
+  the row above.
 - **A chain of folders in the file tree is one row however long**:
   `src/lib/components` read as "src/lib" and then "components".
 - **Ctrl+Enter in a comment field no longer takes Ctrl+Shift+Enter**, which
