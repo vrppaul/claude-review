@@ -256,10 +256,21 @@ class HeldThreads(WireModel):
         return cls(readable=readable, unreadable_ids=unreadable_ids)
 
 
+class NamedThread(WireModel):
+    """All the server reads of a thread it cannot read whole: the id it goes by."""
+
+    # Held to the rule every id is: one no page or review could have given
+    # names no thread, and owns nothing to keep from being handed out
+    thread_id: WireId
+
+
 def _thread_id_of(thread: JsonValue) -> str | None:
-    """The id a thread the server cannot read says it has, if it says one."""
-    thread_id = thread.get("thread_id") if isinstance(thread, dict) else None
-    return thread_id if isinstance(thread_id, str) else None
+    """The id a thread the server cannot read goes by, if it names one a page could have given it."""
+    try:
+        named = NamedThread.model_validate(thread)
+    except ValidationError:
+        return None
+    return named.thread_id
 
 
 class ThreadsResponse(WireModel):

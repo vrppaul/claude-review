@@ -275,6 +275,21 @@ def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_ou
     assert raised.json()["thread_id"] == "raised-8"
 
 
+@pytest.mark.parametrize(
+    "unreadable_id", ["raised-²", "raised-" + "9" * 5000], ids=["not-an-ascii-digit", "more-digits-than-a-number-takes"]
+)
+def test_a_thread_whose_id_no_page_gives_costs_only_itself(review_page: TestClient, unreadable_id: str) -> None:
+    """The socket is a lifeline first: an id no review hands out must not end it, nor cost the threads beside it."""
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [A_THREAD, {"thread_id": unreadable_id}]})
+        until_the_review_is_on_round(review_page, 2)
+
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+
+        assert next_push(socket, ShowPush) == SHOWN
+    assert [held["thread_id"] for held in until_the_review_holds_threads(review_page, 1)] == [FIRST_THREAD_ID]
+
+
 def test_a_thread_the_server_cannot_read_can_still_be_answered_in(review_page: TestClient) -> None:
     """The browser holds it and draws the answer in it, whatever the server could not make of it."""
     unreadable = thread_on_the_wire(

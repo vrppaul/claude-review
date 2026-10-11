@@ -14,6 +14,8 @@ no draft reads them all from here. The reader answers them, and never
 rewrites them: the agent reads their openings as its own words.
 """
 
+import re
+
 import structlog
 from pydantic import BaseModel, ConfigDict
 
@@ -22,8 +24,10 @@ from claude_review.domain.models import CommentSeverity, ThreadDraft, TurnAuthor
 
 log = structlog.get_logger()
 
-# How the threads the agent raises are named, apart from the page's own
+# How the threads the agent raises are named, apart from the page's own: the
+# prefix, then their number in plain digits
 RAISED_PREFIX = "raised-"
+RAISED_NUMBER = re.compile(r"[0-9]+")
 
 
 class RaisedOpening(BaseModel):
@@ -151,4 +155,4 @@ def _is_raised(thread: ThreadDraft) -> bool:
 def _raised_number(thread_id: str) -> int:
     """The number in an id this review handed out, or 0 for any other id."""
     number = thread_id.removeprefix(RAISED_PREFIX)
-    return int(number) if thread_id.startswith(RAISED_PREFIX) and number.isdigit() else 0
+    return int(number) if thread_id.startswith(RAISED_PREFIX) and RAISED_NUMBER.fullmatch(number) else 0
