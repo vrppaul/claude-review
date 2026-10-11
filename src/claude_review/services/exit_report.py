@@ -12,7 +12,18 @@ from claude_review.domain.models import AgentEvent, PanelCancel, PanelMessage, R
 from claude_review.services.place_words import place_in_markdown
 from claude_review.services.thread_markdown import format_opening
 
+# What heads whatever the agent never took, after the rounds
 UNREAD_HEADING = "## Left unread when the review ended"
+# How each thing it never took is headed, as deep as a round's own threads
+QUESTION_HEADING = "### Question in {thread_id}, {place}"
+MESSAGE_HEADING = "### Message {message_id}"
+TAKEN_BACK_HEADING = "### Message {message_id} taken back"
+# How a panel message names each thread it points at
+POINTED_AT = "About {thread_id}, {place}"
+# What parts the report — a round, the heading, each thing never taken — and
+# the lines of one part
+PART_SEPARATOR = "\n\n"
+LINE_SEPARATOR = "\n"
 
 
 def exit_report(last_round: RoundSubmission | None, unread: list[AgentEvent]) -> str:
@@ -26,7 +37,7 @@ def exit_report(last_round: RoundSubmission | None, unread: list[AgentEvent]) ->
     unread_rounds = [event.markdown for event in unread if isinstance(event, RoundSubmission)]
     rounds = unread_rounds or ([last_round.markdown] if last_round is not None else [])
     others = [_unread(event) for event in _not_taken_back(unread) if not isinstance(event, RoundSubmission)]
-    return "\n\n".join([*rounds, *([UNREAD_HEADING, *others] if others else [])])
+    return PART_SEPARATOR.join([*rounds, *([UNREAD_HEADING, *others] if others else [])])
 
 
 def _not_taken_back(unread: list[AgentEvent]) -> list[AgentEvent]:
@@ -48,13 +59,18 @@ def _unread(event: ThreadQuestion | PanelMessage | PanelCancel) -> str:
     """One thing the agent never took, as it would have read it."""
     match event:
         case ThreadQuestion():
-            heading = f"### Question in {event.thread.thread_id}, {place_in_markdown(event.thread.anchor)}"
-            return "\n".join([heading, format_opening(event.body, event.images)])
+            heading = QUESTION_HEADING.format(
+                thread_id=event.thread.thread_id, place=place_in_markdown(event.thread.anchor)
+            )
+            return LINE_SEPARATOR.join([heading, format_opening(event.body, event.images)])
         case PanelMessage():
-            heading = f"### Message {event.message_id}"
-            threads = [f"About {thread.thread_id}, {place_in_markdown(thread.anchor)}" for thread in event.threads]
-            return "\n".join([heading, format_opening(event.body, event.images), *threads])
+            heading = MESSAGE_HEADING.format(message_id=event.message_id)
+            threads = [
+                POINTED_AT.format(thread_id=thread.thread_id, place=place_in_markdown(thread.anchor))
+                for thread in event.threads
+            ]
+            return LINE_SEPARATOR.join([heading, format_opening(event.body, event.images), *threads])
         case PanelCancel():
-            return f"### Message {event.message_id} taken back"
+            return TAKEN_BACK_HEADING.format(message_id=event.message_id)
         case _:
             assert_never(event)
