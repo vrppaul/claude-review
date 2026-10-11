@@ -4,9 +4,11 @@ Straight to loopback with http.client rather than through urllib: urllib
 sends even 127.0.0.1 through whatever proxy the environment names, and no
 proxy belongs between an agent and a review on the same machine.
 
-Whatever goes wrong comes back as one `ReviewCallError` whose message says
-what happened in a line, because these calls run in an agent's loop, where
-a traceback says nothing about what to do next.
+What goes wrong in a call — no review on the port, no answer in time, a
+refusal, an answer it cannot read — comes back as one `ReviewCallError`
+whose message says so in a line, because these calls run in an agent's
+loop, where a traceback says nothing about what to do next. A request is
+sent as UTF-8 bytes, so nothing the agent can type fails on the way out.
 """
 
 import http.client
@@ -37,6 +39,10 @@ RETAKE_SECONDS = 120.0
 # How much longer than its own wait a poll for events may take to answer
 WAIT_MARGIN_SECONDS = 10.0
 
+# What a request's JSON is written in, as JSON always is (RFC 8259). Handed
+# text, http.client writes it in Latin-1, which has no Cyrillic, no dash, no
+# emoji: the body goes as bytes.
+BODY_ENCODING = "utf-8"
 JSON_HEADERS = {"Content-Type": "application/json"}
 
 EVENTS_ROUTE = "/api/events"
@@ -124,7 +130,8 @@ class ReviewClient:
             if request is None:
                 connection.request(method, route)
             else:
-                connection.request(method, route, body=request.model_dump_json(), headers=JSON_HEADERS)
+                body = request.model_dump_json().encode(BODY_ENCODING)
+                connection.request(method, route, body=body, headers=JSON_HEADERS)
             response = connection.getresponse()
             answer = response.read()
         except TimeoutError as error:
