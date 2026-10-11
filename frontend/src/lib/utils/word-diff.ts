@@ -26,6 +26,12 @@ interface WordRanges {
 	added: TextRange[];
 }
 
+// A line's words, its runs of whitespace, and each other character on its
+// own — read by code point (the `u` flag), so an emoji or a rare CJK
+// character, two UTF-16 units each, is never split into halves a mark could
+// fall between
+const TOKENS = /\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/gu;
+
 // How a changed stretch is marked inside highlighted markup
 const MARK_OPEN = '<span class="cr-word">';
 const MARK_CLOSE = '</span>';
@@ -177,9 +183,9 @@ function withMarks<Line extends HighlightedLine>(line: Line, ranges: TextRange[]
 	return { ...line, markup: markRanges(line.markup, ranges) };
 }
 
-/** Split into words, runs of whitespace, and single punctuation marks. */
+/** Split into words, runs of whitespace, and single characters of any other kind. */
 function tokenize(text: string): string[] {
-	return text.match(/\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g) ?? [];
+	return text.match(TOKENS) ?? [];
 }
 
 /** The character of the text at a place in the markup: an escape such as `&amp;` is the one it stands for. */

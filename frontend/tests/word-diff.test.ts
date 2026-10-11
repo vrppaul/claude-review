@@ -292,3 +292,45 @@ describe('marking ranges inside highlighted markup, whatever the line', () => {
 		);
 	});
 });
+
+// What a line may be made of beyond ASCII: emoji and CJK, some of them one
+// UTF-16 unit, some of them two (a surrogate pair), and two emoji that share
+// the first of their two units
+const WIDE_CHARACTERS = ['a', ' ', '_', '(', '中', '文', '😀', '😁', '𠀀', '𠀁'];
+const LONGEST_LINE = 12;
+// Enough pairs of lines that two emoji sharing a unit meet in the same place
+const WIDE_LINES_TRIED = 2000;
+const wideLine = fastCheck.string({ unit: fastCheck.constantFrom(...WIDE_CHARACTERS), maxLength: LONGEST_LINE });
+
+/** Whether a place in a text falls between the two units of one character. */
+function splitsACharacter(text: string, place: number): boolean {
+	const before = text.charCodeAt(place - 1);
+	const after = text.charCodeAt(place);
+	return before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff;
+}
+
+/** Whether no range starts or ends between the two units of one character. */
+function keepsCharactersWhole(text: string, ranges: TextRange[]): boolean {
+	return ranges.every((range) => !splitsACharacter(text, range.start) && !splitsACharacter(text, range.end));
+}
+
+describe('the words a changed line marks, whatever script it is written in', () => {
+	it('marks an emoji whole when it changes to one that shares its first unit', () => {
+		const { removed, added } = wordRanges('ok 😀', 'ok 😁');
+
+		expect(pick('ok 😀', removed)).toEqual(['😀']);
+		expect(pick('ok 😁', added)).toEqual(['😁']);
+	});
+
+	it('never starts or ends a mark inside a character', () => {
+		fastCheck.assert(
+			fastCheck.property(wideLine, wideLine, (removedText, addedText) => {
+				const { removed, added } = wordRanges(removedText, addedText);
+
+				expect(keepsCharactersWhole(removedText, removed)).toBe(true);
+				expect(keepsCharactersWhole(addedText, added)).toBe(true);
+			}),
+			{ numRuns: WIDE_LINES_TRIED }
+		);
+	});
+});
