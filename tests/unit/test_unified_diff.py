@@ -328,3 +328,85 @@ def test_a_file_with_lines_on_one_side_only_is_read_under_its_path_with_what_hap
     drawn: DrawnFile, *, bare_blanks: bool
 ) -> None:
     assert parse_unified_diff(as_git_writes_it([drawn], bare_blanks=bare_blanks)) == [drawn.file]
+
+
+# What git 2.43 writes for a file of three lines turned into a link to
+# target.txt, and for such a link turned into a file of two lines, beside a
+# file changed the ordinary way: each change of type as a deletion and then a
+# creation of the same path
+FILE_TURNED_INTO_A_LINK = """\
+diff --git a/becomes-link.txt b/becomes-link.txt
+deleted file mode 100644
+index 4cb29ea..0000000
+--- a/becomes-link.txt
++++ /dev/null
+@@ -1,3 +0,0 @@
+-one
+-two
+-three
+diff --git a/becomes-link.txt b/becomes-link.txt
+new file mode 120000
+index 0000000..4cbb553
+--- /dev/null
++++ b/becomes-link.txt
+@@ -0,0 +1 @@
++target.txt
+\\ No newline at end of file
+diff --git a/zz.txt b/zz.txt
+index 7898192..422c2b7 100644
+--- a/zz.txt
++++ b/zz.txt
+@@ -1 +1,2 @@
+ a
++b
+"""
+LINK_TURNED_INTO_A_FILE = """\
+diff --git a/was-link b/was-link
+deleted file mode 120000
+index 4cbb553..0000000
+--- a/was-link
++++ /dev/null
+@@ -1 +0,0 @@
+-target.txt
+\\ No newline at end of file
+diff --git a/was-link b/was-link
+new file mode 100644
+index 0000000..957dd0a
+--- /dev/null
++++ b/was-link
+@@ -0,0 +1,2 @@
++now a file
++second
+"""
+# Git's modes for a file and for a link
+FILE_MODE = "100644"
+LINK_MODE = "120000"
+
+
+def test_a_file_turned_into_a_link_is_one_file_whose_lines_become_the_link() -> None:
+    """Two files under one path would be one key twice on the page, which then draws nothing at all."""
+    [turned, ordinary] = parse_unified_diff(FILE_TURNED_INTO_A_LINK)
+
+    assert (turned.path, turned.status) == ("becomes-link.txt", FileStatus.MODIFIED)
+    assert (turned.old_mode, turned.new_mode) == (FILE_MODE, LINK_MODE)
+    assert [line for hunk in turned.hunks for line in hunk.lines] == [
+        removed_line(1, "one"),
+        removed_line(2, "two"),
+        removed_line(3, "three"),
+        added_line(1, "target.txt"),
+    ]
+    assert len(turned.hunks) == 1, "two hunks would both claim the top of the file"
+    assert ordinary.path == "zz.txt"
+
+
+def test_a_link_turned_into_a_file_is_one_file_whose_link_becomes_its_lines() -> None:
+    [turned] = parse_unified_diff(LINK_TURNED_INTO_A_FILE)
+
+    assert (turned.path, turned.status) == ("was-link", FileStatus.MODIFIED)
+    assert (turned.old_mode, turned.new_mode) == (LINK_MODE, FILE_MODE)
+    assert [line for hunk in turned.hunks for line in hunk.lines] == [
+        removed_line(1, "target.txt"),
+        added_line(1, "now a file"),
+        added_line(2, "second"),
+    ]
+    assert len(turned.hunks) == 1

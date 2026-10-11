@@ -326,6 +326,24 @@ async def test_pure_rename_is_listed_under_its_new_path(tmp_git_repo: Path) -> N
     assert by_path["after.txt"].status == FileStatus.RENAMED
 
 
+async def test_a_file_that_changed_type_is_shown_once(tmp_git_repo: Path) -> None:
+    """A file turned into a link, and a link turned into a file: git writes each as two, the review shows one."""
+    (tmp_git_repo / "target.txt").write_text("pointed at\n")
+    (tmp_git_repo / "was_a_file.txt").write_text("one\ntwo\n")
+    (tmp_git_repo / "was_a_link").symlink_to("target.txt")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "a file and a link")
+    (tmp_git_repo / "was_a_file.txt").unlink()
+    (tmp_git_repo / "was_a_file.txt").symlink_to("target.txt")
+    (tmp_git_repo / "was_a_link").unlink()
+    (tmp_git_repo / "was_a_link").write_text("a file now\n")
+
+    files = await _diff(tmp_git_repo)
+
+    assert [diff_file.path for diff_file in files] == ["was_a_file.txt", "was_a_link"]
+    assert all(diff_file.status == FileStatus.MODIFIED for diff_file in files)
+
+
 async def test_binary_name_containing_a_header_separator(tmp_git_repo: Path) -> None:
     """A binary file has no markers, so its name must survive the header split."""
     (tmp_git_repo / "x b").mkdir()

@@ -42,6 +42,11 @@ UNQUOTED_PATHS = re.compile(f"{re.escape(OLD_SIDE_PREFIX)}(?P<old>.+?){re.escape
 # A permission change: the file's mode before and after
 OLD_MODE_HEADER = "old mode "
 NEW_MODE_HEADER = "new mode "
+# The mode of a file deleted, or created, whole. A file that changed type — a
+# file become a link, a link become a file — git writes as two parts for one
+# path, its deletion and then its creation, each with its mode.
+DELETED_MODE_HEADER = "deleted file mode "
+CREATED_MODE_HEADER = "new file mode "
 BINARY_HEADER = "Binary files "
 # A marker comes with a tab after the path when the path would otherwise be ambiguous
 MARKER_PATH_END = "\t"
@@ -78,6 +83,12 @@ OCTAL_BASE = 8
 # byte that is not is shown replaced rather than lost with the whole diff
 PATH_ENCODING = "utf-8"
 
+# The line a file deleted or created whole starts at, on either side
+FIRST_LINE = 1
+# A hunk joined from two that git wrote has no header of git's own; it starts
+# at the file's first line, where no header is drawn
+JOINED_HUNK_HEADER = ""
+
 
 class HunkStart(BaseModel):
     """A hunk's header: where it stands in its file's part of the diff, and the line each side starts at."""
@@ -94,15 +105,25 @@ class HunkStart(BaseModel):
     new_count: int
 
 
+class FilePart(BaseModel):
+    """One file's part of the diff, read: the file it shows, and the mode it was deleted or created with."""
+
+    model_config = ConfigDict(frozen=True)
+
+    file: DiffFile
+    deleted_mode: str | None
+    created_mode: str | None
+
+
 def parse_unified_diff(raw: str) -> list[DiffFile]:
-    """Every file in git's unified diff, in the order git wrote them."""
-    parts = (part for part in FILE_START.split(raw) if part.strip())
-    return [file for part in parts if (file := _file(part)) is not None]
+    """Every file in git's unified diff, each once, in the order git wrote them."""
+    written = (text for text in FILE_START.split(raw) if text.strip())
+    return _each_path_once([part for text in written if (part := _part(text)) is not None])
 
 
-def _file(part: str) -> DiffFile | None:
+def _part(text: str) -> FilePart | None:
     """One file's part of the diff, or None when no path can be read from it."""
-    lines = part.split("\n")
+    lines = text.split("\n")
     hunk_starts = [start for index, line in enumerate(lines) if (start := _hunk_start(index, line)) is not None]
     # Only what comes before the first hunk is the header. A removed line
     # reading "-- x" arrives as "--- x", and would otherwise pass for a path.
@@ -112,13 +133,61 @@ def _file(part: str) -> DiffFile | None:
     if path is None:
         return None
 
-    return DiffFile(
+    file = DiffFile(
         path=path,
         status=_status(header),
         hunks=_hunks(lines, hunk_starts),
         is_binary=any(line.startswith(BINARY_HEADER) for line in header),
+        # Only a change of mode: a file added or deleted whole has one mode,
+        # which is no change
         old_mode=_mode(header, OLD_MODE_HEADER),
         new_mode=_mode(header, NEW_MODE_HEADER),
+    )
+    return FilePart(
+        file=file, deleted_mode=_mode(header, DELETED_MODE_HEADER), created_mode=_mode(header, CREATED_MODE_HEADER)
+    )
+
+
+def _each_path_once(parts: list[FilePart]) -> list[DiffFile]:
+    """The files the parts show, a path git wrote as deleted and then created read as one file whose type changed.
+
+    The review knows a file by its path, so two files under one would be one
+    key twice to whatever shows them.
+    """
+    files: list[DiffFile] = []
+    previous: FilePart | None = None
+    for part in parts:
+        if previous is not None and _is_type_change(previous, part):
+            files[-1] = _type_changed(previous, part)
+        else:
+            files.append(part.file)
+        previous = part
+    return files
+
+
+def _is_type_change(deleted: FilePart, created: FilePart) -> bool:
+    """Whether two parts git wrote one after the other are the deletion and the creation of one path."""
+    return (
+        deleted.deleted_mode is not None and created.created_mode is not None and deleted.file.path == created.file.path
+    )
+
+
+def _type_changed(deleted: FilePart, created: FilePart) -> DiffFile:
+    """A file whose type changed: what it was, every line removed, and what it is, every line added, in one hunk.
+
+    Each of git's two parts starts at the file's first line; as two hunks of
+    one file they would both claim its top, so they are joined into one, as
+    git writes a file rewritten whole. The modes say what changed.
+    """
+    lines = [line for part in (deleted, created) for hunk in part.file.hunks for line in hunk.lines]
+    joined = DiffHunk(header=JOINED_HUNK_HEADER, old_start=FIRST_LINE, new_start=FIRST_LINE, lines=lines)
+    return DiffFile(
+        path=created.file.path,
+        status=FileStatus.MODIFIED,
+        hunks=[joined] if lines else [],
+        is_binary=deleted.file.is_binary or created.file.is_binary,
+        old_mode=deleted.deleted_mode,
+        new_mode=created.created_mode,
     )
 
 
@@ -218,11 +287,7 @@ def _status(header: list[str]) -> FileStatus:
 
 
 def _mode(header: list[str], mode_header: str) -> str | None:
-    """The mode one side of a permission change gives the file, if the header says one.
-
-    A newly added file has "new file mode" instead, which is the file's only
-    mode rather than a change, so it is not read here.
-    """
+    """The mode a header line of one kind gives the file, if the header has that line."""
     return next((line.removeprefix(mode_header).strip() for line in header if line.startswith(mode_header)), None)
 
 

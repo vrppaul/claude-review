@@ -85,6 +85,8 @@ class DiffFile(BaseModel):
     status: FileStatus
     hunks: list[DiffHunk]
     is_binary: bool = False
+    # The file's mode before and after, when it changed: its permissions, or
+    # its type, as when a file became a link (git's mode 120000)
     old_mode: str | None = None
     new_mode: str | None = None
 
