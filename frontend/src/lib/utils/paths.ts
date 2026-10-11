@@ -4,7 +4,7 @@
  */
 
 /** What stands between a folder and what it holds, in a path. */
-const PATH_SEPARATOR = '/';
+export const PATH_SEPARATOR = '/';
 
 /** A file's own name, without the folders it is in. */
 export function fileName(path: string): string {

@@ -841,6 +841,15 @@
 	}
 }
 
+/* The file tree, as wide as the reader left it */
+.cr-tree {
+	width: var(--cr-tree-width);
+}
+/* A row of the tree, set in by how deep its folder is */
+.cr-tree-row {
+	padding-left: calc(var(--cr-depth) * 0.75rem + 0.5rem);
+}
+
 /* What the file tree leaves behind when it is put away */
 .cr-tree-rail {
 	display: flex;

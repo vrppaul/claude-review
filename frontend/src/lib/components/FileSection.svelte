@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
-	import { fileStats } from '$lib/utils/file-stats';
 	import { messageOf } from '$lib/utils/errors';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
 	import { whenNearViewport } from '$lib/dom/scroll';
 	import { useReview } from '$lib/review/context';
+	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody, { type FileView } from './FileBody.svelte';
 	import Icon from './Icon.svelte';
@@ -33,7 +33,6 @@
 	// Files reads the review's own diff unless a narrower base is chosen, whose removed lines are that base's
 	const reviewOwnsRemovedLines = $derived(!review.diff.narrowed);
 
-	const stats = $derived(fileStats(file));
 	const commentCount = $derived(review.threads.onFile(file.path).length);
 	const collapsed = $derived(review.reading.isFolded(file.path));
 	const viewed = $derived(review.reading.isViewed(file.path));
@@ -118,10 +117,7 @@
 
 		{#if isDiffMode}
 			<span class="cr-muted text-xs">{file.status}</span>
-			<span class="font-mono text-xs">
-				<span style="color: var(--cr-add-text)">+{stats.additions}</span>
-				<span style="color: var(--cr-del-text)">−{stats.deletions}</span>
-			</span>
+			<ChangedLines {file} />
 		{/if}
 
 		{#if commentCount > 0}

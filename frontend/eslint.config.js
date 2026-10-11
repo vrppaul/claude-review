@@ -80,19 +80,6 @@ const NO_NESTED_HELPERS = [
 	{ selector: ':function Property > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER }
 ];
 
-// Components written before the rules below, each listed against the rule
-// it still breaks. Phases 7 and 8 rework them and empty these lists; nothing
-// is added to them, and nothing new is written that would need to be.
-const STILL_TO_CLEAN = {
-	shortNames: ['FileList'],
-	magicNumbers: ['FileList']
-};
-
-/** Where a component still to clean is. */
-function componentFiles(names) {
-	return names.map((name) => `src/lib/components/${name}.svelte`);
-}
-
 // What the page's own code may not do to find an element: a test id is the
 // tests' to rename, and an id is page-wide. Elements announce themselves to
 // whoever needs them; a selector that cannot be avoided reads a data-role.
@@ -182,13 +169,7 @@ export default tseslint.config(
 			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS],
 			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
 			// A switch over every kind of a union is one decision, not one per kind
-			complexity: ['error', { max: 10, variant: 'modified' }]
-		}
-	},
-	{
-		files: ['src/**/*.ts', 'src/**/*.svelte'],
-		ignores: componentFiles(STILL_TO_CLEAN.magicNumbers),
-		rules: {
+			complexity: ['error', { max: 10, variant: 'modified' }],
 			'@typescript-eslint/no-magic-numbers': [
 				'error',
 				{
@@ -214,7 +195,6 @@ export default tseslint.config(
 		ignores: ['src/lib/api/request.ts'],
 		rules: { 'no-restricted-globals': ['error', ...REQUEST_CALLERS] }
 	},
-	{ files: componentFiles(STILL_TO_CLEAN.shortNames), rules: { 'id-length': 'off' } },
 	{
 		ignores: ['node_modules/', 'dist/']
 	}

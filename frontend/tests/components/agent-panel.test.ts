@@ -449,3 +449,19 @@ describe('the agent panel', () => {
 		expect(getByTestId('attached-image').getAttribute('src')).toBe(`/api/images/${KEPT_AS}`);
 	});
 });
+
+describe('sizing the panel', () => {
+	it('widens it a step at a time with the arrow keys, leftward being wider', async () => {
+		const user = userEvent.setup();
+		const review = answeredReview();
+		const before = review.layout.agentPanel.width;
+
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		getByTestId('panel-resize').focus();
+		await user.keyboard('{ArrowLeft}');
+
+		expect(review.layout.agentPanel.width).toBeGreaterThan(before);
+		await user.keyboard('{ArrowRight}');
+		expect(review.layout.agentPanel.width).toBe(before);
+	});
+});

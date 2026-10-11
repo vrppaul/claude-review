@@ -127,6 +127,16 @@ describe('finding a file in a long review', () => {
 		expect(getByTestId('sidebar-heading').textContent).toBe('1 of 2');
 	});
 
+	it('draws a chain of folders that each hold one folder as one row', () => {
+		const review = openReview({
+			files: [diffFile({ path: 'src/lib/components/one.ts' }), diffFile({ path: 'src/lib/components/two.ts' })]
+		});
+
+		const { getAllByTestId } = render(FileList, inReview(review));
+
+		expect(getAllByTestId('folder-item').map((folder) => folder.textContent?.trim())).toEqual(['src/lib/components/']);
+	});
+
 	it('folds a directory away and back', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: diffFiles });
@@ -139,5 +149,21 @@ describe('finding a file in a long review', () => {
 
 		await user.click(getAllByTestId('folder-item')[0]);
 		expect(queryAllByTestId('file-item')).toHaveLength(2);
+	});
+});
+
+describe('sizing the tree', () => {
+	it('widens it a step at a time with the arrow keys, rightward being wider', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const before = review.layout.fileTree.width;
+
+		const { getByTestId } = render(FileList, inReview(review));
+		getByTestId('sidebar-resize').focus();
+		await user.keyboard('{ArrowRight}');
+
+		expect(review.layout.fileTree.width).toBeGreaterThan(before);
+		await user.keyboard('{ArrowLeft}');
+		expect(review.layout.fileTree.width).toBe(before);
 	});
 });

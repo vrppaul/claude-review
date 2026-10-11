@@ -10,31 +10,34 @@
 /** Which way the column grows when the pointer moves that way. */
 export type Grows = 'left' | 'right';
 
-export interface Sizing {
-	width: number;
-	grows: Grows;
-	onWidth: (width: number) => void;
+/** A column the reader sizes: how wide it is, and how it is made another width. */
+export interface ColumnWidth {
+	readonly width: number;
+	setWidth(next: number): void;
 }
 
 /** How far the arrow keys move an edge at a time. */
 const STEP = 24;
+
+// Which way along the screen a column's width runs, as the pointer's position does
+const ALONG: Record<Grows, number> = { left: -1, right: 1 };
 
 /** One drag of an edge, from the pointer going down until it is let go. */
 class EdgeDrag {
 	readonly #handle: HTMLElement;
 	readonly #pointerId: number;
 	readonly #startX: number;
-	readonly #width: number;
-	readonly #towards: number;
-	readonly #onWidth: (width: number) => void;
+	readonly #startWidth: number;
+	readonly #along: number;
+	readonly #column: ColumnWidth;
 
-	constructor(event: PointerEvent & { currentTarget: HTMLElement }, { width, grows, onWidth }: Sizing) {
+	constructor(event: PointerEvent & { currentTarget: HTMLElement }, column: ColumnWidth, grows: Grows) {
 		this.#handle = event.currentTarget;
 		this.#pointerId = event.pointerId;
 		this.#startX = event.clientX;
-		this.#width = width;
-		this.#towards = grows === 'left' ? -1 : 1;
-		this.#onWidth = onWidth;
+		this.#startWidth = column.width;
+		this.#along = ALONG[grows];
+		this.#column = column;
 	}
 
 	start(): void {
@@ -44,7 +47,7 @@ class EdgeDrag {
 	}
 
 	readonly #moved = (moved: PointerEvent): void => {
-		this.#onWidth(this.#width + this.#towards * (moved.clientX - this.#startX));
+		this.#column.setWidth(this.#startWidth + this.#along * (moved.clientX - this.#startX));
 	};
 
 	readonly #released = (): void => {
@@ -53,9 +56,13 @@ class EdgeDrag {
 	};
 }
 
-/** Follow the pointer until it is let go, reporting the width it implies. */
-export function dragEdge(event: PointerEvent & { currentTarget: HTMLElement }, sizing: Sizing): void {
-	new EdgeDrag(event, sizing).start();
+/** Follow the pointer until it is let go, sizing the column as it goes. */
+export function dragEdge(
+	event: PointerEvent & { currentTarget: HTMLElement },
+	column: ColumnWidth,
+	grows: Grows
+): void {
+	new EdgeDrag(event, column, grows).start();
 }
 
 /**
@@ -63,10 +70,9 @@ export function dragEdge(event: PointerEvent & { currentTarget: HTMLElement }, s
  *
  * A drag needs a mouse; the same edge has to be movable without one.
  */
-export function stepEdge(event: KeyboardEvent, { width, grows, onWidth }: Sizing): boolean {
-	const towards = grows === 'left' ? -1 : 1;
-	if (event.key === 'ArrowLeft') onWidth(width - towards * STEP);
-	else if (event.key === 'ArrowRight') onWidth(width + towards * STEP);
+export function stepEdge(event: KeyboardEvent, column: ColumnWidth, grows: Grows): boolean {
+	if (event.key === 'ArrowLeft') column.setWidth(column.width - ALONG[grows] * STEP);
+	else if (event.key === 'ArrowRight') column.setWidth(column.width + ALONG[grows] * STEP);
 	else return false;
 
 	event.preventDefault();

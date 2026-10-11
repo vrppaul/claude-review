@@ -10,13 +10,6 @@
 	// Whether the reader is at the foot of the conversation: the conversation
 	// keeps it, and a message sent puts them back there
 	let atFoot = $state(true);
-
-	/** The panel is on the right, so dragging left is what widens it. */
-	const sizing = $derived({
-		width: review.layout.agentPanel.width,
-		grows: 'left' as const,
-		onWidth: (width: number) => review.layout.agentPanel.setWidth(width)
-	});
 </script>
 
 <!-- The conversation about everything a thread is not: who is answering, what has been said, and what is being written -->
@@ -26,7 +19,8 @@
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
 	style:--cr-panel-width="{review.layout.agentPanel.width}px"
 >
-	<EdgeGrip {sizing} label="Resize the panel" testId="panel-resize" />
+	<!-- The panel is on the right, so it grows leftward -->
+	<EdgeGrip column={review.layout.agentPanel} grows="left" label="Resize the panel" testId="panel-resize" />
 	<PanelStatus />
 	<PanelConversation bind:atFoot />
 	<div class="shrink-0 border-t border-base-300 px-3 py-2">
