@@ -95,7 +95,7 @@ describe('being taken to a thread', () => {
 		thread.scrollIntoView = vi.fn();
 		sections.registerThread('comment-1', thread);
 
-		sections.scrollToThread('comment-1', 'a.py');
+		sections.goToThread('comment-1', 'a.py');
 
 		expect(thread.scrollIntoView).toHaveBeenCalled();
 	});
@@ -106,7 +106,7 @@ describe('being taken to a thread', () => {
 		const thread = document.createElement('div');
 		thread.scrollIntoView = vi.fn();
 
-		sections.scrollToThread('comment-1', 'a.py');
+		sections.goToThread('comment-1', 'a.py');
 		expect(file.scrollIntoView).toHaveBeenCalled();
 		expect(thread.scrollIntoView).not.toHaveBeenCalled();
 
@@ -119,7 +119,7 @@ describe('being taken to a thread', () => {
 		const later = document.createElement('div');
 		later.scrollIntoView = vi.fn();
 		const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
-		sections.scrollToThread('comment-1', 'a.py');
+		sections.goToThread('comment-1', 'a.py');
 
 		clock.mockReturnValue(A_MINUTE);
 		sections.registerThread('comment-1', later);
@@ -131,8 +131,8 @@ describe('being taken to a thread', () => {
 	it('does not go to a thread drawn later once the reader has asked for another', () => {
 		const first = document.createElement('div');
 		first.scrollIntoView = vi.fn();
-		sections.scrollToThread('comment-1', 'a.py');
-		sections.scrollToThread('comment-2', 'a.py');
+		sections.goToThread('comment-1', 'a.py');
+		sections.goToThread('comment-2', 'a.py');
 
 		sections.registerThread('comment-1', first);
 

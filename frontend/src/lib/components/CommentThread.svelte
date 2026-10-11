@@ -23,8 +23,9 @@
 	const editing = $derived(review.threads.writing.edit(thread.id));
 </script>
 
-<!-- A thread, drawn the way it is being read: rewritten, folded away, or open -->
-<div bind:this={container} data-testid="comment-thread" data-thread-id={thread.id} class="px-3 py-2">
+<!-- A thread, drawn the way it is being read: rewritten, folded away, or open. The
+	keyboard is put on it when the reader is taken to it, whichever way it is drawn -->
+<div bind:this={container} data-testid="comment-thread" data-thread-id={thread.id} class="px-3 py-2" tabindex="-1">
 	{#if editing}
 		<CommentBox
 			field={editing}

@@ -39,6 +39,50 @@ describe('the keys the review answers', () => {
 		expect(first).toHaveBeenCalled();
 	});
 
+	it('takes the keyboard to the thread n brings into view', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'b.py', body: 'Why?' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('n');
+
+		expect(document.activeElement).toBe(within(sectionOf('b.py')).getByTestId('comment-thread'));
+	});
+
+	it('acts on the file of the thread n landed on, not on the one in view before', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'b.py', body: 'Why?' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('n');
+		await user.keyboard('v');
+
+		expect(review.reading.isViewed('b.py')).toBe(true);
+		expect(review.reading.isViewed('a.py')).toBe(false);
+	});
+
+	it('goes on from the thread the keyboard is on to the line below it, not back to the top', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('n');
+		await user.keyboard('j');
+
+		expect(document.activeElement).toBe(within(sectionOf('b.py')).getByTestId('line-gutter'));
+	});
+
+	it('goes up from the thread the keyboard is on to the line above it', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'b.py', body: 'Why?' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('n');
+		await user.keyboard('k');
+
+		expect(document.activeElement).toBe(within(sectionOf('b.py')).getByTestId('line-gutter'));
+	});
+
 	it('goes to the oldest answer nobody has read, and reads it', async () => {
 		const user = userEvent.setup();
 		const id = review.threads.add(newComment({ file: 'b.py', body: 'Why?' }));

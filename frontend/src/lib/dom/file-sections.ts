@@ -119,7 +119,7 @@ export class FileSections {
 		const awaited = this.#awaitedThread;
 		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
 			this.#awaitedThread = null;
-			bringToCentre(element);
+			arriveAt(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
 	}
@@ -189,7 +189,8 @@ export class FileSections {
 	}
 
 	/**
-	 * Bring a thread into view, building or unfolding its file first if need be.
+	 * Bring a thread into view and put the keyboard on it, building or
+	 * unfolding its file first if need be.
 	 *
 	 * A file's rows are only built once it has been near the viewport, and a
 	 * folded file draws none, so a thread further down the review — restored
@@ -197,11 +198,11 @@ export class FileSections {
 	 * view instead, and the thread follows the moment it is drawn, however
 	 * long that takes.
 	 */
-	scrollToThread(threadId: string, file: string): void {
+	goToThread(threadId: string, file: string): void {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
 			this.#awaitedThread = null;
-			bringToCentre(drawn);
+			arriveAt(drawn);
 			return;
 		}
 		this.scrollToFile(file);
@@ -243,7 +244,14 @@ export class FileSections {
 	}
 }
 
-/** Scroll smoothly until an element stands in the middle of its scrolling area. */
-function bringToCentre(element: HTMLElement): void {
-	element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+/**
+ * Scroll smoothly until a thread stands in the middle of its scrolling area,
+ * and put the keyboard on it: the reader is there now, and the next key — a
+ * line down, the next file, marking it viewed — acts from there rather than
+ * from where the keyboard was before. The scroll is under way, so taking the
+ * keyboard does not move the screen again.
+ */
+function arriveAt(thread: HTMLElement): void {
+	thread.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	thread.focus({ preventScroll: true });
 }

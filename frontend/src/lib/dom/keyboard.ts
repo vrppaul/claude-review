@@ -35,12 +35,27 @@ function lineNumbers(): HTMLElement[] {
 	return Array.from(document.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
 }
 
-/** Move focus one line down or up, starting at the top when nothing is focused. */
-export function moveByLine(step: 1 | -1): void {
-	const all = lineNumbers();
-	if (all.length === 0) return;
+/** Whether an element comes after another in the document. */
+function follows(element: Element, other: Element): boolean {
+	return (other.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
 
-	const at = document.activeElement instanceof HTMLElement ? all.indexOf(document.activeElement) : -1;
-	const next = at === -1 ? 0 : Math.min(all.length - 1, Math.max(0, at + step));
-	all[next]?.focus();
+/**
+ * The line a step lands on from whatever has the focus: the next or the
+ * previous line from a line; from anything else on the page — a thread the
+ * reader was taken to, a button in a file's header — the first line below it
+ * or the last above it; from nothing, the first line. Never past either end.
+ */
+function steppedTo(lines: HTMLElement[], focused: Element | null, step: 1 | -1): HTMLElement | undefined {
+	if (focused === null || focused === document.body) return lines.at(0);
+	const at = lines.findIndex((line) => line === focused);
+	if (at !== -1) return lines[Math.min(lines.length - 1, Math.max(0, at + step))];
+	const beyond =
+		step === 1 ? lines.find((line) => follows(line, focused)) : lines.findLast((line) => follows(focused, line));
+	return beyond ?? (step === 1 ? lines.at(-1) : lines.at(0));
+}
+
+/** Move focus one line down or up, from wherever the focus is, starting at the top when nothing is focused. */
+export function moveByLine(step: 1 | -1): void {
+	steppedTo(lineNumbers(), document.activeElement, step)?.focus();
 }

@@ -46,6 +46,20 @@ describe('stepping through the threads', () => {
 		expect(brought).toEqual(['one', 'one']);
 	});
 
+	it('puts the keyboard on the thread without moving the screen again, which is already on its way there', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		const [thread] = review.threads.all;
+		const drawn = document.createElement('div');
+		drawn.scrollIntoView = () => undefined;
+		const focusedWith: (FocusOptions | undefined)[] = [];
+		drawn.focus = (options) => focusedWith.push(options);
+		review.sections.registerThread(thread.id, drawn);
+
+		review.navigator.step(1);
+
+		expect(focusedWith).toEqual([{ preventScroll: true }]);
+	});
+
 	it('has nothing to step to when there are no threads', () => {
 		const brought = drawThreads();
 

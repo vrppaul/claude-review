@@ -70,7 +70,7 @@ export class Navigator {
 		if (next) this.reveal(next);
 	}
 
-	/** Bring a thread into view, and go on from it the next time the reader steps. */
+	/** Bring a thread into view with the keyboard on it, and go on from it the next time the reader steps. */
 	reveal(thread: Thread): void {
 		this.#at = { thread: thread.id, among: this.#threads.all };
 		this.#revealOnLines(thread.id, anchorLines(thread.anchor));
@@ -107,6 +107,6 @@ export class Navigator {
 		// A folded file has no thread on screen to move to, so it is opened
 		// first; the thread is brought into view once it is drawn
 		this.#reading.unfold(lines.file);
-		this.#sections.scrollToThread(threadId, lines.file);
+		this.#sections.goToThread(threadId, lines.file);
 	}
 }
