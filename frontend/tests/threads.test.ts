@@ -167,6 +167,17 @@ describe('a thread is a conversation', () => {
 		expect(getAllByTestId('open-reply')).toHaveLength(2);
 	});
 
+	it('offers no delete of a thread the agent raised, which the review keeps whatever a page says, but lets it be settled', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+
+		expect(getAllByTestId('delete-comment')).toHaveLength(1);
+		expect(getAllByTestId('resolve-comment')).toHaveLength(2);
+	});
+
 	it('asks before a thread is deleted, and deletes it only on yes', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(onTheAddedLine('Why 3?'));

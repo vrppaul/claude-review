@@ -24,7 +24,9 @@
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
 	// Which round it went out in, if it has
 	const sentIn = $derived(review.threads.sentInRound(thread.id));
-	// The agent's own words open a thread it raised: the reader answers them, and never rewrites them
+	// A thread the agent raised is the agent's: the reader answers its words and
+	// settles it, and never rewrites it nor deletes it — the review keeps it
+	// whatever a page says, and it would come back
 	const raised = $derived(raisedByAgent(thread));
 	// Whether the reader is being asked if the thread, and all said in it, may go
 	let askingToDelete = $state(false);
@@ -81,14 +83,16 @@
 				Resolve
 			</button>
 		{/if}
-		<button
-			type="button"
-			data-testid="delete-comment"
-			class="btn btn-ghost btn-xs hover:text-error"
-			onclick={() => (askingToDelete = true)}
-		>
-			Delete
-		</button>
+		{#if !raised}
+			<button
+				type="button"
+				data-testid="delete-comment"
+				class="btn btn-ghost btn-xs hover:text-error"
+				onclick={() => (askingToDelete = true)}
+			>
+				Delete
+			</button>
+		{/if}
 	</div>
 </div>
 {#if askingToDelete}
