@@ -46,6 +46,11 @@ PINNED_SETTINGS = (
     "core.quotePath=true",
     # A larger file is binary to the diff, which then reads none of it
     f"core.bigFileThreshold={LARGEST_FILE_SHOWN_BYTES}",
+    # A file whose line endings the reader's autocrlf would convert is staged
+    # anyway: core.safecrlf guards the reader's own index from a conversion
+    # that cannot be undone, and the staging writes only one of its own,
+    # thrown away after — refused, the review of such a tree could not open
+    "core.safecrlf=false",
 )
 # How git is handed a setting on its command line, and the settings so handed
 SETTING_OPTION = "-c"

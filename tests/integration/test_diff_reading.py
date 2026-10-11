@@ -504,3 +504,14 @@ async def test_the_server_goes_on_answering_while_a_large_diff_is_read() -> None
 
     assert len(await reading) == FILES_IN_A_LARGE_DIFF
     assert turns > 1, "the loop came back to nothing else until the whole diff was read"
+
+
+async def test_a_reader_who_refuses_unsafe_line_endings_can_still_open_a_review(tmp_git_repo: Path) -> None:
+    """Git refuses to stage a CRLF file it would convert under core.safecrlf; the review's own index is no one's to guard."""
+    git(tmp_git_repo, "config", "core.autocrlf", "input")
+    git(tmp_git_repo, "config", "core.safecrlf", "true")
+    (tmp_git_repo / "install.bat").write_bytes(b"@echo off\r\necho hi\r\n")
+
+    files = await _diff(tmp_git_repo)
+
+    assert [diff_file.path for diff_file in files] == ["install.bat"]
