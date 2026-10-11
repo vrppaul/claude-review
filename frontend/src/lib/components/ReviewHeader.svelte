@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import { counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
@@ -71,8 +72,7 @@
 			{#if inRounds}
 				{review.threads.unsent.length} unsent · {review.threads.count}
 			{:else}
-				{review.threads.count}
-				{review.threads.count === 1 ? 'comment' : 'comments'}
+				{counted(review.threads.count, 'comment', 'comments')}
 			{/if}
 		</span>
 

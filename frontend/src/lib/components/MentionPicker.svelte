@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
+	import { counted } from '$lib/utils/words';
 	import { keyOf, optionIdOf, type Mentionable, type Mentions } from './mentions.svelte';
 	import PopoverPanel from './PopoverPanel.svelte';
 
@@ -20,7 +21,7 @@
 	function threadState(thread: Thread): string {
 		if (thread.anchor.outdated) return 'outdated';
 		if (thread.resolved) return 'resolved';
-		if (thread.turns.length > 0) return `${thread.turns.length} ${thread.turns.length === 1 ? 'turn' : 'turns'}`;
+		if (thread.turns.length > 0) return counted(thread.turns.length, 'turn', 'turns');
 		return '';
 	}
 

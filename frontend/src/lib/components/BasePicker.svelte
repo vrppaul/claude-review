@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
+	import { counted } from '$lib/utils/words';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
@@ -59,9 +60,7 @@
 
 	/** What a row says about a base on its right: its size, or its age. */
 	function meta(version: ReviewVersion): string {
-		if (version.changed !== null) {
-			return `${version.changed} ${version.changed === 1 ? 'file' : 'files'}`;
-		}
+		if (version.changed !== null) return counted(version.changed, 'file', 'files');
 		return version.at === null ? '' : timeAgo(version.at, review.clock.now);
 	}
 </script>

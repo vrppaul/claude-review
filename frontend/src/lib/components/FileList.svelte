@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import type { DiffFile, FileStatus } from '$lib/types';
+	import type { DiffFile, FileStatus, ReviewMode } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
+	import { counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import EdgeGrip from './EdgeGrip.svelte';
 	import Icon from './Icon.svelte';
@@ -85,10 +86,11 @@
 		else foldedFolders.add(path);
 	}
 
-	const sidebarNoun: Record<string, string> = {
-		diff: 'changed file',
-		files: 'file',
-		transcript: 'message'
+	// What the tree counts, in each kind of review
+	const COUNTED_AS: Record<ReviewMode, { one: string; many: string }> = {
+		diff: { one: 'changed file', many: 'changed files' },
+		files: { one: 'file', many: 'files' },
+		transcript: { one: 'message', many: 'messages' }
 	};
 
 	/** The tree is on the left, so dragging right is what widens it. */
@@ -99,11 +101,11 @@
 	});
 
 	const heading = $derived.by(() => {
-		const noun = sidebarNoun[review.mode] ?? 'file';
+		const noun = COUNTED_AS[review.mode];
 		const total = review.diff.files.length;
 		const shown = matching.length;
-		const counted = shown === total ? `${total} ${noun}${total === 1 ? '' : 's'}` : `${shown} of ${total}`;
-		return review.reading.viewedCount > 0 ? `${counted} · ${review.reading.viewedCount} viewed` : counted;
+		const listed = shown === total ? counted(total, noun.one, noun.many) : `${shown} of ${total}`;
+		return review.reading.viewedCount > 0 ? `${listed} · ${review.reading.viewedCount} viewed` : listed;
 	});
 </script>
 

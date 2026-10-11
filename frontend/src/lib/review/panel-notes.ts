@@ -9,6 +9,7 @@ import { anchorShortPlace } from '$lib/anchors/views';
 import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 import type { Anchor, FollowOutcome } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
+import { counted } from '$lib/utils/words';
 
 // Pushes were missed that the server could not hand over again
 const CONNECTION_LOST = 'connection lost for a while — anything said meanwhile may be missing';
@@ -19,8 +20,7 @@ const NO_REASON = 'reload the review';
 
 /** The diff taken again: how many files the review holds now, and what following the threads did. */
 export function retakenNote(fileCount: number, moved: FollowOutcome): string {
-	const files = `${fileCount} ${fileCount === 1 ? 'file' : 'files'}`;
-	return [`diff retaken · ${files}`, ...followWords(moved)].join(PHRASE_BREAK);
+	return [`diff retaken · ${counted(fileCount, 'file', 'files')}`, ...followWords(moved)].join(PHRASE_BREAK);
 }
 
 export function diffNotTakenNote(error: unknown): string {

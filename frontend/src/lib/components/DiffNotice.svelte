@@ -5,6 +5,7 @@
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 	import { messageOf } from '$lib/utils/errors';
+	import { counted } from '$lib/utils/words';
 	import Icon from './Icon.svelte';
 
 	// What a bar says when the diff it asked for could not be taken, and nothing said why
@@ -73,7 +74,7 @@
 		}
 		if (since === null) return 'Diff retaken';
 		if (count === 0) return `Diff retaken — nothing has changed since round ${since}`;
-		return `Diff retaken — ${count} ${count === 1 ? 'file has' : 'files have'} changed since round ${since}`;
+		return `Diff retaken — ${counted(count, 'file has', 'files have')} changed since round ${since}`;
 	}
 
 	async function showWhatChanged() {
@@ -98,8 +99,7 @@
 	>
 		<Icon name="notice" class="h-3 w-3 shrink-0" />
 		<span>
-			The working tree has moved on — {moved}
-			{moved === 1 ? 'file has' : 'files have'} changed since this diff was taken.
+			The working tree has moved on — {counted(moved, 'file has', 'files have')} changed since this diff was taken.
 		</span>
 		<div class="flex-1"></div>
 		{#if failed}
@@ -158,12 +158,10 @@
 			{#if review.diff.files.length === 0}
 				Nothing has changed — {review.diff.phrase}.
 			{:else}
-				Showing {review.diff.phrase} — {review.diff.files.length}
-				{review.diff.files.length === 1 ? 'file' : 'files'}.
+				Showing {review.diff.phrase} — {counted(review.diff.files.length, 'file', 'files')}.
 			{/if}
 			{#if offScreen.length > 0}
-				{offScreen.length}
-				{offScreen.length === 1 ? 'thread is' : 'threads are'} not on this screen.
+				{counted(offScreen.length, 'thread is', 'threads are')} not on this screen.
 			{/if}
 		</span>
 		<div class="flex-1"></div>

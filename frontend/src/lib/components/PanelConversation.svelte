@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { fileName } from '$lib/utils/paths';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
@@ -154,7 +155,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 										class="cr-thread-chip"
 										onclick={() => review.sections.showFile(path)}
 									>
-										{path.split('/').pop()}
+										{fileName(path)}
 									</button>
 								{/each}
 							</div>

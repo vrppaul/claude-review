@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
+	import { fileName } from '$lib/utils/paths';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
@@ -75,7 +76,7 @@
 					class="cr-thread-chip"
 					onclick={() => review.sections.showFile(path)}
 				>
-					{path.split('/').pop()}
+					{fileName(path)}
 				</button>
 			{/each}
 		</div>

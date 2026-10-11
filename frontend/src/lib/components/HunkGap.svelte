@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ContextGap } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
+	import { counted } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import Icon from './Icon.svelte';
 
@@ -23,17 +24,9 @@
 	const reading = $derived(drawing.isReading(gap));
 	const windowSize = $derived(gap.next === null ? 0 : gap.next.end - gap.next.start + 1);
 	// What a gap that is not read into says of itself
-	const unchanged = $derived(`${gap.hidden} unchanged ${linesWord(gap.hidden)}`);
-	const label = $derived(
-		windowSize === gap.hidden
-			? `Show the ${gap.hidden} hidden ${linesWord(gap.hidden)}`
-			: `Show ${windowSize} more of ${gap.hidden} hidden ${linesWord(gap.hidden)}`
-	);
-
-	/** "line" or "lines", as many as there are. */
-	function linesWord(count: number): string {
-		return count === 1 ? 'line' : 'lines';
-	}
+	const unchanged = $derived(counted(gap.hidden, 'unchanged line', 'unchanged lines'));
+	const hidden = $derived(counted(gap.hidden, 'hidden line', 'hidden lines'));
+	const label = $derived(windowSize === gap.hidden ? `Show the ${hidden}` : `Show ${windowSize} more of ${hidden}`);
 
 	async function reveal() {
 		failed = null;

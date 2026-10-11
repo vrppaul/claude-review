@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
 	import { assembleText } from '$lib/utils/renderable';
+	import { counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 
@@ -14,9 +15,7 @@
 	const fullText = $derived(assembleText(file, review.mode));
 	const commentCount = $derived(review.threads.onFile(file.path).length);
 	// One piece of text: split across lines, the count and its word would read apart
-	const commentNote = $derived(
-		`${commentCount} ${commentCount === 1 ? 'comment' : 'comments'} — switch to Raw to view`
-	);
+	const commentNote = $derived(`${counted(commentCount, 'comment', 'comments')} — switch to Raw to view`);
 </script>
 
 <div data-testid="preview-view" class="p-4">

@@ -1,14 +1,11 @@
 import type { LineAnchor, LineSide } from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
 import { lineRangeLabel } from '$lib/anchors/line-label';
+import { fileName } from '$lib/utils/paths';
 
 // What may follow a line token inside a longer one: `@a.py:1-2` sits inside
 // `@a.py:1-20`, so a digit or a dash after it means it is not this token
 const LONGER_TOKEN = /[\d-]/;
-
-function fileName(path: string): string {
-	return path.split('/').pop() ?? path;
-}
 
 function label(anchor: LineAnchor): string {
 	return lineRangeLabel(anchor.side, anchor.start_line, anchor.end_line);

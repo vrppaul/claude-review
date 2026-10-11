@@ -2,6 +2,7 @@
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
+	import { counted } from '$lib/utils/words';
 	import AgentPanel from './AgentPanel.svelte';
 	import DiffNotice from './DiffNotice.svelte';
 	import DiffView from './DiffView.svelte';
@@ -51,8 +52,7 @@
 				class="flex items-center gap-3 border-b border-base-300 bg-base-200 px-4 py-1.5 text-xs"
 			>
 				<span>
-					Picked up {review.restoredCount}
-					{review.restoredCount === 1 ? 'comment' : 'comments'} you had not sent yet.
+					Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
 				</span>
 				<button class="btn btn-ghost btn-xs" onclick={() => review.dismissRestored()}>Dismiss</button>
 			</div>

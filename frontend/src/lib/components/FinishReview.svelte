@@ -4,6 +4,7 @@
 	import { anchorPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
+	import { counted } from '$lib/utils/words';
 
 	const review = useReview();
 
@@ -32,8 +33,7 @@
 			{#if submission.inRounds}
 				{unsent} unsent of {review.threads.count}
 			{:else}
-				{review.threads.count}
-				{review.threads.count === 1 ? 'comment' : 'comments'}
+				{counted(review.threads.count, 'comment', 'comments')}
 			{/if}
 		</span>
 	</div>

@@ -16,7 +16,7 @@ const LAYERS = {
 	dom: [],
 	api: ['types'],
 	connection: ['types'],
-	anchors: ['types'],
+	anchors: ['types', 'utils'],
 	drafts: ['types', 'utils'],
 	reader: ['types', 'utils', 'api'],
 	guide: ['types', 'api'],
