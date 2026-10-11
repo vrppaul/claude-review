@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick, untrack } from 'svelte';
 	import { useReview } from '$lib/review/context';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
@@ -13,6 +14,18 @@
 	$effect(() => {
 		if (!container) return;
 		return review.sections.watchInView(container);
+	});
+
+	// A new diff redraws what lies above the reader as well: they stay on the
+	// line they were reading, not at the same distance from the top, which
+	// would put them in another file. Read before the new diff is drawn, put
+	// back once it is; nothing but the diff itself starts it.
+	$effect.pre(() => {
+		void review.diff.files;
+		const area = untrack(() => container);
+		const place = area ? untrack(() => review.sections.readingPlace(area)) : null;
+		if (!area || place === null) return;
+		void tick().then(() => review.sections.returnTo(area, place));
 	});
 </script>
 

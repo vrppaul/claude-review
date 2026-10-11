@@ -29,6 +29,12 @@ describe('a file in the review', () => {
 		expect(getByText('−1')).toBeTruthy();
 	});
 
+	it('says which line each row is at its number, for the reader to be kept on it across a new diff', () => {
+		const { getAllByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+
+		expect(getAllByTestId('line-gutter').map((number) => number.dataset.place)).toEqual(['new:1', 'old:2', 'new:2']);
+	});
+
 	it('folds the body away and brings it back', async () => {
 		const user = userEvent.setup();
 		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));

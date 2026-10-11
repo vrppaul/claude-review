@@ -11,6 +11,7 @@
  */
 
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
+import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
@@ -130,6 +131,19 @@ export class FileSections {
 	 */
 	watchInView(root: HTMLElement): () => void {
 		return this.#band.watch(root, this.#sections.values());
+	}
+
+	/** Where the reader is reading in an area: the first line still showing at its top, in the file being read. */
+	readingPlace(root: HTMLElement): ReadingPlace | null {
+		const path = this.fileInView;
+		const section = path === null ? undefined : this.#sections.get(path);
+		return path === null || section === undefined ? null : readingPlaceIn(path, section, root);
+	}
+
+	/** Put the reader back where they were reading, as near as what is drawn now allows; nowhere, if the file left. */
+	returnTo(root: HTMLElement, place: ReadingPlace): void {
+		const section = this.#sections.get(place.path);
+		if (section) bringBack(place, section, root);
 	}
 
 	/** The file the reader is in: the one a line of which has the focus, if one has, or else the one in view. */
