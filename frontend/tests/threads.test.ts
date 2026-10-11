@@ -145,6 +145,35 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.unread.length).toBe(0);
 	});
 
+	it('draws as new only the answers that arrived since the reader last looked', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.reading.markRead(id);
+		review.threads.addTurn(id, { author: 'reader', body: 'Then say so in the docstring', images: [] });
+		review.threads.receiveReply(id, 'Added', null);
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+		const [read, unread] = getAllByTestId('thread-answer');
+
+		expect(read.classList).not.toContain('cr-answer-new');
+		expect(unread.classList).toContain('cr-answer-new');
+	});
+
+	it('draws every answer that arrived while the reader was away as new, and none once they look', async () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And why here?', images: [] });
+		review.threads.receiveReply(id, 'Because of the retry path', null);
+		review.threads.receiveReply(id, 'And here because the caller retries', null);
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+		const answers = getAllByTestId('thread-answer');
+		expect(answers.map((answer) => answer.classList.contains('cr-answer-new'))).toEqual([true, true]);
+
+		review.threads.reading.markRead(id);
+		flushSync();
+		expect(answers.map((answer) => answer.classList.contains('cr-answer-new'))).toEqual([false, false]);
+	});
+
 	it('reads an answer the keyboard comes to, as one the mouse clicks on', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.receiveReply(id, 'It moved into the config default', null);

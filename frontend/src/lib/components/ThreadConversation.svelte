@@ -21,7 +21,6 @@
 	const exchanges = $derived(exchangesOf(thread));
 	// What a suggestion in the thread replaces: what the comment was written on
 	const replaced = $derived(anchorReplaces(thread.anchor));
-	const unread = $derived(review.threads.reading.isUnread(thread.id));
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
 
@@ -73,7 +72,7 @@
 					<div
 						data-testid="thread-answer"
 						data-tour="answer"
-						class={['cr-answer', unread && answerIndex === exchange.answers.length - 1 && 'cr-answer-new']}
+						class={['cr-answer', review.threads.reading.isNewAnswer(thread.id, answer.id) && 'cr-answer-new']}
 					>
 						<p class="cr-who"><strong>Agent</strong> {said(answer.at)}</p>
 						<MarkdownRenderer text={answer.body} dense />

@@ -16,17 +16,25 @@ import type { AwaitedQuestion } from '$lib/types';
 
 /** What a thread with nothing asked of it is waiting for: nothing. */
 const NOTHING_AWAITED: readonly AwaitedQuestion[] = [];
+/** The answers known to be unread in a thread new for some other reason: none. */
+const NO_ANSWERS: readonly string[] = [];
 
 export class ThreadReading {
 	readonly #folded = new SvelteSet<string>();
-	readonly #unread = new SvelteSet<string>();
+	/**
+	 * Threads with something nobody has looked at, and which of their
+	 * answers that is, by id: none for a thread the agent raised, whose
+	 * opening is what is new, nor for one a reload brought back unread — the
+	 * draft keeps that a thread is unread, not which answers made it so.
+	 */
+	readonly #unread = new SvelteMap<string, readonly string[]>();
 	// Questions with the agent, by thread, oldest first
 	readonly #awaiting = new SvelteMap<string, AwaitedQuestion[]>();
 
 	/** @param read how the threads were being read before a reload */
 	constructor(read: ThreadsRead) {
 		for (const threadId of read.folded) this.#folded.add(threadId);
-		for (const threadId of read.unread) this.#unread.add(threadId);
+		for (const threadId of read.unread) this.#unread.set(threadId, NO_ANSWERS);
 		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
 			this.#awaiting.set(threadId, waiting);
 		}
@@ -47,8 +55,19 @@ export class ThreadReading {
 		return this.#unread.has(threadId);
 	}
 
+	/** Something in the thread is new — the thread itself, raised by the agent. */
 	markUnread(threadId: string): void {
-		this.#unread.add(threadId);
+		if (!this.#unread.has(threadId)) this.#unread.set(threadId, NO_ANSWERS);
+	}
+
+	/** An answer arrived in the thread, and nobody has looked at it yet. */
+	answerArrived(threadId: string, answerId: string): void {
+		this.#unread.set(threadId, [...(this.#unread.get(threadId) ?? NO_ANSWERS), answerId]);
+	}
+
+	/** Whether an answer arrived after the reader last looked at its thread. */
+	isNewAnswer(threadId: string, answerId: string): boolean {
+		return this.#unread.get(threadId)?.includes(answerId) ?? false;
 	}
 
 	markRead(threadId: string): void {
@@ -100,7 +119,7 @@ export class ThreadReading {
 	get kept(): ThreadsRead {
 		return {
 			folded: [...this.#folded],
-			unread: [...this.#unread],
+			unread: [...this.#unread.keys()],
 			awaiting: Object.fromEntries(this.#awaiting)
 		};
 	}

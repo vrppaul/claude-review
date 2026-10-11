@@ -383,7 +383,7 @@ export class Threads {
 			...answered,
 			turns: [...answered.turns, turn]
 		}));
-		this.reading.markUnread(id);
+		this.reading.answerArrived(id, turn.id);
 		return true;
 	}
 
