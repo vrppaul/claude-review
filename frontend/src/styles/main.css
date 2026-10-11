@@ -171,7 +171,7 @@
  * the reader's own marks on someone else's code.
  */
 .cr-comment {
-	max-width: 96ch;
+	max-width: var(--cr-comment-measure);
 	border-left: 2px solid var(--cr-mark);
 	background: var(--cr-mark-tint);
 	/* Read, not coded: the diff table around it sets a monospace face that
@@ -589,6 +589,10 @@
 }
 .cr-field:focus {
 	border-color: var(--cr-mark);
+}
+/* A field that grows with what is written in it, up to a height, and scrolls from there */
+.cr-field-grows {
+	max-height: var(--cr-field-tallest);
 }
 
 /* A settled thread gives back its space and its mark colour */

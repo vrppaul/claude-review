@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
 	import type { DiffLine, LineSide } from '$lib/types';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { useReview } from '$lib/review/context';
@@ -13,8 +14,8 @@
 	const PLAIN_COLUMNS = 2;
 	// The sign a diff writes before each kind of line
 	const SIGNS: Record<DiffLine['kind'], string> = { add: '+', delete: '-', context: ' ' };
-	// How a row is tinted for the change on it
-	const TINTS: Record<DiffLine['kind'], string> = { add: 'cr-row-add', delete: 'cr-row-del', context: '' };
+	// How a row is tinted for the change on it; a line the change kept is not
+	const TINTS: Record<DiffLine['kind'], string | null> = { add: 'cr-row-add', delete: 'cr-row-del', context: null };
 
 	interface Props {
 		/** The file made ready to draw, by whoever draws it. */
@@ -29,9 +30,8 @@
 	const commenting = $derived(drawing.commenting);
 
 	/** A row's tint, with the mark of lines being written about added to the change rather than replacing it. */
-	function rowClass(kind: DiffLine['kind'], marked: boolean): string {
-		const change = isDiffMode ? TINTS[kind] : '';
-		return marked ? `${change} cr-row-marked` : change;
+	function rowClass(kind: DiffLine['kind'], marked: boolean): ClassValue {
+		return [isDiffMode && TINTS[kind], marked && 'cr-row-marked'];
 	}
 
 	/**
@@ -68,7 +68,7 @@
 				<tbody>
 					{#each hunk.lines as drawn (drawn.key)}
 						<tr
-							class="cr-row {rowClass(drawn.line.kind, commenting.isMarked(drawn.place))} hover:brightness-110"
+							class={['cr-row', rowClass(drawn.line.kind, commenting.isMarked(drawn.place)), 'hover:brightness-110']}
 							onmouseenter={() => commenting.enter(drawn)}
 						>
 							{#if isDiffMode}

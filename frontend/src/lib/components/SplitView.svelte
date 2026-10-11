@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
 	import type { LinePlace, LineSide } from '$lib/types';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { splitRows, type SplitRow } from '$lib/utils/split-rows';
@@ -32,16 +33,16 @@
 	 * change rather than replacing it, so a line keeps showing what changed on
 	 * it while it is written about.
 	 */
-	function tint(cell: DrawnLine | null, column: LineSide): string {
+	function tint(cell: DrawnLine | null, column: LineSide): ClassValue {
 		if (cell === null) return 'cr-cell-absent';
-		const change = changed(cell, column) ? TINTS[column] : '';
-		return commenting.isMarked(cell.place) ? `${change} cr-cell-marked` : change;
+		return [changed(cell, column) && TINTS[column], commenting.isMarked(cell.place) && 'cr-cell-marked'];
 	}
 
-	function edge(cell: DrawnLine | null, column: LineSide): string {
+	/** A cell's edge: the mark of lines being written about outranks the change, as it does across a row. */
+	function edge(cell: DrawnLine | null, column: LineSide): ClassValue {
 		if (cell === null) return 'cr-edge';
-		if (commenting.isMarked(cell.place)) return 'cr-edge cr-edge-marked';
-		return changed(cell, column) ? `cr-edge ${EDGES[column]}` : 'cr-edge';
+		if (commenting.isMarked(cell.place)) return ['cr-edge', 'cr-edge-marked'];
+		return ['cr-edge', changed(cell, column) && EDGES[column]];
 	}
 
 	/**
@@ -88,7 +89,7 @@
 						{@const rightNotes = notedIn(row.right, 'new')}
 						<tr data-testid="split-row" class="cr-side-del">
 							<td
-								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'old')} {tint(row.left, 'old')}"
+								class={['cr-gutter w-12 p-0 text-right select-none', edge(row.left, 'old'), tint(row.left, 'old')]}
 								onmouseenter={() => row.left && commenting.enter(row.left)}
 							>
 								{#if row.left}
@@ -97,16 +98,17 @@
 							</td>
 							<td
 								data-testid="split-old-code"
-								class="cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap {tint(row.left, 'old')}"
+								class={['cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap', tint(row.left, 'old')]}
 							>
 								{#if row.left}{@html row.left.markup}{/if}
 							</td>
 
 							<td
-								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(row.right, 'new')} {tint(
-									row.right,
-									'new'
-								)}"
+								class={[
+									'cr-gutter cr-side-add w-12 p-0 text-right select-none',
+									edge(row.right, 'new'),
+									tint(row.right, 'new')
+								]}
 								onmouseenter={() => row.right && commenting.enter(row.right)}
 							>
 								{#if row.right}
@@ -115,7 +117,7 @@
 							</td>
 							<td
 								data-testid="split-new-code"
-								class="cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap {tint(row.right, 'new')}"
+								class={['cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap', tint(row.right, 'new')]}
 							>
 								{#if row.right}{@html row.right.markup}{/if}
 							</td>

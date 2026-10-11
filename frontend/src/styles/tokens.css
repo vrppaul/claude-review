@@ -30,6 +30,10 @@
 	/* Comments outrank the code they annotate: they are what the review produces */
 	--cr-comment-size: 0.9375rem;
 	--cr-comment-leading: 1.6;
+	/* The width a comment is read at, rather than the width of the window */
+	--cr-comment-measure: 96ch;
+	/* The tallest a field being written in grows with its text, before it scrolls instead */
+	--cr-field-tallest: 30rem;
 
 	/*
 	 * What lies over what, lowest first: a file's sticky header and a

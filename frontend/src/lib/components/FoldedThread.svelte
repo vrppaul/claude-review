@@ -31,7 +31,7 @@
 <div
 	data-testid={thread.resolved ? 'resolved-thread' : 'folded-thread'}
 	class={[
-		'flex max-w-[96ch] items-center gap-3 rounded-r px-4 py-2',
+		'flex max-w-(--cr-comment-measure) items-center gap-3 rounded-r px-4 py-2',
 		thread.resolved ? 'cr-resolved' : 'cr-folded',
 		!thread.resolved && raisedByAgent(thread) && 'cr-raised'
 	]}

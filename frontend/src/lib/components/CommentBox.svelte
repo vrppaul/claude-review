@@ -8,8 +8,6 @@
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 
-	// The tallest the field grows, in pixels, before it scrolls instead
-	const TALLEST = 480;
 	// What is asked before words written in the field are dropped, and its two answers
 	const DISCARD_QUESTION = 'Discard this comment?';
 	const DISCARD = 'Discard';
@@ -62,7 +60,8 @@
 	const sayable = $derived(field.sayable);
 
 	// Grow with the text: a suggestion inserts several lines at once, and a
-	// fixed box scrolls them out of sight with nothing to say so
+	// fixed box scrolls them out of sight with nothing to say so. How tall it
+	// may grow is the stylesheet's (cr-field-grows)
 	$effect(() => {
 		void field.text;
 		if (textarea) fitToText(textarea);
@@ -79,9 +78,10 @@
 		field.focusTaken();
 	});
 
+	/** As tall as the text in it: measured from nothing, as only the field itself can say. */
 	function fitToText(element: HTMLTextAreaElement) {
 		element.style.height = 'auto';
-		element.style.height = `${Math.min(element.scrollHeight, TALLEST)}px`;
+		element.style.height = `${element.scrollHeight}px`;
 	}
 
 	function save() {
@@ -176,7 +176,7 @@
 		id={fieldId}
 		data-testid="comment-input"
 		aria-label={label ? undefined : REPLY}
-		class="cr-field cr-comment-body textarea min-h-20 w-full"
+		class="cr-field cr-field-grows cr-comment-body textarea min-h-20 w-full"
 		placeholder={PLACEHOLDERS[field.at.kind]}
 		maxlength={review.limits.max_text_length}
 		bind:value={field.text}
