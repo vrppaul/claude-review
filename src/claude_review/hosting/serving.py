@@ -124,6 +124,8 @@ async def serve_review(
             await _run_until_ended(server, listening, review, announcer)
         finally:
             listening.close()
+            # Before the workspace says what it leaves behind: only what was sent
+            await review.discard_unsent_images()
 
         server.raise_if_it_never_came_up()
         return review.exit_report()

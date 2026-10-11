@@ -116,11 +116,13 @@ IMAGE_FORMATS = (
 
 
 class ImageService:
-    """Keeps, finds, hands over and discards the images of one review, for as long as it runs.
+    """Keeps, finds, hands over and discards the images of one review: the one owner of each image's life.
 
     What it keeps is held here rather than read back off the disk: this is
     what says an id exists, so no path is ever built from one, and what keeps
     the review under its limit without counting the directory on every upload.
+    It decides an image's fate at once, before the disk is touched: an image
+    on its way out is no longer kept, so nothing can hand it over meanwhile.
     """
 
     def __init__(self, store: ImageStore, quota: ImageQuota) -> None:
@@ -128,7 +130,7 @@ class ImageService:
         self._quota = quota
         self._kept: dict[str, StoredImage] = {}
         # Images that went out with something said. The agent may still be
-        # about to open them, so they stay until the review ends.
+        # about to open them, so they outlive the review.
         self._sent: set[str] = set()
         # Room taken by uploads still being written, so one arriving in the
         # meantime is measured against them
@@ -220,18 +222,26 @@ class ImageService:
             UnknownImageError: if this review keeps no such image.
             ImageAlreadySentError: if it went out with a message.
         """
-        self.kept(image_id)
+        stored = self.kept(image_id)
         if image_id in self._sent:
             msg = "That image was already sent"
             raise ImageAlreadySentError(msg)
+        await self._remove(stored)
 
+    async def discard_unsent(self) -> None:
+        """Remove every image never handed over: the review is over, and nobody will send one now."""
+        for stored in [stored for image_id, stored in self._kept.items() if image_id not in self._sent]:
+            await self._remove(stored)
+
+    async def _remove(self, stored: StoredImage) -> None:
+        """Take an image off the ledger, then off the disk."""
+        del self._kept[stored.image_id]
         try:
-            await self._store.remove(image_id)
+            await self._store.remove(stored.image_id)
         except OSError as error:
             # Still on the disk, so still kept and counted
-            log.warning("image_left_behind", image_id=image_id, reason=str(error))
-            return
-        del self._kept[image_id]
+            log.warning("image_left_behind", image_id=stored.image_id, reason=str(error))
+            self._kept[stored.image_id] = stored
 
     def _held_bytes(self) -> int:
         """How much the review keeps, uploads still being written included."""

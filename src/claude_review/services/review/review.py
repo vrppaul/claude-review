@@ -153,6 +153,10 @@ class Review:
         """Drop an image the reader took off before sending it."""
         await self._images.discard(image_id)
 
+    async def discard_unsent_images(self) -> None:
+        """Once the review has ended, drop every image the reader pasted and never sent: nobody will send it now."""
+        await self._images.discard_unsent()
+
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
         """The diff against a base the review offers, its own when None."""
         return await self._source.view(base, ignore_whitespace=ignore_whitespace)

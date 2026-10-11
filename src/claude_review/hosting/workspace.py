@@ -62,11 +62,11 @@ def review_workspace(*, writes_trees: bool, announcer: ReviewAnnouncer) -> Gener
     the serving ends, because a review can fail to start after the first tree
     is already written — a port already taken is the ordinary way.
 
-    The images pasted into it stay. The last round names them, and the agent
-    reads it only once the review has ended; the system clears its temporary
-    directory on its own schedule, which is long enough for that. Whoever
-    started the review is told where they are; if nothing was pasted, nothing
-    is left.
+    The images handed to the agent stay; the review drops the rest before it
+    lets the workspace go. The last round names them, and the agent reads it
+    only once the review has ended; the system clears its temporary directory
+    on its own schedule, which is long enough for that. Whoever started the
+    review is told where they are; if nothing was sent, nothing is left.
     """
     images = Path(tempfile.mkdtemp(suffix=IMAGES_SUFFIX))
     objects = Path(tempfile.mkdtemp(suffix=OBJECTS_SUFFIX)) if writes_trees else None

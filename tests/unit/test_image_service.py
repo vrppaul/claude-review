@@ -85,6 +85,21 @@ class InterruptedImageStore(MemoryImageStore):
         return await super().write(name, content)
 
 
+class SlowToRemoveImageStore(MemoryImageStore):
+    """A store whose removals wait until the test lets them go, as a slow disk does."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.removing = asyncio.Event()
+        self.released = asyncio.Event()
+
+    @override
+    async def remove(self, name: str) -> None:
+        self.removing.set()
+        await self.released.wait()
+        await super().remove(name)
+
+
 class StuckImageStore(MemoryImageStore):
     """A store whose files cannot be removed, the way a read-only disk refuses."""
 
@@ -248,3 +263,34 @@ async def test_an_image_that_cannot_be_removed_is_still_counted() -> None:
     assert service.find(stored.image_id) == stored
     with pytest.raises(ImageTooLargeError):
         await service.keep(PNG)
+
+
+async def test_an_image_on_its_way_out_is_never_handed_over() -> None:
+    """Taken off a message while the agent reads its thread: the agent must not get a path to a file being removed."""
+    store = SlowToRemoveImageStore()
+    service = ImageService(store, REVIEW_IMAGE_QUOTA)
+    stored = await service.keep(PNG)
+    discarding = asyncio.create_task(service.discard(stored.image_id))
+    await store.removing.wait()
+
+    handover = service.hand_over([stored.image_id])
+    store.released.set()
+    await discarding
+
+    assert handover.paths == []
+    assert handover.missing == [stored.image_id]
+    assert store.files == {}
+
+
+async def test_images_never_sent_go_when_the_review_ends_and_those_sent_stay(
+    service: ImageService, store: MemoryImageStore
+) -> None:
+    """The agent may open what it was handed after the review is over; nobody will send the rest."""
+    sent = await service.keep(PNG)
+    never_sent = await service.keep(PNG)
+    service.hand_over([sent.image_id])
+
+    await service.discard_unsent()
+
+    assert list(store.files) == [sent.image_id]
+    assert service.find(never_sent.image_id) is None

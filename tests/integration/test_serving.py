@@ -21,10 +21,11 @@ from claude_review.services.review.browser_presence import BrowserPresence
 from claude_review.services.review.content_sources import RepositorySource
 from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import ReviewOpening, open_diff
-from tests.helpers import SETTLE_SECONDS
+from tests.helpers import IMAGES_ROUTE, PNG, SETTLE_SECONDS
 from tests.page_socket import page_socket_held
 
 SUBMIT_ROUTE = "/api/submit"
+MESSAGE_ROUTE = "/api/message"
 THE_ROUND = "Rename the helper."
 # The last round, sent and ending the review
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
@@ -53,6 +54,7 @@ class RecordingAnnouncer(ReviewAnnouncer):
 
     def __init__(self) -> None:
         self.address: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+        self.images_left: list[Path] = []
 
     @override
     async def listening_at(self, url: str) -> None:
@@ -60,7 +62,7 @@ class RecordingAnnouncer(ReviewAnnouncer):
 
     @override
     def images_left_in(self, directory: Path) -> None:
-        """Nothing is pasted in these reviews."""
+        self.images_left.append(directory)
 
 
 class FailingWatch:
@@ -205,3 +207,22 @@ async def test_an_opening_cancelled_by_anything_but_a_stop_signal_stays_cancelle
 
     with pytest.raises(asyncio.CancelledError):
         await opening
+
+
+async def test_images_never_sent_go_with_the_review_and_those_sent_stay_for_the_agent(
+    opening: ReviewOpening, announcer: RecordingAnnouncer
+) -> None:
+    """The agent may open what it was handed once the review is over; nobody will send the rest, so it is not left in /tmp."""
+    serving = asyncio.ensure_future(_served(opening, announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+    async with AsyncClient(base_url=address) as page:
+        pasted = [
+            (await page.post(IMAGES_ROUTE, content=PNG, headers={"Content-Type": "image/png"})).json()["image_id"]
+            for _ in range(2)
+        ]
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "images": pasted[:1]})
+        await page.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    [left_in] = announcer.images_left
+    assert [image.name for image in left_in.iterdir()] == pasted[:1]
