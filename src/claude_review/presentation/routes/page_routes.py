@@ -23,15 +23,13 @@ from claude_review.domain.exceptions import (
     UnknownImageError,
     UnknownVersionError,
 )
-from claude_review.domain.models import ReviewKey
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.refusals import Takes, refusals
 from claude_review.presentation.version_words import (
+    base_on_the_wire,
     changes_on_the_wire,
     key_of,
-    key_text,
-    phrase_of,
     version_on_the_wire,
 )
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork, CancelRequest, ImageResponse, MessageRequest
@@ -109,19 +107,17 @@ async def get_diff(
     base: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
     review: Review = Depends(get_review),
 ) -> DiffResponse:
-    """Serve the review's content against the base the page asks for.
+    """Serve the review's content against the base the page asks for, the review's own when it names none.
 
-    The page is told the key of the base in force and of the review's own,
-    so it asks for the one and goes back to the other without building a key
-    itself.
+    The page is told the key of the base in force, so it asks for it again
+    without building a key itself, and whether it is narrower than the
+    review's own, which it goes back to by naming none.
     """
     view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
     opened_against = review.standing().opened_against
     return DiffResponse(
         files=[DiffFile.of(file) for file in view.files],
-        phrase=phrase_of(view.shown, opened_against) if view.shown is not None else None,
-        base_key=key_text(view.shown) if view.shown is not None else None,
-        review_key=key_text(ReviewKey()) if view.shown is not None else None,
+        base=base_on_the_wire(view.shown, opened_against) if view.shown is not None else None,
         moved=view.moved,
     )
 

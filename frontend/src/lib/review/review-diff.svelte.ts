@@ -10,7 +10,7 @@
 import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
-import type { DiffFile, DiffResponse, ReviewVersion } from '$lib/types';
+import type { DiffFile, DiffResponse, ReviewVersion, ShownBase } from '$lib/types';
 
 export class ReviewDiff {
 	/** Files changed on disk since this diff was taken. */
@@ -20,22 +20,18 @@ export class ReviewDiff {
 	// Lines revealed above the hunks of the diff on screen; every diff starts with none
 	#revealed = $state.raw(new RevealedContext());
 	#files = $state.raw<DiffFile[]>([]);
-	// Which base the diff on screen was taken against, by the key the server
-	// named it with. Null in a review compared against nothing.
-	#base = $state<string | null>(null);
-	// The key of the review's own base: the diff the threads are anchored to.
-	// Null in a review compared against nothing.
-	#reviewKey = $state<string | null>(null);
-	// Which base the reader last asked for, null for whatever the review shows
-	// first. Set the moment they ask, so a diff taken again while theirs is on
-	// its way — a round landing — is taken against what they picked, not
-	// against what is still on screen.
+	// Which base the diff on screen was taken against, as the server named it:
+	// its key, what the header says, and whether it is narrower than the
+	// review's own. It comes with the diff rather than out of the version list,
+	// so the header can speak before it knows everything the diff could be
+	// compared against. Null in a review compared against nothing.
+	#shown = $state.raw<ShownBase | null>(null);
+	// Which base the reader last asked for, null for the review's own. Set the
+	// moment they ask, so a diff taken again while theirs is on its way — a
+	// round landing — is taken against what they picked, not against what is
+	// still on screen.
 	#requestedBase: string | null = null;
 	#versions = $state.raw<ReviewVersion[]>([]);
-	// What the header says the diff on screen is. It comes with the diff rather
-	// than out of the version list, so the header can speak before it knows
-	// everything the diff could be compared against.
-	#phrase = $state('');
 	// Which request is the latest. Two can be in flight — a round landing
 	// while the reader picks a base — and only the latest is drawn, whatever
 	// order the answers come back in.
@@ -47,7 +43,7 @@ export class ReviewDiff {
 	 */
 	constructor(first: DiffResponse, whitespaceIgnored: () => boolean) {
 		this.#whitespaceIgnored = whitespaceIgnored;
-		this.#show(first, first.base_key);
+		this.#show(first);
 	}
 
 	get files(): DiffFile[] {
@@ -59,14 +55,14 @@ export class ReviewDiff {
 		return this.#revealed;
 	}
 
-	/** Which base the diff on screen was taken against. */
+	/** Which base the diff on screen was taken against, by its key. */
 	get base(): string | null {
-		return this.#base;
+		return this.#shown?.key ?? null;
 	}
 
 	/** What the header says the diff on screen is. */
 	get phrase(): string {
-		return this.#phrase;
+		return this.#shown?.phrase ?? '';
 	}
 
 	/** Everything the diff could be taken against, once asked for. */
@@ -81,7 +77,7 @@ export class ReviewDiff {
 	 * anchored to the review's own diff, and only that one draws them all.
 	 */
 	get narrowed(): boolean {
-		return this.#base !== this.#reviewKey;
+		return this.#shown?.narrowed ?? false;
 	}
 
 	/** Take the diff again against the base the reader asked for. */
@@ -93,7 +89,7 @@ export class ReviewDiff {
 			base: against
 		});
 		if (mine !== this.#asking) return;
-		this.#show(data, against ?? data.base_key);
+		this.#show(data);
 	}
 
 	/**
@@ -108,21 +104,21 @@ export class ReviewDiff {
 	 * drawing another — and a base that cannot be taken leaves it saying so
 	 * for good.
 	 */
-	async setBase(key: string): Promise<void> {
+	async setBase(key: string | null): Promise<void> {
 		this.#requestedBase = key;
 		try {
 			await this.take();
 		} catch (error) {
 			// A base that cannot be taken is not asked for again by the next retake
-			if (this.#requestedBase === key) this.#requestedBase = this.#base;
+			if (this.#requestedBase === key) this.#requestedBase = this.base;
 			throw error;
 		}
 	}
 
-	/** Put the review's own diff back, with every thread it holds. */
+	/** Put the review's own diff back, with every thread it holds: the one the server shows when asked for no other. */
 	async showWholeReview(): Promise<void> {
-		if (this.#reviewKey === null) return;
-		await this.setBase(this.#reviewKey);
+		if (this.#shown === null) return;
+		await this.setBase(null);
 	}
 
 	/** Ask what the diff could be taken against. */
@@ -142,13 +138,10 @@ export class ReviewDiff {
 	}
 
 	/** Put a diff that has arrived on screen, with everything that came with it. */
-	#show(data: DiffResponse, base: string | null): void {
+	#show(data: DiffResponse): void {
 		this.#revealed = new RevealedContext();
 		this.#files = data.files;
-		this.#base = base;
-		this.#reviewKey = data.review_key;
-		// None when the review is compared against nothing: files, a transcript
-		this.#phrase = data.phrase ?? '';
+		this.#shown = data.base;
 		// Said with the diff as well as pushed: a review reloaded while the tree
 		// was moving heard the push and lost it, and one opened later never
 		// heard it at all

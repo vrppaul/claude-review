@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -109,7 +109,7 @@ describe('a file the last round rewrote', () => {
 	it('shows only what changed since that round when asked', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
-		server.answer('GET /api/diff', diffResponse({ files: [file], phrase: 'changes since round 2' }));
+		server.answer('GET /api/diff', diffResponse({ files: [file], base: sinceRound(2) }));
 		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 
 		await user.click(getByTestId('file-changed-since'));
@@ -192,7 +192,7 @@ describe('a comment whose line the diff no longer shows', () => {
 			...onTheRemovedLine,
 			anchor: { ...lineAnchor('src/core/session.py', 'new', 9, 9, ['gone']), outdated: true }
 		});
-		fakeServer().answer('GET /api/diff', diffResponse({ files: [restored], phrase: 'changes since round 1' }));
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [restored], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
 
 		const { queryByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));

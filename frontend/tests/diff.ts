@@ -1,6 +1,6 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
 import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
-import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse } from '$lib/types';
+import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse, ShownBase } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
 /** A file as the diff carries it: modified, text, open to comments, with no lines unless given some. */
@@ -55,13 +55,19 @@ export function wholeFile(path: string, ...lines: string[]): DiffFile {
 	});
 }
 
+/** The review's own base, as a diff taken against it names it. */
+export const REVIEW_BASE: ShownBase = { key: 'review', phrase: 'uncommitted changes', narrowed: false };
+
+/** A base narrower than the review's own: what changed since a round began, as a diff taken against it names it. */
+export function sinceRound(round: number): ShownBase {
+	return { key: `round:${round}`, phrase: `changes since round ${round}`, narrowed: true };
+}
+
 /** What the server answers a request for the diff with, around these files. */
 export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 	return {
 		files: [],
-		phrase: 'uncommitted changes',
-		base_key: 'review',
-		review_key: 'review',
+		base: REVIEW_BASE,
 		moved: 0,
 		...given
 	};

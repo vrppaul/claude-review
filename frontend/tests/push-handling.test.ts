@@ -6,7 +6,7 @@ import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
-import { contextLine, diffFile, diffResponse, hunk, reviewResponse } from './diff';
+import { contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
@@ -84,7 +84,7 @@ describe('what the server pushes, taken in', () => {
 		const server = fakeServer();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		// A narrower base shows one file of the review's three
-		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], base_key: 'round:1' }));
+		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], base: sinceRound(1) }));
 		const retake: ServerPush = { type: 'diff', file_count: 3, changes: null };
 
 		handOverNext(review, retake);

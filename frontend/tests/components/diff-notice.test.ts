@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
-import { diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -15,7 +15,6 @@ beforeEach(() => {
 	review = openReview();
 });
 
-const SINCE_ROUND_ONE = 'changes since round 1';
 // How long the news of a retake stays up on its own
 const RETAKEN_SHOWN_FOR = 12_000;
 
@@ -141,7 +140,7 @@ describe('threads the base on screen cannot draw', () => {
 
 	it("counts a thread on a removed line, whose number belongs to the base's left side", async () => {
 		const shown = diffFile({ path: 'a.py', hunks: [hunk([removedLine(3, 'gone')])] });
-		fakeServer().answer('GET /api/diff', diffResponse({ phrase: SINCE_ROUND_ONE, files: [shown] }));
+		fakeServer().answer('GET /api/diff', diffResponse({ base: sinceRound(1), files: [shown] }));
 		await review.diff.setBase('round:1');
 		review.threads.add(newComment({ file: 'a.py', side: 'old', startLine: 3, body: 'on a removed line' }));
 
@@ -181,5 +180,5 @@ describe('threads the base on screen cannot draw', () => {
 
 /** The server answering every diff with an empty one, compared against round 1. */
 function serveNarrowed() {
-	fakeServer().answer('GET /api/diff', diffResponse({ phrase: SINCE_ROUND_ONE }));
+	fakeServer().answer('GET /api/diff', diffResponse({ base: sinceRound(1) }));
 }

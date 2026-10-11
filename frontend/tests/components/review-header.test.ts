@@ -13,7 +13,7 @@ import { inReview, openReview } from '../review';
 const file = diffFile({ path: 'test.py', hunks: [hunk([contextLine(1, 1, 'hello')])] });
 // A review of files compared against nothing: the header names it rather
 // than offering bases
-const READ_WHOLE = { phrase: null };
+const READ_WHOLE = { base: null };
 
 describe('sending the review', () => {
 	let review: Review;

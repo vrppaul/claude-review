@@ -59,11 +59,11 @@ export interface paths {
         };
         /**
          * Get Diff
-         * @description Serve the review's content against the base the page asks for.
+         * @description Serve the review's content against the base the page asks for, the review's own when it names none.
          *
-         *     The page is told the key of the base in force and of the review's own,
-         *     so it asks for the one and goes back to the other without building a key
-         *     itself.
+         *     The page is told the key of the base in force, so it asks for it again
+         *     without building a key itself, and whether it is narrower than the
+         *     review's own, which it goes back to by naming none.
          */
         get: operations["get_diff_api_diff_get"];
         put?: never;
@@ -834,12 +834,7 @@ export interface components {
         DiffResponse: {
             /** Files */
             files: components["schemas"]["DiffFile"][];
-            /** Phrase */
-            phrase: string | null;
-            /** Base Key */
-            base_key: string | null;
-            /** Review Key */
-            review_key: string | null;
+            base: components["schemas"]["ShownBase"] | null;
             /** Moved */
             moved: number;
         };
@@ -1273,6 +1268,22 @@ export interface components {
         ShowRequest: {
             /** File */
             file: string;
+        };
+        /**
+         * ShownBase
+         * @description The base a diff was taken against, as the page shows it.
+         *
+         *     `key` is what the page asks for it by, `phrase` what the header says
+         *     while it is in force. `narrowed`: it is narrower than the review's own —
+         *     a round, a ref — so the diff shows less than the threads hang on.
+         */
+        ShownBase: {
+            /** Key */
+            key: string;
+            /** Phrase */
+            phrase: string;
+            /** Narrowed */
+            narrowed: boolean;
         };
         /**
          * StatusRequest

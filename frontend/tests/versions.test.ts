@@ -5,7 +5,7 @@ import { isDrawn } from '$lib/anchors/placement';
 import FileSection from '$lib/components/FileSection.svelte';
 import type { DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
-import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
+import { contextLine, diffFile, diffResponse, hunk, removedLine, REVIEW_BASE, sinceRound } from './diff';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
@@ -31,9 +31,9 @@ function lines(at: Partial<LineAnchor> = {}): LineAnchor {
 }
 
 /** A server handing back these files, whatever base it was asked for. */
-function serving(paths: string[], phrase = 'uncommitted changes'): FakeServer {
+function serving(paths: string[], base = REVIEW_BASE): FakeServer {
 	const server = fakeServer();
-	server.answer('GET /api/diff', diffResponse({ files: paths.map(untouched), phrase }));
+	server.answer('GET /api/diff', diffResponse({ files: paths.map(untouched), base }));
 	return server;
 }
 
@@ -75,7 +75,7 @@ describe('what a round changed', () => {
 
 describe('reading the same tree against something else', () => {
 	it('asks for the diff against the base it was given', async () => {
-		const server = serving(['answered.py'], SINCE_ROUND_ONE);
+		const server = serving(['answered.py'], sinceRound(1));
 
 		await review.diff.setBase('round:1');
 
@@ -85,15 +85,16 @@ describe('reading the same tree against something else', () => {
 	});
 
 	it('goes back to the whole review, and stops being narrowed', async () => {
-		const server = serving(['answered.py'], SINCE_ROUND_ONE);
+		const server = serving(['answered.py'], sinceRound(1));
 		await review.diff.setBase('round:1');
 
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('answered.py')] }));
 		await review.diff.showWholeReview();
 
-		// By the key the server named the review's own base with
-		expect(server.requests.at(-1)).toMatchObject({ path: '/api/diff', query: { base: 'review' } });
+		// By naming no base: the server shows its own
+		expect(server.requests.at(-1)).toEqual({ method: 'GET', path: '/api/diff', query: {}, body: null });
 		expect(review.diff.narrowed).toBe(false);
+		expect(review.diff.base).toBe(REVIEW_BASE.key);
 	});
 
 	it('stays where it was when the base cannot be taken', async () => {
@@ -110,7 +111,7 @@ describe('reading the same tree against something else', () => {
 
 	it('keeps the base the reader picked when a round lands while it loads', async () => {
 		const diffs = fakeServer().hold('GET /api/diff');
-		const narrowed = diffResponse({ files: [untouched('answered.py')], phrase: SINCE_ROUND_ONE });
+		const narrowed = diffResponse({ files: [untouched('answered.py')], base: sinceRound(1) });
 
 		const picking = review.diff.setBase('round:1');
 		const landing = review.diff.take();
@@ -156,7 +157,7 @@ describe("a base that is not the review's own", () => {
 	/** The base on screen narrowed to a round, and this file drawn as Files draws it. */
 	async function drawnUnderRoundOne() {
 		const server = fakeServer();
-		server.answer('GET /api/diff', diffResponse({ files: [answered], phrase: SINCE_ROUND_ONE }));
+		server.answer('GET /api/diff', diffResponse({ files: [answered], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
 		return render(FileSection, inReview(review, { file: answered, scrollRoot: null }));
 	}

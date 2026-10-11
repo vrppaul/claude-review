@@ -146,16 +146,26 @@ class ReviewResponse(WireModel):
     release: str
 
 
+class ShownBase(WireModel):
+    """The base a diff was taken against, as the page shows it.
+
+    `key` is what the page asks for it by, `phrase` what the header says
+    while it is in force. `narrowed`: it is narrower than the review's own —
+    a round, a ref — so the diff shows less than the threads hang on.
+    """
+
+    key: str
+    phrase: str
+    narrowed: WireBool
+
+
 class DiffResponse(WireModel):
     """Response for GET /api/diff — the review's content against one base."""
 
     files: list[DiffFile]
-    # What the diff is compared against, as the header's control says it, and
-    # the key of that base and of the review's own. None in a review whose
-    # content did not come from a repository.
-    phrase: str | None
-    base_key: str | None
-    review_key: str | None
+    # None in a review whose content did not come from a repository: it is
+    # compared against nothing
+    base: ShownBase | None
     # How many files have moved on since this diff was taken. A push says it
     # once; this is how a review that was reloaded, or opened late, finds out.
     moved: int

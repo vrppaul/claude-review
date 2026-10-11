@@ -165,10 +165,28 @@ async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
     assert sorted(served["path"] for served in whole["files"]) == ["from_the_start.py", "later.py"]
 
 
+async def test_the_diff_names_the_base_it_was_taken_against_and_whether_it_is_narrower_than_the_reviews(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The page asks by the key, says the words, and draws every thread only while the review's own is in force."""
+    (tmp_git_repo / "answered.py").write_text("as it was\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        await _mark(client)
+        (tmp_git_repo / "answered.py").write_text("as the round asked\n")
+
+        narrowed = (await client.get(DIFF_ROUTE, params={"base": "round:1"}, headers=LOCAL_HEADERS)).json()
+        whole = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
+
+    assert narrowed["base"] == {"key": "round:1", "phrase": "changes since round 1", "narrowed": True}
+    assert whole["base"] == {"key": "review", "phrase": "uncommitted changes", "narrowed": False}
+
+
 async def test_a_review_without_a_repository_offers_no_bases(reviews: ReviewFactory) -> None:
     """Files and transcripts are not compared against anything."""
     async with http_client(reviews.app(opening_of([], mode=ReviewMode.FILES))) as client:
         assert await _offered(client) == []
+        assert (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["base"] is None
 
 
 async def test_a_round_nothing_has_happened_since_is_not_offered(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
@@ -320,7 +338,7 @@ async def test_a_review_against_an_earlier_commit_keeps_that_commit_on_screen_as
         _commit_everything(tmp_git_repo, "the agent's fix")
         await _mark(client)
         on_screen = await _paths_on_screen(client)
-        phrase = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["phrase"]
+        phrase = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["base"]["phrase"]
 
     assert on_screen == ["the_fix.py", "under_review.py"]
     assert phrase == "changes since HEAD~1", "the reader's own words name what the review is against"

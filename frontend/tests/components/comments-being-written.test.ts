@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { flushSync } from 'svelte';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
@@ -310,10 +310,7 @@ describe('a comment being written on a removed line, when a narrower base is rea
 		await user.click(removedLineNumber(2));
 		await user.type(screen.getByTestId('comment-input'), 'why did this go');
 
-		server.answer(
-			'GET /api/diff',
-			diffResponse({ files: [replacedLine('theirs = 2')], phrase: 'changes since round 1' })
-		);
+		server.answer('GET /api/diff', diffResponse({ files: [replacedLine('theirs = 2')], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
 		flushSync();
 		expect(fieldsSaying()).toEqual([]);

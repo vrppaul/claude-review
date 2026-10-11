@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileBody from '$lib/components/FileBody.svelte';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -48,7 +48,7 @@ describe('a file drawn where what the diff left out is not to be read in', () =>
 
 describe("a file drawn on the review's own removed lines, whatever base is on screen", () => {
 	beforeEach(async () => {
-		fakeServer().answer('GET /api/diff', diffResponse({ files: [file], phrase: 'changes since round 1' }));
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [file], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
 	});
 

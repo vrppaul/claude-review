@@ -203,8 +203,6 @@ ignore_names = [
     "max_images_per_message",
     "max_quoted_lines",
     "max_window_lines",
-    "phrase",
-    "review_key",
     "ended",
     # and read off the review's own model by the wire's, field by field
     "commentable",
