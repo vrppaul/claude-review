@@ -78,8 +78,10 @@ somebody who is waiting.
    for _ in $(seq 150); do grep -qE '^(Review ready at|Error|No )' "$log" && break; sleep 0.2; done
    echo "$log"; cat "$log"
    ```
-   It waits, thirty seconds at most, until the log says where the review
-   is — or why there is none: an error, or nothing to review.
+   It waits until the log says where the review is — or why there is none:
+   an error, or nothing to review — and gives up after about thirty seconds.
+   A large tree can take git longer than that to read: if the log says
+   neither yet, run the loop again.
    Detached, rather than a bare `&`: started in the shell's own session, the
    review dies with that shell, and the next command you run takes the review
    down with it. `setsid` is the one that holds; where there is none — macOS
@@ -189,10 +191,10 @@ somebody who is waiting.
    both.
 
    A thread can have more than one question waiting at once, which is why the
-   answer names one: without it the answer is filed under whatever was asked
-   last. Answer from what you know about this change — why you wrote it that
-   way, what you considered and rejected. That context is the reason to route
-   the question to you rather than to a fresh session.
+   answer names one: without it the answer is filed under the oldest question
+   still waiting. Answer from what you know about this change — why you wrote
+   it that way, what you considered and rejected. That context is the reason
+   to route the question to you rather than to a fresh session.
 
 7. Answer a panel message, naming the message:
    ```bash
