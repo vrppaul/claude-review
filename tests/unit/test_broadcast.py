@@ -172,6 +172,17 @@ def test_a_page_that_falls_too_far_behind_is_let_go() -> None:
         stuck.get_nowait()
 
 
+def test_a_page_yet_to_read_its_welcome_may_still_fall_a_whole_backlog_behind() -> None:
+    """The welcome takes a place of its own, not one of the backlog's."""
+    broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
+    opening = broadcast.listen(resume=None)
+
+    _told_times(broadcast, BACKLOG)
+
+    _welcome(opening)
+    assert len(_deliveries(opening)) == BACKLOG
+
+
 def test_a_page_let_go_is_told_nothing_more() -> None:
     broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     stuck = broadcast.listen(resume=None)

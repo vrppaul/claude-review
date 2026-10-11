@@ -70,6 +70,11 @@ class PageSocket:
     def is_open(self) -> bool:
         return self._protocol.state == ConnectionState.OPEN
 
+    @property
+    def closed_with(self) -> int | None:
+        """The code the review closed the socket with, once it has."""
+        return self._closed_with
+
     def send(self, text: str) -> None:
         self._send_event(TextMessage(data=text))
 
