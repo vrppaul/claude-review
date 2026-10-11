@@ -19,17 +19,26 @@ COMMITTED = {CHANGED_FILE: "def hello():\n    return 'hello'\n"}
 CHANGED = {CHANGED_FILE: "def hello():\n    return 'hi'\n"}
 # What has the keyboard, by the test id it carries
 FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
+# Files changed on every line, each long enough to fill more than the band at
+# the top of the screen, for jumps between them to land on a file's header
+JUMPED_TO = ("first.py", "second.py", "third.py", "fourth.py")
+JUMPED_FILE_LINES = 40
+
+
+def _commit_initial(repository: Path, files: dict[str, str]) -> None:
+    """Make a repository whose first commit holds these files."""
+    git(repository, "init", "-b", "main")
+    git(repository, "config", "user.email", "test@test.com")
+    git(repository, "config", "user.name", "Test")
+    write_files(repository, files)
+    git(repository, "add", ".")
+    git(repository, "commit", "-m", "initial")
 
 
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
     """A repository with one file changed and not committed."""
-    git(tmp_path, "init", "-b", "main")
-    git(tmp_path, "config", "user.email", "test@test.com")
-    git(tmp_path, "config", "user.name", "Test")
-    write_files(tmp_path, COMMITTED)
-    git(tmp_path, "add", ".")
-    git(tmp_path, "commit", "-m", "initial")
+    _commit_initial(tmp_path, COMMITTED)
     write_files(tmp_path, CHANGED)
     return tmp_path
 
@@ -37,6 +46,16 @@ def repository(tmp_path: Path) -> Path:
 @pytest.fixture
 async def review(repository: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(repository))
+
+
+@pytest.fixture
+async def several_files(tmp_path: Path, servers: ReviewServers) -> RunningReview:
+    """A review of several files, each added whole: a stream of file sections to jump between."""
+    _commit_initial(tmp_path, COMMITTED)
+    lines = "".join(f"line {number}\n" for number in range(JUMPED_FILE_LINES))
+    write_files(tmp_path, dict.fromkeys(JUMPED_TO, lines))
+    git(tmp_path, "add", ".")
+    return await servers.start(await repository_opening(tmp_path))
 
 
 async def _open_review(page: Page, review: RunningReview) -> None:
@@ -67,3 +86,14 @@ async def test_keeping_what_was_written_gives_the_keyboard_back_to_the_field(rev
     assert await page.evaluate(FOCUSED_TEST_ID) == "comment-input"
     await page.keyboard.type(", and the rest")
     assert await page.get_by_test_id("comment-input").input_value() == "Half a thought, and the rest"
+
+
+async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_files: RunningReview, page: Page) -> None:
+    """Landed on a file's header, the file above ends at the band's edge: the file read is the one jumped to."""
+    await _open_review(page, several_files)
+
+    for path in JUMPED_TO:
+        await page.get_by_test_id("file-item").filter(has_text=path).click()
+        await page.keyboard.press("v")
+        section = page.locator(f'[data-testid="file-section"][data-path="{path}"]')
+        assert await section.get_by_test_id("viewed-toggle").is_checked(), f"v after jumping to {path}"

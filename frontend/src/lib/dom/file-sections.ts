@@ -161,10 +161,14 @@ export class FileSections {
 		return null;
 	}
 
+	/** Take the reader to a file: its header to the top, and the file the one being read. */
 	scrollToFile(path: string): void {
 		// Going anywhere else is no longer waiting for a thread
 		this.#awaitedThread = null;
-		this.#sections.get(path)?.scrollIntoView({ block: 'start' });
+		const section = this.#sections.get(path);
+		if (!section) return;
+		this.#land(section);
+		section.scrollIntoView({ block: 'start' });
 	}
 
 	/**
@@ -184,8 +188,9 @@ export class FileSections {
 		const showing = ++this.#showing;
 		this.#awaitedThread = null;
 		this.#unmark();
+		this.#band.land(section);
 		section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		new SettleWatch(section, () => this.#markIfStillShown(section, showing)).start();
+		new SettleWatch(section, () => this.#arrivedAtShown(section, showing)).start();
 	}
 
 	/**
@@ -219,8 +224,15 @@ export class FileSections {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
 	}
 
-	/** Mark a file the reader was brought to, unless another showing has come since. */
-	#markIfStillShown(section: HTMLElement, showing: number): void {
+	/** The file being read from now on is the one a jump is taking the reader to, once it has come to rest. */
+	#land(section: HTMLElement): void {
+		this.#band.land(section);
+		new SettleWatch(section, () => this.#band.settle(section)).start();
+	}
+
+	/** A file the reader was brought to has come to rest: mark it, unless another showing has come since. */
+	#arrivedAtShown(section: HTMLElement, showing: number): void {
+		this.#band.settle(section);
 		if (showing === this.#showing) this.#mark(section);
 	}
 
