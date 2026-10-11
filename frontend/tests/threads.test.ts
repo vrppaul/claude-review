@@ -119,6 +119,15 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.all[0].turns.map((turn) => turn.author)).toEqual(['author', 'reader', 'author']);
 	});
 
+	it('does not offer to ask while the review cannot be reached', () => {
+		review.link.lost();
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const { queryByTestId } = render(DiffView, inReview(review));
+
+		expect(queryByTestId('ask-now-thread')).toBeNull();
+	});
+
 	it('does not offer to ask when nothing is there to answer', async () => {
 		// Nobody attached: the review can only be sent whole
 		review.answerer.setAttached(false);

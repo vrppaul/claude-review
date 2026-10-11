@@ -61,6 +61,10 @@ export interface PushReceiver {
 	 * itself.
 	 */
 	catchUp: (from: TellingPosition) => Promise<void>;
+	/** The page's own review welcomed it: it is reached. */
+	reached: () => void;
+	/** The socket dropped: the connection is trying to reach the review again. */
+	lost: () => void;
 	/** Another review answered on the port: the page's own is over, and the connection has let go of it. */
 	strayed: () => void;
 }
@@ -209,6 +213,7 @@ export class PageConnection {
 			return;
 		}
 		this.#instance = welcome.instance;
+		receiver.reached();
 		this.#sayHello();
 		if (welcome.resumed) return;
 		this.#resumedAt = { instance: welcome.instance, sequence: welcome.sequence };
@@ -249,6 +254,7 @@ export class PageConnection {
 	/** The server may simply be slow to come back; back off rather than spin. */
 	#lost(socket: WebSocket): void {
 		if (this.#closed || socket !== this.#socket) return;
+		this.#receiver?.lost();
 		this.#retrying = setTimeout(() => this.#retry(), this.#retryDelay);
 		this.#retryDelay = Math.min(this.#retryDelay * RETRY_GROWTH, LONGEST_RETRY);
 	}

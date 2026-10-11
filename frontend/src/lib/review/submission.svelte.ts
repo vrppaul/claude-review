@@ -70,9 +70,17 @@ export class Submission {
 		return this.#threads.unsent.length > 0 || this.#body.trim().length > 0;
 	}
 
-	/** Whether sending now would send something: a round needs news, the end needs anything at all. */
+	/**
+	 * Whether sending now would send something: a round needs news, the end
+	 * needs anything at all, and either needs the review to be reached.
+	 */
 	get canSend(): boolean {
-		return !this.#sending && this.#link.ending === null && (this.inRounds ? this.hasUnsent : this.hasContent);
+		return !this.#sending && this.#link.connected && (this.inRounds ? this.hasUnsent : this.hasContent);
+	}
+
+	/** Whether the review can be ended now: nothing on its way, and the review reached. */
+	get canEnd(): boolean {
+		return !this.#sending && this.#link.connected;
 	}
 
 	/** Whether a send is on its way. */
@@ -110,6 +118,7 @@ export class Submission {
 
 	/** End a review that was being worked through in rounds, saying why if it could not be. */
 	async end(): Promise<void> {
+		if (!this.canEnd) return;
 		if (await this.#attempt(() => endReview())) this.#finish();
 	}
 

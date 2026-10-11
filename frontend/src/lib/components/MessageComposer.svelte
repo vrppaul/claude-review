@@ -33,11 +33,13 @@
 	// token deleted like a word takes its reference with it
 	const pointed = $derived(threadsIn(draft, review.threads.all));
 	// A screenshot can be the whole question, so words are not required; an
-	// image still on its way is waited for, and so is a message
+	// image still on its way is waited for, and so is a message, and so is a
+	// review that cannot be reached
 	const canSend = $derived(
 		(draft.trim().length > 0 || composer.attachments.images.length > 0) &&
 			!review.conversation.sending &&
-			composer.attachments.uploading === 0
+			composer.attachments.uploading === 0 &&
+			review.link.connected
 	);
 	// The field's own note, or why the last message did not go
 	const whatWentWrong = $derived(noted ?? review.conversation.failed);

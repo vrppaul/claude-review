@@ -47,6 +47,16 @@ describe('the agent panel', () => {
 		review = answeredReview();
 	});
 
+	it('holds a message back while the review cannot be reached', () => {
+		review.conversation.composer.setText('Run the tests');
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		review.link.lost();
+		flushSync();
+
+		expect((getByTestId('send-message') as HTMLButtonElement).disabled).toBe(true);
+	});
+
 	it('takes the cursor when the reader asks to talk to the agent', () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 

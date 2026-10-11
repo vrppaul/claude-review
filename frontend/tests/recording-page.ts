@@ -25,6 +25,9 @@ export class RecordingPage implements PushReceiver {
 	readonly heardAt: TellingPosition[] = [];
 	readonly caughtUpFrom: TellingPosition[] = [];
 	position: TellingPosition = { instance: THIS_RUN, sequence: TOLD_BEFORE };
+	/** How often its own review welcomed it, and how often its socket dropped. */
+	reachedTimes = 0;
+	lostTimes = 0;
 	/** Whether another review answered on the port, and the connection let go. */
 	strayedOff = false;
 	#finish: (() => void) | null = null;
@@ -47,6 +50,14 @@ export class RecordingPage implements PushReceiver {
 		this.caughtUpFrom.push(from);
 		this.position = from;
 		return new Promise((resolve) => (this.#finish = resolve));
+	}
+
+	reached(): void {
+		this.reachedTimes += 1;
+	}
+
+	lost(): void {
+		this.lostTimes += 1;
 	}
 
 	strayed(): void {

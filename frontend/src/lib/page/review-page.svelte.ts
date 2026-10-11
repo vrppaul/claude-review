@@ -77,6 +77,8 @@ export class ReviewPage {
 				told: () => review.telling.heard,
 				take: (push, at) => takePush(review, push, at),
 				catchUp: (from) => catchUp(review, from),
+				reached: () => review.link.reached(),
+				lost: () => review.link.lost(),
 				strayed: () => review.link.end('replaced')
 			});
 			this.#state = { kind: 'open', review };

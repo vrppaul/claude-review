@@ -99,7 +99,7 @@
 					type="button"
 					data-testid="end-review"
 					class="btn btn-ghost btn-sm"
-					disabled={submission.sending}
+					disabled={!submission.canEnd}
 					onclick={() => submission.end()}
 				>
 					End review

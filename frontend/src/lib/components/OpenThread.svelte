@@ -27,7 +27,7 @@
 	// the reader says something. On a thread the agent raised, the opening
 	// is already the agent's word.
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
-	const askable = $derived(review.answerer.attached && awaiting.length === 0 && lastWord !== AGENT);
+	const askable = $derived(review.canAsk && awaiting.length === 0 && lastWord !== AGENT);
 	const raised = $derived(raisedByAgent(thread));
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour

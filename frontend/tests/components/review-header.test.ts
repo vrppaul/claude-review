@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flushSync } from 'svelte';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
@@ -85,6 +86,36 @@ describe('a review that is over', () => {
 
 		expect(getByTestId('review-replaced').textContent).toContain('another review is running here now');
 		expect(getByTestId('review-replaced').textContent).toContain('What you had not sent is kept');
+	});
+});
+
+describe('a review that cannot be reached', () => {
+	it('says so, and that nothing is sent until it is back', () => {
+		const review = openReview({ files: [file] });
+		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
+		expect(queryByTestId('connection-lost')).toBeNull();
+
+		review.link.lost();
+		flushSync();
+
+		expect(getByTestId('connection-lost').textContent).toContain('Nothing is sent until it is back');
+		review.link.reached();
+		flushSync();
+		expect(queryByTestId('connection-lost')).toBeNull();
+	});
+
+	it('holds the send back in the pane, and the end with it', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [file], facts: { answerer_attached: true } });
+		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
+		render(ReviewScreen, { props: { review } });
+		await user.click(screen.getByTestId('quick-submit'));
+
+		review.link.lost();
+		flushSync();
+
+		expect((screen.getByTestId('modal-submit') as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getByTestId('end-review') as HTMLButtonElement).disabled).toBe(true);
 	});
 });
 

@@ -162,6 +162,11 @@ export class Review {
 		if (attached) this.layout.agentPanel.offer();
 	}
 
+	/** Whether a question asked in a thread reaches anybody now: an agent is there, and the review is reached. */
+	get canAsk(): boolean {
+		return this.answerer.attached && this.link.connected;
+	}
+
 	get restoredCount(): number {
 		return this.#restoredCount;
 	}

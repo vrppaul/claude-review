@@ -209,3 +209,22 @@ describe('a thread meeting a diff that has been taken again', () => {
 		expect(review.threads.all.map((comment) => comment.anchor.start_line)).toEqual([3, 9]);
 	});
 });
+
+describe('sending while the review cannot be reached', () => {
+	it('sends nothing, a round or the end, until the review is back', async () => {
+		const server = takingRounds();
+		server.answer('POST /api/end', null);
+		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		review.link.lost();
+		const couldSend = review.submission.canSend;
+		const couldEnd = review.submission.canEnd;
+		await review.submission.send();
+		await review.submission.end();
+
+		expect([couldSend, couldEnd]).toEqual([false, false]);
+		expect(server.requests).toEqual([]);
+		review.link.reached();
+		expect([review.submission.canSend, review.submission.canEnd]).toEqual([true, true]);
+	});
+});

@@ -46,7 +46,7 @@
 		data-testid={over.testId}
 		class={[
 			'flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 px-4',
-			over.underTheReader ? 'cr-over-under-the-reader' : 'bg-base-200'
+			over.underTheReader ? 'cr-warning-bar' : 'bg-base-200'
 		]}
 	>
 		{#if over.underTheReader}
@@ -191,4 +191,16 @@
 
 		<SettingsMenu />
 	</header>
+	{#if review.link.state === 'reconnecting'}
+		<!-- Not over until the review says so: the page tries again, and holds every send meanwhile -->
+		<div
+			data-testid="connection-lost"
+			class="cr-warning-bar flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
+		>
+			<Icon name="notice" class="h-3 w-3 shrink-0" />
+			<span>
+				The review cannot be reached — trying again. What you write is kept. Nothing is sent until it is back.
+			</span>
+		</div>
+	{/if}
 {/if}

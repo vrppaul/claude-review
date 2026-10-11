@@ -196,6 +196,23 @@ describe('the session socket', () => {
 		connection.close();
 	});
 
+	it('tells the page each time its socket drops, and each time its own review welcomes it again', () => {
+		const page = new RecordingPage();
+		const connection = connected(page);
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+
+		latestSocket().drop();
+		const whileDown = { reached: page.reachedTimes, lost: page.lostTimes };
+		vi.advanceTimersByTime(FIRST_RETRY);
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+
+		expect(whileDown).toEqual({ reached: 1, lost: 1 });
+		expect({ reached: page.reachedTimes, lost: page.lostTimes }).toEqual({ reached: 2, lost: 1 });
+		connection.close();
+	});
+
 	it('says nothing to another review answering on its port, and lets go of it for good', () => {
 		const page = new RecordingPage();
 		const connection = connected(page);

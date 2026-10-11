@@ -237,6 +237,26 @@ describe('opening the page', () => {
 		expect(closeTab).toHaveBeenCalledOnce();
 	});
 
+	it('says it cannot reach its review while its socket is down, and that it can once welcomed back', async () => {
+		serving();
+		const page = await openWithAThread();
+		const review = openedReview(page);
+		expect(review.link.state).toBe('connected');
+
+		vi.useFakeTimers();
+		latestSocket().drop();
+		const whileDown = review.link.state;
+		vi.advanceTimersByTime(FIRST_RETRY);
+		vi.useRealTimers();
+		latestSocket().accept();
+		const openButNotWelcomed = review.link.state;
+		latestSocket().say(welcome({ resumed: true }));
+
+		expect(whileDown).toBe('reconnecting');
+		expect(openButNotWelcomed).toBe('reconnecting');
+		expect(review.link.state).toBe('connected');
+	});
+
 	it('lets go of a review stopped under it, keeping what was not sent for when it is opened again', async () => {
 		serving();
 		const closeTab = vi.fn();

@@ -814,14 +814,14 @@
 }
 
 /*
- * A review that ended under the reader — stopped, or another one running
- * on its port now — with what they had not sent waiting for them: the
- * warning's colour, not the mark's of a review sent.
+ * A review the page cannot send anything to — it cannot be reached now, or
+ * it ended under the reader — with what they had not sent waiting for them:
+ * the warning's colour, not the mark's of a review sent.
  */
-.cr-over-under-the-reader {
+.cr-warning-bar {
 	background: var(--cr-warning-tint);
 }
-.cr-over-under-the-reader svg {
+.cr-warning-bar svg {
 	color: var(--color-warning);
 }
 

@@ -41,7 +41,7 @@
 		<CommentBox
 			{field}
 			onSave={() => review.threads.say(field)}
-			onAsk={review.answerer.attached ? () => askNow(field) : undefined}
+			onAsk={review.canAsk ? () => askNow(field) : undefined}
 			onCancel={() => review.threads.writing.discard(field)}
 			label={labelOf(field)}
 			suggestFrom={field.at.quote}
