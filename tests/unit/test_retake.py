@@ -1,0 +1,165 @@
+"""Taking the diff again while the agent works: one take at a time, each in the round it began in.
+
+A retake waits on git. A second retake asked for meanwhile must not leave the
+older tree on screen once both are done, and a round sent meanwhile must not
+tag this take with a round it was not taken in. The repository here holds
+every staging until the test lets it say what moved, and the working tree
+has moved on between any two stagings of it.
+"""
+
+import asyncio
+import contextlib
+from collections.abc import AsyncIterator
+from pathlib import Path
+from typing import override
+
+from claude_review.domain.interfaces import ReviewedRepository, StagedTree
+from claude_review.domain.models import FIRST_ROUND, GitRef, ReviewMode
+from claude_review.services.review.content_sources import ContentSource, content_source
+from claude_review.services.review.round_tracker import RoundTracker
+from claude_review.services.review_opening import OpenedRepository, ReviewOpening
+from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock
+
+ROOT = Path("/repository")
+# The commit the review opened on: its uncommitted changes, as HEAD stood then
+OPENED_ON = "commit-at-opening"
+# When every mark here is left, on the review's clock
+MARKED_AT = 1_791_000_000_000
+# The one file each staging finds changed, in the order the stagings are made:
+# the opening's, then the first retake's, then the second's
+OPENING_FILE = "opening.py"
+OLDER_FILE = "older.py"
+NEWER_FILE = "newer.py"
+# Which staging is the first retake's: the opening's comes before it
+FIRST_RETAKES_STAGING = 1
+
+
+def _diff_adding(path: str) -> str:
+    """What git says of a file added with one line in it."""
+    return f"diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n@@ -0,0 +1 @@\n+x\n"
+
+
+class HeldStaging(StagedTree):
+    """The tree as it stood when it was staged, which says what moved since a base only once it is let."""
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+        self.asked = asyncio.Event()
+        self.answer = asyncio.Event()
+
+    @override
+    async def diff(self, base: str, *, ignore_whitespace: bool) -> str:
+        return _diff_adding(self._path)
+
+    @override
+    async def write_tree(self) -> str:
+        return f"tree-of-{self._path}"
+
+    @override
+    async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
+        self.asked.set()
+        await self.answer.wait()
+        return {base: [self._path] for base in bases}
+
+
+class RepositoryBeingWorkedOn(ReviewedRepository):
+    """A working tree the agent changes between any two stagings of it."""
+
+    def __init__(self) -> None:
+        self.stagings: list[HeldStaging] = []
+        self._paths = iter([OPENING_FILE, OLDER_FILE, NEWER_FILE])
+
+    @override
+    @contextlib.asynccontextmanager
+    async def staged(self, path: Path) -> AsyncIterator[HeldStaging]:
+        staging = HeldStaging(next(self._paths))
+        self.stagings.append(staging)
+        yield staging
+
+    @override
+    async def top_level(self, path: Path) -> Path | None:
+        return path
+
+    @override
+    async def changed_paths(self, path: Path) -> list[str]:
+        return []
+
+    @override
+    async def list_refs(self, path: Path) -> list[GitRef]:
+        return []
+
+    @override
+    async def commit_named(self, path: Path, revision: str) -> str | None:
+        return OPENED_ON
+
+    @override
+    async def empty_tree(self, path: Path) -> str:
+        return "empty-tree"
+
+    @override
+    async def is_tracked(self, root: Path, relative_path: str) -> bool:
+        return True
+
+
+async def _opened(repository: RepositoryBeingWorkedOn, rounds: RoundTracker) -> ContentSource:
+    """A review of the repository's uncommitted changes, opened as the server opens it."""
+    opening = ReviewOpening(
+        mode=ReviewMode.DIFF,
+        diff_files=[],
+        title="",
+        identity=TEST_IDENTITY,
+        repository=OpenedRepository(root=ROOT, named_base=None, pinned_base=OPENED_ON),
+    )
+    source = content_source(opening, repository=repository, clock=FixedClock(MARKED_AT), rounds=rounds)
+    await source.open()
+    return source
+
+
+async def _until_asked(repository: RepositoryBeingWorkedOn, staging_number: int) -> HeldStaging:
+    """Return a staging, by the order it was made in, once it is asked what moved."""
+    async with asyncio.timeout(SETTLE_SECONDS):
+        while len(repository.stagings) <= staging_number:
+            await asyncio.sleep(LOOK_EVERY_SECONDS)
+        staging = repository.stagings[staging_number]
+        await staging.asked.wait()
+        return staging
+
+
+async def _answer_newest_first(repository: RepositoryBeingWorkedOn, retakes: list[asyncio.Task]) -> None:
+    """Let the stagings asked about answer, the one made last first, until every retake is done."""
+    async with asyncio.timeout(SETTLE_SECONDS):
+        while not all(retake.done() for retake in retakes):
+            waiting = [
+                staging for staging in repository.stagings if staging.asked.is_set() and not staging.answer.is_set()
+            ]
+            if waiting:
+                waiting[-1].answer.set()
+            await asyncio.sleep(LOOK_EVERY_SECONDS)
+
+
+async def test_two_retakes_at_once_leave_the_newer_tree_on_screen() -> None:
+    repository = RepositoryBeingWorkedOn()
+    source = await _opened(repository, RoundTracker())
+    older = asyncio.create_task(source.retake())
+    await _until_asked(repository, FIRST_RETAKES_STAGING)
+
+    newer = asyncio.create_task(source.retake())
+    # Long enough for the second retake to stage the tree, if nothing holds it back
+    await asyncio.sleep(LOOK_EVERY_SECONDS)
+    await _answer_newest_first(repository, [older, newer])
+
+    assert [file.path for file in source.content.files] == [NEWER_FILE]
+
+
+async def test_a_round_sent_while_the_diff_is_taken_again_leaves_the_take_in_the_round_it_began_in() -> None:
+    rounds = RoundTracker()
+    repository = RepositoryBeingWorkedOn()
+    source = await _opened(repository, rounds)
+    retaking = asyncio.create_task(source.retake())
+    staging = await _until_asked(repository, FIRST_RETAKES_STAGING)
+
+    rounds.begin_next()
+    staging.answer.set()
+    retaken = await retaking
+
+    assert retaken.round == FIRST_ROUND
