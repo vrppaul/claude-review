@@ -108,13 +108,13 @@
 					data-testid="base-option"
 					class={[
 						'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-base-300',
-						inForce && 'bg-(--cr-mark-tint)'
+						inForce && 'bg-(--cr-control-tint)'
 					]}
 					onclick={() => pick(version)}
 				>
 					<span class="w-3 shrink-0">
 						{#if inForce}
-							<Icon name="check" class="h-3 w-3 text-(--cr-mark)" label="In force" />
+							<Icon name="check" class="h-3 w-3 text-(--cr-control)" label="In force" />
 						{/if}
 					</span>
 					<span class="flex-1 truncate font-mono text-xs">{version.label}</span>

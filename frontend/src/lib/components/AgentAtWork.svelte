@@ -82,7 +82,7 @@
 				<button
 					type="button"
 					data-testid="progress-file"
-					class="cr-thread-chip"
+					class="cr-thread-chip cr-thread-chip-agent"
 					onclick={() => review.sections.showFile(path)}
 				>
 					{fileName(path)}

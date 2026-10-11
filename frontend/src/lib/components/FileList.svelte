@@ -81,7 +81,7 @@
 				></span>
 			{/if}
 			{#if viewed}
-				<Icon name="check" data-testid="file-viewed-mark" class="h-3 w-3 text-(--cr-mark)" label="Viewed" />
+				<Icon name="check" data-testid="file-viewed-mark" class="h-3 w-3 text-(--cr-done)" label="Viewed" />
 			{/if}
 			{#if threadCount > 0}
 				<span class="badge badge-xs badge-primary">{threadCount}</span>

@@ -54,13 +54,13 @@
 	<dl data-testid="shortcuts-list" class="space-y-2">
 		{#each KEYMAP as row (row.keys)}
 			<div class="flex items-baseline gap-4">
-				<dt class="w-40 shrink-0 font-mono text-xs text-(--cr-mark)">{row.keys}</dt>
+				<dt class="w-40 shrink-0 font-mono text-xs text-(--cr-control)">{row.keys}</dt>
 				<dd class="text-sm">{row.does}</dd>
 			</div>
 		{/each}
 		<!-- The list's own key, and every open pane's: not one the review answers -->
 		<div class="flex items-baseline gap-4">
-			<dt class="w-40 shrink-0 font-mono text-xs text-(--cr-mark)">Esc</dt>
+			<dt class="w-40 shrink-0 font-mono text-xs text-(--cr-control)">Esc</dt>
 			<dd class="text-sm">Close it</dd>
 		</div>
 	</dl>

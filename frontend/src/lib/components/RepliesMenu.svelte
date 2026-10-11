@@ -34,7 +34,7 @@
 			<Icon name="reply" class="h-3.5 w-3.5" />
 			Replies
 			{#if review.threads.unread.length > 0}
-				<span data-testid="unread-count" class="font-semibold text-(--cr-mark)">
+				<span data-testid="unread-count" class="font-semibold text-(--cr-unread)">
 					{review.threads.unread.length}
 				</span>
 			{/if}
@@ -67,11 +67,11 @@
 		>
 			<span class="w-2 pt-1.5">
 				{#if unread}
-					<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-mark)"></span>
+					<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-unread)"></span>
 				{/if}
 			</span>
 			<span class="min-w-0 flex-1">
-				<span class={['block font-mono text-xs', unread ? 'text-(--cr-mark)' : 'cr-muted']}>
+				<span class={['block font-mono text-xs', unread ? 'text-(--cr-unread)' : 'cr-muted']}>
 					{anchorShortPlace(thread.anchor)}
 				</span>
 				<span class="cr-muted block truncate text-sm">{lastAnswer(thread)}</span>

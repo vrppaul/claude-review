@@ -3,11 +3,11 @@
 
 	/** How the agent stands with the review. */
 	type Presence = 'absent' | 'working' | 'listening';
-	// Each in its own colour: at work in the agent's violet, listening in the green of something ready
+	// Each in its own colour: at work in the agent's, listening in the colour of something ready
 	const DOTS: Record<Presence, string> = {
 		absent: 'bg-base-300',
-		working: 'bg-(--cr-raised-edge)',
-		listening: 'bg-(--cr-add-edge)'
+		working: 'bg-(--cr-agent)',
+		listening: 'bg-(--cr-done)'
 	};
 
 	const review = useReview();

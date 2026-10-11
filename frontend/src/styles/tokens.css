@@ -8,9 +8,16 @@
  * removed, so the syntax colours below avoid both hues — a green string
  * inside a removed line reads as a contradiction. And change is marked at
  * the edge of a row rather than washed across it, so highlighted code stays
- * legible on top of it. The other colours have one meaning each, the code's
- * own aside: blue is the reader's own mark, violet the agent's voice, yellow
- * a warning, orange a modified file's letter.
+ * legible on top of it.
+ *
+ * Every other colour says whose a thing is, or what it is, and the page
+ * names it by what it means, never by its hue, so a meaning can take
+ * another colour in one line here: blue is the reader's — what they marked
+ * (--cr-mark) and the controls they act with (--cr-control); violet the
+ * agent's — what it raised, said or brought the reader to (--cr-agent), and
+ * what of that is not read yet (--cr-unread); green, beside what the diff
+ * added, what is done (--cr-done); yellow a warning; orange a modified
+ * file's letter.
  */
 
 :root {
@@ -35,8 +42,8 @@
 	--cr-shadow-raised: 0 18px 48px rgb(0 0 0 / 0.45);
 	/* The reader's mark at the left edge of a row, laid inside it */
 	--cr-shadow-marked-edge: inset 2px 0 0 var(--cr-mark);
-	/* The tour's light: a ring round what it points at, in a shade spread over any screen */
-	--cr-shadow-spotlight: 0 0 0 2px var(--cr-mark), 0 0 0 9999px var(--cr-shade);
+	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
+	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);
@@ -45,10 +52,26 @@
 	--cr-mark-chip-hover: color-mix(in srgb, var(--cr-mark) 28%, transparent);
 	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
 	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-	/* The agent's voice, at the strengths the mark uses for the same things */
-	--cr-raised-tint: color-mix(in srgb, var(--cr-raised-edge) 12%, transparent);
-	--cr-raised-border: color-mix(in srgb, var(--cr-raised-edge) 35%, transparent);
-	--cr-raised-line: color-mix(in srgb, var(--cr-raised-edge) 45%, transparent);
+	/* The agent's colour, at the strengths the mark uses for the same things */
+	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
+	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);
+	--cr-agent-chip-hover: color-mix(in srgb, var(--cr-agent) 28%, transparent);
+	--cr-agent-border: color-mix(in srgb, var(--cr-agent) 35%, transparent);
+	--cr-agent-line: color-mix(in srgb, var(--cr-agent) 45%, transparent);
+
+	/*
+	 * A control is the reader's, so it is drawn in their blue: every focus
+	 * ring, a key in the help, what shows hidden lines, a list's lit option,
+	 * a column's grip, the tour's light and its buttons.
+	 */
+	--cr-control: var(--cr-mark);
+	--cr-control-tint: var(--cr-mark-tint);
+	--cr-control-line: var(--cr-mark-line);
+	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
+	--cr-unread: var(--cr-agent);
+	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
+	--cr-done: var(--cr-add-text);
+
 	/* What differs inside a changed line, in the change's own colour */
 	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
 	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
@@ -65,13 +88,14 @@
 	--color-base-content: #d9e1ec;
 	--color-neutral: #232b37;
 	--color-neutral-content: #d9e1ec;
-	--color-primary: #5b8def;
+	/* DaisyUI's colours for its buttons, badges and notes, which the review draws only as controls */
+	--color-primary: var(--cr-control);
 	--color-primary-content: #0b111c;
 	--color-secondary: #c792ea;
 	--color-secondary-content: #14101c;
-	--color-accent: #5b8def;
+	--color-accent: var(--cr-control);
 	--color-accent-content: #0b111c;
-	--color-info: #5b8def;
+	--color-info: var(--cr-control);
 	--color-info-content: #0b111c;
 	--color-success: #4fb865;
 	--color-success-content: #08150c;
@@ -95,7 +119,7 @@
 	--cr-mark-tint: rgb(91 141 239 / 0.14);
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
-	--cr-raised-edge: #a68dd8;
+	--cr-agent: #a68dd8;
 	/* The edge of a pane the reader opened, a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
 	/* A modified file's letter: the one place orange appears outside the code's own colours */
@@ -125,13 +149,14 @@
 	--color-base-content: #1b2430;
 	--color-neutral: #dde4ec;
 	--color-neutral-content: #1b2430;
-	--color-primary: #2c6bd9;
+	/* DaisyUI's colours for its buttons, badges and notes, which the review draws only as controls */
+	--color-primary: var(--cr-control);
 	--color-primary-content: #ffffff;
 	--color-secondary: #7c3fbf;
 	--color-secondary-content: #ffffff;
-	--color-accent: #2c6bd9;
+	--color-accent: var(--cr-control);
 	--color-accent-content: #ffffff;
-	--color-info: #2c6bd9;
+	--color-info: var(--cr-control);
 	--color-info-content: #ffffff;
 	--color-success: #1f8b3a;
 	--color-success-content: #ffffff;
@@ -154,7 +179,7 @@
 	--cr-mark: #2c6bd9;
 	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
-	--cr-raised-edge: #6b4bb8;
+	--cr-agent: #6b4bb8;
 	--cr-popover-edge: #c3cdd9;
 	--cr-status-modified: #9a6410;
 	--cr-gutter-fg: #5d6a7a;

@@ -99,10 +99,11 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 					<div data-testid="panel-event" class="cr-round-mark">
 						<span></span>
 						{#if raised}
+							<!-- A thread the agent raised: the agent's arrival, in its colour -->
 							<button
 								type="button"
 								data-testid="panel-thread-ref"
-								class="cr-thread-chip"
+								class="cr-thread-chip cr-thread-chip-agent"
 								onclick={() => review.navigator.reveal(raised)}
 							>
 								{turn.body}
@@ -153,7 +154,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 									<button
 										type="button"
 										data-testid="answer-file"
-										class="cr-thread-chip"
+										class="cr-thread-chip cr-thread-chip-agent"
 										onclick={() => review.sections.showFile(path)}
 									>
 										{fileName(path)}

@@ -36,7 +36,7 @@
 	]}
 >
 	{#if thread.resolved}
-		<Icon name="check" class="h-3 w-3 shrink-0 text-(--cr-add-edge)" />
+		<Icon name="check" class="h-3 w-3 shrink-0 text-(--cr-done)" />
 	{/if}
 	<FoldToggle folded subject="this thread" testId="fold-comment" onToggle={unfold} />
 	<button

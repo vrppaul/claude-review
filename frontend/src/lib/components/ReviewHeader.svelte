@@ -52,7 +52,7 @@
 		{#if over.underTheReader}
 			<Icon name="notice" class="h-4 w-4" />
 		{:else}
-			<Icon name="check" class="h-4 w-4 text-(--cr-mark)" />
+			<Icon name="check" class="h-4 w-4 text-(--cr-done)" />
 		{/if}
 		<p class="font-semibold">{over.said}</p>
 	</div>
@@ -151,7 +151,7 @@
 			<PresenceDot />
 			Agent
 			{#if review.layout.agentPanel.unread > 0}
-				<span data-testid="panel-unread" class="text-(--cr-mark)">
+				<span data-testid="panel-unread" class="text-(--cr-unread)">
 					<span aria-hidden="true">●</span><span class="sr-only">new answers</span>
 				</span>
 			{/if}
