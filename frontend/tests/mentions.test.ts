@@ -56,6 +56,15 @@ describe('taking a thread out of a message', () => {
 		expect(withoutThread(`Look at ${anchorToken(thread.anchor)} again`, thread)).toBe('Look at again');
 	});
 
+	it('takes one space with it, and leaves every other space of the message as it was', () => {
+		const thread = threadOn('a.py', 1);
+		const token = anchorToken(thread.anchor);
+		const code = 'Like this:\n\n    if  ready:\n        go()\n';
+
+		expect(withoutThread(`${code}${token} please`, thread)).toBe(`${code}please`);
+		expect(withoutThread(`${code}about ${token}`, thread)).toBe(`${code}about`);
+	});
+
 	it('leaves a longer token that begins with its own', () => {
 		const short = { ...threadOn('a.py', 1), anchor: lineAnchor('a.py', 'new', 1, 2, []) };
 
