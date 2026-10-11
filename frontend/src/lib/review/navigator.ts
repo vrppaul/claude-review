@@ -5,8 +5,13 @@
  * Naming a thread is the anchor's business and touches nothing; bringing one
  * into view opens what hides it and moves the screen, so it lives here, with
  * the parts of the page it moves — and so does where the reader has got to
- * among the threads, which only moving changes. Every control that moves the
- * reader — the keys, the header's arrows, the replies — moves them through here.
+ * among the threads, which only moving changes. Every control that takes the
+ * reader to a thread moves them through here — n and p, a, the header's
+ * arrows, the replies, the finish pane, the panel's chips, the notices — and
+ * so do ] and [ from file to file. A file named outright, by the tree or by
+ * the agent, is brought into view by `FileSections` itself, and j and k move
+ * the keyboard line by line (`dom/keyboard.ts`): neither has a place among
+ * the threads to keep.
  */
 
 import { anchorLines, type FileLines } from '$lib/anchors/views';

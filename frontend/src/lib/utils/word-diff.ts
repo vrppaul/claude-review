@@ -46,7 +46,10 @@ const LONGEST_ESCAPE = 8;
  * A row coloured end to end says a line changed but not where, and most
  * replacements touch a word or two. Comparing by word rather than character
  * keeps the marks on things a reader recognises — an identifier, a number, an
- * argument — instead of scattering them mid-token.
+ * argument, as code writes them in ASCII — instead of scattering them
+ * mid-token. A character outside ASCII is a token of its own, so a word in
+ * another script is compared letter by letter, which suits a script written
+ * without spaces and splits one written with them.
  */
 export function wordRanges(removedText: string, addedText: string): WordRanges {
 	const before = tokenize(removedText);
