@@ -111,6 +111,18 @@ async def test_a_thread_reaches_the_agent_with_what_was_said_in_it(client: Async
     assert "question, resolved" in markdown
 
 
+async def test_a_thread_quoting_fewer_lines_than_it_names_is_refused(client: AsyncClient) -> None:
+    """The page drew only some of those lines: an agent applying the suggestion would delete the rest unseen."""
+    across_a_gap = {**line_on_the_wire(REVIEWED_FILE, 1, 3), "quote": ["the first line, and no other"]}
+    thread = thread_on_the_wire(across_a_gap, "Replace these.")
+
+    response = await client.post("/api/submit", json={"threads": [thread], "end": False}, headers=LOCAL_HEADERS)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert "names 3 lines but quotes 1" in response.json()["detail"]
+    assert (await client.get(REVIEW_ROUTE, headers=LOCAL_HEADERS)).json()["round"] == 1
+
+
 async def test_ending_the_review_closes_it(client: AsyncClient) -> None:
     response = await client.post("/api/end", json={}, headers=LOCAL_HEADERS)
 

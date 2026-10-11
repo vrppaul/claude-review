@@ -164,6 +164,23 @@ def test_quoting_a_removed_line_the_diff_does_not_show_says_removed() -> None:
         AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 9, side=LineSide.OLD))
 
 
+def test_a_quote_shorter_than_the_lines_it_names_is_refused() -> None:
+    """Lines the reader never saw would be named but not quoted: a suggestion applied there deletes them."""
+    across_a_gap = line_anchor(FILE, 12, 39, quote=["line 12", "line 13", "line 14", "line 15"])
+
+    with pytest.raises(AnchorLinesNotShownError, match=re.escape("a.py:12-39 names 28 lines but quotes 4")):
+        AnchorService.of_diff(MOVED_DOWN).check_quote(across_a_gap)
+
+
+def test_a_quote_of_every_line_it_names_is_taken() -> None:
+    AnchorService.of_diff(MOVED_DOWN).check_quote(line_anchor(FILE, 3, 4, quote=[RUN, RETURN]))
+
+
+def test_an_anchor_that_never_kept_a_quote_is_taken() -> None:
+    """A thread kept from before quotes were kept quotes nothing, and has nothing to be short of."""
+    AnchorService.of_diff(MOVED_DOWN).check_quote(line_anchor(FILE, 3, 40))
+
+
 def test_a_short_quote_found_in_several_places_follows_the_nearest() -> None:
     """A closing brace stands everywhere; the one that moved least is the one meant."""
     far, near = 3, 10

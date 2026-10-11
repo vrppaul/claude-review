@@ -151,3 +151,71 @@ describe('picking removed lines', () => {
 		expect(field.at.lines.opensBelow).toEqual({ side: 'old', number: 11 });
 	});
 });
+
+describe('picking lines across what the diff left out', () => {
+	// The most lines one comment may cover here: more than the drag below spans
+	const ROOMY_RANGE = 200;
+	/** Unchanged lines from `first` to `last`, numbered the same on both sides. */
+	function unchanged(first: number, last: number) {
+		return Array.from({ length: last - first + 1 }, (_, offset) =>
+			contextLine(first + offset, first + offset, `line ${first + offset}`)
+		);
+	}
+	// Lines 12 to 15 drawn, 16 to 35 left out by the diff, 36 to 39 drawn
+	const apart = diffFile({
+		path: 'c.py',
+		hunks: [
+			hunk(unchanged(12, 15), { old_start: 12, new_start: 12 }),
+			hunk(unchanged(36, 39), { old_start: 36, new_start: 36 })
+		]
+	});
+
+	function across(hunks: ReturnType<typeof drawnHunks>): LineCommenting {
+		review = openReview({ files: [apart], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: ROOMY_RANGE } } });
+		return new LineCommenting(review, {
+			path: () => apart.path,
+			hunks: () => hunks,
+			reviewOwnsRemovedLines: () => true
+		});
+	}
+
+	/** The line numbered this among drawn hunks. */
+	function lineOf(hunks: ReturnType<typeof drawnHunks>, number: number): DrawnLine {
+		const found = hunks.flatMap((drawnHunk) => drawnHunk.lines).find((candidate) => candidate.place.number === number);
+		if (!found) throw new Error(`Line ${number} is not drawn`);
+		return found;
+	}
+
+	it('stops a drag at the last line drawn before lines the diff left out', () => {
+		const hunks = drawnHunks(apart, null, true);
+		const lines = across(hunks);
+
+		lines.press(lineOf(hunks, 13));
+		lines.enter(lineOf(hunks, 38));
+		lines.release();
+
+		const [field] = review.threads.writing.onLinesOf(apart.path);
+		expect(field.at.lines).toMatchObject({ side: 'new', startLine: 13, endLine: 15 });
+		expect(field.at.quote).toEqual(['line 13', 'line 14', 'line 15']);
+	});
+
+	it('crosses into the next hunk once the lines between are drawn', () => {
+		const revealed = diffFile({
+			...apart,
+			hunks: [
+				hunk(unchanged(12, 15), { old_start: 12, new_start: 12 }),
+				hunk(unchanged(16, 39), { old_start: 16, new_start: 16 })
+			]
+		});
+		const hunks = drawnHunks(revealed, null, true);
+		const lines = across(hunks);
+
+		lines.press(lineOf(hunks, 13));
+		lines.enter(lineOf(hunks, 38));
+		lines.release();
+
+		const [field] = review.threads.writing.onLinesOf(apart.path);
+		expect(field.at.lines).toMatchObject({ startLine: 13, endLine: 38 });
+		expect(field.at.quote).toHaveLength(26);
+	});
+});

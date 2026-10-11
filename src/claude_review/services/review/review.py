@@ -196,8 +196,10 @@ class Review:
 
         Raises:
             QuestionNotInThreadError: if the question names nothing the reader said in the thread.
+            AnchorLinesNotShownError: if the thread names lines it does not quote.
         """
         asked = thread.part_asked(question_id)
+        self._check_quotes([thread])
         handed = self._handover.thread(thread)
         # Handed over with the thread already; named again, they are the same
         # files. Like every image in the thread, one this review no longer keeps
@@ -212,7 +214,9 @@ class Review:
 
         Raises:
             ImagesNotKeptError: if it names an image this review does not keep.
+            AnchorLinesNotShownError: if a thread it points at names lines it does not quote.
         """
+        self._check_quotes(threads)
         # Pasted a moment ago, so an image this review does not keep is a fault
         # to report, not a screenshot to leave out quietly. Checked before any
         # is handed over, so a refused message leaves none of them kept for good.
@@ -282,10 +286,12 @@ class Review:
 
         Raises:
             ReviewEndedError: if the review has already ended.
+            AnchorLinesNotShownError: if a thread names lines it does not quote.
         """
         if self._lifetime.has_ended:
             msg = "Review already submitted"
             raise ReviewEndedError(msg)
+        self._check_quotes(threads)
 
         number = self._rounds.current
         result = self._formatter.format(
@@ -337,3 +343,13 @@ class Review:
     def exit_report(self) -> str:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
+
+    def _check_quotes(self, threads: list[ThreadDraft]) -> None:
+        """Refuse threads naming lines they do not quote, before any of them is handed over with its images.
+
+        Raises:
+            AnchorLinesNotShownError: if one does.
+        """
+        anchors = self._source.content.anchors
+        for thread in threads:
+            anchors.check_quote(thread.anchor)

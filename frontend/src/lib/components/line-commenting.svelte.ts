@@ -62,6 +62,29 @@ function reach(start: number, toward: number, longest: number): number {
 	return toward >= start ? Math.min(toward, start + furthest) : Math.max(toward, start - furthest);
 }
 
+/** The numbers of the lines drawn on each side: the places a drag can reach. */
+type DrawnNumbers = Record<LineSide, ReadonlySet<number>>;
+
+function drawnNumbers(hunks: readonly DrawnHunk[]): DrawnNumbers {
+	const numbers = { old: new Set<number>(), new: new Set<number>() };
+	for (const { place } of hunks.flatMap((hunk) => hunk.lines)) numbers[place.side].add(place.number);
+	return numbers;
+}
+
+/**
+ * How far a drag from `start` toward `toward` reaches over lines drawn one
+ * after another on its side: it stops before the first number no line is
+ * drawn at. A comment names every line of its span and quotes each, so a
+ * span may not run over lines the reader never saw — the ones the diff left
+ * out between two hunks, or on the old side a line the change kept.
+ */
+function furthestInRun(drawn: ReadonlySet<number>, start: number, toward: number): number {
+	const step = Math.sign(toward - start);
+	let reached = start;
+	while (reached !== toward && drawn.has(reached + step)) reached += step;
+	return reached;
+}
+
 /** Whether a line number lies between two others, whichever way round they are. */
 function isBetween(lineNumber: number, one: number, other: number): boolean {
 	return lineNumber >= Math.min(one, other) && lineNumber <= Math.max(one, other);
@@ -76,12 +99,14 @@ export class LineCommenting {
 	readonly #review: Review;
 	readonly #file: DrawnFile;
 	#drag = $state<Drag | null>(null);
+	readonly #drawn: DrawnNumbers;
 	readonly #threads: ThreadsByLine;
 	readonly #fields: LineField[];
 
 	constructor(review: Review, file: DrawnFile) {
 		this.#review = review;
 		this.#file = file;
+		this.#drawn = $derived(drawnNumbers(file.hunks()));
 		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.reviewOwnsRemovedLines()));
 		this.#fields = $derived(
 			review.threads.writing
@@ -109,13 +134,10 @@ export class LineCommenting {
 		// places, so dragging across the other side must not extend the range.
 		if (drag === null || drawn.place.side !== drag.side || drawn.place.number === NO_NUMBER) return;
 		const furthest = reach(drag.start, drawn.place.number, this.#review.longestQuotedRange);
-		// A drag stopped short of the pointer stops on a line of its side that is
-		// drawn: on the old side the line at the furthest number may be one the
-		// change kept, which is on the new side, and nothing would hang under it.
 		// The field opens under the line the drag reached, following the drag
-		// back up rather than staying at the furthest point.
-		const reached = this.#furthestDrawn(drag.side, drag.start, furthest);
-		this.#drag = { ...drag, end: reached.number, opensBelow: reached };
+		// back up rather than staying at the furthest point
+		const reached = furthestInRun(this.#drawn[drag.side], drag.start, furthest);
+		this.#drag = { ...drag, end: reached, opensBelow: { side: drag.side, number: reached } };
 	}
 
 	/** The pointer was let go, anywhere: a comment is started on the lines dragged over. */
@@ -173,18 +195,5 @@ export class LineCommenting {
 			.filter(({ place }) => isPicked(place, lines))
 			.map(({ line }) => line.content);
 		this.#review.threads.writing.pickLines(this.#file.path(), lines, quote);
-	}
-
-	/** The line of a side drawn here furthest from `start` toward `end`; `start`'s own when none is further. */
-	#furthestDrawn(side: LineSide, start: number, end: number): LinePlace {
-		return this.#file
-			.hunks()
-			.flatMap((hunk) => hunk.lines)
-			.map(({ place }) => place)
-			.filter((place) => place.side === side && isBetween(place.number, start, end))
-			.reduce(
-				(furthest, place) => (Math.abs(place.number - start) > Math.abs(furthest.number - start) ? place : furthest),
-				{ side, number: start }
-			);
 	}
 }

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
 from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, AnchorBase, DiffFile, LineAnchor, LineSide, LineType
-from claude_review.services.place_words import line_span
+from claude_review.services.place_words import line_span, place_in_words
 
 # How many of the review's files a refusal names, so whoever named the wrong
 # one can see what the right one is called without the whole list
@@ -36,6 +36,15 @@ class AnchorHandler[Kind: AnchorBase](ABC):
     @abstractmethod
     def quote(self, anchor: Kind) -> Kind:
         """The anchor with what it is about read off what the review holds."""
+
+    @abstractmethod
+    def check_quote(self, anchor: Kind) -> None:
+        """Refuse an anchor whose quote does not hold what it names, piece for piece.
+
+        A page quotes what the reader picked as they picked it, and the agent
+        takes the quote for what a suggestion replaces: named but not quoted,
+        a part would be replaced by whoever never saw it.
+        """
 
     @abstractmethod
     def excerpt(self, anchor: Kind) -> list[str]:
@@ -85,6 +94,24 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
             raise AnchorLinesNotShownError(msg)
 
         return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
+
+    @override
+    def check_quote(self, anchor: LineAnchor) -> None:
+        """Refuse lines quoted short of the span they name: one quoted line for each, or none kept at all.
+
+        A thread kept from before quotes were kept quotes nothing, and has
+        nothing to fall short of.
+
+        Raises:
+            AnchorLinesNotShownError: if the quote holds fewer or more lines than the anchor names.
+        """
+        line_count = anchor.end_line - anchor.start_line + 1
+        if anchor.quote and len(anchor.quote) != line_count:
+            msg = (
+                f"{place_in_words(anchor)} names {line_count} lines but quotes {len(anchor.quote)}:"
+                " a comment covers only lines on screen"
+            )
+            raise AnchorLinesNotShownError(msg)
 
     @override
     def excerpt(self, anchor: LineAnchor) -> list[str]:
@@ -159,6 +186,18 @@ class AnchorService:
         match anchor:
             case LineAnchor():
                 return self._lines.quote(anchor)
+            case _:
+                assert_never(anchor)
+
+    def check_quote(self, anchor: Anchor) -> None:
+        """Refuse an anchor the reader's page made whose quote does not hold what it names.
+
+        Raises:
+            AnchorLinesNotShownError: if it names lines it does not quote.
+        """
+        match anchor:
+            case LineAnchor():
+                self._lines.check_quote(anchor)
             case _:
                 assert_never(anchor)
 

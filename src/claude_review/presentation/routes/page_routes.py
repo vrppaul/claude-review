@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.exceptions import (
+    AnchorLinesNotShownError,
     FileNotInReviewError,
     FileUnreadableError,
     ImageAlreadySentError,
@@ -153,7 +154,7 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
 @router.post(
     "/ask",
     status_code=HTTPStatus.NO_CONTENT,
-    responses=refusals(QuestionNotInThreadError, takes=Takes.JSON_BODY),
+    responses=refusals(QuestionNotInThreadError, AnchorLinesNotShownError, takes=Takes.JSON_BODY),
 )
 async def ask_about_thread(request: AskRequest, review: Review = Depends(get_review)) -> None:
     """Take a question asked in one thread, for whoever is answering to pick up.
@@ -167,7 +168,7 @@ async def ask_about_thread(request: AskRequest, review: Review = Depends(get_rev
 @router.post(
     "/message",
     status_code=HTTPStatus.NO_CONTENT,
-    responses=refusals(ImagesNotKeptError, takes=Takes.JSON_BODY),
+    responses=refusals(ImagesNotKeptError, AnchorLinesNotShownError, takes=Takes.JSON_BODY),
 )
 async def take_panel_message(request: MessageRequest, review: Review = Depends(get_review)) -> None:
     """Take what the reader typed in the panel, for the agent to pick up.
@@ -259,7 +260,7 @@ async def discard_an_image(image_id: WireId, review: Review = Depends(get_review
     log.info("image_discarded", image_id=image_id)
 
 
-@router.post("/submit", responses=refusals(ReviewEndedError, takes=Takes.JSON_BODY))
+@router.post("/submit", responses=refusals(ReviewEndedError, AnchorLinesNotShownError, takes=Takes.JSON_BODY))
 async def submit_review(request: SubmitRequest, review: Review = Depends(get_review)) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.
 

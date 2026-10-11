@@ -90,6 +90,18 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
     assert thread["turns"][0]["body"] == "It moved to the caller."
 
 
+async def test_a_message_pointing_at_a_thread_quoting_fewer_lines_than_it_names_is_refused(
+    client: AsyncClient,
+) -> None:
+    """Handed over, the agent would take the quote for every line the thread names."""
+    short = {**THREAD, "anchor": {**line_on_the_wire(REVIEWED_FILE, 40, 42), "quote": ["only line 40"]}}
+
+    response = await client.post("/api/message", json={**MESSAGE, "threads": [short]})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert "names 3 lines but quotes 1" in response.json()["detail"]
+
+
 async def test_questions_rounds_and_messages_keep_one_order(client: AsyncClient) -> None:
     """One queue, so an answer cannot overtake the round it belongs to."""
     await client.post("/api/ask", json=QUESTION)

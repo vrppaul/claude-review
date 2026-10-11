@@ -168,6 +168,16 @@ async def test_an_id_that_could_not_be_read_back_is_refused(client: AsyncClient)
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
+async def test_a_question_in_a_thread_quoting_fewer_lines_than_it_names_is_refused(client: AsyncClient) -> None:
+    """Handed over, the agent would take the quote for every line the thread names."""
+    short = {**A_THREAD, "anchor": {**line_on_the_wire("src/a.py", 40, 42), "quote": [QUOTED]}}
+
+    response = await client.post(ASK_ROUTE, json=_asking(short))
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert "names 3 lines but quotes 1" in response.json()["detail"]
+
+
 async def test_a_question_naming_nothing_in_its_thread_is_refused(client: AsyncClient) -> None:
     response = await client.post(ASK_ROUTE, json=_asking({**A_THREAD, "turns": [ANSWER]}, question_id="turn-9"))
 
