@@ -65,12 +65,15 @@
 	 * a column's grip, the tour's light and its buttons.
 	 */
 	--cr-control: var(--cr-mark);
+	--cr-control-text: var(--cr-mark-text);
 	--cr-control-tint: var(--cr-mark-tint);
 	--cr-control-line: var(--cr-mark-line);
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
 	--cr-unread: var(--cr-agent);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
+	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
+	--cr-placeholder: var(--cr-faint);
 
 	/* What differs inside a changed line, in the change's own colour */
 	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
@@ -116,6 +119,12 @@
 	--cr-del-edge: #cf4249;
 	--cr-del-tint: rgb(242 84 91 / 0.09);
 	--cr-mark: #5b8def;
+	/*
+	 * The reader's mark as words: on its own tint, and on a chip inside a
+	 * message written on that tint, it has to read at 4.5:1, which the mark
+	 * drawn as an edge or a fill does not need to
+	 */
+	--cr-mark-text: #90b2f4;
 	--cr-mark-tint: rgb(91 141 239 / 0.14);
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
@@ -126,13 +135,13 @@
 	--cr-status-modified: #e0a458;
 	--cr-gutter-fg: #7c8a9e;
 	--cr-muted: #98a5b6;
-	--cr-faint: #7a8798;
+	--cr-faint: #8490a0;
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 
 	--cr-syn-keyword: #c792ea;
 	--cr-syn-string: #e0a458;
-	--cr-syn-comment: #6c7a8c;
+	--cr-syn-comment: #8390a0;
 	--cr-syn-number: #7fd3f7;
 	--cr-syn-type: #7fd3f7;
 	--cr-syn-function: #82aaff;
@@ -177,11 +186,12 @@
 	--cr-del-edge: #d24049;
 	--cr-del-tint: rgb(200 50 60 / 0.08);
 	--cr-mark: #2c6bd9;
+	--cr-mark-text: #1f53ad;
 	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
 	--cr-agent: #6b4bb8;
 	--cr-popover-edge: #c3cdd9;
-	--cr-status-modified: #9a6410;
+	--cr-status-modified: #935f0f;
 	--cr-gutter-fg: #5d6a7a;
 	--cr-muted: #4c5866;
 	--cr-faint: #5d6a7a;
@@ -190,7 +200,7 @@
 
 	--cr-syn-keyword: #8250df;
 	--cr-syn-string: #8a5a00;
-	--cr-syn-comment: #6e7a88;
+	--cr-syn-comment: #616b78;
 	--cr-syn-number: #0b6e99;
 	--cr-syn-type: #0b6e99;
 	--cr-syn-function: #2c6bd9;
