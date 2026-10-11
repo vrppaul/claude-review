@@ -4,6 +4,7 @@
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
+	import Popover from './Popover.svelte';
 
 	// What the list says when the bases could not be listed or taken, and nothing said why
 	const LISTING_FAILED = 'Could not list what this can be compared against';
@@ -15,8 +16,6 @@
 	let filter = $state('');
 	let failed = $state<string | null>(null);
 	let asking = $state(false);
-	let container = $state<HTMLElement>();
-	let trigger = $state<HTMLButtonElement>();
 
 	const sections: { kind: VersionKind; title: string }[] = [
 		{ kind: 'review', title: 'This review' },
@@ -29,9 +28,13 @@
 	);
 	const hasRounds = $derived(review.diff.versions.some((version) => version.kind === 'round'));
 
-	async function show() {
-		open = !open;
-		if (!open) return;
+	/** Open or close the list; opened, it asks git afresh what there is to compare against. */
+	function setOpen(next: boolean) {
+		open = next;
+		if (next) void listBases();
+	}
+
+	async function listBases() {
 		filter = '';
 		failed = null;
 		asking = true;
@@ -44,17 +47,11 @@
 		}
 	}
 
-	/** Close, and give the keyboard back where it came from. */
-	function shut() {
-		open = false;
-		trigger?.focus();
-	}
-
 	async function pick(version: ReviewVersion) {
 		failed = null;
 		try {
 			await review.diff.setBase(version.key);
-			shut();
+			open = false;
 		} catch (error) {
 			failed = messageOf(error, TAKING_FAILED);
 		}
@@ -69,95 +66,88 @@
 	}
 </script>
 
-<svelte:window
-	onclick={(event) => {
-		if (open && container && !container.contains(event.target as Node)) open = false;
-	}}
-	onkeydown={(event) => {
-		if (event.key === 'Escape' && open) shut();
-	}}
-/>
-
-<div class="relative" bind:this={container}>
-	<!-- The second half of the title, made a control: the header still reads
-		as one sentence, and takes the mark tint while a narrower base is on. -->
-	<button
-		data-testid="base-picker"
-		data-tour="review-base"
-		class="cr-chip font-mono"
-		style={review.diff.narrowed ? 'background: var(--cr-mark-tint); color: var(--color-base-content)' : ''}
-		aria-expanded={open}
-		title="What the working tree is compared against"
-		bind:this={trigger}
-		onclick={show}
-	>
-		<Icon name="compare" class="h-3 w-3 shrink-0" style={review.diff.narrowed ? 'color: var(--cr-mark)' : ''} />
-		{review.diff.phrase}
-		<Icon name="chevron" class="h-3 w-3 shrink-0" />
-	</button>
-
-	{#if open}
-		<div
-			data-testid="base-list"
-			data-tour="review-base-list"
-			class="cr-dialog absolute left-0 z-30 mt-2 w-80 overflow-hidden rounded-box bg-base-200"
+<!-- The second half of the title, made a control: the header still reads
+	as one sentence, and takes the mark tint while a narrower base is on. -->
+<Popover
+	bind:open={() => open, setOpen}
+	label="Compare the working tree against"
+	placement="below-start"
+	data-testid="base-list"
+	data-tour="review-base-list"
+	class="w-80"
+>
+	{#snippet trigger(control)}
+		<button
+			{...control}
+			type="button"
+			data-testid="base-picker"
+			data-tour="review-base"
+			class={['cr-chip font-mono', review.diff.narrowed && 'bg-(--cr-mark-tint) text-base-content']}
+			title="What the working tree is compared against"
 		>
-			<div class="px-3 pt-2 pb-1">
-				<p class="cr-muted text-xs">Compare the working tree against</p>
-				<!-- svelte-ignore a11y_autofocus -->
-				<input
-					data-testid="base-filter"
-					class="mt-2 w-full rounded border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
-					placeholder="filter"
-					autofocus
-					bind:value={filter}
-				/>
-			</div>
+			<Icon name="compare" class={['h-3 w-3 shrink-0', review.diff.narrowed && 'text-(--cr-mark)']} />
+			{review.diff.phrase}
+			<Icon name="chevron" class="h-3 w-3 shrink-0" />
+		</button>
+	{/snippet}
 
-			{#each sections as section (section.kind)}
-				{@const listed = matching.filter((version) => version.kind === section.kind)}
-				{#if listed.length > 0}
-					<p class="cr-faint px-3 pt-2 pb-1 text-xs">{section.title}</p>
-					{#each listed as version (version.key)}
-						<button
-							data-testid="base-option"
-							class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-base-300"
-							style={version.key === review.diff.base ? 'background: var(--cr-mark-tint)' : ''}
-							onclick={() => pick(version)}
-						>
-							<span class="w-3 shrink-0">
-								{#if version.key === review.diff.base}
-									<Icon name="check" class="h-3 w-3" style="color: var(--cr-mark)" label="In force" />
-								{/if}
-							</span>
-							<span class="flex-1 truncate font-mono text-xs">{version.label}</span>
-							<span class="cr-faint shrink-0 text-xs">{meta(version)}</span>
-						</button>
-					{/each}
-				{/if}
+	<div class="px-3 pt-2 pb-1">
+		<p class="cr-muted text-xs">Compare the working tree against</p>
+		<input
+			data-testid="base-filter"
+			class="mt-2 w-full rounded border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
+			placeholder="filter"
+			aria-label="Filter the bases"
+			bind:value={filter}
+		/>
+	</div>
+
+	{#each sections as section (section.kind)}
+		{@const listed = matching.filter((version) => version.kind === section.kind)}
+		{#if listed.length > 0}
+			<p class="cr-faint px-3 pt-2 pb-1 text-xs">{section.title}</p>
+			{#each listed as version (version.key)}
+				{@const inForce = version.key === review.diff.base}
+				<button
+					type="button"
+					data-testid="base-option"
+					class={[
+						'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-base-300',
+						inForce && 'bg-(--cr-mark-tint)'
+					]}
+					onclick={() => pick(version)}
+				>
+					<span class="w-3 shrink-0">
+						{#if inForce}
+							<Icon name="check" class="h-3 w-3 text-(--cr-mark)" label="In force" />
+						{/if}
+					</span>
+					<span class="flex-1 truncate font-mono text-xs">{version.label}</span>
+					<span class="cr-faint shrink-0 text-xs">{meta(version)}</span>
+				</button>
 			{/each}
+		{/if}
+	{/each}
 
-			{#if asking && matching.length === 0}
-				<p data-testid="bases-asking" class="cr-muted px-3 py-6 text-center text-xs">
-					Asking git what this can be read against…
-				</p>
-			{:else if matching.length === 0 && !failed}
-				<p data-testid="no-bases" class="cr-muted px-3 py-6 text-center text-xs">
-					{filter.trim() ? 'Nothing here answers to that.' : 'Nothing to compare against.'}
-				</p>
-			{/if}
-
-			{#if failed}
-				<p data-testid="base-error" class="border-t border-base-300 px-3 py-2 text-xs text-error">
-					{failed}
-				</p>
-			{/if}
-
-			{#if hasRounds}
-				<p class="cr-faint border-t border-base-300 px-3 py-2 text-xs">
-					Rounds are kept for as long as this review is open.
-				</p>
-			{/if}
-		</div>
+	{#if asking && matching.length === 0}
+		<p data-testid="bases-asking" class="cr-muted px-3 py-6 text-center text-xs">
+			Asking git what this can be read against…
+		</p>
+	{:else if matching.length === 0 && !failed}
+		<p data-testid="no-bases" class="cr-muted px-3 py-6 text-center text-xs">
+			{filter.trim() ? 'Nothing here answers to that.' : 'Nothing to compare against.'}
+		</p>
 	{/if}
-</div>
+
+	{#if failed}
+		<p data-testid="base-error" class="border-t border-base-300 px-3 py-2 text-xs text-error">
+			{failed}
+		</p>
+	{/if}
+
+	{#if hasRounds}
+		<p class="cr-faint border-t border-base-300 px-3 py-2 text-xs">
+			Rounds are kept for as long as this review is open.
+		</p>
+	{/if}
+</Popover>

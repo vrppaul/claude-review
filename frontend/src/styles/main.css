@@ -854,12 +854,67 @@
 	color: var(--color-base-content);
 }
 
-/* A small pane under the button that opened it, rather than a full stop */
+/*
+ * A pane the reader opens from a control: one look for every menu, list and
+ * picker, lifted off the page, with an arrow pointing at the middle of the
+ * control it came from.
+ */
 .cr-popover {
-	background: var(--color-base-100);
-	border: 1px solid var(--color-base-300);
+	--cr-arrow-size: 12px;
+	--cr-popover-gap: 0.5rem;
+	position: absolute;
+	z-index: var(--cr-layer-popover);
+	background: var(--color-base-200);
+	border: 1px solid var(--cr-popover-edge);
 	border-radius: var(--radius-box);
 	box-shadow: var(--cr-elevation-high);
+}
+/* Rounds what scrolls or is lit inside the pane; the arrow stays outside it */
+.cr-popover-body {
+	border-radius: inherit;
+	overflow: hidden;
+}
+/* A square on its corner, two of its edges showing, half out of the pane */
+.cr-popover::before {
+	content: '';
+	position: absolute;
+	width: var(--cr-arrow-size);
+	height: var(--cr-arrow-size);
+	background: inherit;
+	border: inherit;
+	rotate: 45deg;
+}
+.cr-popover-below-start,
+.cr-popover-below-end {
+	top: calc(100% + var(--cr-popover-gap));
+}
+.cr-popover-below-start {
+	left: 0;
+}
+.cr-popover-below-end {
+	right: 0;
+}
+.cr-popover-above-start {
+	bottom: calc(100% + var(--cr-popover-gap));
+	left: 0;
+}
+.cr-popover-below-start::before,
+.cr-popover-below-end::before {
+	top: calc(var(--cr-arrow-size) / -2 - 1px);
+	border-right-color: transparent;
+	border-bottom-color: transparent;
+}
+.cr-popover-above-start::before {
+	bottom: calc(var(--cr-arrow-size) / -2 - 1px);
+	border-left-color: transparent;
+	border-top-color: transparent;
+}
+.cr-popover-below-start::before,
+.cr-popover-above-start::before {
+	left: calc(var(--cr-arrow-offset) - var(--cr-arrow-size) / 2);
+}
+.cr-popover-below-end::before {
+	right: calc(var(--cr-arrow-offset) - var(--cr-arrow-size) / 2);
 }
 .cr-finish-row:hover {
 	background: var(--cr-mark-tint);

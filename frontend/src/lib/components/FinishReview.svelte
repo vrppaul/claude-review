@@ -55,7 +55,7 @@
 	role="dialog"
 	aria-modal="false"
 	aria-label="Finish the review"
-	class="cr-popover absolute right-3 top-12 z-50 flex max-h-[70vh] w-[26rem] flex-col"
+	class="cr-dialog absolute top-12 right-3 z-50 flex max-h-[70vh] w-[26rem] flex-col rounded-box bg-base-100"
 >
 	<div class="flex items-baseline gap-2 border-b border-base-300 px-4 py-2.5">
 		<h3 class="text-sm font-semibold">
