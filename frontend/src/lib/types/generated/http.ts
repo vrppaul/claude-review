@@ -748,6 +748,8 @@ export interface components {
         DiffFile: {
             /** Path */
             path: string;
+            /** Old Path */
+            old_path: string | null;
             status: components["schemas"]["FileStatus"];
             /** Hunks */
             hunks: components["schemas"]["DiffHunk"][];

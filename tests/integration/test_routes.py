@@ -432,6 +432,19 @@ async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, re
     ]
 
 
+async def test_a_renamed_file_is_served_with_where_it_was(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """Without it the page shows a new file, and the reader cannot tell a rename from a rewrite."""
+    (tmp_git_repo / "before.py").write_text("moved, not changed\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "add the file")
+    git(tmp_git_repo, "mv", "before.py", "after.py")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        [served] = (await client.get(DIFF_ROUTE)).json()["files"]
+
+    assert (served["path"], served["old_path"]) == ("after.py", "before.py")
+
+
 async def test_the_review_says_which_release_serves_it(client: AsyncClient) -> None:
     """So the browser can tell a reader what changed since the release they last saw."""
     response = await client.get(REVIEW_ROUTE)

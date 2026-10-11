@@ -410,3 +410,50 @@ def test_a_link_turned_into_a_file_is_one_file_whose_link_becomes_its_lines() ->
         added_line(2, "second"),
     ]
     assert len(turned.hunks) == 1
+
+
+# What git writes for a file moved under a name it has to quote, with a line
+# of it changed, and for one moved without a change
+RENAMED_AND_CHANGED = """\
+diff --git a/old_name.txt "b/\\320\\266 new.txt"
+similarity index 75%
+rename from old_name.txt
+rename to "\\320\\266 new.txt"
+index 2f0c7ea..b2a5f3c 100644
+--- a/old_name.txt
++++ "b/\\320\\266 new.txt"
+@@ -1,2 +1,2 @@
+ kept
+-was
++is
+"""
+RENAMED_UNCHANGED = """\
+diff --git a/before.txt b/after.txt
+similarity index 100%
+rename from before.txt
+rename to after.txt
+"""
+
+
+def test_a_renamed_file_says_where_it_was() -> None:
+    [changed] = parse_unified_diff(RENAMED_AND_CHANGED)
+    [moved] = parse_unified_diff(RENAMED_UNCHANGED)
+
+    assert (changed.path, changed.old_path) == ("ж new.txt", "old_name.txt")
+    assert (moved.path, moved.old_path) == ("after.txt", "before.txt")
+
+
+COPIED_UNCHANGED = """\
+diff --git a/original.txt b/copy.txt
+similarity index 100%
+copy from original.txt
+copy to copy.txt
+"""
+
+
+def test_a_file_that_did_not_move_has_no_old_path() -> None:
+    """A copy leaves its original where it was: it is a new file, not one that moved."""
+    [turned, ordinary] = parse_unified_diff(FILE_TURNED_INTO_A_LINK)
+    [copied] = parse_unified_diff(COPIED_UNCHANGED)
+
+    assert (turned.old_path, ordinary.old_path, copied.old_path) == (None, None, None)

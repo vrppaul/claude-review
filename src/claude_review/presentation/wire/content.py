@@ -39,6 +39,8 @@ class DiffFile(WireModel):
     """A file that has been changed, and what kind of change it was when it has no lines to show."""
 
     path: str
+    # Where the file was before it moved; null unless it was renamed
+    old_path: str | None
     status: FileStatus
     hunks: list[DiffHunk]
     is_binary: WireBool

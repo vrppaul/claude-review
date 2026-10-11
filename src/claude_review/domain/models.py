@@ -82,6 +82,8 @@ class DiffFile(BaseModel):
     """
 
     path: str
+    # Where the file was before it moved; None unless it was renamed
+    old_path: str | None = None
     status: FileStatus
     hunks: list[DiffHunk]
     is_binary: bool = False

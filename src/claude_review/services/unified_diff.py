@@ -32,6 +32,8 @@ OLD_SIDE_MARKER = "--- "
 NO_FILE = "/dev/null"
 # Headers that name where a file went when it moved or was copied without changing
 MOVED_TO_HEADERS = ("rename to ", "copy to ")
+# The header that names where a renamed file was
+RENAMED_FROM_HEADER = "rename from "
 # What git puts before the path on each side, and between the two in "a/x b/x"
 OLD_SIDE_PREFIX = "a/"
 NEW_SIDE_PREFIX = "b/"
@@ -135,6 +137,7 @@ def _part(text: str) -> FilePart | None:
 
     file = DiffFile(
         path=path,
+        old_path=_old_path(header),
         status=_status(header),
         hunks=_hunks(lines, hunk_starts),
         is_binary=any(line.startswith(BINARY_HEADER) for line in header),
@@ -217,6 +220,22 @@ def _path(header: list[str]) -> str | None:
                 return _marker_path(line.removeprefix(moved_to))
 
     return _paths_line_path(header[0])
+
+
+def _old_path(header: list[str]) -> str | None:
+    """Where a renamed file was, read from its header; None for a file that did not move.
+
+    A copy leaves its original where it was, so only a rename says where
+    the file is no longer.
+    """
+    return next(
+        (
+            _marker_path(line.removeprefix(RENAMED_FROM_HEADER))
+            for line in header
+            if line.startswith(RENAMED_FROM_HEADER)
+        ),
+        None,
+    )
 
 
 def _marker_path(value: str) -> str:
