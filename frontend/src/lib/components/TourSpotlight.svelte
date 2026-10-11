@@ -43,8 +43,12 @@
 {#if frame}
 	<div
 		data-testid="tour-spotlight"
-		class="cr-guide-spot {gliding ? 'cr-guide-spot-gliding' : ''}"
+		class={['cr-guide-spot', gliding && 'cr-guide-spot-gliding']}
 		aria-hidden="true"
-		style="left: {frame.left}px; top: {frame.top}px; width: {frame.width}px; height: {frame.height}px; --cr-guide-glide: {GLIDE_MS}ms"
+		style:--cr-spot-left="{frame.left}px"
+		style:--cr-spot-top="{frame.top}px"
+		style:--cr-spot-width="{frame.width}px"
+		style:--cr-spot-height="{frame.height}px"
+		style:--cr-guide-glide="{GLIDE_MS}ms"
 	></div>
 {/if}

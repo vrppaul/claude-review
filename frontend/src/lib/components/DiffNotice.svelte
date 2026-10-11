@@ -91,8 +91,8 @@
 </script>
 
 {#if moved > 0}
-	<!-- Amber, not the mark colour: this is the code moving, not the reader's
-		own mark. Never a swap: whoever is mid-sentence decides when. -->
+	<!-- The warning's yellow, not the mark colour: this is the code moving, not
+		the reader's own mark. Never a swap: whoever is mid-sentence decides when. -->
 	<div
 		data-testid="tree-moved"
 		class="cr-notice cr-notice-moved flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
@@ -105,8 +105,13 @@
 		{#if failed}
 			<span data-testid="retake-error" class="text-error">{failed}</span>
 		{/if}
-		<button data-testid="retake-diff" class="btn btn-ghost btn-xs" onclick={retake}>Retake</button>
-		<button data-testid="dismiss-moved" class="btn btn-ghost btn-xs" onclick={() => review.diff.treeMoved.dismiss()}>
+		<button type="button" data-testid="retake-diff" class="btn btn-ghost btn-xs" onclick={retake}>Retake</button>
+		<button
+			type="button"
+			data-testid="dismiss-moved"
+			class="btn btn-ghost btn-xs"
+			onclick={() => review.diff.treeMoved.dismiss()}
+		>
 			Dismiss
 		</button>
 	</div>
@@ -126,12 +131,13 @@
 			<span data-testid="retaken-error" class="text-error">{failed}</span>
 		{/if}
 		{#if review.lastRetake.changedSince !== null && review.lastRetake.changedCount > 0}
-			<button data-testid="show-what-changed" class="btn btn-ghost btn-xs" onclick={showWhatChanged}>
+			<button type="button" data-testid="show-what-changed" class="btn btn-ghost btn-xs" onclick={showWhatChanged}>
 				Show what changed
 			</button>
 		{/if}
 		{#if stranded}
 			<button
+				type="button"
 				data-testid="show-outdated"
 				class="btn btn-ghost btn-xs"
 				onclick={() => review.navigator.reveal(stranded)}
@@ -139,7 +145,12 @@
 				Show it
 			</button>
 		{/if}
-		<button data-testid="dismiss-retaken" class="btn btn-ghost btn-xs" onclick={() => review.lastRetake.dismiss()}>
+		<button
+			type="button"
+			data-testid="dismiss-retaken"
+			class="btn btn-ghost btn-xs"
+			onclick={() => review.lastRetake.dismiss()}
+		>
 			Dismiss
 		</button>
 	</div>
@@ -170,6 +181,7 @@
 		{/if}
 		{#if offScreen.length > 0}
 			<button
+				type="button"
 				data-testid="list-off-screen"
 				class="btn btn-ghost btn-xs"
 				aria-expanded={listing}
@@ -178,7 +190,7 @@
 				{listing ? 'Hide them' : 'List them'}
 			</button>
 		{/if}
-		<button data-testid="show-everything" class="btn btn-ghost btn-xs" onclick={showEverything}>
+		<button type="button" data-testid="show-everything" class="btn btn-ghost btn-xs" onclick={showEverything}>
 			Show the whole diff
 		</button>
 	</div>
@@ -190,6 +202,7 @@
 		<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
 			{#each offScreen as thread (thread.id)}
 				<button
+					type="button"
 					data-testid="off-screen-thread"
 					class="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-base-200"
 					onclick={() => goTo(thread)}

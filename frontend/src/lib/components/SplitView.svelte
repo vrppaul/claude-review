@@ -86,7 +86,6 @@
 						{@const leftNotes = notedIn(row.left, 'old')}
 						{@const rightNotes = notedIn(row.right, 'new')}
 						<tr data-testid="split-row" class="cr-side-del">
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								class="cr-gutter w-12 p-0 text-right select-none {edge(row.left, 'old')} {tint(row.left, 'old')}"
 								onmouseenter={() => row.left && commenting.enter(row.left)}
@@ -102,7 +101,6 @@
 								{#if row.left}{@html row.left.markup}{/if}
 							</td>
 
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<td
 								class="cr-gutter cr-side-add w-12 p-0 text-right select-none {edge(row.right, 'new')} {tint(
 									row.right,

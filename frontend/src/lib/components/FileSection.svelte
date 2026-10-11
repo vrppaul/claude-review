@@ -8,6 +8,7 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody, { type FileView } from './FileBody.svelte';
+	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
 
 	// What a file's header and each of its rows take up, in pixels, as drawn
@@ -82,29 +83,29 @@
 	data-testid="file-section"
 	data-path={file.path}
 	class="cr-section border-b border-base-300"
-	style="contain-intrinsic-size: auto {HEADER_HEIGHT + bodyHeight}px"
+	style:--cr-section-height="{HEADER_HEIGHT + bodyHeight}px"
+	style:--cr-body-height="{bodyHeight}px"
 >
 	<div
-		class="cr-file-header flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2 {viewed
-			? 'opacity-55'
-			: ''}"
+		data-testid="file-header"
+		class={[
+			'cr-file-header flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2',
+			viewed && 'opacity-55'
+		]}
 	>
-		<button
-			data-testid="collapse-file"
-			class="btn btn-ghost btn-xs px-1.5"
-			aria-expanded={!collapsed}
-			aria-label={collapsed ? `Expand ${file.path}` : `Collapse ${file.path}`}
-			onclick={() => review.reading.toggleFolded(file.path)}
-		>
-			<Icon name="chevron" class="h-3 w-3 transition-transform {collapsed ? '-rotate-90' : ''}" />
-		</button>
+		<FoldToggle
+			folded={collapsed}
+			subject={file.path}
+			testId="collapse-file"
+			onToggle={() => review.reading.toggleFolded(file.path)}
+		/>
 
 		<span class="font-mono text-sm font-semibold">{file.path}</span>
 		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button
+				type="button"
 				data-testid="file-changed-since"
-				class="cr-chip"
-				style="background: var(--cr-mark-tint); color: var(--cr-mark)"
+				class="cr-chip cr-chip-marked"
 				title="Show only what changed since then"
 				onclick={showChangesSince}
 			>
@@ -148,7 +149,7 @@
 		{#if built}
 			<FileBody {file} {language} {view} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
 		{:else}
-			<div data-testid="file-placeholder" style="height: {bodyHeight}px"></div>
+			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 		{/if}
 	{/if}
 </section>

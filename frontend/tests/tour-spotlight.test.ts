@@ -45,7 +45,8 @@ describe('the light over a tour step', () => {
 		window.dispatchEvent(new Event('scroll'));
 		await nextFrame();
 
-		expect(getByTestId('tour-spotlight').style.top).toBe('76px');
+		// Where the light stands, as the component hands it to the stylesheet
+		expect(getByTestId('tour-spotlight').style.getPropertyValue('--cr-spot-top')).toBe('76px');
 		expect(listening.mock.calls.filter(([type]) => type === 'scroll').length).toBe(setUps);
 	});
 

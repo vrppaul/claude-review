@@ -10,6 +10,9 @@
 import { isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 import type { Review } from '$lib/review/review.svelte';
 
+/** The chord that finishes the review, as the help and the hints beside its button write it. */
+export const FINISH_KEYS = 'Ctrl+Shift+Enter';
+
 /** What is held with a key: nothing, or Ctrl (Cmd on a Mac) and Shift together. */
 type Held = 'nothing' | 'command-and-shift';
 
@@ -89,7 +92,7 @@ export const KEYMAP: readonly KeyRow[] = [
 		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))]
 	},
 	{
-		keys: 'Ctrl+Shift+Enter',
+		keys: FINISH_KEYS,
 		does: 'Finish the review',
 		presses: [{ key: 'Enter', held: 'command-and-shift', run: finish }]
 	},

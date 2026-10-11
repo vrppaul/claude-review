@@ -4,6 +4,7 @@
 	import BasePicker from './BasePicker.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
+	import { FINISH_KEYS } from './keymap';
 	import Popover from './Popover.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
@@ -26,6 +27,7 @@
 		<span class="font-semibold">Review</span>
 		<!-- The ? key may belong to a browser extension, so the list has a button too -->
 		<button
+			type="button"
 			data-testid="open-help"
 			class="cr-chip"
 			title="The tour, what is new, and the keys (?)"
@@ -39,9 +41,10 @@
 			<BasePicker />
 			{#if review.settings.current.ignore_whitespace}
 				<!-- Said here as well as in the settings, because it hides changes -->
-				<span data-testid="whitespace-hidden" class="cr-chip text-base-content">
+				<span data-testid="whitespace-hidden" class="cr-chip cr-chip-narrowing">
 					No whitespace
 					<button
+						type="button"
 						data-testid="show-whitespace"
 						class="btn btn-ghost btn-xs px-1"
 						aria-label="Show whitespace changes again"
@@ -79,6 +82,7 @@
 		{#if review.threads.count > 0}
 			<div class="join">
 				<button
+					type="button"
 					data-testid="prev-comment"
 					class="btn join-item btn-ghost btn-xs"
 					onclick={() => review.navigator.step(-1)}
@@ -88,6 +92,7 @@
 					<Icon name="chevron" class="h-3 w-3 rotate-180" />
 				</button>
 				<button
+					type="button"
 					data-testid="next-comment"
 					class="btn join-item btn-ghost btn-xs"
 					onclick={() => review.navigator.step(1)}
@@ -100,6 +105,7 @@
 		{/if}
 
 		<button
+			type="button"
 			data-testid="toggle-panel"
 			data-tour="agent-panel-toggle"
 			class="cr-chip"
@@ -132,7 +138,7 @@
 					data-testid="quick-submit"
 					data-tour="send"
 					disabled={review.submission.sending}
-					title="Ctrl+Shift+Enter"
+					title={FINISH_KEYS}
 				>
 					{#if review.submission.sending}
 						<span class="loading loading-xs loading-spinner"></span>

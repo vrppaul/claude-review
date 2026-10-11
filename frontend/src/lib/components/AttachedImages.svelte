@@ -26,6 +26,7 @@
 					onerror={() => onLost(imageId)}
 				/>
 				<button
+					type="button"
 					data-testid="detach-image"
 					class="cr-image-detach rounded-full"
 					aria-label="Remove this image"

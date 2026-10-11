@@ -79,6 +79,12 @@
  */
 .cr-section {
 	content-visibility: auto;
+	/* What it would take up, drawn: the file says so, from its header and its rows */
+	contain-intrinsic-size: auto var(--cr-section-height);
+}
+/* Where a file's rows go before they are built, as tall as they will be */
+.cr-file-placeholder {
+	height: var(--cr-body-height);
 }
 
 /*
@@ -330,6 +336,17 @@
 .cr-chip:has(:focus-visible) {
 	outline: 2px solid var(--cr-mark);
 	outline-offset: 1px;
+}
+/* A chip saying the reader sees less than the whole diff — a narrower base,
+   whitespace hidden — in their mark's tint, and plain, not muted like a control */
+.cr-chip-narrowing {
+	background: var(--cr-mark-tint);
+	color: var(--color-base-content);
+}
+/* A chip offering the reader something of their own to look at, in their mark */
+.cr-chip-marked {
+	background: var(--cr-mark-tint);
+	color: var(--cr-mark);
 }
 
 /* Rendered prose gets the same measure as a comment: it is prose too */
@@ -1015,6 +1032,10 @@
    what they open is never dimmed. */
 .cr-guide-spot {
 	position: fixed;
+	left: var(--cr-spot-left);
+	top: var(--cr-spot-top);
+	width: var(--cr-spot-width);
+	height: var(--cr-spot-height);
 	z-index: var(--cr-layer-spotlight);
 	pointer-events: none;
 	border-radius: var(--radius-box);

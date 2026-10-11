@@ -4,13 +4,13 @@
  * stylesheet only names them — stylelint refuses a colour, a layer or a
  * shadow written anywhere else.
  *
- * Two rules shape the palette. Green and red belong to the diff and nothing
- * else, so the syntax colors below deliberately avoid both hues — a green
- * string inside a removed line reads as a contradiction. And change is
- * marked at the edge of a row rather than washed across it, so highlighted
- * code stays legible on top of it. Every other colour has one meaning too:
- * blue is the reader's own mark, violet the agent's voice, yellow a warning,
- * orange a modified file's letter.
+ * Two rules shape the palette. Green and red say what the diff added and
+ * removed, so the syntax colours below avoid both hues — a green string
+ * inside a removed line reads as a contradiction. And change is marked at
+ * the edge of a row rather than washed across it, so highlighted code stays
+ * legible on top of it. The other colours have one meaning each, the code's
+ * own aside: blue is the reader's own mark, violet the agent's voice, yellow
+ * a warning, orange a modified file's letter.
  */
 
 :root {
@@ -94,7 +94,7 @@
 	--cr-raised-edge: #a68dd8;
 	/* The edge of a pane the reader opened, a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
-	/* A modified file's letter: the one place orange appears */
+	/* A modified file's letter: the one place orange appears outside the code's own colours */
 	--cr-status-modified: #e0a458;
 	--cr-gutter-fg: #7c8a9e;
 	--cr-muted: #98a5b6;

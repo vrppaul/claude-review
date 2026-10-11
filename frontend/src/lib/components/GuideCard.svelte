@@ -50,12 +50,17 @@
 		<div class="flex items-center gap-2.5">
 			<div class="flex gap-1" aria-hidden="true">
 				{#each stepNumbers as index (index)}
-					<span class="cr-guide-tick {index <= review.guide.stepPosition ? 'cr-guide-tick-done' : ''}"></span>
+					<span class={['cr-guide-tick', index <= review.guide.stepPosition && 'cr-guide-tick-done']}></span>
 				{/each}
 			</div>
 			<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
 			<span class="flex-1"></span>
-			<button data-testid="guide-skip" class="cr-faint px-0.5 text-xs" onclick={() => review.guide.endTour()}>
+			<button
+				type="button"
+				data-testid="guide-skip"
+				class="cr-faint px-0.5 text-xs"
+				onclick={() => review.guide.endTour()}
+			>
 				Skip tour
 			</button>
 		</div>
@@ -68,7 +73,7 @@
 			<ol class="cr-guide-forks">
 				{#each step.fork as option (option.label)}
 					<li class="cr-guide-fork">
-						<span class="cr-guide-route {option.primary ? 'cr-guide-route-primary' : ''}">{option.label}</span>
+						<span class={['cr-guide-route', option.primary && 'cr-guide-route-primary']}>{option.label}</span>
 						<span class="cr-guide-body text-xs">{option.says}</span>
 					</li>
 				{/each}
@@ -82,13 +87,23 @@
 		{/if}
 		<div class="flex items-center gap-2">
 			{#if review.guide.canGoBack}
-				<button data-testid="guide-back" class="btn btn-outline btn-sm" onclick={() => review.guide.back()}>
+				<button
+					type="button"
+					data-testid="guide-back"
+					class="btn btn-outline btn-sm"
+					onclick={() => review.guide.back()}
+				>
 					Back
 				</button>
 			{/if}
 			<span class="flex-1"></span>
 			{#if !waiting}
-				<button data-testid="guide-next" class="btn btn-primary btn-sm" onclick={() => review.guide.next()}>
+				<button
+					type="button"
+					data-testid="guide-next"
+					class="btn btn-primary btn-sm"
+					onclick={() => review.guide.next()}
+				>
 					{review.guide.isLastStep ? 'Done' : 'Next'}
 				</button>
 			{/if}
@@ -101,6 +116,7 @@
 			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
 			<span class="flex-1"></span>
 			<button
+				type="button"
 				data-testid="guide-close"
 				class="btn btn-ghost btn-xs"
 				aria-label="Close"
@@ -113,6 +129,7 @@
 		</p>
 		<div class="flex items-center gap-2">
 			<button
+				type="button"
 				bind:this={firstAction}
 				data-testid="guide-start"
 				class="btn btn-primary btn-sm"
@@ -120,7 +137,12 @@
 			>
 				Show me around
 			</button>
-			<button data-testid="guide-not-now" class="btn btn-ghost btn-sm" onclick={() => review.guide.dismiss()}>
+			<button
+				type="button"
+				data-testid="guide-not-now"
+				class="btn btn-ghost btn-sm"
+				onclick={() => review.guide.dismiss()}
+			>
 				Not now
 			</button>
 		</div>
@@ -133,6 +155,7 @@
 			<span class="cr-guide-release">{news.release}</span>
 			<span class="flex-1"></span>
 			<button
+				type="button"
 				data-testid="guide-close"
 				class="btn btn-ghost btn-xs"
 				aria-label="Close"
@@ -163,6 +186,7 @@
 		</a>
 		<div class="flex items-center gap-2">
 			<button
+				type="button"
 				bind:this={firstAction}
 				data-testid="guide-got-it"
 				class="btn btn-primary btn-sm"
@@ -170,7 +194,12 @@
 			>
 				Got it
 			</button>
-			<button data-testid="guide-take-tour" class="btn btn-ghost btn-sm" onclick={() => review.guide.startTour()}>
+			<button
+				type="button"
+				data-testid="guide-take-tour"
+				class="btn btn-ghost btn-sm"
+				onclick={() => review.guide.startTour()}
+			>
 				Take the tour
 			</button>
 		</div>

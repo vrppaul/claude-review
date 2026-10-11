@@ -11,6 +11,8 @@
 	const TALLEST = 480;
 	// What the field says when it took off an image it could not show
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
+	// What a field with no place said above it is called: a reply, inside the thread it answers
+	const REPLY = 'Reply';
 	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
 		{ value: 'note', label: 'Note' },
 		{ value: 'question', label: 'Question' },
@@ -37,6 +39,7 @@
 
 	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, nested = false }: Props = $props();
 	const review = useReview();
+	const fieldId = $props.id();
 
 	let failed = $state<string | null>(null);
 	let textarea: HTMLTextAreaElement | undefined = $state();
@@ -126,18 +129,20 @@
 </script>
 
 <div
+	data-testid="comment-box"
 	class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}
 	data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}
 >
 	<div class="flex items-center gap-3">
 		{#if label}
-			<span class="cr-comment-ref font-mono text-xs">{label}</span>
+			<label for={fieldId} class="cr-comment-ref font-mono text-xs">{label}</label>
 		{/if}
 		<div class="flex-1"></div>
 		{#if severityPicker}
 			<div data-testid="severity-picker" class="cr-segmented">
 				{#each SEVERITIES as choice (choice.value)}
 					<button
+						type="button"
 						data-testid="severity-{choice.value}"
 						class="cr-segment"
 						aria-pressed={field.severity === choice.value}
@@ -151,7 +156,9 @@
 	</div>
 	<textarea
 		bind:this={textarea}
+		id={fieldId}
 		data-testid="comment-input"
+		aria-label={label ? undefined : REPLY}
 		class="cr-field cr-comment-body textarea min-h-20 w-full focus:outline-none"
 		placeholder="What should change here?"
 		bind:value={field.text}
@@ -165,6 +172,7 @@
 	<div class="flex items-center gap-2">
 		{#if suggestFrom && suggestFrom.length > 0}
 			<button
+				type="button"
 				class="btn btn-ghost btn-xs"
 				data-testid="suggest-change"
 				disabled={field.text.includes(SUGGESTION_FENCE)}
@@ -174,11 +182,13 @@
 			</button>
 		{/if}
 		<div class="flex-1"></div>
-		<button class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}> Cancel </button>
+		<button type="button" class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}> Cancel </button>
 		{#if onAsk}
-			<button class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}> Ask now </button>
+			<button type="button" class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>
+				Ask now
+			</button>
 		{/if}
-		<button class="btn btn-primary btn-xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
+		<button type="button" class="btn btn-primary btn-xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
 			Add to review
 		</button>
 	</div>

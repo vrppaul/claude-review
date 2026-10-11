@@ -58,12 +58,10 @@
 
 	let { text, dense = false }: Props = $props();
 
-	const html = $derived(marked.parse(text) as string);
+	// Parsed as it is drawn: nothing in this setup waits on anything
+	const html = $derived(marked.parse(text, { async: false }));
 </script>
 
-<div
-	data-testid="markdown-content"
-	class={dense ? 'cr-comment-body cr-prose prose prose-sm' : 'cr-prose prose prose-sm'}
->
+<div data-testid="markdown-content" class={['cr-prose prose prose-sm', dense && 'cr-comment-body']}>
 	{@html html}
 </div>

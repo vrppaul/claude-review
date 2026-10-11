@@ -22,8 +22,7 @@
 <div class="mb-2 flex items-center gap-2">
 	<FoldToggle
 		folded={false}
-		foldLabel="Fold this thread away"
-		unfoldLabel="Unfold this thread"
+		subject="this thread"
 		testId="fold-comment"
 		onToggle={() => review.threads.reading.setFolded(thread.id, true)}
 	/>

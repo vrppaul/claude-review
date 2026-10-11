@@ -209,3 +209,21 @@ describe('images in a comment', () => {
 		expect(saved()).toMatchObject({ body: '', images: [KEPT_AS] });
 	});
 });
+
+describe('a comment field, to whoever cannot see it', () => {
+	it('is named by the lines it hangs on', () => {
+		const { getByLabelText, getByTestId } = drawnSaving(newField());
+
+		expect(getByLabelText('Line 5')).toBe(getByTestId('comment-input'));
+	});
+
+	it('is a reply where it hangs on nothing of its own', () => {
+		const field = newField();
+		const { getByLabelText, getByTestId } = render(
+			CommentBox,
+			inReview(review, { field, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, nested: true })
+		);
+
+		expect(getByLabelText('Reply')).toBe(getByTestId('comment-input'));
+	});
+});

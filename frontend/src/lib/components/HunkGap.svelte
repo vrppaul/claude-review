@@ -50,6 +50,7 @@
 	<div data-testid="hunk-gap" class="flex items-center border-y border-base-300 bg-base-200">
 		{#if drawing.readsGaps}
 			<button
+				type="button"
 				data-testid="expand-context"
 				class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left font-mono text-xs"
 				disabled={reading}

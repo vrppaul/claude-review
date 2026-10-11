@@ -76,7 +76,7 @@
 
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
-		if (open && around && !around.contains(event.target as Node)) open = false;
+		if (open && around && event.target instanceof Node && !around.contains(event.target)) open = false;
 	}
 
 	function closeOnEscape(event: KeyboardEvent) {

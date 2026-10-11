@@ -3,15 +3,13 @@
 
 	interface Props {
 		folded: boolean;
-		/** What folding does, said to whoever cannot see the chevron: "Fold this thread away". */
-		foldLabel: string;
-		/** What unfolding does: "Unfold this thread". */
-		unfoldLabel: string;
+		/** What folds, as whoever cannot see the chevron is told it: "this thread", a file's path. */
+		subject: string;
 		testId: string;
 		onToggle: () => void;
 	}
 
-	let { folded, foldLabel, unfoldLabel, testId, onToggle }: Props = $props();
+	let { folded, subject, testId, onToggle }: Props = $props();
 </script>
 
 <!-- One chevron for everything that folds: pointing down while open, right while folded -->
@@ -20,7 +18,7 @@
 	data-testid={testId}
 	class="btn btn-ghost btn-xs px-1"
 	aria-expanded={!folded}
-	aria-label={folded ? unfoldLabel : foldLabel}
+	aria-label={folded ? `Unfold ${subject}` : `Fold ${subject} away`}
 	onclick={onToggle}
 >
 	<Icon name="chevron" class={['h-3 w-3 transition-transform', folded && '-rotate-90']} />

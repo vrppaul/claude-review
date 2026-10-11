@@ -81,7 +81,7 @@
 			type="button"
 			data-testid="base-picker"
 			data-tour="review-base"
-			class={['cr-chip font-mono', review.diff.narrowed && 'bg-(--cr-mark-tint) text-base-content']}
+			class={['cr-chip font-mono', review.diff.narrowed && 'cr-chip-narrowing']}
 			title="What the working tree is compared against"
 		>
 			<Icon name="compare" class={['h-3 w-3 shrink-0', review.diff.narrowed && 'text-(--cr-mark)']} />

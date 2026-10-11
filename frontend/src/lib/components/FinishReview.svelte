@@ -5,6 +5,7 @@
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { counted } from '$lib/utils/words';
+	import { FINISH_KEYS } from './keymap';
 
 	const review = useReview();
 
@@ -90,7 +91,7 @@
 		></textarea>
 
 		<div class="mt-2 flex items-center gap-2">
-			<span class="cr-faint hidden text-xs lg:inline">Ctrl+Shift+Enter sends</span>
+			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
 			<div class="flex-1"></div>
 			{#if submission.inRounds}
 				<button

@@ -100,6 +100,20 @@ const NO_PAGE_LOOKUPS = [
 	}
 ];
 
+// How a component is styled: by classes, and by the stylesheet's tokens. A
+// number only the component knows — a dragged width, a depth — reaches the
+// stylesheet as a custom property; what lies over what is a layer token,
+// never a z- utility, so the stylesheet keeps the one list of layers.
+const STYLED_BY_CLASSES = 'Style with a class; hand a number the stylesheet needs to it as style:--name.';
+const LAYERED_BY_TOKENS = 'Lay one thing over another with a --cr-layer-* token in the stylesheet, not a z- class.';
+const Z_UTILITY = '/(^|\\s)z-/';
+const NO_INLINE_STYLING = [
+	{ selector: "SvelteAttribute[key.name='style']", message: STYLED_BY_CLASSES },
+	{ selector: 'SvelteStyleDirective:not([key.name.name=/^--/])', message: STYLED_BY_CLASSES },
+	{ selector: `SvelteAttribute[key.name='class'] SvelteLiteral[value=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
+	{ selector: `SvelteAttribute[key.name='class'] Literal[value=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS }
+];
+
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
 const OWN_REQUESTS = 'Ask the server through lib/api/request.ts, which holds every request to its schema.';
@@ -152,9 +166,14 @@ export default tseslint.config(
 		rules: {
 			// {@html} is used intentionally with highlight.js (output is escaped)
 			'svelte/no-at-html-tags': 'warn',
-			// These svelte-ignore comments suppress a11y warnings from the Svelte compiler, not eslint
-			'svelte/no-unused-svelte-ignore': 'off'
+			// What a button does is written on it: there is no form for it to submit by default
+			'svelte/button-has-type': 'error'
 		}
+	},
+	{
+		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
+		files: ['**/*.svelte', '**/*.svelte.ts'],
+		rules: { 'prefer-const': 'off', 'svelte/prefer-const': 'error' }
 	},
 	...layerRules,
 	{
@@ -166,7 +185,7 @@ export default tseslint.config(
 				'error',
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS],
+			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING],
 			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
 			// A switch over every kind of a union is one decision, not one per kind
 			complexity: ['error', { max: 10, variant: 'modified' }],
@@ -187,7 +206,7 @@ export default tseslint.config(
 	{
 		files: ['src/lib/**'],
 		rules: {
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_PAGE_LOOKUPS]
+			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_PAGE_LOOKUPS]
 		}
 	},
 	{

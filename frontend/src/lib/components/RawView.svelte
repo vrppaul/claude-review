@@ -56,7 +56,6 @@
 				</colgroup>
 				<tbody>
 					{#each hunk.lines as drawn (drawn.key)}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<tr
 							class="cr-row {rowClass(drawn.line.kind, commenting.isMarked(drawn.place))} hover:brightness-110"
 							onmouseenter={() => commenting.enter(drawn)}

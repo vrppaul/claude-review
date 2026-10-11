@@ -32,8 +32,7 @@
 	{/if}
 	<FoldToggle
 		folded
-		foldLabel="Fold this thread away"
-		unfoldLabel="Unfold this thread"
+		subject="this thread"
 		testId="fold-comment"
 		onToggle={() => review.threads.reading.setFolded(thread.id, false)}
 	/>

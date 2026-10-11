@@ -106,6 +106,14 @@ describe('finding a file in a long review', () => {
 		expect(items[0].textContent).toContain('utils.ts');
 	});
 
+	it('names its filter to whoever cannot see it', () => {
+		const review = openReview({ files: diffFiles });
+
+		const { getByLabelText, getByTestId } = render(FileList, inReview(review));
+
+		expect(getByLabelText('Find a file by its path')).toBe(getByTestId('file-filter'));
+	});
+
 	it('says so when nothing matches', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: diffFiles });

@@ -54,7 +54,14 @@
 				<span>
 					Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
 				</span>
-				<button class="btn btn-ghost btn-xs" onclick={() => review.dismissRestored()}>Dismiss</button>
+				<button
+					type="button"
+					data-testid="dismiss-restored"
+					class="btn btn-ghost btn-xs"
+					onclick={() => review.dismissRestored()}
+				>
+					Dismiss
+				</button>
 			</div>
 		{/if}
 		<ReviewHeader />
@@ -65,6 +72,7 @@
 			{:else}
 				<!-- Where the tree was, so the way back is where it went -->
 				<button
+					type="button"
 					data-testid="show-sidebar"
 					data-tour="file-tree"
 					class="cr-tree-rail"
