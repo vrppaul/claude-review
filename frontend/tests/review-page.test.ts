@@ -266,7 +266,7 @@ describe('opening the page', () => {
 		latestSocket().say(welcome({ resumed: true }));
 
 		await openedReview(page).submission.submit(true);
-		await vi.waitFor(() => expect(latestSocket().readyState).toBe(FakeSocket.CLOSED));
+		await vi.waitFor(() => expect(latestSocket().closedByThePage).toBe(true));
 		const opened = FakeSocket.opened.length;
 		vi.useFakeTimers();
 		// The review's server goes, and another comes up on the same port

@@ -17,9 +17,12 @@ type Listener = (event: { data?: string }) => void;
 export class FakeSocket {
 	static readonly CONNECTING = 0;
 	static readonly OPEN = 1;
+	static readonly CLOSING = 2;
 	static readonly CLOSED = 3;
 	static opened: FakeSocket[] = [];
 	readyState = FakeSocket.CONNECTING;
+	/** Whether the page let the socket go, rather than the server dropping it. */
+	closedByThePage = false;
 	sent: string[] = [];
 	private readonly listeners = new Map<string, Listener[]>();
 
@@ -35,8 +38,18 @@ export class FakeSocket {
 		this.sent.push(text);
 	}
 
+	/**
+	 * The page let the socket go. As in a browser, it is closing at once and
+	 * says it has closed a moment later, once; closing it again does nothing.
+	 */
 	close() {
-		this.readyState = FakeSocket.CLOSED;
+		if (this.readyState === FakeSocket.CLOSING || this.readyState === FakeSocket.CLOSED) return;
+		this.closedByThePage = true;
+		this.readyState = FakeSocket.CLOSING;
+		queueMicrotask(() => {
+			this.readyState = FakeSocket.CLOSED;
+			this.emit('close');
+		});
 	}
 
 	/** The server took the connection. */

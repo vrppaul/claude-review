@@ -224,7 +224,7 @@ describe('the session socket', () => {
 		vi.advanceTimersByTime(LONGEST_RETRY);
 
 		expect(socket.said).toEqual([]);
-		expect(socket.readyState).toBe(FakeSocket.CLOSED);
+		expect(socket.closedByThePage).toBe(true);
 		expect(FakeSocket.opened.at(-1)).toBe(socket);
 		expect(page.strayedOff).toBe(true);
 		expect(page.catchUps).toBe(0);

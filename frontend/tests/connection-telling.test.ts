@@ -49,7 +49,7 @@ describe('going on with the telling across connections', () => {
 		latestSocket().deliver(A_REPLY, TOLD_SINCE + 1);
 
 		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_BEFORE}`);
-		expect(holding.readyState).toBe(FakeSocket.CLOSED);
+		expect(holding.closedByThePage).toBe(true);
 		expect(page.catchUps).toBe(0);
 		expect(page.heard).toEqual([A_REPLY]);
 		connection.close();
@@ -64,7 +64,23 @@ describe('going on with the telling across connections', () => {
 		expect(holding.readyState).toBe(FakeSocket.OPEN);
 
 		latestSocket().accept();
-		expect(holding.readyState).toBe(FakeSocket.CLOSED);
+		expect(holding.closedByThePage).toBe(true);
+		connection.close();
+	});
+
+	it('takes the socket it let go closing for nothing lost, and connects no more for it', async () => {
+		const page = new RecordingPage();
+		const connection = opened();
+		const holding = latestSocket();
+		holding.accept();
+		connection.deliverTo(page);
+
+		latestSocket().accept();
+		await vi.waitFor(() => expect(holding.readyState).toBe(FakeSocket.CLOSED));
+		vi.advanceTimersByTime(LONGEST_RETRY);
+
+		expect(page.lostTimes).toBe(0);
+		expect(FakeSocket.opened).toHaveLength(2);
 		connection.close();
 	});
 
