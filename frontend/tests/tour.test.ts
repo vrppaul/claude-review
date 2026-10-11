@@ -29,7 +29,11 @@ const FILE = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(1, 'y = 3
 // How the tour says how far along it is: "2 of 7"
 const STEP_COUNT = /^\d+ of \d+$/;
 
-/** A page on which exactly these places are drawn. */
+/**
+ * A page on which exactly these places are drawn, as the test says: jsdom lays
+ * nothing out, so the watcher sees nothing drawn. Which places a real page
+ * draws is held by tests/e2e/test_keys_and_focus.py::test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_count.
+ */
 function pageWith(...names: TourTarget[]) {
 	review.guide.seeTargets(new Set(names));
 }

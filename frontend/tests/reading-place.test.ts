@@ -3,7 +3,8 @@ import { bringBack, readingPlaceIn } from '$lib/dom/reading-place';
 import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
 
 // jsdom lays nothing out: where each element stands is said here, in pixels
-// from the top of the window, as a browser would measure it
+// from the top of the window, as a browser would measure it. The reader kept
+// on their line across a real retake is held by tests/e2e/test_reading_place.py
 const AREA_TOP = 100;
 const ROW_HEIGHT = 20;
 

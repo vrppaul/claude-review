@@ -28,6 +28,9 @@ async function nextFrame() {
 	await tick();
 }
 
+// Where the lit element stands is invented: no browser test measures the light
+// over a real page; test_a_first_review_is_welcomed_and_shown_around in
+// tests/e2e/test_review_flow.py only sees it drawn
 describe('the light over a tour step', () => {
 	afterEach(() => {
 		document.body.innerHTML = '';

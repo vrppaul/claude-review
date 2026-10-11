@@ -33,6 +33,8 @@ function section(path: string): HTMLElement {
 	return element;
 }
 
+// Where each file stands is invented here, jsdom laying nothing out: no
+// browser test yet holds a shown file marked once a real scroll stops
 describe('being taken to a file somebody else pointed at', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
@@ -184,6 +186,9 @@ describe('moving the reader', () => {
 	});
 });
 
+// The band here sees every section crossing it (setup.ts's observer); which
+// file a real scroll puts there is held in the browser by
+// tests/e2e/test_keys_and_focus.py::test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to
 describe('knowing which file the reader is in', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';

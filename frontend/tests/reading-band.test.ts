@@ -68,6 +68,10 @@ afterEach(() => {
 	globalThis.IntersectionObserver = observedBefore;
 });
 
+// What crosses the band is reported by the test, not measured: the band
+// over a real layout is held by
+// tests/e2e/test_keys_and_focus.py::test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to,
+// and its one-pixel edge by no browser test, which cannot make the sub-pixel case
 describe('the file being read', () => {
 	it('is the one whose header is at the top: the first of those crossing the band', () => {
 		const first = section('a.py');

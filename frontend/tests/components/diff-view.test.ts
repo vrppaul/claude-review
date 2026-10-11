@@ -417,6 +417,8 @@ class ScriptedObserver {
 	}
 }
 
+// The scroll is scripted here; the reader kept in the file they read across a
+// real retake is held by tests/e2e/test_reading_place.py
 describe('the file being read', () => {
 	beforeEach(() => {
 		ScriptedObserver.made = [];

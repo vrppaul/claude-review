@@ -18,7 +18,8 @@ const TITLE = 'claude-review: uncommitted changes';
 // The longest text a test's server takes, short enough to type past
 const SHORTEST = 5;
 // jsdom lays nothing out, so the panel is given a height to scroll in: this
-// much on screen out of this much said
+// much on screen out of this much said. No browser test holds the panel
+// following a new turn over a real layout.
 const VISIBLE_HEIGHT = 100;
 const FULL_HEIGHT = 500;
 
