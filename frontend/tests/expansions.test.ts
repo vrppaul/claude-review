@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { gapsOf, hunkKey, withRevealed, toContextLines, EXPAND_STEP } from '$lib/utils/expansions';
+import { drawnHunks } from '$lib/utils/drawn-file';
+import { hunkKey, withRevealed, toContextLines, EXPAND_STEP } from '$lib/utils/expansions';
 import type { DiffHunk } from '$lib/types';
 import { contextLine, diffFile, hunk } from './diff';
 
@@ -13,7 +14,7 @@ function unchangedHunk(newStart: number, count: number): DiffHunk {
 
 /** The gap above the hunk at `index`, as the file is drawn. */
 function gapAt(hunks: DiffHunk[], index: number) {
-	return gapsOf(hunks)[index];
+	return drawnHunks(diffFile({ hunks }), null, false)[index].gap;
 }
 
 describe('how many lines a gap above a hunk hides', () => {

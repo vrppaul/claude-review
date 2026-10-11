@@ -9,9 +9,9 @@
  */
 
 import type { DiffFile, DiffHunk, DiffLine, LinePlace } from '$lib/types';
-import { type ContextGap, gapsOf, hunkKey } from '$lib/utils/expansions';
-import { highlightFile } from '$lib/utils/highlight';
-import { applyWordMarks } from '$lib/utils/word-diff';
+import { type ContextGap, gapAbove, hunkKey } from '$lib/utils/expansions';
+import { type HighlightedLine, highlightHunk } from '$lib/utils/highlight';
+import { withWordMarks } from '$lib/utils/word-diff';
 
 /**
  * The number of a line that has none on its own side. The parser numbers
@@ -20,15 +20,12 @@ import { applyWordMarks } from '$lib/utils/word-diff';
  */
 export const NO_NUMBER = 0;
 
-/** A line as it is drawn. */
-export interface DrawnLine {
-	line: DiffLine;
+/** A line as it is drawn: its text highlighted, with what changed inside a replaced line marked. */
+export interface DrawnLine extends HighlightedLine {
 	/** Where it is: what a comment on it hangs on. */
 	place: LinePlace;
-	/** What its row is known by among the file's rows. */
+	/** What its row is known by among the file's rows: its place. */
 	key: string;
-	/** Its text highlighted, with what changed inside a replaced line marked. */
-	markup: string;
 }
 
 /** A hunk as it is drawn: what the diff left out above it, and its lines. */
@@ -51,6 +48,11 @@ export function samePlace(one: LinePlace, other: LinePlace): boolean {
 	return one.side === other.side && one.number === other.number;
 }
 
+/** What a place is known by wherever lines are looked up by where they are. */
+export function placeKey(place: LinePlace): string {
+	return `${place.side}:${place.number}`;
+}
+
 /**
  * A file's hunks, ready to draw.
  *
@@ -59,23 +61,26 @@ export function samePlace(one: LinePlace, other: LinePlace): boolean {
  * @param marksWords whether what changed inside a replaced line is marked: in a diff, where lines are replaced
  */
 export function drawnHunks(file: DiffFile, language: string | null, marksWords: boolean): DrawnHunk[] {
-	const markup = highlightFile(file, language);
-	const gaps = gapsOf(file.hunks);
-	return file.hunks.map((hunk, index) =>
-		drawnHunk(hunk, gaps[index], marksWords ? applyWordMarks(hunk.lines, markup[index]) : markup[index])
-	);
+	return file.hunks.map((hunk, index) => drawnHunk(hunk, file.hunks[index - 1], language, marksWords));
 }
 
-function drawnHunk(hunk: DiffHunk, gap: ContextGap, markup: string[]): DrawnHunk {
+/** A hunk ready to draw, below the hunk drawn above it, if any is. */
+function drawnHunk(
+	hunk: DiffHunk,
+	above: DiffHunk | undefined,
+	language: string | null,
+	marksWords: boolean
+): DrawnHunk {
+	const lines = highlightHunk(hunk.lines, language).map(drawnLine);
 	return {
 		key: hunkKey(hunk),
 		header: hunk.header,
-		gap,
-		lines: hunk.lines.map((line, index) => drawnLine(line, markup[index]))
+		gap: gapAbove(hunk, above),
+		lines: marksWords ? withWordMarks(lines) : lines
 	};
 }
 
-function drawnLine(line: DiffLine, markup: string): DrawnLine {
-	const place = placeOf(line);
-	return { line, place, key: `${place.side}:${place.number}`, markup };
+function drawnLine(highlighted: HighlightedLine): DrawnLine {
+	const place = placeOf(highlighted.line);
+	return { ...highlighted, place, key: placeKey(place) };
 }

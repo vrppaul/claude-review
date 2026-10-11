@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { highlightFile, languageOf } from '$lib/utils/highlight';
+import { drawnHunks } from '$lib/utils/drawn-file';
+import { languageOf } from '$lib/utils/highlight';
 import type { DiffFile, DiffLine } from '$lib/types';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
 
@@ -10,6 +11,11 @@ function context(lineNumber: number, content: string): DiffLine {
 
 function fileOf(lines: DiffLine[], path = 'src/thing.py'): DiffFile {
 	return diffFile({ path, hunks: [hunk(lines)] });
+}
+
+/** The markup each line of each hunk is drawn with, highlighted as this language. */
+function highlightFile(file: DiffFile, language: string | null): string[][] {
+	return drawnHunks(file, language, false).map((drawn) => drawn.lines.map((line) => line.markup));
 }
 
 describe("the colours of a file's code", () => {

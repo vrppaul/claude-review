@@ -61,6 +61,16 @@ describe('the rows of the two-column layout', () => {
 		expect(new Set(after).size).toBe(after.length);
 	});
 
+	it('ends a replacement at an unchanged line: what is added after it replaces nothing above it', () => {
+		const rows = buildSplitRows([removedLine(2, 'gone'), contextLine(3, 2, 'kept'), addedLine(3, 'new')]);
+
+		expect(rows.map((row) => [row.left?.line.content ?? null, row.right?.line.content ?? null])).toEqual([
+			['gone', null],
+			['kept', 'kept'],
+			[null, 'new']
+		]);
+	});
+
 	it('are none for a hunk with no lines', () => {
 		expect(splitRows([])).toEqual([]);
 	});

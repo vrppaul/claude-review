@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import fastCheck from 'fast-check';
 import { escapeMarkup } from '$lib/utils/safe-markup';
-import { wordRanges, markRanges, applyWordMarks, type TextRange } from '$lib/utils/word-diff';
+import { wordRanges, markRanges, withWordMarks, type TextRange } from '$lib/utils/word-diff';
 import { splitSuggestions } from '$lib/utils/suggestion';
-import { addedLine, contextLine, removedLine } from './diff';
+import type { DiffLine } from '$lib/types';
+import { drawnHunks } from '$lib/utils/drawn-file';
+import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
 
 describe('the words a changed line marks', () => {
 	it('marks only the part of the line that actually changed', () => {
@@ -101,38 +103,64 @@ describe('marking words in highlighted code', () => {
 });
 
 describe('word marks across a hunk', () => {
+	/** Each line drawn as its own text, with whatever marks the hunk gives it. */
+	function marked(lines: DiffLine[]): string[] {
+		return withWordMarks(lines.map((line) => ({ line, markup: line.content }))).map((drawn) => drawn.markup);
+	}
+
 	it('pairs a removal with the addition that replaced it', () => {
 		const lines = [removedLine(1, 'timeout = 10'), addedLine(1, 'timeout = 30')];
-		const html = ['timeout = 10', 'timeout = 30'];
 
-		const marked = applyWordMarks(lines, html);
+		const markup = marked(lines);
 
-		expect(marked[0]).toContain('<span class="cr-word">10</span>');
-		expect(marked[1]).toContain('<span class="cr-word">30</span>');
+		expect(markup[0]).toContain('<span class="cr-word">10</span>');
+		expect(markup[1]).toContain('<span class="cr-word">30</span>');
 	});
 
 	it('leaves an addition with no counterpart alone', () => {
-		const lines = [addedLine(1, 'brand new line')];
-		const html = ['brand new line'];
-
-		expect(applyWordMarks(lines, html)).toEqual(['brand new line']);
+		expect(marked([addedLine(1, 'brand new line')])).toEqual(['brand new line']);
 	});
 
 	it('pairs each removal with the addition opposite it in the run', () => {
 		const lines = [removedLine(1, 'a = 1'), removedLine(2, 'b = 2'), addedLine(1, 'a = 9'), addedLine(2, 'b = 8')];
-		const html = ['a = 1', 'b = 2', 'a = 9', 'b = 8'];
 
-		const marked = applyWordMarks(lines, html);
-
-		expect(marked[0]).toContain('>1<');
-		expect(marked[3]).toContain('>8<');
+		expect(marked(lines)).toEqual([
+			'a = <span class="cr-word">1</span>',
+			'b = <span class="cr-word">2</span>',
+			'a = <span class="cr-word">9</span>',
+			'b = <span class="cr-word">8</span>'
+		]);
 	});
 
 	it('leaves context lines untouched', () => {
 		const lines = [contextLine(1, 1, 'unchanged'), removedLine(2, 'x = 1'), addedLine(2, 'x = 2')];
-		const html = ['unchanged', 'x = 1', 'x = 2'];
 
-		expect(applyWordMarks(lines, html)[0]).toBe('unchanged');
+		expect(marked(lines)[0]).toBe('unchanged');
+	});
+
+	it('keeps the lines in their order, a removal past the additions starting a new replacement', () => {
+		const lines = [
+			addedLine(1, 'first = 1'),
+			removedLine(2, 'x = 1'),
+			addedLine(2, 'x = 2'),
+			contextLine(3, 3, 'kept'),
+			removedLine(4, 'y = 1')
+		];
+
+		const markup = marked(lines).map((text) => text.replace(/<[^>]+>/g, ''));
+
+		expect(markup).toEqual(['first = 1', 'x = 1', 'x = 2', 'kept', 'y = 1']);
+		expect(marked(lines)[1]).toContain('<span class="cr-word">1</span>');
+	});
+
+	it('are drawn in a diff, where lines are replaced, and not in files read whole', () => {
+		const file = diffFile({ hunks: [hunk([removedLine(1, 'timeout = 10'), addedLine(1, 'timeout = 30')])] });
+
+		const inDiff = drawnHunks(file, null, true)[0]?.lines.map((line) => line.markup);
+		const readWhole = drawnHunks(file, null, false)[0]?.lines.map((line) => line.markup);
+
+		expect(inDiff).toEqual(['timeout = <span class="cr-word">10</span>', 'timeout = <span class="cr-word">30</span>']);
+		expect(readWhole).toEqual(['timeout = 10', 'timeout = 30']);
 	});
 });
 

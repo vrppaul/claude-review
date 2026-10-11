@@ -36,18 +36,15 @@ export function hunkKey(hunk: DiffHunk): string {
 }
 
 /**
- * The gap above each hunk of a file as it is drawn.
+ * The gap above a hunk as it is drawn, below the hunk drawn above it — the
+ * top of the file when there is none.
  *
  * Revealed lines are drawn inside the hunk below them, so the gap is what
  * still lies between one hunk's last line and the next one's first: it
  * closes as lines are revealed, with nothing kept beside the hunks to count.
  */
-export function gapsOf(hunks: DiffHunk[]): ContextGap[] {
-	return hunks.map((hunk, index) => gapAbove(hunk, hunks[index - 1]));
-}
-
-function gapAbove(hunk: DiffHunk, previous: DiffHunk | undefined): ContextGap {
-	const firstHidden = previous ? lastNewLine(previous) + 1 : 1;
+export function gapAbove(hunk: DiffHunk, above: DiffHunk | undefined): ContextGap {
+	const firstHidden = above ? lastNewLine(above) + 1 : 1;
 	const lastHidden = firstNewLine(hunk) - 1;
 	const hidden = Math.max(0, lastHidden - firstHidden + 1);
 	const wanted = hidden <= EXPAND_ALL_BELOW ? hidden : EXPAND_STEP;

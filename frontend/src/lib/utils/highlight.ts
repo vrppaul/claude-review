@@ -1,6 +1,6 @@
 import hljs from 'highlight.js/lib/core';
 
-import type { DiffFile, DiffLine, ReviewMode } from '$lib/types';
+import type { DiffLine, ReviewMode } from '$lib/types';
 import { escapeMarkup } from '$lib/utils/safe-markup';
 
 export { hljs };
@@ -33,7 +33,8 @@ hljs.registerLanguage('rust', rust);
 hljs.registerLanguage('go', golang);
 hljs.registerLanguage('sql', sql);
 
-const EXT_TO_LANG: Record<string, string> = {
+// What a file is highlighted as, by the extension its name ends in
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
 	'.js': 'javascript',
 	'.mjs': 'javascript',
 	'.cjs': 'javascript',
@@ -61,10 +62,10 @@ const EXT_TO_LANG: Record<string, string> = {
 
 /** What a file is highlighted as, by its extension. */
 function detectLanguage(filePath: string): string | null {
-	const dot = filePath.lastIndexOf('.');
-	if (dot === -1) return null;
-	const ext = filePath.slice(dot).toLowerCase();
-	return EXT_TO_LANG[ext] ?? null;
+	const lastDot = filePath.lastIndexOf('.');
+	if (lastDot === -1) return null;
+	const extension = filePath.slice(lastDot).toLowerCase();
+	return LANGUAGE_BY_EXTENSION[extension] ?? null;
 }
 
 /**
@@ -83,8 +84,14 @@ export function languageOf(mode: ReviewMode, path: string): string | null {
 	return LANGUAGE_IN[mode](path);
 }
 
+/** A line of a hunk with its text as it is drawn: highlighted, and escaped either way. */
+export interface HighlightedLine {
+	line: DiffLine;
+	markup: string;
+}
+
 /**
- * Highlight every row of a file, returning the markup per hunk per line.
+ * Highlight the lines of a hunk, each with the markup of its own text.
  *
  * Highlighting row by row cannot see a construct that spans lines — a
  * docstring, a block comment, a template literal — and colours each
@@ -98,12 +105,8 @@ export function languageOf(mode: ReviewMode, path: string): string | null {
  * Hunks are highlighted separately because the gaps between them are not part
  * of the file, so state must not carry across one.
  */
-export function highlightFile(file: DiffFile, language: string | null): string[][] {
-	return file.hunks.map((hunk) => highlightHunk(hunk.lines, language));
-}
-
-function highlightHunk(lines: DiffLine[], language: string | null): string[] {
-	if (!language) return lines.map((line) => escapeMarkup(line.content));
+export function highlightHunk(lines: DiffLine[], language: string | null): HighlightedLine[] {
+	if (!language) return lines.map((line) => ({ line, markup: escapeMarkup(line.content) }));
 
 	const hasRemovals = lines.some((line) => line.kind === 'delete');
 	const newSide = sideLines(lines, 'add', language);
@@ -111,15 +114,16 @@ function highlightHunk(lines: DiffLine[], language: string | null): string[] {
 
 	// Each line takes its markup from the side it belongs to, and moves on the
 	// reader of every side it is on: context is on both
-	const markup: string[] = [];
+	const highlighted: HighlightedLine[] = [];
 	let oldAt = 0;
 	let newAt = 0;
 	for (const line of lines) {
-		markup.push((line.kind === 'delete' ? oldSide[oldAt] : newSide[newAt]) ?? escapeMarkup(line.content));
+		const markup = (line.kind === 'delete' ? oldSide[oldAt] : newSide[newAt]) ?? escapeMarkup(line.content);
+		highlighted.push({ line, markup });
 		if (line.kind !== 'add') oldAt += 1;
 		if (line.kind !== 'delete') newAt += 1;
 	}
-	return markup;
+	return highlighted;
 }
 
 /** Highlight one version of a hunk: its context plus the lines exclusive to that side. */
@@ -153,7 +157,7 @@ function splitHighlighted(html: string): string[] {
 	let position = 0;
 
 	while (position < html.length) {
-		const character = html[position];
+		const character = html.charAt(position);
 
 		if (character === '<') {
 			const close = html.indexOf('>', position);

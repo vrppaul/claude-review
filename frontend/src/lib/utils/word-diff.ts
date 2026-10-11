@@ -1,4 +1,5 @@
-import type { DiffLine } from '$lib/types';
+import type { HighlightedLine } from '$lib/utils/highlight';
+import { type Run, runsOf } from '$lib/utils/replacements';
 
 /** Beyond this, the line is long enough that the table costs more than the
  * marking is worth, and a line that long is rarely read word by word. */
@@ -18,6 +19,12 @@ export interface TextRange {
 	end: number;
 }
 
+/** What changed in a replaced line, and in the line that replaced it. */
+interface WordRanges {
+	removed: TextRange[];
+	added: TextRange[];
+}
+
 // How a changed stretch is marked inside highlighted markup
 const MARK_OPEN = '<span class="cr-word">';
 const MARK_CLOSE = '</span>';
@@ -34,10 +41,10 @@ const LONGEST_ESCAPE = 8;
  * keeps the marks on things a reader recognises — an identifier, a number, an
  * argument — instead of scattering them mid-token.
  */
-export function wordRanges(removedText: string, addedText: string): { removed: TextRange[]; added: TextRange[] } {
+export function wordRanges(removedText: string, addedText: string): WordRanges {
 	const before = tokenize(removedText);
 	const after = tokenize(addedText);
-	const none = { removed: [], added: [] };
+	const none: WordRanges = { removed: [], added: [] };
 
 	if (before.length > MAX_TOKENS || after.length > MAX_TOKENS) return none;
 
@@ -140,37 +147,32 @@ class MarkWriter {
 /**
  * Mark what changed inside each replaced line of a hunk.
  *
- * Removals and the additions that follow them are read as one replacement,
- * paired in order: the first removed line against the first added one. A line
- * with no counterpart is left alone, since nothing was replaced.
+ * A removed line is marked against the added line that replaced it, as the
+ * hunk's replacements pair them. A line with no counterpart is left alone,
+ * since nothing was replaced.
  */
-export function applyWordMarks(lines: DiffLine[], html: string[]): string[] {
-	const result = [...html];
+export function withWordMarks<Line extends HighlightedLine>(lines: readonly Line[]): Line[] {
+	return runsOf(lines).flatMap(markedRun);
+}
 
-	let index = 0;
-	while (index < lines.length) {
-		if (lines[index].kind !== 'delete') {
-			index += 1;
-			continue;
-		}
+function markedRun<Line extends HighlightedLine>(run: Run<Line>): Line[] {
+	if (run.kind === 'kept') return [run.line];
+	const { removed, added } = run;
+	const ranges = removed.map((line, offset) => rangesAgainst(line, added.at(offset)));
+	return [
+		...removed.map((line, offset) => withMarks(line, ranges.at(offset)?.removed)),
+		...added.map((line, offset) => withMarks(line, ranges.at(offset)?.added))
+	];
+}
 
-		const removalStart = index;
-		while (index < lines.length && lines[index].kind === 'delete') index += 1;
-		const additionStart = index;
-		while (index < lines.length && lines[index].kind === 'add') index += 1;
+/** What changed between a removed line and the line that replaced it; null when nothing replaced it. */
+function rangesAgainst(removed: HighlightedLine, added: HighlightedLine | undefined): WordRanges | null {
+	return added ? wordRanges(removed.line.content, added.line.content) : null;
+}
 
-		const removals = additionStart - removalStart;
-		const additions = index - additionStart;
-		for (let offset = 0; offset < Math.min(removals, additions); offset += 1) {
-			const removedAt = removalStart + offset;
-			const addedAt = additionStart + offset;
-			const { removed, added } = wordRanges(lines[removedAt].content, lines[addedAt].content);
-			result[removedAt] = markRanges(result[removedAt], removed);
-			result[addedAt] = markRanges(result[addedAt], added);
-		}
-	}
-
-	return result;
+/** A line with its changed stretches marked, or as it was when it has none to mark. */
+function withMarks<Line extends HighlightedLine>(line: Line, ranges: TextRange[] | undefined): Line {
+	return ranges ? { ...line, markup: markRanges(line.markup, ranges) } : line;
 }
 
 /** Split into words, runs of whitespace, and single punctuation marks. */

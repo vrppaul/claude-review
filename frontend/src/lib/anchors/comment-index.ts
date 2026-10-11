@@ -1,5 +1,6 @@
 import type { LinePlace, Thread } from '$lib/types';
 import { sideIsDrawn } from '$lib/anchors/placement';
+import { placeKey } from '$lib/utils/drawn-file';
 
 /** What a line with no threads under it holds. */
 const NO_THREADS: readonly Thread[] = [];
@@ -26,7 +27,7 @@ export class ThreadsByLine {
 			// A file's rows are its lines; a thread on anything else has no row
 			if (anchor.kind !== 'line' || anchor.file !== file) continue;
 			if (!sideIsDrawn(anchor.side, removedLines)) continue;
-			const key = keyOf({ side: anchor.side, number: anchor.end_line });
+			const key = placeKey({ side: anchor.side, number: anchor.end_line });
 			const existing = this.#byLine.get(key);
 			if (existing) existing.push(thread);
 			else this.#byLine.set(key, [thread]);
@@ -35,10 +36,6 @@ export class ThreadsByLine {
 
 	/** The threads hanging under a line, in the order they were written. */
 	at(place: LinePlace): readonly Thread[] {
-		return this.#byLine.get(keyOf(place)) ?? NO_THREADS;
+		return this.#byLine.get(placeKey(place)) ?? NO_THREADS;
 	}
-}
-
-function keyOf(place: LinePlace): string {
-	return `${place.side}:${place.number}`;
 }
