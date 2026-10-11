@@ -16,33 +16,17 @@
 	const review = useReview();
 
 	const renderedText = $derived(assembleText(file, review.mode));
-
-	let leftPane: HTMLDivElement | undefined = $state();
-	let rightPane: HTMLDivElement | undefined = $state();
-	let scrollSource: 'left' | 'right' | null = null;
-
-	function syncScroll(source: 'left' | 'right') {
-		// Ignore scroll events triggered by our own assignments
-		if (scrollSource !== null && scrollSource !== source) return;
-		scrollSource = source;
-
-		const from = source === 'left' ? leftPane : rightPane;
-		const to = source === 'left' ? rightPane : leftPane;
-		if (!from || !to) return;
-
-		const ratio = from.scrollTop / (from.scrollHeight - from.clientHeight || 1);
-		to.scrollTop = ratio * (to.scrollHeight - to.clientHeight);
-
-		// Clear after the browser processes the resulting scroll event
-		requestAnimationFrame(() => (scrollSource = null));
-	}
 </script>
 
-<div data-testid="side-by-side-view" class="flex min-h-0 flex-1">
-	<div bind:this={leftPane} class="w-1/2 overflow-auto border-r border-base-300" onscroll={() => syncScroll('left')}>
+<!-- The text and what it renders to, half the width each. Neither half
+	scrolls up and down on its own: both are as tall as what they hold, and
+	the review scrolls them together. A rendered table wider than its half
+	scrolls across inside it. -->
+<div data-testid="side-by-side-view" class="flex">
+	<div class="w-1/2 min-w-0 border-r border-base-300">
 		<RawView {drawing} />
 	</div>
-	<div bind:this={rightPane} class="w-1/2 overflow-auto p-4" onscroll={() => syncScroll('right')}>
+	<div class="w-1/2 min-w-0 overflow-x-auto p-4">
 		<MarkdownRenderer text={renderedText} />
 	</div>
 </div>
