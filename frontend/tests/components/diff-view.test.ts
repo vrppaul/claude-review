@@ -348,7 +348,7 @@ describe('the diff as one stream', () => {
 		const { getAllByTestId, getByTestId } = render(DiffView, inReview(review));
 		const [, second] = getAllByTestId('file-section');
 
-		await user.click(within(second).getAllByTestId('line-gutter')[0]);
+		await user.click(within(second).getByRole('button', { name: 'Comment on line 1' }));
 		await user.click(document.body);
 
 		expect(getByTestId('comment-input')).toBeTruthy();

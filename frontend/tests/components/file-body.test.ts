@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileBody from '$lib/components/FileBody.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
@@ -56,7 +56,7 @@ describe("a file drawn on the review's own removed lines, whatever base is on sc
 		const user = userEvent.setup();
 		const { getByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
-		await user.click(within(rowHolding('gone = 1')).getAllByRole('button')[0]);
+		await user.click(screen.getByRole('button', { name: 'Comment on removed line 30' }));
 		await user.type(getByTestId('comment-input'), 'why did this go');
 		await user.click(getByTestId('save-comment'));
 
@@ -71,13 +71,6 @@ describe("a file drawn on the review's own removed lines, whatever base is on sc
 		expect(getByText('why did this go')).toBeTruthy();
 	});
 });
-
-/** The row that holds this text. */
-function rowHolding(text: string): HTMLElement {
-	const row = screen.getByText(text).closest('tr');
-	if (!row) throw new Error(`No row holds ${text}`);
-	return row;
-}
 
 describe('a file drawn as whoever draws it says', () => {
 	it("is drawn in two columns when told to, whatever the reader's own layout", () => {

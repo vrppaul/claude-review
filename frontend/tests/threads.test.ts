@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { flushSync } from 'svelte';
 import { AGENT_STOPPED_LISTENING } from '$lib/components/agent-waits';
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { addedLine, contextLine, diffFile, hunk } from './diff';
@@ -43,8 +43,8 @@ describe('a thread is a conversation', () => {
 		const user = userEvent.setup({ delay: null });
 		const server = answering();
 
-		const { getByTestId, getAllByTestId } = render(DiffView, inReview(review));
-		await user.click(getAllByTestId('line-gutter')[1]);
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(screen.getByRole('button', { name: 'Comment on line 2' }));
 		await user.type(getByTestId('comment-input'), 'Where did 2 go?');
 		await user.click(getByTestId('ask-now'));
 
@@ -62,8 +62,8 @@ describe('a thread is a conversation', () => {
 		const user = userEvent.setup({ delay: null });
 		answering();
 
-		const { getByTestId, getAllByTestId } = render(DiffView, inReview(review));
-		await user.click(getAllByTestId('line-gutter')[1]);
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(screen.getByRole('button', { name: 'Comment on line 2' }));
 		await user.type(getByTestId('comment-input'), 'Where did 2 go?');
 		await user.click(getByTestId('ask-now'));
 
@@ -382,8 +382,7 @@ describe('a thread is a conversation', () => {
 
 describe('images in a thread', () => {
 	beforeEach(() => {
-		review.answerer.setAttached(true);
-		review = openReview({ files: [file] });
+		review = openReview({ files: [file], facts: { answerer_attached: true } });
 	});
 
 	it('hands the agent the images of the question and of everything said before it', async () => {

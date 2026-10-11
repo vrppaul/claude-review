@@ -1,5 +1,5 @@
 /** jsdom implements none of these; components under test rely on them. */
-import { beforeEach, onTestFinished, vi } from 'vitest';
+import { afterEach, beforeEach, onTestFinished, vi } from 'vitest';
 import { failOnUnanswered } from './fake-server';
 import { leavePage } from './review';
 
@@ -13,6 +13,12 @@ beforeEach(() => {
 	// ran a failure path nobody meant to test. Said once the test is over and
 	// tidied away, so the next test does not start in what it left.
 	onTestFinished(failOnUnanswered);
+});
+
+// A test that switched to fake timers and failed before switching back would
+// leave the next one on them: every test ends on the real clock
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 /**

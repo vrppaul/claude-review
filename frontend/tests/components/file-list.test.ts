@@ -78,8 +78,8 @@ describe('the file tree', () => {
 		section.scrollIntoView = scrollIntoView;
 		const unregister = review.sections.register('src/utils.ts', section);
 
-		const { getAllByTestId } = render(FileList, inReview(review));
-		await userEvent.click(getAllByTestId('file-item')[1]);
+		const { getByRole } = render(FileList, inReview(review));
+		await userEvent.click(getByRole('button', { name: /utils\.ts/ }));
 
 		expect(scrollIntoView).toHaveBeenCalled();
 		unregister();
@@ -171,8 +171,8 @@ describe('finding a file in a long review', () => {
 		const review = openReview({ files: [...diffFiles, diffFile({ path: 'docs/guide.md', status: 'added' })] });
 		const first = render(FileList, inReview(review));
 		await user.type(first.getByTestId('file-filter'), '.');
-		await user.click(first.getAllByTestId('folder-item')[0]);
-		const folded = first.getAllByTestId('folder-item')[0].textContent;
+		await user.click(first.getByRole('button', { name: 'src/' }));
+		const folded = first.getByRole('button', { name: 'src/' }).textContent;
 		first.unmount();
 
 		const again = render(FileList, inReview(review));
@@ -225,13 +225,13 @@ describe('finding a file in a long review', () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: diffFiles });
 
-		const { getAllByTestId, queryAllByTestId } = render(FileList, inReview(review));
+		const { getByRole, queryAllByTestId } = render(FileList, inReview(review));
 		expect(queryAllByTestId('file-item')).toHaveLength(2);
 
-		await user.click(getAllByTestId('folder-item')[0]);
+		await user.click(getByRole('button', { name: 'src/' }));
 		expect(queryAllByTestId('file-item')).toHaveLength(0);
 
-		await user.click(getAllByTestId('folder-item')[0]);
+		await user.click(getByRole('button', { name: 'src/' }));
 		expect(queryAllByTestId('file-item')).toHaveLength(2);
 	});
 });
