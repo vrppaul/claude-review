@@ -16,7 +16,7 @@ const BEFORE_TURN_IDS = 8;
 /** The shape every turn carries an id in, and the draft counts the ids handed out. */
 const SHAPE_WITH_TURN_IDS = 9;
 /** A shape between the last one released and this one, which no release ever kept. */
-const NEVER_RELEASED = 13;
+const NEVER_RELEASED = 14;
 
 /** Put a draft in storage as an older release of the review left it. */
 function keptByAnOlderRelease(draft: object) {
@@ -78,7 +78,13 @@ describe('a draft this release kept', () => {
 			threads: [fullThread()],
 			read: { folded: ['comment-1'], unread: [], awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
 			writing: [
-				{ at: { kind: 'reply', thread: 'comment-1' }, text: 'and another thing', severity: 'note', images: [] },
+				{
+					at: { kind: 'reply', thread: 'comment-1' },
+					text: 'and another thing',
+					severity: 'note',
+					images: [],
+					uploaded: []
+				},
 				{
 					at: {
 						kind: 'new',
@@ -87,13 +93,14 @@ describe('a draft this release kept', () => {
 					},
 					text: 'half a comment',
 					severity: 'question',
-					images: ['pasted.png']
+					images: ['pasted.png'],
+					uploaded: ['pasted.png']
 				}
 			],
 			reviewBody: 'Overall fine',
 			sent: { 'comment-1': 2 },
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
-			composer: { text: 'half a thought', images: ['pasted.png'] },
+			composer: { text: 'half a thought', images: ['pasted.png', 'handed.png'], uploaded: ['pasted.png'] },
 			issued: { comments: 3, turns: 5 },
 			told: { instance: THIS_RUN, sequence: 4 }
 		};
@@ -223,7 +230,7 @@ describe('a draft written by an older release', () => {
 		const draft = readDraft(REVIEW_TITLE);
 
 		expect(draft?.panel).toEqual([]);
-		expect(draft?.composer).toEqual({ text: '', images: [] });
+		expect(draft?.composer).toEqual({ text: '', images: [], uploaded: [] });
 	});
 
 	it('keeps what was said in the panel when the draft predates the composer', () => {
@@ -233,6 +240,6 @@ describe('a draft written by an older release', () => {
 		const draft = readDraft(REVIEW_TITLE);
 
 		expect(draft?.panel).toEqual([said]);
-		expect(draft?.composer).toEqual({ text: '', images: [] });
+		expect(draft?.composer).toEqual({ text: '', images: [], uploaded: [] });
 	});
 });

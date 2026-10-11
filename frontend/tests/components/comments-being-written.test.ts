@@ -130,6 +130,20 @@ describe('a comment being written on lines', () => {
 		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
 	});
 
+	it('lets the server drop what was pasted into it before a reload, when it is put away after', async () => {
+		const user = userEvent.setup();
+		const server = keepingImages();
+		render(DiffView, inReview(review));
+		await user.click(lineNumber(2));
+		await paste(screen.getByTestId('comment-input'), screenshot());
+		await screen.findByTestId('attached-image');
+
+		reload();
+		await user.click(screen.getByTestId('cancel-comment'));
+
+		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
+	});
+
 	it('keeps what was pasted into it once its words are in the review', async () => {
 		const user = userEvent.setup();
 		const server = keepingImages();

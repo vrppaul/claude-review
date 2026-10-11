@@ -39,7 +39,7 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	constructor(at: Written, kept: Omit<KeptField, 'at'>, focusWanted: boolean) {
 		this.at = at;
 		this.key = fieldKey(at);
-		this.attachments = new ImageAttachments(kept.images);
+		this.attachments = new ImageAttachments(kept.images, kept.uploaded);
 		this.#text = $state(kept.text);
 		this.#severity = $state(kept.severity);
 		this.#focusWanted = $state(focusWanted);
@@ -82,7 +82,8 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 			at: this.at,
 			text: this.#text,
 			severity: this.#severity,
-			images: [...this.attachments.images]
+			images: [...this.attachments.images],
+			uploaded: this.attachments.uploaded
 		};
 	}
 }

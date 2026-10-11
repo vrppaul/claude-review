@@ -8,7 +8,9 @@ import { contextLine, addedLine, diffFile, hunk } from './diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
+import { KEPT_AS, keepingImages, screenshot, SEND_LIMITS } from './pasted-images';
 import { leavePage, openReview } from './review';
+import { settled } from './settled';
 
 let review: Review;
 
@@ -200,5 +202,19 @@ describe('the panel talks to the agent about the review', () => {
 
 		review.layout.agentPanel.setWidth(NARROWEST_PANEL - 1);
 		expect(review.layout.agentPanel.width).toBe(NARROWEST_PANEL);
+	});
+});
+
+describe('an image pasted into the panel before a reload', () => {
+	it('goes from the server when it is taken off after the reload', async () => {
+		const server = keepingImages();
+		await review.conversation.composer.attachments.attach([screenshot()], SEND_LIMITS);
+
+		leavePage();
+		review = openReview();
+		review.conversation.composer.attachments.detach(KEPT_AS);
+		await settled();
+
+		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
 	});
 });

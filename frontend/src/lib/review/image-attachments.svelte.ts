@@ -30,14 +30,23 @@ export class ImageAttachments {
 		return this.#images;
 	}
 
+	/** Which of the attached images were uploaded here, as a draft keeps them. */
+	get uploaded(): string[] {
+		return this.#images.filter((imageId) => this.#uploaded.has(imageId));
+	}
+
 	/** Images still on their way to the server; sending waits for them. */
 	get uploading(): number {
 		return this.#uploading;
 	}
 
-	/** @param images what is already attached, when picking up a draft or an edit */
-	constructor(images: string[]) {
+	/**
+	 * @param images what is already attached, when picking up a draft or an edit
+	 * @param uploaded which of them this field uploaded itself before a reload; what it was handed is not its to let go
+	 */
+	constructor(images: string[], uploaded: readonly string[]) {
 		this.#images = images;
+		for (const imageId of uploaded) this.#uploaded.add(imageId);
 	}
 
 	/**

@@ -17,7 +17,7 @@ export class PanelComposer {
 	/** @param kept the half-written message of an unsent review of the same thing */
 	constructor(kept: Composer) {
 		this.#text = $state(kept.text);
-		this.attachments = new ImageAttachments(kept.images);
+		this.attachments = new ImageAttachments(kept.images, kept.uploaded);
 	}
 
 	get text(): string {
@@ -28,7 +28,8 @@ export class PanelComposer {
 	get kept(): Composer {
 		return {
 			text: this.#text,
-			images: [...this.attachments.images]
+			images: [...this.attachments.images],
+			uploaded: this.attachments.uploaded
 		};
 	}
 

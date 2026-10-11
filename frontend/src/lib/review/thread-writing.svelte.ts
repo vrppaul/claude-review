@@ -21,7 +21,7 @@ type Ending = Exclude<CommentFieldEvent['type'], 'opened'>;
 
 /** What a field opens with when nothing is written in it yet. */
 function nothingWritten(): Omit<KeptField, 'at'> {
-	return { text: '', severity: 'note', images: [] };
+	return { text: '', severity: 'note', images: [], uploaded: [] };
 }
 
 function isOnLines(field: CommentField): field is CommentField<WrittenOnLines> {
@@ -80,7 +80,8 @@ export class ThreadWriting {
 	openEdit(thread: Thread): void {
 		this.#open(
 			{ kind: 'edit', thread: thread.id },
-			{ text: thread.body, severity: thread.severity, images: [...thread.images] }
+			// The thread's images are handed in: the field did not upload them, and lets none go
+			{ text: thread.body, severity: thread.severity, images: [...thread.images], uploaded: [] }
 		);
 	}
 

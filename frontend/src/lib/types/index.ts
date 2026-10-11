@@ -270,4 +270,6 @@ export interface Composer {
 	text: string;
 	/** Ids the server kept the images under. */
 	images: string[];
+	/** Which of them were uploaded here, so a reload does not stop them being let go. */
+	uploaded: string[];
 }

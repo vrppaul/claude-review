@@ -9,7 +9,8 @@
  * its own, and every turn carries an id a question can name; how a thread
  * is read — folded, unread, waited on — has moved out of the thread; the
  * draft says how far the server's telling had got for it; and it keeps
- * what was being written in the threads and not said yet. A draft a
+ * what was being written in the threads and not said yet, and which pasted
+ * images each field uploaded itself. A draft a
  * release kept is brought up to date — never thrown away: it is an hour of
  * somebody's reading. The shapes between the last released one and this
  * were never released, and are not read.
@@ -29,7 +30,7 @@ import type {
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 14;
+export const DRAFT_SHAPE = 15;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -51,6 +52,8 @@ export interface KeptField {
 	text: string;
 	severity: CommentSeverity;
 	images: string[];
+	/** Which of the images the field uploaded itself: the only ones it may let the server drop. */
+	uploaded: string[];
 }
 
 /** The threads as a draft keeps them: what they say, how they were read, which went out, and what was being written. */
@@ -131,7 +134,7 @@ interface OlderDraft {
 	// Before rounds were numbered a sent thread was only an id
 	sent?: (string | [string, number])[];
 	panel?: PanelTurn[];
-	composer?: Composer;
+	composer?: Omit<Composer, 'uploaded'>;
 	issued?: IssuedIds;
 }
 
@@ -155,7 +158,7 @@ function isCurrent(kept: KeptDraft): kept is Draft {
 }
 
 function emptyComposer(): Composer {
-	return { text: '', images: [] };
+	return { text: '', images: [], uploaded: [] };
 }
 
 /** The draft of a review nothing has been written in yet. */
@@ -211,7 +214,8 @@ function fromComments(kept: OlderDraft): Draft {
 		// The panel came after threads did; an older draft simply has nothing said
 		panel: kept.panel ?? [],
 		// The panel kept nothing half-written until it could hold images
-		composer: kept.composer ?? emptyComposer(),
+		// A composer kept before it said what it uploaded: its images count as handed in
+		composer: kept.composer ? { ...kept.composer, uploaded: [] } : emptyComposer(),
 		issued,
 		told: null
 	};
