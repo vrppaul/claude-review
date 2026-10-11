@@ -106,7 +106,7 @@ export const TOUR_STEPS: TourStep[] = [
 		id: 'comment-route',
 		targets: ['comment-field'],
 		title: 'Two ways a comment can go',
-		body: 'Write what should change. Then decide when the agent hears about it.',
+		body: 'Write what should change. Then decide when it goes to the agent.',
 		fork: [
 			{
 				label: 'Add to review',
@@ -142,7 +142,7 @@ export const TOUR_STEPS: TourStep[] = [
 		id: 'added',
 		targets: ['unsent-count'],
 		title: 'Added to the review',
-		body: 'It waits with your other comments, and the count went up. The agent hears about all of them together when you send; until then you can still edit or delete it.',
+		body: 'It waits with your other comments, and the count went up. They go to the agent together when you send a round; until then you can still edit or delete it.',
 		applies: (context) => context.route === 'review'
 	},
 	{
@@ -155,8 +155,8 @@ export const TOUR_STEPS: TourStep[] = [
 	{
 		id: 'unsent',
 		targets: ['unsent-count'],
-		title: 'Nothing goes until you send it',
-		body: 'Comments added to the review wait here. The first number is what the agent has not seen yet; the second is everything in the review.',
+		title: 'What waits for you to send it',
+		body: 'Comments added to the review wait here until you send them. The first number is what you have not sent yet; the second is everything in the review.',
 		applies: (context) => context.route === 'ask'
 	},
 	{
