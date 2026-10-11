@@ -284,6 +284,14 @@ def test_busy_port_reports_one_readable_line(changed_repo: Path, cli: CliProcess
     assert "already in use" in result.stderr
 
 
+def test_a_base_that_names_no_commit_is_refused_in_one_readable_line(changed_repo: Path, cli: CliProcesses) -> None:
+    result = cli.run("diff", str(changed_repo), "--base", "no-such-ref", "--no-open")
+
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert "no-such-ref" in result.stderr
+
+
 def test_version_is_reported(cli: CliProcesses) -> None:
     """--version prints the installed version."""
     result = cli.run("--version")

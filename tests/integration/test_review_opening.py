@@ -4,9 +4,11 @@ from pathlib import Path
 
 import pytest
 
+from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
+from tests.helpers import git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
@@ -41,9 +43,19 @@ async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed
     from_inside = await open_diff(nested, None, GitRepository(objects=None))
     from_the_root = await open_diff(changed_repo, None, GitRepository(objects=None))
 
-    assert from_inside.root == from_the_root.root
+    assert from_inside.repository == from_the_root.repository
     assert from_inside.title == from_the_root.title
     assert from_inside.identity == from_the_root.identity
+
+
+@pytest.mark.parametrize("base", ["no-such-ref", "key-blob"], ids=["nothing-by-that-name", "a-tag-on-a-blob"])
+async def test_a_base_that_names_no_commit_is_refused(changed_repo: Path, base: str) -> None:
+    """Nothing can be compared against it: refused as what the reader asked for, not failed as git."""
+    blob = git(changed_repo, "hash-object", "-w", "initial.txt").strip()
+    git(changed_repo, "tag", "-a", "key-blob", blob, "-m", "a key, kept as a tag")
+
+    with pytest.raises(UnknownVersionError, match=base):
+        await open_diff(changed_repo, base, GitRepository(objects=None))
 
 
 async def test_a_diff_against_another_base_is_another_review(changed_repo: Path) -> None:

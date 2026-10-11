@@ -15,6 +15,8 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import ReviewMode
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.review_opening import open_diff
 from tests.helpers import (
     DIFF_ROUTE,
     LOCAL_HEADERS,
@@ -27,6 +29,8 @@ from tests.helpers import (
 )
 
 VERSIONS_ROUTE = "/api/versions"
+FOLLOW_ROUTE = "/api/anchors/follow"
+RETAKE_ROUTE = "/api/retake"
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
@@ -209,7 +213,7 @@ async def test_a_ref_whose_name_begins_with_a_dash_is_never_a_base(
 async def test_a_repository_with_nothing_committed_still_offers_its_bases(
     tmp_path: Path, reviews: ReviewFactory
 ) -> None:
-    """No HEAD means no counts; it does not mean no menu."""
+    """No HEAD means no refs to read against; the review itself is read against nothing, and counts every file."""
     fresh = tmp_path / "fresh"
     fresh.mkdir()
     git(fresh, "init", "-b", "main")
@@ -219,7 +223,32 @@ async def test_a_repository_with_nothing_committed_still_offers_its_bases(
         offered = await _offered(client)
 
     assert [version["key"] for version in offered] == ["review"]
-    assert offered[0]["changed"] is None, "a count that cannot be taken is not a count of zero"
+    assert offered[0]["changed"] == 1
+
+
+async def test_a_base_on_no_commit_is_refused_rather_than_failed(tmp_path: Path, reviews: ReviewFactory) -> None:
+    """HEAD names nothing yet in a new repository; asked for anyway, it is the reader's question that is wrong."""
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    git(fresh, "init", "-b", "main")
+    (fresh / "started.py").write_text("nothing committed yet\n")
+
+    async with http_client(reviews.app(await repository_opening(fresh))) as client:
+        asked = await client.get(DIFF_ROUTE, params={"base": "ref:HEAD"}, headers=LOCAL_HEADERS)
+
+    assert asked.status_code == HTTPStatus.BAD_REQUEST
+
+
+async def test_a_count_git_will_not_take_is_not_a_count_of_zero(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """A reader told nothing changed stops looking; one told nothing stops trusting the count."""
+    (tmp_git_repo / "work.py").write_text("under review\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        # An index git cannot read: the tree cannot be staged to be counted
+        (tmp_git_repo / ".git" / "index").write_bytes(b"not an index")
+        offered = await _offered(client)
+
+    assert offered[0]["changed"] is None
 
 
 async def test_the_diff_says_how_far_the_tree_has_moved_since_it_was_taken(
@@ -248,3 +277,107 @@ async def test_a_review_opens_on_the_tree_its_first_round_is_marked_at(
 
     assert [file["path"] for file in served["files"]] == ["written_in_between.py"]
     assert "round:1" not in by_key, "nothing has changed since the tree round 1 began at"
+
+
+def _commit_everything(repo: Path, message: str) -> None:
+    git(repo, "add", ".")
+    git(repo, "commit", "-m", message)
+
+
+async def _paths_on_screen(client: AsyncClient) -> list[str]:
+    return sorted(file["path"] for file in (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["files"])
+
+
+async def test_a_commit_made_during_the_review_leaves_its_diff_and_its_threads_as_they_were(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The agent commits its work, as agents do: the review is of that work, and must not lose it to the commit."""
+    (tmp_git_repo / "work.py").write_text("written for review\n")
+    on_the_work = {"file": "work.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["written for review"]}
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        _commit_everything(tmp_git_repo, "the agent's work")
+        await _mark(client)
+        on_screen = await _paths_on_screen(client)
+        followed = (await client.post(FOLLOW_ROUTE, json={"anchors": [on_the_work]}, headers=LOCAL_HEADERS)).json()[
+            "anchors"
+        ]
+
+    assert on_screen == ["work.py"]
+    assert [anchor["outdated"] for anchor in followed] == [False]
+
+
+async def test_a_review_against_an_earlier_commit_keeps_that_commit_on_screen_as_more_are_made(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """`--base HEAD~1` names the commit before the one under review; the next commit must not move it past that one."""
+    (tmp_git_repo / "under_review.py").write_text("the commit under review\n")
+    _commit_everything(tmp_git_repo, "the commit under review")
+    opening = await open_diff(tmp_git_repo, "HEAD~1", GitRepository(objects=None))
+
+    async with http_client(reviews.app(opening)) as client:
+        (tmp_git_repo / "the_fix.py").write_text("what the round asked for\n")
+        _commit_everything(tmp_git_repo, "the agent's fix")
+        await _mark(client)
+        on_screen = await _paths_on_screen(client)
+        phrase = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["phrase"]
+
+    assert on_screen == ["the_fix.py", "under_review.py"]
+    assert phrase == "changes since HEAD~1", "the reader's own words name what the review is against"
+
+
+async def test_a_review_whose_base_branch_is_deleted_still_takes_its_diff_again(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The base is the commit the branch named when the review opened, which outlives the branch."""
+    git(tmp_git_repo, "branch", "feature-base")
+    (tmp_git_repo / "feature.py").write_text("on the feature\n")
+    _commit_everything(tmp_git_repo, "the feature")
+    opening = await open_diff(tmp_git_repo, "feature-base", GitRepository(objects=None))
+
+    async with http_client(reviews.app(opening)) as client:
+        git(tmp_git_repo, "branch", "-D", "feature-base")
+        retaken = await client.post(RETAKE_ROUTE, json={}, headers=LOCAL_HEADERS)
+        on_screen = await _paths_on_screen(client)
+
+    assert retaken.status_code == HTTPStatus.OK
+    assert on_screen == ["feature.py"]
+
+
+async def test_a_tag_on_anything_but_a_commit_is_neither_offered_nor_taken_as_a_base(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """A tag may point at a blob, as git.git's own key does; nothing can be compared against one."""
+    blob = git(tmp_git_repo, "hash-object", "-w", "initial.txt").strip()
+    git(tmp_git_repo, "tag", "-a", "key-blob", blob, "-m", "a key, kept as a tag")
+    git(tmp_git_repo, "tag", "plain-blob", blob)
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        offered = [version["label"] for version in await _offered(client) if version["kind"] == "ref"]
+        asked = [
+            (await client.get(DIFF_ROUTE, params={"base": f"ref:{name}"}, headers=LOCAL_HEADERS)).status_code
+            for name in ("key-blob", "plain-blob")
+        ]
+
+    assert "key-blob" not in offered
+    assert "plain-blob" not in offered
+    assert asked == [HTTPStatus.BAD_REQUEST, HTTPStatus.BAD_REQUEST]
+
+
+async def test_a_first_commit_made_during_the_review_of_a_new_repository_leaves_its_diff_as_it_was(
+    tmp_path: Path, reviews: ReviewFactory
+) -> None:
+    """With nothing committed the review is of everything there, and the first commit takes none of it away."""
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    git(fresh, "init", "-b", "main")
+    git(fresh, "config", "user.email", "test@test.com")
+    git(fresh, "config", "user.name", "Test")
+    (fresh / "started.py").write_text("the first file of a new project\n")
+
+    async with http_client(reviews.app(await repository_opening(fresh))) as client:
+        _commit_everything(fresh, "the first commit")
+        await _mark(client)
+        on_screen = await _paths_on_screen(client)
+
+    assert on_screen == ["started.py"]

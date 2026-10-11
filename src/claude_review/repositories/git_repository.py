@@ -18,6 +18,17 @@ log = structlog.get_logger()
 
 GIT_TIMEOUT = 30.0
 REF_LIMIT = 50
+# What `for-each-ref` says of each ref, a tab between each: its name, when it
+# was made, the type of what it points at, and, for a tag, the type of what
+# the tag was put on
+REF_FIELDS = "%(refname:short)%09%(creatordate:unix)%09%(objecttype)%09%(*objecttype)"
+REF_FIELD_SEPARATOR = "\t"
+# The type of object a base has to be, itself or through a tag
+COMMIT_TYPE = "commit"
+# What a revision is followed by to name the commit it is, through any tag on the way
+AS_COMMIT = "^{commit}"
+# What an option begins with, which no revision a review reads against may
+OPTION_MARK = "-"
 # Git dates a ref in seconds, and the review says every time in milliseconds
 MILLISECONDS_PER_SECOND = 1000
 # Where the path starts in an entry of `git status --porcelain`
@@ -139,20 +150,17 @@ class GitStagedTree(StagedTree):
         self._keeps_objects = keeps_objects
 
     @override
-    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
+    async def diff(self, base: str, *, ignore_whitespace: bool) -> str:
         """The unified diff from a base to the working tree, untracked files included.
 
-        Without a base, from HEAD: the uncommitted changes. A base may be a
-        commit, a ref, or a tree a round was written down as.
+        A base may be a commit, a ref, or a tree a round was written down as.
 
         With ignore_whitespace, git leaves out changes that only alter
         whitespace — a reindented block stops hiding the one line that
         actually changed inside it.
         """
         arguments = [*DIFF_STAGED, *(["-w"] if ignore_whitespace else [])]
-        if base is not None:
-            arguments += [END_OF_OPTIONS, base]
-        return await _run(self._path, arguments, self._variables)
+        return await _run(self._path, [*arguments, END_OF_OPTIONS, base], self._variables)
 
     @override
     async def write_tree(self) -> str:
@@ -266,22 +274,30 @@ class GitRepository(ReviewedRepository):
                 # back empty and every such tag is dropped — from a project that
                 # tags its releases properly, all of them
                 "--sort=-creatordate",
-                "--format=%(refname:short)%09%(creatordate:unix)",
+                f"--format={REF_FIELDS}",
                 "refs/heads",
                 "refs/tags",
             ],
         )
-        refs = []
-        for line in listed.splitlines():
-            name, _, at = line.partition("\t")
-            # A name may begin with a dash: `git check-ref-format` allows it and
-            # a fetch can bring one in from a remote. Offered as a base it would
-            # reach `git diff` as an option — `--output=` writes a file — so it
-            # is not offered at all.
-            if name and not name.startswith("-") and at.isdigit():
-                # Git says seconds; the review says every time in milliseconds
-                refs.append(GitRef(name=name, at=int(at) * MILLISECONDS_PER_SECOND))
-        return refs
+        return [ref for line in listed.splitlines() if (ref := _offered_ref(line)) is not None]
+
+    @override
+    async def commit_named(self, path: Path, revision: str) -> str | None:
+        """The id of the commit a revision names now, or None when it names no commit.
+
+        A tag is taken to the commit it was put on, and names none when it was
+        put on anything else: a blob, as git.git keeps its release key.
+        """
+        return await _commit_named(path, revision)
+
+    @override
+    async def empty_tree(self, path: Path) -> str:
+        """The id of the tree with nothing in it, in the kind of id this repository uses: SHA-1 or SHA-256.
+
+        Hashed, never written: git reads against the empty tree whether its
+        object store holds it or not.
+        """
+        return (await _run(path, ["hash-object", "-t", "tree", os.devnull])).strip()
 
     @override
     async def changed_paths(self, path: Path) -> list[str]:
@@ -336,7 +352,7 @@ class GitRepository(ReviewedRepository):
             # the index was written as maybe changed only by comparing the two,
             # and a copy dated now would have it trust a stale stat instead
             await asyncio.to_thread(shutil.copy2, own.index, index)
-        elif await _has_commits(path):
+        elif await _commit_named(path, HEAD) is not None:
             await _run(path, ["read-tree", HEAD], variables)
         else:
             await asyncio.to_thread(index.unlink)
@@ -354,13 +370,32 @@ async def _own_paths(path: Path) -> OwnPaths | None:
     return OwnPaths(objects=Path(objects), index=Path(index)) if objects and index else None
 
 
-async def _has_commits(path: Path) -> bool:
-    """Whether there is a HEAD to start the index from: a fresh repository has none."""
-    try:
-        run = await _execute(path, ["rev-parse", "--verify", "--quiet", HEAD])
-    except GitError:
-        return False
-    return run.exit_code == 0
+def _offered_ref(line: str) -> GitRef | None:
+    """The base one line of `for-each-ref` offers, or None when it is no base to offer."""
+    name, at, points_at, tag_points_at = line.split(REF_FIELD_SEPARATOR)
+    # A name may begin with a dash: `git check-ref-format` allows it and a
+    # fetch can bring one in from a remote. Offered as a base it would reach
+    # `git diff` as an option — `--output=` writes a file — so it is not
+    # offered at all. Nor is a tag on anything but a commit, which nothing
+    # can be compared against.
+    names_a_commit = (tag_points_at or points_at) == COMMIT_TYPE
+    if not name or name.startswith(OPTION_MARK) or not at.isdigit() or not names_a_commit:
+        return None
+    # Git says seconds; the review says every time in milliseconds
+    return GitRef(name=name, at=int(at) * MILLISECONDS_PER_SECOND)
+
+
+async def _commit_named(path: Path, revision: str) -> str | None:
+    """The id of the commit a revision names now, through any tag on the way, or None when it names none.
+
+    Asked to verify, git answers with one id or with nothing, and quietly:
+    a revision that names no commit is an answer, not a failure.
+
+    Raises:
+        GitError: if git could not be started or ran out of time.
+    """
+    run = await _execute(path, ["rev-parse", "--verify", "--quiet", END_OF_OPTIONS, f"{revision}{AS_COMMIT}"])
+    return run.output.strip() if run.exit_code == 0 else None
 
 
 async def _run(path: Path, arguments: list[str], variables: dict[str, str] | None = None) -> str:

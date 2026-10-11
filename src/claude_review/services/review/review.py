@@ -74,7 +74,7 @@ class Review:
     ) -> None:
         self._mode = opening.mode
         self._title = opening.title
-        self._opened_against = opening.base
+        self._opened_against = opening.opened_against
         self._page = page
         self._images = images
         self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import FileStatus
+from claude_review.domain.models import HEAD, FileStatus
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
@@ -17,7 +17,7 @@ SETTLED_AT = 1_000_000_000
 GENERATED_FILES = 20
 
 
-async def _raw_diff(repository: GitRepository, path: Path, base: str | None = None) -> str:
+async def _raw_diff(repository: GitRepository, path: Path, base: str = HEAD) -> str:
     """What one staging of the working tree diffs as, against a base or HEAD."""
     async with repository.staged(path) as staged:
         return await staged.diff(base, ignore_whitespace=False)
@@ -176,7 +176,7 @@ async def test_a_repository_whose_path_holds_a_colon_shows_its_changes_as_change
     store = tmp_path_factory.mktemp("review-objects") if keeps_objects else None
 
     async with GitRepository(objects=store).staged(repo) as staged:
-        [changed] = await read_diff(staged, base=None, ignore_whitespace=False)
+        [changed] = await read_diff(staged, base=HEAD, ignore_whitespace=False)
 
     assert changed.path == "tracked.txt"
     assert changed.status == FileStatus.MODIFIED

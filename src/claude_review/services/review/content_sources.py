@@ -9,7 +9,6 @@ for itself here, so nothing else asks which kind it is.
 import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import override
 
 import structlog
@@ -25,7 +24,7 @@ from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.tree_watcher_service import TreeWatcherService
-from claude_review.services.review_opening import ReviewOpening
+from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 
 log = structlog.get_logger()
 
@@ -85,14 +84,20 @@ class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
 
     def __init__(
-        self, opening: ReviewOpening, root: Path, *, repository: ReviewedRepository, clock: Clock, rounds: RoundTracker
+        self,
+        opening: ReviewOpening,
+        opened: OpenedRepository,
+        *,
+        repository: ReviewedRepository,
+        clock: Clock,
+        rounds: RoundTracker,
     ) -> None:
-        self._root = root
+        self._root = opened.root
         self._content = ReviewContent(opening.diff_files, tree=frozenset())
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
-        self._versions = ReviewVersions(repository, clock, root, review_base=opening.base)
+        self._versions = ReviewVersions(repository, clock, opened)
         self._rounds = rounds
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
@@ -166,7 +171,7 @@ class RepositorySource(ContentSource):
 
     async def _take(self, staged: StagedTree, round_number: int) -> int:
         """Take the diff from a staging, put it on screen with its tree, mark it for the round; say how many files."""
-        files = await read_diff(staged, base=self._versions.review_base, ignore_whitespace=False)
+        files = await read_diff(staged, base=self._versions.pinned_base, ignore_whitespace=False)
         # Read after the diff, not before: a file saved in between then
         # belongs to the tree the diff was taken at, and the reader is not
         # told about a change that is already on their screen
@@ -244,6 +249,6 @@ def content_source(
     opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock, rounds: RoundTracker
 ) -> ContentSource:
     """Where this review's content comes from: its repository, when it has one."""
-    if opening.root is None:
+    if opening.repository is None:
         return FixedSource(opening)
-    return RepositorySource(opening, opening.root, repository=repository, clock=clock, rounds=rounds)
+    return RepositorySource(opening, opening.repository, repository=repository, clock=clock, rounds=rounds)

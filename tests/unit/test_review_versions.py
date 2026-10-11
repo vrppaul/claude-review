@@ -15,9 +15,12 @@ from typing import override
 from claude_review.domain.interfaces import Repository, StagedTree
 from claude_review.domain.models import ChangedSinceRound, GitRef, RoundKey, VersionOnOffer
 from claude_review.services.review.review_versions import ReviewVersions
+from claude_review.services.review_opening import OpenedRepository
 from tests.helpers import FixedClock
 
 ROOT = Path("/repository")
+# The commit the review opened on: its uncommitted changes, as HEAD stood then
+OPENED_ON = "commit-at-opening"
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
 # What the repository says differs from a base: one file, named after the base
@@ -31,7 +34,7 @@ class TreeThatMoves(StagedTree):
         self._repository = repository
 
     @override
-    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
+    async def diff(self, base: str, *, ignore_whitespace: bool) -> str:
         return ""
 
     @override
@@ -70,13 +73,25 @@ class RepositoryThatMoves(Repository):
     async def changed_paths(self, path: Path) -> list[str]:
         return []
 
+    @override
+    async def commit_named(self, path: Path, revision: str) -> str | None:
+        return OPENED_ON
+
+    @override
+    async def empty_tree(self, path: Path) -> str:
+        return "empty-tree"
+
 
 class MarkingReview:
     """The bases of one review over a repository that moves, and its marks left one round at a time."""
 
     def __init__(self) -> None:
         self._repository = RepositoryThatMoves()
-        self.versions = ReviewVersions(self._repository, FixedClock(MARKED_AT), ROOT, review_base=None)
+        self.versions = ReviewVersions(
+            self._repository,
+            FixedClock(MARKED_AT),
+            OpenedRepository(root=ROOT, named_base=None, pinned_base=OPENED_ON),
+        )
 
     async def mark(self, round_number: int) -> None:
         async with self._repository.staged(ROOT) as staged:

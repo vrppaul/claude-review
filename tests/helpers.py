@@ -284,7 +284,7 @@ class FixedClock(Clock):
 
 def opening_of(diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, title: str = "") -> ReviewOpening:
     """What a review of files read once opens on, built by the test; a repository is opened by `repository_opening`."""
-    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, root=None, base=None)
+    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, repository=None)
 
 
 class ReviewFactory:
@@ -302,7 +302,7 @@ class ReviewFactory:
         self._reader_files = reader_files
 
     def hosted(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> HostedReview:
-        writes_marks = opening.root is not None and keeps_marks
+        writes_marks = opening.repository is not None and keeps_marks
         return host_review(
             opening,
             workspace=self._marking_workspace if writes_marks else self._workspace,

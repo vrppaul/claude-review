@@ -8,13 +8,13 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import DiffFile, FileStatus, LineType
+from claude_review.domain.models import HEAD, DiffFile, FileStatus, LineType
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
 
 
-async def _diff(repo: Path, base: str | None = None, *, ignore_whitespace: bool = False) -> list[DiffFile]:
+async def _diff(repo: Path, base: str = HEAD, *, ignore_whitespace: bool = False) -> list[DiffFile]:
     """The diff of a repository's working tree against a base, HEAD unless one is named."""
     async with GitRepository(objects=None).staged(repo) as staged:
         return await read_diff(staged, base=base, ignore_whitespace=ignore_whitespace)

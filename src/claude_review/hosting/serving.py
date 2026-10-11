@@ -43,7 +43,7 @@ async def serve_review(opening: ReviewOpening, *, port: int | None, announcer: R
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
     """
-    with review_workspace(writes_trees=opening.root is not None, announcer=announcer) as workspace:
+    with review_workspace(writes_trees=opening.repository is not None, announcer=announcer) as workspace:
         hosted = host_review(opening, workspace=workspace, reader_files=reader_files(), clock=SystemClock())
         review = hosted.review
         server = ReviewServer(hosted.app, review.lifetime)

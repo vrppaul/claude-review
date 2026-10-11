@@ -1,6 +1,5 @@
 """What one review's diff can be compared against, and the marks it leaves to make that possible."""
 
-from pathlib import Path
 from typing import assert_never
 
 import structlog
@@ -17,8 +16,12 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
+from claude_review.services.review_opening import OpenedRepository
 
 log = structlog.get_logger()
+
+# What an option begins with, which a revision the review reads against never may
+OPTION_MARK = "-"
 
 
 class ReviewVersions:
@@ -34,20 +37,20 @@ class ReviewVersions:
     the review itself.
     """
 
-    def __init__(self, repository: Repository, clock: Clock, root: Path, review_base: str | None) -> None:
+    def __init__(self, repository: Repository, clock: Clock, opened: OpenedRepository) -> None:
         self._repository = repository
         self._clock = clock
-        self._root = root
-        # What the review was opened against; None for uncommitted changes
-        self._review_base = review_base
+        # Where the repository is, and the review's own base: by the name the
+        # reader gave it, and by what that named as the review opened
+        self._opened = opened
         # The tree behind every diff this review has taken, oldest first. The
         # first of each round is a base the reader can go back to.
         self._marks: list[TreeSnapshot] = []
 
     @property
-    def review_base(self) -> str | None:
-        """What the review was opened against; None for the uncommitted changes."""
-        return self._review_base
+    def pinned_base(self) -> str:
+        """What every take of the review's own diff is read against: its base as the review opened on it."""
+        return self._opened.pinned_base
 
     async def mark(self, round_number: int, staged: StagedTree) -> None:
         """Write down the tree the diff has just been taken from, as part of a round."""
@@ -79,12 +82,13 @@ class ReviewVersions:
         knowledge last, then what the repository had before any of this.
         """
         rounds = self._rounds_began()
-        # A ref the review already opened against is that first entry; it is
-        # not a second way of looking at the same thing
-        refs = [ref for ref in await self._refs() if ref.key != RefKey(name=self._review_base or HEAD)]
-        counted = await self._counts([self._review_base or HEAD, *(mark.tree for mark in rounds)])
+        # The ref the reader opened the review against is that first entry,
+        # under the name they gave it; offered again, it would be a second row
+        # of the same name
+        refs = [ref for ref in await self._refs() if ref.key != RefKey(name=self._opened.named_base or HEAD)]
+        counted = await self._counts([self._opened.pinned_base, *(mark.tree for mark in rounds)])
 
-        review = VersionOnOffer(key=ReviewKey(), at=None, changed=counted.get(self._review_base or HEAD))
+        review = VersionOnOffer(key=ReviewKey(), at=None, changed=counted.get(self._opened.pinned_base))
         offered_rounds = [
             VersionOnOffer(key=RoundKey(round=mark.round), at=mark.at, changed=counted.get(mark.tree))
             for mark in rounds
@@ -94,19 +98,20 @@ class ReviewVersions:
         # the way back.
         return [review, *[version for version in offered_rounds if version.changed != 0], *refs]
 
-    async def resolve(self, key: VersionKey) -> str | None:
+    async def resolve(self, key: VersionKey) -> str:
         """The revision a base names, as git will understand it.
 
-        Nothing the page asks for reaches git as a revision unchecked: a round
-        is answered from the marks this review left, and a ref has to be one
-        the repository actually has.
+        Nothing the page asks for reaches git as a revision unchecked: the
+        review's own is the base it opened on, a round is answered from the
+        marks this review left, and a ref has to be one the repository
+        actually has, on a commit.
 
         Raises:
             UnknownVersionError: when nothing this review offers answers to it.
         """
         match key:
             case ReviewKey():
-                return self._review_base
+                return self._opened.pinned_base
             case RoundKey():
                 began = next((mark for mark in self._marks if mark.round == key.round), None)
                 if began is None:
@@ -119,22 +124,30 @@ class ReviewVersions:
                 assert_never(key)
 
     async def _ref_named(self, name: str) -> str:
-        """A ref the repository has, checked as it is asked for.
+        """The commit a ref the repository has names now, checked as it is asked for.
 
         Checked here as well as when the refs are listed: what reaches `git
         diff` must never be able to arrive as an option, and a ref can be
-        written between the listing and the asking.
+        written between the listing and the asking. Read as the commit it
+        names, the way the review's own base was when it opened, so the diff
+        is taken against what was checked.
 
         Raises:
-            UnknownVersionError: if it could be read as an option, or the repository has no such ref.
+            UnknownVersionError: if it could be read as an option, the
+                repository has no such ref, or it is on no commit.
         """
-        if name.startswith("-"):
+        if name.startswith(OPTION_MARK):
             msg = f"{name} cannot be a base: a revision may not begin with a dash"
             raise UnknownVersionError(msg)
-        if name != HEAD and name not in {ref.name for ref in await self._repository.list_refs(self._root)}:
+        root = self._opened.root
+        if name != HEAD and name not in {ref.name for ref in await self._repository.list_refs(root)}:
             msg = f"{name} is not a branch or tag of this repository"
             raise UnknownVersionError(msg)
-        return name
+        commit = await self._repository.commit_named(root, name)
+        if commit is None:
+            msg = f"{name} is not on a commit: nothing can be compared against it"
+            raise UnknownVersionError(msg)
+        return commit
 
     def _began(self, round_number: int) -> TreeSnapshot | None:
         """The mark a round is measured from, and offered as a base.
@@ -166,7 +179,7 @@ class ReviewVersions:
         """The branches and tags this repository can be read against, HEAD first, left uncounted."""
         listed = [
             VersionOnOffer(key=RefKey(name=ref.name), at=ref.at, changed=None)
-            for ref in await self._repository.list_refs(self._root)
+            for ref in await self._repository.list_refs(self._opened.root)
         ]
         return [VersionOnOffer(key=RefKey(name=HEAD), at=None, changed=None), *listed]
 
@@ -179,7 +192,7 @@ class ReviewVersions:
         are one tree.
         """
         try:
-            async with self._repository.staged(self._root) as staged:
+            async with self._repository.staged(self._opened.root) as staged:
                 changed = await staged.names_changed_since(list(dict.fromkeys(bases)))
         except GitError as refusal:
             log.warning("counts_refused", reason=str(refusal))

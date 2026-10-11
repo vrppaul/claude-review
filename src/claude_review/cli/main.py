@@ -16,6 +16,7 @@ import click
 import structlog
 
 from claude_review.cli.review_client import ReviewCallError
+from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import GitError
 from claude_review.hosting.errors import PortUnavailableError, ServerStartError
 from claude_review.services.unreadable_content import UnreadableContentError
@@ -32,9 +33,16 @@ COMMAND_MODULES = {
 
 # What goes wrong in ordinary use, and is said in a line rather than a
 # traceback: no review on that port or a refusal from it, a directory that
-# is no repository, a file that is not text, a port taken, a server that
-# never came up
-EXPLAINED_FAILURES = (ReviewCallError, GitError, UnreadableContentError, PortUnavailableError, ServerStartError)
+# is no repository, a base that is no commit, a file that is not text, a port
+# taken, a server that never came up
+EXPLAINED_FAILURES = (
+    ReviewCallError,
+    GitError,
+    UnknownVersionError,
+    UnreadableContentError,
+    PortUnavailableError,
+    ServerStartError,
+)
 
 
 class ReviewCommands(click.Group):

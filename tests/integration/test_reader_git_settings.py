@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, Field
 
-from claude_review.domain.models import DiffFile, DiffLine, FileStatus
+from claude_review.domain.models import HEAD, DiffFile, DiffLine, FileStatus
 from claude_review.repositories.git_repository import FOREIGN_GIT_VARIABLES, GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import GIT_YES, added_line, context_line, git, removed_line, write_files
@@ -90,7 +90,7 @@ def _committed(repo: Path, attributes: str) -> None:
 
 async def _diff(repo: Path) -> list[DiffFile]:
     async with GitRepository(objects=None).staged(repo) as staged:
-        return await read_diff(staged, base=None, ignore_whitespace=False)
+        return await read_diff(staged, base=HEAD, ignore_whitespace=False)
 
 
 async def _hunk_lines(repo: Path) -> list[DiffLine]:

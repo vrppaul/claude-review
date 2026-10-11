@@ -32,8 +32,8 @@ class StagedTree(ABC):
     """The working tree staged whole for one operation: everything git is asked within it reads the same index."""
 
     @abstractmethod
-    async def diff(self, base: str | None, *, ignore_whitespace: bool) -> str:
-        """The unified diff from a base — HEAD when None — to the working tree."""
+    async def diff(self, base: str, *, ignore_whitespace: bool) -> str:
+        """The unified diff from a base to the working tree."""
 
     @abstractmethod
     async def write_tree(self) -> str:
@@ -45,7 +45,7 @@ class StagedTree(ABC):
 
 
 class Repository(ABC):
-    """A git repository: its working tree staged, its root, its changes and its refs."""
+    """A git repository: its working tree staged, its root, its changes, its refs and the commits they name."""
 
     @abstractmethod
     def staged(self, path: Path) -> AbstractAsyncContextManager[StagedTree]:
@@ -62,6 +62,14 @@ class Repository(ABC):
     @abstractmethod
     async def list_refs(self, path: Path) -> list[GitRef]:
         """Return the branches and tags that can be used as a base."""
+
+    @abstractmethod
+    async def commit_named(self, path: Path, revision: str) -> str | None:
+        """Return the id of the commit a revision names now, or None when it names no commit."""
+
+    @abstractmethod
+    async def empty_tree(self, path: Path) -> str:
+        """Return the id of the tree with nothing in it: what a repository with nothing committed is read against."""
 
 
 class TrackedPaths(ABC):
