@@ -25,5 +25,11 @@
 				<PartFailed what={file.path} {error} {retry} />
 			{/snippet}
 		</svelte:boundary>
+	{:else}
+		<!-- The work undone and the diff taken again, say: nothing differs from
+			the base. Under a narrower base the notice above the diff says so. -->
+		{#if !review.diff.narrowed}
+			<p data-testid="no-changes" class="cr-muted px-4 py-8 text-center text-sm">No changes found.</p>
+		{/if}
 	{/each}
 </div>
