@@ -8,6 +8,7 @@ opens a file it was not told about up front — hence the checks below.
 import asyncio
 from itertools import islice
 from pathlib import Path
+from typing import BinaryIO
 
 from pydantic import BaseModel
 
@@ -25,6 +26,16 @@ MAX_WINDOW_LINES = 2000
 # lock file or a generated bundle stalled the server for seconds and took
 # hundreds of megabytes. Nothing a person reads is anywhere near this.
 MAX_FILE_BYTES = 32 * 1024 * 1024
+
+# How git tells a binary file from text: a NUL byte among the first it reads
+BINARY_CHECK_BYTES = 8000
+BINARY_MARK = b"\0"
+# What ends a line, and nothing else does: git numbers a file's lines by it,
+# so a lone carriage return is part of the line it is in
+LINE_END = b"\n"
+# What a file's bytes are read as; a byte that is not is replaced, as the diff
+# shows it, rather than the file refused
+TEXT_ENCODING = "utf-8"
 
 
 class FileWindow(BaseModel):
@@ -75,30 +86,43 @@ class FileWindowService:
         # Resolving links and reading both block, and the server has a socket
         # to keep answering on. A path that leaves the repository is refused
         # as that, before anything is asked about the file it names.
-        path = await asyncio.to_thread(self._resolve_inside, root, relative_path)
+        await asyncio.to_thread(self._check_inside, root, relative_path)
 
         if relative_path not in in_review and not await self._repository.is_tracked(root, relative_path):
             msg = f"not a file in this review: {relative_path}"
             raise FileNotInReviewError(msg)
 
-        return await asyncio.to_thread(self._read_window, path, relative_path, start, end)
+        return await asyncio.to_thread(self._read_window, root / relative_path, relative_path, start, end)
 
     def _read_window(self, path: Path, named: str, start: int, end: int) -> FileWindow:
-        """Read the wanted lines without holding the whole file in memory."""
+        """Read the wanted lines without holding the whole file in memory.
+
+        Read as bytes and parted at line breaks alone, the way git numbers a
+        file's lines, so the lines widened in beside a hunk are the very
+        lines its numbers name.
+        """
         self._check_readable(path, named)
 
         wanted = min(end - start + 1, MAX_WINDOW_LINES)
         try:
-            with path.open(encoding="utf-8") as handle:
-                window = [line.rstrip("\n") for line in islice(handle, start - 1, start - 1 + wanted)]
-                total = start - 1 + len(window) + sum(1 for _ in handle)
-        except (OSError, UnicodeDecodeError) as error:
-            msg = f"cannot read as text: {named}"
+            with path.open("rb") as handle:
+                is_text = BINARY_MARK not in handle.read(BINARY_CHECK_BYTES)
+                window = _window_from(handle, start, wanted) if is_text else None
+        except OSError as error:
+            msg = f"cannot read: {named}"
             raise FileUnreadableError(msg) from error
-
-        return FileWindow(start=start, lines=window, total=total)
+        if window is None:
+            msg = f"cannot read as text: {named}"
+            raise FileUnreadableError(msg)
+        return window
 
     def _check_readable(self, path: Path, named: str) -> None:
+        # A link's one line is the name of what it points at, which the diff
+        # already shows whole. Read through, it would widen into a file the
+        # review need not hold — the ignored `.env` it points at.
+        if path.is_symlink():
+            msg = f"a link has no lines of its own to widen: {named}"
+            raise FileUnreadableError(msg)
         if not path.is_file():
             msg = f"not a readable file: {named}"
             raise FileNotInReviewError(msg)
@@ -106,8 +130,8 @@ class FileWindowService:
             msg = f"too large to expand: {named}"
             raise FileUnreadableError(msg)
 
-    def _resolve_inside(self, root: Path, relative_path: str) -> Path:
-        """Resolve a path and refuse anything that leaves the repository.
+    def _check_inside(self, root: Path, relative_path: str) -> None:
+        """Refuse a path that leaves the repository, wherever its links lead.
 
         Resolution follows symlinks, so a link pointing outside the tree is
         rejected along with "..", and the check is on the resolved path
@@ -129,4 +153,13 @@ class FileWindowService:
         if not inside:
             msg = f"path leaves the repository: {relative_path}"
             raise PathOutsideRepositoryError(msg)
-        return resolved
+
+
+def _window_from(handle: BinaryIO, start: int, wanted: int) -> FileWindow:
+    """The wanted lines of a file read from its start, and how many lines it has in all."""
+    handle.seek(0)
+    window = [
+        line.removesuffix(LINE_END).decode(TEXT_ENCODING, errors="replace")
+        for line in islice(handle, start - 1, start - 1 + wanted)
+    ]
+    return FileWindow(start=start, lines=window, total=start - 1 + len(window) + sum(1 for _ in handle))
