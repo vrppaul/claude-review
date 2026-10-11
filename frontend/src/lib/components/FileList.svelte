@@ -2,6 +2,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { DiffFile, FileStatus, ReviewMode } from '$lib/types';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
+	import { isComposingText } from '$lib/dom/keyboard';
 	import { formerName } from '$lib/utils/paths';
 	import { counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
@@ -18,12 +19,23 @@
 		deleted: { letter: 'D', colour: 'text-(--cr-del-text)' },
 		renamed: { letter: 'R', colour: 'cr-muted' }
 	};
-	// What the tree counts, in each kind of review
-	const COUNTED_AS: Record<ReviewMode, { one: string; many: string }> = {
-		diff: { one: 'changed file', many: 'changed files' },
-		files: { one: 'file', many: 'files' },
-		transcript: { one: 'message', many: 'messages' }
+	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
+	interface Listed {
+		one: string;
+		many: string;
+		/** One of them, as the filter looks for it, and what of it the filter reads. */
+		sought: string;
+		soughtBy: string;
+	}
+
+	// What the tree lists, in each kind of review
+	const COUNTED_AS: Record<ReviewMode, Listed> = {
+		diff: { one: 'changed file', many: 'changed files', sought: 'file', soughtBy: 'path' },
+		files: { one: 'file', many: 'files', sought: 'file', soughtBy: 'path' },
+		transcript: { one: 'message', many: 'messages', sought: 'message', soughtBy: 'name' }
 	};
+	// What every row that names a file carries, so the filter can hand the keyboard to the first of them
+	const FILE_ROW_ROLE = 'file-row';
 
 	const review = useReview();
 
@@ -31,6 +43,7 @@
 	const foldedFolders = new SvelteSet<string>();
 
 	const isDiffMode = $derived(review.mode === 'diff');
+	const listed = $derived(COUNTED_AS[review.mode]);
 	const query = $derived(filter.trim().toLowerCase());
 	const matching = $derived(
 		query === '' ? review.diff.files : review.diff.files.filter((file) => file.path.toLowerCase().includes(query))
@@ -39,12 +52,26 @@
 	const tree = $derived(isDiffMode ? fileTree(matching) : []);
 
 	const heading = $derived.by(() => {
-		const noun = COUNTED_AS[review.mode];
 		const total = review.diff.files.length;
 		const shown = matching.length;
-		const listed = shown === total ? counted(total, noun.one, noun.many) : `${shown} of ${total}`;
-		return review.reading.viewedCount > 0 ? `${listed} · ${review.reading.viewedCount} viewed` : listed;
+		const count = shown === total ? counted(total, listed.one, listed.many) : `${shown} of ${total}`;
+		return review.reading.viewedCount > 0 ? `${count} · ${review.reading.viewedCount} viewed` : count;
 	});
+
+	let list: HTMLElement | undefined = $state();
+
+	/**
+	 * Enter goes to the first file the filter leaves, as a click on it would;
+	 * the down arrow hands the keyboard to it, to go on from there.
+	 */
+	function onFilterKey(event: KeyboardEvent) {
+		if (isComposingText(event) || (event.key !== 'Enter' && event.key !== 'ArrowDown')) return;
+		const first = list?.querySelector<HTMLElement>(`[data-role="${FILE_ROW_ROLE}"]`);
+		if (!first) return;
+		event.preventDefault();
+		if (event.key === 'Enter') first.click();
+		else first.focus();
+	}
 
 	function toggleFolder(path: string) {
 		if (foldedFolders.has(path)) foldedFolders.delete(path);
@@ -60,6 +87,7 @@
 		<button
 			type="button"
 			data-testid="file-item"
+			data-role={FILE_ROW_ROLE}
 			class={[
 				'cr-tree-row btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs',
 				viewed && 'cr-viewed',
@@ -138,7 +166,7 @@
 >
 	<!-- The tree is on the left, so it grows rightward -->
 	<EdgeGrip column={review.layout.fileTree} grows="right" label="Resize the file tree" testId="sidebar-resize" />
-	<div class="min-h-0 flex-1 overflow-y-auto p-3">
+	<div bind:this={list} class="min-h-0 flex-1 overflow-y-auto p-3">
 		<div class="mb-2 flex items-center gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
 			<div class="flex-1"></div>
@@ -158,14 +186,15 @@
 			data-testid="file-filter"
 			type="search"
 			class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
-			placeholder="Jump to a file"
-			aria-label="Find a file by its path"
+			placeholder="Jump to a {listed.sought}"
+			aria-label="Find a {listed.sought} by its {listed.soughtBy}"
 			bind:value={filter}
+			onkeydown={onFilterKey}
 		/>
 
 		{#if matching.length === 0}
 			<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
-				No file matches “{filter}”.
+				No {listed.sought} matches “{filter}”.
 			</p>
 		{:else if isDiffMode}
 			<ul>

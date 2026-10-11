@@ -129,6 +129,43 @@ describe('finding a file in a long review', () => {
 		expect(items[0].textContent).toContain('utils.ts');
 	});
 
+	it('goes to the first file the filter leaves when the reader presses Enter', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const section = document.createElement('div');
+		section.scrollIntoView = vi.fn();
+		const unregister = review.sections.register('src/utils.ts', section);
+
+		const { getByTestId } = render(FileList, inReview(review));
+		await user.type(getByTestId('file-filter'), 'utils{Enter}');
+
+		expect(section.scrollIntoView).toHaveBeenCalled();
+		unregister();
+	});
+
+	it('hands the keyboard to the first file the filter leaves on the down arrow', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+
+		const { getByTestId, getAllByTestId } = render(FileList, inReview(review));
+		await user.type(getByTestId('file-filter'), 'utils{ArrowDown}');
+
+		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
+		expect(getAllByTestId('file-item')[0].textContent).toContain('utils.ts');
+	});
+
+	it('looks for messages, not files, in a transcript', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [wholeFile('user-1', 'hello')], facts: { mode: 'transcript' } });
+
+		const { getByTestId, getByLabelText } = render(FileList, inReview(review));
+		await user.type(getByTestId('file-filter'), 'nobody');
+
+		expect(getByTestId('file-filter').getAttribute('placeholder')).toBe('Jump to a message');
+		expect(getByLabelText('Find a message by its name')).toBe(getByTestId('file-filter'));
+		expect(getByTestId('no-matches').textContent).toContain('No message matches');
+	});
+
 	it('names its filter to whoever cannot see it', () => {
 		const review = openReview({ files: diffFiles });
 
