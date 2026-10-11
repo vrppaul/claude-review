@@ -3,7 +3,10 @@
 It binds to loopback with no authentication, which is only safe while
 loopback means "this machine, this page". A page on any domain can point
 that domain at 127.0.0.1 and the browser will then treat this server as
-same-origin; and the same-origin policy never applies to WebSockets at all.
+same-origin; the same-origin policy never applies to WebSockets at all; and
+a page next door reads without CORS — an image, a `no-cors` fetch — sending
+no Origin, which only the browser's word on where a request comes from
+gives away.
 """
 
 from http import HTTPStatus
@@ -21,16 +24,38 @@ from tests.helpers import (
     GLANCE_AT_EVENTS,
     LOCAL_HOST,
     LOCAL_ORIGIN,
+    REVIEW_ROUTE,
     REVIEWED_FILE,
+    ReviewFactory,
     next_push,
+    one_line_file,
     open_session,
+    opening_of,
 )
 
 FOREIGN_HEADERS = {"Origin": "https://attacker.example", "Host": LOCAL_HOST}
 # Another server on this machine: a dev server, a notebook, a page any package can start
 NEIGHBOUR_HEADERS = {"Origin": "http://localhost:5173", "Host": LOCAL_HOST}
-# The review's own page, opened by the machine's name rather than its address
-LOCALHOST_PAGE_HEADERS = {"Origin": "http://localhost:8000", "Host": "localhost:8000"}
+# The same, on the very address the review is served at: only the port tells them apart
+NEIGHBOUR_ON_THE_SAME_ADDRESS_HEADERS = {"Origin": "http://127.0.0.1:5173", "Host": LOCAL_HOST}
+# The review's own page, opened by the machine's name rather than its address,
+# as a browser that says where a request comes from sends it
+LOCALHOST_PAGE_HEADERS = {"Origin": "http://localhost:8000", "Host": "localhost:8000", "Sec-Fetch-Site": "same-origin"}
+
+# The header a browser says where a request comes from in (Fetch Metadata),
+# and what it says of a page on another port of this machine and of one anywhere else
+FETCH_SITE = "Sec-Fetch-Site"
+ANOTHER_PORT = "same-site"
+ANOTHER_SITE = "cross-site"
+# What a browser says of a request from the page itself, and of one no page
+# made: an address typed, a bookmark opened
+SAME_PAGE = "same-origin"
+NO_PAGE = "none"
+
+# What the reader typed in the panel, for the agent to pick up
+A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
+# A file the page's build might have put beside it
+A_PAGE_FILE = "/assets/index.js"
 
 
 async def test_the_review_answers_its_own_page(client: AsyncClient) -> None:
@@ -85,6 +110,57 @@ async def test_a_page_on_another_port_of_this_machine_cannot_end_the_review(clie
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
+async def test_a_page_on_the_same_address_and_another_port_cannot_read_the_diff(client: AsyncClient) -> None:
+    """The port is part of the origin: 127.0.0.1 serves the page next door too."""
+    response = await client.get(DIFF_ROUTE, headers=NEIGHBOUR_ON_THE_SAME_ADDRESS_HEADERS)
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.parametrize("fetch_site", [ANOTHER_PORT, ANOTHER_SITE])
+async def test_a_page_elsewhere_cannot_read_the_review_by_a_request_that_sends_no_origin(
+    client: AsyncClient, fetch_site: str
+) -> None:
+    """An image or a `no-cors` fetch carries no Origin; the browser still says it came from another page."""
+    response = await client.get(DIFF_ROUTE, headers={FETCH_SITE: fetch_site})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+async def test_a_page_on_another_port_cannot_take_what_the_reader_handed_the_agent(client: AsyncClient) -> None:
+    """Nor pass for the agent: the review does not offer rounds to an agent that is not there."""
+    await client.post("/api/message", json=A_MESSAGE)
+
+    taken = await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS, headers={FETCH_SITE: ANOTHER_PORT})
+    attached = (await client.get(REVIEW_ROUTE)).json()["answerer_attached"]
+    event = (await client.get(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert taken.status_code == HTTPStatus.FORBIDDEN
+    assert attached is False
+    assert event["message"]["body"] == A_MESSAGE["body"]
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [{FETCH_SITE: SAME_PAGE, "Origin": LOCAL_ORIGIN}, {FETCH_SITE: NO_PAGE}],
+    ids=["from-its-own-page", "from-no-page"],
+)
+async def test_what_the_browser_says_came_from_the_page_itself_or_from_no_page_is_answered(
+    client: AsyncClient, headers: dict[str, str]
+) -> None:
+    response = await client.get(DIFF_ROUTE, headers=headers)
+
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.parametrize("path", ["/", A_PAGE_FILE])
+async def test_a_link_from_another_site_still_opens_the_page(client: AsyncClient, path: str) -> None:
+    """Following a link is a request from another site; the page and its files hold nothing of the review."""
+    response = await client.get(path, headers={FETCH_SITE: ANOTHER_SITE})
+
+    assert response.status_code != HTTPStatus.FORBIDDEN
+
+
 async def test_a_page_without_an_origin_of_its_own_is_refused(client: AsyncClient) -> None:
     """A sandboxed frame or a file page says "null"; it is nobody's page."""
     response = await client.get(DIFF_ROUTE, headers={"Origin": "null"})
@@ -117,13 +193,24 @@ def test_a_page_on_another_site_cannot_open_the_session_socket(review_page: Test
     "headers",
     [
         NEIGHBOUR_HEADERS,
+        NEIGHBOUR_ON_THE_SAME_ADDRESS_HEADERS,
         # The review's own page as the browser names it, asked for under a rebound name
         {"Origin": LOCAL_ORIGIN, "Host": "attacker.example"},
     ],
-    ids=["another-local-port", "foreign-host"],
+    ids=["another-local-port", "another-port-of-the-same-address", "foreign-host"],
 )
 def test_only_the_reviews_own_page_opens_the_session_socket(headers: dict[str, str], review_page: TestClient) -> None:
     with pytest.raises(WebSocketDisconnect), open_session(review_page, headers):
+        pass
+
+
+def test_a_socket_the_browser_says_another_page_opened_is_refused(reviews: ReviewFactory) -> None:
+    """Whatever Origin it sends: the browser's word on where it comes from is enough."""
+    with (
+        TestClient(reviews.app(opening_of([one_line_file()])), base_url=LOCAL_ORIGIN) as browser,
+        pytest.raises(WebSocketDisconnect),
+        open_session(browser, {"Host": LOCAL_HOST, FETCH_SITE: ANOTHER_PORT}),
+    ):
         pass
 
 

@@ -33,7 +33,8 @@ STATIC_DIR = Path(__file__).parent.parent / "static" / "dist"
 # The page, and the folder of files its build put beside it
 PAGE_NAME = "index.html"
 ASSETS_NAME = "assets"
-# Where the page asks for those files
+# Where the page is served, and where it asks for those files
+PAGE_PATH = "/"
 ASSETS_PATH = "/assets"
 # What is asked of a file: to be fetched, or about
 FILE_METHODS = frozenset({HTTPMethod.GET, HTTPMethod.HEAD})
@@ -61,7 +62,7 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: Read
     app.add_middleware(BodySizeLimit)
     app.add_middleware(SecurityHeaders)
     # Outermost, so it runs first: this server answers its own page and nothing else
-    app.add_middleware(LocalOriginOnly)
+    app.add_middleware(LocalOriginOnly, page_path=PAGE_PATH, page_files_path=ASSETS_PATH)
 
     include_api(app)
     # Whatever a route refuses is answered here, by its kind
@@ -83,7 +84,7 @@ def serve_the_page(app: FastAPI, built: Path) -> None:
     """
     page = built / PAGE_NAME
     if page.is_file():
-        app.add_api_route("/", PageFile(page), methods=["GET"], include_in_schema=False)
+        app.add_api_route(PAGE_PATH, PageFile(page), methods=["GET"], include_in_schema=False)
     assets = built / ASSETS_NAME
     if assets.is_dir():
         app.mount(ASSETS_PATH, AssetFiles(directory=assets), name=ASSETS_NAME)

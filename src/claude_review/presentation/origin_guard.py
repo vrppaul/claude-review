@@ -1,18 +1,23 @@
 """Refuse requests that did not come from the review's own page.
 
 The server binds to loopback with no authentication, which is safe only for
-as long as loopback means "this machine, this page". Two things break that:
+as long as loopback means "this machine, this page". `admits` is the whole
+rule; this says what breaks that promise without it.
 
 A page on any domain can point that domain at 127.0.0.1 — a DNS rebind — and
 the browser will then treat this server as same-origin and let the page read
-its responses: the whole working tree, and any file in the repository. The
-name in the ``Host`` header is what the page asked for, so checking it costs
-nothing and takes the rebind away.
+its responses: the whole working tree, and any file in the repository.
 
 WebSockets are worse: the same-origin policy does not apply to them at all,
 so any page the developer has open can connect. That would let it read what
 the server pushes, and — since the review ends when the last socket closes —
 throw away an unsent review by connecting and disconnecting once.
+
+And a page needs no answer to do harm. One on another port of this machine
+asks with an image or a `no-cors` fetch, which carries no Origin: it cannot
+read the answer, but whatever the request does is done — and a request held
+open, as the agent's poll is, holds one of the few connections the browser
+keeps to this server, until the review's own page cannot load.
 """
 
 from functools import partial
@@ -32,9 +37,20 @@ LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
 IPV6_OPENS = "["
 IPV6_CLOSES = "]"
 PORT_SEPARATOR = ":"
-# The headers that say which host a request asked for, and which page sent it
+# The headers that say which host a request asked for, which page sent it,
+# and where the browser says it comes from (Fetch Metadata)
 HOST_HEADER = "host"
 ORIGIN_HEADER = "origin"
+FETCH_SITE_HEADER = "sec-fetch-site"
+
+# Where a browser says a request comes from, when it is the review's own: its
+# page (`same-origin`), or no page at all (`none`: an address typed, a
+# bookmark). A page on another port of this machine is `same-site`, one
+# anywhere else `cross-site`.
+OWN_FETCH_SITES = frozenset({"same-origin", "none"})
+
+# What parts a folder from what is under it, in a path asked for
+PATH_SEPARATOR = "/"
 
 # What a browser sends as the Origin of a page that has none of its own: a
 # sandboxed frame, a file opened from disk
@@ -63,16 +79,35 @@ def is_local_host(value: str | None) -> bool:
     return host in LOCAL_HOSTS
 
 
-def is_own_page(origin: str | None, host: str) -> bool:
-    """Whether a request comes from the page this server serves, or from no page at all.
+def admits(*, host: str | None, origin: str | None, fetch_site: str | None, opens_the_page: bool) -> bool:
+    """Whether a request may reach the review: the guard's whole rule, from three headers, each read once.
 
-    Same origin means the same port too. Loopback is not one page: a dev
-    server, a notebook, anything a package starts is another origin on the
-    same machine, and its page must not read this one or end it.
+    - ``Host`` names this machine over loopback. A rebound domain sends the
+      name the page asked for, which is not one of this machine's.
+    - ``Origin``, when sent, is this server's own: the same scheme, host and
+      port. Loopback is not one page: a dev server, a notebook, anything a
+      package starts is another origin on this machine, and its page must not
+      read this one or end it. A browser sends Origin with every write and
+      every socket; a command-line client sends none.
+    - ``Sec-Fetch-Site``, when sent, says the request comes from the review's
+      own page or from no page. This is what gives away a read another page
+      makes without CORS, which sends no Origin. The page itself and the files
+      its build put beside it are not held to it: a link from another site
+      opens the page, and they hold nothing of the review.
 
-    A missing Origin is allowed: a command-line client sends none, and only
-    browsers — the thing being defended against — always do.
+    A request without Fetch Metadata — the agent's commands, curl, a browser
+    too old to send it — is judged by Host and Origin alone.
     """
+    return (
+        host is not None
+        and is_local_host(host)
+        and is_own_page(origin, host)
+        and (opens_the_page or fetch_site is None or fetch_site in OWN_FETCH_SITES)
+    )
+
+
+def is_own_page(origin: str | None, host: str) -> bool:
+    """Whether a request comes from the page this server serves, or names no page at all."""
     if origin is None:
         return True
     if origin == OPAQUE_ORIGIN:
@@ -127,10 +162,16 @@ async def _send_with_security_headers(message: Message, *, send: Send) -> None:
 
 
 class LocalOriginOnly:
-    """Middleware refusing anything that is not this machine's own page."""
+    """Middleware refusing anything that is not this machine's own page.
 
-    def __init__(self, app: ASGIApp) -> None:
+    It is told where the page and the files beside it are served, which a
+    link from another site may open.
+    """
+
+    def __init__(self, app: ASGIApp, *, page_path: str, page_files_path: str) -> None:
         self.app = app
+        self._page_path = page_path
+        self._page_files_path = page_files_path
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in (HTTP_SCOPE, WEBSOCKET_SCOPE):
@@ -138,8 +179,12 @@ class LocalOriginOnly:
             return
 
         headers = Headers(scope=scope)
-        host = headers.get(HOST_HEADER)
-        allowed = host is not None and is_local_host(host) and is_own_page(headers.get(ORIGIN_HEADER), host)
+        allowed = admits(
+            host=headers.get(HOST_HEADER),
+            origin=headers.get(ORIGIN_HEADER),
+            fetch_site=headers.get(FETCH_SITE_HEADER),
+            opens_the_page=self._opens_the_page(scope["path"]),
+        )
         if allowed:
             await self.app(scope, receive, send)
             return
@@ -149,6 +194,10 @@ class LocalOriginOnly:
         else:
             refused = Refusal(detail=NOT_ITS_PAGE_DETAIL)
             await JSONResponse(refused.model_dump(), status_code=NOT_ITS_PAGE_STATUS)(scope, receive, send)
+
+    def _opens_the_page(self, path: str) -> bool:
+        """Whether a request asks for the page itself, or a file its build put beside it."""
+        return path == self._page_path or path.startswith(self._page_files_path + PATH_SEPARATOR)
 
 
 async def _reject_socket(send: Send) -> None:
