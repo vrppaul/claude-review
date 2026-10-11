@@ -11,7 +11,7 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import HEAD, GitRef
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, GitRef
 
 log = structlog.get_logger()
 
@@ -37,12 +37,6 @@ OPTION_MARK = "-"
 MILLISECONDS_PER_SECOND = 1000
 # Where the path starts in an entry of `git status --porcelain`
 PORCELAIN_PATH_START = 3
-
-# The largest file whose lines the review shows. Nobody reads a longer one line
-# by line — it is a log, a bundle, a dump — and one 50 MB log, read whole,
-# took a review half a minute and more than a gigabyte to show. A lock file is
-# well under it, and its few changed lines still show.
-LARGEST_FILE_SHOWN_BYTES = 4 * 1024 * 1024
 
 # Settings every command runs with, whatever the reader's configuration says
 PINNED_SETTINGS = (

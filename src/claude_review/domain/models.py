@@ -162,6 +162,12 @@ EpochMillis = Annotated[int, Field(ge=0)]
 # The most lines an anchor keeps of what it was written against
 MAX_QUOTE_LINES = 200
 
+# The largest file whose lines the diff shows. Nobody reads a longer one line
+# by line — it is a log, a bundle, a dump — and one 50 MB log, read whole,
+# took a review half a minute and more than a gigabyte to show. A lock file is
+# well under it, and its few changed lines still show.
+LARGEST_FILE_SHOWN_BYTES = 4 * 1024 * 1024
+
 
 class AnchorBase(BaseModel):
     """What every kind of anchor has, whatever it hangs on.

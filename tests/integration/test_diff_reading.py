@@ -10,8 +10,8 @@ from typing import override
 import pytest
 
 from claude_review.domain.interfaces import GitError, StagedTree
-from claude_review.domain.models import HEAD, DiffFile, FileStatus, LineType
-from claude_review.repositories.git_repository import LARGEST_FILE_SHOWN_BYTES, GitRepository
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, DiffFile, FileStatus, LineType
+from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
 

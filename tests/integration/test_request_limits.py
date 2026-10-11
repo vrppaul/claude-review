@@ -14,6 +14,7 @@ from httpx import AsyncClient
 from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.body_limit import MAX_REQUEST_BYTES
 from claude_review.presentation.wire.base import MAX_THREADS
+from claude_review.presentation.wire.threads import MAX_QUOTE_LINE_LENGTH
 from tests.helpers import FIRST_THREAD_ID, line_on_the_wire, thread_on_the_wire
 
 # Big enough to be read in several pieces, as a socket delivers a large body
@@ -52,6 +53,20 @@ async def test_a_round_holds_no_more_threads_than_a_review_may(client: AsyncClie
     response = await client.post("/api/submit", json={"threads": [one_of_many] * (MAX_THREADS + 1), "end": False})
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+
+
+def _quoting(line: str) -> dict[str, object]:
+    """An anchor on one line, quoting it as given."""
+    return {**line_on_the_wire("a.py", 1), "quote": [line]}
+
+
+async def test_a_quoted_line_is_no_longer_than_any_line_the_review_shows(client: AsyncClient) -> None:
+    """The longest a line of a shown file can be is taken; a line longer than that came from nowhere the review shows."""
+    longest = await client.post("/api/anchors/follow", json={"anchors": [_quoting("x" * MAX_QUOTE_LINE_LENGTH)]})
+    longer = await client.post("/api/anchors/follow", json={"anchors": [_quoting("x" * (MAX_QUOTE_LINE_LENGTH + 1))]})
+
+    assert longest.status_code == HTTPStatus.OK
+    assert longer.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.parametrize(

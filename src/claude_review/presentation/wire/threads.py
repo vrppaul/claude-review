@@ -1,13 +1,14 @@
 """Threads on the wire: what they hang on, what the page sends of them, and what the agent is handed."""
 
 from pathlib import Path
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError, model_validator
 
 from claude_review.domain import models
 from claude_review.domain.models import (
     FIRST_ROUND,
+    LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
     AnchorKind,
     CommentSeverity,
@@ -29,6 +30,13 @@ from claude_review.services.place_words import place_in_words
 # The most turns one thread carries
 MAX_TURNS = 200
 
+# The longest line an anchor may quote. It quotes a line of the diff, which
+# shows the lines of no file larger than this many bytes, and a character
+# takes at least one
+MAX_QUOTE_LINE_LENGTH = LARGEST_FILE_SHOWN_BYTES
+# One line an anchor quotes, as the page and the agent send it
+QuoteLine = Annotated[str, Field(max_length=MAX_QUOTE_LINE_LENGTH)]
+
 
 class LineAnchor(WireModel):
     """Lines of one side of a file in the review's own diff, as the page and the agent name them.
@@ -41,7 +49,7 @@ class LineAnchor(WireModel):
     side: LineSide
     start_line: int = Field(ge=1)
     end_line: int = Field(ge=1)
-    quote: list[str] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
+    quote: list[QuoteLine] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
     outdated: WireBool = False
 
     @model_validator(mode="after")
