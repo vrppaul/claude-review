@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import os
 from collections.abc import AsyncGenerator
 from functools import partial
 from http import HTTPMethod, HTTPStatus
@@ -14,6 +15,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
+from starlette.responses import Response
+from starlette.staticfiles import PathLike
 from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocketClose
 
@@ -48,6 +51,17 @@ ASSETS_PATH = "/assets"
 FILE_METHODS = frozenset({HTTPMethod.GET, HTTPMethod.HEAD})
 # What the review calls itself, in its API description
 API_TITLE = "Claude Review"
+
+# How long a browser may keep what it is served, as the header says it. The
+# page is asked for again whenever it is opened, so after an upgrade the
+# browser runs the page the new release built, which names its new files. A
+# file beside it is named by a hash of what it holds, so whatever a browser
+# kept under a name is still that file: it is kept for a year, never asked
+# for again.
+CACHE_HEADER = "cache-control"
+PAGE_CACHING = "no-cache"
+SECONDS_PER_YEAR = 365 * 24 * 60 * 60
+ASSET_CACHING = f"public, max-age={SECONDS_PER_YEAR}, immutable"
 
 # The package whose release serves the review
 PACKAGE_NAME = "claude-review"
@@ -119,17 +133,25 @@ class PageFile:
     async def __call__(self) -> HTMLResponse:
         document = await asyncio.to_thread(self._page.read_bytes)
         policy = content_security_policy(inline_script_hashes(document.decode(PAGE_ENCODING)))
-        return HTMLResponse(document, headers={POLICY_HEADER: policy})
+        return HTMLResponse(document, headers={POLICY_HEADER: policy, CACHE_HEADER: PAGE_CACHING})
 
 
 class AssetFiles(StaticFiles):
-    """The files the page's build put beside it: fetched, never opened as a socket.
+    """The files the page's build put beside it: fetched, never opened as a socket, and kept for good.
 
     A socket opened here is turned away the way the router turns away one it
     has no route for, rather than reaching a file server that cannot answer it.
     Any other method is refused naming the ones a file takes, which the file
     server would leave unsaid.
     """
+
+    @override
+    def file_response(
+        self, full_path: PathLike, stat_result: os.stat_result, scope: Scope, status_code: int = HTTPStatus.OK
+    ) -> Response:
+        served = super().file_response(full_path, stat_result, scope, status_code)
+        served.headers[CACHE_HEADER] = ASSET_CACHING
+        return served
 
     @override
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

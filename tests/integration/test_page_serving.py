@@ -30,6 +30,8 @@ ANOTHER_THEME_SCRIPT = """
     """
 # The header the page says what it may run in
 POLICY_HEADER = "content-security-policy"
+# The header that says how long a browser may keep what it was served
+CACHE_HEADER = "cache-control"
 # What FastAPI serves of its own unless told not to: the API's description,
 # and two pages that draw it
 FRAMEWORK_PATHS = ["/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"]
@@ -145,3 +147,15 @@ async def test_nothing_is_served_but_the_page_its_files_and_the_routes(client: A
     nowhere = await client.get(NOWHERE)
 
     assert (served.status_code, served.json()) == (nowhere.status_code, nowhere.json())
+
+
+def test_the_page_is_asked_for_again_whenever_it_is_opened(built: Path) -> None:
+    """After an upgrade the browser runs the page the new release built, never the one it kept."""
+    assert _served(built).get("/").headers[CACHE_HEADER] == "no-cache"
+
+
+def test_a_file_beside_the_page_is_kept_for_good(built: Path) -> None:
+    """Its name changes with what it holds, so whatever a browser kept under a name is still that file."""
+    served = _served(built).get(f"/{ASSETS_NAME}/{SCRIPT_NAME}")
+
+    assert served.headers[CACHE_HEADER] == "public, max-age=31536000, immutable"
