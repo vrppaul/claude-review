@@ -69,14 +69,14 @@ function gapAbove(hunk: DiffHunk, previous: DiffHunk | undefined): ContextGap {
 export function withRevealed(file: DiffFile, revealed: ReadonlyMap<string, DiffLine[]>): DiffFile {
 	if (revealed.size === 0) return file;
 
-	return {
-		...file,
-		hunks: file.hunks.map((hunk) => {
-			const extra = revealed.get(hunkKey(hunk));
-			if (!extra || extra.length === 0) return hunk;
-			return { ...hunk, lines: [...extra, ...hunk.lines] };
-		})
-	};
+	return { ...file, hunks: file.hunks.map((hunk) => withLinesAbove(hunk, revealed)) };
+}
+
+/** A hunk with the lines revealed above it put before its own, if any were. */
+function withLinesAbove(hunk: DiffHunk, revealed: ReadonlyMap<string, DiffLine[]>): DiffHunk {
+	const above = revealed.get(hunkKey(hunk));
+	if (!above || above.length === 0) return hunk;
+	return { ...hunk, lines: [...above, ...hunk.lines] };
 }
 
 /**

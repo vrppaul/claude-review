@@ -47,11 +47,9 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 			raise(review, push);
 			return;
 		case 'diff':
-			landed(review, push, heard).catch((error) => {
-				// A round landing half-applied is worse than not at all: the code
-				// under the reader has moved and their threads have not
-				review.conversation.note(diffNotTakenNote(error));
-			});
+			// A round landing half-applied is worse than not at all: the code
+			// under the reader has moved and their threads have not
+			landed(review, push, heard).catch((error: unknown) => review.conversation.note(diffNotTakenNote(error)));
 			return;
 		default:
 			if (!heard.factsHoldIt) learnFrom(review, push);

@@ -18,15 +18,18 @@ const NEAR_ENOUGH = '1500px 0px';
  * past stays in the document, and stays findable.
  */
 export function whenNearViewport(element: HTMLElement, root: HTMLElement | null, onNear: () => void): () => void {
-	const observer = new IntersectionObserver(
-		(entries) => {
-			if (entries.some((entry) => entry.isIntersecting)) {
-				observer.disconnect();
-				onNear();
-			}
-		},
-		{ root, rootMargin: NEAR_ENOUGH, threshold: 0 }
-	);
+	const observer = new IntersectionObserver((entries, watching) => cameNear(entries, watching, onNear), {
+		root,
+		rootMargin: NEAR_ENOUGH,
+		threshold: 0
+	});
 	observer.observe(element);
 	return () => observer.disconnect();
+}
+
+/** The element came within reach, if it did: stop watching it, and say so once. */
+function cameNear(entries: IntersectionObserverEntry[], watching: IntersectionObserver, onNear: () => void): void {
+	if (!entries.some((entry) => entry.isIntersecting)) return;
+	watching.disconnect();
+	onNear();
 }

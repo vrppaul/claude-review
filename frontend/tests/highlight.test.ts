@@ -65,6 +65,26 @@ describe("the colours of a file's code", () => {
 		expect(highlighted[3]).not.toContain('hljs-string');
 	});
 
+	it('gives every row the markup of its own line, on whichever side it is', () => {
+		const file = fileOf([
+			context(1, 'first = 1'),
+			removedLine(2, 'gone = 2'),
+			removedLine(3, 'also_gone = 3'),
+			addedLine(2, 'came = 4'),
+			context(4, 'last = 5')
+		]);
+
+		const [highlighted] = highlightFile(file, 'python');
+
+		expect(highlighted.map((markup) => markup.replace(/<[^>]+>/g, ''))).toEqual([
+			'first = 1',
+			'gone = 2',
+			'also_gone = 3',
+			'came = 4',
+			'last = 5'
+		]);
+	});
+
 	it('escapes markup when there is no language', () => {
 		const file = fileOf([context(1, '<script>alert(1)</script>')], 'notes.unknown');
 

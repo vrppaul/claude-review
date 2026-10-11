@@ -238,9 +238,8 @@ export class Guide {
 
 	/** Remember this release as seen, so the card does not come back. */
 	#settle(): void {
-		writeSeenRelease(this.#release).catch(() => {
-			// Not remembered this time: the card comes back with the next review
-		});
+		// Not remembered this time, if it fails: the card comes back with the next review
+		writeSeenRelease(this.#release).catch(() => undefined);
 	}
 
 	#shows(step: TourStep): boolean {

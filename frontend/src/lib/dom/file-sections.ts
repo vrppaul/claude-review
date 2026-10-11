@@ -162,13 +162,11 @@ export class FileSections {
 		const section = this.#sections.get(path);
 		if (!section) return;
 
-		const mine = ++this.#showing;
+		const showing = ++this.#showing;
 		this.#awaitedThread = null;
 		this.#unmark();
 		section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		new SettleWatch(section, () => {
-			if (mine === this.#showing) this.#mark(section);
-		}).start();
+		new SettleWatch(section, () => this.#markIfStillShown(section, showing)).start();
 	}
 
 	/**
@@ -199,6 +197,11 @@ export class FileSections {
 
 	#unregisterThread(threadId: string, element: HTMLElement): void {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
+	}
+
+	/** Mark a file the reader was brought to, unless another showing has come since. */
+	#markIfStillShown(section: HTMLElement, showing: number): void {
+		if (showing === this.#showing) this.#mark(section);
 	}
 
 	#mark(section: HTMLElement): void {

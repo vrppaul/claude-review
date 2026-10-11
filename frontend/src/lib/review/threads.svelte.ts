@@ -51,6 +51,27 @@ function questionIdOf(thread: Thread): string {
 /** What a file with no threads holds. */
 const NO_THREADS: readonly Thread[] = [];
 
+/** A thread, and the anchor following the diff gave it. */
+interface FollowedThread {
+	thread: Thread;
+	moved: Anchor;
+}
+
+/** Whether following took a thread off lines it still had. */
+function lostItsLines({ thread, moved }: FollowedThread): boolean {
+	return moved.outdated && !thread.anchor.outdated;
+}
+
+/** Whether following took a thread, with its lines, somewhere else. */
+function wentWithItsLines(followed: FollowedThread): boolean {
+	return !lostItsLines(followed) && !sameSpot(followed.moved, followed.thread.anchor);
+}
+
+/** A thread on the anchor following gave it, or as it was where it was not asked about. */
+function onItsAnchor(thread: Thread, movedTo: Record<string, Anchor>): Thread {
+	return Object.hasOwn(movedTo, thread.id) ? { ...thread, anchor: movedTo[thread.id] } : thread;
+}
+
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
 	readonly reading: ThreadReading;
@@ -317,18 +338,13 @@ export class Threads {
 			anchors: this.#all.map((thread) => thread.anchor)
 		});
 		const movedTo: Record<string, Anchor> = Object.fromEntries(asked.map((id, index) => [id, anchors[index]]));
+		// A thread written while the answer was on its way was not asked about: it is left as written
+		const followed: FollowedThread[] = this.#all
+			.filter((thread) => Object.hasOwn(movedTo, thread.id))
+			.map((thread) => ({ thread, moved: movedTo[thread.id] }));
 
-		let followed = 0;
-		let outdated = 0;
-		this.#all = this.#all.map((thread) => {
-			const moved = movedTo[thread.id];
-			// Written while the answer was on its way, so not asked about: left as written
-			if (!moved) return thread;
-			if (moved.outdated && !thread.anchor.outdated) outdated += 1;
-			else if (!sameSpot(moved, thread.anchor)) followed += 1;
-			return { ...thread, anchor: moved };
-		});
-		return { followed, outdated };
+		this.#all = this.#all.map((thread) => onItsAnchor(thread, movedTo));
+		return { followed: followed.filter(wentWithItsLines).length, outdated: followed.filter(lostItsLines).length };
 	}
 
 	/**

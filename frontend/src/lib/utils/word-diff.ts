@@ -243,7 +243,7 @@ function rangesOfChanged(tokens: string[], kept: boolean[]): TextRange[] {
 	let offset = 0;
 	let runStart: number | null = null;
 
-	tokens.forEach((token, index) => {
+	for (const [index, token] of tokens.entries()) {
 		if (!kept[index]) {
 			if (runStart === null) runStart = offset;
 		} else if (runStart !== null) {
@@ -251,7 +251,7 @@ function rangesOfChanged(tokens: string[], kept: boolean[]): TextRange[] {
 			runStart = null;
 		}
 		offset += token.length;
-	});
+	}
 
 	if (runStart !== null) ranges.push({ start: runStart, end: offset });
 	return ranges;

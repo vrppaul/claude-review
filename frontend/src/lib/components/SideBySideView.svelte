@@ -34,9 +34,7 @@
 		to.scrollTop = ratio * (to.scrollHeight - to.clientHeight);
 
 		// Clear after the browser processes the resulting scroll event
-		requestAnimationFrame(() => {
-			scrollSource = null;
-		});
+		requestAnimationFrame(() => (scrollSource = null));
 	}
 </script>
 

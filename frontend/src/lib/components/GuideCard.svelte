@@ -26,21 +26,22 @@
 		return focused === null || focused === document.body;
 	}
 
+	/** Give the keyboard to an element, unless somebody has it. */
+	function focusIfFree(element: HTMLElement | null) {
+		if (focusIsFree()) element?.focus();
+	}
+
 	// A card that appears offers its first button, unless the reader is busy
 	$effect(() => {
 		if (review.guide.card === null) return;
-		void tick().then(() => {
-			if (focusIsFree()) firstAction?.focus();
-		});
+		void tick().then(() => focusIfFree(firstAction));
 	});
 
 	// A step reached with focus nowhere — the button that led to it is gone —
 	// puts it on the title, so the keyboard starts from what the step says
 	$effect(() => {
 		if (!step) return;
-		void tick().then(() => {
-			if (focusIsFree()) title?.focus();
-		});
+		void tick().then(() => focusIfFree(title));
 	});
 </script>
 

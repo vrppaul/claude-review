@@ -109,17 +109,17 @@ function highlightHunk(lines: DiffLine[], language: string | null): string[] {
 	const newSide = sideLines(lines, 'add', language);
 	const oldSide = hasRemovals ? sideLines(lines, 'delete', language) : newSide;
 
+	// Each line takes its markup from the side it belongs to, and moves on the
+	// reader of every side it is on: context is on both
+	const markup: string[] = [];
 	let oldAt = 0;
 	let newAt = 0;
-	return lines.map((line) => {
-		if (line.kind === 'delete') return oldSide[oldAt++] ?? escapeMarkup(line.content);
-		if (line.kind === 'add') return newSide[newAt++] ?? escapeMarkup(line.content);
-		// Context belongs to both versions, so it advances both readers
-		const html = newSide[newAt] ?? escapeMarkup(line.content);
-		oldAt++;
-		newAt++;
-		return html;
-	});
+	for (const line of lines) {
+		markup.push((line.kind === 'delete' ? oldSide[oldAt] : newSide[newAt]) ?? escapeMarkup(line.content));
+		if (line.kind !== 'add') oldAt += 1;
+		if (line.kind !== 'delete') newAt += 1;
+	}
+	return markup;
 }
 
 /** Highlight one version of a hunk: its context plus the lines exclusive to that side. */
