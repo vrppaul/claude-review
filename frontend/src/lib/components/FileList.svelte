@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { SvelteSet } from 'svelte/reactivity';
 	import type { DiffFile, FileStatus, ReviewMode } from '$lib/types';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
@@ -8,6 +7,7 @@
 	import { useReview } from '$lib/review/context';
 	import ChangedLines from './ChangedLines.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
+	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
 
 	// A letter in the change's own colour, rather than a filled disc: the file
@@ -39,12 +39,12 @@
 
 	const review = useReview();
 
-	let filter = $state('');
-	const foldedFolders = new SvelteSet<string>();
+	// What the tree is filtered by and which folders are folded are the layout's: they outlive the tree being put away
+	const layout = review.layout.fileTree;
 
 	const isDiffMode = $derived(review.mode === 'diff');
 	const listed = $derived(COUNTED_AS[review.mode]);
-	const query = $derived(filter.trim().toLowerCase());
+	const query = $derived(layout.filter.trim().toLowerCase());
 	const matching = $derived(
 		query === '' ? review.diff.files : review.diff.files.filter((file) => file.path.toLowerCase().includes(query))
 	);
@@ -71,11 +71,6 @@
 		event.preventDefault();
 		if (event.key === 'Enter') first.click();
 		else first.focus();
-	}
-
-	function toggleFolder(path: string) {
-		if (foldedFolders.has(path)) foldedFolders.delete(path);
-		else foldedFolders.add(path);
 	}
 </script>
 
@@ -133,7 +128,7 @@
 	{#if node.kind === 'file'}
 		{@render fileRow(node.file, node.name, depth)}
 	{:else}
-		{@const folded = foldedFolders.has(node.path)}
+		{@const folded = layout.isFolderFolded(node.path)}
 		<li>
 			<button
 				type="button"
@@ -141,9 +136,9 @@
 				class="cr-tree-row flex w-full items-center gap-1 py-1 pr-2 text-left font-mono text-xs font-semibold text-(--cr-muted) hover:text-base-content"
 				style:--cr-depth={depth}
 				aria-expanded={!folded}
-				onclick={() => toggleFolder(node.path)}
+				onclick={() => layout.toggleFolder(node.path)}
 			>
-				<Icon name="chevron" class={['h-2.5 w-2.5 transition-transform', folded && '-rotate-90']} />
+				<FoldChevron {folded} class="h-2.5 w-2.5" />
 				{node.name}/
 			</button>
 			{#if !folded}
@@ -162,10 +157,10 @@
 	data-tour="file-tree"
 	aria-label="Files"
 	class="cr-tree flex flex-col border-r border-base-300 bg-base-100"
-	style:--cr-tree-width="{review.layout.fileTree.width}px"
+	style:--cr-tree-width="{layout.width}px"
 >
 	<!-- The tree is on the left, so it grows rightward -->
-	<EdgeGrip column={review.layout.fileTree} grows="right" label="Resize the file tree" testId="sidebar-resize" />
+	<EdgeGrip column={layout} grows="right" label="Resize the file tree" testId="sidebar-resize" />
 	<div bind:this={list} class="min-h-0 flex-1 overflow-y-auto p-3">
 		<div class="mb-2 flex items-center gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
@@ -176,7 +171,7 @@
 				class="btn btn-ghost btn-xs px-1"
 				title="Put the tree away"
 				aria-label="Put the file tree away"
-				onclick={() => review.layout.fileTree.toggle()}
+				onclick={() => layout.toggle()}
 			>
 				<Icon name="caret" class="h-3 w-3 rotate-180" />
 			</button>
@@ -188,13 +183,13 @@
 			class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
 			placeholder="Jump to a {listed.sought}"
 			aria-label="Find a {listed.sought} by its {listed.soughtBy}"
-			bind:value={filter}
+			bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
 			onkeydown={onFilterKey}
 		/>
 
 		{#if matching.length === 0}
 			<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
-				No {listed.sought} matches “{filter}”.
+				No {listed.sought} matches “{layout.filter}”.
 			</p>
 		{:else if isDiffMode}
 			<ul>

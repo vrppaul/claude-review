@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
-	import Icon from './Icon.svelte';
+	import FoldChevron from './FoldChevron.svelte';
 
 	interface Props {
 		folded: boolean;
@@ -13,7 +13,7 @@
 	let { folded, subject, testId, onToggle }: Props = $props();
 </script>
 
-<!-- One chevron for everything that folds: pointing down while open, right while folded -->
+<!-- The toggle of a thread or a file, with the chevron everything that folds is drawn with -->
 <button
 	type="button"
 	data-testid={testId}
@@ -23,5 +23,5 @@
 	aria-label={folded ? `Unfold ${subject}` : `Fold ${subject} away`}
 	onclick={onToggle}
 >
-	<Icon name="chevron" class={['h-3 w-3 transition-transform', folded && '-rotate-90']} />
+	<FoldChevron {folded} class="h-3 w-3" />
 </button>

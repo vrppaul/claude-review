@@ -166,6 +166,22 @@ describe('finding a file in a long review', () => {
 		expect(getByTestId('no-matches').textContent).toContain('No message matches');
 	});
 
+	it('keeps what was looked for, and the folders folded, while the tree is put away and brought back', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [...diffFiles, diffFile({ path: 'docs/guide.md', status: 'added' })] });
+		const first = render(FileList, inReview(review));
+		await user.type(first.getByTestId('file-filter'), '.');
+		await user.click(first.getAllByTestId('folder-item')[0]);
+		const folded = first.getAllByTestId('folder-item')[0].textContent;
+		first.unmount();
+
+		const again = render(FileList, inReview(review));
+
+		expect((again.getByTestId('file-filter') as HTMLInputElement).value).toBe('.');
+		const folder = again.getAllByTestId('folder-item').find((row) => row.textContent === folded);
+		expect(folder?.getAttribute('aria-expanded')).toBe('false');
+	});
+
 	it('names its filter to whoever cannot see it', () => {
 		const review = openReview({ files: diffFiles });
 

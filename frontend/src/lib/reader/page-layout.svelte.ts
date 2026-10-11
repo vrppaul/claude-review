@@ -7,6 +7,7 @@
  * not on the server.
  */
 
+import { SvelteSet } from 'svelte/reactivity';
 import { readChoice, readFlag, readNumber, writeChoice } from '$lib/utils/preferences';
 
 /** How narrow and how wide a column may be, and how wide it starts. */
@@ -73,10 +74,16 @@ class StoredWidth {
 	}
 }
 
-/** The file tree: on screen or put away, and how wide. */
+/**
+ * The file tree: on screen or put away, how wide, and how the reader left
+ * it — what they were looking for in it, and the folders they folded. Those
+ * two outlive the tree being put away and brought back, not a reload.
+ */
 class FileTreeLayout {
 	#open = $state(readFlag(FILE_TREE_OPEN_KEY, true));
 	readonly #width = new StoredWidth(FILE_TREE_WIDTH_KEY, FILE_TREE_WIDTH);
+	#filter = $state('');
+	readonly #foldedFolders = new SvelteSet<string>();
 
 	/** Whether the tree is on screen. Put away, it gives its room back. */
 	get open(): boolean {
@@ -102,6 +109,24 @@ class FileTreeLayout {
 
 	setWidth(next: number): void {
 		this.#width.set(next);
+	}
+
+	/** What the reader typed into the tree's filter. */
+	get filter(): string {
+		return this.#filter;
+	}
+
+	setFilter(next: string): void {
+		this.#filter = next;
+	}
+
+	isFolderFolded(path: string): boolean {
+		return this.#foldedFolders.has(path);
+	}
+
+	toggleFolder(path: string): void {
+		if (this.#foldedFolders.has(path)) this.#foldedFolders.delete(path);
+		else this.#foldedFolders.add(path);
 	}
 }
 
