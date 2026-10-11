@@ -88,9 +88,11 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-  # Bandit - Security linting for Python
+  # Bandit - Security linting for Python. 1.8 fails on every file of
+  # Python 3.14's ast that holds a call with a keyword, skips the file and
+  # passes: 1.9 reads them
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
+    rev: 1.9.4
     hooks:
       - id: bandit
         name: bandit (security linter)
@@ -107,19 +109,19 @@ repos:
 
   # Frontend — ESLint, svelte-check, Prettier
   # Uses local hooks because mirror repos don't support Svelte plugins.
-  # Skipped gracefully if pnpm is not installed.
+  # Without pnpm they fail and say so; leave them out on purpose with SKIP.
   - repo: local
     hooks:
       - id: frontend-lint
         name: eslint and stylelint (frontend)
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm lint'
+        entry: bash scripts/page_check.sh lint
         language: system
         files: ^frontend/(src/|eslint\.config\.js$|stylelint\.config\.js$)
         pass_filenames: false
 
       - id: frontend-check
         name: svelte-check (frontend)
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm check'
+        entry: bash scripts/page_check.sh check
         language: system
         files: ^frontend/(src/|tsconfig\.json$)
         pass_filenames: false
@@ -127,7 +129,7 @@ repos:
       # Files, exports and dependencies nothing uses
       - id: frontend-knip
         name: knip (frontend)
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm knip'
+        entry: bash scripts/page_check.sh knip
         language: system
         files: ^frontend/(src/|tests/|package\.json$|knip\.ts$)
         pass_filenames: false
@@ -135,7 +137,7 @@ repos:
       # Checks rather than rewrites: a commit never carries formatting it was not shown
       - id: frontend-format
         name: prettier (frontend)
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm format:check'
+        entry: bash scripts/page_check.sh format:check
         language: system
         files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|knip\.ts$|\.prettierrc\.json$)
         pass_filenames: false
@@ -146,7 +148,7 @@ repos:
     hooks:
       - id: api-types
         name: generated API types match the server
-        entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm api:check'
+        entry: bash scripts/page_check.sh api:check
         language: system
         files: ^(src/claude_review/(presentation|domain)/|frontend/src/lib/types/generated/)
         pass_filenames: false

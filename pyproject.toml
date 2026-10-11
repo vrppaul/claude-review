@@ -230,8 +230,21 @@ python-version = "3.14"
 # The tests are held to formatting alone: no type check reads them
 exclude = ["tests"]
 
+[tool.ty.terminal]
+# A warning is a finding like any other: it fails the check, in a hook and in CI alike
+error-on-warning = true
+
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
+skips = [
+    # That a module imports subprocess, and that a process is started from a
+    # list of arguments: said of the build hook's pnpm, which is what it is
+    # for. Bandit cannot tell a list written out in the code from one a
+    # caller handed in; a shell, which can be handed words to run, is still
+    # refused (B602, B605)
+    "B404",
+    "B603",
+]
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]

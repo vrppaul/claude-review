@@ -44,7 +44,9 @@ class FrontendBuildHook(BuildHookInterface):
                 raise RuntimeError(PREBUILT_MISSING)
             return
 
-        if not shutil.which("pnpm"):
+        # Run by the path it was found at, not by a name looked up again when it runs
+        pnpm = shutil.which("pnpm")
+        if pnpm is None:
             if version == EDITABLE_BUILD:
                 # Keep the assets dir present so packaging's force-include doesn't
                 # fail; the server starts and answers its routes, with no page
@@ -54,5 +56,5 @@ class FrontendBuildHook(BuildHookInterface):
                 return
             raise RuntimeError(PNPM_MISSING)
 
-        subprocess.run(["pnpm", "install", "--frozen-lockfile"], cwd=frontend_dir, check=True)
-        subprocess.run(["pnpm", "build"], cwd=frontend_dir, check=True)
+        subprocess.run([pnpm, "install", "--frozen-lockfile"], cwd=frontend_dir, check=True)
+        subprocess.run([pnpm, "build"], cwd=frontend_dir, check=True)
