@@ -152,16 +152,15 @@ class ReviewVersions:
     def _began(self, round_number: int) -> TreeSnapshot | None:
         """The mark a round is measured from, and offered as a base.
 
-        The round's own first mark once it has one; before that, the last
-        mark left behind, which is where the round began. It has to be the
-        same tree the round's base resolves to, or the count and the screen
-        the reader is sent to disagree — "3 files changed since round 2"
-        opening a diff of five.
+        The round's own first mark once it has one; before that, the first
+        mark of the last round that left any, which the count is then said
+        against. It has to be the very tree that round's base resolves to, or
+        the count and the screen the reader is sent to disagree — "3 files
+        changed since round 2" opening a diff of five, when round 2 was taken
+        again after it began.
         """
-        for mark in self._marks:
-            if mark.round == round_number:
-                return mark
-        return self._marks[-1] if self._marks else None
+        began = self._rounds_began()
+        return next((mark for mark in began if mark.round == round_number), began[-1] if began else None)
 
     def _rounds_began(self) -> list[TreeSnapshot]:
         """The first mark of each round, in order.

@@ -155,3 +155,16 @@ async def test_what_changed_is_counted_from_where_the_round_began() -> None:
     assert await review.changed_since_round_began(1) == ChangedSinceRound(
         round=1, paths=[MOVED_SINCE.format(base="tree-1")]
     )
+
+
+async def test_a_round_not_yet_marked_is_counted_from_the_base_its_count_names() -> None:
+    """The count and the base it opens agree: "changed since round 1" counts from where `round:1` opens."""
+    review = MarkingReview()
+    await review.mark(1)
+    await review.mark(1)
+
+    changes = await review.changed_since_round_began(2)
+
+    assert changes is not None
+    named = await review.versions.resolve(RoundKey(round=changes.round))
+    assert changes == ChangedSinceRound(round=1, paths=[MOVED_SINCE.format(base=named)])
