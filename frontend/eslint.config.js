@@ -86,9 +86,6 @@ const NO_NESTED_HELPERS = [
 const STILL_TO_CLEAN = {
 	shortNames: [
 		'AgentPanel',
-		'BasePicker',
-		'CommentThread',
-		'DiffNotice',
 		'FileList',
 		'FinishReview',
 		'KeyboardShortcuts',
@@ -96,7 +93,7 @@ const STILL_TO_CLEAN = {
 		'SettingsMenu',
 		'SubmitBar'
 	],
-	magicNumbers: ['AgentPanel', 'BasePicker', 'CommentThread', 'FileList'],
+	magicNumbers: ['AgentPanel', 'FileList'],
 	nestedHelpers: ['SubmitBar'],
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']

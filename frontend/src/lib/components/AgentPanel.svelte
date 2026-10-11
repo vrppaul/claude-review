@@ -5,15 +5,20 @@
 	import { threadsIn } from '$lib/anchors/thread-token';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
+	import { messageOf } from '$lib/utils/errors';
+	import { clockTime, timeAgo } from '$lib/utils/time';
 	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
+
+	// What the panel says when a message could not be sent or taken back, and nothing said why
+	const SENDING_FAILED = 'Could not send';
+	const STOPPING_FAILED = 'Could not stop it';
 
 	const review = useReview();
 
 	let sending = $state(false);
 	let failed = $state<string | null>(null);
-	let now = $state(Date.now());
 	let composer = $state<HTMLTextAreaElement | null>(null);
 	let stream = $state<HTMLElement | null>(null);
 	// Whether the reader is at the foot of the conversation. A turn landing
@@ -59,17 +64,14 @@
 	// When the agent last said anything, so silence can be read as silence
 	const lastAnswer = $derived([...review.conversation.turns].reverse().find((turn) => turn.author === 'author')?.at);
 
-	/** How long ago, in the words a conversation uses. */
-	function since(at: number | null | undefined): string {
-		if (at === undefined || at === null) return '';
-		const seconds = Math.max(0, Math.round((now - at) / 1000));
-		if (seconds < 60) return `${seconds}s ago`;
-		if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
-		return `${Math.round(seconds / 3600)}h ago`;
+	/** How long ago, read off the review's clock, so it moves on while it is on screen. */
+	function since(at: number): string {
+		return timeAgo(at, review.clock.now);
 	}
 
-	function said(at: number): string {
-		return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+	/** How long ago the agent reported its context, if it ever has. */
+	function reportedAgo(at: number | null): string {
+		return at === null ? '' : since(at);
 	}
 
 	/** What a thread is in, so the picker says whether it is still live. */
@@ -106,13 +108,6 @@
 			// took the turn to be laid out
 			if (atFoot) shown.scrollTop = shown.scrollHeight;
 		});
-	});
-
-	// A clock only while something is waiting on it
-	$effect(() => {
-		if (!working && !review.answerer.status.at && lastAnswer === undefined) return;
-		const timer = setInterval(() => (now = Date.now()), 1000);
-		return () => clearInterval(timer);
 	});
 
 	function openPicker() {
@@ -206,8 +201,8 @@
 		try {
 			await review.conversation.send(pointed);
 			picking = false;
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not send';
+		} catch (error) {
+			failed = messageOf(error, SENDING_FAILED);
 		} finally {
 			sending = false;
 		}
@@ -217,8 +212,8 @@
 		failed = null;
 		try {
 			await review.conversation.cancel(messageId);
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not stop it';
+		} catch (error) {
+			failed = messageOf(error, STOPPING_FAILED);
 		}
 	}
 
@@ -323,7 +318,7 @@
 		</span>
 		{#if review.answerer.status.context}
 			<span data-testid="agent-context" class="cr-pill">
-				context {review.answerer.status.context} · as reported {since(review.answerer.status.at)}
+				context {review.answerer.status.context} · as reported {reportedAgo(review.answerer.status.at)}
 			</span>
 		{/if}
 	</div>
@@ -407,7 +402,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 							data-testid="panel-said"
 							class="cr-panel-said rounded-r px-3 py-2 {turn.cancelled ? 'opacity-60' : ''}"
 						>
-							<p class="cr-who"><strong>You</strong> {said(turn.at)}</p>
+							<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
 							{#if turn.body}
 								<MarkdownRenderer text={turn.body} dense />
 							{/if}
@@ -436,7 +431,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						</div>
 					{:else}
 						<div data-testid="panel-answer" class="cr-answer">
-							<p class="cr-who"><strong>Agent</strong> {said(turn.at)}</p>
+							<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>
 							<MarkdownRenderer text={turn.body} dense />
 							{#if turn.files && turn.files.length > 0}
 								<div class="mt-2 flex flex-wrap gap-1">

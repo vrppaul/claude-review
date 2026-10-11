@@ -3,11 +3,15 @@
 	import FinishReview from './FinishReview.svelte';
 	import TopBar from './TopBar.svelte';
 	import { useReview } from '$lib/review/context';
+	import { messageOf } from '$lib/utils/errors';
+
+	// What the header says when the review could not be sent, and nothing said why
+	const SENDING_FAILED = 'Could not send the review';
 
 	const review = useReview();
 
 	let submitting = $state(false);
-	let error = $state<string | null>(null);
+	let failed = $state<string | null>(null);
 	let showModal = $state(false);
 
 	async function handleSubmit() {
@@ -31,13 +35,13 @@
 	async function send(act: () => Promise<unknown>, { closes }: { closes: boolean }) {
 		if (submitting) return;
 		submitting = true;
-		error = null;
+		failed = null;
 		try {
 			await act();
 			showModal = false;
 			if (closes) window.close();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not send the review';
+		} catch (error) {
+			failed = messageOf(error, SENDING_FAILED);
 		} finally {
 			submitting = false;
 		}
@@ -68,7 +72,7 @@
 	</div>
 {:else}
 	<div class="relative">
-		<TopBar {submitting} {error} onOpenModal={() => (showModal = true)} />
+		<TopBar {submitting} error={failed} onOpenModal={() => (showModal = true)} />
 
 		{#if showModal}
 			<FinishReview

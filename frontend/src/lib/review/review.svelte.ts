@@ -13,6 +13,7 @@ import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { ReplySound } from '$lib/reader/reply-sound';
 import type { Settings } from '$lib/reader/settings.svelte';
 import { Answerer } from '$lib/review/answerer.svelte';
+import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
 import { FileSections } from '$lib/dom/file-sections';
@@ -81,6 +82,8 @@ export class Review {
 	readonly sections = new FileSections();
 	readonly navigator: ThreadNavigator;
 	readonly commentFields = new CommentFields();
+	/** The time now, for whatever says how long ago something was. */
+	readonly clock = new Clock();
 
 	// How many threads came back from the draft, so the reader is told rather
 	// than left to wonder where they came from; zero once they have seen it

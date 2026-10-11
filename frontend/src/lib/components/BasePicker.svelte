@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import { messageOf } from '$lib/utils/errors';
+	import { timeAgo } from '$lib/utils/time';
+
+	// What the list says when the bases could not be listed or taken, and nothing said why
+	const LISTING_FAILED = 'Could not list what this can be compared against';
+	const TAKING_FAILED = 'Could not take the diff against that';
 
 	const review = useReview();
 
@@ -18,9 +24,9 @@
 	];
 
 	const matching = $derived(
-		review.diff.versions.filter((v) => v.label.toLowerCase().includes(filter.trim().toLowerCase()))
+		review.diff.versions.filter((version) => version.label.toLowerCase().includes(filter.trim().toLowerCase()))
 	);
-	const hasRounds = $derived(review.diff.versions.some((v) => v.kind === 'round'));
+	const hasRounds = $derived(review.diff.versions.some((version) => version.kind === 'round'));
 
 	async function show() {
 		open = !open;
@@ -30,8 +36,8 @@
 		asking = true;
 		try {
 			await review.diff.loadVersions();
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not list what this can be compared against';
+		} catch (error) {
+			failed = messageOf(error, LISTING_FAILED);
 		} finally {
 			asking = false;
 		}
@@ -48,8 +54,8 @@
 		try {
 			await review.diff.setBase(version.key);
 			shut();
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not take the diff against that';
+		} catch (error) {
+			failed = messageOf(error, TAKING_FAILED);
 		}
 	}
 
@@ -58,20 +64,16 @@
 		if (version.changed !== null) {
 			return `${version.changed} ${version.changed === 1 ? 'file' : 'files'}`;
 		}
-		if (version.at === null) return '';
-		const seconds = Math.max(0, Math.round((Date.now() - version.at) / 1000));
-		if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
-		if (seconds < 86_400) return `${Math.round(seconds / 3600)}h ago`;
-		return `${Math.round(seconds / 86_400)}d ago`;
+		return version.at === null ? '' : timeAgo(version.at, review.clock.now);
 	}
 </script>
 
 <svelte:window
-	onclick={(e) => {
-		if (open && container && !container.contains(e.target as Node)) open = false;
+	onclick={(event) => {
+		if (open && container && !container.contains(event.target as Node)) open = false;
 	}}
-	onkeydown={(e) => {
-		if (e.key === 'Escape' && open) shut();
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && open) shut();
 	}}
 />
 
@@ -129,7 +131,7 @@
 			</div>
 
 			{#each sections as section (section.kind)}
-				{@const listed = matching.filter((v) => v.kind === section.kind)}
+				{@const listed = matching.filter((version) => version.kind === section.kind)}
 				{#if listed.length > 0}
 					<p class="cr-faint px-3 pt-2 pb-1 text-xs">{section.title}</p>
 					{#each listed as version (version.key)}

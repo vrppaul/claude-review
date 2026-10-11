@@ -4,6 +4,12 @@
 	import { isDrawn } from '$lib/anchors/placement';
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
+	import { messageOf } from '$lib/utils/errors';
+
+	// What a bar says when the diff it asked for could not be taken, and nothing said why
+	const WHOLE_DIFF_NOT_TAKEN = 'Could not take the whole diff again';
+	const ROUND_DIFF_NOT_TAKEN = 'Could not take the diff against that round';
+	const RETAKE_FAILED = 'Could not take the diff again';
 
 	const review = useReview();
 
@@ -19,26 +25,34 @@
 	// Threads the base on screen cannot draw. They are not lost — they are
 	// anchored to the review's own diff — but saying nothing would leave the
 	// reader counting a review they can only see part of.
-	const offScreen = $derived(review.threads.all.filter((c) => !isDrawn(c, review.diff.files, { removedLines: false })));
+	const offScreen = $derived(
+		review.threads.all.filter((thread) => !isDrawn(thread, review.diff.files, { removedLines: false }))
+	);
 	// The diff the list of them was opened over. Every diff taken after it —
 	// another base, a retake — starts folded, so the list is never left open
 	// from a screen the reader has left.
 	let listedOver = $state.raw<DiffFile[] | null>(null);
 	const listing = $derived(listedOver === review.diff.files);
 
-	/** Take the reader back to the whole diff, and to the thread they picked. */
-	async function goTo(comment: Thread) {
+	/** Do what a button asks, saying why if it could not be done; whether it was. */
+	async function attempt(act: () => Promise<unknown>, fallback: string): Promise<boolean> {
 		failed = null;
 		try {
-			await review.diff.showWholeReview();
-			review.navigator.reveal(comment);
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not take the whole diff again';
+			await act();
+			return true;
+		} catch (error) {
+			failed = messageOf(error, fallback);
+			return false;
 		}
+	}
+
+	/** Take the reader back to the whole diff, and to the thread they picked. */
+	async function goTo(thread: Thread) {
+		if (await attempt(() => review.diff.showWholeReview(), WHOLE_DIFF_NOT_TAKEN)) review.navigator.reveal(thread);
 	}
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
 	// what it was written against, and that is what "show it" goes to.
-	const stranded = $derived(review.threads.all.find((comment) => comment.anchor.outdated));
+	const stranded = $derived(review.threads.all.find((thread) => thread.anchor.outdated));
 
 	// Each retake starts the clock afresh: what it says is about that one
 	$effect(() => {
@@ -62,31 +76,15 @@
 	}
 
 	async function showWhatChanged() {
-		failed = null;
-		try {
-			await review.showChangesSinceRetake();
-			review.lastRetake.dismiss();
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not take the diff against that round';
-		}
+		if (await attempt(() => review.showChangesSinceRetake(), ROUND_DIFF_NOT_TAKEN)) review.lastRetake.dismiss();
 	}
 
-	async function showEverything() {
-		failed = null;
-		try {
-			await review.diff.showWholeReview();
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not take the whole diff again';
-		}
+	function showEverything() {
+		void attempt(() => review.diff.showWholeReview(), WHOLE_DIFF_NOT_TAKEN);
 	}
 
-	async function retake() {
-		failed = null;
-		try {
-			await review.diff.retake();
-		} catch (e) {
-			failed = e instanceof Error ? e.message : 'Could not take the diff again';
-		}
+	function retake() {
+		void attempt(() => review.diff.retake(), RETAKE_FAILED);
 	}
 </script>
 
@@ -228,16 +226,16 @@
 			puts the whole diff back and goes to it: it is anchored there, and
 			that is the only screen that can draw it. -->
 		<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
-			{#each offScreen as comment (comment.id)}
+			{#each offScreen as thread (thread.id)}
 				<button
 					data-testid="off-screen-thread"
 					class="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-base-200"
-					onclick={() => goTo(comment)}
+					onclick={() => goTo(thread)}
 				>
 					<span class="cr-comment-ref shrink-0 font-mono text-xs">
-						{anchorShortPlace(comment.anchor)}
+						{anchorShortPlace(thread.anchor)}
 					</span>
-					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{comment.body}</span>
+					<span class="cr-faint min-w-0 flex-1 truncate text-xs">{thread.body}</span>
 				</button>
 			{/each}
 			<p class="cr-faint px-2 pt-1 text-xs">They are still in the review, and still go out with the round.</p>

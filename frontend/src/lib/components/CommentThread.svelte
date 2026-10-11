@@ -4,6 +4,7 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { splitSuggestions } from '$lib/utils/suggestion';
+	import { clockTime, timeAgo } from '$lib/utils/time';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -19,7 +20,6 @@
 	let { comment }: Props = $props();
 	const review = useReview();
 	let failed = $state<string | null>(null);
-	let now = $state(Date.now());
 	let container: HTMLElement | undefined = $state();
 
 	// Announced to the review, which brings the thread into view by it, never by an id on the page
@@ -44,10 +44,9 @@
 	const side = $derived(comment.anchor.kind === 'line' ? comment.anchor.side : null);
 	const sign = $derived(review.mode !== 'diff' || side === null ? '' : side === 'old' ? '−' : '+');
 
-	/** When a turn was said, to the minute — a thread is read, not audited. */
+	/** When a turn was said; a turn kept from an older version may not say. */
 	function said(at: number | undefined): string {
-		if (at === undefined) return '';
-		return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		return at === undefined ? '' : clockTime(at);
 	}
 
 	interface Exchange {
@@ -104,18 +103,14 @@
 	// not drawn as if it were
 	const raised = $derived(comment.raised_by === 'author');
 
-	function waitingFor(exchange: Exchange): number | null {
+	/**
+	 * How long a question has been with the agent, if it is still waited on,
+	 * so silence reads as silence rather than as something broken.
+	 */
+	function waitingFor(exchange: Exchange): string | null {
 		const asked = awaiting.find((question) => question.id === exchange.id);
-		return asked ? Math.round((now - asked.at) / 1000) : null;
+		return asked ? timeAgo(asked.at, review.clock.now) : null;
 	}
-
-	// How long each question has been with the author, so silence reads as
-	// silence rather than as something broken
-	$effect(() => {
-		if (awaiting.length === 0) return;
-		const timer = setInterval(() => (now = Date.now()), 1000);
-		return () => clearInterval(timer);
-	});
 
 	/** Settling a thread folds it away; it can still be opened and read. */
 	function resolve() {
@@ -371,7 +366,7 @@
 									</span>
 									<div class="flex-1"></div>
 									<span class="cr-muted text-xs">
-										asked {waitingFor(exchange)}s ago — keep reading, the answer lands here
+										asked {waitingFor(exchange)} — keep reading, the answer lands here
 									</span>
 								</div>
 							</div>
