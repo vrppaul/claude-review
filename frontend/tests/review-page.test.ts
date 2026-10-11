@@ -201,6 +201,31 @@ describe('opening the page', () => {
 		expect(review.telling.heard).toEqual({ instance: THIS_RUN, sequence: 5 });
 	});
 
+	it('takes in every answer said while it read the review again, each in its turn', async () => {
+		const server = serving();
+		server.answer('POST /api/anchors/follow', { anchors: [] });
+		const page = newPage();
+		await page.open();
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+		const facts = server.hold('GET /api/review');
+
+		vi.useFakeTimers();
+		latestSocket().drop();
+		vi.advanceTimersByTime(FIRST_RETRY);
+		vi.useRealTimers();
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: FACTS_READ_AT }));
+		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
+		latestSocket().deliver({ type: 'chat', message_id: null, body: 'first', files: [] }, FACTS_READ_AT + 1);
+		latestSocket().deliver({ type: 'chat', message_id: null, body: 'second', files: [] }, FACTS_READ_AT + 2);
+		facts.answer(0, reviewResponse({ sequence: FACTS_READ_AT }));
+
+		const review = openedReview(page);
+		await vi.waitFor(() => expect(review.telling.heard.sequence).toBe(FACTS_READ_AT + 2));
+		expect(review.conversation.turns.map((turn) => turn.body).slice(-2)).toEqual(['first', 'second']);
+	});
+
 	it('follows the threads its draft brought back onto the diff it opened on', async () => {
 		const server = serving();
 		// Written before a reload that came while a retake was still moving it

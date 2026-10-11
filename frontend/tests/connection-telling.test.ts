@@ -178,4 +178,19 @@ describe('going on with the telling across connections', () => {
 		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_SINCE + 1}`);
 		connection.close();
 	});
+
+	it('hands over what arrived while it caught up in the order the review told it', async () => {
+		const page = new RecordingPage();
+		const connection = connected(page);
+		latestSocket().accept();
+		latestSocket().say(welcome({ sequence: TOLD_SINCE }));
+		latestSocket().deliver(A_REPLY, TOLD_SINCE + 1);
+		latestSocket().deliver(A_CHAT, TOLD_SINCE + 2);
+
+		page.finishCatchingUp();
+
+		await vi.waitFor(() => expect(page.heard).toEqual([A_REPLY, A_CHAT]));
+		expect(page.heardAt.map((at) => at.sequence)).toEqual([TOLD_SINCE + 1, TOLD_SINCE + 2]);
+		connection.close();
+	});
 });
