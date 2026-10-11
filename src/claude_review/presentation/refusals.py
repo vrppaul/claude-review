@@ -2,7 +2,9 @@
 
 Routes raise what went wrong and never decide how it is said. Every refusal
 is answered the same way, with its message as the `detail` FastAPI uses for
-its own refusals, so a caller reads one shape whoever refused.
+its own refusals, so a caller reads one shape whoever refused. A request
+FastAPI finds wrong before any route runs is answered under the same
+`detail`, field by field: where each was wrong and why, never what was sent.
 
 The same tables say, in the API's description, how each route may refuse:
 a route names the kinds it raises and what it takes in, and is described
@@ -24,6 +26,7 @@ from http import HTTPStatus
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException
 from starlette.requests import ClientDisconnect
@@ -38,7 +41,7 @@ from claude_review.domain.exceptions import (
     TooLargeError,
 )
 from claude_review.presentation.body_limit import TOO_LARGE_STATUS
-from claude_review.presentation.wire.refusal import Refusal
+from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
 
 log = structlog.get_logger()
 
@@ -140,9 +143,14 @@ def status_of(kind: type[ReviewError]) -> HTTPStatus:
 
 
 def answer_refusals(app: FastAPI) -> None:
-    """Have the app answer every kind of refusal with its status, and drop a request cut off while its route read it."""
+    """Have the app answer every kind of refusal with its status, and a request it finds wrong field by field.
+
+    A request cut off while its route read it is dropped instead: nobody is
+    left to answer.
+    """
     for kind, status in REFUSAL_STATUS.items():
         app.add_exception_handler(kind, partial(answer_refusal, status=status))
+    app.add_exception_handler(RequestValidationError, answer_fields_refused)
     app.add_exception_handler(ClientDisconnect, drop_cut_off_request)
     app.add_exception_handler(HTTPException, answer_with_every_method)
 
@@ -151,6 +159,22 @@ async def answer_refusal(request: Request, error: Exception, *, status: HTTPStat
     """Tell whoever asked why the review would not do it."""
     log.warning("request_refused", path=request.url.path, refusal=type(error).__name__, reason=str(error))
     return JSONResponse(status_code=status, content=Refusal(detail=str(error)).model_dump())
+
+
+async def answer_fields_refused(request: Request, error: Exception) -> JSONResponse:
+    """Tell whoever asked which fields of the request were wrong, and why.
+
+    FastAPI's own answer says what each field was sent, too: the whole of
+    a comment too long to take, sent back to whoever sent it. The contract
+    says a field's place and the reason, and so does this.
+    """
+    match error:
+        case RequestValidationError():
+            fields = [FieldRefusal.model_validate(wrong) for wrong in error.errors()]
+            log.warning("request_refused", path=request.url.path, fields=[field.loc for field in fields])
+            return JSONResponse(status_code=WRONG_INPUT, content=Refusal(detail=fields).model_dump())
+        case _:
+            raise error
 
 
 async def answer_with_every_method(request: Request, error: Exception) -> Response:

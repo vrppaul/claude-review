@@ -36,7 +36,7 @@ export type ReviewResponse = Schemas['ReviewResponse'];
 export type DiffResponse = Schemas['DiffResponse'];
 /** The base a diff was taken against: its key, what the header says, and whether it is narrower than the review's own. */
 export type ShownBase = Schemas['ShownBase'];
-/** What the server takes — images, and the lines one comment covers — so the browser checks before sending. */
+/** What the server takes — images, the lines one comment covers, the length of what is written — so the browser checks before sending. */
 export type SendLimits = Schemas['SendLimits'];
 
 /** Where a base came from, so a menu can group them. */
@@ -195,6 +195,10 @@ export type VersionsResponse = Schemas['VersionsResponse'];
 /** The diff taken again: how many files, which round, and what changed since it began. */
 export type RetakeResponse = Schemas['RetakeResponse'];
 export type ImageResponse = Schemas['ImageResponse'];
+/** Why the server refused a request: in words, or field by field. */
+export type Refusal = Schemas['Refusal'];
+/** One field a refused request had wrong: its place in what was sent, and why. */
+export type FieldRefusal = Schemas['FieldRefusal'];
 /** The reader's choices, and whether any were kept yet: the server's `KeptRecord[ReaderSettings]`. */
 export type KeptSettings = Schemas['KeptRecord_ReaderSettings_'];
 /** The choices being changed, and only those. */

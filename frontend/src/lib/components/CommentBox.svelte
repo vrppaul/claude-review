@@ -172,6 +172,7 @@
 		aria-label={label ? undefined : REPLY}
 		class="cr-field cr-comment-body textarea min-h-20 w-full"
 		placeholder="What should change here?"
+		maxlength={review.limits.max_text_length}
 		bind:value={field.text}
 		onkeydown={handleKeydown}
 		onpaste={onPaste}

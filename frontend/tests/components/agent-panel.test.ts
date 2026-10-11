@@ -15,6 +15,8 @@ import { inReview, openReview } from '../review';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
 
 const TITLE = 'claude-review: uncommitted changes';
+// The longest text a test's server takes, short enough to type past
+const SHORTEST = 5;
 // jsdom lays nothing out, so the panel is given a height to scroll in: this
 // much on screen out of this much said
 const VISIBLE_HEIGHT = 100;
@@ -95,6 +97,15 @@ describe('the agent panel', () => {
 		// An agent that opened the review is about to attach; the reader
 		// should not be met with setup instructions meant for somebody else
 		expect((getByTestId('panel-attach-by-hand') as HTMLDetailsElement).open).toBe(false);
+	});
+
+	it('takes no longer a message than the server takes', async () => {
+		review = answeredReview({ limits: { ...SEND_LIMITS, max_text_length: SHORTEST } });
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		await userEvent.type(getByTestId('panel-input'), 'Longer than that');
+
+		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('Longe');
 	});
 
 	it('sends what was typed and empties the field', async () => {

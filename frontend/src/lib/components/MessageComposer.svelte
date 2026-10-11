@@ -157,6 +157,7 @@
 		class="cr-field cr-comment-body w-full resize-y rounded px-3 py-2"
 		rows="2"
 		placeholder="Ask about anything, or paste a screenshot…"
+		maxlength={review.limits.max_text_length}
 		aria-label="Message to the agent"
 		aria-controls={mentions.shown ? listId : undefined}
 		aria-activedescendant={mentions.shown ? optionIdOf(listId, mentions.highlighted) : undefined}

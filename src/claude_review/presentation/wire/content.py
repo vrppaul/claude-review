@@ -6,7 +6,7 @@ from pydantic import Field
 
 from claude_review.domain.models import MAX_QUOTE_LINES, EpochMillis, FileStatus, LineType, ReviewMode
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.base import WireBool, WireModel
+from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireBool, WireModel
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
@@ -52,7 +52,7 @@ class DiffFile(WireModel):
 
 
 class SendLimits(WireModel):
-    """The limits the browser checks before it sends: an image, the lines a comment covers, a read of a file.
+    """The limits the browser checks before it sends: an image, the lines a comment covers, a read of a file, a text.
 
     Told by the server rather than repeated in the browser, so the two
     cannot drift apart — and a comment the server would refuse is never
@@ -66,6 +66,9 @@ class SendLimits(WireModel):
     # The most lines one read of a file hands back: asking for no more, the
     # browser gets back every line it asked for, next to the lines it asked from
     max_window_lines: int
+    # The longest anything the reader writes may be: a comment, a reply, a
+    # panel message, the summary of a round
+    max_text_length: int
 
 
 # What this review holds every page to
@@ -74,6 +77,7 @@ SEND_LIMITS = SendLimits(
     max_images_per_message=MAX_IMAGES_PER_MESSAGE,
     max_quoted_lines=MAX_QUOTE_LINES,
     max_window_lines=MAX_WINDOW_LINES,
+    max_text_length=MAX_TEXT_LENGTH,
 )
 
 

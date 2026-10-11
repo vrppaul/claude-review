@@ -70,9 +70,12 @@ const NO_CONTENT = 204;
 const NOT_FOUND = 404;
 // What FastAPI says of a route it does not have
 const NOT_FOUND_DETAIL = 'Not Found';
-// What FastAPI says of a request whose body its schema refuses: a list of
+// What the server says of a request whose body its schema refuses: a list of
 // what is wrong where, not a sentence
-const INVALID_REQUEST_DETAIL = [{ loc: ['body'], msg: 'Field required', type: 'missing' }];
+const INVALID_REQUEST_DETAIL = [
+	{ loc: ['body', 'threads', 1, 'body'], msg: 'String should have at most 50000 characters' },
+	{ loc: ['body', 'end'], msg: 'Field required' }
+];
 // What a fault on the server's side answers with: plain text, no reason
 const FAULT_TEXT = 'Internal Server Error';
 /** What a test has a route refuse with. */

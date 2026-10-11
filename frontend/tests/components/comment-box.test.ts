@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
 import { FIELD_KEYS } from '$lib/components/keymap';
-import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
+import { KEPT_AS, keepingImages, paste, screenshot, SEND_LIMITS } from '../pasted-images';
 import { newComment } from '../new-comment';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { NewComment } from '$lib/types';
@@ -11,6 +11,9 @@ import type { Review } from '$lib/review/review.svelte';
 import { inReview, leavePage, openReview } from '../review';
 
 let review: Review;
+
+// The longest text a test's server takes, short enough to type past
+const SHORTEST = 5;
 
 beforeEach(() => {
 	review = openReview();
@@ -50,6 +53,16 @@ function editOf(written: Partial<NewComment>): CommentField {
 }
 
 describe('a comment field', () => {
+	it('takes no more text than the server takes', async () => {
+		review = openReview({ facts: { limits: { ...SEND_LIMITS, max_text_length: SHORTEST } } });
+		const { getByTestId } = drawnSaving(newField());
+
+		const input = getByTestId('comment-input') as HTMLTextAreaElement;
+		await userEvent.type(input, 'Longer than that');
+
+		expect(input.value).toBe('Longe');
+	});
+
 	it('saves what was written, without the spaces around it', async () => {
 		const { getByTestId } = drawnSaving(newField());
 

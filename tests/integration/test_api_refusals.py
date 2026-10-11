@@ -12,6 +12,7 @@ from http import HTTPStatus
 
 import pytest
 from fastapi import FastAPI
+from httpx import AsyncClient
 from pydantic import BaseModel, Field
 
 from claude_review.domain.exceptions import ReviewError
@@ -24,7 +25,7 @@ from claude_review.presentation.refusals import (
     answer_refusals,
     status_of,
 )
-from claude_review.presentation.wire.refusal import Refusal
+from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
 from claude_review.services.image_service import IMAGE_FORMATS
 from tests.helpers import IMAGES_ROUTE, http_client
 
@@ -39,6 +40,10 @@ JSON_MEDIA_TYPE = "application/json"
 UNBOUNDED_TYPES = {"string", "null"}
 # Where a parameter that is part of the path sits: it is never missing, though the description calls it required
 PATH_LOCATION = "path"
+# A JSON body no route takes: every route's body is an object
+NOT_AN_OBJECT: list[object] = []
+# What a refusal says of a field, and nothing more: never the value the caller sent, which it has
+SAID_OF_A_FIELD = set(FieldRefusal.model_fields)
 
 
 class SchemaReference(BaseModel):
@@ -204,3 +209,33 @@ async def test_a_refusal_is_described_with_the_status_it_is_answered_with(kind_n
         answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind_name))
 
     assert answered.status_code == status_of(REFUSAL_KINDS[kind_name])
+
+
+def _taking_json(described: Description) -> list[tuple[str, str]]:
+    """Every operation that takes a JSON body, as its method and path."""
+    return [
+        (method, path)
+        for path, operations in described.paths.items()
+        for method, operation in operations.items()
+        if operation.takes() == Takes.JSON_BODY
+    ]
+
+
+async def test_a_body_a_route_finds_wrong_is_refused_field_by_field(
+    described: Description, client: AsyncClient
+) -> None:
+    """Where each field was wrong and why, as the contract says a refusal is: the page and the agent both name them."""
+    refused = {
+        f"{method.upper()} {path}": await client.request(method, path, json=NOT_AN_OBJECT)
+        for method, path in _taking_json(described)
+    }
+
+    assert refused, "no route takes a JSON body"
+    assert {name: answer.status_code for name, answer in refused.items()} == dict.fromkeys(
+        refused, HTTPStatus.UNPROCESSABLE_CONTENT
+    )
+    for name, answer in refused.items():
+        said = answer.json()
+        assert set(said) == {"detail"}, name
+        assert said["detail"], name
+        assert all(set(field) == SAID_OF_A_FIELD for field in said["detail"]), name

@@ -9,7 +9,8 @@
  * makes an HTTP request.
  *
  * Every route answers a refusal the same way: a status, and the reason as
- * the `detail` FastAPI uses for its own. The reason is what the reader is
+ * the `detail` FastAPI uses for its own — in words, or field by field, each
+ * named by its place in what was sent. The reason is what the reader is
  * shown; the status is the last resort, when the server gave none — a fault
  * on its side answers with plain text, not a reason. A request that never
  * reached the review — its server gone, or not yet back — is said in words
@@ -17,6 +18,7 @@
  * told it here, once, in what the page was doing.
  */
 
+import type { FieldRefusal, Refusal } from '$lib/types';
 import type {
 	FileRoute,
 	JsonMediaType,
@@ -67,6 +69,12 @@ const NAMED_IN_PATH = /\{(\w+)\}/g;
 const JSON_TYPE: JsonMediaType = 'application/json';
 // What the reader is told of a request nothing answered
 const UNANSWERED = 'the review did not answer';
+// How a refused field's place is written, and what stands between two refused fields
+const PLACE_SEPARATOR = '.';
+const FIELDS_SEPARATOR = '; ';
+// The parts of a request the server names a field's place from, which say
+// nothing to the reader: where in what was sent is the field itself
+const REQUEST_PARTS = new Set<FieldRefusal['loc'][number]>(['body', 'query', 'path']);
 
 /** Ask a route for what it answers with, and read the JSON it sends. */
 export async function read<Verb extends Method, Path extends JsonRoute<Verb>>(
@@ -139,15 +147,26 @@ function bodyOf(body: unknown): RequestInit {
 	return { headers: { 'Content-Type': JSON_TYPE }, body: JSON.stringify(body) };
 }
 
-/** Why the server refused, in words the reader can act on. */
+/** Why the server refused, in words the reader can act on: its own, or each field it found wrong and why. */
 async function reasonOf(response: Response, doing: string): Promise<string> {
+	const refusal = await refusalIn(response);
+	if (refusal === null) return `${doing}: ${response.status}`;
+	if (typeof refusal.detail === 'string') return refusal.detail;
+	return `${doing}: ${refusal.detail.map(fieldSaidWrong).join(FIELDS_SEPARATOR)}`;
+}
+
+/** The refusal an answer carries, or null for one that carries none: a fault on the server's side says plain text. */
+async function refusalIn(response: Response): Promise<Refusal | null> {
 	try {
-		const said: unknown = await response.json();
-		if (typeof said === 'object' && said !== null && 'detail' in said && typeof said.detail === 'string') {
-			return said.detail;
-		}
+		return await response.json();
 	} catch {
-		// Not JSON: the status is all there is
+		return null;
 	}
-	return `${doing}: ${response.status}`;
+}
+
+/** One field the server found wrong, named by its place in what was sent, and why. */
+function fieldSaidWrong({ loc, msg }: FieldRefusal): string {
+	const [part, ...inPart] = loc;
+	const place = part !== undefined && REQUEST_PARTS.has(part) ? inPart : loc;
+	return place.length > 0 ? `${place.join(PLACE_SEPARATOR)}: ${msg}` : msg;
 }

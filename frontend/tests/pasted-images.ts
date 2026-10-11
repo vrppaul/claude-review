@@ -10,7 +10,8 @@ export const SEND_LIMITS: SendLimits = {
 	max_image_bytes: 10 * BYTES_PER_MEGABYTE,
 	max_images_per_message: 10,
 	max_quoted_lines: 200,
-	max_window_lines: 2000
+	max_window_lines: 2000,
+	max_text_length: 50_000
 };
 
 /** The id the server keeps a pasted screenshot under. */

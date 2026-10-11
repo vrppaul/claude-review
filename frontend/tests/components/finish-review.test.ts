@@ -4,6 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import FinishReview from '$lib/components/FinishReview.svelte';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
+import { SEND_LIMITS } from '../pasted-images';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 
@@ -12,6 +13,8 @@ function said(element: HTMLElement): string {
 	return element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
+// The longest text a test's server takes, short enough to type past
+const SHORTEST = 5;
 // What the server says once a review is sent for good
 const SENT_FOR_GOOD = { markdown: '## Comments', comment_count: 1, round: 1, ended: true };
 
@@ -98,6 +101,15 @@ describe('finishing a review', () => {
 		const { getByTestId } = render(FinishReview, inReview(review));
 
 		expect((getByTestId('modal-submit') as HTMLButtonElement).disabled).toBe(true);
+	});
+
+	it('takes no longer a summary than the server takes', async () => {
+		review = openReview({ facts: { limits: { ...SEND_LIMITS, max_text_length: SHORTEST } } });
+		const { getByTestId } = render(FinishReview, inReview(review));
+
+		await userEvent.type(getByTestId('review-body'), 'Longer than that');
+
+		expect(review.submission.body).toBe('Longe');
 	});
 
 	it('can be sent with only a summary', async () => {

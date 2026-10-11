@@ -36,12 +36,15 @@ describe('asking the server', () => {
 		expect(refusal.message).toBe(`Could not send the review: ${SERVER_ERROR}`);
 	});
 
-	it('does not show the reader a list of schema errors as a reason', async () => {
+	it('names each field the server found wrong, and why, by its place in what was sent', async () => {
 		fakeServer().refuseAsInvalid('POST /api/submit');
 
 		const refusal = await refusalOf(submitReview(AN_EMPTY_ROUND));
 
-		expect(refusal.message).toBe(`Could not send the review: ${UNPROCESSABLE}`);
+		expect(refusal.message).toBe(
+			'Could not send the review: threads.1.body: String should have at most 50000 characters; end: Field required'
+		);
+		expect(refusal.status).toBe(UNPROCESSABLE);
 	});
 
 	it('says in words what was being done when the request never reached the review', async () => {
