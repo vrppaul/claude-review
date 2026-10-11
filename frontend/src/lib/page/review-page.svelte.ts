@@ -24,6 +24,8 @@ export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } |
 
 export class ReviewPage {
 	readonly #connection: PageConnection;
+	// How the page shuts its tab once the review is over; a browser lets it only for a tab a script opened
+	readonly #closeTab: () => void;
 	readonly #settings = new Settings();
 	readonly #layout = new PageLayout();
 	readonly #theme = new PageTheme(this.#settings);
@@ -32,8 +34,10 @@ export class ReviewPage {
 	// holds, and stop keeping its draft
 	#letGo: (() => void) | null = null;
 
-	constructor(connection: PageConnection) {
+	/** @param closeTab how the tab is closed once the review is over */
+	constructor(connection: PageConnection, closeTab: () => void) {
 		this.#connection = connection;
+		this.#closeTab = closeTab;
 	}
 
 	get state(): PageState {
@@ -78,7 +82,7 @@ export class ReviewPage {
 			});
 			this.#state = { kind: 'open', review };
 			void followKeptThreads(review);
-			void review.submission.over.then(() => this.close());
+			void review.submission.over.then(() => this.#over());
 			// A first review is welcomed; a newer release says what changed
 			void review.guide.open();
 		} catch (error) {
@@ -102,5 +106,11 @@ export class ReviewPage {
 		this.#letGo?.();
 		this.#letGo = null;
 		this.#connection.close();
+	}
+
+	/** The review is over: let go of it, and shut the tab, where the browser lets a page do that. */
+	#over(): void {
+		this.close();
+		this.#closeTab();
 	}
 }

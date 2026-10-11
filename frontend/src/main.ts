@@ -5,7 +5,7 @@ import App from './App.svelte';
 import { PageConnection, sessionUrl } from '$lib/connection/page-connection';
 import { ReviewPage } from '$lib/page/review-page.svelte';
 
-const page = new ReviewPage(new PageConnection(sessionUrl(window.location)));
+const page = new ReviewPage(new PageConnection(sessionUrl(window.location)), () => window.close());
 
 const target = document.getElementById('app');
 if (target === null) throw new Error('index.html has no #app to draw in');

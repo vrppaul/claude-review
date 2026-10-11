@@ -1,15 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
-import TopBar from '$lib/components/TopBar.svelte';
+import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { diffResponse } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { inReview, openReview } from '../review';
-
-const HEADER = { submitting: false, error: null, onOpenModal: ignore };
-
-function ignore() {}
 
 describe('the settings', () => {
 	let review: Review;
@@ -24,7 +20,7 @@ describe('the settings', () => {
 
 	it('keep the choices made once out of the header, behind the gear', async () => {
 		const user = userEvent.setup();
-		const { getByTestId, queryByTestId } = render(TopBar, inReview(review, HEADER));
+		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
 		expect(queryByTestId('layout-split')).toBeNull();
 
 		await user.click(getByTestId('settings-toggle'));
@@ -36,7 +32,7 @@ describe('the settings', () => {
 	it('say in the header that whitespace is hidden, and show it again from there', async () => {
 		const user = userEvent.setup();
 		await review.settings.change({ ignore_whitespace: true });
-		const { getByTestId, queryByTestId } = render(TopBar, inReview(review, HEADER));
+		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
 		expect(getByTestId('whitespace-hidden').textContent).toContain('No whitespace');
 
 		await user.click(getByTestId('show-whitespace'));

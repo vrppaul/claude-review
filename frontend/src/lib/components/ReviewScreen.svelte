@@ -8,7 +8,7 @@
 	import FileList from './FileList.svelte';
 	import Guide from './Guide.svelte';
 	import KeyboardShortcuts from './KeyboardShortcuts.svelte';
-	import SubmitBar from './SubmitBar.svelte';
+	import ReviewHeader from './ReviewHeader.svelte';
 	import Icon from './Icon.svelte';
 
 	interface Props {
@@ -51,7 +51,7 @@
 				<button class="btn btn-ghost btn-xs" onclick={() => review.dismissRestored()}>Dismiss</button>
 			</div>
 		{/if}
-		<SubmitBar />
+		<ReviewHeader />
 		<DiffNotice />
 		<div class="flex min-h-0 flex-1">
 			{#if review.layout.fileTree.open}

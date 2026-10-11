@@ -9,7 +9,7 @@ import DiffView from '$lib/components/DiffView.svelte';
 import FileList from '$lib/components/FileList.svelte';
 import Guide from '$lib/components/Guide.svelte';
 import GuideCard from '$lib/components/GuideCard.svelte';
-import TopBar from '$lib/components/TopBar.svelte';
+import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { TOUR_TARGETS, type TourTarget } from '$lib/guide/tour';
 import { addedLine, diffFile, diffResponse, hunk } from './diff';
 import { fakeServer } from './fake-server';
@@ -24,7 +24,6 @@ beforeEach(() => {
 	review = openReview();
 });
 
-const HEADER = { submitting: false, error: null, onOpenModal: ignore };
 const FILE = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(1, 'y = 3')])] });
 
 // How the tour says how far along it is: "2 of 7"
@@ -57,7 +56,7 @@ async function drawHeader() {
 	fakeServer().answer('GET /api/diff', diffResponse({ files: [FILE] }));
 	await review.diff.take();
 	review.answerer.setAttached(true);
-	render(TopBar, inReview(review, HEADER));
+	render(ReviewHeader, inReview(review));
 }
 
 /** The header, with the list of bases it can be read against open. */
@@ -66,7 +65,7 @@ async function drawBaseList() {
 	server.answer('GET /api/diff', diffResponse({ files: [FILE] }));
 	server.answer('GET /api/versions', { versions: [] });
 	await review.diff.take();
-	render(TopBar, inReview(review, HEADER));
+	render(ReviewHeader, inReview(review));
 	await userEvent.click(screen.getByTestId('base-picker'));
 }
 

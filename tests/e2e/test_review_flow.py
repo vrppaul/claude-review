@@ -298,7 +298,7 @@ async def test_a_summary_on_its_own_is_a_review(diff_review: RunningReview, page
 
 
 async def test_closing_the_pane_keeps_the_summary_being_written(diff_review: RunningReview, page: Page) -> None:
-    """Esc closes the modal, and reopening preserves the typed text."""
+    """Esc closes the pane and gives the keyboard back; reopening keeps the typed text."""
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
 
@@ -307,9 +307,11 @@ async def test_closing_the_pane_keeps_the_summary_being_written(diff_review: Run
     modal_textarea = page.get_by_test_id("review-body")
     await modal_textarea.fill("Draft feedback")
 
-    # Close with Esc
+    # Close with Esc: the keyboard goes back to the button that opened it
     await page.keyboard.press("Escape")
     await page.get_by_test_id("finish-review").wait_for(state="detached")
+    focused = await page.evaluate("document.activeElement?.dataset.testid")
+    assert focused == "quick-submit"
 
     # Reopen — text should still be there
     await page.get_by_test_id("quick-submit").click()

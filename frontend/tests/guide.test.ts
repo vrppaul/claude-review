@@ -4,7 +4,7 @@ import fastCheck from 'fast-check';
 import { tick } from 'svelte';
 import Guide from '$lib/components/Guide.svelte';
 import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
-import TopBar from '$lib/components/TopBar.svelte';
+import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
@@ -191,12 +191,11 @@ describe('the news card', () => {
 });
 
 // The header's own props, as a review that is not being sent shows them
-const HEADER = { submitting: false, error: null, onOpenModal: () => undefined };
 
 describe('the ? list', () => {
 	it('opens from a button too, for whoever has ? taken by a browser extension', async () => {
 		const { getByTestId, queryByTestId } = render(KeyboardShortcuts, inReview(review));
-		const { getByTestId: inHeader } = render(TopBar, inReview(review, HEADER));
+		const { getByTestId: inHeader } = render(ReviewHeader, inReview(review));
 		expect(queryByTestId('shortcuts-list')).toBeNull();
 
 		inHeader('open-help').click();

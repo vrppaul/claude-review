@@ -84,9 +84,8 @@ const NO_NESTED_HELPERS = [
 // it still breaks. Phases 7 and 8 rework them and empty these lists; nothing
 // is added to them, and nothing new is written that would need to be.
 const STILL_TO_CLEAN = {
-	shortNames: ['AgentPanel', 'FileList', 'FinishReview', 'KeyboardShortcuts', 'SubmitBar'],
+	shortNames: ['AgentPanel', 'FileList', 'KeyboardShortcuts'],
 	magicNumbers: ['AgentPanel', 'FileList'],
-	nestedHelpers: ['SubmitBar'],
 	tooLong: ['AgentPanel', 'CommentThread'],
 	tooComplex: ['AgentPanel']
 };
@@ -218,10 +217,6 @@ export default tseslint.config(
 		rules: { 'no-restricted-globals': ['error', ...REQUEST_CALLERS] }
 	},
 	{ files: componentFiles(STILL_TO_CLEAN.shortNames), rules: { 'id-length': 'off' } },
-	{
-		files: componentFiles(STILL_TO_CLEAN.nestedHelpers),
-		rules: { 'no-restricted-syntax': ['error', ...NO_PAGE_LOOKUPS] }
-	},
 	{
 		files: componentFiles(STILL_TO_CLEAN.tooLong),
 		rules: { 'max-lines': 'off' }

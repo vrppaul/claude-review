@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
-import TopBar from '$lib/components/TopBar.svelte';
+import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { inReview, openReview } from '../review';
 
-const HEADER = { submitting: false, error: null, onOpenModal: () => undefined };
 const ROUND_ONE = {
 	key: 'round:1',
 	kind: 'round',
@@ -30,7 +29,7 @@ beforeEach(() => {
 describe('a menu in the header', () => {
 	it('says it opens a pane, whether it is open, and which pane it is', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 		const toggle = screen.getByTestId('settings-toggle');
 		expect(toggle.getAttribute('aria-haspopup')).toBe('dialog');
 		expect(toggle.getAttribute('aria-expanded')).toBe('false');
@@ -46,7 +45,7 @@ describe('a menu in the header', () => {
 
 	it('takes the keyboard into itself when it opens', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 
 		await user.click(screen.getByTestId('settings-toggle'));
 
@@ -55,7 +54,7 @@ describe('a menu in the header', () => {
 
 	it('closes on Escape and gives the keyboard back to what opened it', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 		await user.click(screen.getByTestId('settings-toggle'));
 
 		await user.keyboard('{Escape}');
@@ -66,7 +65,7 @@ describe('a menu in the header', () => {
 
 	it('closes as soon as the reader presses anywhere else', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 		await user.click(screen.getByTestId('settings-toggle'));
 
 		await user.pointer({ keys: '[MouseLeft>]', target: document.body });
@@ -76,7 +75,7 @@ describe('a menu in the header', () => {
 
 	it('is one open at a time: opening another closes it', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 		await user.click(screen.getByTestId('settings-toggle'));
 
 		await user.click(screen.getByTestId('base-picker'));
@@ -89,7 +88,7 @@ describe('a menu in the header', () => {
 describe('the list of bases', () => {
 	it('puts the keyboard in its filter, and back on the base once one is taken', async () => {
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 		await user.click(screen.getByTestId('base-picker'));
 		expect(document.activeElement).toBe(screen.getByTestId('base-filter'));
 

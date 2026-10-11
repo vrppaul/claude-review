@@ -28,8 +28,8 @@ const LONGER_THAN_ANY_RETRY = 60_000;
 const openedPages: ReviewPage[] = [];
 
 /** A page on the review's socket, let go of once the test is over. */
-function newPage(): ReviewPage {
-	const page = new ReviewPage(new PageConnection(SESSION_URL));
+function newPage(closeTab: () => void = () => undefined): ReviewPage {
+	const page = new ReviewPage(new PageConnection(SESSION_URL), closeTab);
 	openedPages.push(page);
 	return page;
 }
@@ -195,6 +195,23 @@ describe('opening the page', () => {
 		vi.useRealTimers();
 
 		expect(FakeSocket.opened).toHaveLength(opened);
+	});
+
+	it('shuts its tab once the review is sent for good, and not for a round', async () => {
+		const server = serving();
+		server.answer('POST /api/submit', { markdown: '## Round', comment_count: 0, round: 1, ended: false });
+		const closeTab = vi.fn();
+		const page = newPage(closeTab);
+		await page.open();
+
+		await openedReview(page).submission.submit(false);
+		await settled();
+		expect(closeTab).not.toHaveBeenCalled();
+
+		server.answer('POST /api/submit', { markdown: '## Review', comment_count: 0, round: 2, ended: true });
+		await openedReview(page).submission.submit(true);
+		await settled();
+		expect(closeTab).toHaveBeenCalledOnce();
 	});
 
 	it('says why when the review cannot be opened', async () => {

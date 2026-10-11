@@ -116,7 +116,7 @@ export class Review {
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
-		this.submission = new Submission(this.threads, this.rounds, kept.reviewBody);
+		this.submission = new Submission(this.threads, this.rounds, this.answerer, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);

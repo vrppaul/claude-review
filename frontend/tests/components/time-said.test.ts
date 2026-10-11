@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import DiffView from '$lib/components/DiffView.svelte';
-import TopBar from '$lib/components/TopBar.svelte';
+import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -13,7 +13,6 @@ const A_MINUTE_AND_A_BIT = 61_000;
 const TWELVE_SECONDS = 12_000;
 // Longer than the draft waits before it keeps what changed: the timers left after it are the clock's
 const THE_DRAFT_KEPT = 1_000;
-const HEADER = { submitting: false, error: null, onOpenModal: () => undefined };
 
 const file = diffFile({
 	path: 'a.py',
@@ -82,7 +81,7 @@ describe('how old a base is', () => {
 		});
 		const review = openReview({ files: [file] });
 		const user = userEvent.setup();
-		render(TopBar, inReview(review, HEADER));
+		render(ReviewHeader, inReview(review));
 
 		await user.click(screen.getByTestId('base-picker'));
 
