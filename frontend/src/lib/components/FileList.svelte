@@ -102,7 +102,7 @@
 			<button
 				type="button"
 				data-testid="folder-item"
-				class="cr-tree-row cr-muted flex w-full items-center gap-1 py-1 pr-2 text-left font-mono text-xs font-semibold hover:text-base-content"
+				class="cr-tree-row flex w-full items-center gap-1 py-1 pr-2 text-left font-mono text-xs font-semibold text-(--cr-muted) hover:text-base-content"
 				style:--cr-depth={depth}
 				aria-expanded={!folded}
 				onclick={() => toggleFolder(node.path)}

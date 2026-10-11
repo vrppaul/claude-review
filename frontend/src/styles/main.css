@@ -9,8 +9,16 @@
 }
 
 /*
- * Syntax colors come from the palette above rather than a vendored theme, so
- * both themes stay in step and neither borrows green or red from the diff.
+ * The classes below are the review's own, outside Tailwind's layers, so they
+ * win over any utility on the same element: a utility never changes what a
+ * cr- class sets. Another cr- class does — a chip's state is `.cr-chip-…` —
+ * or the utility goes in place of the class.
+ */
+
+/*
+ * Syntax colors come from the palette in tokens.css rather than a vendored
+ * theme, so both themes stay in step and neither borrows green or red from
+ * the diff.
  */
 .hljs {
 	background: transparent;

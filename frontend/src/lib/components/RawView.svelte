@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { DiffLine } from '$lib/types';
+	import type { DiffLine, LineSide } from '$lib/types';
+	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { useReview } from '$lib/review/context';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
-	import LineGutter from './LineGutter.svelte';
+	import LineGutter, { type Reach } from './LineGutter.svelte';
 	import LineNotes from './LineNotes.svelte';
 
 	// Columns a row spans: two numbers, the sign and the code in a diff; one number and the code otherwise
@@ -30,6 +31,15 @@
 	function rowClass(kind: DiffLine['kind'], marked: boolean): string {
 		const change = isDiffMode ? TINTS[kind] : '';
 		return marked ? `${change} cr-row-marked` : change;
+	}
+
+	/**
+	 * How the keyboard reaches a row's number on one side. Both numbers are
+	 * the same line, so one is the row's stop: the one on the line's own side
+	 * — a removed line's old number, any other line's new one.
+	 */
+	function reachOf(drawn: DrawnLine, side: LineSide): Reach {
+		return drawn.place.side === side ? 'row-stop' : 'pointer';
 	}
 </script>
 
@@ -62,12 +72,11 @@
 						>
 							{#if isDiffMode}
 								<td class="cr-gutter w-12 p-0 text-right select-none">
-									<!-- The same line as the row's stop beside it: one stop a row -->
-									<LineGutter {drawn} side="old" reach="pointer" {commenting} />
+									<LineGutter {drawn} side="old" reach={reachOf(drawn, 'old')} {commenting} />
 								</td>
 							{/if}
 							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
-								<LineGutter {drawn} side="new" reach="row-stop" {commenting} />
+								<LineGutter {drawn} side="new" reach={reachOf(drawn, 'new')} {commenting} />
 							</td>
 							{#if isDiffMode}
 								<td class="cr-sign w-4 px-1 text-center select-none">

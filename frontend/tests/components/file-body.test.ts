@@ -86,3 +86,14 @@ describe('a file drawn as whoever draws it says', () => {
 		expect(queryByTestId('raw-view')).toBeNull();
 	});
 });
+
+describe('the keyboard in one column', () => {
+	it("stops on the number each line shows: a removed line's is on the old side", () => {
+		render(FileBody, inReview(review, AS_A_STEP));
+
+		const stops = screen.getAllByTestId('line-gutter');
+
+		expect(stops.map((stop) => stop.textContent?.trim())).toEqual(['30', '30', '31']);
+		expect(stops[0].getAttribute('aria-label')).toBe('Comment on removed line 30');
+	});
+});

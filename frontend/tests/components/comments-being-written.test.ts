@@ -301,10 +301,10 @@ describe('a comment being written on a removed line, when a narrower base is rea
 	});
 });
 
-/** The old-side number of a removed line, to pick it by. */
+/** The number a removed line shows, to pick it by. */
 function removedLineNumber(number: number): HTMLElement {
 	const gutter = screen
-		.getAllByTestId('old-line-gutter')
+		.getAllByRole('button', { name: `Comment on removed line ${number}` })
 		.find((candidate) => candidate.textContent?.trim() === String(number));
 	if (!gutter) throw new Error(`Removed line ${number} is not drawn`);
 	return gutter;

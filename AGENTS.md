@@ -159,7 +159,7 @@ Before presenting work, review every changed file against these principles:
 
 **No meaningless defaults** — required parameters must be explicit. If a caller must always provide a value, don't give it a default that silently hides bugs. Optional parameters (like `body: str | None = None`) are fine when the absence is a valid state.
 
-**Extensible for future modes** — new review modes (transcript, etc.) should work by adding code, not modifying existing conditionals. Use `isDiffMode` checks (opt-in to diff-specific behavior) rather than `!isFilesMode` checks (which break when a third mode is added). Use lookup maps for mode-dependent values (see `sidebarTitle` in `FileList.svelte`).
+**Extensible for future modes** — new review modes (transcript, etc.) should work by adding code, not modifying existing conditionals. Use `isDiffMode` checks (opt-in to diff-specific behavior) rather than `!isFilesMode` checks (which break when a third mode is added). Use lookup maps for mode-dependent values (see `COUNTED_AS` in `FileList.svelte`).
 
 ## Commit Messages
 

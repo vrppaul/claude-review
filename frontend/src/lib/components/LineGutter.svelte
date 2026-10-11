@@ -1,10 +1,10 @@
 <script lang="ts" module>
 	/**
 	 * How the keyboard reaches a line's number. Every row has one stop, which
-	 * j and k move between and Tab reaches too. A second number on the row is
-	 * reached by Tab when it is another line — a removed line facing the line
-	 * that replaced it — and left to the mouse when it is the same line the
-	 * row's stop comments on.
+	 * j and k move between and Tab reaches too: its new number, or its old one
+	 * where it shows no new one. The old number beside a new one is reached by
+	 * Tab when it is another line — a removed line facing the line that
+	 * replaced it — and left to the mouse when it is the same line.
 	 */
 	export type Reach = 'row-stop' | 'tab' | 'pointer';
 </script>
@@ -43,18 +43,21 @@
 	}
 </script>
 
-<button
-	type="button"
-	data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
-	data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
-	data-tour={isRowStop ? 'line-number' : undefined}
-	class="cr-gutter-button"
-	tabindex={reach === 'pointer' ? -1 : 0}
-	aria-label="Comment on {lineInWords(drawn.place)}"
-	aria-disabled={writable ? undefined : 'true'}
-	title={writable ? undefined : NOT_THE_REVIEWS}
-	onmousedown={() => commenting.press(drawn)}
-	onkeydown={commentOnKey}
->
-	{shown ?? ''}
-</button>
+<!-- A side the line has no number on draws none: nothing there to press or to stop at -->
+{#if shown !== null}
+	<button
+		type="button"
+		data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
+		data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
+		data-tour={isRowStop ? 'line-number' : undefined}
+		class="cr-gutter-button"
+		tabindex={reach === 'pointer' ? -1 : 0}
+		aria-label="Comment on {lineInWords(drawn.place)}"
+		aria-disabled={writable ? undefined : 'true'}
+		title={writable ? undefined : NOT_THE_REVIEWS}
+		onmousedown={() => commenting.press(drawn)}
+		onkeydown={commentOnKey}
+	>
+		{shown}
+	</button>
+{/if}
