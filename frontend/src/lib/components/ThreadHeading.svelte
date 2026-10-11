@@ -4,6 +4,8 @@
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
 	import FoldToggle from './FoldToggle.svelte';
+	import NewReplyMark from './NewReplyMark.svelte';
+	import ReopenButton from './ReopenButton.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -37,9 +39,7 @@
 		<span data-testid="comment-resolved" class="cr-severity cr-muted">resolved</span>
 	{/if}
 	{#if unread}
-		<span data-testid="comment-unread" class="text-xs text-(--cr-mark)"
-			><span aria-hidden="true">●</span> new reply</span
-		>
+		<NewReplyMark />
 	{/if}
 	<div class="flex-1"></div>
 	{#if raisedByAgent(thread)}
@@ -57,14 +57,7 @@
 			Edit
 		</button>
 		{#if thread.resolved}
-			<button
-				type="button"
-				data-testid="reopen-comment"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.threads.setResolved(thread.id, false)}
-			>
-				Reopen
-			</button>
+			<ReopenButton {thread} />
 		{:else}
 			<!-- Settling a thread folds it away; it can still be opened and read -->
 			<button

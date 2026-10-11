@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { lineAnchor } from '$lib/anchors/line';
 import {
 	anchorLabel,
-	anchorMentionedIn,
+	anchorMentionsIn,
 	anchorPlace,
 	anchorShortPlace,
 	anchorToken,
@@ -30,8 +30,8 @@ describe('a thread on lines is named the same way wherever it is shown', () => {
 	it('is mentioned by its token, and not by a longer one that starts the same', () => {
 		const short = lineAnchor('a.py', 'new', 1, 2, []);
 
-		expect(anchorMentionedIn('see @a.py:1-2 please', short)).toBe(true);
-		expect(anchorMentionedIn('see @a.py:1-20 please', short)).toBe(false);
+		expect(anchorMentionsIn('see @a.py:1-2 and @a.py:1-2', short)).toEqual([4, 18]);
+		expect(anchorMentionsIn('see @a.py:1-20 please', short)).toEqual([]);
 	});
 
 	it('is the same spot as another on the same lines, whatever they quote', () => {

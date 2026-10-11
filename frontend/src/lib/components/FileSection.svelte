@@ -90,7 +90,7 @@
 		data-testid="file-header"
 		class={[
 			'cr-file-header flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2',
-			viewed && 'opacity-55'
+			viewed && 'cr-viewed'
 		]}
 	>
 		<FoldToggle

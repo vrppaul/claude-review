@@ -47,7 +47,7 @@ function talkToAgent(review: Review): void {
 
 /** Do something to the file the reader is in: by focus if a line in it has the focus, by scroll if not. */
 function onCurrentFile(review: Review, act: (path: string) => void): void {
-	const path = review.sections.focused() ?? review.sections.fileInView;
+	const path = review.sections.current();
 	if (path) act(path);
 }
 

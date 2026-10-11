@@ -15,7 +15,11 @@ import { PanelComposer } from '$lib/review/panel-composer.svelte';
 import type { Composer, Thread, PanelTurn } from '$lib/types';
 import { ANSWER_ID_PREFIX, EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
 import { threadOnTheWire } from '$lib/api/thread-wire';
+import { messageOf } from '$lib/utils/errors';
 import { AGENT, READER, THE_REVIEW } from '$lib/utils/speakers';
+
+// What the panel says when a message could not be sent, and nothing said why
+const SENDING_FAILED = 'Could not send';
 
 /**
  * The message the agent is still working on.
@@ -37,6 +41,10 @@ export class Conversation {
 	readonly #answerIds = new IdSequence(ANSWER_ID_PREFIX);
 	readonly #eventIds = new IdSequence(EVENT_ID_PREFIX);
 	readonly #working: PanelTurn | undefined;
+	// A message on its way: nothing more is sent until it is answered
+	#sending = $state(false);
+	// Why the last message did not go, until the next one is tried
+	#failed = $state<string | null>(null);
 
 	/**
 	 * @param said what was said here in an unsent review of the same thing
@@ -63,15 +71,30 @@ export class Conversation {
 		return this.#working;
 	}
 
+	/** Whether a message is on its way. */
+	get sending(): boolean {
+		return this.#sending;
+	}
+
+	/** Why the last message did not go, if it did not. */
+	get failed(): string | null {
+		return this.#failed;
+	}
+
 	/**
-	 * Send the message being written, and go on reading.
+	 * Send the message being written, and go on reading; whether it went.
 	 *
 	 * The threads travel with the message rather than only their ids: they
 	 * are unsent work, held in this browser, and the server has never seen
 	 * them. Images are the other way round: the server already keeps them,
-	 * so only their ids go.
+	 * so only their ids go. One message is on its way at a time, whoever
+	 * draws the panel meanwhile; a failure is said, not thrown, and the words
+	 * stay in the field to send again.
 	 */
-	async send(threads: Thread[]): Promise<void> {
+	async send(threads: Thread[]): Promise<boolean> {
+		if (this.#sending) return false;
+		this.#sending = true;
+		this.#failed = null;
 		const written = this.composer.text;
 		const text = written.trim();
 		const images = [...this.composer.attachments.images];
@@ -95,9 +118,13 @@ export class Conversation {
 		} catch (error) {
 			// Never reached the agent, so it is taken off the conversation
 			this.#turns = this.#turns.filter((turn) => turn.id !== id);
-			throw error;
+			this.#failed = messageOf(error, SENDING_FAILED);
+			return false;
+		} finally {
+			this.#sending = false;
 		}
 		this.composer.takeSent(written, images);
+		return true;
 	}
 
 	/** Take what the agent said and put it under what it answers, if anything. */

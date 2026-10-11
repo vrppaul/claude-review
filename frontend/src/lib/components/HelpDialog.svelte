@@ -17,11 +17,15 @@
 		review.guide.showNews();
 	}
 
-	/** ? opened the list, and closes it again — answered here, so the review does not open it once more. */
-	function closeOnQuestionMark(event: KeyboardEvent) {
+	/**
+	 * ? opened the list, and closes it again — answered here, so the review
+	 * does not open it once more. Closed as Escape closes it, so the browser
+	 * gives the keyboard back to where it was.
+	 */
+	function closeOnQuestionMark(event: KeyboardEvent & { currentTarget: HTMLDialogElement }) {
 		if (event.key !== '?') return;
 		event.preventDefault();
-		review.guide.setHelpOpen(false);
+		event.currentTarget.close();
 	}
 </script>
 

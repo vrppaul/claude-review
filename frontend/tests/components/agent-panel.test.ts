@@ -21,7 +21,7 @@ const FULL_HEIGHT = 500;
 const file = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(2, 'y = 3')])] });
 
 /** Write a message in the panel and send it, the way the composer does. */
-function say(review: Review, text: string, threads: Thread[] = []): Promise<void> {
+function say(review: Review, text: string, threads: Thread[] = []): Promise<boolean> {
 	review.conversation.composer.setText(text);
 	return review.conversation.send(threads);
 }
@@ -463,5 +463,35 @@ describe('sizing the panel', () => {
 		expect(review.layout.agentPanel.width).toBeGreaterThan(before);
 		await user.keyboard('{ArrowRight}');
 		expect(review.layout.agentPanel.width).toBe(before);
+	});
+});
+
+describe('a message on its way', () => {
+	it('is not sent again when the panel is closed and opened while it travels', async () => {
+		const user = userEvent.setup();
+		const messages = fakeServer().hold('POST /api/message');
+		const review = answeredReview();
+		const first = render(AgentPanel, inReview(review));
+		await user.type(first.getByTestId('panel-input'), 'Once');
+		await user.click(first.getByTestId('send-message'));
+		first.unmount();
+
+		const again = render(AgentPanel, inReview(review));
+		const send = again.getByTestId('send-message') as HTMLButtonElement;
+		expect(send.disabled).toBe(true);
+		await user.click(send);
+
+		expect(messages.requests).toHaveLength(1);
+	});
+
+	it('leaves Ctrl+Shift+Enter, which finishes the review, to the review', async () => {
+		const user = userEvent.setup();
+		const server = listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(answeredReview()));
+
+		await user.type(getByTestId('panel-input'), 'Not yet');
+		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
+
+		expect(server.requestsTo('POST /api/message')).toHaveLength(0);
 	});
 });

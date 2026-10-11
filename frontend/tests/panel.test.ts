@@ -30,7 +30,7 @@ const NARROWEST_PANEL = 280;
 const WIDEST_PANEL = 720;
 
 /** Write a message in the panel and send it, the way the composer does. */
-function say(text: string, threads: Thread[] = []): Promise<void> {
+function say(text: string, threads: Thread[] = []): Promise<boolean> {
 	review.conversation.composer.setText(text);
 	return review.conversation.send(threads);
 }
@@ -161,11 +161,24 @@ describe('the panel talks to the agent about the review', () => {
 		expect(kept?.panel).toHaveLength(1);
 	});
 
+	it('sends one message at a time, saying the second did not go', async () => {
+		const messages = fakeServer().hold('POST /api/message');
+
+		const first = say('one');
+		const second = await say('two');
+		messages.answer(0, null);
+
+		expect(second).toBe(false);
+		expect(await first).toBe(true);
+		expect(messages.requests).toHaveLength(1);
+	});
+
 	it('takes a failed send back off the conversation', async () => {
 		fakeServer().refuse('POST /api/message', SERVER_ERROR);
 
-		await expect(say('into the void')).rejects.toThrow();
+		expect(await say('into the void')).toBe(false);
 		expect(review.conversation.turns).toHaveLength(0);
+		expect(review.conversation.failed).toContain(SERVER_ERROR);
 	});
 
 	it('still waits on a message the server did not hear taken back', async () => {
@@ -182,7 +195,7 @@ describe('the panel talks to the agent about the review', () => {
 	it('takes a send that never reached the server back off the conversation', async () => {
 		fakeServer().drop('POST /api/message');
 
-		await expect(say('into the void')).rejects.toThrow();
+		expect(await say('into the void')).toBe(false);
 		expect(review.conversation.turns).toHaveLength(0);
 	});
 

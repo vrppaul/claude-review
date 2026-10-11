@@ -4,14 +4,11 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
 	import { useReview } from '$lib/review/context';
-	import { messageOf } from '$lib/utils/errors';
 	import AttachedImages from './AttachedImages.svelte';
 	import MentionPicker from './MentionPicker.svelte';
 	import { Mentions, optionIdOf, tokenOf, type Mentionable } from './mentions.svelte';
 
-	// What the field says when a message could not be sent and nothing said why
-	const SENDING_FAILED = 'Could not send';
-	// What it says when it took off an image it could not show
+	// What the field says when it took off an image it could not show
 	const IMAGE_LOST = 'An image could not be shown and was taken off the message';
 
 	interface Props {
@@ -25,8 +22,8 @@
 	const listId = $props.id();
 
 	let field = $state<HTMLTextAreaElement | null>(null);
-	let sending = $state(false);
-	let failed = $state<string | null>(null);
+	// What the field says of the last thing pasted that it could not take, until a message is sent
+	let noted = $state<string | null>(null);
 
 	const mentions = new Mentions({ threads: () => review.threads.all, files: () => review.diff.files });
 	// The message being written lives in the review's composer, so hiding
@@ -36,12 +33,14 @@
 	// token deleted like a word takes its reference with it
 	const pointed = $derived(threadsIn(draft, review.threads.all));
 	// A screenshot can be the whole question, so words are not required; an
-	// image still on its way is waited for
+	// image still on its way is waited for, and so is a message
 	const canSend = $derived(
 		(draft.trim().length > 0 || composer.attachments.images.length > 0) &&
-			!sending &&
+			!review.conversation.sending &&
 			composer.attachments.uploading === 0
 	);
+	// The field's own note, or why the last message did not go
+	const whatWentWrong = $derived(noted ?? review.conversation.failed);
 
 	// Asked for from the keyboard, perhaps before the panel was open: taken
 	// once the field is drawn
@@ -99,7 +98,7 @@
 
 	async function onPaste(event: ClipboardEvent) {
 		const refusal = await composer.attachments.takePaste(event, review.limits);
-		if (refusal) failed = refusal;
+		if (refusal) noted = refusal;
 	}
 
 	/**
@@ -108,7 +107,7 @@
 	 */
 	function onImageLost(imageId: string) {
 		composer.attachments.forget(imageId);
-		failed = IMAGE_LOST;
+		noted = IMAGE_LOST;
 	}
 
 	/** Open the picker on everything, from the button beside the field. */
@@ -119,17 +118,9 @@
 
 	async function send() {
 		if (!canSend) return;
-		sending = true;
-		failed = null;
+		noted = null;
 		onSending();
-		try {
-			await review.conversation.send(pointed);
-			mentions.close();
-		} catch (error) {
-			failed = messageOf(error, SENDING_FAILED);
-		} finally {
-			sending = false;
-		}
+		if (await review.conversation.send(pointed)) mentions.close();
 	}
 </script>
 
@@ -154,7 +145,7 @@
 			{/each}
 		</div>
 	{/if}
-	<AttachedImages attachments={composer.attachments} disabled={sending} onLost={onImageLost} />
+	<AttachedImages attachments={composer.attachments} disabled={review.conversation.sending} onLost={onImageLost} />
 	<textarea
 		data-testid="panel-input"
 		bind:this={field}
@@ -176,11 +167,11 @@
 		</button>
 		<span class="cr-faint hidden text-xs lg:inline">Ctrl+Enter sends</span>
 		<div class="flex-1"></div>
-		{#if failed}
-			<span data-testid="panel-error" class="text-xs text-error">{failed}</span>
+		{#if whatWentWrong}
+			<span data-testid="panel-error" class="text-xs text-error">{whatWentWrong}</span>
 		{/if}
 		<button type="button" data-testid="send-message" class="btn btn-primary btn-xs" disabled={!canSend} onclick={send}>
-			{sending ? 'Sending' : 'Send'}
+			{review.conversation.sending ? 'Sending' : 'Send'}
 		</button>
 	</div>
 </div>

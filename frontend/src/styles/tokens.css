@@ -31,8 +31,12 @@
 	--cr-layer-popover: 30;
 	--cr-layer-guide: 60;
 
-	/* What lifts a pane off the page it lies over */
-	--cr-elevation: 0 18px 48px rgb(0 0 0 / 0.45);
+	/* Every shadow the page is drawn with. What lifts a pane off the page it lies over: */
+	--cr-shadow-raised: 0 18px 48px rgb(0 0 0 / 0.45);
+	/* The reader's mark at the left edge of a row, laid inside it */
+	--cr-shadow-marked-edge: inset 2px 0 0 var(--cr-mark);
+	/* The tour's light: a ring round what it points at, in a shade spread over any screen */
+	--cr-shadow-spotlight: 0 0 0 2px var(--cr-mark), 0 0 0 9999px var(--cr-shade);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);

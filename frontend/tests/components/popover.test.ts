@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -96,5 +97,44 @@ describe('the list of bases', () => {
 
 		expect(screen.queryByTestId('base-list')).toBeNull();
 		expect(document.activeElement).toBe(screen.getByTestId('base-picker'));
+	});
+});
+
+describe('a pane and the keyboard', () => {
+	it('closes once the keyboard leaves it for anything else, so only one is open at a time', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+		await user.click(screen.getByTestId('base-picker'));
+		const list = screen.getByTestId('base-list');
+		await screen.findAllByTestId('base-option');
+
+		while (list.contains(document.activeElement)) await user.tab();
+
+		expect(screen.queryByTestId('base-list')).toBeNull();
+	});
+
+	it('keeps the keyboard when its own words are pressed, and gives it back on Escape', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+		await user.click(screen.getByTestId('base-picker'));
+
+		await user.click(within(screen.getByTestId('base-list')).getByText('Compare the working tree against'));
+		await user.keyboard('{Escape}');
+
+		expect(document.activeElement).toBe(screen.getByTestId('base-picker'));
+	});
+
+	it('gives the keyboard back to the field it was opened from by its keys', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+		const field = document.body.appendChild(document.createElement('textarea'));
+		field.focus();
+
+		review.submission.setFinishing(true);
+		await tick();
+		await user.keyboard('{Escape}');
+
+		expect(document.activeElement).toBe(field);
+		field.remove();
 	});
 });

@@ -69,7 +69,7 @@ export class Navigator {
 	stepFile(direction: 1 | -1): void {
 		const files = this.#diff.files;
 		if (files.length === 0) return;
-		const here = this.#sections.focused() ?? this.#sections.fileInView;
+		const here = this.#sections.current();
 		const from = files.findIndex((file) => file.path === here);
 		const first = direction === 1 ? 0 : files.length - 1;
 		const to = from === -1 ? first : Math.min(files.length - 1, Math.max(0, from + direction));

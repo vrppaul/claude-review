@@ -57,6 +57,19 @@ describe('finishing a review', () => {
 		expect(getByTestId('end-review')).toBeTruthy();
 	});
 
+	it('sends a round only with something new in it', async () => {
+		review.answerer.setAttached(true);
+		review.threads.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
+		review.threads.markSent(review.threads.all, 1);
+
+		const { getByTestId } = render(FinishReview, inReview(review));
+		const send = getByTestId('modal-submit') as HTMLButtonElement;
+		expect(send.disabled).toBe(true);
+
+		await userEvent.type(getByTestId('review-body'), 'And one more thing');
+		expect(send.disabled).toBe(false);
+	});
+
 	it('offers only the final send once the agent has gone', () => {
 		review.answerer.setAttached(true);
 		review.answerer.setAttached(false);

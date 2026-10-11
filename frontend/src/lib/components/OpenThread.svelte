@@ -116,7 +116,7 @@
 			<button
 				type="button"
 				data-testid="open-reply"
-				class="cr-field cr-comment-body block w-full rounded px-3 py-1.5 text-left text-sm"
+				class="cr-field cr-comment-body block w-full rounded px-3 py-1.5 text-left"
 				onclick={() => writing.openReply(thread.id)}
 			>
 				<span class="cr-muted">Write a reply…</span>

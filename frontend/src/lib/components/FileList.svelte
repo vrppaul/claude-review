@@ -61,7 +61,7 @@
 			data-testid="file-item"
 			class={[
 				'cr-tree-row btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs',
-				viewed && 'opacity-45',
+				viewed && 'cr-viewed',
 				review.sections.fileInView === file.path && 'cr-current'
 			]}
 			style:--cr-depth={depth}

@@ -21,8 +21,8 @@ export interface AnchorView<Kind extends Anchor> {
 	shortPlace(anchor: Kind): string;
 	/** The word a panel message mentions the thread by. */
 	token(anchor: Kind): string;
-	/** Whether a message mentions the thread by its token. */
-	mentionedIn(text: string, anchor: Kind): boolean;
+	/** Where a message mentions the thread by its token, and not by a longer one: where each mention starts. */
+	mentionsIn(text: string, anchor: Kind): number[];
 	/** Whether two anchors of this kind hang on the same spot. */
 	sameSpot(one: Kind, other: Kind): boolean;
 	/** The file it hangs on, for a kind that hangs on one. */
@@ -55,8 +55,8 @@ export function anchorToken(anchor: Anchor): string {
 	return viewOf(anchor).token(anchor);
 }
 
-export function anchorMentionedIn(text: string, anchor: Anchor): boolean {
-	return viewOf(anchor).mentionedIn(text, anchor);
+export function anchorMentionsIn(text: string, anchor: Anchor): number[] {
+	return viewOf(anchor).mentionsIn(text, anchor);
 }
 
 /** Whether two anchors hang on the same spot; anchors of different kinds never do. */

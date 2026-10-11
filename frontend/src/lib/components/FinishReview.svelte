@@ -1,3 +1,10 @@
+<script lang="ts" module>
+	/** What the pane the review is finished from is called: the round it sends, or the end. */
+	export function finishingTitle(inRounds: boolean, round: number): string {
+		return inRounds ? `Round ${round}` : 'Finish the review';
+	}
+</script>
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Thread } from '$lib/types';
@@ -28,7 +35,7 @@
 <div class="flex max-h-[70vh] flex-col">
 	<div class="flex items-baseline gap-2 border-b border-base-300 px-4 py-2.5">
 		<h3 class="text-sm font-semibold">
-			{submission.inRounds ? `Round ${review.rounds.current}` : 'Finish the review'}
+			{finishingTitle(submission.inRounds, review.rounds.current)}
 		</h3>
 		<span data-testid="finish-count" class="cr-faint text-xs">
 			{#if submission.inRounds}

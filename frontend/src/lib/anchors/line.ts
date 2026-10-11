@@ -15,16 +15,15 @@ function token(anchor: LineAnchor): string {
 	return `@${anchor.file}:${anchor.start_line}-${anchor.end_line}`;
 }
 
-/** Whether a message mentions these lines by their token, and not a longer one. */
-function mentionedIn(text: string, anchor: LineAnchor): boolean {
+/** Where a message mentions these lines by their token, and not a longer one: where each mention starts. */
+function mentionsIn(text: string, anchor: LineAnchor): number[] {
 	const said = token(anchor);
-	let from = text.indexOf(said);
-	while (from !== -1) {
+	const starts: number[] = [];
+	for (let from = text.indexOf(said); from !== -1; from = text.indexOf(said, from + said.length)) {
 		const after = text[from + said.length];
-		if (after === undefined || !LONGER_TOKEN.test(after)) return true;
-		from = text.indexOf(said, from + 1);
+		if (after === undefined || !LONGER_TOKEN.test(after)) starts.push(from);
 	}
-	return false;
+	return starts;
 }
 
 /** Whether two anchors hang on the same lines, on the same side of the same file. */
@@ -43,7 +42,7 @@ export const lineAnchorView: AnchorView<LineAnchor> = {
 	place: (anchor) => `${anchor.file} · ${label(anchor)}`,
 	shortPlace: (anchor) => `${fileName(anchor.file)} ${label(anchor)}`,
 	token,
-	mentionedIn,
+	mentionsIn,
 	sameSpot,
 	fileOf: (anchor) => anchor.file
 };

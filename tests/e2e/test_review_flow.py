@@ -51,6 +51,10 @@ CHANGED_FILES = tuple(CHANGES)
 MOVED_AFTER_THE_RETAKE = {MAIN_FILE: "def hello():\n    return 'hey'\n", UTILS_FILE: "# utils, rewritten\n"}
 # What the sidebar's filter is typed with to find the added file alone
 NEW_FILE_TYPED = Path(NEW_FILE).stem
+# What has the keyboard, by what it says it does
+FOCUSED_LABEL = "document.activeElement?.getAttribute('aria-label')"
+# A point on the page, in pixels, that no dialog in the middle of it covers
+OUTSIDE_THE_DIALOG = 5
 # The conversation the transcript is written with, one entry a line: a question, and its answer
 TRANSCRIPT_LINES = [
     json.dumps(
@@ -746,6 +750,96 @@ async def test_the_keys_list_holds_the_keyboard_until_it_closes(diff_review: Run
     await help_dialog.wait_for(state="detached")
     focused = await page.evaluate("document.activeElement?.dataset.testid")
     assert focused == "open-help"
+
+
+async def test_question_mark_closes_the_keys_list_and_gives_the_keyboard_back(
+    diff_review: RunningReview, page: Page
+) -> None:
+    """? opens the list and closes it again, as Escape does: the reader carries on from their line."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.keyboard.press("j")
+    await page.keyboard.press("j")
+    reading = await page.evaluate(FOCUSED_LABEL)
+
+    await page.keyboard.press("?")
+    await page.get_by_test_id("help-dialog").wait_for()
+    await page.keyboard.press("?")
+    await page.get_by_test_id("help-dialog").wait_for(state="detached")
+
+    assert await page.evaluate(FOCUSED_LABEL) == reading
+
+
+async def test_a_press_outside_the_keys_list_closes_it_and_a_selection_let_go_there_does_not(
+    diff_review: RunningReview, page: Page
+) -> None:
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.keyboard.press("?")
+    help_dialog = page.get_by_test_id("help-dialog")
+    await help_dialog.wait_for()
+    words = await page.get_by_text("Keyboard", exact=True).bounding_box()
+    assert words is not None
+
+    await page.mouse.move(words["x"] + 1, words["y"] + words["height"] / 2)
+    await page.mouse.down()
+    await page.mouse.move(OUTSIDE_THE_DIALOG, OUTSIDE_THE_DIALOG)
+    await page.mouse.up()
+    assert await help_dialog.evaluate("dialog => dialog.open")
+
+    await page.mouse.click(OUTSIDE_THE_DIALOG, OUTSIDE_THE_DIALOG)
+    await help_dialog.wait_for(state="detached")
+
+
+async def test_the_keyboard_leaving_a_pane_closes_it(diff_review: RunningReview, page: Page) -> None:
+    """One pane at a time from the keyboard too: Tab out of the list of bases, and Enter on Finish."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.get_by_test_id("base-picker").click()
+    await page.get_by_test_id("base-option").first.wait_for()
+
+    while await page.evaluate("document.activeElement?.dataset.testid") != "quick-submit":
+        await page.keyboard.press("Tab")
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("finish-review").wait_for()
+
+    assert await page.get_by_test_id("base-list").count() == 0
+
+
+async def test_the_finishing_pane_opened_from_a_comment_gives_the_keyboard_back_to_it(
+    diff_review: RunningReview, page: Page
+) -> None:
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type("Half a thought")
+
+    await page.keyboard.press("Control+Shift+Enter")
+    await page.get_by_test_id("finish-review").wait_for()
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("finish-review").wait_for(state="detached")
+
+    assert await page.evaluate("document.activeElement?.dataset.testid") == "comment-input"
+
+
+async def test_the_keyboard_comes_back_to_the_send_button_after_a_round(diff_review: RunningReview, page: Page) -> None:
+    """The send button is disabled while the round goes, which takes the keyboard off it; it comes back."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    waiting = asyncio.create_task(_next_event(diff_review))
+    await page.get_by_test_id("panel-input").wait_for()
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Round from the keyboard")
+
+    await page.get_by_test_id("quick-submit").focus()
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("modal-submit").focus()
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("finish-review").wait_for(state="detached")
+
+    assert (await waiting)["type"] == "round"
+    assert await page.evaluate("document.activeElement?.dataset.testid") == "quick-submit"
 
 
 async def test_v_marks_the_file_you_are_in_as_viewed(diff_review: RunningReview, page: Page) -> None:

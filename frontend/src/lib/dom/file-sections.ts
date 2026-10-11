@@ -132,6 +132,11 @@ export class FileSections {
 		return this.#band.watch(root, this.#sections.values());
 	}
 
+	/** The file the reader is in: the one a line of which has the focus, if one has, or else the one in view. */
+	current(): string | null {
+		return this.focused() ?? this.fileInView;
+	}
+
 	/** The file whose section holds the focus, if any does. */
 	focused(): string | null {
 		const focus = document.activeElement;

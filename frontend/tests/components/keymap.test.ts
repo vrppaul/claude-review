@@ -83,6 +83,17 @@ describe('the keys the review answers', () => {
 		expect(screen.queryByTestId('shortcuts-list')).toBeNull();
 	});
 
+	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const treeOpen = review.layout.fileTree.open;
+
+		await user.keyboard('{Control>}f{/Control}');
+		await user.keyboard('{Alt>}f{/Alt}');
+
+		expect(review.layout.fileTree.open).toBe(treeOpen);
+	});
+
 	it('answers no key of its own while the help is open over it', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });

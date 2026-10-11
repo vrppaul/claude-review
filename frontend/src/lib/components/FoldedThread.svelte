@@ -6,6 +6,8 @@
 	import { counted } from '$lib/utils/words';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
+	import NewReplyMark from './NewReplyMark.svelte';
+	import ReopenButton from './ReopenButton.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -49,16 +51,9 @@
 		{/if}
 	</button>
 	{#if unread}
-		<span class="shrink-0 text-xs text-(--cr-mark)"><span aria-hidden="true">●</span> new reply</span>
+		<NewReplyMark />
 	{/if}
 	{#if thread.resolved}
-		<button
-			type="button"
-			data-testid="reopen-thread"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.threads.setResolved(thread.id, false)}
-		>
-			Reopen
-		</button>
+		<ReopenButton {thread} />
 	{/if}
 </div>

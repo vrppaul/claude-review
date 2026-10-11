@@ -21,10 +21,16 @@
 	function firstFocusable(pane: HTMLElement): HTMLElement | null {
 		return pane.querySelector<HTMLElement>(FOCUSABLE);
 	}
+
+	/** What has the keyboard, if anything on the page does. */
+	function focusedElement(): HTMLElement | null {
+		const focused = document.activeElement;
+		return focused instanceof HTMLElement && focused !== document.body ? focused : null;
+	}
 </script>
 
 <script lang="ts">
-	import { tick, type Snippet } from 'svelte';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import PopoverPanel, { type Placement } from './PopoverPanel.svelte';
 
@@ -45,6 +51,13 @@
 	let control = $state<HTMLElement>();
 	let pane = $state<HTMLDivElement>();
 	let around = $state<HTMLElement>();
+	// What had the keyboard as the pane opened — its control, or a field a key opened it from —
+	// which gets it back when the pane closes with the keyboard in it
+	let keyboardWasOn: HTMLElement | null = null;
+	// Whether the keyboard is this popover's: it came in, and has gone to nothing else since. A
+	// button disabled under it, or a press on the pane's words, sends it to no element at all,
+	// which still leaves it here
+	let keyboardHere = false;
 
 	// How far in from the edge the pane lines up with the arrow points
 	const arrowOffset = $derived(open && control ? control.offsetWidth * MIDDLE : 0);
@@ -68,15 +81,39 @@
 		if (pane && !pane.contains(document.activeElement)) firstFocusable(pane)?.focus();
 	});
 
-	// A pane closing with the keyboard in it hands the keyboard back to its control, not to nowhere.
-	// Asked before the pane is taken off the page, while it still holds the focus.
+	// Opening, it notes what has the keyboard, before the pane is drawn and takes it; closing, it
+	// hands the keyboard back, rather than leave it nowhere
 	$effect.pre(() => {
-		if (!open && pane?.contains(document.activeElement)) void tick().then(() => control?.focus());
+		if (open) untrack(noteOpening);
+		else untrack(handBack);
 	});
+
+	function noteOpening() {
+		keyboardWasOn = focusedElement();
+		keyboardHere = false;
+	}
+
+	/** The keyboard the pane held goes back to what had it before, or to the control if that is gone. */
+	function handBack() {
+		if (!keyboardHere) return;
+		keyboardHere = false;
+		const back = keyboardWasOn?.isConnected ? keyboardWasOn : control;
+		void tick().then(() => back?.focus());
+	}
+
+	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, which keeps it. */
+	function noteKeyboardLeaving(event: FocusEvent) {
+		const next = event.relatedTarget;
+		if (!(next instanceof Node) || around?.contains(next)) return;
+		keyboardHere = false;
+		if (open) open = false;
+	}
 
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
-		if (open && around && event.target instanceof Node && !around.contains(event.target)) open = false;
+		if (!open || !around || !(event.target instanceof Node) || around.contains(event.target)) return;
+		keyboardHere = false;
+		open = false;
 	}
 
 	function closeOnEscape(event: KeyboardEvent) {
@@ -87,10 +124,11 @@
 <svelte:document onpointerdown={closeIfOutside} />
 <svelte:window onkeydown={closeOnEscape} />
 
-<div bind:this={around} class="relative">
+<div bind:this={around} class="relative" onfocusin={() => (keyboardHere = true)} onfocusout={noteKeyboardLeaving}>
 	{@render trigger(triggerProps)}
 	{#if open}
-		<PopoverPanel {...marked} bind:pane id={paneId} role="dialog" {label} {placement} {arrowOffset}>
+		<!-- It takes the keyboard itself, as a native dialog does, so a press on its words keeps it in -->
+		<PopoverPanel {...marked} bind:pane id={paneId} role="dialog" tabindex={-1} {label} {placement} {arrowOffset}>
 			{@render children()}
 		</PopoverPanel>
 	{/if}

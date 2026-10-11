@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { fileToken, mentionBeingTyped, withMention, withoutThread } from '$lib/anchors/mentions';
 import { anchorToken } from '$lib/anchors/views';
+import { lineAnchor } from '$lib/anchors/line';
 import type { Thread } from '$lib/types';
 import { newComment } from './new-comment';
 
@@ -53,5 +54,11 @@ describe('taking a thread out of a message', () => {
 		const thread = threadOn('src/routes.py', 2);
 
 		expect(withoutThread(`Look at ${anchorToken(thread.anchor)} again`, thread)).toBe('Look at again');
+	});
+
+	it('leaves a longer token that begins with its own', () => {
+		const short = { ...threadOn('a.py', 1), anchor: lineAnchor('a.py', 'new', 1, 2, []) };
+
+		expect(withoutThread('See @a.py:1-2 and @a.py:1-20 please', short)).toBe('See and @a.py:1-20 please');
 	});
 });

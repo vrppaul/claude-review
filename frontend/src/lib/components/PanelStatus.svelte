@@ -4,20 +4,12 @@
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
-
-	/** How the agent stands with the review, as the dot beside its name says it. */
-	type Presence = 'absent' | 'working' | 'listening';
-	const DOTS: Record<Presence, string> = {
-		absent: 'bg-base-300',
-		working: 'bg-(--cr-mark)',
-		listening: 'bg-(--cr-add-edge)'
-	};
+	import PresenceDot from './PresenceDot.svelte';
 
 	const review = useReview();
 
 	const attached = $derived(review.answerer.attached);
 	const working = $derived(review.conversation.working);
-	const presence = $derived<Presence>(!attached ? 'absent' : working ? 'working' : 'listening');
 	// When the agent last said anything, so silence can be read as silence
 	const lastAnswer = $derived(review.conversation.turns.findLast((turn) => turn.author === AGENT)?.at);
 
@@ -36,7 +28,7 @@
 	data-testid="panel-status"
 	class="flex h-9 shrink-0 items-center gap-2 border-b border-base-300 bg-base-200 px-3"
 >
-	<span class={['h-1.5 w-1.5 shrink-0 rounded-full', DOTS[presence]]}></span>
+	<PresenceDot />
 	<span class={['text-sm font-semibold', !attached && 'cr-muted']}>
 		{attached ? 'Agent' : 'Waiting for the agent'}
 	</span>

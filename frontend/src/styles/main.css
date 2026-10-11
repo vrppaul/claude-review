@@ -383,7 +383,7 @@
 	border-radius: 0.5rem;
 	background: var(--color-base-100);
 	color: var(--color-base-content);
-	box-shadow: var(--cr-elevation);
+	box-shadow: var(--cr-shadow-raised);
 }
 .cr-dialog::backdrop {
 	background: var(--cr-shade);
@@ -444,10 +444,15 @@
 	z-index: var(--cr-layer-over-content);
 }
 
+/* What the reader has finished with steps back, its row in the tree and its header alike */
+.cr-viewed {
+	opacity: 0.5;
+}
+
 /* Which file the reader is in, marked the way selection is marked elsewhere */
 .cr-current {
 	background: var(--cr-mark-tint);
-	box-shadow: inset 2px 0 0 var(--cr-mark);
+	box-shadow: var(--cr-shadow-marked-edge);
 }
 
 /* A gap between hunks is a control, not a caption */
@@ -906,7 +911,7 @@
 	background: var(--color-base-200);
 	border: 1px solid var(--cr-popover-edge);
 	border-radius: var(--radius-box);
-	box-shadow: var(--cr-elevation);
+	box-shadow: var(--cr-shadow-raised);
 }
 /* What the pane holds, over the arrow's inner half; it rounds what scrolls or is lit inside it */
 .cr-popover-body {
@@ -1027,7 +1032,7 @@
 	background: var(--color-base-200);
 	border: 1px solid var(--color-base-300);
 	border-radius: 0.5rem;
-	box-shadow: var(--cr-elevation);
+	box-shadow: var(--cr-shadow-raised);
 }
 .cr-guide-body {
 	font-size: 0.8125rem;
@@ -1047,9 +1052,7 @@
 	z-index: var(--cr-layer-spotlight);
 	pointer-events: none;
 	border-radius: var(--radius-box);
-	box-shadow:
-		0 0 0 2px var(--cr-mark),
-		0 0 0 9999px var(--cr-shade);
+	box-shadow: var(--cr-shadow-spotlight);
 }
 /* Only between steps: while the page scrolls under one, it keeps up */
 .cr-guide-spot-gliding {

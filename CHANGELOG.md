@@ -28,7 +28,9 @@
   review, and only while something on screen says how long ago.
 - **Colours keep to one meaning each.** A warning — the tree moved on, a
   blocker — is yellow; orange is a modified file's letter alone; a moved
-  file's R is quiet grey rather than the reader's blue. A chip saying the
+  file's R is quiet grey rather than the reader's blue; the agent at work
+  is violet, its own colour, in the header and the panel alike, where the
+  two dots used to disagree. A chip saying the
   reader sees less than the whole diff — a narrower base, whitespace hidden
   — takes their mark's tint and reads plainly.
 - **The @-picker is a list to a screen reader**, which hears which thread
@@ -117,6 +119,18 @@
   the field. j and k still stop once a row. In one column j on a removed
   line puts the focus round its number; it was a flat line on the edge of
   the row above.
+- **Closing a pane never leaves the keyboard nowhere.** After a round sent
+  from the keyboard, or a press on a pane's own words, it goes back to the
+  button the pane opened from; a pane opened by its keys from a comment
+  gives it back to the comment; `?` closing the keys list gives it back to
+  the line being read. Tab out of a pane closes it, so two can no longer be
+  open at once, and a selection let go outside the keys list leaves it
+  open.
+- **Taking a thread out of a panel message leaves a longer one alone**:
+  dropping `@a.py:1-2` used to cut into `@a.py:1-20`, losing that thread
+  from the message and leaving a stray `0`.
+- **A panel message on its way is not sent twice** when the panel is closed
+  and opened again before it arrives.
 - **A chain of folders in the file tree is one row however long**:
   `src/lib/components` read as "src/lib" and then "components".
 - **Ctrl+Enter in a comment field no longer takes Ctrl+Shift+Enter**, which

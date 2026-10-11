@@ -2,10 +2,11 @@
 	import { useReview } from '$lib/review/context';
 	import { counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
-	import FinishReview from './FinishReview.svelte';
+	import FinishReview, { finishingTitle } from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
 	import { FINISH_KEYS } from './keymap';
 	import Popover from './Popover.svelte';
+	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
 
@@ -113,7 +114,7 @@
 			title="The agent panel — talk about the review, not one line of it"
 			onclick={() => review.layout.agentPanel.toggle()}
 		>
-			<span class={['h-1.5 w-1.5 rounded-full', inRounds ? 'bg-(--cr-add-edge)' : 'bg-base-300']}></span>
+			<PresenceDot />
 			Agent
 			{#if review.layout.agentPanel.unread > 0}
 				<span data-testid="panel-unread" class="text-(--cr-mark)">
@@ -125,7 +126,7 @@
 		<!-- One door: what has been written, a summary, and the two ways out -->
 		<Popover
 			bind:open={() => review.submission.finishing, (open) => review.submission.setFinishing(open)}
-			label={inRounds ? `Round ${review.rounds.current}` : 'Finish the review'}
+			label={finishingTitle(inRounds, review.rounds.current)}
 			placement="below-end"
 			data-testid="finish-review"
 			class="w-[26rem]"
