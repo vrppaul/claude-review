@@ -84,10 +84,9 @@ const NO_NESTED_HELPERS = [
 // it still breaks. Phases 7 and 8 rework them and empty these lists; nothing
 // is added to them, and nothing new is written that would need to be.
 const STILL_TO_CLEAN = {
-	shortNames: ['AgentPanel', 'FileList', 'KeyboardShortcuts'],
-	magicNumbers: ['AgentPanel', 'FileList'],
-	tooLong: ['AgentPanel', 'CommentThread'],
-	tooComplex: ['AgentPanel']
+	shortNames: ['FileList', 'KeyboardShortcuts'],
+	magicNumbers: ['FileList'],
+	tooLong: ['CommentThread']
 };
 
 /** Where a component still to clean is. */
@@ -221,7 +220,6 @@ export default tseslint.config(
 		files: componentFiles(STILL_TO_CLEAN.tooLong),
 		rules: { 'max-lines': 'off' }
 	},
-	{ files: componentFiles(STILL_TO_CLEAN.tooComplex), rules: { complexity: 'off' } },
 	{
 		ignores: ['node_modules/', 'dist/']
 	}

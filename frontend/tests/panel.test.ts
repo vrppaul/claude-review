@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readDraft } from '$lib/drafts/draft-storage';
-import { threadsIn } from '$lib/anchors/thread-token';
+import { threadsIn } from '$lib/anchors/mentions';
 import { anchorToken } from '$lib/anchors/views';
 import { formatWeight } from '$lib/review/weight';
 import type { Thread } from '$lib/types';

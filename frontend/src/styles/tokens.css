@@ -31,9 +31,8 @@
 	--cr-layer-popover: 30;
 	--cr-layer-guide: 60;
 
-	/* What lifts a pane off the page: low beside what it belongs to, high over everything */
-	--cr-elevation-low: 0 10px 24px rgb(0 0 0 / 0.18);
-	--cr-elevation-high: 0 18px 48px rgb(0 0 0 / 0.45);
+	/* What lifts a pane off the page it lies over */
+	--cr-elevation: 0 18px 48px rgb(0 0 0 / 0.45);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);

@@ -119,6 +119,27 @@ describe('the agent panel', () => {
 		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).toBe('What is in @src/routes.py ');
 	});
 
+	it('offers what it can point at as a list the field steers from the keyboard', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
+
+		const { getByTestId, getByRole, getAllByRole } = render(AgentPanel, inReview(review));
+		const field = getByTestId('panel-input');
+		await user.type(field, 'Look at @');
+		const list = getByRole('listbox');
+		const [first, second] = getAllByRole('option');
+		expect(field.getAttribute('aria-controls')).toBe(list.id);
+		expect(field.getAttribute('aria-activedescendant')).toBe(first.id);
+
+		await user.keyboard('{ArrowDown}');
+		expect(second.getAttribute('aria-selected')).toBe('true');
+		expect(field.getAttribute('aria-activedescendant')).toBe(second.id);
+		await user.keyboard('{Enter}');
+
+		expect((field as HTMLTextAreaElement).value).toBe('Look at @src/routes.py ');
+		expect(document.activeElement).toBe(field);
+	});
+
 	it('sends the thread the message points at', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();
