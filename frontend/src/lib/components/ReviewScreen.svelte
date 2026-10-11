@@ -26,10 +26,14 @@
 	// svelte-ignore state_referenced_locally
 	provideReview(review);
 
+	// What has arrived from the agent and is not read yet: threads with an
+	// answer or raised by it, and answers that landed in the panel while it was shut
+	const arrived = $derived(review.threads.unread.length + review.layout.agentPanel.unread);
+
 	// An answer can arrive while the review is in a background tab, where
 	// neither the dot beside the thread nor the panel can be seen
 	$effect(() => {
-		markTab(review.threads.unread.length + review.layout.agentPanel.unread, review.title);
+		markTab(arrived, review.title);
 	});
 </script>
 
@@ -40,6 +44,10 @@
 	<HelpDialog />
 {/if}
 <Guide />
+<!-- The dots are for the eye; this says the same aloud as it changes, without moving the keyboard -->
+<p data-testid="arrivals" role="status" class="sr-only">
+	{arrived > 0 ? `${arrived} new from the agent, not read yet` : ''}
+</p>
 <div class="flex h-screen flex-col">
 	{#if review.restoredCount > 0}
 		<div

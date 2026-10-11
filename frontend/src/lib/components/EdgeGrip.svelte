@@ -17,12 +17,18 @@
 	let { column, grows, label, testId }: Props = $props();
 </script>
 
-<!-- The reader's own width, dragged or stepped with the arrow keys -->
-<button
-	type="button"
+<!-- The reader's own width, dragged or stepped with the arrow keys: a splitter
+	between the column and the diff, which says how wide the column is -->
+<div
+	role="separator"
+	tabindex="0"
 	data-testid={testId}
 	class={['cr-grip', EDGES[grows]]}
 	aria-label={label}
+	aria-orientation="vertical"
+	aria-valuenow={column.width}
+	aria-valuemin={column.least}
+	aria-valuemax={column.most}
 	onpointerdown={(event) => dragEdge(event, column, grows)}
 	onkeydown={(event) => stepEdge(event, column, grows)}
-></button>
+></div>

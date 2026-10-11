@@ -61,6 +61,11 @@ class StoredWidth {
 		return this.#value;
 	}
 
+	/** How narrow and how wide it may be. */
+	get bounds(): WidthBounds {
+		return this.#bounds;
+	}
+
 	set(next: number): void {
 		const { min, max } = this.#bounds;
 		this.#value = Math.min(max, Math.max(min, Math.round(next)));
@@ -80,6 +85,14 @@ class FileTreeLayout {
 
 	get width(): number {
 		return this.#width.value;
+	}
+
+	get least(): number {
+		return this.#width.bounds.min;
+	}
+
+	get most(): number {
+		return this.#width.bounds.max;
 	}
 
 	toggle(): void {
@@ -120,6 +133,14 @@ class AgentPanelLayout {
 
 	get width(): number {
 		return this.#width.value;
+	}
+
+	get least(): number {
+		return this.#width.bounds.min;
+	}
+
+	get most(): number {
+		return this.#width.bounds.max;
 	}
 
 	/** Answers that landed while the panel was shut. */

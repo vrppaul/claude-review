@@ -10,9 +10,11 @@
 /** Which way the column grows when the pointer moves that way. */
 export type Grows = 'left' | 'right';
 
-/** A column the reader sizes: how wide it is, and how it is made another width. */
+/** A column the reader sizes: how wide it is, between what bounds, and how it is made another width. */
 export interface ColumnWidth {
 	readonly width: number;
+	readonly least: number;
+	readonly most: number;
 	setWidth: (next: number) => void;
 }
 

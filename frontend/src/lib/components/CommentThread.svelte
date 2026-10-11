@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
-	import { anchorLabel } from '$lib/anchors/views';
+	import { anchorLabel, anchorPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import CommentBox from './CommentBox.svelte';
 	import FoldedThread from './FoldedThread.svelte';
@@ -31,7 +31,15 @@
 
 <!-- A thread, drawn the way it is being read: rewritten, folded away, or open. The
 	keyboard is put on it when the reader is taken to it, whichever way it is drawn -->
-<div bind:this={container} data-testid="comment-thread" data-thread-id={thread.id} class="px-3 py-2" tabindex="-1">
+<div
+	bind:this={container}
+	data-testid="comment-thread"
+	data-thread-id={thread.id}
+	class="px-3 py-2"
+	tabindex="-1"
+	role="group"
+	aria-label="Thread on {anchorPlace(thread.anchor)}"
+>
 	{#if editing}
 		<CommentBox
 			field={editing}

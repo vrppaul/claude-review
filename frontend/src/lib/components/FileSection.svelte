@@ -99,13 +99,14 @@
 			onToggle={() => review.reading.toggleFolded(file.path)}
 		/>
 
-		<span data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
+		<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
+		<h2 data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
 			{#if file.old_path}
 				<!-- Moved: where it was, quieter than where it is -->
 				<span class="cr-muted font-normal">{file.old_path} →</span>
 			{/if}
 			{file.path}
-		</span>
+		</h2>
 		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button
 				type="button"
@@ -146,7 +147,8 @@
 				onchange={() => review.reading.toggleViewed(file.path)}
 			/>
 			<Icon name={viewed ? 'check' : 'ring'} class="h-3 w-3" />
-			Viewed
+			<!-- One box per file, so the box says which file it is about -->
+			Viewed<span class="sr-only">: {file.path}</span>
 		</label>
 	</div>
 

@@ -68,6 +68,7 @@
 			<span class="w-2 pt-1.5">
 				{#if unread}
 					<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-unread)"></span>
+					<span class="sr-only">unread:</span>
 				{/if}
 			</span>
 			<span class="min-w-0 flex-1">

@@ -86,6 +86,7 @@
 					class="h-1.5 w-1.5 shrink-0 rounded-full bg-(--cr-mark)"
 					title="Changed since round {review.lastRetake.changedSince}"
 				></span>
+				<span class="sr-only">changed since round {review.lastRetake.changedSince}</span>
 			{/if}
 			{#if viewed}
 				<Icon name="check" data-testid="file-viewed-mark" class="h-3 w-3 text-(--cr-done)" label="Viewed" />
@@ -131,6 +132,7 @@
 <aside
 	data-testid="sidebar"
 	data-tour="file-tree"
+	aria-label="Files"
 	class="cr-tree flex flex-col border-r border-base-300 bg-base-100"
 	style:--cr-tree-width="{review.layout.fileTree.width}px"
 >

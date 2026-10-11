@@ -16,6 +16,7 @@
 <aside
 	data-testid="agent-panel"
 	data-tour="agent-panel"
+	aria-label="The agent"
 	class="cr-panel flex min-h-0 flex-col border-l border-base-300"
 	style:--cr-panel-width="{review.layout.agentPanel.width}px"
 >

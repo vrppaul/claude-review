@@ -7,7 +7,7 @@
 
 	const review = useReview();
 
-	let container: HTMLDivElement | undefined = $state();
+	let container: HTMLElement | undefined = $state();
 
 	// The sidebar scrolls the stream, and the stream reports back which file is
 	// current — one direction each way, so the two cannot fight over it.
@@ -29,7 +29,8 @@
 	});
 </script>
 
-<div bind:this={container} data-testid="diff-view" class="cr-diff-area bg-base-100">
+<!-- What is reviewed: the page's main part, beside the tree and the panel -->
+<main bind:this={container} data-testid="diff-view" class="cr-diff-area bg-base-100">
 	{#each review.diff.files as file (file.path)}
 		<!-- A file that cannot be drawn says so in its place, and takes no other file down with it -->
 		<svelte:boundary onerror={reportBroken}>
@@ -45,4 +46,4 @@
 			<p data-testid="no-changes" class="cr-muted px-4 py-8 text-center text-sm">No changes found.</p>
 		{/if}
 	{/each}
-</div>
+</main>

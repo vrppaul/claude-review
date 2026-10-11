@@ -22,6 +22,8 @@
 
 	const shown = $derived(side === 'old' ? drawn.line.old_number : drawn.line.new_number);
 	const isRowStop = $derived(reach === 'row-stop');
+	// The same line as the row's stop beside it: a target for the pointer, said once, by that stop
+	const pointerOnly = $derived(reach === 'pointer');
 	// A number that takes no comment says why, but is not disabled: the browser
 	// moves no focus onto a disabled button, and j and k would stop at it for good
 	const refusal = $derived(commenting.whyNot(drawn.place));
@@ -42,10 +44,11 @@
 		type="button"
 		data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
 		data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
-		data-place={reach === 'pointer' ? undefined : drawn.key}
+		data-place={pointerOnly ? undefined : drawn.key}
 		data-tour={isRowStop ? 'line-number' : undefined}
 		class="cr-gutter-button"
-		tabindex={reach === 'pointer' ? -1 : 0}
+		tabindex={pointerOnly ? -1 : 0}
+		aria-hidden={pointerOnly ? 'true' : undefined}
 		aria-label="Comment on {lineInWords(drawn.place)}"
 		aria-disabled={refusal === null ? undefined : 'true'}
 		title={refusal ?? undefined}

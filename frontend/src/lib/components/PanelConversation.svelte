@@ -54,7 +54,15 @@
 	});
 </script>
 
-<div data-testid="panel-turns" bind:this={stream} onscroll={onScroll} class="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+<!-- A log: what the agent and the reader say is read out as it arrives, in order -->
+<div
+	data-testid="panel-turns"
+	role="log"
+	aria-label="Conversation with the agent"
+	bind:this={stream}
+	onscroll={onScroll}
+	class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+>
 	<!-- Work showing outranks the empty state: an agent doing something
 		before anybody has said anything is exactly the case a reader has
 		no other way of seeing. -->
