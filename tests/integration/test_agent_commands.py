@@ -16,17 +16,25 @@ from click.testing import CliRunner, Result
 from httpx import AsyncClient
 
 from claude_review.cli.main import main
-from claude_review.presentation.wire.agent import ProgressStep
+from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
+from claude_review.presentation.wire.pushes import PointPush, Push, ReplyPush
+from claude_review.presentation.wire.session import Delivery
 from tests.helpers import (
+    CATCH_UP_ROUTE,
+    FIRST_THREAD_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
     ReviewServers,
     RunningReview,
+    line_on_the_wire,
+    message_said,
     one_line_file,
     opening_of,
     repository_opening,
+    thread_on_the_wire,
 )
+from tests.page_socket import PageSocket, page_socket_held
 
 # What a command that ran and failed exits with
 FAILED = 1
@@ -40,6 +48,18 @@ CONTROL_CATEGORY = "Cc"
 # What a terminal is meant to act on in printed text: a new line, a tab
 MEANT = "\n\t"
 MESSAGE_ROUTE = "/api/message"
+ASK_ROUTE = "/api/ask"
+
+# An answer in Markdown, which the shell would mangle inside double quotes: it
+# runs the code spans and empties the price
+MARKDOWN = "Renamed `parse_hunk` to `read_hunk`; it costs $5 less — готово.\n\n- one\n- two"
+# What stands for stdin where text is wanted
+FROM_STDIN = "-"
+# A heredoc ends what it hands over with a line break of its own
+FROM_A_HEREDOC = f"{MARKDOWN}\n"
+# How long a push takes to reach the page, at most, and how many to read past to it
+PUSH_SECONDS = 10.0
+PUSHES_READ = 5
 
 
 @pytest.fixture
@@ -48,9 +68,21 @@ async def review(servers: ReviewServers) -> RunningReview:
     return await servers.start(opening_of([one_line_file()]))
 
 
-async def _run(review: RunningReview, command: str, *arguments: str) -> Result:
-    """Run one of the agent's commands against the review, as the agent types it."""
-    return await asyncio.to_thread(CliRunner().invoke, main, [command, "--port", str(review.port), *arguments])
+async def _run(review: RunningReview, command: str, *arguments: str, typed: str | None = None) -> Result:
+    """Run one of the agent's commands against the review, as the agent types it, with what it pipes in."""
+    return await asyncio.to_thread(
+        CliRunner().invoke, main, [command, "--port", str(review.port), *arguments], input=typed
+    )
+
+
+async def _next_push[PushT: Push](page: PageSocket, kind: type[PushT]) -> PushT:
+    """Read what the review pushes to the page, on a thread, until a push of one kind arrives."""
+    for _ in range(PUSHES_READ):
+        said = message_said(await asyncio.to_thread(page.receive, timeout=PUSH_SECONDS))
+        if isinstance(said, Delivery) and isinstance(said.push, kind):
+            return said.push
+    failure = f"no {kind.__name__} arrived"
+    raise AssertionError(failure)
 
 
 def _controls_in(printed: str) -> list[str]:
@@ -154,3 +186,42 @@ async def test_a_file_named_with_a_control_is_printed_to_be_read_never_obeyed(
     assert result.exit_code == 0, result.output
     assert _controls_in(result.output) == []
     assert json.loads(result.output)["changes"]["paths"] == [named]
+
+
+async def test_what_is_said_can_come_from_stdin_as_written(review: RunningReview) -> None:
+    """A quoted heredoc hands Markdown over untouched, where double quotes would run its code spans."""
+    result = await _run(review, "say", FROM_STDIN, typed=FROM_A_HEREDOC)
+    async with AsyncClient(base_url=review.url) as page:
+        seen = CatchUpResponse.model_validate_json((await page.get(CATCH_UP_ROUTE)).content)
+
+    assert result.exit_code == 0, result.output
+    assert [entry.body for entry in seen.panel] == [MARKDOWN]
+
+
+async def test_the_work_can_come_from_stdin_as_written(review: RunningReview) -> None:
+    result = await _run(review, "progress", FROM_STDIN, typed=FROM_A_HEREDOC)
+    work = (await _facts(review)).work
+
+    assert result.exit_code == 0, result.output
+    assert work is not None
+    assert work.text == MARKDOWN
+
+
+async def test_an_answer_can_come_from_stdin_as_written(review: RunningReview) -> None:
+    asked = {"question_id": FIRST_THREAD_ID, "thread": thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why?")}
+    async with AsyncClient(base_url=review.url) as reader, page_socket_held(review.port) as page:
+        await reader.post(ASK_ROUTE, json=asked)
+        result = await _run(review, "reply", "--thread", FIRST_THREAD_ID, FROM_STDIN, typed=FROM_A_HEREDOC)
+        answered = await _next_push(page, ReplyPush)
+
+    assert result.exit_code == 0, result.output
+    assert answered.body == MARKDOWN
+
+
+async def test_a_thread_raised_can_say_what_it_says_from_stdin_as_written(review: RunningReview) -> None:
+    async with page_socket_held(review.port) as page:
+        result = await _run(review, "point", "--file", REVIEWED_FILE, "--lines", "1", FROM_STDIN, typed=FROM_A_HEREDOC)
+        raised = await _next_push(page, PointPush)
+
+    assert result.exit_code == 0, result.output
+    assert raised.body == MARKDOWN

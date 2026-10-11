@@ -52,8 +52,8 @@ def unused_port() -> str:
         return str(probe.getsockname()[1])
 
 
-def _run(*arguments: str) -> Result:
-    return CliRunner().invoke(main, list(arguments))
+def _run(*arguments: str, typed: str | bytes | None = None) -> Result:
+    return CliRunner().invoke(main, list(arguments), input=typed)
 
 
 def _failed_in_a_line(result: Result, exit_code: int) -> bool:
@@ -254,3 +254,17 @@ def test_work_shown_by_its_branches_alone_is_sent(unused_port: str, branch: list
 
     assert _failed_in_a_line(result, FAILED)
     assert NO_REVIEW in result.output
+
+
+@pytest.mark.parametrize(
+    ("piped", "reason"), [("", "would refuse"), (b"\xff\xfe not text", "UTF-8")], ids=["nothing", "not-text"]
+)
+def test_what_stdin_hands_over_is_read_against_the_reviews_rule(
+    unused_port: str, piped: str | bytes, reason: str
+) -> None:
+    """Text from stdin is the typist's as much as an argument is: a mistake in it is said for the argument."""
+    result = _run("say", "--port", unused_port, "-", typed=piped)
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "'BODY'" in result.output
+    assert reason in result.output

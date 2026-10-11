@@ -178,8 +178,16 @@ somebody who is waiting.
 
 6. Answer in the thread it belongs to, naming the question:
    ```bash
-   claude-review reply --port <port> --thread <thread_id> --question <question_id> "..."
+   claude-review reply --port <port> --thread <thread_id> --question <question_id> - <<'EOF'
+   ...
+   EOF
    ```
+   The `-` reads the answer from stdin, here a quoted heredoc closed by `EOF`
+   alone at the start of its line, and everything you write below goes in
+   the same way: inside double quotes the shell runs whatever sits in
+   backticks and empties every `$name`, and an answer in Markdown is full of
+   both.
+
    A thread can have more than one question waiting at once, which is why the
    answer names one: without it the answer is filed under whatever was asked
    last. Answer from what you know about this change — why you wrote it that
@@ -188,7 +196,9 @@ somebody who is waiting.
 
 7. Answer a panel message, naming the message:
    ```bash
-   claude-review say --port <port> --message <message_id> "..."
+   claude-review say --port <port> --message <message_id> - <<'EOF'
+   ...
+   EOF
    ```
    The panel is one conversation, so the answer lands under the message it
    names — and naming it is also what closes it: a message answered without
@@ -206,8 +216,10 @@ somebody who is waiting.
    Leave `--message` out and you are speaking first, which is worth as much
    as answering:
    ```bash
-   claude-review say --port <port> "Both are green now — the second one needed
-   the base read from the round rather than from the diff."
+   claude-review say --port <port> - <<'EOF'
+   Both are green now — the second one needed the base read from the round
+   rather than from the diff.
+   EOF
    ```
    Work that finished while the reader was reading is news they would
    otherwise have to come and ask for. It arrives with a dot on the header
@@ -216,7 +228,9 @@ somebody who is waiting.
 8. Say what you are doing, while you are doing it:
    ```bash
    claude-review progress --port <port> --message <message_id> \
-     --file src/a.py --file src/b.py "rewriting the answer handler"
+     --file src/a.py --file src/b.py - <<'EOF'
+   rewriting the answer handler
+   EOF
    ```
    Waiting says only that something is happening; this says what. Send it
    again to change it — it replaces what was showing rather than adding to it.
@@ -236,7 +250,9 @@ somebody who is waiting.
 
    Two more, for what a paragraph cannot do:
    ```bash
-   claude-review say --port <port> --file src/a.py "Renamed it here."
+   claude-review say --port <port> --file src/a.py - <<'EOF'
+   Renamed it here.
+   EOF
    claude-review show --port <port> --file src/a.py
    ```
    `say --file` offers a jump the reader takes when they want it. `show`
@@ -262,7 +278,9 @@ somebody who is waiting.
 10. Point at a line, when what you have to say belongs on the code:
     ```bash
     claude-review point --port <port> --file src/x.py --lines 118-130 \
-      --severity question "I kept the old name here: renaming it broke two callers."
+      --severity question - <<'EOF'
+    I kept the old name here: renaming it broke two callers.
+    EOF
     ```
     Use it for what a paragraph in the panel would bury — where you did
     something other than what was asked, and why. It becomes an ordinary

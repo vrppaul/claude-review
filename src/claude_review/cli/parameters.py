@@ -17,6 +17,14 @@ from claude_review.presentation.wire.base import MAX_FILES_NAMED, AgentText, Wir
 
 # What joins the first line of a range to its last
 RANGE_SEPARATOR = "-"
+# What stands for stdin where text is wanted, as it does for `git commit -F -`,
+# and stdin as click names it among the process's streams
+FROM_STDIN = "-"
+STDIN = "stdin"
+# What text piped in is written in, and the line break a heredoc or an echo
+# ends it with: the shell's, not part of what was said
+STDIN_ENCODING = "utf-8"
+TRAILING_LINE_BREAK = "\n"
 
 
 class CheckedParameter(click.ParamType):
@@ -34,14 +42,33 @@ class CheckedParameter(click.ParamType):
             self.fail(f"the review would refuse {value!r}: {_reasons(invalid)}", param, ctx)
 
 
+class TextParameter(CheckedParameter):
+    """Text read against the rule the review holds it to, from stdin when it is given as "-".
+
+    Inside double quotes the shell runs whatever sits in backticks and empties
+    every `$name`, and an answer in Markdown is full of both. Piped in from a
+    quoted heredoc, it arrives as it was written.
+    """
+
+    @override
+    def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        if value != FROM_STDIN:
+            return super().convert(value, param, ctx)
+        try:
+            piped = click.get_binary_stream(STDIN).read().decode(STDIN_ENCODING)
+        except UnicodeDecodeError:
+            self.fail(f"what stdin handed over is not {STDIN_ENCODING.upper()} text", param, ctx)
+        return super().convert(piped.removesuffix(TRAILING_LINE_BREAK), param, ctx)
+
+
 # An id the review gave out: a thread, a question, a message
 ID = CheckedParameter("id", TypeAdapter[str](WireId))
 # A file as the diff names it
 FILE = CheckedParameter("path", TypeAdapter[str](FilePath))
 # What the agent says: words that say something
-SAID = CheckedParameter("text", TypeAdapter[str](AgentText))
+SAID = TextParameter("text", TypeAdapter[str](AgentText))
 # What the agent is doing, and what that has branched into
-WORK = CheckedParameter("text", TypeAdapter[str](ProgressText))
+WORK = TextParameter("text", TypeAdapter[str](ProgressText))
 STEP = CheckedParameter("text", TypeAdapter[str](StepText))
 # What the agent says about itself
 STATUS = CheckedParameter("text", TypeAdapter[str](StatusText))

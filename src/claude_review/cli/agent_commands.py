@@ -96,8 +96,8 @@ def reply_command(*, client: ReviewClient, thread: str, question: str | None, bo
     """Answer a question the reader asked about a comment thread.
 
     A thread can have several questions waiting at once, so naming the one
-    being answered is what puts the answer under it rather than under
-    whatever was asked last.
+    being answered is what puts the answer under it rather than under the
+    oldest one still waiting. BODY given as - is read from stdin.
     """
     client.reply(ReplyRequest(thread_id=thread, question_id=question, body=body))
 
@@ -150,7 +150,7 @@ def say_command(*, client: ReviewClient, message: str | None, files: tuple[str, 
     it. Naming the message is what puts an answer under it: several can be
     waiting, and the reader is still reading while you write. Name nothing
     and you are speaking first — worth doing when you have finished
-    something they are waiting on.
+    something they are waiting on. BODY given as - is read from stdin.
     """
     client.say(SayRequest(message_id=message, body=body, files=list(files)))
 
@@ -193,7 +193,8 @@ def progress_command(
 
     Send it again to change it — it replaces what was showing rather than
     adding to it, because it is the state of the work and not a log of it.
-    Send it with --done, or answer, and the whole thing goes away.
+    Send it with --done, or answer, and the whole thing goes away. TEXT
+    given as - is read from stdin.
     """
     if done:
         if message is not None or files or steps or finished or text:
@@ -277,7 +278,7 @@ def point_command(
     something other than what was asked, and why. The reader reads it as an
     ordinary thread — answers it, settles it, removes it — but it is drawn
     as yours, and it is not counted as their unsent work. Prints the id the
-    thread was given.
+    thread was given. BODY given as - is read from stdin.
     """
     anchor = LineAnchor(file=path, side=side, start_line=lines.first, end_line=lines.last)
     raised = client.point(PointRequest(anchor=anchor, body=body, severity=severity))
