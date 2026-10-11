@@ -140,10 +140,12 @@ class AnchorKind(StrEnum):
     LINE = auto()
 
 
-# What a file path may hold. A newline in one would let a filename write its
-# own heading in the review — a whole fabricated section, blocker and all, in
-# what the agent reads. Git quotes such names, and the parser faithfully
-# decodes them.
+# What a file path a thread may name, or the agent may say, holds: no control
+# character. A newline in one would let a filename write its own heading in
+# the review — a whole fabricated section, blocker and all, in what the agent
+# reads — and a tab or an escape has no place in a heading or a chip either.
+# Git quotes such names and the parser faithfully decodes them, so the diff
+# still shows such a file; it only takes no thread (`DiffFile.commentable`).
 SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
 
 # The longest path a file system here hands out

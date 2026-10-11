@@ -166,8 +166,10 @@ somebody who is waiting.
      waiting. An `Image: /path` line under a comment or a turn is a
      screenshot pasted there: open it before answering what it came with.
    - `{"type":"cancel","cancel":{"message_id":"panel-1"}}` — the user has
-     taken a message back. Drop what you were doing for it if you still can,
-     and say nothing about it unless it is already half done.
+     taken back something they asked: a panel message, named by its
+     `message_id`, or a question asked in a thread, whose `question_id` the
+     same field then carries. Drop what you were doing for it if you still
+     can, and say nothing about it unless it is already half done.
    - `{"type":"timeout"}` — nothing was asked. Only a `wait` without
      `--until-event` prints it, after `--seconds`; wait again.
    - `{"type":"closed"}` — the review is over. Stop looping. The last round

@@ -9,6 +9,35 @@
   back, or reloading the page brings it back as it was, without taking the
   cursor. Several comments can be started in one file, each on its own lines,
   as on GitHub; picking lines that already have one brings that one back.
+- **Context opens up or down by twenty lines, or all at once, and below the
+  last change.** Each gap between hunks offers ↑ 20, ↓ 20 and "Show all", as
+  GitHub does, and a file's end has a gap of its own. "Show all" over a long
+  gap reads it in pieces the server returns whole, so no line goes missing.
+- **The page says when its review cannot be reached.** A bar under the
+  header says it is trying again and that nothing is sent until the review
+  is back; Send, End and the panel wait meanwhile. A request nothing
+  answered says so in words, once.
+- **Words being typed and a thread are never dropped without asking.**
+  Escape or Cancel on a comment that holds something, and Delete on a
+  thread, ask first.
+- **A moved file says where it was** — "old → new" in the tree and over the
+  file — and a file that became a link says "file → link".
+- **A question asked in a thread can be taken back**, as a panel message
+  can; the panel's "Stop" now reads "Take back". Once the agent has stopped
+  listening, one set of words says so.
+- **A screen reader finds the diff, each file, each thread and what the
+  agent says**: the diff is the page's main part, each file and thread is
+  named, the panel's turns are a log, new answers are said as they arrive,
+  and the column grips are window splitters.
+- **The agent's `@path:12-39` in the panel is a chip**, as a reader's is.
+- **What the agent says can be piped in.** `say`, `reply`, `point` and
+  `progress` read their text from stdin given `-`, and the skill hands it
+  over from a quoted heredoc, so backticks and `$` in an answer stay as
+  written rather than being run by the shell.
+- **A thread read in full lists its images as files to open**
+  (`catch-up --thread`).
+- **`GET /api/threads`** says the threads the review holds; a page that
+  opens with no draft of its own starts from them.
 
 ### Changed
 - **Every menu is one kind of pane, with an arrow pointing at what opened
@@ -26,13 +55,17 @@
   ago", "2d ago". A question waited on for an hour said "asked 3600s ago",
   and a base taken a moment ago "0m ago". One clock ticks for the whole
   review, and only while something on screen says how long ago.
-- **Colours keep to one meaning each.** A warning — the tree moved on, a
+- **Colours keep to one meaning each.** Blue is the reader's: what they
+  marked, and the controls they act with. Violet is the agent's: what it
+  raised, said or brought the reader to, and what of it is not read yet —
+  an answer arriving, a thread it raised, a file it showed, the branches of
+  its work, which used to wear the reader's blue. Green and red are what the diff added and
+  removed, and green also what is done; a warning — the tree moved on, a
   blocker — is yellow; orange is a modified file's letter alone; a moved
-  file's R is quiet grey rather than the reader's blue; the agent at work
-  is violet, its own colour, in the header and the panel alike, where the
-  two dots used to disagree. A chip saying the
-  reader sees less than the whole diff — a narrower base, whitespace hidden
-  — takes their mark's tint and reads plainly.
+  file's R is quiet grey. A chip saying the reader sees less than the whole
+  diff — a narrower base, whitespace hidden — takes their mark's tint and
+  reads plainly. Every word on the page reads at 4.5:1 or better, in both
+  themes.
 - **The @-picker is a list to a screen reader**, which hears which thread
   or file is highlighted as the arrow keys move; the comment fields and the
   file filter say what they are.
@@ -63,13 +96,14 @@
 - **The diff and the reader's records on the wire.** A diff line says its
   `kind`, `old_number` and `new_number` (were `type`, `old_no`, `new_no`).
   `GET /api/settings` and `GET /api/guide` answer `{record, stored}` (were
-  `{settings, stored}` and `{guide, stored}`). `/api/diff` names the key of
-  the base in force and of the review's own (`base_key`, `review_key`), and a
-  retake names the key that shows what changed since its round.
+  `{settings, stored}` and `{guide, stored}`). `/api/diff` names the base it
+  was taken against in one field, `base: {key, phrase, narrowed}` — null in a
+  review that is compared against nothing — and a retake names the key that
+  shows what changed since its round.
 - **What the review is, apart from its diff.** `GET /api/review` says the
   title, mode, round, whether an agent is attached and what it last said of
   itself, the limits and the release; `/api/diff` carries only the diff
-  against a base (files, phrase, keys, moved). The `diff` push says how many
+  against a base (files, base, moved). The `diff` push says how many
   files the review now holds, so a page reading a narrower base counts the
   review rather than its screen.
 - **A thread's `where` is plain text for the agent**: `src/a.py:42-47`,
@@ -112,6 +146,68 @@
   serves `404`, rather than by the page's file server: the page is served at
   `/` and its files under `/assets` only, so `/index.html` and `HEAD /` are
   no longer answered.
+- **The review's base is the commit it opened on.** An agent's commit during
+  a review of uncommitted changes used to empty the diff and mark every
+  thread outdated; under `--base HEAD~1` the commit under review left the
+  screen as more were made. The base is now read once, as the review opens,
+  and every later diff is taken against that commit. A tag on anything but
+  a commit is no longer offered as a base, and a base that names no commit
+  is refused in one line.
+- **Each review keeps its own draft, and which files were read and folded.**
+  The draft is kept under the review's own name — its repository and base —
+  so a second review on the same port no longer overwrites the first's
+  unsent work, and a reload no longer un-ticks every file. The draft 1.5.0
+  kept is picked up once, by the first review of its title. A draft that
+  cannot be brought up to date stops the page with words rather than
+  opening it empty, and stays where it was kept.
+- **Ending a review sends what was not sent yet as the final review**, and
+  a comment still open in its field goes with any round or review, listed
+  in the finishing pane. A round marks sent only what it carried, and a
+  summary rewritten while it was on its way is kept.
+- **A thread the agent raised stays the agent's**: it offers no Edit and no
+  Delete, and the server refuses a round, a question or a message that
+  changes its opening (`422`).
+- **The agent's two takes are `POST`**: `POST /api/events` and `POST
+  /api/catch-up/threads/{id}`; a `GET` there is answered `405`. The agent's
+  commands are unchanged.
+- **What the agent names twice is named once.** A file or a step named
+  twice in `say` or `progress` is refused (`422`, naming it). The command
+  line sends a file typed twice once, refuses a step both done and under
+  way, and says a list longer than the review takes as a usage error naming
+  the option rather than a traceback.
+- **An answer to a thread, or a jump to a file, the review does not hold is
+  refused** (`404`, one line from the command) rather than taken.
+- **`progress` with nothing to show is refused**: it needs words or a
+  branch, or `--done` on its own; a file alone used to clear the work.
+- **What the reader or the repository wrote is printed to be read, never
+  obeyed**: a terminal's own controls in a thread, a file's name or a
+  failure come out written, as `\u001b`.
+- **A transcript's turns are named by their entries' own ids** — "user
+  f260656f" — the same in every time zone; the name no longer says the time.
+- **A file over 4 MiB is shown as binary**, without its lines, and the diff
+  is read off the server's event loop, so the review answers its pages
+  while a large one is read.
+- **A file whose name holds a control character is shown, read-only**: a
+  thread on it would have had its whole round refused.
+- **The diff keeps a width it can be read at.** The panel, and on a narrower
+  screen the tree, lie over the diff rather than squeezing it; the header
+  and each file's header wrap.
+- **Links in rendered Markdown open in a tab of their own**, and a relative
+  one is text: a click used to take the tab away, and the review ended
+  three seconds later. The page asks before it is left with something
+  unsent. An image in Markdown is named in its line and never fetched; an
+  absolute one is a link.
+- **Only the answers not yet read are drawn new**, not every answer of a
+  thread with one unread.
+- **A reader who asked for less motion gets none**: no animation, no
+  transition, no smooth scroll.
+- **The review serves no description of its API** (`/docs`, `/redoc`,
+  `/openapi.json`); the page is asked for again whenever it is opened, so
+  an upgrade serves the new one, and its built files are kept for good. The
+  page's inline script is allowed by its hash, not by `'unsafe-inline'`.
+- **A request found wrong is refused field by field**, without what was
+  sent echoed back; the page knows the longest text the server takes, and
+  its fields stop there.
 
 ### Fixed
 - **`n` and `p` go on from the thread you are at.** `p` before any thread
@@ -164,13 +260,75 @@
 - **A path the review asks git about is that path, never a pattern.** An
   untracked file named like `[ab].py` passed for the tracked `a.py` it
   matched, so the context of a hunk could be widened into it.
-- **A review sent for good lets go of its page's socket.** A tab left open
+- **A review that is over lets go of its page.** It tells its page so as
+  it ends: sent for good, stopped, or replaced by another review on the
+  same port, each with a bar that says which, and the page connects no
+  more. A tab left open
   after the review used to connect to whatever review ran next on the same
   port, tell it the old review's round and threads, and hold it open after
   its own tab was closed.
 - **Threads brought back from a draft follow the diff the review opens on.**
   A reload while a retake was moving them, or a move that failed, used to
   leave them on their old lines.
+- **A page on another port of this machine can no longer reach the
+  review.** A request that carries no Origin — a no-cors fetch, an image —
+  got in: it could take what the reader handed the agent, light "agent
+  attached", and hold enough connections that the review's own page could
+  not load. Such a request is refused by what the browser says of where it
+  came from, and the guard's own refusals carry the review's security
+  headers.
+- **A drag across lines the diff leaves out stops at the last line drawn.**
+  The comment's heading named the whole range while it quoted only the
+  lines shown, and an agent applying its suggestion deleted the rest. The
+  server refuses a thread that quotes fewer lines than it names.
+- **One broken part of the page leaves the rest on screen**, saying what
+  broke and offering "Try again"; a step or a file the agent named twice
+  used to blank the panel, and after a reload the whole page.
+- **A file that became a link, or a link that became a file, is one file**;
+  as two under one path the page drew nothing at all.
+- **A diff taken again with nothing in it keeps the review around it**: the
+  header, Send, End and the panel stayed away.
+- **A thread whose line is not on screen is drawn at its file's head**, as
+  after a retake turns its removed line back into context.
+- **A new diff keeps the reader on the line they were reading**, not in the
+  file above it.
+- **A repository whose path holds a colon shows its changes**; every file it
+  tracks read as added.
+- **A reader's `core.safecrlf` no longer stops a review from opening**, and
+  Ctrl+C or `kill` while it opens leaves nothing in the temporary directory.
+- **Context widened in a file with a lone carriage return is numbered as git
+  numbers it**, and a link in the review is never widened into the file it
+  points at.
+- **A transcript with U+2028 in a message is read**, rather than refused
+  whole.
+- **A file made runnable after the diff was taken is said to have moved.**
+- **"Changed since round N" counts from where round N opens**, when the
+  diff was taken more than once in it.
+- **Images pasted and never sent go when the review ends**; only those the
+  agent was handed stay for it.
+- **Lines quoted or suggested with a run of backticks in them stay inside
+  their fence**: a quoted `` ``` `` closed it, and the rest read as the
+  round's own Markdown.
+- **A word mark never falls inside an emoji or a wide character.**
+- **Dropping a mention from a message keeps every other space in it**, code
+  indentation among them.
+- **The keyboard goes with the reader.** `n`, `p` and every control that
+  takes the reader to a thread move the keyboard there too, and a row of
+  the finishing pane leaves them where it took them. `v` and `u` act on the
+  file a jump landed on. The keys list opens over a pane, which stays open
+  under it. An agent arriving never takes the keyboard from a field being
+  typed in, the @-picker keeps its highlighted option in view, keys an input
+  method is composing a word with are never the page's, a line's number
+  answers a click with no press behind it, and after a comment is saved,
+  put away, resolved or deleted the keyboard lands on what remains.
+- **The tour moves on once the page shows what the reader did**, and counts
+  its stops one way.
+- **A thread id no page could give costs only that thread**; it closed the
+  page's socket.
+- **A page with no draft takes the review's threads in**, and a thread the
+  agent raised outlives any page; a page opened in another browser used to
+  drop every thread.
+- **A long line of a suggestion scrolls** instead of being cut off.
 
 ## [1.5.0] - 2026-10-05
 
