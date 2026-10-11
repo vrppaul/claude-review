@@ -85,8 +85,7 @@ const NO_NESTED_HELPERS = [
 // is added to them, and nothing new is written that would need to be.
 const STILL_TO_CLEAN = {
 	shortNames: ['FileList', 'KeyboardShortcuts'],
-	magicNumbers: ['FileList'],
-	tooLong: ['CommentThread']
+	magicNumbers: ['FileList']
 };
 
 /** Where a component still to clean is. */
@@ -216,10 +215,6 @@ export default tseslint.config(
 		rules: { 'no-restricted-globals': ['error', ...REQUEST_CALLERS] }
 	},
 	{ files: componentFiles(STILL_TO_CLEAN.shortNames), rules: { 'id-length': 'off' } },
-	{
-		files: componentFiles(STILL_TO_CLEAN.tooLong),
-		rules: { 'max-lines': 'off' }
-	},
 	{
 		ignores: ['node_modules/', 'dist/']
 	}

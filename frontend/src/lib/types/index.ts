@@ -54,7 +54,7 @@ export type ReviewVersion = Schemas['ReviewVersion'];
 export type AgentStatus = Schemas['AgentStatus'];
 
 /** Who wrote a turn: the reader, or whoever answers for the change. */
-type TurnAuthor = Schemas['TurnAuthor'];
+export type TurnAuthor = Schemas['TurnAuthor'];
 
 export interface Turn {
 	author: TurnAuthor;
@@ -232,7 +232,7 @@ export interface FollowOutcome {
 }
 
 /** Who speaks in the panel. An event is the review itself saying so. */
-type PanelSpeaker = TurnAuthor | 'event';
+export type PanelSpeaker = TurnAuthor | 'event';
 
 /**
  * One turn of the panel conversation.

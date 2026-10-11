@@ -99,6 +99,16 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.unread.length).toBe(0);
 	});
 
+	it('reads an answer the keyboard comes to, as one the mouse clicks on', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.receiveReply(id, 'It moved into the config default', null);
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		getByTestId('edit-comment').focus();
+
+		expect(review.threads.unread).toHaveLength(0);
+	});
+
 	it('keeps every turn rather than overwriting the last one', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 

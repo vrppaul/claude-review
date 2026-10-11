@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { AGENT } from '$lib/utils/speakers';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
@@ -18,7 +19,7 @@
 
 	/** What the agent last said in a thread. */
 	function lastAnswer(thread: Thread): string {
-		return thread.turns.findLast((turn) => turn.author === 'author')?.body ?? '';
+		return thread.turns.findLast((turn) => turn.author === AGENT)?.body ?? '';
 	}
 
 	function goTo(thread: Thread) {

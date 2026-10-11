@@ -34,7 +34,7 @@
 
 <!-- What hangs under a line: its threads, and the comments being written there -->
 {#each commenting.threadsUnder(place) as thread (thread.id)}
-	<CommentThread comment={thread} />
+	<CommentThread {thread} />
 {/each}
 {#each commenting.fieldsUnder(place) as field (field.key)}
 	<div class="px-3 py-2">

@@ -30,10 +30,11 @@ import type {
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { threadOnTheWire } from '$lib/api/thread-wire';
+import { AGENT, READER } from '$lib/utils/speakers';
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
 function lastAnsweredAt(thread: Thread): number {
-	return thread.turns.findLast((turn) => turn.author === 'author')?.at ?? 0;
+	return thread.turns.findLast((turn) => turn.author === AGENT)?.at ?? 0;
 }
 
 /**
@@ -44,7 +45,7 @@ function lastAnsweredAt(thread: Thread): number {
  */
 function questionIdOf(thread: Thread): string {
 	const last = thread.turns.at(-1);
-	return last?.author === 'reader' ? last.id : thread.id;
+	return last?.author === READER ? last.id : thread.id;
 }
 
 /** What a file with no threads holds. */
@@ -142,7 +143,7 @@ export class Threads {
 			body,
 			images,
 			turns: [],
-			raised_by: 'reader',
+			raised_by: READER,
 			resolved: false,
 			round: this.#rounds.current,
 			at: Date.now()
@@ -167,7 +168,7 @@ export class Threads {
 			body,
 			images: [],
 			turns: [],
-			raised_by: 'author',
+			raised_by: AGENT,
 			resolved: false,
 			round: this.#rounds.current,
 			at: Date.now()
@@ -269,7 +270,7 @@ export class Threads {
 		const answers = questionId ?? this.reading.awaiting(id)[0]?.id;
 		const turn: Turn = {
 			id: this.#turnIds.next(),
-			author: 'author',
+			author: AGENT,
 			body: text,
 			round: this.#rounds.current,
 			at: Date.now(),
@@ -359,7 +360,7 @@ export class Threads {
 				return this.add({ anchor: lineAnchor(at.file, side, startLine, endLine, at.quote), body, severity, images });
 			}
 			case 'reply':
-				this.addTurn(at.thread, { author: 'reader', body, images });
+				this.addTurn(at.thread, { author: READER, body, images });
 				return at.thread;
 			case 'edit':
 				this.update(at.thread, body, severity, images);

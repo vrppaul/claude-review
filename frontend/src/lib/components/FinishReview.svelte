@@ -3,6 +3,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { raisedByAgent } from '$lib/utils/speakers';
 
 	const review = useReview();
 
@@ -58,7 +59,7 @@
 								{#if thread.severity !== 'note'}
 									<span class="cr-severity cr-severity-{thread.severity}">{thread.severity}</span>
 								{/if}
-								{#if thread.raised_by === 'author'}
+								{#if raisedByAgent(thread)}
 									<span class="cr-severity cr-raised-tag">agent</span>
 								{/if}
 								{#if thread.resolved}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
 	import Icon from './Icon.svelte';
@@ -92,7 +93,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 	{:else}
 		<div class="flex flex-col gap-3">
 			{#each review.conversation.turns as turn (turn.id)}
-				{#if turn.author === 'event'}
+				{#if turn.author === THE_REVIEW}
 					{@const raised = threadNamed(turn.threads?.[0])}
 					<div data-testid="panel-event" class="cr-round-mark">
 						<span></span>
@@ -110,7 +111,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						{/if}
 						<span></span>
 					</div>
-				{:else if turn.author === 'reader'}
+				{:else if turn.author === READER}
 					<div data-testid="panel-said" class={['cr-panel-said rounded-r px-3 py-2', turn.cancelled && 'opacity-60']}>
 						<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
 						{#if turn.body}

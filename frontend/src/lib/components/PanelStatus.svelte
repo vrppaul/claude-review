@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
+	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
 
@@ -18,7 +19,7 @@
 	const working = $derived(review.conversation.working);
 	const presence = $derived<Presence>(!attached ? 'absent' : working ? 'working' : 'listening');
 	// When the agent last said anything, so silence can be read as silence
-	const lastAnswer = $derived(review.conversation.turns.findLast((turn) => turn.author === 'author')?.at);
+	const lastAnswer = $derived(review.conversation.turns.findLast((turn) => turn.author === AGENT)?.at);
 
 	/** How long ago, read off the review's clock, so it moves on while it is on screen. */
 	function since(at: number): string {

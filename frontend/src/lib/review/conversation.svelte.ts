@@ -15,6 +15,7 @@ import { PanelComposer } from '$lib/review/panel-composer.svelte';
 import type { Composer, Thread, PanelTurn } from '$lib/types';
 import { ANSWER_ID_PREFIX, EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
 import { threadOnTheWire } from '$lib/api/thread-wire';
+import { AGENT, READER, THE_REVIEW } from '$lib/utils/speakers';
 
 /**
  * The message the agent is still working on.
@@ -23,7 +24,7 @@ import { threadOnTheWire } from '$lib/api/thread-wire';
  * business, and two "working" lines in a conversation read as a fault.
  */
 function workingOn(turns: PanelTurn[]): PanelTurn | undefined {
-	const last = turns.findLast((turn) => turn.author === 'reader');
+	const last = turns.findLast((turn) => turn.author === READER);
 	if (!last || last.cancelled) return undefined;
 	return turns.some((turn) => turn.answers === last.id) ? undefined : last;
 }
@@ -77,7 +78,7 @@ export class Conversation {
 		const id = this.#messageIds.next();
 		this.#say({
 			id,
-			author: 'reader',
+			author: READER,
 			body: text,
 			at: Date.now(),
 			threads: threads.map((thread) => thread.id),
@@ -103,7 +104,7 @@ export class Conversation {
 	receive(messageId: string | null, text: string, files: string[]): void {
 		this.#say({
 			id: this.#answerIds.next(),
-			author: 'author',
+			author: AGENT,
 			body: text,
 			at: Date.now(),
 			...(messageId === null ? {} : { answers: messageId }),
@@ -121,7 +122,7 @@ export class Conversation {
 	note(body: string, threads: string[] = []): void {
 		this.#say({
 			id: this.#eventIds.next(),
-			author: 'event',
+			author: THE_REVIEW,
 			body,
 			at: Date.now(),
 			threads

@@ -28,6 +28,7 @@ import type {
 	WrittenAt
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
+import { READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
 export const DRAFT_SHAPE = 15;
@@ -266,7 +267,7 @@ function upToDateComment(kept: KeptComment, turnIds: IdSequence): ReadComment {
 			images: turn.images ?? []
 		})),
 		// Threads were all the reader's before the author could raise one
-		raised_by: kept.raised_by ?? 'reader',
+		raised_by: kept.raised_by ?? READER,
 		resolved: kept.resolved ?? false,
 		awaiting: kept.awaiting ?? [],
 		collapsed: kept.collapsed ?? false,
