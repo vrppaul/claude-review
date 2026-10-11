@@ -5,7 +5,8 @@ written from it, and draws requests for each route, the well formed and the
 malformed alike. Whatever it sends, the review answers or refuses — never a
 fault of its own — refuses what the schema does not allow, answers with the
 shapes and statuses the schema gives, and turns a method a route does not
-take away naming those it does.
+take away naming those it does. The agent's poll for events is drawn as
+every other route is, its wait cut to a moment.
 """
 
 from pathlib import Path
@@ -17,7 +18,9 @@ from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
 
+from claude_review.hosting.hosted_review import HostedReview
 from claude_review.presentation.api_schema import http_document
+from claude_review.presentation.wire.base import MAX_WAIT_SECONDS
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -35,8 +38,13 @@ from tests.helpers import (
 # review, that a range starts before it ends, that a message says something
 BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
-# The agent's long poll waits out whatever it is asked to, up to ten minutes
-schema = schemathesis.pytest.from_fixture("described_schema").exclude(path=EVENTS_ROUTE)
+schema = schemathesis.pytest.from_fixture("described_schema")
+
+# The agent's long poll waits out whatever it is asked to, up to ten
+# minutes: a wait drawn within its bounds is cut to this, and one drawn
+# outside them is left as drawn, to be refused
+LONGEST_DRAWN_WAIT_SECONDS = 0.001
+WAIT_PARAMETER = "wait_seconds"
 
 # An image is uploaded as its bytes, as any binary body is sent
 BINARY_MEDIA_TYPE = "application/octet-stream"
@@ -52,21 +60,25 @@ ADDED_TEXT = "def added() -> None:\n    return None\n"
 
 
 class ReviewsByOperation:
-    """A review for each operation drawn against, built the first time it is asked for.
+    """A review for each operation drawn against, built the first time it is asked for and again once it is over.
 
-    What one operation does — sending the review for good, ending it — must
-    not decide what the next one is sent to.
+    What one operation does must not decide what the next one is sent to.
+    A round sent for good ends its review, and every round drawn after it
+    would be refused as sent to a review that is over: the round's writing
+    would be reached once a run, by whichever round came first.
     """
 
     def __init__(self, reviews: ReviewFactory, opening: ReviewOpening) -> None:
         self._reviews = reviews
         self._opening = opening
-        self._apps: dict[str, FastAPI] = {}
+        self._hosted: dict[str, HostedReview] = {}
 
     def app_for(self, operation: str) -> FastAPI:
-        if operation not in self._apps:
-            self._apps[operation] = self._reviews.app(self._opening)
-        return self._apps[operation]
+        hosted = self._hosted.get(operation)
+        if hosted is None or hosted.review.lifetime.has_ended:
+            hosted = self._reviews.hosted(self._opening)
+            self._hosted[operation] = hosted
+        return hosted.app
 
 
 @pytest.fixture
@@ -95,7 +107,34 @@ async def reviews_of_a_repository(reviews: ReviewFactory, changed_repository: Pa
     return ReviewsByOperation(reviews, await repository_opening(changed_repository))
 
 
+def _seconds_drawn(value: object) -> float | None:
+    """A wait as the route reads it from the query — drawn as a number or as its text — or None for anything else."""
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def _a_moment_at_most(query: dict[str, object] | None) -> dict[str, object] | None:
+    """A poll's wait the route takes, cut to a moment; one it refuses, left to be refused.
+
+    A poll that names no wait waits the route's own, which is as long as any
+    other it takes.
+    """
+    drawn = query or {}
+    if WAIT_PARAMETER not in drawn:
+        return {**drawn, WAIT_PARAMETER: LONGEST_DRAWN_WAIT_SECONDS}
+    wait = _seconds_drawn(drawn[WAIT_PARAMETER])
+    if wait is None or not 0 < wait <= MAX_WAIT_SECONDS:
+        return query
+    return {**drawn, WAIT_PARAMETER: min(wait, LONGEST_DRAWN_WAIT_SECONDS)}
+
+
 def _answers_as_its_schema_says(case: Case, reviews_by_operation: ReviewsByOperation) -> None:
+    if case.operation.path == EVENTS_ROUTE:
+        case.query = _a_moment_at_most(case.query)
     case.call_and_validate(
         app=reviews_by_operation.app_for(case.operation.label),
         base_url=LOCAL_ORIGIN,
