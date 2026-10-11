@@ -4,7 +4,7 @@ import { threadsIn } from '$lib/anchors/mentions';
 import { anchorToken } from '$lib/anchors/views';
 import { formatWeight } from '$lib/review/weight';
 import type { Thread } from '$lib/types';
-import { contextLine, addedLine, diffFile, hunk } from './diff';
+import { contextLine, addedLine, diffFile, hunk, REVIEW_IDENTITY } from './diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -156,7 +156,7 @@ describe('the panel talks to the agent about the review', () => {
 		await say('and a message');
 		leavePage();
 
-		const kept = readDraft(TITLE);
+		const kept = readDraft(REVIEW_IDENTITY, TITLE);
 		expect(kept?.threads).toHaveLength(1);
 		expect(kept?.panel).toHaveLength(1);
 	});

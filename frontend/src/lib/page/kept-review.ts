@@ -20,6 +20,6 @@ export interface KeptReview {
  * unsent draft of it this browser kept — and keep its draft from then on.
  */
 export function openKeptReview(facts: ReviewResponse, firstDiff: DiffResponse, reader: ReaderParts): KeptReview {
-	const review = new Review({ facts, firstDiff, draft: readDraft(facts.title) }, reader);
+	const review = new Review({ facts, firstDiff, draft: readDraft(facts.identity, facts.title) }, reader);
 	return { review, stopKeeping: new DraftKeeper(review).start() };
 }

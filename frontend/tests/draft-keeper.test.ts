@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 import { flushSync } from 'svelte';
 import { readDraft } from '$lib/drafts/draft-storage';
 import type { Review } from '$lib/review/review.svelte';
-import { REVIEW_TITLE } from './diff';
+import { REVIEW_IDENTITY, REVIEW_TITLE } from './diff';
 import { newComment } from './new-comment';
 import { openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
@@ -38,7 +38,7 @@ describe('keeping the draft', () => {
 		vi.advanceTimersByTime(AFTER_A_PAUSE);
 
 		expect(draftWrites(written)).toBe(1);
-		expect(readDraft(REVIEW_TITLE)?.reviewBody).toBe('Overall');
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.reviewBody).toBe('Overall');
 	});
 
 	it('keeps it at once when the page goes', () => {
@@ -47,7 +47,7 @@ describe('keeping the draft', () => {
 
 		window.dispatchEvent(new Event('pagehide'));
 
-		expect(readDraft(REVIEW_TITLE)?.reviewBody).toBe('Overall fine');
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.reviewBody).toBe('Overall fine');
 	});
 
 	it('brings no draft back as the page goes with nothing waiting to be kept', () => {

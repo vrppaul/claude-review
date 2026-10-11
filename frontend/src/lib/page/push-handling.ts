@@ -109,11 +109,13 @@ function raise(review: Review, push: PointPush): void {
  * follows them, one whose lines are gone says so — whatever narrower base
  * is being read on screen. Which files changed is what takes the tick off
  * the ones the agent rewrote. A diff the page read after the retake is
- * already the retaken one: only the threads move.
+ * already the retaken one: only the threads move, and the ticks the draft
+ * kept from before it come off what it rewrote, with no news of a retake.
  */
 async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise<void> {
 	const moved = heard.factsHoldIt ? await review.followThreads() : await review.takeRetakenDiff();
-	if (!heard.factsHoldIt) review.noteRetake(moved, push.changes);
+	if (heard.factsHoldIt) review.reading.forgetRewritten(push.changes);
+	else review.noteRetake(moved, push.changes);
 	// The conversation is about code that has just changed under it, so the
 	// panel says where one lot of answers stops applying
 	review.conversation.note(retakenNote(push.file_count, moved));

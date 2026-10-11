@@ -23,8 +23,10 @@ import { stopsTogether } from '$lib/utils/stops';
 // almost nothing
 const KEPT_AFTER = 300;
 
-/** What a draft is kept for: a review's snapshot of it. */
+/** What a draft is kept for: a review's snapshot of it, and the name the review gives itself. */
 export interface Drafted {
+	/** What the review's draft is kept under. */
+	readonly identity: string;
 	/** The draft as the review now stands, or null once it is over. */
 	readonly draft: Draft | null;
 }
@@ -52,7 +54,7 @@ export class DraftKeeper {
 	#changed(draft: Draft | null): void {
 		this.#stopWaiting();
 		if (draft === null) {
-			forgetDraft();
+			forgetDraft(this.#review.identity);
 			return;
 		}
 		this.#waiting = setTimeout(() => this.#flush(), KEPT_AFTER);
@@ -67,7 +69,7 @@ export class DraftKeeper {
 		if (this.#waiting === null) return;
 		this.#stopWaiting();
 		const draft = this.#review.draft;
-		if (draft !== null) keepDraft(draft);
+		if (draft !== null) keepDraft(this.#review.identity, draft);
 	}
 
 	#stopWaiting(): void {

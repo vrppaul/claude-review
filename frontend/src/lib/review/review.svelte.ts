@@ -60,6 +60,8 @@ export interface ReaderParts {
 export class Review {
 	/** What is under review — which repository, and against what. */
 	readonly title: string;
+	/** What makes it the same review whenever it is opened: its draft is kept under it. */
+	readonly identity: string;
 	readonly mode: ReviewMode;
 	/** What the server takes: pasted images, and the lines one comment covers. */
 	readonly limits: SendLimits;
@@ -73,7 +75,8 @@ export class Review {
 	readonly telling: Telling;
 	readonly answerer: Answerer;
 	readonly diff: ReviewDiff;
-	readonly reading = new ReadingProgress();
+	/** How far the reader has got through the files. */
+	readonly reading: ReadingProgress;
 	readonly lastRetake = new LastRetake();
 	readonly threads: Threads;
 	readonly submission: Submission;
@@ -103,6 +106,7 @@ export class Review {
 
 	constructor({ facts, firstDiff, draft }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
+		this.identity = facts.identity;
 		this.mode = facts.mode;
 		this.limits = facts.limits;
 		this.settings = reader.settings;
@@ -110,11 +114,12 @@ export class Review {
 		this.sound = reader.sound;
 
 		// What the review picks up: the draft it opened from, or nothing yet
-		const kept = draft ?? emptyDraft(facts.title);
+		const kept = draft ?? emptyDraft();
 		this.rounds = new Rounds(facts.round);
 		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
+		this.reading = new ReadingProgress(kept.files);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
@@ -228,7 +233,6 @@ export class Review {
 	#snapshot(): Draft {
 		return {
 			version: DRAFT_SHAPE,
-			title: this.title,
 			threads: this.threads.all,
 			read: this.threads.reading.kept,
 			writing: this.threads.writing.kept,
@@ -237,7 +241,8 @@ export class Review {
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,
-			told: this.telling.heard
+			told: this.telling.heard,
+			files: this.reading.kept
 		};
 	}
 

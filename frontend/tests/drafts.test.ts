@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { emptyDraft } from '$lib/drafts/draft-shapes';
 import { forgetDraft, keepDraft, readDraft } from '$lib/drafts/draft-storage';
-import { REVIEW_TITLE } from './diff';
+import { REVIEW_IDENTITY, REVIEW_TITLE } from './diff';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -66,11 +66,39 @@ describe('an unsent review', () => {
 		review = openReview();
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 
-		review = openReview({ facts: { title: 'other-repo: changes since v1' } });
+		review = openReview({ facts: { title: 'other-repo: changes since v1', identity: 'another-review' } });
 		const count = review.restoredCount;
 
 		expect(count).toBe(0);
 		expect(review.threads.all).toEqual([]);
+	});
+
+	it('is kept apart from the draft of another review on the same port, though both have one title', () => {
+		const namesake = { facts: { identity: 'a-namesake-in-another-directory' } };
+		review = openReview();
+		review.threads.add(newComment({ file: 'a.py', body: 'mine' }));
+		review = openReview(namesake);
+		review.threads.add(newComment({ file: 'a.py', body: "the namesake's" }));
+
+		review = openReview();
+		const mine = review.threads.all.map((thread) => thread.body);
+		review = openReview(namesake);
+		const theirs = review.threads.all.map((thread) => thread.body);
+
+		expect(mine).toEqual(['mine']);
+		expect(theirs).toEqual(["the namesake's"]);
+	});
+
+	it('comes back with the files read and folded as they were left', () => {
+		review.reading.setViewed('read.py', true);
+		review.reading.toggleFolded('folded.py');
+
+		reload();
+
+		expect(review.reading.isViewed('read.py')).toBe(true);
+		expect(review.reading.isFolded('read.py')).toBe(true);
+		expect(review.reading.isFolded('folded.py')).toBe(true);
+		expect(review.reading.isViewed('folded.py')).toBe(false);
 	});
 
 	it('does not come back after it has been sent, though it was kept before', async () => {
@@ -80,7 +108,7 @@ describe('an unsent review', () => {
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 		flushSync();
 		window.dispatchEvent(new Event('pagehide'));
-		expect(readDraft(REVIEW_TITLE)?.threads).toHaveLength(1);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads).toHaveLength(1);
 
 		await review.submission.submit(true);
 
@@ -145,14 +173,14 @@ describe('an unsent review', () => {
 	it('ignores a draft that is not what it should be', () => {
 		localStorage.setItem(DRAFT_KEY, 'not json at all');
 
-		expect(readDraft(REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
 	});
 
 	it('is forgotten when asked', () => {
-		keepDraft({ ...emptyDraft(REVIEW_TITLE), reviewBody: 'Overall fine' });
+		keepDraft(REVIEW_IDENTITY, { ...emptyDraft(), reviewBody: 'Overall fine' });
 
-		forgetDraft();
+		forgetDraft(REVIEW_IDENTITY);
 
-		expect(readDraft(REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
 	});
 });

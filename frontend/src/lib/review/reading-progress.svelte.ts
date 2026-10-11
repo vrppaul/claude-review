@@ -8,11 +8,23 @@
 
 import { SvelteSet } from 'svelte/reactivity';
 
+import type { FilesRead } from '$lib/drafts/draft-shapes';
 import type { ChangesSince } from '$lib/types';
 
 export class ReadingProgress {
-	readonly #viewed = new SvelteSet<string>();
-	readonly #folded = new SvelteSet<string>();
+	readonly #viewed: SvelteSet<string>;
+	readonly #folded: SvelteSet<string>;
+
+	/** @param kept how far the reader had got in an unsent review of the same thing */
+	constructor(kept: FilesRead) {
+		this.#viewed = new SvelteSet(kept.viewed);
+		this.#folded = new SvelteSet(kept.folded);
+	}
+
+	/** How far the reader has got, as the draft keeps it. */
+	get kept(): FilesRead {
+		return { viewed: [...this.#viewed], folded: [...this.#folded] };
+	}
 
 	get viewedCount(): number {
 		return this.#viewed.size;

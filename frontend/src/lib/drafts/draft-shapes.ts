@@ -8,9 +8,11 @@
  * being written there; what a thread hangs on has moved into an anchor of
  * its own, and every turn carries an id a question can name; how a thread
  * is read — folded, unread, waited on — has moved out of the thread; the
- * draft says how far the server's telling had got for it; and it keeps
- * what was being written in the threads and not said yet, and which pasted
- * images each field uploaded itself. A draft a
+ * draft says how far the server's telling had got for it; it keeps what
+ * was being written in the threads and not said yet, which pasted images
+ * each field uploaded itself, and which files were read and folded away;
+ * and it is kept under the name the review gives itself rather than under
+ * its title, which another review on the same port may share. A draft a
  * release kept is brought up to date — never thrown away: it is an hour of
  * somebody's reading. The shapes between the last released one and this
  * were never released, and are not read.
@@ -31,7 +33,7 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 15;
+export const DRAFT_SHAPE = 16;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -69,11 +71,15 @@ export interface KeptThreads {
 	issued: IssuedIds;
 }
 
+/** How far the reader has got through the files, by path: those marked read, and those folded away. */
+export interface FilesRead {
+	viewed: string[];
+	folded: string[];
+}
+
 /** An unsent review, as it is kept between reloads. */
 export interface Draft extends KeptThreads {
 	version: typeof DRAFT_SHAPE;
-	/** What the review was of, so a draft is not restored onto a different one. */
-	title: string;
 	reviewBody: string;
 	/** What was said in the agent panel, which outlives a reload like the rest. */
 	panel: PanelTurn[];
@@ -86,6 +92,8 @@ export interface Draft extends KeptThreads {
 	 * the draft follows again.
 	 */
 	told: TellingPosition | null;
+	/** Which files the reader had read and folded away, which a reload used to undo. */
+	files: FilesRead;
 }
 
 /** A thread as drafts kept it until how it was read moved out of it. */
@@ -126,9 +134,11 @@ type KeptComment = AsKept<ReadComment> | AsKept<FlatComment>;
  * A draft of a shape before 10, when threads were kept as comments with how
  * they were read inside them — one of shape 9 that kept no count of the ids
  * handed out included, since what it holds is all there is to count from.
+ * One draft was kept for every review on a port, told apart by the title.
  */
-interface OlderDraft {
+interface ReleasedDraft {
 	version?: number;
+	/** What the review was of, so a draft is not restored onto a different one. */
 	title: string;
 	comments: KeptComment[];
 	reviewBody?: string;
@@ -139,23 +149,31 @@ interface OlderDraft {
 	issued?: IssuedIds;
 }
 
-/** A draft in any shape a release has kept it in. */
-export type KeptDraft = Draft | OlderDraft;
-
 /**
- * Whether what was read from storage is a draft a release kept, in any
- * shape. Threads kept as threads are the current shape: every shape that
- * kept them so before it went unreleased.
+ * Whether what was read from storage is a draft of the current shape.
+ * Threads kept as threads in any other shape were never released.
  */
-export function isKeptDraft(value: unknown): value is KeptDraft {
-	if (typeof value !== 'object' || value === null) return false;
-	if (!('title' in value) || typeof value.title !== 'string') return false;
-	if ('threads' in value) return 'version' in value && value.version === DRAFT_SHAPE && Array.isArray(value.threads);
-	return 'comments' in value && Array.isArray(value.comments);
+export function isCurrentDraft(value: unknown): value is Draft {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'version' in value &&
+		value.version === DRAFT_SHAPE &&
+		'threads' in value &&
+		Array.isArray(value.threads)
+	);
 }
 
-function isCurrent(kept: KeptDraft): kept is Draft {
-	return kept.version === DRAFT_SHAPE;
+/** Whether what was read from storage is a draft a release kept, threads kept as comments. */
+export function isReleasedDraft(value: unknown): value is ReleasedDraft {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'title' in value &&
+		typeof value.title === 'string' &&
+		'comments' in value &&
+		Array.isArray(value.comments)
+	);
 }
 
 function emptyComposer(): Composer {
@@ -163,10 +181,9 @@ function emptyComposer(): Composer {
 }
 
 /** The draft of a review nothing has been written in yet. */
-export function emptyDraft(title: string): Draft {
+export function emptyDraft(): Draft {
 	return {
 		version: DRAFT_SHAPE,
-		title,
 		threads: [],
 		read: { folded: [], unread: [], awaiting: {} },
 		writing: [],
@@ -175,18 +192,17 @@ export function emptyDraft(title: string): Draft {
 		panel: [],
 		composer: emptyComposer(),
 		issued: { comments: 0, turns: 0 },
-		told: null
+		told: null,
+		files: emptyFilesRead()
 	};
 }
 
-/** A draft of the current shape, whichever shape it was kept in. */
-export function upToDate(kept: KeptDraft): Draft {
-	if (isCurrent(kept)) return kept;
-	return fromComments(kept);
+function emptyFilesRead(): FilesRead {
+	return { viewed: [], folded: [] };
 }
 
-/** A draft of the current shape, out of one that kept its threads as comments. */
-function fromComments(kept: OlderDraft): Draft {
+/** A draft of the current shape, out of one a release kept, its threads as comments. */
+export function upToDate(kept: ReleasedDraft): Draft {
 	// A turn that came without an id gets one past every id the draft holds,
 	// the way the review hands them out
 	const turnIds = new IdSequence(TURN_ID_PREFIX);
@@ -199,7 +215,6 @@ function fromComments(kept: OlderDraft): Draft {
 	};
 	return {
 		version: DRAFT_SHAPE,
-		title: kept.title,
 		threads: comments.map(threadOf),
 		read: {
 			folded: comments.filter((comment) => comment.collapsed).map(idOf),
@@ -218,7 +233,9 @@ function fromComments(kept: OlderDraft): Draft {
 		// A composer kept before it said what it uploaded: its images count as handed in
 		composer: kept.composer ? { ...kept.composer, uploaded: [] } : emptyComposer(),
 		issued,
-		told: null
+		told: null,
+		// Which files were read was never kept before
+		files: emptyFilesRead()
 	};
 }
 
