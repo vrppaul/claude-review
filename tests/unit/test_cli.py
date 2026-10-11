@@ -228,3 +228,29 @@ def test_more_lines_than_a_thread_may_quote_are_refused_before_anything_is_calle
     assert _failed_in_a_line(result, USAGE_ERROR)
     assert "'--lines'" in result.output
     assert str(MAX_QUOTE_LINES) in result.output
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [["--file", "src/a.py"], ["--message", "panel-1"], [BLANK], []],
+    ids=["a-file-alone", "a-message-alone", "blank-words", "nothing"],
+)
+def test_work_with_nothing_to_show_is_refused_rather_than_taken_for_done(
+    unused_port: str, arguments: list[str]
+) -> None:
+    """Work is shown by its words and its branches; with neither, the line would go away though nobody said done."""
+    result = _run("progress", "--port", unused_port, *arguments)
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "--done" in result.output
+
+
+@pytest.mark.parametrize(
+    "branch", [["--step", "three subagents out"], ["--did", "ran the tests"]], ids=["under-way", "done"]
+)
+def test_work_shown_by_its_branches_alone_is_sent(unused_port: str, branch: list[str]) -> None:
+    """Three subagents out says what is being done without a sentence about it."""
+    result = _run("progress", "--port", unused_port, *branch)
+
+    assert _failed_in_a_line(result, FAILED)
+    assert NO_REVIEW in result.output

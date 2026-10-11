@@ -200,6 +200,11 @@ def progress_command(
         # Empty, which is what says the work is over
         client.report_progress(ProgressRequest())
         return
+    # The review shows the work by what it says and what it has branched into;
+    # given neither, it would take the line away, which only --done says
+    if not text.strip() and not steps and not finished:
+        msg = "nothing to show: say what you are doing, or what it has branched into — or send --done on its own"
+        raise click.UsageError(msg)
     client.report_progress(
         ProgressRequest(
             message_id=message, text=text, files=list(files), steps=_branches(finished=finished, under_way=steps)
