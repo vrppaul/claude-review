@@ -34,9 +34,22 @@ MILLISECONDS_PER_SECOND = 1000
 # Where the path starts in an entry of `git status --porcelain`
 PORCELAIN_PATH_START = 3
 
-# Settings every command runs with, whatever the reader's configuration says:
-# a path outside plain ASCII keeps git's own quoting, which the parser decodes
-GIT_SETTINGS = ["-c", "core.quotePath=true"]
+# The largest file whose lines the review shows. Nobody reads a longer one line
+# by line — it is a log, a bundle, a dump — and one 50 MB log, read whole,
+# took a review half a minute and more than a gigabyte to show. A lock file is
+# well under it, and its few changed lines still show.
+LARGEST_FILE_SHOWN_BYTES = 4 * 1024 * 1024
+
+# Settings every command runs with, whatever the reader's configuration says
+PINNED_SETTINGS = (
+    # A path outside plain ASCII keeps git's own quoting, which the parser decodes
+    "core.quotePath=true",
+    # A larger file is binary to the diff, which then reads none of it
+    f"core.bigFileThreshold={LARGEST_FILE_SHOWN_BYTES}",
+)
+# How git is handed a setting on its command line, and the settings so handed
+SETTING_OPTION = "-c"
+GIT_SETTINGS = [argument for setting in PINNED_SETTINGS for argument in (SETTING_OPTION, setting)]
 
 # What in the environment would point git elsewhere or change what it says,
 # inherited from a git hook or the reader's shell: none is passed on, and a

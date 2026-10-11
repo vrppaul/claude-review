@@ -3,15 +3,58 @@
 These test the actual user-facing behavior, not implementation details.
 """
 
+import asyncio
 from pathlib import Path
+from typing import override
 
 import pytest
 
-from claude_review.domain.interfaces import GitError
+from claude_review.domain.interfaces import GitError, StagedTree
 from claude_review.domain.models import HEAD, DiffFile, FileStatus, LineType
-from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.git_repository import LARGEST_FILE_SHOWN_BYTES, GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
+
+# A line of a generated log, and how many files of how many such lines make a
+# diff that takes the parser a while to read
+LOG_LINE = "00012345 a generated log line with some words in it"
+FILES_IN_A_LARGE_DIFF = 40
+LINES_PER_FILE = 500
+
+
+class StagingOfALargeDiff(StagedTree):
+    """A staging whose diff is already written out, long enough that reading it takes a while."""
+
+    def __init__(self, raw: str) -> None:
+        self._raw = raw
+
+    @override
+    async def diff(self, base: str, *, ignore_whitespace: bool) -> str:
+        return self._raw
+
+    @override
+    async def write_tree(self) -> str:
+        failure = "nothing is written down here"
+        raise AssertionError(failure)
+
+    @override
+    async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
+        return {}
+
+
+def _large_diff() -> str:
+    """Many added files of many lines, as git writes them."""
+    parts = []
+    for number in range(FILES_IN_A_LARGE_DIFF):
+        header = [
+            f"diff --git a/log_{number}.txt b/log_{number}.txt",
+            "new file mode 100644",
+            "--- /dev/null",
+            f"+++ b/log_{number}.txt",
+            f"@@ -0,0 +1,{LINES_PER_FILE} @@",
+        ]
+        parts.append("\n".join([*header, *(f"+{LOG_LINE}" for _ in range(LINES_PER_FILE))]))
+    return "\n".join(parts) + "\n"
 
 
 async def _diff(repo: Path, base: str = HEAD, *, ignore_whitespace: bool = False) -> list[DiffFile]:
@@ -436,3 +479,28 @@ async def test_the_readers_git_settings_do_not_change_what_is_shown(
 
     assert {diff_file.path for diff_file in files} == {"a/inside.py", "initial.txt"}
     assert all(diff_file.hunks for diff_file in files)
+
+
+async def test_a_file_too_large_to_read_is_shown_without_its_lines(tmp_git_repo: Path) -> None:
+    """A 50 MB log took a review half a minute and a gigabyte to show, and nobody reads one line by line."""
+    lines = LARGEST_FILE_SHOWN_BYTES // len(LOG_LINE) + 1
+    (tmp_git_repo / "generated.log").write_text(f"{LOG_LINE}\n" * lines)
+
+    [shown] = await _diff(tmp_git_repo)
+
+    assert shown.path == "generated.log"
+    assert shown.is_binary, "shown as a file there are no lines of to read"
+    assert shown.hunks == []
+
+
+async def test_the_server_goes_on_answering_while_a_large_diff_is_read() -> None:
+    """Read on the event loop, a diff of many files kept every page and agent waiting until it was done."""
+    reading = asyncio.ensure_future(read_diff(StagingOfALargeDiff(_large_diff()), base=HEAD, ignore_whitespace=False))
+    turns = 0
+    while not reading.done():
+        # A turn of the loop, as any socket the server holds is answered in
+        await asyncio.sleep(0)
+        turns += 1
+
+    assert len(await reading) == FILES_IN_A_LARGE_DIFF
+    assert turns > 1, "the loop came back to nothing else until the whole diff was read"
