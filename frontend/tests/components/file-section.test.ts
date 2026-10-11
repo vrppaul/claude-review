@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, within } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileSection from '$lib/components/FileSection.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
@@ -33,6 +34,17 @@ describe('a file in the review', () => {
 		const { getAllByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
 
 		expect(getAllByTestId('line-gutter').map((number) => number.dataset.place)).toEqual(['new:1', 'old:2', 'new:2']);
+	});
+
+	it('says how many rows it draws, for the room it takes before it is drawn, and none once folded', () => {
+		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const section = getByTestId('file-section');
+		expect(section.style.getPropertyValue('--cr-rows')).toBe('3');
+
+		review.reading.toggleFolded(file.path);
+		flushSync();
+
+		expect(section.style.getPropertyValue('--cr-rows')).toBe('0');
 	});
 
 	it('folds the body away and brings it back', async () => {

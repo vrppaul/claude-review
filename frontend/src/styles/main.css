@@ -87,12 +87,12 @@
  */
 .cr-section {
 	content-visibility: auto;
-	/* What it would take up, drawn: the file says so, from its header and its rows */
-	contain-intrinsic-size: auto var(--cr-section-height);
+	/* What it would take up, drawn: its header, and as many rows as the file says it draws */
+	contain-intrinsic-size: auto calc(var(--cr-file-header-estimate) + var(--cr-rows) * var(--cr-row-height));
 }
 /* Where a file's rows go before they are built, as tall as they will be */
 .cr-file-placeholder {
-	height: var(--cr-body-height);
+	height: calc(var(--cr-rows) * var(--cr-row-height));
 }
 
 /*

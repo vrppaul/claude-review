@@ -12,10 +12,6 @@
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
 
-	// What a file's header and each of its rows take up, in pixels, as drawn
-	const HEADER_HEIGHT = 41;
-	const ROW_HEIGHT = 21;
-
 	interface Props {
 		file: DiffFile;
 		/** The area the review scrolls in, which a file comes near to be built; null for the page itself. */
@@ -37,10 +33,11 @@
 	const collapsed = $derived(review.reading.isFolded(file.path));
 	const viewed = $derived(review.reading.isViewed(file.path));
 
-	// Rough height so the browser can leave an off-screen file undrawn without
-	// the scrollbar lurching once it renders for real. One row plus the header.
+	// How many rows the file will draw, so the browser can leave it undrawn off
+	// screen without the scrollbar lurching once it is drawn for real: the
+	// stylesheet turns the count into a height. At least one, unless folded.
 	const rowCount = $derived(file.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
-	const bodyHeight = $derived(collapsed ? 0 : Math.max(rowCount, 1) * ROW_HEIGHT);
+	const rowsDrawn = $derived(collapsed ? 0 : Math.max(rowCount, 1));
 
 	let changedSinceFailed = $state<string | null>(null);
 
@@ -82,8 +79,7 @@
 	data-testid="file-section"
 	data-path={file.path}
 	class="cr-section border-b border-base-300"
-	style:--cr-section-height="{HEADER_HEIGHT + bodyHeight}px"
-	style:--cr-body-height="{bodyHeight}px"
+	style:--cr-rows={rowsDrawn}
 >
 	<div
 		data-testid="file-header"

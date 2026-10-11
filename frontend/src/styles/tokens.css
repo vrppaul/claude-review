@@ -23,6 +23,10 @@
 :root {
 	--cr-code-size: 0.8125rem;
 	--cr-code-leading: 1.55;
+	/* A row of code, as tall as its line */
+	--cr-row-height: calc(var(--cr-code-size) * var(--cr-code-leading));
+	/* What a file's header is taken to take up before the file is drawn: one row of it */
+	--cr-file-header-estimate: 2.5625rem;
 	/* Comments outrank the code they annotate: they are what the review produces */
 	--cr-comment-size: 0.9375rem;
 	--cr-comment-leading: 1.6;
