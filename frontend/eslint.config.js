@@ -25,6 +25,14 @@ const LAYERS = {
 };
 const PARTS = [...Object.keys(LAYERS), 'components'];
 
+// A part of src/lib is named one way: `$lib//page`, `$lib/./page` and
+// `$lib/review/../page` reach page/ by a spelling no pattern of a part would
+// refuse, so a path with an empty, `.` or `..` step is refused everywhere
+const PLAINLY_NAMED = {
+	regex: String.raw`^\$lib/(?:[^/]+/)*(?:\.{1,2})?(?:/|$)`,
+	message: 'Name a part of $lib plainly, with no empty, . or .. step in the path'
+};
+
 /**
  * The import patterns a part may not use: every part it is not listed as
  * building on, and any path climbing out of its folder, which would reach
@@ -48,7 +56,8 @@ const layerRules = Object.keys(LAYERS).map((part) => ({
 					{
 						group: outOfReach(part),
 						message: `${part}/ builds only on ${LAYERS[part].join(', ') || 'nothing'}`
-					}
+					},
+					PLAINLY_NAMED
 				]
 			}
 		]
@@ -235,6 +244,12 @@ export default tseslint.config(
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
 		files: ['**/*.svelte', '**/*.svelte.ts'],
 		rules: { 'prefer-const': 'off', 'svelte/prefer-const': 'error' }
+	},
+	{
+		// Everywhere else — the components, the page's entry — a part is named plainly too;
+		// each part of src/lib below says so again with what it may not reach
+		files: ['src/**'],
+		rules: { 'no-restricted-imports': ['error', { patterns: [PLAINLY_NAMED] }] }
 	},
 	...layerRules,
 	{
