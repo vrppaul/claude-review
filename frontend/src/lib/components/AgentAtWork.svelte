@@ -6,9 +6,6 @@
 	import Icon from './Icon.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
-	// What the row says when a message could not be taken back, and nothing said why
-	const STOPPING_FAILED = 'Could not stop it';
-
 	interface Props {
 		/** When the work began: the message that asked for it, or the work itself. */
 		since: number;
@@ -30,7 +27,7 @@
 		try {
 			await review.conversation.cancel(messageId);
 		} catch (error) {
-			failed = messageOf(error, STOPPING_FAILED);
+			failed = messageOf(error);
 		}
 	}
 </script>

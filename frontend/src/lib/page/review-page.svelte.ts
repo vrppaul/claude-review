@@ -16,9 +16,6 @@ import { openKeptReview } from '$lib/page/kept-review';
 import { messageOf } from '$lib/utils/errors';
 import { stopsTogether } from '$lib/utils/stops';
 
-// What the page says when the review could not be opened and nothing said why
-const OPENING_FAILED = 'Could not open the review';
-
 /** Where the page has got to with its review. */
 export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } | { kind: 'failed'; reason: string };
 
@@ -92,7 +89,7 @@ export class ReviewPage {
 		} catch (error) {
 			this.#state = {
 				kind: 'failed',
-				reason: messageOf(error, OPENING_FAILED)
+				reason: messageOf(error)
 			};
 		}
 	}

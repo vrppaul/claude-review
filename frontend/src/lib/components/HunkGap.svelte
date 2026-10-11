@@ -5,9 +5,6 @@
 	import type { FileDrawing } from './file-drawing.svelte';
 	import Icon from './Icon.svelte';
 
-	// What the gap says when the file could not be read and nothing said why
-	const READING_FAILED = 'Could not read the file';
-
 	interface Props {
 		/** What the diff left out above a hunk, between two, or below the last. */
 		gap: ContextGap;
@@ -43,7 +40,7 @@
 		try {
 			await drawing.read(read);
 		} catch (error) {
-			failed = messageOf(error, READING_FAILED);
+			failed = messageOf(error);
 		}
 	}
 </script>

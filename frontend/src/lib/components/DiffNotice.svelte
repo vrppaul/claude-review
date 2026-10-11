@@ -8,11 +8,6 @@
 	import { counted } from '$lib/utils/words';
 	import Icon from './Icon.svelte';
 
-	// What a bar says when the diff it asked for could not be taken, and nothing said why
-	const WHOLE_DIFF_NOT_TAKEN = 'Could not take the whole diff again';
-	const ROUND_DIFF_NOT_TAKEN = 'Could not take the diff against that round';
-	const RETAKE_FAILED = 'Could not take the diff again';
-
 	const review = useReview();
 
 	let failed = $state<string | null>(null);
@@ -39,20 +34,20 @@
 	const listing = $derived(listedOver === review.diff.files);
 
 	/** Do what a button asks, saying why if it could not be done; whether it was. */
-	async function attempt(act: () => Promise<unknown>, fallback: string): Promise<boolean> {
+	async function attempt(act: () => Promise<unknown>): Promise<boolean> {
 		failed = null;
 		try {
 			await act();
 			return true;
 		} catch (error) {
-			failed = messageOf(error, fallback);
+			failed = messageOf(error);
 			return false;
 		}
 	}
 
 	/** Take the reader back to the whole diff, and to the thread they picked. */
 	async function goTo(thread: Thread) {
-		if (await attempt(() => review.diff.showWholeReview(), WHOLE_DIFF_NOT_TAKEN)) review.navigator.reveal(thread);
+		if (await attempt(() => review.diff.showWholeReview())) review.navigator.reveal(thread);
 	}
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
 	// what it was written against, and that is what "show it" goes to.
@@ -80,15 +75,15 @@
 	}
 
 	async function showWhatChanged() {
-		if (await attempt(() => review.showChangesSinceRetake(), ROUND_DIFF_NOT_TAKEN)) review.lastRetake.dismiss();
+		if (await attempt(() => review.showChangesSinceRetake())) review.lastRetake.dismiss();
 	}
 
 	function showEverything() {
-		void attempt(() => review.diff.showWholeReview(), WHOLE_DIFF_NOT_TAKEN);
+		void attempt(() => review.diff.showWholeReview());
 	}
 
 	function retake() {
-		void attempt(() => review.diff.retake(), RETAKE_FAILED);
+		void attempt(() => review.diff.retake());
 	}
 </script>
 

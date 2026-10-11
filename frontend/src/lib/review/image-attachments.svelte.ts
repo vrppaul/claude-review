@@ -13,9 +13,6 @@ import { discardImage, keepImage } from '$lib/api/review-api';
 import { messageOf } from '$lib/utils/errors';
 import { imagesAmong, wholeMegabytes } from '$lib/utils/images';
 
-// What a field says when an image could not be attached and nothing said why
-const ATTACHING_FAILED = 'Could not attach the image';
-
 export class ImageAttachments {
 	#images = $state.raw<string[]>([]);
 	#uploading = $state(0);
@@ -131,7 +128,7 @@ export class ImageAttachments {
 			this.#images = [...this.#images, imageId];
 			return null;
 		} catch (error) {
-			return messageOf(error, ATTACHING_FAILED);
+			return messageOf(error);
 		} finally {
 			this.#uploading -= 1;
 		}

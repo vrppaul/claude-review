@@ -18,9 +18,6 @@ import { threadOnTheWire } from '$lib/api/thread-wire';
 import { messageOf } from '$lib/utils/errors';
 import { AGENT, READER, THE_REVIEW } from '$lib/utils/speakers';
 
-// What the panel says when a message could not be sent, and nothing said why
-const SENDING_FAILED = 'Could not send';
-
 /**
  * The message the agent is still working on.
  *
@@ -118,7 +115,7 @@ export class Conversation {
 		} catch (error) {
 			// Never reached the agent, so it is taken off the conversation
 			this.#turns = this.#turns.filter((turn) => turn.id !== id);
-			this.#failed = messageOf(error, SENDING_FAILED);
+			this.#failed = messageOf(error);
 			return false;
 		} finally {
 			this.#sending = false;

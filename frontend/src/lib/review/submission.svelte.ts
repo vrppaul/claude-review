@@ -17,9 +17,6 @@ import type { SubmitResponse } from '$lib/types';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 import { messageOf } from '$lib/utils/errors';
 
-// What the review says when it could not be sent, and nothing said why
-const SENDING_FAILED = 'Could not send the review';
-
 export class Submission {
 	readonly #threads: Threads;
 	readonly #rounds: Rounds;
@@ -155,7 +152,7 @@ export class Submission {
 			this.#finishing = false;
 			return true;
 		} catch (error) {
-			this.#failed = messageOf(error, SENDING_FAILED);
+			this.#failed = messageOf(error);
 			return false;
 		} finally {
 			this.#sending = false;

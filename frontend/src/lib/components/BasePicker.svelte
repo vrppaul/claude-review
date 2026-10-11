@@ -7,10 +7,6 @@
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
-	// What the list says when the bases could not be listed or taken, and nothing said why
-	const LISTING_FAILED = 'Could not list what this can be compared against';
-	const TAKING_FAILED = 'Could not take the diff against that';
-
 	const review = useReview();
 
 	let open = $state(false);
@@ -42,7 +38,7 @@
 		try {
 			await review.diff.loadVersions();
 		} catch (error) {
-			failed = messageOf(error, LISTING_FAILED);
+			failed = messageOf(error);
 		} finally {
 			asking = false;
 		}
@@ -54,7 +50,7 @@
 			await review.diff.setBase(version.key);
 			open = false;
 		} catch (error) {
-			failed = messageOf(error, TAKING_FAILED);
+			failed = messageOf(error);
 		}
 	}
 

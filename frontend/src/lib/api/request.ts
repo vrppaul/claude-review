@@ -11,7 +11,10 @@
  * Every route answers a refusal the same way: a status, and the reason as
  * the `detail` FastAPI uses for its own. The reason is what the reader is
  * shown; the status is the last resort, when the server gave none — a fault
- * on its side answers with plain text, not a reason.
+ * on its side answers with plain text, not a reason. A request that never
+ * reached the review — its server gone, or not yet back — is said in words
+ * too, rather than in the browser's own. Whatever went wrong, the reader is
+ * told it here, once, in what the page was doing.
  */
 
 import type {
@@ -26,11 +29,12 @@ import type {
 	SilentRoute
 } from '$lib/types/routes';
 
-/** A request the server refused, with what the reader is told about it. */
+/** A request the server refused, or one that never reached it, with what the reader is told about it. */
 export class ApiError extends Error {
-	readonly status: number;
+	/** What the server refused with; null when nothing answered at all. */
+	readonly status: number | null;
 
-	constructor(status: number, message: string) {
+	constructor(status: number | null, message: string) {
 		super(message);
 		this.name = 'ApiError';
 		this.status = status;
@@ -61,6 +65,8 @@ type Address = Pick<Carried, 'query' | 'pathParameters'>;
 // A name in a route's path the request fills in: `{image_id}`
 const NAMED_IN_PATH = /\{(\w+)\}/g;
 const JSON_TYPE: JsonMediaType = 'application/json';
+// What the reader is told of a request nothing answered
+const UNANSWERED = 'the review did not answer';
 
 /** Ask a route for what it answers with, and read the JSON it sends. */
 export async function read<Verb extends Method, Path extends JsonRoute<Verb>>(
@@ -105,13 +111,23 @@ function entriesOf<Value>(part: Readonly<Record<string, Value>> | undefined): [s
 	return part ? Object.entries(part) : [];
 }
 
-/** Make the request and hand back the server's answer, or throw what the server said if it refused. */
+/** Make the request and hand back the server's answer, or throw what went wrong, in words. */
 async function answerTo(method: Method, path: string, errand: Carried): Promise<Response> {
-	const response = await fetch(addressOf(path, errand), { method: method.toUpperCase(), ...bodyOf(errand.body) });
+	const response = await reached(addressOf(path, errand), { method: method.toUpperCase(), ...bodyOf(errand.body) });
+	if (response === null) throw new ApiError(null, `${errand.doing}: ${UNANSWERED}`);
 	if (!response.ok) {
 		throw new ApiError(response.status, await reasonOf(response, errand.doing));
 	}
 	return response;
+}
+
+/** The server's answer, or null when the request never reached it: the browser only rejects a fetch nothing answered. */
+async function reached(address: string, init: RequestInit): Promise<Response | null> {
+	try {
+		return await fetch(address, init);
+	} catch {
+		return null;
+	}
 }
 
 /** A body as it goes: a file as it is, under its own type, and anything else as JSON. */

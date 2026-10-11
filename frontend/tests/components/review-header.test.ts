@@ -216,4 +216,17 @@ describe('the pane the review is sent from', () => {
 		expect(screen.queryByTestId('finish-review')).toBeNull();
 		expect(screen.queryByTestId('submit-error')).toBeNull();
 	});
+
+	it("says in words that a send never reached the review, not in the browser's", async () => {
+		const user = userEvent.setup();
+		fakeServer().drop('POST /api/submit');
+		const review = openReview({ files: [file], facts: { answerer_attached: true } });
+		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
+		onScreen(review);
+		await user.click(screen.getByTestId('quick-submit'));
+
+		await user.click(screen.getByTestId('modal-submit'));
+
+		expect(screen.getByTestId('submit-error').textContent).toBe('Could not send the review: the review did not answer');
+	});
 });

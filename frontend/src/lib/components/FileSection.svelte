@@ -15,8 +15,6 @@
 	// What a file's header and each of its rows take up, in pixels, as drawn
 	const HEADER_HEIGHT = 41;
 	const ROW_HEIGHT = 21;
-	// What the file says when the round's diff could not be taken and nothing said why
-	const CHANGES_NOT_TAKEN = 'Could not take the diff against that round';
 
 	interface Props {
 		file: DiffFile;
@@ -63,7 +61,7 @@
 		try {
 			await review.showChangesSinceRetake();
 		} catch (error) {
-			changedSinceFailed = messageOf(error, CHANGES_NOT_TAKEN);
+			changedSinceFailed = messageOf(error);
 		}
 	}
 

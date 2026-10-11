@@ -44,10 +44,13 @@ describe('asking the server', () => {
 		expect(refusal.message).toBe(`Could not send the review: ${UNPROCESSABLE}`);
 	});
 
-	it('lets a request that never arrived fail as it did', async () => {
+	it('says in words what was being done when the request never reached the review', async () => {
 		fakeServer().drop('POST /api/submit');
 
-		await expect(submitReview(AN_EMPTY_ROUND)).rejects.toBeInstanceOf(TypeError);
+		const refusal = await refusalOf(submitReview(AN_EMPTY_ROUND));
+
+		expect(refusal.message).toBe('Could not send the review: the review did not answer');
+		expect(refusal.status).toBeNull();
 	});
 
 	it("names in the diff's query only what the reader changed: whitespace, and another base", async () => {

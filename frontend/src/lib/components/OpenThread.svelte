@@ -9,9 +9,6 @@
 	import ThreadConversation from './ThreadConversation.svelte';
 	import ThreadHeading from './ThreadHeading.svelte';
 
-	// What the thread says when it could not be handed over and nothing said why
-	const ASKING_FAILED = 'Could not ask';
-
 	interface Props {
 		thread: Thread;
 	}
@@ -54,7 +51,7 @@
 		try {
 			await handedOver;
 		} catch (error) {
-			failed = messageOf(error, ASKING_FAILED);
+			failed = messageOf(error);
 		}
 	}
 </script>
