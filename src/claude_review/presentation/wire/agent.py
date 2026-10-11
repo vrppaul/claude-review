@@ -31,6 +31,9 @@ ProgressText = Annotated[str, Field(max_length=MAX_PROGRESS_LENGTH)]
 # The most branches the work is shown as at once
 MAX_PROGRESS_STEPS = 20
 
+# How a refusal lists the names a list repeats
+NAMES_SEPARATOR = ", "
+
 # The longest the agent may say which model it is, or how full its context is
 MAX_STATUS_LENGTH = 200
 StatusText = Annotated[str, Field(max_length=MAX_STATUS_LENGTH)]
@@ -63,7 +66,7 @@ def _refuse_repeats(names: list[str]) -> None:
     """
     repeated = dict.fromkeys(name for position, name in enumerate(names) if name in names[:position])
     if repeated:
-        msg = f"names {', '.join(repeated)} more than once"
+        msg = f"names {NAMES_SEPARATOR.join(repeated)} more than once"
         raise ValueError(msg)
 
 

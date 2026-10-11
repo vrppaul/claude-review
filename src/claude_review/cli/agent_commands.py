@@ -36,6 +36,9 @@ from claude_review.presentation.wire.agent import (
 from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
 from claude_review.presentation.wire.threads import LineAnchor, PointRequest
 
+# How a refusal lists the steps both --did and --step name
+STEPS_SEPARATOR = ", "
+
 
 def _client_for(_context: click.Context, _parameter: click.Parameter, port: int) -> ReviewClient:
     """The review a command calls, from the port it is served on."""
@@ -227,7 +230,7 @@ def _branches(*, finished: tuple[str, ...], under_way: tuple[str, ...]) -> list[
     """
     both = [step for step in under_way if step in finished]
     if both:
-        msg = f"--did and --step both name {', '.join(both)}: a step is either finished or under way"
+        msg = f"--did and --step both name {STEPS_SEPARATOR.join(both)}: a step is either finished or under way"
         raise click.UsageError(msg)
     branches = [
         *(ProgressStep(text=step, done=True) for step in finished),
