@@ -69,6 +69,26 @@ async def test_a_rebound_domain_is_refused(client: AsyncClient) -> None:
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
+async def test_a_rebound_domain_after_an_ipv6_address_is_refused(client: AsyncClient) -> None:
+    """All of the Host must be a name of this machine, not only its start."""
+    response = await client.get(DIFF_ROUTE, headers={"Host": "[::1]attacker.example"})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "origin",
+    ["http://[", "http://127.0.0.1:8000/", "https://127.0.0.1:8000"],
+    ids=["no-address", "a-path-after-it", "a-scheme-the-review-is-not-served-over"],
+)
+async def test_an_origin_not_written_as_the_reviews_own_is_refused_not_a_fault(
+    client: AsyncClient, origin: str
+) -> None:
+    response = await client.get(DIFF_ROUTE, headers={"Origin": origin})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
 async def test_localhost_is_the_same_machine(client: AsyncClient) -> None:
     assert (await client.get(DIFF_ROUTE, headers={"Host": "localhost:8000"})).status_code == HTTPStatus.OK
 

@@ -20,9 +20,9 @@ open, as the agent's poll is, holds one of the few connections the browser
 keeps to this server, until the review's own page cannot load.
 """
 
+import re
 from functools import partial
 from http import HTTPStatus
-from urllib.parse import urlsplit
 
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import JSONResponse
@@ -31,12 +31,14 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from claude_review.presentation.asgi import HTTP_RESPONSE_START, HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
 from claude_review.presentation.wire.refusal import Refusal
 
-# Loopback names, as a Host header writes them: an IPv6 address always in brackets
-LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
-# How a Host header sets an IPv6 address apart from the port after it, and a name from its port
-IPV6_OPENS = "["
-IPV6_CLOSES = "]"
-PORT_SEPARATOR = ":"
+# This machine's names over loopback, as a Host header writes them: an IPv6
+# address always in brackets
+LOOPBACK_NAMES = ("localhost", "127.0.0.1", "[::1]")
+# A Host header naming this machine: one of those names, then a port or
+# nothing. Matched whole, and in any case as names are, so nothing passes
+# before or after a name — where a rebound name would sit.
+LOCAL_HOST_PATTERN = re.compile(rf"(?:{'|'.join(map(re.escape, LOOPBACK_NAMES))})(?::[0-9]+)?", re.IGNORECASE)
+
 # The headers that say which host a request asked for, which page sent it,
 # and where the browser says it comes from (Fetch Metadata)
 HOST_HEADER = "host"
@@ -52,11 +54,11 @@ OWN_FETCH_SITES = frozenset({"same-origin", "none"})
 # What parts a folder from what is under it, in a path asked for
 PATH_SEPARATOR = "/"
 
-# What a browser sends as the Origin of a page that has none of its own: a
-# sandboxed frame, a file opened from disk
-OPAQUE_ORIGIN = "null"
-
-WEB_SCHEMES = frozenset({"http", "https"})
+# How the origin of the page this server serves is written, before the host
+# and port it was asked by: plain HTTP, all a review on loopback is served
+# over. A page with no origin of its own — a sandboxed frame, a file opened
+# from disk — sends "null", which is not this.
+OWN_ORIGIN_PREFIX = "http://"
 
 # The close code for a handshake refused on policy grounds (RFC 6455, 7.4.1)
 POLICY_VIOLATION = 1008
@@ -65,18 +67,9 @@ NOT_ITS_PAGE_STATUS = HTTPStatus.FORBIDDEN
 NOT_ITS_PAGE_DETAIL = "Not this server's page"
 
 
-def is_local_host(value: str | None) -> bool:
-    """Whether a Host header names this machine over loopback."""
-    if not value:
-        return False
-    if value.startswith(IPV6_OPENS):
-        address, _, _ = value.partition(IPV6_CLOSES)
-        host = address + IPV6_CLOSES
-    else:
-        # The port is what follows the last separator; a name with none has no port
-        name, separator, _ = value.rpartition(PORT_SEPARATOR)
-        host = name if separator else value
-    return host in LOCAL_HOSTS
+def is_local_host(value: str) -> bool:
+    """Whether a Host header names this machine over loopback, all of it."""
+    return LOCAL_HOST_PATTERN.fullmatch(value) is not None
 
 
 def admits(*, host: str | None, origin: str | None, fetch_site: str | None, opens_the_page: bool) -> bool:
@@ -84,11 +77,11 @@ def admits(*, host: str | None, origin: str | None, fetch_site: str | None, open
 
     - ``Host`` names this machine over loopback. A rebound domain sends the
       name the page asked for, which is not one of this machine's.
-    - ``Origin``, when sent, is this server's own: the same scheme, host and
-      port. Loopback is not one page: a dev server, a notebook, anything a
-      package starts is another origin on this machine, and its page must not
-      read this one or end it. A browser sends Origin with every write and
-      every socket; a command-line client sends none.
+    - ``Origin``, when sent, is this server's own: its scheme, then exactly
+      the host and port asked for. Loopback is not one page: a dev server, a
+      notebook, anything a package starts is another origin on this machine,
+      and its page must not read this one or end it. A browser sends Origin
+      with every write and every socket; a command-line client sends none.
     - ``Sec-Fetch-Site``, when sent, says the request comes from the review's
       own page or from no page. This is what gives away a read another page
       makes without CORS, which sends no Origin. The page itself and the files
@@ -107,13 +100,8 @@ def admits(*, host: str | None, origin: str | None, fetch_site: str | None, open
 
 
 def is_own_page(origin: str | None, host: str) -> bool:
-    """Whether a request comes from the page this server serves, or names no page at all."""
-    if origin is None:
-        return True
-    if origin == OPAQUE_ORIGIN:
-        return False
-    parsed = urlsplit(origin)
-    return parsed.scheme in WEB_SCHEMES and parsed.netloc.lower() == host.lower()
+    """Whether a request names no page, or the page this server serves, written as a browser writes it."""
+    return origin is None or origin.lower() == OWN_ORIGIN_PREFIX + host.lower()
 
 
 # The page loads nothing from anywhere else, so it can say so. This is
