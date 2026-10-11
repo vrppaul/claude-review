@@ -1,4 +1,5 @@
-import type { DiffFile, LineAnchor, LineSide } from '$lib/types';
+import type { FileLines } from '$lib/anchors/views';
+import type { DiffFile, LineSide } from '$lib/types';
 
 /**
  * Whether a thread on these lines has a row to hang on in the diff as it is drawn.
@@ -15,7 +16,7 @@ import type { DiffFile, LineAnchor, LineSide } from '$lib/types';
  * `removedLines` off, the old side is not drawn at all.
  */
 export function isDrawn(
-	lines: LineAnchor,
+	lines: FileLines,
 	files: DiffFile[],
 	{ removedLines = true }: { removedLines?: boolean } = {}
 ): boolean {

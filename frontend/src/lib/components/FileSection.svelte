@@ -7,7 +7,8 @@
 	import { useReview } from '$lib/review/context';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
-	import FileBody, { type FileView } from './FileBody.svelte';
+	import FileBody from './FileBody.svelte';
+	import type { FileView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
 

@@ -1,5 +1,5 @@
 import type { LinePlace, Thread } from '$lib/types';
-import type { ThreadOnLines } from '$lib/anchors/line';
+import type { ThreadOnLines } from '$lib/anchors/views';
 import { sideIsDrawn } from '$lib/anchors/placement';
 import { placeKey } from '$lib/utils/line-places';
 

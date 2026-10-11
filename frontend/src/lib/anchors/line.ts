@@ -1,4 +1,4 @@
-import type { LineAnchor, LineSide, Thread } from '$lib/types';
+import type { LineAnchor, LineSide } from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
 import { lineRangeLabel } from '$lib/anchors/line-label';
 import { fileName } from '$lib/utils/paths';
@@ -46,12 +46,6 @@ export const lineAnchorView: AnchorView<LineAnchor> = {
 	sameSpot,
 	linesOf: (anchor) => anchor
 };
-
-/** A thread that hangs on lines of a file, with those lines. */
-export interface ThreadOnLines {
-	thread: Thread;
-	lines: LineAnchor;
-}
 
 /** Lines of a file as the reader selects them, with what they say now. */
 export function lineAnchor(

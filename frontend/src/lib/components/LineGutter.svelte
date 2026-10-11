@@ -1,20 +1,9 @@
-<script lang="ts" module>
-	/**
-	 * How the keyboard reaches a line's number. Every row has one stop, which
-	 * j and k move between and Tab reaches too: its new number, or its old one
-	 * where it shows no new one. The old number beside a new one is reached by
-	 * Tab when it is another line — a removed line facing the line that
-	 * replaced it — and left to the mouse when it is the same line.
-	 */
-	export type Reach = 'row-stop' | 'tab' | 'pointer';
-</script>
-
 <script lang="ts">
 	import type { LineSide } from '$lib/types';
 	import { lineInWords } from '$lib/anchors/line-label';
 	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
-	import type { LineCommenting } from './line-commenting.svelte';
+	import type { LineCommenting, Reach } from './line-commenting.svelte';
 
 	// What a number that takes no comment says when asked why
 	const NOT_THE_REVIEWS = 'A removed line belongs to the base on screen. Show the whole diff to write here.';

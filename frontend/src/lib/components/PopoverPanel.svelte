@@ -1,11 +1,7 @@
-<script lang="ts" module>
-	/** Where a pane opens beside what opened it, and which of its edges it lines up with. */
-	export type Placement = 'below-start' | 'below-end' | 'above-start';
-</script>
-
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import type { Placement } from './pane-placement';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
 		/** What the pane is to a screen reader: a pane of controls, or a list to pick from. */

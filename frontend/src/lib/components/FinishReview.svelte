@@ -1,10 +1,3 @@
-<script lang="ts" module>
-	/** What the pane the review is finished from is called: the round it sends, or the end. */
-	export function finishingTitle(inRounds: boolean, round: number): string {
-		return inRounds ? `Round ${round}` : 'Finish the review';
-	}
-</script>
-
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Thread } from '$lib/types';
@@ -12,6 +5,7 @@
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { counted } from '$lib/utils/words';
+	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
 
 	const review = useReview();

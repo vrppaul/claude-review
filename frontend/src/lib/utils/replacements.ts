@@ -22,6 +22,21 @@ interface Replacement<Line> {
 /** A line the change kept, or a run of lines it replaced. */
 export type Run<Line> = { kind: 'kept'; line: Line } | Replacement<Line>;
 
+/** A removed line and the added line that replaced it; null on the side a longer run leaves empty. */
+export interface Facing<Line> {
+	removed: Line | null;
+	added: Line | null;
+}
+
+/** A replacement's lines face to face, in order: the first removed against the first added, and so on. */
+export function facingLines<Line>({ removed, added }: Replacement<Line>): Facing<Line>[] {
+	const height = Math.max(removed.length, added.length);
+	return Array.from({ length: height }, (_, offset) => ({
+		removed: removed.at(offset) ?? null,
+		added: added.at(offset) ?? null
+	}));
+}
+
 /**
  * The runs of a hunk's lines, in order.
  *

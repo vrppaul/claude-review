@@ -17,7 +17,7 @@
 
 {#if illustration.kind === 'image'}
 	<img data-testid="news-image" class="cr-news-image" src={illustration.src} alt={illustration.alt} />
-{:else}
+{:else if illustration.kind === 'drawing'}
 	{@const Drawing = DRAWINGS[illustration.name]}
 	<Drawing />
 {/if}

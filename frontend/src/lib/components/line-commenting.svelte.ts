@@ -17,6 +17,15 @@ import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$
 import { type DrawnHunk, type DrawnLine, NO_NUMBER } from '$lib/utils/drawn-file';
 import { samePlace } from '$lib/utils/line-places';
 
+/**
+ * How the keyboard reaches a line's number. Every row has one stop, which
+ * j and k move between and Tab reaches too: its new number, or its old one
+ * where it shows no new one. The old number beside a new one is reached by
+ * Tab when it is another line — a removed line facing the line that
+ * replaced it — and left to the mouse when it is the same line.
+ */
+export type Reach = 'row-stop' | 'tab' | 'pointer';
+
 /** A comment being written on lines of the file. */
 type LineField = CommentField<WrittenOnLines>;
 

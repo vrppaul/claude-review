@@ -3,10 +3,10 @@
  *
  * A thread is named in its own header, in menus and in the panel, a panel
  * message mentions it by a token, and it is drawn under the lines of a file
- * it hangs on, if it hangs on any. Each kind of anchor answers those
- * questions in its own module, so naming, matching, mentioning and drawing a
- * thread never ask what it hangs on; bringing one into view moves the page,
- * which is the review's `Navigator`.
+ * it hangs on. Each kind of anchor answers those questions in its own
+ * module, so naming, matching, mentioning and drawing a thread never ask
+ * what it hangs on; bringing one into view moves the page, which is the
+ * review's `Navigator`.
  *
  * Each answer is a function property rather than a method, so a kind's view
  * is held to anchors of that kind: methods are compared loosely, and with a
@@ -15,8 +15,17 @@
  * it is told which view each kind is answered by.
  */
 
-import type { Anchor, AnchorKind, LineAnchor } from '$lib/types';
+import type { Anchor, AnchorKind, LineAnchor, Thread } from '$lib/types';
 import { lineAnchorView } from '$lib/anchors/line';
+
+/** The lines of a file a thread hangs on, whichever kind of anchor says so. */
+export type FileLines = Pick<LineAnchor, 'file' | 'side' | 'start_line' | 'end_line'>;
+
+/** A thread, with the lines of a file it hangs on. */
+export interface ThreadOnLines {
+	thread: Thread;
+	lines: FileLines;
+}
 
 export interface AnchorView<Kind extends Anchor> {
 	/** In the thread's own header: "Line 42". */
@@ -31,8 +40,12 @@ export interface AnchorView<Kind extends Anchor> {
 	mentionsIn: (text: string, anchor: Kind) => number[];
 	/** Whether two anchors of this kind hang on the same spot. */
 	sameSpot: (one: Kind, other: Kind) => boolean;
-	/** The lines of a file it hangs on, for a kind drawn under a file's lines; null for one that is not. */
-	linesOf: (anchor: Kind) => LineAnchor | null;
+	/**
+	 * The lines of a file it hangs on. Every kind hangs on lines so far: a kind
+	 * drawn somewhere else makes this an answer of several kinds, and each part
+	 * of the page that reads it then has to say what it does with every one.
+	 */
+	linesOf: (anchor: Kind) => FileLines;
 }
 
 const VIEWS: {
@@ -70,7 +83,7 @@ export function sameSpot(one: Anchor, other: Anchor): boolean {
 	return viewOf(one).sameSpot(one, other);
 }
 
-/** The lines of a file an anchor hangs on; null for a kind that hangs on none. */
-export function anchorLines(anchor: Anchor): LineAnchor | null {
+/** The lines of a file an anchor hangs on. */
+export function anchorLines(anchor: Anchor): FileLines {
 	return viewOf(anchor).linesOf(anchor);
 }

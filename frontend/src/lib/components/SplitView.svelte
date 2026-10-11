@@ -4,7 +4,8 @@
 	import { splitRows, type SplitRow } from '$lib/utils/split-rows';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
-	import LineGutter, { type Reach } from './LineGutter.svelte';
+	import LineGutter from './LineGutter.svelte';
+	import type { Reach } from './line-commenting.svelte';
 	import LineNotes from './LineNotes.svelte';
 
 	// The two columns are the two sides, the old on the left: the kind of line each colours as changed

@@ -1,6 +1,6 @@
 import { commonTokens, type Token } from '$lib/utils/common-tokens';
 import type { HighlightedLine } from '$lib/utils/highlight';
-import { type Run, runsOf } from '$lib/utils/replacements';
+import { type Facing, facingLines, type Run, runsOf } from '$lib/utils/replacements';
 
 /** Beyond this, the line is long enough that the table costs more than the
  * marking is worth, and a line that long is rarely read word by word. */
@@ -157,22 +157,24 @@ export function withWordMarks<Line extends HighlightedLine>(lines: readonly Line
 
 function markedRun<Line extends HighlightedLine>(run: Run<Line>): Line[] {
 	if (run.kind === 'kept') return [run.line];
-	const { removed, added } = run;
-	const ranges = removed.map((line, offset) => rangesAgainst(line, added.at(offset)));
+	const marked = facingLines(run).map(markedFacing);
+	// Laid out as the hunk has them: the removed lines, then the lines added in their place
 	return [
-		...removed.map((line, offset) => withMarks(line, ranges.at(offset)?.removed)),
-		...added.map((line, offset) => withMarks(line, ranges.at(offset)?.added))
+		...marked.map(({ removed }) => removed).filter((line) => line !== null),
+		...marked.map(({ added }) => added).filter((line) => line !== null)
 	];
 }
 
-/** What changed between a removed line and the line that replaced it; null when nothing replaced it. */
-function rangesAgainst(removed: HighlightedLine, added: HighlightedLine | undefined): WordRanges | null {
-	return added ? wordRanges(removed.line.content, added.line.content) : null;
+/** A removed line and the line that replaced it, each with what changed in it marked; a line facing nothing is left alone. */
+function markedFacing<Line extends HighlightedLine>({ removed, added }: Facing<Line>): Facing<Line> {
+	if (removed === null || added === null) return { removed, added };
+	const ranges = wordRanges(removed.line.content, added.line.content);
+	return { removed: withMarks(removed, ranges.removed), added: withMarks(added, ranges.added) };
 }
 
-/** A line with its changed stretches marked, or as it was when it has none to mark. */
-function withMarks<Line extends HighlightedLine>(line: Line, ranges: TextRange[] | undefined): Line {
-	return ranges ? { ...line, markup: markRanges(line.markup, ranges) } : line;
+/** A line with its changed stretches marked. */
+function withMarks<Line extends HighlightedLine>(line: Line, ranges: TextRange[]): Line {
+	return { ...line, markup: markRanges(line.markup, ranges) };
 }
 
 /** Split into words, runs of whitespace, and single punctuation marks. */

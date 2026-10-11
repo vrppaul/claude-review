@@ -10,8 +10,8 @@
 import { SvelteMap } from 'svelte/reactivity';
 
 import { askInThread, followAnchors } from '$lib/api/review-api';
-import { lineAnchor, type ThreadOnLines } from '$lib/anchors/line';
-import { anchorLines } from '$lib/anchors/views';
+import { lineAnchor } from '$lib/anchors/line';
+import { anchorLines, type ThreadOnLines } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
@@ -52,12 +52,6 @@ function questionIdOf(thread: Thread): string {
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
 
-/** A thread with the lines of a file it hangs on: one, or none for a thread on no lines. */
-function onItsLines(thread: Thread): ThreadOnLines[] {
-	const lines = anchorLines(thread.anchor);
-	return lines ? [{ thread, lines }] : [];
-}
-
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
 	readonly reading: ThreadReading;
@@ -71,7 +65,7 @@ export class Threads {
 	readonly #sent = new SvelteMap<string, number>();
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
-	readonly #onLines = $derived(this.#all.flatMap(onItsLines));
+	readonly #onLines = $derived(this.#all.map((thread) => ({ thread, lines: anchorLines(thread.anchor) })));
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
@@ -123,7 +117,7 @@ export class Threads {
 		return this.#answered;
 	}
 
-	/** The threads that hang on lines of a file, each with its lines. */
+	/** Every thread, with the lines of a file it hangs on. */
 	get onLines(): readonly ThreadOnLines[] {
 		return this.#onLines;
 	}

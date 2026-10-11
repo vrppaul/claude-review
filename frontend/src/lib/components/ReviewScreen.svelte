@@ -32,7 +32,7 @@
 </script>
 
 <!-- The review's keys, from anywhere on the page -->
-<svelte:window onkeydown={(event) => pressKey(review, event)} />
+<svelte:window onkeydown={(event: KeyboardEvent) => pressKey(review, event)} />
 
 {#if review.diff.files.length === 0 && !review.diff.narrowed}
 	<div class="flex items-center justify-center min-h-screen">

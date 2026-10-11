@@ -1,13 +1,8 @@
-<script lang="ts" module>
-	/** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
-	export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
-</script>
-
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
 	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 	import { useReview } from '$lib/review/context';
-	import { FileDrawing } from './file-drawing.svelte';
+	import { FileDrawing, type FileView } from './file-drawing.svelte';
 	import FileNotes from './FileNotes.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';

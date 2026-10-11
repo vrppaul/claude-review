@@ -10,7 +10,7 @@
 	const MIDDLE = 0.5;
 
 	/** What the control that opens a popover carries: spread on it, it says what it opens, and opens it. */
-	export type TriggerProps = {
+	type TriggerProps = {
 		'aria-haspopup': 'dialog';
 		'aria-expanded': boolean;
 		'aria-controls': string | undefined;
@@ -32,7 +32,8 @@
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import PopoverPanel, { type Placement } from './PopoverPanel.svelte';
+	import type { Placement } from './pane-placement';
+	import PopoverPanel from './PopoverPanel.svelte';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
 		/** Whether the pane is open: the reader's to change, by the control or by leaving the pane. */

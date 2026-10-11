@@ -2,7 +2,8 @@
 	import { useReview } from '$lib/review/context';
 	import { counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
-	import FinishReview, { finishingTitle } from './FinishReview.svelte';
+	import { finishingTitle } from './finishing';
+	import FinishReview from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
 	import { FINISH_KEYS } from './keymap';
 	import Popover from './Popover.svelte';
@@ -125,7 +126,7 @@
 
 		<!-- One door: what has been written, a summary, and the two ways out -->
 		<Popover
-			bind:open={() => review.submission.finishing, (open) => review.submission.setFinishing(open)}
+			bind:open={() => review.submission.finishing, (open: boolean) => review.submission.setFinishing(open)}
 			label={finishingTitle(inRounds, review.rounds.current)}
 			placement="below-end"
 			data-testid="finish-review"

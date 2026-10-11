@@ -4,7 +4,8 @@
 	import { useReview } from '$lib/review/context';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
-	import LineGutter, { type Reach } from './LineGutter.svelte';
+	import LineGutter from './LineGutter.svelte';
+	import type { Reach } from './line-commenting.svelte';
 	import LineNotes from './LineNotes.svelte';
 
 	// Columns a row spans: two numbers, the sign and the code in a diff; one number and the code otherwise

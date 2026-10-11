@@ -9,22 +9,41 @@
  * reader — the keys, the header's arrows, the replies — moves them through here.
  */
 
-import { anchorLines } from '$lib/anchors/views';
+import { anchorLines, type FileLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { Thread, LineAnchor } from '$lib/types';
+import type { Thread } from '$lib/types';
+
+/** Where the reader is among the threads: the one they were last brought to, among the threads as they stood then. */
+interface ReaderAt {
+	thread: string;
+	among: readonly Thread[];
+}
 
 /**
- * Where a step lands among this many threads, from the one at `here`: the
- * next or the previous, round from the end to the start. From nowhere — no
- * thread yet, or the one the reader was on is gone — going on starts at the
- * first and going back at the last.
+ * The thread a step lands on: the next or the previous, round from the end
+ * to the start. From a thread since removed, the nearest of its neighbours
+ * that is still there, the way the step goes; from nowhere, the first going
+ * on and the last going back.
  */
-function steppedTo(here: number, direction: 1 | -1, count: number): number {
-	if (here === -1) return direction === 1 ? 0 : count - 1;
-	return (here + direction + count) % count;
+function steppedTo(threads: readonly Thread[], from: ReaderAt | null, direction: 1 | -1): Thread | undefined {
+	const here = threads.findIndex((thread) => thread.id === from?.thread);
+	if (here !== -1) return threads[(here + direction + threads.length) % threads.length];
+	const neighbour = from ? nearestStillThere(threads, from, direction) : undefined;
+	return neighbour ?? (direction === 1 ? threads.at(0) : threads.at(-1));
+}
+
+/** The nearest neighbour of a removed thread that is still there, the way a step goes, as the threads stood. */
+function nearestStillThere(threads: readonly Thread[], from: ReaderAt, direction: 1 | -1): Thread | undefined {
+	const stillThere = new Map(threads.map((thread) => [thread.id, thread]));
+	const was = from.among.findIndex((thread) => thread.id === from.thread);
+	const neighbour =
+		direction === 1
+			? from.among.slice(was + 1).find((thread) => stillThere.has(thread.id))
+			: from.among.slice(0, Math.max(was, 0)).findLast((thread) => stillThere.has(thread.id));
+	return neighbour && stillThere.get(neighbour.id);
 }
 
 export class Navigator {
@@ -33,9 +52,10 @@ export class Navigator {
 	readonly #sections: FileSections;
 	readonly #diff: ReviewDiff;
 	// The thread the reader was last brought to, by whichever control, and the
-	// one a step goes on from. Kept by id: threads come and go, and a place in
-	// the list would then be another thread's.
-	#atThread: string | null = null;
+	// one a step goes on from. Kept by id, with the threads as they stood: a
+	// place in a list that changes would become another thread's, and a thread
+	// removed leaves its neighbours to go on to.
+	#at: ReaderAt | null = null;
 
 	constructor(threads: Threads, reading: ReadingProgress, sections: FileSections, diff: ReviewDiff) {
 		this.#threads = threads;
@@ -46,18 +66,14 @@ export class Navigator {
 
 	/** Step to the next or previous thread, and bring it into view. */
 	step(direction: 1 | -1): void {
-		const threads = this.#threads.all;
-		const here = threads.findIndex((thread) => thread.id === this.#atThread);
-		const next = threads[steppedTo(here, direction, threads.length)];
+		const next = steppedTo(this.#threads.all, this.#at, direction);
 		if (next) this.reveal(next);
 	}
 
 	/** Bring a thread into view, and go on from it the next time the reader steps. */
 	reveal(thread: Thread): void {
-		this.#atThread = thread.id;
-		// A thread is drawn under the lines of a file it hangs on; one on no lines is drawn nowhere to go to
-		const lines = anchorLines(thread.anchor);
-		if (lines) this.#revealOnLines(thread.id, lines);
+		this.#at = { thread: thread.id, among: this.#threads.all };
+		this.#revealOnLines(thread.id, anchorLines(thread.anchor));
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -87,7 +103,7 @@ export class Navigator {
 		if (target) this.#sections.scrollToFile(target.path);
 	}
 
-	#revealOnLines(threadId: string, lines: LineAnchor): void {
+	#revealOnLines(threadId: string, lines: FileLines): void {
 		// A folded file has no thread on screen to move to, so it is opened
 		// first; the thread is brought into view once it is drawn
 		this.#reading.unfold(lines.file);

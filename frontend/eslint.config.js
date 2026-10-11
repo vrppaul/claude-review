@@ -258,20 +258,11 @@ export default tseslint.config(
 		rules: { '@typescript-eslint/no-unsafe-return': 'off' }
 	},
 	{
-		// What the rules that read types cannot see in a component. Their TypeScript program reads
-		// every .svelte import through Svelte's own catch-all declaration, which says nothing of a
-		// component's props (a callback handed to a child takes any) or of what its module script
-		// exports; it does not narrow inside {:else}, types a <svelte:window> handler's event as any,
-		// takes `= $bindable()` for a default value, and reads `{@render}` of a snippet as using what a
-		// call that returns nothing returns. svelte-check, which reads components as Svelte does, holds
-		// their types.
+		// Where the rules that read types misread Svelte's own syntax: `= $bindable()` marks a prop the
+		// parent may bind, which they take for a default value no caller needs, and `{@render}` of a
+		// component's own snippet, which they take for using what a call returning nothing returns
 		files: ['**/*.svelte'],
 		rules: {
-			'@typescript-eslint/no-unsafe-argument': 'off',
-			'@typescript-eslint/no-unsafe-assignment': 'off',
-			'@typescript-eslint/no-unsafe-call': 'off',
-			'@typescript-eslint/no-unsafe-member-access': 'off',
-			'@typescript-eslint/no-unsafe-return': 'off',
 			'@typescript-eslint/no-useless-default-assignment': 'off',
 			'@typescript-eslint/no-confusing-void-expression': 'off'
 		}

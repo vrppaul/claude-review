@@ -14,6 +14,9 @@ import type { DiffFile } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
 import { type ContextGap, withRevealed } from '$lib/utils/expansions';
 
+/** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
+export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
+
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
 	file: () => DiffFile;

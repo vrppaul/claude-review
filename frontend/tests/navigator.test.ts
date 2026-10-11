@@ -91,4 +91,33 @@ describe('stepping through the threads', () => {
 
 		expect(brought).toEqual(['two', 'three']);
 	});
+
+	it('goes on to the next thread from one the reader removed, and back to the one before it', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		const second = review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
+		const brought = drawThreads();
+		review.navigator.step(1);
+		review.navigator.step(1);
+
+		review.threads.remove(second);
+		review.navigator.step(1);
+		review.navigator.step(-1);
+
+		expect(brought).toEqual(['one', 'two', 'three', 'one']);
+	});
+
+	it('goes back from a removed thread to the one before it', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		const second = review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
+		const brought = drawThreads();
+		review.navigator.step(1);
+		review.navigator.step(1);
+
+		review.threads.remove(second);
+		review.navigator.step(-1);
+
+		expect(brought).toEqual(['one', 'two', 'one']);
+	});
 });

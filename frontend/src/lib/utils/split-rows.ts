@@ -1,5 +1,5 @@
 import type { DrawnLine } from '$lib/utils/drawn-file';
-import { type Run, runsOf } from '$lib/utils/replacements';
+import { facingLines, type Run, runsOf } from '$lib/utils/replacements';
 
 /** One row of two columns: the line before on the left, the line after on the right. */
 export interface SplitRow {
@@ -24,10 +24,7 @@ export function splitRows(lines: DrawnLine[]): SplitRow[] {
 
 function rowsOf(run: Run<DrawnLine>): SplitRow[] {
 	if (run.kind === 'kept') return [rowOf(run.line, run.line)];
-	const height = Math.max(run.removed.length, run.added.length);
-	return Array.from({ length: height }, (_, offset) =>
-		rowOf(run.removed.at(offset) ?? null, run.added.at(offset) ?? null)
-	);
+	return facingLines(run).map(({ removed, added }) => rowOf(removed, added));
 }
 
 function rowOf(left: DrawnLine | null, right: DrawnLine | null): SplitRow {
