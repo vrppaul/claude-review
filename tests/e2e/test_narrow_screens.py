@@ -97,7 +97,7 @@ async def test_on_a_laptop_the_columns_stand_beside_a_readable_diff_and_every_vi
     for viewed in await page.get_by_test_id("viewed-toggle").locator("..").all():
         box = await _box(viewed)
         assert box["x"] + box["width"] <= diff["x"] + diff["width"] + WITHIN_ROUNDING
-    path = await _box(page.get_by_test_id("file-header").filter(has_text=LONG_PATH).get_by_text(LONG_PATH))
+    path = await _box(page.get_by_test_id("file-heading").filter(has_text=LONG_PATH))
     assert path["width"] >= diff["width"] * PATH_SHARE
 
 
