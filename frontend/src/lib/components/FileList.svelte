@@ -2,6 +2,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { DiffFile, FileStatus, ReviewMode } from '$lib/types';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
+	import { formerName } from '$lib/utils/paths';
 	import { counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import ChangedLines from './ChangedLines.svelte';
@@ -70,7 +71,13 @@
 			{#if isDiffMode}
 				<span class={['w-3 shrink-0 text-center font-semibold', status.colour]}>{status.letter}</span>
 			{/if}
-			<span class="flex-1 truncate">{name}</span>
+			<span class="flex-1 truncate">
+				{#if file.old_path}
+					<!-- Moved: what it was called, quieter than what it is called now -->
+					<span class="cr-muted">{formerName(file.old_path, file.path)} →</span>
+				{/if}
+				{name}
+			</span>
 			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 				<!-- The same fact the file header spells out, where there is no
 					room to spell it -->

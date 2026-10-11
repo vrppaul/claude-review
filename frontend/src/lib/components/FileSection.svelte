@@ -99,7 +99,13 @@
 			onToggle={() => review.reading.toggleFolded(file.path)}
 		/>
 
-		<span class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">{file.path}</span>
+		<span data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
+			{#if file.old_path}
+				<!-- Moved: where it was, quieter than where it is -->
+				<span class="cr-muted font-normal">{file.old_path} →</span>
+			{/if}
+			{file.path}
+		</span>
 		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button
 				type="button"

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, Thread } from '$lib/types';
+	import { modeChangeOf } from '$lib/utils/file-modes';
 	import { counted } from '$lib/utils/words';
 	import CommentThread from './CommentThread.svelte';
 	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
@@ -12,16 +13,16 @@
 
 	let { file, unplaced }: Props = $props();
 
-	const modeChange = $derived(file.old_mode && file.new_mode ? `${file.old_mode} → ${file.new_mode}` : null);
+	const modeChange = $derived(modeChangeOf(file));
 	// A file can change without producing lines: binary content, or a bare
-	// permission change. Say which, rather than showing an empty panel.
+	// change of its mode. Say which, rather than showing an empty panel.
 	const emptyReason = $derived(
 		file.hunks.length > 0
 			? null
 			: file.is_binary
 				? 'Binary file — no preview'
 				: modeChange
-					? 'Permission change only'
+					? `${modeChange.what} change only`
 					: 'No content changes'
 	);
 </script>
@@ -35,7 +36,7 @@
 
 {#if modeChange}
 	<div data-testid="mode-change-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs">
-		Permission changed: {modeChange}
+		{modeChange.what} changed: {modeChange.from} → {modeChange.to}
 	</div>
 {/if}
 

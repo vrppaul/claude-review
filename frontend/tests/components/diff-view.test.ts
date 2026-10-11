@@ -272,6 +272,33 @@ describe('files with no lines to show', () => {
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
 	});
 
+	it('says a file turned into a link as a change of what it is, not of its permissions', () => {
+		review = openReview({ files: [{ ...changedFile, old_mode: '100644', new_mode: '120000' }] });
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('mode-change-note').textContent).toContain('Type changed: file → link');
+		expect(getByTestId('mode-change-note').textContent).not.toContain('Permission');
+	});
+
+	it('says a link turned back into a file the same way', () => {
+		review = openReview({ files: [{ ...changedFile, old_mode: '120000', new_mode: '100755' }] });
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('mode-change-note').textContent).toContain('Type changed: link → file');
+	});
+
+	it('names a moved file by where it was as well as where it is', () => {
+		review = openReview({ files: [{ ...changedFile, status: 'renamed', old_path: 'src/old_handler.ts' }] });
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('file-heading').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'src/old_handler.ts → src/handler.ts'
+		);
+	});
+
 	it('does not claim an empty panel for a file that has hunks', () => {
 		review = openReview({ files: [changedFile] });
 

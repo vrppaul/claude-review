@@ -39,6 +39,29 @@ describe('the file tree', () => {
 		expect(getByTestId('sidebar-heading').textContent).toBe('2 changed files · 1 viewed');
 	});
 
+	it('names a file moved within its folder by its old name beside its new one', () => {
+		const review = openReview({
+			files: [diffFile({ path: 'src/handler.ts', status: 'renamed', old_path: 'src/old_handler.ts' })]
+		});
+
+		const { getByTestId } = render(FileList, inReview(review));
+
+		const row = getByTestId('file-item').textContent?.replace(/\s+/g, ' ');
+		expect(row).toContain('old_handler.ts → handler.ts');
+		// The folder is the tree's to say, once, above the row
+		expect(row).not.toContain('src/');
+	});
+
+	it('names a file moved from another folder by its old path', () => {
+		const review = openReview({
+			files: [diffFile({ path: 'src/handler.ts', status: 'renamed', old_path: 'lib/handler.ts' })]
+		});
+
+		const { getByTestId } = render(FileList, inReview(review));
+
+		expect(getByTestId('file-item').textContent?.replace(/\s+/g, ' ')).toContain('lib/handler.ts → handler.ts');
+	});
+
 	it('lists every file', () => {
 		const review = openReview({ files: diffFiles });
 
