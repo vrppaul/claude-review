@@ -100,14 +100,47 @@ describe('a previewed file is read, not run', () => {
 		}
 	);
 
-	it('keeps an image description inside its own attribute', () => {
+	it('keeps an image description and its destination as words, never as markup', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: '![chart" onerror="alert(1)](./chart.png)\n' }
+			props: { text: '![<b onmouseover="alert(1)">chart</b>](<docs/<i>pic</i>.png>)\n' }
 		});
 
-		const image = getByTestId('markdown-content').querySelector('img');
-		expect(image?.getAttribute('onerror')).toBeNull();
-		expect(image?.getAttribute('alt')).toBe('chart" onerror="alert(1)');
+		const content = getByTestId('markdown-content');
+		expect(content.querySelector('b, i, [onmouseover]')).toBeNull();
+		expect(content.textContent).toContain('<b onmouseover="alert(1)">chart</b>');
+	});
+
+	it('names an image at a path of the repository in words, inside the line it stands in', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: 'See ![a picture](docs/pic.png) for the layout.\n' }
+		});
+
+		const content = getByTestId('markdown-content');
+		expect(content.querySelector('img')).toBeNull();
+		expect(content.querySelector('a')).toBeNull();
+		expect(content.querySelectorAll('p')).toHaveLength(1);
+		expect(content.textContent?.trim()).toBe('See image: a picture (docs/pic.png) for the layout.');
+	});
+
+	it("never asks the review's own address for an image, where assets/ is the page's own scripts", () => {
+		const { getByTestId } = render(MarkdownRenderer, { props: { text: '![logo](assets/logo.png)\n' } });
+
+		const content = getByTestId('markdown-content');
+		expect(content.querySelector('img')).toBeNull();
+		expect(content.textContent).toContain('image: logo (assets/logo.png)');
+	});
+
+	it('opens an image written whole in a tab of its own, rather than drawing it broken', () => {
+		const { getByTestId } = render(MarkdownRenderer, {
+			props: { text: '![chart](https://example.com/chart.png)\n' }
+		});
+
+		const content = getByTestId('markdown-content');
+		const link = content.querySelector('a');
+		expect(content.querySelector('img')).toBeNull();
+		expect(link?.getAttribute('href')).toBe('https://example.com/chart.png');
+		expect(link?.getAttribute('target')).toBe('_blank');
+		expect(link?.textContent).toContain('image: chart');
 	});
 
 	it('keeps a link title inside its own attribute', () => {

@@ -368,6 +368,16 @@
 .cr-prose {
 	max-width: 72ch;
 }
+/* A quotation is set off by its rule; quotation marks added around it would read as the writer's own */
+.cr-prose blockquote p::before,
+.cr-prose blockquote p::after {
+	content: none;
+}
+/* An image named in words, in the line it stands in: said quietly, as what is not shown */
+.cr-image-named {
+	color: var(--cr-muted);
+	font-style: italic;
+}
 
 /*
  * A disabled action still has to be readable: a field's Add button waits for

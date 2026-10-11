@@ -2,15 +2,23 @@
 	import { Marked, type Tokens } from 'marked';
 	import { markedHighlight } from 'marked-highlight';
 	import { hljs } from '$lib/utils/highlight';
-	import { escapeMarkup, isAbsoluteDestination, isSafeDestination } from '$lib/utils/safe-markup';
+	import { escapeMarkup, isAbsoluteDestination } from '$lib/utils/safe-markup';
 
 	// Where a link opens: a tab of its own, which learns nothing of the review
 	// that opened it — followed in the review's own tab, it would end the review
 	const IN_A_TAB_OF_ITS_OWN = 'target="_blank" rel="noopener noreferrer"';
+	// What an image is called in the words that stand for it
+	const IMAGE = 'image';
 
 	/** A title attribute, or nothing when the destination has no title. */
 	function titleAttribute(title: string | null | undefined): string {
 		return title ? ` title="${escapeMarkup(title)}"` : '';
+	}
+
+	/** An image in words: what it shows, if the text says, and where it is. */
+	function imageInWords(token: Tokens.Image): string {
+		const shows = token.text ? `${IMAGE}: ${token.text}` : IMAGE;
+		return escapeMarkup(`${shows} (${token.href})`);
 	}
 
 	// Single shared instance — Marked is stateless once configured
@@ -49,9 +57,18 @@
 					if (!isAbsoluteDestination(token.href)) return text;
 					return `<a href="${escapeMarkup(token.href)}"${titleAttribute(token.title)} ${IN_A_TAB_OF_ITS_OWN}>${text}</a>`;
 				},
+				/**
+				 * An image named in words, in the line it stands in, rather than
+				 * drawn. A path is read against the review's own address, which
+				 * serves no file of the repository — `assets/…` would even reach the
+				 * page's own scripts — and the page's policy loads no image from
+				 * anywhere else, so a picture would only arrive broken. One written
+				 * whole opens, like a link, in a tab of its own.
+				 */
 				image(token: Tokens.Image) {
-					if (!isSafeDestination(token.href)) return escapeMarkup(token.text);
-					return `<img src="${escapeMarkup(token.href)}" alt="${escapeMarkup(token.text)}"${titleAttribute(token.title)} />`;
+					const words = `<span class="cr-image-named">${imageInWords(token)}</span>`;
+					if (!isAbsoluteDestination(token.href)) return words;
+					return `<a href="${escapeMarkup(token.href)}"${titleAttribute(token.title)} ${IN_A_TAB_OF_ITS_OWN}>${words}</a>`;
 				}
 			}
 		}
