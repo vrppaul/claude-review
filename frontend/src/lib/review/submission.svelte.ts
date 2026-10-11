@@ -140,7 +140,8 @@ export class Submission {
 	 */
 	async submit(end: boolean): Promise<SubmitResponse> {
 		this.#threads.sayOpen();
-		const summary = this.#body.trim();
+		const written = this.#body;
+		const summary = written.trim();
 		const unsent = this.#threads.unsent;
 
 		const result = await submitReview({
@@ -155,11 +156,21 @@ export class Submission {
 		}
 
 		// A round is a line under what was said, not the end of it: the threads
-		// stay, and only what happens next is new
+		// stay, and only what happens next is new — what was written while the
+		// round was on its way included
 		this.#threads.markSent(unsent, result.round);
-		this.setBody('');
+		this.#takeSent(written);
 		this.#rounds.reach(result.round + 1);
 		return result;
+	}
+
+	/**
+	 * Let go of the summary that went with a round. What was added to it while
+	 * the round was on its way belongs to the next one, and a summary
+	 * rewritten meanwhile is all new.
+	 */
+	#takeSent(written: string): void {
+		if (this.#body.startsWith(written)) this.#body = this.#body.slice(written.length).trimStart();
 	}
 
 	/** Do one send, once at a time, and put the pane away if it went; whether it went. */

@@ -376,9 +376,13 @@ export class Threads {
 		if (resolved) this.reading.setFolded(id, true);
 	}
 
-	/** Note that these threads went out in this round. */
+	/**
+	 * Note that these threads went out in this round — each as it was when it
+	 * went. One changed since, while the round was on its way, is a thread
+	 * the round did not carry, and goes with the next.
+	 */
 	markSent(sent: Thread[], round: number): void {
-		for (const thread of sent) this.#sent.set(thread.id, round);
+		for (const thread of sent) if (this.#all.includes(thread)) this.#sent.set(thread.id, round);
 	}
 
 	/**

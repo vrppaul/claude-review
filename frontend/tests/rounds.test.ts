@@ -269,3 +269,52 @@ describe('ending a review worked through in rounds', () => {
 		expect(review.link.ending).toBe('finished');
 	});
 });
+
+describe('writing while a round is on its way', () => {
+	it('sends again with the next round a thread that changed after this one took it', async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		const sending = review.submission.submit(false);
+		review.threads.addTurn(id, { author: 'reader', body: 'and this too', images: [] });
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
+	});
+
+	it('marks sent a thread that did not change while the round was on its way', async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		const sending = review.submission.submit(false);
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.sentInRound(id)).toBe(1);
+	});
+
+	it('keeps what was added to the summary while the round was on its way, and only that', async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		review.submission.setBody('Mostly fine.');
+
+		const sending = review.submission.submit(false);
+		review.submission.setBody('Mostly fine. One more thing:');
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.submission.body).toBe('One more thing:');
+	});
+
+	it('keeps a summary rewritten while the round was on its way whole', async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		review.submission.setBody('Mostly fine.');
+
+		const sending = review.submission.submit(false);
+		review.submission.setBody('Actually, not fine.');
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.submission.body).toBe('Actually, not fine.');
+	});
+});
