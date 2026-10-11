@@ -94,12 +94,16 @@
 		keyboardHere = false;
 	}
 
-	/** The keyboard the pane held goes back to what had it before, or to the control if that is gone. */
+	/**
+	 * The keyboard the pane held goes back to what had it before, or to the
+	 * control if that is gone — without moving the screen: where the reader is
+	 * looking is theirs, whatever they did while the pane was open.
+	 */
 	function handBack() {
 		if (!keyboardHere) return;
 		keyboardHere = false;
 		const back = keyboardWasOn?.isConnected ? keyboardWasOn : control;
-		void tick().then(() => back?.focus());
+		void tick().then(() => back?.focus({ preventScroll: true }));
 	}
 
 	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, which keeps it. */

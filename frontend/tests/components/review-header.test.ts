@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { flushSync } from 'svelte';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flushSync, tick } from 'svelte';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
@@ -210,6 +210,35 @@ describe('the pane the review is sent from', () => {
 
 		expect(screen.queryByTestId('finish-review')).toBeNull();
 		expect(document.activeElement).toBe(screen.getByTestId('quick-submit'));
+	});
+
+	it('takes the reader, keyboard and all, to the thread a row of the pane names, though a field opened it', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [file] });
+		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
+		onScreen(review);
+		await user.click(lineNumber(1));
+		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
+
+		await user.click(screen.getByTestId('finish-comment'));
+		await tick();
+
+		expect(screen.queryByTestId('finish-review')).toBeNull();
+		expect(document.activeElement).toBe(screen.getByTestId('comment-thread'));
+	});
+
+	it('gives the keyboard back to the field it was opened from without moving the screen', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [file] });
+		onScreen(review);
+		await user.click(lineNumber(1));
+		const handedBack = vi.spyOn(screen.getByTestId('comment-input'), 'focus');
+		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
+
+		await user.keyboard('{Escape}');
+		await tick();
+
+		expect(handedBack.mock.calls).toEqual([[{ preventScroll: true }]]);
 	});
 
 	it('opens from the keys while a comment is being written, and sends with them once open', async () => {
