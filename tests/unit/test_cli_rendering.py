@@ -17,7 +17,7 @@ DISCUSSED = thread(
     "Does a round overtake a question?\nAnd if it does, what then?",
     thread_id="comment-4",
     severity=CommentSeverity.QUESTION,
-    turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2)],
+    turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2, images=[])],
 )
 SETTLED = thread(line_anchor("src/app.py", 3), "Rename it", thread_id="comment-5", resolved=True)
 GONE = thread(line_anchor("src/old.py", 9, outdated=True), "This moved", thread_id="comment-6")

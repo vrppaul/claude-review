@@ -51,7 +51,7 @@ def test_a_message_the_agent_read_and_the_reader_then_took_back_says_so() -> Non
 
 def test_an_unanswered_question_says_which_thread_it_was_asked_in() -> None:
     asked = thread(line_anchor(REVIEWED_FILE, 1), "Why one?")
-    question = ThreadQuestion(question_id="turn-2", body="Still unsure", thread=asked)
+    question = ThreadQuestion(question_id="turn-2", body="Still unsure", images=[], thread=asked)
 
     unread = exit_report(None, [question]).split(UNREAD_HEADING)[1]
 

@@ -227,7 +227,7 @@ class Turn(BaseModel):
     body: str
     round: int = Field(ge=FIRST_ROUND)
     # Screenshots pasted with it, as files whoever answers can open
-    images: list[Path] = []
+    images: list[Path]
 
 
 class Thread(BaseModel):
@@ -247,8 +247,8 @@ class Thread(BaseModel):
     severity: CommentSeverity
     body: str
     # Screenshots pasted with the comment that opened the thread
-    images: list[Path] = []
-    turns: list[Turn] = []
+    images: list[Path]
+    turns: list[Turn]
     # Who opened it. The author may point at a line too — "here I did it
     # differently from what you asked" belongs on the line, not in a
     # paragraph elsewhere. The reader then works with it as with their own,
@@ -320,7 +320,7 @@ class ThreadQuestion(BaseModel):
     # What is asked: the reader's last word in the thread, or the comment
     # that opened it
     body: str
-    images: list[Path] = []
+    images: list[Path]
     # Everything said in the thread so far, the question included, so an
     # answer to the third question is not written as if it were the first
     thread: Thread
@@ -337,9 +337,9 @@ class PanelMessage(BaseModel):
 
     message_id: str
     body: str
-    threads: list[Thread] = []
+    threads: list[Thread]
     # Images the reader pasted, as files the agent can open
-    images: list[Path] = []
+    images: list[Path]
 
 
 class AgentStatus(BaseModel):
@@ -414,7 +414,8 @@ class PanelEntry(BaseModel):
     author: TurnAuthor
     body: str
     at: EpochMillis
-    images: list[Path] = []
+    # Screenshots the reader pasted; the agent says words only
+    images: list[Path]
 
 
 class RoundSubmission(BaseModel):

@@ -31,5 +31,5 @@ class Conversation:
 
     def agent_said(self, *, message_id: str | None, body: str) -> None:
         self._entries.append(
-            PanelEntry(message_id=message_id, author=TurnAuthor.AUTHOR, body=body, at=self._clock.now())
+            PanelEntry(message_id=message_id, author=TurnAuthor.AUTHOR, body=body, at=self._clock.now(), images=[])
         )
