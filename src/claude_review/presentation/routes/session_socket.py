@@ -15,8 +15,7 @@ from pydantic import ValidationError
 from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
-from claude_review.presentation.wire.base import MAX_ID_LENGTH
-from claude_review.presentation.wire.session import Resume
+from claude_review.presentation.wire.session import PushNumber, Resume, RunName
 from claude_review.presentation.wire.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
 
@@ -33,8 +32,8 @@ FELL_BEHIND = 1013
 @router.websocket("/session")
 async def session(
     websocket: WebSocket,
-    instance: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
-    after: int | None = Query(default=None, ge=0),
+    instance: RunName | None = Query(default=None),
+    after: PushNumber | None = Query(default=None),
     review: Review = Depends(get_review),
     broadcast: BrowserBroadcast = Depends(get_broadcast),
 ) -> None:

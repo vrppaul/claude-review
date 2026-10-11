@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
+from claude_review.presentation.wire.base import MAX_ID_LENGTH
 from claude_review.presentation.wire.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
 from claude_review.presentation.wire.session import Welcome
 from tests.helpers import (
@@ -87,6 +88,20 @@ def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_mis
     elsewhere = serving.model_copy(update={"instance": ANOTHER_RUN})
     with open_session_at(review_page, _coming_back(elsewhere)) as back:
         assert not welcome_of(back).resumed
+
+
+@pytest.mark.parametrize(
+    "named",
+    [{"instance": "r" * (MAX_ID_LENGTH + 1), "after": 0}, {"instance": ANOTHER_RUN, "after": -1}],
+    ids=["run-name-too-long", "push-number-below-zero"],
+)
+def test_a_page_naming_a_place_no_telling_has_is_turned_away(review_page: TestClient, named: dict[str, object]) -> None:
+    """Held to the bounds the socket's document gives what a page names in its address."""
+    with (
+        pytest.raises(WebSocketDisconnect),
+        open_session_at(review_page, f"{SESSION_ROUTE}?{urlencode(named)}") as socket,
+    ):
+        socket.receive_text()
 
 
 def test_a_page_is_welcomed_by_the_name_of_the_review_it_reached(review_page: TestClient) -> None:

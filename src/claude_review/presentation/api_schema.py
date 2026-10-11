@@ -2,9 +2,10 @@
 
 Two documents, because two things cross it. The routes describe themselves
 as OpenAPI. The session socket is not HTTP, and OpenAPI has no words for it:
-what the browser says on it is read by the server, and what the server
-pushes is written by it, so the two are described each in its own
-direction, in a document of their own that holds nothing but their schemas.
+what the browser says on it — and names in its address as it opens it — is
+read by the server, and what the server pushes is written by it, so each is
+described in its own direction, in a document of their own that holds
+nothing but their schemas.
 
 Run as a module, it prints one: `python -m claude_review.presentation.api_schema http`
 or `... api_schema socket`.
@@ -22,7 +23,7 @@ from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
 from claude_review.presentation.routes.api import include_api
-from claude_review.presentation.wire.session import SessionMessage
+from claude_review.presentation.wire.session import Resume, SessionMessage
 from claude_review.presentation.wire.threads import SessionHello
 
 # The OpenAPI version both documents are written in
@@ -34,8 +35,8 @@ SOCKET_VERSION = "1"
 SCHEMA_REFERENCE = "#/components/schemas/{model}"
 
 
-class SocketMessage(NamedTuple):
-    """One kind of message on the socket, as pydantic is asked to describe it.
+class SocketSchema(NamedTuple):
+    """One thing said on the socket, or in its address, as pydantic is asked to describe it.
 
     A named tuple because `TypeAdapter.json_schemas` takes each as a
     `(key, mode, adapter)` triple: the fields keep that order.
@@ -49,14 +50,15 @@ class SocketMessage(NamedTuple):
     adapter: TypeAdapter[Any]
 
 
-SOCKET_MESSAGES = (
-    SocketMessage("SessionHello", "validation", TypeAdapter(SessionHello)),
-    SocketMessage("SessionMessage", "serialization", TypeAdapter(SessionMessage)),
+SOCKET_SCHEMAS = (
+    SocketSchema("SessionHello", "validation", TypeAdapter(SessionHello)),
+    SocketSchema("Resume", "validation", TypeAdapter(Resume)),
+    SocketSchema("SessionMessage", "serialization", TypeAdapter(SessionMessage)),
 )
 
 
 class MissingSocketSchemaError(Exception):
-    """Raised when a socket message is not described under its own name."""
+    """Raised when something said on the socket is not described under its own name."""
 
 
 def http_document() -> dict[str, Any]:
@@ -68,9 +70,9 @@ def http_document() -> dict[str, Any]:
 
 def socket_document() -> dict[str, Any]:
     """What travels on the session socket, as the schemas of an OpenAPI document with no paths."""
-    _, definitions = TypeAdapter.json_schemas(SOCKET_MESSAGES, ref_template=SCHEMA_REFERENCE)
+    _, definitions = TypeAdapter.json_schemas(SOCKET_SCHEMAS, ref_template=SCHEMA_REFERENCE)
     schemas = definitions["$defs"]
-    missing = [message.name for message in SOCKET_MESSAGES if message.name not in schemas]
+    missing = [described.name for described in SOCKET_SCHEMAS if described.name not in schemas]
     if missing:
         msg = f"not described under their own names: {', '.join(missing)}"
         raise MissingSocketSchemaError(msg)

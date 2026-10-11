@@ -27,7 +27,7 @@
  */
 
 import { decodeSessionMessage } from '$lib/connection/session-messages';
-import type { Delivery, ServerPush, SessionHello, TellingPosition, Welcome } from '$lib/types';
+import type { Delivery, Resume, ServerPush, SessionHello, TellingPosition, Welcome } from '$lib/types';
 
 /** How long the first attempt to reconnect waits, in milliseconds. */
 export const FIRST_RETRY = 500;
@@ -174,8 +174,10 @@ export class PageConnection {
 	#address(): string {
 		const told = this.#receiver?.told();
 		if (told === undefined) return this.#url;
-		const resume = new URLSearchParams({ instance: told.instance, after: String(told.sequence) });
-		return `${this.#url}?${resume.toString()}`;
+		// Named as the socket's document names them, so a name the server changes does not compile
+		const resume: Resume = { instance: told.instance, after: told.sequence };
+		const named = new URLSearchParams(Object.entries(resume).map(([name, value]) => [name, String(value)]));
+		return `${this.#url}?${named.toString()}`;
 	}
 
 	#opened(socket: WebSocket): void {

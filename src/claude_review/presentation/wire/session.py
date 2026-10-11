@@ -14,9 +14,9 @@ The pushes say what happened; this says how they reached the page.
 from enum import StrEnum, auto
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
-from claude_review.presentation.wire.base import WireBool, WireModel
+from claude_review.presentation.wire.base import MAX_ID_LENGTH, WireBool, WireModel
 from claude_review.presentation.wire.pushes import ServerPush
 
 
@@ -65,10 +65,23 @@ class Delivery(WireModel):
 type SessionMessage = Annotated[Welcome | Delivery, Field(discriminator="type")]
 
 
-class Resume(BaseModel):
-    """What a page says it holds: which run of the review, and the number of the last push it covers."""
+# A run of the review, as a page names the one it read
+RunName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
+# The number of a push in one run's telling. The first push is numbered one,
+# so a page that has heard none of them says zero.
+PushNumber = Annotated[int, Field(ge=0)]
+
+
+class Resume(WireModel):
+    """Where a page coming back had got to: which run of the review, and the number of the last push it covers.
+
+    Named in the socket's address — `?instance=…&after=…` — rather than said
+    on the socket: the welcome, and whatever the page missed after it, are
+    told before the page could say anything. A page that cannot name it yet
+    names neither, and its socket only holds the review on screen.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    instance: str
-    after: int
+    instance: RunName
+    after: PushNumber

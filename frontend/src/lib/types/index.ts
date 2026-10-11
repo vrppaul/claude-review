@@ -202,6 +202,8 @@ export type KeptGuide = Schemas['KeptRecord_GuideState_'];
 export type GuideChange = Schemas['GuideChange'];
 /** What the review says over its socket, on connecting and whenever its threads change. */
 export type SessionHello = SocketSchemas['SessionHello'];
+/** Where a page coming back had got to, named in the socket's address as it opens it. */
+export type Resume = SocketSchemas['Resume'];
 /**
  * What the server says down the socket: a welcome on every connection, then
  * each push in a delivery numbered across the run of the review.

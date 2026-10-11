@@ -273,6 +273,21 @@ export interface components {
             body: string;
         };
         /**
+         * Resume
+         * @description Where a page coming back had got to: which run of the review, and the number of the last push it covers.
+         *
+         *     Named in the socket's address — `?instance=…&after=…` — rather than said
+         *     on the socket: the welcome, and whatever the page missed after it, are
+         *     told before the page could say anything. A page that cannot name it yet
+         *     names neither, and its socket only holds the review on screen.
+         */
+        Resume: {
+            /** Instance */
+            instance: string;
+            /** After */
+            after: number;
+        };
+        /**
          * RoundPush
          * @description The round now being written, after one was sent and the review stayed open.
          */
@@ -294,14 +309,6 @@ export interface components {
          *     in it — the threads are unsent work — and the only side that survives a
          *     server restarted mid-review. So it says both, and neither costs anybody
          *     anything: this never leaves the machine until an agent asks for it.
-         *
-         *     `threads` says what the page holds, three ways. None: nothing — a page
-         *     that does not know them yet — and the review keeps what it holds. A
-         *     list: every thread the page holds, which the review holds from then on
-         *     in place of the reader's it held — an empty one when the last was
-         *     deleted. The threads the agent raised are never taken away by a list
-         *     that leaves them out: a page with no draft holds none of them, and
-         *     reads them from GET /api/threads as it opens.
          */
         SessionHello: {
             /**
@@ -311,6 +318,7 @@ export interface components {
             round: number | null;
             /**
              * Threads
+             * @description What the page holds, three ways. Null: nothing — a page that does not know them yet — and the review keeps what it holds. A list: every thread the page holds, which the review holds from then on in place of the reader's it held — an empty one when the last was deleted. The threads the agent raised are never taken away by a list that leaves them out: a page with no draft holds none of them, and reads them from GET /api/threads as it opens.
              * @default null
              */
             threads: components["schemas"]["ThreadInput"][] | null;

@@ -185,37 +185,45 @@ class AskRequest(WireModel):
     thread: ThreadInput
 
 
-class SessionHello(WireModel):
+# What a hello's threads say the page holds, three ways
+HELLO_THREADS_MEANING = (
+    "What the page holds, three ways. Null: nothing — a page that does not know them yet — and the"
+    " review keeps what it holds. A list: every thread the page holds, which the review holds from then"
+    " on in place of the reader's it held — an empty one when the last was deleted. The threads the"
+    " agent raised are never taken away by a list that leaves them out: a page with no draft holds none"
+    " of them, and reads them from GET /api/threads as it opens."
+)
+
+
+class HelloBase[Threads](WireModel):
+    """What a page says on its socket: the round it had reached, and the threads it holds.
+
+    Written once for both of its readings — the browser's, of what it says,
+    and the server's, of what it hears — which differ only in how far a
+    thread is read: a field the page says is a field the server hears.
+    """
+
+    round: int | None = Field(default=None, ge=FIRST_ROUND)
+    threads: list[Threads] | None = Field(default=None, max_length=MAX_THREADS, description=HELLO_THREADS_MEANING)
+
+
+class SessionHello(HelloBase[ThreadInput]):
     """What the browser says on connecting, and whenever its threads change.
 
     The review on screen is the only side that knows what has been written
     in it — the threads are unsent work — and the only side that survives a
     server restarted mid-review. So it says both, and neither costs anybody
     anything: this never leaves the machine until an agent asks for it.
-
-    `threads` says what the page holds, three ways. None: nothing — a page
-    that does not know them yet — and the review keeps what it holds. A
-    list: every thread the page holds, which the review holds from then on
-    in place of the reader's it held — an empty one when the last was
-    deleted. The threads the agent raised are never taken away by a list
-    that leaves them out: a page with no draft holds none of them, and
-    reads them from GET /api/threads as it opens.
     """
 
-    round: int | None = Field(default=None, ge=FIRST_ROUND)
-    threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
-
-class ReceivedHello(WireModel):
+class ReceivedHello(HelloBase[JsonValue]):
     """A hello as the server first reads it, its threads not yet read one by one.
 
     `SessionHello` is what the browser says; this is how the server takes
     it. One thread out of bounds must not cost the round and every other
     thread with it, so each is read on its own afterwards (`HeldThreads`).
     """
-
-    round: int | None = Field(default=None, ge=FIRST_ROUND)
-    threads: list[JsonValue] | None = Field(default=None, max_length=MAX_THREADS)
 
 
 class HeldThreads(WireModel):
