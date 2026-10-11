@@ -24,7 +24,7 @@ import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
-import { ThreadNavigator } from '$lib/review/thread-navigator';
+import { Navigator } from '$lib/review/navigator';
 import { Threads } from '$lib/review/threads.svelte';
 import type {
 	ChangesSince,
@@ -80,7 +80,7 @@ export class Review {
 	readonly conversation: Conversation;
 	readonly guide: Guide;
 	readonly sections = new FileSections();
-	readonly navigator: ThreadNavigator;
+	readonly navigator: Navigator;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
@@ -119,7 +119,7 @@ export class Review {
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
-		this.navigator = new ThreadNavigator(this.threads, this.reading, this.sections);
+		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
 		this.#weight = $derived(tokensOf(this.#diffCharacters + threadCharacters(this.threads.all)));

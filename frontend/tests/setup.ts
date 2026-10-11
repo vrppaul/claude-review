@@ -50,3 +50,19 @@ class SilentResizeObserver implements ResizeObserver {
 }
 
 globalThis.ResizeObserver = SilentResizeObserver as unknown as typeof ResizeObserver;
+
+/**
+ * jsdom has dialogs but cannot show one as a modal: showing it opens it, and
+ * closing it says so, as a browser does. What being modal does — the keyboard
+ * held inside, the page under it inert — is the browser's, and the browser
+ * tests hold it.
+ */
+HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+	this.open = true;
+	// A browser moves the keyboard into a modal it shows, onto the first thing there that takes it
+	this.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]')?.focus();
+};
+HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+	this.open = false;
+	this.dispatchEvent(new Event('close'));
+};

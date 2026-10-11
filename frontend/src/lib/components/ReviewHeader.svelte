@@ -10,20 +10,7 @@
 	const review = useReview();
 
 	const inRounds = $derived(review.submission.inRounds);
-
-	/**
-	 * Ctrl+Shift+Enter, from anywhere — a comment field included: the first
-	 * press opens the pane the review is sent from, the second sends it.
-	 */
-	function finishOnKeys(event: KeyboardEvent) {
-		if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey) || !event.shiftKey) return;
-		event.preventDefault();
-		if (review.submission.finishing) void review.submission.send();
-		else review.submission.setFinishing(true);
-	}
 </script>
-
-<svelte:window onkeydown={finishOnKeys} />
 
 {#if review.submission.finished}
 	<div

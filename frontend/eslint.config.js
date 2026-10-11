@@ -84,7 +84,7 @@ const NO_NESTED_HELPERS = [
 // it still breaks. Phases 7 and 8 rework them and empty these lists; nothing
 // is added to them, and nothing new is written that would need to be.
 const STILL_TO_CLEAN = {
-	shortNames: ['FileList', 'KeyboardShortcuts'],
+	shortNames: ['FileList'],
 	magicNumbers: ['FileList']
 };
 

@@ -7,7 +7,8 @@
 	import DiffView from './DiffView.svelte';
 	import FileList from './FileList.svelte';
 	import Guide from './Guide.svelte';
-	import KeyboardShortcuts from './KeyboardShortcuts.svelte';
+	import HelpDialog from './HelpDialog.svelte';
+	import { pressKey } from './keymap';
 	import ReviewHeader from './ReviewHeader.svelte';
 	import Icon from './Icon.svelte';
 
@@ -29,6 +30,9 @@
 	});
 </script>
 
+<!-- The review's keys, from anywhere on the page -->
+<svelte:window onkeydown={(event) => pressKey(review, event)} />
+
 {#if review.diff.files.length === 0 && !review.diff.narrowed}
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="alert alert-info max-w-md">
@@ -36,7 +40,9 @@
 		</div>
 	</div>
 {:else}
-	<KeyboardShortcuts />
+	{#if review.guide.helpOpen}
+		<HelpDialog />
+	{/if}
 	<Guide />
 	<div class="flex h-screen flex-col">
 		{#if review.restoredCount > 0}

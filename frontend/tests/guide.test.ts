@@ -3,12 +3,12 @@ import { render } from '@testing-library/svelte';
 import fastCheck from 'fast-check';
 import { tick } from 'svelte';
 import Guide from '$lib/components/Guide.svelte';
-import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
-import ReviewHeader from '$lib/components/ReviewHeader.svelte';
+import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
 import { readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
+import { contextLine, diffFile, hunk } from './diff';
 import { fakeServer, SERVER_ERROR } from './fake-server';
 import { guideServer } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
@@ -190,15 +190,13 @@ describe('the news card', () => {
 	});
 });
 
-// The header's own props, as a review that is not being sent shows them
-
 describe('the ? list', () => {
 	it('opens from a button too, for whoever has ? taken by a browser extension', async () => {
-		const { getByTestId, queryByTestId } = render(KeyboardShortcuts, inReview(review));
-		const { getByTestId: inHeader } = render(ReviewHeader, inReview(review));
+		const opened = openReview({ files: [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x')])] })] });
+		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review: opened } });
 		expect(queryByTestId('shortcuts-list')).toBeNull();
 
-		inHeader('open-help').click();
+		getByTestId('open-help').click();
 		await tick();
 
 		expect(getByTestId('shortcuts-list')).toBeTruthy();

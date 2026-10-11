@@ -350,11 +350,22 @@
 	border-color: transparent;
 }
 
-/* The palette sets depth to zero, so a dialog needs its own way of reading
-   as being on top of the page rather than part of it */
+/* A dialog over the whole review: lifted off the page, which is shaded under it */
 .cr-dialog {
+	margin: auto;
+	padding: 0;
 	border: 1px solid var(--color-base-300);
+	border-radius: 0.5rem;
+	background: var(--color-base-100);
+	color: var(--color-base-content);
 	box-shadow: var(--cr-elevation);
+}
+.cr-dialog::backdrop {
+	background: var(--cr-shade);
+}
+/* What the dialog holds, inside its edge: a press here is not a press outside it */
+.cr-dialog-body {
+	padding: 1.5rem;
 }
 
 /*

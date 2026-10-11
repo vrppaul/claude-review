@@ -24,8 +24,7 @@
 
 	function goTo(thread: Thread) {
 		open = false;
-		review.navigator.reveal(thread);
-		review.threads.reading.markRead(thread.id);
+		review.navigator.readAnswer(thread);
 	}
 </script>
 

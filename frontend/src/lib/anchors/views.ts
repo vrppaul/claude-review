@@ -6,7 +6,7 @@
  * questions in its own module, so naming, matching and mentioning a thread
  * never asks what it hangs on. Drawing one on the lines it hangs on still
  * does — only line anchors are drawn on a file — and bringing one into view
- * moves the page, which is the review's `ThreadNavigator`.
+ * moves the page, which is the review's `Navigator`.
  */
 
 import type { Anchor, AnchorKind } from '$lib/types';

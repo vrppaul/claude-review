@@ -91,7 +91,7 @@
 	function onKeydown(event: KeyboardEvent) {
 		if (pickerKey(event)) {
 			event.preventDefault();
-		} else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+		} else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
 			event.preventDefault();
 			void send();
 		}

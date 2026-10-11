@@ -114,7 +114,8 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+		// Ctrl+Shift+Enter is not the field's: it finishes the review
+		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
 			event.preventDefault();
 			save();
 		}

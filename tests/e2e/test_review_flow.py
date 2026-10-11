@@ -705,6 +705,29 @@ async def test_question_mark_shows_the_keys(diff_review: RunningReview, page: Pa
     await page.get_by_test_id("shortcuts-list").wait_for(state="detached")
 
 
+async def test_the_keys_list_holds_the_keyboard_until_it_closes(diff_review: RunningReview, page: Page) -> None:
+    """A modal: the keyboard goes into it, no Tab reaches the page under it, and Escape gives it back."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.get_by_test_id("open-help").focus()
+
+    await page.keyboard.press("Enter")
+    help_dialog = page.get_by_test_id("help-dialog")
+    await help_dialog.wait_for()
+    assert await help_dialog.evaluate("dialog => dialog.contains(document.activeElement)")
+    # Past its last control the browser's own bar may take it, never the page under the dialog
+    for _ in range(6):
+        await page.keyboard.press("Tab")
+        assert await help_dialog.evaluate(
+            "dialog => dialog.contains(document.activeElement) || document.activeElement === document.body"
+        )
+
+    await page.keyboard.press("Escape")
+    await help_dialog.wait_for(state="detached")
+    focused = await page.evaluate("document.activeElement?.dataset.testid")
+    assert focused == "open-help"
+
+
 async def test_v_marks_the_file_you_are_in_as_viewed(diff_review: RunningReview, page: Page) -> None:
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()

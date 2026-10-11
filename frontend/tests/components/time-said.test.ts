@@ -71,6 +71,8 @@ describe('how long a question has waited', () => {
 
 describe('how old a base is', () => {
 	it('is said in seconds when it was taken a moment ago', async () => {
+		// The time stands still, so the list says what it says however long the test takes to draw it
+		vi.useFakeTimers({ toFake: ['Date'] });
 		const taken = Date.now() - TWELVE_SECONDS;
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse());
