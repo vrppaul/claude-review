@@ -228,3 +228,44 @@ describe('sending while the review cannot be reached', () => {
 		expect([review.submission.canSend, review.submission.canEnd]).toEqual([true, true]);
 	});
 });
+
+describe('ending a review worked through in rounds', () => {
+	const ENDED: SubmitResponse = { markdown: '## Final', comment_count: 1, round: 2, ended: true };
+
+	/** A review an agent works through, with its first round sent. */
+	async function afterARound(): Promise<FakeServer> {
+		review = openReview({ facts: { answerer_attached: true } });
+		const server = takingRounds();
+		review.threads.add(newComment({ file: 'a.py', body: 'sent in round one' }));
+		await review.submission.submit(false);
+		server.answer('POST /api/submit', ENDED);
+		server.answer('POST /api/end', null);
+		return server;
+	}
+
+	it('sends what was not sent yet as the final review rather than dropping it', async () => {
+		const server = await afterARound();
+		review.threads.add(newComment({ file: 'a.py', startLine: 2, body: 'written since' }));
+		review.submission.setBody('Ship it after this');
+
+		await review.submission.end();
+
+		expect(server.requestsTo('POST /api/end')).toEqual([]);
+		expect(server.bodiesSentTo('POST /api/submit').at(-1)).toMatchObject({
+			threads: [{ body: 'written since' }],
+			body: 'Ship it after this',
+			end: true
+		});
+		expect(review.link.ending).toBe('finished');
+	});
+
+	it('only ends it when everything has gone already', async () => {
+		const server = await afterARound();
+
+		await review.submission.end();
+
+		expect(server.requestsTo('POST /api/end')).toHaveLength(1);
+		expect(server.requestsTo('POST /api/submit')).toHaveLength(1);
+		expect(review.link.ending).toBe('finished');
+	});
+});

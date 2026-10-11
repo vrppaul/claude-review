@@ -116,9 +116,18 @@ export class Submission {
 		await this.#attempt(() => this.submit(!this.inRounds));
 	}
 
-	/** End a review that was being worked through in rounds, saying why if it could not be. */
+	/**
+	 * End a review that was being worked through in rounds, saying why if it
+	 * could not be. Whatever has not gone yet goes with the end, as the
+	 * final review — the way a review nobody worked through ends — and only
+	 * a review with nothing left to send is simply ended.
+	 */
 	async end(): Promise<void> {
 		if (!this.canEnd) return;
+		if (this.hasUnsent) {
+			await this.#attempt(() => this.submit(true));
+			return;
+		}
 		if (await this.#attempt(() => endReview())) this.#finish();
 	}
 
