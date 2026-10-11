@@ -251,6 +251,7 @@ describe('an image on its way when its field is put away', () => {
 		const user = userEvent.setup();
 		const server = fakeServer();
 		const uploads = server.hold('POST /api/images');
+		server.answer('DELETE /api/images/{image_id}', null);
 		render(DiffView, inReview(review));
 		await user.click(lineNumber(2));
 		await paste(screen.getByTestId('comment-input'), screenshot());

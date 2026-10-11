@@ -36,8 +36,9 @@ export function paste(field: HTMLElement, ...files: File[]): Promise<boolean> {
 	return fireEvent.paste(field, { clipboardData: { files } });
 }
 
-/** Have the server keep every pasted image under `KEPT_AS`. */
+/** Have the server keep every pasted image under `KEPT_AS`, and let one go when the page asks it to. */
 export function keepingImages(server: FakeServer = fakeServer()): FakeServer {
 	server.answer('POST /api/images', { image_id: KEPT_AS });
+	server.answer('DELETE /api/images/{image_id}', null);
 	return server;
 }

@@ -1,5 +1,6 @@
 /** jsdom implements none of these; components under test rely on them. */
-import { beforeEach, vi } from 'vitest';
+import { beforeEach, onTestFinished, vi } from 'vitest';
+import { failOnUnanswered } from './fake-server';
 import { leavePage } from './review';
 
 // Every test starts from a page opened fresh: each builds its own review,
@@ -8,6 +9,10 @@ import { leavePage } from './review';
 beforeEach(() => {
 	leavePage();
 	localStorage.clear();
+	// A page that asked its server a route the test never said how to answer
+	// ran a failure path nobody meant to test. Said once the test is over and
+	// tidied away, so the next test does not start in what it left.
+	onTestFinished(failOnUnanswered);
 });
 
 /**

@@ -102,6 +102,7 @@ describe('how a markdown file is shown', () => {
 describe('retaking the diff', () => {
 	it('asks git to leave whitespace-only changes out', async () => {
 		const server = fakeServer();
+		keepingSettings(server);
 		server.answer('GET /api/diff', diffResponse());
 
 		await review.setIgnoreWhitespace(true);
@@ -111,7 +112,9 @@ describe('retaking the diff', () => {
 	});
 
 	it('says in the panel when the diff cannot be taken again without whitespace', async () => {
-		fakeServer().fail('GET /api/diff', SERVER_ERROR);
+		const server = fakeServer();
+		keepingSettings(server);
+		server.fail('GET /api/diff', SERVER_ERROR);
 
 		await review.setIgnoreWhitespace(true);
 
@@ -119,7 +122,9 @@ describe('retaking the diff', () => {
 	});
 
 	it('keeps the files already worked through', async () => {
-		fakeServer().answer('GET /api/diff', diffResponse());
+		const server = fakeServer();
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse());
 		review.reading.setViewed('src/a.ts', true);
 
 		await review.setIgnoreWhitespace(true);
@@ -166,6 +171,7 @@ describe('retaking the diff', () => {
 
 	it('drops lines revealed against hunks whitespace renumbered', async () => {
 		const server = fakeServer();
+		keepingSettings(server);
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two'], total: 40 });
 		server.answer('GET /api/diff', diffResponse());
 		await revealAboveTheHunk();

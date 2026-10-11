@@ -3,8 +3,13 @@
  *
  * Answers what the browser asks by method and path, with replies typed as the
  * server sends them, and keeps every request it received so a test can say
- * what was sent rather than dig through a stub's call list. A route nobody
- * told it about answers 404, as the real server does.
+ * what was sent rather than dig through a stub's call list. A request no route
+ * of the page's takes is refused as the real server refuses one: 405 where a
+ * route is at its path under another method, naming the methods taken there,
+ * and 404 elsewhere — of the server's routes, it knows those the page uses. A
+ * route the page uses that the test did not say how to answer fails the test
+ * once it is over: the real server would have answered it, and a test must
+ * not run a failure path unknowingly.
  */
 import { vi } from 'vitest';
 import type { paths } from '$lib/types/generated/http';
@@ -19,8 +24,9 @@ type Method = 'get' | 'put' | 'post' | 'delete';
 /**
  * What a route answers when it does what was asked, read from the server's
  * own schema: the JSON it sends, or nothing for a route that sends no body.
- * A route the server does not have, or a method it does not answer, does
- * not compile.
+ * A route the server does not have, or a method it does not answer, has no
+ * reply to give: an editor says so at once, though no gate type-checks the
+ * tests.
  */
 type ReplyOf<Path extends keyof paths, Verb extends Method> = paths[Path][Verb] extends {
 	responses: infer Responses;
@@ -32,28 +38,63 @@ type ReplyOf<Path extends keyof paths, Verb extends Method> = paths[Path][Verb] 
 			: never
 	: never;
 
+/**
+ * Every route the page asks the server through `fetch`, by its method and
+ * its path as the schema writes it, path parameters and all. An image the
+ * browser fetches itself, by the address the page writes for it, is not one.
+ */
+const ROUTES = [
+	'GET /api/review',
+	'GET /api/threads',
+	'GET /api/diff',
+	'GET /api/versions',
+	'GET /api/file-window',
+	'GET /api/settings',
+	'PUT /api/settings',
+	'GET /api/guide',
+	'PUT /api/guide',
+	'POST /api/images',
+	'DELETE /api/images/{image_id}',
+	'POST /api/ask',
+	'POST /api/message',
+	'POST /api/cancel',
+	'POST /api/anchors/follow',
+	'POST /api/submit',
+	'POST /api/retake',
+	'POST /api/end'
+] as const;
+
+export type Route = (typeof ROUTES)[number];
+
+/** What one route answers with when it does what was asked, read from its method and path. */
+type ReplyOfRoute<Asked extends Route> = Asked extends `${infer Verb} ${infer Path}`
+	? Path extends keyof paths
+		? ReplyOf<Path, Lowercase<Verb> & Method>
+		: never
+	: never;
+
 /** What each route the page uses answers with when it does what was asked. */
-export interface Replies {
-	'GET /api/review': ReplyOf<'/api/review', 'get'>;
-	'GET /api/threads': ReplyOf<'/api/threads', 'get'>;
-	'GET /api/diff': ReplyOf<'/api/diff', 'get'>;
-	'GET /api/versions': ReplyOf<'/api/versions', 'get'>;
-	'GET /api/file-window': ReplyOf<'/api/file-window', 'get'>;
-	'GET /api/settings': ReplyOf<'/api/settings', 'get'>;
-	'PUT /api/settings': ReplyOf<'/api/settings', 'put'>;
-	'GET /api/guide': ReplyOf<'/api/guide', 'get'>;
-	'PUT /api/guide': ReplyOf<'/api/guide', 'put'>;
-	'POST /api/images': ReplyOf<'/api/images', 'post'>;
-	'POST /api/ask': ReplyOf<'/api/ask', 'post'>;
-	'POST /api/message': ReplyOf<'/api/message', 'post'>;
-	'POST /api/cancel': ReplyOf<'/api/cancel', 'post'>;
-	'POST /api/anchors/follow': ReplyOf<'/api/anchors/follow', 'post'>;
-	'POST /api/submit': ReplyOf<'/api/submit', 'post'>;
-	'POST /api/retake': ReplyOf<'/api/retake', 'post'>;
-	'POST /api/end': ReplyOf<'/api/end', 'post'>;
+export type Replies = { [Asked in Route]: ReplyOfRoute<Asked> };
+
+/** A route the page uses, told apart by its method and by a pattern its path is matched with. */
+interface RoutePattern {
+	route: Route;
+	method: string;
+	path: RegExp;
 }
 
-export type Route = keyof Replies;
+// What a path parameter stands for in a path as the schema writes it: one
+// part of the path, whatever it says
+const PATH_PARAMETER = /\{[^}]+\}/g;
+const ONE_PATH_PART = '[^/]+';
+
+/** How a request's method and path are matched to a route. */
+function patternOf(route: Route): RoutePattern {
+	const [method, path] = route.split(' ');
+	return { route, method, path: new RegExp(`^${path.replace(PATH_PARAMETER, ONE_PATH_PART)}$`) };
+}
+
+const ROUTE_PATTERNS = ROUTES.map(patternOf);
 
 /** A request as the server received it. */
 export interface ReceivedRequest {
@@ -68,8 +109,12 @@ const SUCCEEDED = 200;
 // What a route answers when it did what was asked and has nothing to add
 const NO_CONTENT = 204;
 const NOT_FOUND = 404;
-// What FastAPI says of a route it does not have
+// What FastAPI says of a path it has no route at
 const NOT_FOUND_DETAIL = 'Not Found';
+// What it answers a method the route at a path does not take, naming those it does
+const METHOD_NOT_ALLOWED = 405;
+const METHOD_NOT_ALLOWED_DETAIL = 'Method Not Allowed';
+const ALLOW_SEPARATOR = ', ';
 // What the server says of a request whose body its schema refuses: a list of
 // what is wrong where, not a sentence
 const INVALID_REQUEST_DETAIL = [
@@ -133,7 +178,9 @@ export class HeldReplies<Held extends Route> implements Holder {
 export class FakeServer {
 	/** Everything received, in the order it arrived. */
 	readonly requests: ReceivedRequest[] = [];
-	private readonly answers = new Map<string, Answer>();
+	/** What arrived on a route the page uses that the test did not say how to answer. */
+	readonly unanswered: ReceivedRequest[] = [];
+	private readonly answers = new Map<Route, Answer>();
 
 	/** Answer every request to the route with this reply. */
 	answer<Answered extends Route>(route: Answered, reply: Replies[Answered]): void {
@@ -174,7 +221,7 @@ export class FakeServer {
 
 	/** What arrived on one route, in order. */
 	requestsTo(route: Route): ReceivedRequest[] {
-		return this.requests.filter((request) => routeOf(request) === route);
+		return this.requests.filter((request) => routeOf(request)?.route === route);
 	}
 
 	/** The bodies sent to one route, in order. */
@@ -186,8 +233,13 @@ export class FakeServer {
 	receive(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
 		const request = received(input, init);
 		this.requests.push(request);
-		const answer = this.answers.get(routeOf(request));
-		if (!answer) return Promise.resolve(jsonResponse(NOT_FOUND, { detail: NOT_FOUND_DETAIL }));
+		const route = routeOf(request);
+		if (route === null) return Promise.resolve(refusedAsTheServerRefuses(request));
+		const answer = this.answers.get(route.route);
+		if (!answer) {
+			this.unanswered.push(request);
+			return Promise.reject(new Error(`The test did not say how ${route.route} answers`));
+		}
 
 		switch (answer.kind) {
 			case 'reply':
@@ -204,11 +256,27 @@ export class FakeServer {
 	}
 }
 
+// The servers put in place of the network during the test running now
+const serversThisTest: FakeServer[] = [];
+
 /** Put a server in place of the network for the rest of the test. */
 export function fakeServer(): FakeServer {
 	const server = new FakeServer();
+	serversThisTest.push(server);
 	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => server.receive(input, init));
 	return server;
+}
+
+/**
+ * Fail the test that has just run if the page asked a route of its server
+ * the test did not say how to answer; then forget its servers.
+ */
+export function failOnUnanswered(): void {
+	const unanswered = serversThisTest.splice(0).flatMap((server) => server.unanswered);
+	if (unanswered.length > 0) {
+		const asked = unanswered.map((request) => `${request.method} ${request.path}`).join(', ');
+		throw new Error(`The page asked what the test did not say how to answer: ${asked}`);
+	}
 }
 
 /** What a reader who has never chosen anything has. */
@@ -259,8 +327,19 @@ export function listeningToThePanel(server: FakeServer = fakeServer()): FakeServ
 	return server;
 }
 
-function routeOf(request: ReceivedRequest): string {
-	return `${request.method} ${request.path}`;
+/** The route of the page's a request was sent to; null when none takes its method at its path. */
+function routeOf(request: ReceivedRequest): RoutePattern | null {
+	return ROUTE_PATTERNS.find(({ method, path }) => method === request.method && path.test(request.path)) ?? null;
+}
+
+/** What the real server answers a request no route takes: 405 naming the methods taken at its path, or 404. */
+function refusedAsTheServerRefuses(request: ReceivedRequest): Response {
+	const taken = ROUTE_PATTERNS.filter(({ path }) => path.test(request.path)).map(({ method }) => method);
+	if (taken.length === 0) return jsonResponse(NOT_FOUND, { detail: NOT_FOUND_DETAIL });
+	return new Response(JSON.stringify({ detail: METHOD_NOT_ALLOWED_DETAIL }), {
+		status: METHOD_NOT_ALLOWED,
+		headers: { ...JSON_HEADERS, Allow: taken.join(ALLOW_SEPARATOR) }
+	});
 }
 
 function received(input: RequestInfo | URL, init: RequestInit): ReceivedRequest {

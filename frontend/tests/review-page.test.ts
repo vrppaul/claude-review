@@ -9,7 +9,7 @@ import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import { lineAnchor } from '$lib/anchors/line';
-import type { HeldThread, ServerPush } from '$lib/types';
+import type { FollowRequest, HeldThread, ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
 import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
@@ -94,7 +94,7 @@ function openedReview(page: ReviewPage): Review {
 	return page.state.review;
 }
 
-/** A server with a review to open, and a reader it knows nothing about yet. */
+/** A server with a review to open, a reader it knows nothing about yet, and threads that stay where they are. */
 function serving(): FakeServer {
 	const server = fakeServer();
 	server.answer('GET /api/settings', { record: NEW_READER, stored: true });
@@ -102,6 +102,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/diff', diffResponse());
 	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
+	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
 	return server;
 }
 
