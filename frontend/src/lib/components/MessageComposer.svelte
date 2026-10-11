@@ -3,6 +3,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
+	import { isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 	import MentionPicker from './MentionPicker.svelte';
@@ -45,10 +46,10 @@
 	const whatWentWrong = $derived(noted ?? review.conversation.failed);
 
 	// Asked for from the keyboard, perhaps before the panel was open: taken
-	// once the field is drawn
+	// once the field is drawn — never out of another field the reader is typing in
 	$effect(() => {
 		if (!field || !review.layout.agentPanel.inputWanted) return;
-		field.focus();
+		if (!isTypingTarget(document.activeElement)) field.focus();
 		review.layout.agentPanel.inputTaken();
 	});
 

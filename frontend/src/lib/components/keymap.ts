@@ -38,11 +38,13 @@ function alone(key: string, run: (review: Review) => void): Press {
 /**
  * Open the panel and put the cursor in it. Everything else in this review
  * can be done from the keyboard; talking to the agent should not be the one
- * thing that needs a mouse.
+ * thing that needs a mouse. With nobody listening the panel has no field to
+ * write in, and the cursor is not asked for: a field drawn when an agent
+ * arrives, long after, would take it from whatever the reader is typing then.
  */
 function talkToAgent(review: Review): void {
 	review.layout.agentPanel.setOpen(true);
-	review.layout.agentPanel.askForInput();
+	if (review.answerer.attached) review.layout.agentPanel.askForInput();
 }
 
 /** Do something to the file the reader is in: by focus if a line in it has the focus, by scroll if not. */

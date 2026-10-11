@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { KEYMAP } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
@@ -102,6 +103,38 @@ describe('the keys the review answers', () => {
 		await user.keyboard('c');
 
 		expect(document.activeElement).toBe(screen.getByTestId('panel-input'));
+	});
+
+	it('leaves no cursor waiting when nobody is listening, for an agent arriving later to take', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files, facts: { answerer_attached: false } });
+		render(ReviewScreen, { props: { review } });
+		await user.keyboard('c');
+		expect(review.layout.agentPanel.open).toBe(true);
+		expect(review.layout.agentPanel.inputWanted).toBe(false);
+
+		await user.click(within(sectionOf('a.py')).getByTestId('line-gutter'));
+		await user.keyboard('Half');
+		review.answerer.setAttached(true);
+		flushSync();
+
+		expect(screen.getByTestId('panel-input')).toBeTruthy();
+		expect(document.activeElement).toBe(screen.getByTestId('comment-input'));
+	});
+
+	it('never takes the keyboard from a field being typed in as the panel draws its own', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files, facts: { answerer_attached: false } });
+		review.layout.agentPanel.setOpen(true);
+		render(ReviewScreen, { props: { review } });
+		await user.click(within(sectionOf('a.py')).getByTestId('line-gutter'));
+		review.layout.agentPanel.askForInput();
+
+		review.answerer.setAttached(true);
+		flushSync();
+
+		expect(document.activeElement).toBe(screen.getByTestId('comment-input'));
+		expect(review.layout.agentPanel.inputWanted).toBe(false);
 	});
 
 	it('leaves a letter typed in a field to the field', async () => {
