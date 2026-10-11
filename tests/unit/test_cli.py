@@ -1,12 +1,18 @@
 """The command line as it is typed: what it offers, and what it refuses before it calls anything."""
 
+import importlib
+import inspect
+import pkgutil
 import re
 import socket
 import subprocess
 import sys
 
+import click
 import pytest
 from click.testing import CliRunner, Result
+
+import claude_review
 
 from claude_review.cli.main import main
 from claude_review.domain.models import MAX_QUOTE_LINES
@@ -268,3 +274,30 @@ def test_what_stdin_hands_over_is_read_against_the_reviews_rule(
     assert _failed_in_a_line(result, USAGE_ERROR)
     assert "'BODY'" in result.output
     assert reason in result.output
+
+
+def _every_command() -> list[click.Command]:
+    """Every command the package defines, whichever module it lives in."""
+    modules = [
+        importlib.import_module(found.name)
+        for found in pkgutil.walk_packages(claude_review.__path__, f"{claude_review.__name__}.")
+    ]
+    found = {
+        id(value): value for module in modules for value in vars(module).values() if isinstance(value, click.Command)
+    }
+    return list(found.values())
+
+
+def test_every_command_takes_what_it_is_typed_with_by_name() -> None:
+    """Click hands every value over by name, and nothing should call a command with a bare value in its place."""
+    by_position = [
+        command.name
+        for command in _every_command()
+        if command.callback is not None
+        and any(
+            parameter.kind is not inspect.Parameter.KEYWORD_ONLY
+            for parameter in inspect.signature(command.callback).parameters.values()
+        )
+    ]
+
+    assert by_position == []

@@ -88,7 +88,7 @@ DOCUMENTS: dict[str, Callable[[], dict[str, Any]]] = {"http": http_document, "so
 
 @click.command()
 @click.argument("document", type=click.Choice(list(DOCUMENTS)))
-def print_document(document: str) -> None:
+def print_document(*, document: str) -> None:
     """Print one of the documents the browser's types are generated from."""
     json.dump(DOCUMENTS[document](), sys.stdout, indent=2)
 
