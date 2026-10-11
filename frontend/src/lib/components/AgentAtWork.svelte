@@ -53,9 +53,10 @@
 		<p data-testid="panel-progress" class="cr-progress text-sm">{work.text}</p>
 	{/if}
 	{#if work && work.steps.length > 0}
-		<!-- Branches of the same work, drawn hanging off it -->
+		<!-- Branches of the same work, drawn hanging off it: known by where they
+			stand, since the agent may name the same step twice -->
 		<ul data-testid="progress-steps" class="cr-branches">
-			{#each work.steps as step (step.text)}
+			{#each work.steps as step, position (position)}
 				<li class={['cr-branch', step.done && 'cr-branch-done']}>
 					{#if step.done}
 						<Icon name="check" class="cr-branch-mark" />
@@ -69,7 +70,8 @@
 	{/if}
 	{#if work && work.files.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each work.files as path (path)}
+			<!-- Known by where they stand, since the agent may name a file twice -->
+			{#each work.files as path, position (position)}
 				<button
 					type="button"
 					data-testid="progress-file"

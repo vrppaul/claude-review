@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
+	import PartFailed from './PartFailed.svelte';
 
 	const review = useReview();
 
@@ -16,6 +18,12 @@
 
 <div bind:this={container} data-testid="diff-view" class="flex-1 overflow-auto bg-base-100">
 	{#each review.diff.files as file (file.path)}
-		<FileSection {file} scrollRoot={container ?? null} />
+		<!-- A file that cannot be drawn says so in its place, and takes no other file down with it -->
+		<svelte:boundary onerror={reportBroken}>
+			<FileSection {file} scrollRoot={container ?? null} />
+			{#snippet failed(error, retry)}
+				<PartFailed what={file.path} {error} {retry} />
+			{/snippet}
+		</svelte:boundary>
 	{/each}
 </div>

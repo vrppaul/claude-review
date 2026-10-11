@@ -148,7 +148,8 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						<MarkdownRenderer text={turn.body} dense />
 						{#if turn.files && turn.files.length > 0}
 							<div class="mt-2 flex flex-wrap gap-1">
-								{#each turn.files as path (path)}
+								<!-- Known by where they stand, since the agent may name a file twice -->
+								{#each turn.files as path, position (position)}
 									<button
 										type="button"
 										data-testid="answer-file"

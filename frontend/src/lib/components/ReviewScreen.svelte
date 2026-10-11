@@ -4,6 +4,7 @@
 	import { markTab } from '$lib/dom/tab';
 	import { counted } from '$lib/utils/words';
 	import AgentPanel from './AgentPanel.svelte';
+	import { reportBroken } from './broken-parts';
 	import DiffNotice from './DiffNotice.svelte';
 	import DiffView from './DiffView.svelte';
 	import FileList from './FileList.svelte';
@@ -12,6 +13,7 @@
 	import { pressKey } from './keymap';
 	import ReviewHeader from './ReviewHeader.svelte';
 	import Icon from './Icon.svelte';
+	import PartFailed from './PartFailed.svelte';
 
 	interface Props {
 		review: Review;
@@ -85,7 +87,19 @@
 			{/if}
 			<DiffView />
 			{#if review.layout.agentPanel.open}
-				<AgentPanel />
+				<!-- A panel that cannot be drawn says so in its column, and leaves the review to be read and sent -->
+				<svelte:boundary onerror={reportBroken}>
+					<AgentPanel />
+					{#snippet failed(error, retry)}
+						<!-- Where the panel stood, as wide, so the review beside it does not move -->
+						<div
+							class="cr-panel shrink-0 border-l border-base-300"
+							style:--cr-panel-width="{review.layout.agentPanel.width}px"
+						>
+							<PartFailed what="The agent panel" {error} {retry} />
+						</div>
+					{/snippet}
+				</svelte:boundary>
 			{/if}
 		</div>
 	</div>

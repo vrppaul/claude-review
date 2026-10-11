@@ -796,10 +796,13 @@
 .cr-notice {
 	color: var(--color-base-content);
 }
-.cr-notice-moved {
+/* The code moving on under the reader, and a part of the page that could not be drawn: warnings both */
+.cr-notice-moved,
+.cr-notice-broken {
 	background: var(--cr-warning-tint);
 }
-.cr-notice-moved svg {
+.cr-notice-moved svg,
+.cr-notice-broken svg {
 	color: var(--color-warning);
 }
 .cr-notice-taken {

@@ -240,6 +240,33 @@ describe('the agent panel', () => {
 		expect(steps.textContent).toContain('three subagents out, one back');
 	});
 
+	it('draws a step or a file the agent names twice, twice', async () => {
+		const { getAllByTestId } = render(AgentPanel, inReview(review));
+
+		review.answerer.showWork(
+			work({
+				steps: [
+					{ text: 'ran the tests', done: true },
+					{ text: 'ran the tests', done: false }
+				],
+				files: ['src/routes.py', 'src/routes.py']
+			})
+		);
+		await tick();
+
+		expect(getAllByTestId('progress-steps')[0].querySelectorAll('li')).toHaveLength(2);
+		expect(getAllByTestId('progress-file')).toHaveLength(2);
+	});
+
+	it('draws a file the agent names twice in what it says, twice', async () => {
+		const { getAllByTestId } = render(AgentPanel, inReview(review));
+
+		review.conversation.receive(null, 'Both halves are here.', ['src/routes.py', 'src/routes.py']);
+		await tick();
+
+		expect(getAllByTestId('answer-file')).toHaveLength(2);
+	});
+
 	it('takes the line away when the server says the work is over', async () => {
 		const { queryByTestId } = render(AgentPanel, inReview(review));
 		review.answerer.showWork(work({ text: 'rewriting it' }));
