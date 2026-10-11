@@ -25,6 +25,17 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * Whether a key is part of a word an input method is composing — a word
+ * built from several keys, as Japanese or Chinese is typed. Enter there takes
+ * the composition and Escape drops it: neither is the page's, not a field's,
+ * not a pane's and not the review's, and every key the page reads asks here
+ * first.
+ */
+export function isComposingText(event: KeyboardEvent): boolean {
+	return event.isComposing;
+}
+
+/**
  * What every line number a reader moves between from the keyboard carries,
  * in the order the page draws them. A role of its own: a test id may be
  * renamed for the tests' sake, and the tour's names are the tour's.

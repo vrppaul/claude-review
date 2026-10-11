@@ -169,6 +169,20 @@ describe('the agent panel', () => {
 		expect(firstShown).not.toHaveBeenCalled();
 	});
 
+	it('leaves Enter and Escape to an input method composing a word in the field', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
+		const { getByTestId, getByRole } = render(AgentPanel, inReview(review));
+		const field = getByTestId('panel-input');
+		await user.type(field, 'Look at @');
+
+		await fireEvent.keyDown(field, { key: 'Enter', isComposing: true });
+		await fireEvent.keyDown(field, { key: 'Escape', isComposing: true });
+
+		expect((field as HTMLTextAreaElement).value).toBe('Look at @');
+		expect(getByRole('listbox')).toBeTruthy();
+	});
+
 	it('sends the thread the message points at', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();

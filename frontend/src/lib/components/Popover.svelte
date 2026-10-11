@@ -43,6 +43,7 @@
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { isComposingText } from '$lib/dom/keyboard';
 	import type { Placement } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
 
@@ -134,7 +135,7 @@
 	}
 
 	function closeOnEscape(event: KeyboardEvent) {
-		if (open && event.key === 'Escape' && !inModalAbove(event.target)) open = false;
+		if (open && event.key === 'Escape' && !isComposingText(event) && !inModalAbove(event.target)) open = false;
 	}
 </script>
 

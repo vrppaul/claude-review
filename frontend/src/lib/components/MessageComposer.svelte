@@ -3,7 +3,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
-	import { isTypingTarget } from '$lib/dom/keyboard';
+	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
 	import MentionPicker from './MentionPicker.svelte';
@@ -91,6 +91,7 @@
 	}
 
 	function onKeydown(event: KeyboardEvent) {
+		if (isComposingText(event)) return;
 		if (pickerKey(event)) {
 			event.preventDefault();
 		} else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CommentSeverity } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
+	import { isComposingText } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
@@ -124,6 +125,7 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (isComposingText(event)) return;
 		// Ctrl+Shift+Enter is not the field's: it finishes the review
 		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
 			event.preventDefault();

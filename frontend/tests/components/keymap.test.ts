@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
@@ -158,6 +158,14 @@ describe('the keys the review answers', () => {
 		await user.keyboard('?');
 
 		expect(screen.queryByTestId('shortcuts-list')).toBeNull();
+	});
+
+	it('leaves a chord to an input method composing a word', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		await fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true, isComposing: true });
+
+		expect(review.submission.finishing).toBe(false);
 	});
 
 	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {

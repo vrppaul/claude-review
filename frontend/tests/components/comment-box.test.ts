@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
@@ -260,6 +260,27 @@ describe('putting a comment away', () => {
 		expect(onCancel).not.toHaveBeenCalled();
 		expect(queryByTestId('discard-dialog')).toBeNull();
 		expect((getByTestId('comment-input') as HTMLTextAreaElement).value).toBe('Half a thought');
+	});
+
+	it('leaves Escape to an input method composing a word in it', async () => {
+		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(newField());
+		const input = getByTestId('comment-input');
+
+		await fireEvent.keyDown(input, { key: 'Escape', isComposing: true });
+
+		expect(queryByTestId('discard-dialog')).toBeNull();
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+
+	it('leaves Ctrl+Enter to an input method composing a word in it', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = drawnSaving(newField());
+		const input = getByTestId('comment-input');
+		await user.type(input, 'Half');
+
+		await fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true, isComposing: true });
+
+		expect(review.threads.count).toBe(0);
 	});
 
 	it('closes an empty field on Escape without asking', async () => {

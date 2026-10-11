@@ -7,7 +7,7 @@
  * review from inside a comment field is what it is for.
  */
 
-import { isTypingTarget, moveByLine } from '$lib/dom/keyboard';
+import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 import type { Review } from '$lib/review/review.svelte';
 
 /** The chord that finishes the review, as the help and the hints beside its button write it. */
@@ -116,12 +116,12 @@ function pressOf(event: KeyboardEvent): Press | undefined {
 
 /**
  * Answer a keystroke the review has a key for. A key something on the page
- * has already answered is not the review's; while the help is open the keys
- * are the help's; while a field is being typed in, only a chord is the
- * review's.
+ * has already answered is not the review's, nor one an input method is
+ * composing a word with; while the help is open the keys are the help's;
+ * while a field is being typed in, only a chord is the review's.
  */
 export function pressKey(review: Review, event: KeyboardEvent): void {
-	if (event.defaultPrevented || review.guide.helpOpen) return;
+	if (event.defaultPrevented || isComposingText(event) || review.guide.helpOpen) return;
 	const press = pressOf(event);
 	if (!press || (press.held === 'nothing' && isTypingTarget(event.target))) return;
 	event.preventDefault();

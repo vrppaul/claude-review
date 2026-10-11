@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
@@ -122,6 +122,16 @@ describe('a pane and the keyboard', () => {
 		await user.keyboard('{Escape}');
 
 		expect(document.activeElement).toBe(screen.getByTestId('base-picker'));
+	});
+
+	it('leaves Escape to an input method composing a word in its field', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+		await user.click(screen.getByTestId('base-picker'));
+
+		await fireEvent.keyDown(screen.getByTestId('base-filter'), { key: 'Escape', isComposing: true });
+
+		expect(screen.getByTestId('base-list')).toBeTruthy();
 	});
 
 	it('gives the keyboard back to the field it was opened from by its keys', async () => {
