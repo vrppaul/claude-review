@@ -53,6 +53,21 @@ function questionIdOf(thread: Thread): string {
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
 
+/** A comment field holding something not said yet, and what it is written on. */
+export interface OpenField {
+	field: CommentField;
+	anchor: Anchor;
+}
+
+/** Whether an edit's field says what its thread says already: opened, and left as it was. */
+function leftAsItWas(field: CommentField, thread: Thread): boolean {
+	return (
+		field.text.trim() === thread.body &&
+		field.attachments.images.length === thread.images.length &&
+		field.attachments.images.every((image, position) => image === thread.images[position])
+	);
+}
+
 /** Whether a thread the review holds is as the agent raised it: nothing settled, and nothing said in it by the reader. */
 function isAsRaised(held: HeldThread): boolean {
 	return held.raised_by === AGENT && !held.resolved && held.turns.every((turn) => turn.author !== READER);
@@ -266,6 +281,24 @@ export class Threads {
 		await this.ask(thread);
 	}
 
+	/**
+	 * The fields holding something not said yet: a comment started on lines, a
+	 * reply, an edit that changes what its thread says. What a send takes
+	 * along, and the pane it goes from lists.
+	 */
+	get open(): OpenField[] {
+		return this.writing.fields.filter((field) => field.sayable).flatMap((field) => this.#openOn(field));
+	}
+
+	/**
+	 * Put into the review what every open field holds, as a send does before it
+	 * goes: a pending comment goes with the review, as on GitHub, rather than
+	 * being left behind by a round or forgotten with the draft by the end.
+	 */
+	sayOpen(): void {
+		for (const { field } of this.open) this.say(field);
+	}
+
 	/** Add what someone said to a thread. */
 	addTurn(id: string, { author, body, images }: NewTurn): void {
 		const turn: Turn = {
@@ -402,6 +435,18 @@ export class Threads {
 				this.update(at.thread, body, severity, images);
 				return at.thread;
 		}
+	}
+
+	/** What an open field is written on, as one, or none when it would say nothing new. */
+	#openOn(field: CommentField): OpenField[] {
+		const { at } = field;
+		if (at.kind === 'new') {
+			const { side, startLine, endLine } = at.lines;
+			return [{ field, anchor: lineAnchor(at.file, side, startLine, endLine, at.quote) }];
+		}
+		const thread = this.#all.find((candidate) => candidate.id === at.thread);
+		if (!thread || (at.kind === 'edit' && leftAsItWas(field, thread))) return [];
+		return [{ field, anchor: thread.anchor }];
 	}
 
 	#replace(id: string, change: (thread: Thread) => Thread): void {

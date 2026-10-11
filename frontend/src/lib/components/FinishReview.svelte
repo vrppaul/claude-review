@@ -14,6 +14,8 @@
 
 	const submission = review.submission;
 	const unsent = $derived(review.threads.unsent.length);
+	// Comments still open in their fields, which go with whatever is sent
+	const open = $derived(review.threads.open);
 
 	// The pane opens on the summary: the one thing in it that is written here
 	onMount(() => summary?.focus());
@@ -41,8 +43,26 @@
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+		{#if open.length > 0}
+			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
+			<div data-testid="open-fields" class="mb-3">
+				<p class="cr-faint mb-1.5 text-xs">
+					{counted(open.length, 'comment still open goes', 'comments still open go')} with the review:
+				</p>
+				<ul class="flex flex-col gap-1.5">
+					{#each open as { field, anchor } (field.key)}
+						<li data-testid="open-field" class="px-2 py-1.5">
+							<span class="cr-comment-ref font-mono text-xs">{anchorPlace(anchor)}</span>
+							<span class="cr-comment-body mt-0.5 block whitespace-pre-wrap">{field.text}</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 		{#if review.threads.count === 0}
-			<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
+			{#if open.length === 0}
+				<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
+			{/if}
 		{:else}
 			<ul class="flex flex-col gap-1.5">
 				{#each review.threads.all as thread (thread.id)}

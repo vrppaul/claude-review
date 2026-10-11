@@ -44,9 +44,7 @@
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
-	const sayable = $derived(
-		(field.text.trim().length > 0 || field.attachments.images.length > 0) && field.attachments.uploading === 0
-	);
+	const sayable = $derived(field.sayable);
 
 	// Grow with the text: a suggestion inserts several lines at once, and a
 	// fixed box scrolls them out of sight with nothing to say so

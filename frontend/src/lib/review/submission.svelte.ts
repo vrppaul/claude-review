@@ -60,14 +60,14 @@ export class Submission {
 		return this.#answerer.attached;
 	}
 
-	/** Whether there is anything to send at all. */
+	/** Whether there is anything to send at all: a thread, the summary, or a comment still open in its field. */
 	get hasContent(): boolean {
-		return this.#threads.count > 0 || this.#body.trim().length > 0;
+		return this.#threads.count > 0 || this.#body.trim().length > 0 || this.#threads.open.length > 0;
 	}
 
-	/** Whether there is anything the answering side has not been told yet. */
+	/** Whether there is anything the answering side has not been told yet, comments still open included. */
 	get hasUnsent(): boolean {
-		return this.#threads.unsent.length > 0 || this.#body.trim().length > 0;
+		return this.#threads.unsent.length > 0 || this.#body.trim().length > 0 || this.#threads.open.length > 0;
 	}
 
 	/**
@@ -132,12 +132,14 @@ export class Submission {
 	}
 
 	/**
-	 * Send what has been written since the last time.
+	 * Send what has been written since the last time, comments still open in
+	 * their fields included.
 	 *
 	 * `end` decides whether this is the last word: a round leaves the review
 	 * open, so the answers to it have somewhere to come back to.
 	 */
 	async submit(end: boolean): Promise<SubmitResponse> {
+		this.#threads.sayOpen();
 		const summary = this.#body.trim();
 		const unsent = this.#threads.unsent;
 

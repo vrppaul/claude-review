@@ -61,6 +61,11 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 		this.#severity = severity;
 	}
 
+	/** Whether it holds something to say — words, or an image — with no image still on its way. */
+	get sayable(): boolean {
+		return (this.#text.trim().length > 0 || this.attachments.images.length > 0) && this.attachments.uploading === 0;
+	}
+
 	/** Whether it should take the cursor now. */
 	get focusWanted(): boolean {
 		return this.#focusWanted;

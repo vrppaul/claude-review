@@ -43,6 +43,11 @@ export class ThreadWriting {
 		for (const field of kept) this.#fields.set(fieldKey(field.at), new CommentField(field.at, field, false));
 	}
 
+	/** Every field being written, in the order opened. */
+	get fields(): CommentField[] {
+		return [...this.#fields.values()];
+	}
+
 	/** The comments being started on a file's lines, in the order they were started. */
 	onLinesOf(file: string): CommentField<WrittenOnLines>[] {
 		return [...this.#fields.values()].filter(isOnLines).filter((field) => field.at.file === file);
