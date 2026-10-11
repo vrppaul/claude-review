@@ -11,6 +11,7 @@
 import type { DiffFile, DiffHunk, DiffLine, LinePlace } from '$lib/types';
 import { type ContextGap, gapAbove, hunkKey } from '$lib/utils/expansions';
 import { type HighlightedLine, highlightHunk } from '$lib/utils/highlight';
+import { placeKey } from '$lib/utils/line-places';
 import { withWordMarks } from '$lib/utils/word-diff';
 
 /**
@@ -41,16 +42,6 @@ export interface DrawnHunk {
 function placeOf(line: DiffLine): LinePlace {
 	if (line.kind === 'delete') return { side: 'old', number: line.old_number ?? NO_NUMBER };
 	return { side: 'new', number: line.new_number ?? NO_NUMBER };
-}
-
-/** Whether two places are the same line. */
-export function samePlace(one: LinePlace, other: LinePlace): boolean {
-	return one.side === other.side && one.number === other.number;
-}
-
-/** What a place is known by wherever lines are looked up by where they are. */
-export function placeKey(place: LinePlace): string {
-	return `${place.side}:${place.number}`;
 }
 
 /**

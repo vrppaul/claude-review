@@ -14,7 +14,8 @@ import { sideIsDrawn } from '$lib/anchors/placement';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
-import { type DrawnHunk, type DrawnLine, NO_NUMBER, samePlace } from '$lib/utils/drawn-file';
+import { type DrawnHunk, type DrawnLine, NO_NUMBER } from '$lib/utils/drawn-file';
+import { samePlace } from '$lib/utils/line-places';
 
 /** A comment being written on lines of the file. */
 type LineField = CommentField<WrittenOnLines>;

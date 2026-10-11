@@ -1,7 +1,7 @@
 import type { LinePlace, Thread } from '$lib/types';
 import type { ThreadOnLines } from '$lib/anchors/line';
 import { sideIsDrawn } from '$lib/anchors/placement';
-import { placeKey } from '$lib/utils/drawn-file';
+import { placeKey } from '$lib/utils/line-places';
 
 /** What a line with no threads under it holds. */
 const NO_THREADS: readonly Thread[] = [];
