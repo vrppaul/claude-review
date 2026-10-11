@@ -28,7 +28,7 @@ export class ReviewPage {
 	readonly #theme = new PageTheme(this.#settings);
 	#state = $state.raw<PageState>({ kind: 'opening' });
 	// How to let go of the review open now: stop telling the server what it
-	// holds, and stop keeping its draft
+	// holds, stop keeping its draft, and stop asking before the tab leaves it
 	#letGo: (() => void) | null = null;
 
 	/** @param closeTab how the tab is closed once the review is over */
@@ -74,7 +74,10 @@ export class ReviewPage {
 				layout: this.#layout,
 				sound: new ReplySound(this.#settings)
 			});
-			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping);
+			window.addEventListener('beforeunload', this.#askBeforeLeaving);
+			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping, () =>
+				window.removeEventListener('beforeunload', this.#askBeforeLeaving)
+			);
 			this.#connection.deliverTo({
 				identity: review.identity,
 				told: () => review.telling.heard,
@@ -112,4 +115,11 @@ export class ReviewPage {
 		this.#letGo = null;
 		this.#connection.close();
 	}
+
+	// The browser asks the reader before the tab leaves a review with something
+	// unsent in it — a link followed, the tab closed, a reload: the draft keeps
+	// it, but leaving ends the review a moment later and lets its agent go
+	readonly #askBeforeLeaving = (event: Event): void => {
+		if (this.#state.kind === 'open' && this.#state.review.submission.hasUnsent) event.preventDefault();
+	};
 }

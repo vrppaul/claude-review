@@ -47,3 +47,17 @@ export function isSafeDestination(destination: string): boolean {
 		return false;
 	}
 }
+
+/**
+ * Whether a link leads somewhere of its own: written whole, with a scheme a
+ * link may follow. A relative one is read against the review's own address —
+ * its server, its routes — and following it would take the review's tab
+ * away from the review, which ends once its tab is gone.
+ */
+export function isAbsoluteDestination(destination: string): boolean {
+	try {
+		return SAFE_PROTOCOLS.has(new URL(destination).protocol);
+	} catch {
+		return false;
+	}
+}

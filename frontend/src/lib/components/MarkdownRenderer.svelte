@@ -2,7 +2,11 @@
 	import { Marked, type Tokens } from 'marked';
 	import { markedHighlight } from 'marked-highlight';
 	import { hljs } from '$lib/utils/highlight';
-	import { escapeMarkup, isSafeDestination } from '$lib/utils/safe-markup';
+	import { escapeMarkup, isAbsoluteDestination, isSafeDestination } from '$lib/utils/safe-markup';
+
+	// Where a link opens: a tab of its own, which learns nothing of the review
+	// that opened it — followed in the review's own tab, it would end the review
+	const IN_A_TAB_OF_ITS_OWN = 'target="_blank" rel="noopener noreferrer"';
 
 	/** A title attribute, or nothing when the destination has no title. */
 	function titleAttribute(title: string | null | undefined): string {
@@ -35,10 +39,15 @@
 				html(token: Tokens.HTML | Tokens.Tag) {
 					return escapeMarkup(token.text);
 				},
+				/**
+				 * A link that leads somewhere of its own, opened in a tab of its
+				 * own. Anything else — code in place of a destination, or a path
+				 * relative to the review's own address — is left as its text.
+				 */
 				link(token: Tokens.Link) {
 					const text = this.parser.parseInline(token.tokens);
-					if (!isSafeDestination(token.href)) return text;
-					return `<a href="${escapeMarkup(token.href)}"${titleAttribute(token.title)}>${text}</a>`;
+					if (!isAbsoluteDestination(token.href)) return text;
+					return `<a href="${escapeMarkup(token.href)}"${titleAttribute(token.title)} ${IN_A_TAB_OF_ITS_OWN}>${text}</a>`;
 				},
 				image(token: Tokens.Image) {
 					if (!isSafeDestination(token.href)) return escapeMarkup(token.text);

@@ -81,6 +81,13 @@ function socketsOpenedAfterLongWait(): number {
 	return FakeSocket.opened.length - opened;
 }
 
+/** Whether the browser would ask the reader before the tab leaves the page now. */
+function asksBeforeLeaving(): boolean {
+	const leaving = new Event('beforeunload', { cancelable: true });
+	window.dispatchEvent(leaving);
+	return leaving.defaultPrevented;
+}
+
 /** The review an open page holds. */
 function openedReview(page: ReviewPage): Review {
 	if (page.state.kind !== 'open') throw new Error(`The page is ${page.state.kind}`);
@@ -377,6 +384,21 @@ describe('opening the page', () => {
 		await page.open();
 
 		expect(openedReview(page).threads.all.map((thread) => thread.body)).toEqual(['written in this browser']);
+	});
+
+	it('asks before the tab leaves the review with something unsent in it, and only then', async () => {
+		serving();
+		const page = newPage();
+		await page.open();
+		const review = openedReview(page);
+
+		const withNothing = asksBeforeLeaving();
+		review.submission.setBody('Mostly fine');
+		const withASummary = asksBeforeLeaving();
+		page.close();
+		const onceLetGo = asksBeforeLeaving();
+
+		expect([withNothing, withASummary, onceLetGo]).toEqual([false, true, false]);
 	});
 
 	it('says why when the review cannot be opened', async () => {

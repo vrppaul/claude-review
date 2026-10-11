@@ -76,30 +76,29 @@ describe('a previewed file is read, not run', () => {
 		expect(content.textContent).toContain('click me');
 	});
 
-	it('still renders an ordinary link', () => {
+	it('opens an ordinary link in a tab of its own, so the review stays where it is', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
 			props: { text: '[docs](https://example.com/a)\n' }
 		});
 
 		const link = getByTestId('markdown-content').querySelector('a');
 		expect(link?.getAttribute('href')).toBe('https://example.com/a');
+		expect(link?.getAttribute('target')).toBe('_blank');
+		expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
 	});
 
-	it('still renders a relative link', () => {
-		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: '[other](./other.md)\n' }
-		});
+	it.each(['./other.md', 'README.md', '../docs/plan.md', '#usage', '/api/end'])(
+		'leaves a relative link (%s) as text: followed, it would take the review away from its own tab',
+		(destination) => {
+			const { getByTestId } = render(MarkdownRenderer, {
+				props: { text: `[where](${destination})\n` }
+			});
 
-		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe('./other.md');
-	});
-
-	it('still renders a relative link written without a leading dot', () => {
-		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: '[readme](README.md)\n' }
-		});
-
-		expect(getByTestId('markdown-content').querySelector('a')?.getAttribute('href')).toBe('README.md');
-	});
+			const content = getByTestId('markdown-content');
+			expect(content.querySelector('a')).toBeNull();
+			expect(content.textContent).toContain('where');
+		}
+	);
 
 	it('keeps an image description inside its own attribute', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
@@ -113,7 +112,7 @@ describe('a previewed file is read, not run', () => {
 
 	it('keeps a link title inside its own attribute', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: `[docs](./docs.md 'say "hi" onmouseover="alert(1)"')\n` }
+			props: { text: `[docs](https://example.com/docs.md 'say "hi" onmouseover="alert(1)"')\n` }
 		});
 
 		const link = getByTestId('markdown-content').querySelector('a');
@@ -123,10 +122,11 @@ describe('a previewed file is read, not run', () => {
 
 	it('keeps a link destination inside its own attribute', () => {
 		const { getByTestId } = render(MarkdownRenderer, {
-			props: { text: '[docs](<./docs.md" onmouseover="alert(1)>)\n' }
+			props: { text: '[docs](<https://example.com/docs.md" onmouseover="alert(1)>)\n' }
 		});
 
 		const link = getByTestId('markdown-content').querySelector('a');
+		expect(link).not.toBeNull();
 		expect(link?.getAttribute('onmouseover')).toBeNull();
 	});
 
