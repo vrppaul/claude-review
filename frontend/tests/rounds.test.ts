@@ -173,6 +173,30 @@ describe('a thread meeting a diff that has been taken again', () => {
 		expect(moved).toEqual({ followed: 0, outdated: 1 });
 	});
 
+	it('refuses an answer that does not say where every thread went, and leaves them where they were', async () => {
+		fakeServer().answer('POST /api/anchors/follow', { anchors: [] });
+		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));
+
+		await expect(review.threads.follow()).rejects.toThrow();
+
+		expect(review.threads.all.map((comment) => comment.anchor.start_line)).toEqual([2]);
+	});
+
+	it('counts only the threads still there when the answer lands', async () => {
+		const followed = fakeServer().hold('POST /api/anchors/follow');
+		const removed = review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));
+		review.threads.add(newComment({ file: 'a.py', startLine: 5, quote: ['def walk():'] }));
+
+		const following = review.threads.follow();
+		review.threads.remove(removed);
+		followed.answer(0, {
+			anchors: [lineAnchor('a.py', 'new', 3, 3, ['def run():']), lineAnchor('a.py', 'new', 6, 6, ['def walk():'])]
+		});
+
+		expect(await following).toEqual({ followed: 1, outdated: 0 });
+		expect(review.threads.all.map((comment) => comment.anchor.start_line)).toEqual([6]);
+	});
+
 	it('leaves a thread written while the answer was on its way where it is', async () => {
 		const followed = fakeServer().hold('POST /api/anchors/follow');
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));

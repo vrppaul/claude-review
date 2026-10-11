@@ -39,11 +39,8 @@ function indexOfStep(shown: TourStep[], id: string | null): number {
 	// saving a comment becomes choosing where it goes, the last word becomes
 	// the round or the end
 	const inWholeTour = TOUR_STEPS.findIndex((step) => step.id === id);
-	for (let earlier = inWholeTour - 1; earlier >= 0; earlier -= 1) {
-		const standIn = shown.findIndex((step) => step.id === TOUR_STEPS[earlier].id);
-		if (standIn !== -1) return standIn;
-	}
-	return 0;
+	const standIn = TOUR_STEPS.slice(0, Math.max(inWholeTour, 0)).findLast((step) => shown.includes(step));
+	return standIn ? shown.indexOf(standIn) : 0;
 }
 
 export class Guide {
@@ -261,18 +258,12 @@ export class Guide {
 	 * one there is something to see in; going on past the end ends the tour.
 	 */
 	#landFrom(index: number, direction: 1 | -1): void {
-		let candidate = index;
-		while (candidate >= 0 && candidate < this.#steps.length && !this.#shows(this.#steps[candidate])) {
-			candidate += direction;
-		}
-		if (candidate < 0) {
-			this.#landFrom(0, 1);
-			return;
-		}
-		if (candidate >= this.#steps.length) {
-			this.endTour();
-			return;
-		}
-		this.#stepId = this.#steps[candidate].id;
+		const landing =
+			direction === 1
+				? this.#steps.slice(index).find((step) => this.#shows(step))
+				: this.#steps.slice(0, index + 1).findLast((step) => this.#shows(step));
+		if (landing) this.#stepId = landing.id;
+		else if (direction === -1) this.#landFrom(0, 1);
+		else this.endTour();
 	}
 }

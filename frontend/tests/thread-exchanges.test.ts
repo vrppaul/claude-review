@@ -18,8 +18,8 @@ function thread(turns: Turn[]): Thread {
 	};
 }
 
-function reply(id: string, body: string): Turn {
-	return { id, author: 'reader', body, round: 1, at: 0, images: [] };
+function reply(id: string, body: string, round = 1): Turn {
+	return { id, author: 'reader', body, round, at: 0, images: [] };
 }
 
 function answer(id: string, body: string, answers?: string): Turn {
@@ -61,5 +61,11 @@ describe('a thread read as questions and answers', () => {
 			['Why here?', []],
 			['And there?', ['An old answer.']]
 		]);
+	});
+
+	it('says where a new round begins: at a question asked in a later round than the one before it', () => {
+		const exchanges = exchangesOf(thread([reply('t1', 'And this?'), reply('t2', 'Still?', 2), reply('t3', 'Now?', 2)]));
+
+		expect(exchanges.map((exchange) => exchange.startsRound)).toEqual([false, false, true, false]);
 	});
 });

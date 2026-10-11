@@ -7,15 +7,16 @@
  * to act on, so every value that reaches the markup goes through here.
  */
 
-// What would close a text node or a quoted attribute early, as entities
-const MARKUP_ENTITIES: Readonly<Record<string, string>> = {
-	'&': '&amp;',
-	'<': '&lt;',
-	'>': '&gt;',
-	'"': '&quot;',
-	"'": '&#39;'
-};
-const MARKUP_SPECIAL = /[&<>"']/g;
+// What would close a text node or a quoted attribute early, and the entity each is written as instead
+const MARKUP_ENTITIES: ReadonlyMap<string, string> = new Map([
+	['&', '&amp;'],
+	['<', '&lt;'],
+	['>', '&gt;'],
+	['"', '&quot;'],
+	["'", '&#39;']
+]);
+// Any one of them; none is special inside a set of characters
+const MARKUP_SPECIAL = new RegExp(`[${[...MARKUP_ENTITIES.keys()].join('')}]`, 'g');
 
 // Schemes a link or an image may lead to. Anything else — javascript:, data:,
 // vbscript: — is not a destination, it is code or content carried inline.
@@ -28,7 +29,7 @@ const RELATIVE_BASE = 'https://relative.invalid/';
 
 /** Text made safe for a text node and for a quoted attribute value alike. */
 export function escapeMarkup(text: string): string {
-	return text.replace(MARKUP_SPECIAL, (special) => MARKUP_ENTITIES[special]);
+	return text.replace(MARKUP_SPECIAL, (special) => MARKUP_ENTITIES.get(special) ?? special);
 }
 
 /**

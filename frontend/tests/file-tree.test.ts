@@ -42,6 +42,12 @@ describe('the files of a review as a tree', () => {
 		expect(rowsOf(tree)).toEqual(['src/lib/', '  one.ts', '  deep/', '    two.ts']);
 	});
 
+	it('stops the chain at a folder holding more than its first folder', () => {
+		const tree = treeOf('src/deep/two.ts', 'src/one.ts');
+
+		expect(rowsOf(tree)).toEqual(['src/', '  deep/', '    two.ts', '  one.ts']);
+	});
+
 	it('knows a folder by its path from the top, the way it is folded', () => {
 		const [folder] = treeOf('src/lib/one.ts', 'src/lib/two.ts');
 

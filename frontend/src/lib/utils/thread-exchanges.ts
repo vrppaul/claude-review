@@ -16,6 +16,8 @@ export interface Exchange {
 	id: string;
 	asked: string;
 	round: number;
+	/** Whether it was asked in another round than the question before it: where a new round begins in the thread. */
+	startsRound: boolean;
 	/** When it was asked; a reply kept from an older version may not say. */
 	at: number | undefined;
 	images: string[];
@@ -23,23 +25,39 @@ export interface Exchange {
 }
 
 export function exchangesOf(thread: Thread): Exchange[] {
-	const exchanges: Exchange[] = [
-		{ id: thread.id, asked: thread.body, round: thread.round, at: thread.at, images: thread.images, answers: [] }
-	];
+	const opening: Exchange = {
+		id: thread.id,
+		asked: thread.body,
+		round: thread.round,
+		startsRound: false,
+		at: thread.at,
+		images: thread.images,
+		answers: []
+	};
+	const exchanges = [opening];
+	// The question asked last, which an answer that names none falls to
+	let latest = opening;
 	for (const turn of thread.turns) {
 		if (turn.author === READER) {
-			exchanges.push({
-				id: turn.id,
-				asked: turn.body,
-				round: turn.round,
-				at: turn.at,
-				images: turn.images,
-				answers: []
-			});
+			latest = exchangeAfter(latest, turn);
+			exchanges.push(latest);
 		} else {
-			const answered = exchanges.find((exchange) => exchange.id === turn.answers) ?? exchanges[exchanges.length - 1];
+			const answered = exchanges.find((exchange) => exchange.id === turn.answers) ?? latest;
 			answered.answers.push(turn);
 		}
 	}
 	return exchanges;
+}
+
+/** The question a reply of the reader's asks, after the question before it. */
+function exchangeAfter(previous: Exchange, reply: Turn): Exchange {
+	return {
+		id: reply.id,
+		asked: reply.body,
+		round: reply.round,
+		startsRound: reply.round !== previous.round,
+		at: reply.at,
+		images: reply.images,
+		answers: []
+	};
 }

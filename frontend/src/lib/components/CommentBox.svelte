@@ -2,11 +2,9 @@
 	import type { CommentSeverity } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
+	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
 
-	// What opens a suggested replacement, and what closes it on a line of its own
-	const SUGGESTION_FENCE = '```suggestion';
-	const FENCE_CLOSE = '\n```';
 	// The tallest the field grows, in pixels, before it scrolls instead
 	const TALLEST = 480;
 	// What the field says when it took off an image it could not show
@@ -101,19 +99,17 @@
 	 * gets something it can apply rather than something it has to interpret.
 	 */
 	function suggest() {
-		if (!suggestFrom || field.text.includes(SUGGESTION_FENCE)) return;
-		const block = `${SUGGESTION_FENCE}\n${suggestFrom.join('\n')}${FENCE_CLOSE}`;
-		const written = field.text.trim();
-		field.text = written ? `${written}\n\n${block}` : block;
-		requestAnimationFrame(() => selectSuggestion());
+		if (!suggestFrom || hasSuggestion(field.text)) return;
+		const { text, start, end } = withSuggestion(field.text, suggestFrom);
+		field.text = text;
+		requestAnimationFrame(() => selectSuggested(start, end));
 	}
 
-	/** Put the cursor in the suggested lines, rather than after the block. */
-	function selectSuggestion() {
+	/** Put the cursor over the suggested lines, rather than after the block. */
+	function selectSuggested(start: number, end: number) {
 		if (!textarea) return;
 		textarea.focus();
-		const from = field.text.indexOf(SUGGESTION_FENCE) + SUGGESTION_FENCE.length + 1;
-		textarea.setSelectionRange(from, field.text.length - FENCE_CLOSE.length);
+		textarea.setSelectionRange(start, end);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -175,7 +171,7 @@
 				type="button"
 				class="btn btn-ghost btn-xs"
 				data-testid="suggest-change"
-				disabled={field.text.includes(SUGGESTION_FENCE)}
+				disabled={hasSuggestion(field.text)}
 				onclick={suggest}
 			>
 				Suggest a change

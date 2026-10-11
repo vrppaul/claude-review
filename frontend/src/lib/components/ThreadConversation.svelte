@@ -37,7 +37,7 @@
 <div class="cr-thread">
 	{#each exchanges as exchange, index (exchange.id)}
 		{@const waitedOn = askedAt(exchange.id)}
-		{#if index > 0 && exchange.round !== exchanges[index - 1].round}
+		{#if exchange.startsRound}
 			<!-- Where one round ended and the next began, in this thread -->
 			<div data-testid="round-mark" class="cr-round-mark">
 				<span></span>

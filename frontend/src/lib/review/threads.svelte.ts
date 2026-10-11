@@ -11,10 +11,11 @@ import { SvelteMap } from 'svelte/reactivity';
 
 import { askInThread, followAnchors } from '$lib/api/review-api';
 import { lineAnchor, type ThreadOnLines } from '$lib/anchors/line';
-import { anchorLines, sameSpot } from '$lib/anchors/views';
+import { anchorLines } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
+import { followedThreads } from '$lib/review/following';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
 import { ThreadWriting } from '$lib/review/thread-writing.svelte';
@@ -55,27 +56,6 @@ const NO_THREADS: readonly ThreadOnLines[] = [];
 function onItsLines(thread: Thread): ThreadOnLines[] {
 	const lines = anchorLines(thread.anchor);
 	return lines ? [{ thread, lines }] : [];
-}
-
-/** A thread, and the anchor following the diff gave it. */
-interface FollowedThread {
-	thread: Thread;
-	moved: Anchor;
-}
-
-/** Whether following took a thread off lines it still had. */
-function lostItsLines({ thread, moved }: FollowedThread): boolean {
-	return moved.outdated && !thread.anchor.outdated;
-}
-
-/** Whether following took a thread, with its lines, somewhere else. */
-function wentWithItsLines(followed: FollowedThread): boolean {
-	return !lostItsLines(followed) && !sameSpot(followed.moved, followed.thread.anchor);
-}
-
-/** A thread on the anchor following gave it, or as it was where it was not asked about. */
-function onItsAnchor(thread: Thread, movedTo: Record<string, Anchor>): Thread {
-	return Object.hasOwn(movedTo, thread.id) ? { ...thread, anchor: movedTo[thread.id] } : thread;
 }
 
 export class Threads {
@@ -290,25 +270,21 @@ export class Threads {
 	}
 
 	/**
-	 * Take an answer that came back and put it under the question it answers.
-	 * Says whether there was a thread to put it in.
-	 *
-	 * An answerer that names the question is believed; one that does not gets
-	 * the oldest question still waiting, which is the order they were handed
-	 * over in.
+	 * Take an answer that came back and put it under the question it answers,
+	 * as the reading tells which. Says whether there was a thread to put it in.
 	 */
 	receiveReply(id: string, text: string, questionId: string | null): boolean {
 		if (!this.#all.some((thread) => thread.id === id)) return false;
 
-		const answers = questionId ?? this.reading.awaiting(id)[0]?.id;
+		const answers = this.reading.settleAnswer(id, questionId);
 		const turn: Turn = {
 			id: this.#turnIds.next(),
 			author: AGENT,
 			body: text,
 			round: this.#rounds.current,
 			at: Date.now(),
-			answers,
-			images: []
+			images: [],
+			...(answers === undefined ? {} : { answers })
 		};
 		// Not marked unsent: the answer came from the side that reads the
 		// rounds, so sending it back would only repeat what they wrote
@@ -316,7 +292,6 @@ export class Threads {
 			...answered,
 			turns: [...answered.turns, turn]
 		}));
-		this.reading.settled(id, answers);
 		this.reading.markUnread(id);
 		return true;
 	}
@@ -345,18 +320,11 @@ export class Threads {
 	 * and the only part of a retake they cannot see at a glance.
 	 */
 	async follow(): Promise<FollowOutcome> {
-		const asked = this.#all.map((thread) => thread.id);
-		const { anchors } = await followAnchors({
-			anchors: this.#all.map((thread) => thread.anchor)
-		});
-		const movedTo: Record<string, Anchor> = Object.fromEntries(asked.map((id, index) => [id, anchors[index]]));
-		// A thread written while the answer was on its way was not asked about: it is left as written
-		const followed: FollowedThread[] = this.#all
-			.filter((thread) => Object.hasOwn(movedTo, thread.id))
-			.map((thread) => ({ thread, moved: movedTo[thread.id] }));
-
-		this.#all = this.#all.map((thread) => onItsAnchor(thread, movedTo));
-		return { followed: followed.filter(wentWithItsLines).length, outdated: followed.filter(lostItsLines).length };
+		const asked = this.#all;
+		const { anchors } = await followAnchors({ anchors: asked.map((thread) => thread.anchor) });
+		const { threads, outcome } = followedThreads(asked, anchors, this.#all);
+		this.#all = threads;
+		return outcome;
 	}
 
 	/**

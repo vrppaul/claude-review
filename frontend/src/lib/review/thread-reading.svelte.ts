@@ -70,6 +70,18 @@ export class ThreadReading {
 		this.#awaiting.set(threadId, [...waiting, { id: questionId, at: Date.now() }]);
 	}
 
+	/**
+	 * Take an answer that came back: the question it answers is no longer
+	 * waited on. An answer that names its question is believed; one that does
+	 * not answers the oldest still waited on, the order they were handed over
+	 * in. Says which question it answered, if it answered one.
+	 */
+	settleAnswer(threadId: string, named: string | null): string | undefined {
+		const answered = named ?? this.awaiting(threadId).at(0)?.id;
+		this.settled(threadId, answered);
+		return answered;
+	}
+
 	/** A question is no longer waited on: answered, or never handed over. */
 	settled(threadId: string, questionId: string | undefined): void {
 		const waiting = this.awaiting(threadId).filter((question) => question.id !== questionId);

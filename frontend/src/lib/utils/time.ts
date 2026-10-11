@@ -16,12 +16,14 @@ interface TimeUnit {
 	letter: string;
 }
 
+// The smallest unit, which a span shorter than any whole unit is said in too: "0s ago"
+const SECONDS: TimeUnit = { seconds: 1, letter: 's' };
 // The largest first: a span is said in the largest unit it holds a whole one of
 const UNITS: readonly TimeUnit[] = [
 	{ seconds: SECONDS_IN_A_DAY, letter: 'd' },
 	{ seconds: SECONDS_IN_AN_HOUR, letter: 'h' },
 	{ seconds: SECONDS_IN_A_MINUTE, letter: 'm' },
-	{ seconds: 1, letter: 's' }
+	SECONDS
 ];
 
 // A turn is read, not audited: its time is said to the minute
@@ -34,7 +36,7 @@ const TO_THE_MINUTE: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-
  */
 export function timeAgo(at: number, now: number): string {
 	const seconds = Math.max(0, Math.floor((now - at) / MILLISECONDS_IN_A_SECOND));
-	const unit = UNITS.find((candidate) => seconds >= candidate.seconds) ?? UNITS[UNITS.length - 1];
+	const unit = UNITS.find((candidate) => seconds >= candidate.seconds) ?? SECONDS;
 	return `${Math.floor(seconds / unit.seconds)}${unit.letter} ago`;
 }
 

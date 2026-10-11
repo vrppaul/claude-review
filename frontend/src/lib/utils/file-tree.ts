@@ -60,8 +60,8 @@ function folderAmong(siblings: TreeNode[], name: string, path: string): TreeFold
 /** A folder holding one folder and nothing else, made one row with it, as far down as that goes. */
 function collapsed(node: TreeNode): TreeNode {
 	if (node.kind === 'file') return node;
-	const [only] = node.children;
-	if (node.children.length === 1 && only.kind === 'folder') {
+	const [only, ...others] = node.children;
+	if (only?.kind === 'folder' && others.length === 0) {
 		return collapsed({ ...only, name: `${node.name}${PATH_SEPARATOR}${only.name}` });
 	}
 	return { ...node, children: node.children.map(collapsed) };
