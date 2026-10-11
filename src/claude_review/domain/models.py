@@ -424,7 +424,8 @@ class PathState(BaseModel):
 
     Git says only that a path differs, and that stays true through every
     later edit of it; its size and modification time say when its content
-    changed again.
+    changed again, and whether it may be run when its mode did — which
+    changes neither.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -433,6 +434,8 @@ class PathState(BaseModel):
     # None when nothing is on the disk at the path: it was deleted
     modified_ns: int | None
     size: int | None
+    # Whether its owner may run it: of a file's mode, the one bit git keeps
+    executable: bool | None
 
 
 # The working tree as one taking of the diff left it

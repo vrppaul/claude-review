@@ -21,6 +21,9 @@ POLL_SECONDS = 0.02
 REPORT_TIMEOUT_SECONDS = 5
 # Enough polls to have seen a change had there been one
 QUIET_POLLS = 25
+# A file anyone may run, and one only its owner may read and write
+RUNNABLE = 0o755
+READ_BY_ITS_OWNER_ALONE = 0o600
 
 
 def _watcher() -> TreeWatcherService:
@@ -126,3 +129,25 @@ async def test_staging_a_change_moves_nothing(tmp_git_repo: Path) -> None:
     git(tmp_git_repo, "add", "initial.txt")
 
     assert await _quiet(watcher, tmp_git_repo, taken_at)
+
+
+async def test_a_file_made_runnable_after_the_diff_is_reported(tmp_git_repo: Path) -> None:
+    """Its content, size and time stay as they were, and the diff now shows a change of mode."""
+    (tmp_git_repo / "initial.txt").write_text("already changed\n")
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+
+    (tmp_git_repo / "initial.txt").chmod(RUNNABLE)
+
+    assert await watcher.drift(tmp_git_repo, taken_at) == 1
+
+
+async def test_a_permission_git_does_not_keep_moves_nothing(tmp_git_repo: Path) -> None:
+    """Git keeps whether a file runs, nothing else of its mode: the diff stays as it was."""
+    (tmp_git_repo / "initial.txt").write_text("already changed\n")
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+
+    (tmp_git_repo / "initial.txt").chmod(READ_BY_ITS_OWNER_ALONE)
+
+    assert await watcher.drift(tmp_git_repo, taken_at) == 0

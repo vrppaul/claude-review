@@ -8,6 +8,7 @@ diff under someone mid-sentence orphans what they were writing.
 """
 
 import asyncio
+import stat
 from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 
@@ -107,5 +108,10 @@ def _path_state(root: Path, path: str) -> PathState:
     try:
         found = (root / path).stat()
     except OSError:
-        return PathState(path=path, modified_ns=None, size=None)
-    return PathState(path=path, modified_ns=found.st_mtime_ns, size=found.st_size)
+        return PathState(path=path, modified_ns=None, size=None, executable=None)
+    return PathState(
+        path=path,
+        modified_ns=found.st_mtime_ns,
+        size=found.st_size,
+        executable=bool(found.st_mode & stat.S_IXUSR),
+    )
