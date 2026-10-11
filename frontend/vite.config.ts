@@ -35,6 +35,9 @@ export default defineConfig({
 		// the next test's calls; each test starts from the real globals
 		unstubGlobals: true,
 		restoreMocks: true,
+		// Every run takes the tests in an order of its own, and says which: a
+		// test that leans on another's leftovers fails, and its seed repeats it
+		sequence: { shuffle: true },
 		// Typing into a component is simulated keystroke by keystroke, and the
 		// files run in parallel: on a busy machine the default five seconds is
 		// not slack, it is a coin toss

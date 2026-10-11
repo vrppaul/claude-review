@@ -1,11 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ContentViewToggle from '$lib/components/ContentViewToggle.svelte';
+import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 
 describe('choosing how a markdown file is shown', () => {
-	const review = openReview();
+	// Each test opens the review afresh: what one picks must not be the next one's start
+	let review: Review;
+
+	beforeEach(() => {
+		review = openReview();
+	});
 
 	it('offers the raw text, the preview, and both side by side', () => {
 		const { getByTestId } = render(ContentViewToggle, inReview(review));
