@@ -86,7 +86,7 @@
 	style="contain-intrinsic-size: auto {HEADER_HEIGHT + bodyHeight}px"
 >
 	<div
-		class="sticky top-0 z-10 flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2 {viewed
+		class="cr-file-header flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2 {viewed
 			? 'opacity-55'
 			: ''}"
 	>

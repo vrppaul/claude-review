@@ -8,9 +8,9 @@
  */
 
 /** Which way the column grows when the pointer moves that way. */
-type Grows = 'left' | 'right';
+export type Grows = 'left' | 'right';
 
-interface Sizing {
+export interface Sizing {
 	width: number;
 	grows: Grows;
 	onWidth: (width: number) => void;

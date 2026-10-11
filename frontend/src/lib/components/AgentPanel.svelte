@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace, anchorToken } from '$lib/anchors/views';
-	import { dragEdge, stepEdge } from '$lib/dom/resize';
 	import { threadsIn } from '$lib/anchors/thread-token';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
 	import { clockTime, timeAgo } from '$lib/utils/time';
 	import AttachedImages from './AttachedImages.svelte';
+	import EdgeGrip from './EdgeGrip.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import Icon from './Icon.svelte';
@@ -266,14 +266,7 @@
 	class="cr-panel flex min-h-0 shrink-0 flex-col border-l border-base-300"
 	style="width: {review.layout.agentPanel.width}px"
 >
-	<!-- The reader's own width, dragged or stepped with the arrow keys -->
-	<button
-		data-testid="panel-resize"
-		class="cr-panel-grip"
-		aria-label="Resize the panel"
-		onpointerdown={(e) => dragEdge(e, sizing)}
-		onkeydown={(e) => stepEdge(e, sizing)}
-	></button>
+	<EdgeGrip {sizing} label="Resize the panel" testId="panel-resize" />
 
 	<header
 		data-testid="panel-status"

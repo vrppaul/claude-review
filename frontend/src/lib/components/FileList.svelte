@@ -3,7 +3,7 @@
 	import type { DiffFile, FileStatus } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { useReview } from '$lib/review/context';
-	import { dragEdge, stepEdge } from '$lib/dom/resize';
+	import EdgeGrip from './EdgeGrip.svelte';
 	import Icon from './Icon.svelte';
 
 	const review = useReview();
@@ -11,7 +11,7 @@
 	// A letter in the change's own colour, rather than a filled disc: the file
 	// name is what the eye should land on in this list.
 	const statusMark: Record<FileStatus, { label: string; colour: string }> = {
-		modified: { label: 'M', colour: 'var(--color-warning)' },
+		modified: { label: 'M', colour: 'var(--cr-status-modified)' },
 		added: { label: 'A', colour: 'var(--cr-add-text)' },
 		deleted: { label: 'D', colour: 'var(--cr-del-text)' },
 		renamed: { label: 'R', colour: 'var(--cr-mark)' }
@@ -90,6 +90,13 @@
 		files: 'file',
 		transcript: 'message'
 	};
+
+	/** The tree is on the left, so dragging right is what widens it. */
+	const sizing = $derived({
+		width: review.layout.fileTree.width,
+		grows: 'right' as const,
+		onWidth: (width: number) => review.layout.fileTree.setWidth(width)
+	});
 
 	const heading = $derived.by(() => {
 		const noun = sidebarNoun[review.mode] ?? 'file';
@@ -180,24 +187,7 @@
 	class="relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
 	style="width: {review.layout.fileTree.width}px"
 >
-	<!-- The reader's own width, dragged or stepped with the arrow keys -->
-	<button
-		data-testid="sidebar-resize"
-		class="cr-tree-grip"
-		aria-label="Resize the file tree"
-		onpointerdown={(e) =>
-			dragEdge(e, {
-				width: review.layout.fileTree.width,
-				grows: 'right',
-				onWidth: (width) => review.layout.fileTree.setWidth(width)
-			})}
-		onkeydown={(e) =>
-			stepEdge(e, {
-				width: review.layout.fileTree.width,
-				grows: 'right',
-				onWidth: (width) => review.layout.fileTree.setWidth(width)
-			})}
-	></button>
+	<EdgeGrip {sizing} label="Resize the file tree" testId="sidebar-resize" />
 	<div class="min-h-0 flex-1 overflow-y-auto p-3">
 		<div class="mb-2 flex items-center gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>

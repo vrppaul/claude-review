@@ -65,7 +65,7 @@
 			<p class="cr-guide-body">{step.body}</p>
 		</div>
 		{#if step.fork}
-			<ol class="flex flex-col gap-2">
+			<ol class="cr-guide-forks">
 				{#each step.fork as option (option.label)}
 					<li class="cr-guide-fork">
 						<span class="cr-guide-route {option.primary ? 'cr-guide-route-primary' : ''}">{option.label}</span>

@@ -1,0 +1,168 @@
+/*
+ * The review's design tokens: every colour, strength, layer and shadow the
+ * page is drawn with, written down once for both themes. The rest of the
+ * stylesheet only names them — stylelint refuses a colour, a layer or a
+ * shadow written anywhere else.
+ *
+ * Two rules shape the palette. Green and red belong to the diff and nothing
+ * else, so the syntax colors below deliberately avoid both hues — a green
+ * string inside a removed line reads as a contradiction. And change is
+ * marked at the edge of a row rather than washed across it, so highlighted
+ * code stays legible on top of it. Every other colour has one meaning too:
+ * blue is the reader's own mark, violet the agent's voice, yellow a warning,
+ * orange a modified file's letter.
+ */
+
+:root {
+	--cr-code-size: 0.8125rem;
+	--cr-code-leading: 1.55;
+	/* Comments outrank the code they annotate: they are what the review produces */
+	--cr-comment-size: 0.9375rem;
+	--cr-comment-leading: 1.6;
+
+	/*
+	 * What lies over what, lowest first: a file's sticky header and a
+	 * column's grip over what scrolls under them, the tour's light over the
+	 * review, what the reader opens over the light (so it is never dimmed),
+	 * and the guide's card over everything it talks about.
+	 */
+	--cr-layer-over-content: 10;
+	--cr-layer-spotlight: 25;
+	--cr-layer-popover: 30;
+	--cr-layer-guide: 60;
+
+	/* What lifts a pane off the page: low beside what it belongs to, high over everything */
+	--cr-elevation-low: 0 10px 24px rgb(0 0 0 / 0.18);
+	--cr-elevation-high: 0 18px 48px rgb(0 0 0 / 0.45);
+
+	/* The reader's mark at each strength it is drawn with, faintest first */
+	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);
+	--cr-mark-soft: color-mix(in srgb, var(--cr-mark) 10%, transparent);
+	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) 18%, transparent);
+	--cr-mark-chip-hover: color-mix(in srgb, var(--cr-mark) 28%, transparent);
+	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
+	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
+	/* The agent's voice, at the strengths the mark uses for the same things */
+	--cr-raised-tint: color-mix(in srgb, var(--cr-raised-edge) 12%, transparent);
+	--cr-raised-border: color-mix(in srgb, var(--cr-raised-edge) 35%, transparent);
+	--cr-raised-line: color-mix(in srgb, var(--cr-raised-edge) 45%, transparent);
+	/* What differs inside a changed line, in the change's own colour */
+	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
+	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
+	/* The ground of something the review warns about */
+	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+[data-theme='dark'] {
+	color-scheme: dark;
+
+	--color-base-100: #12161c;
+	--color-base-200: #171c25;
+	--color-base-300: #232b37;
+	--color-base-content: #d9e1ec;
+	--color-neutral: #232b37;
+	--color-neutral-content: #d9e1ec;
+	--color-primary: #5b8def;
+	--color-primary-content: #0b111c;
+	--color-secondary: #c792ea;
+	--color-secondary-content: #14101c;
+	--color-accent: #5b8def;
+	--color-accent-content: #0b111c;
+	--color-info: #5b8def;
+	--color-info-content: #0b111c;
+	--color-success: #4fb865;
+	--color-success-content: #08150c;
+	--color-warning: #e8c440;
+	--color-warning-content: #1c1608;
+	--color-error: #f2545b;
+	--color-error-content: #1c0a0c;
+
+	--radius-selector: 0.375rem;
+	--radius-field: 0.25rem;
+	--radius-box: 0.375rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
+
+	--cr-add-edge: #3f9d54;
+	--cr-add-tint: rgb(79 184 101 / 0.09);
+	--cr-del-edge: #cf4249;
+	--cr-del-tint: rgb(242 84 91 / 0.09);
+	--cr-mark: #5b8def;
+	--cr-mark-tint: rgb(91 141 239 / 0.14);
+	/* What the tour lays over everything it is not pointing at */
+	--cr-shade: rgb(6 9 14 / 0.6);
+	--cr-raised-edge: #a68dd8;
+	/* A modified file's letter: the one place orange appears */
+	--cr-status-modified: #e0a458;
+	--cr-gutter-fg: #7c8a9e;
+	--cr-muted: #98a5b6;
+	--cr-faint: #7a8798;
+	--cr-add-text: #59c470;
+	--cr-del-text: #ff8086;
+
+	--cr-syn-keyword: #c792ea;
+	--cr-syn-string: #e0a458;
+	--cr-syn-comment: #6c7a8c;
+	--cr-syn-number: #7fd3f7;
+	--cr-syn-type: #7fd3f7;
+	--cr-syn-function: #82aaff;
+	--cr-syn-variable: #d9e1ec;
+	--cr-syn-meta: #c792ea;
+}
+
+[data-theme='light'] {
+	color-scheme: light;
+
+	--color-base-100: #ffffff;
+	--color-base-200: #f4f7fa;
+	--color-base-300: #dde4ec;
+	--color-base-content: #1b2430;
+	--color-neutral: #dde4ec;
+	--color-neutral-content: #1b2430;
+	--color-primary: #2c6bd9;
+	--color-primary-content: #ffffff;
+	--color-secondary: #7c3fbf;
+	--color-secondary-content: #ffffff;
+	--color-accent: #2c6bd9;
+	--color-accent-content: #ffffff;
+	--color-info: #2c6bd9;
+	--color-info-content: #ffffff;
+	--color-success: #1f8b3a;
+	--color-success-content: #ffffff;
+	--color-warning: #806600;
+	--color-warning-content: #ffffff;
+	--color-error: #c8323c;
+	--color-error-content: #ffffff;
+
+	--radius-selector: 0.375rem;
+	--radius-field: 0.25rem;
+	--radius-box: 0.375rem;
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
+
+	--cr-add-edge: #2f9e4f;
+	--cr-add-tint: rgb(31 139 58 / 0.08);
+	--cr-del-edge: #d24049;
+	--cr-del-tint: rgb(200 50 60 / 0.08);
+	--cr-mark: #2c6bd9;
+	--cr-mark-tint: rgb(44 107 217 / 0.12);
+	--cr-shade: rgb(27 36 48 / 0.45);
+	--cr-raised-edge: #6b4bb8;
+	--cr-status-modified: #9a6410;
+	--cr-gutter-fg: #5d6a7a;
+	--cr-muted: #4c5866;
+	--cr-faint: #5d6a7a;
+	--cr-add-text: #16702e;
+	--cr-del-text: #a5222c;
+
+	--cr-syn-keyword: #8250df;
+	--cr-syn-string: #8a5a00;
+	--cr-syn-comment: #6e7a88;
+	--cr-syn-number: #0b6e99;
+	--cr-syn-type: #0b6e99;
+	--cr-syn-function: #2c6bd9;
+	--cr-syn-variable: #1b2430;
+	--cr-syn-meta: #8250df;
+}

@@ -111,10 +111,10 @@ repos:
   - repo: local
     hooks:
       - id: frontend-lint
-        name: eslint (frontend)
+        name: eslint and stylelint (frontend)
         entry: bash -c 'command -v pnpm >/dev/null || exit 0; cd frontend && pnpm lint'
         language: system
-        files: ^frontend/(src/|eslint\.config\.js$)
+        files: ^frontend/(src/|eslint\.config\.js$|stylelint\.config\.js$)
         pass_filenames: false
 
       - id: frontend-check
