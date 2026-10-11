@@ -13,8 +13,15 @@ import type { Review } from '$lib/review/review.svelte';
 /** The chord that finishes the review, as the help and the hints beside its button write it. */
 export const FINISH_KEYS = 'Ctrl+Shift+Enter';
 
-/** What is held with a key: nothing, or Ctrl (Cmd on a Mac) and Shift together. */
-type Held = 'nothing' | 'command-and-shift';
+/**
+ * The chord that sends what a field holds where it goes — a comment into the
+ * review, a message to the agent — as the help and the hints beside the
+ * fields write it.
+ */
+export const FIELD_KEYS = 'Ctrl+Enter';
+
+/** What is held with a key: nothing, Ctrl (Cmd on a Mac), or Ctrl and Shift together. */
+type Held = 'nothing' | 'command' | 'command-and-shift';
 
 /** A key as it is pressed, and what it does. */
 interface Press {
@@ -67,6 +74,8 @@ export const KEYMAP: readonly KeyRow[] = [
 	},
 	// Enter on a line's number is the number's own: it is a button
 	{ keys: 'Enter', does: 'Comment on this line', presses: [] },
+	// The chord in a comment or a message is the field's own: it knows where what it holds goes
+	{ keys: FIELD_KEYS, does: 'Add the comment, or send the message, being written', presses: [] },
 	{
 		keys: '] / [',
 		does: 'Next / previous file',
@@ -104,8 +113,13 @@ export const KEYMAP: readonly KeyRow[] = [
 /** What is held with a press, if it is anything the review answers; Alt is never the review's. */
 function heldWith(event: KeyboardEvent): Held | null {
 	if (event.altKey) return null;
-	if (event.metaKey || event.ctrlKey) return event.shiftKey ? 'command-and-shift' : null;
+	if (event.metaKey || event.ctrlKey) return event.shiftKey ? 'command-and-shift' : 'command';
 	return 'nothing';
+}
+
+/** Whether a keystroke in a field is the field's chord: Enter with Ctrl, never with Shift — that finishes the review. */
+export function isFieldChord(event: KeyboardEvent): boolean {
+	return event.key === 'Enter' && heldWith(event) === 'command';
 }
 
 /** The press in the table this keystroke is, if any. */

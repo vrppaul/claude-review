@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { KEYMAP } from '$lib/components/keymap';
+import { FIELD_KEYS, KEYMAP } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { newComment } from '../new-comment';
@@ -166,6 +166,15 @@ describe('the keys the review answers', () => {
 		await fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true, isComposing: true });
 
 		expect(review.submission.finishing).toBe(false);
+	});
+
+	it('lists in the help the chord a comment or a message is sent from its field with', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+
+		expect(screen.getByTestId('shortcuts-list').textContent).toContain(FIELD_KEYS);
 	});
 
 	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {

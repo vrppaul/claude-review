@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
+import { FIELD_KEYS } from '$lib/components/keymap';
 import { KEPT_AS, keepingImages, paste, screenshot } from '../pasted-images';
 import { newComment } from '../new-comment';
 import type { CommentField } from '$lib/review/comment-field.svelte';
@@ -94,6 +95,29 @@ describe('a comment field', () => {
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
 		expect(input.value).toBe('existing text');
+	});
+});
+
+describe('the chord a field answers', () => {
+	it('adds the comment on the chord the help lists, and says so beside it', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, getByText } = drawnSaving(newField());
+
+		await user.type(getByTestId('comment-input'), 'Fix this');
+		await user.keyboard('{Control>}{Enter}{/Control}');
+
+		expect(saved().body).toBe('Fix this');
+		expect(getByText((said) => said.includes(FIELD_KEYS))).toBeTruthy();
+	});
+
+	it('leaves the chord with Shift to the review, which it finishes', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = drawnSaving(newField());
+
+		await user.type(getByTestId('comment-input'), 'Fix this');
+		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
+
+		expect(review.threads.count).toBe(0);
 	});
 });
 

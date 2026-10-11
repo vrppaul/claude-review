@@ -6,6 +6,7 @@
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import AttachedImages from './AttachedImages.svelte';
+	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
 	import { Mentions, optionIdOf, tokenOf, type Mentionable } from './mentions.svelte';
 
@@ -94,7 +95,7 @@
 		if (isComposingText(event)) return;
 		if (pickerKey(event)) {
 			event.preventDefault();
-		} else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+		} else if (isFieldChord(event)) {
 			event.preventDefault();
 			void send();
 		}
@@ -169,7 +170,7 @@
 		<button type="button" data-testid="mention-thread" class="btn btn-ghost btn-xs" onclick={mention}>
 			@ thread or file
 		</button>
-		<span class="cr-faint hidden text-xs lg:inline">Ctrl+Enter sends</span>
+		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
 		<div class="flex-1"></div>
 		{#if whatWentWrong}
 			<span data-testid="panel-error" class="text-xs text-error">{whatWentWrong}</span>

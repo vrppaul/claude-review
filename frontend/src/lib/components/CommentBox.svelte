@@ -6,6 +6,7 @@
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
+	import { FIELD_KEYS, isFieldChord } from './keymap';
 
 	// The tallest the field grows, in pixels, before it scrolls instead
 	const TALLEST = 480;
@@ -126,8 +127,7 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (isComposingText(event)) return;
-		// Ctrl+Shift+Enter is not the field's: it finishes the review
-		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+		if (isFieldChord(event)) {
 			event.preventDefault();
 			save();
 		}
@@ -205,9 +205,9 @@
 	</div>
 	<p class="cr-faint text-xs">
 		{#if onAsk}
-			Ctrl+Enter adds it to the review. Ask now sends this one straight away.
+			{FIELD_KEYS} adds it to the review. Ask now sends this one straight away.
 		{:else}
-			Ctrl+Enter to save.
+			{FIELD_KEYS} to save.
 		{/if}
 	</p>
 </div>
