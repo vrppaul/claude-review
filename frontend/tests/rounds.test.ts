@@ -183,6 +183,18 @@ describe('a thread meeting a diff that has been taken again', () => {
 		expect(moved).toEqual({ followed: 0, outdated: 1 });
 	});
 
+	it('counts a thread outdated once, when its lines go, and not again each time it is followed after', async () => {
+		const outdated = { ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), outdated: true };
+		fakeServer().answer('POST /api/anchors/follow', { anchors: [outdated] });
+		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def walk():'] }));
+
+		const first = await review.threads.follow();
+		const again = await review.threads.follow();
+
+		expect(first).toEqual({ followed: 0, outdated: 1 });
+		expect(again).toEqual({ followed: 0, outdated: 0 });
+	});
+
 	it('refuses an answer that does not say where every thread went, and leaves them where they were', async () => {
 		fakeServer().answer('POST /api/anchors/follow', { anchors: [] });
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def run():'] }));

@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { isDrawn } from '$lib/anchors/placement';
@@ -144,6 +144,23 @@ describe('a thread the base on screen cannot draw', () => {
 
 		expect(isDrawn(removed, shown)).toBe(true);
 		expect(isDrawn(removed, shown, { removedLines: false })).toBe(false);
+	});
+});
+
+describe('two diffs asked for at once', () => {
+	it('draws the one asked for last, whichever answer comes back first', async () => {
+		const diffs = fakeServer().hold('GET /api/diff');
+		const first = review.diff.setBase('round:1');
+		const last = review.diff.setBase('round:2');
+		await vi.waitFor(() => expect(diffs.requests).toHaveLength(2));
+
+		diffs.answer(1, diffResponse({ files: [untouched('asked-last.py')], base: sinceRound(2) }));
+		await last;
+		diffs.answer(0, diffResponse({ files: [untouched('asked-first.py')], base: sinceRound(1) }));
+		await first;
+
+		expect(review.diff.files.map((file) => file.path)).toEqual(['asked-last.py']);
+		expect(review.diff.base).toBe('round:2');
 	});
 });
 
