@@ -1,10 +1,11 @@
 """Every route, sent what its schema allows and what it does not: none of it is a fault of the server's.
 
-Schemathesis reads the review's own OpenAPI and draws requests for each
-route, the well formed and the malformed alike. Whatever it sends, the
-review answers or refuses — never a fault of its own — refuses what the
-schema does not allow, answers with the shapes and statuses the schema
-gives, and turns a method a route does not take away naming those it does.
+Schemathesis reads the review's own OpenAPI, as the page's types are
+written from it, and draws requests for each route, the well formed and the
+malformed alike. Whatever it sends, the review answers or refuses — never a
+fault of its own — refuses what the schema does not allow, answers with the
+shapes and statuses the schema gives, and turns a method a route does not
+take away naming those it does.
 """
 
 from pathlib import Path
@@ -16,6 +17,7 @@ from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
 
+from claude_review.presentation.api_schema import http_document
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -34,7 +36,7 @@ from tests.helpers import (
 BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
 # The agent's long poll waits out whatever it is asked to, up to ten minutes
-schema = schemathesis.pytest.from_fixture("served_schema").exclude(path=EVENTS_ROUTE)
+schema = schemathesis.pytest.from_fixture("described_schema").exclude(path=EVENTS_ROUTE)
 
 # An image is uploaded as its bytes, as any binary body is sent
 BINARY_MEDIA_TYPE = "application/octet-stream"
@@ -76,10 +78,9 @@ def changed_repository(tmp_git_repo: Path) -> Path:
 
 
 @pytest.fixture
-def served_schema(reviews: ReviewFactory) -> schemathesis.BaseSchema:
-    return schemathesis.openapi.from_asgi(
-        "/openapi.json", reviews.app(opening_of([one_line_file()])), headers=LOCAL_HEADERS
-    )
+def described_schema() -> schemathesis.BaseSchema:
+    """The API as the page's types are written from it: in-process, since the review serves no description of it."""
+    return schemathesis.openapi.from_dict(http_document())
 
 
 @pytest.fixture

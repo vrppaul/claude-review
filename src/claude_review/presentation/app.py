@@ -54,8 +54,13 @@ PACKAGE_NAME = "claude-review"
 
 
 def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: ReaderRecords) -> FastAPI:
-    """The app serving one review, opened on its content before it answers anybody."""
-    app = FastAPI(title=API_TITLE, lifespan=partial(_opened, review))
+    """The app serving one review, opened on its content before it answers anybody.
+
+    It serves no description of its API, nor the pages that draw one: the
+    page's types are written from the routes in-process (`api_schema.py`),
+    and nobody else reads a review's API.
+    """
+    app = FastAPI(title=API_TITLE, lifespan=partial(_opened, review), openapi_url=None, docs_url=None, redoc_url=None)
 
     app.state.review = review
     # Where the review tells its pages what happened, down their sockets

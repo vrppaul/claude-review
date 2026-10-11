@@ -12,10 +12,10 @@ from http import HTTPStatus
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient
 from pydantic import BaseModel, Field
 
 from claude_review.domain.exceptions import ReviewError
+from claude_review.presentation.api_schema import http_document
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
 from claude_review.presentation.refusals import (
     INPUT_REFUSAL_EXTENSION,
@@ -158,8 +158,8 @@ async def refuse(kind_name: str) -> None:
 
 
 @pytest.fixture
-async def described(client: AsyncClient) -> Description:
-    return Description.model_validate((await client.get("/openapi.json")).json())
+def described() -> Description:
+    return Description.model_validate(http_document())
 
 
 def _unsaid(status: HTTPStatus, *, among: dict[str, Operation]) -> list[str]:

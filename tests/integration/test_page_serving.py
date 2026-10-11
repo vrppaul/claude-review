@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.presentation.app import ASSETS_NAME, PAGE_NAME, serve_the_page
@@ -29,6 +30,11 @@ ANOTHER_THEME_SCRIPT = """
     """
 # The header the page says what it may run in
 POLICY_HEADER = "content-security-policy"
+# What FastAPI serves of its own unless told not to: the API's description,
+# and two pages that draw it
+FRAMEWORK_PATHS = ["/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"]
+# A path nothing serves
+NOWHERE = "/nothing-here"
 
 
 @pytest.fixture
@@ -130,3 +136,12 @@ def test_a_page_built_with_other_line_ends_names_its_script_as_a_browser_reads_i
     policy = _served(tmp_path).get("/").headers[POLICY_HEADER]
 
     assert _named_by_hash(THEME_SCRIPT) in _script_sources(policy)
+
+
+@pytest.mark.parametrize("path", FRAMEWORK_PATHS)
+async def test_nothing_is_served_but_the_page_its_files_and_the_routes(client: AsyncClient, path: str) -> None:
+    """The page's types are written from the schema in-process; nothing reads it, or draws it, over HTTP."""
+    served = await client.get(path)
+    nowhere = await client.get(NOWHERE)
+
+    assert (served.status_code, served.json()) == (nowhere.status_code, nowhere.json())
