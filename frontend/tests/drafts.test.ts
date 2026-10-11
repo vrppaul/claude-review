@@ -178,7 +178,7 @@ describe('an unsent review', () => {
 	});
 
 	it('is forgotten when asked', () => {
-		keepDraft(REVIEW_IDENTITY, { ...emptyDraft(), reviewBody: 'Overall fine' });
+		keepDraft(REVIEW_IDENTITY, { ...emptyDraft(1), reviewBody: 'Overall fine' });
 
 		forgetDraft(REVIEW_IDENTITY);
 

@@ -120,8 +120,10 @@ export class Review {
 		this.sound = reader.sound;
 
 		// What the review picks up: the draft it opened from, or nothing yet
-		const kept = draft ?? emptyDraft();
+		const kept = draft ?? emptyDraft(facts.round);
+		// A server restarted mid-review comes back at round one: the draft knows better
 		this.rounds = new Rounds(facts.round);
+		this.rounds.reach(kept.round);
 		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
@@ -257,7 +259,8 @@ export class Review {
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,
 			told: this.telling.heard,
-			files: this.reading.kept
+			files: this.reading.kept,
+			round: this.rounds.current
 		};
 	}
 

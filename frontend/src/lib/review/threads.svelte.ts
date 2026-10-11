@@ -404,22 +404,12 @@ export class Threads {
 		return outcome;
 	}
 
-	/**
-	 * Pick up the threads of an unsent review of the same thing, kept before
-	 * a reload.
-	 *
-	 * A round the server has forgotten is still written all over the draft:
-	 * every thread knows the round it was written in, and every sent thread
-	 * the round it went out in. A restarted server comes back at round one
-	 * and would number the next round wrongly for everyone.
-	 */
+	/** Pick up the threads of an unsent review of the same thing, kept before a reload. */
 	#pickUp(kept: KeptThreads): void {
 		this.#all = kept.threads;
 		for (const [id, round] of Object.entries(kept.sent)) this.#sent.set(id, round);
 		this.#commentIds.continueFrom(kept.issued.comments);
 		this.#turnIds.continueFrom(kept.issued.turns);
-		for (const thread of this.#all) this.#rounds.reach(thread.round);
-		for (const round of this.#sent.values()) this.#rounds.reach(round + 1);
 	}
 
 	/** Write out what a field holds, meant as this; the thread it went into. */

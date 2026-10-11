@@ -109,7 +109,8 @@ describe('a draft this release kept', () => {
 			composer: { text: 'half a thought', images: ['pasted.png', 'handed.png'], uploaded: ['pasted.png'] },
 			issued: { comments: 3, turns: 5 },
 			told: { instance: THIS_RUN, sequence: 4 },
-			files: { viewed: ['a.py'], folded: ['a.py', 'b.py'] }
+			files: { viewed: ['a.py'], folded: ['a.py', 'b.py'] },
+			round: 3
 		};
 
 		keepDraft(REVIEW_IDENTITY, kept);
@@ -215,6 +216,18 @@ describe('a draft written by an older release', () => {
 		});
 		expect(Object.keys(comment)).not.toContain('start_line');
 		expect(Object.keys(comment)).not.toContain('quote');
+	});
+
+	it("has reached the round after the last one a thread of the reader's went out in, not one the agent raised", () => {
+		keptByAnOlderRelease({
+			comments: [flatThread(), flatThread({ id: 'raised-1', raised_by: 'author', round: 3 })],
+			sent: [
+				['comment-1', 2],
+				['raised-1', 3]
+			]
+		});
+
+		expect(readKept()?.round).toBe(3);
 	});
 
 	it('counts a thread sent before rounds were numbered as sent in the first', () => {

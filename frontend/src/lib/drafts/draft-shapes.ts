@@ -10,9 +10,11 @@
  * is read — folded, unread, waited on — has moved out of the thread; the
  * draft says how far the server's telling had got for it; it keeps what
  * was being written in the threads and not said yet, which pasted images
- * each field uploaded itself, and which files were read and folded away;
- * and it is kept under the name the review gives itself rather than under
- * its title, which another review on the same port may share. A draft a
+ * each field uploaded itself, which files were read and folded away, and
+ * the round the review had reached, rather than read back from the marks
+ * its threads carry; and it is kept under the name the review gives itself
+ * rather than under its title, which another review on the same port may
+ * share. A draft a
  * release kept is brought up to date — never thrown away: it is an hour of
  * somebody's reading. The shapes between the last released one and this
  * were never released, and are not read.
@@ -30,10 +32,12 @@ import type {
 	WrittenAt
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
-import { READER } from '$lib/utils/speakers';
+import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
 export const DRAFT_SHAPE = 16;
+// The round every review begins in
+const FIRST_ROUND = 1;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -94,6 +98,12 @@ export interface Draft extends KeptThreads {
 	told: TellingPosition | null;
 	/** Which files the reader had read and folded away, which a reload used to undo. */
 	files: FilesRead;
+	/**
+	 * The round the review had reached: a server restarted mid-review comes
+	 * back believing it is round one, and the page is the only side that
+	 * still knows better.
+	 */
+	round: number;
 }
 
 /** A thread as drafts kept it until how it was read moved out of it, always saying when it was written. */
@@ -181,8 +191,8 @@ function emptyComposer(): Composer {
 	return { text: '', images: [], uploaded: [] };
 }
 
-/** The draft of a review nothing has been written in yet. */
-export function emptyDraft(): Draft {
+/** The draft of a review nothing has been written in yet, in the round it is in. */
+export function emptyDraft(round: number): Draft {
 	return {
 		version: DRAFT_SHAPE,
 		threads: [],
@@ -194,7 +204,8 @@ export function emptyDraft(): Draft {
 		composer: emptyComposer(),
 		issued: { comments: 0, turns: 0 },
 		told: null,
-		files: emptyFilesRead()
+		files: emptyFilesRead(),
+		round
 	};
 }
 
@@ -209,6 +220,9 @@ export function upToDate(kept: ReleasedDraft): Draft {
 	const turnIds = new IdSequence(TURN_ID_PREFIX);
 	turnIds.continuePast(kept.comments.flatMap((comment) => comment.turns ?? []).map((turn) => turn.id));
 	const comments = kept.comments.map((comment) => upToDateComment(comment, turnIds));
+	const sent = Object.fromEntries(
+		(kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, FIRST_ROUND] : entry))
+	);
 	// Where a comment kept count of the ids handed out, it is believed
 	const issued = kept.issued ?? {
 		comments: commentIdsPast(kept.comments),
@@ -227,7 +241,7 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		// Nothing being written was kept until the fields were held by the review
 		writing: [],
 		reviewBody: kept.reviewBody ?? '',
-		sent: Object.fromEntries((kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, 1] : entry))),
+		sent,
 		// The panel came after threads did; an older draft simply has nothing said
 		panel: kept.panel ?? [],
 		// The panel kept nothing half-written until it could hold images
@@ -236,8 +250,24 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		issued,
 		told: null,
 		// Which files were read was never kept before
-		files: emptyFilesRead()
+		files: emptyFilesRead(),
+		round: roundReached(comments, sent)
 	};
+}
+
+/**
+ * The round a draft that never said so had reached: the latest any of its
+ * threads was written in, or the one after the latest a thread of the
+ * reader's went out in. A thread the agent raised is marked sent in the
+ * round it arrived in, which says nothing of a round sent.
+ */
+function roundReached(comments: ReadComment[], sent: Record<string, number>): number {
+	const written = comments.map((comment) => comment.round);
+	const sentIn = comments
+		.filter((comment) => comment.raised_by !== AGENT)
+		.map((comment) => sent[comment.id])
+		.filter((round) => round !== undefined);
+	return Math.max(FIRST_ROUND, ...written, ...sentIn.map((round) => round + 1));
 }
 
 /**
@@ -290,7 +320,7 @@ function upToDateComment(kept: KeptComment, turnIds: IdSequence): ReadComment {
 		awaiting: kept.awaiting ?? [],
 		collapsed: kept.collapsed ?? false,
 		unread: kept.unread ?? false,
-		round: kept.round ?? 1,
+		round: kept.round ?? FIRST_ROUND,
 		at: kept.at ?? 0
 	};
 }

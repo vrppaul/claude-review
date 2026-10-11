@@ -97,7 +97,7 @@ describe('sending a round rather than ending the review', () => {
 });
 
 describe('the round a restarted server has forgotten', () => {
-	it('is read back from the round the threads were written in', () => {
+	it('is the round the page had reached, kept with its draft', () => {
 		review = openReview();
 		review.rounds.reach(3);
 		review.threads.add(newComment({ body: 'written in the third round' }));
@@ -107,7 +107,7 @@ describe('the round a restarted server has forgotten', () => {
 		expect(review.rounds.current).toBe(3);
 	});
 
-	it('is the one after the last round a thread went out in', async () => {
+	it('is the one after the last round sent', async () => {
 		takingRounds(3);
 		review = openReview();
 		review.threads.add(newComment({ body: 'sent in the third round' }));
@@ -116,6 +116,16 @@ describe('the round a restarted server has forgotten', () => {
 		reloadAfterRestart();
 
 		expect(review.rounds.current).toBe(4);
+	});
+
+	it('stays the round it was after a thread the agent raised, a reload later', () => {
+		review = openReview({ facts: { round: 2 } });
+		review.threads.raise('raised-1', lineAnchor('a.py', 'new', 1, 1, ['x']), 'Look here', 'note');
+
+		review = openReview({ facts: { round: 2 } });
+
+		expect(review.rounds.current).toBe(2);
+		expect(review.draft?.round).toBe(2);
 	});
 
 	it('does not take back a later round the server already knows', () => {
