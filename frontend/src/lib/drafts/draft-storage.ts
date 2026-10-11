@@ -21,6 +21,15 @@ function draftKeyOf(identity: string): string {
 	return storageKey(`draft:${identity}`);
 }
 
+/**
+ * Whether the browser refused its storage — private windows and blocked
+ * site data refuse it, a full one refuses a write — rather than the page
+ * failing at something of its own.
+ */
+function isStorageRefused(error: unknown): boolean {
+	return error instanceof DOMException;
+}
+
 /** What was kept under a key, read as JSON; null for nothing. */
 function keptUnder(key: string): unknown {
 	const kept = localStorage.getItem(key);
@@ -54,19 +63,24 @@ export function readDraft(identity: string, title: string): Draft | null {
 		const kept = keptUnder(draftKeyOf(identity));
 		if (isCurrentDraft(kept)) return kept;
 		return pickUpReleased(identity, title);
-	} catch {
-		// Not a draft this page can read, or storage refused as private windows
-		// and blocked site data refuse it: nothing to pick up
-		return null;
+	} catch (error) {
+		// Not JSON, or storage refused: nothing to pick up. Anything else is a
+		// fault in bringing a draft up to date, and passing it off as no draft
+		// would open the review without it for good; said, the draft stays
+		// where it was kept for a release that reads it.
+		if (error instanceof SyntaxError || isStorageRefused(error)) return null;
+		throw error;
 	}
 }
 
 /** Keep the draft of the review of this identity as it now stands. */
 export function keepDraft(identity: string, draft: Draft): void {
+	const written = JSON.stringify(draft);
 	try {
-		localStorage.setItem(draftKeyOf(identity), JSON.stringify(draft));
-	} catch {
-		// Private windows and blocked site data both throw; the review still works
+		localStorage.setItem(draftKeyOf(identity), written);
+	} catch (error) {
+		// Refused, the review still works without a draft kept
+		if (!isStorageRefused(error)) throw error;
 	}
 }
 
@@ -74,7 +88,8 @@ export function keepDraft(identity: string, draft: Draft): void {
 export function forgetDraft(identity: string): void {
 	try {
 		localStorage.removeItem(draftKeyOf(identity));
-	} catch {
-		// Nothing to do: the draft simply outlives the review
+	} catch (error) {
+		// Refused, the draft simply outlives the review
+		if (!isStorageRefused(error)) throw error;
 	}
 }

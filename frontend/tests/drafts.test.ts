@@ -16,6 +16,11 @@ beforeEach(() => {
 	review = openReview();
 });
 
+/** What a browser throws where its storage is refused: private windows and blocked site data. */
+function siteDataBlocked(): DOMException {
+	return new DOMException('The operation is insecure.', 'SecurityError');
+}
+
 /** The reload of a page: whatever it held is gone, and the draft is read again. */
 function reload() {
 	review = openReview();
@@ -163,12 +168,32 @@ describe('an unsent review', () => {
 
 	it('leaves the review working when site data is blocked', () => {
 		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-			throw new Error('blocked');
+			throw siteDataBlocked();
 		});
 
 		review = openReview();
 		expect(() => review.threads.add(newComment({ body: 'still fine' }))).not.toThrow();
 		expect(review.threads.count).toBe(1);
+	});
+
+	it('says a fault of its own in keeping or forgetting the draft, rather than taking it for storage refused', () => {
+		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+			throw new TypeError('a fault of the page');
+		});
+		vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+			throw new TypeError('a fault of the page');
+		});
+
+		expect(() => keepDraft(REVIEW_IDENTITY, emptyDraft(1))).toThrow(TypeError);
+		expect(() => forgetDraft(REVIEW_IDENTITY)).toThrow(TypeError);
+	});
+
+	it('opens with nothing picked up when site data is blocked', () => {
+		vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+			throw siteDataBlocked();
+		});
+
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
 	});
 
 	it('ignores a draft that is not what it should be', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DRAFT_SHAPE, type Draft } from '$lib/drafts/draft-shapes';
+import { DRAFT_SHAPE, isCurrentDraft, isReleasedDraft, type Draft } from '$lib/drafts/draft-shapes';
 import { keepDraft, readDraft } from '$lib/drafts/draft-storage';
 import { lineAnchor } from '$lib/anchors/line';
 import type { AwaitedQuestion, Thread } from '$lib/types';
@@ -131,6 +131,8 @@ describe('a draft of a shape no release kept', () => {
 		storeDraft(unreleased);
 		storeReleasedDraft(unreleased);
 
+		expect(isCurrentDraft(unreleased)).toBe(false);
+		expect(isReleasedDraft(unreleased)).toBe(false);
 		expect(readKept()).toBeNull();
 	});
 });
@@ -153,6 +155,13 @@ describe('the draft an older release kept, the one of its port', () => {
 		readKept();
 
 		expect(readKept()?.threads).toHaveLength(1);
+	});
+
+	it('is not passed off as no draft when it cannot be brought up to date, and stays where it was kept', () => {
+		keptByAnOlderRelease({ comments: [null] });
+
+		expect(() => readKept()).toThrow(TypeError);
+		expect(localStorage.getItem(RELEASED_DRAFT_KEY)).not.toBeNull();
 	});
 
 	it('is left for its own review by a review of another title', () => {
