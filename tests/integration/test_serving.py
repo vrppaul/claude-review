@@ -1,10 +1,16 @@
-"""A review held open in this process: what it hands back, whatever else goes wrong while it runs."""
+"""A review held open in this process: what it hands back, whatever else goes wrong while it runs.
+
+What goes wrong is played by what the review is built on — a repository
+that goes away, one that cannot be staged, a terminal that cannot be told —
+and by nothing reached into from outside.
+"""
 
 import asyncio
 import contextlib
 import signal
 import tempfile
 from collections.abc import AsyncGenerator, Iterator
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 from typing import override
 
@@ -14,14 +20,12 @@ from structlog.typing import EventDict
 
 from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.errors import ReviewStoppedError, ServerStartError
-from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.hosting.serving import serve_review, stop_signals
+from claude_review.hosting.hosted_review import HostedReview
+from claude_review.hosting.ports import ANY_FREE_PORT, bind
+from claude_review.hosting.serving import hold_open, serve_review, stop_signals
 from claude_review.repositories.git_repository import GitRepository, GitStagedTree
-from claude_review.services.review.browser_presence import BrowserPresence
-from claude_review.services.review.content_sources import RepositorySource
-from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import ReviewOpening, open_diff
-from tests.helpers import IMAGES_ROUTE, PNG, SETTLE_SECONDS
+from tests.helpers import IMAGES_ROUTE, LOOK_EVERY_SECONDS, PNG, SETTLE_SECONDS, ReviewFactory
 from tests.page_socket import page_socket_held
 
 SUBMIT_ROUTE = "/api/submit"
@@ -49,6 +53,33 @@ class StagingThatHangs(GitRepository):
             yield staged
 
 
+class RepositoryThatGoesAway(GitRepository):
+    """A repository read as git reads it until its disk goes away, from then on failing whatever it is asked."""
+
+    def __init__(self) -> None:
+        super().__init__(objects=None)
+        self.gone = False
+
+    @override
+    async def changed_paths(self, path: Path) -> list[str]:
+        if self.gone:
+            failure = "the disk went away"
+            raise OSError(failure)
+        return await super().changed_paths(path)
+
+
+class RepositoryThatCannotBeStaged(GitRepository):
+    """A repository whose working tree cannot be read at all, as one on a disk already gone is."""
+
+    def __init__(self) -> None:
+        super().__init__(objects=None)
+
+    @override
+    def staged(self, path: Path) -> AbstractAsyncContextManager[GitStagedTree]:
+        failure = "the repository went away"
+        raise OSError(failure)
+
+
 class RecordingAnnouncer(ReviewAnnouncer):
     """Whoever started the review, as a test: it holds on to what it is told."""
 
@@ -65,20 +96,13 @@ class RecordingAnnouncer(ReviewAnnouncer):
         self.images_left.append(directory)
 
 
-class FailingWatch:
-    """A watch on the tree that fails the first time it looks, as a disk gone away would."""
+class TerminalThatIsGone(RecordingAnnouncer):
+    """Whoever started the review, gone: their terminal closed, so telling them where the review is fails."""
 
-    def __aiter__(self) -> FailingWatch:
-        return self
-
-    async def __anext__(self) -> int:
-        failure = "the disk went away"
-        raise OSError(failure)
-
-
-async def _failing_check(*_arguments: object) -> None:
-    failure = "the event loop went away"
-    raise OSError(failure)
+    @override
+    async def listening_at(self, url: str) -> None:
+        failure = "the terminal went away"
+        raise BrokenPipeError(failure)
 
 
 @pytest.fixture(autouse=True)
@@ -98,10 +122,17 @@ def signals_never_end_the_tests() -> Iterator[list[int]]:
     signal.signal(signal.SIGTERM, left_as_found)
 
 
-async def _served(opening: ReviewOpening, announcer: ReviewAnnouncer) -> str:
-    """Serve a review the way the command line does, Ctrl+C and `kill` answered from the start."""
+async def _served(hosted: HostedReview, announcer: ReviewAnnouncer) -> str:
+    """Serve a review put together by the test, Ctrl+C and `kill` answered from the start."""
     with stop_signals() as signals:
-        return await serve_review(opening, port=ANY_FREE_PORT, announcer=announcer, signals=signals)
+        listening = bind(ANY_FREE_PORT, may_fall_back=False)
+        return await serve_review(hosted, listening=listening, announcer=announcer, signals=signals)
+
+
+async def _held_open(opening: ReviewOpening, announcer: ReviewAnnouncer) -> str:
+    """Hold a review open the way the command line does: in a workspace of its own, on a port of its own."""
+    with stop_signals() as signals:
+        return await hold_open(opening, port=ANY_FREE_PORT, announcer=announcer, signals=signals)
 
 
 async def _opened(repo: Path, repository: GitRepository) -> ReviewOpening:
@@ -134,47 +165,73 @@ def _events(logged: list[EventDict]) -> list[str]:
     return [entry["event"] for entry in logged]
 
 
+async def _until_logged(logged: list[EventDict], event: str) -> None:
+    """Return once the review has logged an event."""
+    while event not in _events(logged):
+        await asyncio.sleep(LOOK_EVERY_SECONDS)
+
+
 async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_round_handed_back(
-    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
+    opening: ReviewOpening, reviews: ReviewFactory, announcer: RecordingAnnouncer, logged: list[EventDict]
 ) -> None:
     """The watch only helps; the reader's unsent work and the last round matter more than it."""
-    monkeypatch.setattr(TreeWatcherService, "changes", lambda *_arguments, **_keywords: FailingWatch())
-
-    serving = asyncio.ensure_future(_served(opening, announcer))
+    repository = RepositoryThatGoesAway()
+    serving = asyncio.ensure_future(_served(reviews.hosted(opening, repository=repository), announcer))
     address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+
+    repository.gone = True
     # The tree is watched only once a page is there to be told
     async with page_socket_held(_port_of(address)), AsyncClient(base_url=address) as agent:
+        await asyncio.wait_for(_until_logged(logged, "review_helper_failed"), SETTLE_SECONDS)
         await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
 
     assert THE_ROUND in await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
-    assert "review_helper_failed" in _events(logged)
 
 
-async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than_running_for_good(
-    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
+async def test_a_review_that_cannot_tell_whoever_started_it_where_it_is_ends_rather_than_running_unseen(
+    opening: ReviewOpening, reviews: ReviewFactory, logged: list[EventDict]
 ) -> None:
-    """Run on, it would hold its port and keep its agent waiting long after the reader has gone."""
-    monkeypatch.setattr(BrowserPresence, "until_closed_for_good", _failing_check)
-
-    handed_back = await asyncio.wait_for(_served(opening, announcer), timeout=SETTLE_SECONDS)
+    """Run on, it would hold its port and keep its agent waiting for a reader who was never told where to look."""
+    handed_back = await asyncio.wait_for(_served(reviews.hosted(opening), TerminalThatIsGone()), SETTLE_SECONDS)
 
     assert handed_back == ""
     assert "review_part_failed" in _events(logged)
 
 
-async def _failing_opening(*_arguments: object) -> None:
-    failure = "the repository went away"
+async def _the_check_fails() -> None:
+    failure = "the event loop went away"
     raise OSError(failure)
 
 
+async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than_running_for_good(
+    opening: ReviewOpening,
+    reviews: ReviewFactory,
+    announcer: RecordingAnnouncer,
+    logged: list[EventDict],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Run on, it would hold its port and keep its agent waiting long after the reader has gone.
+
+    The check is the review's own, and nothing the review is built on can
+    fail it: the review handed to the server is given one that fails.
+    """
+    hosted = reviews.hosted(opening)
+    monkeypatch.setattr(hosted.review, "end_once_its_page_is_closed", _the_check_fails)
+
+    handed_back = await asyncio.wait_for(_served(hosted, announcer), timeout=SETTLE_SECONDS)
+
+    assert handed_back == ""
+    assert "review_part_failed" in _events(logged)
+
+
 async def test_a_review_that_cannot_open_says_why_and_ends_as_a_fault(
-    opening: ReviewOpening, announcer: RecordingAnnouncer, logged: list[EventDict], monkeypatch: pytest.MonkeyPatch
+    opening: ReviewOpening, reviews: ReviewFactory, announcer: RecordingAnnouncer, logged: list[EventDict]
 ) -> None:
     """Never listening, it must still say what stopped it rather than leave only a server that stopped."""
-    monkeypatch.setattr(RepositorySource, "open", _failing_opening)
+    hosted = reviews.hosted(opening, repository=RepositoryThatCannotBeStaged())
 
     with pytest.raises(ServerStartError, match="fault"):
-        await asyncio.wait_for(_served(opening, announcer), timeout=SETTLE_SECONDS)
+        await asyncio.wait_for(_served(hosted, announcer), timeout=SETTLE_SECONDS)
 
     assert "review_opening_failed" in _events(logged)
 
@@ -213,7 +270,7 @@ async def test_images_never_sent_go_with_the_review_and_those_sent_stay_for_the_
     opening: ReviewOpening, announcer: RecordingAnnouncer
 ) -> None:
     """The agent may open what it was handed once the review is over; nobody will send the rest, so it is not left in /tmp."""
-    serving = asyncio.ensure_future(_served(opening, announcer))
+    serving = asyncio.ensure_future(_held_open(opening, announcer))
     address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
     async with AsyncClient(base_url=address) as page:
         pasted = [

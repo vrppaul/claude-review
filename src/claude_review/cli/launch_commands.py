@@ -15,7 +15,7 @@ from claude_review.cli.terminal_announcer import TerminalAnnouncer
 from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import ReviewMode
 from claude_review.hosting.ports import ANY_FREE_PORT, HIGHEST_PORT
-from claude_review.hosting.serving import serve_review, stop_signals
+from claude_review.hosting.serving import hold_open, stop_signals
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff, open_files, open_transcript
 
@@ -92,7 +92,7 @@ async def _open_and_serve(opening: Awaitable[ReviewOpening], *, port: int | None
             click.echo(NOTHING_TO_REVIEW[opened.mode], err=True)
             return ""
         log.info("content_loaded", file_count=len(opened.diff_files), mode=opened.mode)
-        return await serve_review(opened, port=port, announcer=announcer, signals=signals)
+        return await hold_open(opened, port=port, announcer=announcer, signals=signals)
 
 
 COMMANDS = {command.name: command for command in (diff_command, files_command, transcript_command)}

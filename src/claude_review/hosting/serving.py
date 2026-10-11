@@ -21,10 +21,11 @@ import structlog
 from claude_review.hosting.address import review_url
 from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.errors import ReviewStoppedError
-from claude_review.hosting.hosted_review import host_review
+from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import reader_files, review_workspace
+from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
@@ -102,33 +103,55 @@ def stop_signals() -> Generator[StopSignals]:
             loop.remove_signal_handler(stop_signal)
 
 
-async def serve_review(
+async def hold_open(
     opening: ReviewOpening, *, port: int | None, announcer: ReviewAnnouncer, signals: StopSignals
 ) -> str:
-    """Hold a review open until it ends, and return what it hands back: its rounds, and anything left unread.
+    """Put a review of what was opened together on this machine, serve it until it ends, and return what it hands back.
 
-    `port` is the one asked for; None works it out from what is reviewed, so
-    the review comes back on the same one whenever it is opened again.
+    The review gets a workspace of its own, reads its repository through
+    git, and is served on `port` — the one asked for; None works it out from
+    what is reviewed, so the review comes back on the same one whenever it
+    is opened again.
 
     Raises:
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
     """
     with review_workspace(writes_trees=opening.repository is not None, announcer=announcer) as workspace:
-        hosted = host_review(opening, workspace=workspace, reader_files=reader_files(), clock=SystemClock())
-        review = hosted.review
-        signals.hand_to(review.lifetime)
-        server = ReviewServer(hosted.app, review.lifetime)
+        hosted = host_review(
+            opening,
+            repository=GitRepository(objects=workspace.objects),
+            workspace=workspace,
+            reader_files=reader_files(),
+            clock=SystemClock(),
+        )
         listening = bind(port if port is not None else stable_port(opening.identity), may_fall_back=port is None)
-        try:
-            await _run_until_ended(server, listening, review, announcer)
-        finally:
-            listening.close()
-            # Before the workspace says what it leaves behind: only what was sent
-            await review.discard_unsent_images()
+        return await serve_review(hosted, listening=listening, announcer=announcer, signals=signals)
 
-        server.raise_if_it_never_came_up()
-        return review.exit_report()
+
+async def serve_review(
+    hosted: HostedReview, *, listening: socket.socket, announcer: ReviewAnnouncer, signals: StopSignals
+) -> str:
+    """Serve a review on the socket it listens on until it ends, and return what it hands back.
+
+    What it hands back is its rounds, and anything left unread. The socket is
+    the review's from here on, and closes with it.
+
+    Raises:
+        ServerStartError: If the server stopped before it ever listened.
+    """
+    review = hosted.review
+    signals.hand_to(review.lifetime)
+    server = ReviewServer(hosted.app, review.lifetime)
+    try:
+        await _run_until_ended(server, listening, review, announcer)
+    finally:
+        listening.close()
+        # Before its workspace says what it leaves behind: only what was sent
+        await review.discard_unsent_images()
+
+    server.raise_if_it_never_came_up()
+    return review.exit_report()
 
 
 async def _run_until_ended(

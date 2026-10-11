@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from starlette.testclient import WebSocketTestSession
 from starlette.types import Message, Scope
 
-from claude_review.domain.interfaces import Clock, PageChannel
+from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
 from claude_review.domain.models import (
     FIRST_ROUND,
     AnchorKind,
@@ -327,11 +327,20 @@ class ReviewFactory:
         self._marking_workspace = marking_workspace
         self._reader_files = reader_files
 
-    def hosted(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> HostedReview:
-        writes_marks = opening.repository is not None and keeps_marks
+    def hosted(
+        self,
+        opening: ReviewOpening,
+        *,
+        keeps_marks: bool = True,
+        clock: Clock | None = None,
+        repository: ReviewedRepository | None = None,
+    ) -> HostedReview:
+        """The review put together as the command line puts it together, over git unless the test names another."""
+        workspace = self._marking_workspace if opening.repository is not None and keeps_marks else self._workspace
         return host_review(
             opening,
-            workspace=self._marking_workspace if writes_marks else self._workspace,
+            repository=repository or GitRepository(objects=workspace.objects),
+            workspace=workspace,
             reader_files=self._reader_files,
             clock=clock or SystemClock(),
         )
