@@ -44,6 +44,10 @@ class UnknownThreadError(NotFoundError):
     """Raised when a thread is named that the review does not hold."""
 
 
+class AgentWordsChangedError(RefusedError):
+    """Raised when a thread the agent raised comes back no longer opening as the agent raised it."""
+
+
 class ReviewEndedError(ConflictError):
     """Raised when a review that has ended is sent more."""
 

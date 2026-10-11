@@ -204,9 +204,10 @@ class Review:
         Raises:
             QuestionNotInThreadError: if the question names nothing the reader said in the thread.
             AnchorLinesNotShownError: if the thread names lines it does not quote.
+            AgentWordsChangedError: if it is the agent's own thread, and no longer opens as the agent raised it.
         """
         asked = thread.part_asked(question_id)
-        self._check_quotes([thread])
+        self._check_threads([thread])
         handed = self._hand_over(thread)
         # Handed over with the thread already; named again, they are the same
         # files. Like every image in the thread, one this review no longer keeps
@@ -222,8 +223,9 @@ class Review:
         Raises:
             ImagesNotKeptError: if it names an image this review does not keep.
             AnchorLinesNotShownError: if a thread it points at names lines it does not quote.
+            AgentWordsChangedError: if a thread it points at is the agent's own, and no longer opens as it raised it.
         """
-        self._check_quotes(threads)
+        self._check_threads(threads)
         # Pasted a moment ago, so an image this review does not keep is a fault
         # to report, not a screenshot to leave out quietly. Checked before any
         # is handed over, so a refused message leaves none of them kept for good.
@@ -318,11 +320,12 @@ class Review:
         Raises:
             ReviewEndedError: if the review has already ended.
             AnchorLinesNotShownError: if a thread names lines it does not quote.
+            AgentWordsChangedError: if a thread the agent raised no longer opens as it raised it.
         """
         if self._lifetime.has_ended:
             msg = "Review already submitted"
             raise ReviewEndedError(msg)
-        self._check_quotes(threads)
+        self._check_threads(threads)
 
         number = self._rounds.current
         result = self._formatter.format(
@@ -375,15 +378,17 @@ class Review:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
 
-    def _check_quotes(self, threads: list[ThreadDraft]) -> None:
-        """Refuse threads naming lines they do not quote, before any of them is handed over with its images.
+    def _check_threads(self, threads: list[ThreadDraft]) -> None:
+        """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.
 
         Raises:
-            AnchorLinesNotShownError: if one does.
+            AnchorLinesNotShownError: if one names lines it does not quote.
+            AgentWordsChangedError: if one the agent raised no longer opens as the agent raised it.
         """
         anchors = self._source.content.anchors
         for thread in threads:
             anchors.check_quote(thread.anchor)
+        self._threads.check_openings(threads)
 
     def _hand_over(self, thread: ThreadDraft) -> Thread:
         """A thread as the agent is handed it, which the agent may answer in from now on."""

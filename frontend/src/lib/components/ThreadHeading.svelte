@@ -18,6 +18,8 @@
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
 	// Which round it went out in, if it has
 	const sentIn = $derived(review.threads.sentInRound(thread.id));
+	// The agent's own words open a thread it raised: the reader answers them, and never rewrites them
+	const raised = $derived(raisedByAgent(thread));
 </script>
 
 <!-- What the thread hangs on and what state it is in, and what can be done to it -->
@@ -42,20 +44,22 @@
 		<NewReplyMark />
 	{/if}
 	<div class="flex-1"></div>
-	{#if raisedByAgent(thread)}
+	{#if raised}
 		<span data-testid="comment-raised" class="cr-severity cr-raised-tag">from the agent</span>
 	{:else if sentIn !== undefined}
 		<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 	{/if}
 	<div class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-		<button
-			type="button"
-			data-testid="edit-comment"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.threads.writing.openEdit(thread)}
-		>
-			Edit
-		</button>
+		{#if !raised}
+			<button
+				type="button"
+				data-testid="edit-comment"
+				class="btn btn-ghost btn-xs"
+				onclick={() => review.threads.writing.openEdit(thread)}
+			>
+				Edit
+			</button>
+		{/if}
 		{#if thread.resolved}
 			<ReopenButton {thread} />
 		{:else}

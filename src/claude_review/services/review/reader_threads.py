@@ -1,4 +1,4 @@
-"""The threads the reader's page holds, and the ids the agent's own threads take beside them.
+"""The threads the reader's page holds, and the agent's own threads beside them: their ids, and what each opened with.
 
 The threads are the reader's unsent work and live in their page; an agent
 that attaches later has no other way to learn they exist. They are kept as
@@ -10,18 +10,38 @@ The agent's own threads are held from the moment they are raised, and a
 page that says what it holds updates them but never takes them away: a
 page with no draft of the review — another browser, a private window —
 holds none, and the agent's threads must outlive it. A page opening with
-no draft reads them all from here.
+no draft reads them all from here. The reader answers them, and never
+rewrites them: the agent reads their openings as its own words.
 """
 
 import structlog
+from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.exceptions import UnknownThreadError
-from claude_review.domain.models import ThreadDraft, TurnAuthor
+from claude_review.domain.exceptions import AgentWordsChangedError, UnknownThreadError
+from claude_review.domain.models import CommentSeverity, ThreadDraft, TurnAuthor
 
 log = structlog.get_logger()
 
 # How the threads the agent raises are named, apart from the page's own
 RAISED_PREFIX = "raised-"
+
+
+class RaisedOpening(BaseModel):
+    """What the agent opened a thread of its own with: its words, and how it meant them."""
+
+    model_config = ConfigDict(frozen=True)
+
+    body: str
+    severity: CommentSeverity
+
+    def opens(self, thread: ThreadDraft) -> bool:
+        """Whether a thread the page holds still opens as the agent raised it: as the agent's, nothing in it changed."""
+        return (
+            thread.raised_by == TurnAuthor.AUTHOR
+            and thread.body == self.body
+            and thread.severity == self.severity
+            and not thread.images
+        )
 
 
 class ReaderThreads:
@@ -38,6 +58,10 @@ class ReaderThreads:
         # one before the page says it holds it: a page says so at most once a
         # second, and of several tabs on the review, the last to say it wins.
         self._known_to_the_agent: set[str] = set()
+        # What each thread the agent raised in this review opened with: a page
+        # that says it holds one updates the thread, never its opening. One
+        # raised before a restart is not here, and nothing can be said of it.
+        self._raised_openings: dict[str, RaisedOpening] = {}
 
     @property
     def held(self) -> list[ThreadDraft]:
@@ -96,8 +120,21 @@ class ReaderThreads:
         return raised
 
     def raised(self, thread: ThreadDraft) -> None:
-        """Hold a thread the agent raised, as it was raised, until a page says what became of it."""
+        """Hold a thread the agent raised, until a page says what became of it, and keep what it opens with."""
         self._held = [*self._held, thread]
+        self._raised_openings[thread.thread_id] = RaisedOpening(body=thread.body, severity=thread.severity)
+
+    def check_openings(self, threads: list[ThreadDraft]) -> None:
+        """Refuse a thread the agent raised that no longer opens as the agent raised it.
+
+        Raises:
+            AgentWordsChangedError: if one of them does not.
+        """
+        for thread in threads:
+            opening = self._raised_openings.get(thread.thread_id)
+            if opening is not None and not opening.opens(thread):
+                msg = f"{thread.thread_id} opens with the agent's own words, which only the agent may change"
+                raise AgentWordsChangedError(msg)
 
 
 def _unknown(thread_id: str) -> UnknownThreadError:

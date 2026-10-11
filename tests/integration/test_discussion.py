@@ -7,6 +7,7 @@ separate processes, which is why a queue sits between them.
 
 from http import HTTPStatus
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
@@ -16,6 +17,8 @@ from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
     LOCAL_HEADERS,
+    REVIEWED_FILE,
+    REVIEWED_LINE,
     WAIT_FOR_EVENT,
     line_on_the_wire,
     next_push,
@@ -41,6 +44,8 @@ ANSWER = turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id=
 FOLLOW_UP = turn_on_the_wire(TurnAuthor.READER, "Which caller?", turn_id=FOLLOW_UP_ID)
 # An image id the review never kept, or no longer keeps after a restart
 GONE_IMAGE = "gone.png"
+# What the agent opens a thread of its own with
+RAISED_BODY = "I kept the old name; renaming it broke two callers."
 
 
 def _asking(thread: dict[str, object], question_id: str = FIRST_THREAD_ID) -> dict[str, object]:
@@ -262,6 +267,57 @@ async def test_a_thread_asked_about_can_be_answered_before_the_page_says_it_hold
     response = await client.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": "Because"})
 
     assert response.status_code == HTTPStatus.NO_CONTENT
+
+
+async def _raise_a_thread(client: AsyncClient) -> dict[str, object]:
+    """The agent raises a thread on the reviewed line; the thread as the page then holds and sends it."""
+    raised = await client.post(
+        "/api/point",
+        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
+    )
+    anchor = {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+    return thread_on_the_wire(anchor, RAISED_BODY, thread_id=raised.json()["thread_id"], raised_by=TurnAuthor.AUTHOR)
+
+
+async def test_the_agents_own_thread_is_asked_about_as_it_raised_it(client: AsyncClient) -> None:
+    raised = await _raise_a_thread(client)
+    answered = {**raised, "turns": [turn_on_the_wire(TurnAuthor.READER, "Why keep it?", turn_id=FOLLOW_UP_ID)]}
+
+    response = await client.post(ASK_ROUTE, json=_asking(answered, question_id=FOLLOW_UP_ID))
+
+    assert response.status_code == HTTPStatus.NO_CONTENT
+
+
+async def test_a_thread_the_agent_raised_is_refused_with_the_readers_words_in_its_opening(
+    client: AsyncClient,
+) -> None:
+    """The agent would read the reader's words as its own: the opening of its thread is the agent's alone."""
+    raised = await _raise_a_thread(client)
+    rewritten = {**raised, "body": "Rename it after all."}
+
+    response = await client.post(ASK_ROUTE, json=_asking(rewritten, question_id=str(raised["thread_id"])))
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert "only the agent" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "changed",
+    [
+        {"severity": CommentSeverity.BLOCKER},
+        {"images": [GONE_IMAGE]},
+        {"raised_by": TurnAuthor.READER},
+    ],
+    ids=["reweighed", "with an image", "claimed by the reader"],
+)
+async def test_a_round_carrying_the_agents_thread_changed_is_refused(
+    client: AsyncClient, changed: dict[str, object]
+) -> None:
+    raised = await _raise_a_thread(client)
+
+    response = await client.post("/api/submit", json={"threads": [{**raised, **changed}], "end": False})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient) -> None:

@@ -109,6 +109,18 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.unread).toHaveLength(0);
 	});
 
+	it('offers no edit of a thread the agent raised: the reader answers its words, never rewrites them', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+
+		expect(getAllByTestId('comment-thread')).toHaveLength(2);
+		expect(getAllByTestId('edit-comment')).toHaveLength(1);
+		expect(getAllByTestId('open-reply')).toHaveLength(2);
+	});
+
 	it('keeps every turn rather than overwriting the last one', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 
