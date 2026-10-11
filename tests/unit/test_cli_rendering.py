@@ -126,3 +126,21 @@ def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
 
     assert "reader: (image)" in printed
     assert f"image: {image}" in printed
+
+
+def test_an_image_in_a_thread_read_in_full_is_listed_as_a_file_to_open() -> None:
+    """Reading a thread in full hands its images over; without their paths, nothing could open them."""
+    opened_with = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
+    answered_with = Path("/tmp/tmp0a1b.claude-review/images/2c3d.png")
+    pictured = thread(
+        line_anchor("src/app.py", 3),
+        "This renders wrong",
+        images=[opened_with],
+        turns=[Turn(author=TurnAuthor.READER, body="", round=1, images=[answered_with])],
+    )
+
+    printed = render_thread(Thread.of(pictured))
+
+    assert f"image: {opened_with}" in printed
+    assert "reader: (image)" in printed
+    assert f"image: {answered_with}" in printed

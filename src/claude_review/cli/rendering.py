@@ -5,6 +5,8 @@ over the whole review unasked would cost more than the work; a thread in
 full when it is named.
 """
 
+from pathlib import Path
+
 from claude_review.domain.models import TurnAuthor
 from claude_review.presentation.wire.agent import CatchUpResponse
 from claude_review.presentation.wire.threads import Thread, ThreadSummary
@@ -18,8 +20,10 @@ ELLIPSIS = "…"
 # "you" here as it is in the skill: what it raised is "yours"
 SPEAKERS = {TurnAuthor.READER: "reader", TurnAuthor.AUTHOR: "you"}
 RAISED_BY_THE_AGENT = "yours"
-# How deep what belongs to a line of the index is set under it
+# How deep what belongs to a line of the index is set under it, and an image
+# under what it was said with
 INDENT = "  "
+IMAGE_INDENT = INDENT * 2
 MARK_SEPARATOR = " · "
 # What stands between who said something, or what it is, and what was said
 LABEL_SEPARATOR = ": "
@@ -65,18 +69,20 @@ def render_catch_up(seen: CatchUpResponse) -> str:
         lines.append("")
         lines.append(PANEL_HEADING)
         for entry in seen.panel:
-            said = _gist(entry.body) or (IMAGE_ONLY if entry.images else "")
-            lines.append(_indent(said, who=SPEAKERS[entry.author]))
-            lines.extend(f"{INDENT * 2}{IMAGE_LABEL}{LABEL_SEPARATOR}{path}" for path in entry.images)
+            lines.append(_indent(_said(_gist(entry.body), entry.images), who=SPEAKERS[entry.author]))
+            lines.extend(_images(entry.images))
 
     return "\n".join(lines)
 
 
 def render_thread(thread: Thread) -> str:
-    """One thread in full: everything said in it, and the lines it hangs on."""
+    """One thread in full: everything said in it, each image as a file to open, and the lines it hangs on."""
     lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of_thread(thread))}"]
-    lines.append(_indent(thread.body))
-    lines.extend(_indent(turn.body, who=SPEAKERS[turn.author]) for turn in thread.turns)
+    lines.append(_indent(_said(thread.body, thread.images)))
+    lines.extend(_images(thread.images))
+    for turn in thread.turns:
+        lines.append(_indent(_said(turn.body, turn.images), who=SPEAKERS[turn.author]))
+        lines.extend(_images(turn.images))
     if thread.anchor.quote:
         lines.append(_indent("\n".join(thread.anchor.quote), who=QUOTE_LABEL))
     return "\n".join(lines)
@@ -96,6 +102,16 @@ def _indent(text: str, *, who: str | None = None) -> str:
     """Set every line of something said under the line it belongs to, with who said it."""
     label = f"{who}{LABEL_SEPARATOR}" if who else ""
     return "\n".join(f"{INDENT}{label}{line}" for line in text.splitlines()) or f"{INDENT}{label}"
+
+
+def _said(text: str, images: list[Path]) -> str:
+    """What was said, or that an image was all of it, where an empty line would say nothing."""
+    return text if text.strip() else (IMAGE_ONLY if images else "")
+
+
+def _images(images: list[Path]) -> list[str]:
+    """Each image something was said with, as a file to open, set under what it was said with."""
+    return [f"{IMAGE_INDENT}{IMAGE_LABEL}{LABEL_SEPARATOR}{path}" for path in images]
 
 
 def _gist(text: str) -> str:
