@@ -683,7 +683,9 @@
  */
 .cr-panel {
 	position: relative;
+	flex-shrink: 1;
 	width: var(--cr-panel-width);
+	min-width: var(--cr-panel-least-width);
 	background: var(--color-base-100);
 }
 /* A column's edge, there to be dragged: the panel's on its left, the tree's on its right */
@@ -907,7 +909,10 @@
 
 /* The file tree, as wide as the reader left it */
 .cr-tree {
+	position: relative;
+	flex-shrink: 1;
 	width: var(--cr-tree-width);
+	min-width: var(--cr-tree-least-width);
 }
 /* A row of the tree, set in by how deep its folder is */
 .cr-tree-row {
@@ -1255,6 +1260,45 @@
 	border-radius: var(--radius-field);
 	font-size: 0.75rem;
 	color: var(--cr-faint);
+}
+
+/*
+ * The review's columns on a screen of any width: the tree, the diff, the
+ * panel. The tree and the panel give up their width to the diff, which
+ * never goes below the width it reads at; where even their least leaves it
+ * less, each lies over the diff, lifted off it, until the reader puts it
+ * away. A screen narrower than the diff's least width still shows it whole.
+ */
+.cr-columns {
+	position: relative;
+	display: flex;
+	flex: 1;
+	min-height: 0;
+}
+.cr-diff-area {
+	flex: 1;
+	min-width: min(var(--cr-diff-least-width), 100%);
+	overflow: auto;
+}
+@media (width < theme(--breakpoint-cr-panel-beside)) {
+	.cr-panel {
+		position: absolute;
+		inset-block: 0;
+		right: 0;
+		max-width: 100%;
+		z-index: var(--cr-layer-column);
+		box-shadow: var(--cr-shadow-raised);
+	}
+}
+@media (width < theme(--breakpoint-cr-tree-beside)) {
+	.cr-tree {
+		position: absolute;
+		inset-block: 0;
+		left: 0;
+		max-width: 100%;
+		z-index: var(--cr-layer-column);
+		box-shadow: var(--cr-shadow-raised);
+	}
 }
 
 /*

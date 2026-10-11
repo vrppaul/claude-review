@@ -29,11 +29,13 @@
 
 	/*
 	 * What lies over what, lowest first: a file's sticky header and a
-	 * column's grip over what scrolls under them, the tour's light over the
+	 * column's grip over what scrolls under them, the tree or the panel
+	 * lying over the diff on a narrow screen, the tour's light over the
 	 * review, what the reader opens over the light (so it is never dimmed),
 	 * and the guide's card over everything it talks about.
 	 */
 	--cr-layer-over-content: 10;
+	--cr-layer-column: 20;
 	--cr-layer-spotlight: 25;
 	--cr-layer-popover: 30;
 	--cr-layer-guide: 60;
@@ -75,11 +77,36 @@
 	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
 	--cr-placeholder: var(--cr-faint);
 
+	/*
+	 * How the columns share a screen. The diff is what is reviewed, so it is
+	 * never squeezed below the width it reads at: the tree and the panel give
+	 * up their width to it first, down to the least each is drawn at — no
+	 * narrower than the reader may drag it (reader/page-layout.svelte.ts) —
+	 * and on a screen too narrow even for that they lie over the diff instead,
+	 * at the breakpoints below.
+	 */
+	/* About fifty-five columns of code beside its two line numbers and its sign */
+	--cr-diff-least-width: 36rem;
+	--cr-tree-least-width: 10rem;
+	--cr-panel-least-width: 17.5rem;
+
 	/* What differs inside a changed line, in the change's own colour */
 	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
 	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
 	/* The ground of something the review warns about */
 	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+/*
+ * Where a side column stops standing beside the diff and lies over it. A
+ * media query cannot read a custom property, so each is the sum of the
+ * widths above written out, as Tailwind's breakpoints are written.
+ */
+@theme {
+	/* The least tree, the least panel and the least diff: 10 + 17.5 + 36 */
+	--breakpoint-cr-panel-beside: 63.5rem;
+	/* The least tree and the least diff, the panel lying over it: 10 + 36 */
+	--breakpoint-cr-tree-beside: 46rem;
 }
 
 [data-theme='dark'] {

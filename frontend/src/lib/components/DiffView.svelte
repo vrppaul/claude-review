@@ -29,7 +29,7 @@
 	});
 </script>
 
-<div bind:this={container} data-testid="diff-view" class="flex-1 overflow-auto bg-base-100">
+<div bind:this={container} data-testid="diff-view" class="cr-diff-area bg-base-100">
 	{#each review.diff.files as file (file.path)}
 		<!-- A file that cannot be drawn says so in its place, and takes no other file down with it -->
 		<svelte:boundary onerror={reportBroken}>

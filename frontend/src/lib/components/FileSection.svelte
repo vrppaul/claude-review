@@ -88,7 +88,7 @@
 	<div
 		data-testid="file-header"
 		class={[
-			'cr-file-header flex items-center gap-3 border-b border-base-300 bg-base-200 px-3 py-2',
+			'cr-file-header flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-300 bg-base-200 px-3 py-2',
 			viewed && 'cr-viewed'
 		]}
 	>
@@ -99,7 +99,7 @@
 			onToggle={() => review.reading.toggleFolded(file.path)}
 		/>
 
-		<span class="font-mono text-sm font-semibold">{file.path}</span>
+		<span class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">{file.path}</span>
 		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button
 				type="button"

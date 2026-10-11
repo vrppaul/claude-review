@@ -45,7 +45,7 @@
 	<div
 		data-testid={over.testId}
 		class={[
-			'flex h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 px-4',
+			'flex min-h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 px-4 py-2 text-center',
 			over.underTheReader ? 'cr-warning-bar' : 'bg-base-200'
 		]}
 	>
@@ -57,7 +57,11 @@
 		<p class="font-semibold">{over.said}</p>
 	</div>
 {:else}
-	<header data-testid="top-bar" class="flex h-12 shrink-0 items-center gap-3 border-b border-base-300 bg-base-200 px-4">
+	<!-- One row while it fits; on a narrow screen the controls wrap onto another, none cut off -->
+	<header
+		data-testid="top-bar"
+		class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-base-300 bg-base-200 px-4 py-1.5"
+	>
 		<span class="font-semibold">Review</span>
 		<!-- The ? key may belong to a browser extension, so the list has a button too -->
 		<button

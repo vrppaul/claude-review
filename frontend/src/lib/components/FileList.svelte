@@ -124,7 +124,7 @@
 <aside
 	data-testid="sidebar"
 	data-tour="file-tree"
-	class="cr-tree relative flex shrink-0 flex-col border-r border-base-300 bg-base-100"
+	class="cr-tree flex flex-col border-r border-base-300 bg-base-100"
 	style:--cr-tree-width="{review.layout.fileTree.width}px"
 >
 	<!-- The tree is on the left, so it grows rightward -->

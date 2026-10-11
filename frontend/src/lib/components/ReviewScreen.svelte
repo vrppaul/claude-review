@@ -61,7 +61,7 @@
 	{/if}
 	<ReviewHeader />
 	<DiffNotice />
-	<div class="flex min-h-0 flex-1">
+	<div class="cr-columns">
 		{#if review.layout.fileTree.open}
 			<FileList />
 		{:else}
@@ -85,10 +85,7 @@
 				<AgentPanel />
 				{#snippet failed(error, retry)}
 					<!-- Where the panel stood, as wide, so the review beside it does not move -->
-					<div
-						class="cr-panel shrink-0 border-l border-base-300"
-						style:--cr-panel-width="{review.layout.agentPanel.width}px"
-					>
+					<div class="cr-panel border-l border-base-300" style:--cr-panel-width="{review.layout.agentPanel.width}px">
 						<PartFailed what="The agent panel" {error} {retry} />
 					</div>
 				{/snippet}
