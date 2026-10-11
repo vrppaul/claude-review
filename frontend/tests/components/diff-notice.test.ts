@@ -3,7 +3,7 @@ import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
 import { diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
-import { fakeServer } from '../fake-server';
+import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
@@ -175,6 +175,39 @@ describe('threads the base on screen cannot draw', () => {
 		await settled();
 
 		expect(queryByTestId('off-screen-list')).toBeNull();
+	});
+});
+
+describe('a bar that could not do what it was asked', () => {
+	it('says why in that bar, and in no other on the screen', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse({ base: sinceRound(1) }));
+		server.refuse('POST /api/retake', SERVER_ERROR, 'The repository is locked');
+		await review.diff.setBase('round:1');
+		review.diff.treeMoved.note(1);
+
+		const { getByTestId, findByTestId, queryByTestId } = render(DiffNotice, inReview(review));
+		await user.click(getByTestId('retake-diff'));
+
+		expect(text(await findByTestId('retake-error'))).toContain('The repository is locked');
+		expect(getByTestId('narrowed-to')).toBeTruthy();
+		expect(queryByTestId('narrow-error')).toBeNull();
+	});
+
+	it('says a failure to show the whole diff in the narrowed bar alone', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse({ base: sinceRound(1) }));
+		await review.diff.setBase('round:1');
+		server.refuse('GET /api/diff', SERVER_ERROR, 'The diff could not be read');
+		review.diff.treeMoved.note(1);
+
+		const { getByTestId, findByTestId, queryByTestId } = render(DiffNotice, inReview(review));
+		await user.click(getByTestId('show-everything'));
+
+		expect(text(await findByTestId('narrow-error'))).toContain('The diff could not be read');
+		expect(queryByTestId('retake-error')).toBeNull();
 	});
 });
 
