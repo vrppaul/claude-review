@@ -70,6 +70,29 @@ async def test_a_file_the_agent_names_is_one_line(client: AsyncClient, route: st
 
 
 @pytest.mark.parametrize(
+    ("route", "payload", "repeated"),
+    [
+        ("/api/say", {"body": "Renamed both.", "files": ["src/a.py", "src/b.py", "src/a.py"]}, "src/a.py"),
+        ("/api/progress", {"text": "renaming", "files": ["src/a.py", "src/a.py"]}, "src/a.py"),
+        (
+            "/api/progress",
+            {"text": "checking", "steps": [{"text": "the tests", "done": True}, {"text": "the tests"}]},
+            "the tests",
+        ),
+    ],
+    ids=["a-file-said-about-twice", "a-file-worked-on-twice", "a-branch-twice"],
+)
+async def test_what_the_reader_is_shown_once_is_named_once(
+    client: AsyncClient, route: str, payload: dict[str, object], repeated: str
+) -> None:
+    """A chip a file, a branch a step, each told apart by its name: a second says nothing new and breaks the panel."""
+    response = await client.post(route, json=payload)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert repeated in response.text
+
+
+@pytest.mark.parametrize(
     ("route", "payload"),
     [
         ("/api/say", {"body": BLANK}),

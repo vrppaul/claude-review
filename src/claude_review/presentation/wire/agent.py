@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import AfterValidator, Field
 
 from claude_review.domain import models
 from claude_review.domain.models import EpochMillis, FilePath, StepText, TurnAuthor
@@ -53,6 +53,38 @@ class ProgressStep(WireModel):
 
     def in_the_review(self) -> models.ProgressStep:
         return models.ProgressStep.model_validate(self, from_attributes=True)
+
+
+def _refuse_repeats(names: list[str]) -> None:
+    """Refuse a list that names anything more than once, naming what it repeats.
+
+    Raises:
+        ValueError: if a name comes again after its first time.
+    """
+    repeated = dict.fromkeys(name for position, name in enumerate(names) if name in names[:position])
+    if repeated:
+        msg = f"names {', '.join(repeated)} more than once"
+        raise ValueError(msg)
+
+
+def _each_file_once(files: list[str]) -> list[str]:
+    _refuse_repeats(files)
+    return files
+
+
+def _each_branch_once(steps: list[ProgressStep]) -> list[ProgressStep]:
+    _refuse_repeats([step.text for step in steps])
+    return steps
+
+
+# Files hung off what the agent says, a chip each the reader can jump by. Each
+# once: the page tells the chips apart by their paths, and a second chip for a
+# file says nothing the first did not.
+NamedFiles = Annotated[list[FilePath], Field(max_length=MAX_FILES_NAMED), AfterValidator(_each_file_once)]
+
+# What the work has branched into, each branch once: the reader tells them
+# apart by what they say, and so does the page
+WorkBranches = Annotated[list[ProgressStep], Field(max_length=MAX_PROGRESS_STEPS), AfterValidator(_each_branch_once)]
 
 
 class AgentWork(WireModel):
@@ -157,7 +189,7 @@ class SayRequest(WireModel):
     body: AgentText
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
-    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
+    files: NamedFiles = Field(default_factory=list)
 
 
 class ProgressRequest(WireModel):
@@ -170,10 +202,10 @@ class ProgressRequest(WireModel):
 
     message_id: WireId | None = None
     text: ProgressText = ""
-    files: list[FilePath] = Field(default_factory=list, max_length=MAX_FILES_NAMED)
+    files: NamedFiles = Field(default_factory=list)
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
-    steps: list[ProgressStep] = Field(default_factory=list, max_length=MAX_PROGRESS_STEPS)
+    steps: WorkBranches = Field(default_factory=list)
 
 
 class ShowRequest(WireModel):
