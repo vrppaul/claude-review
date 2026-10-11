@@ -6,11 +6,13 @@ page. jsdom moves no focus as a browser does — not into a modal, not back
 out of one — so these are held in the browser.
 """
 
+import re
 from pathlib import Path
 
 import pytest
 from playwright.async_api import Page
 
+from claude_review.hosting.workspace import ReaderFiles
 from tests.helpers import ReviewServers, RunningReview, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -23,6 +25,12 @@ FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 # the top of the screen, for jumps between them to land on a file's header
 JUMPED_TO = ("first.py", "second.py", "third.py", "fourth.py")
 JUMPED_FILE_LINES = 40
+# How the welcome says how many stops the tour has, and how the tour says where it is
+STOPS_ANNOUNCED = re.compile(r"(\d+) stops")
+STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
+# The step that waits for a comment on a line, and the one a comment opened there leads to
+COMMENT_ON_A_LINE = "Comment on a line"
+ADD_IT = "Add it to the review"
 
 
 def _commit_initial(repository: Path, files: dict[str, str]) -> None:
@@ -97,3 +105,26 @@ async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_fil
         await page.keyboard.press("v")
         section = page.locator(f'[data-testid="file-section"][data-path="{path}"]')
         assert await section.get_by_test_id("viewed-toggle").is_checked(), f"v after jumping to {path}"
+
+
+async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_count(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    """The step after opening a comment lights the field it opened, and the count is the welcome's to the end."""
+    reader_files.guide.unlink()
+    await _open_review(page, review)
+    welcome = page.get_by_test_id("guide-welcome")
+    announced = STOPS_ANNOUNCED.search(await welcome.inner_text())
+    assert announced is not None
+    await page.get_by_test_id("guide-start").click()
+    tour = page.get_by_test_id("guide-tour")
+    while await tour.get_by_role("heading").inner_text() != COMMENT_ON_A_LINE:
+        await tour.get_by_test_id("guide-next").click()
+
+    await page.get_by_test_id("line-gutter").first.click()
+    await page.get_by_test_id("comment-input").wait_for()
+
+    await tour.get_by_role("heading", name=ADD_IT).wait_for()
+    reached = STOP_REACHED.match(await tour.get_by_text(STOP_REACHED).inner_text())
+    assert reached is not None
+    assert reached.group(1) == announced.group(1)

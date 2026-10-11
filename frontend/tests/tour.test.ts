@@ -195,10 +195,38 @@ describe('the tour', () => {
 		expect(review.guide.step?.id).toBe('comment-line');
 
 		review.guide.notice({ type: 'opened', kind: 'reply' });
+		pageWith('file-tree', 'line-number', 'comment-field');
 		expect(review.guide.step?.id).toBe('comment-line');
 
 		review.guide.notice({ type: 'opened', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'comment-field');
 		expect(review.guide.step?.id).toBe('comment-save');
+	});
+
+	it('moves on from a comment opened only once the page has drawn its field, never to what follows the field', () => {
+		pageWith('file-tree', 'line-number', 'unsent-count', 'send');
+		review.guide.startTour();
+		review.guide.next();
+		expect(review.guide.step?.id).toBe('comment-line');
+
+		openComment(1);
+		expect(review.guide.step?.id).toBe('comment-line');
+		pageWith('file-tree', 'line-number', 'unsent-count', 'send', 'comment-field');
+
+		expect(review.guide.step?.id).toBe('comment-save');
+	});
+
+	it('moves on once the page reports, though what it has drawn is as it was', () => {
+		pageWith('file-tree', 'line-number', 'comment-field', 'unsent-count');
+		review.guide.startTour();
+		review.guide.next();
+		review.guide.notice({ type: 'opened', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'comment-field', 'unsent-count');
+
+		review.guide.notice({ type: 'added', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'comment-field', 'unsent-count');
+
+		expect(review.guide.step?.id).toBe('added');
 	});
 
 	it('does not wait for a comment that is already open', () => {
@@ -217,9 +245,11 @@ describe('the tour', () => {
 		review.guide.startTour();
 		review.guide.next();
 		review.guide.notice({ type: 'opened', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'comment-field', 'awaited-answer', 'unsent-count');
 		expect(review.guide.step?.id).toBe('comment-route');
 
 		review.guide.notice({ type: 'asked', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'awaited-answer', 'unsent-count');
 
 		expect(review.guide.step?.id).toBe('asked');
 	});
@@ -230,6 +260,7 @@ describe('the tour', () => {
 		review.guide.startTour();
 		review.guide.next();
 		review.guide.notice({ type: 'opened', kind: 'new' });
+		pageWith('file-tree', 'line-number', 'comment-field');
 
 		review.guide.notice({ type: 'closed', kind: 'new' });
 
@@ -266,22 +297,54 @@ describe('the tour', () => {
 		review.guide.next();
 		openComment(1);
 		openComment(2);
+		pageWith('file-tree', 'line-number', 'comment-field');
 
 		closeComment(1);
 
 		expect(review.guide.step?.id).toBe('comment-route');
 	});
 
-	it('counts again the moment a comment field opens, which a step was waiting for', () => {
-		pageWith('file-tree', 'line-number', 'comment-field');
+	it('keeps one count of its stops, from before the tour to after a comment field opens', () => {
+		review.answerer.setAttached(true);
+		pageWith('review-base', 'file-tree', 'line-number', 'unsent-count', 'agent-panel', 'send');
+		const announced = review.guide.stepCount;
 		review.guide.startTour();
 		const { getByText } = render(GuideCard, inReview(review));
+		while (review.guide.step?.id !== 'comment-line') review.guide.next();
+		flushSync();
 		const before = getByText(STEP_COUNT).textContent;
 
 		openComment(1);
+		pageWith('review-base', 'file-tree', 'line-number', 'comment-field', 'unsent-count', 'agent-panel', 'send');
 		flushSync();
 
-		expect(getByText(STEP_COUNT).textContent).not.toBe(before);
+		expect(review.guide.step?.id).toBe('comment-route');
+		expect(before).toBe(`3 of ${announced}`);
+		expect(getByText(STEP_COUNT).textContent).toBe(`4 of ${announced}`);
+	});
+
+	it('forgets what the page had drawn once nothing watches it any more', async () => {
+		const unseen = review.guide.stepCount;
+		render(Guide, inReview(review));
+		review.guide.setHelpOpen(true);
+		await tick();
+		// jsdom lays nothing out, so the page says it has drawn nothing
+		expect(review.guide.stepCount).not.toBe(unseen);
+
+		review.guide.setHelpOpen(false);
+		await tick();
+
+		expect(review.guide.stepCount).toBe(unseen);
+	});
+
+	it('looks over the page while the welcome says how many stops the tour has', async () => {
+		const seen = vi.spyOn(review.guide, 'seeTargets');
+		await review.guide.open();
+		render(Guide, inReview(review));
+		await tick();
+
+		expect(review.guide.card).toBe('welcome');
+		expect(seen).toHaveBeenCalled();
 	});
 
 	it('counts only the steps it will show, and offers no Back before the first', () => {
@@ -290,7 +353,8 @@ describe('the tour', () => {
 
 		expect(review.guide.stepPosition).toBe(0);
 		expect(review.guide.canGoBack).toBe(false);
-		expect(review.guide.stepCount).toBe(2);
+		// The files, a line to comment on, and the field the reader opens there to write in
+		expect(review.guide.stepCount).toBe(3);
 	});
 
 	it('moves on from a step it landed on before the page said what it has drawn', () => {
@@ -346,6 +410,7 @@ describe('the tour', () => {
 		review.commentFields.report({ type: 'opened', kind: 'new' });
 		expect(review.guide.step?.id).toBe('comment-line');
 		await tick();
+		pageWith('file-tree', 'line-number', 'comment-field');
 
 		expect(review.guide.step?.id).toBe('comment-save');
 	});

@@ -176,7 +176,9 @@ export class PageWatcher {
 }
 
 /**
- * Tells which of some places are drawn on the page, whenever that changes.
+ * Tells which of some places are drawn on the page, each time the page has
+ * drawn anything — whether or not that changed which: a tour waiting for the
+ * page to show what the reader just did moves on at the next telling.
  *
  * Scrolling draws nothing new, so only changes to the page are measured.
  */
@@ -184,7 +186,6 @@ export class TargetWatcher<Name extends string> {
 	readonly #names: readonly Name[];
 	readonly #onTargets: (drawn: ReadonlySet<Name>) => void;
 	readonly #changes: PageChanges;
-	#drawn: ReadonlySet<Name> | null = null;
 
 	constructor(names: readonly Name[], onTargets: (drawn: ReadonlySet<Name>) => void) {
 		this.#names = names;
@@ -198,13 +199,6 @@ export class TargetWatcher<Name extends string> {
 	}
 
 	#measure(): void {
-		const drawn: ReadonlySet<Name> = new Set(this.#names.filter(isDrawn));
-		if (this.#drawn !== null && sameMembers(drawn, this.#drawn)) return;
-		this.#drawn = drawn;
-		this.#onTargets(drawn);
+		this.#onTargets(new Set(this.#names.filter(isDrawn)));
 	}
-}
-
-function sameMembers<Member>(first: ReadonlySet<Member>, second: ReadonlySet<Member>): boolean {
-	return first.size === second.size && [...first].every((member) => second.has(member));
 }

@@ -9,7 +9,7 @@
 
 import type { CommentRoute, TourStep, TourTarget } from '$lib/guide/tour';
 import type { CommentFieldEvent } from '$lib/types';
-import { TOUR_STEPS, stepsFor } from '$lib/guide/tour';
+import { DRAWN_BY_THE_READER, TOUR_STEPS, stepsFor } from '$lib/guide/tour';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
 import { handOverLegacyRelease, legacySeenRelease, readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
@@ -28,6 +28,17 @@ export interface AnswererPresence {
  */
 export interface OpenComments {
 	readonly openOnLines: number;
+}
+
+/**
+ * What the reader did that a step was waiting for: opened a comment on a
+ * line, or sent one, to the review or straight to the agent.
+ */
+type Done = { kind: 'opened' } | { kind: 'sent'; route: CommentRoute };
+
+/** Whether two sets hold the same members. */
+function sameMembers<Member>(first: ReadonlySet<Member>, second: ReadonlySet<Member>): boolean {
+	return first.size === second.size && [...first].every((member) => second.has(member));
 }
 
 /** Where a step stands among the steps that are shown, by its id. */
@@ -61,11 +72,18 @@ export class Guide {
 	#stepId = $state<string | null>(null);
 	#route = $state<CommentRoute>('review');
 	// Which places the page has drawn for a step to light. The page says so
-	// while the tour runs; until it first has, every step counts as shown,
+	// while it is watched; until it first has, every step counts as shown,
 	// and a step landed on then is checked again once it has.
 	#onPage = $state.raw<ReadonlySet<TourTarget> | null>(null);
+	// What the reader did that the step on screen waited for, held until the
+	// page next says what it has drawn: the step it leads to lights what the
+	// reader just drew, which is on the page only once the page says so
+	#done: Done | null = null;
 	readonly #steps: TourStep[];
 	readonly #stepIndex: number;
+	// The tour's stops, one list for every count of them: the welcome's, the
+	// ? list's and the tour's own
+	readonly #stops: TourStep[];
 
 	constructor(answerer: AnswererPresence, comments: OpenComments, release: string) {
 		this.#answerer = answerer;
@@ -73,6 +91,7 @@ export class Guide {
 		this.#release = release;
 		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
 		this.#stepIndex = $derived(indexOfStep(this.#steps, this.#stepId));
+		this.#stops = $derived(this.#steps.filter((step) => this.#isStop(step)));
 	}
 
 	get card(): GuideCard | null {
@@ -95,21 +114,30 @@ export class Guide {
 		return this.#touring;
 	}
 
+	/**
+	 * Whether what the page has drawn matters now: the tour runs, or the
+	 * welcome or the ? list says how many stops it has.
+	 */
+	get watchesThePage(): boolean {
+		return this.#touring || this.#card === 'welcome' || this.#helpOpen;
+	}
+
 	get step(): TourStep | undefined {
 		return this.#touring ? this.#steps[this.#stepIndex] : undefined;
 	}
 
 	/**
-	 * Where this step stands among the steps the reader will actually see —
-	 * a plan has no base to choose, so its tour is shorter, and says so.
+	 * Where this step stands among the tour's stops — a plan has no base to
+	 * choose, so its tour is shorter, and says so.
 	 */
 	get stepPosition(): number {
 		const current = this.#steps[this.#stepIndex];
-		return current ? this.#shownSteps().indexOf(current) : -1;
+		return current ? this.#stops.indexOf(current) : -1;
 	}
 
+	/** How many stops the tour has, as the welcome, the ? list and the tour itself all say. */
 	get stepCount(): number {
-		return this.#shownSteps().length;
+		return this.#stops.length;
 	}
 
 	get isLastStep(): boolean {
@@ -127,15 +155,29 @@ export class Guide {
 	}
 
 	/**
-	 * The page says which of the tour's places it has drawn. A step left with
-	 * nothing to light — the tour began before the page could say — moves on
-	 * to the next that has something.
+	 * The page says which of the tour's places it has drawn, each time it has
+	 * drawn anything. What the reader did that the step waited for moves the
+	 * tour on now, once what it drew is on the page. A step left with nothing
+	 * to light — the tour began before the page could say — moves on to the
+	 * next that has something.
 	 */
 	seeTargets(drawn: ReadonlySet<TourTarget>): void {
-		const landedBlind = this.#onPage === null;
-		this.#onPage = drawn;
+		const before = this.#onPage;
+		const landedBlind = before === null;
+		if (before === null || !sameMembers(drawn, before)) this.#onPage = drawn;
+		const done = this.#done;
+		this.#done = null;
+		if (done) {
+			this.#moveOn(done);
+			return;
+		}
 		const current = this.step;
 		if (landedBlind && current && !this.#shows(current)) this.#landFrom(this.#stepIndex, 1);
+	}
+
+	/** The page is no longer watched, so what it last said goes stale. */
+	pageUnwatched(): void {
+		this.#onPage = null;
 	}
 
 	/** Decide what to show a reader arriving at a review served by this release. */
@@ -179,7 +221,8 @@ export class Guide {
 	/** The tour is over, skipped or walked to its end. */
 	endTour(): void {
 		this.#touring = false;
-		// The page is no longer watched, so what it last said goes stale
+		this.#done = null;
+		// What the page said was said for this tour; the next asks afresh
 		this.#onPage = null;
 	}
 
@@ -192,26 +235,20 @@ export class Guide {
 	}
 
 	/**
-	 * Hear what happened to a comment field, and move on if it was awaited.
-	 *
-	 * Called once the page shows the result, so the step it leads to finds
-	 * what it lights.
+	 * Hear what happened to a comment field. What a step was waiting for
+	 * moves the tour on once the page next says what it has drawn — the step
+	 * it leads to lights what was just drawn; a comment put away unsent goes
+	 * back at once.
 	 */
 	notice(event: CommentFieldEvent): void {
 		const waiting = this.step?.waitsFor;
 		if (!waiting || event.kind !== 'new') return;
 
 		if (waiting.kind === 'comment-opened') {
-			if (event.type === 'opened') this.next();
+			if (event.type === 'opened') this.#done = { kind: 'opened' };
 			return;
 		}
 		this.#followComment(event.type, waiting.routes);
-	}
-
-	/** The reader chose where a comment goes; the next step shows what came of it. */
-	choose(chosen: CommentRoute): void {
-		this.#route = chosen;
-		this.next();
 	}
 
 	/** The release a cookie from an older release says was seen, handed over to the server; null when there is none. */
@@ -221,16 +258,23 @@ export class Guide {
 		return legacy;
 	}
 
-	/** Move on to what became of a comment the step was waiting to see sent, or back if it was dropped. */
+	/** Note where a comment the step was waiting to see sent went, or go back if it was dropped. */
 	#followComment(happened: CommentFieldEvent['type'], routes: readonly CommentRoute[]): void {
 		if (happened === 'added' && routes.includes('review')) {
-			this.choose('review');
+			this.#done = { kind: 'sent', route: 'review' };
 		} else if (happened === 'asked' && routes.includes('ask')) {
-			this.choose('ask');
+			this.#done = { kind: 'sent', route: 'ask' };
 		} else if (happened === 'closed' && this.#comments.openOnLines === 0) {
 			// While another comment on a line is open, that one is still to be sent
+			this.#done = null;
 			this.back();
 		}
+	}
+
+	/** Move on from what the reader did; a comment sent shows next what came of it, the way it went. */
+	#moveOn(done: Done): void {
+		if (done.kind === 'sent') this.#route = done.route;
+		this.next();
 	}
 
 	/** Remember this release as seen, so the card does not come back. */
@@ -239,15 +283,24 @@ export class Guide {
 		writeSeenRelease(this.#release).catch(() => undefined);
 	}
 
+	/**
+	 * Whether the tour lands on a step: one with something on the page to
+	 * light, unless it waits for a comment on a line and one is open already.
+	 */
 	#shows(step: TourStep): boolean {
 		const onPage = this.#onPage;
 		if (onPage !== null && !step.targets.some((target) => onPage.has(target))) return false;
 		return !(step.waitsFor?.kind === 'comment-opened' && this.#comments.openOnLines > 0);
 	}
 
-	/** The steps this tour shows, in order: those with something on the page. */
-	#shownSteps(): TourStep[] {
-		return this.#steps.filter((step) => this.#shows(step));
+	/**
+	 * Whether a step is one of the tour's stops: one with something on the
+	 * page to light, or with what the reader is about to draw. A stop passed
+	 * over because what it waits for is done already is still counted.
+	 */
+	#isStop(step: TourStep): boolean {
+		const onPage = this.#onPage;
+		return onPage === null || step.targets.some((target) => onPage.has(target) || DRAWN_BY_THE_READER.has(target));
 	}
 
 	/**
