@@ -24,7 +24,8 @@ from typing import IO
 
 import pytest
 
-from claude_review.domain.models import CommentSeverity
+from claude_review.cli.launch_commands import NOTHING_TO_REVIEW
+from claude_review.domain.models import CommentSeverity, ReviewMode
 from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import (
     AnswererPush,
@@ -41,6 +42,7 @@ from tests.helpers import (
     ANY_PORT,
     FIRST_THREAD_ID,
     LOOPBACK,
+    PNG,
     git,
     line_on_the_wire,
     next_push,
@@ -78,6 +80,13 @@ SHORTEST_WAIT_SECONDS = "0.2"
 PAST_THE_SHORTEST_WAIT_SECONDS = 0.6
 # A thread no review holds
 NO_SUCH_THREAD = "comment-99"
+# How a failure the command line explains begins, on the one line it takes
+ONE_LINE_FAILURE = "Error: "
+# A conversation as Claude Code writes one, an entry a line: a question, and its answer
+CONVERSATION = [
+    {"type": "user", "message": {"role": "user", "content": "Can you rename the helper?"}},
+    {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Renamed it."}]}},
+]
 # What a machine with no browser to open looks like
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}
 # A page on somebody else's site
@@ -282,6 +291,83 @@ def test_busy_port_reports_one_readable_line(changed_repo: Path, cli: CliProcess
     assert "Traceback" not in result.stderr
     assert str(taken_port) in result.stderr
     assert "already in use" in result.stderr
+
+
+def _read(port: int, route: str) -> dict:
+    """What a route of the review served on the port answers, read as the page reads it."""
+    with urllib.request.urlopen(f"http://{LOOPBACK}:{port}{route}", timeout=COMMAND_SECONDS) as response:
+        return json.loads(response.read())
+
+
+def test_a_repository_with_nothing_changed_is_said_to_have_nothing_and_never_served(
+    tmp_git_repo: Path, cli: CliProcesses
+) -> None:
+    result = cli.run("diff", str(tmp_git_repo), "--no-open")
+
+    assert result.returncode == 0
+    assert result.stderr == f"{NOTHING_TO_REVIEW[ReviewMode.DIFF]}\n"
+
+
+@pytest.mark.parametrize(
+    ("command", "what"),
+    [("diff", "no-repository"), ("files", "not-text")],
+    ids=["a-directory-that-is-no-repository", "a-file-that-is-not-text"],
+)
+def test_what_cannot_be_reviewed_is_refused_in_one_readable_line(
+    tmp_path: Path, cli: CliProcesses, command: str, what: str
+) -> None:
+    (tmp_path / what).mkdir()
+    (tmp_path / what / "image.png").write_bytes(PNG)
+    named = tmp_path / what if command == "diff" else tmp_path / what / "image.png"
+
+    result = cli.run(command, str(named), "--no-open")
+
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+    assert result.stderr.startswith(ONE_LINE_FAILURE)
+    assert result.stderr.count("\n") == 1
+
+
+def test_verbose_says_what_the_review_does_and_otherwise_nothing_is_said_but_the_outcome(
+    tmp_git_repo: Path, cli: CliProcesses
+) -> None:
+    quiet = cli.run("diff", str(tmp_git_repo), "--no-open")
+    verbose = cli.run("--verbose", "diff", str(tmp_git_repo), "--no-open")
+
+    assert "loading_diff" in verbose.stderr
+    assert "loading_diff" not in quiet.stderr
+
+
+def test_a_review_against_a_base_shows_what_changed_since_it(tmp_git_repo: Path, cli: CliProcesses, port: int) -> None:
+    """Nothing is left uncommitted: everything on screen came from the base onward."""
+    (tmp_git_repo / "since.txt").write_text("committed since the base\n")
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "since")
+
+    cli.start("diff", str(tmp_git_repo), "--base", "HEAD~1", "--port", str(port), "--no-open").wait_for_address()
+
+    assert _read(port, "/api/review")["title"] == f"{tmp_git_repo.name}: changes since HEAD~1"
+    assert [changed["path"] for changed in _read(port, "/api/diff")["files"]] == ["since.txt"]
+
+
+def test_files_are_named_as_typed_from_where_the_command_ran(tmp_path: Path, cli: CliProcesses, port: int) -> None:
+    (tmp_path / "notes").mkdir()
+    (tmp_path / "notes" / "plan.md").write_text("# Plan\n")
+    (tmp_path / "README.md").write_text("# Read me\n")
+
+    cli.start("files", "notes/plan.md", "README.md", "--port", str(port), "--no-open", cwd=tmp_path).wait_for_address()
+
+    assert sorted(read["path"] for read in _read(port, "/api/diff")["files"]) == ["README.md", "notes/plan.md"]
+
+
+def test_a_conversation_is_reviewed_as_its_messages(tmp_path: Path, cli: CliProcesses, port: int) -> None:
+    conversation = tmp_path / "conversation.jsonl"
+    conversation.write_text("\n".join(json.dumps(entry) for entry in CONVERSATION))
+
+    cli.start("transcript", str(conversation), "--port", str(port), "--no-open").wait_for_address()
+
+    assert _read(port, "/api/review")["mode"] == ReviewMode.TRANSCRIPT
+    assert len(_read(port, "/api/diff")["files"]) == len(CONVERSATION)
 
 
 def test_a_base_that_names_no_commit_is_refused_in_one_readable_line(changed_repo: Path, cli: CliProcesses) -> None:

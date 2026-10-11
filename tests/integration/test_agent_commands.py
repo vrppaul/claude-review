@@ -16,9 +16,10 @@ from click.testing import CliRunner, Result
 from httpx import AsyncClient
 
 from claude_review.cli.main import main
+from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import PointPush, ReplyPush
+from claude_review.presentation.wire.pushes import ChatPush, PointPush, ReplyPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
@@ -26,10 +27,13 @@ from tests.helpers import (
     REVIEWED_FILE,
     ReviewServers,
     RunningReview,
+    added_line,
+    diff_file,
     line_on_the_wire,
     next_push,
     one_line_file,
     opening_of,
+    removed_line,
     repository_opening,
     thread_on_the_wire,
 )
@@ -92,6 +96,30 @@ async def test_a_file_typed_twice_is_sent_once(review: RunningReview, command: s
     result = await _run(review, command, "--file", REVIEWED_FILE, "--file", REVIEWED_FILE, "Renamed it")
 
     assert result.exit_code == 0, result.output
+
+
+async def test_a_thread_raised_hangs_on_the_side_it_names_with_the_weight_it_is_given(servers: ReviewServers) -> None:
+    """A thread on lines the change removed must not land on the lines that replaced them."""
+    review = await servers.start(
+        opening_of([diff_file(REVIEWED_FILE, [removed_line(1, "x = 0"), added_line(1, "x = 1")])])
+    )
+    async with page_socket_held(review.port) as page:
+        result = await _run(
+            review, "point", "--file", REVIEWED_FILE, "--lines", "1", "--side", "old", "--severity", "blocker", "Why?"
+        )
+        raised = await asyncio.to_thread(next_push, page, PointPush)
+
+    assert result.exit_code == 0, result.output
+    assert (raised.anchor.side, raised.severity) == (LineSide.OLD, CommentSeverity.BLOCKER)
+
+
+async def test_what_the_agent_says_names_the_files_it_is_about(review: RunningReview) -> None:
+    async with page_socket_held(review.port) as page:
+        result = await _run(review, "say", "--file", REVIEWED_FILE, "Renamed it")
+        said = await asyncio.to_thread(next_push, page, ChatPush)
+
+    assert result.exit_code == 0, result.output
+    assert said.files == [REVIEWED_FILE]
 
 
 async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningReview) -> None:
