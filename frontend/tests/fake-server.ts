@@ -35,6 +35,7 @@ type ReplyOf<Path extends keyof paths, Verb extends Method> = paths[Path][Verb] 
 /** What each route the page uses answers with when it does what was asked. */
 export interface Replies {
 	'GET /api/review': ReplyOf<'/api/review', 'get'>;
+	'GET /api/threads': ReplyOf<'/api/threads', 'get'>;
 	'GET /api/diff': ReplyOf<'/api/diff', 'get'>;
 	'GET /api/versions': ReplyOf<'/api/versions', 'get'>;
 	'GET /api/file-window': ReplyOf<'/api/file-window', 'get'>;

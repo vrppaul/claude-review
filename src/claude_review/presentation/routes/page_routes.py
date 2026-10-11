@@ -50,6 +50,8 @@ from claude_review.presentation.wire.threads import (
     FollowResponse,
     SubmitRequest,
     SubmitResponse,
+    ThreadInput,
+    ThreadsResponse,
     anchor_in_the_review,
     anchor_on_the_wire,
 )
@@ -84,6 +86,19 @@ async def get_the_review(
         instance=told.instance,
         sequence=told.sequence,
     )
+
+
+@router.get("/threads")
+async def held_threads(review: Review = Depends(get_review)) -> ThreadsResponse:
+    """Say what threads the review holds, for a page that opens with no draft of them.
+
+    Another browser, a private window, cleared site data: the page has none
+    of the reader's threads, nor the agent's. It takes these as its own
+    rather than saying it holds none — which would leave an agent arriving
+    later with nothing to read. Read-only: no page is told what another
+    holds once it is open.
+    """
+    return ThreadsResponse(threads=[ThreadInput.of(held) for held in review.threads_held()])
 
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))

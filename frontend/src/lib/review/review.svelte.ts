@@ -31,6 +31,7 @@ import type {
 	ChangesSince,
 	DiffResponse,
 	FollowOutcome,
+	HeldThread,
 	ReviewMode,
 	ReviewResponse,
 	SendLimits,
@@ -39,11 +40,13 @@ import type {
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
 
-/** What a review opens on: what the server says it is, its first diff, and any unsent draft. */
+/** What a review opens on: what the server says it is, its first diff, any unsent draft, and the threads it holds. */
 export interface Opening {
 	facts: ReviewResponse;
 	firstDiff: DiffResponse;
 	draft: Draft | null;
+	/** What the review holds of its threads: taken in only with no draft to open from. */
+	held: HeldThread[];
 }
 
 /** Whoever carries what the page holds to the server. */
@@ -107,7 +110,7 @@ export class Review {
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
 
-	constructor({ facts, firstDiff, draft }: Opening, reader: ReaderParts) {
+	constructor({ facts, firstDiff, draft, held }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
 		this.identity = facts.identity;
 		this.mode = facts.mode;
@@ -124,6 +127,9 @@ export class Review {
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.reading = new ReadingProgress(kept.files);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
+		// A page with no draft — another browser, a private window — would
+		// otherwise say it holds no threads, and the review would forget them
+		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, kept.composer);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);

@@ -96,8 +96,9 @@ export interface Draft extends KeptThreads {
 	files: FilesRead;
 }
 
-/** A thread as drafts kept it until how it was read moved out of it. */
+/** A thread as drafts kept it until how it was read moved out of it, always saying when it was written. */
 interface ReadComment extends Thread {
+	at: number;
 	awaiting: AwaitedQuestion[];
 	collapsed: boolean;
 	unread: boolean;

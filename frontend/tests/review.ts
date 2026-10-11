@@ -5,7 +5,7 @@ import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, DiffResponse, ReviewResponse } from '$lib/types';
+import type { DiffFile, DiffResponse, HeldThread, ReviewResponse } from '$lib/types';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
 
@@ -18,6 +18,8 @@ export interface Opened {
 	diff?: Partial<DiffResponse>;
 	/** The reader's settings, where a test reads them. */
 	settings?: Settings;
+	/** The threads the review holds, which a review opening with no draft takes in. */
+	held?: HeldThread[];
 }
 
 // The page open in this tab: the review it holds, keeping its draft as the page does
@@ -40,9 +42,9 @@ export function leavePage(): void {
  * kept — and keep its draft from then on. Opening another is a reload: the
  * page before it goes first.
  */
-export function openReview({ files = [], facts, diff, settings = new Settings() }: Opened = {}): Review {
+export function openReview({ files = [], facts, diff, settings = new Settings(), held = [] }: Opened = {}): Review {
 	leavePage();
-	openPage = openKeptReview(reviewResponse(facts), diffResponse({ files, ...diff }), {
+	openPage = openKeptReview(reviewResponse(facts), diffResponse({ files, ...diff }), held, {
 		settings,
 		layout: new PageLayout(),
 		sound: new ReplySound(settings)

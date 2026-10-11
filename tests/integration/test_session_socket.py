@@ -23,6 +23,7 @@ from tests.helpers import (
     FIRST_THREAD_ID,
     PNG,
     REVIEWED_FILE,
+    REVIEWED_LINE,
     SESSION_ROUTE,
     line_on_the_wire,
     next_push,
@@ -31,6 +32,7 @@ from tests.helpers import (
     review_facts,
     thread_on_the_wire,
     thread_route,
+    turn_on_the_wire,
     until_the_review_holds_threads,
     until_the_review_is_on_round,
     welcome_of,
@@ -298,6 +300,69 @@ def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_
     )
 
     assert raised.json()["thread_id"] == "raised-4"
+
+
+THREADS_ROUTE = "/api/threads"
+
+
+def _raised(page: TestClient, body: str) -> str:
+    """Raise a thread on the review's one line, as the agent does, and say its id."""
+    raised = page.post(
+        "/api/point",
+        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": body, "severity": CommentSeverity.NOTE},
+    )
+    return raised.json()["thread_id"]
+
+
+def test_a_thread_the_agent_raised_is_held_before_any_page_says_it_holds_it(review_page: TestClient) -> None:
+    """A page that opens later, with no draft of its own, learns of it from the review."""
+    thread_id = _raised(review_page, "Kept on purpose")
+
+    [held] = review_page.get(THREADS_ROUTE).json()["threads"]
+
+    assert (held["thread_id"], held["body"], held["raised_by"]) == (thread_id, "Kept on purpose", TurnAuthor.AUTHOR)
+    assert held["anchor"]["quote"] == [REVIEWED_LINE]
+
+
+def test_a_thread_the_agent_raised_stays_though_a_page_says_it_holds_none(review_page: TestClient) -> None:
+    """A browser with no draft must not take the agent's threads away with it."""
+    thread_id = _raised(review_page, "Kept on purpose")
+
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [A_THREAD]})
+        until_the_review_is_on_round(review_page, 2)
+
+    held = review_page.get(THREADS_ROUTE).json()["threads"]
+    assert sorted(thread["thread_id"] for thread in held) == sorted([FIRST_THREAD_ID, thread_id])
+    assert review_page.post(thread_route(thread_id)).status_code == HTTPStatus.OK
+
+
+def test_a_thread_the_agent_raised_is_held_as_the_page_last_said_it(review_page: TestClient) -> None:
+    """The reader's reply in it is what an agent arriving later must read."""
+    thread_id = _raised(review_page, "Kept on purpose")
+    raised = review_page.get(THREADS_ROUTE).json()["threads"][0]
+    replied = {**raised, "turns": [turn_on_the_wire(TurnAuthor.READER, "Why?", turn_id="turn-1")]}
+
+    with open_session(review_page) as socket:
+        socket.send_json({"round": 2, "threads": [replied]})
+        until_the_review_is_on_round(review_page, 2)
+
+    [held] = review_page.get(THREADS_ROUTE).json()["threads"]
+    assert held["thread_id"] == thread_id
+    assert [turn["body"] for turn in held["turns"]] == ["Why?"]
+
+
+def test_a_page_that_says_nothing_of_its_threads_leaves_them_as_the_review_holds_them(
+    review_page: TestClient,
+) -> None:
+    """A page with no draft says nothing of threads until it knows them: it must not wipe them."""
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
+        socket.send_json({"round": 2, "threads": None})
+        until_the_review_is_on_round(review_page, 2)
+
+    assert [held["thread_id"] for held in review_page.get(THREADS_ROUTE).json()["threads"]] == [FIRST_THREAD_ID]
 
 
 def test_a_binary_frame_is_ignored_and_the_socket_goes_on(review_page: TestClient) -> None:

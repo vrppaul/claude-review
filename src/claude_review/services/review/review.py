@@ -28,6 +28,7 @@ from claude_review.domain.models import (
     Thread,
     ThreadDraft,
     ThreadQuestion,
+    TurnAuthor,
     VersionKey,
     VersionOnOffer,
 )
@@ -128,6 +129,10 @@ class Review:
     def page_holds(self, threads: list[ThreadDraft], unreadable_ids: list[str]) -> None:
         """Take the threads a page says it holds, and the ids of those it could not say."""
         self._threads.hold(threads, unreadable_ids)
+
+    def threads_held(self) -> list[ThreadDraft]:
+        """The threads the review holds: as a page last said them, and the agent's own however a page left them."""
+        return self._threads.held
 
     def agent_called(self) -> None:
         """Note that the agent is still there: every call it makes renews its lease."""
@@ -283,6 +288,18 @@ class Review:
         """
         quoted = self._source.content.anchors.quote(anchor)
         thread_id = self._threads.raise_id()
+        self._threads.raised(
+            ThreadDraft(
+                thread_id=thread_id,
+                anchor=quoted,
+                severity=severity,
+                body=body,
+                images=[],
+                turns=[],
+                raised_by=TurnAuthor.AUTHOR,
+                resolved=False,
+            )
+        )
         self._page.tell(ThreadRaised(thread_id=thread_id, anchor=quoted, body=body, severity=severity))
         log.info("thread_raised", thread_id=thread_id, where=place_in_words(quoted))
         return thread_id

@@ -27,6 +27,7 @@ import type {
 	SettingsChange,
 	SubmitRequest,
 	SubmitResponse,
+	ThreadsResponse,
 	VersionsResponse
 } from '$lib/types';
 import type { Query } from '$lib/types/routes';
@@ -34,6 +35,11 @@ import type { Query } from '$lib/types/routes';
 /** What the review is and where it stands: read as the page opens. */
 export function readReview(): Promise<ReviewResponse> {
 	return read('get', '/api/review', { doing: 'Could not open the review' });
+}
+
+/** The threads the review holds: what a page that opens with no draft of the review takes in. */
+export function readHeldThreads(): Promise<ThreadsResponse> {
+	return read('get', '/api/threads', { doing: 'Could not read the threads of the review' });
 }
 
 /** Which diff is asked for: whose whitespace, and against which base. */

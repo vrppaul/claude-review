@@ -4,7 +4,7 @@
  * letting it go once it is over.
  */
 
-import { readReview, takeDiff } from '$lib/api/review-api';
+import { readHeldThreads, readReview, takeDiff } from '$lib/api/review-api';
 import type { PageConnection } from '$lib/connection/page-connection';
 import { catchUp, followKeptThreads, takePush } from '$lib/page/push-handling';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
@@ -50,10 +50,13 @@ export class ReviewPage {
 	 * before the diff: whether whitespace counts decides which diff is asked
 	 * for. The facts come before the diff too: they say how far the telling
 	 * had got, and a diff read after them holds everything told by then.
-	 * Once the review is open, the socket goes on from where its draft or its
-	 * facts left the telling, so whatever was said meanwhile is handed over
-	 * rather than missed, and the threads its draft brought back follow onto
-	 * the diff it opened on.
+	 * The threads the review holds are read after the facts too: a thread
+	 * the agent raises in between is then held and pushed both, and taken in
+	 * once, where read before them it would be neither. Once the review is
+	 * open, the socket goes on from where its draft or its facts left the
+	 * telling, so whatever was said meanwhile is handed over rather than
+	 * missed, and the threads its draft brought back follow onto the diff it
+	 * opened on.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -61,12 +64,12 @@ export class ReviewPage {
 		try {
 			await this.#settings.load();
 			const facts = await readReview();
-			const firstDiff = await takeDiff({
-				ignoreWhitespace: this.#settings.current.ignore_whitespace,
-				base: null
-			});
+			const [firstDiff, { threads: held }] = await Promise.all([
+				takeDiff({ ignoreWhitespace: this.#settings.current.ignore_whitespace, base: null }),
+				readHeldThreads()
+			]);
 			// An unsent review of the same thing is picked up where it stopped
-			const { review, stopKeeping } = openKeptReview(facts, firstDiff, {
+			const { review, stopKeeping } = openKeptReview(facts, firstDiff, held, {
 				settings: this.#settings,
 				layout: this.#layout,
 				sound: new ReplySound(this.#settings)

@@ -154,8 +154,11 @@ export interface Thread {
 	resolved: boolean;
 	/** Which round it was written in, so a thread can show where one ended. */
 	round: number;
-	/** When it was written. Read in the thread, never sent with the review. */
-	at: number;
+	/**
+	 * When it was written. Read in the thread, never sent with the review —
+	 * so one taken in from what the review holds does not say.
+	 */
+	at?: number;
 }
 
 /**
@@ -163,9 +166,16 @@ export interface Thread {
  * was read. One shape wherever a thread travels — a round, a question, a
  * panel message, the review saying what it holds.
  */
-export type ThreadInput = Schemas['ThreadInput'];
+export type ThreadInput = Schemas['ThreadInput-Input'];
 /** A turn as it goes back: what was said, with the images as ids. */
-export type TurnInput = Schemas['TurnInput'];
+export type TurnInput = Schemas['TurnInput-Input'];
+/**
+ * A thread the review holds, as a page last said it — every field there:
+ * what a page that opens with no draft of the review takes in.
+ */
+export type HeldThread = Schemas['ThreadInput-Output'];
+/** The threads the review holds. */
+export type ThreadsResponse = Schemas['ThreadsResponse'];
 export type SubmitRequest = Schemas['SubmitRequest'];
 /**
  * A question asked in a thread. The whole thread goes, and the server

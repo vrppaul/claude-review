@@ -8,7 +8,8 @@ import type { Review } from '$lib/review/review.svelte';
 import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
-import type { ServerPush } from '$lib/types';
+import { lineAnchor } from '$lib/anchors/line';
+import type { HeldThread, ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
 import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
@@ -28,6 +29,29 @@ const LONGER_THAN_ANY_RETRY = 60_000;
 // The pages a test opened: each is let go once the test is over, so none
 // keeps its draft into the next
 const openedPages: ReviewPage[] = [];
+
+// A thread the review holds, as a page in another browser said it
+const A_HELD_THREAD: HeldThread = {
+	thread_id: 'comment-1',
+	anchor: lineAnchor('a.py', 'new', 1, 1, ['x = 1']),
+	severity: 'question',
+	body: 'Written in another browser',
+	images: [],
+	turns: [{ turn_id: 'turn-3', author: 'author', body: 'Answered', round: 2, images: [] }],
+	raised_by: 'reader',
+	resolved: false
+};
+// A thread the agent raised, as the review holds it
+const A_RAISED_THREAD: HeldThread = {
+	thread_id: 'raised-1',
+	anchor: lineAnchor('a.py', 'new', 2, 2, ['y = 2']),
+	severity: 'note',
+	body: 'Look here',
+	images: [],
+	turns: [],
+	raised_by: 'author',
+	resolved: false
+};
 
 /** A page on the review's socket, let go of once the test is over. */
 function newPage(closeTab: () => void = () => undefined): ReviewPage {
@@ -69,6 +93,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/settings', { record: NEW_READER, stored: true });
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('GET /api/diff', diffResponse());
+	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
 	return server;
 }
@@ -301,6 +326,57 @@ describe('opening the page', () => {
 		expect(elsewhere.said).toEqual([]);
 		expect(openedReview(page).link.ending).toBe('replaced');
 		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads).toHaveLength(1);
+	});
+
+	it('takes the threads the review holds as its own when this browser kept no draft of it', async () => {
+		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD, A_RAISED_THREAD] });
+		const page = newPage();
+
+		await page.open();
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+		flushSync();
+
+		const review = openedReview(page);
+		expect(review.threads.all.map((thread) => thread.id)).toEqual(['comment-1', 'raised-1']);
+		expect(review.threads.unsent.map((thread) => thread.id)).toEqual(['comment-1']);
+		expect(latestSocket().said).toMatchObject([{ threads: [{ thread_id: 'comment-1' }, { thread_id: 'raised-1' }] }]);
+	});
+
+	it('writes its next comment under an id none of the threads it took in has', async () => {
+		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD] });
+		const page = newPage();
+		await page.open();
+
+		const added = openedReview(page).threads.add(newComment({ body: 'mine' }));
+
+		expect(added).not.toBe('comment-1');
+	});
+
+	it('takes in once a thread the agent raised as the page opened, held and pushed both', async () => {
+		serving().answer('GET /api/threads', { threads: [A_RAISED_THREAD] });
+		const page = newPage();
+		await page.open();
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+
+		const { thread_id, anchor, body, severity } = A_RAISED_THREAD;
+		latestSocket().deliver({ type: 'point', thread_id, anchor, body, severity }, 1);
+
+		expect(openedReview(page).threads.all.map((thread) => thread.id)).toEqual(['raised-1']);
+	});
+
+	it('keeps to its own draft rather than the threads the review holds', async () => {
+		const server = serving();
+		server.answer('GET /api/threads', { threads: [A_HELD_THREAD] });
+		openReview().threads.add(newComment({ body: 'written in this browser' }));
+		leavePage();
+		server.answer('POST /api/anchors/follow', { anchors: [newComment().anchor] });
+		const page = newPage();
+
+		await page.open();
+
+		expect(openedReview(page).threads.all.map((thread) => thread.body)).toEqual(['written in this browser']);
 	});
 
 	it('says why when the review cannot be opened', async () => {

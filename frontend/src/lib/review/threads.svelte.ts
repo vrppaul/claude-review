@@ -23,6 +23,7 @@ import type {
 	Anchor,
 	CommentSeverity,
 	FollowOutcome,
+	HeldThread,
 	NewComment,
 	NewTurn,
 	Thread,
@@ -51,6 +52,30 @@ function questionIdOf(thread: Thread): string {
 
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
+
+/** Whether a thread the review holds is as the agent raised it: nothing settled, and nothing said in it by the reader. */
+function isAsRaised(held: HeldThread): boolean {
+	return held.raised_by === AGENT && !held.resolved && held.turns.every((turn) => turn.author !== READER);
+}
+
+/**
+ * A thread the review holds, as this page holds one. When it was written was
+ * never told, nor which question an answer belongs to; the round it was
+ * written in is no later than the first thing said in it, nor than now.
+ */
+function threadOfHeld(held: HeldThread, currentRound: number): Thread {
+	return {
+		id: held.thread_id,
+		anchor: held.anchor,
+		severity: held.severity,
+		body: held.body,
+		images: held.images,
+		turns: held.turns.map(({ turn_id, author, body, round, images }) => ({ id: turn_id, author, body, round, images })),
+		raised_by: held.raised_by,
+		resolved: held.resolved,
+		round: Math.min(currentRound, ...held.turns.map((turn) => turn.round))
+	};
+}
 
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
@@ -160,14 +185,17 @@ export class Threads {
 	}
 
 	/**
-	 * Take a thread the agent raised and put it on the diff.
+	 * Take a thread the agent raised and put it on the diff; whether it was
+	 * new. One the page holds already — taken in with the review's threads
+	 * as it opened — is not raised twice.
 	 *
 	 * It arrives already sent: the reader has not written it, so it must not
 	 * swell "unsent" or travel back to the side that wrote it. The moment
 	 * they answer or edit it, it stops being sent — as any thread does — and
 	 * goes with the next round, so the reply arrives with what it replies to.
 	 */
-	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): void {
+	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): boolean {
+		if (this.#all.some((held) => held.id === id)) return false;
 		const thread: Thread = {
 			id,
 			anchor,
@@ -183,6 +211,24 @@ export class Threads {
 		this.#all = [...this.#all, thread];
 		this.reading.markUnread(id);
 		this.#sent.set(id, this.#rounds.current);
+		return true;
+	}
+
+	/**
+	 * Take as this page's own the threads the review holds, for a page that
+	 * opened with no draft of the review: another browser, a private window.
+	 *
+	 * Which of them went out with a round only the page that sent them
+	 * knew, so each is taken as not sent yet — sent twice costs the agent a
+	 * second look, never sent costs the reader the comment — but for one
+	 * still as the agent raised it, taken as a raised thread arrives. Ids go
+	 * on past theirs, so nothing written here takes one of them.
+	 */
+	adopt(held: HeldThread[]): void {
+		this.#all = [...this.#all, ...held.map((thread) => threadOfHeld(thread, this.#rounds.current))];
+		for (const thread of held.filter(isAsRaised)) this.#sent.set(thread.thread_id, this.#rounds.current);
+		this.#commentIds.continuePast(held.map((thread) => thread.thread_id));
+		this.#turnIds.continuePast(held.flatMap((thread) => thread.turns.map((turn) => turn.turn_id)));
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {

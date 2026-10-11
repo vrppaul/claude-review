@@ -192,11 +192,17 @@ class SessionHello(WireModel):
     in it — the threads are unsent work — and the only side that survives a
     server restarted mid-review. So it says both, and neither costs anybody
     anything: this never leaves the machine until an agent asks for it.
+
+    `threads` says what the page holds, three ways. None: nothing — a page
+    that does not know them yet — and the review keeps what it holds. A
+    list: every thread the page holds, which the review holds from then on
+    in place of the reader's it held — an empty one when the last was
+    deleted. The threads the agent raised are never taken away by a list
+    that leaves them out: a page with no draft holds none of them, and
+    reads them from GET /api/threads as it opens.
     """
 
     round: int | None = Field(default=None, ge=FIRST_ROUND)
-    # None when the browser said nothing about them; an empty list when it
-    # holds none — the last one was deleted
     threads: list[ThreadInput] | None = Field(default=None, max_length=MAX_THREADS)
 
 
@@ -238,6 +244,16 @@ def _thread_id_of(thread: JsonValue) -> str | None:
     """The id a thread the server cannot read says it has, if it says one."""
     thread_id = thread.get("thread_id") if isinstance(thread, dict) else None
     return thread_id if isinstance(thread_id, str) else None
+
+
+class ThreadsResponse(WireModel):
+    """Response for GET /api/threads — the threads the review holds, for a page that opens with no draft of its own.
+
+    As a page last said them, and the agent's own however a page left them.
+    Read once, as the page opens: from then on the page says what it holds.
+    """
+
+    threads: list[ThreadInput]
 
 
 class ThreadSummary(WireModel):

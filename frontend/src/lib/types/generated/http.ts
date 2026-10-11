@@ -24,6 +24,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Held Threads
+         * @description Say what threads the review holds, for a page that opens with no draft of them.
+         *
+         *     Another browser, a private window, cleared site data: the page has none
+         *     of the reader's threads, nor the agent's. It takes these as its own
+         *     rather than saying it holds none — which would leave an agent arriving
+         *     later with nothing to read. Read-only: no page is told what another
+         *     holds once it is open.
+         */
+        get: operations["held_threads_api_threads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/diff": {
         parameters: {
             query?: never;
@@ -670,7 +696,7 @@ export interface components {
         AskRequest: {
             /** Question Id */
             question_id: string;
-            thread: components["schemas"]["ThreadInput"];
+            thread: components["schemas"]["ThreadInput-Input"];
         };
         /** CancelEvent */
         CancelEvent: {
@@ -946,7 +972,7 @@ export interface components {
             /** Message Id */
             message_id: string;
             /** Threads */
-            threads?: components["schemas"]["ThreadInput"][];
+            threads?: components["schemas"]["ThreadInput-Input"][];
         };
         /**
          * PanelCancel
@@ -1267,7 +1293,7 @@ export interface components {
          */
         SubmitRequest: {
             /** Threads */
-            threads: components["schemas"]["ThreadInput"][];
+            threads: components["schemas"]["ThreadInput-Input"][];
             /** Body */
             body?: string | null;
             /** End */
@@ -1323,7 +1349,7 @@ export interface components {
          *     as it stands right now: a round, a question, a panel message, the
          *     review saying what it holds.
          */
-        ThreadInput: {
+        "ThreadInput-Input": {
             /** Body */
             body: string;
             /** Images */
@@ -1333,7 +1359,31 @@ export interface components {
             anchor: components["schemas"]["Anchor-Input"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns?: components["schemas"]["TurnInput"][];
+            turns?: components["schemas"]["TurnInput-Input"][];
+            raised_by: components["schemas"]["TurnAuthor"];
+            /** Resolved */
+            resolved: boolean;
+        };
+        /**
+         * ThreadInput
+         * @description A thread as the browser holds it, turns and all.
+         *
+         *     The browser holds the threads — they are unsent work, and never reach
+         *     this side until a round is — so whatever is about one sends it along,
+         *     as it stands right now: a round, a question, a panel message, the
+         *     review saying what it holds.
+         */
+        "ThreadInput-Output": {
+            /** Body */
+            body: string;
+            /** Images */
+            images: string[];
+            /** Thread Id */
+            thread_id: string;
+            anchor: components["schemas"]["Anchor-Output"];
+            severity: components["schemas"]["CommentSeverity"];
+            /** Turns */
+            turns: components["schemas"]["TurnInput-Output"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
@@ -1376,6 +1426,17 @@ export interface components {
             /** Turn Count */
             turn_count: number;
         };
+        /**
+         * ThreadsResponse
+         * @description Response for GET /api/threads — the threads the review holds, for a page that opens with no draft of its own.
+         *
+         *     As a page last said them, and the agent's own however a page left them.
+         *     Read once, as the page opens: from then on the page says what it holds.
+         */
+        ThreadsResponse: {
+            /** Threads */
+            threads: components["schemas"]["ThreadInput-Output"][];
+        };
         /** TimeoutEvent */
         TimeoutEvent: {
             /**
@@ -1410,11 +1471,26 @@ export interface components {
          * TurnInput
          * @description One turn of a thread, as the browser sends it back.
          */
-        TurnInput: {
+        "TurnInput-Input": {
             /** Body */
             body: string;
             /** Images */
             images?: string[];
+            /** Turn Id */
+            turn_id: string;
+            author: components["schemas"]["TurnAuthor"];
+            /** Round */
+            round: number;
+        };
+        /**
+         * TurnInput
+         * @description One turn of a thread, as the browser sends it back.
+         */
+        "TurnInput-Output": {
+            /** Body */
+            body: string;
+            /** Images */
+            images: string[];
             /** Turn Id */
             turn_id: string;
             author: components["schemas"]["TurnAuthor"];
@@ -1464,6 +1540,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    held_threads_api_threads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
                 };
             };
             /** @description Forbidden */

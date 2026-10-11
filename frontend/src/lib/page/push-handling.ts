@@ -98,10 +98,10 @@ function unknown(push: never): void {
 	console.warn('claude-review: the server pushed something this page does not know', push);
 }
 
-/** Put a thread the agent raised onto the diff, and say so in the panel. */
+/** Put a thread the agent raised onto the diff, and say so in the panel, unless the page holds it already. */
 function raise(review: Review, push: PointPush): void {
 	// The server quoted it from the diff it checked the lines against
-	review.threads.raise(push.thread_id, push.anchor, push.body, push.severity);
+	if (!review.threads.raise(push.thread_id, push.anchor, push.body, push.severity)) return;
 	review.conversation.note(raisedNote(push.anchor), [push.thread_id]);
 	review.sound.announce();
 }

@@ -5,12 +5,18 @@ that attaches later has no other way to learn they exist. They are kept as
 the page said them, images by their ids: they are handed over only to an
 agent that reads them, so an image in a comment nobody has read yet can
 still be taken off.
+
+The agent's own threads are held from the moment they are raised, and a
+page that says what it holds updates them but never takes them away: a
+page with no draft of the review — another browser, a private window —
+holds none, and the agent's threads must outlive it. A page opening with
+no draft reads them all from here.
 """
 
 import structlog
 
 from claude_review.domain.exceptions import UnknownThreadError
-from claude_review.domain.models import ThreadDraft
+from claude_review.domain.models import ThreadDraft, TurnAuthor
 
 log = structlog.get_logger()
 
@@ -65,13 +71,15 @@ class ReaderThreads:
         self._known_to_the_agent.add(thread_id)
 
     def hold(self, readable: list[ThreadDraft], unreadable_ids: list[str]) -> None:
-        """Take the threads the page holds, and never hand out an id one of them has.
+        """Take the threads the page holds, keep the agent's own it leaves out, and never hand out an id one has.
 
         A review restarted mid-way starts counting again from nothing, while
         the page still holds the threads the agent raised before — the ones
         this review could not read included.
         """
-        self._held = readable
+        said_ids = {*(thread.thread_id for thread in readable), *unreadable_ids}
+        left_out = [thread for thread in self._held if _is_raised(thread) and thread.thread_id not in said_ids]
+        self._held = [*readable, *left_out]
         held_ids = [*(thread.thread_id for thread in readable), *unreadable_ids]
         self._raised = max([self._raised, *(_raised_number(thread_id) for thread_id in held_ids)])
         # Said when it changes rather than on every hello, which comes as
@@ -87,11 +95,20 @@ class ReaderThreads:
         self._known_to_the_agent.add(raised)
         return raised
 
+    def raised(self, thread: ThreadDraft) -> None:
+        """Hold a thread the agent raised, as it was raised, until a page says what became of it."""
+        self._held = [*self._held, thread]
+
 
 def _unknown(thread_id: str) -> UnknownThreadError:
     """What a thread named and not held is refused with."""
     msg = f"No thread {thread_id} in this review"
     return UnknownThreadError(msg)
+
+
+def _is_raised(thread: ThreadDraft) -> bool:
+    """Whether the agent raised the thread, rather than the reader writing it."""
+    return thread.raised_by == TurnAuthor.AUTHOR
 
 
 def _raised_number(thread_id: str) -> int:

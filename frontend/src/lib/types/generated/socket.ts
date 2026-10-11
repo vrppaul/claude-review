@@ -294,6 +294,14 @@ export interface components {
          *     in it — the threads are unsent work — and the only side that survives a
          *     server restarted mid-review. So it says both, and neither costs anybody
          *     anything: this never leaves the machine until an agent asks for it.
+         *
+         *     `threads` says what the page holds, three ways. None: nothing — a page
+         *     that does not know them yet — and the review keeps what it holds. A
+         *     list: every thread the page holds, which the review holds from then on
+         *     in place of the reader's it held — an empty one when the last was
+         *     deleted. The threads the agent raised are never taken away by a list
+         *     that leaves them out: a page with no draft holds none of them, and
+         *     reads them from GET /api/threads as it opens.
          */
         SessionHello: {
             /**
