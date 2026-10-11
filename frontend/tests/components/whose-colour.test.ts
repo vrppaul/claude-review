@@ -45,6 +45,17 @@ describe('a colour says whose a thing is', () => {
 		expect(getByTestId('progress-file').classList).toContain(AGENT_CHIP);
 	});
 
+	it('draws a thread the agent mentions in what it says in its own colour', async () => {
+		const review = answeredReview();
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }));
+		review.conversation.receive(null, 'See @src/routes.py:2-2', []);
+
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await tick();
+
+		expect(getByTestId('answer-thread').classList).toContain(AGENT_CHIP);
+	});
+
 	it('draws a thread the agent raised, as the panel notes it, in its own colour', () => {
 		const review = answeredReview();
 		const anchor = lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']);

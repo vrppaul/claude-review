@@ -54,6 +54,25 @@
 	});
 </script>
 
+<!-- The threads a turn points at, a chip each, in the colour of whoever said it -->
+{#snippet threadChips(threadIds: string[], testId: string, byTheAgent: boolean)}
+	<div class="mt-2 flex flex-wrap gap-1">
+		{#each threadIds as threadId (threadId)}
+			{@const thread = threadNamed(threadId)}
+			{#if thread}
+				<button
+					type="button"
+					data-testid={testId}
+					class={['cr-thread-chip', byTheAgent && 'cr-thread-chip-agent']}
+					onclick={() => review.navigator.reveal(thread)}
+				>
+					{anchorShortPlace(thread.anchor)}
+				</button>
+			{/if}
+		{/each}
+	</div>
+{/snippet}
+
 <!-- A log: what the agent and the reader say is read out as it arrives, in order -->
 <div
 	data-testid="panel-turns"
@@ -129,21 +148,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						{/if}
 						<SaidImages images={turn.images ?? []} />
 						{#if turn.threads && turn.threads.length > 0}
-							<div class="mt-2 flex flex-wrap gap-1">
-								{#each turn.threads as threadId (threadId)}
-									{@const thread = threadNamed(threadId)}
-									{#if thread}
-										<button
-											type="button"
-											data-testid="panel-thread-ref"
-											class="cr-thread-chip"
-											onclick={() => review.navigator.reveal(thread)}
-										>
-											{anchorShortPlace(thread.anchor)}
-										</button>
-									{/if}
-								{/each}
-							</div>
+							{@render threadChips(turn.threads, 'panel-thread-ref', false)}
 						{/if}
 						{#if turn.cancelled}
 							<p data-testid="panel-cancelled" class="cr-faint mt-1 text-xs">
@@ -155,6 +160,10 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 					<div data-testid="panel-answer" class="cr-answer">
 						<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>
 						<MarkdownRenderer text={turn.body} dense />
+						{#if turn.threads && turn.threads.length > 0}
+							<!-- Threads its words mention, drawn as the reader's mentions are -->
+							{@render threadChips(turn.threads, 'answer-thread', true)}
+						{/if}
 						{#if turn.files && turn.files.length > 0}
 							<div class="mt-2 flex flex-wrap gap-1">
 								<!-- Known by where they stand, since the agent may name a file twice -->

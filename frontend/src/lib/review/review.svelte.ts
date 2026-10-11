@@ -133,7 +133,7 @@ export class Review {
 		// otherwise say it holds no threads, and the review would forget them
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
-		this.conversation = new Conversation(kept.panel, kept.composer);
+		this.conversation = new Conversation(kept.panel, kept.composer, () => this.threads.all);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);

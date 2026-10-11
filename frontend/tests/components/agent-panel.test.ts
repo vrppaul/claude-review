@@ -350,6 +350,25 @@ describe('the agent panel', () => {
 		expect(getAllByTestId('answer-file')).toHaveLength(2);
 	});
 
+	it("draws a thread the agent mentions by its token as the chip a reader's mention is, and goes to it", async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
+		const reveal = vi.spyOn(review.navigator, 'reveal');
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		review.conversation.receive(
+			null,
+			'The catch in @src/routes.py:2-2 is for the retry; @src/routes.py:2-20 is not a thread.',
+			[]
+		);
+		await tick();
+
+		const chip = getByTestId('answer-thread');
+		expect(chip.textContent?.trim()).toBe('routes.py Line 2');
+		await user.click(chip);
+		expect(reveal).toHaveBeenCalledWith(review.threads.all[0]);
+	});
+
 	it('takes the line away when the server says the work is over', async () => {
 		const { queryByTestId } = render(AgentPanel, inReview(review));
 		review.answerer.showWork(work({ text: 'rewriting it' }));

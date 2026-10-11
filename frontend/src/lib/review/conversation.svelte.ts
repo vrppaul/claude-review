@@ -10,6 +10,7 @@
  * to review" has no meaning outside a thread.
  */
 
+import { threadsIn } from '$lib/anchors/mentions';
 import { cancelMessage, sendMessage } from '$lib/api/review-api';
 import { PanelComposer } from '$lib/review/panel-composer.svelte';
 import type { Composer, Thread, PanelTurn } from '$lib/types';
@@ -42,13 +43,17 @@ export class Conversation {
 	#sending = $state(false);
 	// Why the last message did not go, until the next one is tried
 	#failed = $state<string | null>(null);
+	// The review's threads as they stand, which an answer may mention by their tokens
+	readonly #threads: () => Thread[];
 
 	/**
 	 * @param said what was said here in an unsent review of the same thing
 	 * @param composer the message being written there
+	 * @param threads the review's threads as they stand
 	 */
-	constructor(said: PanelTurn[], composer: Composer) {
+	constructor(said: PanelTurn[], composer: Composer, threads: () => Thread[]) {
 		this.composer = new PanelComposer(composer);
+		this.#threads = threads;
 		this.#turns = $state.raw(said);
 		this.#working = $derived(workingOn(this.#turns));
 		// Past the highest id already handed out, so an answer cannot land under
@@ -132,7 +137,9 @@ export class Conversation {
 			body: text,
 			at: Date.now(),
 			...(messageId === null ? {} : { answers: messageId }),
-			files
+			files,
+			// The threads its words mention by their tokens, as a message of the reader's points at them
+			threads: threadsIn(text, this.#threads()).map((thread) => thread.id)
 		});
 	}
 
