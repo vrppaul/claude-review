@@ -70,7 +70,8 @@ class ReviewCommands(click.Group):
         try:
             return super().invoke(ctx)
         except EXPLAINED_FAILURES as failure:
-            # What failed may be named in the repository's words: a file, a ref, what git said
+            # What failed is named in words this program did not choose — a file,
+            # a ref, what git said — which may hold a terminal's own controls
             raise click.ClickException(terminal_text(str(failure))) from failure
 
 

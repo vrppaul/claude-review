@@ -13,7 +13,6 @@ import pytest
 from click.testing import CliRunner, Result
 
 import claude_review
-
 from claude_review.cli.main import main
 from claude_review.domain.models import MAX_QUOTE_LINES
 from claude_review.hosting.address import LOOPBACK
