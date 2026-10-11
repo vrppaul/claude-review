@@ -40,6 +40,8 @@ async def test_a_reload_is_not_the_reader_leaving() -> None:
     presence = _presence()
     with presence.page_open():
         gone = asyncio.ensure_future(presence.until_closed_for_good())
+    # A turn of the loop: the watch sees the page closed before it comes back
+    await asyncio.sleep(0)
     with presence.page_open():
         assert await _still_open_after(gone)
 
