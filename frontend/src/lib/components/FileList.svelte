@@ -4,6 +4,7 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { useReview } from '$lib/review/context';
 	import { dragEdge, stepEdge } from '$lib/dom/resize';
+	import Icon from './Icon.svelte';
 
 	const review = useReview();
 
@@ -127,16 +128,13 @@
 				></span>
 			{/if}
 			{#if viewed}
-				<svg
+				<Icon
+					name="check"
 					data-testid="file-viewed-mark"
 					class="h-3 w-3"
 					style="color: var(--cr-mark)"
-					viewBox="0 0 12 12"
-					fill="currentColor"
-					aria-label="Viewed"
-				>
-					<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
-				</svg>
+					label="Viewed"
+				/>
 			{/if}
 			{#if fileComments.length > 0}
 				<span class="badge badge-xs badge-primary">{fileComments.length}</span>
@@ -162,14 +160,7 @@
 				aria-expanded={!folded}
 				onclick={() => toggleFolder(node.path)}
 			>
-				<svg
-					class="h-2.5 w-2.5 transition-transform {folded ? '-rotate-90' : ''}"
-					viewBox="0 0 12 12"
-					fill="currentColor"
-					aria-hidden="true"
-				>
-					<path d="M2 4l4 4 4-4z" />
-				</svg>
+				<Icon name="chevron" class="h-2.5 w-2.5 transition-transform {folded ? '-rotate-90' : ''}" />
 				{node.name}/
 			</button>
 			{#if !folded}
@@ -218,9 +209,7 @@
 				aria-label="Put the file tree away"
 				onclick={() => review.layout.fileTree.toggle()}
 			>
-				<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-					<path d="M7.5 2L4 6l3.5 4z" />
-				</svg>
+				<Icon name="caret" class="h-3 w-3 rotate-180" />
 			</button>
 		</div>
 

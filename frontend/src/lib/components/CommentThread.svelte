@@ -9,6 +9,8 @@
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
+	import Icon from './Icon.svelte';
+	import TypingIndicator from './TypingIndicator.svelte';
 
 	interface Props {
 		comment: Thread;
@@ -158,13 +160,7 @@
 			rounded-r px-4 py-2"
 		>
 			{#if comment.resolved}
-				<svg
-					class="h-3 w-3 shrink-0"
-					viewBox="0 0 12 12"
-					fill="currentColor"
-					style="color: var(--cr-add-edge)"
-					aria-hidden="true"><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg
-				>
+				<Icon name="check" class="h-3 w-3 shrink-0" style="color: var(--cr-add-edge)" />
 			{/if}
 			<button
 				data-testid="fold-comment"
@@ -173,14 +169,7 @@
 				aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
 				onclick={() => reading.setFolded(comment.id, !folded)}
 			>
-				<svg
-					class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
-					viewBox="0 0 12 12"
-					fill="currentColor"
-					aria-hidden="true"
-				>
-					<path d="M2 4l4 4 4-4z" />
-				</svg>
+				<Icon name="chevron" class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}" />
 			</button>
 			<button
 				data-testid="unfold-thread"
@@ -227,14 +216,7 @@
 					aria-label={folded ? 'Unfold this thread' : 'Fold this thread away'}
 					onclick={() => reading.setFolded(comment.id, !folded)}
 				>
-					<svg
-						class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}"
-						viewBox="0 0 12 12"
-						fill="currentColor"
-						aria-hidden="true"
-					>
-						<path d="M2 4l4 4 4-4z" />
-					</svg>
+					<Icon name="chevron" class="h-3 w-3 transition-transform {folded ? '-rotate-90' : ''}" />
 				</button>
 				{#if sign}
 					<span
@@ -361,9 +343,7 @@
 								{/if}
 								<div data-testid="awaiting-answer" data-tour="awaited-answer" class="cr-answer flex items-center gap-3">
 									<span class="cr-who"><strong>Agent</strong></span>
-									<span class="flex items-center gap-1">
-										<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
-									</span>
+									<TypingIndicator />
 									<div class="flex-1"></div>
 									<span class="cr-muted text-xs">
 										asked {waitingFor(exchange)} — keep reading, the answer lands here

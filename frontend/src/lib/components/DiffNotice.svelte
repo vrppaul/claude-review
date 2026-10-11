@@ -5,6 +5,7 @@
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 	import { messageOf } from '$lib/utils/errors';
+	import Icon from './Icon.svelte';
 
 	// What a bar says when the diff it asked for could not be taken, and nothing said why
 	const WHOLE_DIFF_NOT_TAKEN = 'Could not take the whole diff again';
@@ -95,19 +96,7 @@
 		data-testid="tree-moved"
 		class="cr-notice cr-notice-moved flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
 	>
-		<svg
-			class="h-3 w-3 shrink-0"
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			stroke-linecap="round"
-			aria-hidden="true"
-		>
-			<path d="M8 4.5v4"></path>
-			<path d="M8 11.2v.3"></path>
-			<circle cx="8" cy="8" r="6"></circle>
-		</svg>
+		<Icon name="notice" class="h-3 w-3 shrink-0" />
 		<span>
 			The working tree has moved on — {moved}
 			{moved === 1 ? 'file has' : 'files have'} changed since this diff was taken.
@@ -128,18 +117,7 @@
 		data-testid="diff-retaken"
 		class="cr-notice cr-notice-taken flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
 	>
-		<svg
-			class="h-3 w-3 shrink-0"
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.6"
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			aria-hidden="true"
-		>
-			<path d="M3 8.5l3.2 3.2L13 5"></path>
-		</svg>
+		<Icon name="check" class="h-3 w-3 shrink-0" />
 		<span>
 			{[whatChanged(), ...followWords(retaken)].join(PHRASE_BREAK)}
 		</span>
@@ -175,21 +153,7 @@
 		data-testid="narrowed-to"
 		class="cr-notice cr-notice-taken flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
 	>
-		<svg
-			class="h-3 w-3 shrink-0"
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			aria-hidden="true"
-		>
-			<path d="M2.5 5h9"></path>
-			<path d="M9 2.5L11.5 5 9 7.5"></path>
-			<path d="M13.5 11h-9"></path>
-			<path d="M7 8.5L4.5 11 7 13.5"></path>
-		</svg>
+		<Icon name="compare" class="h-3 w-3 shrink-0" />
 		<span>
 			{#if review.diff.files.length === 0}
 				Nothing has changed — {review.diff.phrase}.

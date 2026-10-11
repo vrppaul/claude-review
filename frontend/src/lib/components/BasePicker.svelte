@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
+	import Icon from './Icon.svelte';
 
 	// What the list says when the bases could not be listed or taken, and nothing said why
 	const LISTING_FAILED = 'Could not list what this can be compared against';
@@ -90,26 +91,9 @@
 		bind:this={trigger}
 		onclick={show}
 	>
-		<svg
-			class="h-3 w-3 shrink-0"
-			style={review.diff.narrowed ? 'color: var(--cr-mark)' : ''}
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			aria-hidden="true"
-		>
-			<path d="M2.5 5h9" />
-			<path d="M9 2.5L11.5 5 9 7.5" />
-			<path d="M13.5 11h-9" />
-			<path d="M7 8.5L4.5 11 7 13.5" />
-		</svg>
+		<Icon name="compare" class="h-3 w-3 shrink-0" style={review.diff.narrowed ? 'color: var(--cr-mark)' : ''} />
 		{review.diff.phrase}
-		<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-			<path d="M2 4l4 4 4-4z" />
-		</svg>
+		<Icon name="chevron" class="h-3 w-3 shrink-0" />
 	</button>
 
 	{#if open}
@@ -143,15 +127,7 @@
 						>
 							<span class="w-3 shrink-0">
 								{#if version.key === review.diff.base}
-									<svg
-										class="h-3 w-3"
-										style="color: var(--cr-mark)"
-										viewBox="0 0 12 12"
-										fill="currentColor"
-										aria-label="In force"
-									>
-										<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
-									</svg>
+									<Icon name="check" class="h-3 w-3" style="color: var(--cr-mark)" label="In force" />
 								{/if}
 							</span>
 							<span class="flex-1 truncate font-mono text-xs">{version.label}</span>

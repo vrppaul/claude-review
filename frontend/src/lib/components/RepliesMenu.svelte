@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Icon from './Icon.svelte';
 
 	const review = useReview();
 
@@ -40,19 +41,7 @@
 
 <div class="relative" bind:this={container}>
 	<button data-testid="replies-menu" class="cr-chip" aria-expanded={open} onclick={() => (open = !open)}>
-		<svg
-			class="h-3.5 w-3.5"
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			aria-hidden="true"
-		>
-			<path d="M4 3v5.5a2 2 0 0 0 2 2h6" />
-			<path d="M9.5 8l3 2.5-3 2.5" />
-		</svg>
+		<Icon name="reply" class="h-3.5 w-3.5" />
 		Replies
 		{#if review.threads.unread.length > 0}
 			<span data-testid="unread-count" class="font-semibold" style="color: var(--cr-mark)">

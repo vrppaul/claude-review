@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Icon from './Icon.svelte';
 
 	const review = useReview();
 
@@ -124,18 +125,13 @@
 			<!-- The way back to the tour and the news, once their card is put away -->
 			<div class="mb-5 flex flex-col gap-1">
 				<button data-testid="take-tour" class="cr-guide-entry cr-guide-entry-lead" onclick={takeTour}>
-					<svg class="cr-guide-compass" viewBox="0 0 20 20" aria-hidden="true">
-						<circle cx="10" cy="10" r="7.5"></circle>
-						<path d="M12.8 7.2l-1.7 3.9-3.9 1.7 1.7-3.9z"></path>
-					</svg>
+					<Icon name="compass" class="cr-guide-compass" />
 					<span class="flex-1 text-left">Take the tour again</span>
 					<span class="cr-faint text-xs">{review.guide.stepCount} stops</span>
 				</button>
 				{#if review.guide.latestNews}
 					<button data-testid="read-news" class="cr-guide-entry" onclick={readNews}>
-						<svg class="cr-guide-plus" viewBox="0 0 20 20" aria-hidden="true">
-							<path d="M10 3v14M3 10h14"></path>
-						</svg>
+						<Icon name="plus" class="cr-guide-plus" />
 						<span class="flex-1 text-left">What's new in {review.guide.latestNews.release}</span>
 					</button>
 				{/if}

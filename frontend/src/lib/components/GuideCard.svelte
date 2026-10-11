@@ -3,6 +3,7 @@
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
 	import NewsIllustration from './NewsIllustration.svelte';
+	import Icon from './Icon.svelte';
 
 	const review = useReview();
 
@@ -96,10 +97,7 @@
 {:else if review.guide.card === 'welcome'}
 	<section data-testid="guide-welcome" class="cr-guide-card" role="complementary" aria-labelledby="guide-welcome-title">
 		<div class="flex items-center gap-2.5">
-			<svg class="cr-guide-compass" viewBox="0 0 20 20" aria-hidden="true">
-				<circle cx="10" cy="10" r="7.5"></circle>
-				<path d="M12.8 7.2l-1.7 3.9-3.9 1.7 1.7-3.9z"></path>
-			</svg>
+			<Icon name="compass" class="cr-guide-compass" />
 			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
 			<span class="flex-1"></span>
 			<button

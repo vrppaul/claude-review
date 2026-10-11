@@ -3,6 +3,7 @@
 	import BasePicker from './BasePicker.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		submitting: boolean;
@@ -44,16 +45,7 @@
 					title="Show whitespace changes again"
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
-					<svg
-						class="h-2.5 w-2.5"
-						viewBox="0 0 12 12"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"
-						aria-hidden="true"
-					>
-						<path d="M3 3l6 6M9 3l-6 6" />
-					</svg>
+					<Icon name="cross" class="h-2.5 w-2.5" />
 				</button>
 			</span>
 		{/if}
@@ -91,9 +83,7 @@
 				title="Previous comment"
 				aria-label="Previous comment"
 			>
-				<svg class="h-3 w-3 rotate-180" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-					<path d="M2 4l4 4 4-4z" />
-				</svg>
+				<Icon name="chevron" class="h-3 w-3 rotate-180" />
 			</button>
 			<button
 				data-testid="next-comment"
@@ -102,9 +92,7 @@
 				title="Next comment"
 				aria-label="Next comment"
 			>
-				<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-					<path d="M2 4l4 4 4-4z" />
-				</svg>
+				<Icon name="chevron" class="h-3 w-3" />
 			</button>
 		</div>
 	{/if}
@@ -144,9 +132,7 @@
 		{:else}
 			Finish review
 		{/if}
-		<svg class="h-2.5 w-2.5" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-			<path d="M2 4l4 4 4-4z" />
-		</svg>
+		<Icon name="chevron" class="h-2.5 w-2.5" />
 	</button>
 
 	<SettingsMenu />

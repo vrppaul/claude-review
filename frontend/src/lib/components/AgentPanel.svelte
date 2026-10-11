@@ -10,6 +10,8 @@
 	import AttachedImages from './AttachedImages.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
+	import Icon from './Icon.svelte';
+	import TypingIndicator from './TypingIndicator.svelte';
 
 	// What the panel says when a message could not be sent or taken back, and nothing said why
 	const SENDING_FAILED = 'Could not send';
@@ -238,9 +240,7 @@
 			{#each review.answerer.work.steps as step (step.text)}
 				<li class="cr-branch {step.done ? 'cr-branch-done' : ''}">
 					{#if step.done}
-						<svg class="cr-branch-mark" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"
-							><path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" /></svg
-						>
+						<Icon name="check" class="cr-branch-mark" />
 					{:else}
 						<span class="cr-branch-mark"><span class="cr-dot"></span></span>
 					{/if}
@@ -305,9 +305,7 @@
 			aria-label="Hide the agent panel"
 			onclick={() => review.layout.agentPanel.setOpen(false)}
 		>
-			<svg class="h-3 w-3 -rotate-90" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-				<path d="M2 4l4 4 4-4z" />
-			</svg>
+			<Icon name="chevron" class="h-3 w-3 -rotate-90" />
 		</button>
 	</header>
 
@@ -335,19 +333,7 @@
 		{#if review.conversation.turns.length === 0 && !review.answerer.work}
 			{#if attached}
 				<div data-testid="panel-empty" class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-					<svg
-						class="h-5 w-5"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						style="color: var(--color-base-300)"
-						aria-hidden="true"
-					>
-						<path d="M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z"></path>
-					</svg>
+					<Icon name="conversation" class="h-5 w-5" style="color: var(--color-base-300)" />
 					<p class="cr-faint text-sm leading-relaxed">
 						Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
 						about the rest.
@@ -454,9 +440,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 					<div data-testid="panel-working" class="cr-answer flex flex-col gap-2">
 						<div class="flex items-center gap-3">
 							<span class="cr-who"><strong>Agent</strong></span>
-							<span class="flex items-center gap-1">
-								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
-							</span>
+							<TypingIndicator />
 							<div class="flex-1"></div>
 							<span class="cr-faint text-xs">working {since(working.at)}</span>
 							<button data-testid="stop-message" class="btn btn-outline btn-xs" onclick={() => stop(working.id)}>
@@ -473,9 +457,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 					<div data-testid="panel-work" class="cr-answer flex flex-col gap-2">
 						<div class="flex items-center gap-3">
 							<span class="cr-who"><strong>Agent</strong></span>
-							<span class="flex items-center gap-1">
-								<span class="cr-dot"></span><span class="cr-dot"></span><span class="cr-dot"></span>
-							</span>
+							<TypingIndicator />
 							<div class="flex-1"></div>
 							<span class="cr-faint text-xs">working {since(review.answerer.work.at)}</span>
 						</div>

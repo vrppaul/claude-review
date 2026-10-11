@@ -2,6 +2,7 @@
 	import type { ContextGap } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
 	import type { FileDrawing } from './file-drawing.svelte';
+	import Icon from './Icon.svelte';
 
 	// What the gap says when the file could not be read and nothing said why
 	const READING_FAILED = 'Could not read the file';
@@ -61,9 +62,7 @@
 				disabled={reading}
 				onclick={reveal}
 			>
-				<svg class="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-					<path d="M6 1L3 4h2v4H3l3 3 3-3H7V4h2z" />
-				</svg>
+				<Icon name="expand" class="h-3 w-3 shrink-0" />
 				{reading ? 'Reading…' : label}
 			</button>
 			{#if failed}

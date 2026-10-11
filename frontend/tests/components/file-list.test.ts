@@ -71,6 +71,15 @@ describe('the file tree', () => {
 		expect(getAllByTestId('file-viewed-mark')).toHaveLength(1);
 	});
 
+	it('says a file is viewed to whoever reads the tree aloud', () => {
+		const review = openReview({ files: diffFiles });
+		review.reading.setViewed('src/handler.ts', true);
+
+		const { getByRole } = render(FileList, inReview(review));
+
+		expect(getByRole('img', { name: 'Viewed' })).toBeTruthy();
+	});
+
 	it('counts a transcript in messages', () => {
 		const review = openReview({
 			files: [wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')],

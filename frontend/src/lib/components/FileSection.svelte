@@ -8,6 +8,7 @@
 	import { useReview } from '$lib/review/context';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody, { type FileView } from './FileBody.svelte';
+	import Icon from './Icon.svelte';
 
 	// What a file's header and each of its rows take up, in pixels, as drawn
 	const HEADER_HEIGHT = 41;
@@ -96,14 +97,7 @@
 			aria-label={collapsed ? `Expand ${file.path}` : `Collapse ${file.path}`}
 			onclick={() => review.reading.toggleFolded(file.path)}
 		>
-			<svg
-				class="h-3 w-3 transition-transform {collapsed ? '-rotate-90' : ''}"
-				viewBox="0 0 12 12"
-				fill="currentColor"
-				aria-hidden="true"
-			>
-				<path d="M2 4l4 4 4-4z" />
-			</svg>
+			<Icon name="chevron" class="h-3 w-3 transition-transform {collapsed ? '-rotate-90' : ''}" />
 		</button>
 
 		<span class="font-mono text-sm font-semibold">{file.path}</span>
@@ -149,13 +143,7 @@
 				checked={viewed}
 				onchange={() => review.reading.toggleViewed(file.path)}
 			/>
-			<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-				{#if viewed}
-					<path d="M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z" />
-				{:else}
-					<circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1" />
-				{/if}
-			</svg>
+			<Icon name={viewed ? 'check' : 'ring'} class="h-3 w-3" />
 			Viewed
 		</label>
 	</div>

@@ -1107,11 +1107,7 @@
 .cr-guide-compass {
 	width: 1.25rem;
 	height: 1.25rem;
-	fill: none;
-	stroke: var(--cr-mark);
-	stroke-width: 1.5;
-	stroke-linecap: round;
-	stroke-linejoin: round;
+	color: var(--cr-mark);
 }
 .cr-guide-tick {
 	display: block;
@@ -1189,10 +1185,7 @@
 .cr-guide-plus {
 	width: 1.125rem;
 	height: 1.125rem;
-	fill: none;
-	stroke: var(--cr-muted);
-	stroke-width: 1.5;
-	stroke-linecap: round;
+	color: var(--cr-muted);
 }
 /* What is new, shown rather than told: a file, or a drawing in the theme */
 .cr-news-image {

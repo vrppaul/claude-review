@@ -9,6 +9,7 @@
 	import Guide from './Guide.svelte';
 	import KeyboardShortcuts from './KeyboardShortcuts.svelte';
 	import SubmitBar from './SubmitBar.svelte';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		review: Review;
@@ -65,9 +66,7 @@
 					aria-label="Bring the file tree back"
 					onclick={() => review.layout.fileTree.toggle()}
 				>
-					<svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-						<path d="M4.5 2L8 6l-3.5 4z" />
-					</svg>
+					<Icon name="caret" class="h-3 w-3" />
 				</button>
 			{/if}
 			<DiffView />
