@@ -9,9 +9,11 @@ import pytest
 from click.testing import CliRunner, Result
 
 from claude_review.cli.main import main
+from claude_review.domain.models import MAX_QUOTE_LINES
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
+from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
 
 # What click exits with when a command is typed wrong, before it runs
 USAGE_ERROR = 2
@@ -33,6 +35,13 @@ LOAD_AN_AGENTS_COMMAND = (
 )
 # The server and the web framework under it: an agent's command calls a review in another process, and needs neither
 WEB_STACK = {"uvicorn", "fastapi", "starlette", "wsproto"}
+# How a review that is not there is said: the command got past what it was typed with
+NO_REVIEW = "no review is listening"
+
+
+def _repeated(option: str, count: int, value: str = "") -> list[str]:
+    """An option typed `count` times, each with a value of its own unless one value is given for all."""
+    return [word for index in range(count) for word in (option, value or f"src/file_{index}.py")]
 
 
 @pytest.fixture
@@ -153,3 +162,69 @@ def test_an_agents_command_does_not_load_the_server_or_its_framework() -> None:
     ).stdout.split()
 
     assert WEB_STACK.isdisjoint(loaded)
+
+
+@pytest.mark.parametrize(
+    ("arguments", "typed_in"),
+    [
+        (["say", *_repeated("--file", MAX_FILES_NAMED + 1), "Renamed them all"], "--file"),
+        (["progress", *_repeated("--file", MAX_FILES_NAMED + 1), "renaming"], "--file"),
+        (["progress", *_repeated("--step", MAX_PROGRESS_STEPS + 1), "checking"], "--step"),
+        (["progress", *_repeated("--did", MAX_PROGRESS_STEPS + 1), "checking"], "--did"),
+    ],
+    ids=["files-said-about", "files-worked-on", "steps-under-way", "steps-done"],
+)
+def test_more_than_the_review_takes_is_refused_naming_the_option(
+    unused_port: str, arguments: list[str], typed_in: str
+) -> None:
+    """Said as the command is parsed, in a line, rather than as a traceback once the request is built."""
+    command, *rest = arguments
+    result = _run(command, "--port", unused_port, *rest)
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert f"'{typed_in}'" in result.output
+
+
+def test_a_value_typed_again_is_one_value_and_counts_once(unused_port: str) -> None:
+    """The typist meant it once: repeated past the review's bound, it is still one file, and the call is made."""
+    result = _run("say", "--port", unused_port, *_repeated("--file", MAX_FILES_NAMED + 1, "src/a.py"), "Here")
+
+    assert _failed_in_a_line(result, FAILED)
+    assert NO_REVIEW in result.output
+
+
+def test_more_branches_than_the_review_shows_are_refused_naming_both_options(unused_port: str) -> None:
+    """Each option within the bound, together past it: the work is drawn with no more branches than that."""
+    finished = MAX_PROGRESS_STEPS // 2 + 1
+    under_way = MAX_PROGRESS_STEPS - finished + 1
+    result = _run(
+        "progress",
+        "--port",
+        unused_port,
+        *[word for index in range(finished) for word in ("--did", f"done {index}")],
+        *[word for index in range(under_way) for word in ("--step", f"running {index}")],
+        "checking",
+    )
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "--did" in result.output
+    assert "--step" in result.output
+    assert str(MAX_PROGRESS_STEPS) in result.output
+
+
+def test_a_step_both_done_and_under_way_is_refused(unused_port: str) -> None:
+    """Two things said of one branch: whichever the review kept, the reader would be told something untrue."""
+    result = _run("progress", "--port", unused_port, "--did", "the tests", "--step", "the tests", "checking")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "the tests" in result.output
+
+
+def test_more_lines_than_a_thread_may_quote_are_refused_before_anything_is_called(unused_port: str) -> None:
+    """The review would refuse such a thread; the typist hears why as they type it, naming the option."""
+    too_many = f"1-{MAX_QUOTE_LINES + 1}"
+    result = _run("point", "--port", unused_port, "--file", "a.py", "--lines", too_many, "All of it")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "'--lines'" in result.output
+    assert str(MAX_QUOTE_LINES) in result.output

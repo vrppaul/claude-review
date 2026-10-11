@@ -11,9 +11,9 @@ import click
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 from claude_review.cli.review_client import REASON_SEPARATOR
-from claude_review.domain.models import FilePath, StepText
-from claude_review.presentation.wire.agent import ProgressText, StatusText
-from claude_review.presentation.wire.base import AgentText, WireId
+from claude_review.domain.models import MAX_QUOTE_LINES, FilePath, StepText
+from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
+from claude_review.presentation.wire.base import MAX_FILES_NAMED, AgentText, WireId
 
 # What joins the first line of a range to its last
 RANGE_SEPARATOR = "-"
@@ -31,8 +31,7 @@ class CheckedParameter(click.ParamType):
         try:
             return self._rule.validate_python(value)
         except ValidationError as invalid:
-            reasons = REASON_SEPARATOR.join(detail["msg"] for detail in invalid.errors())
-            self.fail(f"the review would refuse {value!r}: {reasons}", param, ctx)
+            self.fail(f"the review would refuse {value!r}: {_reasons(invalid)}", param, ctx)
 
 
 # An id the review gave out: a thread, a question, a message
@@ -48,8 +47,33 @@ STEP = CheckedParameter("text", TypeAdapter[str](StepText))
 STATUS = CheckedParameter("text", TypeAdapter[str](StatusText))
 
 
+class EachOnce:
+    """What a repeatable option was typed with, read as the review reads its list: each once, and no more than it takes.
+
+    A value typed twice was meant once, and goes once, where it was first
+    typed: the review refuses a list that names one twice. More values than
+    the review takes are the typist's to fix, said naming the option.
+    """
+
+    def __init__(self, bound: int) -> None:
+        self._bound = bound
+
+    def __call__(self, context: click.Context, parameter: click.Parameter, values: tuple[str, ...]) -> tuple[str, ...]:
+        distinct = tuple(dict.fromkeys(values))
+        if len(distinct) > self._bound:
+            msg = f"the review takes at most {self._bound}, not {len(distinct)}"
+            raise click.BadParameter(msg, ctx=context, param=parameter)
+        return distinct
+
+
+# The files hung off what the agent says, or off what it is doing
+NAMED_FILES = EachOnce(MAX_FILES_NAMED)
+# The branches of the work, done or under way
+BRANCHES = EachOnce(MAX_PROGRESS_STEPS)
+
+
 class LineSpan(BaseModel):
-    """The lines of a file a thread hangs on, first to last."""
+    """The lines of a file a thread hangs on, first to last, no more than a thread may quote."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -60,6 +84,14 @@ class LineSpan(BaseModel):
     def runs_forwards(self) -> Self:
         if self.last < self.first:
             msg = "the range runs backwards"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def quotable(self) -> Self:
+        line_count = self.last - self.first + 1
+        if line_count > MAX_QUOTE_LINES:
+            msg = f"a thread may hang on at most {MAX_QUOTE_LINES} lines, not {line_count}"
             raise ValueError(msg)
         return self
 
@@ -75,10 +107,19 @@ class LineSpanParameter(click.ParamType):
             return value
         first, separator, last = str(value).partition(RANGE_SEPARATOR)
         try:
-            return LineSpan(first=int(first), last=int(last) if separator else int(first))
-        # Both a number that is no number and a span that breaks its own rules say no this way
+            first_line = int(first)
+            last_line = int(last) if separator else first_line
         except ValueError:
             self.fail(f'wants a line or a range from line 1 on, like "42" or "42-47", not "{value}"', param, ctx)
+        try:
+            return LineSpan(first=first_line, last=last_line)
+        except ValidationError as invalid:
+            self.fail(f'the review would refuse "{value}": {_reasons(invalid)}', param, ctx)
 
 
 LINE_SPAN = LineSpanParameter()
+
+
+def _reasons(invalid: ValidationError) -> str:
+    """Why a value was refused, in the words of each rule it broke, on one line."""
+    return REASON_SEPARATOR.join(detail["msg"] for detail in invalid.errors())

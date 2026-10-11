@@ -6,12 +6,24 @@ them from a loop of its own and reads and writes code between them.
 
 import click
 
-from claude_review.cli.parameters import FILE, ID, LINE_SPAN, SAID, STATUS, STEP, WORK, LineSpan
+from claude_review.cli.parameters import (
+    BRANCHES,
+    FILE,
+    ID,
+    LINE_SPAN,
+    NAMED_FILES,
+    SAID,
+    STATUS,
+    STEP,
+    WORK,
+    LineSpan,
+)
 from claude_review.cli.rendering import render_catch_up, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
 from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.wire.agent import (
+    MAX_PROGRESS_STEPS,
     ProgressRequest,
     ProgressStep,
     ReplyRequest,
@@ -125,6 +137,7 @@ def catch_up_command(*, client: ReviewClient, thread: str | None, as_json: bool)
     "files",
     type=FILE,
     multiple=True,
+    callback=NAMED_FILES,
     help="A file worth opening at what you said. Repeatable; each becomes a chip the reader can jump by.",
 )
 @click.argument("body", required=True, type=SAID)
@@ -143,11 +156,20 @@ def say_command(*, client: ReviewClient, message: str | None, files: tuple[str, 
 @click.command("progress")
 @review_port
 @click.option("--message", type=ID, default=None, help="Message being worked on, from the event.")
-@click.option("--file", "files", type=FILE, multiple=True, help="A file being worked on. Repeatable.")
 @click.option(
-    "--step", "steps", type=STEP, multiple=True, help="Something under way — a check, a subagent. Repeatable."
+    "--file", "files", type=FILE, multiple=True, callback=NAMED_FILES, help="A file being worked on. Repeatable."
 )
-@click.option("--did", "finished", type=STEP, multiple=True, help="A step already finished. Repeatable.")
+@click.option(
+    "--step",
+    "steps",
+    type=STEP,
+    multiple=True,
+    callback=BRANCHES,
+    help="Something under way — a check, a subagent. Repeatable.",
+)
+@click.option(
+    "--did", "finished", type=STEP, multiple=True, callback=BRANCHES, help="A step already finished. Repeatable."
+)
 @click.option("--done", is_flag=True, help="Take the line away: the work is finished. Sent on its own.")
 @click.argument("text", required=False, type=WORK, default="")
 def progress_command(
@@ -178,11 +200,35 @@ def progress_command(
         # Empty, which is what says the work is over
         client.report_progress(ProgressRequest())
         return
+    client.report_progress(
+        ProgressRequest(
+            message_id=message, text=text, files=list(files), steps=_branches(finished=finished, under_way=steps)
+        )
+    )
+
+
+def _branches(*, finished: tuple[str, ...], under_way: tuple[str, ...]) -> list[ProgressStep]:
+    """The branches of the work, those finished first, as the review takes them.
+
+    Each option is read on its own as it is parsed; what only the two
+    together can break is read here.
+
+    Raises:
+        click.UsageError: if a step is said to be both finished and under
+            way, or the two name more steps than the review shows.
+    """
+    both = [step for step in under_way if step in finished]
+    if both:
+        msg = f"--did and --step both name {', '.join(both)}: a step is either finished or under way"
+        raise click.UsageError(msg)
     branches = [
         *(ProgressStep(text=step, done=True) for step in finished),
-        *(ProgressStep(text=step, done=False) for step in steps),
+        *(ProgressStep(text=step, done=False) for step in under_way),
     ]
-    client.report_progress(ProgressRequest(message_id=message, text=text, files=list(files), steps=branches))
+    if len(branches) > MAX_PROGRESS_STEPS:
+        msg = f"--did and --step together name at most {MAX_PROGRESS_STEPS} steps, not {len(branches)}"
+        raise click.UsageError(msg)
+    return branches
 
 
 @click.command("show")
