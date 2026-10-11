@@ -11,6 +11,9 @@
 		retaken: FollowOutcome;
 	}
 
+	// What the way to the thread that lost its lines says: of the one, or of the first of several
+	const SHOW_OUTDATED = { one: 'Show the outdated thread', many: 'Show the first outdated thread' };
+
 	let { retaken }: Props = $props();
 	const review = useReview();
 	const showing = new Attempt();
@@ -66,7 +69,7 @@
 			class="btn btn-ghost btn-xs"
 			onclick={() => review.navigator.reveal(stranded)}
 		>
-			{outdated.length === 1 ? 'Show the outdated thread' : 'Show the first outdated thread'}
+			{outdated.length === 1 ? SHOW_OUTDATED.one : SHOW_OUTDATED.many}
 		</button>
 	{/if}
 	<button
