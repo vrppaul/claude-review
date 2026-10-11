@@ -25,7 +25,7 @@ afterEach(() => {
 
 /** A review with a question on each of these lines, every one still with the agent. */
 function waitingOn(lines: number[]) {
-	const review = openReview({ files: [file] });
+	const review = openReview({ files: [file], facts: { answerer_attached: true } });
 	for (const line of lines) {
 		const id = review.threads.add(newComment({ file: 'a.py', startLine: line, body: `why ${line}` }));
 		review.threads.reading.asked(id, id);

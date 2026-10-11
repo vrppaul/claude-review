@@ -9,7 +9,7 @@
 
 import { SvelteMap } from 'svelte/reactivity';
 
-import { askInThread, followAnchors } from '$lib/api/review-api';
+import { askInThread, cancelMessage, followAnchors } from '$lib/api/review-api';
 import { lineAnchor } from '$lib/anchors/line';
 import { anchorLines, type ThreadOnLines } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
@@ -340,6 +340,17 @@ export class Threads {
 			this.reading.settled(id, questionId);
 			throw error;
 		}
+	}
+
+	/**
+	 * Take back a question still waited on, as a message in the panel is
+	 * taken back: whoever answers is asked to drop it — a request, not a kill
+	 * — and once that is heard the thread waits for it no more. An answer the
+	 * agent writes all the same still lands in the thread.
+	 */
+	async takeBack(threadId: string, questionId: string): Promise<void> {
+		await cancelMessage({ message_id: questionId });
+		this.reading.settled(threadId, questionId);
 	}
 
 	/**

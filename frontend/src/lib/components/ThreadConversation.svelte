@@ -82,7 +82,12 @@
 			{/each}
 
 			{#if waitedOn !== undefined}
-				<AwaitingAnswer askedAt={waitedOn} first={exchange.answers.length === 0} />
+				<AwaitingAnswer
+					threadId={thread.id}
+					questionId={exchange.id}
+					askedAt={waitedOn}
+					first={exchange.answers.length === 0}
+				/>
 			{/if}
 		</div>
 	{/each}

@@ -3,6 +3,7 @@
 	import { messageOf } from '$lib/utils/errors';
 	import { fileName } from '$lib/utils/paths';
 	import { timeAgo } from '$lib/utils/time';
+	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
 	import Icon from './Icon.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
@@ -19,9 +20,12 @@
 	let failed = $state<string | null>(null);
 
 	const work = $derived(review.answerer.work);
+	// Whether the agent is still there to do it: once it has stopped listening
+	// the row says so, rather than go on saying it is at work
+	const listening = $derived(review.answerer.attached);
 
 	/** Take back the message being worked on; the agent decides what to do about it. */
-	async function stop() {
+	async function takeBack() {
 		if (!messageId) return;
 		failed = null;
 		try {
@@ -36,11 +40,17 @@
 <div data-testid={messageId ? 'panel-working' : 'panel-work'} class="cr-answer flex flex-col gap-2">
 	<div class="flex items-center gap-3">
 		<span class="cr-who"><strong>Agent</strong></span>
-		<TypingIndicator />
+		{#if listening}
+			<TypingIndicator />
+		{/if}
 		<div class="flex-1"></div>
-		<span class="cr-faint text-xs">working {timeAgo(since, review.clock.now)}</span>
+		<span class="cr-faint text-xs">
+			{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
+		</span>
 		{#if messageId}
-			<button type="button" data-testid="stop-message" class="btn btn-outline btn-xs" onclick={stop}> Stop </button>
+			<button type="button" data-testid="stop-message" class="btn btn-outline btn-xs" onclick={takeBack}>
+				{TAKE_BACK}
+			</button>
 		{/if}
 	</div>
 	{#if failed}

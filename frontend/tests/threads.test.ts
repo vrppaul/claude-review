@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flushSync } from 'svelte';
+import { AGENT_STOPPED_LISTENING } from '$lib/components/agent-waits';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
@@ -76,6 +78,50 @@ describe('a thread is a conversation', () => {
 		const { getByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('ask-now-thread'));
 
+		expect(getByTestId('awaiting-answer')).toBeTruthy();
+	});
+
+	it('says, once the agent stops listening, what the panel says of a message it left unanswered', async () => {
+		const user = userEvent.setup({ delay: null });
+		answering();
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+
+		review.answerer.setAttached(false);
+		flushSync();
+
+		const row = getByTestId('awaiting-answer').textContent;
+		expect(row).toContain(AGENT_STOPPED_LISTENING);
+		expect(row).not.toContain('the answer lands here');
+	});
+
+	it('takes back a question still waited on, as a panel message is taken back', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = answering();
+		server.answer('POST /api/cancel', null);
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+
+		await user.click(getByTestId('take-back-question'));
+
+		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: id }]);
+		expect(queryByTestId('awaiting-answer')).toBeNull();
+		expect(getByTestId('ask-now-thread')).toBeTruthy();
+	});
+
+	it('keeps waiting on a question that could not be taken back, and says why', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = answering();
+		server.fail('POST /api/cancel', SERVER_ERROR);
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId, findByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+
+		await user.click(getByTestId('take-back-question'));
+
+		expect(await findByTestId('take-back-error')).toBeTruthy();
 		expect(getByTestId('awaiting-answer')).toBeTruthy();
 	});
 

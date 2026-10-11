@@ -4,6 +4,7 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
+import { AGENT_STOPPED_LISTENING, TAKE_BACK } from '$lib/components/agent-waits';
 import type { Thread, ReviewResponse } from '$lib/types';
 import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
@@ -195,6 +196,22 @@ describe('the agent panel', () => {
 
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: review.conversation.turns[0].id }]);
 		expect(getByTestId('panel-cancelled')).toBeTruthy();
+	});
+
+	it('says, once the agent stops listening, that it left the message unanswered, and still offers to take it back', async () => {
+		const user = userEvent.setup({ delay: null });
+		listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Run the tests');
+		await user.click(getByTestId('send-message'));
+
+		review.answerer.setAttached(false);
+		flushSync();
+
+		const row = getByTestId('panel-working').textContent;
+		expect(row).toContain(AGENT_STOPPED_LISTENING);
+		expect(row).not.toContain('working');
+		expect(getByTestId('stop-message').textContent).toContain(TAKE_BACK);
 	});
 
 	it('brings a new turn into view', async () => {
