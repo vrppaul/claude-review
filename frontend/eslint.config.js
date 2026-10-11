@@ -116,13 +116,44 @@ const STYLED_BY_CLASSES = 'Style with a class; hand a number the stylesheet need
 const LAYERED_BY_TOKENS = 'Lay one thing over another with a --cr-layer-* token in the stylesheet, not a z- class.';
 // A z- utility in a class, behind any variants and its sign: `z-10`, `md:z-10`, `-z-1`
 const Z_UTILITY = '/(^|\\s)([^\\s:]+:)*-?z-/';
+// A colour or a shadow is a token too, written once in tokens.css for both
+// themes: markup paints with a cr- class or names a token (`text-(--cr-mark)`,
+// `bg-base-200`), never with Tailwind's palette (`bg-blue-500`, `text-white`),
+// a colour written in place (`text-[#fff]`, `bg-[rgb(…)]`) or a shadow
+// utility. Tailwind's utilities for layout, size and type stay.
+const PAINTED_BY_TOKENS =
+	'Paint with a cr- class or a token (text-(--cr-…)); colours and shadows are written in tokens.css.';
+// Where a utility starts in a class list: the start or a space, then any variants (`hover:`, `md:`) and its marks
+const UTILITY_START = '(^|\\s)([^\\s:]+:)*!?-?';
+// The utilities that take a colour
+const PAINTS =
+	'(bg|text|border(-[xytblrse])?|ring(-offset)?|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|inset-ring)';
+// A colour of Tailwind's own palette, at any shade, or its black and white. A
+// slash in a pattern is escaped: a selector's regex ends at one
+const PALETTE =
+	'((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+|(black|white)(\\s|\\/|$))';
+// A colour written in place, as an arbitrary value
+const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\\b)';
+const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
+// Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
+const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|\\s|$)/`;
+
+/** Selectors for every way a class list is written in markup, holding a pattern. */
+function inClassLists(pattern, message) {
+	return [
+		{ selector: `SvelteAttribute[key.name='class'] SvelteLiteral[value=${pattern}]`, message },
+		{ selector: `SvelteAttribute[key.name='class'] Literal[value=${pattern}]`, message },
+		{ selector: `SvelteAttribute[key.name='class'] TemplateElement[value.raw=${pattern}]`, message },
+		{ selector: `SvelteDirective[kind='Class'][key.name.name=${pattern}]`, message }
+	];
+}
+
 const NO_INLINE_STYLING = [
 	{ selector: "SvelteAttribute[key.name='style']", message: STYLED_BY_CLASSES },
 	{ selector: 'SvelteStyleDirective:not([key.name.name=/^--/])', message: STYLED_BY_CLASSES },
-	{ selector: `SvelteAttribute[key.name='class'] SvelteLiteral[value=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
-	{ selector: `SvelteAttribute[key.name='class'] Literal[value=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
-	{ selector: `SvelteAttribute[key.name='class'] TemplateElement[value.raw=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
-	{ selector: `SvelteDirective[kind='Class'][key.name.name=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS }
+	...inClassLists(Z_UTILITY, LAYERED_BY_TOKENS),
+	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
+	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS)
 ];
 
 // The page makes an HTTP request in one place, which holds every request to the
@@ -182,11 +213,23 @@ export default tseslint.config(
 	{
 		files: ['**/*.svelte'],
 		rules: {
-			// {@html} is used intentionally with highlight.js (output is escaped)
-			'svelte/no-at-html-tags': 'warn',
+			// Markup handed to the page whole runs whatever it holds: only the parts listed below, whose markup is escaped, may
+			'svelte/no-at-html-tags': 'error',
 			// What a button does is written on it: there is no form for it to submit by default
 			'svelte/button-has-type': 'error'
 		}
+	},
+	{
+		// The lines of a diff, drawn as highlight.js writes them: it escapes the source it is handed, and the
+		// marks on changed words (utils/word-diff.ts) are spans put around that escaped text, never inside an escape
+		files: ['src/lib/components/RawView.svelte', 'src/lib/components/SplitView.svelte'],
+		rules: { 'svelte/no-at-html-tags': 'off' }
+	},
+	{
+		// Markdown as marked writes it: raw HTML in the text is escaped by its renderer, links and images keep
+		// only destinations utils/safe-markup.ts lets through, and code is highlighted as the diff is
+		files: ['src/lib/components/MarkdownRenderer.svelte'],
+		rules: { 'svelte/no-at-html-tags': 'off' }
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
