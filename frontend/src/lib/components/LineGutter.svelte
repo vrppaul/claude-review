@@ -1,3 +1,14 @@
+<script lang="ts" module>
+	/**
+	 * How the keyboard reaches a line's number. Every row has one stop, which
+	 * j and k move between and Tab reaches too. A second number on the row is
+	 * reached by Tab when it is another line — a removed line facing the line
+	 * that replaced it — and left to the mouse when it is the same line the
+	 * row's stop comments on.
+	 */
+	export type Reach = 'row-stop' | 'tab' | 'pointer';
+</script>
+
 <script lang="ts">
 	import type { LineSide } from '$lib/types';
 	import { lineInWords } from '$lib/anchors/line-label';
@@ -12,14 +23,14 @@
 		drawn: DrawnLine;
 		/** Which side's number it shows: a line the change kept has one on each. */
 		side: LineSide;
-		/** Whether the keyboard stops here. One number a row is a stop; the other is for the mouse. */
-		stop: boolean;
+		reach: Reach;
 		commenting: LineCommenting;
 	}
 
-	let { drawn, side, stop, commenting }: Props = $props();
+	let { drawn, side, reach, commenting }: Props = $props();
 
 	const shown = $derived(side === 'old' ? drawn.line.old_number : drawn.line.new_number);
+	const isRowStop = $derived(reach === 'row-stop');
 	// A number that takes no comment says so, but is not disabled: the browser
 	// moves no focus onto a disabled button, and j and k would stop at it for good
 	const writable = $derived(commenting.mayComment(drawn.place));
@@ -33,11 +44,12 @@
 </script>
 
 <button
-	data-testid={stop ? 'line-gutter' : 'old-line-gutter'}
-	data-role={stop ? LINE_NUMBER_ROLE : undefined}
-	data-tour={stop ? 'line-number' : undefined}
+	type="button"
+	data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
+	data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
+	data-tour={isRowStop ? 'line-number' : undefined}
 	class="cr-gutter-button"
-	tabindex={stop ? 0 : -1}
+	tabindex={reach === 'pointer' ? -1 : 0}
 	aria-label="Comment on {lineInWords(drawn.place)}"
 	aria-disabled={writable ? undefined : 'true'}
 	title={writable ? undefined : NOT_THE_REVIEWS}

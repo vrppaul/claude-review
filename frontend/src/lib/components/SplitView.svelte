@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { LinePlace, LineSide } from '$lib/types';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
-	import { splitRows } from '$lib/utils/split-rows';
+	import { splitRows, type SplitRow } from '$lib/utils/split-rows';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
-	import LineGutter from './LineGutter.svelte';
+	import LineGutter, { type Reach } from './LineGutter.svelte';
 	import LineNotes from './LineNotes.svelte';
 
 	// The two columns are the two sides, the old on the left: the kind of line each colours as changed
@@ -54,6 +54,17 @@
 		if (cell === null || cell.place.side !== column || !commenting.hasNotes(cell.place)) return null;
 		return cell.place;
 	}
+
+	/**
+	 * How the keyboard reaches a row's left number. The right one is the row's
+	 * stop, unless the row has nothing on the right; a removed line facing
+	 * the line that replaced it is a line of its own, which Tab reaches; an
+	 * unchanged line's left number is the same line as its right one.
+	 */
+	function leftReach(row: SplitRow): Reach {
+		if (row.right === null) return 'row-stop';
+		return row.left === row.right ? 'pointer' : 'tab';
+	}
 </script>
 
 <div data-testid="split-view">
@@ -81,9 +92,7 @@
 								onmouseenter={() => row.left && commenting.enter(row.left)}
 							>
 								{#if row.left}
-									<!-- One keyboard stop per row: the new side's number, or this
-										one when the row has nothing on the new side -->
-									<LineGutter drawn={row.left} side="old" stop={row.right === null} {commenting} />
+									<LineGutter drawn={row.left} side="old" reach={leftReach(row)} {commenting} />
 								{/if}
 							</td>
 							<td
@@ -102,7 +111,7 @@
 								onmouseenter={() => row.right && commenting.enter(row.right)}
 							>
 								{#if row.right}
-									<LineGutter drawn={row.right} side="new" stop {commenting} />
+									<LineGutter drawn={row.right} side="new" reach="row-stop" {commenting} />
 								{/if}
 							</td>
 							<td

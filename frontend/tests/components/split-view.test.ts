@@ -147,3 +147,27 @@ describe('reaching every row from the keyboard in two columns', () => {
 		expect(stops.every((stop) => stop.tabIndex === 0)).toBe(true);
 	});
 });
+
+describe('a removed line facing the line that replaced it', () => {
+	beforeEach(async () => {
+		review = openReview({ files: [file] });
+		await inTwoColumns();
+	});
+
+	it('takes the keyboard by Tab, and is not a stop j and k move between', () => {
+		render(FileSection, inReview(review, { file, scrollRoot: null }));
+
+		const removed = within(rowHolding('const b = 2;')).getByTestId('old-line-gutter');
+		const stops = screen.getAllByTestId('line-gutter').map((stop) => stop.getAttribute('aria-label'));
+
+		expect(removed.getAttribute('aria-label')).toBe('Comment on removed line 2');
+		expect(removed.tabIndex).toBe(0);
+		expect(stops).toEqual(['Comment on line 1', 'Comment on line 2', 'Comment on line 3']);
+	});
+
+	it('leaves the left number of an unchanged line to the mouse: its row stops on the same line', () => {
+		render(FileSection, inReview(review, { file, scrollRoot: null }));
+
+		expect(within(rowHolding('const a = 1;')).getByTestId('old-line-gutter').tabIndex).toBe(-1);
+	});
+});

@@ -63,11 +63,12 @@
 						>
 							{#if isDiffMode}
 								<td class="cr-gutter w-12 p-0 text-right select-none">
-									<LineGutter {drawn} side="old" stop={false} {commenting} />
+									<!-- The same line as the row's stop beside it: one stop a row -->
+									<LineGutter {drawn} side="old" reach="pointer" {commenting} />
 								</td>
 							{/if}
 							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
-								<LineGutter {drawn} side="new" stop {commenting} />
+								<LineGutter {drawn} side="new" reach="row-stop" {commenting} />
 							</td>
 							{#if isDiffMode}
 								<td class="cr-sign w-4 px-1 text-center select-none">

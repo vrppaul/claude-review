@@ -658,6 +658,26 @@ async def test_comment_left_in_split_layout_reaches_claude(diff_review: RunningR
     assert "Split comment" in sent
 
 
+async def test_a_removed_line_beside_its_replacement_takes_a_comment_from_the_keyboard(
+    diff_review: RunningReview, page: Page
+) -> None:
+    """In two columns line 2 of main.py faces the line that replaced it: Tab reaches it, Enter comments on it."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.get_by_test_id("settings-toggle").click()
+    await page.get_by_test_id("layout-split").click()
+    await _section(page, MAIN_FILE).get_by_test_id("split-view").wait_for()
+    await page.get_by_test_id("settings-toggle").click()
+
+    await page.keyboard.press("j")
+    await page.keyboard.press("Tab")
+    reached = await page.evaluate("document.activeElement.getAttribute('aria-label')")
+    await page.keyboard.press("Enter")
+
+    assert reached == "Comment on removed line 2"
+    await expect(_section(page, MAIN_FILE).get_by_text("Removed line 2")).to_be_visible()
+
+
 async def test_a_comment_can_be_left_without_a_mouse(diff_review: RunningReview, page: Page) -> None:
     """The tool's central action has a keyboard path."""
     await page.goto(diff_review.url)
