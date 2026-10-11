@@ -57,17 +57,23 @@ class SilentResizeObserver implements ResizeObserver {
 globalThis.ResizeObserver = SilentResizeObserver as unknown as typeof ResizeObserver;
 
 /**
- * jsdom has dialogs but cannot show one as a modal: showing it opens it, and
- * closing it says so, as a browser does. What being modal does — the keyboard
- * held inside, the page under it inert — is the browser's, and the browser
- * tests hold it.
+ * jsdom has dialogs but cannot show or close one. This stand-in opens it,
+ * puts the keyboard on the first thing in it that takes it, and closes it
+ * once, saying so. It is not a browser's modal, and leaves out:
+ * - the close event a moment later: it is said at once, inside close();
+ * - the keyboard given back, on closing, to what had it before;
+ * - Escape, which a browser answers by cancelling and closing the dialog;
+ * - the keyboard held inside, and the page under it inert.
+ * The browser tests hold those: tests/e2e/test_keys_and_focus.py and the
+ * keys list's tests in tests/e2e/test_review_flow.py.
  */
 HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
 	this.open = true;
-	// A browser moves the keyboard into a modal it shows, onto the first thing there that takes it
 	this.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]')?.focus();
 };
 HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+	// A dialog already closed says nothing more, as in a browser
+	if (!this.open) return;
 	this.open = false;
 	this.dispatchEvent(new Event('close'));
 };
