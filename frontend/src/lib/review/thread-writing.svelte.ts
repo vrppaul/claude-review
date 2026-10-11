@@ -40,7 +40,7 @@ export class ThreadWriting {
 	constructor(kept: KeptField[], events: CommentFields) {
 		this.#events = events;
 		// Drawn again where they were, without taking the cursor from wherever the reader is
-		for (const field of kept) this.#fields.set(fieldKey(field.at), new CommentField(field.at, field, false));
+		for (const field of kept) this.#fields.set(fieldKey(field.at), new CommentField(field.at, field, 'restored'));
 	}
 
 	/** Every field being written, in the order opened. */
@@ -125,7 +125,7 @@ export class ThreadWriting {
 			open.askForFocus();
 			return;
 		}
-		const field = new CommentField(at, written, true);
+		const field = new CommentField(at, written, 'opened');
 		this.#fields.set(field.key, field);
 		this.#events.report({ type: 'opened', kind: at.kind });
 	}

@@ -7,7 +7,7 @@ import { newComment } from '../new-comment';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { NewComment } from '$lib/types';
 import type { Review } from '$lib/review/review.svelte';
-import { inReview, openReview } from '../review';
+import { inReview, leavePage, openReview } from '../review';
 
 let review: Review;
 
@@ -225,5 +225,99 @@ describe('a comment field, to whoever cannot see it', () => {
 		);
 
 		expect(getByLabelText('Reply')).toBe(getByTestId('comment-input'));
+	});
+});
+
+describe('putting a comment away', () => {
+	/** A field drawn as the page draws it, with what putting it away does recorded. */
+	function drawnPuttingAway(field: CommentField) {
+		const onCancel = vi.fn();
+		const drawn = render(CommentBox, inReview(review, { field, onSave: vi.fn(), onCancel, label: 'Line 5' }));
+		return { ...drawn, onCancel };
+	}
+
+	it('asks before Escape drops the words written in it, and drops them only on yes', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, onCancel } = drawnPuttingAway(newField());
+		await user.type(getByTestId('comment-input'), 'Half a thought');
+
+		await user.keyboard('{Escape}');
+		expect(getByTestId('discard-dialog').textContent).toContain('Discard this comment?');
+		expect(onCancel).not.toHaveBeenCalled();
+
+		await user.click(getByTestId('confirm-go-ahead'));
+		expect(onCancel).toHaveBeenCalledOnce();
+	});
+
+	it('keeps the words, and the field, when the reader keeps writing', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(newField());
+		await user.type(getByTestId('comment-input'), 'Half a thought');
+
+		await user.click(getByTestId('cancel-comment'));
+		await user.click(getByTestId('confirm-keep'));
+
+		expect(onCancel).not.toHaveBeenCalled();
+		expect(queryByTestId('discard-dialog')).toBeNull();
+		expect((getByTestId('comment-input') as HTMLTextAreaElement).value).toBe('Half a thought');
+	});
+
+	it('closes an empty field on Escape without asking', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(newField());
+		getByTestId('comment-input').focus();
+
+		await user.keyboard('{Escape}');
+
+		expect(queryByTestId('discard-dialog')).toBeNull();
+		expect(onCancel).toHaveBeenCalledOnce();
+	});
+
+	it('asks before dropping a screenshot pasted into it', async () => {
+		keepingImages();
+		const user = userEvent.setup();
+		const { getByTestId, findByTestId, onCancel } = drawnPuttingAway(newField());
+		await paste(getByTestId('comment-input'), screenshot());
+		await findByTestId('attached-image');
+
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(getByTestId('discard-dialog')).toBeTruthy();
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+
+	it('puts away an edit nothing was changed in without asking', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(editOf({ body: 'As it was' }));
+
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(queryByTestId('discard-dialog')).toBeNull();
+		expect(onCancel).toHaveBeenCalledOnce();
+	});
+
+	it('asks before dropping an edit whose words were changed', async () => {
+		const user = userEvent.setup();
+		const { getByTestId, onCancel } = drawnPuttingAway(editOf({ body: 'As it was' }));
+
+		await user.type(getByTestId('comment-input'), ', and more');
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(getByTestId('discard-dialog')).toBeTruthy();
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+
+	it('asks before dropping words a reload brought back, whatever the field began from', async () => {
+		const user = userEvent.setup();
+		newField().text = 'Written before the reload';
+		leavePage();
+		review = openReview();
+		const [restored] = review.threads.writing.onLinesOf('a.ts');
+		const { getByTestId, onCancel } = drawnPuttingAway(restored);
+
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(getByTestId('discard-dialog')).toBeTruthy();
+		expect(onCancel).not.toHaveBeenCalled();
 	});
 });

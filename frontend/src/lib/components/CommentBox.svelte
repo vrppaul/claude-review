@@ -4,9 +4,14 @@
 	import { useReview } from '$lib/review/context';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	// The tallest the field grows, in pixels, before it scrolls instead
 	const TALLEST = 480;
+	// What is asked before words written in the field are dropped, and its two answers
+	const DISCARD_QUESTION = 'Discard this comment?';
+	const DISCARD = 'Discard';
+	const KEEP_WRITING = 'Keep writing';
 	// What the field says when it took off an image it could not show
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
 	// What a field with no place said above it is called: a reply, inside the thread it answers
@@ -41,6 +46,8 @@
 
 	let failed = $state<string | null>(null);
 	let textarea: HTMLTextAreaElement | undefined = $state();
+	// Whether the reader is being asked if what they wrote may be dropped
+	let askingToDiscard = $state(false);
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
@@ -110,6 +117,12 @@
 		textarea.setSelectionRange(start, end);
 	}
 
+	/** Put the field away: at once when nothing in it would be lost, and only on the reader's word when something would. */
+	function putAway() {
+		if (field.holdsWork) askingToDiscard = true;
+		else onCancel();
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		// Ctrl+Shift+Enter is not the field's: it finishes the review
 		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
@@ -117,7 +130,9 @@
 			save();
 		}
 		if (event.key === 'Escape') {
-			onCancel();
+			// Left to the browser, the same key would close the question it opens
+			event.preventDefault();
+			putAway();
 		}
 	}
 </script>
@@ -176,7 +191,7 @@
 			</button>
 		{/if}
 		<div class="flex-1"></div>
-		<button type="button" class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={onCancel}> Cancel </button>
+		<button type="button" class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={putAway}> Cancel </button>
 		{#if onAsk}
 			<button type="button" class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>
 				Ask now
@@ -194,3 +209,13 @@
 		{/if}
 	</p>
 </div>
+{#if askingToDiscard}
+	<ConfirmDialog
+		question={DISCARD_QUESTION}
+		goAhead={DISCARD}
+		keep={KEEP_WRITING}
+		testId="discard-dialog"
+		onGoAhead={onCancel}
+		onClose={() => (askingToDiscard = false)}
+	/>
+{/if}

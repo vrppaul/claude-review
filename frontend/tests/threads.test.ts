@@ -121,6 +121,22 @@ describe('a thread is a conversation', () => {
 		expect(getAllByTestId('open-reply')).toHaveLength(2);
 	});
 
+	it('asks before a thread is deleted, and deletes it only on yes', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getByTestId('delete-comment'));
+		expect(getByTestId('delete-dialog').textContent).toContain('Delete this comment?');
+		await user.click(getByTestId('confirm-keep'));
+		expect(review.threads.count).toBe(1);
+		expect(queryByTestId('delete-dialog')).toBeNull();
+
+		await user.click(getByTestId('delete-comment'));
+		await user.click(getByTestId('confirm-go-ahead'));
+		expect(review.threads.count).toBe(0);
+	});
+
 	it('keeps every turn rather than overwriting the last one', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 

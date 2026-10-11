@@ -125,6 +125,7 @@ describe('a comment being written on lines', () => {
 		await screen.findByTestId('attached-image');
 
 		await user.click(screen.getByTestId('cancel-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
 
 		expect(fieldsSaying()).toEqual([]);
 		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
@@ -140,6 +141,7 @@ describe('a comment being written on lines', () => {
 
 		reload();
 		await user.click(screen.getByTestId('cancel-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
 
 		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
 	});
@@ -218,6 +220,7 @@ describe('a reply or an edit being written in a thread', () => {
 		await screen.findByTestId('attached-image');
 
 		await user.click(screen.getByTestId('delete-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
 
 		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
 	});
@@ -233,6 +236,7 @@ describe('an image on its way when its field is put away', () => {
 		await paste(screen.getByTestId('comment-input'), screenshot());
 
 		await user.click(screen.getByTestId('cancel-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
 		uploads.answer(0, { image_id: KEPT_AS });
 		await settled();
 

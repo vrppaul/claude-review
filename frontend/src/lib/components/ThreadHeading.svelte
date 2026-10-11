@@ -3,9 +3,15 @@
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
+
+	// What is asked before a thread is deleted, and its two answers
+	const DELETE_QUESTION = 'Delete this comment?';
+	const DELETE = 'Delete';
+	const KEEP_IT = 'Keep it';
 
 	interface Props {
 		thread: Thread;
@@ -20,6 +26,8 @@
 	const sentIn = $derived(review.threads.sentInRound(thread.id));
 	// The agent's own words open a thread it raised: the reader answers them, and never rewrites them
 	const raised = $derived(raisedByAgent(thread));
+	// Whether the reader is being asked if the thread, and all said in it, may go
+	let askingToDelete = $state(false);
 </script>
 
 <!-- What the thread hangs on and what state it is in, and what can be done to it -->
@@ -77,9 +85,19 @@
 			type="button"
 			data-testid="delete-comment"
 			class="btn btn-ghost btn-xs hover:text-error"
-			onclick={() => review.threads.remove(thread.id)}
+			onclick={() => (askingToDelete = true)}
 		>
 			Delete
 		</button>
 	</div>
 </div>
+{#if askingToDelete}
+	<ConfirmDialog
+		question={DELETE_QUESTION}
+		goAhead={DELETE}
+		keep={KEEP_IT}
+		testId="delete-dialog"
+		onGoAhead={() => review.threads.remove(thread.id)}
+		onClose={() => (askingToDelete = false)}
+	/>
+{/if}

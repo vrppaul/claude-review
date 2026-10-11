@@ -18,12 +18,23 @@ export function fieldKey(at: WrittenAt): string {
 	return `new:${at.file}:${side}:${startLine}-${endLine}`;
 }
 
+/**
+ * How a field came to be on the page: opened by the reader just now, or
+ * brought back by a reload. One just opened takes the cursor, and began from
+ * what it was opened with; one brought back leaves the cursor where it is, and
+ * nothing is known of what it began from.
+ */
+type FieldOpening = 'opened' | 'restored';
+
 export class CommentField<Written extends WrittenAt = WrittenAt> {
 	/** Where it is written. */
 	readonly at: Written;
 	readonly key: string;
 	readonly attachments: ImageAttachments;
 	#text: string;
+	// What it began from: nothing, or the words of the comment being edited.
+	// Words that differ from it are the reader's own, and are not dropped unasked
+	readonly #beganFrom: string;
 	// A reply has no weight of its own — the thread's belongs to its first
 	// comment — so a reply's field keeps one all the same, never shown
 	#severity: CommentSeverity;
@@ -34,15 +45,16 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	/**
 	 * @param at where it is written
 	 * @param kept what it holds: nothing yet, what is being edited, or what a draft kept
-	 * @param focusWanted whether it takes the cursor once drawn
+	 * @param opening whether the reader opened it just now, or a reload brought it back
 	 */
-	constructor(at: Written, kept: Omit<KeptField, 'at'>, focusWanted: boolean) {
+	constructor(at: Written, kept: Omit<KeptField, 'at'>, opening: FieldOpening) {
 		this.at = at;
 		this.key = fieldKey(at);
 		this.attachments = new ImageAttachments(kept.images, kept.uploaded);
 		this.#text = $state(kept.text);
 		this.#severity = $state(kept.severity);
-		this.#focusWanted = $state(focusWanted);
+		this.#beganFrom = opening === 'opened' ? kept.text : '';
+		this.#focusWanted = $state(opening === 'opened');
 	}
 
 	get text(): string {
@@ -64,6 +76,15 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	/** Whether it holds something to say — words, or an image — with no image still on its way. */
 	get sayable(): boolean {
 		return (this.#text.trim().length > 0 || this.attachments.images.length > 0) && this.attachments.uploading === 0;
+	}
+
+	/**
+	 * Whether putting it away would lose something the reader put in it:
+	 * words other than those it began from, or an image pasted into it.
+	 */
+	get holdsWork(): boolean {
+		const pasted = this.attachments.uploaded.length + this.attachments.uploading;
+		return this.#text.trim() !== this.#beganFrom.trim() || pasted > 0;
 	}
 
 	/** Whether it should take the cursor now. */

@@ -2,12 +2,13 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLDialogAttributes } from 'svelte/elements';
 
-	interface Props extends HTMLDialogAttributes {
+	interface Props extends Omit<HTMLDialogAttributes, 'children'> {
 		/** What the dialog is called, said to whoever cannot see it. */
 		label: string;
-		/** Called once it closes, by Escape or by a press outside it, for whoever drew it to stop drawing it. */
+		/** Called once it closes, by Escape, a press outside it or its own words, for whoever drew it to stop drawing it. */
 		onClose: () => void;
-		children: Snippet;
+		/** What it holds, handed the way to close it as Escape does, so the browser gives the keyboard back. */
+		children: Snippet<[close: () => void]>;
 	}
 
 	let { label, onClose, children, class: sized, ...marked }: Props = $props();
@@ -32,6 +33,11 @@
 	function closeOnBackdrop(event: MouseEvent) {
 		if (pressedOnBackdrop && event.target === dialog) dialog.close();
 	}
+
+	/** Close it from what it holds: never by no longer drawing it, which would leave the keyboard nowhere. */
+	function close() {
+		dialog?.close();
+	}
 </script>
 
 <dialog
@@ -44,6 +50,6 @@
 	onclick={closeOnBackdrop}
 >
 	<div class="cr-dialog-body">
-		{@render children()}
+		{@render children(close)}
 	</div>
 </dialog>
