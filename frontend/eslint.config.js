@@ -73,28 +73,19 @@ const TYPE_NAME = '^[A-Z][a-z]';
 // A helper is a function of its module, with a name and parameters of its
 // own, not a closure in the body of another. A one-line lambda — passed to
 // a call, or kept to take a listener off again — is still fine; one with a
-// body of statements is a helper wherever it is: in a variable, in an
-// object, handed back as a teardown, or passed straight to a call. A rune
-// is the one call a body is handed to: an effect's body is the effect.
+// body of statements is a helper wherever it is inside another function —
+// in a variable, a field, an object, an array, behind a condition or a
+// default, handed back as a teardown, or passed straight to a call — and so
+// is a function expression of any body, and a class. A rune is the one call
+// a body is handed to: an effect's body is the effect.
 const NESTED_HELPER = 'A helper with logic is a function of the module, not one inside another.';
-// A call that is not a rune's — `$effect(…)`, `$effect.root(…)` and `$derived.by(…)` take a body to run
-const NOT_A_RUNE = ':not([callee.name=/^\\$/]):not([callee.object.name=/^\\$/])';
+// What a rune is handed: `$effect(…)`, `$effect.root(…)` and `$derived.by(…)` take a body to run
+const RUNE_BODY = 'CallExpression[callee.name=/^\\$/] > *, CallExpression[callee.object.name=/^\\$/] > *';
 const NO_NESTED_HELPERS = [
-	{ selector: ':function VariableDeclarator > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
-	{ selector: ':function VariableDeclarator > FunctionExpression', message: NESTED_HELPER },
-	{ selector: ':function FunctionDeclaration', message: NESTED_HELPER },
-	{ selector: ':function ReturnStatement > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
-	{ selector: ':function ReturnStatement > FunctionExpression', message: NESTED_HELPER },
-	{ selector: 'ArrowFunctionExpression > ArrowFunctionExpression.body[expression=false]', message: NESTED_HELPER },
-	{ selector: ':function Property > FunctionExpression', message: NESTED_HELPER },
-	{ selector: ':function Property > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
 	{
-		selector: `:function CallExpression${NOT_A_RUNE} > ArrowFunctionExpression[expression=false]`,
+		selector: `:function :matches(ArrowFunctionExpression[expression=false], FunctionExpression, ClassDeclaration, ClassExpression):not(${RUNE_BODY})`,
 		message: NESTED_HELPER
-	},
-	{ selector: `:function CallExpression${NOT_A_RUNE} > FunctionExpression`, message: NESTED_HELPER },
-	{ selector: ':function NewExpression > ArrowFunctionExpression[expression=false]', message: NESTED_HELPER },
-	{ selector: ':function NewExpression > FunctionExpression', message: NESTED_HELPER }
+	}
 ];
 
 // What the page's own code may not do to find an element: a test id is the
