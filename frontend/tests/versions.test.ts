@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { isDrawn } from '$lib/anchors/placement';
 import FileSection from '$lib/components/FileSection.svelte';
@@ -162,27 +162,32 @@ describe("a base that is not the review's own", () => {
 		return render(FileSection, inReview(review, { file: answered, scrollRoot: null }));
 	}
 
-	/** The numbers in the gutters of the row holding this text. */
-	function guttersOf(text: string): HTMLElement[] {
-		const row = screen.getByText(text).closest('tr');
-		if (!row) throw new Error(`No row holds ${text}`);
-		return within(row).getAllByRole('button');
+	/** The number a reader comments on a line by, named as a screen reader names it. */
+	function gutterOf(line: string): HTMLElement {
+		return screen.getByRole('button', { name: `Comment on ${line}` });
 	}
 
 	it('refuses a thread on a removed line, whose numbering belongs to that base', async () => {
 		const user = userEvent.setup();
-		const { queryByTestId } = await drawnUnderRoundOne();
+		await drawnUnderRoundOne();
+		const removed = gutterOf('removed line 17');
 
-		for (const gutter of guttersOf('gone')) await user.click(gutter);
+		await user.click(removed);
+		removed.focus();
+		await user.keyboard('{Enter}');
 
-		expect(queryByTestId('comment-input')).toBeNull();
+		// Refused, not merely left undrawn: no comment was started on it at all,
+		// and the number says it takes none, and why
+		expect(review.threads.writing.onLinesOf('answered.py')).toEqual([]);
+		expect(removed.getAttribute('aria-disabled')).toBe('true');
+		expect(removed.title).toContain('Show the whole diff');
 	});
 
 	it('takes a thread on a line of the working tree, which every base shares', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = await drawnUnderRoundOne();
 
-		await user.click(guttersOf('here')[0]);
+		await user.click(gutterOf('line 17'));
 		await user.type(getByTestId('comment-input'), 'still here');
 		await user.click(getByTestId('save-comment'));
 
