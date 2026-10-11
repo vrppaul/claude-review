@@ -49,14 +49,19 @@
 	{arrived > 0 ? `${arrived} new from the agent, not read yet` : ''}
 </p>
 <div class="flex h-screen flex-col">
+	<ReviewHeader />
 	{#if review.restoredCount > 0}
+		<!-- Under the header, with the other news about the review: what the
+			draft brought back, counted as the header counts what is unsent -->
 		<div
 			data-testid="restored-notice"
-			class="flex items-center gap-3 border-b border-base-300 bg-base-200 px-4 py-1.5 text-xs"
+			class="cr-notice cr-notice-taken flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
 		>
+			<Icon name="check" class="h-3 w-3 shrink-0" />
 			<span>
 				Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
 			</span>
+			<div class="flex-1"></div>
 			<button
 				type="button"
 				data-testid="dismiss-restored"
@@ -67,7 +72,6 @@
 			</button>
 		</div>
 	{/if}
-	<ReviewHeader />
 	<DiffNotice />
 	<div class="cr-columns">
 		{#if review.layout.fileTree.open}

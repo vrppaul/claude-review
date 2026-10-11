@@ -390,6 +390,15 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-progress').textContent).toContain('taking the diff again');
 	});
 
+	it('says when the agent last said something, not that it answered what nobody asked', async () => {
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		review.conversation.receive(null, 'Tests are green again.', []);
+		await tick();
+
+		expect(getByTestId('agent-last-answer').textContent?.trim()).toMatch(/^said /);
+	});
+
 	it('lets the agent speak first, with a file worth opening at it', async () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
@@ -405,7 +414,8 @@ describe('the agent panel', () => {
 
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		expect(getByTestId('review-weight').textContent).toContain('review ~');
+		// The unit said on the pill itself, not only in a title a pointer has to find
+		expect(getByTestId('review-weight').textContent).toMatch(/review ~\d+ tokens/);
 		expect(getByTestId('agent-context').textContent).toContain('53% of 1M');
 		expect(getByTestId('agent-context').textContent).toContain('as reported');
 		expect(getByTestId('agent-model').textContent).toContain('opus-5');

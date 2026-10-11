@@ -136,7 +136,8 @@ export class Review {
 		this.conversation = new Conversation(kept.panel, kept.composer, () => this.threads.all);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
-		this.#restoredCount = $state(draft === null ? 0 : this.threads.count);
+		// What the draft kept that had not gone out: the header's "unsent" counts the same
+		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
 		this.#weight = $derived(tokensOf(this.#diffCharacters + threadCharacters(this.threads.all)));
 		this.#hello = $derived({

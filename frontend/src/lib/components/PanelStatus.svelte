@@ -41,8 +41,9 @@
 	{#if working}
 		<span class="cr-faint text-xs">{since(working.at)}</span>
 	{:else if lastAnswer !== undefined}
+		<!-- Said, not answered: much of what the agent says, nobody asked for -->
 		<span data-testid="agent-last-answer" class="cr-faint text-xs">
-			answered {since(lastAnswer)}
+			said {since(lastAnswer)}
 		</span>
 	{/if}
 	<button
@@ -59,7 +60,7 @@
 <!-- Two numbers, told apart: one this side measures, one the agent reports -->
 <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 px-3 py-1.5">
 	<span data-testid="review-weight" class="cr-pill" title="What handing this review over costs">
-		review {formatWeight(review.weight)}
+		review {formatWeight(review.weight)} tokens
 	</span>
 	{#if review.answerer.status.context}
 		<span data-testid="agent-context" class="cr-pill">

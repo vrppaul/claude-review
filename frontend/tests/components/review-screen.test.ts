@@ -25,6 +25,22 @@ describe('comments picked up from before a reload', () => {
 	});
 });
 
+describe('comments picked up from a review sent in rounds', () => {
+	it('counts only what had not gone out, as the header counts what is unsent, and stands under the header', () => {
+		const before = openReview({ files });
+		before.threads.add(newComment({ file: 'a.py', body: 'went out' }));
+		before.threads.add(newComment({ file: 'a.py', body: 'kept' }));
+		before.threads.markSent([before.threads.all[0]], 1);
+		const review = openReview({ files });
+
+		const { getByTestId } = render(ReviewScreen, { props: { review } });
+		const notice = getByTestId('restored-notice');
+
+		expect(notice.textContent).toContain('Picked up 1 comment you had not sent yet.');
+		expect(getByTestId('top-bar').compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+});
+
 describe('a diff with nothing in it', () => {
 	it('says so where the files were, and leaves the review around it', async () => {
 		const review = openReview({ files, facts: { answerer_attached: true } });

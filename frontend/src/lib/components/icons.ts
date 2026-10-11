@@ -27,11 +27,12 @@ export const ICONS = {
 	check: { viewBox: '0 0 12 12', paths: ['M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z'], drawn: FILLED },
 	// Lines read in above a hunk, up and down from where they were left out
 	expand: { viewBox: '0 0 12 12', paths: ['M6 1L3 4h2v4H3l3 3 3-3H7V4h2z'], drawn: FILLED },
-	// Not yet done: the place a check would be
-	ring: {
+	// A box to tick, as a checkbox is drawn: empty, and ticked
+	box: { viewBox: '0 0 12 12', paths: ['M2 2h8v8h-8z'], drawn: { kind: 'traced', width: 1 } },
+	ticked: {
 		viewBox: '0 0 12 12',
-		paths: ['M1.5 6a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0'],
-		drawn: { kind: 'traced', width: 1 }
+		paths: ['M2 2h8v8h-8z', 'M3.8 6.1l1.5 1.5 2.9-3.2'],
+		drawn: { kind: 'traced', width: 1.2 }
 	},
 	cross: { viewBox: '0 0 12 12', paths: ['M3 3l6 6M9 3l-6 6'], drawn: { kind: 'traced', width: 1.6 } },
 	// One version against another: what the diff is taken against

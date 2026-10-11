@@ -24,6 +24,9 @@
 	// from a screen the reader has left.
 	let listedOver = $state.raw<DiffFile[] | null>(null);
 	const listing = $derived(listedOver === review.diff.files);
+	// What the list's button says, while the list is shown and while it is not, of one thread or of several
+	const LIST_WORDS = { shown: { one: 'Hide it', many: 'Hide them' }, folded: { one: 'List it', many: 'List them' } };
+	const listWords = $derived(LIST_WORDS[listing ? 'shown' : 'folded']);
 
 	/** Take the reader back to the whole diff, and to the thread they picked. */
 	async function goTo(thread: Thread) {
@@ -61,7 +64,7 @@
 			aria-expanded={listing}
 			onclick={() => (listedOver = listing ? null : review.diff.files)}
 		>
-			{listing ? 'Hide them' : 'List them'}
+			{offScreen.length === 1 ? listWords.one : listWords.many}
 		</button>
 	{/if}
 	<button

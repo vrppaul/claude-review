@@ -146,7 +146,7 @@
 				checked={viewed}
 				onchange={() => review.reading.toggleViewed(file.path)}
 			/>
-			<Icon name={viewed ? 'check' : 'ring'} class="h-3 w-3" />
+			<Icon name={viewed ? 'ticked' : 'box'} class="h-3 w-3" />
 			<!-- One box per file, so the box says which file it is about -->
 			Viewed<span class="sr-only">: {file.path}</span>
 		</label>

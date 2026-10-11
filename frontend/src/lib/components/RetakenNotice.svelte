@@ -16,8 +16,10 @@
 	const showing = new Attempt();
 
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
-	// what it was written against, and that is what "show it" goes to.
-	const stranded = $derived(review.threads.all.find((thread) => thread.anchor.outdated));
+	// what it was written against, and that is what the button goes to: the
+	// first, when there are several.
+	const outdated = $derived(review.threads.all.filter((thread) => thread.anchor.outdated));
+	const stranded = $derived(outdated.at(0));
 
 	/** What the retaken bar says happened, in the order it matters. */
 	function whatChanged(): string {
@@ -64,7 +66,7 @@
 			class="btn btn-ghost btn-xs"
 			onclick={() => review.navigator.reveal(stranded)}
 		>
-			Show it
+			{outdated.length === 1 ? 'Show the outdated thread' : 'Show the first outdated thread'}
 		</button>
 	{/if}
 	<button
