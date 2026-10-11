@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { flushSync } from 'svelte';
@@ -114,6 +114,26 @@ describe('a comment being written on lines', () => {
 		expect((field as HTMLTextAreaElement).value).toBe('half a thought');
 		expect(field.closest('tr')?.previousElementSibling?.textContent).toContain('second = 2');
 		expect(document.activeElement).not.toBe(field);
+	});
+
+	it('opens on a line clicked without a press, as assistive technology and voice control click', async () => {
+		render(DiffView, inReview(review));
+
+		await fireEvent.click(lineNumber(2), { detail: 0 });
+
+		expect(fieldsSaying()).toEqual(['']);
+	});
+
+	it('opens on a line the keyboard presses, Enter or Space', async () => {
+		const user = userEvent.setup();
+		render(DiffView, inReview(review));
+
+		lineNumber(2).focus();
+		await user.keyboard('{Enter}');
+		lineNumber(4).focus();
+		await user.keyboard(' ');
+
+		expect(fieldsSaying()).toEqual(['', '']);
 	});
 
 	it('lets the server drop what was pasted into it when it is put away unsaid', async () => {
