@@ -1097,11 +1097,6 @@
 		width var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
 		height var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-@media (prefers-reduced-motion: reduce) {
-	.cr-guide-spot-gliding {
-		transition: none;
-	}
-}
 .cr-guide-title {
 	font-size: 0.9375rem;
 	font-weight: 600;
@@ -1260,4 +1255,23 @@
 	border-radius: var(--radius-field);
 	font-size: 0.75rem;
 	color: var(--cr-faint);
+}
+
+/*
+ * Motion, for a reader who asked their system for less of it: every
+ * animation and every transition on the page stops, here and nowhere else.
+ * Last in the stylesheet and as specific as one class, it wins over each
+ * rule above that moves something — a rule more specific than one class
+ * that adds motion must not be written — and over Tailwind's and DaisyUI's,
+ * which sit in layers under it. A scroll the page starts itself asks the
+ * same question in dom/motion.ts.
+ */
+@media (prefers-reduced-motion: reduce) {
+	:root *,
+	:root *::before,
+	:root *::after {
+		animation: none;
+		transition: none;
+		scroll-behavior: auto;
+	}
 }

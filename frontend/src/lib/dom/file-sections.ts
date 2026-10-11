@@ -11,6 +11,7 @@
  */
 
 import { focusWhatRemains } from '$lib/dom/keyboard';
+import { scrollMotion } from '$lib/dom/motion';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
@@ -197,7 +198,7 @@ export class FileSections {
 		this.#awaitedThread = null;
 		this.#unmark();
 		this.#band.land(section);
-		section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		section.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
 		new SettleWatch(section, () => this.#arrivedAtShown(section, showing)).start();
 	}
 
@@ -295,13 +296,14 @@ export class FileSections {
 }
 
 /**
- * Scroll smoothly until a thread stands in the middle of its scrolling area,
- * and put the keyboard on it: the reader is there now, and the next key — a
- * line down, the next file, marking it viewed — acts from there rather than
- * from where the keyboard was before. The scroll is under way, so taking the
- * keyboard does not move the screen again.
+ * Scroll until a thread stands in the middle of its scrolling area —
+ * smoothly, unless the reader asked for less motion — and put the keyboard
+ * on it: the reader is there now, and the next key — a line down, the next
+ * file, marking it viewed — acts from there rather than from where the
+ * keyboard was before. The scroll is under way, so taking the keyboard does
+ * not move the screen again.
  */
 function arriveAt(thread: HTMLElement): void {
-	thread.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	thread.scrollIntoView({ behavior: scrollMotion(), block: 'center' });
 	thread.focus({ preventScroll: true });
 }

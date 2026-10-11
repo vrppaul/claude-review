@@ -140,6 +140,50 @@ describe('being taken to a thread', () => {
 	});
 });
 
+describe('moving the reader', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** A system that has, or has not, asked for less motion. */
+	function lessMotion(asked: boolean) {
+		vi.stubGlobal(
+			'matchMedia',
+			vi.fn().mockImplementation((query: string) => ({ matches: asked && query.includes('reduced-motion') }))
+		);
+	}
+
+	it('glides to a file and to a thread', () => {
+		lessMotion(false);
+		const file = section('a.py');
+		file.scrollIntoView = vi.fn();
+		const thread = document.createElement('div');
+		thread.scrollIntoView = vi.fn();
+		sections.registerThread('comment-1', thread);
+
+		sections.showFile('a.py');
+		sections.goToThread('comment-1', 'a.py');
+
+		expect(file.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+		expect(thread.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+	});
+
+	it('goes there at once for a reader who asked their system for less motion', () => {
+		lessMotion(true);
+		const file = section('a.py');
+		file.scrollIntoView = vi.fn();
+		const thread = document.createElement('div');
+		thread.scrollIntoView = vi.fn();
+		sections.registerThread('comment-1', thread);
+
+		sections.showFile('a.py');
+		sections.goToThread('comment-1', 'a.py');
+
+		expect(file.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }));
+		expect(thread.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }));
+	});
+});
+
 describe('knowing which file the reader is in', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
