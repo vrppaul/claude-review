@@ -25,6 +25,20 @@ log = structlog.get_logger()
 # How many files a files review names in its title before it counts the rest
 FILES_NAMED_IN_TITLE = 3
 
+# What each kind of review is called in its header: a repository's changes,
+# against what they are compared; files, by their names; a conversation, by
+# its file's name
+DIFF_TITLE = "{repository}: {against}"
+SINCE_A_BASE = "changes since {base}"
+UNCOMMITTED = "uncommitted changes"
+FILE_NAMES_SEPARATOR = ", "
+MORE_FILES = "{named} + {unnamed} more"
+CONVERSATION_TITLE = "Conversation {name}"
+# What parts the pieces an identity is made of: no path holds a line break
+IDENTITY_SEPARATOR = "\n"
+# What a diff of the uncommitted changes adds to its root in its identity: no base
+NO_BASE = ""
+
 
 class OpenedRepository(BaseModel):
     """The repository a diff review reads from, and what its working tree is compared against."""
@@ -87,7 +101,7 @@ async def open_diff(location: Path, base: str | None, repository: Repository) ->
         mode=ReviewMode.DIFF,
         diff_files=diff_files,
         title=_diff_title(root, base),
-        identity=f"{root}\n{base or ''}",
+        identity=IDENTITY_SEPARATOR.join((str(root), base or NO_BASE)),
         repository=OpenedRepository(root=root, named_base=base, pinned_base=pinned_base),
     )
 
@@ -117,7 +131,7 @@ async def open_files(paths: list[Path], *, named_from: Path) -> ReviewOpening:
         diff_files=diff_files,
         title=_files_title(files),
         # The same files are the same review, in whatever order they are named
-        identity="\n".join(sorted(str(file) for file in files)),
+        identity=IDENTITY_SEPARATOR.join(sorted(str(file) for file in files)),
         repository=None,
     )
 
@@ -130,8 +144,8 @@ async def open_transcript(path: Path) -> ReviewOpening:
     return ReviewOpening(
         mode=ReviewMode.TRANSCRIPT,
         diff_files=diff_files,
-        title=f"Conversation {conversation.stem}",
-        identity=f"{conversation}\n{ReviewMode.TRANSCRIPT}",
+        title=CONVERSATION_TITLE.format(name=conversation.stem),
+        identity=IDENTITY_SEPARATOR.join((str(conversation), ReviewMode.TRANSCRIPT)),
         repository=None,
     )
 
@@ -143,13 +157,13 @@ def _resolved_once(paths: list[Path]) -> list[Path]:
 
 def _diff_title(root: Path, base: str | None) -> str:
     """Name the repository under review and what it is compared against."""
-    against = f"changes since {base}" if base else "uncommitted changes"
-    return f"{root.name or root}: {against}"
+    against = SINCE_A_BASE.format(base=base) if base else UNCOMMITTED
+    return DIFF_TITLE.format(repository=root.name or root, against=against)
 
 
 def _files_title(paths: list[Path]) -> str:
     """Name the files under review, so two sets of them are told apart."""
     names = sorted(path.name for path in paths)
-    named = ", ".join(names[:FILES_NAMED_IN_TITLE])
+    named = FILE_NAMES_SEPARATOR.join(names[:FILES_NAMED_IN_TITLE])
     unnamed = len(names) - FILES_NAMED_IN_TITLE
-    return f"{named} + {unnamed} more" if unnamed > 0 else named
+    return MORE_FILES.format(named=named, unnamed=unnamed) if unnamed > 0 else named

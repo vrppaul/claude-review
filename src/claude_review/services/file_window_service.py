@@ -36,6 +36,7 @@ LINE_END = b"\n"
 # What a file's bytes are read as; a byte that is not is replaced, as the diff
 # shows it, rather than the file refused
 TEXT_ENCODING = "utf-8"
+NOT_TEXT = "replace"
 
 
 class FileWindow(BaseModel):
@@ -159,7 +160,7 @@ def _window_from(handle: BinaryIO, start: int, wanted: int) -> FileWindow:
     """The wanted lines of a file read from its start, and how many lines it has in all."""
     handle.seek(0)
     window = [
-        line.removesuffix(LINE_END).decode(TEXT_ENCODING, errors="replace")
+        line.removesuffix(LINE_END).decode(TEXT_ENCODING, errors=NOT_TEXT)
         for line in islice(handle, start - 1, start - 1 + wanted)
     ]
     return FileWindow(start=start, lines=window, total=start - 1 + len(window) + sum(1 for _ in handle))

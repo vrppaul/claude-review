@@ -37,6 +37,14 @@ TRANSCRIPT_ENCODING = "utf-8"
 # How much of an entry's id names the turn it begins: enough to tell a
 # conversation's turns apart, as a short commit id tells commits apart
 TURN_ID_LENGTH = 8
+# How a turn is named: who spoke, then the id of the entry it began with, or
+# without one the local time it was said at; and how a name already taken is
+# numbered again
+NAMED_BY_ID = "{speaker} {entry_id}"
+NAMED_BY_TIME = "{speaker} ({said_at:%H:%M:%S})"
+REPEATED_NAME = "{name} #{count}"
+# What parts the entries merged into one turn: each starts a line of its own
+TURN_LINE_BREAK = "\n"
 
 
 class ContentBlock(BaseModel):
@@ -188,7 +196,7 @@ def _merge_turns(entries: list[TranscriptEntry]) -> list[ConversationTurn]:
             continue
 
         if turns and turns[-1].speaker == speaker and not last_had_tools:
-            turns[-1] = turns[-1].model_copy(update={"text": f"{turns[-1].text}\n{text}"})
+            turns[-1] = _continued(turns[-1], text)
         else:
             turns.append(_turn(speaker, text, entry))
 
@@ -200,6 +208,16 @@ def _merge_turns(entries: list[TranscriptEntry]) -> list[ConversationTurn]:
 def _turn(speaker: Speaker, text: str, entry: TranscriptEntry) -> ConversationTurn:
     """A turn that begins with this entry."""
     return ConversationTurn(speaker=speaker, text=text, timestamp=entry.timestamp, entry_id=entry.uuid)
+
+
+def _continued(turn: ConversationTurn, text: str) -> ConversationTurn:
+    """A turn with more said in it by the same speaker."""
+    return ConversationTurn(
+        speaker=turn.speaker,
+        text=TURN_LINE_BREAK.join((turn.text, text)),
+        timestamp=turn.timestamp,
+        entry_id=turn.entry_id,
+    )
 
 
 def _has_tool_blocks(entry: TranscriptEntry) -> bool:
@@ -235,24 +253,25 @@ def _labels(turns: list[ConversationTurn]) -> list[str]:
     seen: Counter[str] = Counter()
     labels = []
     for turn in turns:
-        label = f"{turn.speaker}{_told_apart_by(turn)}"
-        seen[label] += 1
-        labels.append(label if seen[label] == 1 else f"{label} #{seen[label]}")
+        name = _name_of(turn)
+        seen[name] += 1
+        labels.append(name if seen[name] == 1 else REPEATED_NAME.format(name=name, count=seen[name]))
     return labels
 
 
-def _told_apart_by(turn: ConversationTurn) -> str:
-    """What tells a turn apart after who spoke: the id of the entry it began with, or when it was said."""
+def _name_of(turn: ConversationTurn) -> str:
+    """Who spoke, and what tells the turn apart: the id of the entry it began with, or when it was said."""
     if turn.entry_id:
-        return f" {turn.entry_id[:TURN_ID_LENGTH]}"
-    return _said_at(turn.timestamp)
+        return NAMED_BY_ID.format(speaker=turn.speaker, entry_id=turn.entry_id[:TURN_ID_LENGTH])
+    said_at = _said_at(turn.timestamp)
+    return NAMED_BY_TIME.format(speaker=turn.speaker, said_at=said_at) if said_at else str(turn.speaker)
 
 
-def _said_at(timestamp: str) -> str:
-    """When a turn was said, in local time, or nothing when the entry does not say."""
+def _said_at(timestamp: str) -> datetime | None:
+    """When a turn was said, in local time, or None when the entry does not say."""
     if not timestamp:
-        return ""
+        return None
     try:
-        return f" ({datetime.fromisoformat(timestamp).astimezone():%H:%M:%S})"
+        return datetime.fromisoformat(timestamp).astimezone()
     except ValueError:
-        return ""
+        return None

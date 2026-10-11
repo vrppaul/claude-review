@@ -16,7 +16,11 @@ from claude_review.domain.models import HEAD, GitRef
 log = structlog.get_logger()
 
 
+# How long one git command may take: staging a large tree takes seconds, and
+# a git that hangs must not hang the review with it
 GIT_TIMEOUT = 30.0
+# The most branches and tags the base picker offers: more would fill a menu
+# nobody can read
 REF_LIMIT = 50
 # What `for-each-ref` says of each ref, a tab between each: its name, when it
 # was made, the type of what it points at, and, for a tag, the type of what
@@ -92,6 +96,12 @@ FOREIGN_GIT_VARIABLES = frozenset(
 # What every command sets: a path the review names is that path, never a
 # pattern — "[ab].py" is the file of that name, not a.py beside it
 EVERY_COMMAND_SETS = {"GIT_LITERAL_PATHSPECS": "1"}
+# What a command asked twice a second sets: it takes no lock it can do
+# without, so the agent's own `git add` never fails on `index.lock`
+WITHOUT_OPTIONAL_LOCKS = {"GIT_OPTIONAL_LOCKS": "0"}
+# What points one staging's commands at its own index and object store
+INDEX_VARIABLE = "GIT_INDEX_FILE"
+OBJECTS_VARIABLE = "GIT_OBJECT_DIRECTORY"
 
 # How many lines of context a hunk carries: git's own default, so a change is
 # shown with what is around it whatever the reader set; the page widens it on
@@ -122,6 +132,15 @@ DIFF_STAGED = [
 
 # Ends the options, so a revision that follows can never be read as one
 END_OF_OPTIONS = "--end-of-options"
+# Leaves out changes that only alter whitespace
+IGNORING_WHITESPACE = "-w"
+# What ends each name git lists under -z, and each line it prints otherwise
+NAME_END = "\0"
+LINE_END = "\n"
+# What git prints is read as UTF-8, a byte that is not replaced: one file in
+# another encoding costs its own odd characters, not the review
+OUTPUT_ENCODING = "utf-8"
+NOT_TEXT = "replace"
 
 # What the temporary pieces of one staging are called, to be told apart in /tmp
 INDEX_SUFFIX = ".git-index"
@@ -177,7 +196,7 @@ class GitStagedTree(StagedTree):
         whitespace — a reindented block stops hiding the one line that
         actually changed inside it.
         """
-        arguments = [*DIFF_STAGED, *(["-w"] if ignore_whitespace else [])]
+        arguments = [*DIFF_STAGED, *([IGNORING_WHITESPACE] if ignore_whitespace else [])]
         return await _run(self._path, [*arguments, END_OF_OPTIONS, base], self._variables)
 
     @override
@@ -220,7 +239,7 @@ class GitStagedTree(StagedTree):
                 # answer, not the end of the question
                 log.warning("changed_since_refused", base=base)
                 continue
-            changed[base] = [name for name in listed.split("\0") if name]
+            changed[base] = [name for name in listed.split(NAME_END) if name]
         return changed
 
 
@@ -262,7 +281,7 @@ class GitRepository(ReviewedRepository):
         try:
             throwaway = await asyncio.to_thread(_temporary_objects) if self._objects is None else None
             objects = throwaway or str(self._objects)
-            variables = {"GIT_INDEX_FILE": index, "GIT_OBJECT_DIRECTORY": objects}
+            variables = {INDEX_VARIABLE: index, OBJECTS_VARIABLE: objects}
             own = await _own_paths(path)
             # Whichever store is written to, the repository's own stays readable
             if own is not None:
@@ -331,10 +350,10 @@ class GitRepository(ReviewedRepository):
         listed = await _run(
             path,
             ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"],
-            {"GIT_OPTIONAL_LOCKS": "0"},
+            WITHOUT_OPTIONAL_LOCKS,
         )
         # Each entry is two status letters, a space, then the path
-        return [entry[PORCELAIN_PATH_START:] for entry in listed.split("\0") if entry]
+        return [entry[PORCELAIN_PATH_START:] for entry in listed.split(NAME_END) if entry]
 
     @override
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
@@ -384,7 +403,7 @@ async def _own_paths(path: Path) -> OwnPaths | None:
         )
     except GitError:
         return None
-    objects, _, index = found.strip().partition("\n")
+    objects, _, index = found.strip().partition(LINE_END)
     return OwnPaths(objects=Path(objects), index=Path(index)) if objects and index else None
 
 
@@ -435,8 +454,6 @@ async def _execute(path: Path, arguments: list[str], variables: dict[str, str] |
 
     `variables` are what the command sets in git's environment; the rest is
     inherited, but for what would point git elsewhere or reshape its diff.
-    Output is decoded as UTF-8 with anything else replaced: one file in
-    another encoding costs its own odd characters, not the review.
 
     Raises:
         GitError: if git could not be started or ran out of time.
@@ -468,8 +485,8 @@ async def _execute(path: Path, arguments: list[str], variables: dict[str, str] |
 
     return GitRun(
         exit_code=await process.wait(),
-        output=output.decode(errors="replace"),
-        errors=errors.decode(errors="replace"),
+        output=output.decode(OUTPUT_ENCODING, errors=NOT_TEXT),
+        errors=errors.decode(OUTPUT_ENCODING, errors=NOT_TEXT),
     )
 
 

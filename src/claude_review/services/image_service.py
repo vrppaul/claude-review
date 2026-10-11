@@ -25,6 +25,8 @@ from claude_review.domain.interfaces import ImageStore
 log = structlog.get_logger()
 
 BYTES_PER_MEGABYTE = 1024 * 1024
+# How a limit is told to the reader
+IN_MEGABYTES = "{megabytes} MB"
 
 # A whole screen at full resolution fits several times over; anything bigger
 # is not a screenshot
@@ -250,7 +252,7 @@ class ImageService:
 
 def _in_megabytes(byte_count: int) -> str:
     """A limit as the reader is told it, in whole megabytes."""
-    return f"{byte_count // BYTES_PER_MEGABYTE} MB"
+    return IN_MEGABYTES.format(megabytes=byte_count // BYTES_PER_MEGABYTE)
 
 
 def recognise(content: bytes) -> ImageFormat | None:

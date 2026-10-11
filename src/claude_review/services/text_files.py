@@ -7,6 +7,9 @@ from claude_review.domain.models import DiffFile
 from claude_review.services.unreadable_content import UnreadableContentError
 from claude_review.services.whole_file import whole_file
 
+# What a file reviewed whole is read as: a file that is not is refused, and named
+TEXT_ENCODING = "utf-8"
+
 
 async def read_text_files(paths: list[Path], *, named_from: Path) -> list[DiffFile]:
     """Each file, read whole on a thread rather than the event loop, and named as seen from `named_from`.
@@ -49,7 +52,7 @@ def _read_text(path: Path) -> str:
             cannot be read, or is not UTF-8 text.
     """
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_text(encoding=TEXT_ENCODING)
     except (OSError, UnicodeDecodeError) as error:
         msg = f"Not a readable text file: {path}"
         raise UnreadableContentError(msg) from error

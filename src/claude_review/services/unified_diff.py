@@ -84,6 +84,7 @@ OCTAL_BASE = 8
 # Git writes a path's bytes as the file system holds them, here UTF-8; a
 # byte that is not is shown replaced rather than lost with the whole diff
 PATH_ENCODING = "utf-8"
+NOT_TEXT = "replace"
 
 # The line a file deleted or created whole starts at, on either side
 FIRST_LINE = 1
@@ -293,7 +294,7 @@ def _unquote(value: str) -> str:
             decoded.extend(ESCAPED_CHARACTERS.get(piece["escaped"], piece["escaped"]).encode())
         else:
             decoded.extend(piece["plain"].encode())
-    return decoded.decode(PATH_ENCODING, errors="replace")
+    return decoded.decode(PATH_ENCODING, errors=NOT_TEXT)
 
 
 def _status(header: list[str]) -> FileStatus:
