@@ -461,7 +461,6 @@ async def test_a_file_without_a_final_newline_shows_only_its_own_lines(tmp_git_r
         ("diff.noprefix", "true"),
         ("color.diff", "always"),
         ("color.ui", "always"),
-        ("diff.relative", "true"),
         # A diff tool of the reader's own, which must not stand in for git's format
         ("diff.external", "false"),
         ("core.quotePath", "false"),
@@ -470,14 +469,24 @@ async def test_a_file_without_a_final_newline_shows_only_its_own_lines(tmp_git_r
 async def test_the_readers_git_settings_do_not_change_what_is_shown(
     tmp_git_repo: Path, setting: str, value: str
 ) -> None:
+    """A file added, one changed, one deleted and one named outside plain ASCII: each path is read from its own side.
+
+    A deleted file is named only on the side before the change, so a prefix
+    of the reader's there would be read as part of its path.
+    """
+    (tmp_git_repo / "gone.txt").write_text("gone\n")
+    git(tmp_git_repo, "add", "gone.txt")
+    git(tmp_git_repo, "commit", "-m", "a file to delete")
+    (tmp_git_repo / "gone.txt").unlink()
     (tmp_git_repo / "a").mkdir()
     (tmp_git_repo / "a" / "inside.py").write_text("x = 1\n")
+    (tmp_git_repo / "заметки.md").write_text("привет\n")
     (tmp_git_repo / "initial.txt").write_text("changed\n")
     git(tmp_git_repo, "config", setting, value)
 
     files = await _diff(tmp_git_repo)
 
-    assert {diff_file.path for diff_file in files} == {"a/inside.py", "initial.txt"}
+    assert {diff_file.path for diff_file in files} == {"a/inside.py", "gone.txt", "initial.txt", "заметки.md"}
     assert all(diff_file.hunks for diff_file in files)
 
 

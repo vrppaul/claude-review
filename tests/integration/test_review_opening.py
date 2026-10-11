@@ -48,6 +48,18 @@ async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed
     assert from_inside.identity == from_the_root.identity
 
 
+async def test_a_diff_opened_from_a_subdirectory_shows_what_changed_outside_it(changed_repo: Path) -> None:
+    """A reader whose git writes diffs relative to where it runs would see only the subdirectory's changes."""
+    nested = changed_repo / "sub"
+    nested.mkdir()
+    (nested / "inside.py").write_text("inside\n")
+    git(changed_repo, "config", "diff.relative", "true")
+
+    opened = await open_diff(nested, None, GitRepository(objects=None))
+
+    assert sorted(changed.path for changed in opened.diff_files) == ["initial.txt", "sub/inside.py"]
+
+
 @pytest.mark.parametrize("base", ["no-such-ref", "key-blob"], ids=["nothing-by-that-name", "a-tag-on-a-blob"])
 async def test_a_base_that_names_no_commit_is_refused(changed_repo: Path, base: str) -> None:
     """Nothing can be compared against it: refused as what the reader asked for, not failed as git."""

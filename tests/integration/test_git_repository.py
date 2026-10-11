@@ -1,6 +1,9 @@
 """Tests for GitRepository error handling."""
 
+import asyncio
+import contextlib
 import os
+import signal
 from pathlib import Path
 
 import pytest
@@ -9,12 +12,19 @@ from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import HEAD, FileStatus
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
-from tests.helpers import git
+from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, git
 
 # A moment long before any test runs, in seconds since the epoch
 SETTLED_AT = 1_000_000_000
 # Enough untracked files that a stray blob per file would be plain to see
 GENERATED_FILES = 20
+# A git stuck on a huge tree: it writes down its process id, then works on without end
+GIT_THAT_WORKS_ON = """#!/bin/sh
+echo $$ > "{written_to}"
+exec sleep 60
+"""
+# What a script needs to be run
+RUNNABLE = 0o755
 
 
 async def _raw_diff(repository: GitRepository, path: Path, base: str = HEAD) -> str:
@@ -40,10 +50,46 @@ async def test_git_error_on_non_git_directory(tmp_path: Path) -> None:
         await _raw_diff(GitRepository(objects=None), tmp_path)
 
 
-async def test_git_error_on_nonexistent_directory() -> None:
+async def test_git_error_on_nonexistent_directory(tmp_path: Path) -> None:
     """Running against a nonexistent directory raises GitError."""
     with pytest.raises(GitError):
-        await _raw_diff(GitRepository(objects=None), Path("/tmp/nonexistent-repo-path-xyz"))
+        await _raw_diff(GitRepository(objects=None), tmp_path / "never-made")
+
+
+def _running(process_id: int) -> bool:
+    """Whether a process of this id is still there."""
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+async def test_git_still_working_when_its_caller_gives_up_is_stopped_with_it(
+    tmp_git_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A review that ends while the watcher waits on git leaves no git working on behind it."""
+    programs = tmp_path / "programs"
+    programs.mkdir()
+    written_to = tmp_path / "git-process"
+    (programs / "git").write_text(GIT_THAT_WORKS_ON.format(written_to=written_to))
+    (programs / "git").chmod(RUNNABLE)
+    monkeypatch.setenv("PATH", f"{programs}{os.pathsep}{os.environ['PATH']}")
+    looking = asyncio.ensure_future(GitRepository(objects=None).changed_paths(tmp_git_repo))
+    async with asyncio.timeout(SETTLE_SECONDS):
+        while not (written_to.exists() and written_to.read_text().strip()):
+            await asyncio.sleep(LOOK_EVERY_SECONDS)
+    git_process = int(written_to.read_text())
+
+    looking.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await looking
+
+    try:
+        assert not _running(git_process)
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(git_process, signal.SIGKILL)
 
 
 async def test_reading_a_diff_leaves_no_objects_behind(tmp_git_repo: Path) -> None:
