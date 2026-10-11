@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type { Draft } from '$lib/drafts/draft-shapes';
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
-import type { TellingPosition } from '$lib/types';
+import type { ServerPush, TellingPosition } from '$lib/types';
+import { work } from './agent-work';
 import { contextLine, diffFile, hunk } from './diff';
 import { fakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
@@ -78,6 +79,69 @@ describe('a page opening from a draft', () => {
 
 		expect(review.answerer.attached).toBe(true);
 		expect(review.threads.all[0].turns.map((turn) => turn.body)).toEqual(['Because.']);
+	});
+});
+
+/** A push saying something of the review's facts, and what of the review it changes when taken in. */
+interface FactPush {
+	push: ServerPush;
+	read: (review: Review) => unknown;
+}
+
+// Each kind of push that says something of the review's facts; a retake,
+// which takes the diff, is held by tests of its own
+const FACT_PUSHES: FactPush[] = [
+	{ push: { type: 'answerer', attached: true }, read: (review) => review.answerer.attached },
+	{ push: { type: 'progress', work: work() }, read: (review) => review.answerer.work },
+	{
+		push: { type: 'status', agent: { model: 'another model', context: '40%', at: 1 } },
+		read: (review) => review.answerer.status
+	},
+	{ push: { type: 'show', file: 'a.py' }, read: (review) => review.sections.fileInView },
+	{ push: { type: 'changed', moved_count: 3 }, read: (review) => review.diff.treeMoved.count },
+	{ push: { type: 'round', number: 9 }, read: (review) => review.rounds.current }
+];
+
+/** A page reloaded over a draft from before its facts, its one file drawn for a push to show. */
+function reloadedWithAFileDrawn(): Review {
+	const review = reloadedFrom(pushedAt(DRAFT_LEFT_AT));
+	review.sections.register('a.py', document.createElement('section'));
+	return review;
+}
+
+describe('a fact a page opening from a draft is told', () => {
+	it.each(FACT_PUSHES)('is left as its facts say when they hold it already: $push.type', ({ push, read }) => {
+		const review = reloadedWithAFileDrawn();
+		const asRead = read(review);
+
+		takePush(review, push, pushedAt(FACTS_READ_AT));
+
+		expect(read(review)).toEqual(asRead);
+	});
+
+	it.each(FACT_PUSHES)('is taken in when it was said after them: $push.type', ({ push, read }) => {
+		const review = reloadedWithAFileDrawn();
+		const asRead = read(review);
+
+		takePush(review, push, pushedAt(FACTS_READ_AT + 1));
+
+		expect(read(review)).not.toEqual(asRead);
+	});
+
+	it('follows the threads for a retake its facts hold, and neither takes the diff again nor calls it news', async () => {
+		const server = fakeServer();
+		server.answerWith('POST /api/anchors/follow', (request) => request.body as { anchors: [] });
+		const review = reloadedWithAFileDrawn();
+
+		const changes = { since_round: 1, base_key: 'round:1', paths: ['a.py'] };
+
+		takePush(review, { type: 'diff', file_count: 1, changes }, pushedAt(FACTS_READ_AT));
+		await settled();
+
+		expect(server.requestsTo('POST /api/anchors/follow')).toHaveLength(1);
+		expect(server.requestsTo('GET /api/diff')).toEqual([]);
+		expect(review.lastRetake.outcome).toBeNull();
+		expect(review.lastRetake.changedSince).toBeNull();
 	});
 });
 

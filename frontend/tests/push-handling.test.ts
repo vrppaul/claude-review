@@ -63,6 +63,35 @@ describe('what the server pushes, taken in', () => {
 		expect(review.diff.files.map((file) => file.path)).toEqual(['a.py', 'b.py']);
 	});
 
+	it('shows what the agent says it is doing, and nothing once it says its work is over', () => {
+		const underWay = work({ text: 'reading the handler', files: ['a.py'] });
+
+		handOverNext(review, { type: 'progress', work: underWay });
+		expect(review.answerer.work).toEqual(underWay);
+
+		handOverNext(review, { type: 'progress', work: null });
+		expect(review.answerer.work).toBeNull();
+	});
+
+	it('reports what the agent says of itself', () => {
+		const agent = { model: 'a model', context: '40% of its context', at: 1_000 };
+
+		handOverNext(review, { type: 'status', agent });
+
+		expect(review.answerer.status).toEqual(agent);
+	});
+
+	it('brings the file the agent shows into view, and makes it the one being read', () => {
+		const section = document.createElement('section');
+		const scrolled = vi.spyOn(section, 'scrollIntoView');
+		review.sections.register('b.py', section);
+
+		handOverNext(review, { type: 'show', file: 'b.py' });
+
+		expect(scrolled).toHaveBeenCalledOnce();
+		expect(review.sections.fileInView).toBe('b.py');
+	});
+
 	it('moves on to the round the server began, never back', () => {
 		handOverNext(review, { type: 'round', number: 3 });
 		handOverNext(review, { type: 'round', number: 2 });
