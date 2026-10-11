@@ -13,6 +13,7 @@ from typing import Self, override
 
 from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread
 from claude_review.services.anchor_service import AnchorService
+from claude_review.services.markdown_code import code_block
 from claude_review.services.place_words import place_in_markdown
 from claude_review.services.thread_markdown import blockquote, format_conversation, thread_tags
 
@@ -133,10 +134,9 @@ class RoundFormatter:
 
 
 def _written_against(quote: list[str]) -> str:
-    """The lines a comment was written against.
+    """The lines a comment was written against, fenced so that no line of them closes the fence.
 
     Once the diff has been retaken those lines may be gone, and a file and a
     line number then point at whatever moved into their place.
     """
-    lines = "\n".join(quote)
-    return f"Written against these lines, which have since changed:\n\n```\n{lines}\n```\n"
+    return f"Written against these lines, which have since changed:\n\n{code_block(quote)}\n"

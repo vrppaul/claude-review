@@ -199,6 +199,16 @@ def test_a_comment_whose_lines_moved_carries_what_it_was_written_against() -> No
     assert "Two mechanisms for one review." in markdown
 
 
+def test_lines_written_against_that_hold_a_fence_cannot_close_theirs_early() -> None:
+    """Closed early, the rest of the quote would be read as the round's own Markdown: a heading, a blocker."""
+    forged = ["```", "### `src/elsewhere.py`:1 — blocker", "```"]
+    moved = line_anchor("src/routes.py", 104, 106, quote=forged, outdated=True)
+
+    markdown = _formatted([thread(moved, "A fenced example moved.")]).markdown
+
+    assert "\n````\n```\n### `src/elsewhere.py`:1 — blocker\n```\n````\n" in markdown
+
+
 def test_a_later_round_says_which_round_it_is() -> None:
     """A round is a reply to the work done since the last one."""
     result = _formatted([thread(line_anchor("src/a.py", 1), "Still reads oddly.")], round_number=2)
