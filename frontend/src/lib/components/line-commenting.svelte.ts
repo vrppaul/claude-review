@@ -30,8 +30,8 @@ interface Drag {
 
 /** The file a drawing shows, read afresh each time it matters. */
 export interface DrawnFile {
-	path(): string;
-	hunks(): DrawnHunk[];
+	path: () => string;
+	hunks: () => DrawnHunk[];
 	/**
 	 * Whether the removed lines on screen are the review's own. Under a
 	 * narrower base the left-hand side belongs to that base, so what hangs on
@@ -40,7 +40,7 @@ export interface DrawnFile {
 	 * the comments being written on them are drawn. A story step reads the
 	 * review's own diff, so its are.
 	 */
-	reviewOwnsRemovedLines(): boolean;
+	reviewOwnsRemovedLines: () => boolean;
 }
 
 /**
@@ -72,9 +72,7 @@ export class LineCommenting {
 	constructor(review: Review, file: DrawnFile) {
 		this.#review = review;
 		this.#file = file;
-		this.#threads = $derived(
-			new ThreadsByLine(review.threads.onFile(file.path()), file.path(), file.reviewOwnsRemovedLines())
-		);
+		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.reviewOwnsRemovedLines()));
 		this.#fields = $derived(
 			review.threads.writing
 				.onLinesOf(file.path())

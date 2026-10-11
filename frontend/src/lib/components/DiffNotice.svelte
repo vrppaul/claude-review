@@ -28,7 +28,9 @@
 	// anchored to the review's own diff — but saying nothing would leave the
 	// reader counting a review they can only see part of.
 	const offScreen = $derived(
-		review.threads.all.filter((thread) => !isDrawn(thread, review.diff.files, { removedLines: false }))
+		review.threads.onLines
+			.filter(({ lines }) => !isDrawn(lines, review.diff.files, { removedLines: false }))
+			.map(({ thread }) => thread)
 	);
 	// The diff the list of them was opened over. Every diff taken after it —
 	// another base, a retake — starts folded, so the list is never left open

@@ -197,6 +197,9 @@ export default tseslint.config(
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
 			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING],
+			// A function an interface asks for is a property: a method's parameters are compared
+			// loosely, so a value that takes only one kind could stand where every kind is passed
+			'@typescript-eslint/method-signature-style': ['error', 'property'],
 			'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
 			// A switch over every kind of a union is one decision, not one per kind
 			complexity: ['error', { max: 10, variant: 'modified' }],

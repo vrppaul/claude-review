@@ -13,7 +13,7 @@ export type Grows = 'left' | 'right';
 /** A column the reader sizes: how wide it is, and how it is made another width. */
 export interface ColumnWidth {
 	readonly width: number;
-	setWidth(next: number): void;
+	setWidth: (next: number) => void;
 }
 
 /** How far the arrow keys move an edge at a time. */

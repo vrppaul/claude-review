@@ -10,8 +10,8 @@
 import { SvelteMap } from 'svelte/reactivity';
 
 import { askInThread, followAnchors } from '$lib/api/review-api';
-import { lineAnchor } from '$lib/anchors/line';
-import { anchorFile, sameSpot } from '$lib/anchors/views';
+import { lineAnchor, type ThreadOnLines } from '$lib/anchors/line';
+import { anchorLines, sameSpot } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
@@ -48,8 +48,14 @@ function questionIdOf(thread: Thread): string {
 	return last?.author === READER ? last.id : thread.id;
 }
 
-/** What a file with no threads holds. */
-const NO_THREADS: readonly Thread[] = [];
+/** What a file with no threads on its lines holds. */
+const NO_THREADS: readonly ThreadOnLines[] = [];
+
+/** A thread with the lines of a file it hangs on: one, or none for a thread on no lines. */
+function onItsLines(thread: Thread): ThreadOnLines[] {
+	const lines = anchorLines(thread.anchor);
+	return lines ? [{ thread, lines }] : [];
+}
 
 /** A thread, and the anchor following the diff gave it. */
 interface FollowedThread {
@@ -85,8 +91,9 @@ export class Threads {
 	readonly #sent = new SvelteMap<string, number>();
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
+	readonly #onLines = $derived(this.#all.flatMap(onItsLines));
 	// By the file they hang on, so a file asks for its own without a scan
-	readonly #byFile = $derived(Map.groupBy(this.#all, (thread) => anchorFile(thread.anchor)));
+	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
 	readonly #unsent = $derived(this.#all.filter((thread) => !this.#sent.has(thread.id)));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
@@ -136,8 +143,13 @@ export class Threads {
 		return this.#answered;
 	}
 
-	/** The threads hanging on one file. */
-	onFile(path: string): readonly Thread[] {
+	/** The threads that hang on lines of a file, each with its lines. */
+	get onLines(): readonly ThreadOnLines[] {
+		return this.#onLines;
+	}
+
+	/** The threads hanging on lines of one file, each with its lines. */
+	onLinesOf(path: string): readonly ThreadOnLines[] {
 		return this.#byFile.get(path) ?? NO_THREADS;
 	}
 

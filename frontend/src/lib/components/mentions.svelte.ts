@@ -18,8 +18,8 @@ export type Mentionable = { kind: 'thread'; thread: Thread } | { kind: 'file'; p
 
 /** What the picker offers from: the review's threads and files, as they stand. */
 export interface Offered {
-	threads(): Thread[];
-	files(): DiffFile[];
+	threads: () => Thread[];
+	files: () => DiffFile[];
 }
 
 /** Whether what was typed after the @ is in what a candidate is known by. */

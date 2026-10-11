@@ -13,7 +13,7 @@
 	const review = useReview();
 
 	const fullText = $derived(assembleText(file, review.mode));
-	const commentCount = $derived(review.threads.onFile(file.path).length);
+	const commentCount = $derived(review.threads.onLinesOf(file.path).length);
 	// One piece of text: split across lines, the count and its word would read apart
 	const commentNote = $derived(`${counted(commentCount, 'comment', 'comments')} — switch to Raw to view`);
 </script>

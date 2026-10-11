@@ -16,13 +16,13 @@ import { type ContextGap, withRevealed } from '$lib/utils/expansions';
 
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
-	file(): DiffFile;
+	file: () => DiffFile;
 	/** What it is highlighted as, if anything. */
-	language(): string | null;
+	language: () => string | null;
 	/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-	reviewOwnsRemovedLines(): boolean;
+	reviewOwnsRemovedLines: () => boolean;
 	/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
-	revealed(): RevealedContext | null;
+	revealed: () => RevealedContext | null;
 }
 
 export class FileDrawing implements DrawnFile {

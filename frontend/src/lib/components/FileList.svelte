@@ -53,7 +53,7 @@
 
 {#snippet fileRow(file: DiffFile, name: string, depth: number)}
 	{@const status = STATUS_LETTERS[file.status]}
-	{@const threadCount = review.threads.onFile(file.path).length}
+	{@const threadCount = review.threads.onLinesOf(file.path).length}
 	{@const viewed = review.reading.isViewed(file.path)}
 	<li>
 		<button

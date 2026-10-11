@@ -43,16 +43,16 @@ export function sessionUrl(page: Location): string {
 /** What the page does with what the connection brings it. */
 export interface PushReceiver {
 	/** Where the page's telling stands: the run of the review, and how far the page has heard it. */
-	told(): TellingPosition;
+	told: () => TellingPosition;
 	/** Take in one push, and where it stands in the telling. */
-	take(push: ServerPush, at: TellingPosition): void;
+	take: (push: ServerPush, at: TellingPosition) => void;
 	/**
 	 * Learn again what the pushes would have said: the review could not hand
 	 * over everything missed before `from`, where the telling now goes on.
 	 * Settles once done, whether or not it could; what went wrong, it says
 	 * itself.
 	 */
-	catchUp(from: TellingPosition): Promise<void>;
+	catchUp: (from: TellingPosition) => Promise<void>;
 }
 
 /** A push waiting to be handed over, with where it stands in the telling. */

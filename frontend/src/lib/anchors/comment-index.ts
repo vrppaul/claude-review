@@ -1,4 +1,5 @@
 import type { LinePlace, Thread } from '$lib/types';
+import type { ThreadOnLines } from '$lib/anchors/line';
 import { sideIsDrawn } from '$lib/anchors/placement';
 import { placeKey } from '$lib/utils/drawn-file';
 
@@ -16,18 +17,14 @@ export class ThreadsByLine {
 	readonly #byLine = new Map<string, Thread[]>();
 
 	/**
-	 * @param threads the threads to place, of any file
-	 * @param file the file whose lines they are placed under
+	 * @param threads the threads on lines of the file
 	 * @param removedLines whether threads on removed lines are drawn — see `isDrawn`: under a narrower
 	 *   base those numbers belong to something else
 	 */
-	constructor(threads: readonly Thread[], file: string, removedLines: boolean) {
-		for (const thread of threads) {
-			const { anchor } = thread;
-			// A file's rows are its lines; a thread on anything else has no row
-			if (anchor.kind !== 'line' || anchor.file !== file) continue;
-			if (!sideIsDrawn(anchor.side, removedLines)) continue;
-			const key = placeKey({ side: anchor.side, number: anchor.end_line });
+	constructor(threads: readonly ThreadOnLines[], removedLines: boolean) {
+		for (const { thread, lines } of threads) {
+			if (!sideIsDrawn(lines.side, removedLines)) continue;
+			const key = placeKey({ side: lines.side, number: lines.end_line });
 			const existing = this.#byLine.get(key);
 			if (existing) existing.push(thread);
 			else this.#byLine.set(key, [thread]);

@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
-import { diffResponse } from '../diff';
+import { diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -137,6 +137,17 @@ describe('threads the base on screen cannot draw', () => {
 
 		expect(text(getByTestId('off-screen-list'))).toContain('this one is not on this screen');
 		expect(text(getByTestId('off-screen-list'))).toContain('elsewhere.py');
+	});
+
+	it("counts a thread on a removed line, whose number belongs to the base's left side", async () => {
+		const shown = diffFile({ path: 'a.py', hunks: [hunk([removedLine(3, 'gone')])] });
+		fakeServer().answer('GET /api/diff', diffResponse({ phrase: SINCE_ROUND_ONE, files: [shown] }));
+		await review.diff.setBase('round:1');
+		review.threads.add(newComment({ file: 'a.py', side: 'old', startLine: 3, body: 'on a removed line' }));
+
+		const { getByTestId } = render(DiffNotice, inReview(review));
+
+		expect(text(getByTestId('narrowed-to'))).toContain('1 thread is not on this screen');
 	});
 
 	it('lists them once, even while a retake is being reported', async () => {

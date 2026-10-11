@@ -9,6 +9,7 @@
  * reader — the keys, the header's arrows, the replies — moves them through here.
  */
 
+import { anchorLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
@@ -54,14 +55,9 @@ export class Navigator {
 	/** Bring a thread into view, and go on from it the next time the reader steps. */
 	reveal(thread: Thread): void {
 		this.#atThread = thread.id;
-		const { anchor } = thread;
-		switch (anchor.kind) {
-			case 'line':
-				this.#revealOnLines(thread.id, anchor);
-				return;
-			default:
-				return unknownKind(anchor.kind);
-		}
+		// A thread is drawn under the lines of a file it hangs on; one on no lines is drawn nowhere to go to
+		const lines = anchorLines(thread.anchor);
+		if (lines) this.#revealOnLines(thread.id, lines);
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -91,15 +87,10 @@ export class Navigator {
 		this.#sections.scrollToFile(files[to].path);
 	}
 
-	#revealOnLines(threadId: string, anchor: LineAnchor): void {
+	#revealOnLines(threadId: string, lines: LineAnchor): void {
 		// A folded file has no thread on screen to move to, so it is opened
 		// first; the thread is brought into view once it is drawn
-		this.#reading.unfold(anchor.file);
-		this.#sections.scrollToThread(threadId, anchor.file);
+		this.#reading.unfold(lines.file);
+		this.#sections.scrollToThread(threadId, lines.file);
 	}
-}
-
-/** The compiler's way of saying a kind of anchor was left out above. */
-function unknownKind(kind: never): never {
-	throw new Error(`No way to bring a thread on ${String(kind)} into view`);
 }

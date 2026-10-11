@@ -18,7 +18,7 @@ const ENDED = { markdown: '## Comments', comment_count: 1, round: 1, ended: true
 
 /** The threads drawn under one row of a file. */
 function threadsOn(file: string, side: LineSide, line: number) {
-	return new ThreadsByLine(review.threads.all, file, true).at({ side, number: line });
+	return new ThreadsByLine(review.threads.onLinesOf(file), true).at({ side, number: line });
 }
 
 describe('the comments of a review', () => {
@@ -87,9 +87,9 @@ describe('the comments of a review', () => {
 		review.threads.add(newComment({ file: 'b.ts', startLine: 1, body: 'comment B' }));
 		review.threads.add(newComment({ file: 'a.ts', startLine: 5, body: 'comment A2' }));
 
-		expect(review.threads.onFile('a.ts').map((comment) => comment.body)).toEqual(['comment A', 'comment A2']);
-		expect(review.threads.onFile('b.ts')).toHaveLength(1);
-		expect(review.threads.onFile('c.ts')).toHaveLength(0);
+		expect(review.threads.onLinesOf('a.ts').map(({ thread }) => thread.body)).toEqual(['comment A', 'comment A2']);
+		expect(review.threads.onLinesOf('b.ts')).toHaveLength(1);
+		expect(review.threads.onLinesOf('c.ts')).toHaveLength(0);
 	});
 
 	it('draw a thread under the last line of its range only', () => {
@@ -101,6 +101,14 @@ describe('the comments of a review', () => {
 		expect(threadsOn('file.ts', 'new', 15)).toHaveLength(1);
 		expect(threadsOn('file.ts', 'new', 16)).toHaveLength(0);
 		expect(threadsOn('file.ts', 'new', 20)).toHaveLength(1);
+	});
+
+	it("leave a thread on a removed line undrawn where the removed lines are not the review's own", () => {
+		review.threads.add(newComment({ file: 'file.ts', side: 'old', startLine: 3, body: 'on a removed line' }));
+		const onLines = review.threads.onLinesOf('file.ts');
+
+		expect(new ThreadsByLine(onLines, true).at({ side: 'old', number: 3 })).toHaveLength(1);
+		expect(new ThreadsByLine(onLines, false).at({ side: 'old', number: 3 })).toHaveLength(0);
 	});
 });
 

@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { isDrawn } from '$lib/anchors/placement';
 import FileSection from '$lib/components/FileSection.svelte';
-import type { Thread, DiffFile, LineAnchor } from '$lib/types';
+import type { DiffFile, LineAnchor } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
 import { contextLine, diffFile, diffResponse, hunk, removedLine } from './diff';
 import { BAD_REQUEST, fakeServer, type FakeServer } from './fake-server';
@@ -25,19 +25,9 @@ function untouched(path: string): DiffFile {
 	return diffFile({ path, hunks: [hunk([contextLine(1, 1, 'x')])] });
 }
 
-function thread(at: Partial<LineAnchor> = {}): Thread {
-	return {
-		id: 'c1',
-		anchor: { ...lineAnchor('a.py', 'new', 1, 1, []), ...at },
-		severity: 'note',
-		body: 'reads oddly',
-		images: [],
-		turns: [],
-		raised_by: 'reader',
-		resolved: false,
-		round: 1,
-		at: 0
-	};
+/** Lines of a.py a thread hangs on: line 1 on the new side, unless said otherwise. */
+function lines(at: Partial<LineAnchor> = {}): LineAnchor {
+	return { ...lineAnchor('a.py', 'new', 1, 1, []), ...at };
 }
 
 /** A server handing back these files, whatever base it was asked for. */
@@ -136,19 +126,19 @@ describe('reading the same tree against something else', () => {
 
 describe('a thread the base on screen cannot draw', () => {
 	it('is not drawn when its file is not shown', () => {
-		expect(isDrawn(thread({ file: 'elsewhere.py' }), [diffFile({ path: 'a.py' })])).toBe(false);
+		expect(isDrawn(lines({ file: 'elsewhere.py' }), [diffFile({ path: 'a.py' })])).toBe(false);
 	});
 
 	it('is not drawn when its lines are not among the ones shown', () => {
-		expect(isDrawn(thread({ end_line: 40 }), [untouched('a.py')])).toBe(false);
+		expect(isDrawn(lines({ end_line: 40 }), [untouched('a.py')])).toBe(false);
 	});
 
 	it('is drawn when the row it hangs on is there', () => {
-		expect(isDrawn(thread({ end_line: 1 }), [untouched('a.py')])).toBe(true);
+		expect(isDrawn(lines({ end_line: 1 }), [untouched('a.py')])).toBe(true);
 	});
 
 	it('leaves removed lines alone under a narrower base, whose left side is not ours', () => {
-		const removed = thread({ side: 'old', end_line: 1 });
+		const removed = lines({ side: 'old', end_line: 1 });
 		const shown = [diffFile({ path: 'a.py', hunks: [hunk([removedLine(1, 'x')])] })];
 
 		expect(isDrawn(removed, shown)).toBe(true);

@@ -34,7 +34,7 @@
 	// Files reads the review's own diff unless a narrower base is chosen, whose removed lines are that base's
 	const reviewOwnsRemovedLines = $derived(!review.diff.narrowed);
 
-	const commentCount = $derived(review.threads.onFile(file.path).length);
+	const commentCount = $derived(review.threads.onLinesOf(file.path).length);
 	const collapsed = $derived(review.reading.isFolded(file.path));
 	const viewed = $derived(review.reading.isViewed(file.path));
 

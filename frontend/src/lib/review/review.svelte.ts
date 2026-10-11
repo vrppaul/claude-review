@@ -47,7 +47,7 @@ export interface Opening {
 
 /** Whoever carries what the page holds to the server. */
 export interface Greeter {
-	greet(hello: SessionHello): void;
+	greet: (hello: SessionHello) => void;
 }
 
 /** What belongs to the reader rather than to the review, and outlives it. */
