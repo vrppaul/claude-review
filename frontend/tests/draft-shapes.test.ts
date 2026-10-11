@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fastCheck from 'fast-check';
 import { DRAFT_SHAPE, isCurrentDraft, isReleasedDraft, type Draft } from '$lib/drafts/draft-shapes';
 import { keepDraft, readDraft } from '$lib/drafts/draft-storage';
 import { lineAnchor } from '$lib/anchors/line';
@@ -7,7 +8,7 @@ import { REVIEW_TITLE } from './diff';
 import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { openReview } from './review';
-import { RELEASED_DRAFT_KEY, storeDraft, storeReleasedDraft } from './stored-draft';
+import { DRAFT_KEY, RELEASED_DRAFT_KEY, storeDraft, storeReleasedDraft } from './stored-draft';
 
 /** The last shape a draft had before its threads hung on anchors. */
 const BEFORE_ANCHORS = 7;
@@ -19,6 +20,28 @@ const SHAPE_WITH_TURN_IDS = 9;
 const NEVER_RELEASED = 15;
 /** What another review on the same port is of. */
 const ANOTHER_TITLE = 'other-repo: changes since v1';
+
+/** Fields of a comment no draft before them kept: one missing means the comment predates it. */
+const GROWN_SINCE_THE_FIRST_SHAPE = [
+	'images',
+	'turns',
+	'raised_by',
+	'resolved',
+	'outdated',
+	'quote',
+	'awaiting',
+	'collapsed',
+	'unread',
+	'round',
+	'at'
+] as const;
+/** Fields of a draft no draft before them kept. */
+const KEPT_SINCE_THE_FIRST_SHAPE = ['version', 'reviewBody', 'sent', 'panel', 'composer'] as const;
+
+/** A copy of what was kept, without some of its fields. */
+function without(kept: object, fields: readonly string[]): object {
+	return Object.fromEntries(Object.entries(kept).filter(([field]) => !fields.includes(field)));
+}
 
 /** Put a draft in storage as an older release of the review left it: the one draft of the port, under its title. */
 function keptByAnOlderRelease(draft: object) {
@@ -76,6 +99,168 @@ function keptComment(): KeptComment {
 		unread: true
 	};
 }
+
+/**
+ * A draft as v1.5.0 — the last release, the one whose drafts readers hold
+ * now — wrote it with `saveDraft`, copied field for field from what that
+ * release's `Draft`, `Comment`, `Turn`, `PanelTurn` and `Composer` held:
+ * shape 7, the one draft of the port, told apart by title. Each comment
+ * carries how it was read; a sent thread is an [id, round] pair; the panel
+ * keeps what was said and the message half written there.
+ */
+const WRITTEN_BY_1_5_0 = {
+	version: 7,
+	title: REVIEW_TITLE,
+	comments: [
+		{
+			id: 'comment-2',
+			file: 'src/a.py',
+			side: 'new',
+			severity: 'question',
+			start_line: 3,
+			end_line: 4,
+			body: 'Why both?',
+			images: ['opening.png'],
+			turns: [
+				{ id: 'turn-1', author: 'reader', body: 'Still unsure', round: 1, at: 1000, images: [] },
+				{ id: 'turn-2', author: 'author', body: 'History', round: 1, at: 1100, answers: 'turn-1', images: [] },
+				{ id: 'turn-3', author: 'reader', body: 'And this?', round: 2, at: 1150, images: ['shot.png'] }
+			],
+			raised_by: 'reader',
+			resolved: false,
+			outdated: false,
+			quote: ['x = 1', 'y = 2'],
+			awaiting: [{ id: 'turn-3', at: 1150 }],
+			collapsed: true,
+			unread: true,
+			round: 1,
+			at: 900
+		},
+		{
+			id: 'raised-1',
+			file: 'src/b.py',
+			side: 'old',
+			severity: 'note',
+			start_line: 7,
+			end_line: 7,
+			body: 'This went',
+			images: [],
+			turns: [],
+			raised_by: 'author',
+			resolved: true,
+			outdated: true,
+			quote: ['gone()'],
+			awaiting: [],
+			collapsed: false,
+			unread: false,
+			round: 2,
+			at: 1120
+		}
+	],
+	reviewBody: 'Overall fine',
+	sent: [
+		['comment-2', 1],
+		['raised-1', 2]
+	],
+	panel: [
+		{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 1200, threads: ['comment-2'], images: ['run.png'] },
+		{ id: 'message-2', author: 'author', body: 'They pass', at: 1300, files: ['src/a.py'], answers: 'message-1' },
+		{ id: 'message-3', author: 'reader', body: 'Never mind', at: 1400, cancelled: true }
+	],
+	composer: { text: 'half a thought', images: ['pasted.png'] }
+};
+
+/** The draft v1.5.0 wrote, in the shape this release keeps: nothing it held is lost. */
+const UP_TO_DATE_1_5_0: Draft = {
+	version: DRAFT_SHAPE,
+	threads: [
+		{
+			id: 'comment-2',
+			anchor: lineAnchor('src/a.py', 'new', 3, 4, ['x = 1', 'y = 2']),
+			severity: 'question',
+			body: 'Why both?',
+			images: ['opening.png'],
+			turns: WRITTEN_BY_1_5_0.comments[0].turns,
+			raised_by: 'reader',
+			resolved: false,
+			round: 1,
+			at: 900
+		},
+		{
+			id: 'raised-1',
+			anchor: { ...lineAnchor('src/b.py', 'old', 7, 7, ['gone()']), outdated: true },
+			severity: 'note',
+			body: 'This went',
+			images: [],
+			turns: [],
+			raised_by: 'author',
+			resolved: true,
+			round: 2,
+			at: 1120
+		}
+	],
+	read: { folded: ['comment-2'], unread: ['comment-2'], awaiting: { 'comment-2': [{ id: 'turn-3', at: 1150 }] } },
+	writing: [],
+	reviewBody: 'Overall fine',
+	sent: { 'comment-2': 1, 'raised-1': 2 },
+	panel: WRITTEN_BY_1_5_0.panel,
+	composer: { text: 'half a thought', images: ['pasted.png'], uploaded: [] },
+	// It kept no count: the comment ids and turn ids it holds are all there is
+	issued: { comments: 2, turns: 3 },
+	told: null,
+	files: { viewed: [], folded: [] },
+	// The reader's thread went out in round 1; the agent's arriving in 2 says nothing of a round sent
+	round: 2
+};
+
+describe('the draft the last release kept, as it wrote it', () => {
+	it('comes back in the current shape with everything it held', () => {
+		storeReleasedDraft(WRITTEN_BY_1_5_0);
+
+		expect(readKept()).toEqual(UP_TO_DATE_1_5_0);
+	});
+
+	it('is kept in the current shape once picked up, and read back as kept', () => {
+		storeReleasedDraft(WRITTEN_BY_1_5_0);
+
+		readKept();
+
+		expect(JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null')).toEqual(UP_TO_DATE_1_5_0);
+		expect(readKept()).toEqual(UP_TO_DATE_1_5_0);
+	});
+
+	it('opens the review where the reader left it', () => {
+		storeReleasedDraft(WRITTEN_BY_1_5_0);
+
+		const review = openReview();
+
+		expect(review.threads.all.map((thread) => thread.id)).toEqual(['comment-2', 'raised-1']);
+		expect(review.threads.reading.isFolded('comment-2')).toBe(true);
+		expect(review.threads.unsent).toEqual([]);
+		expect(review.rounds.current).toBe(2);
+		expect(review.conversation.composer.text).toBe('half a thought');
+		expect(review.conversation.turns.map((turn) => turn.body)).toEqual(['Run the tests', 'They pass', 'Never mind']);
+	});
+
+	it('is brought up to date whichever of the fields grown since its first shape it lacks', () => {
+		fastCheck.assert(
+			fastCheck.property(
+				fastCheck.subarray([...GROWN_SINCE_THE_FIRST_SHAPE]),
+				fastCheck.subarray([...KEPT_SINCE_THE_FIRST_SHAPE]),
+				(commentLacks, draftLacks) => {
+					localStorage.clear();
+					const comments = WRITTEN_BY_1_5_0.comments.map((comment) => without(comment, commentLacks));
+					storeReleasedDraft(without({ ...WRITTEN_BY_1_5_0, comments }, draftLacks));
+
+					const draft = readKept();
+
+					expect(draft?.threads.map((thread) => thread.body)).toEqual(['Why both?', 'This went']);
+					expect(isCurrentDraft(draft)).toBe(true);
+				}
+			)
+		);
+	});
+});
 
 describe('a draft this release kept', () => {
 	it('comes back as it was kept', () => {
