@@ -10,6 +10,13 @@
 import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 import type { Review } from '$lib/review/review.svelte';
 
+/**
+ * What the header's button that opens the help carries: where the keyboard
+ * goes when the tour or a card of the guide goes, since the tour and the news
+ * are found again in the help.
+ */
+export const HELP_BUTTON_ROLE = 'open-help';
+
 /** The chord that finishes the review, as the help and the hints beside its button write it. */
 export const FINISH_KEYS = 'Ctrl+Shift+Enter';
 

@@ -6,7 +6,7 @@
 	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
-	import { FINISH_KEYS } from './keymap';
+	import { FINISH_KEYS, HELP_BUTTON_ROLE } from './keymap';
 	import Popover from './Popover.svelte';
 	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
@@ -63,6 +63,7 @@
 		<button
 			type="button"
 			data-testid="open-help"
+			data-role={HELP_BUTTON_ROLE}
 			class="cr-chip"
 			title="The tour, what is new, and the keys (?)"
 			onclick={() => review.guide.setHelpOpen(true)}

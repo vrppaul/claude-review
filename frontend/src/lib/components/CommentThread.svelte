@@ -21,6 +21,12 @@
 	// The opening comment being rewritten, held by the review so that folding
 	// the thread or its file, or reloading the page, keeps it
 	const editing = $derived(review.threads.writing.edit(thread.id));
+
+	/** The edit is over, its words said or put away; the keyboard stays with the thread. */
+	function editDone(done: () => void) {
+		done();
+		review.sections.keyboardToThread(thread.id);
+	}
 </script>
 
 <!-- A thread, drawn the way it is being read: rewritten, folded away, or open. The
@@ -29,8 +35,8 @@
 	{#if editing}
 		<CommentBox
 			field={editing}
-			onSave={() => review.threads.say(editing)}
-			onCancel={() => review.threads.writing.discard(editing)}
+			onSave={() => editDone(() => review.threads.say(editing))}
+			onCancel={() => editDone(() => review.threads.writing.discard(editing))}
 			label={anchorLabel(thread.anchor)}
 		/>
 	{:else if review.threads.reading.isFolded(thread.id)}

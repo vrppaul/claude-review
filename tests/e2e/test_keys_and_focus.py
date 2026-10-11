@@ -25,6 +25,14 @@ FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 # the top of the screen, for jumps between them to land on a file's header
 JUMPED_TO = ("first.py", "second.py", "third.py", "fourth.py")
 JUMPED_FILE_LINES = 40
+# A file long enough for the diff to leave out more lines above its change,
+# which is near its end, than one step shows: what the reader shows a step at
+# a time, then all at once
+LONG_FILE = "long.py"
+LONG_FILE_LINES = 60
+CHANGED_NEAR_THE_END = 55
+# What the keyboard is on: the test id it carries, and the line its number names
+FOCUSED_PLACE = "document.activeElement?.dataset.place"
 # How the welcome says how many stops the tour has, and how the tour says where it is
 STOPS_ANNOUNCED = re.compile(r"(\d+) stops")
 STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
@@ -54,6 +62,16 @@ def repository(tmp_path: Path) -> Path:
 @pytest.fixture
 async def review(repository: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(repository))
+
+
+@pytest.fixture
+async def gapped(tmp_path: Path, servers: ReviewServers) -> RunningReview:
+    """A review of one long file changed near its end, with the lines above the change left out."""
+    lines = [f"line_{number} = {number}" for number in range(1, LONG_FILE_LINES + 1)]
+    _commit_initial(tmp_path, {LONG_FILE: "\n".join(lines) + "\n"})
+    lines[CHANGED_NEAR_THE_END - 1] = "changed = True"
+    write_files(tmp_path, {LONG_FILE: "\n".join(lines) + "\n"})
+    return await servers.start(await repository_opening(tmp_path))
 
 
 @pytest.fixture
@@ -151,3 +169,85 @@ async def test_the_help_opens_over_a_pane_and_gives_the_keyboard_back_into_it(
     await page.keyboard.press("Escape")
     await pane.wait_for(state="detached")
     assert await page.evaluate(FOCUSED_TEST_ID) == "settings-toggle"
+
+
+async def _press(page: Page, test_id: str) -> None:
+    """Press a control from the keyboard: the keyboard on it, then Enter."""
+    await page.get_by_test_id(test_id).first.focus()
+    await page.keyboard.press("Enter")
+
+
+async def _focused(page: Page) -> str | None:
+    return await page.evaluate(FOCUSED_TEST_ID)
+
+
+async def test_the_keyboard_lands_on_what_remains_after_each_thing_done_to_a_comment(
+    gapped: RunningReview, page: Page
+) -> None:
+    """Saved, settled, taken up again, folded, deleted or put away, the keyboard is never left on nothing."""
+    await _open_review(page, gapped)
+    await page.keyboard.press("j")
+    commented = await page.evaluate(FOCUSED_PLACE)
+
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("comment-input").wait_for(state="detached")
+    assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", commented)
+
+    await page.keyboard.press("Enter")
+    await page.keyboard.type("Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id("comment-thread").wait_for()
+    assert await _focused(page) == "comment-thread"
+
+    await _press(page, "resolve-comment")
+    await page.get_by_test_id("resolved-thread").wait_for()
+    assert await _focused(page) == "comment-thread"
+
+    await _press(page, "reopen-thread")
+    await page.get_by_test_id("folded-thread").wait_for()
+    assert await _focused(page) == "comment-thread"
+
+    await _press(page, "fold-comment")
+    await page.get_by_test_id("delete-comment").wait_for()
+    assert await _focused(page) == "fold-comment"
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("folded-thread").wait_for()
+    assert await _focused(page) == "fold-comment"
+    await page.keyboard.press("Enter")
+
+    await _press(page, "delete-comment")
+    await page.get_by_test_id("confirm-go-ahead").focus()
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("comment-thread").wait_for(state="detached")
+    assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", commented)
+
+
+async def test_the_keyboard_stays_on_a_step_up_and_lands_on_the_first_line_shown_once_none_is_hidden(
+    gapped: RunningReview, page: Page
+) -> None:
+    """The button pressed keeps the keyboard while it stays; read whole, the gap goes, and its first line takes it."""
+    await _open_review(page, gapped)
+    hidden_before = await page.get_by_test_id("hunk-gap").first.inner_text()
+
+    await _press(page, "expand-up")
+    await page.get_by_test_id("hunk-gap").first.filter(has_not_text=hidden_before).wait_for()
+    assert await _focused(page) == "expand-up"
+
+    await _press(page, "expand-all")
+    await page.locator('[data-place="new:1"]').wait_for()
+    assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", "new:1")
+
+
+async def test_the_keyboard_lands_on_the_help_once_the_tour_is_skipped(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    reader_files.guide.unlink()
+    await _open_review(page, review)
+    await page.get_by_test_id("guide-start").click()
+
+    await _press(page, "guide-skip")
+    await page.get_by_test_id("guide-tour").wait_for(state="detached")
+
+    assert await _focused(page) == "open-help"

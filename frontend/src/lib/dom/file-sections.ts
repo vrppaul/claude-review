@@ -10,8 +10,16 @@
  * query string.
  */
 
+import { focusWhatRemains } from '$lib/dom/keyboard';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
+
+/**
+ * What every toggle that folds something carries — a thread, a file — so the
+ * keyboard can be put back on the one drawn anew when what it folds changes
+ * shape. A role of its own, as a line's number has one.
+ */
+export const FOLD_TOGGLE_ROLE = 'fold-toggle';
 
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
@@ -212,6 +220,36 @@ export class FileSections {
 		}
 		this.scrollToFile(file);
 		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_THREAD_FOR };
+	}
+
+	/** Put the keyboard on a thread once it is drawn, if what had it went: the thread a comment became, or what remains of a change to it. */
+	keyboardToThread(threadId: string): void {
+		focusWhatRemains(() => this.#threads.get(threadId));
+	}
+
+	/** Put the keyboard on the toggle that folds a thread, as it is drawn now, if what had it went with the fold. */
+	keyboardToThreadFold(threadId: string): void {
+		focusWhatRemains(() =>
+			this.#threads.get(threadId)?.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`)
+		);
+	}
+
+	/**
+	 * Put the keyboard on a line's number, by the key its place is known by,
+	 * if what had it went: what remains where a comment was put away, a
+	 * thread deleted, or hidden lines shown. Where the line is not drawn, the
+	 * file's own toggle takes it.
+	 */
+	keyboardToLine(path: string, lineKey: string): void {
+		focusWhatRemains(() => this.lineOrFile(path, lineKey));
+	}
+
+	/** A line's number in a file's section, by the key its place is known by, or the file's toggle where it is not drawn. */
+	lineOrFile(path: string, lineKey: string): HTMLElement | null {
+		const section = this.#sections.get(path);
+		if (!section) return null;
+		const line = section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`);
+		return line ?? section.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`);
 	}
 
 	#unregister(path: string, element: HTMLElement): void {

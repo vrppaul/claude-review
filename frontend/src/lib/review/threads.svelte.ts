@@ -92,6 +92,13 @@ function threadOfHeld(held: HeldThread, currentRound: number): Thread {
 	};
 }
 
+/** Words put into the review and asked about straight away: the thread they went into, and the asking. */
+export interface SaidAndAsked {
+	thread: string;
+	/** Settled once the question is handed over; refused, it says why. */
+	asked: Promise<void>;
+}
+
 export class Threads {
 	/** How the page reads them: folded, unread, waiting on an answer. */
 	readonly reading: ThreadReading;
@@ -275,10 +282,10 @@ export class Threads {
 	 * asking and then leaving the comment marked as a note would say two
 	 * different things about the same words.
 	 */
-	async sayAndAsk(field: CommentField): Promise<void> {
+	sayAndAsk(field: CommentField): SaidAndAsked {
 		const thread = this.#writeOut(field, 'question');
 		this.writing.asked(field);
-		await this.ask(thread);
+		return { thread, asked: this.ask(thread) };
 	}
 
 	/**

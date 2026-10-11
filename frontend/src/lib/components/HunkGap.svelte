@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { focusWhatRemains } from '$lib/dom/keyboard';
+	import { useReview } from '$lib/review/context';
 	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
+	import { placeKey } from '$lib/utils/line-places';
 	import { counted } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import Icon from './Icon.svelte';
@@ -15,6 +18,7 @@
 	}
 
 	let { gap, header, drawing }: Props = $props();
+	const review = useReview();
 
 	let failed = $state<string | null>(null);
 
@@ -35,13 +39,21 @@
 		hidden === null ? 'The file may go on below' : counted(hidden, 'hidden line', 'hidden lines')
 	);
 
-	async function widen(read: GapRead) {
+	/**
+	 * Read lines into the gap. The button pressed keeps the keyboard while
+	 * lines are still hidden; read whole, the gap and its bar go, and the
+	 * keyboard goes to the first line shown where they were.
+	 */
+	async function widen(read: GapRead, pressed: HTMLElement) {
 		failed = null;
 		try {
 			await drawing.read(read);
 		} catch (error) {
 			failed = messageOf(error);
+			return;
 		}
+		const firstShown = placeKey({ side: 'new', number: read.window.start });
+		focusWhatRemains(() => (pressed.isConnected ? pressed : review.sections.lineOrFile(drawing.path(), firstShown)));
 	}
 </script>
 
@@ -62,7 +74,7 @@
 					data-testid="expand-all"
 					class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left"
 					disabled={reading}
-					onclick={() => widen(inOneGo)}
+					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
 					<Icon name="expand" class="h-3 w-3 shrink-0" />
 					{reading ? 'Reading…' : `Show the ${hiddenLines}`}
@@ -81,7 +93,7 @@
 						title={said}
 						aria-label={said}
 						disabled={reading}
-						onclick={() => widen(stepUp)}
+						onclick={(event) => widen(stepUp, event.currentTarget)}
 					>
 						↑ {sizeOf(stepUp)}
 					</button>
@@ -95,7 +107,7 @@
 						title={said}
 						aria-label={said}
 						disabled={reading}
-						onclick={() => widen(stepDown)}
+						onclick={(event) => widen(stepDown, event.currentTarget)}
 					>
 						↓ {sizeOf(stepDown)}
 					</button>
@@ -107,7 +119,7 @@
 						data-testid="expand-all"
 						class="cr-expand px-3 py-1.5"
 						disabled={reading}
-						onclick={() => widen(allAtOnce)}
+						onclick={(event) => widen(allAtOnce, event.currentTarget)}
 					>
 						{sizeOf(allAtOnce) === hidden ? 'Show all' : `Show ${sizeOf(allAtOnce)}`}
 					</button>

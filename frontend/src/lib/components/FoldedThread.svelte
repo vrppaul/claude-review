@@ -17,6 +17,12 @@
 	const review = useReview();
 
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
+
+	/** Open the thread again; the keyboard stays on its toggle, drawn anew at the head of the open thread. */
+	function unfold() {
+		review.threads.reading.setFolded(thread.id, false);
+		review.sections.keyboardToThreadFold(thread.id);
+	}
 </script>
 
 <!-- Folded, by hand or by settling it: one line, and the first words of what
@@ -32,17 +38,12 @@
 	{#if thread.resolved}
 		<Icon name="check" class="h-3 w-3 shrink-0 text-(--cr-add-edge)" />
 	{/if}
-	<FoldToggle
-		folded
-		subject="this thread"
-		testId="fold-comment"
-		onToggle={() => review.threads.reading.setFolded(thread.id, false)}
-	/>
+	<FoldToggle folded subject="this thread" testId="fold-comment" onToggle={unfold} />
 	<button
 		type="button"
 		data-testid="unfold-thread"
 		class="flex min-w-0 flex-1 items-baseline gap-3 text-left"
-		onclick={() => review.threads.reading.setFolded(thread.id, false)}
+		onclick={unfold}
 	>
 		<span class="cr-comment-ref shrink-0 font-mono text-xs">{anchorLabel(thread.anchor)}</span>
 		<span class="cr-muted truncate text-sm">{thread.body || 'an image'}</span>

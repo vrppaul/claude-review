@@ -42,7 +42,7 @@
 		type="button"
 		data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
 		data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
-		data-place={isRowStop ? drawn.key : undefined}
+		data-place={reach === 'pointer' ? undefined : drawn.key}
 		data-tour={isRowStop ? 'line-number' : undefined}
 		class="cr-gutter-button"
 		tabindex={reach === 'pointer' ? -1 : 0}

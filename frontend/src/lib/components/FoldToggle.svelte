@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 	import Icon from './Icon.svelte';
 
 	interface Props {
@@ -16,6 +17,7 @@
 <button
 	type="button"
 	data-testid={testId}
+	data-role={FOLD_TOGGLE_ROLE}
 	class="btn btn-ghost btn-xs px-1"
 	aria-expanded={!folded}
 	aria-label={folded ? `Unfold ${subject}` : `Fold ${subject} away`}

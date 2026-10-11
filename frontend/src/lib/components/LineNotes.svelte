@@ -3,6 +3,7 @@
 	import { lineRangeLabel } from '$lib/anchors/line-label';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
+	import { placeKey } from '$lib/utils/line-places';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import type { LineCommenting } from './line-commenting.svelte';
@@ -22,13 +23,26 @@
 		return lineRangeLabel(side, startLine, endLine);
 	}
 
-	/** Add a comment and hand it straight to whoever is answering. */
+	/** Add a comment; the keyboard goes on to the thread it became. */
+	function add(field: CommentField<WrittenOnLines>) {
+		review.sections.keyboardToThread(review.threads.say(field));
+	}
+
+	/** Add a comment and hand it straight to whoever is answering; the keyboard goes on to its thread. */
 	async function askNow(field: CommentField<WrittenOnLines>) {
+		const said = review.threads.sayAndAsk(field);
+		review.sections.keyboardToThread(said.thread);
 		try {
-			await review.threads.sayAndAsk(field);
+			await said.asked;
 		} catch {
 			// The comment is written either way; the thread offers to ask again
 		}
+	}
+
+	/** Put a comment away unsaid; the keyboard goes back to the line it was opened under. */
+	function putAway(field: CommentField<WrittenOnLines>) {
+		review.threads.writing.discard(field);
+		review.sections.keyboardToLine(field.at.file, placeKey(field.at.lines.opensBelow));
 	}
 </script>
 
@@ -40,9 +54,9 @@
 	<div class="px-3 py-2">
 		<CommentBox
 			{field}
-			onSave={() => review.threads.say(field)}
+			onSave={() => add(field)}
 			onAsk={review.canAsk ? () => askNow(field) : undefined}
-			onCancel={() => review.threads.writing.discard(field)}
+			onCancel={() => putAway(field)}
 			label={labelOf(field)}
 			suggestFrom={field.at.quote}
 		/>

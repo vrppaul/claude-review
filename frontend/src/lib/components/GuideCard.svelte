@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import Icon from './Icon.svelte';
+	import { HELP_BUTTON_ROLE } from './keymap';
 
 	const review = useReview();
 
@@ -17,32 +18,42 @@
 	let title = $state<HTMLElement | null>(null);
 	let firstAction = $state<HTMLButtonElement | null>(null);
 
-	/**
-	 * Whether nobody has focus, so moving it into the card takes it from no one —
-	 * not from a comment the tour asked for, and not from the card's own Next.
-	 */
-	function focusIsFree(): boolean {
-		const focused = document.activeElement;
-		return focused === null || focused === document.body;
-	}
-
-	/** Give the keyboard to an element, unless somebody has it. */
-	function focusIfFree(element: HTMLElement | null) {
-		if (focusIsFree()) element?.focus();
-	}
-
-	// A card that appears offers its first button, unless the reader is busy
+	// A card that appears offers its first button, unless the reader is busy:
+	// it takes the keyboard from no one — not from a comment the tour asked for
 	$effect(() => {
-		if (review.guide.card === null) return;
-		void tick().then(() => focusIfFree(firstAction));
+		if (review.guide.card !== null) focusWhatRemains(() => firstAction);
 	});
 
 	// A step reached with focus nowhere — the button that led to it is gone —
 	// puts it on the title, so the keyboard starts from what the step says
 	$effect(() => {
-		if (!step) return;
-		void tick().then(() => focusIfFree(title));
+		if (step) focusWhatRemains(() => title);
 	});
+
+	/**
+	 * The card goes — the tour over, the welcome or the news put away — and
+	 * the button pressed with it: the keyboard goes to the help, where the
+	 * tour and the news are found again.
+	 */
+	function keyboardToHelp() {
+		focusWhatRemains(() => document.querySelector<HTMLElement>(`[data-role="${HELP_BUTTON_ROLE}"]`));
+	}
+
+	function skipTour() {
+		review.guide.endTour();
+		keyboardToHelp();
+	}
+
+	/** On to the next step, or out of the tour after its last. */
+	function goOn() {
+		review.guide.next();
+		if (!review.guide.touring) keyboardToHelp();
+	}
+
+	function putAway() {
+		review.guide.dismiss();
+		keyboardToHelp();
+	}
 </script>
 
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
@@ -56,12 +67,7 @@
 			</div>
 			<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
 			<span class="flex-1"></span>
-			<button
-				type="button"
-				data-testid="guide-skip"
-				class="cr-faint px-0.5 text-xs"
-				onclick={() => review.guide.endTour()}
-			>
+			<button type="button" data-testid="guide-skip" class="cr-faint px-0.5 text-xs" onclick={skipTour}>
 				Skip tour
 			</button>
 		</div>
@@ -99,12 +105,7 @@
 			{/if}
 			<span class="flex-1"></span>
 			{#if !waiting}
-				<button
-					type="button"
-					data-testid="guide-next"
-					class="btn btn-primary btn-sm"
-					onclick={() => review.guide.next()}
-				>
+				<button type="button" data-testid="guide-next" class="btn btn-primary btn-sm" onclick={goOn}>
 					{review.guide.isLastStep ? 'Done' : 'Next'}
 				</button>
 			{/if}
@@ -116,12 +117,8 @@
 			<Icon name="compass" class="cr-guide-compass" />
 			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
 			<span class="flex-1"></span>
-			<button
-				type="button"
-				data-testid="guide-close"
-				class="btn btn-ghost btn-xs"
-				aria-label="Close"
-				onclick={() => review.guide.dismiss()}>×</button
+			<button type="button" data-testid="guide-close" class="btn btn-ghost btn-xs" aria-label="Close" onclick={putAway}
+				>×</button
 			>
 		</div>
 		<p class="cr-guide-body">
@@ -138,12 +135,7 @@
 			>
 				Show me around
 			</button>
-			<button
-				type="button"
-				data-testid="guide-not-now"
-				class="btn btn-ghost btn-sm"
-				onclick={() => review.guide.dismiss()}
-			>
+			<button type="button" data-testid="guide-not-now" class="btn btn-ghost btn-sm" onclick={putAway}>
 				Not now
 			</button>
 		</div>
@@ -155,12 +147,8 @@
 			<span class="cr-faint text-xs">New in</span>
 			<span class="cr-guide-release">{news.release}</span>
 			<span class="flex-1"></span>
-			<button
-				type="button"
-				data-testid="guide-close"
-				class="btn btn-ghost btn-xs"
-				aria-label="Close"
-				onclick={() => review.guide.dismiss()}>×</button
+			<button type="button" data-testid="guide-close" class="btn btn-ghost btn-xs" aria-label="Close" onclick={putAway}
+				>×</button
 			>
 		</div>
 		<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
@@ -191,7 +179,7 @@
 				bind:this={firstAction}
 				data-testid="guide-got-it"
 				class="btn btn-primary btn-sm"
-				onclick={() => review.guide.dismiss()}
+				onclick={putAway}
 			>
 				Got it
 			</button>

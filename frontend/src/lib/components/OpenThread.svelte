@@ -40,9 +40,23 @@
 		review.threads.reading.markRead(thread.id);
 	}
 
+	/** Add the reply being written; the keyboard stays with the thread, where the field was. */
+	function reply(written: CommentField) {
+		review.threads.say(written);
+		review.sections.keyboardToThread(thread.id);
+	}
+
 	/** Add the reply being written, and hand the thread over with it. */
 	function replyAndAsk(written: CommentField) {
-		void asking(review.threads.sayAndAsk(written));
+		const said = review.threads.sayAndAsk(written);
+		review.sections.keyboardToThread(said.thread);
+		void asking(said.asked);
+	}
+
+	/** Put the reply being written away; the keyboard stays with the thread. */
+	function putAway(written: CommentField) {
+		writing.discard(written);
+		review.sections.keyboardToThread(thread.id);
 	}
 
 	/** Wait for a question to be handed over, and say so if it could not be. */
@@ -104,9 +118,9 @@
 		<div class="mt-3">
 			<CommentBox
 				field={replying}
-				onSave={() => review.threads.say(replying)}
+				onSave={() => reply(replying)}
 				onAsk={review.answerer.attached ? () => replyAndAsk(replying) : undefined}
-				onCancel={() => writing.discard(replying)}
+				onCancel={() => putAway(replying)}
 				severityPicker={false}
 				nested
 			/>

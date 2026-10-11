@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
+	import { anchorLines } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
 	import ConfirmDialog from './ConfirmDialog.svelte';
@@ -30,16 +32,30 @@
 	const raised = $derived(raisedByAgent(thread));
 	// Whether the reader is being asked if the thread, and all said in it, may go
 	let askingToDelete = $state(false);
+
+	/** Fold the thread away; the keyboard stays on the toggle, drawn anew on the folded line. */
+	function foldAway() {
+		review.threads.reading.setFolded(thread.id, true);
+		review.sections.keyboardToThreadFold(thread.id);
+	}
+
+	/** Settle the thread, which folds it; the keyboard stays with it. */
+	function resolve() {
+		review.threads.setResolved(thread.id, true);
+		review.sections.keyboardToThread(thread.id);
+	}
+
+	/** Delete the thread; the keyboard goes back to the line it hung under. */
+	function remove() {
+		const lines = anchorLines(thread.anchor);
+		review.threads.remove(thread.id);
+		review.sections.keyboardToLine(lines.file, placeKey({ side: lines.side, number: lines.end_line }));
+	}
 </script>
 
 <!-- What the thread hangs on and what state it is in, and what can be done to it -->
 <div class="mb-2 flex items-center gap-2">
-	<FoldToggle
-		folded={false}
-		subject="this thread"
-		testId="fold-comment"
-		onToggle={() => review.threads.reading.setFolded(thread.id, true)}
-	/>
+	<FoldToggle folded={false} subject="this thread" testId="fold-comment" onToggle={foldAway} />
 	<AnchorHeading anchor={thread.anchor} />
 	{#if thread.severity !== 'note'}
 		<span data-testid="comment-severity" class="cr-severity cr-severity-{thread.severity}">{thread.severity}</span>
@@ -74,12 +90,7 @@
 			<ReopenButton {thread} />
 		{:else}
 			<!-- Settling a thread folds it away; it can still be opened and read -->
-			<button
-				type="button"
-				data-testid="resolve-comment"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.threads.setResolved(thread.id, true)}
-			>
+			<button type="button" data-testid="resolve-comment" class="btn btn-ghost btn-xs" onclick={resolve}>
 				Resolve
 			</button>
 		{/if}
@@ -101,7 +112,7 @@
 		goAhead={DELETE}
 		keep={KEEP_IT}
 		testId="delete-dialog"
-		onGoAhead={() => review.threads.remove(thread.id)}
+		onGoAhead={remove}
 		onClose={() => (askingToDelete = false)}
 	/>
 {/if}

@@ -7,6 +7,8 @@
  * would have to be kept in step with the real one.
  */
 
+import { tick } from 'svelte';
+
 /** Text-entry inputs; a checkbox or a button is not one of them. */
 const TYPED_INTO = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
 
@@ -69,4 +71,23 @@ function steppedTo(lines: HTMLElement[], focused: Element | null, step: 1 | -1):
 /** Move focus one line down or up, from wherever the focus is, starting at the top when nothing is focused. */
 export function moveByLine(step: 1 | -1): void {
 	steppedTo(lineNumbers(), document.activeElement, step)?.focus();
+}
+
+/** Put the keyboard on what is found, if it is on nothing now; the screen stays where it is. */
+function focusIfOnNothing(find: () => HTMLElement | null | undefined): void {
+	const focused = document.activeElement;
+	if (focused === null || focused === document.body) find()?.focus({ preventScroll: true });
+}
+
+/**
+ * Once the page has drawn what an action changed, put the keyboard on what
+ * remains in place of what went. The control an action was taken with often
+ * goes with it — a field saved, a thread folded, settled or deleted, a gap
+ * read whole — and the keyboard with it, onto nothing, where no key the
+ * reader presses next acts where they were. Only then, and only on what is
+ * drawn: a keyboard something else has taken stays where it is. The screen
+ * does not move; the reader is looking there already.
+ */
+export function focusWhatRemains(find: () => HTMLElement | null | undefined): void {
+	void tick().then(() => focusIfOnNothing(find));
 }
