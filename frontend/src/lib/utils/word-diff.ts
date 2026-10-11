@@ -1,3 +1,4 @@
+import { commonTokens, type Token } from '$lib/utils/common-tokens';
 import type { HighlightedLine } from '$lib/utils/highlight';
 import { type Run, runsOf } from '$lib/utils/replacements';
 
@@ -48,13 +49,13 @@ export function wordRanges(removedText: string, addedText: string): WordRanges {
 
 	if (before.length > MAX_TOKENS || after.length > MAX_TOKENS) return none;
 
-	const common = longestCommonSubsequence(before, after);
-	if (common.beforeKept.every(Boolean) && common.afterKept.every(Boolean)) {
+	const common = commonTokens(before, after);
+	if (common.before.every((token) => token.kept) && common.after.every((token) => token.kept)) {
 		return none;
 	}
 
-	const removed = join(rangesOfChanged(before, common.beforeKept));
-	const added = join(rangesOfChanged(after, common.afterKept));
+	const removed = join(rangesOfChanged(common.before));
+	const added = join(rangesOfChanged(common.after));
 
 	const marked = covered(removed) + covered(added);
 	const total = removedText.length + addedText.length;
@@ -75,16 +76,16 @@ export function markRanges(html: string, ranges: TextRange[]): string {
 	if (ranges.length === 0) return html;
 
 	const writer = new MarkWriter();
+	// The ranges in order: the one the text has reached, or none once it is past the last
+	const ahead = ranges.values();
+	let range = ahead.next().value;
 	let position = 0;
 	let plainIndex = 0;
-	let rangeIndex = 0;
 
 	while (position < html.length) {
-		while (rangeIndex < ranges.length && plainIndex >= ranges[rangeIndex].end) {
-			rangeIndex += 1;
-		}
+		while (range !== undefined && plainIndex >= range.end) range = ahead.next().value;
 
-		if (html[position] === '<') {
+		if (html.charAt(position) === '<') {
 			const close = html.indexOf('>', position);
 			const end = close === -1 ? html.length : close + 1;
 			writer.tag(html.slice(position, end));
@@ -93,8 +94,7 @@ export function markRanges(html: string, ranges: TextRange[]): string {
 		}
 
 		const piece = readCharacter(html, position);
-		const range = ranges[rangeIndex];
-		writer.character(piece, range !== undefined && plainIndex >= range.start && plainIndex < range.end);
+		writer.character(piece, range !== undefined && plainIndex >= range.start);
 		position += piece.length;
 		plainIndex += 1;
 	}
@@ -180,22 +180,21 @@ function tokenize(text: string): string[] {
 	return text.match(/\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g) ?? [];
 }
 
+/** The character of the text at a place in the markup: an escape such as `&amp;` is the one it stands for. */
 function readCharacter(html: string, at: number): string {
-	if (html[at] !== '&') return html[at];
+	const character = html.charAt(at);
+	if (character !== '&') return character;
 	const semicolon = html.indexOf(';', at);
 	const isEntity = semicolon !== -1 && semicolon - at <= LONGEST_ESCAPE;
-	return isEntity ? html.slice(at, semicolon + 1) : html[at];
+	return isEntity ? html.slice(at, semicolon + 1) : character;
 }
 
 /** Merge ranges with only a character or two between them. */
 function join(ranges: TextRange[]): TextRange[] {
-	// One range, or none, has nothing to be merged with
-	if (ranges.length <= 1) return ranges;
-
-	const merged: TextRange[] = [{ ...ranges[0] }];
-	for (const range of ranges.slice(1)) {
-		const last = merged[merged.length - 1];
-		if (range.start - last.end <= JOIN_WITHIN) last.end = range.end;
+	const merged: TextRange[] = [];
+	for (const range of ranges) {
+		const last = merged.at(-1);
+		if (last !== undefined && range.start - last.end <= JOIN_WITHIN) last.end = range.end;
 		else merged.push({ ...range });
 	}
 	return merged;
@@ -205,54 +204,20 @@ function covered(ranges: TextRange[]): number {
 	return ranges.reduce((total, range) => total + (range.end - range.start), 0);
 }
 
-function longestCommonSubsequence(before: string[], after: string[]): { beforeKept: boolean[]; afterKept: boolean[] } {
-	const rows = before.length;
-	const columns = after.length;
-	const table: number[][] = Array.from({ length: rows + 1 }, () => new Array<number>(columns + 1).fill(0));
-
-	for (let beforeIndex = rows - 1; beforeIndex >= 0; beforeIndex -= 1) {
-		for (let afterIndex = columns - 1; afterIndex >= 0; afterIndex -= 1) {
-			table[beforeIndex][afterIndex] =
-				before[beforeIndex] === after[afterIndex]
-					? table[beforeIndex + 1][afterIndex + 1] + 1
-					: Math.max(table[beforeIndex + 1][afterIndex], table[beforeIndex][afterIndex + 1]);
-		}
-	}
-
-	const beforeKept = new Array<boolean>(rows).fill(false);
-	const afterKept = new Array<boolean>(columns).fill(false);
-	let beforeIndex = 0;
-	let afterIndex = 0;
-	while (beforeIndex < rows && afterIndex < columns) {
-		if (before[beforeIndex] === after[afterIndex]) {
-			beforeKept[beforeIndex] = true;
-			afterKept[afterIndex] = true;
-			beforeIndex += 1;
-			afterIndex += 1;
-		} else if (table[beforeIndex + 1][afterIndex] >= table[beforeIndex][afterIndex + 1]) {
-			beforeIndex += 1;
-		} else {
-			afterIndex += 1;
-		}
-	}
-
-	return { beforeKept, afterKept };
-}
-
 /** Character ranges covering the tokens that are not shared. */
-function rangesOfChanged(tokens: string[], kept: boolean[]): TextRange[] {
+function rangesOfChanged(tokens: Token[]): TextRange[] {
 	const ranges: TextRange[] = [];
 	let offset = 0;
 	let runStart: number | null = null;
 
-	for (const [index, token] of tokens.entries()) {
-		if (!kept[index]) {
+	for (const token of tokens) {
+		if (!token.kept) {
 			if (runStart === null) runStart = offset;
 		} else if (runStart !== null) {
 			ranges.push({ start: runStart, end: offset });
 			runStart = null;
 		}
-		offset += token.length;
+		offset += token.text.length;
 	}
 
 	if (runStart !== null) ranges.push({ start: runStart, end: offset });
