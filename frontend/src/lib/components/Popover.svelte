@@ -27,6 +27,17 @@
 		const focused = document.activeElement;
 		return focused instanceof HTMLElement && focused !== document.body ? focused : null;
 	}
+
+	/**
+	 * Whether something is in a modal dialog open over the page. A modal is a
+	 * layer above every pane: one opened from inside a pane — the help, by ? —
+	 * leaves the pane open under it, takes the keyboard, the presses and
+	 * Escape while it is open, and gives the keyboard back into the pane as it
+	 * closes.
+	 */
+	function inModalAbove(target: EventTarget | null): boolean {
+		return target instanceof Element && target.closest('dialog[open]') !== null;
+	}
 </script>
 
 <script lang="ts">
@@ -106,10 +117,10 @@
 		void tick().then(() => back?.focus({ preventScroll: true }));
 	}
 
-	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, which keeps it. */
+	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, or a modal above, which keeps it. */
 	function noteKeyboardLeaving(event: FocusEvent) {
 		const next = event.relatedTarget;
-		if (!(next instanceof Node) || around?.contains(next)) return;
+		if (!(next instanceof Node) || around?.contains(next) || inModalAbove(next)) return;
 		keyboardHere = false;
 		if (open) open = false;
 	}
@@ -117,12 +128,13 @@
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
 		if (!open || !around || !(event.target instanceof Node) || around.contains(event.target)) return;
+		if (inModalAbove(event.target)) return;
 		keyboardHere = false;
 		open = false;
 	}
 
 	function closeOnEscape(event: KeyboardEvent) {
-		if (open && event.key === 'Escape') open = false;
+		if (open && event.key === 'Escape' && !inModalAbove(event.target)) open = false;
 	}
 </script>
 

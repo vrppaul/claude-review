@@ -171,6 +171,18 @@ describe('the keys the review answers', () => {
 		expect(review.layout.fileTree.open).toBe(treeOpen);
 	});
 
+	it('opens the help over a pane the keyboard is in, and leaves the pane open under it', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		await user.click(screen.getByTestId('settings-toggle'));
+		expect(screen.getByTestId('settings-menu').contains(document.activeElement)).toBe(true);
+
+		await user.keyboard('?');
+
+		expect(screen.getByTestId('help-dialog')).toBeTruthy();
+		expect(screen.getByTestId('settings-menu')).toBeTruthy();
+	});
+
 	it('answers no key of its own while the help is open over it', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });

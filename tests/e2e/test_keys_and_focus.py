@@ -128,3 +128,26 @@ async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_co
     reached = STOP_REACHED.match(await tour.get_by_text(STOP_REACHED).inner_text())
     assert reached is not None
     assert reached.group(1) == announced.group(1)
+
+
+async def test_the_help_opens_over_a_pane_and_gives_the_keyboard_back_into_it(
+    review: RunningReview, page: Page
+) -> None:
+    """A modal is a layer above a pane: ? from inside the pane leaves it open, and Escape returns into it."""
+    await _open_review(page, review)
+    await page.get_by_test_id("settings-toggle").click()
+    pane = page.get_by_test_id("settings-menu")
+    assert await pane.evaluate("pane => pane.contains(document.activeElement)")
+
+    await page.keyboard.press("?")
+    help_dialog = page.get_by_test_id("help-dialog")
+    await help_dialog.wait_for()
+    await help_dialog.get_by_text("Keyboard", exact=True).click()
+    assert await pane.is_visible()
+    await page.keyboard.press("Escape")
+    await help_dialog.wait_for(state="detached")
+
+    assert await pane.evaluate("pane => pane.contains(document.activeElement)")
+    await page.keyboard.press("Escape")
+    await pane.wait_for(state="detached")
+    assert await page.evaluate(FOCUSED_TEST_ID) == "settings-toggle"
