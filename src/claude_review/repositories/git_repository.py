@@ -102,6 +102,11 @@ OBJECTS_SUFFIX = ".git-objects"
 INDEX_NAME = "index"
 OBJECTS_NAME = "objects"
 
+# Where in an object store git finds the other stores it reads objects from,
+# and what ends each one's line there
+ALTERNATES_FILE = Path("info") / "alternates"
+ALTERNATES_LINE_END = b"\n"
+
 
 class GitRun(BaseModel):
     """What one git command said, and how it ended."""
@@ -235,7 +240,7 @@ class GitRepository(ReviewedRepository):
             own = await _own_paths(path)
             # Whichever store is written to, the repository's own stays readable
             if own is not None:
-                variables["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(own.objects)
+                await asyncio.to_thread(_lend_objects, Path(objects), own.objects)
 
             await self._seed(path, Path(index), own, variables)
             await _run(path, ["add", "-A"], variables)
@@ -438,6 +443,23 @@ def _temporary_index() -> str:
 def _temporary_objects() -> str:
     """A directory of its own for one staging to write objects nobody keeps."""
     return tempfile.mkdtemp(suffix=OBJECTS_SUFFIX)
+
+
+def _lend_objects(store: Path, lender: Path) -> None:
+    """Have an object store read another store's objects as its own, through git's alternates file.
+
+    Not through GIT_ALTERNATE_OBJECT_DIRECTORIES: git splits that variable
+    on colons, so a repository whose path held one would lend nothing, and
+    every file it tracks would read as added. The file names one store per
+    line. It is replaced whole rather than written in place, since another
+    staging into the same store may be reading it.
+    """
+    alternates = store / ALTERNATES_FILE
+    alternates.parent.mkdir(exist_ok=True)
+    handle, written = tempfile.mkstemp(dir=alternates.parent)
+    with os.fdopen(handle, "wb") as replacement:
+        replacement.write(os.fsencode(lender) + ALTERNATES_LINE_END)
+    Path(written).replace(alternates)
 
 
 def _remove_staging(index: str, throwaway: str | None) -> None:

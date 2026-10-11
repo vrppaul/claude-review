@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
+from claude_review.domain.models import FileStatus
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
 
 # A moment long before any test runs, in seconds since the epoch
@@ -153,6 +155,31 @@ async def test_one_staging_answers_every_question_about_the_same_tree(
     assert "second pass" in diff
     assert changed == {earlier: ["work.txt"]}
     assert now != earlier
+
+
+@pytest.mark.parametrize("keeps_objects", [False, True], ids=["objects-thrown-away", "objects-kept"])
+async def test_a_repository_whose_path_holds_a_colon_shows_its_changes_as_changes(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory, *, keeps_objects: bool
+) -> None:
+    """Git reads a list of object stores in its environment split on colons; a path holding one still lends its own.
+
+    Lent nothing, the staging knows none of the repository's objects, and
+    every file it tracks reads as added.
+    """
+    repo = tmp_path / "work:in progress"
+    repo.mkdir()
+    git(repo, "init", "-b", "main")
+    (repo / "tracked.txt").write_text("as committed\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "initial")
+    (repo / "tracked.txt").write_text("as changed\n")
+    store = tmp_path_factory.mktemp("review-objects") if keeps_objects else None
+
+    async with GitRepository(objects=store).staged(repo) as staged:
+        [changed] = await read_diff(staged, base=None, ignore_whitespace=False)
+
+    assert changed.path == "tracked.txt"
+    assert changed.status == FileStatus.MODIFIED
 
 
 async def test_a_file_saved_as_the_index_was_written_is_still_seen_changed(tmp_git_repo: Path) -> None:
