@@ -84,6 +84,32 @@ describe('the keys the review answers', () => {
 		expect(document.activeElement).toBe(within(sectionOf('b.py')).getByTestId('line-gutter'));
 	});
 
+	it('folds the file the reader is in by u, and unfolds it by u again', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		within(sectionOf('b.py')).getByTestId('line-gutter').focus();
+		await user.keyboard('u');
+		expect(review.reading.isFolded('b.py')).toBe(true);
+		expect(review.reading.isFolded('a.py')).toBe(false);
+
+		within(sectionOf('b.py')).getByRole('button', { expanded: false }).focus();
+		await user.keyboard('u');
+		expect(review.reading.isFolded('b.py')).toBe(false);
+	});
+
+	it('puts the file tree away by f, and brings it back by f again', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const shownAtFirst = review.layout.fileTree.open;
+
+		await user.keyboard('f');
+		expect(review.layout.fileTree.open).toBe(!shownAtFirst);
+
+		await user.keyboard('f');
+		expect(review.layout.fileTree.open).toBe(shownAtFirst);
+	});
+
 	it('goes to the oldest answer nobody has read, and reads it', async () => {
 		const user = userEvent.setup();
 		const id = review.threads.add(newComment({ file: 'b.py', body: 'Why?' }));
