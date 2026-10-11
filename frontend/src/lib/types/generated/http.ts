@@ -365,7 +365,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Review Context
+         * Catch Up
          * @description Say what this review holds, for an agent that has just arrived.
          *
          *     An agent restarted mid-review knows nothing: `events` hands over what
@@ -375,7 +375,7 @@ export interface paths {
          *     unasked is how a catch-up costs more than the work. A thread is read in
          *     full from its own route.
          */
-        get: operations["review_context_api_catch_up_get"];
+        get: operations["catch_up_api_catch_up_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1357,10 +1357,9 @@ export interface components {
          * ThreadInput
          * @description A thread as the browser holds it, turns and all.
          *
-         *     The browser holds the threads — they are unsent work, and never reach
-         *     this side until a round is — so whatever is about one sends it along,
-         *     as it stands right now: a round, a question, a panel message, the
-         *     review saying what it holds.
+         *     The browser holds the threads — they are unsent work — so whatever is
+         *     about one sends it along as it stands right now: a round, a question, a
+         *     panel message, and the hello in which the page says what it holds.
          */
         "ThreadInput-Input": {
             /** Body */
@@ -1381,10 +1380,9 @@ export interface components {
          * ThreadInput
          * @description A thread as the browser holds it, turns and all.
          *
-         *     The browser holds the threads — they are unsent work, and never reach
-         *     this side until a round is — so whatever is about one sends it along,
-         *     as it stands right now: a round, a question, a panel message, the
-         *     review saying what it holds.
+         *     The browser holds the threads — they are unsent work — so whatever is
+         *     about one sends it along as it stands right now: a round, a question, a
+         *     panel message, and the hello in which the page says what it holds.
          */
         "ThreadInput-Output": {
             /** Body */
@@ -2313,7 +2311,7 @@ export interface operations {
             };
         };
     };
-    review_context_api_catch_up_get: {
+    catch_up_api_catch_up_get: {
         parameters: {
             query?: never;
             header?: never;

@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, JsonValue, TypeAdapter, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, ValidationError, model_validator
 
 from claude_review.domain import models
 from claude_review.domain.models import (
@@ -140,10 +140,9 @@ class TurnInput(SaysSomething):
 class ThreadInput(SaysSomething):
     """A thread as the browser holds it, turns and all.
 
-    The browser holds the threads — they are unsent work, and never reach
-    this side until a round is — so whatever is about one sends it along,
-    as it stands right now: a round, a question, a panel message, the
-    review saying what it holds.
+    The browser holds the threads — they are unsent work — so whatever is
+    about one sends it along as it stands right now: a round, a question, a
+    panel message, and the hello in which the page says what it holds.
     """
 
     thread_id: WireId
@@ -175,7 +174,7 @@ class SubmitResponse(WireModel):
 
     markdown: str
     comment_count: int
-    # Which round was just sent, and which one is being written now
+    # Which round was just sent: the one written next is the one after it
     round: int
     ended: WireBool
 
@@ -234,8 +233,13 @@ class ReceivedHello(HelloBase[JsonValue]):
     """
 
 
-class HeldThreads(WireModel):
-    """The threads a hello says the review holds: those the server can read, and the ids of the rest."""
+class HeldThreads(BaseModel):
+    """The threads a hello says the page holds, as the server read them: those it can read, and the ids of the rest.
+
+    Never on the wire itself: what the server made of what was.
+    """
+
+    model_config = ConfigDict(frozen=True)
 
     readable: list[ThreadInput]
     # A thread left out still owns its id in the browser, so the server

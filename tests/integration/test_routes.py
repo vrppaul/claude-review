@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import DiffFile, ReviewMode
+from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
@@ -406,6 +406,17 @@ async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: A
     response = await repo_backed_client.get("/api/file-window", params={"path": "../outside.txt", "start": 1, "end": 1})
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+async def test_file_window_refuses_a_path_longer_than_any_file_system_hands_out(
+    repo_backed_client: AsyncClient,
+) -> None:
+    """Every text a request carries is bounded, a path asked about in a query too."""
+    longer = "a" * (MAX_PATH_LENGTH + 1)
+
+    response = await repo_backed_client.get("/api/file-window", params={"path": longer, "start": 1, "end": 1})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: AsyncClient) -> None:

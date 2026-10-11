@@ -347,10 +347,9 @@ export interface components {
          * ThreadInput
          * @description A thread as the browser holds it, turns and all.
          *
-         *     The browser holds the threads — they are unsent work, and never reach
-         *     this side until a round is — so whatever is about one sends it along,
-         *     as it stands right now: a round, a question, a panel message, the
-         *     review saying what it holds.
+         *     The browser holds the threads — they are unsent work — so whatever is
+         *     about one sends it along as it stands right now: a round, a question, a
+         *     panel message, and the hello in which the page says what it holds.
          */
         ThreadInput: {
             /** Body */

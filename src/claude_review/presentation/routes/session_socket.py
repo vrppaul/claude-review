@@ -78,10 +78,10 @@ async def _hear_the_page(review: Review, websocket: WebSocket) -> None:
         if said is None:
             log.debug("page_frame_ignored")
             continue
-        _catch_up(review, said)
+        _take_the_hello(review, said)
 
 
-def _catch_up(review: Review, said: str) -> None:
+def _take_the_hello(review: Review, said: str) -> None:
     """Take what the page knows and the review does not.
 
     Two things. The round: a review restarted mid-way comes back believing

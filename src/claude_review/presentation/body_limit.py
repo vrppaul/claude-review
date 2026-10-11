@@ -12,11 +12,13 @@ from fastapi import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from claude_review.presentation.asgi import HTTP_REQUEST, HTTP_SCOPE
-from claude_review.services.image_service import MAX_IMAGE_BYTES
+from claude_review.services.image_service import BYTES_PER_MEGABYTE, MAX_IMAGE_BYTES
 
 # The largest thing sent is a pasted image, uploaded as the body itself. A
-# round of several hundred threads is a fraction of that.
-MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
+# round of several hundred threads is a fraction of that: a megabyte more
+# leaves room for whatever else a body holds.
+BODY_HEADROOM_BYTES = BYTES_PER_MEGABYTE
+MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + BODY_HEADROOM_BYTES
 # The header a request announces its body's length in, as ASGI hands headers over: lower case, in bytes
 CONTENT_LENGTH_HEADER = b"content-length"
 

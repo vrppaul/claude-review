@@ -2,7 +2,6 @@
 
 from http import HTTPStatus
 
-import structlog
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
@@ -23,6 +22,7 @@ from claude_review.domain.exceptions import (
     UnknownImageError,
     UnknownVersionError,
 )
+from claude_review.domain.models import MAX_PATH_LENGTH
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.refusals import Takes, refusals
@@ -56,8 +56,6 @@ from claude_review.presentation.wire.threads import (
 )
 from claude_review.services.image_service import IMAGE_FORMATS, MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
-
-log = structlog.get_logger()
 
 router = APIRouter()
 
@@ -141,7 +139,9 @@ async def offered_versions(review: Review = Depends(get_review)) -> VersionsResp
     ),
 )
 async def get_file_window(
-    path: str = Query(min_length=1),
+    # Any path the diff draws, a name holding a control character too: one
+    # that cannot be commented on can still be read wider
+    path: str = Query(min_length=1, max_length=MAX_PATH_LENGTH),
     start: int = Query(ge=1),
     end: int = Query(ge=1),
     review: Review = Depends(get_review),
@@ -230,7 +230,6 @@ async def keep_an_image(http_request: Request, review: Review = Depends(get_revi
     parse.
     """
     stored = await review.keep_image(await _read_capped(http_request, limit=MAX_IMAGE_BYTES))
-    log.info("image_kept", image_id=stored.image_id, size=stored.size)
     return ImageResponse(image_id=stored.image_id)
 
 
@@ -272,7 +271,6 @@ async def discard_an_image(image_id: WireId, review: Review = Depends(get_review
     open it, and nothing on this side knows when it has.
     """
     await review.discard_image(image_id)
-    log.info("image_discarded", image_id=image_id)
 
 
 @router.post(

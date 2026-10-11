@@ -104,7 +104,7 @@ def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
 
 
 @router.get("/catch-up")
-async def review_context(review: Review = Depends(get_review)) -> CatchUpResponse:
+async def catch_up(review: Review = Depends(get_review)) -> CatchUpResponse:
     """Say what this review holds, for an agent that has just arrived.
 
     An agent restarted mid-review knows nothing: `events` hands over what

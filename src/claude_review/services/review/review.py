@@ -150,7 +150,9 @@ class Review:
 
     async def keep_image(self, content: bytes) -> StoredImage:
         """Keep an image the reader is about to send."""
-        return await self._images.keep(content)
+        stored = await self._images.keep(content)
+        log.info("image_kept", image_id=stored.image_id, size=stored.size)
+        return stored
 
     def kept_image(self, image_id: str) -> StoredImage:
         """An image this review keeps."""
@@ -159,6 +161,7 @@ class Review:
     async def discard_image(self, image_id: str) -> None:
         """Drop an image the reader took off before sending it."""
         await self._images.discard(image_id)
+        log.info("image_discarded", image_id=image_id)
 
     async def discard_unsent_images(self) -> None:
         """Once the review has ended, drop every image the reader pasted and never sent: nobody will send it now."""

@@ -3,7 +3,7 @@
 The review's own models say what the review is; these say what crosses to
 its page and its agent. They are kept apart so the one can change without
 the other, and so the rules of the wire — every field written out, every
-id and text bounded — live on the wire alone.
+id and text a request carries bounded — live on the wire alone.
 """
 
 from typing import Annotated, Self
