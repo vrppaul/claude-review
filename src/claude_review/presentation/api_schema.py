@@ -14,11 +14,11 @@ or `... api_schema socket`.
 import json
 import sys
 from collections.abc import Callable
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import click
 from fastapi import FastAPI
-from pydantic import TypeAdapter
+from pydantic import JsonValue, TypeAdapter
 from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
@@ -47,7 +47,7 @@ class SocketSchema(NamedTuple):
     # Read by the server, or written by it: a field with a default may be
     # left out of the one, and is always there in the other
     direction: JsonSchemaMode
-    adapter: TypeAdapter[Any]
+    adapter: TypeAdapter[SessionHello] | TypeAdapter[Resume] | TypeAdapter[SessionMessage]
 
 
 SOCKET_SCHEMAS = (
@@ -61,14 +61,14 @@ class MissingSocketSchemaError(Exception):
     """Raised when something said on the socket is not described under its own name."""
 
 
-def http_document() -> dict[str, Any]:
+def http_document() -> dict[str, JsonValue]:
     """Every route the review serves, as OpenAPI: mounted as a review's app mounts them, with no review behind them."""
     app = FastAPI(title=API_TITLE)
     include_api(app)
     return app.openapi()
 
 
-def socket_document() -> dict[str, Any]:
+def socket_document() -> dict[str, JsonValue]:
     """What travels on the session socket, as the schemas of an OpenAPI document with no paths."""
     _, definitions = TypeAdapter.json_schemas(SOCKET_SCHEMAS, ref_template=SCHEMA_REFERENCE)
     schemas = definitions["$defs"]
@@ -85,7 +85,7 @@ def socket_document() -> dict[str, Any]:
 
 
 # Each document by the name it is asked for
-DOCUMENTS: dict[str, Callable[[], dict[str, Any]]] = {"http": http_document, "socket": socket_document}
+DOCUMENTS: dict[str, Callable[[], dict[str, JsonValue]]] = {"http": http_document, "socket": socket_document}
 
 
 @click.command()

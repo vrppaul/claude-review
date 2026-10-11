@@ -134,8 +134,6 @@ known-first-party = ["claude_review"]
 # Standalone CI scripts run on bare python3 with no deps — print, not
 # structlog — and are run by path, not imported from a package
 "scripts/**" = ["T20", "INP001"]
-# OpenAPI documents are JSON of any shape, and their writer says so
-"src/claude_review/presentation/api_schema.py" = ["TID251"]
 # A command takes one parameter per option, which click hands over by name
 "src/claude_review/cli/agent_commands.py" = ["PLR0913"]
 # The module is one match from each page event to its push. McCabe counts
