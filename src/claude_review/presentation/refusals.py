@@ -9,8 +9,11 @@ a route names the kinds it raises and what it takes in, and is described
 with their statuses and no others, those it may be refused for what it
 takes in said to be so.
 
-A request whose caller went away before it had sent all of it is no refusal:
-nobody is left to answer, and nothing went wrong on either side.
+A body read as it comes — an image uploaded, read by its route itself — whose
+caller went away before all of it came is no refusal: nobody is left to
+answer, and nothing went wrong on either side. Only such a route meets it: a
+JSON body is read by FastAPI before any route runs, and one cut off is
+answered there as unreadable, with nothing said of it here.
 """
 
 from collections.abc import Set
@@ -137,7 +140,7 @@ def status_of(kind: type[ReviewError]) -> HTTPStatus:
 
 
 def answer_refusals(app: FastAPI) -> None:
-    """Have the app answer every kind of refusal with its status, and drop a request cut off."""
+    """Have the app answer every kind of refusal with its status, and drop a request cut off while its route read it."""
     for kind, status in REFUSAL_STATUS.items():
         app.add_exception_handler(kind, partial(answer_refusal, status=status))
     app.add_exception_handler(ClientDisconnect, drop_cut_off_request)
@@ -190,6 +193,6 @@ def methods_taken_at(request: Request) -> set[str]:
 
 
 async def drop_cut_off_request(request: Request, _error: Exception) -> Response:
-    """Let a request go whose caller left mid-way: a tab closed while an image was still uploading."""
+    """Let a request go whose caller left while its route read the body: a tab closed mid-upload of an image."""
     log.info("request_cut_off", path=request.url.path)
     return Response(status_code=CUT_OFF_STATUS)
