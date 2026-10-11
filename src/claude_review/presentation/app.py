@@ -59,10 +59,12 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: Read
     # Read once: it does not change while the review runs
     app.state.release = installed_version(PACKAGE_NAME)
 
+    # The middleware added last runs first. Outermost, the security headers
+    # go on every answer, the guard's refusals too; inside them the guard, so
+    # this server answers its own page and nothing else.
     app.add_middleware(BodySizeLimit)
-    app.add_middleware(SecurityHeaders)
-    # Outermost, so it runs first: this server answers its own page and nothing else
     app.add_middleware(LocalOriginOnly, page_path=PAGE_PATH, page_files_path=ASSETS_PATH)
+    app.add_middleware(SecurityHeaders)
 
     include_api(app)
     # Whatever a route refuses is answered here, by its kind

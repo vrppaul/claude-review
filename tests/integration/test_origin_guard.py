@@ -230,6 +230,19 @@ async def test_the_page_says_what_it_may_load(client: AsyncClient) -> None:
     assert "connect-src 'self'" in policy
 
 
+@pytest.mark.parametrize("headers", [{}, FOREIGN_HEADERS], ids=["an-answer", "the-guards-refusal"])
+async def test_every_answer_says_what_a_browser_may_do_with_it_refusals_included(
+    client: AsyncClient, headers: dict[str, str]
+) -> None:
+    """A refusal reaches a browser as any answer does: read as what it says it is, framed by nobody, leaking no address."""
+    answered = (await client.get(DIFF_ROUTE, headers=headers)).headers
+
+    assert answered["x-content-type-options"] == "nosniff"
+    assert answered["referrer-policy"] == "no-referrer"
+    assert answered["x-frame-options"] == "DENY"
+    assert "default-src 'none'" in answered["content-security-policy"]
+
+
 async def test_the_review_cannot_be_framed(client: AsyncClient) -> None:
     """Framing it would let a page bait a click on Send and end the review."""
     headers = (await client.get(DIFF_ROUTE)).headers
