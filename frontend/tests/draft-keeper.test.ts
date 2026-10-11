@@ -9,6 +9,8 @@ import { openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
 // Longer than the keeper waits after the last change
 const AFTER_A_PAUSE = 1000;
+// A typist's pace: a key every tenth of a second
+const BETWEEN_KEYSTROKES = 100;
 
 /** How many times the draft was written, of everything written to storage. */
 function draftWrites(written: MockInstance<Storage['setItem']>): number {
@@ -40,6 +42,21 @@ describe('keeping the draft', () => {
 
 		expect(draftWrites(written)).toBe(1);
 		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.reviewBody).toBe('Overall');
+	});
+
+	it("waits out a sentence typed at a typist's pace, and keeps it once the typing stops", () => {
+		const written = vi.spyOn(Storage.prototype, 'setItem');
+
+		for (const typed of ['O', 'Ov', 'Ove', 'Over', 'Overall']) {
+			review.submission.setBody(typed);
+			flushSync();
+			vi.advanceTimersByTime(BETWEEN_KEYSTROKES);
+		}
+		expect(draftWrites(written)).toBe(0);
+
+		vi.advanceTimersByTime(AFTER_A_PAUSE);
+
+		expect(draftWrites(written)).toBe(1);
 	});
 
 	it('keeps it at once when the page goes', () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readDraft } from '$lib/drafts/draft-storage';
 import { threadsIn } from '$lib/anchors/mentions';
 import { anchorToken } from '$lib/anchors/views';
-import { formatWeight } from '$lib/review/weight';
+import { diffCharacters, formatWeight, threadCharacters, tokensOf } from '$lib/review/weight';
 import type { Thread } from '$lib/types';
 import { contextLine, addedLine, diffFile, hunk } from './diff';
 import { REVIEW_IDENTITY } from './fake-socket';
@@ -208,6 +208,17 @@ describe('the panel talks to the agent about the review', () => {
 		expect(review.weight).toBe(106);
 		expect(formatWeight(18_240)).toBe('~18.2k');
 		expect(formatWeight(640)).toBe('~640');
+	});
+
+	it('weighs every path, every line with its break, and all a thread says and quotes', () => {
+		const id = review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why?', quote: ['y = 3'] }));
+		review.threads.addTurn(id, { author: 'author', body: 'Because.', images: [] });
+
+		// The path's 13 characters, and two lines of 5, each with its break
+		expect(diffCharacters(review.diff.files)).toBe(13 + 2 * (5 + 1));
+		// The comment's 4, the line it quotes, 5, and the answer's 8
+		expect(threadCharacters(review.threads.all)).toBe(4 + 5 + 8);
+		expect(review.weight).toBe(tokensOf(25 + 17));
 	});
 
 	it('remembers how wide the reader made it, within what the layout can take', () => {

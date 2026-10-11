@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ApiError } from '$lib/api/request';
+import { ApiError, read } from '$lib/api/request';
 import { endReview, imageUrl, keepImage, submitReview, takeDiff } from '$lib/api/review-api';
 import { diffResponse } from './diff';
 import { fakeServer, SERVER_ERROR, UNPROCESSABLE } from './fake-server';
@@ -66,6 +66,17 @@ describe('asking the server', () => {
 		expect(server.requestsTo('GET /api/diff').map((request) => request.query)).toEqual([
 			{},
 			{ ignore_whitespace: 'true', base: 'round:2' }
+		]);
+	});
+
+	it('says a no in a query as a no, and leaves out only what says nothing', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse());
+
+		await read('get', '/api/diff', { query: { ignore_whitespace: false, base: null }, doing: 'Taking the diff' });
+
+		expect(server.requestsTo('GET /api/diff').map((request) => request.query)).toEqual([
+			{ ignore_whitespace: 'false' }
 		]);
 	});
 
