@@ -138,6 +138,18 @@ describe('threads the base on screen cannot draw', () => {
 		expect(text(getByTestId('off-screen-list'))).toContain('elsewhere.py');
 	});
 
+	it('lists each by its first words, plainly', async () => {
+		const user = userEvent.setup({ delay: null });
+		serveNarrowed();
+		await review.diff.setBase('round:1');
+		review.threads.add(newComment({ file: 'elsewhere.py', startLine: 12, body: '**Rename** `x`, please' }));
+
+		const { getByTestId } = render(DiffNotice, inReview(review));
+		await user.click(getByTestId('list-off-screen'));
+
+		expect(text(getByTestId('off-screen-thread'))).toContain('Rename x, please');
+	});
+
 	it("counts a thread on a removed line, whose number belongs to the base's left side", async () => {
 		const shown = diffFile({ path: 'a.py', hunks: [hunk([removedLine(3, 'gone')])] });
 		fakeServer().answer('GET /api/diff', diffResponse({ base: sinceRound(1), files: [shown] }));

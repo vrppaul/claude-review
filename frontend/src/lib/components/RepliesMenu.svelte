@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { plainWords } from '$lib/utils/plain-words';
 	import { AGENT } from '$lib/utils/speakers';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
@@ -19,7 +20,7 @@
 
 	/** What the agent last said in a thread. */
 	function lastAnswer(thread: Thread): string {
-		return thread.turns.findLast((turn) => turn.author === AGENT)?.body ?? '';
+		return plainWords(thread.turns.findLast((turn) => turn.author === AGENT)?.body ?? '');
 	}
 
 	function goTo(thread: Thread) {
@@ -47,10 +48,12 @@
 			{review.threads.unread.length} unread
 		</span>
 		<div class="flex-1"></div>
+		<!-- Nothing to do while everything has been read: offered, it would do nothing -->
 		<button
 			type="button"
 			data-testid="mark-all-read"
 			class="btn btn-ghost btn-xs"
+			disabled={review.threads.unread.length === 0}
 			onclick={() => review.threads.reading.markAllRead()}
 		>
 			Mark all read

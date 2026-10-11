@@ -263,6 +263,23 @@ describe('a comment field, to whoever cannot see it', () => {
 
 		expect(getByLabelText('Reply')).toBe(getByTestId('comment-input'));
 	});
+
+	it('asks for a reply in the words that opened it, and for a comment in its own', () => {
+		const id = review.threads.add(newComment({ body: 'Why?' }));
+		review.threads.writing.openReply(id);
+		const reply = review.threads.writing.reply(id);
+		if (!reply) throw new Error('No reply was opened');
+
+		const replying = render(
+			CommentBox,
+			inReview(review, { field: reply, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, nested: true })
+		);
+		expect(replying.getByTestId('comment-input').getAttribute('placeholder')).toBe('Write a reply…');
+		replying.unmount();
+
+		const commenting = drawnSaving(newField());
+		expect(commenting.getByTestId('comment-input').getAttribute('placeholder')).toBe('What should change here?');
+	});
 });
 
 describe('putting a comment away', () => {

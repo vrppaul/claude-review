@@ -174,6 +174,19 @@ describe('a thread is a conversation', () => {
 		expect(answers.map((answer) => answer.classList.contains('cr-answer-new'))).toEqual([false, false]);
 	});
 
+	it('says a folded thread in its first words, plainly, and counts the replies under it', () => {
+		const id = review.threads.add(onTheAddedLine('**Rename** `y`:\n\n```suggestion\nconst limit = 3;\n```'));
+		review.threads.receiveReply(id, 'Done', null);
+		review.threads.reading.setFolded(id, true);
+
+		const { getByTestId } = render(DiffView, inReview(review));
+		const folded = getByTestId('folded-thread').textContent?.replace(/\s+/g, ' ');
+
+		expect(folded).toContain('Rename y: (a suggested change)');
+		expect(folded).toContain('1 reply');
+		expect(folded).not.toContain('**');
+	});
+
 	it('reads an answer the keyboard comes to, as one the mouse clicks on', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.receiveReply(id, 'It moved into the config default', null);

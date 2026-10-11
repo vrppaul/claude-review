@@ -3,6 +3,7 @@
 	import { anchorLabel } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
+	import { plainWords } from '$lib/utils/plain-words';
 	import { counted } from '$lib/utils/words';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
@@ -46,9 +47,10 @@
 		onclick={unfold}
 	>
 		<span class="cr-comment-ref shrink-0 font-mono text-xs">{anchorLabel(thread.anchor)}</span>
-		<span class="cr-muted truncate text-sm">{thread.body || 'an image'}</span>
+		<span class="cr-muted truncate text-sm">{plainWords(thread.body) || 'an image'}</span>
 		{#if thread.turns.length > 0}
-			<span class="cr-faint shrink-0 text-xs">{counted(thread.turns.length, 'turn', 'turns')}</span>
+			<!-- Everything said under the comment that opened it, the agent's and the reader's alike -->
+			<span class="cr-faint shrink-0 text-xs">{counted(thread.turns.length, 'reply', 'replies')}</span>
 		{/if}
 	</button>
 	{#if unread}

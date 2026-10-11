@@ -3,6 +3,7 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { isDrawn } from '$lib/anchors/placement';
 	import { useReview } from '$lib/review/context';
+	import { plainWords } from '$lib/utils/plain-words';
 	import { counted } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
 	import Icon from './Icon.svelte';
@@ -88,7 +89,7 @@
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">
 					{anchorShortPlace(thread.anchor)}
 				</span>
-				<span class="cr-faint min-w-0 flex-1 truncate text-xs">{thread.body}</span>
+				<span class="cr-faint min-w-0 flex-1 truncate text-xs">{plainWords(thread.body)}</span>
 			</button>
 		{/each}
 		<p class="cr-faint px-2 pt-1 text-xs">They are still in the review, and still go out with the round.</p>

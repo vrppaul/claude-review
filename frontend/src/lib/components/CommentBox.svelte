@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentSeverity } from '$lib/types';
+	import type { CommentSeverity, WrittenAt } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
@@ -18,6 +18,12 @@
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
 	// What a field with no place said above it is called: a reply, inside the thread it answers
 	const REPLY = 'Reply';
+	// What an empty field says, by what is being written in it: a reply reads as the thread's own "Write a reply…"
+	const PLACEHOLDERS: Record<WrittenAt['kind'], string> = {
+		new: 'What should change here?',
+		edit: 'What should change here?',
+		reply: 'Write a reply…'
+	};
 	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
 		{ value: 'note', label: 'Note' },
 		{ value: 'question', label: 'Question' },
@@ -171,7 +177,7 @@
 		data-testid="comment-input"
 		aria-label={label ? undefined : REPLY}
 		class="cr-field cr-comment-body textarea min-h-20 w-full"
-		placeholder="What should change here?"
+		placeholder={PLACEHOLDERS[field.at.kind]}
 		maxlength={review.limits.max_text_length}
 		bind:value={field.text}
 		onkeydown={handleKeydown}
