@@ -266,6 +266,21 @@ class TestRead:
         with pytest.raises(UnreadableContentError, match="Invalid JSON"):
             await read_transcript(conversation)
 
+    @pytest.mark.parametrize(
+        "separator", ["\u2028", "\u2029", "\u0085"], ids=["line-separator", "paragraph-separator", "next-line"]
+    )
+    async def test_a_line_break_of_unicode_inside_a_message_leaves_it_one_line(
+        self, tmp_path: Path, separator: str
+    ) -> None:
+        """Node writes these unescaped inside a string; only "\\n" ends a line of JSONL."""
+        conversation = tmp_path / "conversation.jsonl"
+        said = f"before{separator}after"
+        conversation.write_text(json.dumps(_user(said), ensure_ascii=False) + "\n", encoding="utf-8")
+
+        [turn] = await read_transcript(conversation)
+
+        assert [line.content for line in turn.hunks[0].lines] == [said]
+
 
 class TestWhatIsATurn:
     async def test_text_the_tool_put_in_the_users_name_is_not_a_turn(self, tmp_path: Path) -> None:

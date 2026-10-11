@@ -27,6 +27,14 @@ SYSTEM_TAG = re.compile(r"^<(command-|local-command-|system-reminder|bash-)")
 TOOL_BLOCKS = frozenset({"tool_use", "tool_result"})
 TEXT_BLOCK = "text"
 
+# What ends an entry of the transcript, and nothing else does. Python's own
+# line splitting also breaks at U+2028, U+2029 and U+0085, which Node writes
+# unescaped inside a string: one such character anywhere, in a tool's result
+# even, would cut an entry in two and refuse the whole transcript.
+ENTRY_END = "\n"
+# What the transcript is written in
+TRANSCRIPT_ENCODING = "utf-8"
+
 
 class ContentBlock(BaseModel):
     """One block of a message: text, thinking, a tool call or its result."""
@@ -112,7 +120,7 @@ def _read_text(path: Path) -> str:
         UnreadableContentError: If the file cannot be read, or is not UTF-8.
     """
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_text(encoding=TRANSCRIPT_ENCODING)
     except (OSError, UnicodeDecodeError) as error:
         msg = f"Invalid transcript file: {error}"
         raise UnreadableContentError(msg) from error
@@ -130,7 +138,7 @@ def _entries(text: str) -> list[TranscriptEntry]:
         UnreadableContentError: If a line is not JSON.
     """
     entries = []
-    for line_number, line in enumerate(text.splitlines(), start=1):
+    for line_number, line in enumerate(text.split(ENTRY_END), start=1):
         if not line.strip():
             continue
         try:
