@@ -114,6 +114,11 @@
   no longer answered.
 
 ### Fixed
+- **`n` and `p` go on from the thread you are at.** `p` before any thread
+  goes to the last one; it went to the one before the last. Removing a
+  thread no longer moves the place they go on from onto another thread, and
+  a thread opened from the panel, the replies or the finish pane is where
+  the next step starts.
 - **In two columns a removed line facing the line that replaced it takes a
   comment from the keyboard again**: Tab reaches its number, Enter opens
   the field. j and k still stop once a row. In one column j on a removed

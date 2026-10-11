@@ -53,4 +53,42 @@ describe('stepping through the threads', () => {
 
 		expect(brought).toEqual([]);
 	});
+
+	it('goes back from nowhere to the last thread', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
+		const brought = drawThreads();
+
+		review.navigator.step(-1);
+
+		expect(brought).toEqual(['three']);
+	});
+
+	it('goes on from the thread it is on when one before it is removed', () => {
+		const first = review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
+		const brought = drawThreads();
+		review.navigator.step(1);
+		review.navigator.step(1);
+
+		review.threads.remove(first);
+		review.navigator.step(1);
+
+		expect(brought).toEqual(['one', 'two', 'three']);
+	});
+
+	it('goes on from the thread the reader was last taken to, by whatever control', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		review.threads.add(newComment({ startLine: 2, body: 'two' }));
+		review.threads.add(newComment({ startLine: 3, body: 'three' }));
+		const brought = drawThreads();
+		const [, second] = review.threads.all;
+
+		if (second) review.navigator.reveal(second);
+		review.navigator.step(1);
+
+		expect(brought).toEqual(['two', 'three']);
+	});
 });

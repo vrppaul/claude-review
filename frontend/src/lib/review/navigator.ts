@@ -15,13 +15,26 @@ import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread, LineAnchor } from '$lib/types';
 
+/**
+ * Where a step lands among this many threads, from the one at `here`: the
+ * next or the previous, round from the end to the start. From nowhere — no
+ * thread yet, or the one the reader was on is gone — going on starts at the
+ * first and going back at the last.
+ */
+function steppedTo(here: number, direction: 1 | -1, count: number): number {
+	if (here === -1) return direction === 1 ? 0 : count - 1;
+	return (here + direction + count) % count;
+}
+
 export class Navigator {
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;
 	readonly #sections: FileSections;
 	readonly #diff: ReviewDiff;
-	// Where the reader is among the threads, shared by every control that steps through them
-	#position = -1;
+	// The thread the reader was last brought to, by whichever control, and the
+	// one a step goes on from. Kept by id: threads come and go, and a place in
+	// the list would then be another thread's.
+	#atThread: string | null = null;
 
 	constructor(threads: Threads, reading: ReadingProgress, sections: FileSections, diff: ReviewDiff) {
 		this.#threads = threads;
@@ -33,12 +46,14 @@ export class Navigator {
 	/** Step to the next or previous thread, and bring it into view. */
 	step(direction: 1 | -1): void {
 		const threads = this.#threads.all;
-		if (threads.length === 0) return;
-		this.#position = (this.#position + direction + threads.length) % threads.length;
-		this.reveal(threads[this.#position]);
+		const here = threads.findIndex((thread) => thread.id === this.#atThread);
+		const next = threads[steppedTo(here, direction, threads.length)];
+		if (next) this.reveal(next);
 	}
 
+	/** Bring a thread into view, and go on from it the next time the reader steps. */
 	reveal(thread: Thread): void {
+		this.#atThread = thread.id;
 		const { anchor } = thread;
 		switch (anchor.kind) {
 			case 'line':
