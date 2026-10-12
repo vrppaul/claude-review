@@ -32,6 +32,13 @@ TOLD_LINE = "Comment on line 2"
 # The line the housekeeping file gained, which no piece of the story draws
 CHANGED_NOTE = "Comment on line 1"
 A_STORY = story_of(step(TOLD_FILE, 2, 2), housekeeping=(HOUSEKEEPING_FILE,))
+# A file added whole, long enough that its piece runs far past the bottom of the screen
+LONG_FILE = "long.py"
+LINES_OF_THE_LONG_FILE = 200
+# How far into the long piece the reader scrolls: well past its head, well short of its end
+DEEP_IN_THE_PIECE = 1500
+# Where an element's top edge is on screen, in pixels from the top of the window
+TOP_OF = "(element) => element.getBoundingClientRect().top"
 # Wide enough for the tree of files to stand beside them
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
 
@@ -50,6 +57,17 @@ async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     started = await servers.start(await repository_opening(changed_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    return started
+
+
+@pytest.fixture
+async def review_of_a_long_file(tmp_path: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose story tells, in one step, a file added whole and longer than any screen."""
+    repo = committed_repository(tmp_path / "long", COMMITTED_FILES)
+    write_files(repo, {LONG_FILE: "".join(f"line {number}\n" for number in range(1, LINES_OF_THE_LONG_FILE + 1))})
+    started = await servers.start(await repository_opening(repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(LONG_FILE, 1, LINES_OF_THE_LONG_FILE))))
     return started
 
 
@@ -125,3 +143,16 @@ async def test_f_in_the_story_leaves_the_tree_of_files_where_the_reader_left_it(
     await page.click('[data-testid="read-as-files"]')
 
     await expect(page.get_by_test_id("file-item").first).to_be_visible()
+
+
+async def test_deep_in_a_long_piece_its_header_stays_in_view_saying_which_file_is_read(
+    review_of_a_long_file: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file)
+    story = page.get_by_test_id("story-view")
+
+    await story.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+
+    header = page.get_by_test_id("story-piece-header")
+    await expect(header).to_be_in_viewport()
+    assert await header.evaluate(TOP_OF) == await story.evaluate(TOP_OF)

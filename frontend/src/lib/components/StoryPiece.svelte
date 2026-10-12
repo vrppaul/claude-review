@@ -44,11 +44,13 @@
 	$effect(() => (element ? nearness.watch(element, scrollRoot) : undefined));
 </script>
 
+<!-- Clipped to its rounded corners, never hidden past them: `overflow: hidden` would make the piece what
+	its header sticks to, and deep in a long piece the header would scroll away with it -->
 <section
 	bind:this={element}
 	data-testid="story-piece"
 	data-path={piece.path}
-	class="cr-section overflow-hidden rounded-md border border-base-300"
+	class="cr-section overflow-clip rounded-md border border-base-300"
 	style:--cr-rows={rowsDrawn}
 >
 	<div
