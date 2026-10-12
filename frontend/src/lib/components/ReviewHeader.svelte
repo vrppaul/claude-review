@@ -81,7 +81,7 @@
 		of is in the tab's title; the header has room only for what changes. A
 		story is of the review's own diff whatever base the files are read
 		against, so it shows none. -->
-		{#if !review.readsStory}
+		{#if review.views.onScreen.name === 'files'}
 			{#if review.diff.phrase}
 				<BasePicker />
 				{#if review.settings.current.ignore_whitespace}

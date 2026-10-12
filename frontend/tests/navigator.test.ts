@@ -219,6 +219,7 @@ describe('the order the threads are stepped through', () => {
 describe('moving the reader in whatever view the review is read in', () => {
 	/** A view that draws none of the review: no section, no thread, no file. */
 	const DRAWS_NOTHING: ReadingView = {
+		name: 'files',
 		sectionKeys: () => [],
 		threadsInOrder: () => [],
 		sectionOf: () => null,
@@ -229,7 +230,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 
 	/** The review read in one view alone, with nothing else to bring on screen: what that view draws none of is nowhere. */
 	function onlyIn(view: ReadingView): ViewsOnScreen {
-		return { onScreen: () => view, showEverything: () => Promise.resolve(view) };
+		return { onScreen: view, showEverything: () => Promise.resolve(view) };
 	}
 
 	/** A section on the page under a key, which says when it is brought into view. */
@@ -260,7 +261,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOf: () => 'in the files' };
 		const showEverything = vi.fn(() => Promise.resolve(drawsAll));
-		const navigator = new Navigator(review.threads, review.sections, { onScreen: () => DRAWS_NOTHING, showEverything });
+		const navigator = new Navigator(review.threads, review.sections, { onScreen: DRAWS_NOTHING, showEverything });
 
 		navigator.reveal(thread);
 		await settled();
@@ -275,7 +276,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('the piece that draws it', []);
 		const draws = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it' };
 		const showEverything = vi.fn(() => Promise.resolve(DRAWS_NOTHING));
-		const navigator = new Navigator(review.threads, review.sections, { onScreen: () => draws, showEverything });
+		const navigator = new Navigator(review.threads, review.sections, { onScreen: draws, showEverything });
 
 		navigator.reveal(thread);
 
@@ -287,7 +288,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('a.py in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOfFile: () => 'a.py in the files' };
 		const navigator = new Navigator(review.threads, review.sections, {
-			onScreen: () => DRAWS_NOTHING,
+			onScreen: DRAWS_NOTHING,
 			showEverything: () => Promise.resolve(drawsAll)
 		});
 

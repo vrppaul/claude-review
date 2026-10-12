@@ -12,12 +12,15 @@
 import { inDiffOrder } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
+import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
 export interface ReadingView {
+	/** Which way of reading it is: what the reader chooses it by, and what is its alone is known by. */
+	readonly name: ReadingViewName;
 	/** The sections it draws, by their keys, in the order it draws them: what ] and [ walk. */
 	sectionKeys: () => string[];
 	/** The threads it draws, in the order they stand in it: what n and p walk. */
@@ -39,6 +42,7 @@ export function fileSectionKey(path: string): string {
 
 /** The review read file by file: every file of the diff on screen in a section of its own, in the diff's order. */
 export class FilesReading implements ReadingView {
+	readonly name = 'files';
 	readonly #diff: ReviewDiff;
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;

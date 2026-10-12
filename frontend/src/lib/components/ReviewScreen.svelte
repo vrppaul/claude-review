@@ -97,10 +97,10 @@
 	{/if}
 	<DiffNotice />
 	<div class="cr-columns">
-		{#if review.readsStory}
+		{#if review.views.onScreen.name === 'story'}
 			<!-- The same review, read as its story: the tree of files is the files' own -->
 			<StoryView />
-		{:else}
+		{:else if review.views.onScreen.name === 'files'}
 			{#if review.layout.fileTree.open}
 				<FileList />
 			{:else}

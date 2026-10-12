@@ -73,6 +73,7 @@ function standingOf(
 }
 
 export class StoryReading implements ReadingView {
+	readonly name = 'story';
 	readonly #story: ReviewStory;
 	readonly #threads: Threads;
 

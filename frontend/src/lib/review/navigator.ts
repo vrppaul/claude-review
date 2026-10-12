@@ -25,8 +25,12 @@ import type { Thread } from '$lib/types';
 /** The views the review is read in, as moving the reader needs them. */
 export interface ViewsOnScreen {
 	/** The view the review is read in now. */
-	onScreen: () => ReadingView;
-	/** Bring on screen the view that draws every thread and file the review holds, and hand it over once it is drawn. */
+	readonly onScreen: ReadingView;
+	/**
+	 * Bring on screen the view that draws every thread and file the review
+	 * holds, and hand it over. It need not be drawn yet: the page waits for
+	 * a section asked for before it is.
+	 */
 	showEverything: () => Promise<ReadingView>;
 }
 
@@ -79,7 +83,7 @@ export class Navigator {
 
 	/** Step to the next or previous thread in the view on screen, and bring it into view. */
 	step(direction: 1 | -1): void {
-		const next = steppedTo(this.#views.onScreen().threadsInOrder(), this.#at, direction);
+		const next = steppedTo(this.#views.onScreen.threadsInOrder(), this.#at, direction);
 		if (next) this.reveal(next);
 	}
 
@@ -91,7 +95,7 @@ export class Navigator {
 	 * comes on screen for it: the reader asked for the thread.
 	 */
 	reveal(thread: Thread): void {
-		const onScreen = this.#views.onScreen();
+		const onScreen = this.#views.onScreen;
 		if (onScreen.sectionOf(anchorLines(thread.anchor)) !== null) this.#revealIn(onScreen, thread);
 		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread));
 	}
@@ -114,7 +118,7 @@ export class Navigator {
 	 * view; from nowhere, the first or the last.
 	 */
 	stepSection(direction: 1 | -1): void {
-		const keys = this.#views.onScreen().sectionKeys();
+		const keys = this.#views.onScreen.sectionKeys();
 		const here = this.#sections.current();
 		const from = here === null ? -1 : keys.indexOf(here);
 		const first = direction === 1 ? 0 : keys.length - 1;
@@ -131,7 +135,7 @@ export class Navigator {
 	 * either is shown nowhere.
 	 */
 	showFile(path: string): void {
-		const section = this.#views.onScreen().sectionOfFile(path);
+		const section = this.#views.onScreen.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
 		else void this.#views.showEverything().then((drawingAll) => this.#showIn(drawingAll, path));
 	}

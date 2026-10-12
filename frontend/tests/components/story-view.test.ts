@@ -73,7 +73,7 @@ describe('a review a story can be told of', () => {
 describe('a review read as its story', () => {
 	beforeEach(() => {
 		review = openReview({ files, story: TOLD });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 	});
 
 	it('says what the change is called, and which round the story was told in', () => {
@@ -143,7 +143,7 @@ describe('a review read as its story', () => {
 	it('shows a file it leaves out whole as that file says of itself, with no count of lines it has none of', () => {
 		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
 		review = openReview({ files, story: storyHeld({ left_out: [{ piece: picture, changed_lines: 0 }] }) });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		const leftOut = screen.getByTestId('story-left-out');
@@ -209,8 +209,19 @@ describe('a review read as its story', () => {
 		review.navigator.reveal(thread);
 		await settled();
 
-		expect(review.readsStory).toBe(false);
+		expect(review.views.onScreen.name).toBe('files');
 		expect(document.activeElement).toBe(screen.getByTestId('comment-thread'));
+	});
+
+	it('leaves how the reader chose to read as they chose it, when it takes them to the files for a thread', async () => {
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
+		const [thread] = review.threads.all;
+		render(ReviewScreen, { props: { review } });
+
+		review.navigator.reveal(thread);
+		await settled();
+
+		expect(openReview({ files, story: TOLD }).views.onScreen.name).toBe('story');
 	});
 
 	it('shows a file the agent names in the files, where the story draws none of it, once they are drawn', async () => {
@@ -219,7 +230,7 @@ describe('a review read as its story', () => {
 		handOverNext(review, { type: 'show', file: 'uv.lock' });
 		await settled();
 
-		expect(review.readsStory).toBe(false);
+		expect(review.views.onScreen.name).toBe('files');
 		expect(review.sections.fileInView).toBe('uv.lock');
 	});
 
@@ -229,7 +240,7 @@ describe('a review read as its story', () => {
 		handOverNext(review, { type: 'show', file: 'b.py' });
 		await settled();
 
-		expect(review.readsStory).toBe(true);
+		expect(review.views.onScreen.name).toBe('story');
 		expect(review.sections.fileInView).toBe('b.py');
 	});
 
@@ -261,7 +272,7 @@ describe('a review read as its story', () => {
 			later: [{ text: 'A line for c.py.', chapter: null }]
 		};
 		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		const more = screen.getByTestId('story-more');
@@ -282,7 +293,7 @@ describe('a review read as its story', () => {
 		const diagram = { mermaid: 'flowchart LR; a --> b', caption: 'How a line travels', links: {} };
 		const overview = { ...TOLD.story.overview, diagram };
 		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		const drawn = screen.getByTestId('story-diagram');
@@ -299,7 +310,7 @@ describe('a review read as its story', () => {
 
 	it('says the story is a reconstruction where the agent told it from commits', () => {
 		review = openReview({ files, story: storyHeld({ told_from: 'commits' }) });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('story-reconstructed').textContent).toBe('reconstructed');
@@ -315,7 +326,7 @@ describe('a review read as its story', () => {
 describe('a story told of the take of the change the page reads', () => {
 	beforeEach(() => {
 		review = openReview({ files, story: TOLD });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 	});
 
 	it('says nothing of the code having changed', () => {
@@ -342,7 +353,7 @@ describe('a story told of the take of the change the page reads', () => {
 describe('a story the code has moved on from', () => {
 	beforeEach(() => {
 		review = openReview({ files, story: TOLD, diff: { take: A_LATER_TAKE } });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 	});
 
 	it('is still told whole, every step with the code as it was', () => {
@@ -423,7 +434,7 @@ describe('the files, read where a story could be', () => {
 describe('a review nobody has told a story of yet', () => {
 	it('says so where the story would be, and how one is told', () => {
 		review = openReview({ files });
-		review.layout.readingView.set('story');
+		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('no-story').textContent).toContain('No story has been told of this change yet.');
@@ -432,8 +443,8 @@ describe('a review nobody has told a story of yet', () => {
 
 describe('a review no story can be told of', () => {
 	it('offers none, and is read by its files though the reader chose the story last', () => {
+		openReview({ files, story: TOLD }).views.choose('story');
 		review = openReview({ files, facts: { takes_a_story: false } });
-		review.layout.readingView.set('story');
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.queryByTestId('reading-view')).toBeNull();

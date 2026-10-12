@@ -8,7 +8,6 @@
  * narrowing to what changed — is done here.
  */
 
-import { tick } from 'svelte';
 import { Guide } from '$lib/guide/guide.svelte';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { PageTheme } from '$lib/reader/page-theme.svelte';
@@ -22,7 +21,8 @@ import { FileSections } from '$lib/dom/file-sections';
 import { LastRetake } from '$lib/review/last-retake.svelte';
 import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
-import { FilesReading, type ReadingView } from '$lib/review/reading-view';
+import { FilesReading } from '$lib/review/reading-view';
+import { ReadingViews } from '$lib/review/reading-views.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import { StoryReading } from '$lib/review/story-reading';
@@ -110,9 +110,9 @@ export class Review {
 	readonly story: ReviewStory;
 	readonly guide: Guide;
 	readonly sections = new FileSections();
+	/** The ways the review is read — file by file, or as the story told of it — and which is on screen. */
+	readonly views: ReadingViews;
 	readonly navigator: Navigator;
-	// The review read file by file
-	readonly #files: FilesReading;
 	/** The review read as the story told of it. */
 	readonly storyReading: StoryReading;
 	readonly commentFields = new CommentFields();
@@ -165,12 +165,13 @@ export class Review {
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.story = new ReviewStory(facts.takes_a_story, story, () => this.diff.takeOnScreen);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
-		this.#files = new FilesReading(this.diff, this.threads, this.reading, this.sections);
 		this.storyReading = new StoryReading(this.story, this.threads);
-		this.navigator = new Navigator(this.threads, this.sections, {
-			onScreen: () => this.view,
-			showEverything: () => this.showFiles()
-		});
+		this.views = new ReadingViews(
+			{ files: new FilesReading(this.diff, this.threads, this.reading, this.sections), story: this.storyReading },
+			this.layout.readingView,
+			this.story.canBeTold
+		);
+		this.navigator = new Navigator(this.threads, this.sections, this.views);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
 		this.#draftSetAside = $state(draftSetAside);
@@ -183,27 +184,6 @@ export class Review {
 		// A review stopped under the reader keeps its draft for when it is opened again
 		this.#draft = $derived(this.link.ending === 'finished' ? null : this.#snapshot());
 		if (this.answerer.attached) this.layout.agentPanel.offer();
-	}
-
-	/**
-	 * Whether the review is read as its story now: the reader chose that, and
-	 * a story can be told of this review. Chosen for a review that takes
-	 * none — the choice outlives a review — it is read by its files.
-	 */
-	get readsStory(): boolean {
-		return this.story.canBeTold && this.layout.readingView.name === 'story';
-	}
-
-	/** The view the review is read in now: as its story, or file by file. */
-	get view(): ReadingView {
-		return this.readsStory ? this.storyReading : this.#files;
-	}
-
-	/** Bring the files' own view on screen, which draws every thread and file the review holds, and say once it is drawn. */
-	async showFiles(): Promise<ReadingView> {
-		this.layout.readingView.set('files');
-		await tick();
-		return this.#files;
 	}
 
 	/** The unsent review as a draft keeps it; none once the review is over. */

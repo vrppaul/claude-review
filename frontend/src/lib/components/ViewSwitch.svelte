@@ -19,7 +19,6 @@
 	];
 
 	const review = useReview();
-	const reading = $derived<ReadingViewName>(review.readsStory ? 'story' : 'files');
 </script>
 
 <!-- Offered only where a story can be told: the review says, and nothing here asks what kind it is -->
@@ -30,8 +29,8 @@
 				type="button"
 				data-testid={offered.testId}
 				class="cr-segment flex items-center gap-1.5"
-				aria-pressed={reading === offered.name}
-				onclick={() => review.layout.readingView.set(offered.name)}
+				aria-pressed={review.views.onScreen.name === offered.name}
+				onclick={() => review.views.choose(offered.name)}
 			>
 				<Icon name={offered.icon} class="h-3.5 w-3.5" />
 				{offered.label}

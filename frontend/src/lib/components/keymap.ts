@@ -63,7 +63,7 @@ function talkToAgent(review: Review): void {
 
 /** Do something to the file the reader is reading, where the view on screen reads file by file. */
 function onCurrentFile(review: Review, act: (path: string) => void): void {
-	const path = review.view.fileBeingRead();
+	const path = review.views.onScreen.fileBeingRead();
 	if (path) act(path);
 }
 

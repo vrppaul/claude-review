@@ -108,7 +108,7 @@
 						type="button"
 						data-testid="show-in-files"
 						class="btn btn-ghost btn-xs"
-						onclick={() => review.layout.readingView.set('files')}
+						onclick={() => review.views.showFiles()}
 					>
 						Show in Files
 					</button>
