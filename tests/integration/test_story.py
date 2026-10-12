@@ -33,8 +33,8 @@ ADDED_FILE = "src/added.py"
 THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "def added() -> None:\n    return None\n"}
 # The edited file as a round's work leaves it: the line the story told, said another way
 REWORDED_SINCE = "initial content\nand a line reworded since\n"
-# A file added whole and long, and a story with a step to every other line of it: long enough in the telling
-# that the loop turns many times meanwhile, and that a short story sent after it arrives while it is still told
+# A file added whole and long, and a story with a step to every other line of it: long in the telling, so it is
+# surely still being told when a test that started it looks at the review again, or sends another story after it
 LONG_FILE = "src/long.py"
 LINES_OF_THE_LONG_FILE = 4000
 STEPS_OF_THE_LONG_STORY = [step(LONG_FILE, line, line) for line in range(1, LINES_OF_THE_LONG_FILE, 2)]

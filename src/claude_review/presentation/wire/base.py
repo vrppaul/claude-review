@@ -13,7 +13,8 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
 from claude_review.domain.models import says_nothing
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
 
-# What a model crosses the wire written in, whichever way it goes: a request's body, an answer, a refusal
+# What JSON is called on the wire, for whoever writes it there by hand: the agent's client says it of what it
+# sends, and a refusal of itself. The answers FastAPI writes say it themselves
 JSON_MEDIA_TYPE = "application/json"
 
 
