@@ -43,6 +43,38 @@ tests. Remove items when done — don't check them off.
       them were found running at once. Give an unopened review a deadline
       of its own.
 
+## The story, from the reviews of its server side
+
+- [ ] `fix(cli)`: the story file's usage error prints the document's field
+      names as they were written, so a key holding a terminal's control
+      sequence reaches the terminal. Everything else the reader or the
+      repository wrote is printed through `terminal_text`.
+- [ ] `fix(cli)`: `story` says "0 lines not in the story (docs/logo.png)" of
+      a file the change shows no line of — binary, too large, only moved.
+      Say such a file apart from lines left out. `render_story_taken` has no
+      unit test of its own.
+- [ ] `fix(cli)`: two refusals read badly. A step's lines that name no lines
+      are refused with pydantic's own "Value error, " before the review's
+      words; `point --lines 0` says "Input should be greater than or equal
+      to 1" twice, once for each end of the range.
+- [ ] `docs(story)`: `PlacedFile.left_out` takes runs that share no row —
+      the story's checks refuse a line told twice before it is asked — and
+      does not say so.
+- [ ] `test(wire)`: nothing holds the anchors of `LINES_WRITTEN`. The review
+      reads lines with `fullmatch`, so only the API's schema needs them,
+      which reads a pattern as found anywhere in a text: with either anchor
+      gone, every test passes.
+- [ ] `test`: older tests make a variant of a model with
+      `model_copy(update=…)`, which the package no longer does —
+      `tests/unit/test_cli_rendering.py` (seven) and
+      `tests/integration/test_session_socket.py` (two) — and four helpers
+      of `tests/unit/test_cli.py` hold a branch (`_repeated`,
+      `_offered_commands`, `_every_command`, and the test that every
+      command takes its values by name).
+- [ ] `refactor`: `line_span(start, end)` takes two numbers where
+      `lines_named` gives back a `LineSpan`: the two are one shape, said
+      twice.
+
 ## Infrastructure
 
 - [ ] Submit to the official Claude Code plugin marketplace
