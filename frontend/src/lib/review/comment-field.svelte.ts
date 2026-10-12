@@ -20,11 +20,18 @@ export function fieldKey(at: WrittenAt): string {
 
 /**
  * How a field came to be on the page: opened by the reader just now, or
- * brought back by a reload. One just opened takes the cursor, and began from
- * what it was opened with; one brought back leaves the cursor where it is, and
- * nothing is known of what it began from.
+ * brought back by a reload. One just opened takes the cursor; one brought
+ * back leaves the cursor where it is.
  */
 type FieldOpening = 'opened' | 'restored';
+
+/** What a field began from: what it was opened with — nothing, or the comment being edited. */
+export type BeganFrom = Pick<KeptField, 'text' | 'severity' | 'images'>;
+
+/** Whether two lists of images hold the same images, in the same order. */
+function sameImages(one: readonly string[], other: readonly string[]): boolean {
+	return one.length === other.length && one.every((image, position) => image === other[position]);
+}
 
 export class CommentField<Written extends WrittenAt = WrittenAt> {
 	/** Where it is written. */
@@ -32,9 +39,9 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	readonly key: string;
 	readonly attachments: ImageAttachments;
 	#text: string;
-	// What it began from: nothing, or the words of the comment being edited.
-	// Words that differ from it are the reader's own, and are not dropped unasked
-	readonly #beganFrom: string;
+	// What it began from. Whatever differs from it is the reader's own: it is
+	// not dropped unasked, and an edit holding none of it says nothing new
+	readonly #beganFrom: BeganFrom;
 	// A reply has no weight of its own — the thread's belongs to its first
 	// comment — so a reply's field keeps one all the same, never shown
 	#severity: CommentSeverity;
@@ -46,14 +53,15 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	 * @param at where it is written
 	 * @param kept what it holds: nothing yet, what is being edited, or what a draft kept
 	 * @param opening whether the reader opened it just now, or a reload brought it back
+	 * @param beganFrom what it was opened with: for a field brought back, what its opener knows of it
 	 */
-	constructor(at: Written, kept: Omit<KeptField, 'at'>, opening: FieldOpening) {
+	constructor(at: Written, kept: Omit<KeptField, 'at'>, opening: FieldOpening, beganFrom: BeganFrom) {
 		this.at = at;
 		this.key = fieldKey(at);
 		this.attachments = new ImageAttachments(kept.images, kept.uploaded);
 		this.#text = $state(kept.text);
 		this.#severity = $state(kept.severity);
-		this.#beganFrom = opening === 'opened' ? kept.text : '';
+		this.#beganFrom = beganFrom;
 		this.#focusWanted = $state(opening === 'opened');
 	}
 
@@ -79,12 +87,19 @@ export class CommentField<Written extends WrittenAt = WrittenAt> {
 	}
 
 	/**
-	 * Whether putting it away would lose something the reader put in it:
-	 * words other than those it began from, or an image pasted into it.
+	 * Whether it holds something the reader put in it: words, a weight or
+	 * images other than those it began from, or an image still on its way.
+	 * Putting it away would lose that; an edit holding none of it is left as
+	 * it was, and says nothing its thread does not say already.
 	 */
 	get holdsWork(): boolean {
-		const pasted = this.attachments.uploaded.length + this.attachments.uploading;
-		return this.#text.trim() !== this.#beganFrom.trim() || pasted > 0;
+		const began = this.#beganFrom;
+		return (
+			this.#text.trim() !== began.text.trim() ||
+			this.#severity !== began.severity ||
+			!sameImages(this.attachments.images, began.images) ||
+			this.attachments.uploading > 0
+		);
 	}
 
 	/** Whether it should take the cursor now. */

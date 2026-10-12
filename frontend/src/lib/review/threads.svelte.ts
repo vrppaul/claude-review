@@ -58,15 +58,6 @@ export interface OpenField {
 	anchor: Anchor;
 }
 
-/** Whether an edit's field says what its thread says already: opened, and left as it was. */
-function leftAsItWas(field: CommentField, thread: Thread): boolean {
-	return (
-		field.text.trim() === thread.body &&
-		field.attachments.images.length === thread.images.length &&
-		field.attachments.images.every((image, position) => image === thread.images[position])
-	);
-}
-
 /** Whether a thread the review holds is as the agent raised it: nothing settled, and nothing said in it by the reader. */
 function isAsRaised(held: HeldThread): boolean {
 	return held.raised_by === AGENT && !held.resolved && held.turns.every((turn) => turn.author !== READER);
@@ -129,7 +120,7 @@ export class Threads {
 	constructor(rounds: Rounds, kept: KeptThreads, fieldEvents: CommentFields) {
 		this.#rounds = rounds;
 		this.reading = new ThreadReading(kept.read);
-		this.writing = new ThreadWriting(kept.writing, fieldEvents);
+		this.writing = new ThreadWriting(kept.writing, fieldEvents, kept.threads);
 		this.#sending = new ThreadSending(kept.sent);
 		this.#pickUp(kept);
 	}
@@ -460,7 +451,8 @@ export class Threads {
 			return [{ field, anchor: lineAnchor(at.file, side, startLine, endLine, at.quote) }];
 		}
 		const thread = this.#all.find((candidate) => candidate.id === at.thread);
-		if (!thread || (at.kind === 'edit' && leftAsItWas(field, thread))) return [];
+		// An edit holding nothing the reader put in it says what its thread says already
+		if (!thread || (at.kind === 'edit' && !field.holdsWork)) return [];
 		return [{ field, anchor: thread.anchor }];
 	}
 

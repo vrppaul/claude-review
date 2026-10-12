@@ -239,6 +239,24 @@ describe('a comment still open in its field as the review is finished', () => {
 		expect(review.submission.canSend).toBe(false);
 	});
 
+	it('is an edit that changed the weight alone, which goes with the send', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/submit', { markdown: '## x', comment_count: 1, round: 1, ended: false });
+		review.threads.add(newComment({ body: 'as it was', severity: 'note' }));
+		const [thread] = review.threads.all;
+		if (!thread) throw new Error('No thread');
+		review.answerer.setAttached(true);
+		review.threads.writing.openEdit(thread);
+		const field = review.threads.writing.edit(thread.id);
+		if (!field) throw new Error('No edit');
+		field.severity = 'blocker';
+
+		await review.submission.send();
+
+		const [sent] = server.requestsTo('POST /api/submit');
+		expect(sent.body).toMatchObject({ threads: [{ body: 'as it was', severity: 'blocker' }] });
+	});
+
 	it('is not an edit left open as it was, which would send the thread again', () => {
 		const id = review.threads.add(newComment({ body: 'as it was' }));
 		const [thread] = review.threads.all;

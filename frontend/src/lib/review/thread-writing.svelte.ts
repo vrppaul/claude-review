@@ -12,7 +12,7 @@
 import { SvelteMap } from 'svelte/reactivity';
 
 import type { KeptField } from '$lib/drafts/draft-shapes';
-import { CommentField, fieldKey } from '$lib/review/comment-field.svelte';
+import { type BeganFrom, CommentField, fieldKey } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
 import type { CommentFieldEvent, PickedLines, Thread, WrittenAt, WrittenOnLines } from '$lib/types';
 
@@ -22,6 +22,22 @@ type Ending = Exclude<CommentFieldEvent['type'], 'opened'>;
 /** What a field opens with when nothing is written in it yet. */
 function nothingWritten(): Omit<KeptField, 'at'> {
 	return { text: '', severity: 'note', images: [], uploaded: [] };
+}
+
+/** What a field begins from when it opens holding this. */
+function beganFrom({ text, severity, images }: Omit<KeptField, 'at'>): BeganFrom {
+	return { text, severity, images: [...images] };
+}
+
+/**
+ * What a field a reload brought back began from: an edit, from its thread
+ * as the draft kept it, which the edit has not touched yet; anything else,
+ * from nothing.
+ */
+function beganBefore(at: WrittenAt, threads: readonly Thread[]): BeganFrom {
+	const edited = at.kind === 'edit' ? threads.find((thread) => thread.id === at.thread) : undefined;
+	if (edited === undefined) return beganFrom(nothingWritten());
+	return { text: edited.body, severity: edited.severity, images: [...edited.images] };
 }
 
 function isOnLines(field: CommentField): field is CommentField<WrittenOnLines> {
@@ -36,11 +52,15 @@ export class ThreadWriting {
 	/**
 	 * @param kept what was being written when the draft was kept
 	 * @param events where what happens to a field is told
+	 * @param threads the threads as the draft kept them, which an edit kept with them began from
 	 */
-	constructor(kept: KeptField[], events: CommentFields) {
+	constructor(kept: KeptField[], events: CommentFields, threads: readonly Thread[]) {
 		this.#events = events;
 		// Drawn again where they were, without taking the cursor from wherever the reader is
-		for (const field of kept) this.#fields.set(fieldKey(field.at), new CommentField(field.at, field, 'restored'));
+		for (const field of kept) {
+			const restored = new CommentField(field.at, field, 'restored', beganBefore(field.at, threads));
+			this.#fields.set(restored.key, restored);
+		}
 	}
 
 	/** Every field being written, in the order opened. */
@@ -125,7 +145,7 @@ export class ThreadWriting {
 			open.askForFocus();
 			return;
 		}
-		const field = new CommentField(at, written, 'opened');
+		const field = new CommentField(at, written, 'opened', beganFrom(written));
 		this.#fields.set(field.key, field);
 		this.#events.report({ type: 'opened', kind: at.kind });
 	}

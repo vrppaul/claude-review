@@ -382,6 +382,34 @@ describe('putting a comment away', () => {
 		expect(onCancel).not.toHaveBeenCalled();
 	});
 
+	it('asks before dropping an edit whose weight alone was changed', async () => {
+		const user = userEvent.setup();
+		const field = editOf({ body: 'As it was', severity: 'note' });
+		const { getByTestId, onCancel } = drawnPuttingAway(field);
+		field.severity = 'blocker';
+
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(getByTestId('discard-dialog')).toBeTruthy();
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+
+	it('puts away without asking an edit a reload brought back as it was', async () => {
+		const user = userEvent.setup();
+		editOf({ body: 'As it was' });
+		const [edited] = review.threads.all;
+		leavePage();
+		review = openReview();
+		const restored = review.threads.writing.edit(edited.id);
+		if (!restored) throw new Error('The edit did not come back');
+		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(restored);
+
+		await user.click(getByTestId('cancel-comment'));
+
+		expect(queryByTestId('discard-dialog')).toBeNull();
+		expect(onCancel).toHaveBeenCalledOnce();
+	});
+
 	it('asks before dropping words a reload brought back, whatever the field began from', async () => {
 		const user = userEvent.setup();
 		newField().text = 'Written before the reload';
