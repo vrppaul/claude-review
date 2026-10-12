@@ -30,7 +30,7 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 from starlette.requests import ClientDisconnect
 from starlette.routing import Match, Route
@@ -45,6 +45,7 @@ from claude_review.domain.exceptions import (
     TooLargeError,
 )
 from claude_review.presentation.body_limit import TOO_LARGE_STATUS
+from claude_review.presentation.refusal_answers import answered
 from claude_review.presentation.wire.refusal import FieldRefusal, Refusal, RequestPart
 
 log = structlog.get_logger()
@@ -160,13 +161,13 @@ def answer_refusals(app: FastAPI) -> None:
     app.add_exception_handler(HTTPException, answer_with_every_method)
 
 
-async def answer_refusal(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
+async def answer_refusal(request: Request, error: Exception, *, status: HTTPStatus) -> Response:
     """Tell whoever asked why the review would not do it."""
     log.warning("request_refused", path=request.url.path, refusal=type(error).__name__, reason=str(error))
-    return JSONResponse(status_code=status, content=Refusal(detail=str(error)).model_dump())
+    return answered(Refusal(detail=str(error)), status)
 
 
-async def answer_faults_found(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
+async def answer_faults_found(request: Request, error: Exception, *, status: HTTPStatus) -> Response:
     """Tell whoever asked everything the review found wrong with what they sent, each fault at its field.
 
     A fault is named under the request's body, where FastAPI names a field
@@ -184,12 +185,12 @@ async def answer_faults_found(request: Request, error: Exception, *, status: HTT
                 reason=str(error),
                 fields=[field.loc for field in fields],
             )
-            return JSONResponse(status_code=status, content=Refusal(detail=fields).model_dump())
+            return answered(Refusal(detail=fields), status)
         case _:
             raise error
 
 
-async def answer_fields_refused(request: Request, error: Exception) -> JSONResponse:
+async def answer_fields_refused(request: Request, error: Exception) -> Response:
     """Tell whoever asked which fields of the request were wrong, and why.
 
     FastAPI's own answer says what each field was sent, too: the whole of
@@ -200,7 +201,7 @@ async def answer_fields_refused(request: Request, error: Exception) -> JSONRespo
         case RequestValidationError():
             fields = [FieldRefusal.model_validate(wrong) for wrong in error.errors()]
             log.warning("request_refused", path=request.url.path, fields=[field.loc for field in fields])
-            return JSONResponse(status_code=WRONG_INPUT, content=Refusal(detail=fields).model_dump())
+            return answered(Refusal(detail=fields), WRONG_INPUT)
         case _:
             raise error
 

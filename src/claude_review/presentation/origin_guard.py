@@ -24,10 +24,10 @@ import re
 from http import HTTPStatus
 
 from starlette.datastructures import Headers
-from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from claude_review.presentation.asgi import HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
+from claude_review.presentation.refusal_answers import answered
 from claude_review.presentation.wire.refusal import Refusal
 
 # This machine's names over loopback, as a Host header writes them: an IPv6
@@ -134,8 +134,8 @@ class LocalOriginOnly:
         if scope["type"] == WEBSOCKET_SCOPE:
             await _reject_socket(send)
         else:
-            refused = Refusal(detail=NOT_ITS_PAGE_DETAIL)
-            await JSONResponse(refused.model_dump(), status_code=NOT_ITS_PAGE_STATUS)(scope, receive, send)
+            refused = answered(Refusal(detail=NOT_ITS_PAGE_DETAIL), NOT_ITS_PAGE_STATUS)
+            await refused(scope, receive, send)
 
     def _opens_the_page(self, path: str) -> bool:
         """Whether a request asks for the page itself, or a file its build put beside it."""
