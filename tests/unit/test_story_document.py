@@ -6,7 +6,8 @@ document is found in one reading, each fault at the field it is about, with
 where the rest belongs when a text ran long.
 """
 
-import time
+import sys
+from types import FrameType
 
 import pytest
 from hypothesis import given, strategies as strategy
@@ -15,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 from claude_review.domain.exceptions import FieldFault, FieldPath
 from claude_review.domain.models import LineSpan
 from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
-from claude_review.presentation.wire.story import MAX_CHAPTERS, MAX_STEPS_IN_CHAPTER
 from claude_review.services.story_checks import document_faults
 from tests.stories import (
     IMAGE_SERVICE,
@@ -72,11 +72,13 @@ LONGEST_REACH = 20
 FAR_BELOW = 500
 # How far past a limit a generated text runs
 FAR_OVER = 50
-# The most steps one request may carry, how far apart the narrow ones of a long story start, and the longest
-# such a story may take to check: a hundred times what it takes, and a tenth of what it took
-MOST_STEPS = MAX_CHAPTERS * MAX_STEPS_IN_CHAPTER
+# How far apart the narrow steps of a long story start; how many steps the shorter of two such stories has,
+# and how many times as many the longer; and how much more than that many times the work the longer may take,
+# for the logarithm: held against one another step by step, it took that many times squared
 STRIDE = 4
-LONGEST_CHECK_SECONDS = 10.0
+STEPS_OF_THE_SHORTER = 500
+TIMES_AS_LONG = 4
+ROOM_FOR_THE_LOGARITHM = 2
 
 
 def lines(first: int, last: int) -> dict[str, JsonValue]:
@@ -307,25 +309,43 @@ def test_a_step_that_meets_two_earlier_steps_is_told_of_the_one_the_story_told_f
     assert "50-60" in third.reason
 
 
-def test_a_story_as_long_as_a_request_may_carry_is_checked_in_seconds_however_its_steps_lie() -> None:
-    """One step lying across all the rest once took minutes: every step was held against every other in turn."""
+class CallsCounted:
+    """How many calls Python made while this stood as its profiler: the work done, whatever the machine."""
+
+    def __init__(self) -> None:
+        self.made = 0
+
+    def __call__(self, frame: FrameType, event: str, argument: object) -> None:
+        self.made += 1
+
+
+def work_of_checking(story: Story[Step]) -> int:
+    """How many calls checking a story's document takes."""
+    counted = CallsCounted()
+    sys.setprofile(counted)
+    try:
+        document_faults(story)
+    finally:
+        sys.setprofile(None)
+    return counted.made
+
+
+def story_with_one_step_across_the_rest(steps: int) -> Story[Step]:
+    """A story of this many steps of one file: narrow ones that stand apart, and a last one told across them all."""
     narrow = [
         Step(file=IMAGE_SERVICE, lines=LineSpan(first=place * STRIDE + 1, last=place * STRIDE + 2))
-        for place in range(MOST_STEPS - 1)
+        for place in range(steps - 1)
     ]
-    across_them_all = Step(file=IMAGE_SERVICE, lines=LineSpan(first=1, last=MOST_STEPS * STRIDE))
-    story = story_of_chapters(
-        *(
-            chapter_of(f"ch-{first}", *[*narrow, across_them_all][first : first + MAX_STEPS_IN_CHAPTER])
-            for first in range(0, MOST_STEPS, MAX_STEPS_IN_CHAPTER)
-        )
-    )
+    across_them_all = Step(file=IMAGE_SERVICE, lines=LineSpan(first=1, last=steps * STRIDE))
+    return story_of_chapters(chapter_of(KEEPING_CHAPTER, *narrow, across_them_all))
 
-    started = time.perf_counter()
-    faults = document_faults(story)
 
-    assert paths_of(faults) == [("chapters", MAX_CHAPTERS - 1, "steps", MAX_STEPS_IN_CHAPTER - 1, "lines")]
-    assert time.perf_counter() - started < LONGEST_CHECK_SECONDS
+def test_a_story_four_times_as_long_takes_little_more_than_four_times_the_work_to_check() -> None:
+    """Each step held against every other, it took sixteen times: a story as long as a request may carry, a minute."""
+    work_of_the_shorter = work_of_checking(story_with_one_step_across_the_rest(STEPS_OF_THE_SHORTER))
+    work_of_the_longer = work_of_checking(story_with_one_step_across_the_rest(STEPS_OF_THE_SHORTER * TIMES_AS_LONG))
+
+    assert work_of_the_longer < work_of_the_shorter * TIMES_AS_LONG * ROOM_FOR_THE_LOGARITHM
 
 
 def test_steps_that_meet_in_two_files_are_each_refused_in_the_order_the_story_tells_them() -> None:

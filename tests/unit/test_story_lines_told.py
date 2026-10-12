@@ -5,6 +5,8 @@ told it first — first in the story, wherever in the file the others lie.
 Each step is named here by its place among the steps of its file.
 """
 
+from functools import partial
+
 from hypothesis import given, strategies as strategy
 
 from claude_review.domain.models import LineSpan
@@ -23,6 +25,29 @@ MEETS_NONE = None
 
 def lines(first: int, last: int) -> LineSpan:
     return LineSpan(first=first, last=last)
+
+
+def share_a_line(steps: list[LineSpan], later: int, earlier: int) -> bool:
+    """The rule as it reads: two steps share a line when each starts no later than the other ends."""
+    return steps[earlier].first <= steps[later].last and steps[later].first <= steps[earlier].last
+
+
+def first_met_plainly(steps: list[LineSpan]) -> list[int | None]:
+    """Each step held against every earlier one in turn: the first that shares a line with it, or none."""
+    return [next(filter(partial(share_a_line, steps, later), range(later)), None) for later in range(len(steps))]
+
+
+@strategy.composite
+def steps_of_one_file(draw: strategy.DrawFn) -> list[LineSpan]:
+    """Steps of one file told in any order, lying across one another or apart, of a line or of many."""
+    firsts = draw(strategy.lists(strategy.integers(min_value=1, max_value=FURTHEST_REACH)))
+    return [lines(first, first + draw(strategy.integers(min_value=0, max_value=FURTHEST_REACH))) for first in firsts]
+
+
+@given(steps=steps_of_one_file())
+def test_however_the_steps_of_a_file_lie_each_meets_the_step_the_plain_rule_names(steps: list[LineSpan]) -> None:
+    """The lines are kept so that a long story is checked quickly: what is answered is the plain rule's answer."""
+    assert first_met(steps) == first_met_plainly(steps)
 
 
 def test_a_file_no_step_tells_has_no_step_to_meet_another() -> None:
