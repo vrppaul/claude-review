@@ -77,7 +77,7 @@ class UnknownAnchorFileError(NotFoundError):
 
 
 class UnknownFileError(NotFoundError):
-    """Raised when the agent names a file this review does not hold: to take the reader to it, or to offer a jump."""
+    """Raised when the reader is to be taken to a file this review does not hold."""
 
 
 class AnchorTooLongError(RefusedError):

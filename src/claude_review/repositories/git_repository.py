@@ -392,16 +392,6 @@ class GitRepository(ReviewedRepository):
         return run.exit_code == 0
 
     @override
-    async def has_file(self, root: Path, relative_path: str) -> bool:
-        """Whether a file stands at this path of the working tree, made since the diff was taken or not.
-
-        Looked at on the disk, off the event loop: git knows nothing of a
-        file it has not been told to add. A path that leads out of the root,
-        by `..` or by a link, stands in no working tree of this review.
-        """
-        return await asyncio.to_thread(_file_inside, root, relative_path)
-
-    @override
     async def top_level(self, path: Path) -> Path | None:
         """The root of the repository containing ``path``.
 
@@ -470,12 +460,6 @@ async def _commit_named(path: Path, revision: str) -> str | None:
     """
     run = await _execute(path, ["rev-parse", "--verify", "--quiet", END_OF_OPTIONS, f"{revision}{AS_COMMIT}"])
     return run.output.strip() if run.exit_code == 0 else None
-
-
-def _file_inside(root: Path, relative_path: str) -> bool:
-    """Whether a file stands at this path, which leads nowhere outside the root."""
-    found = (root / relative_path).resolve()
-    return found.is_relative_to(root.resolve()) and found.is_file()
 
 
 def _sides_stored(base: str, file: DiffFile) -> list[str]:

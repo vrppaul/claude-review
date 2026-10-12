@@ -104,10 +104,6 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         return True
 
-    @override
-    async def has_file(self, root: Path, relative_path: str) -> bool:
-        return True
-
 
 async def _opened(repository: RepositoryBeingWorkedOn, rounds: RoundTracker) -> ContentSource:
     """A review of the repository's uncommitted changes, opened as the server opens it."""

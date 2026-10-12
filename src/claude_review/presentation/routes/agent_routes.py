@@ -147,7 +147,7 @@ async def reply_to_thread(request: ReplyRequest, review: Review = Depends(get_re
     review.answer_thread(thread_id=request.thread_id, question_id=request.question_id, body=request.body)
 
 
-@router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY))
+@router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)) -> None:
     """Push what the agent has to say into a review still open.
 
@@ -155,12 +155,10 @@ async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)
     the agent speaking first, which is worth as much: work finished while
     the reader was reading is news they would otherwise have to ask for.
     """
-    await review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
+    review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
 
 
-@router.post(
-    "/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY)
-)
+@router.post("/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
 async def report_progress(request: ProgressRequest, review: Review = Depends(get_review)) -> None:
     """Say what is being done, while it is being done.
 
@@ -169,7 +167,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     whatever was showing — the state of the work, not a log of it — and an
     empty one takes the line away.
     """
-    await review.report_work(
+    review.report_work(
         message_id=request.message_id,
         text=request.text,
         files=request.files,
