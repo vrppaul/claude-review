@@ -50,14 +50,16 @@ NOT_TEXT = 'wants lines as text, like "42" or "42-47"'
 
 
 def _lines_read(written: object) -> models.LineSpan:
-    """A step's lines as the agent wrote them, read.
+    """A step's lines as the agent wrote them, read; lines the review holds already are taken as they are.
 
     Raises:
-        ValueError: if they are not text, or text that names no lines: what
+        ValueError: if they are neither, or text that names no lines: what
             pydantic reads as a field refused, where any other error would
             be a fault of this side.
     """
     match written:
+        case models.LineSpan():
+            return written
         case str():
             return lines_named(written)
         case _:

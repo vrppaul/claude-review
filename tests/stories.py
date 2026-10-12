@@ -21,7 +21,7 @@ from claude_review.domain.models import (
     LineType,
 )
 from claude_review.domain.story import Chapter, Diagram, OverviewItem, Step, Story, StoryOverview, ToldFrom
-from claude_review.services.place_words import line_span
+from claude_review.presentation.wire.story import StoryRequest
 from tests.helpers import added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by
@@ -73,11 +73,7 @@ def field_at(story: Story[Step], path: FieldPath) -> JsonValue:
 
 def as_the_agent_writes(story: Story[Step]) -> dict[str, JsonValue]:
     """A story as its document says it: JSON, each step's lines written "104-129"."""
-    document = story.model_dump(mode="json")
-    for chapter in document["chapters"]:
-        for written in chapter["steps"]:
-            written["lines"] = line_span(written["lines"]["first"], written["lines"]["last"])
-    return document
+    return StoryRequest.of(story).model_dump(mode="json")
 
 
 def _overview() -> StoryOverview:
