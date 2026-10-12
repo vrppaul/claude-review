@@ -117,8 +117,22 @@ def _seconds_drawn(value: object) -> float | None:
         return None
 
 
-def _a_moment_at_most(query: dict[str, object] | None) -> dict[str, object] | None:
-    """A poll's wait the route takes, cut to a moment; one it refuses, left to be refused.
+def _cut_to_a_moment(drawn: object) -> object:
+    """A wait the route takes, cut to a moment; one it refuses, left to be refused.
+
+    A wait drawn several times over is read by the route as its last, so the
+    last is the one cut.
+    """
+    if isinstance(drawn, list):
+        return [*drawn[:-1], _cut_to_a_moment(drawn[-1])] if drawn else drawn
+    seconds = _seconds_drawn(drawn)
+    if seconds is None or not 0 < seconds <= MAX_WAIT_SECONDS:
+        return drawn
+    return min(seconds, LONGEST_DRAWN_WAIT_SECONDS)
+
+
+def _a_moment_at_most(query: dict[str, object] | None) -> dict[str, object]:
+    """A poll's query with its wait cut to a moment.
 
     A poll that names no wait waits the route's own, which is as long as any
     other it takes.
@@ -126,10 +140,7 @@ def _a_moment_at_most(query: dict[str, object] | None) -> dict[str, object] | No
     drawn = query or {}
     if WAIT_PARAMETER not in drawn:
         return {**drawn, WAIT_PARAMETER: LONGEST_DRAWN_WAIT_SECONDS}
-    wait = _seconds_drawn(drawn[WAIT_PARAMETER])
-    if wait is None or not 0 < wait <= MAX_WAIT_SECONDS:
-        return query
-    return {**drawn, WAIT_PARAMETER: min(wait, LONGEST_DRAWN_WAIT_SECONDS)}
+    return {**drawn, WAIT_PARAMETER: _cut_to_a_moment(drawn[WAIT_PARAMETER])}
 
 
 def _answers_as_its_schema_says(case: Case, reviews_by_operation: ReviewsByOperation) -> None:
