@@ -672,6 +672,19 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
     assert not list(temporary.glob("*.claude-review-objects"))
 
 
+def test_a_review_stopped_by_a_signal_while_its_page_is_open_exits_without_being_killed(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """A page holding its socket must not keep the process alive past `kill`, so a restart never needs `kill -9`."""
+    review = cli.start("diff", str(changed_repo), "--port", str(port), "--no-open")
+    review.wait_for_address()
+
+    with _session(port):
+        review.terminate()
+
+        assert review.finish() == 0
+
+
 # A git that never finishes staging, as on a tree of a million files: `add`
 # waits, every other command is the real git's
 GIT_THAT_HANGS_STAGING = """#!/bin/sh
