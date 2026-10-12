@@ -6,9 +6,11 @@ canvas's own words. The limits a story is held to are measured against a
 story somebody meant, not against filler.
 """
 
-from pydantic import JsonValue
+from collections.abc import Callable
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from pydantic import BaseModel, ConfigDict, JsonValue
+
+from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 from claude_review.domain.story import (
     Chapter,
     Diagram,
@@ -19,6 +21,7 @@ from claude_review.domain.story import (
     Story,
     StoryOverview,
 )
+from tests.helpers import added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by
 PASTE_CHAPTER = "ch-1"
@@ -199,34 +202,69 @@ def _keeping_chapter() -> Chapter[Step]:
     )
 
 
-# How a row of a hunk is written in a test: a space for a line the change kept, and git's own signs for the rest
-KINDS = {" ": LineType.CONTEXT, "+": LineType.ADD, "-": LineType.DELETE}
+class RowKind(BaseModel):
+    """A kind of row, as a test writes one: how its line is made, and what it counts for."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The line, given the number the row would have on each side
+    line: Callable[[int, int], DiffLine]
+    # How many lines it is on the old side and on the new, and how many the change added or removed in it
+    old_lines: int
+    new_lines: int
+    changes: int
+
+
+def _kept(old_number: int, new_number: int) -> DiffLine:
+    return context_line(old_number, new_number, f" {old_number}/{new_number}")
+
+
+def _added(_old_number: int, new_number: int) -> DiffLine:
+    return added_line(new_number, f"+/{new_number}")
+
+
+def _removed(old_number: int, _new_number: int) -> DiffLine:
+    return removed_line(old_number, f"-{old_number}/")
+
+
+# How a row of a hunk is written in a test, by its sign: a space for a line the change kept, and git's
+# own signs for the rest. Every line says its sign and its numbers, so a test reads which row it holds.
+ROWS = {
+    " ": RowKind(line=_kept, old_lines=1, new_lines=1, changes=0),
+    "+": RowKind(line=_added, old_lines=0, new_lines=1, changes=1),
+    "-": RowKind(line=_removed, old_lines=1, new_lines=0, changes=1),
+}
+# The sign each kind of line is written by
+SIGNS = {LineType.CONTEXT: " ", LineType.ADD: "+", LineType.DELETE: "-"}
 # The one chapter of a story a test tells of a change of its own
 ONLY_CHAPTER = "ch-1"
 
 
 def hunk(old_start: int, new_start: int, signs: str) -> DiffHunk:
-    """A hunk whose rows are written by their signs, numbered on each side from where the hunk starts there.
-
-    Every line says its sign and its numbers, so a test reads which row it holds.
-    """
+    """A hunk whose rows are written by their signs, numbered on each side from where the hunk starts there."""
     lines: list[DiffLine] = []
     old_number, new_number = old_start, new_start
     for sign in signs:
-        kind = KINDS[sign]
-        on_old = kind != LineType.ADD
-        on_new = kind != LineType.DELETE
-        lines.append(
-            DiffLine(
-                kind=kind,
-                old_number=old_number if on_old else None,
-                new_number=new_number if on_new else None,
-                content=f"{sign}{old_number if on_old else ''}/{new_number if on_new else ''}",
-            )
-        )
-        old_number += 1 if on_old else 0
-        new_number += 1 if on_new else 0
-    return DiffHunk(header="", old_start=old_start, new_start=new_start, lines=lines)
+        row = ROWS[sign]
+        lines.append(row.line(old_number, new_number))
+        old_number += row.old_lines
+        new_number += row.new_lines
+    return DiffHunk(header=NO_HUNK_HEADER, old_start=old_start, new_start=new_start, lines=lines)
+
+
+def signs_of(lines: list[DiffLine]) -> str:
+    """The signs these rows are written by, in order."""
+    return "".join(SIGNS[line.kind] for line in lines)
+
+
+def changed_in(lines: list[DiffLine]) -> int:
+    """How many of these rows the change added or removed."""
+    return sum(ROWS[sign].changes for sign in signs_of(lines))
+
+
+def lines_of(file: DiffFile) -> list[DiffLine]:
+    """Every row of a file, hunk after hunk."""
+    return [line for shown in file.hunks for line in shown.lines]
 
 
 def changed_file(path: str, *hunks: DiffHunk, status: FileStatus = FileStatus.MODIFIED) -> DiffFile:
@@ -236,7 +274,7 @@ def changed_file(path: str, *hunks: DiffHunk, status: FileStatus = FileStatus.MO
 
 def rows_of(file: DiffFile) -> list[str]:
     """What every row of a file says, hunk after hunk."""
-    return [line.content for shown in file.hunks for line in shown.lines]
+    return [line.content for line in lines_of(file)]
 
 
 def step(file: str, first: int, last: int) -> Step:

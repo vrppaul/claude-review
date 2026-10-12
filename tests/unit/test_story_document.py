@@ -50,8 +50,11 @@ FIRST_STEP_LINES: FieldPath = ("chapters", 1, "steps", 0, "lines")
 SECOND_STEP_LINES: FieldPath = ("chapters", 1, "steps", 1, "lines")
 THIRD_STEP_LINES: FieldPath = ("chapters", 1, "steps", 2, "lines")
 OTHER_FILE_STEP_LINES: FieldPath = ("chapters", 1, "steps", 3, "lines")
-# Lines well above every step the canvas tells of that file, for steps a test moves about
+# Lines well above every step the canvas tells of that file, for steps a test moves about;
+# how far a generated step reaches from where it is made; and a line far below them all
 ROOM_ABOVE = 60
+LONGEST_REACH = 20
+FAR_BELOW = 500
 # How far past a limit a generated text runs
 FAR_OVER = 50
 
@@ -249,23 +252,42 @@ def test_lines_already_refused_for_their_numbers_are_not_held_to_meet_others_too
     assert paths_of(document_faults(story)) == [SECOND_STEP_LINES]
 
 
-@given(
-    first_start=strategy.integers(min_value=1, max_value=ROOM_ABOVE),
-    first_length=strategy.integers(min_value=0, max_value=ROOM_ABOVE),
-    second_start=strategy.integers(min_value=1, max_value=ROOM_ABOVE),
-    second_length=strategy.integers(min_value=0, max_value=ROOM_ABOVE),
-)
-def test_two_steps_of_a_file_are_refused_exactly_when_they_share_a_line(
-    first_start: int, first_length: int, second_start: int, second_length: int
-) -> None:
-    out_of_the_way = planted(canvas_story(), THIRD_STEP_LINES, lines(500, 510))
-    earlier = planted(out_of_the_way, FIRST_STEP_LINES, lines(first_start, first_start + first_length))
-    story = planted(earlier, SECOND_STEP_LINES, lines(second_start, second_start + second_length))
-    shared = set(range(first_start, first_start + first_length + 1)) & set(
-        range(second_start, second_start + second_length + 1)
-    )
+def two_steps_of_one_file(earlier: dict[str, JsonValue], later: dict[str, JsonValue]) -> Story[Step]:
+    """The canvas's story with two steps of one file told of these lines, and its third moved out of their way."""
+    out_of_the_way = planted(canvas_story(), THIRD_STEP_LINES, lines(FAR_BELOW, FAR_BELOW))
+    return planted(planted(out_of_the_way, FIRST_STEP_LINES, earlier), SECOND_STEP_LINES, later)
 
-    assert paths_of(document_faults(story)) == ([SECOND_STEP_LINES] if shared else [])
+
+@strategy.composite
+def stories_whose_steps_share_a_line(draw: strategy.DrawFn) -> Story[Step]:
+    """Two steps of one file made around a line both tell: each starts no later than it and ends no sooner."""
+    shared = draw(strategy.integers(min_value=LONGEST_REACH + 1, max_value=ROOM_ABOVE))
+    reaches = strategy.integers(min_value=0, max_value=LONGEST_REACH)
+    earlier = lines(shared - draw(reaches), shared + draw(reaches))
+    later = lines(shared - draw(reaches), shared + draw(reaches))
+    return two_steps_of_one_file(earlier, later)
+
+
+@strategy.composite
+def stories_whose_steps_stand_apart(draw: strategy.DrawFn) -> Story[Step]:
+    """Two steps of one file, one ending before the other starts, told in either order."""
+    reaches = strategy.integers(min_value=0, max_value=LONGEST_REACH)
+    upper_first = draw(strategy.integers(min_value=1, max_value=ROOM_ABOVE))
+    upper_last = upper_first + draw(reaches)
+    lower_first = upper_last + 1 + draw(reaches)
+    lower_last = lower_first + draw(reaches)
+    earlier, later = draw(strategy.permutations([lines(upper_first, upper_last), lines(lower_first, lower_last)]))
+    return two_steps_of_one_file(earlier, later)
+
+
+@given(story=stories_whose_steps_share_a_line())
+def test_two_steps_of_a_file_that_share_a_line_are_always_refused_at_the_later(story: Story[Step]) -> None:
+    assert paths_of(document_faults(story)) == [SECOND_STEP_LINES]
+
+
+@given(story=stories_whose_steps_stand_apart())
+def test_two_steps_of_a_file_that_share_no_line_are_never_refused(story: Story[Step]) -> None:
+    assert document_faults(story) == []
 
 
 def test_a_file_named_twice_as_housekeeping_is_refused_the_second_time() -> None:

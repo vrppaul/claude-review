@@ -8,10 +8,10 @@ hold is refused, with all of it said at once.
 
 import pytest
 
-from claude_review.domain.models import DiffFile, FileStatus, LineType, Unshown
+from claude_review.domain.models import DiffFile, FileStatus, Unshown
 from claude_review.domain.story import FieldPath, Step, Story, StoryFault, StoryRefusedError
 from claude_review.services.story_telling import tell
-from tests.stories import ONLY_CHAPTER, changed_file, hunk, planted, rows_of, step, story_of
+from tests.stories import ONLY_CHAPTER, changed_file, changed_in, hunk, lines_of, planted, rows_of, step, story_of
 
 SERVICE = "src/service.py"
 STORE = "src/store.py"
@@ -20,12 +20,11 @@ LOGO = "docs/logo.png"
 
 # The change every test here tells: one line replaced by two and two removed in a service, a store added
 # whole, a lock file rewritten, and a picture the change shows no line of
-CHANGE = [
-    changed_file(SERVICE, hunk(10, 10, "  -++ -- ")),
-    changed_file(STORE, hunk(0, 1, "+++"), status=FileStatus.ADDED),
-    changed_file(LOCK, hunk(3, 3, " -+ ")),
-    DiffFile(path=LOGO, status=FileStatus.ADDED, hunks=[], unshown=Unshown.BINARY),
-]
+SERVICE_FILE = changed_file(SERVICE, hunk(10, 10, "  -++ -- "))
+STORE_FILE = changed_file(STORE, hunk(0, 1, "+++"), status=FileStatus.ADDED)
+LOCK_FILE = changed_file(LOCK, hunk(3, 3, " -+ "))
+LOGO_FILE = DiffFile(path=LOGO, status=FileStatus.ADDED, hunks=[], unshown=Unshown.BINARY)
+CHANGE = [SERVICE_FILE, STORE_FILE, LOCK_FILE, LOGO_FILE]
 # Steps that between them tell everything the service and the store changed
 WHOLE_SERVICE = [step(SERVICE, 12, 13), step(SERVICE, 15, 15)]
 WHOLE_STORE = step(STORE, 1, 3)
@@ -36,7 +35,7 @@ FIRST_HOUSEKEEPING: FieldPath = ("housekeeping", 0)
 
 def changed_lines(files: list[DiffFile]) -> int:
     """How many lines the change added or removed in these files."""
-    return sum(1 for file in files for part in file.hunks for line in part.lines if line.kind != LineType.CONTEXT)
+    return sum(changed_in(lines_of(file)) for file in files)
 
 
 def refusal_of(story: Story[Step]) -> list[StoryFault]:
@@ -102,8 +101,8 @@ def test_a_step_tells_lines_of_its_own_file_and_of_no_other() -> None:
     told = tell(story_of(WHOLE_STORE, housekeeping=(LOGO,)), CHANGE)
 
     assert [(left.piece.path, rows_of(left.piece)) for left in told.left_out] == [
-        (SERVICE, rows_of(CHANGE[0])),
-        (LOCK, rows_of(CHANGE[2])),
+        (SERVICE, rows_of(SERVICE_FILE)),
+        (LOCK, rows_of(LOCK_FILE)),
     ]
 
 
@@ -113,7 +112,7 @@ def test_a_file_the_change_shows_no_line_of_is_left_out_as_the_file_it_is() -> N
 
     [left] = told.left_out
 
-    assert left.piece == CHANGE[3]
+    assert left.piece == LOGO_FILE
     assert left.changed_lines == 0
 
 
@@ -122,7 +121,7 @@ def test_every_line_the_change_added_or_removed_is_told_left_out_or_housekeeping
 
     told_lines = changed_lines([told_step.piece for chapter in told.chapters for told_step in chapter.steps])
     left_lines = sum(left.changed_lines for left in told.left_out)
-    housekeeping_lines = changed_lines([file for file in CHANGE if file.path == LOCK])
+    housekeeping_lines = changed_lines([LOCK_FILE])
 
     assert told_lines + left_lines + housekeeping_lines == changed_lines(CHANGE)
 

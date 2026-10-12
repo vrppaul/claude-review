@@ -9,10 +9,10 @@ the same rule, so nothing the change did can fall between the two.
 import pytest
 from hypothesis import given, strategies as strategy
 
-from claude_review.domain.models import DiffFile, FileStatus, LineType
+from claude_review.domain.models import DiffFile, DiffLine, FileStatus
 from claude_review.domain.story import StepLines
 from claude_review.services.story_slices import HunkRows, ToldFile
-from tests.stories import changed_file, hunk, rows_of
+from tests.stories import ROWS, changed_file, changed_in, hunk, lines_of, rows_of, signs_of
 
 FILE = "a.py"
 # Lines 12 and 13 replace one line; further down, two lines are removed above the line now numbered 15
@@ -51,6 +51,11 @@ def left_out(file: DiffFile, *steps: StepLines) -> DiffFile:
 def rows_in(runs: list[HunkRows]) -> list[tuple[int, int]]:
     """Every row of these runs, by its hunk and its place among the hunk's rows."""
     return [(run.hunk, row) for run in runs for row in range(run.start, run.stop)]
+
+
+def lines_in(file: DiffFile, runs: list[HunkRows]) -> list[DiffLine]:
+    """The rows of a file these runs are, read off the file itself."""
+    return [line for run in runs for line in file.hunks[run.hunk].lines[run.start : run.stop]]
 
 
 def test_a_step_is_every_row_at_its_lines_and_a_removed_line_comes_with_the_place_it_was_removed_from() -> None:
@@ -161,8 +166,8 @@ def changed_files(draw: strategy.DrawFn) -> DiffFile:
         old_number += GAP
         new_number += GAP
         hunks.append(hunk(old_number, new_number, signs))
-        old_number += sum(1 for sign in signs if sign != "+")
-        new_number += sum(1 for sign in signs if sign != "-")
+        old_number += sum(ROWS[sign].old_lines for sign in signs)
+        new_number += sum(ROWS[sign].new_lines for sign in signs)
     return changed_file(FILE, *hunks)
 
 
@@ -176,33 +181,38 @@ def steps_apart(draw: strategy.DrawFn) -> list[StepLines]:
 
 
 @given(file=changed_files(), steps=steps_apart())
-def test_every_row_the_change_added_or_removed_is_told_by_one_step_or_left_out_and_never_both(
-    file: DiffFile, steps: list[StepLines]
-) -> None:
+def test_no_row_is_told_by_two_steps_or_both_told_and_left_out(file: DiffFile, steps: list[StepLines]) -> None:
     reading = ToldFile(file)
     told = [run for step in steps for run in reading.rows_at(step)]
-    left = reading.left_out(told)
-    changed = {
-        (part, row)
-        for part, shown_hunk in enumerate(file.hunks)
-        for row, line in enumerate(shown_hunk.lines)
-        if line.kind != LineType.CONTEXT
-    }
+    rows = [*rows_in(told), *rows_in(reading.left_out(told))]
 
-    assert len(set(rows_in(told)) | set(rows_in(left))) == len(rows_in(told)) + len(rows_in(left))
-    assert changed <= set(rows_in(told)) | set(rows_in(left))
-    assert all(reading.changed_lines([run]) > 0 for run in left)
+    assert len(set(rows)) == len(rows)
 
 
 @given(file=changed_files(), steps=steps_apart())
-def test_every_hunk_of_a_piece_starts_at_the_numbers_its_first_rows_have(
+def test_every_row_the_change_added_or_removed_is_told_or_left_out(file: DiffFile, steps: list[StepLines]) -> None:
+    """No row is counted twice, so counting them all means each is somewhere."""
+    reading = ToldFile(file)
+    told = [run for step in steps for run in reading.rows_at(step)]
+    left = reading.left_out(told)
+
+    assert changed_in(lines_in(file, told)) + changed_in(lines_in(file, left)) == changed_in(lines_of(file))
+
+
+@given(file=changed_files(), steps=steps_apart())
+def test_every_run_of_rows_left_out_holds_a_change(file: DiffFile, steps: list[StepLines]) -> None:
+    reading = ToldFile(file)
+    left = reading.left_out([run for step in steps for run in reading.rows_at(step)])
+
+    assert all(changed_in(lines_in(file, [run])) > 0 for run in left)
+
+
+@given(file=changed_files(), steps=steps_apart())
+def test_every_hunk_of_a_piece_numbers_its_rows_from_where_it_starts_as_the_file_numbers_them(
     file: DiffFile, steps: list[StepLines]
 ) -> None:
+    """Written again from its own starts and signs, a piece's hunk is the very rows it was cut from."""
     reading = ToldFile(file)
+    pieces = [part for step in steps for part in reading.piece(reading.rows_at(step)).hunks]
 
-    for step in steps:
-        for part in reading.piece(reading.rows_at(step)).hunks:
-            old_numbers = [line.old_number for line in part.lines if line.old_number is not None]
-            new_numbers = [line.new_number for line in part.lines if line.new_number is not None]
-            assert not old_numbers or part.old_start == old_numbers[0]
-            assert not new_numbers or part.new_start == new_numbers[0]
+    assert pieces == [hunk(part.old_start, part.new_start, signs_of(part.lines)) for part in pieces]
