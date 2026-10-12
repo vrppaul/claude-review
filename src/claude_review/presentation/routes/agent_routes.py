@@ -155,7 +155,7 @@ async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)
     the agent speaking first, which is worth as much: work finished while
     the reader was reading is news they would otherwise have to ask for.
     """
-    review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
+    await review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
 
 
 @router.post(
@@ -169,7 +169,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
     whatever was showing — the state of the work, not a log of it — and an
     empty one takes the line away.
     """
-    review.report_work(
+    await review.report_work(
         message_id=request.message_id,
         text=request.text,
         files=request.files,

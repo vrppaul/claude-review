@@ -262,3 +262,18 @@ async def test_a_base_that_reads_as_an_option_is_never_taken_for_one(
         await _raw_diff(GitRepository(objects=None), tmp_git_repo, base=f"--output={target}")
 
     assert not target.exists()
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "stands"),
+    [("made_since.py", True), ("initial.txt", True), ("nowhere.py", False), ("../outside.txt", False)],
+    ids=["made-since", "committed", "nowhere", "out-of-the-root"],
+)
+async def test_a_file_stands_in_the_working_tree_whatever_git_knows_of_it(
+    tmp_git_repo: Path, relative_path: str, *, stands: bool
+) -> None:
+    """A file the agent made a moment ago stands there before any staging; a path out of the root stands nowhere."""
+    (tmp_git_repo / "made_since.py").write_text("x = 1\n")
+    (tmp_git_repo.parent / "outside.txt").write_text("not the review's\n")
+
+    assert await GitRepository(objects=None).has_file(tmp_git_repo, relative_path) is stands

@@ -142,15 +142,15 @@ class Review:
         """Note that the agent is still there: every call it makes renews its lease."""
         self._answerer.heard()
 
-    def report_work(
+    async def report_work(
         self, *, message_id: str | None, text: str, files: list[FilePath], steps: list[ProgressStep]
     ) -> None:
         """Say what the agent is doing, replacing whatever was showing; nothing said ends it.
 
         Raises:
-            UnknownFileError: if it names a file the review does not hold.
+            UnknownFileError: if it names a file that is neither in the review nor in its working tree.
         """
-        self._require_files(files)
+        await self._require_files(files)
         self._answerer.report_work(message_id=message_id, text=text, files=files, steps=steps)
 
     def report_status(self, *, model: str | None, context: str | None) -> None:
@@ -261,13 +261,13 @@ class Review:
         self._answerer.end_work_for(message_id)
         log.info("panel_cancelled", message_id=message_id)
 
-    def agent_says(self, *, message_id: str | None, body: str, files: list[FilePath]) -> None:
+    async def agent_says(self, *, message_id: str | None, body: str, files: list[FilePath]) -> None:
         """Tell the pages what the agent says in the panel: an answer to a message, or the agent speaking first.
 
         Raises:
-            UnknownFileError: if it names a file the review does not hold.
+            UnknownFileError: if it names a file that is neither in the review nor in its working tree.
         """
-        self._require_files(files)
+        await self._require_files(files)
         self._page.tell(AgentSaid(message_id=message_id, body=body, files=files))
         self._answerer.end_work_for(message_id)
         self._conversation.agent_said(message_id=message_id, body=body)
@@ -287,9 +287,10 @@ class Review:
         """Take the reader to a file, which they asked to be taken to.
 
         Raises:
-            UnknownFileError: if the review holds no such file.
+            UnknownFileError: if the review holds no such file: the page draws nothing else to take them to.
         """
-        self._require_files([file])
+        if file not in self._source.content.paths:
+            raise UnknownFileError(_not_in_the_review(file))
         self._page.tell(FileShown(file=file))
         log.info("file_shown", file=file)
 
@@ -393,17 +394,21 @@ class Review:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
 
-    def _require_files(self, files: list[FilePath]) -> None:
-        """Refuse files the agent names that the review does not hold: the page would take the reader to none of them.
+    async def _require_files(self, files: list[FilePath]) -> None:
+        """Refuse a file the agent names that is neither in the review nor in its working tree.
+
+        A file the agent has just made is not in the diff until it is taken
+        again, and the agent says so as it works: such a file is named, and
+        drawn as one the diff does not hold yet. A file that is nowhere is a
+        name the reader could do nothing with.
 
         Raises:
             UnknownFileError: naming the first such file.
         """
         held = self._source.content.paths
-        unknown = next((file for file in files if file not in held), None)
-        if unknown is not None:
-            msg = f"{unknown} is not in this review"
-            raise UnknownFileError(msg)
+        for file in files:
+            if file not in held and not await self._source.has_file(file):
+                raise UnknownFileError(_not_in_the_review(file))
 
     def _check_threads(self, threads: list[ThreadDraft]) -> None:
         """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.
@@ -421,3 +426,8 @@ class Review:
         """A thread as the agent is handed it, which the agent may answer in from now on."""
         self._threads.handed(thread.thread_id)
         return self._handover.thread(thread)
+
+
+def _not_in_the_review(file: str) -> str:
+    """What a file the review cannot point the reader to is refused with."""
+    return f"{file} is not in this review"

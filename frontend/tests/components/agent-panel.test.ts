@@ -590,6 +590,42 @@ describe('the agent panel', () => {
 	});
 });
 
+describe('a file the agent names', () => {
+	let review: Review;
+
+	beforeEach(() => {
+		review = answeredReview();
+	});
+
+	it('takes the reader to it when the diff holds it', async () => {
+		const user = userEvent.setup();
+		const shown = vi.spyOn(review.sections, 'showFile');
+		review.conversation.receive(null, 'Renamed it.', [file.path]);
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		await user.click(getByTestId('answer-file'));
+
+		expect(shown).toHaveBeenCalledWith(file.path);
+	});
+
+	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {
+		const user = userEvent.setup();
+		const shown = vi.spyOn(review.sections, 'showFile');
+		review.conversation.receive(null, 'Split it out.', ['src/made_since.py']);
+		review.answerer.showWork(work({ text: 'splitting it out', files: ['src/made_since.py'] }));
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await tick();
+
+		for (const chip of [getByTestId('answer-file'), getByTestId('progress-file')]) {
+			expect(chip.textContent).toContain('made_since.py');
+			expect(chip.getAttribute('title')).toBe('src/made_since.py — not in the diff yet');
+			await user.click(chip);
+		}
+
+		expect(shown).not.toHaveBeenCalled();
+	});
+});
+
 describe('sizing the panel', () => {
 	it('widens it a step at a time with the arrow keys, leftward being wider', async () => {
 		const user = userEvent.setup();

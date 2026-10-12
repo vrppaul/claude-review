@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
-	import { fileName } from '$lib/utils/paths';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
+	import FileChip from './FileChip.svelte';
 	import Icon from './Icon.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
@@ -168,14 +168,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 							<div class="mt-2 flex flex-wrap gap-1">
 								<!-- Known by where they stand, since the agent may name a file twice -->
 								{#each turn.files as path, position (position)}
-									<button
-										type="button"
-										data-testid="answer-file"
-										class="cr-thread-chip cr-thread-chip-agent"
-										onclick={() => review.sections.showFile(path)}
-									>
-										{fileName(path)}
-									</button>
+									<FileChip {path} testId="answer-file" />
 								{/each}
 							</div>
 						{/if}

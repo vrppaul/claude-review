@@ -804,6 +804,13 @@
 .cr-thread-chip-agent:hover {
 	background: var(--cr-agent-chip-hover);
 }
+/* A file the agent named that the diff does not hold yet: named, not a way to it */
+.cr-thread-chip-elsewhere,
+.cr-thread-chip-elsewhere:hover {
+	background: transparent;
+	outline: 1px dashed var(--cr-agent-border);
+	outline-offset: -1px;
+}
 
 /*
  * One of a list picked from while the keyboard stays in a field: lit as the

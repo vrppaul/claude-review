@@ -5,14 +5,17 @@ tests, a file nobody commented on — and it reaches the same agent, over the
 same queue, so an answer written after a round arrives after it.
 """
 
+import asyncio
 from http import HTTPStatus
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
+from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, ReviewMode, TurnAuthor
 from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
+from claude_review.services.text_files import read_text_files
 from tests.helpers import (
     CATCH_UP_ROUTE,
     EVENTS_ROUTE,
@@ -23,6 +26,7 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     FixedClock,
     ReviewFactory,
+    ReviewServers,
     http_client,
     line_on_the_wire,
     next_push,
@@ -32,12 +36,14 @@ from tests.helpers import (
     opening_of,
     page_client,
     pushes_until,
+    repository_opening,
     review_facts,
     thread_on_the_wire,
     thread_route,
     turn_on_the_wire,
     until_the_review_holds_threads,
 )
+from tests.page_socket import page_socket_held
 
 MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails."}
 
@@ -45,6 +51,8 @@ MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails."}
 A_MOMENT = 1_791_000_000_000
 # A file the review does not hold
 ELSEWHERE = "src/elsewhere.py"
+# A file the agent makes after the diff was taken
+MADE_SINCE = "made_since.py"
 
 THREAD = thread_on_the_wire(
     {**line_on_the_wire(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
@@ -236,7 +244,7 @@ def test_the_agent_may_speak_first(review_page: TestClient) -> None:
 async def test_words_naming_a_file_the_review_does_not_hold_are_refused_and_nothing_is_said(
     client: AsyncClient,
 ) -> None:
-    """A chip to a file the review does not hold would take the reader nowhere, while the agent took it as said."""
+    """With no repository behind it, a file the review does not hold stands nowhere the reader could go."""
     response = await client.post("/api/say", json={"body": "Renamed both.", "files": [REVIEWED_FILE, ELSEWHERE]})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -253,6 +261,61 @@ async def test_work_naming_a_file_the_review_does_not_hold_is_refused_and_nothin
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert f"{ELSEWHERE} is not in this review" in response.json()["detail"]
     assert (await client.get(REVIEW_ROUTE)).json()["work"] is None
+
+
+async def test_the_agent_may_name_a_file_it_has_made_since_the_diff_was_taken(
+    tmp_git_repo: Path, servers: ReviewServers
+) -> None:
+    """It says so as it works, and a file made a moment ago is in no diff until the diff is taken again."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    review = await servers.start(await repository_opening(tmp_git_repo))
+    (tmp_git_repo / MADE_SINCE).write_text("x = 1\n")
+
+    async with page_socket_held(review.port) as page, AsyncClient(base_url=review.url) as agent:
+        said = await agent.post("/api/say", json={"body": "Split it out.", "files": [MADE_SINCE]})
+        worked = await agent.post("/api/progress", json={"text": "splitting it out", "files": [MADE_SINCE]})
+        pushed = await asyncio.to_thread(next_push, page, ChatPush)
+        work = (await agent.get(REVIEW_ROUTE)).json()["work"]
+
+    assert (said.status_code, worked.status_code) == (HTTPStatus.NO_CONTENT, HTTPStatus.NO_CONTENT)
+    assert pushed.files == [MADE_SINCE]
+    assert work["files"] == [MADE_SINCE]
+
+
+async def test_a_file_in_neither_the_review_nor_its_working_tree_is_refused(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        said = await agent.post("/api/say", json={"body": "Split it out.", "files": [ELSEWHERE]})
+        worked = await agent.post("/api/progress", json={"text": "splitting it out", "files": [ELSEWHERE]})
+
+    assert (said.status_code, worked.status_code) == (HTTPStatus.NOT_FOUND, HTTPStatus.NOT_FOUND)
+    assert f"{ELSEWHERE} is not in this review" in said.json()["detail"]
+
+
+async def test_the_reader_is_taken_only_to_a_file_the_review_holds(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
+    """A file made since the diff was taken is drawn nowhere yet: there is nothing to take the reader to."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        (tmp_git_repo / MADE_SINCE).write_text("x = 1\n")
+        response = await agent.post("/api/show", json={"file": MADE_SINCE})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+async def test_a_review_of_files_names_no_file_beside_them(tmp_path: Path, reviews: ReviewFactory) -> None:
+    """Files read once stand in no working tree: a file next to them on the disk is still not the review's."""
+    (tmp_path / "plan.md").write_text("# Plan\n")
+    (tmp_path / "notes.md").write_text("# Notes\n")
+    files = await read_text_files([tmp_path / "plan.md"], named_from=tmp_path)
+
+    async with http_client(reviews.app(opening_of(files, mode=ReviewMode.FILES))) as agent:
+        response = await agent.post("/api/say", json={"body": "See the notes.", "files": ["notes.md"]})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) -> None:

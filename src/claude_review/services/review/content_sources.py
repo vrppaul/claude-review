@@ -79,6 +79,10 @@ class ContentSource(ABC):
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """How many files have moved, each time the tree stops matching the take on screen, until the review ends."""
 
+    @abstractmethod
+    async def has_file(self, path: str) -> bool:
+        """Whether a file stands at this path where the content comes from, held by the take on screen or not."""
+
 
 class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
@@ -188,6 +192,11 @@ class RepositorySource(ContentSource):
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         return self._watcher.changes(self._root, taken_at=lambda: self._content.tree, lifetime=lifetime)
 
+    @override
+    async def has_file(self, path: str) -> bool:
+        """Whether the file stands in the working tree: one the agent made since the diff was taken among them."""
+        return await self._repository.has_file(self._root, path)
+
 
 class FixedSource(ContentSource):
     """Files or a conversation, read once: nothing to compare against, nothing to take again."""
@@ -237,6 +246,11 @@ class FixedSource(ContentSource):
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """No tree to watch: nothing in it ever moves."""
         return _no_moves()
+
+    @override
+    async def has_file(self, path: str) -> bool:
+        """None beyond what was read: files and a conversation stand in no tree."""
+        return False
 
 
 async def _no_moves() -> AsyncIterator[int]:

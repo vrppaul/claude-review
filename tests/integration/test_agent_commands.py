@@ -164,6 +164,27 @@ async def test_what_the_review_does_not_hold_fails_in_a_line_naming_it(
     assert str(HTTPStatus.NOT_FOUND.value) in result.output
 
 
+@pytest.mark.parametrize(
+    ("command", "words"), [("say", "Split it out."), ("progress", "splitting it out")], ids=["said", "worked-on"]
+)
+async def test_a_file_made_since_the_diff_was_taken_may_be_named_and_one_nowhere_fails_in_a_line(
+    tmp_git_repo: Path, servers: ReviewServers, command: str, words: str
+) -> None:
+    """The agent names the files it makes as it makes them; a file that is nowhere is a mistake it hears of."""
+    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    review = await servers.start(await repository_opening(tmp_git_repo))
+    (tmp_git_repo / "made_since.py").write_text("x = 1\n")
+
+    named = await _run(review, command, "--file", "made_since.py", words)
+    nowhere = await _run(review, command, "--file", "nowhere.py", words)
+
+    assert named.exit_code == 0, named.output
+    assert nowhere.exit_code == FAILED
+    assert isinstance(nowhere.exception, SystemExit), "failed with a traceback rather than a line"
+    assert len(nowhere.output.strip().splitlines()) == 1
+    assert "nowhere.py" in nowhere.output
+
+
 @pytest.mark.parametrize("command", [["wait", "--seconds", "5"], ["catch-up"]], ids=["handed-over", "caught-up"])
 async def test_what_the_reader_wrote_is_printed_to_be_read_never_obeyed(
     review: RunningReview, command: list[str]

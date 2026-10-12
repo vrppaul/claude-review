@@ -84,7 +84,15 @@ class TrackedPaths(ABC):
         """Whether the repository tracks the file at this path."""
 
 
-class ReviewedRepository(Repository, TrackedPaths):
+class WorkingFiles(ABC):
+    """Whether a file stands in the working tree, whatever the repository knows of it."""
+
+    @abstractmethod
+    async def has_file(self, root: Path, relative_path: str) -> bool:
+        """Whether a file stands at this path of the working tree under ``root``, and inside it."""
+
+
+class ReviewedRepository(Repository, TrackedPaths, WorkingFiles):
     """Everything a review asks of the repository it reviews."""
 
 

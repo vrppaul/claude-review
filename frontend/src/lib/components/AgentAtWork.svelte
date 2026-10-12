@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
-	import { fileName } from '$lib/utils/paths';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
+	import FileChip from './FileChip.svelte';
 	import Icon from './Icon.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
@@ -79,14 +79,7 @@
 		<div class="flex flex-wrap gap-1">
 			<!-- Known by where they stand, since the agent may name a file twice -->
 			{#each work.files as path, position (position)}
-				<button
-					type="button"
-					data-testid="progress-file"
-					class="cr-thread-chip cr-thread-chip-agent"
-					onclick={() => review.sections.showFile(path)}
-				>
-					{fileName(path)}
-				</button>
+				<FileChip {path} testId="progress-file" />
 			{/each}
 		</div>
 	{/if}
