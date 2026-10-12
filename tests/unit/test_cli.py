@@ -2,7 +2,9 @@
 
 import importlib
 import inspect
+import json
 import pkgutil
+from pathlib import Path
 import re
 import socket
 import subprocess
@@ -19,6 +21,7 @@ from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from tests.stories import as_the_agent_writes, step, story_of
 
 # What click exits with when a command is typed wrong, before it runs
 USAGE_ERROR = 2
@@ -30,7 +33,7 @@ FAILED = 1
 COMMANDS_HEADING = "Commands:"
 COMMAND_LINE = re.compile(r"^  (\S+)  ")
 LAUNCH_COMMANDS = ("diff", "files", "transcript")
-AGENT_COMMANDS = ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake")
+AGENT_COMMANDS = ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake", "story")
 LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
 # Words that say nothing
 BLANK = "   "
@@ -300,3 +303,43 @@ def test_every_command_takes_what_it_is_typed_with_by_name() -> None:
     ]
 
     assert by_position == []
+
+
+# A story's document as the agent writes one, and what stands for stdin where a file is wanted
+A_STORY = as_the_agent_writes(story_of(step("src/app.py", 1, 3)))
+FROM_STDIN = "-"
+# Documents the review would refuse for their shape, and the field each is refused at
+MISSHAPEN_STORIES = [
+    ({**A_STORY, "doubts": "Whether it holds."}, "doubts"),
+    ({name: said for name, said in A_STORY.items() if name != "told_from"}, "told_from"),
+    ({**A_STORY, "chapters": [{**A_STORY["chapters"][0], "steps": [{"file": "src/app.py", "lines": "all"}]}]}, "lines"),
+]
+
+
+@pytest.mark.parametrize(("document", "field"), MISSHAPEN_STORIES)
+def test_a_story_the_review_would_refuse_for_its_shape_is_refused_as_it_is_read(
+    unused_port: str, document: dict, field: str
+) -> None:
+    """Said naming the field, before anything is called: the mistake is in the file, and the typist's to fix."""
+    result = _run("story", "--port", unused_port, "--file", FROM_STDIN, typed=json.dumps(document))
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert field in result.output
+    assert NO_REVIEW not in result.output
+
+
+def test_a_story_that_is_not_json_is_refused_as_it_is_read(unused_port: str) -> None:
+    result = _run("story", "--port", unused_port, "--file", FROM_STDIN, typed="A story, in my own words.")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "JSON" in result.output
+    assert NO_REVIEW not in result.output
+
+
+def test_a_story_file_that_is_not_there_is_said_to_be_missing(unused_port: str, tmp_path: Path) -> None:
+    missing = tmp_path / "story.json"
+
+    result = _run("story", "--port", unused_port, "--file", str(missing))
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert str(missing) in result.output

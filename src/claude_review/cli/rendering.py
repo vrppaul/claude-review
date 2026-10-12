@@ -9,6 +9,7 @@ from pathlib import Path
 
 from claude_review.domain.models import TurnAuthor, says_nothing
 from claude_review.presentation.wire.agent import CatchUpResponse
+from claude_review.presentation.wire.story import LeftOutOfFile, StoryTakenResponse
 from claude_review.presentation.wire.threads import Thread, ThreadSummary
 from claude_review.services.thread_markdown import tags_of
 
@@ -42,6 +43,14 @@ FILE_NOUN = "file"
 THREAD_NOUN = "thread"
 MESSAGE_NOUN = "message"
 TURN_NOUN = "turn"
+CHAPTER_NOUN = "chapter"
+STEP_NOUN = "step"
+LINE_NOUN = "line"
+# How a story the review took is said, and what its steps left out of the change
+STORY_TAKEN = "accepted: {chapters}, {steps}; {left_out}"
+NOTHING_LEFT_OUT = "nothing left out"
+LEFT_OUT = "{lines} not in the story ({files})"
+FILES_SEPARATOR = ", "
 
 
 def render_catch_up(seen: CatchUpResponse) -> str:
@@ -86,6 +95,24 @@ def render_thread(thread: Thread) -> str:
     if thread.anchor.quote:
         lines.append(_indent("\n".join(thread.anchor.quote), who=QUOTE_LABEL))
     return "\n".join(lines)
+
+
+def render_story_taken(taken: StoryTakenResponse) -> str:
+    """What the review made of a story, in a line: how much it tells, and what its steps left out of the change."""
+    return STORY_TAKEN.format(
+        chapters=_counted(taken.chapters, CHAPTER_NOUN),
+        steps=_counted(taken.steps, STEP_NOUN),
+        left_out=_left_out(taken.left_out),
+    )
+
+
+def _left_out(left_out: list[LeftOutOfFile]) -> str:
+    """How many lines of the change no step tells, and of which files; that there are none, when there are none."""
+    if not left_out:
+        return NOTHING_LEFT_OUT
+    lines = sum(left.changed_lines for left in left_out)
+    files = FILES_SEPARATOR.join(left.file for left in left_out)
+    return LEFT_OUT.format(lines=_counted(lines, LINE_NOUN), files=files)
 
 
 def _marks(summary: ThreadSummary) -> str:

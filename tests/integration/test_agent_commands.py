@@ -20,6 +20,7 @@ from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ReplyPush
+from claude_review.presentation.wire.story import StoryResponse
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
@@ -36,8 +37,10 @@ from tests.helpers import (
     removed_line,
     repository_opening,
     thread_on_the_wire,
+    write_files,
 )
 from tests.page_socket import page_socket_held
+from tests.stories import as_the_agent_writes, planted, step, story_of
 
 # What a command that ran and failed exits with
 FAILED = 1
@@ -247,3 +250,81 @@ async def test_a_thread_raised_can_say_what_it_says_from_stdin_as_written(review
 
     assert result.exit_code == 0, result.output
     assert raised.body == MARKDOWN
+
+
+STORY_ROUTE = "/api/story"
+# What the repository under review has changed since its commit, and steps that tell each of the two changes
+EDITED_FILE = "initial.txt"
+ADDED_FILE = "src/added.py"
+THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "def added() -> None:\n    return None\n"}
+THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
+THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
+
+
+@pytest.fixture
+async def review_of_a_change(servers: ReviewServers, tmp_git_repo: Path) -> RunningReview:
+    """A review of a repository's uncommitted changes, served on a port of its own."""
+    write_files(tmp_git_repo, THE_CHANGE)
+    return await servers.start(await repository_opening(tmp_git_repo))
+
+
+async def _story_held(review: RunningReview) -> StoryResponse:
+    """The story the review holds, as its page reads it."""
+    async with AsyncClient(base_url=review.url) as page:
+        return StoryResponse.model_validate_json((await page.get(STORY_ROUTE)).content)
+
+
+async def test_a_story_written_to_a_file_is_told_and_answered_in_a_line(
+    review_of_a_change: RunningReview, tmp_path: Path
+) -> None:
+    written = tmp_path / "story.json"
+    written.write_text(json.dumps(as_the_agent_writes(story_of(THE_LINE_ADDED, THE_FILE_ADDED))))
+
+    result = await _run(review_of_a_change, "story", "--file", str(written))
+
+    assert result.exit_code == 0, result.output
+    assert result.output == "accepted: 1 chapter, 2 steps; nothing left out\n"
+    held = (await _story_held(review_of_a_change)).held
+    assert held is not None
+    assert [told.file for told in held.story.chapters[0].steps] == [EDITED_FILE, ADDED_FILE]
+
+
+async def test_a_story_piped_in_is_told_and_what_it_leaves_out_is_said(review_of_a_change: RunningReview) -> None:
+    """How many lines no step tells, and of which files: what the reader will be shown beside the story."""
+    piped = json.dumps(as_the_agent_writes(story_of(THE_LINE_ADDED)))
+
+    result = await _run(review_of_a_change, "story", "--file", FROM_STDIN, typed=piped)
+
+    assert result.exit_code == 0, result.output
+    assert result.output == f"accepted: 1 chapter, 1 step; 2 lines not in the story ({ADDED_FILE})\n"
+
+
+async def test_a_story_the_review_refuses_fails_in_a_line_naming_everything_wrong_with_it(
+    review_of_a_change: RunningReview,
+) -> None:
+    untitled = planted(story_of(THE_LINE_ADDED, step(ADDED_FILE, 7, 9)), ("title",), "")
+
+    result = await _run(
+        review_of_a_change, "story", "--file", FROM_STDIN, typed=json.dumps(as_the_agent_writes(untitled))
+    )
+
+    assert result.exit_code == FAILED
+    assert "title: says nothing" in result.output
+    assert "chapters.0.steps.1.lines: hold no line" in result.output
+    assert (await _story_held(review_of_a_change)).held is None
+
+
+async def test_a_file_a_story_leaves_out_is_printed_to_be_read_never_obeyed(
+    servers: ReviewServers, tmp_git_repo: Path
+) -> None:
+    """A file's name is the repository's to choose, and may hold what a terminal would act on: here, a clipboard write."""
+    hostile_file = f"copied{ESCAPE}]52;c;ZWNobyBwd25lZA==\x07.py"
+    write_files(tmp_git_repo, {**THE_CHANGE, hostile_file: "pass\n"})
+    review = await servers.start(await repository_opening(tmp_git_repo))
+    told = json.dumps(as_the_agent_writes(story_of(THE_LINE_ADDED, THE_FILE_ADDED)))
+
+    result = await _run(review, "story", "--file", FROM_STDIN, typed=told)
+
+    assert result.exit_code == 0, result.output
+    assert "1 line not in the story" in result.output
+    assert _controls_in(result.output) == []

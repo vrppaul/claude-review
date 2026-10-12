@@ -10,10 +10,12 @@ from typing import Self, override
 import click
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
-from claude_review.cli.review_client import REASON_SEPARATOR
+from claude_review.cli.review_client import REASON_SEPARATOR, fields_said_wrong
 from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText, runs_backwards
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, AgentText, WireId
+from claude_review.presentation.wire.refusal import FieldRefusal
+from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.place_words import lines_named
 
 # What stands for stdin where text is wanted, as it does for `git commit -F -`,
@@ -23,6 +25,8 @@ STDIN = "stdin"
 # What text piped in is written in, and the line break a heredoc or an echo
 # ends it with: the shell's, not part of what was said
 STDIN_ENCODING = "utf-8"
+# How a file is opened to be read as the bytes it holds
+BINARY_READ = "rb"
 TRAILING_LINE_BREAK = "\n"
 
 
@@ -144,6 +148,35 @@ class LineSpanParameter(click.ParamType):
 
 
 LINE_SPAN = LineSpanParameter()
+
+
+class StoryParameter(click.ParamType):
+    """Reads a story's document from the file it is written in — from stdin, given as "-" — as the review reads one.
+
+    A document of the wrong shape is the typist's to fix, said naming each
+    field where the file has it; what the story is held to as a story only
+    the review can say, against the change it holds.
+    """
+
+    name = "file"
+
+    @override
+    def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> StoryRequest:
+        if isinstance(value, StoryRequest):
+            return value
+        try:
+            with click.open_file(str(value), BINARY_READ) as written:
+                document = written.read()
+        except OSError as unread:
+            self.fail(f"cannot read {value}: {unread.strerror}", param, ctx)
+        try:
+            return StoryRequest.model_validate_json(document)
+        except ValidationError as invalid:
+            wrong = [FieldRefusal.model_validate(error) for error in invalid.errors()]
+            self.fail(f"the review would refuse this story: {fields_said_wrong(wrong)}", param, ctx)
+
+
+STORY = StoryParameter()
 
 
 def _reasons(invalid: ValidationError) -> str:

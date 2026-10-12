@@ -15,10 +15,11 @@ from claude_review.cli.parameters import (
     SAID,
     STATUS,
     STEP,
+    STORY,
     WORK,
     ThreadLines,
 )
-from claude_review.cli.rendering import render_catch_up, render_thread
+from claude_review.cli.rendering import render_catch_up, render_story_taken, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
 from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import CommentSeverity, LineSide, says_nothing
@@ -34,6 +35,7 @@ from claude_review.presentation.wire.agent import (
     TimeoutEvent,
 )
 from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.story import StoryRequest
 from claude_review.presentation.wire.threads import LineAnchor, PointRequest
 
 # How a refusal lists the steps both --did and --step name
@@ -325,6 +327,26 @@ def retake_command(*, client: ReviewClient) -> None:
     click.echo(terminal_text(client.retake().model_dump_json()))
 
 
+@click.command("story")
+@review_port
+@click.option(
+    "--file", "story", required=True, type=STORY, help='The story, as a JSON document. Given as "-", read from stdin.'
+)
+def story_command(*, client: ReviewClient, story: StoryRequest) -> None:
+    """Tell the change as a story, for the reader to read it by.
+
+    The document is the whole story: what was asked and done and what to
+    doubt, then chapters, each a run of steps — a piece of the change, and
+    why it is the way it is. It takes the place of any story told before:
+    there is no patching one, so send it again whole.
+
+    Refused, it comes back with everything wrong at once, each fault at its
+    field of the document. Taken, it prints what its steps left out of the
+    change, which the reader is shown beside the story all the same.
+    """
+    click.echo(terminal_text(render_story_taken(client.tell_story(story))))
+
+
 COMMANDS = {
     command.name: command
     for command in (
@@ -337,5 +359,6 @@ COMMANDS = {
         point_command,
         status_command,
         retake_command,
+        story_command,
     )
 }

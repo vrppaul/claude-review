@@ -29,6 +29,7 @@ from claude_review.presentation.wire.agent import (
 )
 from claude_review.presentation.wire.content import RetakeResponse
 from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
+from claude_review.presentation.wire.story import StoryRequest, StoryTakenResponse
 from claude_review.presentation.wire.threads import PointRequest, PointResponse, Thread
 
 # How long an ordinary call may take: the review answers at once
@@ -55,6 +56,7 @@ STATUS_ROUTE = "/api/status"
 SHOW_ROUTE = "/api/show"
 POINT_ROUTE = "/api/point"
 RETAKE_ROUTE = "/api/retake"
+STORY_ROUTE = "/api/story"
 # What the poll for events calls how long it may wait
 WAIT_SECONDS_PARAMETER = "wait_seconds"
 
@@ -73,6 +75,7 @@ CATCH_UP_ANSWER = TypeAdapter(CatchUpResponse)
 THREAD_ANSWER = TypeAdapter(Thread)
 POINT_ANSWER = TypeAdapter(PointResponse)
 RETAKE_ANSWER = TypeAdapter(RetakeResponse)
+STORY_ANSWER = TypeAdapter(StoryTakenResponse)
 
 
 class ReviewCallError(Exception):
@@ -121,6 +124,10 @@ class ReviewClient:
         """Take the diff again, which the reviews on screen then reload."""
         return self._read(RETAKE_ANSWER, self._call(HTTPMethod.POST, RETAKE_ROUTE, timeout=RETAKE_SECONDS))
 
+    def tell_story(self, request: StoryRequest) -> StoryTakenResponse:
+        """Tell the change as a story, in place of any told before, and read what the review made of it."""
+        return self._read(STORY_ANSWER, self._call(HTTPMethod.PUT, STORY_ROUTE, request))
+
     def _call(
         self, method: HTTPMethod, route: str, request: BaseModel | None = None, *, timeout: float = CALL_SECONDS
     ) -> bytes:
@@ -156,11 +163,15 @@ class ReviewClient:
             raise ReviewCallError(msg) from error
 
 
-def _fields_said_wrong(refusals: list[FieldRefusal]) -> str:
-    """Name each field a request had wrong, and why, on one line."""
-    return REASON_SEPARATOR.join(
-        f"{FIELD_PATH_SEPARATOR.join(str(part) for part in refusal.loc)}: {refusal.msg}" for refusal in refusals
-    )
+def fields_said_wrong(refusals: list[FieldRefusal]) -> str:
+    """Name each field that was wrong, and why, on one line."""
+    return REASON_SEPARATOR.join(_field_said_wrong(refusal) for refusal in refusals)
+
+
+def _field_said_wrong(refusal: FieldRefusal) -> str:
+    """One field and what is wrong with it; what is wrong with the whole of what was sent has no field to name."""
+    field = FIELD_PATH_SEPARATOR.join(str(part) for part in refusal.loc)
+    return f"{field}: {refusal.msg}" if field else refusal.msg
 
 
 def _reason(answer: bytes) -> str:
@@ -171,7 +182,7 @@ def _reason(answer: bytes) -> str:
         return answer.decode(errors="replace").strip()
     if isinstance(refusal.detail, str):
         return refusal.detail
-    return _fields_said_wrong([_as_typed(field) for field in refusal.detail])
+    return fields_said_wrong([_as_typed(field) for field in refusal.detail])
 
 
 def _as_typed(refusal: FieldRefusal) -> FieldRefusal:

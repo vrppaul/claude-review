@@ -79,6 +79,15 @@ def test_a_field_the_review_refuses_is_named_as_it_was_typed() -> None:
     assert "body" not in str(refused.value)
 
 
+def test_what_is_wrong_with_the_whole_of_what_was_sent_is_said_without_a_field_to_name() -> None:
+    whole_body = Refusal(detail=[FieldRefusal(loc=("body",), msg="Input should be a valid dictionary")])
+
+    with _refusing_review(whole_body) as client, pytest.raises(ReviewCallError) as refused:
+        client.show(SHOWN)
+
+    assert str(refused.value).endswith("): Input should be a valid dictionary")
+
+
 def test_a_refusal_in_words_is_passed_on_as_said() -> None:
     with _refusing_review(REFUSED_IN_WORDS) as client, pytest.raises(ReviewCallError) as refused:
         client.show(SHOWN)
