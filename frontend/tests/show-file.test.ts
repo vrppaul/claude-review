@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FileSections } from '$lib/dom/file-sections';
+import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 
 let sections: FileSections;
 
@@ -247,5 +247,39 @@ describe('knowing which file the reader is in', () => {
 		takeBack();
 
 		expect(sections.fileInView).toBe('b.py');
+	});
+});
+
+describe('what stands for a line where it is not drawn', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** A file's section with its fold toggle, on the page in the order made, said to the sections in another. */
+	function sectionWithToggle(): { element: HTMLElement; toggle: HTMLElement } {
+		const element = document.createElement('div');
+		const toggle = document.createElement('button');
+		toggle.dataset.role = FOLD_TOGGLE_ROLE;
+		element.append(toggle);
+		document.body.append(element);
+		return { element, toggle };
+	}
+
+	it('is the toggle of the first file on the page for a file the diff does not hold, whichever was drawn first', () => {
+		const first = sectionWithToggle();
+		const second = sectionWithToggle();
+		sections.register('b.py', second.element);
+		sections.register('a.py', first.element);
+
+		expect(sections.lineOrFile('reverted.py', 'new:1')).toBe(first.toggle);
+	});
+
+	it("is the file's own toggle for a line of it that is not drawn", () => {
+		const first = sectionWithToggle();
+		const second = sectionWithToggle();
+		sections.register('a.py', first.element);
+		sections.register('b.py', second.element);
+
+		expect(sections.lineOrFile('b.py', 'new:9')).toBe(second.toggle);
 	});
 });

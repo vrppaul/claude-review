@@ -1,11 +1,27 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
+	import { threadsOffTheDiff } from '$lib/anchors/placement';
 	import { useReview } from '$lib/review/context';
+	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
 	import PartFailed from './PartFailed.svelte';
+	import UnplacedThreads from './UnplacedThreads.svelte';
 
 	const review = useReview();
+
+	// Threads on a file the diff no longer has, drawn above the files so none
+	// leaves the screen. Under a narrower base the notice above the diff names
+	// every thread it cannot draw, and takes the reader to it on the whole diff.
+	const offTheDiff = $derived(review.diff.narrowed ? [] : threadsOffTheDiff(review.threads.onLines, review.diff.files));
+
+	/** Why threads are drawn above every file, of one and of several: the file they hang on is not in the diff. */
+	function offTheDiffWords(file: string): CountedWords {
+		return {
+			one: `comment on ${file}, a file no longer in the diff`,
+			many: `comments on ${file}, a file no longer in the diff`
+		};
+	}
 
 	let container: HTMLElement | undefined = $state();
 
@@ -31,6 +47,9 @@
 
 <!-- What is reviewed: the page's main part, beside the tree and the panel -->
 <main bind:this={container} data-testid="diff-view" class="cr-diff-area bg-base-100">
+	{#each offTheDiff as { file, threads } (file)}
+		<UnplacedThreads {threads} why={offTheDiffWords(file)} />
+	{/each}
 	{#each review.diff.files as file (file.path)}
 		<!-- A file that cannot be drawn says so in its place, and takes no other file down with it -->
 		<svelte:boundary onerror={reportBroken}>

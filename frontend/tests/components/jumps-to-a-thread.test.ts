@@ -104,6 +104,20 @@ describe('every control that takes the reader to a thread', () => {
 		expect(document.activeElement).toBe(threadIn('c.py'));
 	});
 
+	it('takes the reader to the thread a retake left outdated on a file the diff no longer has', async () => {
+		const user = userEvent.setup();
+		// The agent put the file back as it was, and the retake left it out
+		const anchor = { ...newComment({ file: 'gone.py' }).anchor, outdated: true };
+		review.threads.add({ ...newComment({ file: 'gone.py', body: 'about gone.py' }), anchor });
+		review.noteRetake({ followed: 0, outdated: 1 }, null);
+		render(ReviewScreen, { props: { review } });
+
+		await user.click(screen.getByTestId('show-outdated'));
+
+		const onIt = within(screen.getByTestId('threads-off-their-lines')).getByTestId('comment-thread');
+		expect(document.activeElement).toBe(onIt);
+	});
+
 	it('takes the reader from a narrower base to a thread it cannot draw, on the whole diff', async () => {
 		const user = userEvent.setup();
 		const server = fakeServer();

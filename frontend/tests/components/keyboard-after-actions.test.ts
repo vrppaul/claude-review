@@ -6,7 +6,7 @@ import DiffView from '$lib/components/DiffView.svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import GuideCard from '$lib/components/GuideCard.svelte';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
-import { addedLine, contextLine, diffFile, hunk, removedLine } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer } from '../fake-server';
 import { guideServer } from '../guide-server';
 import { newComment } from '../new-comment';
@@ -163,6 +163,27 @@ describe('where the keyboard is after a thread drawn at the head of its file goe
 		await drawn();
 
 		expect(document.activeElement).toBe(screen.getByTestId('collapse-file'));
+	});
+});
+
+describe('where the keyboard is after a thread on a file the diff no longer has goes', () => {
+	it('is on the first file of the diff, which the thread was drawn above, however late that file came', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'src/reverted.py', body: 'a file no longer here' }));
+		render(DiffView, inReview(review));
+		// A retake brings a file that is drawn before the one already there
+		const first = diffFile({ path: 'src/aardvark.py', hunks: [hunk([addedLine(1, 'new = 1')])] });
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [first, file] }));
+		await review.diff.take();
+		await drawn();
+
+		await user.click(screen.getByTestId('delete-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
+		await drawn();
+
+		const [firstSection] = screen.getAllByTestId('file-section');
+		expect(firstSection.dataset.path).toBe(first.path);
+		expect(document.activeElement).toBe(within(firstSection).getByTestId('collapse-file'));
 	});
 });
 

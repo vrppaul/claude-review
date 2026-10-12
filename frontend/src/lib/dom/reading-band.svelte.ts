@@ -10,6 +10,8 @@
 
 import { SvelteSet } from 'svelte/reactivity';
 
+import { firstInDocument } from '$lib/dom/document-order';
+
 // How far into the band a section must reach to cross it, in pixels. After a
 // jump to a file, the file above it ends at the band's top edge, give or take
 // a fraction of a pixel, and touching the band is not being read in it
@@ -89,17 +91,4 @@ export class ReadingBand {
 		this.#crossing.clear();
 		this.#landed = null;
 	}
-}
-
-/** Of some elements, the one that comes first in the document; null of none. */
-function firstInDocument(elements: Iterable<Element>): Element | null {
-	let first: Element | null = null;
-	for (const element of elements) {
-		if (first === null || comesBefore(element, first)) first = element;
-	}
-	return first;
-}
-
-function comesBefore(element: Element, other: Element): boolean {
-	return (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }

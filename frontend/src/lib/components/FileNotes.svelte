@@ -1,9 +1,8 @@
 <script lang="ts">
 	import type { DiffFile, Thread } from '$lib/types';
 	import { modeChangeOf } from '$lib/utils/file-modes';
-	import { counted } from '$lib/utils/words';
-	import CommentThread from './CommentThread.svelte';
 	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
+	import UnplacedThreads from './UnplacedThreads.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -12,6 +11,9 @@
 	}
 
 	let { file, unplaced }: Props = $props();
+
+	// Why a thread is drawn at the head of its file: the line it hangs on is not drawn
+	const OFF_THEIR_LINES = { one: 'comment on a line no longer shown', many: 'comments on lines no longer shown' };
 
 	const modeChange = $derived(modeChangeOf(file));
 	// A file can change without producing lines: binary content, or a bare
@@ -40,17 +42,7 @@
 	</div>
 {/if}
 
-{#if unplaced.length > 0}
-	<!-- Never off the screen: whole, with everything that can be done to them, where the file starts -->
-	<div data-testid="threads-off-their-lines" class="border-b border-base-300">
-		<p class="cr-muted px-4 pt-2 text-xs">
-			{counted(unplaced.length, 'comment on a line no longer shown', 'comments on lines no longer shown')}
-		</p>
-		{#each unplaced as thread (thread.id)}
-			<CommentThread {thread} />
-		{/each}
-	</div>
-{/if}
+<UnplacedThreads threads={unplaced} why={OFF_THEIR_LINES} />
 
 {#if emptyReason}
 	<div data-testid="empty-file-note" class="cr-muted px-4 py-8 text-center text-sm">

@@ -4,6 +4,12 @@
  * which goes with a count is kept here, once.
  */
 
+/** The words a count goes with: the singular for one, the plural for none and for many. */
+export interface CountedWords {
+	one: string;
+	many: string;
+}
+
 /** A count and the words that go with it: the singular for one, the plural for none and for many. */
 export function counted(count: number, one: string, many: string): string {
 	return `${count} ${count === 1 ? one : many}`;

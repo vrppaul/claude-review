@@ -3,7 +3,8 @@ import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import DiffView from '$lib/components/DiffView.svelte';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, wholeFile } from '../diff';
+import { lineAnchor } from '$lib/anchors/line';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound, wholeFile } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -306,6 +307,78 @@ describe('files with no lines to show', () => {
 
 		expect(queryByTestId('empty-file-note')).toBeNull();
 		expect(queryByTestId('mode-change-note')).toBeNull();
+	});
+});
+
+describe('a comment on a file the diff no longer has', () => {
+	// The agent put the file back as it was, and the diff was taken again without it
+	const onTheRevertedFile = {
+		...newComment({ file: 'src/reverted.ts', body: 'why this change' }),
+		anchor: { ...lineAnchor('src/reverted.ts', 'new', 1, 1, ['const z = 1;']), outdated: true }
+	};
+
+	it('is drawn above the files, whole, rather than nowhere', () => {
+		review = openReview({ files: [changedFile] });
+		review.threads.add(onTheRevertedFile);
+		review.threads.add(newComment({ file: changedFile.path, startLine: 2, body: 'on a line still there' }));
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		const above = getByTestId('threads-off-their-lines');
+		expect(above.textContent).toContain('1 comment on src/reverted.ts, a file no longer in the diff');
+		expect(within(above).getAllByTestId('comment-thread')).toHaveLength(1);
+		expect(above.textContent).toContain('why this change');
+		expect(above.textContent).not.toContain('on a line still there');
+		expect(above.compareDocumentPosition(getByTestId('file-section'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	it('is drawn under the name of its file, each file apart', () => {
+		review = openReview({ files: [changedFile] });
+		review.threads.add(onTheRevertedFile);
+		review.threads.add(newComment({ file: 'src/also-reverted.ts', body: 'and this one' }));
+		review.threads.add(newComment({ file: 'src/reverted.ts', startLine: 4, body: 'and further down' }));
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+
+		const [first, second] = getAllByTestId('threads-off-their-lines');
+		expect(first.textContent).toContain('2 comments on src/reverted.ts, a file no longer in the diff');
+		expect(within(first).getAllByTestId('comment-thread')).toHaveLength(2);
+		expect(second.textContent).toContain('1 comment on src/also-reverted.ts, a file no longer in the diff');
+		expect(second.textContent).toContain('and this one');
+	});
+
+	it('is drawn when the diff has no file left at all', () => {
+		review = openReview({ files: [] });
+		review.threads.add(onTheRevertedFile);
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('no-changes')).toBeTruthy();
+		expect(within(getByTestId('threads-off-their-lines')).getByText('why this change')).toBeTruthy();
+	});
+
+	it('can be deleted where it is drawn', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files: [changedFile] });
+		review.threads.add(onTheRevertedFile);
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		await user.click(within(getByTestId('threads-off-their-lines')).getByTestId('delete-comment'));
+		await user.click(getByTestId('confirm-go-ahead'));
+
+		expect(review.threads.all).toEqual([]);
+		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+	});
+
+	it('is left to the notice above the diff under a narrower base, which names every thread it cannot draw', async () => {
+		review = openReview({ files: [changedFile] });
+		review.threads.add(onTheRevertedFile);
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [changedFile], base: sinceRound(1) }));
+		await review.diff.setBase('round:1');
+
+		const { queryByTestId } = render(DiffView, inReview(review));
+
+		expect(queryByTestId('threads-off-their-lines')).toBeNull();
 	});
 });
 

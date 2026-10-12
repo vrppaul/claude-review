@@ -10,6 +10,7 @@
  * query string.
  */
 
+import { firstInDocument } from '$lib/dom/document-order';
 import { focusWhatRemains } from '$lib/dom/keyboard';
 import { scrollMotion } from '$lib/dom/motion';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
@@ -239,18 +240,18 @@ export class FileSections {
 	 * Put the keyboard on a line's number, by the key its place is known by,
 	 * if what had it went: what remains where a comment was put away, a
 	 * thread deleted, or hidden lines shown. Where the line is not drawn, the
-	 * file's own toggle takes it.
+	 * file's own toggle takes it; where the file is not in the diff at all,
+	 * the toggle of the first file, which its threads were drawn above.
 	 */
 	keyboardToLine(path: string, lineKey: string): void {
 		focusWhatRemains(() => this.lineOrFile(path, lineKey));
 	}
 
-	/** A line's number in a file's section, by the key its place is known by, or the file's toggle where it is not drawn. */
+	/** A line's number in a file's section, by the key its place is known by, or the toggle that stands for it where it is not drawn. */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
 		const section = this.#sections.get(path);
-		if (!section) return null;
-		const line = section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`);
-		return line ?? section.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`);
+		if (!section) return toggleOf(firstInDocument(this.#sections.values()));
+		return section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`) ?? toggleOf(section);
 	}
 
 	#unregister(path: string, element: HTMLElement): void {
@@ -306,4 +307,9 @@ export class FileSections {
 function arriveAt(thread: HTMLElement): void {
 	thread.scrollIntoView({ behavior: scrollMotion(), block: 'center' });
 	thread.focus({ preventScroll: true });
+}
+
+/** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for. */
+function toggleOf(section: HTMLElement | null): HTMLElement | null {
+	return section?.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`) ?? null;
 }

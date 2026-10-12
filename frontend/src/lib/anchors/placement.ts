@@ -1,5 +1,5 @@
-import type { FileLines } from '$lib/anchors/views';
-import type { DiffFile, LineSide } from '$lib/types';
+import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
+import type { DiffFile, LineSide, Thread } from '$lib/types';
 
 /**
  * Whether a thread on these lines has a row to hang on in the diff as it is drawn.
@@ -36,4 +36,24 @@ export function isDrawn(
  */
 export function sideIsDrawn(side: LineSide, removedLines: boolean): boolean {
 	return side !== 'old' || removedLines;
+}
+
+/** The threads on one file the diff does not hold. */
+export interface ThreadsOffTheDiff {
+	file: string;
+	threads: Thread[];
+}
+
+/**
+ * The threads on files the diff does not hold — put back as they were, say,
+ * and the diff taken again: no file is drawn for them to hang in. By file,
+ * in the order the threads stand.
+ */
+export function threadsOffTheDiff(onLines: readonly ThreadOnLines[], files: readonly DiffFile[]): ThreadsOffTheDiff[] {
+	const drawn = new Set(files.map((file) => file.path));
+	const byFile = Map.groupBy(
+		onLines.filter(({ lines }) => !drawn.has(lines.file)),
+		({ lines }) => lines.file
+	);
+	return [...byFile].map(([file, held]) => ({ file, threads: held.map(({ thread }) => thread) }));
 }
