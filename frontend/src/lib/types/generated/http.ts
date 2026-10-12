@@ -120,7 +120,9 @@ export interface paths {
          *
          *     The page is told the key of the base in force, so it asks for it again
          *     without building a key itself, and whether it is narrower than the
-         *     review's own, which it goes back to by naming none.
+         *     review's own, which it goes back to by naming none. And which take of
+         *     the review it read, whatever the base: a story is of the code on screen
+         *     only while it says the same take.
          */
         get: operations["get_diff_api_diff_get"];
         put?: never;
@@ -949,6 +951,8 @@ export interface components {
             base: components["schemas"]["ShownBase"] | null;
             /** Moved */
             moved: number;
+            /** Take */
+            take: number;
         };
         EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
         /**
@@ -1516,12 +1520,14 @@ export interface components {
         };
         /**
          * StoryHeld
-         * @description A story as the review holds it: as it was told, and the round it was told in.
+         * @description A story as the review holds it: as it was told, the round it was told in, and the take it was told of.
          */
         StoryHeld: {
             story: components["schemas"]["ToldStory"];
             /** Round */
             round: number;
+            /** Take */
+            take: number;
         };
         /**
          * StoryOverview

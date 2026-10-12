@@ -1,10 +1,11 @@
-"""Taking the diff again while the agent works: one take at a time, each in the round it began in.
+"""Taking the diff as the review opens, and again while the agent works: one take at a time, each in its round.
 
 A retake waits on git. A second retake asked for meanwhile must not leave the
 older tree on screen once both are done, and a round sent meanwhile must not
 tag this take with a round it was not taken in. The repository here holds
 every staging until the test lets it say what moved, and the working tree
-has moved on between any two stagings of it.
+has moved on between any two stagings of it. And a tree git will not stage
+as the review opens leaves the review what the command line read for it.
 """
 
 import asyncio
@@ -13,12 +14,13 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.interfaces import ReviewedRepository, StagedTree
+from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
 from claude_review.services.review.content_sources import ContentSource, content_source
+from claude_review.services.review.review_content import FIRST_TAKE
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
-from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock
+from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file
 
 ROOT = Path("/repository")
 # The commit the review opened on: its uncommitted changes, as HEAD stood then
@@ -105,11 +107,22 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
         return True
 
 
-async def _opened(repository: RepositoryBeingWorkedOn, rounds: RoundTracker) -> ContentSource:
-    """A review of the repository's uncommitted changes, opened as the server opens it."""
+class RepositoryGitWillNotStage(RepositoryBeingWorkedOn):
+    """A working tree git refuses to stage just now, as one whose index another git holds locked."""
+
+    @override
+    def staged(self, path: Path) -> contextlib.AbstractAsyncContextManager[HeldStaging]:
+        refusal = "the index is locked"
+        raise GitError(refusal)
+
+
+async def _opened_on(
+    read_for_it: list[DiffFile], repository: RepositoryBeingWorkedOn, rounds: RoundTracker
+) -> ContentSource:
+    """A review of the repository's uncommitted changes, opened as the server opens it on what was read for it."""
     opening = ReviewOpening(
         mode=ReviewMode.DIFF,
-        diff_files=[],
+        diff_files=read_for_it,
         title="",
         identity=TEST_IDENTITY,
         repository=OpenedRepository(root=ROOT, named_base=None, pinned_base=OPENED_ON),
@@ -117,6 +130,11 @@ async def _opened(repository: RepositoryBeingWorkedOn, rounds: RoundTracker) -> 
     source = content_source(opening, repository=repository, clock=FixedClock(MARKED_AT), rounds=rounds)
     await source.open()
     return source
+
+
+async def _opened(repository: RepositoryBeingWorkedOn, rounds: RoundTracker) -> ContentSource:
+    """A review opened with nothing read for it yet: what is on screen is whatever its stagings find."""
+    return await _opened_on([], repository, rounds)
 
 
 async def _until_asked(repository: RepositoryBeingWorkedOn, staging_number: int) -> HeldStaging:
@@ -167,3 +185,13 @@ async def test_a_round_sent_while_the_diff_is_taken_again_leaves_the_take_in_the
     retaken = await retaking
 
     assert retaken.round == FIRST_ROUND
+
+
+async def test_a_tree_git_will_not_stage_as_the_review_opens_leaves_on_screen_what_was_read_for_it() -> None:
+    """It costs the review its first mark, never the review: what is on screen is still the take it opened on."""
+    read_for_it = [one_line_file(OPENING_FILE)]
+
+    source = await _opened_on(read_for_it, RepositoryGitWillNotStage(), RoundTracker())
+
+    assert source.content.files == read_for_it
+    assert source.content.take == FIRST_TAKE

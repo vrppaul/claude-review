@@ -16,13 +16,14 @@ from httpx import AsyncClient
 
 from claude_review.domain.models import FIRST_ROUND
 from claude_review.domain.story import Step, Story
-from claude_review.presentation.wire.content import ReviewResponse
+from claude_review.presentation.wire.content import DiffResponse, ReviewResponse
 from claude_review.presentation.wire.pushes import StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
 from claude_review.services.review.review import Review
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
+    DIFF_ROUTE,
     REVIEW_ROUTE,
     ReviewFactory,
     http_client,
@@ -37,6 +38,8 @@ from tests.stories import as_the_agent_writes, planted, rows_of, step, story_of
 STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
+# The base a page asks for to read only what changed since the first round began
+SINCE_THE_FIRST_ROUND = "round:1"
 
 # What the repository under review has changed since its commit: a line added to a file, and a file added
 EDITED_FILE = "initial.txt"
@@ -73,6 +76,23 @@ async def tell(agent: AsyncClient, story: Story[Step]) -> StoryTakenResponse:
 async def held_by(agent: AsyncClient) -> StoryResponse:
     """The story the review holds, as its page reads it."""
     return StoryResponse.model_validate_json((await agent.get(STORY_ROUTE)).content)
+
+
+async def own_diff(agent: AsyncClient) -> DiffResponse:
+    """The review's own diff, as its page reads it."""
+    return DiffResponse.model_validate_json((await agent.get(DIFF_ROUTE)).content)
+
+
+async def diff_against(agent: AsyncClient, base: str) -> DiffResponse:
+    """The diff against another base, as a page that chose one reads it."""
+    return DiffResponse.model_validate_json((await agent.get(DIFF_ROUTE, params={"base": base})).content)
+
+
+async def take_again_after_a_round(agent: AsyncClient, repository: Path) -> None:
+    """Send a round, do its work on the file the story told, and take the diff again."""
+    await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "Another word for it, please.", "end": False})
+    write_files(repository, {EDITED_FILE: REWORDED_SINCE})
+    await agent.post(RETAKE_ROUTE)
 
 
 async def test_a_story_told_of_the_change_is_taken_and_summed_up_in_a_line(agent: AsyncClient) -> None:
@@ -173,12 +193,51 @@ async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_say
     await tell(agent, WHOLE_STORY)
     told_first = await held_by(agent)
 
-    await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "Another word for it, please.", "end": False})
-    write_files(tmp_git_repo, {EDITED_FILE: REWORDED_SINCE})
-    await agent.post(RETAKE_ROUTE)
+    await take_again_after_a_round(agent, tmp_git_repo)
 
     assert await held_by(agent) == told_first
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
+
+
+async def test_a_story_is_of_the_take_of_the_change_the_review_holds_as_it_is_told(agent: AsyncClient) -> None:
+    """A page draws a story's pieces beside threads that hang on line numbers: both must be of one take."""
+    await tell(agent, WHOLE_STORY)
+
+    assert (await held_by(agent)).held.take == (await own_diff(agent)).take
+
+
+async def test_the_diff_taken_again_is_of_another_take_than_the_story_told_before_it(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """So a page can tell a story of code that has moved on from one of the code it shows."""
+    await tell(agent, WHOLE_STORY)
+
+    await take_again_after_a_round(agent, tmp_git_repo)
+
+    assert (await held_by(agent)).held.take != (await own_diff(agent)).take
+
+
+async def test_a_story_told_after_the_diff_was_taken_again_is_of_the_take_the_diff_is_now(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    await tell(agent, WHOLE_STORY)
+    await take_again_after_a_round(agent, tmp_git_repo)
+
+    await tell(agent, story_of(THE_FILE_ADDED))
+
+    assert (await held_by(agent)).held.take == (await own_diff(agent)).take
+
+
+async def test_a_diff_read_against_a_narrower_base_says_the_take_of_the_reviews_own(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """Whatever a page reads its files against, the take it learns is the one a story must be of."""
+    await take_again_after_a_round(agent, tmp_git_repo)
+
+    narrowed = await diff_against(agent, SINCE_THE_FIRST_ROUND)
+
+    assert narrowed.base.narrowed is True
+    assert narrowed.take == (await own_diff(agent)).take
 
 
 @pytest.fixture

@@ -189,6 +189,10 @@ class DiffResponse(WireModel):
     # How many files have moved on since this diff was taken. A push says it
     # once; this is how a review that was reloaded, or opened late, finds out.
     moved: int
+    # The take the review held as this was read, whatever base it is read
+    # against: the one the threads' lines are numbered by, and the one a
+    # story must say for its pieces to be numbered so too
+    take: int
 
 
 class VersionsResponse(WireModel):

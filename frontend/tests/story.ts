@@ -1,6 +1,6 @@
 /** Stories as the review hands them to its page, built with only what a test cares about. */
 import type { StoryHeld, ToldChapter, ToldStep, ToldStory } from '$lib/types';
-import { addedLine, diffFile, hunk } from './diff';
+import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 
 /** The round a story is told in, unless a test says another. */
 const FIRST_ROUND = 1;
@@ -40,7 +40,7 @@ export function toldStory(given: Partial<ToldStory> = {}): ToldStory {
 	};
 }
 
-/** A story as the review holds it: as told, in the round it was told in. */
+/** A story as the review holds it: as told, in the round it was told in, of the take a test's diff is read at. */
 export function storyHeld(given: Partial<ToldStory> = {}, round = FIRST_ROUND): StoryHeld {
-	return { story: toldStory(given), round };
+	return { story: toldStory(given), round, take: FIRST_TAKE };
 }

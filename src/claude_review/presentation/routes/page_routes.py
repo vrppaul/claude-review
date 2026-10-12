@@ -142,7 +142,9 @@ async def get_diff(
 
     The page is told the key of the base in force, so it asks for it again
     without building a key itself, and whether it is narrower than the
-    review's own, which it goes back to by naming none.
+    review's own, which it goes back to by naming none. And which take of
+    the review it read, whatever the base: a story is of the code on screen
+    only while it says the same take.
     """
     view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
     opened_against = review.standing().opened_against
@@ -150,6 +152,7 @@ async def get_diff(
         files=[DiffFile.of(file) for file in view.files],
         base=base_on_the_wire(view.shown, opened_against) if view.shown is not None else None,
         moved=view.moved,
+        take=view.take,
     )
 
 

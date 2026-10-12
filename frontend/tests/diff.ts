@@ -63,12 +63,16 @@ export function sinceRound(round: number): ShownBase {
 	return { key: `round:${round}`, phrase: `changes since round ${round}`, narrowed: true };
 }
 
+/** The take of the review a test's diff is read at, and its story told of, unless it says another. */
+export const FIRST_TAKE = 1;
+
 /** What the server answers a request for the diff with, around these files. */
 export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 	return {
 		files: [],
 		base: REVIEW_BASE,
 		moved: 0,
+		take: FIRST_TAKE,
 		...given
 	};
 }

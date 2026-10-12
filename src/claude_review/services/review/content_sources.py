@@ -37,6 +37,10 @@ class DiffView(BaseModel):
     # not come from a repository: it is compared against nothing.
     shown: VersionKey | None
     moved: int
+    # The take the review held as this was read, whatever base it is read
+    # against: the one the threads' lines are numbered by, and the one a
+    # story must be of for its pieces to be numbered so too
+    take: int
 
 
 class Retaken(BaseModel):
@@ -61,8 +65,8 @@ class ContentSource(ABC):
         """Whether the content is a change somebody made to a repository: what a story can be told of."""
 
     @abstractmethod
-    def change(self) -> list[DiffFile]:
-        """The change under review, as the take on screen has it: what a story is told of.
+    def change(self) -> ReviewContent:
+        """The take of the change on screen now: what a story is told of, and says it was told of.
 
         Raises:
             NoRepositoryError: if the content came from no repository: nobody changed it.
@@ -106,7 +110,7 @@ class RepositorySource(ContentSource):
         rounds: RoundTracker,
     ) -> None:
         self._root = opened.root
-        self._content = ReviewContent(opening.diff_files, tree=frozenset())
+        self._content = ReviewContent.opening_on(opening.diff_files)
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
@@ -126,8 +130,8 @@ class RepositorySource(ContentSource):
         return True
 
     @override
-    def change(self) -> list[DiffFile]:
-        return self._content.files
+    def change(self) -> ReviewContent:
+        return self._content
 
     @override
     async def open(self) -> None:
@@ -143,7 +147,7 @@ class RepositorySource(ContentSource):
                 await self._take(staged, self._rounds.current)
         except GitError as refusal:
             log.warning("opening_mark_refused", reason=str(refusal))
-            self._content = ReviewContent(self._content.files, await self._watcher.read(self._root))
+            self._content = self._content.on_tree(await self._watcher.read(self._root))
 
     @override
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
@@ -164,7 +168,8 @@ class RepositorySource(ContentSource):
             against = await self._versions.resolve(shown)
             async with self._repository.staged(self._root) as staged:
                 files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
-        return DiffView(files=files, shown=shown, moved=await self._watcher.drift(self._root, content.tree))
+        moved = await self._watcher.drift(self._root, content.tree)
+        return DiffView(files=files, shown=shown, moved=moved, take=content.take)
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
@@ -198,7 +203,7 @@ class RepositorySource(ContentSource):
         # belongs to the tree the diff was taken at, and the reader is not
         # told about a change that is already on their screen
         tree = await self._watcher.read(self._root)
-        self._content = ReviewContent(files, tree)
+        self._content = self._content.taken_again(files, tree)
         await self._versions.mark(round_number, staged)
         return len(files)
 
@@ -215,7 +220,7 @@ class FixedSource(ContentSource):
     """Files or a conversation, read once: nothing to compare against, nothing to take again."""
 
     def __init__(self, opening: ReviewOpening) -> None:
-        self._content = ReviewContent(opening.diff_files, tree=frozenset())
+        self._content = ReviewContent.opening_on(opening.diff_files)
 
     @property
     @override
@@ -228,7 +233,7 @@ class FixedSource(ContentSource):
         return False
 
     @override
-    def change(self) -> list[DiffFile]:
+    def change(self) -> ReviewContent:
         """Raises: NoRepositoryError, always."""
         msg = "This review is of no change: its content came from no repository"
         raise NoRepositoryError(msg)
@@ -247,7 +252,7 @@ class FixedSource(ContentSource):
         if base is not None:
             msg = "This review is not compared against anything"
             raise NoRepositoryError(msg)
-        return DiffView(files=self._content.files, shown=None, moved=0)
+        return DiffView(files=self._content.files, shown=None, moved=0, take=self._content.take)
 
     @override
     async def offer(self) -> list[VersionOnOffer]:

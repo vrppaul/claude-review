@@ -379,8 +379,9 @@ class Review:
         """Take the story the agent tells of the change, whole, in place of any it told before.
 
         Told of the review's own diff as it stands when the story arrives,
-        whatever base a page reads, and kept with the round it arrived in.
-        Every page open is told there is one, and reads it from here.
+        whatever base a page reads, and kept with the round it arrived in
+        and the take it was told of. Every page open is told there is one,
+        and reads it from here.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
@@ -388,7 +389,13 @@ class Review:
         """
         held = await self._story.tell(story, self._source.change(), round_number=self._rounds.current)
         self._page.tell(StoryTold())
-        log.info("story_told", chapters=len(held.story.chapters), left_out=len(held.story.left_out), round=held.round)
+        log.info(
+            "story_told",
+            chapters=len(held.story.chapters),
+            left_out=len(held.story.left_out),
+            round=held.round,
+            take=held.take,
+        )
         return held
 
     def story_held(self) -> StoryHeld | None:

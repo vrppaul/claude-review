@@ -224,10 +224,14 @@ class ToldStory(WireModel):
 
 
 class StoryHeld(WireModel):
-    """A story as the review holds it: as it was told, and the round it was told in."""
+    """A story as the review holds it: as it was told, the round it was told in, and the take it was told of."""
 
     story: ToldStory
     round: int
+    # The take of the change its pieces were cut out of: their lines are
+    # numbered as the threads' are only while the diff a page read says the
+    # same take
+    take: int
 
 
 class StoryResponse(WireModel):
