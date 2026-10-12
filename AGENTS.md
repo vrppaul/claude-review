@@ -152,6 +152,12 @@ async def submit_review(
 
 ## Self-Review
 
+**Only better, and who says so.** Every change leaves the repository better than it found it — cleaner, more readable, more modular, its architecture more fitting — in every part it touches, not on balance. The rule being written down has not been enough: whoever writes a change can talk themselves into trading it for convenience. So three things hold a change to it, and none is its author's own judgement:
+
+- **The verdict is somebody else's.** A chunk of work is not done, and its author says nothing of it being better, until an independent reviewer has measured its whole diff against this rule, given to it word for word, and listed every place that got worse. That review is part of the chunk, never a favour asked for it.
+- **A regression found becomes a gate.** Whatever a review catches is turned into a rule a tool enforces — `scripts/check_code_rules.py`, a linter's rule, a test over the package — so that kind of mistake cannot be made again whatever its author thinks. A form a type checker refused is never answered with a form it cannot see.
+- **What its author can name as worse is not committed.** Anything that would be listed under "did not get better" is put right before the commit, or the work stops there and the owner is asked: it is never a note in the report afterwards.
+
 Before presenting work, review every changed file against these principles:
 
 **Clean and readable** — each function does one thing. No god methods. Decompose like existing services do (e.g. `unified_diff` has `_file`, `_path`, `_status`, `_mode`, `_hunks`, `_hunk`).
