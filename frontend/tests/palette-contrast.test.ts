@@ -44,22 +44,6 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		text: '--cr-status-modified',
 		grounds: ['--color-base-100', '--cr-mark-tint']
 	},
-	{ said: 'a syntax comment, on an unchanged row', text: '--cr-syn-comment', grounds: ['--color-base-100'] },
-	{
-		said: 'a syntax comment, on an added row',
-		text: '--cr-syn-comment',
-		grounds: ['--color-base-100', '--cr-add-tint']
-	},
-	{
-		said: 'a syntax comment, on a removed row',
-		text: '--cr-syn-comment',
-		grounds: ['--color-base-100', '--cr-del-tint']
-	},
-	{
-		said: 'a syntax comment, on a marked row',
-		text: '--cr-syn-comment',
-		grounds: ['--color-base-100', '--cr-mark-tint']
-	},
 	{ said: 'a placeholder, in the panel', text: '--cr-placeholder', grounds: ['--color-base-100'] },
 	{ said: 'a placeholder, in a field being written', text: '--cr-placeholder', grounds: ['--color-base-200'] },
 	{ said: 'a placeholder, under a comment', text: '--cr-placeholder', grounds: ['--color-base-100', '--cr-mark-tint'] },
@@ -84,6 +68,26 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--color-base-200', '--cr-control-tint']
 	}
 ];
+
+// Every colour code is highlighted in, by what it colours
+const SYNTAX = ['keyword', 'string', 'comment', 'number', 'type', 'function', 'variable', 'meta'];
+// Every row code is drawn on, by the tint laid over the page under it: a
+// marked row's tint takes the place of its change's, it does not stack on it
+const ROWS = [
+	{ row: 'an unchanged row', tints: [] },
+	{ row: 'an added row', tints: ['--cr-add-tint'] },
+	{ row: 'a removed row', tints: ['--cr-del-tint'] },
+	{ row: 'a marked row', tints: ['--cr-mark-tint'] }
+];
+// Highlighted code, on every row it is drawn on. The mark behind a changed
+// word is not among them: code on it reads below 4.5:1, an open question
+const CODE_DRAWN = SYNTAX.flatMap((colour) =>
+	ROWS.map(({ row, tints }) => ({
+		said: `code coloured as ${colour}, on ${row}`,
+		text: `--cr-syn-${colour}`,
+		grounds: ['--color-base-100', ...tints]
+	}))
+);
 
 /** The declarations of one block of tokens.css. */
 function block(selector: string): Map<string, string> {
@@ -129,7 +133,7 @@ describe('the palette', () => {
 	const root = block(':root');
 	for (const themeName of THEMES) {
 		const theme = block(`[data-theme='${themeName}']`);
-		for (const pair of DRAWN) {
+		for (const pair of [...DRAWN, ...CODE_DRAWN]) {
 			it(`reads at ${SMALL_TEXT}:1 in the ${themeName} theme: ${pair.said}`, () => {
 				const [surface, ...tints] = pair.grounds;
 				const ground = tints.reduce(
