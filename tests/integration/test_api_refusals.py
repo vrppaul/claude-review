@@ -17,6 +17,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from pydantic import BaseModel, Field
+from structlog.typing import EventDict
 
 import claude_review
 from claude_review.domain import exceptions
@@ -45,6 +46,8 @@ JSON_MEDIA_TYPE = "application/json"
 UNBOUNDED_TYPES = {"string", "null"}
 # Where a parameter that is part of the path sits: it is never missing, though the description calls it required
 PATH_LOCATION = "path"
+# The part of a request FastAPI names a field of its body under
+BODY = "body"
 # A JSON body no route takes: every route's body is an object
 NOT_AN_OBJECT: list[object] = []
 # What a refusal says of a field, and nothing more: never the value the caller sent, which it has
@@ -244,13 +247,28 @@ def test_every_kind_of_refusal_is_kept_where_the_review_keeps_its_refusals() -> 
 async def test_a_refusal_that_carries_what_it_found_wrong_is_answered_field_by_field(
     kind: type[FieldsRefusedError], refusing: FastAPI
 ) -> None:
-    """Each fault where it was found and why, as a request FastAPI finds wrong is answered: one shape, whoever refused."""
+    """Each fault where it was found and why, as a request FastAPI finds wrong is answered: one shape, whoever refused.
+
+    And one place: a fault is named under the request's body, where FastAPI
+    names a field of one, so no caller has to tell who refused before it
+    reads where.
+    """
     async with http_client(refusing) as caller:
         answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind.__name__))
 
     assert Refusal.model_validate(answered.json()) == Refusal(
-        detail=[FieldRefusal(loc=fault.path, msg=fault.reason) for fault in FAULTS]
+        detail=[FieldRefusal(loc=(BODY, *fault.path), msg=fault.reason) for fault in FAULTS]
     )
+
+
+async def test_a_refusal_that_carries_what_it_found_wrong_is_logged_with_the_fields_it_found_it_at(
+    refusing: FastAPI, logged: list[EventDict]
+) -> None:
+    """Its own words say only that something was refused, and reach no caller: the log says where, as it does of a request FastAPI refuses."""
+    async with http_client(refusing) as caller:
+        await caller.get(REFUSING_ROUTE.format(kind_name=FieldsRefusedError.__name__))
+
+    assert [(BODY, *fault.path) for fault in FAULTS] in [entry.get("fields") for entry in logged]
 
 
 def _taking_json(described: Description) -> list[tuple[str, str]]:

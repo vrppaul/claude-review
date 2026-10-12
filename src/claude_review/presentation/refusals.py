@@ -6,7 +6,8 @@ its own refusals, so a caller reads one shape whoever refused. A request
 FastAPI finds wrong before any route runs is answered under the same
 `detail`, field by field: where each was wrong and why, never what was sent.
 So is a refusal of the review's own that found several things wrong, and
-carries them.
+carries them: each is named under the request's body, where FastAPI names a
+field of one, so a caller reads one place for a field whoever refused it.
 
 The same tables say, in the API's description, how each route may refuse:
 a route names the kinds it raises and what it takes in, and is described
@@ -44,7 +45,7 @@ from claude_review.domain.exceptions import (
     TooLargeError,
 )
 from claude_review.presentation.body_limit import TOO_LARGE_STATUS
-from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
+from claude_review.presentation.wire.refusal import REQUEST_BODY, FieldRefusal, Refusal
 
 log = structlog.get_logger()
 
@@ -153,6 +154,7 @@ def answer_refusals(app: FastAPI) -> None:
     """
     for kind, status in REFUSAL_STATUS.items():
         app.add_exception_handler(kind, partial(answer_refusal, status=status))
+    app.add_exception_handler(FieldsRefusedError, partial(answer_faults_found, status=status_of(FieldsRefusedError)))
     app.add_exception_handler(RequestValidationError, answer_fields_refused)
     app.add_exception_handler(ClientDisconnect, drop_cut_off_request)
     app.add_exception_handler(HTTPException, answer_with_every_method)
@@ -161,16 +163,30 @@ def answer_refusals(app: FastAPI) -> None:
 async def answer_refusal(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
     """Tell whoever asked why the review would not do it."""
     log.warning("request_refused", path=request.url.path, refusal=type(error).__name__, reason=str(error))
-    return JSONResponse(status_code=status, content=Refusal(detail=_detail_of(error)).model_dump())
+    return JSONResponse(status_code=status, content=Refusal(detail=str(error)).model_dump())
 
 
-def _detail_of(error: Exception) -> str | list[FieldRefusal]:
-    """Why the review refused: field by field when the refusal carries what it found wrong, else in its own words."""
+async def answer_faults_found(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
+    """Tell whoever asked everything the review found wrong with what they sent, each fault at its field.
+
+    A fault is named under the request's body, where FastAPI names a field
+    it refuses itself: one answer, and one place in it for a field, whoever
+    refused. The refusal's own words say only that it was refused, so the
+    log says where, as it does of a request FastAPI refuses.
+    """
     match error:
         case FieldsRefusedError():
-            return [FieldRefusal(loc=fault.path, msg=fault.reason) for fault in error.faults]
+            fields = [FieldRefusal(loc=(REQUEST_BODY, *fault.path), msg=fault.reason) for fault in error.faults]
+            log.warning(
+                "request_refused",
+                path=request.url.path,
+                refusal=type(error).__name__,
+                reason=str(error),
+                fields=[field.loc for field in fields],
+            )
+            return JSONResponse(status_code=status, content=Refusal(detail=fields).model_dump())
         case _:
-            return str(error)
+            raise error
 
 
 async def answer_fields_refused(request: Request, error: Exception) -> JSONResponse:

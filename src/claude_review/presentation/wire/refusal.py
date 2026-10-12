@@ -7,6 +7,10 @@ caller reads one shape whichever refused, and the API describes it once.
 
 from claude_review.presentation.wire.base import WireModel
 
+# The part of a request a field of its JSON body is named under: FastAPI's
+# word for it, and the review's for what it finds wrong in a body itself
+REQUEST_BODY = "body"
+
 
 class FieldRefusal(WireModel):
     """One field a request had wrong, as pydantic and FastAPI both describe it."""

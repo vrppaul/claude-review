@@ -98,14 +98,18 @@ async def test_a_story_told_again_takes_the_place_of_the_one_before_whole(agent:
 
 
 async def test_a_story_with_things_wrong_is_refused_naming_each_where_the_document_has_it(agent: AsyncClient) -> None:
-    """Everything at once, each at the field as the agent wrote it: one answer to put the whole story right by."""
+    """Everything at once, each at the field as the agent wrote it: one answer to put the whole story right by.
+
+    Under the request's body, as a field of the wrong shape is named: a
+    caller reads one place for a field, whoever refused it.
+    """
     untitled = planted(story_of(THE_LINE_ADDED, step(ADDED_FILE, 7, 9)), ("title",), "")
 
     answered = await agent.put(STORY_ROUTE, json=as_the_agent_writes(untitled))
 
     assert answered.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     refused = Refusal.model_validate_json(answered.content)
-    assert [field.loc for field in refused.detail] == [("title",), ("chapters", 0, "steps", 1, "lines")]
+    assert [field.loc for field in refused.detail] == [("body", "title"), ("body", "chapters", 0, "steps", 1, "lines")]
 
 
 async def test_a_story_refused_takes_the_place_of_none(agent: AsyncClient) -> None:
