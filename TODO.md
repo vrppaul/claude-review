@@ -43,41 +43,49 @@ tests. Remove items when done — don't check them off.
       them were found running at once. Give an unopened review a deadline
       of its own.
 
+- [ ] `fix(cli)`: three usage errors print what the command was handed as
+      it was written — a field's name from the story's document, the text
+      given for `--lines`, the story file's path — so a terminal's control
+      sequence in any of them reaches the terminal. Whatever the reader or
+      the repository wrote goes through `terminal_text`; what the agent
+      hands a command does not.
+- [ ] `fix(cli)`: a value the review's own rule refuses is said with
+      pydantic's "Value error, " before the review's words: "Value error,
+      says nothing", "Value error, the range runs backwards", and the same
+      before a story's lines that name none.
+- [ ] `fix(cli)`: `point --lines 0` says "Input should be greater than or
+      equal to 1" twice, once for each end of the range.
+
 ## The story, from the reviews of its server side
 
-- [ ] `fix(cli)`: the story file's usage error prints the document's field
-      names as they were written, so a key holding a terminal's control
-      sequence reaches the terminal. Everything else the reader or the
-      repository wrote is printed through `terminal_text`.
 - [ ] `fix(cli)`: `story` says "0 lines not in the story (docs/logo.png)" of
       a file the change shows no line of — binary, too large, only moved.
-      Say such a file apart from lines left out. `render_story_taken` has no
-      unit test of its own.
-- [ ] `fix(cli)`: two refusals read badly. A step's lines that name no lines
-      are refused with pydantic's own "Value error, " before the review's
-      words; `point --lines 0` says "Input should be greater than or equal
-      to 1" twice, once for each end of the range.
+      Say such a file apart from lines left out.
+- [ ] `test(cli)`: `render_story_taken` has no unit test of its own: it is
+      reached only through the command.
 - [ ] `docs(story)`: `PlacedFile.left_out` takes runs that share no row —
       the story's checks refuse a line told twice before it is asked — and
       does not say so.
 - [ ] `test(wire)`: nothing holds the anchors of `LINES_WRITTEN`. The review
       reads lines with `fullmatch`, so only the API's schema needs them,
       which reads a pattern as found anywhere in a text: with either anchor
-      gone, every test passes.
-- [ ] `test`: older tests make a variant of a model with
-      `model_copy(update=…)`, which the package no longer does —
-      `tests/unit/test_cli_rendering.py` (seven) and
-      `tests/integration/test_session_socket.py` (two) — and four helpers
-      of `tests/unit/test_cli.py` hold a branch (`_repeated`,
-      `_offered_commands`, `_every_command`, and the test that every
-      command takes its values by name).
-- [ ] `refactor`: `line_span(start, end)` takes two numbers where
-      `lines_named` gives back a `LineSpan`: the two are one shape, said
-      twice.
+      gone, every unit and integration test passes.
+- [ ] `refactor(story)`: `ReviewStory.tell` calls the module's `tell`: one
+      name for two things in one file.
+- [ ] `refactor(story)`: in `story_lines_told.py`, `told` names a run of
+      lines in `ToldOfRun.tell` and the tree of them in `first_met`.
+- [ ] `test(story)`: the test that a story is told off the event loop waits
+      three turns of the loop and then looks. That the telling runs in
+      another thread is the fact, and a test of that needs no count.
+- [ ] `refactor(story)`: a told story is frozen, and the rows its pieces
+      show are the take's own `DiffLine`s, which are not.
 
 ## Infrastructure
 
 - [ ] Submit to the official Claude Code plugin marketplace
+- [ ] `line_span(start, end)` takes two numbers where `lines_named` gives
+      back a `LineSpan`, so two callers take a `LineSpan` apart to say it:
+      one shape, written twice.
 - [ ] Move file reading out of `FileWindowService` and `read_text_files`
       (`services/text_files.py`) into `repositories/`, behind interfaces, the
       way `ImageService` keeps policy and `DirectoryImageStore` touches the
@@ -87,6 +95,15 @@ tests. Remove items when done — don't check them off.
 
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
+- [ ] The tests hold 138 branches in 28 files — an `if`, a conditional
+      expression, an `or`, a filter in a comprehension — where the owner's
+      rule for tests is that a test and its helpers hold none: one case to
+      a property, inputs made by construction. Most are in
+      `tests/unit/test_unified_diff.py`
+      (28) and `tests/helpers.py` (25).
+- [ ] Older tests make a variant of a model with `model_copy(update=…)`,
+      its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
+      two in `tests/integration/test_session_socket.py`.
 
 ## Known limits
 
