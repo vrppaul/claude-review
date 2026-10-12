@@ -111,11 +111,6 @@ export class StoryReading implements ReadingView {
 		// Nothing of a story is folded: every piece it draws is on the page
 	}
 
-	/** A story is not read file by file: it has no file to tick off or fold. */
-	fileBeingRead(): null {
-		return null;
-	}
-
 	/** The pieces the story held now draws; none while no story is held. */
 	#pieces(): DrawnPiece[] {
 		const held = this.#story.held;

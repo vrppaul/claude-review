@@ -5,9 +5,14 @@
  * A key on its own is the review's only while nothing is being typed — j in
  * a comment is a letter. A chord is the review's anywhere: finishing the
  * review from inside a comment field is what it is for.
+ *
+ * A row says which ways of reading the review its keys are keys of. What is
+ * answered, and what the help lists, are the rows of the view on screen: a
+ * key of the files alone does nothing unseen while a story is read.
  */
 
 import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
+import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { Review } from '$lib/review/review.svelte';
 
 /**
@@ -37,12 +42,23 @@ interface Press {
 	run: (review: Review) => void;
 }
 
-/** One line of the help: the keys as it writes them, what they do, and each press. */
+/** One line of the help: the keys as it writes them, what they do, each press, and where they are keys at all. */
 export interface KeyRow {
 	keys: string;
 	does: string;
 	presses: readonly Press[];
+	/**
+	 * The ways of reading the review the keys act in. A key that is one
+	 * view's own — the files have a tree to put away, and files to tick off
+	 * and fold; a story has none — is neither answered nor listed in the other.
+	 */
+	views: readonly ReadingViewName[];
 }
+
+// The keys of every view, of the files alone, and of the story alone
+const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
+const THE_FILES: readonly ReadingViewName[] = ['files'];
+const THE_STORY: readonly ReadingViewName[] = ['story'];
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -61,11 +77,17 @@ function talkToAgent(review: Review): void {
 	if (review.answerer.attached) review.layout.agentPanel.askForInput();
 }
 
-/** Do something to the file the reader is reading, where the view on screen reads file by file. */
+/** Do something to the file the reader is reading: the one a line of which has the keyboard, or else the one in view. */
 function onCurrentFile(review: Review, act: (path: string) => void): void {
-	const path = review.views.onScreen.fileBeingRead();
+	const path = review.sections.currentFile();
 	if (path) act(path);
 }
+
+// ] and [ walk the sections of whichever view is on screen; what a section is, each view's row says
+const SECTION_PRESSES: readonly Press[] = [
+	alone(']', (review) => review.navigator.stepSection(1)),
+	alone('[', (review) => review.navigator.stepSection(-1))
+];
 
 /** The first press opens the pane the review is sent from; the second sends it. */
 function finish(review: Review): void {
@@ -77,45 +99,70 @@ export const KEYMAP: readonly KeyRow[] = [
 	{
 		keys: 'j / k',
 		does: 'Down / up a line',
-		presses: [alone('j', () => moveByLine(1)), alone('k', () => moveByLine(-1))]
+		presses: [alone('j', () => moveByLine(1)), alone('k', () => moveByLine(-1))],
+		views: EVERY_VIEW
 	},
 	// Enter on a line's number is the number's own: it is a button
-	{ keys: 'Enter', does: 'Comment on this line', presses: [] },
+	{ keys: 'Enter', does: 'Comment on this line', presses: [], views: EVERY_VIEW },
 	// The chord in a comment or a message is the field's own: it knows where what it holds goes
-	{ keys: FIELD_KEYS, does: 'Add the comment, or send the message, being written', presses: [] },
 	{
-		keys: '] / [',
-		does: 'Next / previous file, or step of a story',
-		presses: [
-			alone(']', (review) => review.navigator.stepSection(1)),
-			alone('[', (review) => review.navigator.stepSection(-1))
-		]
+		keys: FIELD_KEYS,
+		does: 'Add the comment, or send the message, being written',
+		presses: [],
+		views: EVERY_VIEW
 	},
+	{ keys: '] / [', does: 'Next / previous file', presses: SECTION_PRESSES, views: THE_FILES },
+	// A story's sections are its pieces: every step, then what no step tells
+	{ keys: '] / [', does: 'Next / previous piece of the story', presses: SECTION_PRESSES, views: THE_STORY },
 	{
 		keys: 'n / p',
 		does: 'Next / previous comment',
-		presses: [alone('n', (review) => review.navigator.step(1)), alone('p', (review) => review.navigator.step(-1))]
+		presses: [alone('n', (review) => review.navigator.step(1)), alone('p', (review) => review.navigator.step(-1))],
+		views: EVERY_VIEW
 	},
-	{ keys: 'a', does: 'Next unread reply', presses: [alone('a', (review) => review.navigator.nextUnread())] },
-	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)] },
-	{ keys: 'f', does: 'Show or hide the file tree', presses: [alone('f', (review) => review.layout.fileTree.toggle())] },
+	{
+		keys: 'a',
+		does: 'Next unread reply',
+		presses: [alone('a', (review) => review.navigator.nextUnread())],
+		views: EVERY_VIEW
+	},
+	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW },
+	{
+		keys: 'f',
+		does: 'Show or hide the file tree',
+		presses: [alone('f', (review) => review.layout.fileTree.toggle())],
+		views: THE_FILES
+	},
 	{
 		keys: 'v',
 		does: 'Mark this file viewed',
-		presses: [alone('v', (review) => onCurrentFile(review, (path) => review.reading.toggleViewed(path)))]
+		presses: [alone('v', (review) => onCurrentFile(review, (path) => review.reading.toggleViewed(path)))],
+		views: THE_FILES
 	},
 	{
 		keys: 'u',
 		does: 'Fold or unfold this file',
-		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))]
+		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))],
+		views: THE_FILES
 	},
 	{
 		keys: FINISH_KEYS,
 		does: 'Finish the review',
-		presses: [{ key: 'Enter', held: 'command-and-shift', run: finish }]
+		presses: [{ key: 'Enter', held: 'command-and-shift', run: finish }],
+		views: EVERY_VIEW
 	},
-	{ keys: '?', does: 'Show this list', presses: [alone('?', (review) => review.guide.setHelpOpen(true))] }
+	{
+		keys: '?',
+		does: 'Show this list',
+		presses: [alone('?', (review) => review.guide.setHelpOpen(true))],
+		views: EVERY_VIEW
+	}
 ];
+
+/** The keys of one way of reading the review: what is answered while it is on screen, and what the help lists then. */
+export function keysOf(view: ReadingViewName): KeyRow[] {
+	return KEYMAP.filter((row) => row.views.includes(view));
+}
 
 /** What is held with a press, if it is anything the review answers; Alt is never the review's. */
 function heldWith(event: KeyboardEvent): Held | null {
@@ -129,10 +176,12 @@ export function isFieldChord(event: KeyboardEvent): boolean {
 	return event.key === 'Enter' && heldWith(event) === 'command';
 }
 
-/** The press in the table this keystroke is, if any. */
-function pressOf(event: KeyboardEvent): Press | undefined {
+/** The press this keystroke is among the keys of the view on screen, if any. */
+function pressOf(review: Review, event: KeyboardEvent): Press | undefined {
 	const held = heldWith(event);
-	return KEYMAP.flatMap((row) => row.presses).find((press) => press.key === event.key && press.held === held);
+	return keysOf(review.views.onScreen.name)
+		.flatMap((row) => row.presses)
+		.find((press) => press.key === event.key && press.held === held);
 }
 
 /**
@@ -143,7 +192,7 @@ function pressOf(event: KeyboardEvent): Press | undefined {
  */
 export function pressKey(review: Review, event: KeyboardEvent): void {
 	if (event.defaultPrevented || isComposingText(event) || review.guide.helpOpen) return;
-	const press = pressOf(event);
+	const press = pressOf(review, event);
 	if (!press || (press.held === 'nothing' && isTypingTarget(event.target))) return;
 	event.preventDefault();
 	press.run(review);

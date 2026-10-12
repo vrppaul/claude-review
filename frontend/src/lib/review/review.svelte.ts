@@ -165,7 +165,7 @@ export class Review {
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.views = new ReadingViews(
 			{
-				files: new FilesReading(this.diff, this.threads, this.reading, this.sections),
+				files: new FilesReading(this.diff, this.threads, this.reading),
 				story: new StoryReading(this.story, this.threads)
 			},
 			this.layout.readingView,

@@ -224,8 +224,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		threadsInOrder: () => [],
 		sectionOf: () => null,
 		sectionOfFile: () => null,
-		unfold: () => undefined,
-		fileBeingRead: () => null
+		unfold: () => undefined
 	};
 
 	/** The review read in one view alone, with nothing else to bring on screen: what that view draws none of is nowhere. */

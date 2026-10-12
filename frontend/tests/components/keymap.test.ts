@@ -8,6 +8,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
+import { storyHeld, toldChapter, toldStep } from '../story';
 
 const files = ['a.py', 'b.py'].map((path) => diffFile({ path, hunks: [hunk([contextLine(1, 1, `in ${path}`)])] }));
 
@@ -16,6 +17,17 @@ let review: Review;
 beforeEach(() => {
 	review = openReview({ files, facts: { answerer_attached: true } });
 });
+
+/**
+ * What records a section being brought into view: its own, given to it here.
+ * A spy on the method would be the one every element shares, already called
+ * by whatever was brought into view before.
+ */
+function broughtIntoView(section: HTMLElement): ReturnType<typeof vi.fn> {
+	const brought = vi.fn();
+	section.scrollIntoView = brought;
+	return brought;
+}
 
 /** The section a file is drawn in. */
 function sectionOf(path: string): HTMLElement {
@@ -28,8 +40,8 @@ describe('the keys the review answers', () => {
 	it('takes the reader to the next file, and the previous, from the one they are in', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
-		const first = vi.spyOn(sectionOf('a.py'), 'scrollIntoView');
-		const second = vi.spyOn(sectionOf('b.py'), 'scrollIntoView');
+		const first = broughtIntoView(sectionOf('a.py'));
+		const second = broughtIntoView(sectionOf('b.py'));
 
 		within(sectionOf('a.py')).getByTestId('line-gutter').focus();
 		await user.keyboard(']');
@@ -235,5 +247,80 @@ describe('the keys the review answers', () => {
 		await user.keyboard('f');
 
 		expect(review.layout.fileTree.open).toBe(treeOpen);
+	});
+
+	it("lists in the help what ] and [ do among the files, and nothing of a story's keys", async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+		const listed = screen.getByTestId('shortcuts-list').textContent;
+
+		expect(listed).toContain('Next / previous file');
+		expect(listed).not.toContain('piece of the story');
+	});
+});
+
+describe('the keys of a review read as its story', () => {
+	// A story of one chapter that tells a line of a.py, then a line of b.py
+	const TOLD = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('a.py', 1), toldStep('b.py', 1)])] });
+
+	beforeEach(() => {
+		review = openReview({ files, story: TOLD, facts: { answerer_attached: true } });
+		review.views.choose('story');
+	});
+
+	it('take the reader to the next piece of the story, and the previous, from the one they are in', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const [first, second] = screen.getAllByTestId('story-piece');
+		const toTheFirst = broughtIntoView(first);
+		const toTheSecond = broughtIntoView(second);
+
+		within(first).getByTestId('line-gutter').focus();
+		await user.keyboard(']');
+		expect(toTheSecond).toHaveBeenCalled();
+
+		within(second).getByTestId('line-gutter').focus();
+		// A bracket is written twice to be typed once: one alone opens a key's name
+		await user.keyboard('[[');
+		expect(toTheFirst).toHaveBeenCalled();
+	});
+
+	it('leave the tree of files as the reader left it: f is a key of the files, and the story has no tree', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const treeOpen = review.layout.fileTree.open;
+
+		await user.keyboard('f');
+
+		expect(review.layout.fileTree.open).toBe(treeOpen);
+	});
+
+	it('mark no file viewed and fold none: v and u are keys of the files', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const [first] = screen.getAllByTestId('story-piece');
+
+		within(first).getByTestId('line-gutter').focus();
+		await user.keyboard('vu');
+
+		expect(review.reading.isViewed('a.py')).toBe(false);
+		expect(review.reading.isFolded('a.py')).toBe(false);
+	});
+
+	it("are listed in the help, and none that are the files' own", async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+		const listed = screen.getByTestId('shortcuts-list').textContent;
+
+		expect(listed).toContain('Next / previous piece of the story');
+		expect(listed).toContain('Next / previous comment');
+		expect(listed).not.toContain('Next / previous file');
+		expect(listed).not.toContain('Show or hide the file tree');
+		expect(listed).not.toContain('Mark this file viewed');
+		expect(listed).not.toContain('Fold or unfold this file');
 	});
 });

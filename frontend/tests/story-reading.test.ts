@@ -88,10 +88,6 @@ describe('a review read as its story', () => {
 		]);
 	});
 
-	it('has no file for the keyboard to tick off or fold', () => {
-		expect(review.views.onScreen.fileBeingRead()).toBeNull();
-	});
-
 	it('says which threads it draws none of', () => {
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'in chapter two' }));
 		review.threads.add(newComment({ file: 'a.py', startLine: 5, body: 'on a line no piece shows' }));

@@ -2,7 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import Dialog from './Dialog.svelte';
 	import Icon from './Icon.svelte';
-	import { KEYMAP } from './keymap';
+	import { keysOf } from './keymap';
 
 	const review = useReview();
 
@@ -52,7 +52,7 @@
 	</div>
 	<h3 class="mb-4 text-lg font-semibold">Keyboard</h3>
 	<dl data-testid="shortcuts-list" class="space-y-2">
-		{#each KEYMAP as row (row.keys)}
+		{#each keysOf(review.views.onScreen.name) as row (row.keys)}
 			<div class="flex items-baseline gap-4">
 				<dt class="w-40 shrink-0 font-mono text-xs text-(--cr-control)">{row.keys}</dt>
 				<dd class="text-sm">{row.does}</dd>

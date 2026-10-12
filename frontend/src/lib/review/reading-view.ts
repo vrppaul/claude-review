@@ -11,7 +11,6 @@
 
 import { inDiffOrder, isDrawn } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
-import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
@@ -31,8 +30,6 @@ export interface ReadingView {
 	sectionOfFile: (path: string) => string | null;
 	/** Bring out lines the view has folded away, so what hangs on them can be drawn. */
 	unfold: (lines: FileLines) => void;
-	/** The file the reader ticks off and folds from the keyboard: the one being read, where files are what is read. */
-	fileBeingRead: () => string | null;
 }
 
 /**
@@ -55,13 +52,11 @@ export class FilesReading implements ReadingView {
 	readonly #diff: ReviewDiff;
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;
-	readonly #sections: FileSections;
 
-	constructor(diff: ReviewDiff, threads: Threads, reading: ReadingProgress, sections: FileSections) {
+	constructor(diff: ReviewDiff, threads: Threads, reading: ReadingProgress) {
 		this.#diff = diff;
 		this.#threads = threads;
 		this.#reading = reading;
-		this.#sections = sections;
 	}
 
 	sectionKeys(): string[] {
@@ -98,10 +93,5 @@ export class FilesReading implements ReadingView {
 	/** A folded file draws no line, and no thread: it is opened. */
 	unfold(lines: FileLines): void {
 		this.#reading.unfold(lines.file);
-	}
-
-	/** The file of the section the reader is in: by focus if a line has it, by scroll if not. */
-	fileBeingRead(): string | null {
-		return this.#sections.currentFile();
 	}
 }
