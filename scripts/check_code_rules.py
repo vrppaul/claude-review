@@ -16,9 +16,15 @@ reads the names. So what goes the other way is not used at all — pydantic's
 `vars` and `copy.replace`. A model leaves for the wire as JSON
 (`model_dump_json`), never as a mapping. The check knows these by name
 alone: a model handed to `dict(…)`, or walked field by field, is past what
-it sees, and the rule holds there all the same. The module `copy` it knows
-by the names the file's own imports give it, so a text called `copy` is
-not taken for it.
+it sees, and the rule holds there all the same. A name is refused whatever
+is done with it — `model_copy` also where it changes no field — since a
+name does not show which use it is.
+
+The module `copy` is known by the names the file's own imports give it,
+wherever in the file they stand, so a file that does not import it may
+call anything `copy`. In a file that does, whatever else goes by one of
+those names is taken for the module: the check reads names, not what a
+name stands for where it is used.
 
 Run on files or directories, in the project's own environment. The
 pre-commit hook hands it every Python file outside `tests/`, and CI runs
@@ -47,10 +53,7 @@ TOO_SHORT = "`{name}` is too short to say what it holds"
 # What takes a model apart into its fields by name, or puts one together from them, as an attribute of
 # anything: each with what is said of it
 FIELDS_BY_NAME = {
-    "model_copy": (
-        "`model_copy` copies a model past its constructor, and what it is told to change goes in by name, unchecked:"
-        " the model makes it, by its constructor"
-    ),
+    "model_copy": "`model_copy` copies a model past its constructor, unchecked: the model makes its own copy",
     "model_construct": "`model_construct` builds a model unchecked, from names in text: build it by its constructor",
     "model_dump": "`model_dump` writes a model out as a mapping: hand the model on, or write it as JSON",
     "__dict__": "`__dict__` reads an object's fields as a mapping, by name: read the fields it has",
@@ -58,7 +61,7 @@ FIELDS_BY_NAME = {
 # The builtin that does as `__dict__` does, and the module and function that copy an object by the names of its fields
 FIELDS_OF = "vars"
 VARS_READ = "`vars` reads an object's fields as a mapping, by name: read the fields it has"
-COPYING_MODULE = "copy"
+COPY_MODULE = "copy"
 REPLACING = "replace"
 REPLACED_BY_NAME = "`copy.replace` copies an object by the names of its fields: build it by its constructor"
 # What the process exits with
@@ -123,7 +126,7 @@ def _names_of_the_copy_module(tree: ast.AST) -> frozenset[str]:
         for node in ast.walk(tree)
         if isinstance(node, ast.Import)
         for imported in node.names
-        if imported.name == COPYING_MODULE
+        if imported.name == COPY_MODULE
     )
 
 
@@ -164,7 +167,9 @@ def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) ->
     match node:
         case ast.Attribute(value=ast.Name(id=module), attr=name) if module in copy_module_names and name == REPLACING:
             return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
-        case ast.ImportFrom(module=module, names=names) if module == COPYING_MODULE and _name_among(names, REPLACING):
+        case ast.ImportFrom(module=module, names=names, level=0) if module == COPY_MODULE and _name_among(
+            names, REPLACING
+        ):
             return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
         case ast.Attribute(attr=name) if name in FIELDS_BY_NAME:
             return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]

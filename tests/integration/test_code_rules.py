@@ -61,14 +61,6 @@ FIELDS_BY_NAME = [
         said="checked.py:3: `model_copy` copies a model past its constructor",
     ),
     FieldsByName(
-        what="a copy that changes no field",
-        source="""
-            def kept(anchor: Anchor) -> Anchor:
-                return anchor.model_copy(deep=True)
-        """,
-        said="checked.py:3: `model_copy` copies a model past its constructor",
-    ),
-    FieldsByName(
         what="a model built unchecked",
         source="""
             def moved(line: int) -> Anchor:
@@ -133,6 +125,16 @@ FIELDS_BY_NAME = [
         said="checked.py:6: `copy.replace` copies an object by the names of its fields",
     ),
     FieldsByName(
+        what="that module brought in inside a function",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                import copy
+
+                return copy.replace(anchor, line=line)
+        """,
+        said="checked.py:5: `copy.replace` copies an object by the names of its fields",
+    ),
+    FieldsByName(
         what="that function brought in by name",
         source="""
             from copy import replace
@@ -141,9 +143,21 @@ FIELDS_BY_NAME = [
     ),
 ]
 
+# A copy that names no field of the model, and is made past its constructor all the same
+COPIED_WHOLE = """
+    def kept(anchor: Anchor) -> Anchor:
+        return anchor.model_copy(deep=True)
+"""
+
 # What takes no model apart: a model made by its constructor, one written as JSON, mappings that never were
-# models spread and merged, and a text with a part of it replaced, whatever the text is called
+# models spread and merged, a text with a part of it replaced, whatever the text is called, and a `replace`
+# that is another module's — the system's, or a module of the package's own that is called `copy`
 MODELS_MADE_AND_MAPPINGS_MERGED = """
+    import os
+
+    from .copy import replace
+
+
     class Anchor(BaseModel):
         line: int
 
@@ -173,6 +187,14 @@ MODELS_MADE_AND_MAPPINGS_MERGED = """
 
     def reworded(copy: str) -> str:
         return copy.replace("old", "new")
+
+
+    def kept(staged: str, kept_as: str) -> None:
+        os.replace(staged, kept_as)
+
+
+    def reworded_by_the_package(text: str) -> str:
+        return replace(text)
 """
 
 
@@ -212,6 +234,14 @@ def test_a_model_taken_apart_by_the_names_of_its_fields_is_named_where_it_is(
 
     assert checked.returncode == RULE_BROKEN
     assert named.said in checked.stdout
+
+
+def test_a_copy_that_changes_no_field_is_refused_all_the_same(tmp_path: Path) -> None:
+    """A name cannot show which use it is, and what is said of it is true of this one too: no rule is asked again."""
+    checked = _check(tmp_path, COPIED_WHOLE)
+
+    assert checked.returncode == RULE_BROKEN
+    assert "checked.py:3: `model_copy` copies a model past its constructor, unchecked" in checked.stdout
 
 
 def test_a_model_made_by_its_constructor_and_mappings_that_were_never_models_pass(tmp_path: Path) -> None:
