@@ -7,11 +7,12 @@ import AgentPanel from '$lib/components/AgentPanel.svelte';
 import { AGENT_STOPPED_LISTENING, TAKE_BACK } from '$lib/components/agent-waits';
 import { FIELD_KEYS } from '$lib/components/keymap';
 import type { Thread, ReviewResponse } from '$lib/types';
-import { addedLine, diffFile, hunk } from '../diff';
+import { addedLine, diffFile, diffResponse, hunk, REVIEW_BASE, sinceRound } from '../diff';
 import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { settled } from '../settled';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
 
 const TITLE = 'claude-review: uncommitted changes';
@@ -606,6 +607,30 @@ describe('a file the agent names', () => {
 		await user.click(getByTestId('answer-file'));
 
 		expect(shown).toHaveBeenCalledWith(file.path);
+	});
+
+	it('takes the reader to one the review holds under a narrower base, putting the whole review back first', async () => {
+		const user = userEvent.setup();
+		const other = diffFile({ path: 'src/other.py', hunks: [hunk([addedLine(1, 'z = 1')])] });
+		review = answeredReview();
+		const server = fakeServer();
+		server.answerWith('GET /api/diff', (request) =>
+			request.query.base === 'round:1'
+				? diffResponse({ files: [file], base: sinceRound(1) })
+				: diffResponse({ files: [file, other], base: REVIEW_BASE })
+		);
+		await review.diff.take();
+		await review.diff.setBase('round:1');
+		const shown = vi.spyOn(review.sections, 'showFile');
+		review.conversation.receive(null, 'Changed it too.', [other.path]);
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		expect(getByTestId('answer-file').getAttribute('title')).toBe(other.path);
+		await user.click(getByTestId('answer-file'));
+		await settled();
+
+		expect(review.diff.narrowed).toBe(false);
+		expect(shown).toHaveBeenCalledWith(other.path);
 	});
 
 	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {

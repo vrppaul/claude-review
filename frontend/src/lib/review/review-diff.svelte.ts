@@ -20,6 +20,9 @@ export class ReviewDiff {
 	// Lines revealed above the hunks of the diff on screen; every diff starts with none
 	#revealed = $state.raw(new RevealedContext());
 	#files = $state.raw<DiffFile[]>([]);
+	// The files of the review's own diff, as it was last taken: a narrower
+	// base shows fewer of them, and the review holds them all the same
+	#ownFiles = $state.raw<DiffFile[]>([]);
 	// Which base the diff on screen was taken against, as the server named it:
 	// its key, what the header says, and whether it is narrower than the
 	// review's own. It comes with the diff rather than out of the version list,
@@ -48,6 +51,11 @@ export class ReviewDiff {
 
 	get files(): DiffFile[] {
 		return this.#files;
+	}
+
+	/** Whether the review's own diff holds a file, whatever base is on screen. */
+	holds(path: string): boolean {
+		return this.#ownFiles.some((file) => file.path === path);
 	}
 
 	/** Lines revealed above the hunks of the diff on screen. */
@@ -141,6 +149,7 @@ export class ReviewDiff {
 	#show(data: DiffResponse): void {
 		this.#revealed = new RevealedContext();
 		this.#files = data.files;
+		if (!(data.base?.narrowed ?? false)) this.#ownFiles = data.files;
 		this.#shown = data.base;
 		// Said with the diff as well as pushed: a review reloaded while the tree
 		// was moving heard the push and lost it, and one opened later never
