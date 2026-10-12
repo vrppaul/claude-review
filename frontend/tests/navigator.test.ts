@@ -1,4 +1,6 @@
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { Navigator } from '$lib/review/navigator';
+import type { ReadingView } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
 import { newComment } from './new-comment';
@@ -210,5 +212,113 @@ describe('the order the threads are stepped through', () => {
 		review.navigator.step(1);
 
 		expect(brought).toEqual(['on gone.py', 'on a.py']);
+	});
+});
+
+describe('moving the reader in whatever view the review is read in', () => {
+	/** A view that draws none of the review: no section, no thread, no file. */
+	const DRAWS_NOTHING: ReadingView = {
+		sectionKeys: () => [],
+		threadsInOrder: () => [],
+		sectionOf: () => null,
+		sectionOfFile: () => null,
+		unfold: () => undefined,
+		fileBeingRead: () => null
+	};
+
+	/** A section on the page under a key, which says when it is brought into view. */
+	function sectionKnownBy(key: string, brought: string[]): HTMLElement {
+		const section = document.createElement('section');
+		section.scrollIntoView = () => brought.push(key);
+		document.body.append(section);
+		review.sections.register(key, 'a.py', section);
+		return section;
+	}
+
+	it('takes the reader nowhere for a thread the view does not draw, though the page still does', () => {
+		review.threads.add(newComment({ startLine: 1, body: 'one' }));
+		const brought = drawThreads();
+		const [thread] = review.threads.all;
+		const navigator = new Navigator(review.threads, review.sections, () => DRAWS_NOTHING);
+
+		navigator.reveal(thread);
+
+		expect(brought).toEqual([]);
+	});
+
+	it('shows no file the view draws none of, though a section stands on the page under its name', () => {
+		const brought: string[] = [];
+		sectionKnownBy('a.py', brought);
+		const navigator = new Navigator(review.threads, review.sections, () => DRAWS_NOTHING);
+
+		navigator.showFile('a.py');
+
+		expect(brought).toEqual([]);
+	});
+
+	it('shows a file in the section the view says draws it', () => {
+		const brought: string[] = [];
+		sectionKnownBy('the first piece of a.py', brought);
+		const view = { ...DRAWS_NOTHING, sectionOfFile: vi.fn(() => 'the first piece of a.py') };
+		const navigator = new Navigator(review.threads, review.sections, () => view);
+
+		navigator.showFile('a.py');
+
+		expect(view.sectionOfFile).toHaveBeenCalledWith('a.py');
+		expect(brought).toEqual(['the first piece of a.py']);
+	});
+
+	it('walks the sections the view draws, in the order it draws them', () => {
+		const brought: string[] = [];
+		sectionKnownBy('drawn second', brought);
+		sectionKnownBy('drawn first', brought);
+		const view = { ...DRAWS_NOTHING, sectionKeys: () => ['drawn first', 'drawn second'] };
+		const navigator = new Navigator(review.threads, review.sections, () => view);
+
+		navigator.stepSection(1);
+
+		expect(brought).toEqual(['drawn first']);
+	});
+
+	it('goes on from the section the reader is in, the one a line of which has the keyboard', () => {
+		const brought: string[] = [];
+		sectionKnownBy('drawn first', brought);
+		const second = sectionKnownBy('drawn second', brought);
+		sectionKnownBy('drawn third', brought);
+		const lineNumber = second.appendChild(document.createElement('button'));
+		const view = { ...DRAWS_NOTHING, sectionKeys: () => ['drawn first', 'drawn second', 'drawn third'] };
+		const navigator = new Navigator(review.threads, review.sections, () => view);
+		lineNumber.focus();
+
+		navigator.stepSection(1);
+
+		expect(brought).toEqual(['drawn third']);
+	});
+
+	it('goes to a thread by the section the view says draws it, and brings out what folds it away', () => {
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'one' }));
+		const [thread] = review.threads.all;
+		const brought: string[] = [];
+		sectionKnownBy('the piece that draws it', brought);
+		const view = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it', unfold: vi.fn() };
+		const navigator = new Navigator(review.threads, review.sections, () => view);
+
+		navigator.reveal(thread);
+
+		expect(brought).toEqual(['the piece that draws it']);
+		expect(view.unfold).toHaveBeenCalledWith(expect.objectContaining({ file: 'a.py' }));
+	});
+});
+
+describe('going to a thread in the files as they are read one by one', () => {
+	it('opens the file the reader folded away, so the thread in it can be drawn', () => {
+		review = openReview({ files: [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'x = 1')])] })] });
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'in a folded file' }));
+		const [thread] = review.threads.all;
+		review.reading.toggleFolded('a.py');
+
+		review.navigator.reveal(thread);
+
+		expect(review.reading.isFolded('a.py')).toBe(false);
 	});
 });

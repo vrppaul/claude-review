@@ -1,6 +1,12 @@
 /**
- * Where each file and each thread sits in the stream, which file the reader
- * is in, and bringing one into view.
+ * Where each section that draws a file's lines, and each thread, sits in the
+ * stream, which of them the reader is in, and bringing one into view.
+ *
+ * A section is known by a key whoever draws it gives: the files' own view
+ * draws each file in one section and knows it by the file's path; a story
+ * draws a file in as many sections as it has pieces of it, each under a key
+ * of its own. So a section says both, its key and the file it draws lines
+ * of, and a line of a file is looked for in every section that draws the file.
  *
  * The sidebar and the comment navigator move the reader by scrolling rather
  * than by swapping what is rendered, so find-in-page, text selection across
@@ -42,6 +48,13 @@ const AWAIT_THREAD_FOR = 2000;
 interface AwaitedThread {
 	threadId: string;
 	until: number;
+}
+
+/** A section as it announced itself: what it is known by, the file it draws lines of, and where it is. */
+interface Section {
+	key: string;
+	path: string;
+	element: HTMLElement;
 }
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
@@ -89,9 +102,10 @@ class SettleWatch {
 }
 
 export class FileSections {
-	readonly #sections = new Map<string, HTMLElement>();
-	// Which file each section stands for, so the section being read names its file
-	readonly #paths = new Map<Element, string>();
+	// Every section on the page, by what whoever draws it knows it by
+	readonly #sections = new Map<string, Section>();
+	// The section each element is, so the one being read names itself
+	readonly #byElement = new Map<Element, Section>();
 	readonly #threads = new Map<string, HTMLElement>();
 	// A thread asked for before it was drawn, and until when it is waited
 	// for: brought into view once it is drawn, if that is soon
@@ -107,20 +121,23 @@ export class FileSections {
 	#showing = 0;
 
 	/**
-	 * The file the reader is in: the one whose header is pinned at the top of
-	 * the reading area, while the reading area is watched.
+	 * The file the reader is in: the one whose section is pinned at the top
+	 * of the reading area, while the reading area is watched.
 	 */
 	get fileInView(): string | null {
-		const earliest = this.#band.earliest;
-		return earliest === null ? null : (this.#paths.get(earliest) ?? null);
+		return this.#inView()?.path ?? null;
 	}
 
-	/** Say where a file's section is; returns how to take it back. */
-	register(path: string, element: HTMLElement): () => void {
-		this.#sections.set(path, element);
-		this.#paths.set(element, path);
+	/**
+	 * Say where a section is: the key whoever draws it knows it by, and the
+	 * file it draws lines of. Returns how to take it back.
+	 */
+	register(key: string, path: string, element: HTMLElement): () => void {
+		const section = { key, path, element };
+		this.#sections.set(key, section);
+		this.#byElement.set(element, section);
 		this.#band.add(element);
-		return () => this.#unregister(path, element);
+		return () => this.#unregister(section);
 	}
 
 	/** Say where a thread is drawn; returns how to take it back. */
@@ -135,92 +152,86 @@ export class FileSections {
 	}
 
 	/**
-	 * Follow which file the reader is in as they scroll an area, so the
-	 * sidebar can follow the scroll instead of driving it. Files drawn later
-	 * are watched as they arrive. Returns how to stop.
+	 * Follow which section the reader is in as they scroll an area, so the
+	 * sidebar can follow the scroll instead of driving it. Sections drawn
+	 * later are watched as they arrive. Returns how to stop.
 	 */
 	watchInView(root: HTMLElement): () => void {
-		return this.#band.watch(root, this.#sections.values());
+		return this.#band.watch(root, this.#elements());
 	}
 
-	/** Where the reader is reading in an area: the first line still showing at its top, in the file being read. */
+	/** Where the reader is reading in an area: the first line still showing at its top, in the section being read. */
 	readingPlace(root: HTMLElement): ReadingPlace | null {
-		const path = this.fileInView;
-		const section = path === null ? undefined : this.#sections.get(path);
-		return path === null || section === undefined ? null : readingPlaceIn(path, section, root);
+		const section = this.#inView();
+		return section === null ? null : readingPlaceIn(section.key, section.element, root);
 	}
 
-	/** Put the reader back where they were reading, as near as what is drawn now allows; nowhere, if the file left. */
+	/** Put the reader back where they were reading, as near as what is drawn now allows; nowhere, if the section left. */
 	returnTo(root: HTMLElement, place: ReadingPlace): void {
-		const section = this.#sections.get(place.path);
-		if (section) bringBack(place, section, root);
+		const section = this.#sections.get(place.section);
+		if (section) bringBack(place, section.element, root);
 	}
 
-	/** The file the reader is in: the one a line of which has the focus, if one has, or else the one in view. */
+	/** The section the reader is in, by its key: the one a line of which has the focus, if one has, or else the one in view. */
 	current(): string | null {
-		return this.focused() ?? this.fileInView;
+		return this.#current()?.key ?? null;
 	}
 
-	/** The file whose section holds the focus, if any does. */
-	focused(): string | null {
-		const focus = document.activeElement;
-		if (focus === null) return null;
-		for (const [path, element] of this.#sections) {
-			if (element.contains(focus)) return path;
-		}
-		return null;
+	/** The file of the section the reader is in. */
+	currentFile(): string | null {
+		return this.#current()?.path ?? null;
 	}
 
-	/** Take the reader to a file: its header to the top, and the file the one being read. */
-	scrollToFile(path: string): void {
+	/** Take the reader to a section: its head to the top, and the section the one being read. */
+	scrollTo(key: string): void {
 		// Going anywhere else is no longer waiting for a thread
 		this.#awaitedThread = null;
-		const section = this.#sections.get(path);
+		const section = this.#sections.get(key);
 		if (!section) return;
-		this.#land(section);
-		section.scrollIntoView({ block: 'start' });
+		this.#land(section.element);
+		section.element.scrollIntoView({ block: 'start' });
 	}
 
 	/**
-	 * Bring a file into view and mark it once it gets there.
+	 * Bring a section into view and mark it once it gets there.
 	 *
-	 * Somebody else moved this screen, so the file has to say "here" when it
-	 * arrives: a page that has jumped somewhere without a word leaves the
+	 * Somebody else moved this screen, so the section has to say "here" when
+	 * it arrives: a page that has jumped somewhere without a word leaves the
 	 * reader working out what they are looking at. The mark waits for the
 	 * scroll to stop — across sixty files a smooth scroll outlasts the mark
 	 * itself, and the reader would arrive to a file that had already finished
 	 * saying so.
 	 */
-	showFile(path: string): void {
-		const section = this.#sections.get(path);
-		if (!section) return;
+	show(key: string): void {
+		const element = this.#sections.get(key)?.element;
+		if (!element) return;
 
 		const showing = ++this.#showing;
 		this.#awaitedThread = null;
 		this.#unmark();
-		this.#band.land(section);
-		section.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
-		new SettleWatch(section, () => this.#arrivedAtShown(section, showing)).start();
+		this.#band.land(element);
+		element.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
+		new SettleWatch(element, () => this.#arrivedAtShown(element, showing)).start();
 	}
 
 	/**
 	 * Bring a thread into view and put the keyboard on it, building or
-	 * unfolding its file first if need be.
+	 * unfolding the section that draws it first if need be.
 	 *
-	 * A file's rows are only built once it has been near the viewport, and a
-	 * folded file draws none, so a thread further down the review — restored
-	 * from a draft, say — may have nothing drawn yet. Its file is brought into
-	 * view instead, and the thread follows the moment it is drawn, however
-	 * long that takes.
+	 * A section's rows are only built once it has been near the viewport,
+	 * and a folded file draws none, so a thread further down the review —
+	 * restored from a draft, say — may have nothing drawn yet. Its section is
+	 * brought into view instead, and the thread follows the moment it is
+	 * drawn, however long that takes.
 	 */
-	goToThread(threadId: string, file: string): void {
+	goToThread(threadId: string, sectionKey: string): void {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
 			this.#awaitedThread = null;
 			arriveAt(drawn);
 			return;
 		}
-		this.scrollToFile(file);
+		this.scrollTo(sectionKey);
 		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_THREAD_FOR };
 	}
 
@@ -237,52 +248,89 @@ export class FileSections {
 	}
 
 	/**
-	 * Put the keyboard on a line's number, by the key its place is known by,
-	 * if what had it went: what remains where a comment was put away, a
-	 * thread deleted, or hidden lines shown. Where the line is not drawn, the
-	 * file's own toggle takes it; where the file is not in the diff at all,
-	 * the toggle of the first file, which its threads were drawn above.
+	 * Put the keyboard on a line's number, by the file it is a line of and
+	 * the key its place is known by, if what had it went: what remains where
+	 * a comment was put away, a thread deleted, or hidden lines shown. Where
+	 * the line is not drawn, the file's own toggle takes it; where the file
+	 * is not drawn at all, the toggle of the first section, which its threads
+	 * were drawn above.
 	 */
 	keyboardToLine(path: string, lineKey: string): void {
 		focusWhatRemains(() => this.lineOrFile(path, lineKey));
 	}
 
-	/** A line's number in a file's section, by the key its place is known by, or the toggle that stands for it where it is not drawn. */
+	/**
+	 * A line's number, in whichever section draws that line of its file, by
+	 * the key its place is known by; or the toggle that stands for it where
+	 * it is not drawn: that of the first section on the page to draw the
+	 * file, or of the first section of all where none draws it.
+	 */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
-		const section = this.#sections.get(path);
-		if (!section) return toggleOf(firstInDocument(this.#sections.values()));
-		return section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`) ?? toggleOf(section);
+		const ofTheFile = [...this.#sections.values()]
+			.filter((section) => section.path === path)
+			.map((section) => section.element);
+		if (ofTheFile.length === 0) return toggleOf(firstInDocument(this.#elements()));
+		const line = ofTheFile
+			.map((element) => element.querySelector<HTMLElement>(`[data-place="${lineKey}"]`))
+			.find((found) => found !== null);
+		return line ?? toggleOf(firstInDocument(ofTheFile));
 	}
 
-	#unregister(path: string, element: HTMLElement): void {
-		this.#band.remove(element);
-		this.#paths.delete(element);
-		if (this.#sections.get(path) === element) this.#sections.delete(path);
+	/** Where every section is, in the order they announced themselves. */
+	#elements(): HTMLElement[] {
+		return [...this.#sections.values()].map((section) => section.element);
+	}
+
+	/** The section the reader is in: the one holding the focus, if one does, or else the one being read. */
+	#current(): Section | null {
+		return this.#focused() ?? this.#inView();
+	}
+
+	/** The section holding the focus, if any does. */
+	#focused(): Section | null {
+		const focus = document.activeElement;
+		if (focus === null) return null;
+		for (const section of this.#sections.values()) {
+			if (section.element.contains(focus)) return section;
+		}
+		return null;
+	}
+
+	/** The section being read, while the reading area is watched. */
+	#inView(): Section | null {
+		const earliest = this.#band.earliest;
+		return earliest === null ? null : (this.#byElement.get(earliest) ?? null);
+	}
+
+	#unregister(section: Section): void {
+		this.#band.remove(section.element);
+		this.#byElement.delete(section.element);
+		if (this.#sections.get(section.key) === section) this.#sections.delete(section.key);
 	}
 
 	#unregisterThread(threadId: string, element: HTMLElement): void {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
 	}
 
-	/** The file being read from now on is the one a jump is taking the reader to, once it has come to rest. */
-	#land(section: HTMLElement): void {
-		this.#band.land(section);
-		new SettleWatch(section, () => this.#band.settle(section)).start();
+	/** The section being read from now on is the one a jump is taking the reader to, once it has come to rest. */
+	#land(element: HTMLElement): void {
+		this.#band.land(element);
+		new SettleWatch(element, () => this.#band.settle(element)).start();
 	}
 
-	/** A file the reader was brought to has come to rest: mark it, unless another showing has come since. */
-	#arrivedAtShown(section: HTMLElement, showing: number): void {
-		this.#band.settle(section);
-		if (showing === this.#showing) this.#mark(section);
+	/** A section the reader was brought to has come to rest: mark it, unless another showing has come since. */
+	#arrivedAtShown(element: HTMLElement, showing: number): void {
+		this.#band.settle(element);
+		if (showing === this.#showing) this.#mark(element);
 	}
 
-	#mark(section: HTMLElement): void {
+	#mark(element: HTMLElement): void {
 		// The class draws the mark; the attribute says it is there to whatever
 		// reads the page rather than its styles
-		section.classList.add(MARKED_CLASS);
-		section.dataset.marked = '';
+		element.classList.add(MARKED_CLASS);
+		element.dataset.marked = '';
 		this.#marked = {
-			element: section,
+			element,
 			timer: setTimeout(() => this.#unmark(), MARKED_FOR)
 		};
 	}

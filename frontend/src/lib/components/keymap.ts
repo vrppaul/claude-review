@@ -61,9 +61,9 @@ function talkToAgent(review: Review): void {
 	if (review.answerer.attached) review.layout.agentPanel.askForInput();
 }
 
-/** Do something to the file the reader is in: by focus if a line in it has the focus, by scroll if not. */
+/** Do something to the file the reader is reading, where the view on screen reads file by file. */
 function onCurrentFile(review: Review, act: (path: string) => void): void {
-	const path = review.sections.current();
+	const path = review.view.fileBeingRead();
 	if (path) act(path);
 }
 
@@ -87,8 +87,8 @@ export const KEYMAP: readonly KeyRow[] = [
 		keys: '] / [',
 		does: 'Next / previous file',
 		presses: [
-			alone(']', (review) => review.navigator.stepFile(1)),
-			alone('[', (review) => review.navigator.stepFile(-1))
+			alone(']', (review) => review.navigator.stepSection(1)),
+			alone('[', (review) => review.navigator.stepSection(-1))
 		]
 	},
 	{

@@ -8,10 +8,11 @@
 
 import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
 
-/** Where the reader is reading: a line of a file, and how far below the top of the reading area it stands. */
+/** Where the reader is reading: a line of a section, and how far below the top of the reading area it stands. */
 export interface ReadingPlace {
-	path: string;
-	/** The line, by what its row is known by; null for the top of a file that draws no line there. */
+	/** The section, by the key whoever draws it knows it by. */
+	section: string;
+	/** The line, by what its row is known by; null for the top of a section that draws no line there. */
 	line: string | null;
 	/** How far below the top of the reading area it stands, in pixels. */
 	offset: number;
@@ -22,17 +23,21 @@ function lineNumbersIn(section: HTMLElement): HTMLElement[] {
 	return Array.from(section.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
 }
 
-/** Where the reader is reading in a file's section: its first line still showing at the top of the area, or its top. */
-export function readingPlaceIn(path: string, section: HTMLElement, root: HTMLElement): ReadingPlace {
+/** Where the reader is reading in a section: its first line still showing at the top of the area, or its top. */
+export function readingPlaceIn(sectionKey: string, section: HTMLElement, root: HTMLElement): ReadingPlace {
 	const top = root.getBoundingClientRect().top;
 	const line = lineNumbersIn(section).find((number) => number.getBoundingClientRect().bottom > top);
 	const standing = line ?? section;
-	return { path, line: line?.dataset.place ?? null, offset: standing.getBoundingClientRect().top - top };
+	return {
+		section: sectionKey,
+		line: line?.dataset.place ?? null,
+		offset: standing.getBoundingClientRect().top - top
+	};
 }
 
 /**
  * Scroll an area so the line read stands where it stood. A line no longer
- * drawn leaves the reader at the top of its file instead.
+ * drawn leaves the reader at the top of its section instead.
  */
 export function bringBack(place: ReadingPlace, section: HTMLElement, root: HTMLElement): void {
 	const line = lineNumbersIn(section).find((number) => place.line !== null && number.dataset.place === place.line);

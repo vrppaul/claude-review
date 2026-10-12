@@ -655,7 +655,7 @@ describe('a file the agent names', () => {
 
 	it('takes the reader to it when the diff holds it', async () => {
 		const user = userEvent.setup();
-		const shown = vi.spyOn(review.sections, 'showFile');
+		const shown = vi.spyOn(review.sections, 'show');
 		review.conversation.receive(chatPush('Renamed it.', { files: [file.path] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
@@ -676,7 +676,7 @@ describe('a file the agent names', () => {
 		);
 		await review.diff.take();
 		await review.diff.setBase('round:1');
-		const shown = vi.spyOn(review.sections, 'showFile');
+		const shown = vi.spyOn(review.sections, 'show');
 		review.conversation.receive(chatPush('Changed it too.', { files: [other.path] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
@@ -690,7 +690,7 @@ describe('a file the agent names', () => {
 
 	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {
 		const user = userEvent.setup();
-		const shown = vi.spyOn(review.sections, 'showFile');
+		const shown = vi.spyOn(review.sections, 'show');
 		review.conversation.receive(chatPush('Split it out.', { files: ['src/made_since.py'] }));
 		review.answerer.showWork(work({ text: 'splitting it out', files: ['src/made_since.py'] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));

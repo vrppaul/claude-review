@@ -8,17 +8,16 @@
  * among the threads, which only moving changes. Every control that takes the
  * reader to a thread moves them through here — n and p, a, the header's
  * arrows, the replies, the finish pane, the panel's chips, the notices — and
- * so do ] and [ from file to file. A file named outright, by the tree or by
- * the agent, is brought into view by `FileSections` itself, and j and k move
- * the keyboard line by line (`dom/keyboard.ts`): neither has a place among
- * the threads to keep.
+ * so do ] and [ from section to section, and a file the agent names. What is
+ * walked, and where a thread or a file is drawn, is asked of the view the
+ * review is read in (`ReadingView`); the page itself is moved by
+ * `FileSections`. j and k move the keyboard line by line
+ * (`dom/keyboard.ts`), and have no place among the threads to keep.
  */
 
-import { inDiffOrder } from '$lib/anchors/placement';
-import { anchorLines, type FileLines } from '$lib/anchors/views';
+import { anchorLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
-import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
-import type { ReviewDiff } from '$lib/review/review-diff.svelte';
+import type { ReadingView } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
@@ -54,32 +53,41 @@ function nearestStillThere(threads: readonly Thread[], from: ReaderAt, direction
 
 export class Navigator {
 	readonly #threads: Threads;
-	readonly #reading: ReadingProgress;
 	readonly #sections: FileSections;
-	readonly #diff: ReviewDiff;
+	// The view the review is read in now: what is walked, and where a thread or a file is drawn, is its to say
+	readonly #onScreen: () => ReadingView;
 	// The thread the reader was last brought to, by whichever control, and the
 	// one a step goes on from. Kept by id, with the threads as they stood: a
 	// place in a list that changes would become another thread's, and a thread
 	// removed leaves its neighbours to go on to.
 	#at: ReaderAt | null = null;
 
-	constructor(threads: Threads, reading: ReadingProgress, sections: FileSections, diff: ReviewDiff) {
+	constructor(threads: Threads, sections: FileSections, onScreen: () => ReadingView) {
 		this.#threads = threads;
-		this.#reading = reading;
 		this.#sections = sections;
-		this.#diff = diff;
+		this.#onScreen = onScreen;
 	}
 
-	/** Step to the next or previous thread down the diff, and bring it into view. */
+	/** Step to the next or previous thread in the view on screen, and bring it into view. */
 	step(direction: 1 | -1): void {
-		const next = steppedTo(this.#inOrder(), this.#at, direction);
+		const next = steppedTo(this.#onScreen().threadsInOrder(), this.#at, direction);
 		if (next) this.reveal(next);
 	}
 
-	/** Bring a thread into view with the keyboard on it, and go on from it the next time the reader steps. */
+	/**
+	 * Bring a thread into view with the keyboard on it, and go on from it the
+	 * next time the reader steps. Whatever folds its lines away is opened
+	 * first, and the thread is gone to once it is drawn. A thread the view on
+	 * screen does not draw takes the reader nowhere.
+	 */
 	reveal(thread: Thread): void {
-		this.#at = { thread: thread.id, among: this.#inOrder() };
-		this.#revealOnLines(thread.id, anchorLines(thread.anchor));
+		const view = this.#onScreen();
+		const lines = anchorLines(thread.anchor);
+		const section = view.sectionOf(lines);
+		if (section === null) return;
+		this.#at = { thread: thread.id, among: view.threadsInOrder() };
+		view.unfold(lines);
+		this.#sections.goToThread(thread.id, section);
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -95,29 +103,27 @@ export class Navigator {
 	}
 
 	/**
-	 * Step to the next or previous file from the one the reader is in — by
+	 * Step to the next or previous section from the one the reader is in — by
 	 * focus if a line in it has the focus, by scroll if not — and bring it into
 	 * view; from nowhere, the first or the last.
 	 */
-	stepFile(direction: 1 | -1): void {
-		const files = this.#diff.files;
+	stepSection(direction: 1 | -1): void {
+		const keys = this.#onScreen().sectionKeys();
 		const here = this.#sections.current();
-		const from = files.findIndex((file) => file.path === here);
-		const first = direction === 1 ? 0 : files.length - 1;
-		const to = from === -1 ? first : Math.min(files.length - 1, Math.max(0, from + direction));
-		const target = files[to];
-		if (target) this.#sections.scrollToFile(target.path);
+		const from = here === null ? -1 : keys.indexOf(here);
+		const first = direction === 1 ? 0 : keys.length - 1;
+		const to = from === -1 ? first : Math.min(keys.length - 1, Math.max(0, from + direction));
+		const target = keys[to];
+		if (target !== undefined) this.#sections.scrollTo(target);
 	}
 
-	/** The threads in the order they stand on the diff, as n and p walk them. */
-	#inOrder(): Thread[] {
-		return inDiffOrder(this.#threads.onLines, this.#diff.files);
-	}
-
-	#revealOnLines(threadId: string, lines: FileLines): void {
-		// A folded file has no thread on screen to move to, so it is opened
-		// first; the thread is brought into view once it is drawn
-		this.#reading.unfold(lines.file);
-		this.#sections.goToThread(threadId, lines.file);
+	/**
+	 * Bring a file somebody named into view — the agent, in what it said or
+	 * showed — and mark it once it gets there; nowhere, where the view on
+	 * screen draws none of it.
+	 */
+	showFile(path: string): void {
+		const section = this.#onScreen().sectionOfFile(path);
+		if (section !== null) this.#sections.show(section);
 	}
 }

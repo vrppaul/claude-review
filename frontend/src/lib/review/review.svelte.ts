@@ -21,6 +21,7 @@ import { FileSections } from '$lib/dom/file-sections';
 import { LastRetake } from '$lib/review/last-retake.svelte';
 import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
+import { FilesReading, type ReadingView } from '$lib/review/reading-view';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
@@ -102,6 +103,8 @@ export class Review {
 	readonly guide: Guide;
 	readonly sections = new FileSections();
 	readonly navigator: Navigator;
+	// The review read file by file
+	readonly #files: FilesReading;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
@@ -151,7 +154,8 @@ export class Review {
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
-		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
+		this.#files = new FilesReading(this.diff, this.threads, this.reading, this.sections);
+		this.navigator = new Navigator(this.threads, this.sections, () => this.view);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
 		this.#draftSetAside = $state(draftSetAside);
@@ -164,6 +168,11 @@ export class Review {
 		// A review stopped under the reader keeps its draft for when it is opened again
 		this.#draft = $derived(this.link.ending === 'finished' ? null : this.#snapshot());
 		if (this.answerer.attached) this.layout.agentPanel.offer();
+	}
+
+	/** The view the review is read in now: file by file. */
+	get view(): ReadingView {
+		return this.#files;
 	}
 
 	/** The unsent review as a draft keeps it; none once the review is over. */

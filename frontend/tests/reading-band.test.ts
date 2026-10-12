@@ -39,7 +39,7 @@ function section(path: string): HTMLElement {
 	element.scrollIntoView = () => undefined;
 	element.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 	document.body.append(element);
-	sections.register(path, element);
+	sections.register(path, path, element);
 	return element;
 }
 
@@ -88,7 +88,7 @@ describe('the file being read', () => {
 		const watched = band();
 		watched.report([first]);
 
-		sections.scrollToFile('b.py');
+		sections.scrollTo('b.py');
 		// The file above still touches the band as the jump lands: a short file at
 		// the end cannot scroll up to it, and a fraction of a pixel is enough
 		watched.report([first]);
@@ -102,7 +102,7 @@ describe('the file being read', () => {
 		section('c.py');
 		const watched = band();
 		watched.report([first]);
-		sections.scrollToFile('c.py');
+		sections.scrollTo('c.py');
 		await frames();
 
 		watched.report([second], [first]);

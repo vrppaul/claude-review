@@ -36,13 +36,13 @@ describe('where the reader is reading', () => {
 		// Rows start 30 px above the area: the first is past its top, the second reaches into it
 		const section = sectionOf(['new:40', 'new:41', 'new:42'], () => AREA_TOP - 30);
 
-		expect(readingPlaceIn('b.py', section, area())).toEqual({ path: 'b.py', line: 'new:41', offset: -10 });
+		expect(readingPlaceIn('b.py', section, area())).toEqual({ section: 'b.py', line: 'new:41', offset: -10 });
 	});
 
 	it('is the top of the file where it draws no line', () => {
 		const section = sectionOf([], () => AREA_TOP + 5);
 
-		expect(readingPlaceIn('b.py', section, area())).toEqual({ path: 'b.py', line: null, offset: 5 });
+		expect(readingPlaceIn('b.py', section, area())).toEqual({ section: 'b.py', line: null, offset: 5 });
 	});
 });
 
@@ -52,7 +52,7 @@ describe('bringing the reader back after a new diff', () => {
 		// The new diff put 400 px more above the file
 		const section = sectionOf(['new:40', 'new:41'], () => AREA_TOP + 400 - reading.scrollTop);
 
-		bringBack({ path: 'b.py', line: 'new:41', offset: -10 }, section, reading);
+		bringBack({ section: 'b.py', line: 'new:41', offset: -10 }, section, reading);
 
 		expect(reading.scrollTop).toBe(400 + ROW_HEIGHT + 10);
 	});
@@ -61,7 +61,7 @@ describe('bringing the reader back after a new diff', () => {
 		const reading = area();
 		const section = sectionOf(['new:40'], () => AREA_TOP + 400 - reading.scrollTop);
 
-		bringBack({ path: 'b.py', line: 'new:99', offset: 50 }, section, reading);
+		bringBack({ section: 'b.py', line: 'new:99', offset: 50 }, section, reading);
 
 		expect(reading.scrollTop).toBe(400);
 	});

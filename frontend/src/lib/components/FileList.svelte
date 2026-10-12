@@ -5,6 +5,7 @@
 	import { formerName } from '$lib/utils/paths';
 	import { counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
+	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
 	import FoldChevron from './FoldChevron.svelte';
@@ -89,7 +90,7 @@
 				review.sections.fileInView === file.path && 'cr-current'
 			]}
 			style:--cr-depth={depth}
-			onclick={() => review.sections.scrollToFile(file.path)}
+			onclick={() => review.sections.scrollTo(fileSectionKey(file.path))}
 		>
 			{#if isDiffMode}
 				<span class={['w-3 shrink-0 text-center font-semibold', status.colour]}>{status.letter}</span>

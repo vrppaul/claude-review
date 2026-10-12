@@ -5,6 +5,7 @@
 	import { isRenderable } from '$lib/utils/renderable';
 	import { whenNearViewport } from '$lib/dom/scroll';
 	import { useReview } from '$lib/review/context';
+	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody from './FileBody.svelte';
@@ -71,7 +72,7 @@
 	// Rows are built when the file comes within reach, and kept from then on
 	let built = $state(false);
 
-	$effect(() => (element ? review.sections.register(file.path, element) : undefined));
+	$effect(() => (element ? review.sections.register(fileSectionKey(file.path), file.path, element) : undefined));
 
 	$effect(() => {
 		if (!element || built) return;

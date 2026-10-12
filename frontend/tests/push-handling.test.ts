@@ -84,12 +84,22 @@ describe('what the server pushes, taken in', () => {
 	it('brings the file the agent shows into view, and makes it the one being read', () => {
 		const section = document.createElement('section');
 		const scrolled = vi.spyOn(section, 'scrollIntoView');
-		review.sections.register('b.py', section);
+		review.sections.register('b.py', 'b.py', section);
 
 		handOverNext(review, { type: 'show', file: 'b.py' });
 
 		expect(scrolled).toHaveBeenCalledOnce();
 		expect(review.sections.fileInView).toBe('b.py');
+	});
+
+	it('shows no file the diff on screen does not hold, though a section stands on the page under its name', () => {
+		const section = document.createElement('section');
+		section.scrollIntoView = vi.fn();
+		review.sections.register('made-since.py', 'made-since.py', section);
+
+		handOverNext(review, { type: 'show', file: 'made-since.py' });
+
+		expect(section.scrollIntoView).not.toHaveBeenCalled();
 	});
 
 	it('moves on to the round the server began, never back', () => {

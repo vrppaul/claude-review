@@ -29,7 +29,7 @@ function isMarked(section: HTMLElement): boolean {
 function section(path: string): HTMLElement {
 	const element = document.createElement('div');
 	document.body.append(element);
-	sections.register(path, element);
+	sections.register(path, path, element);
 	return element;
 }
 
@@ -45,7 +45,7 @@ describe('being taken to a file somebody else pointed at', () => {
 		let top = 900;
 		moving.getBoundingClientRect = () => ({ top }) as DOMRect;
 
-		sections.showFile('a.py');
+		sections.show('a.py');
 		await frames(FRAMES_WHILE_MOVING);
 		expect(isMarked(moving)).toBe(false);
 
@@ -58,11 +58,11 @@ describe('being taken to a file somebody else pointed at', () => {
 		const shown = section('a.py');
 		shown.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
-		sections.showFile('a.py');
+		sections.show('a.py');
 		await frames();
 		expect(isMarked(shown)).toBe(true);
 
-		sections.showFile('a.py');
+		sections.show('a.py');
 		expect(isMarked(shown)).toBe(false);
 		await frames();
 		expect(isMarked(shown)).toBe(true);
@@ -74,8 +74,8 @@ describe('being taken to a file somebody else pointed at', () => {
 		first.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 		second.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
-		sections.showFile('a.py');
-		sections.showFile('b.py');
+		sections.show('a.py');
+		sections.show('b.py');
 		await frames();
 
 		expect(isMarked(first)).toBe(false);
@@ -83,7 +83,7 @@ describe('being taken to a file somebody else pointed at', () => {
 	});
 
 	it('says nothing about a file the review does not hold', () => {
-		expect(() => sections.showFile('missing.py')).not.toThrow();
+		expect(() => sections.show('missing.py')).not.toThrow();
 	});
 });
 
@@ -163,7 +163,7 @@ describe('moving the reader', () => {
 		thread.scrollIntoView = vi.fn();
 		sections.registerThread('comment-1', thread);
 
-		sections.showFile('a.py');
+		sections.show('a.py');
 		sections.goToThread('comment-1', 'a.py');
 
 		expect(file.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
@@ -178,7 +178,7 @@ describe('moving the reader', () => {
 		thread.scrollIntoView = vi.fn();
 		sections.registerThread('comment-1', thread);
 
-		sections.showFile('a.py');
+		sections.show('a.py');
 		sections.goToThread('comment-1', 'a.py');
 
 		expect(file.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }));
@@ -202,13 +202,13 @@ describe('knowing which file the reader is in', () => {
 
 		lineNumber.focus();
 
-		expect(sections.focused()).toBe('b.py');
+		expect(sections.currentFile()).toBe('b.py');
 	});
 
 	it('is none while the focus is outside every file', () => {
 		section('a.py');
 
-		expect(sections.focused()).toBeNull();
+		expect(sections.currentFile()).toBeNull();
 	});
 
 	it('is none while the reading area is not watched', () => {
@@ -221,8 +221,8 @@ describe('knowing which file the reader is in', () => {
 		const first = document.createElement('div');
 		const second = document.createElement('div');
 		document.body.append(first, second);
-		sections.register('b.py', second);
-		sections.register('a.py', first);
+		sections.register('b.py', 'b.py', second);
+		sections.register('a.py', 'a.py', first);
 
 		sections.watchInView(document.body);
 
@@ -240,13 +240,81 @@ describe('knowing which file the reader is in', () => {
 	it('moves on to the next file in the band when the one in view is taken away', () => {
 		const leaving = document.createElement('div');
 		document.body.append(leaving);
-		const takeBack = sections.register('a.py', leaving);
+		const takeBack = sections.register('a.py', 'a.py', leaving);
 		section('b.py');
 		sections.watchInView(document.body);
 
 		takeBack();
 
 		expect(sections.fileInView).toBe('b.py');
+	});
+});
+
+describe('a file drawn in several pieces, as a story draws one', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** A piece of a file on the page, known by a key of its own. */
+	function piece(key: string, path: string): HTMLElement {
+		const element = document.createElement('div');
+		element.scrollIntoView = vi.fn();
+		document.body.append(element);
+		sections.register(key, path, element);
+		return element;
+	}
+
+	/** A line's number drawn in a piece, known by its place. */
+	function lineIn(drawn: HTMLElement, place: string): HTMLElement {
+		const number = document.createElement('button');
+		number.dataset.place = place;
+		drawn.append(number);
+		return number;
+	}
+
+	it('finds a line in whichever piece of its file draws it', () => {
+		lineIn(piece('step-1', 'a.py'), 'new:3');
+		const further = lineIn(piece('step-2', 'a.py'), 'new:40');
+
+		expect(sections.lineOrFile('a.py', 'new:40')).toBe(further);
+	});
+
+	it('names the file of the piece being read', () => {
+		piece('step-1', 'a.py');
+
+		sections.watchInView(document.body);
+
+		expect(sections.fileInView).toBe('a.py');
+	});
+
+	it('says which piece the reader is in by its own key', () => {
+		lineIn(piece('step-1', 'a.py'), 'new:3');
+		const further = lineIn(piece('step-2', 'a.py'), 'new:40');
+
+		further.focus();
+
+		expect(sections.current()).toBe('step-2');
+	});
+
+	it('goes to the piece a thread will be drawn in, not to the first piece of its file', () => {
+		const first = piece('step-1', 'a.py');
+		const further = piece('step-2', 'a.py');
+
+		sections.goToThread('comment-1', 'step-2');
+
+		expect(further.scrollIntoView).toHaveBeenCalled();
+		expect(first.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('goes on finding a line of the file when another piece of it is taken away', () => {
+		const leaving = document.createElement('div');
+		document.body.append(leaving);
+		const takeBack = sections.register('step-1', 'a.py', leaving);
+		const staying = lineIn(piece('step-2', 'a.py'), 'new:40');
+
+		takeBack();
+
+		expect(sections.lineOrFile('a.py', 'new:40')).toBe(staying);
 	});
 });
 
@@ -268,8 +336,8 @@ describe('what stands for a line where it is not drawn', () => {
 	it('is the toggle of the first file on the page for a file the diff does not hold, whichever was drawn first', () => {
 		const first = sectionWithToggle();
 		const second = sectionWithToggle();
-		sections.register('b.py', second.element);
-		sections.register('a.py', first.element);
+		sections.register('b.py', 'b.py', second.element);
+		sections.register('a.py', 'a.py', first.element);
 
 		expect(sections.lineOrFile('reverted.py', 'new:1')).toBe(first.toggle);
 	});
@@ -277,8 +345,8 @@ describe('what stands for a line where it is not drawn', () => {
 	it("is the file's own toggle for a line of it that is not drawn", () => {
 		const first = sectionWithToggle();
 		const second = sectionWithToggle();
-		sections.register('a.py', first.element);
-		sections.register('b.py', second.element);
+		sections.register('a.py', 'a.py', first.element);
+		sections.register('b.py', 'b.py', second.element);
 
 		expect(sections.lineOrFile('b.py', 'new:9')).toBe(second.toggle);
 	});

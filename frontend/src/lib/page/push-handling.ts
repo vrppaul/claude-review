@@ -72,7 +72,7 @@ function learnFrom(review: Review, push: FactPush): void {
 			return;
 		case 'show':
 			// Asked for: the agent does not move this screen on its own
-			review.sections.showFile(push.file);
+			review.navigator.showFile(push.file);
 			return;
 		case 'status':
 			review.answerer.report(push.agent);

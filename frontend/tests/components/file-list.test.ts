@@ -76,7 +76,7 @@ describe('the file tree', () => {
 		const section = document.createElement('div');
 		const scrollIntoView = vi.fn();
 		section.scrollIntoView = scrollIntoView;
-		const unregister = review.sections.register('src/utils.ts', section);
+		const unregister = review.sections.register('src/utils.ts', 'src/utils.ts', section);
 
 		const { getByRole } = render(FileList, inReview(review));
 		await userEvent.click(getByRole('button', { name: /utils\.ts/ }));
@@ -134,7 +134,7 @@ describe('finding a file in a long review', () => {
 		const review = openReview({ files: diffFiles });
 		const section = document.createElement('div');
 		section.scrollIntoView = vi.fn();
-		const unregister = review.sections.register('src/utils.ts', section);
+		const unregister = review.sections.register('src/utils.ts', 'src/utils.ts', section);
 
 		const { getByTestId } = render(FileList, inReview(review));
 		await user.type(getByTestId('file-filter'), 'utils{Enter}');

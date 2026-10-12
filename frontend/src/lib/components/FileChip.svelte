@@ -26,7 +26,7 @@
 	async function goToFile() {
 		if (review.diff.narrowed && !(await going.run(() => review.diff.showWholeReview()))) return;
 		await tick();
-		review.sections.showFile(path);
+		review.navigator.showFile(path);
 	}
 </script>
 

@@ -105,7 +105,7 @@ const FACT_PUSHES: FactPush[] = [
 /** A page reloaded over a draft from before its facts, its one file drawn for a push to show. */
 function reloadedWithAFileDrawn(): Review {
 	const review = reloadedFrom(pushedAt(DRAFT_LEFT_AT));
-	review.sections.register('a.py', document.createElement('section'));
+	review.sections.register('a.py', 'a.py', document.createElement('section'));
 	return review;
 }
 
