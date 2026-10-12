@@ -488,6 +488,50 @@ describe('a story the code has moved on from', () => {
 	});
 });
 
+describe('what a piece of a story leaves out between its hunks', () => {
+	// A step that runs over two changes of a.py, lines 1 and 9, and what no step tells of b.py: two runs
+	// of it, lines 1 and 6, around lines some other step tells
+	const overTwoChanges = diffFile({
+		path: 'a.py',
+		hunks: [
+			hunk([addedLine(1, 'one')], { header: '', old_start: 1, new_start: 1 }),
+			hunk([addedLine(9, 'nine')], { header: '', old_start: 8, new_start: 9 })
+		]
+	});
+	const twoRunsNoStepTells = diffFile({
+		path: 'b.py',
+		hunks: [
+			hunk([addedLine(1, 'first')], { header: '', old_start: 1, new_start: 1 }),
+			hunk([addedLine(6, 'sixth')], { header: '', old_start: 1, new_start: 6 })
+		]
+	});
+	const told = storyHeld({
+		chapters: [toldChapter('ch-1', [{ ...toldStep('a.py', 1), lines: { first: 1, last: 9 }, piece: overTwoChanges }])],
+		left_out: [{ piece: twoRunsNoStepTells, changed_lines: 2 }]
+	});
+
+	beforeEach(() => {
+		review = openReview({ files, story: told });
+		review.views.choose('story');
+	});
+
+	it('is said to be unchanged in a step: between two changes it tells lie lines the change kept', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const inTheStep = within(screen.getByTestId('story-step')).getByTestId('hunk-gap');
+
+		expect(inTheStep.textContent.trim()).toBe('⋯ 7 unchanged lines');
+	});
+
+	it('is said only to be not shown where no step tells the lines around it: a step may tell those between', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const inWhatWasLeftOut = within(screen.getByTestId('story-left-out')).getByTestId('hunk-gap');
+
+		expect(inWhatWasLeftOut.textContent.trim()).toBe('⋯ 4 lines not shown here');
+	});
+});
+
 describe('the files, read where a story could be', () => {
 	it('stay drawn as they are when the tree beside them is put away', async () => {
 		const user = userEvent.setup();

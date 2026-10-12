@@ -13,7 +13,7 @@
 		/** What it is highlighted and rendered as, if anything. */
 		language: string | null;
 		view: FileView;
-		/** How much of a file is given: the whole of it, or a piece cut out of one, as a step of a story is. */
+		/** How much of a file is given: the whole of it, or a piece cut out of one for a story. */
 		extent: Extent;
 	}
 

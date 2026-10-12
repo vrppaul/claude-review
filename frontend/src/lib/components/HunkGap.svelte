@@ -33,8 +33,9 @@
 	// Drawn where the gap is the drawing's to say, while it hides lines or
 	// may: below the last hunk, how many is not known until a read finds out
 	const drawn = $derived(drawing.says(gap) && hidden !== 0);
-	// What a gap says of itself: how much it hides, as far as that is known
-	const unchanged = $derived(counted(hidden ?? 0, 'unchanged line', 'unchanged lines'));
+	// What a gap says of itself where it is only said, and where it may be
+	// read in: how much it hides, as far as that is known
+	const said = $derived(drawing.saidOfAGap);
 	const hiddenLines = $derived(
 		hidden === null ? 'The file may go on below' : counted(hidden, 'hidden line', 'hidden lines')
 	);
@@ -67,7 +68,7 @@
 		</div>
 	{/if}
 	<div data-testid="hunk-gap" class="flex items-center gap-1 border-y border-base-300 bg-base-200 font-mono text-xs">
-		{#if drawing.readsGaps}
+		{#if said === null}
 			{#if inOneGo}
 				<button
 					type="button"
@@ -129,7 +130,7 @@
 				<span data-testid="expand-error" class="px-4 text-error">{failed}</span>
 			{/if}
 		{:else}
-			<span class="cr-muted px-4 py-1.5">⋯ {unchanged}</span>
+			<span class="cr-muted px-4 py-1.5">⋯ {counted(hidden ?? 0, said.one, said.many)}</span>
 		{/if}
 	</div>
 {/if}

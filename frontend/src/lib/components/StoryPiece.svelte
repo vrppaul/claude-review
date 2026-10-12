@@ -7,7 +7,7 @@
 	import { languageOf } from '$lib/utils/highlight';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileBody from './FileBody.svelte';
-	import { type Extent, linesView } from './file-drawing.svelte';
+	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import { STATUS_LETTERS } from './status-letters';
 
 	interface Props {
@@ -15,6 +15,8 @@
 		sectionKey: string;
 		/** The piece of a file the review cut out: a step's lines, or what no step tells of the file. */
 		piece: DiffFile;
+		/** What it is cut out to show: the lines a step tells, or what no step tells of the file. */
+		shows: PieceShows;
 		/** Whose numbers its lines carry, as the story it is a piece of says. */
 		numbering: StoryNumbering;
 		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
@@ -23,13 +25,13 @@
 		beside: Snippet;
 	}
 
-	let { sectionKey, piece, numbering, scrollRoot, beside }: Props = $props();
+	let { sectionKey, piece, shows, numbering, scrollRoot, beside }: Props = $props();
 	const review = useReview();
 
 	const status = $derived(STATUS_LETTERS[piece.status]);
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
-	const extent = $derived<Extent>({ kind: 'piece', numbering });
+	const extent = $derived<Extent>({ kind: 'piece', shows, numbering });
 	// How many rows the piece will draw, so the browser can leave it undrawn off
 	// screen without the scrollbar lurching once it is drawn: at least one
 	const rowCount = $derived(piece.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));

@@ -215,6 +215,7 @@
 								<StoryPiece
 									sectionKey={stepSectionKey(chapterPlace, stepPlace)}
 									piece={step.piece}
+									shows="a-step"
 									{numbering}
 									scrollRoot={container ?? null}
 								>
@@ -243,6 +244,7 @@
 							<StoryPiece
 								sectionKey={leftOutSectionKey(place)}
 								piece={left.piece}
+								shows="what-no-step-tells"
 								{numbering}
 								scrollRoot={container ?? null}
 							>

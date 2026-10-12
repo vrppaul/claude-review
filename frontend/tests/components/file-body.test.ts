@@ -25,7 +25,7 @@ const file = diffFile({
 const AS_LINES = { file, language: null, view: 'raw' } as const;
 
 /** How a story step draws a file: a piece cut out of it, of the take the page reads. */
-const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', numbering: 'the-reviews' } } as const;
+const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', shows: 'a-step', numbering: 'the-reviews' } } as const;
 
 /** A piece of the same file that runs over two changes: lines 32 to 39 lie between them, unchanged. */
 const overTwoChanges = diffFile({
@@ -33,6 +33,24 @@ const overTwoChanges = diffFile({
 	hunks: [...file.hunks, hunk([addedLine(40, 'more = 4')], { header: '', old_start: 40, new_start: 40 })]
 });
 const A_STEP_OVER_TWO_CHANGES = { ...AS_A_STEP, file: overTwoChanges } as const;
+
+/**
+ * What no step tells of a file that was added whole: lines 1 and 6, two runs
+ * of it. Lines 2 to 5 between them are added too, and told by a step.
+ */
+const aroundWhatAStepTells = diffFile({
+	path: 'src/new.py',
+	status: 'added',
+	hunks: [
+		hunk([addedLine(1, 'first = 1')], { header: '', old_start: 1, new_start: 1 }),
+		hunk([addedLine(6, 'sixth = 6')], { header: '', old_start: 1, new_start: 6 })
+	]
+});
+const WHAT_NO_STEP_TELLS = {
+	...AS_LINES,
+	file: aroundWhatAStepTells,
+	extent: { kind: 'piece', shows: 'what-no-step-tells', numbering: 'the-reviews' }
+} as const;
 
 beforeEach(() => {
 	review = openReview({ files: [file] });
@@ -62,6 +80,12 @@ describe('a piece cut out of a file', () => {
 		expect(getAllByTestId('hunk-gap').map((gap) => gap.textContent.trim())).toEqual(['⋯ 8 unchanged lines']);
 		expect(queryByTestId('expand-up')).toBeNull();
 		expect(queryByTestId('expand-all')).toBeNull();
+	});
+
+	it('says the lines between two runs no step tells are not shown here, never that they are unchanged: a step may tell them', () => {
+		const { getAllByTestId } = render(FileBody, inReview(review, WHAT_NO_STEP_TELLS));
+
+		expect(getAllByTestId('hunk-gap').map((gap) => gap.textContent.trim())).toEqual(['⋯ 4 lines not shown here']);
 	});
 
 	it('says nothing of the file above its first line or below its last: that is not the piece', () => {

@@ -15,6 +15,7 @@ import type { Review } from '$lib/review/review.svelte';
 import type { DiffFile, DiffLayout } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
 import { type ContextGap, gapBelow, type GapRead, readOf, type Widening, withRevealed } from '$lib/utils/expansions';
+import type { CountedWords } from '$lib/utils/words';
 
 /** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
 export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
@@ -33,17 +34,30 @@ interface WholeFile {
 	revealed: RevealedContext;
 }
 
+/** What a piece of a file is cut out to show: the lines a step of a story tells, or what no step tells of the file. */
+export type PieceShows = 'a-step' | 'what-no-step-tells';
+
 /**
- * A piece of a file, cut out of the review's own diff: a step of a story.
- * Its lines are numbered as the take the story was told of, whatever base
- * is on screen, and what lies around it is the rest of its file, which it
+ * A piece of a file, cut out of the review's own diff for a story. Its
+ * lines are numbered as the take the story was told of, whatever base is
+ * on screen, and what lies around it is the rest of its file, which it
  * does not read in.
  */
 interface Piece {
 	kind: 'piece';
+	shows: PieceShows;
 	/** Whose numbers its lines carry, as the story it is a piece of says. */
 	numbering: StoryNumbering;
 }
+
+// What a piece says of the lines between two of its hunks, which it does not
+// draw, of one line and of several. Between two hunks of a step lie lines the
+// change kept. Between two runs no step tells may lie lines a step does tell,
+// changed ones: they are not shown here, and nothing more is known of them.
+const SAID_OF_A_GAP: Record<PieceShows, CountedWords> = {
+	'a-step': { one: 'unchanged line', many: 'unchanged lines' },
+	'what-no-step-tells': { one: 'line not shown here', many: 'lines not shown here' }
+};
 
 /** How much of a file a drawing is of: the whole of it, or a piece. */
 export type Extent = WholeFile | Piece;
@@ -107,9 +121,14 @@ export class FileDrawing implements DrawnFile {
 		return this.#source.extent().kind === 'whole' || (gap.above !== null && gap.below !== null);
 	}
 
-	/** Whether what the diff left out may be read in here, or only said: a piece reads nothing in. */
-	get readsGaps(): boolean {
-		return this.#revealed() !== null;
+	/**
+	 * What is said of a gap where it is only said, of one line and of
+	 * several: a piece reads nothing in. Null where what the diff left out
+	 * may be read in instead.
+	 */
+	get saidOfAGap(): CountedWords | null {
+		const extent = this.#source.extent();
+		return extent.kind === 'piece' ? SAID_OF_A_GAP[extent.shows] : null;
 	}
 
 	/** The gap below the last hunk, where the file may go on past it; null where it cannot. */
