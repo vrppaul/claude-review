@@ -10,7 +10,8 @@ import pytest
 from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
-from claude_review.domain.story import TEXT_LIMITS, FieldPath, Step, Story, StoryFault, StoryText
+from claude_review.domain.exceptions import FieldFault, FieldPath
+from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
 from claude_review.services.story_checks import document_faults
 from tests.stories import IMAGE_SERVICE, IMAGE_STORE, KEEPING_CHAPTER, PASTE_CHAPTER, canvas_story, field_at, planted
 
@@ -69,7 +70,7 @@ def text_of(length: int) -> str:
     return "x" * length
 
 
-def paths_of(faults: list[StoryFault]) -> list[FieldPath]:
+def paths_of(faults: list[FieldFault]) -> list[FieldPath]:
     return [fault.path for fault in faults]
 
 

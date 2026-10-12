@@ -8,8 +8,9 @@ hold is refused, with all of it said at once.
 
 import pytest
 
+from claude_review.domain.exceptions import FieldFault, FieldPath, StoryRefusedError
 from claude_review.domain.models import DiffFile, FileStatus, Unshown
-from claude_review.domain.story import FieldPath, Step, Story, StoryFault, StoryRefusedError
+from claude_review.domain.story import Step, Story
 from claude_review.services.story_telling import tell
 from tests.stories import ONLY_CHAPTER, changed_file, changed_in, hunk, lines_of, planted, rows_of, step, story_of
 
@@ -38,14 +39,14 @@ def changed_lines(files: list[DiffFile]) -> int:
     return sum(changed_in(lines_of(file)) for file in files)
 
 
-def refusal_of(story: Story[Step]) -> list[StoryFault]:
+def refusal_of(story: Story[Step]) -> list[FieldFault]:
     """What a story is refused with against the change: every fault, as it was found."""
     with pytest.raises(StoryRefusedError) as refused:
         tell(story, CHANGE)
     return refused.value.faults
 
 
-def paths_of(faults: list[StoryFault]) -> list[FieldPath]:
+def paths_of(faults: list[FieldFault]) -> list[FieldPath]:
     return [fault.path for fault in faults]
 
 

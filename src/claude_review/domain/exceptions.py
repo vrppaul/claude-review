@@ -5,7 +5,14 @@ the kind is what whoever asked is told: what they named is not here, what
 they asked for no review could serve, what they sent is not acceptable,
 or too large, or at odds with where the review stands. The specific error
 says why, in words the asker can act on.
+
+A refusal says one thing wrong. What is sent whole and read whole — a
+document — may be wrong in many places at once, and whoever sent it should
+not learn of them one refusal at a time: such a refusal carries every fault
+found, each at the field it is about.
 """
+
+from pydantic import BaseModel, ConfigDict
 
 
 class ReviewError(Exception):
@@ -30,6 +37,28 @@ class TooLargeError(RefusedError):
 
 class ConflictError(ReviewError):
     """Raised when a request is at odds with where the review already stands."""
+
+
+# Where a field stands in what was sent: the names and positions that lead to
+# it, as the JSON it came in nests them
+type FieldPath = tuple[str | int, ...]
+
+
+class FieldFault(BaseModel):
+    """One thing wrong with what was sent: the field it is about, and what is wrong there."""
+
+    model_config = ConfigDict(frozen=True)
+
+    path: FieldPath
+    reason: str
+
+
+class FieldsRefusedError(RefusedError):
+    """Raised when what a request carries is wrong field by field; it carries every fault found, not the first."""
+
+    def __init__(self, message: str, faults: list[FieldFault]) -> None:
+        super().__init__(message)
+        self.faults = faults
 
 
 class NoRepositoryError(NotFoundError):
@@ -106,3 +135,7 @@ class UnknownImageError(NotFoundError):
 
 class ImageAlreadySentError(ConflictError):
     """Raised when an image that went out with a message is asked to be removed."""
+
+
+class StoryRefusedError(FieldsRefusedError):
+    """Raised when a story may not be told as it was written."""

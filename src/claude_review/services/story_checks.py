@@ -17,18 +17,9 @@ from collections.abc import Iterator
 
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.exceptions import FieldFault, FieldPath
 from claude_review.domain.models import FIRST_LINE
-from claude_review.domain.story import (
-    TEXT_LIMITS,
-    Chapter,
-    FieldPath,
-    OverviewItem,
-    Step,
-    Story,
-    StoryFault,
-    StoryOverview,
-    StoryText,
-)
+from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
 from claude_review.services.story_slices import ToldFile
 
@@ -84,7 +75,7 @@ class StepInDocument(BaseModel):
     step: Step
 
 
-def document_faults(story: Story[Step]) -> list[StoryFault]:
+def document_faults(story: Story[Step]) -> list[FieldFault]:
     """Everything wrong with a story that its document shows by itself, each fault at its field."""
     return [
         *_texts_out_of_bounds(story),
@@ -97,7 +88,7 @@ def document_faults(story: Story[Step]) -> list[StoryFault]:
     ]
 
 
-def placement_faults(story: Story[Step], change: dict[str, ToldFile]) -> list[StoryFault]:
+def placement_faults(story: Story[Step], change: dict[str, ToldFile]) -> list[FieldFault]:
     """Everything wrong with a story that only the change it is told of shows, each fault at its field.
 
     `change` is the files of the change by their paths. A step told of
@@ -110,7 +101,7 @@ def placement_faults(story: Story[Step], change: dict[str, ToldFile]) -> list[St
     ]
 
 
-def _step_faults(told: StepInDocument, change: dict[str, ToldFile]) -> Iterator[StoryFault]:
+def _step_faults(told: StepInDocument, change: dict[str, ToldFile]) -> Iterator[FieldFault]:
     """What is wrong with a step against the change.
 
     Its file is not in the change, or shows no line; or its lines hold nothing
@@ -118,14 +109,14 @@ def _step_faults(told: StepInDocument, change: dict[str, ToldFile]) -> Iterator[
     """
     file = change.get(told.step.file)
     if file is None:
-        yield StoryFault(path=(*told.path, FILE), reason=NO_SUCH_FILE)
+        yield FieldFault(path=(*told.path, FILE), reason=NO_SUCH_FILE)
     elif not file.shows_lines:
-        yield StoryFault(path=(*told.path, FILE), reason=NO_LINES_SHOWN)
+        yield FieldFault(path=(*told.path, FILE), reason=NO_LINES_SHOWN)
     elif file.changed_lines(file.rows_at(told.step.lines)) == 0:
-        yield StoryFault(path=(*told.path, LINES), reason=NO_CHANGE_TOLD.format(file=told.step.file))
+        yield FieldFault(path=(*told.path, LINES), reason=NO_CHANGE_TOLD.format(file=told.step.file))
 
 
-def _housekeeping_faults(story: Story[Step], change: dict[str, ToldFile]) -> Iterator[StoryFault]:
+def _housekeeping_faults(story: Story[Step], change: dict[str, ToldFile]) -> Iterator[FieldFault]:
     """Every housekeeping file the change does not have, and every one a step is told of.
 
     A file is housekeeping because it has nothing to tell: named as that
@@ -135,12 +126,12 @@ def _housekeeping_faults(story: Story[Step], change: dict[str, ToldFile]) -> Ite
     for index, file in enumerate(story.housekeeping):
         told = next((told for told in steps if told.step.file == file), None)
         if file not in change:
-            yield StoryFault(path=(HOUSEKEEPING, index), reason=NO_SUCH_FILE)
+            yield FieldFault(path=(HOUSEKEEPING, index), reason=NO_SUCH_FILE)
         elif told is not None:
-            yield StoryFault(path=(HOUSEKEEPING, index), reason=HOUSEKEEPING_TOLD.format(chapter=told.chapter.id))
+            yield FieldFault(path=(HOUSEKEEPING, index), reason=HOUSEKEEPING_TOLD.format(chapter=told.chapter.id))
 
 
-def _texts_out_of_bounds(story: Story[Step]) -> Iterator[StoryFault]:
+def _texts_out_of_bounds(story: Story[Step]) -> Iterator[FieldFault]:
     """Every text of the story that says nothing, or more than its kind may."""
     yield from _text_faults((TITLE,), story.title, StoryText.TITLE)
     yield from _overview_texts_out_of_bounds(story.overview)
@@ -152,7 +143,7 @@ def _texts_out_of_bounds(story: Story[Step]) -> Iterator[StoryFault]:
         yield from _text_faults((*told.path, REASON), told.step.reason, StoryText.STEP_REASON)
 
 
-def _overview_texts_out_of_bounds(overview: StoryOverview) -> Iterator[StoryFault]:
+def _overview_texts_out_of_bounds(overview: StoryOverview) -> Iterator[FieldFault]:
     """Every text of the overview that says nothing or too much: its three lines, its drawing, what it lists."""
     yield from _text_faults((OVERVIEW, TASK), overview.task, StoryText.TASK)
     yield from _text_faults((OVERVIEW, DONE), overview.done, StoryText.DONE)
@@ -165,7 +156,7 @@ def _overview_texts_out_of_bounds(overview: StoryOverview) -> Iterator[StoryFaul
             yield from _text_faults((OVERVIEW, name, index, TEXT), item.text, StoryText.ITEM)
 
 
-def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator[StoryFault]:
+def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator[FieldFault]:
     """What is wrong with a text of one kind: it says nothing, or runs past the length its kind may be.
 
     A text left out is no text, and has nothing wrong with it.
@@ -174,16 +165,16 @@ def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator
         return
     held_to = TEXT_LIMITS[kind]
     if _says_nothing(text):
-        yield StoryFault(path=path, reason=SAYS_NOTHING)
+        yield FieldFault(path=path, reason=SAYS_NOTHING)
     elif len(text) > held_to.characters:
         too_long = TOO_LONG.format(length=len(text), limit=held_to.characters, hint=held_to.hint)
-        yield StoryFault(path=path, reason=too_long)
+        yield FieldFault(path=path, reason=too_long)
 
 
-def _blank_faults(path: FieldPath, text: str) -> Iterator[StoryFault]:
+def _blank_faults(path: FieldPath, text: str) -> Iterator[FieldFault]:
     """What is wrong with a text that has no length to keep to: it says nothing."""
     if _says_nothing(text):
-        yield StoryFault(path=path, reason=SAYS_NOTHING)
+        yield FieldFault(path=path, reason=SAYS_NOTHING)
 
 
 def _says_nothing(text: str) -> bool:
@@ -191,23 +182,23 @@ def _says_nothing(text: str) -> bool:
     return not text.strip()
 
 
-def _parts_missing(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
+def _parts_missing(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
     """A story with no chapter, and every chapter with no step: neither tells anything."""
     if not chapters:
-        yield StoryFault(path=(CHAPTERS,), reason=NO_CHAPTERS)
+        yield FieldFault(path=(CHAPTERS,), reason=NO_CHAPTERS)
     for index, chapter in enumerate(chapters):
         if not chapter.steps:
-            yield StoryFault(path=(CHAPTERS, index, STEPS), reason=NO_STEPS)
+            yield FieldFault(path=(CHAPTERS, index, STEPS), reason=NO_STEPS)
 
 
-def _ids_repeated(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
+def _ids_repeated(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
     """Every chapter under an id an earlier chapter has: a link to that id could mean either."""
     ids = [chapter.id for chapter in chapters]
     for index in _repeated_at(ids):
-        yield StoryFault(path=(CHAPTERS, index, ID), reason=ID_REPEATED.format(chapter=ids[index]))
+        yield FieldFault(path=(CHAPTERS, index, ID), reason=ID_REPEATED.format(chapter=ids[index]))
 
 
-def _links_to_no_chapter(story: Story[Step]) -> Iterator[StoryFault]:
+def _links_to_no_chapter(story: Story[Step]) -> Iterator[FieldFault]:
     """Every link the overview makes to a chapter the story does not have."""
     known = frozenset(chapter.id for chapter in story.chapters)
     overview = story.overview
@@ -219,31 +210,31 @@ def _links_to_no_chapter(story: Story[Step]) -> Iterator[StoryFault]:
             yield from _link_faults((OVERVIEW, DIAGRAM, LINKS, part), chapter, known)
 
 
-def _link_faults(path: FieldPath, chapter: str | None, known: frozenset[str]) -> Iterator[StoryFault]:
+def _link_faults(path: FieldPath, chapter: str | None, known: frozenset[str]) -> Iterator[FieldFault]:
     """What is wrong with a link: it leads to a chapter the story does not have. One left out leads nowhere."""
     if chapter is not None and chapter not in known:
-        yield StoryFault(path=path, reason=NO_SUCH_CHAPTER.format(chapter=chapter))
+        yield FieldFault(path=path, reason=NO_SUCH_CHAPTER.format(chapter=chapter))
 
 
-def _lines_numbered_wrongly(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
+def _lines_numbered_wrongly(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
     """Every step told of lines no file could have."""
     for told in _steps_of(chapters):
         yield from _numbering_faults(told)
 
 
-def _numbering_faults(told: StepInDocument) -> list[StoryFault]:
+def _numbering_faults(told: StepInDocument) -> list[FieldFault]:
     """What is wrong with how a step's lines are numbered: from before a file's first line, or backwards."""
     lines = told.step.lines
     path = (*told.path, LINES)
-    faults: list[StoryFault] = []
+    faults: list[FieldFault] = []
     if lines.first < FIRST_LINE:
-        faults.append(StoryFault(path=path, reason=BEFORE_FIRST_LINE.format(first=lines.first, first_line=FIRST_LINE)))
+        faults.append(FieldFault(path=path, reason=BEFORE_FIRST_LINE.format(first=lines.first, first_line=FIRST_LINE)))
     if lines.last < lines.first:
-        faults.append(StoryFault(path=path, reason=RUNS_BACKWARDS.format(first=lines.first, last=lines.last)))
+        faults.append(FieldFault(path=path, reason=RUNS_BACKWARDS.format(first=lines.first, last=lines.last)))
     return faults
 
 
-def _lines_told_twice(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
+def _lines_told_twice(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
     """Every step that tells a line an earlier step of the same file tells already.
 
     A line is told once: told twice, whatever hangs on it — a thread, a
@@ -256,7 +247,7 @@ def _lines_told_twice(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
         earlier = next((told for told in numbered[:position] if _share_a_line(told.step, later.step)), None)
         if earlier is not None:
             met = line_span(earlier.step.lines.first, earlier.step.lines.last)
-            yield StoryFault(path=(*later.path, LINES), reason=TOLD_TWICE.format(lines=met, chapter=earlier.chapter.id))
+            yield FieldFault(path=(*later.path, LINES), reason=TOLD_TWICE.format(lines=met, chapter=earlier.chapter.id))
 
 
 def _share_a_line(one: Step, other: Step) -> bool:
@@ -264,10 +255,10 @@ def _share_a_line(one: Step, other: Step) -> bool:
     return one.file == other.file and one.lines.meets(other.lines)
 
 
-def _files_named_twice(housekeeping: list[str]) -> Iterator[StoryFault]:
+def _files_named_twice(housekeeping: list[str]) -> Iterator[FieldFault]:
     """Every file the housekeeping names again, having named it once."""
     for index in _repeated_at(housekeeping):
-        yield StoryFault(path=(HOUSEKEEPING, index), reason=NAMED_TWICE.format(file=housekeeping[index]))
+        yield FieldFault(path=(HOUSEKEEPING, index), reason=NAMED_TWICE.format(file=housekeeping[index]))
 
 
 def _steps_of(chapters: list[Chapter[Step]]) -> Iterator[StepInDocument]:

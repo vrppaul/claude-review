@@ -17,12 +17,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.exceptions import RefusedError
 from claude_review.domain.models import DiffFile
-
-# Where a field stands in a story's document: the names and positions that
-# lead to it, as the document's JSON nests them
-type FieldPath = tuple[str | int, ...]
 
 
 class StoryPart(BaseModel):
@@ -183,27 +178,6 @@ TEXT_LIMITS: dict[StoryText, TextLimit] = {
         characters=400, hint="Why this piece is the way it is. If that takes more, tell it as two steps."
     ),
 }
-
-
-# What a story refused is refused with, before its faults are said one by one
-STORY_REFUSED = "the story may not be told as it is written"
-
-
-class StoryFault(BaseModel):
-    """One thing that keeps a story from being told: the field it is about, and what is wrong there."""
-
-    model_config = ConfigDict(frozen=True)
-
-    path: FieldPath
-    reason: str
-
-
-class StoryRefusedError(RefusedError):
-    """Raised when a story may not be told as it was written; it carries everything found wrong with it."""
-
-    def __init__(self, faults: list[StoryFault]) -> None:
-        super().__init__(STORY_REFUSED)
-        self.faults = faults
 
 
 class ToldStep(Step):

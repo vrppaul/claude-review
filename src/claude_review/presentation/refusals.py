@@ -5,6 +5,8 @@ is answered the same way, with its message as the `detail` FastAPI uses for
 its own refusals, so a caller reads one shape whoever refused. A request
 FastAPI finds wrong before any route runs is answered under the same
 `detail`, field by field: where each was wrong and why, never what was sent.
+So is a refusal of the review's own that found several things wrong, and
+carries them.
 
 The same tables say, in the API's description, how each route may refuse:
 a route names the kinds it raises and what it takes in, and is described
@@ -34,6 +36,7 @@ from starlette.routing import Match, Route
 
 from claude_review.domain.exceptions import (
     ConflictError,
+    FieldsRefusedError,
     InvalidRequestError,
     NotFoundError,
     RefusedError,
@@ -158,7 +161,16 @@ def answer_refusals(app: FastAPI) -> None:
 async def answer_refusal(request: Request, error: Exception, *, status: HTTPStatus) -> JSONResponse:
     """Tell whoever asked why the review would not do it."""
     log.warning("request_refused", path=request.url.path, refusal=type(error).__name__, reason=str(error))
-    return JSONResponse(status_code=status, content=Refusal(detail=str(error)).model_dump())
+    return JSONResponse(status_code=status, content=Refusal(detail=_detail_of(error)).model_dump())
+
+
+def _detail_of(error: Exception) -> str | list[FieldRefusal]:
+    """Why the review refused: field by field when the refusal carries what it found wrong, else in its own words."""
+    match error:
+        case FieldsRefusedError():
+            return [FieldRefusal(loc=fault.path, msg=fault.reason) for fault in error.faults]
+        case _:
+            return str(error)
 
 
 async def answer_fields_refused(request: Request, error: Exception) -> JSONResponse:

@@ -8,10 +8,14 @@ added or removed is in a step, in a file named as housekeeping, or among
 what was left out, and a story cannot hide one.
 """
 
+from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile
-from claude_review.domain.story import Chapter, LeftOut, Step, Story, StoryRefusedError, ToldStep, ToldStory
+from claude_review.domain.story import Chapter, LeftOut, Step, Story, ToldStep, ToldStory
 from claude_review.services.story_checks import document_faults, placement_faults
 from claude_review.services.story_slices import ToldFile
+
+# What a story refused is refused with, before its faults are said one by one
+STORY_REFUSED = "the story may not be told as it is written"
 
 
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
@@ -23,7 +27,7 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
     change = {file.path: ToldFile(file) for file in files}
     faults = [*document_faults(story), *placement_faults(story, change)]
     if faults:
-        raise StoryRefusedError(faults)
+        raise StoryRefusedError(STORY_REFUSED, faults)
     return ToldStory(
         title=story.title,
         overview=story.overview,

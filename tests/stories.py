@@ -10,17 +10,9 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, JsonValue
 
+from claude_review.domain.exceptions import FieldPath
 from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineType
-from claude_review.domain.story import (
-    Chapter,
-    Diagram,
-    FieldPath,
-    OverviewItem,
-    Step,
-    StepLines,
-    Story,
-    StoryOverview,
-)
+from claude_review.domain.story import Chapter, Diagram, OverviewItem, Step, StepLines, Story, StoryOverview
 from tests.helpers import added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by

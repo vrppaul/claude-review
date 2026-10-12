@@ -8,6 +8,9 @@ route raises of its own is held to its word only where the schema test's
 requests reach it: that test fails on any status a route did not describe.
 """
 
+import importlib
+import pkgutil
+from functools import partial
 from http import HTTPStatus
 
 import pytest
@@ -15,7 +18,9 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from pydantic import BaseModel, Field
 
-from claude_review.domain.exceptions import ReviewError
+import claude_review
+from claude_review.domain import exceptions
+from claude_review.domain.exceptions import FieldFault, FieldsRefusedError, ReviewError
 from claude_review.presentation.api_schema import http_document
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
 from claude_review.presentation.refusals import (
@@ -155,16 +160,36 @@ def every_kind_of(kind: type[ReviewError]) -> list[type[ReviewError]]:
 
 # Every kind of refusal the review raises, by name
 REFUSAL_KINDS = {kind.__name__: kind for kind in every_kind_of(ReviewError)}
+# The kinds that carry what they found wrong, field by field, and what the test's refusals of those kinds found
+KINDS_WITH_FIELDS = [FieldsRefusedError, *every_kind_of(FieldsRefusedError)]
+FAULTS = [
+    FieldFault(path=("chapters", 0, "title"), reason="says nothing"),
+    FieldFault(path=("housekeeping", 1), reason="is no file of this change"),
+]
+# How the test makes a refusal of each kind: with its reason, and with its faults when it carries them
+REFUSALS = {
+    **{name: partial(kind, REASON) for name, kind in REFUSAL_KINDS.items()},
+    **{kind.__name__: partial(kind, REASON, FAULTS) for kind in KINDS_WITH_FIELDS},
+}
 
 
 async def refuse(kind_name: str) -> None:
     """A route that refuses with whichever kind it is asked for."""
-    raise REFUSAL_KINDS[kind_name](REASON)
+    raise REFUSALS[kind_name]()
 
 
 @pytest.fixture
 def described() -> Description:
     return Description.model_validate(http_document())
+
+
+@pytest.fixture
+def refusing() -> FastAPI:
+    """An app whose one route refuses with whichever kind it is asked for, answered as the review answers."""
+    app = FastAPI()
+    answer_refusals(app)
+    app.add_api_route(REFUSING_ROUTE, refuse)
+    return app
 
 
 def _unsaid(status: HTTPStatus, *, among: dict[str, Operation]) -> list[str]:
@@ -199,16 +224,33 @@ def test_what_a_route_is_refused_for_what_it_takes_in_is_what_it_takes_in_and_no
 
 
 @pytest.mark.parametrize("kind_name", sorted(REFUSAL_KINDS))
-async def test_a_refusal_is_described_with_the_status_it_is_answered_with(kind_name: str) -> None:
+async def test_a_refusal_is_described_with_the_status_it_is_answered_with(kind_name: str, refusing: FastAPI) -> None:
     """A kind of refusal is answered as the nearest kind the table names, and described the same way."""
-    app = FastAPI()
-    answer_refusals(app)
-    app.add_api_route(REFUSING_ROUTE, refuse)
-
-    async with http_client(app) as caller:
+    async with http_client(refusing) as caller:
         answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind_name))
 
     assert answered.status_code == status_of(REFUSAL_KINDS[kind_name])
+
+
+def test_every_kind_of_refusal_is_kept_where_the_review_keeps_its_refusals() -> None:
+    """A kind written anywhere else is one this test never reads: answered, and held to nothing here."""
+    for module in pkgutil.walk_packages(claude_review.__path__, prefix=f"{claude_review.__name__}."):
+        importlib.import_module(module.name)
+
+    assert {kind.__module__ for kind in every_kind_of(ReviewError)} == {exceptions.__name__}
+
+
+@pytest.mark.parametrize("kind", KINDS_WITH_FIELDS, ids=[kind.__name__ for kind in KINDS_WITH_FIELDS])
+async def test_a_refusal_that_carries_what_it_found_wrong_is_answered_field_by_field(
+    kind: type[FieldsRefusedError], refusing: FastAPI
+) -> None:
+    """Each fault where it was found and why, as a request FastAPI finds wrong is answered: one shape, whoever refused."""
+    async with http_client(refusing) as caller:
+        answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind.__name__))
+
+    assert Refusal.model_validate(answered.json()) == Refusal(
+        detail=[FieldRefusal(loc=fault.path, msg=fault.reason) for fault in FAULTS]
+    )
 
 
 def _taking_json(described: Description) -> list[tuple[str, str]]:
