@@ -14,6 +14,7 @@
  * the threads to keep.
  */
 
+import { inDiffOrder } from '$lib/anchors/placement';
 import { anchorLines, type FileLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
@@ -69,15 +70,15 @@ export class Navigator {
 		this.#diff = diff;
 	}
 
-	/** Step to the next or previous thread, and bring it into view. */
+	/** Step to the next or previous thread down the diff, and bring it into view. */
 	step(direction: 1 | -1): void {
-		const next = steppedTo(this.#threads.all, this.#at, direction);
+		const next = steppedTo(this.#inOrder(), this.#at, direction);
 		if (next) this.reveal(next);
 	}
 
 	/** Bring a thread into view with the keyboard on it, and go on from it the next time the reader steps. */
 	reveal(thread: Thread): void {
-		this.#at = { thread: thread.id, among: this.#threads.all };
+		this.#at = { thread: thread.id, among: this.#inOrder() };
 		this.#revealOnLines(thread.id, anchorLines(thread.anchor));
 	}
 
@@ -106,6 +107,11 @@ export class Navigator {
 		const to = from === -1 ? first : Math.min(files.length - 1, Math.max(0, from + direction));
 		const target = files[to];
 		if (target) this.#sections.scrollToFile(target.path);
+	}
+
+	/** The threads in the order they stand on the diff, as n and p walk them. */
+	#inOrder(): Thread[] {
+		return inDiffOrder(this.#threads.onLines, this.#diff.files);
 	}
 
 	#revealOnLines(threadId: string, lines: FileLines): void {
