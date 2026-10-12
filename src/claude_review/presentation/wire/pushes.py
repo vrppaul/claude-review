@@ -131,13 +131,12 @@ class DiffPush(Push):
 class StoryPush(Push):
     """A story was told of the change, in place of any before it: the page fetches it.
 
-    The round it was told in, and no more. The story carries the code its
-    steps show, as much as the change it tells: like a diff taken again, it
-    is fetched, not pushed.
+    That there is one, and no more. The story carries the code its steps
+    show, as much as the change it tells: like a diff taken again, it is
+    fetched, not pushed.
     """
 
     type: Literal[PushKind.STORY] = PushKind.STORY
-    round: int
 
 
 class EndedPush(Push):

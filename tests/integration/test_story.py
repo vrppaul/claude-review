@@ -262,4 +262,4 @@ def test_every_page_open_on_the_review_is_told_when_a_story_is_told(
         review_page.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
         told = next_push(socket, StoryPush)
 
-    assert told == StoryPush(round=FIRST_ROUND)
+    assert told == StoryPush()

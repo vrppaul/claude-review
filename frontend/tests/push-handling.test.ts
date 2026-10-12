@@ -107,7 +107,7 @@ describe('what the server pushes, taken in', () => {
 		const told = storyHeld({ title: 'Told just now' });
 		fakeServer().answer('GET /api/story', { held: told });
 
-		handOverNext(review, { type: 'story', round: 1 });
+		handOverNext(review, { type: 'story' });
 		await settled();
 
 		expect(review.story.held).toEqual(told);
@@ -118,7 +118,7 @@ describe('what the server pushes, taken in', () => {
 		review = openReview({ story: before });
 		fakeServer().refuse('GET /api/story', SERVER_ERROR, 'the review fell over');
 
-		handOverNext(review, { type: 'story', round: 2 });
+		handOverNext(review, { type: 'story' });
 		await settled();
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('the story could not be read — the review fell over');

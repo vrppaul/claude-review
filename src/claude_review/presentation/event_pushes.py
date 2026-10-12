@@ -72,7 +72,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case DiffRetaken():
             return DiffPush(file_count=event.file_count, changes=changes_on_the_wire(event.changes))
         case StoryTold():
-            return StoryPush(round=event.round)
+            return StoryPush()
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

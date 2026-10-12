@@ -97,12 +97,10 @@ class DiffRetaken(PageEventBase):
 class StoryTold(PageEventBase):
     """A story was told of the change, in place of any told before: a page reads it from the review.
 
-    Told that there is one, and of which round, never the story itself: it
-    carries the code its steps show, as much as the change it tells, and is
-    read as a diff taken again is.
+    Told that there is one, never the story itself: it carries the code its
+    steps show, as much as the change it tells, and is read as a diff taken
+    again is.
     """
-
-    round: int
 
 
 class ReviewEnded(PageEventBase):

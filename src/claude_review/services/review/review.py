@@ -387,7 +387,7 @@ class Review:
             StoryRefusedError: if anything is wrong with the story, carrying all of it.
         """
         held = await self._story.tell(story, self._source.change(), round_number=self._rounds.current)
-        self._page.tell(StoryTold(round=held.round))
+        self._page.tell(StoryTold())
         log.info("story_told", chapters=len(held.story.chapters), left_out=len(held.story.left_out), round=held.round)
         return held
 
