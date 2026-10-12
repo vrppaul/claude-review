@@ -4,9 +4,12 @@
  */
 
 import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
-import { readDraft } from '$lib/drafts/draft-storage';
-import { type ReaderParts, Review } from '$lib/review/review.svelte';
+import { type KeptDraft, readDraft, setDraftAside } from '$lib/drafts/draft-storage';
+import { type Opening, type ReaderParts, Review } from '$lib/review/review.svelte';
 import type { DiffResponse, HeldThread, ReviewResponse } from '$lib/types';
+
+/** What a review opens on, whatever draft it opens from. */
+type OpeningWithoutDraft = Omit<Opening, 'draft' | 'draftSetAside'>;
 
 /** A review on screen, and how to stop keeping its draft. */
 export interface KeptReview {
@@ -26,7 +29,22 @@ export function openKeptReview(
 	held: HeldThread[],
 	reader: ReaderParts
 ): KeptReview {
-	const kept = readDraft(facts.identity, facts.title);
-	const review = new Review({ facts, firstDiff, draft: kept.draft, draftSetAside: kept.setAside, held }, reader);
+	const review = openOnKeptDraft({ facts, firstDiff, held }, readDraft(facts.identity, facts.title), reader);
 	return { review, stopKeeping: new DraftKeeper(review).start() };
+}
+
+/**
+ * The review opened on the draft this browser kept of it. A draft that
+ * reads but that the review cannot be opened on is set aside as one that
+ * cannot be read is, and the review opens without it: a broken draft never
+ * keeps the review shut, reload after reload.
+ */
+function openOnKeptDraft(opening: OpeningWithoutDraft, kept: KeptDraft, reader: ReaderParts): Review {
+	try {
+		return new Review({ ...opening, draft: kept.draft, draftSetAside: kept.setAside }, reader);
+	} catch (error) {
+		if (kept.draft === null) throw error;
+		const setAside = setDraftAside(opening.facts.identity, error);
+		return new Review({ ...opening, draft: null, draftSetAside: setAside }, reader);
+	}
 }

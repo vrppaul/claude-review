@@ -92,6 +92,12 @@ function setAside(key: string): boolean {
 	}
 }
 
+/** Tell a fault in a kept draft whole to the console, and set the draft aside; say whether it could be. */
+function setAsideAtFault(key: string, error: unknown): boolean {
+	console.error('claude-review: a kept draft could not be read, and is set aside', error);
+	return setAside(key);
+}
+
 /**
  * What a draft that could not be read leaves: nothing, when it was not JSON
  * or storage was refused. Anything else is a fault in reading or bringing
@@ -100,8 +106,7 @@ function setAside(key: string): boolean {
  */
 function unreadable(key: string, error: unknown): KeptDraft {
 	if (error instanceof SyntaxError || isStorageRefused(error)) return NOTHING_KEPT;
-	console.error('claude-review: a kept draft could not be read, and is set aside', error);
-	return { draft: null, setAside: setAside(key) };
+	return { draft: null, setAside: setAsideAtFault(key, error) };
 }
 
 /**
@@ -122,6 +127,16 @@ export function readDraft(identity: string, title: string): KeptDraft {
 	} catch (error) {
 		return unreadable(RELEASED_DRAFT_KEY, error);
 	}
+}
+
+/**
+ * Set aside the draft of the review of this identity, which read but which
+ * the review could not be opened on, as one that cannot be read is: told
+ * whole to the console, and kept as it was beside its key. Says whether it
+ * could be.
+ */
+export function setDraftAside(identity: string, error: unknown): boolean {
+	return setAsideAtFault(draftKeyOf(identity), error);
 }
 
 /** Keep the draft of the review of this identity as it now stands. */

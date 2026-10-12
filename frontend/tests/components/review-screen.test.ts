@@ -7,7 +7,8 @@ import { REVIEW_TITLE, contextLine, diffFile, diffResponse, hunk } from '../diff
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
-import { storeReleasedDraft } from '../stored-draft';
+import { DRAFT_SHAPE } from '$lib/drafts/draft-shapes';
+import { DRAFT_KEY, storeDraft, storeReleasedDraft } from '../stored-draft';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x = 1')])] })];
 
@@ -39,6 +40,34 @@ describe('a kept draft that could not be read', () => {
 		expect(getByTestId('draft-set-aside').textContent).toContain('A kept draft could not be read; it is set aside.');
 
 		await user.click(getByTestId('dismiss-set-aside'));
+
+		expect(queryByTestId('draft-set-aside')).toBeNull();
+	});
+});
+
+describe('a kept draft that reads but cannot be opened', () => {
+	it('is set aside as one that cannot be read is, said once, and the review opens without it', () => {
+		// The current shape by its number, with nothing else a review opens on
+		storeDraft({ version: DRAFT_SHAPE, threads: [] });
+		const asItWasKept = localStorage.getItem(DRAFT_KEY);
+		const told = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		const review = openReview({ files });
+		const { getByTestId } = render(ReviewScreen, { props: { review } });
+
+		expect(review.threads.all).toEqual([]);
+		expect(getByTestId('draft-set-aside').textContent).toContain('A kept draft could not be read; it is set aside.');
+		expect(localStorage.getItem(`${DRAFT_KEY}:unreadable:1`)).toBe(asItWasKept);
+		expect(told).toHaveBeenCalledWith(expect.any(String), expect.any(TypeError));
+	});
+
+	it('locks nobody out: the next page opens on no draft, with nothing more to say', () => {
+		storeDraft({ version: DRAFT_SHAPE, threads: [] });
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		openReview({ files });
+
+		const review = openReview({ files });
+		const { queryByTestId } = render(ReviewScreen, { props: { review } });
 
 		expect(queryByTestId('draft-set-aside')).toBeNull();
 	});
