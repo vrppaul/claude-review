@@ -8,6 +8,7 @@ holds — its content, its rounds, the threads the page described — is kept
 by the part that answers for it.
 """
 
+import asyncio
 from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
@@ -374,18 +375,23 @@ class Review:
         log.info("review_submitted", comment_count=result.comment_count, round=number, ended=ends)
         return submission
 
-    def tell_story(self, story: Story[Step]) -> StoryHeld:
+    async def tell_story(self, story: Story[Step]) -> StoryHeld:
         """Take the story the agent tells of the change, whole, in place of any it told before.
 
-        Told of the review's own diff as it now stands, whatever base a page
-        reads, and kept with the round it is told in.
+        Told of the review's own diff as it stands when the story arrives,
+        whatever base a page reads, and kept with the round it arrived in.
+        Told off the event loop: a story of a large change takes seconds to
+        place on it, and the server has every page's socket and the agent's
+        wait to keep answering meanwhile.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
             StoryRefusedError: if anything is wrong with the story, carrying all of it.
         """
-        told = tell(story, self._source.change())
-        held = self._story.keep(told, round_number=self._rounds.current)
+        change = self._source.change()
+        arrived_in = self._rounds.current
+        told = await asyncio.to_thread(tell, story, change)
+        held = self._story.keep(told, round_number=arrived_in)
         log.info("story_told", chapters=len(told.chapters), left_out=len(told.left_out), round=held.round)
         return held
 

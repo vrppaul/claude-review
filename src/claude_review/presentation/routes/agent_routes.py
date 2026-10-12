@@ -223,4 +223,4 @@ async def tell_the_story(request: StoryRequest, review: Review = Depends(get_rev
     told or refused whole, and a refusal names everything wrong with it at
     once, each fault at its field of the document.
     """
-    return StoryTakenResponse.summing_up(review.tell_story(request.in_the_review()))
+    return StoryTakenResponse.summing_up(await review.tell_story(request.in_the_review()))

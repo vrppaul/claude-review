@@ -6,6 +6,7 @@ each step with the piece of the change it shows — until the agent tells
 another, which takes its place whole.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from http import HTTPStatus
 from pathlib import Path
@@ -160,6 +161,21 @@ async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_say
 
     assert await held_by(agent) == told_first
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
+
+
+async def test_the_review_goes_on_answering_while_a_story_is_told(reviews: ReviewFactory, tmp_git_repo: Path) -> None:
+    """Told on the event loop, a story of a large change kept every page and agent waiting until it was placed."""
+    write_files(tmp_git_repo, THE_CHANGE)
+    review = reviews.hosted(await repository_opening(tmp_git_repo)).review
+    telling = asyncio.ensure_future(review.tell_story(WHOLE_STORY))
+    turns = 0
+    while not telling.done():
+        # A turn of the loop, as any socket the server holds is answered in
+        await asyncio.sleep(0)
+        turns += 1
+
+    assert (await telling).round == FIRST_ROUND
+    assert turns > 1, "the loop came back to nothing else until the whole story was told"
 
 
 async def test_telling_a_story_says_the_agent_is_there(agent: AsyncClient) -> None:
