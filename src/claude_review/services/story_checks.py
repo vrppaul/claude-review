@@ -21,6 +21,7 @@ from claude_review.domain.exceptions import FieldFault, FieldPath
 from claude_review.domain.models import FIRST_LINE, runs_backwards, says_nothing
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
+from claude_review.services.story_lines_told import first_met
 from claude_review.services.story_slices import PlacedFile
 
 # The fields of a story's document, by the names the document's own models
@@ -48,9 +49,6 @@ FILE = "file"
 LINES = "lines"
 REASON = "reason"
 HOUSEKEEPING = "housekeeping"
-
-# The line before a file's first: how far a file's steps reach before any of them is read
-NO_LINE = FIRST_LINE - 1
 
 # What is wrong at a field, in words the agent can act on
 SAYS_NOTHING = "says nothing"
@@ -243,54 +241,23 @@ def _lines_told_twice(steps: list[StepInDocument]) -> list[FieldFault]:
     comment being written — would be drawn under both steps and belong to
     neither.
     """
-    told_twice = (fault for together in _steps_reaching_one_another(steps) for fault in _told_twice_among(together))
+    told_twice = (fault for of_one_file in _steps_by_file(steps).values() for fault in _told_twice_in(of_one_file))
     return sorted(told_twice, key=lambda fault: fault.path)
 
 
-def _told_twice_among(together: list[StepInDocument]) -> Iterator[FieldFault]:
-    """Of steps of one file in the order they are told, each that shares a line with one told before it.
+def _told_twice_in(of_one_file: list[StepInDocument]) -> Iterator[FieldFault]:
+    """Of the steps of one file in the order they are told, each that tells a line one told before it tells already.
 
     Said at the later step, naming the first it meets: its lines, and the
     chapter that tells them, so the agent finds the other step.
     """
-    for position, later in enumerate(together):
-        above = together[:position]
-        earlier = next((written for written in above if written.step.lines.meets(later.step.lines)), None)
-        if earlier is not None:
-            met = line_span(earlier.step.lines.first, earlier.step.lines.last)
-            yield FieldFault(path=(*later.path, LINES), reason=TOLD_TWICE.format(lines=met, chapter=earlier.chapter.id))
-
-
-def _steps_reaching_one_another(steps: list[StepInDocument]) -> Iterator[list[StepInDocument]]:
-    """The steps in the groups that can share a line, each group in the order the story tells it.
-
-    Steps of different files share none. Read down one file, a step that
-    starts past everything above it shares none with those steps, nor does
-    any step below it: so a story whose steps all stand apart is seen to be
-    one without holding each step against every other, and only steps whose
-    lines reach into one another are compared.
-    """
-    for of_one_file in _steps_by_file(steps).values():
-        down_the_file = sorted(of_one_file, key=lambda written: written.step.lines.first)
-        for together in _runs_unbroken(down_the_file):
-            yield sorted(together, key=lambda written: written.path)
-
-
-def _runs_unbroken(down_the_file: list[StepInDocument]) -> list[list[StepInDocument]]:
-    """Steps of one file, in the order of their first lines, in the runs no line stands clear between.
-
-    A step that starts past the furthest line any step above it reaches
-    begins a new run. Every line here is one a file could have, so the first
-    step, with nothing above it, begins one too.
-    """
-    runs: list[list[StepInDocument]] = []
-    reached = NO_LINE
-    for written in down_the_file:
-        if written.step.lines.first > reached:
-            runs.append([])
-        runs[-1].append(written)
-        reached = max(reached, written.step.lines.last)
-    return runs
+    met = first_met([written.step.lines for written in of_one_file])
+    for later, place_met in zip(of_one_file, met, strict=True):
+        if place_met is not None:
+            earlier = of_one_file[place_met]
+            lines_met = line_span(earlier.step.lines.first, earlier.step.lines.last)
+            told_twice = TOLD_TWICE.format(lines=lines_met, chapter=earlier.chapter.id)
+            yield FieldFault(path=(*later.path, LINES), reason=told_twice)
 
 
 def _steps_by_file(steps: list[StepInDocument]) -> dict[str, list[StepInDocument]]:

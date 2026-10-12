@@ -73,10 +73,6 @@ class LineSpan(BaseModel):
     first: int
     last: int
 
-    def meets(self, other: LineSpan) -> bool:
-        """Whether the two hold a line in common, each running from its first line to its last."""
-        return self.first <= other.last and other.first <= self.last
-
 
 def says_nothing(text: str) -> bool:
     """Whether a text says nothing: it is empty, or blanks alone."""

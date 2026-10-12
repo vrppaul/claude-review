@@ -6,14 +6,28 @@ document is found in one reading, each fault at the field it is about, with
 where the rest belongs when a text ran long.
 """
 
+import time
+
 import pytest
 from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
+from claude_review.domain.models import LineSpan
 from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
+from claude_review.presentation.wire.story import MAX_CHAPTERS, MAX_STEPS_IN_CHAPTER
 from claude_review.services.story_checks import document_faults
-from tests.stories import IMAGE_SERVICE, IMAGE_STORE, KEEPING_CHAPTER, PASTE_CHAPTER, canvas_story, field_at, planted
+from tests.stories import (
+    IMAGE_SERVICE,
+    IMAGE_STORE,
+    KEEPING_CHAPTER,
+    PASTE_CHAPTER,
+    canvas_story,
+    chapter_of,
+    field_at,
+    planted,
+    story_of_chapters,
+)
 
 # Where a text of each kind stands in the story the canvas tells
 TEXT_PLACES: dict[StoryText, FieldPath] = {
@@ -58,6 +72,11 @@ LONGEST_REACH = 20
 FAR_BELOW = 500
 # How far past a limit a generated text runs
 FAR_OVER = 50
+# The most steps one request may carry, how far apart the narrow ones of a long story start, and the longest
+# such a story may take to check: a hundred times what it takes, and a tenth of what it took
+MOST_STEPS = MAX_CHAPTERS * MAX_STEPS_IN_CHAPTER
+STRIDE = 4
+LONGEST_CHECK_SECONDS = 10.0
 
 
 def lines(first: int, last: int) -> dict[str, JsonValue]:
@@ -276,6 +295,37 @@ def test_a_step_that_meets_only_a_step_already_refused_is_refused_as_well() -> N
     assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
     assert "1-10" in second.reason
     assert "5-20" in third.reason
+
+
+def test_a_step_that_meets_two_earlier_steps_is_told_of_the_one_the_story_told_first() -> None:
+    """First in the story, though the other lies above it in the file: the agent is sent to one place, the same every time."""
+    story = planted(two_steps_of_one_file(lines(50, 60), lines(1, 10)), THIRD_STEP_LINES, lines(5, 55))
+
+    [third] = document_faults(story)
+
+    assert third.path == THIRD_STEP_LINES
+    assert "50-60" in third.reason
+
+
+def test_a_story_as_long_as_a_request_may_carry_is_checked_in_seconds_however_its_steps_lie() -> None:
+    """One step lying across all the rest once took minutes: every step was held against every other in turn."""
+    narrow = [
+        Step(file=IMAGE_SERVICE, lines=LineSpan(first=place * STRIDE + 1, last=place * STRIDE + 2))
+        for place in range(MOST_STEPS - 1)
+    ]
+    across_them_all = Step(file=IMAGE_SERVICE, lines=LineSpan(first=1, last=MOST_STEPS * STRIDE))
+    story = story_of_chapters(
+        *(
+            chapter_of(f"ch-{first}", *[*narrow, across_them_all][first : first + MAX_STEPS_IN_CHAPTER])
+            for first in range(0, MOST_STEPS, MAX_STEPS_IN_CHAPTER)
+        )
+    )
+
+    started = time.perf_counter()
+    faults = document_faults(story)
+
+    assert paths_of(faults) == [("chapters", MAX_CHAPTERS - 1, "steps", MAX_STEPS_IN_CHAPTER - 1, "lines")]
+    assert time.perf_counter() - started < LONGEST_CHECK_SECONDS
 
 
 def test_steps_that_meet_in_two_files_are_each_refused_in_the_order_the_story_tells_them() -> None:
