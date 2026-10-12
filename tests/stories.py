@@ -8,6 +8,7 @@ story somebody meant, not against filler.
 
 from pydantic import JsonValue
 
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
 from claude_review.domain.story import (
     Chapter,
     Diagram,
@@ -36,9 +37,9 @@ DIAGRAM = """flowchart LR
   store --> agent[Agent opens it]"""
 
 
-def canvas_story() -> Story:
+def canvas_story() -> Story[Step]:
     """The story the canvas tells: nothing in it keeps it from being told."""
-    return Story(
+    return Story[Step](
         title="Paste a screenshot into the panel or any thread",
         overview=_overview(),
         chapters=[_paste_chapter(), _keeping_chapter()],
@@ -46,7 +47,7 @@ def canvas_story() -> Story:
     )
 
 
-def planted(story: Story, path: FieldPath, value: JsonValue) -> Story:
+def planted(story: Story[Step], path: FieldPath, value: JsonValue) -> Story[Step]:
     """The story with one field of its document written anew: the field its path leads to, as the agent's JSON nests it."""
     document = story.model_dump()
     *way, field = path
@@ -54,10 +55,10 @@ def planted(story: Story, path: FieldPath, value: JsonValue) -> Story:
     for part in way:
         holder = holder[part]
     holder[field] = value
-    return Story.model_validate(document)
+    return Story[Step].model_validate(document)
 
 
-def field_at(story: Story, path: FieldPath) -> JsonValue:
+def field_at(story: Story[Step], path: FieldPath) -> JsonValue:
     """What a path leads to in a story's document; a path that leads nowhere raises."""
     found = story.model_dump()
     for part in path:
@@ -119,8 +120,8 @@ def _overview() -> StoryOverview:
     )
 
 
-def _paste_chapter() -> Chapter:
-    return Chapter(
+def _paste_chapter() -> Chapter[Step]:
+    return Chapter[Step](
         id=PASTE_CHAPTER,
         title="A paste reaches the server",
         why=(
@@ -149,8 +150,8 @@ def _paste_chapter() -> Chapter:
     )
 
 
-def _keeping_chapter() -> Chapter:
-    return Chapter(
+def _keeping_chapter() -> Chapter[Step]:
+    return Chapter[Step](
         id=KEEPING_CHAPTER,
         title="The server keeps images by what they are",
         why=(
@@ -195,4 +196,67 @@ def _keeping_chapter() -> Chapter:
                 ),
             ),
         ],
+    )
+
+
+# How a row of a hunk is written in a test: a space for a line the change kept, and git's own signs for the rest
+KINDS = {" ": LineType.CONTEXT, "+": LineType.ADD, "-": LineType.DELETE}
+# The one chapter of a story a test tells of a change of its own
+ONLY_CHAPTER = "ch-1"
+
+
+def hunk(old_start: int, new_start: int, signs: str) -> DiffHunk:
+    """A hunk whose rows are written by their signs, numbered on each side from where the hunk starts there.
+
+    Every line says its sign and its numbers, so a test reads which row it holds.
+    """
+    lines: list[DiffLine] = []
+    old_number, new_number = old_start, new_start
+    for sign in signs:
+        kind = KINDS[sign]
+        on_old = kind != LineType.ADD
+        on_new = kind != LineType.DELETE
+        lines.append(
+            DiffLine(
+                kind=kind,
+                old_number=old_number if on_old else None,
+                new_number=new_number if on_new else None,
+                content=f"{sign}{old_number if on_old else ''}/{new_number if on_new else ''}",
+            )
+        )
+        old_number += 1 if on_old else 0
+        new_number += 1 if on_new else 0
+    return DiffHunk(header="", old_start=old_start, new_start=new_start, lines=lines)
+
+
+def changed_file(path: str, *hunks: DiffHunk, status: FileStatus = FileStatus.MODIFIED) -> DiffFile:
+    """A file of a change, with the hunks it shows."""
+    return DiffFile(path=path, status=status, hunks=list(hunks))
+
+
+def rows_of(file: DiffFile) -> list[str]:
+    """What every row of a file says, hunk after hunk."""
+    return [line.content for shown in file.hunks for line in shown.lines]
+
+
+def step(file: str, first: int, last: int) -> Step:
+    """A step told of lines of a file, with no reason given."""
+    return Step(file=file, lines=StepLines(first=first, last=last))
+
+
+def story_of(*steps: Step, housekeeping: tuple[str, ...] = ()) -> Story[Step]:
+    """A story of one chapter that tells these steps, with nothing wrong in what it says."""
+    return Story[Step](
+        title="A change",
+        overview=StoryOverview(task="Change it.", done="It is changed.", decisions=[], turned_down=[], later=[]),
+        chapters=[
+            Chapter[Step](
+                id=ONLY_CHAPTER,
+                title="The change",
+                why="It belongs together.",
+                doubt="Look hardest here.",
+                steps=list(steps),
+            )
+        ],
+        housekeeping=list(housekeeping),
     )

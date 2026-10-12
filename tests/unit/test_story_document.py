@@ -10,7 +10,7 @@ import pytest
 from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
-from claude_review.domain.story import TEXT_LIMITS, FieldPath, Story, StoryFault, StoryText
+from claude_review.domain.story import TEXT_LIMITS, FieldPath, Step, Story, StoryFault, StoryText
 from claude_review.services.story_checks import document_faults
 from tests.stories import IMAGE_SERVICE, IMAGE_STORE, KEEPING_CHAPTER, PASTE_CHAPTER, canvas_story, field_at, planted
 
@@ -318,7 +318,7 @@ EVERYTHING_WRONG = [
 ]
 
 
-def story_with_everything_wrong() -> Story:
+def story_with_everything_wrong() -> Story[Step]:
     story = canvas_story()
     for planting in EVERYTHING_WRONG:
         story = planted(story, planting.at, planting.written)

@@ -4,15 +4,21 @@ A second way to read the same diff. First an overview — what was asked,
 what was done, what to doubt — then chapters, each a run of steps, and each
 step a piece of the change with the agent's reason above it.
 
-These models are a story as the agent wrote it: what its document is made
-of, and nothing about whether it may be told. That is asked of the whole
-document at once (`services/story_checks.py`), so the agent hears everything
-wrong with it in one answer, each fault at the field it is about.
+A story comes as a document the agent wrote, and these models are first of
+all that: what the document is made of, and nothing about whether it may be
+told. That is asked of the whole document at once
+(`services/story_checks.py`), so the agent hears everything wrong with it in
+one answer, each fault at the field it is about. A story that may be told
+is then the same story with what each step shows cut out of the change
+(`ToldStory`): only `services/story_telling.py` makes one.
 """
 
 from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
+
+from claude_review.domain.exceptions import RefusedError
+from claude_review.domain.models import DiffFile
 
 # Where a field stands in a story's document: the names and positions that
 # lead to it, as the document's JSON nests them
@@ -30,6 +36,10 @@ class StepLines(StoryPart):
 
     first: int
     last: int
+
+    def holds(self, line: int) -> bool:
+        """Whether a line is among them."""
+        return self.first <= line <= self.last
 
     def meets(self, other: StepLines) -> bool:
         """Whether the two hold a line in common, each running from its first line to its last."""
@@ -51,8 +61,12 @@ class Step(StoryPart):
     reason: str | None = None
 
 
-class Chapter(StoryPart):
-    """Changes that belong together, told one step after another."""
+class Chapter[StepKind: Step](StoryPart):
+    """Changes that belong together, told one step after another.
+
+    Its steps are as the agent wrote them, or as they are told, each with
+    what it shows: a chapter is the same either way.
+    """
 
     # What the overview and the diagram lead to it by
     id: str
@@ -61,7 +75,7 @@ class Chapter(StoryPart):
     why: str
     # Where the reader should look hardest, when there is such a place
     doubt: str | None = None
-    steps: list[Step]
+    steps: list[StepKind]
 
 
 class OverviewItem(StoryPart):
@@ -95,12 +109,12 @@ class StoryOverview(StoryPart):
     later: list[OverviewItem]
 
 
-class Story(StoryPart):
+class Story[StepKind: Step](StoryPart):
     """A change as the agent tells it, whole: a story is sent in one piece, and replaced in one piece."""
 
     title: str
     overview: StoryOverview
-    chapters: list[Chapter]
+    chapters: list[Chapter[StepKind]]
     # Files that changed and have nothing to tell — a lock file, a changelog —
     # named so that what changed in them is not held against the story
     housekeeping: list[str]
@@ -171,6 +185,10 @@ TEXT_LIMITS: dict[StoryText, TextLimit] = {
 }
 
 
+# What a story refused is refused with, before its faults are said one by one
+STORY_REFUSED = "the story may not be told as it is written"
+
+
 class StoryFault(BaseModel):
     """One thing that keeps a story from being told: the field it is about, and what is wrong there."""
 
@@ -178,3 +196,39 @@ class StoryFault(BaseModel):
 
     path: FieldPath
     reason: str
+
+
+class StoryRefusedError(RefusedError):
+    """Raised when a story may not be told as it was written; it carries everything found wrong with it."""
+
+    def __init__(self, faults: list[StoryFault]) -> None:
+        super().__init__(STORY_REFUSED)
+        self.faults = faults
+
+
+class ToldStep(Step):
+    """A step as it is told: with the piece of its file it shows, cut out of the change."""
+
+    piece: DiffFile
+
+
+class LeftOut(BaseModel):
+    """What a story leaves out of one file: changes no step tells, in a file nobody named as housekeeping.
+
+    Shown all the same, beside the story: a story that could hide a change
+    would be an advertisement for it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # The rows left out, each run of them that holds a change a hunk of its
+    # own; the file as it is, when the change shows no line of it
+    piece: DiffFile
+    # How many lines of it the change added or removed
+    changed_lines: int
+
+
+class ToldStory(Story[ToldStep]):
+    """A story on the change it is told of: every step with what it shows, and what no step tells."""
+
+    left_out: list[LeftOut]

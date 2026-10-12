@@ -5,9 +5,12 @@ fault, it would put that right and send the story again, to be refused for
 the next: so the whole document is read first, and everything wrong with it
 is said in one answer, each fault at the field it is about.
 
-What is read here is what a document shows by itself, whatever change it is
-told of: texts that say nothing or run past their length, chapters and
-links that do not hold together, lines no file could have or told twice.
+Two readings find them. One is of what the document shows by itself,
+whatever change it is told of: texts that say nothing or run past their
+length, chapters and links that do not hold together, lines no file could
+have or told twice. The other is against the change: a step or a
+housekeeping file the change does not have, and a step that tells nothing
+the change did.
 """
 
 from collections.abc import Iterator
@@ -27,6 +30,7 @@ from claude_review.domain.story import (
     StoryText,
 )
 from claude_review.services.place_words import line_span
+from claude_review.services.story_slices import ToldFile
 
 # The fields of a story's document, as a fault names them: what the
 # document's own models call them, since that is what the agent wrote
@@ -48,6 +52,7 @@ CHAPTERS = "chapters"
 ID = "id"
 WHY = "why"
 STEPS = "steps"
+FILE = "file"
 LINES = "lines"
 REASON = "reason"
 HOUSEKEEPING = "housekeeping"
@@ -63,6 +68,10 @@ BEFORE_FIRST_LINE = "starts at line {first}: a file's lines are numbered from {f
 RUNS_BACKWARDS = "runs backwards, from line {first} to line {last}"
 TOLD_TWICE = "meets lines {lines} of the same file, which chapter {chapter} tells already: a line is told once"
 NAMED_TWICE = "names {file} a second time"
+NO_SUCH_FILE = "is no file of this change"
+NO_LINES_SHOWN = "is a file the change shows no line of: a step has nothing of it to tell"
+NO_CHANGE_TOLD = "hold no line of {file} that the change added or removed: a step tells something it did"
+HOUSEKEEPING_TOLD = "is told in chapter {chapter}: a file with a step to it is not housekeeping"
 
 
 class StepInDocument(BaseModel):
@@ -71,11 +80,11 @@ class StepInDocument(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     path: FieldPath
-    chapter: Chapter
+    chapter: Chapter[Step]
     step: Step
 
 
-def document_faults(story: Story) -> list[StoryFault]:
+def document_faults(story: Story[Step]) -> list[StoryFault]:
     """Everything wrong with a story that its document shows by itself, each fault at its field."""
     return [
         *_texts_out_of_bounds(story),
@@ -88,7 +97,50 @@ def document_faults(story: Story) -> list[StoryFault]:
     ]
 
 
-def _texts_out_of_bounds(story: Story) -> Iterator[StoryFault]:
+def placement_faults(story: Story[Step], change: dict[str, ToldFile]) -> list[StoryFault]:
+    """Everything wrong with a story that only the change it is told of shows, each fault at its field.
+
+    `change` is the files of the change by their paths. A step told of
+    lines no file could have is left out: it is refused for that already.
+    """
+    steps = [told for told in _steps_of(story.chapters) if not _numbering_faults(told)]
+    return [
+        *(fault for told in steps for fault in _step_faults(told, change)),
+        *_housekeeping_faults(story, change),
+    ]
+
+
+def _step_faults(told: StepInDocument, change: dict[str, ToldFile]) -> Iterator[StoryFault]:
+    """What is wrong with a step against the change.
+
+    Its file is not in the change, or shows no line; or its lines hold nothing
+    the change added or removed.
+    """
+    file = change.get(told.step.file)
+    if file is None:
+        yield StoryFault(path=(*told.path, FILE), reason=NO_SUCH_FILE)
+    elif not file.shows_lines:
+        yield StoryFault(path=(*told.path, FILE), reason=NO_LINES_SHOWN)
+    elif file.changed_lines(file.rows_at(told.step.lines)) == 0:
+        yield StoryFault(path=(*told.path, LINES), reason=NO_CHANGE_TOLD.format(file=told.step.file))
+
+
+def _housekeeping_faults(story: Story[Step], change: dict[str, ToldFile]) -> Iterator[StoryFault]:
+    """Every housekeeping file the change does not have, and every one a step is told of.
+
+    A file is housekeeping because it has nothing to tell: named as that
+    and told in a step, it would be both.
+    """
+    steps = list(_steps_of(story.chapters))
+    for index, file in enumerate(story.housekeeping):
+        told = next((told for told in steps if told.step.file == file), None)
+        if file not in change:
+            yield StoryFault(path=(HOUSEKEEPING, index), reason=NO_SUCH_FILE)
+        elif told is not None:
+            yield StoryFault(path=(HOUSEKEEPING, index), reason=HOUSEKEEPING_TOLD.format(chapter=told.chapter.id))
+
+
+def _texts_out_of_bounds(story: Story[Step]) -> Iterator[StoryFault]:
     """Every text of the story that says nothing, or more than its kind may."""
     yield from _text_faults((TITLE,), story.title, StoryText.TITLE)
     yield from _overview_texts_out_of_bounds(story.overview)
@@ -139,7 +191,7 @@ def _says_nothing(text: str) -> bool:
     return not text.strip()
 
 
-def _parts_missing(chapters: list[Chapter]) -> Iterator[StoryFault]:
+def _parts_missing(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
     """A story with no chapter, and every chapter with no step: neither tells anything."""
     if not chapters:
         yield StoryFault(path=(CHAPTERS,), reason=NO_CHAPTERS)
@@ -148,14 +200,14 @@ def _parts_missing(chapters: list[Chapter]) -> Iterator[StoryFault]:
             yield StoryFault(path=(CHAPTERS, index, STEPS), reason=NO_STEPS)
 
 
-def _ids_repeated(chapters: list[Chapter]) -> Iterator[StoryFault]:
+def _ids_repeated(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
     """Every chapter under an id an earlier chapter has: a link to that id could mean either."""
     ids = [chapter.id for chapter in chapters]
     for index in _repeated_at(ids):
         yield StoryFault(path=(CHAPTERS, index, ID), reason=ID_REPEATED.format(chapter=ids[index]))
 
 
-def _links_to_no_chapter(story: Story) -> Iterator[StoryFault]:
+def _links_to_no_chapter(story: Story[Step]) -> Iterator[StoryFault]:
     """Every link the overview makes to a chapter the story does not have."""
     known = frozenset(chapter.id for chapter in story.chapters)
     overview = story.overview
@@ -173,7 +225,7 @@ def _link_faults(path: FieldPath, chapter: str | None, known: frozenset[str]) ->
         yield StoryFault(path=path, reason=NO_SUCH_CHAPTER.format(chapter=chapter))
 
 
-def _lines_numbered_wrongly(chapters: list[Chapter]) -> Iterator[StoryFault]:
+def _lines_numbered_wrongly(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
     """Every step told of lines no file could have."""
     for told in _steps_of(chapters):
         yield from _numbering_faults(told)
@@ -191,7 +243,7 @@ def _numbering_faults(told: StepInDocument) -> list[StoryFault]:
     return faults
 
 
-def _lines_told_twice(chapters: list[Chapter]) -> Iterator[StoryFault]:
+def _lines_told_twice(chapters: list[Chapter[Step]]) -> Iterator[StoryFault]:
     """Every step that tells a line an earlier step of the same file tells already.
 
     A line is told once: told twice, whatever hangs on it — a thread, a
@@ -218,7 +270,7 @@ def _files_named_twice(housekeeping: list[str]) -> Iterator[StoryFault]:
         yield StoryFault(path=(HOUSEKEEPING, index), reason=NAMED_TWICE.format(file=housekeeping[index]))
 
 
-def _steps_of(chapters: list[Chapter]) -> Iterator[StepInDocument]:
+def _steps_of(chapters: list[Chapter[Step]]) -> Iterator[StepInDocument]:
     """Every step of the story in the order it is told, with where it stands and the chapter that tells it."""
     for chapter_index, chapter in enumerate(chapters):
         for step_index, step in enumerate(chapter.steps):
