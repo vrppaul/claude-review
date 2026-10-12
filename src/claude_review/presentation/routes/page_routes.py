@@ -51,6 +51,7 @@ from claude_review.presentation.wire.content import (
     ReviewResponse,
     VersionsResponse,
 )
+from claude_review.presentation.wire.story import StoryHeld, StoryResponse
 from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,
@@ -116,6 +117,17 @@ async def held_conversation(review: Review = Depends(get_review)) -> Conversatio
     so a page with a draft draws each part once. Read-only, like the threads.
     """
     return ConversationResponse(said=[SaidInPanel.of(said) for said in review.conversation_held()])
+
+
+@router.get("/story")
+async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
+    """Say what story the review holds: the last the agent told of its change, each step with what it shows.
+
+    None while nobody has told one, which is no refusal: a review is read
+    without a story as it always was.
+    """
+    held = review.story_held()
+    return StoryResponse(held=StoryHeld.of(held) if held is not None else None)
 
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from claude_review.domain import models, page_events, story as told
 from claude_review.presentation.wire import agent, content, pushes, records, story, threads
+from claude_review.services.review import review_story
 
 # What a push carries of its own: the kind the page tells it apart by
 PUSH_KIND = frozenset({"type"})
@@ -74,6 +75,7 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.Chapter[told.ToldStep], story.ToldChapter, frozenset()),
     (told.LeftOut, story.LeftOut, frozenset()),
     (told.ToldStory, story.ToldStory, frozenset()),
+    (review_story.StoryHeld, story.StoryHeld, frozenset()),
     *EVENTS_AND_PUSHES,
     # A hello as the server hears it, and as the page says it
     (threads.ReceivedHello, threads.SessionHello, frozenset()),

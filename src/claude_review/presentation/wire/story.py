@@ -13,7 +13,7 @@ asks all of that at once (`services/story_checks.py`), so the agent hears
 everything wrong with its story in one answer.
 """
 
-from typing import Annotated
+from typing import Annotated, Self
 
 from pydantic import ConfigDict, Field, PlainSerializer, PlainValidator, WithJsonSchema
 
@@ -23,6 +23,7 @@ from claude_review.domain.story import ToldFrom
 from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH, WireModel
 from claude_review.presentation.wire.content import DiffFile
 from claude_review.services.place_words import LINES_WRITTEN, line_span, lines_named
+from claude_review.services.review import review_story
 
 # The most of each thing one document may hold. A story with more is not a
 # story any more, and the request that carries one stays bounded; how much a
@@ -218,3 +219,49 @@ class ToldStory(WireModel):
     chapters: list[ToldChapter]
     housekeeping: list[str]
     left_out: list[LeftOut]
+
+
+class StoryHeld(WireModel):
+    """A story as the review holds it: as it was told, and the round it was told in."""
+
+    story: ToldStory
+    round: int
+
+
+class StoryResponse(WireModel):
+    """Response for GET /api/story — the story the review holds, or none while nobody has told one."""
+
+    held: StoryHeld | None
+
+
+class LeftOutOfFile(WireModel):
+    """How much of one file a story leaves out: enough to say so in a line."""
+
+    file: str
+    # How many lines of it the change added or removed and no step tells:
+    # none, of a file the change shows no line of
+    changed_lines: int
+
+
+class StoryTakenResponse(WireModel):
+    """Response for PUT /api/story — what the review made of the story it took, in short.
+
+    The agent wrote the story and does not need it back; what it cannot
+    know is what its steps left for the reader to find alone.
+    """
+
+    round: int
+    chapters: int
+    steps: int
+    left_out: list[LeftOutOfFile]
+
+    @classmethod
+    def summing_up(cls, held: review_story.StoryHeld) -> Self:
+        """A story the review has just taken, summed up for whoever told it."""
+        told = held.story
+        return cls(
+            round=held.round,
+            chapters=len(told.chapters),
+            steps=sum(len(chapter.steps) for chapter in told.chapters),
+            left_out=[LeftOutOfFile(file=left.piece.path, changed_lines=left.changed_lines) for left in told.left_out],
+        )

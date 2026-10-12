@@ -56,6 +56,14 @@ class ContentSource(ABC):
         """The take on screen now."""
 
     @abstractmethod
+    def change(self) -> list[DiffFile]:
+        """The change under review, as the take on screen has it: what a story is told of.
+
+        Raises:
+            NoRepositoryError: if the content came from no repository: nobody changed it.
+        """
+
+    @abstractmethod
     async def open(self) -> None:
         """Note what the review opens on: whatever later takes are measured against."""
 
@@ -106,6 +114,10 @@ class RepositorySource(ContentSource):
     @override
     def content(self) -> ReviewContent:
         return self._content
+
+    @override
+    def change(self) -> list[DiffFile]:
+        return self._content.files
 
     @override
     async def open(self) -> None:
@@ -199,6 +211,12 @@ class FixedSource(ContentSource):
     @override
     def content(self) -> ReviewContent:
         return self._content
+
+    @override
+    def change(self) -> list[DiffFile]:
+        """Raises: NoRepositoryError, always."""
+        msg = "This review is of no change: there is no story to tell of it"
+        raise NoRepositoryError(msg)
 
     @override
     async def open(self) -> None:

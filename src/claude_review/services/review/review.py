@@ -43,6 +43,7 @@ from claude_review.domain.page_events import (
     ThreadRaised,
     TreeMoved,
 )
+from claude_review.domain.story import Step, Story
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -54,11 +55,13 @@ from claude_review.services.review.content_sources import ContentSource, DiffVie
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_story import ReviewStory, StoryHeld
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
 from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.round_formatter import RoundFormatter
+from claude_review.services.story_telling import tell
 
 log = structlog.get_logger()
 
@@ -88,6 +91,7 @@ class Review:
         self._inbox = AgentInbox(self._lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
+        self._story = ReviewStory()
         self._handover = ThreadHandover(images)
         self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
         # Chosen once: a review of a conversation quotes what each comment is
@@ -369,6 +373,25 @@ class Review:
 
         log.info("review_submitted", comment_count=result.comment_count, round=number, ended=ends)
         return submission
+
+    def tell_story(self, story: Story[Step]) -> StoryHeld:
+        """Take the story the agent tells of the change, whole, in place of any it told before.
+
+        Told of the review's own diff as it now stands, whatever base a page
+        reads, and kept with the round it is told in.
+
+        Raises:
+            NoRepositoryError: if the review is of no change: files read once, or a conversation.
+            StoryRefusedError: if anything is wrong with the story, carrying all of it.
+        """
+        told = tell(story, self._source.change())
+        held = self._story.keep(told, round_number=self._rounds.current)
+        log.info("story_told", chapters=len(told.chapters), left_out=len(told.left_out), round=held.round)
+        return held
+
+    def story_held(self) -> StoryHeld | None:
+        """The story the review holds, as it was told, or None while nobody has told one."""
+        return self._story.held
 
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, and tell the pages to fetch it.

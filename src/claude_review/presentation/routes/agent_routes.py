@@ -9,6 +9,8 @@ from claude_review.domain import models
 from claude_review.domain.exceptions import (
     AnchorLinesNotShownError,
     AnchorTooLongError,
+    NoRepositoryError,
+    StoryRefusedError,
     UnknownAnchorFileError,
     UnknownFileError,
     UnknownThreadError,
@@ -38,6 +40,7 @@ from claude_review.presentation.wire.agent import (
     TimeoutEvent,
 )
 from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, WireId
+from claude_review.presentation.wire.story import StoryRequest, StoryTakenResponse
 from claude_review.presentation.wire.threads import (
     PointRequest,
     PointResponse,
@@ -209,3 +212,15 @@ async def report_status(request: StatusRequest, review: Review = Depends(get_rev
     measured from here, so both are quoted with the time they were said.
     """
     review.report_status(model=request.model, context=request.context)
+
+
+@router.put("/story", responses=refusals(StoryRefusedError, NoRepositoryError, takes=Takes.JSON_BODY))
+async def tell_the_story(request: StoryRequest, review: Review = Depends(get_review)) -> StoryTakenResponse:
+    """Take the story the agent tells of the change, whole, in place of any it told before.
+
+    A PUT: the story is sent in one piece and replaced in one piece, never
+    patched, since sending it again is simpler than agreeing on a part. It is
+    told or refused whole, and a refusal names everything wrong with it at
+    once, each fault at its field of the document.
+    """
+    return StoryTakenResponse.summing_up(review.tell_story(request.in_the_review()))

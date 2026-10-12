@@ -75,6 +75,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Held Story
+         * @description Say what story the review holds: the last the agent told of its change, each step with what it shows.
+         *
+         *     None while nobody has told one, which is no refusal: a review is read
+         *     without a story as it always was.
+         */
+        get: operations["held_story_api_story_get"];
+        /**
+         * Tell The Story
+         * @description Take the story the agent tells of the change, whole, in place of any it told before.
+         *
+         *     A PUT: the story is sent in one piece and replaced in one piece, never
+         *     patched, since sending it again is simpler than agreeing on a part. It is
+         *     told or refused whole, and a refusal names everything wrong with it at
+         *     once, each fault at its field of the document.
+         */
+        put: operations["tell_the_story_api_story_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/diff": {
         parameters: {
             query?: never;
@@ -774,6 +806,22 @@ export interface components {
             /** Paths */
             paths: string[];
         };
+        /**
+         * ChapterInput
+         * @description Changes that belong together, told one step after another.
+         */
+        ChapterInput: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+            /** Doubt */
+            doubt?: string | null;
+            /** Steps */
+            steps: components["schemas"]["StepInput"][];
+        };
         /** ClosedEvent */
         ClosedEvent: {
             /**
@@ -803,6 +851,34 @@ export interface components {
         ConversationResponse: {
             /** Said */
             said: components["schemas"]["SaidInPanel"][];
+        };
+        /**
+         * Diagram
+         * @description The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to.
+         */
+        Diagram: {
+            /** Mermaid */
+            mermaid: string;
+            /** Caption */
+            caption: string | null;
+            /** Links */
+            links: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * DiagramInput
+         * @description The change drawn, and the chapter each part of the drawing leads to.
+         */
+        DiagramInput: {
+            /** Mermaid */
+            mermaid: string;
+            /** Caption */
+            caption?: string | null;
+            /** Links */
+            links?: {
+                [key: string]: string;
+            };
         };
         /**
          * DiffFile
@@ -960,6 +1036,25 @@ export interface components {
             stored: boolean;
         };
         /**
+         * LeftOut
+         * @description What the story leaves out of one file, shown beside it all the same.
+         */
+        LeftOut: {
+            piece: components["schemas"]["DiffFile"];
+            /** Changed Lines */
+            changed_lines: number;
+        };
+        /**
+         * LeftOutOfFile
+         * @description How much of one file a story leaves out: enough to say so in a line.
+         */
+        LeftOutOfFile: {
+            /** File */
+            file: string;
+            /** Changed Lines */
+            changed_lines: number;
+        };
+        /**
          * LineSide
          * @description Which version of the file a line belongs to.
          *
@@ -970,6 +1065,29 @@ export interface components {
          * @enum {string}
          */
         LineSide: "old" | "new";
+        /**
+         * LineSpan
+         * @description Lines of a file as somebody names them, the first and the last both among them.
+         *
+         *     Whether a file could have such lines — numbered from its first, running
+         *     forwards — is for whoever is handed them to ask.
+         */
+        "LineSpan-Input": {
+            /** First */
+            first: number;
+            /** Last */
+            last: number;
+        };
+        /**
+         * LineSpan
+         * @description Lines of a file, the first and the last both among them.
+         */
+        "LineSpan-Output": {
+            /** First */
+            first: number;
+            /** Last */
+            last: number;
+        };
         /**
          * LineType
          * @description Type of a diff line.
@@ -1004,6 +1122,26 @@ export interface components {
             message_id: string;
             /** Threads */
             threads?: components["schemas"]["ThreadInput-Input"][];
+        };
+        /**
+         * OverviewItem
+         * @description One thing the overview lists, and the chapter that shows it, when one does.
+         */
+        OverviewItem: {
+            /** Text */
+            text: string;
+            /** Chapter */
+            chapter: string | null;
+        };
+        /**
+         * OverviewItemInput
+         * @description One thing the overview lists, and the chapter that shows it, when one does.
+         */
+        OverviewItemInput: {
+            /** Text */
+            text: string;
+            /** Chapter */
+            chapter?: string | null;
         };
         /**
          * PanelCancel
@@ -1363,6 +1501,107 @@ export interface components {
             context?: string | null;
         };
         /**
+         * StepInput
+         * @description A piece of the change, and why it is the way it is.
+         */
+        StepInput: {
+            /** File */
+            file: string;
+            /** Lines */
+            lines: string;
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * StoryHeld
+         * @description A story as the review holds it: as it was told, and the round it was told in.
+         */
+        StoryHeld: {
+            story: components["schemas"]["ToldStory"];
+            /** Round */
+            round: number;
+        };
+        /**
+         * StoryOverview
+         * @description The change in short: what was asked, what was done, what to doubt, and what the overview lists.
+         */
+        StoryOverview: {
+            /** Task */
+            task: string;
+            /** Done */
+            done: string;
+            /** Doubt */
+            doubt: string | null;
+            diagram: components["schemas"]["Diagram"] | null;
+            /** Decisions */
+            decisions: components["schemas"]["OverviewItem"][];
+            /** Turned Down */
+            turned_down: components["schemas"]["OverviewItem"][];
+            /** Later */
+            later: components["schemas"]["OverviewItem"][];
+        };
+        /**
+         * StoryOverviewInput
+         * @description The change in short. What it lists may be left out: a story need not have turned anything down.
+         */
+        StoryOverviewInput: {
+            /** Task */
+            task: string;
+            /** Done */
+            done: string;
+            /** Doubt */
+            doubt?: string | null;
+            diagram?: components["schemas"]["DiagramInput"] | null;
+            /** Decisions */
+            decisions?: components["schemas"]["OverviewItemInput"][];
+            /** Turned Down */
+            turned_down?: components["schemas"]["OverviewItemInput"][];
+            /** Later */
+            later?: components["schemas"]["OverviewItemInput"][];
+        };
+        /**
+         * StoryRequest
+         * @description Request body for PUT /api/story — the story the agent tells of the change, whole.
+         *
+         *     It says what it is told from, and has no way not to: a reconstruction
+         *     that forgot to say so would pass for the memory of whoever made the
+         *     change.
+         */
+        StoryRequest: {
+            /** Title */
+            title: string;
+            told_from: components["schemas"]["ToldFrom"];
+            overview: components["schemas"]["StoryOverviewInput"];
+            /** Chapters */
+            chapters: components["schemas"]["ChapterInput"][];
+            /** Housekeeping */
+            housekeeping?: string[];
+        };
+        /**
+         * StoryResponse
+         * @description Response for GET /api/story — the story the review holds, or none while nobody has told one.
+         */
+        StoryResponse: {
+            held: components["schemas"]["StoryHeld"] | null;
+        };
+        /**
+         * StoryTakenResponse
+         * @description Response for PUT /api/story — what the review made of the story it took, in short.
+         *
+         *     The agent wrote the story and does not need it back; what it cannot
+         *     know is what its steps left for the reader to find alone.
+         */
+        StoryTakenResponse: {
+            /** Round */
+            round: number;
+            /** Chapters */
+            chapters: number;
+            /** Steps */
+            steps: number;
+            /** Left Out */
+            left_out: components["schemas"]["LeftOutOfFile"][];
+        };
+        /**
          * SubmitRequest
          * @description Request body for POST /api/submit.
          */
@@ -1517,6 +1756,60 @@ export interface components {
              * @enum {string}
              */
             type: "timeout";
+        };
+        /**
+         * ToldChapter
+         * @description A chapter as it is told: why its changes belong together, where to look hardest, and its steps.
+         */
+        ToldChapter: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+            /** Doubt */
+            doubt: string | null;
+            /** Steps */
+            steps: components["schemas"]["ToldStep"][];
+        };
+        /**
+         * ToldFrom
+         * @description What the agent tells a story from.
+         *
+         *     MEMORY — it made the change, and remembers why each piece is as it is.
+         *     COMMITS — it reads the change back from its commits: a reconstruction of
+         *     what somebody decided, and said to be one.
+         * @enum {string}
+         */
+        ToldFrom: "memory" | "commits";
+        /**
+         * ToldStep
+         * @description A step as it is told: its reason, when it has one, and the piece of its file it shows.
+         */
+        ToldStep: {
+            /** File */
+            file: string;
+            lines: components["schemas"]["LineSpan-Output"];
+            /** Reason */
+            reason: string | null;
+            piece: components["schemas"]["DiffFile"];
+        };
+        /**
+         * ToldStory
+         * @description A story on the change it is told of: every step with what it shows, and what no step tells.
+         */
+        ToldStory: {
+            /** Title */
+            title: string;
+            told_from: components["schemas"]["ToldFrom"];
+            overview: components["schemas"]["StoryOverview"];
+            /** Chapters */
+            chapters: components["schemas"]["ToldChapter"][];
+            /** Housekeeping */
+            housekeeping: string[];
+            /** Left Out */
+            left_out: components["schemas"]["LeftOut"][];
         };
         /**
          * Turn
@@ -1685,6 +1978,104 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    held_story_api_story_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    tell_the_story_api_story_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryTakenResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
