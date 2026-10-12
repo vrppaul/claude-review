@@ -18,9 +18,11 @@
 		reviewOwnsRemovedLines: boolean;
 		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
 		revealed: RevealedContext | null;
+		/** Whether the file given is a piece cut out of one, as a step of a story is: see `DrawnFile`. */
+		piece: boolean;
 	}
 
-	let { file, language, view, reviewOwnsRemovedLines, revealed }: Props = $props();
+	let { file, language, view, reviewOwnsRemovedLines, revealed, piece }: Props = $props();
 	const review = useReview();
 
 	// Made once, whichever way the lines are laid out: switching layout prepares nothing again
@@ -28,7 +30,8 @@
 		file: () => file,
 		language: () => language,
 		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines,
-		revealed: () => revealed
+		revealed: () => revealed,
+		piece: () => piece
 	});
 </script>
 

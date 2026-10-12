@@ -21,28 +21,76 @@ const file = diffFile({
 	]
 });
 
-/** How a story step draws a file: as lines, on the review's own removed lines, with gaps not to be read into. */
-const AS_A_STEP = { file, language: null, view: 'raw', reviewOwnsRemovedLines: true, revealed: null } as const;
+/**
+ * How a story step draws a file: a piece cut out of it, as lines, on the
+ * review's own removed lines, with nothing around its hunks to read into.
+ */
+const AS_A_STEP = {
+	file,
+	language: null,
+	view: 'raw',
+	reviewOwnsRemovedLines: true,
+	revealed: null,
+	piece: true
+} as const;
+
+/** A piece of the same file that runs over two changes: lines 32 to 39 lie between them, unchanged. */
+const overTwoChanges = diffFile({
+	path: 'src/app.py',
+	hunks: [...file.hunks, hunk([addedLine(40, 'more = 4')], { header: '', old_start: 40, new_start: 40 })]
+});
+const A_STEP_OVER_TWO_CHANGES = { ...AS_A_STEP, file: overTwoChanges } as const;
 
 beforeEach(() => {
 	review = openReview({ files: [file] });
 });
 
-describe('a file drawn where what the diff left out is not to be read in', () => {
-	it('says how many lines it leaves out, and offers nothing to show them', () => {
-		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
+/** How the files' own view draws a file: whole, with what lies around its hunks to be read in. */
+function asAFile() {
+	return { ...AS_A_STEP, revealed: review.diff.revealed, piece: false } as const;
+}
 
-		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
+describe('a piece cut out of a file', () => {
+	it('says how many lines it leaves out between its changes, and offers nothing to show them', () => {
+		const { getAllByTestId, queryByTestId } = render(FileBody, inReview(review, A_STEP_OVER_TWO_CHANGES));
+
+		expect(getAllByTestId('hunk-gap').map((gap) => gap.textContent.trim())).toEqual(['⋯ 8 unchanged lines']);
 		expect(queryByTestId('expand-up')).toBeNull();
 		expect(queryByTestId('expand-all')).toBeNull();
 	});
 
 	it('says the same in two columns', () => {
-		const { getByTestId, queryByTestId } = render(FileBody, inReview(review, { ...AS_A_STEP, view: 'split' }));
+		const step = { ...A_STEP_OVER_TWO_CHANGES, view: 'split' } as const;
+		const { getAllByTestId, queryByTestId } = render(FileBody, inReview(review, step));
 
-		expect(getByTestId('hunk-gap').textContent).toContain('29 unchanged lines');
+		expect(getAllByTestId('hunk-gap').map((gap) => gap.textContent.trim())).toEqual(['⋯ 8 unchanged lines']);
 		expect(queryByTestId('expand-up')).toBeNull();
 		expect(queryByTestId('expand-all')).toBeNull();
+	});
+
+	it('says nothing of the file above its first line: that is not the piece', () => {
+		const { queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
+
+		expect(queryByTestId('hunk-gap')).toBeNull();
+	});
+
+	it('draws no thread on a line it does not show: that hangs in whichever piece shows the line', () => {
+		review.threads.add(newComment({ file: 'src/app.py', startLine: 9, quote: ['z = 3'], body: 'on another line' }));
+
+		const { queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
+
+		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+	});
+});
+
+describe('a file drawn whole', () => {
+	it('says how many lines the diff leaves out above its first change, and offers to show them', () => {
+		const { getAllByTestId, getByTestId } = render(FileBody, inReview(review, asAFile()));
+
+		const [aboveTheChange] = getAllByTestId('hunk-gap');
+
+		expect(aboveTheChange.textContent).toContain('29 hidden lines');
+		expect(getByTestId('expand-up')).toBeTruthy();
 	});
 });
 
@@ -100,13 +148,13 @@ describe('a comment no line drawn here can hang under', () => {
 	});
 
 	it('is drawn at the head of the file, where the lines are drawn', () => {
-		const { getByTestId } = render(FileBody, inReview(review, AS_A_STEP));
+		const { getByTestId } = render(FileBody, inReview(review, asAFile()));
 
 		expect(getByTestId('threads-off-their-lines').textContent).toContain('off its line');
 	});
 
 	it('is left to the count a rendered preview gives, which draws no lines', () => {
-		const { queryByTestId } = render(FileBody, inReview(review, { ...AS_A_STEP, view: 'preview' }));
+		const { queryByTestId } = render(FileBody, inReview(review, { ...asAFile(), view: 'preview' }));
 
 		expect(queryByTestId('threads-off-their-lines')).toBeNull();
 	});

@@ -26,6 +26,8 @@ export interface DrawingSource {
 	reviewOwnsRemovedLines: () => boolean;
 	/** Where lines read in around the hunks are kept; null where the gaps are said but not read into. */
 	revealed: () => RevealedContext | null;
+	/** Whether what is drawn is a piece cut out of the file: see `DrawnFile`. */
+	piece: () => boolean;
 }
 
 export class FileDrawing implements DrawnFile {
@@ -62,6 +64,20 @@ export class FileDrawing implements DrawnFile {
 
 	commentable(): boolean {
 		return this.#source.file().commentable;
+	}
+
+	piece(): boolean {
+		return this.#source.piece();
+	}
+
+	/**
+	 * Whether a gap is this drawing's to say. A piece says what it leaves
+	 * out between its own hunks. What lies above its first is the rest of
+	 * the file, which it does not draw; so is what lies below its last,
+	 * which only a drawing that reads into its gaps says.
+	 */
+	says(gap: ContextGap): boolean {
+		return !this.piece() || gap.above !== null;
 	}
 
 	/** Whether what the diff left out may be read in here, or only said. */

@@ -40,7 +40,8 @@ function commenting(): LineCommenting {
 		path: () => file.path,
 		hunks: () => [drawn],
 		reviewOwnsRemovedLines: () => true,
-		commentable: () => true
+		commentable: () => true,
+		piece: () => false
 	});
 }
 
@@ -131,7 +132,8 @@ describe('picking removed lines', () => {
 			path: () => removals.path,
 			hunks: () => [drawnRemovals],
 			reviewOwnsRemovedLines: () => true,
-			commentable: () => true
+			commentable: () => true,
+			piece: () => false
 		});
 	}
 
@@ -178,7 +180,8 @@ describe('picking lines across what the diff left out', () => {
 			path: () => apart.path,
 			hunks: () => hunks,
 			reviewOwnsRemovedLines: () => true,
-			commentable: () => true
+			commentable: () => true,
+			piece: () => false
 		});
 	}
 
@@ -230,7 +233,8 @@ describe('a file no comment may name', () => {
 			path: () => file.path,
 			hunks: () => [drawn],
 			reviewOwnsRemovedLines: () => true,
-			commentable: () => false
+			commentable: () => false,
+			piece: () => false
 		});
 
 		lines.press(line(11));

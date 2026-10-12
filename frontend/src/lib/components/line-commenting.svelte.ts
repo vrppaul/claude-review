@@ -61,6 +61,14 @@ export interface DrawnFile {
 	 * whole round with it: its lines are only to be read.
 	 */
 	commentable: () => boolean;
+	/**
+	 * Whether what is drawn is a piece cut out of the file — a step of a
+	 * story — and not the file as the diff has it. A piece draws the threads
+	 * on its own lines and no others: one on another line of the file hangs
+	 * in whichever piece shows that line, and whoever draws the pieces says
+	 * which hang in none.
+	 */
+	piece: () => boolean;
 }
 
 /**
@@ -224,10 +232,11 @@ export class LineCommenting {
 	 * The threads of the file whose last line is not drawn here. Under a
 	 * narrower base there are none: the notice above the diff names every
 	 * thread that base cannot draw, and takes the reader to it on the whole
-	 * diff.
+	 * diff. A piece of the file has none either: the lines it does not show
+	 * are not its own.
 	 */
 	#withoutTheirLine(): readonly Thread[] {
-		if (!this.#file.reviewOwnsRemovedLines()) return [];
+		if (!this.#file.reviewOwnsRemovedLines() || this.#file.piece()) return [];
 		return this.#review.threads
 			.onLinesOf(this.#file.path())
 			.filter(({ lines }) => !this.#drawn[lines.side].has(lines.end_line))

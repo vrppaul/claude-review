@@ -150,7 +150,7 @@
 
 	{#if !collapsed}
 		{#if built}
-			<FileBody {file} {language} {view} {reviewOwnsRemovedLines} revealed={review.diff.revealed} />
+			<FileBody {file} {language} {view} {reviewOwnsRemovedLines} revealed={review.diff.revealed} piece={false} />
 		{:else}
 			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 		{/if}
