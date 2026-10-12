@@ -16,6 +16,8 @@ from tests.helpers import line_anchor, thread
 ON_REMOVED_LINES = thread(line_anchor("src/a.py", 42, 47, side=LineSide.OLD), "Why were these dropped?")
 WHERE_IT_HANGS = "src/a.py:42-47 (removed)"
 ELSEWHERE = "src/b.py:1"
+# Where a screenshot pasted into a thread is kept: named, never opened here
+A_SCREENSHOT = Path("/reviews/images/shot.png")
 
 
 def test_a_thread_handed_to_the_agent_says_where_it_hangs() -> None:
@@ -42,9 +44,9 @@ def test_a_thread_says_where_its_anchor_is_whatever_place_it_was_sent_with() -> 
     assert Thread.model_validate(sent).where == WHERE_IT_HANGS
 
 
-def test_a_thread_read_back_from_its_own_json_is_the_thread_that_was_written(tmp_path: Path) -> None:
+def test_a_thread_read_back_from_its_own_json_is_the_thread_that_was_written() -> None:
     """A command reads what the review wrote: nothing of a thread is lost on the way, its screenshots among it."""
-    with_a_screenshot = thread(line_anchor("src/a.py", 42), "See the picture.", images=[tmp_path / "shot.png"])
+    with_a_screenshot = thread(line_anchor("src/a.py", 42), "See the picture.", images=[A_SCREENSHOT])
     written = Thread.of(with_a_screenshot)
 
     assert Thread.model_validate_json(written.model_dump_json()) == written

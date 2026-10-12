@@ -1,4 +1,4 @@
-"""What a review asks of the world around it: git, the disk, the clock and the pages open on it.
+"""What a review asks of the world around it: git, the disk, the clock, the pages open on it, and a reader's changes.
 
 The services build on these and never on what implements them, which sits
 in a layer the services do not import. Each is an abstract class its

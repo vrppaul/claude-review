@@ -130,9 +130,10 @@ known-first-party = ["claude_review"]
 "typing.cast".msg = "Prove the type instead: narrow it, or validate it with a model."
 
 [tool.ruff.lint.per-file-ignores]
-# Scripts are run by path, not imported from a package, and say what they
-# find by printing. verify_artifacts.py runs on bare python3 with no deps, as
-# CI runs it after the build; check_code_rules.py runs in the project's own
+# Scripts are run by path, not imported from a package, and what they find
+# is their output, printed as a linter prints its findings: nothing of theirs
+# is a log. verify_artifacts.py runs on bare python3 with no deps, as CI runs
+# it after the build; check_code_rules.py runs in the project's own
 # environment, as the hook runs it
 "scripts/**" = ["T20", "INP001"]
 # A command takes one parameter per option, which click hands over by name

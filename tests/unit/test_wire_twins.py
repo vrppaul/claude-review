@@ -43,7 +43,8 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.DiffFile, content.DiffFile, frozenset({"commentable"})),
     (models.LineAnchor, threads.LineAnchor, frozenset()),
     (models.Turn, threads.Turn, frozenset()),
-    (models.Thread, threads.Thread, frozenset()),
+    # The place a thread hangs on, in plain words: worked out from its anchor, and written out with it
+    (models.Thread, threads.Thread, frozenset({"where"})),
     (models.AgentStatus, agent.AgentStatus, frozenset()),
     (models.ProgressStep, agent.ProgressStep, frozenset()),
     (models.AgentWork, agent.AgentWork, frozenset()),
@@ -85,7 +86,9 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
 def test_the_wire_carries_every_field_of_the_reviews_own_model(
     review_model: type[BaseModel], wire_model: type[BaseModel], wire_only: frozenset[str]
 ) -> None:
-    assert set(wire_model.model_fields) == set(review_model.model_fields) | wire_only
+    written_out = set(wire_model.model_fields) | set(wire_model.model_computed_fields)
+
+    assert written_out == set(review_model.model_fields) | wire_only
 
 
 def test_every_event_the_review_tells_its_pages_is_held_to_its_push() -> None:
