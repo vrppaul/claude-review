@@ -10,22 +10,14 @@ became a link, not saying so.
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import (
-    DiffFile,
-    FileStatus,
-    LineAnchor,
-    LineSide,
-    LineSpan,
-    SaidInPanel,
-    TurnAuthor,
-    Unshown,
-)
+from claude_review.domain.models import DiffFile, FileStatus, LineSide, LineSpan, SaidInPanel, TurnAuthor, Unshown
 from claude_review.domain.story import Chapter, LeftOut, Step
+from tests.helpers import line_anchor
 from tests.stories import canvas_story, hunk
 
 
 class MadeFrom(BaseModel):
-    """A model made from another: which it is, and the fields it says something else in, or gained."""
+    """A model made from another: which it is, and the fields its making writes anew, or adds."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -46,14 +38,11 @@ FILE = DiffFile(
     new_mode="100755",
 )
 OTHER_ROWS = [hunk(3, 3, "+")]
-ANCHOR = LineAnchor(
-    file="src/moved.py",
-    side=LineSide.OLD,
-    start_line=11,
-    end_line=12,
-    quote=["def walk():", "    run()"],
-    outdated=False,
-)
+# An anchor on what the review holds, and the same one marked outdated: making one writes that mark anew,
+# and which of the two it is made from shows it
+QUOTE = ["def walk():", "    run()"]
+ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE)
+OUTDATED_ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE, outdated=True)
 SAID = SaidInPanel(
     said_id="message-1",
     message_id="message-1",
@@ -84,10 +73,16 @@ MADE = [
         what="a file too large to show", source=FILE, made=FILE.unshown_for(Unshown.TOO_LARGE), replaced={"unshown"}
     ),
     MadeFrom(
-        what="an anchor quoting its lines", source=ANCHOR, made=ANCHOR.quoting(["def run():"]), replaced={"quote"}
+        what="an anchor quoting its lines",
+        source=OUTDATED_ANCHOR,
+        made=OUTDATED_ANCHOR.quoting(["def run():"]),
+        replaced={"quote", "outdated"},
     ),
     MadeFrom(
-        what="an anchor found again", source=ANCHOR, made=ANCHOR.current_at(14, 15), replaced={"start_line", "end_line"}
+        what="an anchor found again",
+        source=OUTDATED_ANCHOR,
+        made=OUTDATED_ANCHOR.current_at(14, 15),
+        replaced={"start_line", "end_line", "outdated"},
     ),
     MadeFrom(what="an anchor lost", source=ANCHOR, made=ANCHOR.lost(), replaced={"outdated"}),
     MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),

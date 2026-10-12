@@ -204,7 +204,8 @@ def test_a_piece_of_a_file_some_of_which_is_not_shown_says_so_as_the_file_does()
 
 
 def test_a_piece_carries_no_header_of_the_whole_hunk() -> None:
-    headed = hunk(10, 10, " + ").model_copy(update={"header": "@@ -10,2 +10,3 @@ def whole():"})
+    rows = hunk(10, 10, " + ").lines
+    headed = DiffHunk(header="@@ -10,2 +10,3 @@ def whole():", old_start=10, new_start=10, lines=rows)
 
     piece = piece_at(changed_file(FILE, headed), 11, 11)
 

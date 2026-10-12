@@ -140,6 +140,13 @@ def test_quoting_reads_the_lines_off_the_diff() -> None:
     assert quoted.quote == [RUN, RETURN]
 
 
+def test_an_anchor_quoted_off_the_diff_is_on_what_the_review_holds_whatever_it_said_before() -> None:
+    """Its lines were just read where it says they are: it is not outdated, though it came marked so."""
+    quoted = AnchorService.of_diff(MOVED_DOWN).quote(line_anchor(FILE, 3, 4, outdated=True))
+
+    assert quoted.outdated is False
+
+
 def test_lines_more_than_a_quote_keeps_are_refused() -> None:
     """A thread the review cannot keep its quote of could never be sent in a round."""
     longest = MAX_QUOTE_LINES + 1

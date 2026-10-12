@@ -88,7 +88,9 @@ def test_a_told_story_says_everything_the_story_said() -> None:
 
 def test_a_change_of_a_files_mode_is_said_with_every_step_of_it_and_with_what_is_left_out() -> None:
     """Whether a file may be run is a change too: told nowhere, a story would hide it."""
-    made_runnable = SERVICE_FILE.model_copy(update={"old_mode": "100644", "new_mode": "100755"})
+    made_runnable = DiffFile(
+        path=SERVICE, status=FileStatus.MODIFIED, hunks=SERVICE_FILE.hunks, old_mode="100644", new_mode="100755"
+    )
 
     told = tell(story_of(step(SERVICE, 12, 13)), [made_runnable])
 
