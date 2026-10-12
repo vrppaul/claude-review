@@ -178,6 +178,12 @@
   the option rather than a traceback.
 - **An answer to a thread, or a jump to a file, the review does not hold is
   refused** (`404`, one line from the command) rather than taken.
+- **A file the agent names that the diff does not hold yet is a chip that
+  says so.** `say --file` and `progress --file` take any file — one the
+  agent is about to make among them — and its chip in the panel reads "not
+  in the diff yet" and takes the reader nowhere. Under a narrower base a
+  file the review holds takes the reader back to the whole review, then to
+  the file.
 - **`progress` with nothing to show is refused**: it needs words or a
   branch, or `--done` on its own; a file alone used to clear the work.
 - **What the reader or the repository wrote is printed to be read, never
@@ -185,9 +191,10 @@
   failure come out written, as `\u001b`.
 - **A transcript's turns are named by their entries' own ids** — "user
   f260656f" — the same in every time zone; the name no longer says the time.
-- **A file over 4 MiB is shown as binary**, without its lines, and the diff
-  is read off the server's event loop, so the review answers its pages
-  while a large one is read.
+- **A file over 4 MiB is shown without its lines**, saying "Too large to
+  show" rather than calling it binary, and the diff is read off the
+  server's event loop, so the review answers its pages while a large one
+  is read.
 - **A file whose name holds a control character is shown, read-only**: a
   thread on it would have had its whole round refused.
 - **The diff keeps a width it can be read at.** The panel, and on a narrower
@@ -216,7 +223,10 @@
   thread no longer moves the place they go on from onto another thread;
   removing the one you are at, they go on to the thread after it or back to
   the one before. A thread opened from the panel, the replies or the finish
-  pane is where the next step starts.
+  pane is where the next step starts. They go down the diff, file by file
+  and line by line, not in the order the threads were written.
+- **The agent's dot goes quiet while the review cannot be reached**; it
+  stayed green, as if the agent were known to be listening.
 - **In two columns a removed line facing the line that replaced it takes a
   comment from the keyboard again**: Tab reaches its number, Enter opens
   the field. j and k still stop once a row. In one column j on a removed
