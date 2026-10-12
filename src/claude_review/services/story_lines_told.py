@@ -3,8 +3,8 @@
 A line is told once. A step that tells a line an earlier step of its file
 told already is refused, and told which step that was: the first to tell
 it, in the order the story tells its steps. Held against every earlier step
-in turn, a story as long as a request may carry took minutes to check when
-one of its steps lay across the rest.
+in turn, a story as long as a request may carry took over a minute to check
+when one of its steps lay across the rest.
 
 So the lines are kept, not the steps. Two steps that share a line share
 the first line of whichever starts further down the file, so only the
