@@ -5,9 +5,16 @@
  * None of these belong to a review — they are how this person reads this
  * page — so they are kept in this port's storage, not with the review and
  * not on the server.
+ *
+ * A column the reader has not opened or shut themselves comes on screen of
+ * its own only where it stands beside the diff: below its breakpoint it
+ * would lie over the code, and a review opened under its columns, or
+ * covered the moment an agent turns up, is no way to start reading. The
+ * reader's own choice stands on any screen.
  */
 
 import { SvelteSet } from 'svelte/reactivity';
+import { screenReaches } from '$lib/dom/screen';
 import { readChoice, readFlag, readNumber, writeChoice } from '$lib/utils/preferences';
 
 /** How narrow and how wide a column may be, and how wide it starts. */
@@ -30,6 +37,10 @@ const FILE_TREE_WIDTH_KEY = 'sidebar-width';
 const AGENT_PANEL_OPEN_KEY = 'panel-open';
 const AGENT_PANEL_WIDTH_KEY = 'panel-width';
 const CONTENT_VIEW_KEY = 'content-view';
+
+// Where each column stops lying over the diff and stands beside it, as the stylesheet names it
+const FILE_TREE_BESIDE = '--breakpoint-cr-tree-beside';
+const AGENT_PANEL_BESIDE = '--breakpoint-cr-panel-beside';
 
 /** Every way a renderable file can be shown: as text, rendered, or both side by side. */
 const CONTENT_VIEW_MODES = ['raw', 'preview', 'side-by-side'] as const;
@@ -80,7 +91,7 @@ class StoredWidth {
  * two outlive the tree being put away and brought back, not a reload.
  */
 class FileTreeLayout {
-	#open = $state(readFlag(FILE_TREE_OPEN_KEY, true));
+	#open = $state(readFlag(FILE_TREE_OPEN_KEY, screenReaches(FILE_TREE_BESIDE)));
 	readonly #width = new StoredWidth(FILE_TREE_WIDTH_KEY, FILE_TREE_WIDTH);
 	#filter = $state('');
 	readonly #foldedFolders = new SvelteSet<string>();
@@ -184,9 +195,9 @@ class AgentPanelLayout {
 		this.setOpen(!this.#open);
 	}
 
-	/** An agent has turned up; show the panel unless the reader shut it. */
+	/** An agent has turned up; show the panel unless the reader shut it, or it would lie over the diff. */
 	offer(): void {
-		if (!this.#chosen) this.#open = true;
+		if (!this.#chosen && screenReaches(AGENT_PANEL_BESIDE)) this.#open = true;
 	}
 
 	/** Whether the cursor is waiting to be put in the panel's field. */

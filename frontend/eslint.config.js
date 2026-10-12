@@ -18,7 +18,7 @@ const LAYERS = {
 	connection: ['types'],
 	anchors: ['types', 'utils'],
 	drafts: ['types', 'utils'],
-	reader: ['types', 'utils', 'api'],
+	reader: ['types', 'utils', 'dom', 'api'],
 	guide: ['types', 'api'],
 	review: ['types', 'utils', 'dom', 'anchors', 'api', 'drafts', 'guide', 'reader'],
 	page: ['types', 'utils', 'api', 'connection', 'drafts', 'reader', 'review']

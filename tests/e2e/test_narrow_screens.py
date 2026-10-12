@@ -96,10 +96,31 @@ async def test_on_a_laptop_the_columns_stand_beside_a_readable_diff_and_every_vi
     assert path["width"] >= diff["width"] * PATH_SHARE
 
 
-async def test_zoomed_in_the_header_keeps_every_control_and_the_columns_lie_over_the_diff(
+async def test_zoomed_in_the_review_opens_on_the_diff_alone_and_the_toggles_lay_the_columns_over_it(
     review: RunningReview, page: Page
 ) -> None:
-    await _open_with_the_panel(page, review, ZOOMED)
+    await page.set_viewport_size(ZOOMED)
+    await page.goto(review.url)
+    await page.get_by_test_id("file-section").first.wait_for()
+
+    # Opened, nothing lies over the diff: the tree is put away to its rail, and the panel is shut
+    assert await page.get_by_test_id("sidebar").count() == 0
+    assert await page.get_by_test_id("agent-panel").count() == 0
+    rail = await _box(page.get_by_test_id("show-sidebar"))
+    diff = await _box(page.get_by_test_id("diff-view"))
+    assert diff["x"] >= rail["x"] + rail["width"] - WITHIN_ROUNDING
+    assert diff["x"] + diff["width"] <= ZOOMED["width"] + WITHIN_ROUNDING
+
+    # The toggles bring each column, lying over the diff, which keeps the screen's width under them
+    await page.get_by_test_id("show-sidebar").click()
+    await page.get_by_test_id("toggle-panel").click()
+    await page.get_by_test_id("agent-panel").wait_for()
+    diff = await _box(page.get_by_test_id("diff-view"))
+    tree = await _box(page.get_by_test_id("sidebar"))
+    panel = await _box(page.get_by_test_id("agent-panel"))
+    assert tree["x"] + tree["width"] > diff["x"]
+    assert panel["x"] < diff["x"] + diff["width"]
+    assert diff["width"] >= ZOOMED["width"] - WITHIN_ROUNDING
 
     # Every control of the header is on the screen, on one line: the row wraps instead of cutting
     # the last ones off or squeezing a chip's words onto lines of their own
@@ -112,15 +133,7 @@ async def test_zoomed_in_the_header_keeps_every_control_and_the_columns_lie_over
     # Nothing is wider than the screen
     assert await page.evaluate("document.documentElement.scrollWidth") <= ZOOMED["width"]
 
-    # The tree and the panel lie over the diff, which keeps the screen's width under them
-    diff = await _box(page.get_by_test_id("diff-view"))
-    tree = await _box(page.get_by_test_id("sidebar"))
-    panel = await _box(page.get_by_test_id("agent-panel"))
-    assert tree["x"] + tree["width"] > diff["x"]
-    assert panel["x"] < diff["x"] + diff["width"]
-    assert diff["width"] >= ZOOMED["width"] - WITHIN_ROUNDING
-
-    # Put away, they leave the whole diff to be read
+    # Put away again, they leave the whole diff to be read
     await page.get_by_test_id("close-panel").click()
     await page.get_by_test_id("hide-sidebar").click()
     rail = await _box(page.get_by_test_id("show-sidebar"))

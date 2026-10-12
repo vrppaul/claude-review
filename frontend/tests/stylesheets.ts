@@ -42,10 +42,19 @@ function block(selector: string): Map<string, string> {
 }
 
 const ROOT = block(':root');
+// What tokens.css hands Tailwind's theme: the breakpoints, which the built stylesheet sets on the page's root
+const THEME = block('@theme static');
 const THEME_BLOCKS: Record<Theme, Map<string, string>> = {
 	light: block("[data-theme='light']"),
 	dark: block("[data-theme='dark']")
 };
+
+/** A variable of the theme tokens.css hands Tailwind, as written there: a breakpoint's width, say. */
+export function themeVariable(name: string): string {
+	const value = THEME.get(name);
+	if (value === undefined) throw new Error(`${name} is not in the theme tokens.css hands Tailwind`);
+	return value;
+}
 
 /** A token's paint in a theme, following the names it is written in terms of. */
 export function paint(token: string, theme: Theme): Paint {

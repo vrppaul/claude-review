@@ -204,7 +204,11 @@
   thread on it would have had its whole round refused.
 - **The diff keeps a width it can be read at.** The panel, and on a narrower
   screen the tree, lie over the diff rather than squeezing it; the header
-  and each file's header wrap.
+  and each file's header wrap. Where a column would lie over the diff, it
+  waits to be asked for: the tree starts put away, and the panel no longer
+  opens itself when the agent attaches (the dot in the header says the
+  agent is there). A column the reader opened or shut stays as they left
+  it.
 - **Links in rendered Markdown open in a tab of their own**, and a relative
   one is text: a click used to take the tab away, and the review ended
   three seconds later. The page asks before it is left with something

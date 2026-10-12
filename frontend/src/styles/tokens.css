@@ -112,9 +112,12 @@
 /*
  * Where a side column stops standing beside the diff and lies over it. A
  * media query cannot read a custom property, so each is the sum of the
- * widths above written out, as Tailwind's breakpoints are written.
+ * widths above written out, as Tailwind's breakpoints are written. Static,
+ * so the built stylesheet also sets each on the page's root, where the page
+ * reads it by name to start a column put away where it would lie over the
+ * diff (reader/page-layout.svelte.ts).
  */
-@theme {
+@theme static {
 	/* The least tree, the least panel and the least diff: 10 + 17.5 + 36 */
 	--breakpoint-cr-panel-beside: 63.5rem;
 	/* The least tree and the least diff, the panel lying over it: 10 + 36 */
