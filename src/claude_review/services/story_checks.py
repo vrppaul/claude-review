@@ -25,7 +25,7 @@ from claude_review.services.story_slices import PlacedFile
 
 # The fields of a story's document, by the names the document's own models
 # give them: what a fault names its field by, since that is what the agent
-# wrote, and what a part of the story is told again by
+# wrote
 TITLE = "title"
 OVERVIEW = "overview"
 TASK = "task"

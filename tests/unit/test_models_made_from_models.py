@@ -10,8 +10,9 @@ became a link, not saying so.
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, FileStatus, Unshown
-from tests.stories import hunk
+from claude_review.domain.models import DiffFile, FileStatus, LineSpan, Unshown
+from claude_review.domain.story import Chapter, LeftOut, Step
+from tests.stories import canvas_story, hunk
 
 
 class MadeFrom(BaseModel):
@@ -36,11 +37,31 @@ FILE = DiffFile(
     new_mode="100755",
 )
 OTHER_ROWS = [hunk(3, 3, "+")]
+STEP = Step(file="src/moved.py", lines=LineSpan(first=11, last=12), reason="The store closes before the reply is sent.")
+CHAPTER = Chapter[Step](
+    id="ch-1",
+    title="The store closes",
+    why="Both changes are about when the store closes.",
+    doubt="Whether a cancelled reply still closes it.",
+    steps=[STEP],
+)
+STORY = canvas_story()
+TOLD_STEP = STEP.told(FILE)
+TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
+LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
 
 MADE = [
     MadeFrom(what="a piece of a file", source=FILE, made=FILE.showing(OTHER_ROWS), replaced={"hunks"}),
     MadeFrom(
         what="a file too large to show", source=FILE, made=FILE.unshown_for(Unshown.TOO_LARGE), replaced={"unshown"}
+    ),
+    MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
+    MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
+    MadeFrom(
+        what="a story told",
+        source=STORY,
+        made=STORY.told([TOLD_CHAPTER], [LEFT_OUT]),
+        replaced={"chapters", "left_out"},
     ),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])

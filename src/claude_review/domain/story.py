@@ -10,7 +10,9 @@ told. That is asked of the whole document at once
 (`services/story_checks.py`), so the agent hears everything wrong with it in
 one answer, each fault at the field it is about. A story that may be told
 is then the same story with what each step shows cut out of the change
-(`ToldStory`): only `services/story_telling.py` makes one.
+(`ToldStory`). Each part makes its own told form, since it is the part that
+knows what it says; only `services/story_telling.py` decides that a story
+may be told, and cuts what its steps show.
 """
 
 from enum import StrEnum, auto
@@ -44,6 +46,10 @@ class Step(StoryPart):
     lines: LineSpan
     reason: str | None = None
 
+    def told(self, piece: DiffFile) -> ToldStep:
+        """The step as it is told: everything it says, and the piece of its file it shows."""
+        return ToldStep(file=self.file, lines=self.lines, reason=self.reason, piece=piece)
+
 
 class Chapter[StepKind: Step](StoryPart):
     """Changes that belong together, told one step after another.
@@ -60,6 +66,10 @@ class Chapter[StepKind: Step](StoryPart):
     # Where the reader should look hardest, when there is such a place
     doubt: str | None = None
     steps: list[StepKind]
+
+    def told(self, steps: list[ToldStep]) -> Chapter[ToldStep]:
+        """The chapter as it is told: everything it says, with its steps as they are told in place of its own."""
+        return Chapter[ToldStep](id=self.id, title=self.title, why=self.why, doubt=self.doubt, steps=steps)
 
 
 class OverviewItem(StoryPart):
@@ -115,6 +125,17 @@ class Story[StepKind: Step](StoryPart):
     # Files that changed and have nothing to tell — a lock file, a changelog —
     # named so that what changed in them is not held against the story
     housekeeping: list[str]
+
+    def told(self, chapters: list[Chapter[ToldStep]], left_out: list[LeftOut]) -> ToldStory:
+        """The story as it is told: everything it says, its chapters as they are told, and what no step tells."""
+        return ToldStory(
+            title=self.title,
+            told_from=self.told_from,
+            overview=self.overview,
+            chapters=chapters,
+            housekeeping=self.housekeeping,
+            left_out=left_out,
+        )
 
 
 class StoryText(StrEnum):
