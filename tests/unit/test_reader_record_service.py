@@ -8,19 +8,10 @@ change in one is there in the next.
 import asyncio
 from typing import override
 
-from pydantic import BaseModel
-
 from claude_review.domain.interfaces import RecordStore
 from claude_review.domain.models import DiffLayout, ReaderSettings, Theme
+from claude_review.presentation.wire.records import SettingsChange
 from claude_review.services.reader_record_service import ReaderRecordService
-
-
-class SettingsChanged(BaseModel):
-    """Some of the reader's choices, changed; the rest left as they are."""
-
-    theme: Theme | None = None
-    diff_layout: DiffLayout | None = None
-    ignore_whitespace: bool | None = None
 
 
 class KeptInMemory(RecordStore[ReaderSettings]):
@@ -45,7 +36,7 @@ async def test_a_reader_who_never_chose_gets_nothing_back() -> None:
 async def test_changing_one_choice_keeps_the_others() -> None:
     store = KeptInMemory(ReaderSettings(theme=Theme.DARK))
 
-    changed = await ReaderRecordService(store, ReaderSettings).change(SettingsChanged(diff_layout=DiffLayout.SPLIT))
+    changed = await ReaderRecordService(store, ReaderSettings).change(SettingsChange(diff_layout=DiffLayout.SPLIT))
 
     assert (changed.theme, changed.diff_layout) == (Theme.DARK, DiffLayout.SPLIT)
     assert store.record == changed
@@ -54,7 +45,7 @@ async def test_changing_one_choice_keeps_the_others() -> None:
 async def test_the_first_choice_starts_from_what_a_new_reader_gets() -> None:
     store = KeptInMemory()
 
-    changed = await ReaderRecordService(store, ReaderSettings).change(SettingsChanged(ignore_whitespace=True))
+    changed = await ReaderRecordService(store, ReaderSettings).change(SettingsChange(ignore_whitespace=True))
 
     assert changed == ReaderSettings(ignore_whitespace=True)
 
@@ -65,7 +56,7 @@ async def test_two_changes_at_once_both_stay() -> None:
     service = ReaderRecordService(store, ReaderSettings)
 
     await asyncio.gather(
-        service.change(SettingsChanged(theme=Theme.DARK)), service.change(SettingsChanged(diff_layout=DiffLayout.SPLIT))
+        service.change(SettingsChange(theme=Theme.DARK)), service.change(SettingsChange(diff_layout=DiffLayout.SPLIT))
     )
 
     assert store.record == ReaderSettings(theme=Theme.DARK, diff_layout=DiffLayout.SPLIT)

@@ -10,8 +10,21 @@ longer says — a piece of a file that became a link, not saying so.
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, FileStatus, LineSide, LineSpan, SaidInPanel, TurnAuthor, Unshown
+from claude_review.domain.models import (
+    DiffFile,
+    DiffLayout,
+    FileStatus,
+    GuideState,
+    LineSide,
+    LineSpan,
+    ReaderSettings,
+    SaidInPanel,
+    Theme,
+    TurnAuthor,
+    Unshown,
+)
 from claude_review.domain.story import Chapter, LeftOut, Step
+from claude_review.presentation.wire.records import GuideChange, SettingsChange
 from claude_review.presentation.wire.refusal import FieldRefusal
 from tests.helpers import line_anchor
 from tests.stories import canvas_story, hunk
@@ -64,6 +77,9 @@ CHAPTER = Chapter[Step](
     steps=[STEP],
 )
 STORY = canvas_story()
+# How a reader reads, with nothing left as a new reader gets it, and how far they were shown around
+SETTINGS = ReaderSettings(theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True)
+GUIDE = GuideState(seen_release="1.5.0")
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
 TOLD_STEP = STEP.told(FILE)
@@ -91,6 +107,18 @@ MADE = [
     MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),
     MadeFrom(
         what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}
+    ),
+    MadeFrom(
+        what="a reader's settings with one choice changed",
+        source=SETTINGS,
+        made=SettingsChange(theme=Theme.LIGHT).applied_to(SETTINGS),
+        replaced={"theme"},
+    ),
+    MadeFrom(
+        what="what a reader was shown, with a later release",
+        source=GUIDE,
+        made=GuideChange(seen_release="1.6.0").applied_to(GUIDE),
+        replaced={"seen_release"},
     ),
     MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
     MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),

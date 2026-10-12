@@ -4,7 +4,7 @@ import asyncio
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.interfaces import RecordStore
+from claude_review.domain.interfaces import RecordChange, RecordStore
 from claude_review.domain.models import GuideState, ReaderSettings
 
 
@@ -26,19 +26,15 @@ class ReaderRecordService[Record: BaseModel]:
         """What a reader nothing has been kept about gets."""
         return self._record_type()
 
-    async def change(self, change: BaseModel) -> Record:
-        """Change the fields a change carries and keep the rest, starting from the defaults if nothing was kept.
+    async def change(self, change: RecordChange[Record]) -> Record:
+        """Keep the record as a change leaves it, starting from the defaults if nothing was kept.
 
-        A field the change leaves as None is not changed: null is a value
-        not sent. Read and written again on every change rather than held in
-        memory: another review on the machine may have changed something since.
-
-        Raises:
-            ValidationError: if a value is not one the record takes.
+        Read and written again on every change rather than held in memory:
+        another review on the machine may have changed something since.
         """
         async with self._changing:
             current = await self._store.read() or self.defaults()
-            changed = self._record_type.model_validate(current.model_dump() | change.model_dump(exclude_none=True))
+            changed = change.applied_to(current)
             await self._store.write(changed)
             return changed
 

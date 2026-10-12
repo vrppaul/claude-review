@@ -1,7 +1,11 @@
 """What every review on the machine keeps about its reader, as the page reads and changes it."""
 
+from typing import override
+
 from pydantic import ConfigDict, Field
 
+from claude_review.domain import models
+from claude_review.domain.interfaces import RecordChange
 from claude_review.domain.models import DiffLayout, Theme
 from claude_review.presentation.wire.base import WireBool, WireModel
 
@@ -39,7 +43,7 @@ class KeptRecord[Record: WireModel](WireModel):
     stored: WireBool
 
 
-class SettingsChange(WireModel):
+class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
     """Request body for PUT /api/settings — the choices being changed, and only those.
 
     A choice sent as null is a choice not sent, as in every change to what
@@ -53,10 +57,30 @@ class SettingsChange(WireModel):
     ignore_whitespace: WireBool | None = None
     sound_on_replies: WireBool | None = None
 
+    @override
+    def applied_to(self, record: models.ReaderSettings) -> models.ReaderSettings:
+        """The reader's settings with each choice sent in place of theirs, and every other as it was kept."""
+        return models.ReaderSettings(
+            theme=_sent_or_kept(self.theme, record.theme),
+            diff_layout=_sent_or_kept(self.diff_layout, record.diff_layout),
+            ignore_whitespace=_sent_or_kept(self.ignore_whitespace, record.ignore_whitespace),
+            sound_on_replies=_sent_or_kept(self.sound_on_replies, record.sound_on_replies),
+        )
 
-class GuideChange(WireModel):
+
+class GuideChange(WireModel, RecordChange[models.GuideState]):
     """Request body for PUT /api/guide — what the reader has now been shown."""
 
     model_config = ConfigDict(extra="forbid")
 
     seen_release: str = Field(min_length=1, max_length=MAX_RELEASE_LENGTH)
+
+    @override
+    def applied_to(self, record: models.GuideState) -> models.GuideState:
+        """What the review remembers of showing the reader around, once they have been shown this release."""
+        return models.GuideState(seen_release=self.seen_release)
+
+
+def _sent_or_kept[Choice](sent: Choice | None, kept: Choice) -> Choice:
+    """A choice as it was sent, or as it was kept when none was: null is a choice not sent."""
+    return kept if sent is None else sent

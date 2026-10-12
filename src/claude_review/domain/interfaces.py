@@ -118,3 +118,11 @@ class RecordStore[Record: BaseModel](ABC):
     @abstractmethod
     async def write(self, record: Record) -> None:
         """Replace the record whole."""
+
+
+class RecordChange[Record: BaseModel](ABC):
+    """A change to one record about the reader: it knows what it carries, and so what it makes of the record."""
+
+    @abstractmethod
+    def applied_to(self, record: Record) -> Record:
+        """The record as this change leaves it: what the change does not carry stays as it was kept."""
