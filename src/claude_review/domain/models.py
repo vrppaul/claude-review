@@ -65,6 +65,11 @@ class DiffLine(BaseModel):
     content: str
 
 
+# The header of a hunk git wrote none for: one the review put together
+# itself, where no header is drawn
+NO_HUNK_HEADER = ""
+
+
 class DiffHunk(BaseModel):
     """A contiguous block of changes in a file."""
 

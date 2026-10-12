@@ -9,7 +9,16 @@ import re
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import FIRST_LINE, DiffFile, DiffHunk, DiffLine, FileStatus, LineType, Unshown
+from claude_review.domain.models import (
+    FIRST_LINE,
+    NO_HUNK_HEADER,
+    DiffFile,
+    DiffHunk,
+    DiffLine,
+    FileStatus,
+    LineType,
+    Unshown,
+)
 
 # Where each file's part of the diff begins
 FILE_START = re.compile(r"^diff --git ", re.MULTILINE)
@@ -88,11 +97,6 @@ OCTAL_BASE = 8
 # byte that is not is shown replaced rather than lost with the whole diff
 PATH_ENCODING = "utf-8"
 NOT_TEXT = "replace"
-
-# A hunk joined from two that git wrote has no header of git's own; it starts
-# at the file's first line, as a file deleted or created whole does on either
-# side, where no header is drawn
-JOINED_HUNK_HEADER = ""
 
 
 class HunkStart(BaseModel):
@@ -186,7 +190,9 @@ def _type_changed(deleted: FilePart, created: FilePart) -> DiffFile:
     git writes a file rewritten whole. The modes say what changed.
     """
     lines = [line for part in (deleted, created) for hunk in part.file.hunks for line in hunk.lines]
-    joined = DiffHunk(header=JOINED_HUNK_HEADER, old_start=FIRST_LINE, new_start=FIRST_LINE, lines=lines)
+    # Joined from two hunks git wrote, it has no header of git's own; it starts at the file's
+    # first line, as a file deleted or created whole does on either side
+    joined = DiffHunk(header=NO_HUNK_HEADER, old_start=FIRST_LINE, new_start=FIRST_LINE, lines=lines)
     return DiffFile(
         path=created.file.path,
         status=FileStatus.MODIFIED,
