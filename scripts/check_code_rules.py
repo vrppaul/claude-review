@@ -8,9 +8,10 @@ No name is too short to say what it holds: `index`, not `i`; `error`, not
 `e`. A few words are short and still say what they mean, and `_` says that
 nothing is kept.
 
-Run on files or directories, as CI and the pre-commit hook do:
+Run on files or directories, in the project's own environment, as the
+pre-commit hook runs it and CI runs the hook:
 
-    python3 scripts/check_code_rules.py src tests scripts
+    uv run python scripts/check_code_rules.py src scripts
 
 Prints each place that breaks a rule and exits 1, or says nothing and exits 0.
 """
@@ -18,7 +19,8 @@ Prints each place that breaks a rule and exits 1, or says nothing and exits 0.
 import ast
 import sys
 from pathlib import Path
-from typing import NamedTuple
+
+from pydantic import BaseModel, ConfigDict
 
 # Shorter than this, a name abbreviates what it holds rather than saying it
 SHORTEST_NAME = 3
@@ -31,15 +33,19 @@ ALL_KEPT = 0
 RULE_BROKEN = 1
 
 
-class GivenName(NamedTuple):
+class GivenName(BaseModel):
     """A name given to something, and the line it is given on."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     line: int
 
 
-class Breach(NamedTuple):
+class Breach(BaseModel):
     """One place that breaks a rule, and what it does."""
+
+    model_config = ConfigDict(frozen=True)
 
     path: Path
     line: int
@@ -61,10 +67,12 @@ def _look_inside(node: ast.AST, path: Path, *, inside_function: bool, found: lis
     """Check everything under a node, knowing whether it already sits in a function."""
     for child in ast.iter_child_nodes(node):
         if inside_function and isinstance(child, FUNCTIONS):
-            found.append(Breach(path, child.lineno, f"`{child.name}` is defined inside another function"))
+            defined_inside = f"`{child.name}` is defined inside another function"
+            found.append(Breach(path=path, line=child.lineno, says=defined_inside))
         given = _name_given(child)
         if given is not None and _too_short(given.name):
-            found.append(Breach(path, given.line, f"`{given.name}` is too short to say what it holds"))
+            too_short = f"`{given.name}` is too short to say what it holds"
+            found.append(Breach(path=path, line=given.line, says=too_short))
         _look_inside(child, path, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
 
 
@@ -83,7 +91,7 @@ def _name_given(node: ast.AST) -> GivenName | None:
             | ast.MatchAs(name=str() as name)
             | ast.MatchStar(name=str() as name)
         ):
-            return GivenName(name, node.lineno)
+            return GivenName(name=name, line=node.lineno)
         case _:
             return None
 
