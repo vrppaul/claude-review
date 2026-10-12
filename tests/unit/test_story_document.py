@@ -247,6 +247,37 @@ def test_a_line_told_in_two_chapters_is_refused_naming_the_chapter_that_told_it_
     assert PASTE_CHAPTER in fault.reason
 
 
+def test_a_step_is_held_against_every_earlier_step_of_its_file_not_only_the_one_just_above_it() -> None:
+    """A long step with a short one inside it: a third further down still meets the long one, past the short."""
+    story = planted(two_steps_of_one_file(lines(1, 100), lines(2, 3)), THIRD_STEP_LINES, lines(50, 60))
+
+    [second, third] = document_faults(story)
+
+    assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
+    assert "1-100" in second.reason
+    assert "1-100" in third.reason
+
+
+def test_a_step_that_meets_only_a_step_already_refused_is_refused_as_well() -> None:
+    """The second meets the first, and the third only the second: all that is wrong is said at once."""
+    story = planted(two_steps_of_one_file(lines(1, 10), lines(5, 20)), THIRD_STEP_LINES, lines(15, 18))
+
+    [second, third] = document_faults(story)
+
+    assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
+    assert "1-10" in second.reason
+    assert "5-20" in third.reason
+
+
+def test_steps_that_meet_in_two_files_are_each_refused_in_the_order_the_story_tells_them() -> None:
+    """The store is told of first, and its steps meet at the story's last step: the service's are said before it."""
+    other_file = planted(canvas_story(), ("chapters", 0, "steps", 1, "file"), IMAGE_STORE)
+    met_there = planted(other_file, ("chapters", 0, "steps", 1, "lines"), lines(20, 40))
+    story = planted(met_there, THIRD_STEP_LINES, lines(120, 141))
+
+    assert paths_of(document_faults(story)) == [THIRD_STEP_LINES, OTHER_FILE_STEP_LINES]
+
+
 def test_lines_already_refused_for_their_numbers_are_not_held_to_meet_others_too() -> None:
     story = planted(canvas_story(), SECOND_STEP_LINES, lines(92, 68))
 

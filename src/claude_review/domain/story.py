@@ -32,10 +32,6 @@ class StepLines(StoryPart):
     first: int
     last: int
 
-    def holds(self, line: int) -> bool:
-        """Whether a line is among them."""
-        return self.first <= line <= self.last
-
     def meets(self, other: StepLines) -> bool:
         """Whether the two hold a line in common, each running from its first line to its last."""
         return self.first <= other.last and other.first <= self.last

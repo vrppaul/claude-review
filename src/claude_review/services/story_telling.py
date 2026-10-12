@@ -10,9 +10,9 @@ what was left out, and a story cannot hide one.
 
 from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile
-from claude_review.domain.story import Chapter, LeftOut, Step, Story, ToldStep, ToldStory
+from claude_review.domain.story import Chapter, LeftOut, Step, StepLines, Story, ToldStep, ToldStory
 from claude_review.services.story_checks import document_faults, placement_faults
-from claude_review.services.story_slices import ToldFile
+from claude_review.services.story_slices import PlacedFile
 
 # What a story refused is refused with, before its faults are said one by one
 STORY_REFUSED = "the story may not be told as it is written"
@@ -24,7 +24,7 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
     Raises:
         StoryRefusedError: if anything is wrong with it, carrying all of it.
     """
-    change = {file.path: ToldFile(file) for file in files}
+    change = {file.path: PlacedFile(file) for file in files}
     faults = [*document_faults(story), *placement_faults(story, change)]
     if faults:
         raise StoryRefusedError(STORY_REFUSED, faults)
@@ -37,7 +37,7 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
     )
 
 
-def _told_chapter(chapter: Chapter[Step], change: dict[str, ToldFile]) -> Chapter[ToldStep]:
+def _told_chapter(chapter: Chapter[Step], change: dict[str, PlacedFile]) -> Chapter[ToldStep]:
     """A chapter with each of its steps as it is told."""
     return Chapter[ToldStep](
         id=chapter.id,
@@ -48,29 +48,39 @@ def _told_chapter(chapter: Chapter[Step], change: dict[str, ToldFile]) -> Chapte
     )
 
 
-def _told_step(step: Step, file: ToldFile) -> ToldStep:
+def _told_step(step: Step, file: PlacedFile) -> ToldStep:
     """A step with the piece of its file it shows."""
-    return ToldStep(file=step.file, lines=step.lines, reason=step.reason, piece=file.piece(file.rows_at(step.lines)))
+    return ToldStep(file=step.file, lines=step.lines, reason=step.reason, piece=file.piece([file.rows_at(step.lines)]))
 
 
-def _left_out(story: Story[Step], files: list[DiffFile], change: dict[str, ToldFile]) -> list[LeftOut]:
+def _left_out(story: Story[Step], files: list[DiffFile], change: dict[str, PlacedFile]) -> list[LeftOut]:
     """What the story leaves out, file by file in the order of the change: nothing of a housekeeping file."""
-    steps = [step for chapter in story.chapters for step in chapter.steps]
+    lines_told = _lines_told_of_each_file(story)
+    housekeeping = frozenset(story.housekeeping)
     return [
         left
         for file in files
-        if file.path not in story.housekeeping
-        for left in _left_out_of(file, change[file.path], [step for step in steps if step.file == file.path])
+        if file.path not in housekeeping
+        for left in _left_out_of(file, change[file.path], lines_told.get(file.path, []))
     ]
 
 
-def _left_out_of(file: DiffFile, told: ToldFile, steps: list[Step]) -> list[LeftOut]:
-    """What the steps of one file leave out of it, if anything.
+def _lines_told_of_each_file(story: Story[Step]) -> dict[str, list[StepLines]]:
+    """The lines the story's steps tell, by the file they are lines of."""
+    lines_told: dict[str, list[StepLines]] = {}
+    for chapter in story.chapters:
+        for step in chapter.steps:
+            lines_told.setdefault(step.file, []).append(step.lines)
+    return lines_told
+
+
+def _left_out_of(file: DiffFile, placed: PlacedFile, lines_told: list[StepLines]) -> list[LeftOut]:
+    """What steps of these lines leave out of one file, if anything.
 
     A file the change shows no line of — binary, too large, only moved —
     has no line for a step to tell, and is left out whole, as it is.
     """
-    if not told.shows_lines:
+    if not placed.shows_lines:
         return [LeftOut(piece=file, changed_lines=0)]
-    left = told.left_out([run for step in steps for run in told.rows_at(step.lines)])
-    return [LeftOut(piece=told.piece(left), changed_lines=told.changed_lines(left))] if left else []
+    left = placed.left_out([placed.rows_at(lines) for lines in lines_told])
+    return [LeftOut(piece=placed.piece(left), changed_lines=placed.changed_lines(left))] if left else []

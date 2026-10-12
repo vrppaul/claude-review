@@ -21,7 +21,7 @@ from claude_review.domain.exceptions import FieldFault, FieldPath
 from claude_review.domain.models import FIRST_LINE
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
-from claude_review.services.story_slices import ToldFile
+from claude_review.services.story_slices import PlacedFile
 
 # The fields of a story's document, as a fault names them: what the
 # document's own models call them, since that is what the agent wrote
@@ -47,6 +47,9 @@ FILE = "file"
 LINES = "lines"
 REASON = "reason"
 HOUSEKEEPING = "housekeeping"
+
+# The line before a file's first: how far a file's steps reach before any of them is read
+NO_LINE = FIRST_LINE - 1
 
 # What is wrong at a field, in words the agent can act on
 SAYS_NOTHING = "says nothing"
@@ -77,61 +80,63 @@ class StepInDocument(BaseModel):
 
 def document_faults(story: Story[Step]) -> list[FieldFault]:
     """Everything wrong with a story that its document shows by itself, each fault at its field."""
+    steps = _steps_of(story.chapters)
     return [
-        *_texts_out_of_bounds(story),
+        *_texts_out_of_bounds(story, steps),
         *_parts_missing(story.chapters),
         *_ids_repeated(story.chapters),
         *_links_to_no_chapter(story),
-        *_lines_numbered_wrongly(story.chapters),
-        *_lines_told_twice(story.chapters),
+        *(fault for written in steps for fault in _numbering_faults(written)),
+        *_lines_told_twice(_numbered_rightly(steps)),
         *_files_named_twice(story.housekeeping),
     ]
 
 
-def placement_faults(story: Story[Step], change: dict[str, ToldFile]) -> list[FieldFault]:
+def placement_faults(story: Story[Step], change: dict[str, PlacedFile]) -> list[FieldFault]:
     """Everything wrong with a story that only the change it is told of shows, each fault at its field.
 
-    `change` is the files of the change by their paths. A step told of
-    lines no file could have is left out: it is refused for that already.
+    `change` is the files of the change by their paths.
     """
-    steps = [told for told in _steps_of(story.chapters) if not _numbering_faults(told)]
+    steps = _steps_of(story.chapters)
     return [
-        *(fault for told in steps for fault in _step_faults(told, change)),
-        *_housekeeping_faults(story, change),
+        *(fault for written in _numbered_rightly(steps) for fault in _step_faults(written, change)),
+        *_housekeeping_faults(story.housekeeping, steps, change),
     ]
 
 
-def _step_faults(told: StepInDocument, change: dict[str, ToldFile]) -> Iterator[FieldFault]:
+def _step_faults(written: StepInDocument, change: dict[str, PlacedFile]) -> Iterator[FieldFault]:
     """What is wrong with a step against the change.
 
     Its file is not in the change, or shows no line; or its lines hold nothing
     the change added or removed.
     """
-    file = change.get(told.step.file)
+    file = change.get(written.step.file)
     if file is None:
-        yield FieldFault(path=(*told.path, FILE), reason=NO_SUCH_FILE)
+        yield FieldFault(path=(*written.path, FILE), reason=NO_SUCH_FILE)
     elif not file.shows_lines:
-        yield FieldFault(path=(*told.path, FILE), reason=NO_LINES_SHOWN)
-    elif file.changed_lines(file.rows_at(told.step.lines)) == 0:
-        yield FieldFault(path=(*told.path, LINES), reason=NO_CHANGE_TOLD.format(file=told.step.file))
+        yield FieldFault(path=(*written.path, FILE), reason=NO_LINES_SHOWN)
+    elif file.changed_lines([file.rows_at(written.step.lines)]) == 0:
+        yield FieldFault(path=(*written.path, LINES), reason=NO_CHANGE_TOLD.format(file=written.step.file))
 
 
-def _housekeeping_faults(story: Story[Step], change: dict[str, ToldFile]) -> Iterator[FieldFault]:
+def _housekeeping_faults(
+    housekeeping: list[str], steps: list[StepInDocument], change: dict[str, PlacedFile]
+) -> Iterator[FieldFault]:
     """Every housekeeping file the change does not have, and every one a step is told of.
 
     A file is housekeeping because it has nothing to tell: named as that
     and told in a step, it would be both.
     """
-    steps = list(_steps_of(story.chapters))
-    for index, file in enumerate(story.housekeeping):
-        told = next((told for told in steps if told.step.file == file), None)
+    # A chapter that tells each file: of a file told in several, the last
+    told_in = {written.step.file: written.chapter.id for written in steps}
+    for index, file in enumerate(housekeeping):
         if file not in change:
             yield FieldFault(path=(HOUSEKEEPING, index), reason=NO_SUCH_FILE)
-        elif told is not None:
-            yield FieldFault(path=(HOUSEKEEPING, index), reason=HOUSEKEEPING_TOLD.format(chapter=told.chapter.id))
+        elif file in told_in:
+            yield FieldFault(path=(HOUSEKEEPING, index), reason=HOUSEKEEPING_TOLD.format(chapter=told_in[file]))
 
 
-def _texts_out_of_bounds(story: Story[Step]) -> Iterator[FieldFault]:
+def _texts_out_of_bounds(story: Story[Step], steps: list[StepInDocument]) -> Iterator[FieldFault]:
     """Every text of the story that says nothing, or more than its kind may."""
     yield from _text_faults((TITLE,), story.title, StoryText.TITLE)
     yield from _overview_texts_out_of_bounds(story.overview)
@@ -139,8 +144,8 @@ def _texts_out_of_bounds(story: Story[Step]) -> Iterator[FieldFault]:
         yield from _text_faults((CHAPTERS, index, TITLE), chapter.title, StoryText.CHAPTER_TITLE)
         yield from _text_faults((CHAPTERS, index, WHY), chapter.why, StoryText.CHAPTER_WHY)
         yield from _text_faults((CHAPTERS, index, DOUBT), chapter.doubt, StoryText.CHAPTER_DOUBT)
-    for told in _steps_of(story.chapters):
-        yield from _text_faults((*told.path, REASON), told.step.reason, StoryText.STEP_REASON)
+    for written in steps:
+        yield from _text_faults((*written.path, REASON), written.step.reason, StoryText.STEP_REASON)
 
 
 def _overview_texts_out_of_bounds(overview: StoryOverview) -> Iterator[FieldFault]:
@@ -216,16 +221,10 @@ def _link_faults(path: FieldPath, chapter: str | None, known: frozenset[str]) ->
         yield FieldFault(path=path, reason=NO_SUCH_CHAPTER.format(chapter=chapter))
 
 
-def _lines_numbered_wrongly(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
-    """Every step told of lines no file could have."""
-    for told in _steps_of(chapters):
-        yield from _numbering_faults(told)
-
-
-def _numbering_faults(told: StepInDocument) -> list[FieldFault]:
+def _numbering_faults(written: StepInDocument) -> list[FieldFault]:
     """What is wrong with how a step's lines are numbered: from before a file's first line, or backwards."""
-    lines = told.step.lines
-    path = (*told.path, LINES)
+    lines = written.step.lines
+    path = (*written.path, LINES)
     faults: list[FieldFault] = []
     if lines.first < FIRST_LINE:
         faults.append(FieldFault(path=path, reason=BEFORE_FIRST_LINE.format(first=lines.first, first_line=FIRST_LINE)))
@@ -234,25 +233,74 @@ def _numbering_faults(told: StepInDocument) -> list[FieldFault]:
     return faults
 
 
-def _lines_told_twice(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
-    """Every step that tells a line an earlier step of the same file tells already.
+def _numbered_rightly(steps: list[StepInDocument]) -> list[StepInDocument]:
+    """The steps told of lines a file could have: the rest are refused for their numbers, and held to nothing more."""
+    return [written for written in steps if not _numbering_faults(written)]
+
+
+def _lines_told_twice(steps: list[StepInDocument]) -> list[FieldFault]:
+    """Every step that tells a line an earlier step of the same file tells already, in the order the story tells them.
 
     A line is told once: told twice, whatever hangs on it — a thread, a
     comment being written — would be drawn under both steps and belong to
-    neither. Steps told of lines no file could have are left out: they are
-    refused for that already.
+    neither.
     """
-    numbered = [told for told in _steps_of(chapters) if not _numbering_faults(told)]
-    for position, later in enumerate(numbered):
-        earlier = next((told for told in numbered[:position] if _share_a_line(told.step, later.step)), None)
+    told_twice = (fault for together in _steps_reaching_one_another(steps) for fault in _told_twice_among(together))
+    return sorted(told_twice, key=lambda fault: fault.path)
+
+
+def _told_twice_among(together: list[StepInDocument]) -> Iterator[FieldFault]:
+    """Of steps of one file in the order they are told, each that shares a line with one told before it.
+
+    Said at the later step, naming the first it meets: its lines, and the
+    chapter that tells them, so the agent finds the other step.
+    """
+    for position, later in enumerate(together):
+        above = together[:position]
+        earlier = next((written for written in above if written.step.lines.meets(later.step.lines)), None)
         if earlier is not None:
             met = line_span(earlier.step.lines.first, earlier.step.lines.last)
             yield FieldFault(path=(*later.path, LINES), reason=TOLD_TWICE.format(lines=met, chapter=earlier.chapter.id))
 
 
-def _share_a_line(one: Step, other: Step) -> bool:
-    """Whether two steps tell a line of the same file."""
-    return one.file == other.file and one.lines.meets(other.lines)
+def _steps_reaching_one_another(steps: list[StepInDocument]) -> Iterator[list[StepInDocument]]:
+    """The steps in the groups that can share a line, each group in the order the story tells it.
+
+    Steps of different files share none. Read down one file, a step that
+    starts past everything above it shares none with those steps, nor does
+    any step below it: so a story whose steps all stand apart is seen to be
+    one without holding each step against every other, and only steps whose
+    lines reach into one another are compared.
+    """
+    for of_one_file in _steps_by_file(steps).values():
+        down_the_file = sorted(of_one_file, key=lambda written: written.step.lines.first)
+        for together in _runs_unbroken(down_the_file):
+            yield sorted(together, key=lambda written: written.path)
+
+
+def _runs_unbroken(down_the_file: list[StepInDocument]) -> list[list[StepInDocument]]:
+    """Steps of one file, in the order of their first lines, in the runs no line stands clear between.
+
+    A step that starts past the furthest line any step above it reaches
+    begins a new run. Every line here is one a file could have, so the first
+    step, with nothing above it, begins one too.
+    """
+    runs: list[list[StepInDocument]] = []
+    reached = NO_LINE
+    for written in down_the_file:
+        if written.step.lines.first > reached:
+            runs.append([])
+        runs[-1].append(written)
+        reached = max(reached, written.step.lines.last)
+    return runs
+
+
+def _steps_by_file(steps: list[StepInDocument]) -> dict[str, list[StepInDocument]]:
+    """The steps told of each file, in the order the story tells them."""
+    by_file: dict[str, list[StepInDocument]] = {}
+    for written in steps:
+        by_file.setdefault(written.step.file, []).append(written)
+    return by_file
 
 
 def _files_named_twice(housekeeping: list[str]) -> Iterator[FieldFault]:
@@ -261,11 +309,13 @@ def _files_named_twice(housekeeping: list[str]) -> Iterator[FieldFault]:
         yield FieldFault(path=(HOUSEKEEPING, index), reason=NAMED_TWICE.format(file=housekeeping[index]))
 
 
-def _steps_of(chapters: list[Chapter[Step]]) -> Iterator[StepInDocument]:
+def _steps_of(chapters: list[Chapter[Step]]) -> list[StepInDocument]:
     """Every step of the story in the order it is told, with where it stands and the chapter that tells it."""
-    for chapter_index, chapter in enumerate(chapters):
-        for step_index, step in enumerate(chapter.steps):
-            yield StepInDocument(path=(CHAPTERS, chapter_index, STEPS, step_index), chapter=chapter, step=step)
+    return [
+        StepInDocument(path=(CHAPTERS, chapter_index, STEPS, step_index), chapter=chapter, step=step)
+        for chapter_index, chapter in enumerate(chapters)
+        for step_index, step in enumerate(chapter.steps)
+    ]
 
 
 def _item_lists(overview: StoryOverview) -> dict[str, list[OverviewItem]]:
@@ -275,4 +325,6 @@ def _item_lists(overview: StoryOverview) -> dict[str, list[OverviewItem]]:
 
 def _repeated_at(names: list[str]) -> list[int]:
     """Where a list names something it has named earlier already."""
-    return [index for index, name in enumerate(names) if name in names[:index]]
+    # Read from the last name back, so the place kept for each is its first
+    first_at = {name: index for index, name in reversed(list(enumerate(names)))}
+    return [index for index, name in enumerate(names) if first_at[name] != index]
