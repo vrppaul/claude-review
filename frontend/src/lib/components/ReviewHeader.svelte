@@ -11,6 +11,7 @@
 	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
+	import ViewSwitch from './ViewSwitch.svelte';
 
 	/** What the header says in place of everything else once the review is over. */
 	interface Over {
@@ -74,30 +75,36 @@
 		>
 			<kbd class="cr-guide-key">?</kbd> Help
 		</button>
+		<!-- Right after Help, where it never moves, whatever else the header shows -->
+		<ViewSwitch />
 		<!-- What the diff is compared against, as a control. The repository it is
-		of is in the tab's title; the header has room only for what changes. -->
-		{#if review.diff.phrase}
-			<BasePicker />
-			{#if review.settings.current.ignore_whitespace}
-				<!-- Said here as well as in the settings, because it hides changes -->
-				<span data-testid="whitespace-hidden" class="cr-chip cr-chip-narrowing">
-					No whitespace
-					<button
-						type="button"
-						data-testid="show-whitespace"
-						class="btn btn-ghost btn-xs px-1"
-						aria-label="Show whitespace changes again"
-						title="Show whitespace changes again"
-						onclick={() => review.setIgnoreWhitespace(false)}
-					>
-						<Icon name="cross" class="h-2.5 w-2.5" />
-					</button>
+		of is in the tab's title; the header has room only for what changes. A
+		story is of the review's own diff whatever base the files are read
+		against, so it shows none. -->
+		{#if !review.readsStory}
+			{#if review.diff.phrase}
+				<BasePicker />
+				{#if review.settings.current.ignore_whitespace}
+					<!-- Said here as well as in the settings, because it hides changes -->
+					<span data-testid="whitespace-hidden" class="cr-chip cr-chip-narrowing">
+						No whitespace
+						<button
+							type="button"
+							data-testid="show-whitespace"
+							class="btn btn-ghost btn-xs px-1"
+							aria-label="Show whitespace changes again"
+							title="Show whitespace changes again"
+							onclick={() => review.setIgnoreWhitespace(false)}
+						>
+							<Icon name="cross" class="h-2.5 w-2.5" />
+						</button>
+					</span>
+				{/if}
+			{:else if review.title}
+				<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
+					{review.title}
 				</span>
 			{/if}
-		{:else if review.title}
-			<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
-				{review.title}
-			</span>
 		{/if}
 
 		<div class="flex-1"></div>

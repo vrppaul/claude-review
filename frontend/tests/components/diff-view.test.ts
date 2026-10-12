@@ -281,6 +281,17 @@ describe('files with no lines to show', () => {
 		expect(getByTestId('mode-change-note').textContent).toContain('100644 → 100755');
 	});
 
+	it('draws a file with no lines in one column, though the reader reads changes across two', async () => {
+		keepingSettings(fakeServer());
+		review = openReview({ files: [binaryFile] });
+		await review.settings.change({ diff_layout: 'split' });
+
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		expect(queryByTestId('split-view')).toBeNull();
+		expect(getByTestId('raw-view')).toBeTruthy();
+	});
+
 	it('says a file turned into a link as a change of what it is, not of its permissions', () => {
 		review = openReview({ files: [{ ...changedFile, old_mode: '100644', new_mode: '120000' }] });
 

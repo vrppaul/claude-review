@@ -11,12 +11,17 @@
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile } from '$lib/types';
+import type { DiffFile, DiffLayout } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
 import { type ContextGap, gapBelow, type GapRead, readOf, type Widening, withRevealed } from '$lib/utils/expansions';
 
 /** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
 export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
+
+/** How a change's lines are laid out as the reader chose: in two columns where there are lines to set side by side. */
+export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
+	return layout === 'split' && file.hunks.length > 0 ? 'split' : 'raw';
+}
 
 /** A file drawn whole, as the diff on screen has it. */
 interface WholeFile {

@@ -3,13 +3,13 @@
 	import { messageOf } from '$lib/utils/errors';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
-	import { whenNearViewport } from '$lib/dom/scroll';
+	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody from './FileBody.svelte';
-	import type { Extent, FileView } from './file-drawing.svelte';
+	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
 
@@ -55,8 +55,7 @@
 	function viewOf(): FileView {
 		const contentView = review.layout.contentView.mode;
 		if (hasRenderablePreview && contentView !== 'raw') return contentView;
-		const twoColumns = isDiffMode && review.settings.current.diff_layout === 'split' && file.hunks.length > 0;
-		return twoColumns ? 'split' : 'raw';
+		return isDiffMode ? linesView(review.settings.current.diff_layout, file) : 'raw';
 	}
 
 	async function showChangesSince() {
@@ -70,14 +69,11 @@
 
 	let element: HTMLElement | undefined = $state();
 	// Rows are built when the file comes within reach, and kept from then on
-	let built = $state(false);
+	const nearness = new BuiltWhenNear();
 
 	$effect(() => (element ? review.sections.register(fileSectionKey(file.path), file.path, element) : undefined));
 
-	$effect(() => {
-		if (!element || built) return;
-		return whenNearViewport(element, scrollRoot, () => (built = true));
-	});
+	$effect(() => (element ? nearness.watch(element, scrollRoot) : undefined));
 </script>
 
 <section
@@ -155,7 +151,7 @@
 	</div>
 
 	{#if !collapsed}
-		{#if built}
+		{#if nearness.built}
 			<FileBody {file} {language} {view} {extent} />
 		{:else}
 			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>

@@ -20,6 +20,14 @@ const FILLED: Drawn = { kind: 'filled' };
 const TRACED: Drawn = { kind: 'traced', width: 1.5 };
 
 export const ICONS = {
+	// An open book: the change read as the story told of it
+	story: {
+		viewBox: '0 0 16 16',
+		paths: ['M8 4.5C6.6 3.4 4.6 3 2 3v9.5c2.6 0 4.6.4 6 1.5 1.4-1.1 3.4-1.5 6-1.5V3c-2.6 0-4.6.4-6 1.5Z', 'M8 4.5V14'],
+		drawn: TRACED
+	},
+	// A stack of files: the change read file by file
+	files: { viewBox: '0 0 16 16', paths: ['M5.5 2.5h4.5l3 3v8H5.5z', 'M10 2.5v3h3', 'M3 5v9.5h7'], drawn: TRACED },
 	// Points down; turned for up, or to say something is folded
 	chevron: { viewBox: '0 0 12 12', paths: ['M2 4l4 4 4-4z'], drawn: FILLED },
 	// Points right; turned to point left

@@ -12,6 +12,7 @@
 	import HelpDialog from './HelpDialog.svelte';
 	import { pressKey } from './keymap';
 	import ReviewHeader from './ReviewHeader.svelte';
+	import StoryView from './StoryView.svelte';
 	import Icon from './Icon.svelte';
 	import PartFailed from './PartFailed.svelte';
 
@@ -96,23 +97,29 @@
 	{/if}
 	<DiffNotice />
 	<div class="cr-columns">
-		{#if review.layout.fileTree.open}
-			<FileList />
+		{#if review.readsStory}
+			<!-- The same review, read as its story: the tree of files is the files' own -->
+			<StoryView />
 		{:else}
-			<!-- Where the tree was, so the way back is where it went -->
-			<button
-				type="button"
-				data-testid="show-sidebar"
-				data-tour="file-tree"
-				class="cr-tree-rail"
-				title="Bring the file tree back"
-				aria-label="Bring the file tree back"
-				onclick={() => review.layout.fileTree.toggle()}
-			>
-				<Icon name="caret" class="h-3 w-3" />
-			</button>
+			{#if review.layout.fileTree.open}
+				<FileList />
+			{:else}
+				<!-- Where the tree was, so the way back is where it went -->
+				<button
+					type="button"
+					data-testid="show-sidebar"
+					data-tour="file-tree"
+					class="cr-tree-rail"
+					title="Bring the file tree back"
+					aria-label="Bring the file tree back"
+					onclick={() => review.layout.fileTree.toggle()}
+				>
+					<Icon name="caret" class="h-3 w-3" />
+				</button>
+			{/if}
+			<!-- One diff, whether the tree stands beside it or is put away -->
+			<DiffView />
 		{/if}
-		<DiffView />
 		{#if review.layout.agentPanel.open}
 			<!-- A panel that cannot be drawn says so in its column, and leaves the review to be read and sent -->
 			<svelte:boundary onerror={reportBroken}>

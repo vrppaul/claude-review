@@ -1,6 +1,6 @@
 /**
- * How this reader lays the page out: the file tree, the agent panel, and
- * how a renderable file is shown.
+ * How this reader lays the page out: the file tree, the agent panel, how a
+ * renderable file is shown, and which way a review is read.
  *
  * None of these belong to a review — they are how this person reads this
  * page — so they are kept in this port's storage, not with the review and
@@ -37,6 +37,7 @@ const FILE_TREE_WIDTH_KEY = 'sidebar-width';
 const AGENT_PANEL_OPEN_KEY = 'panel-open';
 const AGENT_PANEL_WIDTH_KEY = 'panel-width';
 const CONTENT_VIEW_KEY = 'content-view';
+const READING_VIEW_KEY = 'reading-view';
 
 // Where each column stops lying over the diff and stands beside it, as the stylesheet names it
 const FILE_TREE_BESIDE = '--breakpoint-cr-tree-beside';
@@ -46,6 +47,11 @@ const AGENT_PANEL_BESIDE = '--breakpoint-cr-panel-beside';
 const CONTENT_VIEW_MODES = ['raw', 'preview', 'side-by-side'] as const;
 export type ContentViewMode = (typeof CONTENT_VIEW_MODES)[number];
 const FIRST_CONTENT_VIEW: ContentViewMode = 'raw';
+
+/** Every way a review can be read: file by file, or as the story the agent tells of it. */
+const READING_VIEWS = ['files', 'story'] as const;
+export type ReadingViewName = (typeof READING_VIEWS)[number];
+const FIRST_READING_VIEW: ReadingViewName = 'files';
 
 // Whether the reader has said if they want the agent panel: "unset" until
 // they open or shut it themselves
@@ -239,9 +245,24 @@ class ContentViewChoice {
 	}
 }
 
+/** Which way the reader reads a review: the one they chose last, whether or not a review can be read that way. */
+class ReadingViewChoice {
+	#name = $state(readChoice(READING_VIEW_KEY, READING_VIEWS, FIRST_READING_VIEW));
+
+	get name(): ReadingViewName {
+		return this.#name;
+	}
+
+	set(name: ReadingViewName): void {
+		this.#name = name;
+		writeChoice(READING_VIEW_KEY, name);
+	}
+}
+
 /** Everything about how the page is laid out, as this reader left it. */
 export class PageLayout {
 	readonly fileTree = new FileTreeLayout();
 	readonly agentPanel = new AgentPanelLayout();
 	readonly contentView = new ContentViewChoice();
+	readonly readingView = new ReadingViewChoice();
 }

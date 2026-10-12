@@ -10,8 +10,9 @@
  * arrows, the replies, the finish pane, the panel's chips, the notices — and
  * so do ] and [ from section to section, and a file the agent names. What is
  * walked, and where a thread or a file is drawn, is asked of the view the
- * review is read in (`ReadingView`); the page itself is moved by
- * `FileSections`. j and k move the keyboard line by line
+ * review is read in (`ReadingView`); what that view does not draw is gone to
+ * in the one that draws everything, which is brought on screen for it. The
+ * page itself is moved by `FileSections`. j and k move the keyboard line by line
  * (`dom/keyboard.ts`), and have no place among the threads to keep.
  */
 
@@ -20,6 +21,14 @@ import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
+
+/** The views the review is read in, as moving the reader needs them. */
+export interface ViewsOnScreen {
+	/** The view the review is read in now. */
+	onScreen: () => ReadingView;
+	/** Bring on screen the view that draws every thread and file the review holds, and hand it over once it is drawn. */
+	showEverything: () => Promise<ReadingView>;
+}
 
 /** Where the reader is among the threads: the one they were last brought to, among the threads as they stood then. */
 interface ReaderAt {
@@ -54,23 +63,23 @@ function nearestStillThere(threads: readonly Thread[], from: ReaderAt, direction
 export class Navigator {
 	readonly #threads: Threads;
 	readonly #sections: FileSections;
-	// The view the review is read in now: what is walked, and where a thread or a file is drawn, is its to say
-	readonly #onScreen: () => ReadingView;
+	// The views the review is read in: what is walked, and where a thread or a file is drawn, is theirs to say
+	readonly #views: ViewsOnScreen;
 	// The thread the reader was last brought to, by whichever control, and the
 	// one a step goes on from. Kept by id, with the threads as they stood: a
 	// place in a list that changes would become another thread's, and a thread
 	// removed leaves its neighbours to go on to.
 	#at: ReaderAt | null = null;
 
-	constructor(threads: Threads, sections: FileSections, onScreen: () => ReadingView) {
+	constructor(threads: Threads, sections: FileSections, views: ViewsOnScreen) {
 		this.#threads = threads;
 		this.#sections = sections;
-		this.#onScreen = onScreen;
+		this.#views = views;
 	}
 
 	/** Step to the next or previous thread in the view on screen, and bring it into view. */
 	step(direction: 1 | -1): void {
-		const next = steppedTo(this.#onScreen().threadsInOrder(), this.#at, direction);
+		const next = steppedTo(this.#views.onScreen().threadsInOrder(), this.#at, direction);
 		if (next) this.reveal(next);
 	}
 
@@ -78,16 +87,13 @@ export class Navigator {
 	 * Bring a thread into view with the keyboard on it, and go on from it the
 	 * next time the reader steps. Whatever folds its lines away is opened
 	 * first, and the thread is gone to once it is drawn. A thread the view on
-	 * screen does not draw takes the reader nowhere.
+	 * screen does not draw is gone to in the view that draws them all, which
+	 * comes on screen for it: the reader asked for the thread.
 	 */
 	reveal(thread: Thread): void {
-		const view = this.#onScreen();
-		const lines = anchorLines(thread.anchor);
-		const section = view.sectionOf(lines);
-		if (section === null) return;
-		this.#at = { thread: thread.id, among: view.threadsInOrder() };
-		view.unfold(lines);
-		this.#sections.goToThread(thread.id, section);
+		const onScreen = this.#views.onScreen();
+		if (onScreen.sectionOf(anchorLines(thread.anchor)) !== null) this.#revealIn(onScreen, thread);
+		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread));
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -108,7 +114,7 @@ export class Navigator {
 	 * view; from nowhere, the first or the last.
 	 */
 	stepSection(direction: 1 | -1): void {
-		const keys = this.#onScreen().sectionKeys();
+		const keys = this.#views.onScreen().sectionKeys();
 		const here = this.#sections.current();
 		const from = here === null ? -1 : keys.indexOf(here);
 		const first = direction === 1 ? 0 : keys.length - 1;
@@ -119,11 +125,30 @@ export class Navigator {
 
 	/**
 	 * Bring a file somebody named into view — the agent, in what it said or
-	 * showed — and mark it once it gets there; nowhere, where the view on
-	 * screen draws none of it.
+	 * showed — and mark it once it gets there. A file the view on screen
+	 * draws none of is shown in the view that draws every file the review
+	 * holds, which comes on screen for it; one that view does not draw
+	 * either is shown nowhere.
 	 */
 	showFile(path: string): void {
-		const section = this.#onScreen().sectionOfFile(path);
+		const section = this.#views.onScreen().sectionOfFile(path);
+		if (section !== null) this.#sections.show(section);
+		else void this.#views.showEverything().then((drawingAll) => this.#showIn(drawingAll, path));
+	}
+
+	/** Go to a thread in a view, if the view draws it. */
+	#revealIn(view: ReadingView, thread: Thread): void {
+		const lines = anchorLines(thread.anchor);
+		const section = view.sectionOf(lines);
+		if (section === null) return;
+		this.#at = { thread: thread.id, among: view.threadsInOrder() };
+		view.unfold(lines);
+		this.#sections.goToThread(thread.id, section);
+	}
+
+	/** Show a file in a view, if the view draws any of it. */
+	#showIn(view: ReadingView, path: string): void {
+		const section = view.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
 	}
 }

@@ -28,6 +28,7 @@
 	<RetakenNotice retaken={review.lastRetake.outcome} />
 {/if}
 
-{#if review.diff.narrowed}
+<!-- A narrower base is how the files are read: a story is of the review's own diff -->
+{#if review.diff.narrowed && !review.readsStory}
 	<NarrowedNotice />
 {/if}

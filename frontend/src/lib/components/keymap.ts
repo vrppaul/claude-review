@@ -85,7 +85,7 @@ export const KEYMAP: readonly KeyRow[] = [
 	{ keys: FIELD_KEYS, does: 'Add the comment, or send the message, being written', presses: [] },
 	{
 		keys: '] / [',
-		does: 'Next / previous file',
+		does: 'Next / previous file, or step of a story',
 		presses: [
 			alone(']', (review) => review.navigator.stepSection(1)),
 			alone('[', (review) => review.navigator.stepSection(-1))

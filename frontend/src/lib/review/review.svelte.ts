@@ -8,6 +8,7 @@
  * narrowing to what changed — is done here.
  */
 
+import { tick } from 'svelte';
 import { Guide } from '$lib/guide/guide.svelte';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { PageTheme } from '$lib/reader/page-theme.svelte';
@@ -24,6 +25,7 @@ import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading, type ReadingView } from '$lib/review/reading-view';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
+import { StoryReading } from '$lib/review/story-reading';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -111,6 +113,8 @@ export class Review {
 	readonly navigator: Navigator;
 	// The review read file by file
 	readonly #files: FilesReading;
+	/** The review read as the story told of it. */
+	readonly storyReading: StoryReading;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
@@ -162,7 +166,11 @@ export class Review {
 		this.story = new ReviewStory(facts.takes_a_story, story);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.#files = new FilesReading(this.diff, this.threads, this.reading, this.sections);
-		this.navigator = new Navigator(this.threads, this.sections, () => this.view);
+		this.storyReading = new StoryReading(this.story, this.threads);
+		this.navigator = new Navigator(this.threads, this.sections, {
+			onScreen: () => this.view,
+			showEverything: () => this.showFiles()
+		});
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
 		this.#draftSetAside = $state(draftSetAside);
@@ -177,8 +185,24 @@ export class Review {
 		if (this.answerer.attached) this.layout.agentPanel.offer();
 	}
 
-	/** The view the review is read in now: file by file. */
+	/**
+	 * Whether the review is read as its story now: the reader chose that, and
+	 * a story can be told of this review. Chosen for a review that takes
+	 * none — the choice outlives a review — it is read by its files.
+	 */
+	get readsStory(): boolean {
+		return this.story.canBeTold && this.layout.readingView.name === 'story';
+	}
+
+	/** The view the review is read in now: as its story, or file by file. */
 	get view(): ReadingView {
+		return this.readsStory ? this.storyReading : this.#files;
+	}
+
+	/** Bring the files' own view on screen, which draws every thread and file the review holds, and say once it is drawn. */
+	async showFiles(): Promise<ReadingView> {
+		this.layout.readingView.set('files');
+		await tick();
 		return this.#files;
 	}
 

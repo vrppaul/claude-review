@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile, FileStatus, ReviewMode } from '$lib/types';
+	import type { DiffFile, ReviewMode } from '$lib/types';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { formerName } from '$lib/utils/paths';
@@ -10,16 +10,8 @@
 	import EdgeGrip from './EdgeGrip.svelte';
 	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
+	import { STATUS_LETTERS } from './status-letters';
 
-	// A letter in the change's own colour, rather than a filled disc: the file
-	// name is what the eye should land on in this list. A moved file says so
-	// quietly — blue is the reader's own mark, and nothing else's.
-	const STATUS_LETTERS: Record<FileStatus, { letter: string; colour: string }> = {
-		modified: { letter: 'M', colour: 'text-(--cr-status-modified)' },
-		added: { letter: 'A', colour: 'text-(--cr-add-text)' },
-		deleted: { letter: 'D', colour: 'text-(--cr-del-text)' },
-		renamed: { letter: 'R', colour: 'cr-muted' }
-	};
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed {
 		one: string;

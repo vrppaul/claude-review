@@ -82,7 +82,7 @@ function numberOn(side: LineSide, line: DiffLine): number | null {
  * the row it would stand before. A row with no number on the thread's side,
  * an added line for a thread on removed ones, is never it.
  */
-function rowOf(lines: FileLines, rows: readonly DiffLine[]): number {
+export function rowOf(lines: FileLines, rows: readonly DiffLine[]): number {
 	const at = rows.findIndex((line) => (numberOn(lines.side, line) ?? Number.NEGATIVE_INFINITY) >= lines.end_line);
 	return at === -1 ? rows.length : at;
 }
