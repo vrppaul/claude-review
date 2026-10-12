@@ -20,6 +20,9 @@
 	const review = useReview();
 
 	const held = $derived(review.story.held);
+	const numbering = $derived(review.story.numbering);
+	// Whether the story held is of another take of the change than the page reads: the diff was taken again since
+	const codeMovedOn = $derived(numbering === 'another-takes');
 	const offTheStory = $derived(review.storyReading.threadsNotDrawn);
 
 	let container: HTMLElement | undefined = $state();
@@ -75,7 +78,23 @@
 				</p>
 			{/if}
 
-			{#if offTheStory > 0}
+			{#if codeMovedOn}
+				<!-- A state, not news, and a warning: what the story shows is no longer the code under review, so
+					nothing is written on it here, and nothing of the reader's is drawn against it: where that is, is said -->
+				<p data-testid="story-moved-on" class="cr-notice cr-notice-moved rounded px-3 py-1.5 text-xs">
+					The code has changed since this story was told. It shows the code as it was, and takes no comments.
+					{#if review.threads.onLines.length > 0}
+						{counted(review.threads.onLines.length, 'comment is', 'comments are')} in Files.
+					{/if}
+					{#if review.threads.writing.openOnLines > 0}
+						{counted(
+							review.threads.writing.openOnLines,
+							'comment you were writing is',
+							'comments you were writing are'
+						)} in Files.
+					{/if}
+				</p>
+			{:else if offTheStory > 0}
 				<!-- A state, not news: the story shows part of the change, and the threads it does not draw are still in the review -->
 				<div
 					data-testid="threads-off-the-story"
@@ -179,6 +198,7 @@
 								<StoryPiece
 									sectionKey={stepSectionKey(chapterPlace, stepPlace)}
 									piece={step.piece}
+									{numbering}
 									scrollRoot={container ?? null}
 								>
 									{#snippet beside()}
@@ -203,7 +223,12 @@
 					</header>
 					{#each story.left_out as left, place (left.piece.path)}
 						<svelte:boundary onerror={reportBroken}>
-							<StoryPiece sectionKey={leftOutSectionKey(place)} piece={left.piece} scrollRoot={container ?? null}>
+							<StoryPiece
+								sectionKey={leftOutSectionKey(place)}
+								piece={left.piece}
+								{numbering}
+								scrollRoot={container ?? null}
+							>
 								{#snippet beside()}
 									{#if left.changed_lines > 0}
 										<span class="cr-muted text-xs">

@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import type { Review } from '$lib/review/review.svelte';
 import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-reading';
-import { addedLine, diffFile, hunk, removedLine } from './diff';
+import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
 import { newComment } from './new-comment';
 import { openReview } from './review';
 import { storyHeld, toldChapter, toldStep } from './story';
@@ -96,6 +96,34 @@ describe('a review read as its story', () => {
 		review.threads.add(newComment({ file: 'housekeeping.lock', startLine: 1 }));
 
 		expect(review.storyReading.threadsNotDrawn).toBe(2);
+	});
+});
+
+describe('a story told of another take of the change than the page reads', () => {
+	beforeEach(() => {
+		review = openReview({ story: TOLD, diff: { take: A_LATER_TAKE } });
+		review.layout.readingView.set('story');
+	});
+
+	it('is still read piece by piece, as it was told', () => {
+		expect(review.view.sectionKeys()).toEqual([
+			stepSectionKey(0, 0),
+			stepSectionKey(0, 1),
+			stepSectionKey(1, 0),
+			leftOutSectionKey(0)
+		]);
+	});
+
+	it('draws no thread, though a piece shows a line of the number the thread hangs on: it is numbered as that take', () => {
+		const onLineNine = newComment({ file: 'a.py', startLine: 9 }).anchor;
+
+		expect(review.view.sectionOf(onLineNine)).toBeNull();
+	});
+
+	it('walks no thread', () => {
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'in chapter two' }));
+
+		expect(review.view.threadsInOrder()).toEqual([]);
 	});
 });
 

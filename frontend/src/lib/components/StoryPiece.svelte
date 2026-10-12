@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { StoryNumbering } from '$lib/anchors/numbering';
 	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
 	import { languageOf } from '$lib/utils/highlight';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileBody from './FileBody.svelte';
-	import { A_PIECE, linesView } from './file-drawing.svelte';
+	import { type Extent, linesView } from './file-drawing.svelte';
 	import { STATUS_LETTERS } from './status-letters';
 
 	interface Props {
@@ -14,18 +15,21 @@
 		sectionKey: string;
 		/** The piece of a file the review cut out: a step's lines, or what no step tells of the file. */
 		piece: DiffFile;
+		/** Whose numbers its lines carry, as the story it is a piece of says. */
+		numbering: StoryNumbering;
 		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
 		scrollRoot: HTMLElement | null;
 		/** What is said beside the file's name: the lines a step tells, how much was left out. */
 		beside: Snippet;
 	}
 
-	let { sectionKey, piece, scrollRoot, beside }: Props = $props();
+	let { sectionKey, piece, numbering, scrollRoot, beside }: Props = $props();
 	const review = useReview();
 
 	const status = $derived(STATUS_LETTERS[piece.status]);
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
+	const extent = $derived<Extent>({ kind: 'piece', numbering });
 	// How many rows the piece will draw, so the browser can leave it undrawn off
 	// screen without the scrollbar lurching once it is drawn: at least one
 	const rowCount = $derived(piece.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
@@ -56,7 +60,7 @@
 		<ChangedLines file={piece} />
 	</div>
 	{#if nearness.built}
-		<FileBody file={piece} {language} {view} extent={A_PIECE} />
+		<FileBody file={piece} {language} {view} {extent} />
 	{:else}
 		<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 	{/if}

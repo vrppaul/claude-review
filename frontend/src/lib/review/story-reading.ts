@@ -6,9 +6,12 @@
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
  * thread on a line no piece shows is not drawn here at all; the files' own
- * view draws every thread.
+ * view draws every thread. Nor is any thread drawn in a story told of
+ * another take of the change than the page reads: its lines are numbered
+ * as that take, and a thread hangs on a line of the take on screen.
  */
 
+import type { StoryNumbering } from '$lib/anchors/numbering';
 import { isDrawn, rowOf } from '$lib/anchors/placement';
 import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
 import type { ReadingView } from '$lib/review/reading-view';
@@ -48,14 +51,21 @@ function piecesOf(story: ToldStory): DrawnPiece[] {
 	return [...steps, ...leftOut];
 }
 
-/** Whether a piece shows the line a thread on these lines hangs under: it is a piece of their file, and holds the line. */
-function draws({ piece }: DrawnPiece, lines: FileLines): boolean {
-	return isDrawn(lines, [piece], 'the-reviews');
+/**
+ * Whether a piece draws a thread on these lines: it is a piece of their
+ * file, holds the line, and numbers it as the review does.
+ */
+function draws({ piece }: DrawnPiece, lines: FileLines, numbering: StoryNumbering): boolean {
+	return isDrawn(lines, [piece], numbering);
 }
 
 /** Where a thread stands among the pieces, if one of them draws it. */
-function standingOf({ thread, lines }: ThreadOnLines, pieces: readonly DrawnPiece[]): Standing[] {
-	const piecePlace = pieces.findIndex((drawn) => draws(drawn, lines));
+function standingOf(
+	{ thread, lines }: ThreadOnLines,
+	pieces: readonly DrawnPiece[],
+	numbering: StoryNumbering
+): Standing[] {
+	const piecePlace = pieces.findIndex((drawn) => draws(drawn, lines, numbering));
 	const drawn = pieces[piecePlace];
 	if (drawn === undefined) return [];
 	const rows = drawn.piece.hunks.flatMap((hunk) => hunk.lines);
@@ -78,14 +88,16 @@ export class StoryReading implements ReadingView {
 	/** Down the story, piece by piece and row by row: only the threads a piece draws. */
 	threadsInOrder(): Thread[] {
 		const pieces = this.#pieces();
+		const numbering = this.#story.numbering;
 		return this.#threads.onLines
-			.flatMap((onLines) => standingOf(onLines, pieces))
+			.flatMap((onLines) => standingOf(onLines, pieces, numbering))
 			.sort((one, other) => one.piecePlace - other.piecePlace || one.row - other.row)
 			.map(({ thread }) => thread);
 	}
 
 	sectionOf(lines: FileLines): string | null {
-		return this.#pieces().find((drawn) => draws(drawn, lines))?.key ?? null;
+		const numbering = this.#story.numbering;
+		return this.#pieces().find((drawn) => draws(drawn, lines, numbering))?.key ?? null;
 	}
 
 	/** The first piece of the file the story draws: where the file is first told. */

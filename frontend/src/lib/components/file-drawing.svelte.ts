@@ -8,7 +8,7 @@
  * nothing again.
  */
 
-import type { Numbering } from '$lib/anchors/numbering';
+import type { DiffNumbering, Numbering, StoryNumbering } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -28,25 +28,25 @@ export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
 interface WholeFile {
 	kind: 'whole';
 	/** Whose numbers its lines carry, as the diff on screen was taken: see `DrawnFile`. */
-	numbering: Numbering;
+	numbering: DiffNumbering;
 	/** Where the lines read in around its hunks are kept. */
 	revealed: RevealedContext;
 }
 
 /**
  * A piece of a file, cut out of the review's own diff: a step of a story.
- * Its lines are numbered as the review's own whatever base is on screen,
- * and what lies around it is the rest of its file, which it does not read in.
+ * Its lines are numbered as the take the story was told of, whatever base
+ * is on screen, and what lies around it is the rest of its file, which it
+ * does not read in.
  */
 interface Piece {
 	kind: 'piece';
+	/** Whose numbers its lines carry, as the story it is a piece of says. */
+	numbering: StoryNumbering;
 }
 
 /** How much of a file a drawing is of: the whole of it, or a piece. */
 export type Extent = WholeFile | Piece;
-
-/** A piece, which has no more to say of itself than that it is one. */
-export const A_PIECE: Extent = { kind: 'piece' };
 
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
@@ -86,8 +86,7 @@ export class FileDrawing implements DrawnFile {
 	}
 
 	numbering(): Numbering {
-		const extent = this.#source.extent();
-		return extent.kind === 'piece' ? 'the-reviews' : extent.numbering;
+		return this.#source.extent().numbering;
 	}
 
 	commentable(): boolean {

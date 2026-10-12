@@ -7,7 +7,7 @@
  * nothing about the review is written down by choosing one.
  */
 
-import type { Numbering } from '$lib/anchors/numbering';
+import type { DiffNumbering } from '$lib/anchors/numbering';
 import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
@@ -91,8 +91,18 @@ export class ReviewDiff {
 	}
 
 	/** Whose numbers the lines of the diff on screen carry: the review's own, unless a narrower base is in force. */
-	get numbering(): Numbering {
+	get numbering(): DiffNumbering {
 		return this.narrowed ? 'a-narrower-bases' : 'the-reviews';
+	}
+
+	/**
+	 * Which take of the review the page reads: the one the diff on screen was
+	 * read at, whatever base it is read against, and the one the threads'
+	 * lines are numbered by. While a retake lands — the threads followed, the
+	 * diff not read yet — it is still the take before.
+	 */
+	get takeOnScreen(): number {
+		return this.#onScreen.take;
 	}
 
 	/** Take the diff again against the base the reader asked for. */

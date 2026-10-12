@@ -40,7 +40,10 @@ export function toldStory(given: Partial<ToldStory> = {}): ToldStory {
 	};
 }
 
-/** A story as the review holds it: as told, in the round it was told in, of the take a test's diff is read at. */
-export function storyHeld(given: Partial<ToldStory> = {}, round = FIRST_ROUND): StoryHeld {
-	return { story: toldStory(given), round, take: FIRST_TAKE };
+/**
+ * A story as the review holds it: as told, in the first round, of the take
+ * a test's diff is read at, unless it is held otherwise.
+ */
+export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<StoryHeld, 'story'>> = {}): StoryHeld {
+	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, ...held };
 }

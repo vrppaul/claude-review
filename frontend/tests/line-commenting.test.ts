@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { LineCommenting } from '$lib/components/line-commenting.svelte';
 import { type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
 import { contextLine, diffFile, hunk, removedLine } from './diff';
+import { newComment } from './new-comment';
 import { SEND_LIMITS } from './pasted-images';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
@@ -244,5 +245,35 @@ describe('a file no comment may name', () => {
 
 		expect(review.threads.writing.onLinesOf(file.path)).toEqual([]);
 		expect(lines.isMarked({ side: 'new', number: 12 })).toBe(false);
+	});
+});
+
+describe("a drawing whose lines are numbered as another take's", () => {
+	function ofAnotherTake(): LineCommenting {
+		review = openReview({ files: [file] });
+		return new LineCommenting(review, {
+			path: () => file.path,
+			hunks: () => [drawn],
+			numbering: () => 'another-takes',
+			commentable: () => true,
+			standsForItsFile: () => false
+		});
+	}
+
+	it('takes no comment on a line, by the mouse or by the keyboard', () => {
+		const lines = ofAnotherTake();
+
+		lines.press(line(11));
+		lines.release();
+		lines.commentOn(line(13));
+
+		expect(review.threads.writing.onLinesOf(file.path)).toEqual([]);
+	});
+
+	it('draws no thread under a line of the number the thread hangs on', () => {
+		const lines = ofAnotherTake();
+		review.threads.add(newComment({ file: file.path, startLine: 11, body: 'on line 11 as the file now stands' }));
+
+		expect(lines.threadsUnder({ side: 'new', number: 11 })).toEqual([]);
 	});
 });

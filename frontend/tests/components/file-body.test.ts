@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileBody from '$lib/components/FileBody.svelte';
-import { A_PIECE } from '$lib/components/file-drawing.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -25,8 +24,8 @@ const file = diffFile({
 /** The file drawn as lines in one column: what is asked for whether the whole of it is drawn, or a piece. */
 const AS_LINES = { file, language: null, view: 'raw' } as const;
 
-/** How a story step draws a file: a piece cut out of it. */
-const AS_A_STEP = { ...AS_LINES, extent: A_PIECE } as const;
+/** How a story step draws a file: a piece cut out of it, of the take the page reads. */
+const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', numbering: 'the-reviews' } } as const;
 
 /** A piece of the same file that runs over two changes: lines 32 to 39 lie between them, unchanged. */
 const overTwoChanges = diffFile({

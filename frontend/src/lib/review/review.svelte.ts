@@ -163,7 +163,7 @@ export class Review {
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
-		this.story = new ReviewStory(facts.takes_a_story, story);
+		this.story = new ReviewStory(facts.takes_a_story, story, () => this.diff.takeOnScreen);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.#files = new FilesReading(this.diff, this.threads, this.reading, this.sections);
 		this.storyReading = new StoryReading(this.story, this.threads);
