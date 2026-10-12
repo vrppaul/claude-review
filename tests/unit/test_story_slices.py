@@ -133,7 +133,7 @@ def test_lines_removed_in_a_hunk_that_shows_no_line_of_the_file_are_told_at_the_
 @pytest.mark.parametrize("status", [FileStatus.DELETED, FileStatus.MODIFIED])
 def test_a_file_the_change_left_no_line_of_is_told_by_the_lines_it_had(status: FileStatus) -> None:
     """Deleted, or emptied and still there: either way its new side has no line to number a step by."""
-    gone = changed_file(FILE, hunk(1, 0, "---"), status=status)
+    gone = changed_file(FILE, hunk(1, 1, "---"), status=status)
 
     assert shown(gone, 2, 3) == ["-2/", "-3/"]
 

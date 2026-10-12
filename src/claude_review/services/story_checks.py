@@ -23,8 +23,9 @@ from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step,
 from claude_review.services.place_words import line_span
 from claude_review.services.story_slices import PlacedFile
 
-# The fields of a story's document, as a fault names them: what the
-# document's own models call them, since that is what the agent wrote
+# The fields of a story's document, by the names the document's own models
+# give them: what a fault names its field by, since that is what the agent
+# wrote, and what a part of the story is told again by
 TITLE = "title"
 OVERVIEW = "overview"
 TASK = "task"
@@ -141,6 +142,7 @@ def _texts_out_of_bounds(story: Story[Step], steps: list[StepInDocument]) -> Ite
     yield from _text_faults((TITLE,), story.title, StoryText.TITLE)
     yield from _overview_texts_out_of_bounds(story.overview)
     for index, chapter in enumerate(story.chapters):
+        yield from _blank_faults((CHAPTERS, index, ID), chapter.id)
         yield from _text_faults((CHAPTERS, index, TITLE), chapter.title, StoryText.CHAPTER_TITLE)
         yield from _text_faults((CHAPTERS, index, WHY), chapter.why, StoryText.CHAPTER_WHY)
         yield from _text_faults((CHAPTERS, index, DOUBT), chapter.doubt, StoryText.CHAPTER_DOUBT)

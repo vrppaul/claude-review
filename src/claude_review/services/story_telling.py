@@ -11,15 +11,22 @@ what was left out, and a story cannot hide one.
 from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile
 from claude_review.domain.story import Chapter, LeftOut, Step, StepLines, Story, ToldStep, ToldStory
-from claude_review.services.story_checks import document_faults, placement_faults
+from claude_review.services.story_checks import CHAPTERS, STEPS, document_faults, placement_faults
 from claude_review.services.story_slices import PlacedFile
 
 # What a story refused is refused with, before its faults are said one by one
 STORY_REFUSED = "the story may not be told as it is written"
+# Where a told story keeps what its steps leave out, by the name its model gives the field
+LEFT_OUT = "left_out"
 
 
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
     """The story on the change it is told of.
+
+    A told story says everything the story said: each part of it is the
+    written part with what telling adds, never the written part copied out
+    field by field, so a field a part gains later is told without a word
+    here.
 
     Raises:
         StoryRefusedError: if anything is wrong with it, carrying all of it.
@@ -28,29 +35,20 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
     faults = [*document_faults(story), *placement_faults(story, change)]
     if faults:
         raise StoryRefusedError(STORY_REFUSED, faults)
-    return ToldStory(
-        title=story.title,
-        overview=story.overview,
-        chapters=[_told_chapter(chapter, change) for chapter in story.chapters],
-        housekeeping=story.housekeeping,
-        left_out=_left_out(story, files, change),
-    )
+    chapters = [_told_chapter(chapter, change) for chapter in story.chapters]
+    left_out = _left_out(story, files, change)
+    return ToldStory.model_validate({**dict(story), CHAPTERS: chapters, LEFT_OUT: left_out})
 
 
 def _told_chapter(chapter: Chapter[Step], change: dict[str, PlacedFile]) -> Chapter[ToldStep]:
-    """A chapter with each of its steps as it is told."""
-    return Chapter[ToldStep](
-        id=chapter.id,
-        title=chapter.title,
-        why=chapter.why,
-        doubt=chapter.doubt,
-        steps=[_told_step(step, change[step.file]) for step in chapter.steps],
-    )
+    """A chapter as it is told: everything it says, and each of its steps with what it shows."""
+    steps = [_told_step(step, change[step.file]) for step in chapter.steps]
+    return Chapter[ToldStep].model_validate({**dict(chapter), STEPS: steps})
 
 
 def _told_step(step: Step, file: PlacedFile) -> ToldStep:
-    """A step with the piece of its file it shows."""
-    return ToldStep(file=step.file, lines=step.lines, reason=step.reason, piece=file.piece([file.rows_at(step.lines)]))
+    """A step as it is told: everything it says, and the piece of its file it shows."""
+    return ToldStep(**dict(step), piece=file.piece([file.rows_at(step.lines)]))
 
 
 def _left_out(story: Story[Step], files: list[DiffFile], change: dict[str, PlacedFile]) -> list[LeftOut]:

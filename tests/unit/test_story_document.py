@@ -143,6 +143,15 @@ def test_every_list_of_the_overview_holds_its_items_to_the_same_length(item_list
     assert paths_of(document_faults(story)) == [place]
 
 
+@pytest.mark.parametrize("blank", BLANKS)
+def test_a_chapter_whose_id_says_nothing_is_refused_though_a_link_leads_to_it(blank: str) -> None:
+    """What the overview and the diagram lead to a chapter by has to be something to lead by."""
+    unnamed = planted(canvas_story(), ("chapters", 0, "id"), blank)
+    story = planted(unnamed, ("overview", "diagram", "links", "paste"), blank)
+
+    assert paths_of(document_faults(story)) == [("chapters", 0, "id")]
+
+
 def test_a_story_tells_at_least_one_chapter() -> None:
     told_nothing = planted(planted(canvas_story(), ("chapters",), []), ("overview", "diagram"), None)
     unlinked = planted(told_nothing, ("overview", "decisions"), [])
@@ -341,8 +350,8 @@ class Planting(BaseModel):
     faulted_at: FieldPath
 
 
-# One fault of every kind a document can hold. None of them makes another:
-# the chapter that loses its id is the one nothing but the diagram led to
+# Faults of many kinds in one document. None of them makes another: the
+# chapter that loses its id is the one nothing but the diagram led to
 EVERYTHING_WRONG = [
     Planting(at=("title",), written="", faulted_at=("title",)),
     Planting(
@@ -390,5 +399,6 @@ def test_every_fault_is_at_a_field_the_document_has() -> None:
     """A fault names its field as the agent's JSON nests it, or the agent could not find what to put right."""
     story = story_with_everything_wrong()
 
-    for fault in document_faults(story):
-        field_at(story, fault.path)
+    found = [field_at(story, fault.path) for fault in document_faults(story)]
+
+    assert len(found) == len(EVERYTHING_WRONG)

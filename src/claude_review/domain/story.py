@@ -21,7 +21,11 @@ from claude_review.domain.models import DiffFile
 
 
 class StoryPart(BaseModel):
-    """What every part of a story is: written once, and never changed."""
+    """What every part of a story is, as it is written and as it is told: made once, and never changed.
+
+    What a story is held to — a limit, a fault found in it — is no part of
+    it, and is not one of these.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -182,14 +186,12 @@ class ToldStep(Step):
     piece: DiffFile
 
 
-class LeftOut(BaseModel):
+class LeftOut(StoryPart):
     """What a story leaves out of one file: changes no step tells, in a file nobody named as housekeeping.
 
     Shown all the same, beside the story: a story that could hide a change
     would be an advertisement for it.
     """
-
-    model_config = ConfigDict(frozen=True)
 
     # The rows left out, each run of them that holds a change a hunk of its
     # own; the file as it is, when the change shows no line of it
