@@ -138,6 +138,13 @@ async def test_a_review_of_no_change_takes_no_story(client: AsyncClient) -> None
     assert await held_by(client) == StoryResponse(held=None)
 
 
+async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client: AsyncClient) -> None:
+    """Told why, the agent stops trying: nothing it could write would be a story of this review."""
+    answered = await client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    assert "no change" in Refusal.model_validate_json(answered.content).detail
+
+
 async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_says_which_round_told_it(
     agent: AsyncClient,
 ) -> None:

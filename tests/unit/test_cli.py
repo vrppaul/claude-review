@@ -21,6 +21,7 @@ from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from claude_review.services.place_words import NOT_LINES
 from tests.stories import as_the_agent_writes, step, story_of
 
 # What click exits with when a command is typed wrong, before it runs
@@ -107,6 +108,14 @@ def test_lines_that_are_no_line_are_refused_before_anything_is_called(unused_por
 
     assert _failed_in_a_line(result, USAGE_ERROR)
     assert f'"{lines}"' in result.output
+
+
+@pytest.mark.parametrize("lines", ["abc", "4-x"])
+def test_what_names_no_lines_is_refused_in_the_words_the_review_refuses_it_with(unused_port: str, lines: str) -> None:
+    """One rule for how lines are written, said one way: by a command as by the review it calls."""
+    result = _run("point", "--port", unused_port, "--file", "a.py", "--lines", lines, "Kept on purpose")
+
+    assert NOT_LINES in result.output
 
 
 def test_reporting_nothing_is_refused_rather_than_sent(unused_port: str) -> None:
