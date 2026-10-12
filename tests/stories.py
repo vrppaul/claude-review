@@ -76,6 +76,13 @@ def as_the_agent_writes(story: Story[Step]) -> dict[str, JsonValue]:
     return StoryRequest.of(story).model_dump(mode="json")
 
 
+def without_field(document: dict[str, JsonValue], field: str) -> dict[str, JsonValue]:
+    """A document with one of its fields left out, as an agent that forgot it would write it."""
+    left = dict(document)
+    del left[field]
+    return left
+
+
 def _overview() -> StoryOverview:
     return StoryOverview(
         task="Let the reader paste a screenshot wherever they write, and get it to the agent as a file it can open.",

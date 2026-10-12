@@ -22,7 +22,7 @@ from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
 from claude_review.services.place_words import NOT_LINES
-from tests.stories import as_the_agent_writes, step, story_of
+from tests.stories import as_the_agent_writes, step, story_of, without_field
 
 # What click exits with when a command is typed wrong, before it runs
 USAGE_ERROR = 2
@@ -320,7 +320,7 @@ FROM_STDIN = "-"
 # Documents the review would refuse for their shape, and the field each is refused at
 MISSHAPEN_STORIES = [
     ({**A_STORY, "doubts": "Whether it holds."}, "doubts"),
-    ({name: said for name, said in A_STORY.items() if name != "told_from"}, "told_from"),
+    (without_field(A_STORY, "told_from"), "told_from"),
     ({**A_STORY, "chapters": [{**A_STORY["chapters"][0], "steps": [{"file": "src/app.py", "lines": "all"}]}]}, "lines"),
 ]
 

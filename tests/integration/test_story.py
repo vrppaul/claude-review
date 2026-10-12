@@ -29,6 +29,8 @@ RETAKE_ROUTE = "/api/retake"
 EDITED_FILE = "initial.txt"
 ADDED_FILE = "src/added.py"
 THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "def added() -> None:\n    return None\n"}
+# The edited file as a round's work leaves it: the line the story told, said another way
+REWORDED_SINCE = "initial content\nand a line reworded since\n"
 # Steps that tell each of the two, and a story that tells the whole change
 THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
 THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
@@ -146,13 +148,14 @@ async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client:
 
 
 async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_says_which_round_told_it(
-    agent: AsyncClient,
+    agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
     """The round's work may move the code under a story; what was told is still what was told, and of which round."""
     await tell(agent, WHOLE_STORY)
     told_first = await held_by(agent)
 
-    await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "One more line, please.", "end": False})
+    await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "Another word for it, please.", "end": False})
+    write_files(tmp_git_repo, {EDITED_FILE: REWORDED_SINCE})
     await agent.post(RETAKE_ROUTE)
 
     assert await held_by(agent) == told_first

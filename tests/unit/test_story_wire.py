@@ -23,7 +23,7 @@ from claude_review.presentation.wire.story import (
     ToldStory,
 )
 from claude_review.services.story_telling import tell
-from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of
+from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of, without_field
 
 SERVICE = "src/service.py"
 CHANGE = [changed_file(SERVICE, hunk(10, 10, "  -++ -- "))]
@@ -136,9 +136,7 @@ def test_what_a_story_may_leave_out_is_read_as_left_out() -> None:
 @pytest.mark.parametrize("left_out", ["title", "told_from", "overview", "chapters"])
 def test_what_a_story_must_say_is_asked_for_by_name(left_out: str) -> None:
     """Whether it is told from memory or read back from commits most of all: unsaid, a reconstruction would pass for memory."""
-    said = {name: value for name, value in THE_LEAST_A_STORY_SAYS.items() if name != left_out}
-
-    assert refused_at(said) == [(left_out,)]
+    assert refused_at(without_field(THE_LEAST_A_STORY_SAYS, left_out)) == [(left_out,)]
 
 
 @pytest.mark.parametrize("part", PARTS)
@@ -198,7 +196,7 @@ def test_a_text_is_as_long_as_a_request_may_hold_and_no_longer(capped: FieldPath
     longest = written_with(as_the_agent_writes(canvas_story()), capped, "x" * most)
     longer = written_with(as_the_agent_writes(canvas_story()), capped, "x" * (most + 1))
 
-    assert StoryRequest.model_validate(longest)
+    assert read_at(StoryRequest.model_validate(longest).model_dump(mode="json"), capped) == "x" * most
     assert refused_at(longer) == [capped]
 
 
