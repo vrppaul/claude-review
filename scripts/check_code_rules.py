@@ -1,4 +1,4 @@
-"""Check the two code rules no linter here can be told to keep.
+"""Check the code rules no linter here can be told to keep.
 
 No function is defined inside another: a helper is a function of its
 module, with a name and parameters of its own, not a closure in the body of
@@ -7,6 +7,15 @@ something else. A lambda is still allowed where a short one does.
 No name is too short to say what it holds: `index`, not `i`; `error`, not
 `e`. A few words are short and still say what they mean, and `_` says that
 nothing is kept.
+
+No model's fields are named in text: a model is not copied with fields
+updated (`model_copy(update=…)`), and one written out as a mapping
+(`model_dump()`, `dict(model)`) is not spread with `**` or merged with `|`
+into the making of another. No type checker reads the names such a mapping
+carries. A model made from another is made by a method of the model, which
+calls its constructor with every field written out. A mapping carried in a
+variable before it is spread is past what this check can see: the rule
+holds there all the same.
 
 Run on files or directories, in the project's own environment, as the
 pre-commit hook runs it and CI runs the hook:
@@ -28,6 +37,16 @@ SHORTEST_NAME = 3
 SHORT_WORDS = frozenset({"_", "id", "at", "to", "ok", "of", "on", "by", "is"})
 PYTHON_FILES = "*.py"
 FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+# How pydantic copies a model with some of its fields changed
+COPYING = "model_copy"
+FIELDS_CHANGED = "update"
+# How a model is written out as a mapping of its fields: by its own method, or by the builtin handed it
+DUMPING = "model_dump"
+MAPPING = "dict"
+# What each way of naming a model's fields in text is told
+COPIED_BY_NAME = "`model_copy(update=…)` names a model's fields in text: the model makes the copy, by its constructor"
+SPREAD = "a model written out as a mapping is spread with `**`: its fields are named in text no type checker reads"
+MERGED = "a model written out as a mapping is merged with `|`: its fields are named in text no type checker reads"
 # What the process exits with
 ALL_KEPT = 0
 RULE_BROKEN = 1
@@ -73,7 +92,61 @@ def _look_inside(node: ast.AST, path: Path, *, inside_function: bool, found: lis
         if given is not None and _too_short(given.name):
             too_short = f"`{given.name}` is too short to say what it holds"
             found.append(Breach(path=path, line=given.line, says=too_short))
+        named_in_text = _fields_named_in_text(child, path)
+        if named_in_text is not None:
+            found.append(named_in_text)
         _look_inside(child, path, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
+
+
+def _fields_named_in_text(node: ast.AST, path: Path) -> Breach | None:
+    """The breach a node makes by naming a model's fields in text, if it makes one.
+
+    A copy with fields updated; a model written out as a mapping and spread
+    into a call or into another mapping; one merged with another mapping.
+    """
+    match node:
+        case ast.Call() if _copies_with_an_update(node):
+            return Breach(path=path, line=node.lineno, says=COPIED_BY_NAME)
+        case ast.Call() if _spreads_a_model_into_a_call(node):
+            return Breach(path=path, line=node.lineno, says=SPREAD)
+        case ast.Dict() if _spreads_a_model_into_a_mapping(node):
+            return Breach(path=path, line=node.lineno, says=SPREAD)
+        case ast.BinOp(op=ast.BitOr()) if _writes_a_model_out(node.left) or _writes_a_model_out(node.right):
+            return Breach(path=path, line=node.lineno, says=MERGED)
+        case _:
+            return None
+
+
+def _copies_with_an_update(call: ast.Call) -> bool:
+    """Whether a call is `model.model_copy(update=…)`."""
+    match call.func:
+        case ast.Attribute(attr=called):
+            return called == COPYING and any(keyword.arg == FIELDS_CHANGED for keyword in call.keywords)
+        case _:
+            return False
+
+
+def _spreads_a_model_into_a_call(call: ast.Call) -> bool:
+    """Whether a call is handed a model written out and spread: a spread is a keyword with no name."""
+    return any(keyword.arg is None and _writes_a_model_out(keyword.value) for keyword in call.keywords)
+
+
+def _spreads_a_model_into_a_mapping(written: ast.Dict) -> bool:
+    """Whether a mapping written out has a model spread into it: a spread stands where a key would, with none."""
+    return any(
+        key is None and _writes_a_model_out(value) for key, value in zip(written.keys, written.values, strict=True)
+    )
+
+
+def _writes_a_model_out(node: ast.expr) -> bool:
+    """Whether an expression writes a model out as a mapping of its fields: `model.model_dump(…)`, or `dict(model)`."""
+    match node:
+        case ast.Call(func=ast.Attribute(attr=called)):
+            return called == DUMPING
+        case ast.Call(func=ast.Name(id=called), args=[_], keywords=[]):
+            return called == MAPPING
+        case _:
+            return False
 
 
 def _name_given(node: ast.AST) -> GivenName | None:
