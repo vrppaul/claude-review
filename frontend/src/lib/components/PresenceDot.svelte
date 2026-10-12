@@ -1,19 +1,24 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 
-	/** How the agent stands with the review. */
+	/** How the agent stands with the review, as far as the page can tell. */
 	type Presence = 'absent' | 'working' | 'listening';
 	// Each in its own colour: at work in the agent's, listening in the colour of something ready
 	const DOTS: Record<Presence, string> = {
-		absent: 'bg-base-300',
+		absent: 'bg-(--color-base-300)',
 		working: 'bg-(--cr-agent)',
 		listening: 'bg-(--cr-done)'
 	};
 
 	const review = useReview();
 
+	// While the review cannot be reached, the page cannot tell whether the agent is still there
 	const presence = $derived<Presence>(
-		!review.answerer.attached ? 'absent' : review.conversation.working ? 'working' : 'listening'
+		!review.link.connected || !review.answerer.attached
+			? 'absent'
+			: review.conversation.working
+				? 'working'
+				: 'listening'
 	);
 </script>
 

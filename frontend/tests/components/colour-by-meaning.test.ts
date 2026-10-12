@@ -24,6 +24,8 @@ const AGENTS = '--cr-agent';
 const READERS_WORDS = '--cr-mark-text';
 const READERS_CONTROLS = '--cr-mark';
 const DONE = '--cr-add-text';
+// And nothing in particular: the quiet ground of a dot saying nobody is there
+const NOBODY = '--color-base-300';
 
 /** That a part of an element is drawn in a meaning's colour, in every theme, whatever token stands between. */
 function expectDrawnIn(element: Element | null | undefined, drawn: Drawn, meaning: string): void {
@@ -130,6 +132,23 @@ describe('each thing is drawn in the colour of what it means', () => {
 		const { container } = render(PresenceDot, inReview(review));
 
 		expectDrawnIn(container.querySelector('span'), 'background', DONE);
+	});
+
+	it('draws an agent as nobody while the review cannot be reached: the page cannot know it is still there', () => {
+		const review = answeredReview();
+		review.link.lost();
+
+		const { container } = render(PresenceDot, inReview(review));
+
+		expectDrawnIn(container.querySelector('span'), 'background', NOBODY);
+	});
+
+	it('draws no agent as nobody', () => {
+		const review = openReview({ files: [file] });
+
+		const { container } = render(PresenceDot, inReview(review));
+
+		expectDrawnIn(container.querySelector('span'), 'background', NOBODY);
 	});
 
 	it('draws the agent at work on a message in its own colour', async () => {
