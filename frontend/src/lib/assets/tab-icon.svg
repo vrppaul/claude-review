@@ -1,1 +1,2 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="3" y="7" width="26" height="19" rx="4" fill="none" stroke="#8894a6" stroke-width="3"/><path d="M9 17h9" stroke="#8894a6" stroke-width="3" stroke-linecap="round"/></svg>
+<!-- The tab's icon. Its colours are tokens of styles/tokens.css: an icon is an image, which reads no stylesheet, so the page writes each value in as it sets the icon (dom/tab.ts) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="3" y="7" width="26" height="19" rx="4" fill="none" stroke="var(--cr-faint)" stroke-width="3"/><path d="M9 17h9" stroke="var(--cr-faint)" stroke-width="3" stroke-linecap="round"/></svg>
