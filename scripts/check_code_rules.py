@@ -16,7 +16,9 @@ reads the names. So what goes the other way is not used at all — pydantic's
 `vars` and `copy.replace`. A model leaves for the wire as JSON
 (`model_dump_json`), never as a mapping. The check knows these by name
 alone: a model handed to `dict(…)`, or walked field by field, is past what
-it sees, and the rule holds there all the same.
+it sees, and the rule holds there all the same. The module `copy` it knows
+by the names the file's own imports give it, so a text called `copy` is
+not taken for it.
 
 Run on files or directories, in the project's own environment. The
 pre-commit hook hands it every Python file outside `tests/`, and CI runs
@@ -45,7 +47,10 @@ TOO_SHORT = "`{name}` is too short to say what it holds"
 # What takes a model apart into its fields by name, or puts one together from them, as an attribute of
 # anything: each with what is said of it
 FIELDS_BY_NAME = {
-    "model_copy": "`model_copy` copies a model by the names of its fields: the model makes it, by its constructor",
+    "model_copy": (
+        "`model_copy` copies a model past its constructor, and what it is told to change goes in by name, unchecked:"
+        " the model makes it, by its constructor"
+    ),
     "model_construct": "`model_construct` builds a model unchecked, from names in text: build it by its constructor",
     "model_dump": "`model_dump` writes a model out as a mapping: hand the model on, or write it as JSON",
     "__dict__": "`__dict__` reads an object's fields as a mapping, by name: read the fields it has",
@@ -68,6 +73,16 @@ class GivenName(BaseModel):
 
     name: str
     line: int
+
+
+class CheckedFile(BaseModel):
+    """A file under the check: where it is, and what is known of it before any one node is looked at."""
+
+    model_config = ConfigDict(frozen=True)
+
+    path: Path
+    # Every name the file's imports give the module `copy`: its own, or the one after `as`
+    copy_module_names: frozenset[str]
 
 
 class Said(BaseModel):
@@ -96,20 +111,32 @@ def breaches_in(path: Path) -> list[Breach]:
     """Every place in one file that breaks a rule, in the order they are found."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: list[Breach] = []
-    _look_inside(tree, path, inside_function=False, found=found)
+    file = CheckedFile(path=path, copy_module_names=_names_of_the_copy_module(tree))
+    _look_inside(tree, file, inside_function=False, found=found)
     return found
 
 
-def _look_inside(node: ast.AST, path: Path, *, inside_function: bool, found: list[Breach]) -> None:
+def _names_of_the_copy_module(tree: ast.AST) -> frozenset[str]:
+    """Every name a file's imports give the module `copy`, wherever in the file it is imported."""
+    return frozenset(
+        imported.asname or imported.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for imported in node.names
+        if imported.name == COPYING_MODULE
+    )
+
+
+def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, found: list[Breach]) -> None:
     """Check everything under a node, knowing whether it already sits in a function."""
     for child in ast.iter_child_nodes(node):
         said = [
             *_said_of_a_function_inside(child, inside_function=inside_function),
             *_said_of_a_short_name(child),
-            *_said_of_fields_by_name(child),
+            *_said_of_fields_by_name(child, file.copy_module_names),
         ]
-        found.extend(Breach(path=path, line=one.line, says=one.says) for one in said)
-        _look_inside(child, path, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
+        found.extend(Breach(path=file.path, line=one.line, says=one.says) for one in said)
+        _look_inside(child, file, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
 
 
 def _said_of_a_function_inside(node: ast.AST, *, inside_function: bool) -> list[Said]:
@@ -129,10 +156,13 @@ def _said_of_a_short_name(node: ast.AST) -> list[Said]:
     return [Said(line=given.line, says=TOO_SHORT.format(name=given.name))]
 
 
-def _said_of_fields_by_name(node: ast.AST) -> list[Said]:
-    """What is said of a node that takes a model apart by the names of its fields, or puts one together from them."""
+def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) -> list[Said]:
+    """What is said of a node that takes a model apart by the names of its fields, or puts one together from them.
+
+    `copy_module_names` is what the node's file calls the module `copy`.
+    """
     match node:
-        case ast.Attribute(value=ast.Name(id=module), attr=name) if module == COPYING_MODULE and name == REPLACING:
+        case ast.Attribute(value=ast.Name(id=module), attr=name) if module in copy_module_names and name == REPLACING:
             return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
         case ast.ImportFrom(module=module, names=names) if module == COPYING_MODULE and _name_among(names, REPLACING):
             return [Said(line=node.lineno, says=REPLACED_BY_NAME)]

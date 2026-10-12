@@ -58,7 +58,15 @@ FIELDS_BY_NAME = [
             def moved(anchor: Anchor, line: int) -> Anchor:
                 return anchor.model_copy(update={"line": line})
         """,
-        said="checked.py:3: `model_copy` copies a model by the names of its fields",
+        said="checked.py:3: `model_copy` copies a model past its constructor",
+    ),
+    FieldsByName(
+        what="a copy that changes no field",
+        source="""
+            def kept(anchor: Anchor) -> Anchor:
+                return anchor.model_copy(deep=True)
+        """,
+        said="checked.py:3: `model_copy` copies a model past its constructor",
     ),
     FieldsByName(
         what="a model built unchecked",
@@ -114,6 +122,17 @@ FIELDS_BY_NAME = [
         said="checked.py:6: `copy.replace` copies an object by the names of its fields",
     ),
     FieldsByName(
+        what="that module brought in under another name",
+        source="""
+            import copy as duplicating
+
+
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return duplicating.replace(anchor, line=line)
+        """,
+        said="checked.py:6: `copy.replace` copies an object by the names of its fields",
+    ),
+    FieldsByName(
         what="that function brought in by name",
         source="""
             from copy import replace
@@ -123,7 +142,7 @@ FIELDS_BY_NAME = [
 ]
 
 # What takes no model apart: a model made by its constructor, one written as JSON, mappings that never were
-# models spread and merged, and a text with a part of it replaced
+# models spread and merged, and a text with a part of it replaced, whatever the text is called
 MODELS_MADE_AND_MAPPINGS_MERGED = """
     class Anchor(BaseModel):
         line: int
@@ -150,6 +169,10 @@ MODELS_MADE_AND_MAPPINGS_MERGED = """
 
     def renamed(path: str) -> str:
         return path.replace("old", "new")
+
+
+    def reworded(copy: str) -> str:
+        return copy.replace("old", "new")
 """
 
 
