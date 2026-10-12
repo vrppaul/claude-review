@@ -51,6 +51,19 @@ tests. Remove items when done — don't check them off.
       way `ImageService` keeps policy and `DirectoryImageStore` touches the
       disk. Both read files themselves today.
 
+- [ ] `refactor(server)`: a reader's record is changed by merging the dumps
+      of two models — `ReaderRecordService.change` reads the record back from
+      `current.model_dump() | change.model_dump(exclude_none=True)` — so
+      which fields a change carries is matched by name, in text no type
+      checker reads. The change should say for itself, typed, how it applies
+      to a record (AGENTS.md, "A model made from another").
+- [ ] `refactor(wire)`: a thread on the wire is told its place through a
+      mapping of the review's own thread — `Thread.place_named` in
+      `presentation/wire/threads.py` returns `{**source.model_dump(),
+      "where": ...}` — the one wire model that is not made of the review's
+      own by `.of()` alone. It wants a construction that says `where`
+      without spreading the model (same rule).
+
 ## Testing
 
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
