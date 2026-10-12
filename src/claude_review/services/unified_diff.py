@@ -9,7 +9,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, Unshown
+from claude_review.domain.models import FIRST_LINE, DiffFile, DiffHunk, DiffLine, FileStatus, LineType, Unshown
 
 # Where each file's part of the diff begins
 FILE_START = re.compile(r"^diff --git ", re.MULTILINE)
@@ -89,10 +89,9 @@ OCTAL_BASE = 8
 PATH_ENCODING = "utf-8"
 NOT_TEXT = "replace"
 
-# The line a file deleted or created whole starts at, on either side
-FIRST_LINE = 1
 # A hunk joined from two that git wrote has no header of git's own; it starts
-# at the file's first line, where no header is drawn
+# at the file's first line, as a file deleted or created whole does on either
+# side, where no header is drawn
 JOINED_HUNK_HEADER = ""
 
 

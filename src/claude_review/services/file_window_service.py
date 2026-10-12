@@ -19,6 +19,7 @@ from claude_review.domain.exceptions import (
     PathOutsideRepositoryError,
 )
 from claude_review.domain.interfaces import TrackedPaths
+from claude_review.domain.models import FIRST_LINE
 
 MAX_WINDOW_LINES = 2000
 
@@ -80,7 +81,7 @@ class FileWindowService:
                 file, or nothing readable is there.
             FileUnreadableError: if the file is not text, or too large to read.
         """
-        if start < 1 or end < start:
+        if start < FIRST_LINE or end < start:
             msg = f"not a line range: {start}-{end}"
             raise LineRangeError(msg)
 
@@ -159,8 +160,10 @@ class FileWindowService:
 def _window_from(handle: BinaryIO, start: int, wanted: int) -> FileWindow:
     """The wanted lines of a file read from its start, and how many lines it has in all."""
     handle.seek(0)
+    # How many lines stand above the window
+    above = start - FIRST_LINE
     window = [
         line.removesuffix(LINE_END).decode(TEXT_ENCODING, errors=NOT_TEXT)
-        for line in islice(handle, start - 1, start - 1 + wanted)
+        for line in islice(handle, above, above + wanted)
     ]
-    return FileWindow(start=start, lines=window, total=start - 1 + len(window) + sum(1 for _ in handle))
+    return FileWindow(start=start, lines=window, total=above + len(window) + sum(1 for _ in handle))

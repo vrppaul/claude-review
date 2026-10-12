@@ -52,6 +52,10 @@ class FileStatus(StrEnum):
     RENAMED = auto()
 
 
+# The number of a file's first line: every line the review names is counted from it
+FIRST_LINE = 1
+
+
 class DiffLine(BaseModel):
     """A single line in a diff hunk."""
 
@@ -219,8 +223,8 @@ class LineAnchor(AnchorBase):
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
     file: FilePath
     side: LineSide
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
+    start_line: int = Field(ge=FIRST_LINE)
+    end_line: int = Field(ge=FIRST_LINE)
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:

@@ -22,7 +22,7 @@ from claude_review.domain.exceptions import (
     UnknownImageError,
     UnknownVersionError,
 )
-from claude_review.domain.models import MAX_PATH_LENGTH
+from claude_review.domain.models import FIRST_LINE, MAX_PATH_LENGTH
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.refusals import Takes, refusals
@@ -162,8 +162,8 @@ async def get_file_window(
     # Any path the diff draws, a name holding a control character too: one
     # that cannot be commented on can still be read wider
     path: str = Query(min_length=1, max_length=MAX_PATH_LENGTH),
-    start: int = Query(ge=1),
-    end: int = Query(ge=1),
+    start: int = Query(ge=FIRST_LINE),
+    end: int = Query(ge=FIRST_LINE),
     review: Review = Depends(get_review),
 ) -> FileWindowResponse:
     """Serve lines a hunk left out, so the reader can widen its context."""

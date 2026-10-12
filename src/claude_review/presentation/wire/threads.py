@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter, Valid
 
 from claude_review.domain import models
 from claude_review.domain.models import (
+    FIRST_LINE,
     FIRST_ROUND,
     LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
@@ -47,8 +48,8 @@ class LineAnchor(WireModel):
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
     file: FilePath
     side: LineSide
-    start_line: int = Field(ge=1)
-    end_line: int = Field(ge=1)
+    start_line: int = Field(ge=FIRST_LINE)
+    end_line: int = Field(ge=FIRST_LINE)
     quote: list[QuoteLine] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
     outdated: WireBool = False
 

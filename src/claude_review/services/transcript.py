@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_review.domain.models import DiffFile
+from claude_review.domain.models import FIRST_LINE, DiffFile
 from claude_review.services.unreadable_content import UnreadableContentError
 from claude_review.services.whole_file import whole_file
 
@@ -153,7 +153,7 @@ def _entries(text: str) -> list[TranscriptEntry]:
         UnreadableContentError: If a line is not JSON.
     """
     entries = []
-    for line_number, line in enumerate(text.split(ENTRY_END), start=1):
+    for line_number, line in enumerate(text.split(ENTRY_END), start=FIRST_LINE):
         if not line.strip():
             continue
         try:
