@@ -36,6 +36,10 @@ def test_a_path_that_starts_with_a_backtick_is_set_apart_from_its_fence() -> Non
     assert place_in_markdown(line_anchor("`quoted`.py", 1)) == "`` `quoted`.py ``:1"
 
 
+# What somebody might write where lines are wanted, and no lines are named by
+NOT_LINES_AT_ALL = "all of it"
+
+
 @pytest.mark.parametrize(("written", "first", "last"), [("42", 42, 42), ("42-47", 42, 47), ("47-42", 47, 42)])
 def test_lines_are_read_as_somebody_wrote_them(written: str, first: int, last: int) -> None:
     """One line, or a first and a last: whether a file could have such lines is for whoever asked to say."""
@@ -46,6 +50,14 @@ def test_lines_are_read_as_somebody_wrote_them(written: str, first: int, last: i
 def test_what_names_no_lines_is_not_read_as_some(written: str) -> None:
     with pytest.raises(ValueError, match="42-47"):
         lines_named(written)
+
+
+def test_what_names_no_lines_is_refused_without_being_said_back() -> None:
+    """Whoever wrote it has it; said back, a text of any length would come back whole in a refusal."""
+    with pytest.raises(ValueError, match="42-47") as refused:
+        lines_named(NOT_LINES_AT_ALL)
+
+    assert NOT_LINES_AT_ALL not in str(refused.value)
 
 
 @given(

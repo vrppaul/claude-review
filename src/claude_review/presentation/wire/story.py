@@ -22,7 +22,7 @@ from claude_review.domain.models import MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
 from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH, WireModel
 from claude_review.presentation.wire.content import DiffFile
-from claude_review.services.place_words import LINES_WRITTEN, line_span, lines_named
+from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 from claude_review.services.review import review_story
 
 # The most of each thing one document may hold. A story with more is not a
@@ -46,7 +46,7 @@ ChangedFile = Annotated[str, Field(max_length=MAX_PATH_LENGTH)]
 
 # How the API describes a step's lines: text, as `LINES_WRITTEN` has it
 LINES_SCHEMA = {"type": "string", "pattern": LINES_WRITTEN.pattern}
-NOT_TEXT = 'wants lines as text, like "42" or "42-47"'
+NOT_TEXT = f"wants lines as text, like {LINES_EXAMPLE}"
 
 
 def _lines_read(written: object) -> models.LineSpan:

@@ -137,10 +137,8 @@ class ThreadLinesParameter(click.ParamType):
             return value
         try:
             named = lines_named(str(value))
-        except ValueError:
-            self.fail(
-                f'wants a line or a range from line {FIRST_LINE} on, like "42" or "42-47", not "{value}"', param, ctx
-            )
+        except ValueError as not_lines:
+            self.fail(f'"{value}" {not_lines}', param, ctx)
         try:
             return ThreadLines(first=named.first, last=named.last)
         except ValidationError as invalid:

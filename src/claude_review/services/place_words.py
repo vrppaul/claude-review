@@ -1,9 +1,14 @@
-"""How the review names the place a thread hangs on: in plain words, or in Markdown.
+"""How the review says a place in words, and reads lines back from the words for them.
 
 An anchor is the place itself; the words for it depend on who reads them.
 The agent's events, the catch-up index and the logs are text, and take plain
 words. A round and the exit report are Markdown, and set the path as code,
 so a name with an underscore or an asterisk in it is not read as emphasis.
+
+A run of lines is written one way, "42" or "42-47", wherever a person
+writes one — an option of a command, a step of a story's document. It is
+written and read back here, with the one pattern for it and the one way
+of saying what is not one, so they cannot come to differ.
 """
 
 import re
@@ -23,7 +28,11 @@ MOST_DIGITS = 10
 # last. Anchored at both ends, so its pattern says the same to a schema, which
 # reads a pattern as found anywhere in a text
 LINES_WRITTEN = re.compile(rf"^[0-9]{{1,{MOST_DIGITS}}}({RANGE_SEPARATOR}[0-9]{{1,{MOST_DIGITS}}})?$")
-NOT_LINES = 'not a line or a range of lines, like "42" or "42-47": {written!r}'
+# How a run of lines is written, shown to whoever wrote something else
+LINES_EXAMPLE = '"42" or "42-47"'
+# What is wrong with a text that names no lines: the rule, never the text,
+# which whoever wrote it has
+NOT_LINES = f"is not a line or a range of lines, like {LINES_EXAMPLE}"
 
 
 def place_in_words(anchor: Anchor) -> str:
@@ -56,7 +65,7 @@ def lines_named(written: str) -> LineSpan:
         ValueError: if it is neither a line's number nor a first and a last.
     """
     if LINES_WRITTEN.fullmatch(written) is None:
-        raise ValueError(NOT_LINES.format(written=written))
+        raise ValueError(NOT_LINES)
     first, _, last = written.partition(RANGE_SEPARATOR)
     return LineSpan(first=int(first), last=int(last or first))
 

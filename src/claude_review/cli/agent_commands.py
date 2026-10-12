@@ -37,6 +37,7 @@ from claude_review.presentation.wire.agent import (
 from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
 from claude_review.presentation.wire.story import StoryRequest
 from claude_review.presentation.wire.threads import LineAnchor, PointRequest
+from claude_review.services.place_words import LINES_EXAMPLE
 
 # How a refusal lists the steps both --did and --step name
 STEPS_SEPARATOR = ", "
@@ -260,7 +261,7 @@ def show_command(*, client: ReviewClient, path: str) -> None:
 @click.command("point")
 @review_port
 @click.option("--file", "path", required=True, type=FILE, help="File the thread hangs on, as the diff names it.")
-@click.option("--lines", required=True, type=THREAD_LINES, help='Line or range it is about, e.g. "42" or "42-47".')
+@click.option("--lines", required=True, type=THREAD_LINES, help=f"Line or range it is about, e.g. {LINES_EXAMPLE}.")
 @click.option(
     "--side",
     type=click.Choice(LineSide, case_sensitive=False),

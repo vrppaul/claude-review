@@ -39,6 +39,8 @@ PARTS: list[FieldPath] = [
 ]
 # What is no way to write a step's lines: words, a number, the first and the last apart
 NOT_LINES: list[JsonValue] = ["all of it", 42, {"first": 42, "last": 47}, "42 - 47", ""]
+# What an agent might write where lines are wanted, and no lines are named by
+NOT_LINES_AT_ALL = "the whole function"
 # Each list of the document, and the most it may hold
 CAPPED_LISTS: list[tuple[FieldPath, int]] = [
     (("chapters",), MAX_CHAPTERS),
@@ -152,6 +154,16 @@ def test_lines_not_written_as_lines_are_refused_at_the_step(written: JsonValue) 
     document = written_with(as_the_agent_writes(canvas_story()), (*FIRST_STEP, "lines"), written)
 
     assert refused_at(document) == [(*FIRST_STEP, "lines")]
+
+
+def test_lines_refused_are_not_said_back_to_whoever_sent_them() -> None:
+    """A refusal says where and why, never what was sent: lines of any length would come back whole in it."""
+    document = written_with(as_the_agent_writes(canvas_story()), (*FIRST_STEP, "lines"), NOT_LINES_AT_ALL)
+
+    with pytest.raises(ValidationError) as refused:
+        StoryRequest.model_validate(document)
+
+    assert [NOT_LINES_AT_ALL in error["msg"] for error in refused.value.errors()] == [False]
 
 
 def test_lines_that_run_backwards_are_read_and_left_to_the_storys_checks() -> None:
