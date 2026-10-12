@@ -4,7 +4,15 @@ from enum import StrEnum, auto
 
 from pydantic import Field
 
-from claude_review.domain.models import MAX_QUOTE_LINES, EpochMillis, FileStatus, LineType, ReviewMode
+from claude_review.domain.models import (
+    LARGEST_FILE_SHOWN_BYTES,
+    MAX_QUOTE_LINES,
+    EpochMillis,
+    FileStatus,
+    LineType,
+    ReviewMode,
+    Unshown,
+)
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireBool, WireModel
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
@@ -44,7 +52,8 @@ class DiffFile(WireModel):
     old_path: str | None
     status: FileStatus
     hunks: list[DiffHunk]
-    is_binary: WireBool
+    # Why none of its lines are shown though its content changed; null when they are
+    unshown: Unshown | None
     old_mode: str | None
     new_mode: str | None
     # Whether a thread may name it: a path holding a control character is shown, but only to be read
@@ -56,7 +65,8 @@ class SendLimits(WireModel):
 
     Told by the server rather than repeated in the browser, so the two
     cannot drift apart — and a comment the server would refuse is never
-    written in the first place.
+    written in the first place. The largest file shown line by line goes
+    with them, for the page to name when it shows a file without its lines.
     """
 
     max_image_bytes: int
@@ -69,6 +79,8 @@ class SendLimits(WireModel):
     # The longest anything the reader writes may be: a comment, a reply, a
     # panel message, the summary of a round
     max_text_length: int
+    # The largest file whose lines the diff shows, in bytes
+    largest_file_shown_bytes: int
 
 
 # What this review holds every page to
@@ -78,6 +90,7 @@ SEND_LIMITS = SendLimits(
     max_quoted_lines=MAX_QUOTE_LINES,
     max_window_lines=MAX_WINDOW_LINES,
     max_text_length=MAX_TEXT_LENGTH,
+    largest_file_shown_bytes=LARGEST_FILE_SHOWN_BYTES,
 )
 
 

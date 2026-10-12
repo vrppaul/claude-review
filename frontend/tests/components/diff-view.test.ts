@@ -238,7 +238,7 @@ describe('comment anchoring across diff sides', () => {
 });
 
 describe('files with no lines to show', () => {
-	const binaryFile = diffFile({ path: 'docs/logo.png', status: 'added', is_binary: true });
+	const binaryFile = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
 
 	const modeOnlyFile = diffFile({
 		path: 'scripts/run.sh',
@@ -252,6 +252,14 @@ describe('files with no lines to show', () => {
 		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('empty-file-note').textContent).toContain('Binary file');
+	});
+
+	it('says a file too large to show is too large, and how large that is, rather than calling it binary', () => {
+		review = openReview({ files: [diffFile({ path: 'generated.log', status: 'added', unshown: 'too_large' })] });
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('empty-file-note').textContent?.trim()).toBe('Too large to show (over 4 MB)');
 	});
 
 	it('shows a permission change that touched no line', () => {

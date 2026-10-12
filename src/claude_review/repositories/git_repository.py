@@ -11,7 +11,7 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, GitRef
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, DiffFile, FileStatus, GitRef
 
 log = structlog.get_logger()
 
@@ -144,6 +144,13 @@ OBJECTS_SUFFIX = ".git-objects"
 INDEX_NAME = "index"
 OBJECTS_NAME = "objects"
 
+# How git is asked the size of what is stored, an object to a line, and
+# answers a line to each: the size, or the name asked and that it is missing
+SIZES_ASKED = ["cat-file", "--batch-check=%(objectsize)"]
+# What stands between where a blob is and its path: `<base>:<path>` in a
+# base, `:<path>` in the index being staged
+BLOB_AT = ":"
+
 # Where in an object store git finds the other stores it reads objects from,
 # and what ends each one's line there
 ALTERNATES_FILE = Path("info") / "alternates"
@@ -235,6 +242,32 @@ class GitStagedTree(StagedTree):
                 continue
             changed[base] = [name for name in listed.split(NAME_END) if name]
         return changed
+
+    @override
+    async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
+        """Of files the diff shows no lines of, the paths of those over the size git reads, on either side.
+
+        Git reads no file over `core.bigFileThreshold` and says of it only that
+        it is binary, as it says of a file that is: the sizes stored tell the
+        two apart. Each side is asked by where it stands, a line to each, all
+        in one command; a path holding a line break cannot be asked so, and
+        stays as git said it.
+        """
+        asked = [
+            (file.path, side)
+            for file in files
+            if LINE_END not in file.path and LINE_END not in (file.old_path or "")
+            for side in _sides_stored(base, file)
+        ]
+        if not asked:
+            return set()
+        handed = "".join(f"{side}{LINE_END}" for _, side in asked)
+        sizes = (await _run(self._path, SIZES_ASKED, self._variables, handed=handed)).splitlines()
+        return {
+            path
+            for (path, _), size in zip(asked, sizes, strict=True)
+            if size.isdecimal() and int(size) > LARGEST_FILE_SHOWN_BYTES
+        }
 
 
 class GitRepository(ReviewedRepository):
@@ -429,13 +462,25 @@ async def _commit_named(path: Path, revision: str) -> str | None:
     return run.output.strip() if run.exit_code == 0 else None
 
 
-async def _run(path: Path, arguments: list[str], variables: dict[str, str] | None = None) -> str:
-    """What a git command printed.
+def _sides_stored(base: str, file: DiffFile) -> list[str]:
+    """Where each side of a file is stored, as git names a blob by where it stands: in the base, and in the index."""
+    sides = []
+    if file.status != FileStatus.ADDED:
+        sides.append(f"{base}{BLOB_AT}{file.old_path or file.path}")
+    if file.status != FileStatus.DELETED:
+        sides.append(f"{BLOB_AT}{file.path}")
+    return sides
+
+
+async def _run(
+    path: Path, arguments: list[str], variables: dict[str, str] | None = None, *, handed: str | None = None
+) -> str:
+    """What a git command printed, handed on its standard input what it reads there, if anything.
 
     Raises:
         GitError: if it could not run, ran out of time, or failed.
     """
-    run = await _execute(path, arguments, variables)
+    run = await _execute(path, arguments, variables, handed=handed)
     if run.exit_code != 0:
         log.warning("git_command_failed", command=arguments[0], exit_code=run.exit_code)
         msg = f"git command failed: {run.errors.strip()}"
@@ -443,11 +488,14 @@ async def _run(path: Path, arguments: list[str], variables: dict[str, str] | Non
     return run.output
 
 
-async def _execute(path: Path, arguments: list[str], variables: dict[str, str] | None = None) -> GitRun:
+async def _execute(
+    path: Path, arguments: list[str], variables: dict[str, str] | None = None, *, handed: str | None = None
+) -> GitRun:
     """Run git and say how it went, leaving no process behind whatever happens.
 
     `variables` are what the command sets in git's environment; the rest is
     inherited, but for what would point git elsewhere or reshape its diff.
+    `handed` is what it reads on its standard input, for a command that reads it.
 
     Raises:
         GitError: if git could not be started or ran out of time.
@@ -458,6 +506,7 @@ async def _execute(path: Path, arguments: list[str], variables: dict[str, str] |
             *GIT_SETTINGS,
             *arguments,
             cwd=path,
+            stdin=None if handed is None else asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=_git_environment(variables or {}),
@@ -467,7 +516,8 @@ async def _execute(path: Path, arguments: list[str], variables: dict[str, str] |
         raise GitError(msg) from failure
 
     try:
-        output, errors = await asyncio.wait_for(process.communicate(), timeout=GIT_TIMEOUT)
+        given = None if handed is None else handed.encode(OUTPUT_ENCODING)
+        output, errors = await asyncio.wait_for(process.communicate(given), timeout=GIT_TIMEOUT)
     except TimeoutError:
         await _stop(process)
         msg = f"git command timed out after {GIT_TIMEOUT}s: git {arguments[0]}"

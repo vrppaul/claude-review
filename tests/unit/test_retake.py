@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import override
 
 from claude_review.domain.interfaces import ReviewedRepository, StagedTree
-from claude_review.domain.models import FIRST_ROUND, GitRef, ReviewMode
+from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
 from claude_review.services.review.content_sources import ContentSource, content_source
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
@@ -60,6 +60,10 @@ class HeldStaging(StagedTree):
         self.asked.set()
         await self.answer.wait()
         return {base: [self._path] for base in bases}
+
+    @override
+    async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
+        return set()
 
 
 class RepositoryBeingWorkedOn(ReviewedRepository):

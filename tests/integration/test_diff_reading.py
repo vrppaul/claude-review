@@ -10,7 +10,7 @@ from typing import override
 import pytest
 
 from claude_review.domain.interfaces import GitError, StagedTree
-from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, DiffFile, FileStatus, LineType
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, DiffFile, FileStatus, LineType, Unshown
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import git
@@ -40,6 +40,10 @@ class StagingOfALargeDiff(StagedTree):
     @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         return {}
+
+    @override
+    async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
+        return set()
 
 
 def _large_diff() -> str:
@@ -298,7 +302,7 @@ async def test_binary_file_is_marked_as_binary(tmp_git_repo: Path) -> None:
     files = await _diff(tmp_git_repo)
     by_path = {diff_file.path: diff_file for diff_file in files}
 
-    assert by_path["logo.png"].is_binary
+    assert by_path["logo.png"].unshown is Unshown.BINARY
     assert by_path["logo.png"].hunks == []
 
 
@@ -309,7 +313,7 @@ async def test_text_file_is_not_marked_as_binary(tmp_git_repo: Path) -> None:
     files = await _diff(tmp_git_repo)
     by_path = {diff_file.path: diff_file for diff_file in files}
 
-    assert not by_path["initial.txt"].is_binary
+    assert by_path["initial.txt"].unshown is None
 
 
 async def test_permission_change_reports_both_modes(tmp_git_repo: Path) -> None:
@@ -396,7 +400,7 @@ async def test_binary_name_containing_a_header_separator(tmp_git_repo: Path) -> 
     by_path = {diff_file.path: diff_file for diff_file in files}
 
     assert "x b/y.bin" in by_path
-    assert by_path["x b/y.bin"].is_binary
+    assert by_path["x b/y.bin"].unshown is Unshown.BINARY
 
 
 async def test_mode_only_name_containing_a_header_separator(tmp_git_repo: Path) -> None:
@@ -498,8 +502,49 @@ async def test_a_file_too_large_to_read_is_shown_without_its_lines(tmp_git_repo:
     [shown] = await _diff(tmp_git_repo)
 
     assert shown.path == "generated.log"
-    assert shown.is_binary, "shown as a file there are no lines of to read"
+    assert shown.unshown is Unshown.TOO_LARGE, "said too large, not binary: it is text, only long"
     assert shown.hunks == []
+
+
+async def test_a_file_too_large_in_the_base_is_said_too_large_once_deleted(tmp_git_repo: Path) -> None:
+    """Its size is the base's: git reads neither side of a file over the limit on either."""
+    lines = LARGEST_FILE_SHOWN_BYTES // len(LOG_LINE) + 1
+    (tmp_git_repo / "generated.log").write_text(f"{LOG_LINE}\n" * lines)
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "a long log")
+    (tmp_git_repo / "generated.log").unlink()
+
+    [shown] = await _diff(tmp_git_repo)
+
+    assert (shown.status, shown.unshown) == (FileStatus.DELETED, Unshown.TOO_LARGE)
+
+
+async def test_a_file_over_the_limit_whose_name_holds_a_line_break_is_still_shown(tmp_git_repo: Path) -> None:
+    """Git is asked the sizes a name to a line, and such a name cannot be one: it stays as git said it, and the rest go on."""
+    lines = LARGEST_FILE_SHOWN_BYTES // len(LOG_LINE) + 1
+    (tmp_git_repo / "two\nlines.log").write_text(f"{LOG_LINE}\n" * lines)
+    (tmp_git_repo / "generated.log").write_text(f"{LOG_LINE}\n" * lines)
+
+    files = await _diff(tmp_git_repo)
+
+    assert {diff_file.path: diff_file.unshown for diff_file in files} == {
+        "generated.log": Unshown.TOO_LARGE,
+        "two\nlines.log": Unshown.BINARY,
+    }
+
+
+async def test_a_binary_file_under_the_limit_beside_one_over_it_is_still_binary(tmp_git_repo: Path) -> None:
+    """Each file is measured for itself."""
+    lines = LARGEST_FILE_SHOWN_BYTES // len(LOG_LINE) + 1
+    (tmp_git_repo / "generated.log").write_text(f"{LOG_LINE}\n" * lines)
+    (tmp_git_repo / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x01\x02\x03")
+
+    files = await _diff(tmp_git_repo)
+
+    assert {diff_file.path: diff_file.unshown for diff_file in files} == {
+        "generated.log": Unshown.TOO_LARGE,
+        "logo.png": Unshown.BINARY,
+    }
 
 
 async def test_the_server_goes_on_answering_while_a_large_diff_is_read() -> None:

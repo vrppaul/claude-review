@@ -11,7 +11,8 @@ import type { SendLimits } from '$lib/types';
 import { SvelteSet } from 'svelte/reactivity';
 import { discardImage, keepImage } from '$lib/api/review-api';
 import { messageOf } from '$lib/utils/errors';
-import { imagesAmong, wholeMegabytes } from '$lib/utils/images';
+import { imagesAmong } from '$lib/utils/images';
+import { wholeMegabytes } from '$lib/utils/sizes';
 
 export class ImageAttachments {
 	#images = $state.raw<string[]>([]);

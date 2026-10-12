@@ -15,7 +15,7 @@ import pytest
 from httpx import AsyncClient
 from structlog.typing import EventDict
 
-from claude_review.domain.models import MAX_QUOTE_LINES, ReviewMode, TurnAuthor
+from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, ReviewMode, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
@@ -246,6 +246,7 @@ async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
         "max_quoted_lines": MAX_QUOTE_LINES,
         "max_window_lines": MAX_WINDOW_LINES,
         "max_text_length": MAX_TEXT_LENGTH,
+        "largest_file_shown_bytes": LARGEST_FILE_SHOWN_BYTES,
     }
 
 

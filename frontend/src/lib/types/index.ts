@@ -31,12 +31,14 @@ export type GuideState = Schemas['GuideState'];
 export type DiffLine = Schemas['DiffLine'];
 export type DiffHunk = Schemas['DiffHunk'];
 export type DiffFile = Schemas['DiffFile'];
+/** Why a file whose content changed shows none of its lines: not text, or too large to read. */
+export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */
 export type ReviewResponse = Schemas['ReviewResponse'];
 export type DiffResponse = Schemas['DiffResponse'];
 /** The base a diff was taken against: its key, what the header says, and whether it is narrower than the review's own. */
 export type ShownBase = Schemas['ShownBase'];
-/** What the server takes — images, the lines one comment covers, the length of what is written — so the browser checks before sending. */
+/** What the server takes — images, the lines one comment covers, the length of what is written — so the browser checks before sending; and the largest file it shows line by line. */
 export type SendLimits = Schemas['SendLimits'];
 
 /** Where a base came from, so a menu can group them. */

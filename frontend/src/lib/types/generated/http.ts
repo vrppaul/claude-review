@@ -779,8 +779,7 @@ export interface components {
             status: components["schemas"]["FileStatus"];
             /** Hunks */
             hunks: components["schemas"]["DiffHunk"][];
-            /** Is Binary */
-            is_binary: boolean;
+            unshown: components["schemas"]["Unshown"] | null;
             /** Old Mode */
             old_mode: string | null;
             /** New Mode */
@@ -1231,7 +1230,8 @@ export interface components {
          *
          *     Told by the server rather than repeated in the browser, so the two
          *     cannot drift apart — and a comment the server would refuse is never
-         *     written in the first place.
+         *     written in the first place. The largest file shown line by line goes
+         *     with them, for the page to name when it shows a file without its lines.
          */
         SendLimits: {
             /** Max Image Bytes */
@@ -1244,6 +1244,8 @@ export interface components {
             max_window_lines: number;
             /** Max Text Length */
             max_text_length: number;
+            /** Largest File Shown Bytes */
+            largest_file_shown_bytes: number;
         };
         /**
          * SettingsChange
@@ -1508,6 +1510,16 @@ export interface components {
             /** Round */
             round: number;
         };
+        /**
+         * Unshown
+         * @description Why a file whose content changed shows none of its lines.
+         *
+         *     BINARY — its content is not text.
+         *     TOO_LARGE — it is larger, on one side or the other, than the review reads
+         *     line by line (`LARGEST_FILE_SHOWN_BYTES`): whether it is text is never asked.
+         * @enum {string}
+         */
+        Unshown: "binary" | "too_large";
         /**
          * VersionKind
          * @description Where a base came from, so a menu can group them.

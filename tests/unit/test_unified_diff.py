@@ -21,7 +21,7 @@ import string
 from hypothesis import given, strategies as strategy
 from pydantic import BaseModel
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, Unshown
 from claude_review.services.unified_diff import parse_unified_diff
 from tests.helpers import added_line, context_line, removed_line
 
@@ -371,7 +371,7 @@ def binary_files(draw: strategy.DrawFn) -> WrittenPart:
     old_side = NO_FILE if status == FileStatus.ADDED else as_git_quotes_it(OLD_SIDE + path)
     new_side = NO_FILE if status == FileStatus.DELETED else as_git_quotes_it(NEW_SIDE + path)
     return WrittenPart(
-        file=DiffFile(path=path, status=status, hunks=[], is_binary=True),
+        file=DiffFile(path=path, status=status, hunks=[], unshown=Unshown.BINARY),
         written=[
             paths_line(path, path),
             *([STATUS_HEADER[status]] if status in STATUS_HEADER else []),

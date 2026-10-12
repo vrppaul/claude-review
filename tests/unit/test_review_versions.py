@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import override
 
 from claude_review.domain.interfaces import Repository, StagedTree
-from claude_review.domain.models import ChangedSinceRound, GitRef, RoundKey, VersionOnOffer
+from claude_review.domain.models import ChangedSinceRound, DiffFile, GitRef, RoundKey, VersionOnOffer
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review_opening import OpenedRepository
 from tests.helpers import FixedClock
@@ -44,6 +44,10 @@ class TreeThatMoves(StagedTree):
     @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         return {base: [MOVED_SINCE.format(base=base)] for base in bases}
+
+    @override
+    async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
+        return set()
 
 
 class RepositoryThatMoves(Repository):

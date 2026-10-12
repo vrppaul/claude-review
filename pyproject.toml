@@ -201,6 +201,7 @@ ignore_names = [
     "max_quoted_lines",
     "max_window_lines",
     "max_text_length",
+    "largest_file_shown_bytes",
     "ended",
     # and read off the review's own model by the wire's, field by field
     "commentable",

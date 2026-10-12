@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from claude_review.domain.models import EpochMillis, GitRef
+from claude_review.domain.models import DiffFile, EpochMillis, GitRef
 from claude_review.domain.page_events import PageEvent
 
 
@@ -42,6 +42,10 @@ class StagedTree(ABC):
     @abstractmethod
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         """For each base, the paths that differ from the working tree."""
+
+    @abstractmethod
+    async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
+        """Of files the diff shows no lines of, those too large to read, in the base or the working tree, by path."""
 
 
 class Repository(ABC):

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, ReviewMode
+from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, FileStatus, ReviewMode, Unshown
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
@@ -111,6 +111,21 @@ async def test_a_file_whose_name_no_thread_may_carry_is_served_as_read_only(revi
         served = (await client.get(DIFF_ROUTE)).json()["files"]
 
     assert [(file["path"], file["commentable"]) for file in served] == [("tab\there.py", False), (HANDLER_FILE, True)]
+
+
+async def test_a_file_shown_without_its_lines_is_served_saying_why(reviews: ReviewFactory) -> None:
+    """A log over the limit is not binary, and the page must not call it so."""
+    too_large = DiffFile(path="generated.log", status=FileStatus.ADDED, hunks=[], unshown=Unshown.TOO_LARGE)
+    binary = DiffFile(path="logo.png", status=FileStatus.ADDED, hunks=[], unshown=Unshown.BINARY)
+
+    async with http_client(reviews.app(opening_of([too_large, binary, *_handler_change()]))) as client:
+        served = (await client.get(DIFF_ROUTE)).json()["files"]
+
+    assert [(file["path"], file["unshown"]) for file in served] == [
+        ("generated.log", "too_large"),
+        ("logo.png", "binary"),
+        (HANDLER_FILE, None),
+    ]
 
 
 async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient) -> None:

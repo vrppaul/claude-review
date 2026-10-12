@@ -9,7 +9,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineType, Unshown
 
 # Where each file's part of the diff begins
 FILE_START = re.compile(r"^diff --git ", re.MULTILINE)
@@ -49,6 +49,9 @@ NEW_MODE_HEADER = "new mode "
 # path, its deletion and then its creation, each with its mode.
 DELETED_MODE_HEADER = "deleted file mode "
 CREATED_MODE_HEADER = "new file mode "
+# What git writes in place of the lines of a file it does not read as text:
+# one whose content is binary, or one larger than it reads at all, which only
+# the repository can tell apart
 BINARY_HEADER = "Binary files "
 # A marker comes with a tab after the path when the path would otherwise be ambiguous
 MARKER_PATH_END = "\t"
@@ -141,7 +144,7 @@ def _part(text: str) -> FilePart | None:
         old_path=_old_path(header),
         status=_status(header),
         hunks=_hunks(lines, hunk_starts),
-        is_binary=any(line.startswith(BINARY_HEADER) for line in header),
+        unshown=Unshown.BINARY if any(line.startswith(BINARY_HEADER) for line in header) else None,
         # Only a change of mode: a file added or deleted whole has one mode,
         # which is no change
         old_mode=_mode(header, OLD_MODE_HEADER),
@@ -189,7 +192,7 @@ def _type_changed(deleted: FilePart, created: FilePart) -> DiffFile:
         path=created.file.path,
         status=FileStatus.MODIFIED,
         hunks=[joined] if lines else [],
-        is_binary=deleted.file.is_binary or created.file.is_binary,
+        unshown=deleted.file.unshown or created.file.unshown,
         old_mode=deleted.deleted_mode,
         new_mode=created.created_mode,
     )

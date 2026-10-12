@@ -73,12 +73,25 @@ class DiffHunk(BaseModel):
     lines: list[DiffLine]
 
 
+class Unshown(StrEnum):
+    """Why a file whose content changed shows none of its lines.
+
+    BINARY — its content is not text.
+    TOO_LARGE — it is larger, on one side or the other, than the review reads
+    line by line (`LARGEST_FILE_SHOWN_BYTES`): whether it is text is never asked.
+    """
+
+    BINARY = auto()
+    TOO_LARGE = auto()
+
+
 class DiffFile(BaseModel):
     """A file that has been changed.
 
     A file can change without producing hunks: binary content has no lines to
-    show, and a permission change touches no line at all. The extra fields let
-    the UI say which of those happened instead of showing an empty panel.
+    show, nor has a file too large to read, and a permission change touches no
+    line at all. The extra fields let the UI say which of those happened
+    instead of showing an empty panel.
     """
 
     path: str
@@ -86,7 +99,8 @@ class DiffFile(BaseModel):
     old_path: str | None = None
     status: FileStatus
     hunks: list[DiffHunk]
-    is_binary: bool = False
+    # Why none of its lines are shown though its content changed; None when they are
+    unshown: Unshown | None = None
     # The file's mode before and after, when it changed: its permissions, or
     # its type, as when a file became a link (git's mode 120000)
     old_mode: str | None = None

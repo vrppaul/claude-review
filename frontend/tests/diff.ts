@@ -3,13 +3,13 @@ import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
 import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse, ShownBase } from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
-/** A file as the diff carries it: modified, text, open to comments, with no lines unless given some. */
+/** A file as the diff carries it: modified, shown line by line, open to comments, with no lines unless given some. */
 export function diffFile(given: Partial<DiffFile> = {}): DiffFile {
 	return {
 		path: 'file.ts',
 		status: 'modified',
 		hunks: [],
-		is_binary: false,
+		unshown: null,
 		old_mode: null,
 		new_mode: null,
 		commentable: true,
