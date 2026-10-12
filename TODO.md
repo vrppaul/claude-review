@@ -150,8 +150,8 @@ tests. Remove items when done — don't check them off.
 - [ ] A page test that asks what `document.activeElement` says, by its
       text, passes with the keyboard on the page itself, which says
       everything; and a spy on an element's `scrollIntoView` is the one
-      every element shares. Four such assertions and two such spies were
-      put right in the story's tests and the keys'; one spy is left, in
+      every element shares. Four such assertions, and the spies of the two
+      tests of `]` and `[`, were put right; one spy is left, in
       `frontend/tests/push-handling.test.ts`, and the rest of the page's
       tests were not searched for the first.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,

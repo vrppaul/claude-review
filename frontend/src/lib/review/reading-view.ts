@@ -18,7 +18,7 @@ import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
 export interface ReadingView {
-	/** Which way of reading it is: what the reader chooses it by, and what is its alone is known by. */
+	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */
 	readonly name: ReadingViewName;
 	/** The sections it draws, by their keys, in the order it draws them: what ] and [ walk. */
 	sectionKeys: () => string[];
