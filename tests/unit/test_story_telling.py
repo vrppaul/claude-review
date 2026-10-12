@@ -12,7 +12,19 @@ from claude_review.domain.exceptions import FieldFault, FieldPath, StoryRefusedE
 from claude_review.domain.models import DiffFile, FileStatus, Unshown
 from claude_review.domain.story import Step, Story
 from claude_review.services.story_telling import tell
-from tests.stories import ONLY_CHAPTER, changed_file, changed_in, hunk, lines_of, planted, rows_of, step, story_of
+from tests.stories import (
+    ONLY_CHAPTER,
+    changed_file,
+    changed_in,
+    chapter_of,
+    hunk,
+    lines_of,
+    planted,
+    rows_of,
+    step,
+    story_of,
+    story_of_chapters,
+)
 
 SERVICE = "src/service.py"
 STORE = "src/store.py"
@@ -34,6 +46,9 @@ WHAT_TELLING_ADDS = {"left_out": True, "chapters": {"__all__": {"steps": {"__all
 # Where the first step of a story of one chapter stands, and the first file it names as housekeeping
 FIRST_STEP: FieldPath = ("chapters", 0, "steps", 0)
 FIRST_HOUSEKEEPING: FieldPath = ("housekeeping", 0)
+# Two chapters of one story, for a file told in both
+EARLIER_CHAPTER = "ch-earlier"
+LATER_CHAPTER = "ch-later"
 
 
 def changed_lines(files: list[DiffFile]) -> int:
@@ -161,6 +176,19 @@ def test_a_file_named_as_housekeeping_and_told_in_a_step_is_refused_naming_the_c
 
     assert fault.path == FIRST_HOUSEKEEPING
     assert ONLY_CHAPTER in fault.reason
+
+
+def test_a_housekeeping_file_told_in_several_chapters_is_refused_naming_the_first_that_tells_it() -> None:
+    """As a line told twice names the chapter that told it first: the agent is sent to the same place every time."""
+    told_in_two = story_of_chapters(
+        chapter_of(EARLIER_CHAPTER, step(SERVICE, 12, 13)),
+        chapter_of(LATER_CHAPTER, step(SERVICE, 15, 15)),
+        housekeeping=(SERVICE,),
+    )
+
+    [fault] = refusal_of(told_in_two)
+
+    assert (EARLIER_CHAPTER in fault.reason, LATER_CHAPTER in fault.reason) == (True, False)
 
 
 def test_lines_already_refused_for_their_numbers_are_not_also_held_to_tell_nothing() -> None:

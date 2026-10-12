@@ -128,8 +128,9 @@ def _housekeeping_faults(
     A file is housekeeping because it has nothing to tell: named as that
     and told in a step, it would be both.
     """
-    # A chapter that tells each file: of a file told in several, the last
-    told_in = {written.step.file: written.chapter.id for written in steps}
+    # The chapter that tells each file. Read from the last step back, so the
+    # chapter kept for a file told in several is the first that tells it
+    told_in = {written.step.file: written.chapter.id for written in reversed(steps)}
     for index, file in enumerate(housekeeping):
         if file not in change:
             yield FieldFault(path=(HOUSEKEEPING, index), reason=NO_SUCH_FILE)

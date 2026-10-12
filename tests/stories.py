@@ -293,20 +293,24 @@ def step(file: str, first: int, last: int) -> Step:
     return Step(file=file, lines=LineSpan(first=first, last=last))
 
 
-def story_of(*steps: Step, housekeeping: tuple[str, ...] = ()) -> Story[Step]:
-    """A story of one chapter that tells these steps, with nothing wrong in what it says."""
+def chapter_of(chapter_id: str, *steps: Step) -> Chapter[Step]:
+    """A chapter that tells these steps, with nothing wrong in what it says."""
+    return Chapter[Step](
+        id=chapter_id, title="The change", why="It belongs together.", doubt="Look hardest here.", steps=list(steps)
+    )
+
+
+def story_of_chapters(*chapters: Chapter[Step], housekeeping: tuple[str, ...] = ()) -> Story[Step]:
+    """A story that tells these chapters, with nothing wrong in what it says."""
     return Story[Step](
         title="A change",
         told_from=ToldFrom.MEMORY,
         overview=StoryOverview(task="Change it.", done="It is changed.", decisions=[], turned_down=[], later=[]),
-        chapters=[
-            Chapter[Step](
-                id=ONLY_CHAPTER,
-                title="The change",
-                why="It belongs together.",
-                doubt="Look hardest here.",
-                steps=list(steps),
-            )
-        ],
+        chapters=list(chapters),
         housekeeping=list(housekeeping),
     )
+
+
+def story_of(*steps: Step, housekeeping: tuple[str, ...] = ()) -> Story[Step]:
+    """A story of one chapter that tells these steps, with nothing wrong in what it says."""
+    return story_of_chapters(chapter_of(ONLY_CHAPTER, *steps), housekeeping=housekeeping)
