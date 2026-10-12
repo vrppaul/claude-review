@@ -60,9 +60,9 @@ tests. Remove items when done — don't check them off.
 - [ ] `refactor(wire)`: a thread on the wire is told its place through a
       mapping of the review's own thread — `Thread.place_named` in
       `presentation/wire/threads.py` returns `{**source.model_dump(),
-      "where": ...}` — the one wire model that is not made of the review's
-      own by `.of()` alone. It wants a construction that says `where`
-      without spreading the model (same rule).
+      "where": ...}` — the model spread into a mapping, its fields named
+      in text. It wants a construction that says `where` without spreading
+      the model (same rule).
 
 ## Testing
 

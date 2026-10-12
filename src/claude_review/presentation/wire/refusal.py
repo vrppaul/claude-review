@@ -16,15 +16,15 @@ class RequestPart(StrEnum):
     BODY — its JSON body, where the review too names what it finds wrong in one.
     QUERY — its query string.
     PATH — its path.
+
+    Only FastAPI writes the last two. Here they are matched by value, at the
+    head of a place, and never named: `tests/unit/test_refused_fields.py`
+    holds each of the three to being left out, and is where they are read.
     """
 
     BODY = auto()
     QUERY = auto()
     PATH = auto()
-
-
-# Every part of a request, to tell the head of a field's place from a name of the field's own
-REQUEST_PARTS = frozenset(RequestPart)
 
 
 class FieldRefusal(WireModel):
@@ -41,7 +41,7 @@ class FieldRefusal(WireModel):
         wrote. Only that head is left out: a field may itself be called
         `path`.
         """
-        named = self.loc[1:] if self.loc and self.loc[0] in REQUEST_PARTS else self.loc
+        named = self.loc[1:] if self.loc and self.loc[0] in RequestPart else self.loc
         return FieldRefusal(loc=named, msg=self.msg)
 
 
