@@ -74,6 +74,16 @@ def test_a_told_story_says_everything_the_story_said() -> None:
     ]
 
 
+def test_a_change_of_a_files_mode_is_said_with_every_step_of_it_and_with_what_is_left_out() -> None:
+    """Whether a file may be run is a change too: told nowhere, a story would hide it."""
+    made_runnable = SERVICE_FILE.model_copy(update={"old_mode": "100644", "new_mode": "100755"})
+
+    told = tell(story_of(step(SERVICE, 12, 13)), [made_runnable])
+
+    pieces = [*(told_step.piece for told_step in told.chapters[0].steps), *(left.piece for left in told.left_out)]
+    assert [(piece.old_mode, piece.new_mode) for piece in pieces] == [("100644", "100755"), ("100644", "100755")]
+
+
 def test_a_story_that_tells_or_names_everything_leaves_nothing_out() -> None:
     told = tell(story_of(*WHOLE_SERVICE, WHOLE_STORE, housekeeping=(LOCK, LOGO)), CHANGE)
 

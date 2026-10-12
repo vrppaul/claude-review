@@ -27,6 +27,8 @@ from claude_review.domain.story import StepLines
 
 # Where a file's rows are counted from
 FIRST_ROW = 0
+# The one field of a file a piece of it has its own of: the rest of a piece is its file's
+HUNKS = "hunks"
 
 
 class PlacedRow(BaseModel):
@@ -136,14 +138,13 @@ class PlacedFile:
     def piece(self, runs: list[RowRun]) -> DiffFile:
         """These runs cut out of the file, each a hunk of its own, or one for each hunk it runs through.
 
-        A piece of the file, to be shown as a file is.
+        A piece of the file, to be shown as a file is: it is the file in
+        everything but the rows it shows, so whatever is said of the file —
+        where it was, that its mode changed, that some of it is not shown —
+        is said of every piece of it, and a story cannot leave it unsaid.
         """
-        return DiffFile(
-            path=self._file.path,
-            old_path=self._file.old_path,
-            status=self._file.status,
-            hunks=[self._cut(part) for run in runs for part in self._hunk_by_hunk(run)],
-        )
+        cut = [self._cut(part) for run in runs for part in self._hunk_by_hunk(run)]
+        return self._file.model_copy(update={HUNKS: cut})
 
     def _hunk_by_hunk(self, run: RowRun) -> list[RowRun]:
         """The run cut where one hunk ends and the next begins: of each hunk it holds rows of, a run of those rows."""
