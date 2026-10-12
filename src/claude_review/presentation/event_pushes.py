@@ -17,6 +17,7 @@ from claude_review.domain.page_events import (
     ReviewEnded,
     RoundBegan,
     StatusReported,
+    StoryTold,
     ThreadAnswered,
     ThreadRaised,
     TreeMoved,
@@ -37,6 +38,7 @@ from claude_review.presentation.wire.pushes import (
     ServerPush,
     ShowPush,
     StatusPush,
+    StoryPush,
 )
 from claude_review.presentation.wire.threads import anchor_on_the_wire
 
@@ -69,6 +71,8 @@ def push_of(event: PageEvent) -> ServerPush:
             return RoundPush(number=event.number)
         case DiffRetaken():
             return DiffPush(file_count=event.file_count, changes=changes_on_the_wire(event.changes))
+        case StoryTold():
+            return StoryPush(round=event.round)
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

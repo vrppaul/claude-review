@@ -1334,6 +1334,8 @@ export interface components {
             answerer_attached: boolean;
             agent: components["schemas"]["AgentStatus"];
             work: components["schemas"]["AgentWork"] | null;
+            /** Takes A Story */
+            takes_a_story: boolean;
             limits: components["schemas"]["SendLimits"];
             /** Instance */
             instance: string;

@@ -4,7 +4,7 @@
  * letting it go once it is over.
  */
 
-import { readConversation, readHeldThreads, readReview, takeDiff } from '$lib/api/review-api';
+import { readConversation, readHeldThreads, readReview, readStory, takeDiff } from '$lib/api/review-api';
 import type { PageConnection } from '$lib/connection/page-connection';
 import { catchUp, followKeptThreads, takePush } from '$lib/page/push-handling';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
@@ -12,9 +12,18 @@ import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import type { Review } from '$lib/review/review.svelte';
+import type { ReviewResponse, StoryResponse } from '$lib/types';
 import { openKeptReview } from '$lib/page/kept-review';
 import { messageOf } from '$lib/utils/errors';
 import { stopsTogether } from '$lib/utils/stops';
+
+// What a review that takes no story is known to hold of one, without asking
+const NO_STORY: StoryResponse = { held: null };
+
+/** The story a review holds: asked of one that takes a story, known of one that takes none. */
+function storyOf(facts: ReviewResponse): Promise<StoryResponse> {
+	return facts.takes_a_story ? readStory() : Promise.resolve(NO_STORY);
+}
 
 /** Where the page has got to with its review. */
 export type PageState = { kind: 'opening' } | { kind: 'open'; review: Review } | { kind: 'failed'; reason: string };
@@ -53,7 +62,8 @@ export class ReviewPage {
 	 * The threads the review holds, and what was said in its panel, are read
 	 * after the facts too: a thread the agent raises, or words it says, in
 	 * between are then held and pushed both, and taken in once, where read
-	 * before them they would be neither. Once the review is
+	 * before them they would be neither. So is the story it holds, where it
+	 * takes one. Once the review is
 	 * open, the socket goes on from where its draft or its facts left the
 	 * telling, so whatever was said meanwhile is handed over rather than
 	 * missed, and the threads its draft brought back follow onto the diff it
@@ -65,14 +75,15 @@ export class ReviewPage {
 		try {
 			await this.#settings.load();
 			const facts = await readReview();
-			const [firstDiff, { threads: held }, { said }] = await Promise.all([
+			const [firstDiff, { threads: held }, { said }, { held: story }] = await Promise.all([
 				takeDiff({ ignoreWhitespace: this.#settings.current.ignore_whitespace, base: null }),
 				readHeldThreads(),
-				readConversation()
+				readConversation(),
+				storyOf(facts)
 			]);
 			// An unsent review of the same thing is picked up where it stopped
 			const { review, stopKeeping } = openKeptReview(
-				{ facts, firstDiff, held, said },
+				{ facts, firstDiff, held, said, story },
 				{ settings: this.#settings, layout: this.#layout, sound: new ReplySound(this.#settings), theme: this.#theme }
 			);
 			window.addEventListener('beforeunload', this.#askBeforeLeaving);

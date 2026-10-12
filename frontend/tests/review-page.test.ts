@@ -14,6 +14,7 @@ import { newComment } from './new-comment';
 import { chatPush, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
+import { storyHeld } from './story';
 
 const SESSION_URL = 'ws://review.test/api/session';
 // How far the review's telling had got when the page read its facts
@@ -142,6 +143,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/diff', diffResponse());
 	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/conversation', { said: [] });
+	server.answer('GET /api/story', { held: null });
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
 	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
 	return server;
@@ -156,6 +158,27 @@ describe('opening the page', () => {
 	afterEach(() => {
 		for (const page of openedPages.splice(0)) page.close();
 		vi.unstubAllGlobals();
+	});
+
+	it('opens on the story the review holds, where the agent has told one', async () => {
+		const told = storyHeld({ title: 'Told before the page opened' });
+		serving().answer('GET /api/story', { held: told });
+		const page = newPage();
+
+		await page.open();
+
+		expect(openedReview(page).story.held).toEqual(told);
+	});
+
+	it('asks for no story of a review that takes none, and holds none', async () => {
+		const server = serving();
+		server.answer('GET /api/review', reviewResponse({ takes_a_story: false }));
+		const page = newPage();
+
+		await page.open();
+
+		expect(server.requestsTo('GET /api/story')).toEqual([]);
+		expect(openedReview(page).story.held).toBeNull();
 	});
 
 	it('holds its socket while the review is still being read, so a slow read does not end it', async () => {

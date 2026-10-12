@@ -47,6 +47,7 @@ const ROUTES = [
 	'GET /api/review',
 	'GET /api/threads',
 	'GET /api/conversation',
+	'GET /api/story',
 	'GET /api/diff',
 	'GET /api/versions',
 	'GET /api/file-window',

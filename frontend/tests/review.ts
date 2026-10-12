@@ -6,7 +6,7 @@ import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, DiffResponse, HeldThread, ReviewResponse, SaidInPanel } from '$lib/types';
+import type { DiffFile, DiffResponse, HeldThread, ReviewResponse, SaidInPanel, StoryHeld } from '$lib/types';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
 
@@ -23,6 +23,8 @@ export interface Opened {
 	held?: HeldThread[];
 	/** What the review holds of the panel, which a review opens on whatever its draft holds. */
 	said?: SaidInPanel[];
+	/** The story the review holds, if the agent told one. */
+	story?: StoryHeld | null;
 }
 
 // The page open in this tab: the review it holds, keeping its draft as the page does
@@ -51,11 +53,12 @@ export function openReview({
 	diff,
 	settings = new Settings(),
 	held = [],
-	said = []
+	said = [],
+	story = null
 }: Opened = {}): Review {
 	leavePage();
 	openPage = openKeptReview(
-		{ facts: reviewResponse(facts), firstDiff: diffResponse({ files, ...diff }), held, said },
+		{ facts: reviewResponse(facts), firstDiff: diffResponse({ files, ...diff }), held, said, story },
 		{ settings, layout: new PageLayout(), sound: new ReplySound(settings), theme: new PageTheme(settings) }
 	);
 	return openPage.review;

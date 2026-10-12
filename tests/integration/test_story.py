@@ -17,10 +17,21 @@ from httpx import AsyncClient
 from claude_review.domain.models import FIRST_ROUND
 from claude_review.domain.story import Step, Story
 from claude_review.presentation.wire.content import ReviewResponse
+from claude_review.presentation.wire.pushes import StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
 from claude_review.services.review.review import Review
-from tests.helpers import REVIEW_ROUTE, ReviewFactory, http_client, repository_opening, write_files
+from claude_review.services.review_opening import ReviewOpening
+from tests.helpers import (
+    REVIEW_ROUTE,
+    ReviewFactory,
+    http_client,
+    next_push,
+    open_session,
+    page_client,
+    repository_opening,
+    write_files,
+)
 from tests.stories import as_the_agent_writes, planted, rows_of, step, story_of
 
 STORY_ROUTE = "/api/story"
@@ -221,3 +232,34 @@ async def test_telling_a_story_says_the_agent_is_there(agent: AsyncClient) -> No
 
     after = ReviewResponse.model_validate_json((await agent.get(REVIEW_ROUTE)).content)
     assert (before.answerer_attached, after.answerer_attached) == (False, True)
+
+
+async def test_a_review_of_a_change_says_it_takes_a_story(agent: AsyncClient) -> None:
+    """Said by the review, so its page offers a story where one can be told and asks nothing of what kind it is."""
+    facts = ReviewResponse.model_validate_json((await agent.get(REVIEW_ROUTE)).content)
+
+    assert facts.takes_a_story is True
+
+
+async def test_a_review_of_no_change_says_it_takes_no_story(client: AsyncClient) -> None:
+    facts = ReviewResponse.model_validate_json((await client.get(REVIEW_ROUTE)).content)
+
+    assert facts.takes_a_story is False
+
+
+@pytest.fixture
+async def opened_on_the_change(tmp_git_repo: Path) -> ReviewOpening:
+    """What a review of the repository's change opens on, for a test that opens its page itself."""
+    write_files(tmp_git_repo, THE_CHANGE)
+    return await repository_opening(tmp_git_repo)
+
+
+def test_every_page_open_on_the_review_is_told_when_a_story_is_told(
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening
+) -> None:
+    """A page does not ask again and again whether a story has come: it is told, and reads the story then."""
+    with page_client(reviews.app(opened_on_the_change)) as review_page, open_session(review_page) as socket:
+        review_page.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+        told = next_push(socket, StoryPush)
+
+    assert told == StoryPush(round=FIRST_ROUND)

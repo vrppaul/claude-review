@@ -15,7 +15,8 @@ import {
 	keptThreadsNotFollowedNote,
 	notCaughtUpNote,
 	raisedNote,
-	retakenNote
+	retakenNote,
+	storyNotReadNote
 } from '$lib/review/panel-notes';
 import type { Review } from '$lib/review/review.svelte';
 import type { HeardPush } from '$lib/review/telling.svelte';
@@ -85,6 +86,10 @@ function learnFrom(review: Review, push: FactPush): void {
 		case 'round':
 			review.rounds.reach(push.number);
 			return;
+		case 'story':
+			// Told that there is one: the story itself is read, and the one held stays if it cannot be
+			review.story.read().catch((error: unknown) => review.conversation.note(storyNotReadNote(error)));
+			return;
 		default:
 			unknown(push);
 	}
@@ -136,7 +141,8 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * Catch up after the connection came back to a review that could not hand
  * over everything it missed; the telling goes on from `from`.
  *
- * What the pushes kept up to date is read again. What they alone carried —
+ * What the pushes kept up to date is read again, the story among it. What
+ * they alone carried —
  * an answer in a thread, a thread raised, a word in the panel — is gone, and
  * the panel says so. A retake among them would have left the threads on old
  * lines: following them again moves only those whose lines moved, so it is
@@ -150,6 +156,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.learn(facts);
 		review.telling.factsReadAt({ instance: facts.instance, sequence: facts.sequence });
 		const moved = await review.takeRetakenDiff();
+		if (review.story.canBeTold) await review.story.read();
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {
 		review.conversation.note(notCaughtUpNote(error));

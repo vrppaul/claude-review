@@ -86,6 +86,7 @@ export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewRespo
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },
 		work: null,
+		takes_a_story: true,
 		limits: SEND_LIMITS,
 		release: '1.5.0',
 		instance: THIS_RUN,

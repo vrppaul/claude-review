@@ -23,6 +23,9 @@ class ReviewStanding(BaseModel):
     answerer_attached: bool
     # What the agent last said about itself
     agent: AgentStatus
+    # Whether a story can be told of it: of a change somebody made, never
+    # of files read once or a conversation
+    takes_a_story: bool
 
 
 class CatchUp(BaseModel):

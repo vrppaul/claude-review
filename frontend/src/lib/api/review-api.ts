@@ -26,6 +26,7 @@ import type {
 	RetakeResponse,
 	ReviewResponse,
 	SettingsChange,
+	StoryResponse,
 	SubmitRequest,
 	SubmitResponse,
 	ThreadsResponse,
@@ -46,6 +47,11 @@ export function readHeldThreads(): Promise<ThreadsResponse> {
 /** What was said in the panel, as the review holds it: what a page draws as it opens, whatever its draft holds. */
 export function readConversation(): Promise<ConversationResponse> {
 	return read('get', '/api/conversation', { doing: 'Could not read what was said in the panel' });
+}
+
+/** The story the review holds, as the agent told it: none while it has told none. */
+export function readStory(): Promise<StoryResponse> {
+	return read('get', '/api/story', { doing: 'Could not read the story' });
 }
 
 /** Which diff is asked for: whose whitespace, and against which base. */

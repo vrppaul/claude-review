@@ -25,6 +25,7 @@ class PushKind(StrEnum):
     CHANGED — the working tree moved away from the diff on screen.
     ROUND — the round now being written.
     DIFF — the diff was taken again.
+    STORY — a story was told of the change.
     ENDED — the review is over.
     """
 
@@ -38,6 +39,7 @@ class PushKind(StrEnum):
     CHANGED = auto()
     ROUND = auto()
     DIFF = auto()
+    STORY = auto()
     ENDED = auto()
 
 
@@ -126,6 +128,18 @@ class DiffPush(Push):
     changes: ChangesSince | None
 
 
+class StoryPush(Push):
+    """A story was told of the change, in place of any before it: the page fetches it.
+
+    The round it was told in, and no more. The story carries the code its
+    steps show, as much as the change it tells: like a diff taken again, it
+    is fetched, not pushed.
+    """
+
+    type: Literal[PushKind.STORY] = PushKind.STORY
+    round: int
+
+
 class EndedPush(Push):
     """The review is over, and this is the last thing told: the page lets go of it rather than reach for it again.
 
@@ -151,6 +165,7 @@ type ServerPush = Annotated[
     | ChangedPush
     | RoundPush
     | DiffPush
+    | StoryPush
     | EndedPush,
     Field(discriminator="type"),
 ]

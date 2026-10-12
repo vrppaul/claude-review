@@ -24,6 +24,10 @@ export function diffNotTakenNote(error: unknown): string {
 	return `the diff could not be taken again — ${messageOf(error)}`;
 }
 
+export function storyNotReadNote(error: unknown): string {
+	return `the story could not be read — ${messageOf(error)}`;
+}
+
 /** A thread the agent raised, by where it hangs. */
 export function raisedNote(anchor: Anchor): string {
 	return `pointed at ${anchorShortPlace(anchor)}`;

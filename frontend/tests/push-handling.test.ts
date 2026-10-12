@@ -13,6 +13,7 @@ import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
+import { storyHeld } from './story';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -100,6 +101,28 @@ describe('what the server pushes, taken in', () => {
 		handOverNext(review, { type: 'show', file: 'made-since.py' });
 
 		expect(section.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('reads the story the review holds when it says one was told', async () => {
+		const told = storyHeld({ title: 'Told just now' });
+		fakeServer().answer('GET /api/story', { held: told });
+
+		handOverNext(review, { type: 'story', round: 1 });
+		await settled();
+
+		expect(review.story.held).toEqual(told);
+	});
+
+	it('says in the panel when the story told could not be read, and keeps the one it had', async () => {
+		const before = storyHeld({ title: 'Told before' });
+		review = openReview({ story: before });
+		fakeServer().refuse('GET /api/story', SERVER_ERROR, 'the review fell over');
+
+		handOverNext(review, { type: 'story', round: 2 });
+		await settled();
+
+		expect(review.conversation.turns.at(-1)?.body).toBe('the story could not be read — the review fell over');
+		expect(review.story.held).toEqual(before);
 	});
 
 	it('moves on to the round the server began, never back', () => {
@@ -191,12 +214,13 @@ const GOES_ON_FROM = { instance: THIS_RUN, sequence: 0 };
 // A review restarted on the same port: another run, numbering its pushes afresh
 const NEXT_RUN = 'next-run';
 
-/** A server the page can catch up from: the review as it now stands, and its threads where they were. */
+/** A server the page can catch up from: the review as it now stands, its threads where they were, and no story told. */
 function caughtUpFrom(): FakeServer {
 	const server = fakeServer();
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('POST /api/anchors/follow', { anchors: [] });
 	server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py'), untouched('b.py')] }));
+	server.answer('GET /api/story', { held: null });
 	return server;
 }
 
@@ -216,6 +240,24 @@ describe('catching up on what the server could not hand over again', () => {
 		expect(review.answerer.status).toEqual(status);
 		expect(review.answerer.work).toEqual(underWay);
 		expect(review.layout.agentPanel.open).toBe(true);
+	});
+
+	it('reads the story the review holds now, in case one was told among what was missed', async () => {
+		const told = storyHeld({ title: 'Told while the page was away' });
+		caughtUpFrom().answer('GET /api/story', { held: told });
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(review.story.held).toEqual(told);
+	});
+
+	it('asks for no story of a review that takes none', async () => {
+		review = openReview({ facts: { takes_a_story: false } });
+		const server = caughtUpFrom();
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(server.requestsTo('GET /api/story')).toEqual([]);
 	});
 
 	it('follows the threads onto the diff as it stands, in case a retake was among what was missed', async () => {

@@ -55,6 +55,11 @@ class ContentSource(ABC):
     def content(self) -> ReviewContent:
         """The take on screen now."""
 
+    @property
+    @abstractmethod
+    def is_a_change(self) -> bool:
+        """Whether the content is a change somebody made to a repository: what a story can be told of."""
+
     @abstractmethod
     def change(self) -> list[DiffFile]:
         """The change under review, as the take on screen has it: what a story is told of.
@@ -114,6 +119,11 @@ class RepositorySource(ContentSource):
     @override
     def content(self) -> ReviewContent:
         return self._content
+
+    @property
+    @override
+    def is_a_change(self) -> bool:
+        return True
 
     @override
     def change(self) -> list[DiffFile]:
@@ -211,6 +221,11 @@ class FixedSource(ContentSource):
     @override
     def content(self) -> ReviewContent:
         return self._content
+
+    @property
+    @override
+    def is_a_change(self) -> bool:
+        return False
 
     @override
     def change(self) -> list[DiffFile]:

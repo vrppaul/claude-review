@@ -39,6 +39,7 @@ from claude_review.domain.page_events import (
     DiffRetaken,
     FileShown,
     RoundBegan,
+    StoryTold,
     ThreadAnswered,
     ThreadRaised,
     TreeMoved,
@@ -112,6 +113,7 @@ class Review:
             round=self._rounds.current,
             answerer_attached=self._answerer.attached,
             agent=self._answerer.status,
+            takes_a_story=self._source.is_a_change,
         )
 
     def catch_up(self) -> CatchUp:
@@ -378,12 +380,14 @@ class Review:
 
         Told of the review's own diff as it stands when the story arrives,
         whatever base a page reads, and kept with the round it arrived in.
+        Every page open is told there is one, and reads it from here.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
             StoryRefusedError: if anything is wrong with the story, carrying all of it.
         """
         held = await self._story.tell(story, self._source.change(), round_number=self._rounds.current)
+        self._page.tell(StoryTold(round=held.round))
         log.info("story_told", chapters=len(held.story.chapters), left_out=len(held.story.left_out), round=held.round)
         return held
 

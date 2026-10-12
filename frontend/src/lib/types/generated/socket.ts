@@ -308,7 +308,7 @@ export interface components {
             /** Number */
             number: number;
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["EndedPush"];
+        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
          * @description What the browser says on connecting, and whenever its threads change.
@@ -350,6 +350,23 @@ export interface components {
              */
             type: "status";
             agent: components["schemas"]["AgentStatus"];
+        };
+        /**
+         * StoryPush
+         * @description A story was told of the change, in place of any before it: the page fetches it.
+         *
+         *     The round it was told in, and no more. The story carries the code its
+         *     steps show, as much as the change it tells: like a diff taken again, it
+         *     is fetched, not pushed.
+         */
+        StoryPush: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "story";
+            /** Round */
+            round: number;
         };
         /**
          * ThreadInput

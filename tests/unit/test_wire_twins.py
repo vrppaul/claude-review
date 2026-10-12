@@ -32,6 +32,7 @@ EVENTS_AND_PUSHES: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]]
     (page_events.TreeMoved, pushes.ChangedPush, PUSH_KIND),
     (page_events.RoundBegan, pushes.RoundPush, PUSH_KIND),
     (page_events.DiffRetaken, pushes.DiffPush, PUSH_KIND),
+    (page_events.StoryTold, pushes.StoryPush, PUSH_KIND),
     (page_events.ReviewEnded, pushes.EndedPush, PUSH_KIND),
 ]
 

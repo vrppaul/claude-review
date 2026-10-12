@@ -87,6 +87,7 @@ async def get_the_review(
         answerer_attached=standing.answerer_attached,
         agent=AgentStatus.of(standing.agent),
         work=AgentWork.of(work) if work is not None else None,
+        takes_a_story=standing.takes_a_story,
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,

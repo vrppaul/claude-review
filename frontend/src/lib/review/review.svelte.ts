@@ -23,6 +23,7 @@ import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading, type ReadingView } from '$lib/review/reading-view';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
+import { ReviewStory } from '$lib/review/review-story.svelte';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -38,7 +39,8 @@ import type {
 	ReviewResponse,
 	SaidInPanel,
 	SendLimits,
-	SessionHello
+	SessionHello,
+	StoryHeld
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
@@ -57,6 +59,8 @@ export interface Opening {
 	held: HeldThread[];
 	/** What the review holds as said in the panel: drawn whatever the draft holds, which adds what it does not. */
 	said: SaidInPanel[];
+	/** The story the review holds, if the agent told one. */
+	story: StoryHeld | null;
 }
 
 /** Whoever carries what the page holds to the server. */
@@ -100,6 +104,8 @@ export class Review {
 	readonly threads: Threads;
 	readonly submission: Submission;
 	readonly conversation: Conversation;
+	/** The story the agent told of the change, if it told one. */
+	readonly story: ReviewStory;
 	readonly guide: Guide;
 	readonly sections = new FileSections();
 	readonly navigator: Navigator;
@@ -128,7 +134,7 @@ export class Review {
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
 
-	constructor({ facts, firstDiff, draft, draftSetAside, held, said }: Opening, reader: ReaderParts) {
+	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
 		this.identity = facts.identity;
 		this.mode = facts.mode;
@@ -153,6 +159,7 @@ export class Review {
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
+		this.story = new ReviewStory(facts.takes_a_story, story);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.#files = new FilesReading(this.diff, this.threads, this.reading, this.sections);
 		this.navigator = new Navigator(this.threads, this.sections, () => this.view);

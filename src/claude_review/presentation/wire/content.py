@@ -151,6 +151,9 @@ class ReviewResponse(WireModel):
     # What the agent last said about itself, and what it says it is doing now
     agent: AgentStatus
     work: AgentWork | None
+    # Whether a story can be told of the review, so the page offers one only
+    # where it can be, and never asks what kind of review this is to know
+    takes_a_story: WireBool
     # What the browser checks before uploading an image or quoting lines
     limits: SendLimits
     # How far the review's telling had got when this was read, in which run of
