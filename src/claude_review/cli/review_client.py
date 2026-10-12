@@ -60,9 +60,6 @@ STORY_ROUTE = "/api/story"
 # What the poll for events calls how long it may wait
 WAIT_SECONDS_PARAMETER = "wait_seconds"
 
-# The parts of a request a refused field is named under, which say nothing
-# to whoever typed the command
-REQUEST_PARTS = frozenset({"body", "query", "path"})
 # How a refusal names a field inside another — `anchor.file` — and joins the
 # reasons for several
 FIELD_PATH_SEPARATOR = "."
@@ -182,15 +179,4 @@ def _reason(answer: bytes) -> str:
         return answer.decode(errors="replace").strip()
     if isinstance(refusal.detail, str):
         return refusal.detail
-    return fields_said_wrong([_as_typed(field) for field in refusal.detail])
-
-
-def _as_typed(refusal: FieldRefusal) -> FieldRefusal:
-    """A field the review refused, named as whoever typed the command knows it.
-
-    The review names it under the part of the request it came in — `body`,
-    `query`, `path` — which says nothing to them.
-    """
-    location = refusal.loc
-    named = location[1:] if location and location[0] in REQUEST_PARTS else location
-    return FieldRefusal(loc=named, msg=refusal.msg)
+    return fields_said_wrong([field.without_request_part() for field in refusal.detail])

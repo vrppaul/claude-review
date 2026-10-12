@@ -45,7 +45,7 @@ from claude_review.domain.exceptions import (
     TooLargeError,
 )
 from claude_review.presentation.body_limit import TOO_LARGE_STATUS
-from claude_review.presentation.wire.refusal import REQUEST_BODY, FieldRefusal, Refusal
+from claude_review.presentation.wire.refusal import FieldRefusal, Refusal, RequestPart
 
 log = structlog.get_logger()
 
@@ -176,7 +176,7 @@ async def answer_faults_found(request: Request, error: Exception, *, status: HTT
     """
     match error:
         case FieldsRefusedError():
-            fields = [FieldRefusal(loc=(REQUEST_BODY, *fault.path), msg=fault.reason) for fault in error.faults]
+            fields = [FieldRefusal(loc=(RequestPart.BODY, *fault.path), msg=fault.reason) for fault in error.faults]
             log.warning(
                 "request_refused",
                 path=request.url.path,

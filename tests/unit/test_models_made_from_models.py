@@ -1,10 +1,10 @@
 """Functional requirement tests for a model the review makes from another: it says everything the other said.
 
 A piece of a file, a step as it is told, an anchor moved, a message taken
-back: each is made from a model the review already holds, and says all of it
-again but what was replaced. One that left a field out would still be a
-model, and nobody would see what it no longer says — a piece of a file that
-became a link, not saying so.
+back, a refused field named anew: each is made from a model the review
+already holds, and says all of it again but what was replaced. One that
+left a field out would still be a model, and nobody would see what it no
+longer says — a piece of a file that became a link, not saying so.
 """
 
 import pytest
@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import DiffFile, FileStatus, LineSide, LineSpan, SaidInPanel, TurnAuthor, Unshown
 from claude_review.domain.story import Chapter, LeftOut, Step
+from claude_review.presentation.wire.refusal import FieldRefusal
 from tests.helpers import line_anchor
 from tests.stories import canvas_story, hunk
 
@@ -63,6 +64,8 @@ CHAPTER = Chapter[Step](
     steps=[STEP],
 )
 STORY = canvas_story()
+# A field the review refused, named under the part of the request it came in
+FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
 TOLD_STEP = STEP.told(FILE)
 TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
@@ -86,6 +89,9 @@ MADE = [
     ),
     MadeFrom(what="an anchor lost", source=ANCHOR, made=ANCHOR.lost(), replaced={"outdated"}),
     MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),
+    MadeFrom(
+        what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}
+    ),
     MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
     MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
     MadeFrom(
