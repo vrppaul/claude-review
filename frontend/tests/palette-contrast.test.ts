@@ -61,16 +61,20 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 
 // Every colour code is highlighted in, by what it colours
 const SYNTAX = ['keyword', 'string', 'comment', 'number', 'type', 'function', 'variable', 'meta'];
-// Every row code is drawn on, by the tint laid over the page under it: a
-// marked row's tint takes the place of its change's, it does not stack on it
+// Every ground code is drawn on, by the tints laid over the page under it: a
+// marked row's tint takes the place of its change's, it does not stack on it;
+// the band behind a changed word lies over its row's tint, marked or not
 const ROWS = [
 	{ row: 'an unchanged row', tints: [] },
 	{ row: 'an added row', tints: ['--cr-add-tint'] },
 	{ row: 'a removed row', tints: ['--cr-del-tint'] },
-	{ row: 'a marked row', tints: ['--cr-mark-tint'] }
+	{ row: 'a marked row', tints: ['--cr-mark-tint'] },
+	{ row: 'the band of a word an added row changed', tints: ['--cr-add-tint', '--cr-add-word'] },
+	{ row: 'the band of a word a removed row changed', tints: ['--cr-del-tint', '--cr-del-word'] },
+	{ row: 'the band of a word a marked added row changed', tints: ['--cr-mark-tint', '--cr-add-word'] },
+	{ row: 'the band of a word a marked removed row changed', tints: ['--cr-mark-tint', '--cr-del-word'] }
 ];
-// Highlighted code, on every row it is drawn on. The mark behind a changed
-// word is not among them: code on it reads below 4.5:1, an open question
+// Highlighted code, on every ground it is drawn on
 const CODE_DRAWN = SYNTAX.flatMap((colour) =>
 	ROWS.map(({ row, tints }) => ({
 		said: `code coloured as ${colour}, on ${row}`,
@@ -79,8 +83,12 @@ const CODE_DRAWN = SYNTAX.flatMap((colour) =>
 	}))
 );
 
+/**
+ * A tint laid over a ground, in whole channels, as a browser paints each
+ * layer: a pair that reads at 4.5:1 only before rounding is drawn below it.
+ */
 function over(top: Paint, ground: Channels): Channels {
-	return ground.map((channel, at) => top.channels[at] * top.alpha + channel * (1 - top.alpha)) as Channels;
+	return ground.map((channel, at) => Math.round(top.channels[at] * top.alpha + channel * (1 - top.alpha))) as Channels;
 }
 
 function luminance(channels: Channels): number {

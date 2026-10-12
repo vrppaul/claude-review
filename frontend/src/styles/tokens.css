@@ -98,9 +98,13 @@
 	--cr-tree-least-width: 10rem;
 	--cr-panel-least-width: 17.5rem;
 
-	/* What differs inside a changed line, in the change's own colour */
-	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 34%, transparent);
-	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 34%, transparent);
+	/*
+	 * What differs inside a changed line, in the change's own colour: still a
+	 * band at a glance over its row, marked or not, and faint enough that code
+	 * in every colour it is highlighted in reads at 4.5:1 on it
+	 */
+	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 20%, transparent);
+	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 20%, transparent);
 	/* The ground of something the review warns about */
 	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
 }
@@ -176,7 +180,7 @@
 
 	--cr-syn-keyword: #c792ea;
 	--cr-syn-string: #e0a458;
-	--cr-syn-comment: #8390a0;
+	--cr-syn-comment: #9ca7b3;
 	--cr-syn-number: #7fd3f7;
 	--cr-syn-type: #7fd3f7;
 	--cr-syn-function: #82aaff;
@@ -233,12 +237,12 @@
 	--cr-add-text: #16702e;
 	--cr-del-text: #a5222c;
 
-	--cr-syn-keyword: #7e4bde;
-	--cr-syn-string: #8a5a00;
-	--cr-syn-comment: #616b78;
-	--cr-syn-number: #0b6e99;
-	--cr-syn-type: #0b6e99;
-	--cr-syn-function: #2666d5;
+	--cr-syn-keyword: #682dd8;
+	--cr-syn-string: #7a4f00;
+	--cr-syn-comment: #515964;
+	--cr-syn-number: #095e83;
+	--cr-syn-type: #095e83;
+	--cr-syn-function: #1f54b0;
 	--cr-syn-variable: #1b2430;
-	--cr-syn-meta: #7e4bde;
+	--cr-syn-meta: #682dd8;
 }

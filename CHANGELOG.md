@@ -69,7 +69,9 @@
   file's R is quiet grey. A chip saying the reader sees less than the whole
   diff — a narrower base, whitespace hidden — takes their mark's tint and
   reads plainly. Every word on the page reads at 4.5:1 or better, in both
-  themes, but for code on the band that marks a changed word.
+  themes, code on the band that marks a changed word too: the band is
+  fainter, the light theme's code colours a shade darker, and the dark
+  theme's comments a shade lighter.
 - **The @-picker is a list to a screen reader**, which hears which thread
   or file is highlighted as the arrow keys move; the comment fields and the
   file filter say what they are.
