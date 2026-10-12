@@ -93,10 +93,23 @@ class StoryOverview(StoryPart):
     later: list[OverviewItem]
 
 
+class ToldFrom(StrEnum):
+    """What the agent tells a story from.
+
+    MEMORY — it made the change, and remembers why each piece is as it is.
+    COMMITS — it reads the change back from its commits: a reconstruction of
+    what somebody decided, and said to be one.
+    """
+
+    MEMORY = auto()
+    COMMITS = auto()
+
+
 class Story[StepKind: Step](StoryPart):
     """A change as the agent tells it, whole: a story is sent in one piece, and replaced in one piece."""
 
     title: str
+    told_from: ToldFrom
     overview: StoryOverview
     chapters: list[Chapter[StepKind]]
     # Files that changed and have nothing to tell — a lock file, a changelog —

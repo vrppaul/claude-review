@@ -13,8 +13,8 @@ from typing import get_args
 import pytest
 from pydantic import BaseModel
 
-from claude_review.domain import models, page_events
-from claude_review.presentation.wire import agent, content, pushes, records, threads
+from claude_review.domain import models, page_events, story as told
+from claude_review.presentation.wire import agent, content, pushes, records, story, threads
 
 # What a push carries of its own: the kind the page tells it apart by
 PUSH_KIND = frozenset({"type"})
@@ -58,6 +58,22 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     # A thread as the page holds it, sent back with whatever is about it
     (models.ThreadDraft, threads.ThreadInput, frozenset()),
     (models.TurnDraft, threads.TurnInput, frozenset()),
+    # A story's document as the agent writes it
+    (told.Step, story.StepInput, frozenset()),
+    (told.Chapter[told.Step], story.ChapterInput, frozenset()),
+    (told.OverviewItem, story.OverviewItemInput, frozenset()),
+    (told.Diagram, story.DiagramInput, frozenset()),
+    (told.StoryOverview, story.StoryOverviewInput, frozenset()),
+    (told.Story[told.Step], story.StoryRequest, frozenset()),
+    # and the story as a page is told it
+    (models.LineSpan, story.LineSpan, frozenset()),
+    (told.OverviewItem, story.OverviewItem, frozenset()),
+    (told.Diagram, story.Diagram, frozenset()),
+    (told.StoryOverview, story.StoryOverview, frozenset()),
+    (told.ToldStep, story.ToldStep, frozenset()),
+    (told.Chapter[told.ToldStep], story.ToldChapter, frozenset()),
+    (told.LeftOut, story.LeftOut, frozenset()),
+    (told.ToldStory, story.ToldStory, frozenset()),
     *EVENTS_AND_PUSHES,
     # A hello as the server hears it, and as the page says it
     (threads.ReceivedHello, threads.SessionHello, frozenset()),
