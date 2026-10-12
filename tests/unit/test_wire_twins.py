@@ -43,8 +43,7 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.DiffFile, content.DiffFile, frozenset({"commentable"})),
     (models.LineAnchor, threads.LineAnchor, frozenset()),
     (models.Turn, threads.Turn, frozenset()),
-    # The place a thread hangs on, in plain words
-    (models.Thread, threads.Thread, frozenset({"where"})),
+    (models.Thread, threads.Thread, frozenset()),
     (models.AgentStatus, agent.AgentStatus, frozenset()),
     (models.ProgressStep, agent.ProgressStep, frozenset()),
     (models.AgentWork, agent.AgentWork, frozenset()),

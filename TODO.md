@@ -51,13 +51,6 @@ tests. Remove items when done — don't check them off.
       way `ImageService` keeps policy and `DirectoryImageStore` touches the
       disk. Both read files themselves today.
 
-- [ ] `refactor(wire)`: a thread on the wire is told its place through a
-      mapping of the review's own thread — `Thread.place_named` in
-      `presentation/wire/threads.py` returns `{**source.model_dump(),
-      "where": ...}` — the model spread into a mapping, its fields named
-      in text. It wants a construction that says `where` without spreading
-      the model (same rule).
-
 ## Testing
 
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
