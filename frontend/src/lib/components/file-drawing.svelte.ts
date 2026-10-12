@@ -8,6 +8,7 @@
  * nothing again.
  */
 
+import type { Numbering } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -26,16 +27,16 @@ export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
 /** A file drawn whole, as the diff on screen has it. */
 interface WholeFile {
 	kind: 'whole';
-	/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-	reviewOwnsRemovedLines: boolean;
+	/** Whose numbers its lines carry, as the diff on screen was taken: see `DrawnFile`. */
+	numbering: Numbering;
 	/** Where the lines read in around its hunks are kept. */
 	revealed: RevealedContext;
 }
 
 /**
  * A piece of a file, cut out of the review's own diff: a step of a story.
- * Its removed lines are the review's own whatever base is on screen, and
- * what lies around it is the rest of its file, which it does not read in.
+ * Its lines are numbered as the review's own whatever base is on screen,
+ * and what lies around it is the rest of its file, which it does not read in.
  */
 interface Piece {
 	kind: 'piece';
@@ -84,17 +85,18 @@ export class FileDrawing implements DrawnFile {
 		return this.#hunks;
 	}
 
-	reviewOwnsRemovedLines(): boolean {
+	numbering(): Numbering {
 		const extent = this.#source.extent();
-		return extent.kind === 'piece' || extent.reviewOwnsRemovedLines;
+		return extent.kind === 'piece' ? 'the-reviews' : extent.numbering;
 	}
 
 	commentable(): boolean {
 		return this.#source.file().commentable;
 	}
 
-	piece(): boolean {
-		return this.#source.extent().kind === 'piece';
+	standsForItsFile(): boolean {
+		const extent = this.#source.extent();
+		return extent.kind === 'whole' && extent.numbering === 'the-reviews';
 	}
 
 	/**
@@ -103,7 +105,7 @@ export class FileDrawing implements DrawnFile {
 	 * last is the rest of the file, which it does not draw.
 	 */
 	says(gap: ContextGap): boolean {
-		return !this.piece() || (gap.above !== null && gap.below !== null);
+		return this.#source.extent().kind === 'whole' || (gap.above !== null && gap.below !== null);
 	}
 
 	/** Whether what the diff left out may be read in here, or only said: a piece reads nothing in. */

@@ -39,9 +39,9 @@ function commenting(): LineCommenting {
 	return new LineCommenting(review, {
 		path: () => file.path,
 		hunks: () => [drawn],
-		reviewOwnsRemovedLines: () => true,
+		numbering: () => 'the-reviews',
 		commentable: () => true,
-		piece: () => false
+		standsForItsFile: () => true
 	});
 }
 
@@ -131,9 +131,9 @@ describe('picking removed lines', () => {
 		return new LineCommenting(review, {
 			path: () => removals.path,
 			hunks: () => [drawnRemovals],
-			reviewOwnsRemovedLines: () => true,
+			numbering: () => 'the-reviews',
 			commentable: () => true,
-			piece: () => false
+			standsForItsFile: () => true
 		});
 	}
 
@@ -179,9 +179,9 @@ describe('picking lines across what the diff left out', () => {
 		return new LineCommenting(review, {
 			path: () => apart.path,
 			hunks: () => hunks,
-			reviewOwnsRemovedLines: () => true,
+			numbering: () => 'the-reviews',
 			commentable: () => true,
-			piece: () => false
+			standsForItsFile: () => true
 		});
 	}
 
@@ -232,9 +232,9 @@ describe('a file no comment may name', () => {
 		const lines = new LineCommenting(review, {
 			path: () => file.path,
 			hunks: () => [drawn],
-			reviewOwnsRemovedLines: () => true,
+			numbering: () => 'the-reviews',
 			commentable: () => false,
-			piece: () => false
+			standsForItsFile: () => true
 		});
 
 		lines.press(line(11));

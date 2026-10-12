@@ -43,7 +43,7 @@ beforeEach(() => {
 function asAFile() {
 	return {
 		...AS_LINES,
-		extent: { kind: 'whole', reviewOwnsRemovedLines: true, revealed: review.diff.revealed }
+		extent: { kind: 'whole', numbering: 'the-reviews', revealed: review.diff.revealed }
 	} as const;
 }
 

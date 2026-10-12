@@ -18,7 +18,7 @@ const ENDED = { markdown: '## Comments', comment_count: 1, round: 1, ended: true
 
 /** The threads drawn under one row of a file. */
 function threadsOn(file: string, side: LineSide, line: number) {
-	return new ThreadsByLine(review.threads.onLinesOf(file), true).at({ side, number: line });
+	return new ThreadsByLine(review.threads.onLinesOf(file), 'the-reviews').at({ side, number: line });
 }
 
 describe('the comments of a review', () => {
@@ -107,8 +107,8 @@ describe('the comments of a review', () => {
 		review.threads.add(newComment({ file: 'file.ts', side: 'old', startLine: 3, body: 'on a removed line' }));
 		const onLines = review.threads.onLinesOf('file.ts');
 
-		expect(new ThreadsByLine(onLines, true).at({ side: 'old', number: 3 })).toHaveLength(1);
-		expect(new ThreadsByLine(onLines, false).at({ side: 'old', number: 3 })).toHaveLength(0);
+		expect(new ThreadsByLine(onLines, 'the-reviews').at({ side: 'old', number: 3 })).toHaveLength(1);
+		expect(new ThreadsByLine(onLines, 'a-narrower-bases').at({ side: 'old', number: 3 })).toHaveLength(0);
 	});
 });
 

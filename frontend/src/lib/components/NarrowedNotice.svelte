@@ -16,7 +16,7 @@
 	// reader counting a review they can only see part of.
 	const offScreen = $derived(
 		review.threads.onLines
-			.filter(({ lines }) => !isDrawn(lines, review.diff.files, { removedLines: false }))
+			.filter(({ lines }) => !isDrawn(lines, review.diff.files, review.diff.numbering))
 			.map(({ thread }) => thread)
 	);
 	// The diff the list of them was opened over. Every diff taken after it —

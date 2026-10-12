@@ -10,7 +10,7 @@
  */
 
 import { ThreadsByLine } from '$lib/anchors/comment-index';
-import { sideIsDrawn } from '$lib/anchors/placement';
+import { type Numbering, sideIsTheReviews, whyNotTheReviews } from '$lib/anchors/numbering';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
@@ -29,8 +29,7 @@ export type Reach = 'row-stop' | 'tab' | 'pointer';
 /** A comment being written on lines of the file. */
 type LineField = CommentField<WrittenOnLines>;
 
-// Why a line takes no comment, said by its number when asked, and by the file of itself
-const REMOVED_LINE_NOT_THE_REVIEWS = 'A removed line belongs to the base on screen. Show the whole diff to write here.';
+// Why no line of a file takes a comment, said by each line's number when asked, and by the file of itself
 export const FILE_NOT_COMMENTABLE = 'This file cannot be commented on: its name holds control characters.';
 
 /** A drag across lines of one side, from where it began to where it has reached. */
@@ -47,14 +46,12 @@ export interface DrawnFile {
 	path: () => string;
 	hunks: () => DrawnHunk[];
 	/**
-	 * Whether the removed lines on screen are the review's own. Under a
-	 * narrower base the left-hand side belongs to that base, so what hangs on
-	 * a removed line there would be anchored in somebody else's numbering:
-	 * removed lines then take no comment, and neither the threads on them nor
-	 * the comments being written on them are drawn. A story step reads the
-	 * review's own diff, so its are.
+	 * Whose numbers the lines drawn carry. On a side whose numbers are not
+	 * the review's own, what hangs on a line would be anchored in somebody
+	 * else's numbering: its lines take no comment, and neither the threads on
+	 * them nor the comments being written on them are drawn.
 	 */
-	reviewOwnsRemovedLines: () => boolean;
+	numbering: () => Numbering;
 	/**
 	 * Whether a comment may name the file at all. A path holding a control
 	 * character is drawn, but a thread naming it would be refused, and the
@@ -62,13 +59,14 @@ export interface DrawnFile {
 	 */
 	commentable: () => boolean;
 	/**
-	 * Whether what is drawn is a piece cut out of the file — a step of a
-	 * story — and not the file as the diff has it. A piece draws the threads
-	 * on its own lines and no others: one on another line of the file hangs
-	 * in whichever piece shows that line, and whoever draws the pieces says
-	 * which hang in none.
+	 * Whether the drawing stands for its file in the review: the whole of
+	 * it, in the review's own numbering. Then every thread of the file is
+	 * drawn here, one with no line drawn to hang under at its head. A piece
+	 * cut out of the file draws the threads on its own lines and no others,
+	 * and whoever draws the pieces says which hang in none; under a narrower
+	 * base the notice above the diff names every thread that base cannot draw.
 	 */
-	piece: () => boolean;
+	standsForItsFile: () => boolean;
 }
 
 /**
@@ -126,12 +124,12 @@ export class LineCommenting {
 		this.#review = review;
 		this.#file = file;
 		this.#drawn = $derived(drawnNumbers(file.hunks()));
-		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.reviewOwnsRemovedLines()));
+		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.numbering()));
 		this.#unplaced = $derived(this.#withoutTheirLine());
 		this.#fields = $derived(
 			review.threads.writing
 				.onLinesOf(file.path())
-				.filter((field) => sideIsDrawn(field.at.lines.side, file.reviewOwnsRemovedLines()))
+				.filter((field) => sideIsTheReviews(field.at.lines.side, file.numbering()))
 		);
 	}
 
@@ -143,12 +141,11 @@ export class LineCommenting {
 	/**
 	 * Why no comment may start on a line, in words; null when one may: the
 	 * file is not one a comment may name, or the line is on a side whose
-	 * comments are not drawn here.
+	 * numbers are not the review's own here.
 	 */
 	whyNot(place: LinePlace): string | null {
 		if (!this.#file.commentable()) return FILE_NOT_COMMENTABLE;
-		if (!sideIsDrawn(place.side, this.#file.reviewOwnsRemovedLines())) return REMOVED_LINE_NOT_THE_REVIEWS;
-		return null;
+		return whyNotTheReviews(place.side, this.#file.numbering());
 	}
 
 	/** The pointer went down on a line: a drag starts there. */
@@ -229,14 +226,11 @@ export class LineCommenting {
 	}
 
 	/**
-	 * The threads of the file whose last line is not drawn here. Under a
-	 * narrower base there are none: the notice above the diff names every
-	 * thread that base cannot draw, and takes the reader to it on the whole
-	 * diff. A piece of the file has none either: the lines it does not show
-	 * are not its own.
+	 * The threads of the file whose last line is not drawn here, where the
+	 * drawing stands for the file; none where it does not.
 	 */
 	#withoutTheirLine(): readonly Thread[] {
-		if (!this.#file.reviewOwnsRemovedLines() || this.#file.piece()) return [];
+		if (!this.#file.standsForItsFile()) return [];
 		return this.#review.threads
 			.onLinesOf(this.#file.path())
 			.filter(({ lines }) => !this.#drawn[lines.side].has(lines.end_line))

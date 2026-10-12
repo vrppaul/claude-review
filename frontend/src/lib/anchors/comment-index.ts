@@ -1,6 +1,6 @@
 import type { LinePlace, Thread } from '$lib/types';
+import { type Numbering, sideIsTheReviews } from '$lib/anchors/numbering';
 import type { ThreadOnLines } from '$lib/anchors/views';
-import { sideIsDrawn } from '$lib/anchors/placement';
 import { placeKey } from '$lib/utils/line-places';
 
 /** What a line with no threads under it holds. */
@@ -18,12 +18,12 @@ export class ThreadsByLine {
 
 	/**
 	 * @param threads the threads on lines of the file
-	 * @param removedLines whether threads on removed lines are drawn — see `isDrawn`: under a narrower
-	 *   base those numbers belong to something else
+	 * @param numbering whose numbers the lines drawn carry: a thread hangs only on a side whose numbers
+	 *   are the review's own
 	 */
-	constructor(threads: readonly ThreadOnLines[], removedLines: boolean) {
+	constructor(threads: readonly ThreadOnLines[], numbering: Numbering) {
 		for (const { thread, lines } of threads) {
-			if (!sideIsDrawn(lines.side, removedLines)) continue;
+			if (!sideIsTheReviews(lines.side, numbering)) continue;
 			const key = placeKey({ side: lines.side, number: lines.end_line });
 			const existing = this.#byLine.get(key);
 			if (existing) existing.push(thread);

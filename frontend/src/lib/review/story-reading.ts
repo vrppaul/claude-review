@@ -50,7 +50,7 @@ function piecesOf(story: ToldStory): DrawnPiece[] {
 
 /** Whether a piece shows the line a thread on these lines hangs under: it is a piece of their file, and holds the line. */
 function draws({ piece }: DrawnPiece, lines: FileLines): boolean {
-	return isDrawn(lines, [piece]);
+	return isDrawn(lines, [piece], 'the-reviews');
 }
 
 /** Where a thread stands among the pieces, if one of them draws it. */

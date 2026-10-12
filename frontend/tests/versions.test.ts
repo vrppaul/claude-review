@@ -127,23 +127,23 @@ describe('reading the same tree against something else', () => {
 
 describe('a thread the base on screen cannot draw', () => {
 	it('is not drawn when its file is not shown', () => {
-		expect(isDrawn(lines({ file: 'elsewhere.py' }), [diffFile({ path: 'a.py' })])).toBe(false);
+		expect(isDrawn(lines({ file: 'elsewhere.py' }), [diffFile({ path: 'a.py' })], 'the-reviews')).toBe(false);
 	});
 
 	it('is not drawn when its lines are not among the ones shown', () => {
-		expect(isDrawn(lines({ end_line: 40 }), [untouched('a.py')])).toBe(false);
+		expect(isDrawn(lines({ end_line: 40 }), [untouched('a.py')], 'the-reviews')).toBe(false);
 	});
 
 	it('is drawn when the row it hangs on is there', () => {
-		expect(isDrawn(lines({ end_line: 1 }), [untouched('a.py')])).toBe(true);
+		expect(isDrawn(lines({ end_line: 1 }), [untouched('a.py')], 'the-reviews')).toBe(true);
 	});
 
 	it('leaves removed lines alone under a narrower base, whose left side is not ours', () => {
 		const removed = lines({ side: 'old', end_line: 1 });
 		const shown = [diffFile({ path: 'a.py', hunks: [hunk([removedLine(1, 'x')])] })];
 
-		expect(isDrawn(removed, shown)).toBe(true);
-		expect(isDrawn(removed, shown, { removedLines: false })).toBe(false);
+		expect(isDrawn(removed, shown, 'the-reviews')).toBe(true);
+		expect(isDrawn(removed, shown, 'a-narrower-bases')).toBe(false);
 	});
 });
 
