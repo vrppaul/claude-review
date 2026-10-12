@@ -190,6 +190,18 @@ describe('finding a file in a long review', () => {
 		expect(getByLabelText('Find a file by its path')).toBe(getByTestId('file-filter'));
 	});
 
+	it('says the diff holds no file when it holds none, rather than that none matches an empty filter', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: [] });
+
+		const { getByTestId, queryByTestId } = render(FileList, inReview(review));
+		expect(getByTestId('no-files').textContent?.trim()).toBe('No changed files.');
+		await user.type(getByTestId('file-filter'), 'zzz');
+
+		expect(getByTestId('no-files').textContent?.trim()).toBe('No changed files.');
+		expect(queryByTestId('no-matches')).toBeNull();
+	});
+
 	it('says so when nothing matches', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: diffFiles });

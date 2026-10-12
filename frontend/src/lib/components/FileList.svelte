@@ -187,7 +187,10 @@
 			onkeydown={onFilterKey}
 		/>
 
-		{#if matching.length === 0}
+		{#if review.diff.files.length === 0}
+			<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
+			<p data-testid="no-files" class="cr-muted px-2 py-4 text-xs">No {listed.many}.</p>
+		{:else if matching.length === 0}
 			<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
 				No {listed.sought} matches “{layout.filter}”.
 			</p>
