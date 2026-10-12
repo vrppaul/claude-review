@@ -291,6 +291,42 @@ class LineAnchor(AnchorBase):
         check_line_span(self.start_line, self.end_line)
         return self
 
+    def quoting(self, quote: list[str]) -> LineAnchor:
+        """The anchor quoting these lines, read off what the review holds at its place: it is not outdated."""
+        return LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=quote,
+            outdated=False,
+        )
+
+    def current_at(self, start_line: int, end_line: int) -> LineAnchor:
+        """The anchor on these lines of what the review holds now: it is not outdated."""
+        return LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=start_line,
+            end_line=end_line,
+            quote=self.quote,
+            outdated=False,
+        )
+
+    def lost(self) -> LineAnchor:
+        """The anchor where it was, marked outdated: what it was made on is gone from what the review holds."""
+        return LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=self.quote,
+            outdated=True,
+        )
+
 
 # Everything a thread can hang on, told apart by `kind`; `AnchorService`
 # answers for each kind
@@ -509,6 +545,20 @@ class SaidInPanel(BaseModel):
     files: list[FilePath]
     # Whether the reader took the message back before it was answered
     taken_back: bool
+
+    def withdrawn(self) -> SaidInPanel:
+        """The same thing said, marked as taken back by the reader."""
+        return SaidInPanel(
+            said_id=self.said_id,
+            message_id=self.message_id,
+            author=self.author,
+            body=self.body,
+            at=self.at,
+            images=self.images,
+            threads=self.threads,
+            files=self.files,
+            taken_back=True,
+        )
 
 
 class PanelEntry(BaseModel):

@@ -66,6 +66,4 @@ class Conversation:
 
     def taken_back(self, message_id: str) -> None:
         """Mark a message the reader took back. A question taken back in a thread names none here, and marks nothing."""
-        self._said = [
-            said.model_copy(update={"taken_back": True}) if said.said_id == message_id else said for said in self._said
-        ]
+        self._said = [said.withdrawn() if said.said_id == message_id else said for said in self._said]

@@ -10,7 +10,16 @@ became a link, not saying so.
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, FileStatus, LineSpan, Unshown
+from claude_review.domain.models import (
+    DiffFile,
+    FileStatus,
+    LineAnchor,
+    LineSide,
+    LineSpan,
+    SaidInPanel,
+    TurnAuthor,
+    Unshown,
+)
 from claude_review.domain.story import Chapter, LeftOut, Step
 from tests.stories import canvas_story, hunk
 
@@ -37,6 +46,25 @@ FILE = DiffFile(
     new_mode="100755",
 )
 OTHER_ROWS = [hunk(3, 3, "+")]
+ANCHOR = LineAnchor(
+    file="src/moved.py",
+    side=LineSide.OLD,
+    start_line=11,
+    end_line=12,
+    quote=["def walk():", "    run()"],
+    outdated=False,
+)
+SAID = SaidInPanel(
+    said_id="message-1",
+    message_id="message-1",
+    author=TurnAuthor.READER,
+    body="Is the store closed on every path?",
+    at=1_760_000_000_000,
+    images=["image-1"],
+    threads=["thread-1"],
+    files=["src/moved.py"],
+    taken_back=False,
+)
 STEP = Step(file="src/moved.py", lines=LineSpan(first=11, last=12), reason="The store closes before the reply is sent.")
 CHAPTER = Chapter[Step](
     id="ch-1",
@@ -55,6 +83,14 @@ MADE = [
     MadeFrom(
         what="a file too large to show", source=FILE, made=FILE.unshown_for(Unshown.TOO_LARGE), replaced={"unshown"}
     ),
+    MadeFrom(
+        what="an anchor quoting its lines", source=ANCHOR, made=ANCHOR.quoting(["def run():"]), replaced={"quote"}
+    ),
+    MadeFrom(
+        what="an anchor found again", source=ANCHOR, made=ANCHOR.current_at(14, 15), replaced={"start_line", "end_line"}
+    ),
+    MadeFrom(what="an anchor lost", source=ANCHOR, made=ANCHOR.lost(), replaced={"outdated"}),
+    MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),
     MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
     MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
     MadeFrom(

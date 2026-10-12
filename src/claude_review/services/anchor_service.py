@@ -99,7 +99,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
             msg = f"{anchor.file} does not show {SIDE_WORDS[anchor.side]} {lines} {span}"
             raise AnchorLinesNotShownError(msg)
 
-        return _changed(anchor, quote=[on_screen[number] for number in wanted], outdated=False)
+        return anchor.quoting([on_screen[number] for number in wanted])
 
     @override
     def check_quote(self, anchor: LineAnchor) -> None:
@@ -142,23 +142,18 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         its lines has nothing to search for, and is left where it is.
         """
         if not anchor.quote:
-            return _changed(anchor, outdated=False)
+            return anchor.current_at(anchor.start_line, anchor.end_line)
 
         shown = self._files.get(anchor.file)
         if shown is None:
-            return _changed(anchor, outdated=True)
+            return anchor.lost()
 
         lines = self._lines_of(shown, anchor.side)
         found = _find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
-            return _changed(anchor, outdated=True)
+            return anchor.lost()
 
-        return _changed(
-            anchor,
-            start_line=lines[found].number,
-            end_line=lines[found + len(anchor.quote) - 1].number,
-            outdated=False,
-        )
+        return anchor.current_at(lines[found].number, lines[found + len(anchor.quote) - 1].number)
 
     def _lines_of(self, file: DiffFile, side: LineSide) -> list[SideLine]:
         known = self._side_lines[side]
@@ -238,15 +233,6 @@ def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
         if (line.kind == LineType.DELETE) == removed_side
         and (number := line.old_number if removed_side else line.new_number) is not None
     ]
-
-
-def _changed(anchor: LineAnchor, **changes: object) -> LineAnchor:
-    """The anchor with some fields changed, checked again as any anchor is.
-
-    `model_copy` would skip the checks, and an anchor built here goes out to
-    the browser and comes back in a round, where they are applied.
-    """
-    return LineAnchor.model_validate({**anchor.model_dump(), **changes})
 
 
 def _find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | None:

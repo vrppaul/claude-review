@@ -193,4 +193,4 @@ def _as_typed(refusal: FieldRefusal) -> FieldRefusal:
     """
     location = refusal.loc
     named = location[1:] if location and location[0] in REQUEST_PARTS else location
-    return refusal.model_copy(update={"loc": named})
+    return FieldRefusal(loc=named, msg=refusal.msg)
