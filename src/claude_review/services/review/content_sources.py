@@ -215,7 +215,7 @@ class FixedSource(ContentSource):
     @override
     def change(self) -> list[DiffFile]:
         """Raises: NoRepositoryError, always."""
-        msg = "This review is of no change: there is no story to tell of it"
+        msg = "This review is of no change: its content came from no repository"
         raise NoRepositoryError(msg)
 
     @override

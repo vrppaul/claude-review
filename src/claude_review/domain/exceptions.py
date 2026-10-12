@@ -62,7 +62,12 @@ class FieldsRefusedError(RefusedError):
 
 
 class NoRepositoryError(NotFoundError):
-    """Raised when a review whose content did not come from a repository is asked for git's help."""
+    """Raised when a review whose content came from no repository is asked for what only a repository gives.
+
+    A base to compare against, the diff taken again, more of a file than was
+    read, the change under review: files read once and a conversation have
+    none of them.
+    """
 
 
 class QuestionNotInThreadError(RefusedError):
