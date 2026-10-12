@@ -11,8 +11,9 @@
   as on GitHub; picking lines that already have one brings that one back.
 - **Context opens up or down by twenty lines, or all at once, and below the
   last change.** Each gap between hunks offers ↑ 20, ↓ 20 and "Show all", as
-  GitHub does, and a file's end has a gap of its own. "Show all" over a long
-  gap reads it in pieces the server returns whole, so no line goes missing.
+  GitHub does, and a file's end has a gap of its own. A gap longer than the
+  server hands back in one read offers "Show N" in place of "Show all", N
+  lines a press.
 - **The page says when its review cannot be reached.** A bar under the
   header says it is trying again and that nothing is sent until the review
   is back; Send, End and the panel wait meanwhile. A request nothing
@@ -280,7 +281,8 @@
 - **A drag across lines the diff leaves out stops at the last line drawn.**
   The comment's heading named the whole range while it quoted only the
   lines shown, and an agent applying its suggestion deleted the rest. The
-  server refuses a thread that quotes fewer lines than it names.
+  server refuses a thread that does not quote one line for each line it
+  names; one that quotes none, kept from before quotes were, is taken.
 - **One broken part of the page leaves the rest on screen**, saying what
   broke and offering "Try again"; a step or a file the agent named twice
   used to blank the panel, and after a reload the whole page.
