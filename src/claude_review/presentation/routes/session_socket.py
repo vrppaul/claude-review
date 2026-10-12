@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
-from claude_review.presentation.wire.session import PushNumber, Resume, RunName
+from claude_review.presentation.wire.session import PushNumber, Resume, ReviewName, RunName
 from claude_review.presentation.wire.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
 
@@ -29,24 +29,38 @@ router = APIRouter()
 FELL_BEHIND = 1013
 
 
+def _resume_named(
+    identity: ReviewName | None = Query(default=None),
+    instance: RunName | None = Query(default=None),
+    after: PushNumber | None = Query(default=None),
+) -> Resume | None:
+    """Where the page had got to, as its socket's address names it; nothing from a page still reading its review."""
+    if identity is None or instance is None or after is None:
+        return None
+    return Resume(identity=identity, instance=instance, after=after)
+
+
 @router.websocket("/session")
 async def session(
     websocket: WebSocket,
-    instance: RunName | None = Query(default=None),
-    after: PushNumber | None = Query(default=None),
+    resume: Resume | None = Depends(_resume_named),
     review: Review = Depends(get_review),
     broadcast: BrowserBroadcast = Depends(get_broadcast),
 ) -> None:
     """Hold the review open for as long as the page has it on screen, and tell the page what happens.
 
-    A page names the run of the review it reads and how far it had got in
-    it — by the pushes it took in, the facts it read, or the draft it opened
-    from — and is handed what came after. One that names nothing yet only
-    holds the review on screen while it opens.
+    A page names the review it reads, the run of it and how far it had got
+    in it — by the pushes it took in, the facts it read, or the draft it
+    opened from — and is handed what came after. One that names nothing yet
+    only holds the review on screen while it opens. One that names another
+    review was left open on a review that ran on this port before: it is
+    not this review's page, and is told so and let go before it counts as one.
     """
     await websocket.accept()
+    if resume is not None and not review.answers_to(resume.identity):
+        await _turn_away(websocket, broadcast)
+        return
     with review.page_open():
-        resume = Resume(instance=instance, after=after) if instance is not None and after is not None else None
         outbox = broadcast.listen(resume=resume)
         try:
             async with asyncio.TaskGroup() as directions:
@@ -58,6 +72,17 @@ async def session(
             log.debug("page_socket_lost")
         finally:
             broadcast.stop_listening(outbox)
+
+
+async def _turn_away(websocket: WebSocket, broadcast: BrowserBroadcast) -> None:
+    """Tell a page of another review which review answers here, and let it go: its own is over."""
+    log.debug("page_of_another_review_turned_away")
+    try:
+        await websocket.send_text(broadcast.welcome_alone())
+        await websocket.close()
+    except WebSocketDisconnect:
+        # The page hung up first, as one does on reading the welcome: nobody is left to tell
+        log.debug("page_socket_lost")
 
 
 async def _tell_the_page(outbox: asyncio.Queue[str], websocket: WebSocket) -> None:

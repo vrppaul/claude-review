@@ -113,7 +113,7 @@ def test_a_page_coming_back_is_handed_exactly_what_it_missed(told: int, data: st
     instance = _instance(broadcast)
     _told_times(broadcast, told)
 
-    back = broadcast.listen(resume=Resume(instance=instance, after=told - missed))
+    back = broadcast.listen(resume=Resume(identity=REVIEW_IDENTITY, instance=instance, after=told - missed))
 
     assert _welcome(back).resumed
     assert [delivery.sequence for delivery in _deliveries(back)] == list(range(told - missed + 1, told + 1))
@@ -128,7 +128,7 @@ def test_a_page_that_missed_more_than_is_kept_is_told_it_was_not_handed_it(
     instance = _instance(broadcast)
     _told_times(broadcast, told)
 
-    back = broadcast.listen(resume=Resume(instance=instance, after=after))
+    back = broadcast.listen(resume=Resume(identity=REVIEW_IDENTITY, instance=instance, after=after))
 
     welcome = _welcome(back)
     assert (welcome.sequence, welcome.resumed) == (told, False)
@@ -137,7 +137,7 @@ def test_a_page_that_missed_more_than_is_kept_is_told_it_was_not_handed_it(
 
 @pytest.mark.parametrize(
     "resume",
-    [Resume(instance=ANOTHER_RUN, after=0), None],
+    [Resume(identity=REVIEW_IDENTITY, instance=ANOTHER_RUN, after=0), None],
     ids=["another run of the review", "a page that never had one"],
 )
 def test_a_page_from_another_run_is_not_resumed(resume: Resume | None) -> None:
@@ -156,7 +156,7 @@ def test_a_page_claiming_more_than_was_told_is_not_resumed() -> None:
     instance = _instance(broadcast)
     _told_times(broadcast, FEW)
 
-    back = broadcast.listen(resume=Resume(instance=instance, after=FEW + 1))
+    back = broadcast.listen(resume=Resume(identity=REVIEW_IDENTITY, instance=instance, after=FEW + 1))
 
     assert not _welcome(back).resumed
 
@@ -204,7 +204,9 @@ def test_a_page_let_go_for_falling_behind_is_handed_what_it_missed_when_it_comes
     last_seen = _welcome(stuck)
 
     _told_times(broadcast, LET_GO_AFTER)
-    back = broadcast.listen(resume=Resume(instance=last_seen.instance, after=last_seen.sequence))
+    back = broadcast.listen(
+        resume=Resume(identity=REVIEW_IDENTITY, instance=last_seen.instance, after=last_seen.sequence)
+    )
 
     assert _welcome(back).resumed
     assert len(_deliveries(back)) == LET_GO_AFTER
@@ -214,7 +216,7 @@ def test_a_page_handed_a_backlog_of_what_it_missed_still_has_room_for_what_comes
     broadcast = BrowserBroadcast(backlog=BACKLOG, identity=REVIEW_IDENTITY)
     instance = _instance(broadcast)
     _told_times(broadcast, BACKLOG)
-    back = broadcast.listen(resume=Resume(instance=instance, after=0))
+    back = broadcast.listen(resume=Resume(identity=REVIEW_IDENTITY, instance=instance, after=0))
 
     broadcast.tell(SHOWN)
 

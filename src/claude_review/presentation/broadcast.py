@@ -100,10 +100,7 @@ class BrowserBroadcast(PageChannel):
         handed = missed or []
         # What it missed waits already; a backlog on top of it is what it may fall behind by
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=self._backlog + WELCOME_PLACES + len(handed))
-        welcome = Welcome(
-            identity=self._identity, instance=self._instance, sequence=self._sequence, resumed=missed is not None
-        )
-        queue.put_nowait(welcome.model_dump_json())
+        queue.put_nowait(self._welcome(resumed=missed is not None))
         for told in handed:
             queue.put_nowait(told.said)
         self._listeners.add(queue)
@@ -112,9 +109,18 @@ class BrowserBroadcast(PageChannel):
     def stop_listening(self, queue: asyncio.Queue[str]) -> None:
         self._listeners.discard(queue)
 
+    def welcome_alone(self) -> str:
+        """The welcome, with nothing told after it: what a page of another review learns before it is let go."""
+        return self._welcome(resumed=False)
+
     def position(self) -> TellingPosition:
         """How far the telling has got: where a page reading the review's facts now goes on from."""
         return TellingPosition(instance=self._instance, sequence=self._sequence)
+
+    def _welcome(self, *, resumed: bool) -> str:
+        """What opens a connection: which review this is, which run of it, and how far its telling has got."""
+        welcome = Welcome(identity=self._identity, instance=self._instance, sequence=self._sequence, resumed=resumed)
+        return welcome.model_dump_json()
 
     def _missed_since(self, resume: Resume | None) -> list[Told] | None:
         """What a page coming back missed, or None when it cannot be handed all of it."""

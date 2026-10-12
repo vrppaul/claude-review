@@ -274,14 +274,20 @@ export interface components {
         };
         /**
          * Resume
-         * @description Where a page coming back had got to: which run of the review, and the number of the last push it covers.
+         * @description Where a page coming back had got to: which review, which run of it, and the number of the last push it covers.
          *
-         *     Named in the socket's address — `?instance=…&after=…` — rather than said
-         *     on the socket: the welcome, and whatever the page missed after it, are
-         *     told before the page could say anything. A page that cannot name it yet
-         *     names neither, and its socket only holds the review on screen.
+         *     Named in the socket's address — `?identity=…&instance=…&after=…` —
+         *     rather than said on the socket: the welcome, and whatever the page
+         *     missed after it, are told before the page could say anything. A page
+         *     that has not read its review yet names none of it: it was served by the
+         *     review that answers, and its socket only holds that review on screen
+         *     while it reads it. One naming another review is a page left open on a
+         *     review that ran on the port before: it is welcomed, so it learns whose
+         *     review answers now, and let go without counting as this review's page.
          */
         Resume: {
+            /** Identity */
+            identity: string;
             /** Instance */
             instance: string;
             /** After */

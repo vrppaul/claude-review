@@ -21,9 +21,12 @@
  *
  * The port outlives the review: once it is over, the next review of the
  * same thing — or of anything, on a port named twice — may answer there.
- * The page says nothing until the review that welcomes it names itself as
- * its own; one that names itself otherwise is let go for good, unheard and
- * untold, so it is neither handed this page's threads nor held open by it.
+ * The page names its review in the socket's address, and a review of
+ * another name welcomes it only to let it go, never counting it as a page
+ * of its own: a tab left over neither holds that review open nor, leaving,
+ * ends it. The page says nothing until the review that welcomes it names
+ * itself as its own; one that names itself otherwise is let go for good,
+ * unheard and untold, so it is never handed this page's threads.
  */
 
 import { decodeSessionMessage } from '$lib/connection/session-messages';
@@ -170,12 +173,17 @@ export class PageConnection {
 		this.#socket = socket;
 	}
 
-	/** Where to connect: naming, once the page can say it, the run of the review and how far the page has heard it. */
+	/**
+	 * Where to connect: naming, once the page can say it, its review, the
+	 * run of it and how far the page has heard it. A review that answers by
+	 * another name lets the page go before it counts it as its own.
+	 */
 	#address(): string {
-		const told = this.#receiver?.told();
-		if (told === undefined) return this.#url;
+		const receiver = this.#receiver;
+		if (receiver === null) return this.#url;
+		const told = receiver.told();
 		// Named as the socket's document names them, so a name the server changes does not compile
-		const resume: Resume = { instance: told.instance, after: told.sequence };
+		const resume: Resume = { identity: receiver.identity, instance: told.instance, after: told.sequence };
 		const named = new URLSearchParams(Object.entries(resume).map(([name, value]) => [name, String(value)]));
 		return `${this.#url}?${named.toString()}`;
 	}

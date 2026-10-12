@@ -65,6 +65,8 @@ class Delivery(WireModel):
 type SessionMessage = Annotated[Welcome | Delivery, Field(discriminator="type")]
 
 
+# A review, as a page names the one it read: by the identity its welcome gave
+ReviewName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
 # A run of the review, as a page names the one it read
 RunName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
 # The number of a push in one run's telling. The first push is numbered one,
@@ -73,15 +75,20 @@ PushNumber = Annotated[int, Field(ge=0)]
 
 
 class Resume(WireModel):
-    """Where a page coming back had got to: which run of the review, and the number of the last push it covers.
+    """Where a page coming back had got to: which review, which run of it, and the number of the last push it covers.
 
-    Named in the socket's address — `?instance=…&after=…` — rather than said
-    on the socket: the welcome, and whatever the page missed after it, are
-    told before the page could say anything. A page that cannot name it yet
-    names neither, and its socket only holds the review on screen.
+    Named in the socket's address — `?identity=…&instance=…&after=…` —
+    rather than said on the socket: the welcome, and whatever the page
+    missed after it, are told before the page could say anything. A page
+    that has not read its review yet names none of it: it was served by the
+    review that answers, and its socket only holds that review on screen
+    while it reads it. One naming another review is a page left open on a
+    review that ran on the port before: it is welcomed, so it learns whose
+    review answers now, and let go without counting as this review's page.
     """
 
     model_config = ConfigDict(frozen=True)
 
+    identity: ReviewName
     instance: RunName
     after: PushNumber

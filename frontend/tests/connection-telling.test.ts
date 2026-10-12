@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { FakeSocket, latestSocket, THIS_RUN, welcome } from './fake-socket';
+import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import { LONGEST_RETRY } from '$lib/connection/page-connection';
 import {
 	A_CHAT,
@@ -48,7 +48,9 @@ describe('going on with the telling across connections', () => {
 		latestSocket().say(welcome({ sequence: TOLD_SINCE + 1, resumed: true }));
 		latestSocket().deliver(A_REPLY, TOLD_SINCE + 1);
 
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_BEFORE}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${TOLD_BEFORE}`
+		);
 		expect(holding.closedByThePage).toBe(true);
 		expect(page.catchUps).toBe(0);
 		expect(page.heard).toEqual([A_REPLY]);
@@ -107,7 +109,9 @@ describe('going on with the telling across connections', () => {
 		vi.advanceTimersByTime(LONGEST_RETRY);
 
 		expect(FakeSocket.opened).toHaveLength(2);
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_BEFORE}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${TOLD_BEFORE}`
+		);
 		connection.close();
 	});
 
@@ -131,7 +135,9 @@ describe('going on with the telling across connections', () => {
 
 		dropAndComeBack();
 
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_BEFORE + 1}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${TOLD_BEFORE + 1}`
+		);
 		connection.close();
 	});
 
@@ -144,7 +150,9 @@ describe('going on with the telling across connections', () => {
 		page.position = { instance: THIS_RUN, sequence: PAGE_TOLD_AT };
 		dropAndComeBack();
 
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${PAGE_TOLD_AT}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${PAGE_TOLD_AT}`
+		);
 		connection.close();
 	});
 
@@ -191,7 +199,9 @@ describe('going on with the telling across connections', () => {
 
 		await vi.waitFor(() => expect(page.heard).toEqual([A_CHAT]));
 		dropAndComeBack();
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${TOLD_SINCE + 1}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${TOLD_SINCE + 1}`
+		);
 		connection.close();
 	});
 

@@ -21,6 +21,7 @@ from http import HTTPStatus
 from importlib.metadata import version
 from pathlib import Path
 from typing import IO
+from urllib.parse import urlencode
 
 import pytest
 
@@ -37,14 +38,17 @@ from claude_review.presentation.wire.pushes import (
     ShowPush,
     StatusPush,
 )
+from claude_review.presentation.wire.session import Welcome
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
 from tests.helpers import (
     ANY_PORT,
     FIRST_THREAD_ID,
     LOOPBACK,
     PNG,
+    SESSION_ROUTE,
     git,
     line_on_the_wire,
+    message_said,
     next_push,
     thread_on_the_wire,
     work_pushed,
@@ -91,6 +95,9 @@ CONVERSATION = [
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}
 # A page on somebody else's site
 FOREIGN_ORIGIN = "https://attacker.example"
+# A review that ran on the port before, and the welcome a page left open on it had from it
+ANOTHER_REVIEW = "another-review"
+WELCOME_FROM_ANOTHER_REVIEW = Welcome(identity=ANOTHER_REVIEW, instance="another-run", sequence=0, resumed=False)
 # What writes "echo pwned" into the clipboard of a terminal that prints it (OSC 52), as a reader may paste it
 ESCAPE = "\x1b"
 CLIPBOARD_WRITE = f"{ESCAPE}]52;c;ZWNobyBwd25lZA==\x07"
@@ -266,6 +273,19 @@ def port() -> int:
 def _session(port: int) -> PageSocket:
     """The session socket, held open as a review on screen holds it; with no Origin, as from no page at all."""
     return PageSocket(port)
+
+
+def _session_of(port: int, welcome: Welcome) -> PageSocket:
+    """The session socket of a page that has read its review: it names the review, the run and the last push it had."""
+    named = {"identity": welcome.identity, "instance": welcome.instance, "after": welcome.sequence}
+    return PageSocket(port, route=f"{SESSION_ROUTE}?{urlencode(named)}")
+
+
+def _welcome(page: PageSocket) -> Welcome:
+    """The welcome that opens every connection."""
+    welcome = message_said(page.receive(timeout=HEARD_SECONDS))
+    assert isinstance(welcome, Welcome)
+    return welcome
 
 
 def _post(port: int, path: str, payload: dict) -> None:
@@ -453,6 +473,36 @@ def test_a_review_nobody_has_opened_is_not_ended_by_a_page_it_refused(
     assert refused.value.status_code == HTTPStatus.FORBIDDEN
 
     assert review.outlives(PAST_GRACE_SECONDS), "the review ended without ever being opened"
+
+
+def test_a_review_nobody_has_opened_is_not_ended_by_a_page_left_on_another_review(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """A tab left on a review that ran on this port before comes back to whichever answers now: it is not its reader.
+
+    It is told whose review answers, and let go; its leaving is nobody leaving.
+    """
+    review = cli.review(changed_repo, port)
+
+    with _session_of(port, WELCOME_FROM_ANOTHER_REVIEW) as left_open:
+        assert _welcome(left_open).identity != ANOTHER_REVIEW
+        with pytest.raises(ConnectionError):
+            left_open.receive(timeout=HEARD_SECONDS)
+
+    assert review.outlives(PAST_GRACE_SECONDS), "a page of another review ended this one"
+
+
+def test_the_socket_a_page_holds_once_it_has_read_its_review_holds_the_review_open(
+    changed_repo: Path, cli: CliProcesses, port: int
+) -> None:
+    """The page holds a socket while it reads the review, then one naming the review it read, and lets the first go."""
+    review = cli.review(changed_repo, port)
+
+    with _session(port) as reading:
+        welcome = _welcome(reading)
+        named = _session_of(port, welcome)
+    with named:
+        assert review.outlives(PAST_GRACE_SECONDS), "the review ended under the page that had read it"
 
 
 def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, cli: CliProcesses, port: int) -> None:

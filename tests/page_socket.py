@@ -40,10 +40,13 @@ class HandshakeRefusedError(Exception):
 class PageSocket(PushSource):
     """A page's session socket: what the review pushes is read off it, what the page says is sent on it."""
 
-    def __init__(self, port: int, *, origin: str | None = None, receive_buffer: int | None = None) -> None:
+    def __init__(
+        self, port: int, *, route: str = SESSION_ROUTE, origin: str | None = None, receive_buffer: int | None = None
+    ) -> None:
         """Open the session socket of the review serving on `port`, once the review has answered the handshake.
 
-        Without an origin it arrives as from no page at all. A receive buffer
+        The route names whatever a page names in the socket's address. Without
+        an origin it arrives as from no page at all. A receive buffer
         holds the page's side of the connection to that little, so whatever a
         page that stops reading is sent backs up on the review's side.
 
@@ -61,7 +64,7 @@ class PageSocket(PushSource):
         if receive_buffer is not None:
             self._connection.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, receive_buffer)
         try:
-            self._shake_hands(port, origin)
+            self._shake_hands(port, route, origin)
         except BaseException:
             self._connection.close()
             raise
@@ -114,12 +117,12 @@ class PageSocket(PushSource):
         # Closed whether or not the block raised: what it raised goes on up
         self.close()
 
-    def _shake_hands(self, port: int, origin: str | None) -> None:
+    def _shake_hands(self, port: int, route: str, origin: str | None) -> None:
         deadline = time.monotonic() + HANDSHAKE_SECONDS
         self._connection.settimeout(HANDSHAKE_SECONDS)
         self._connection.connect((LOOPBACK, port))
         headers = [(ORIGIN_HEADER, origin.encode())] if origin is not None else []
-        self._send_event(Request(host=f"{LOOPBACK}:{port}", target=SESSION_ROUTE, extra_headers=headers))
+        self._send_event(Request(host=f"{LOOPBACK}:{port}", target=route, extra_headers=headers))
         # The review's acceptance shows as the connection opening
         while self._protocol.state == ConnectionState.CONNECTING:
             self._read(deadline)

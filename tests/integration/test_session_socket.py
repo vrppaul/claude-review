@@ -45,13 +45,16 @@ SHOWN = ShowPush(file=REVIEWED_FILE)
 ANSWER = "It moved to config"
 # A run of the review other than the one serving
 ANOTHER_RUN = "another-run"
+# A review other than the one serving, that ran on its port before
+ANOTHER_REVIEW = "another-review"
 # The round a page had reached before its server restarted
 ROUND_THE_PAGE_KEPT = 4
 
 
 def _coming_back(welcome: Welcome) -> str:
-    """Where a page coming back connects: naming the run it read, and the last push it was handed."""
-    return f"{SESSION_ROUTE}?{urlencode({'instance': welcome.instance, 'after': welcome.sequence})}"
+    """Where a page coming back connects: naming the review and the run it read, and the last push it was handed."""
+    named = {"identity": welcome.identity, "instance": welcome.instance, "after": welcome.sequence}
+    return f"{SESSION_ROUTE}?{urlencode(named)}"
 
 
 def test_a_page_coming_back_is_handed_what_was_said_while_it_was_away(review_page: TestClient) -> None:
@@ -92,8 +95,12 @@ def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_mis
 
 @pytest.mark.parametrize(
     "named",
-    [{"instance": "r" * (MAX_ID_LENGTH + 1), "after": 0}, {"instance": ANOTHER_RUN, "after": -1}],
-    ids=["run-name-too-long", "push-number-below-zero"],
+    [
+        {"instance": "r" * (MAX_ID_LENGTH + 1), "after": 0},
+        {"instance": ANOTHER_RUN, "after": -1},
+        {"identity": "r" * (MAX_ID_LENGTH + 1), "instance": ANOTHER_RUN, "after": 0},
+    ],
+    ids=["run-name-too-long", "push-number-below-zero", "review-name-too-long"],
 )
 def test_a_page_naming_a_place_no_telling_has_is_turned_away(review_page: TestClient, named: dict[str, object]) -> None:
     """Held to the bounds the socket's document gives what a page names in its address."""
@@ -102,6 +109,19 @@ def test_a_page_naming_a_place_no_telling_has_is_turned_away(review_page: TestCl
         open_session_at(review_page, f"{SESSION_ROUTE}?{urlencode(named)}") as socket,
     ):
         socket.receive_text()
+
+
+def test_a_page_left_open_on_another_review_is_told_whose_review_answers_and_let_go(review_page: TestClient) -> None:
+    """A review over and gone leaves its tab knocking on the port: it is neither told nor heard by the next one."""
+    with open_session(review_page) as first:
+        serving = welcome_of(first)
+
+    left_on = serving.model_copy(update={"identity": ANOTHER_REVIEW})
+    with open_session_at(review_page, _coming_back(left_on)) as socket:
+        assert welcome_of(socket).identity == serving.identity
+        review_page.post("/api/show", json={"file": REVIEWED_FILE})
+        with pytest.raises(WebSocketDisconnect):
+            socket.receive_text()
 
 
 def test_a_page_is_welcomed_by_the_name_of_the_review_it_reached(review_page: TestClient) -> None:

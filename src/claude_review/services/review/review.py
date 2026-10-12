@@ -118,6 +118,10 @@ class Review:
             panel=self._conversation.entries,
         )
 
+    def answers_to(self, identity: str) -> bool:
+        """Whether a page naming this identity reads this review, rather than one that ran on its port before."""
+        return identity == self._identity
+
     def page_open(self) -> AbstractContextManager[None]:
         """Count a page as open on the review for as long as this lasts."""
         return self._presence.page_open()

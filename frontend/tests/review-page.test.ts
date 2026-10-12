@@ -163,7 +163,9 @@ describe('opening the page', () => {
 		latestSocket().say(welcome({ sequence: FACTS_READ_AT, resumed: true }));
 		latestSocket().deliver({ type: 'reply', thread_id: id, question_id: null, body: 'Because.' }, DRAFT_LEFT_AT + 1);
 
-		expect(latestSocket().url).toBe(`${SESSION_URL}?instance=${THIS_RUN}&after=${DRAFT_LEFT_AT}`);
+		expect(latestSocket().url).toBe(
+			`${SESSION_URL}?identity=${REVIEW_IDENTITY}&instance=${THIS_RUN}&after=${DRAFT_LEFT_AT}`
+		);
 		expect(openedReview(page).threads.all[0].turns.at(-1)?.body).toBe('Because.');
 	});
 
