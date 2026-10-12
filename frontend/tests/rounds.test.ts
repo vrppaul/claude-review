@@ -305,6 +305,66 @@ describe('writing while a round is on its way', () => {
 		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
 	});
 
+	it.each([
+		{ change: 'edited', make: (id: string) => review.threads.update(id, 'tighten this more', 'note', []) },
+		{ change: 'resolved', make: (id: string) => review.threads.setResolved(id, true) },
+		{
+			change: 'replied to',
+			make: (id: string) => review.threads.addTurn(id, { author: 'reader', body: 'and', images: [] })
+		}
+	])('sends again a thread the reader $change while the round was on its way', async ({ make }) => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		const sending = review.submission.submit(false);
+		make(id);
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
+		expect(review.threads.sentInRound(id)).toBeUndefined();
+	});
+
+	it('marks nothing sent for a thread deleted while the round was on its way', async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		const sending = review.submission.submit(false);
+		review.threads.remove(id);
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.sentRounds).toEqual({});
+	});
+
+	it("marks sent a thread the agent answered while the round was on its way: the answer is the agent's own", async () => {
+		const rounds = fakeServer().hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+
+		const sending = review.submission.submit(false);
+		review.threads.receiveReply(id, 'done, tightened', null);
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.unsent).toEqual([]);
+		expect(review.threads.sentInRound(id)).toBe(1);
+	});
+
+	it('marks sent a thread the diff moved while the round was on its way: the reader wrote nothing new', async () => {
+		const server = fakeServer();
+		const rounds = server.hold('POST /api/submit');
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		server.answer('POST /api/anchors/follow', { anchors: [lineAnchor('a.py', 'new', 3, 3, [])] });
+
+		const sending = review.submission.submit(false);
+		await review.threads.follow();
+		rounds.answer(0, roundTaken(1));
+		await sending;
+
+		expect(review.threads.all[0].anchor).toMatchObject({ start_line: 3 });
+		expect(review.threads.sentInRound(id)).toBe(1);
+	});
+
 	it('marks sent a thread that did not change while the round was on its way', async () => {
 		const rounds = fakeServer().hold('POST /api/submit');
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));

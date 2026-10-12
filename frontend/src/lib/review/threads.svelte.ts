@@ -7,8 +7,6 @@
  * what the page holds for an agent that attaches later.
  */
 
-import { SvelteMap } from 'svelte/reactivity';
-
 import { askInThread, cancelMessage, followAnchors } from '$lib/api/review-api';
 import { lineAnchor } from '$lib/anchors/line';
 import { anchorLines, type ThreadOnLines } from '$lib/anchors/views';
@@ -18,6 +16,7 @@ import type { CommentFields } from '$lib/review/comment-fields';
 import { followedThreads } from '$lib/review/following';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
+import { type CarriedThread, ThreadSending } from '$lib/review/thread-sending.svelte';
 import { ThreadWriting } from '$lib/review/thread-writing.svelte';
 import type {
 	Anchor,
@@ -106,17 +105,15 @@ export class Threads {
 	readonly writing: ThreadWriting;
 	readonly #rounds: Rounds;
 	#all = $state.raw<Thread[]>([]);
-	// Which threads have gone out, and in which round. A round carries what
-	// is new since the last one, not the whole review again — and the reader
-	// can see which of what is on screen the answering side has already read.
-	readonly #sent = new SvelteMap<string, number>();
+	// Which have gone out, in which round, and which the reader has changed since
+	readonly #sending: ThreadSending;
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
 	readonly #onLines = $derived(this.#all.map((thread) => ({ thread, lines: anchorLines(thread.anchor) })));
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
-	readonly #unsent = $derived(this.#all.filter((thread) => !this.#sent.has(thread.id)));
+	readonly #unsent = $derived(this.#all.filter((thread) => this.#sending.roundOf(thread.id) === undefined));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
 	readonly #answered = $derived(
 		this.#all
@@ -133,6 +130,7 @@ export class Threads {
 		this.#rounds = rounds;
 		this.reading = new ThreadReading(kept.read);
 		this.writing = new ThreadWriting(kept.writing, fieldEvents);
+		this.#sending = new ThreadSending(kept.sent);
 		this.#pickUp(kept);
 	}
 
@@ -176,7 +174,7 @@ export class Threads {
 
 	/** The round every thread sent so far went out in, by thread, as the draft keeps them. */
 	get sentRounds(): Record<string, number> {
-		return Object.fromEntries(this.#sent);
+		return this.#sending.rounds;
 	}
 
 	/** How many thread and turn ids have been handed out, deleted ones included. */
@@ -186,7 +184,7 @@ export class Threads {
 
 	/** Which round a thread went out in, or nothing if it has not yet. */
 	sentInRound(id: string): number | undefined {
-		return this.#sent.get(id);
+		return this.#sending.roundOf(id);
 	}
 
 	add({ anchor, body, severity, images }: NewComment): string {
@@ -232,7 +230,7 @@ export class Threads {
 		};
 		this.#all = [...this.#all, thread];
 		this.reading.markUnread(id);
-		this.#sent.set(id, this.#rounds.current);
+		this.#sending.arrivedSent(id, this.#rounds.current);
 		return true;
 	}
 
@@ -248,18 +246,18 @@ export class Threads {
 	 */
 	adopt(held: HeldThread[]): void {
 		this.#all = [...this.#all, ...held.map((thread) => threadOfHeld(thread, this.#rounds.current))];
-		for (const thread of held.filter(isAsRaised)) this.#sent.set(thread.thread_id, this.#rounds.current);
+		for (const thread of held.filter(isAsRaised)) this.#sending.arrivedSent(thread.thread_id, this.#rounds.current);
 		this.#commentIds.continuePast(held.map((thread) => thread.thread_id));
 		this.#turnIds.continuePast(held.flatMap((thread) => thread.turns.map((turn) => turn.turn_id)));
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {
-		this.#sent.delete(id);
+		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({ ...thread, body, severity, images }));
 	}
 
 	remove(id: string): void {
-		this.#sent.delete(id);
+		this.#sending.changedByReader(id);
 		this.reading.forget(id);
 		this.writing.forget(id);
 		this.#all = this.#all.filter((thread) => thread.id !== id);
@@ -316,7 +314,7 @@ export class Threads {
 			at: Date.now(),
 			images
 		};
-		this.#sent.delete(id);
+		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({
 			...thread,
 			turns: [...thread.turns, turn]
@@ -389,18 +387,24 @@ export class Threads {
 
 	/** Settle a thread, which folds it away, or open it again. */
 	setResolved(id: string, resolved: boolean): void {
-		this.#sent.delete(id);
+		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({ ...thread, resolved }));
 		if (resolved) this.reading.setFolded(id, true);
 	}
 
+	/** The threads a round about to go carries, as `markSent` is handed them back once it has gone. */
+	carry(threads: readonly Thread[]): CarriedThread[] {
+		return this.#sending.carry(threads);
+	}
+
 	/**
-	 * Note that these threads went out in this round — each as it was when it
-	 * went. One changed since, while the round was on its way, is a thread
-	 * the round did not carry, and goes with the next.
+	 * Note that the threads a round carried went out in it. One the reader
+	 * changed since, while the round was on its way, is a thread the round did
+	 * not carry as it is now, and goes with the next; one the agent answered
+	 * meanwhile, or the diff moved, still went as the reader wrote it.
 	 */
-	markSent(sent: Thread[], round: number): void {
-		for (const thread of sent) if (this.#all.includes(thread)) this.#sent.set(thread.id, round);
+	markSent(carried: readonly CarriedThread[], round: number): void {
+		this.#sending.markSent(carried, round);
 	}
 
 	/**
@@ -425,7 +429,6 @@ export class Threads {
 	/** Pick up the threads of an unsent review of the same thing, kept before a reload. */
 	#pickUp(kept: KeptThreads): void {
 		this.#all = kept.threads;
-		for (const [id, round] of Object.entries(kept.sent)) this.#sent.set(id, round);
 		this.#commentIds.continueFrom(kept.issued.comments);
 		this.#turnIds.continueFrom(kept.issued.turns);
 	}

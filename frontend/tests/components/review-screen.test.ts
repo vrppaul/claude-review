@@ -49,7 +49,7 @@ describe('comments picked up from a review sent in rounds', () => {
 		const before = openReview({ files });
 		before.threads.add(newComment({ file: 'a.py', body: 'went out' }));
 		before.threads.add(newComment({ file: 'a.py', body: 'kept' }));
-		before.threads.markSent([before.threads.all[0]], 1);
+		before.threads.markSent(before.threads.carry([before.threads.all[0]]), 1);
 		const review = openReview({ files });
 
 		const { getByTestId } = render(ReviewScreen, { props: { review } });

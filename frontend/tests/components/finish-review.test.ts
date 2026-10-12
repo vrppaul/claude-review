@@ -63,7 +63,7 @@ describe('finishing a review', () => {
 	it('sends a round only with something new in it', async () => {
 		review.answerer.setAttached(true);
 		review.threads.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
-		review.threads.markSent(review.threads.all, 1);
+		review.threads.markSent(review.threads.carry(review.threads.all), 1);
 
 		const { getByTestId } = render(FinishReview, inReview(review));
 		const send = getByTestId('modal-submit') as HTMLButtonElement;
@@ -243,7 +243,7 @@ describe('a comment still open in its field as the review is finished', () => {
 		const id = review.threads.add(newComment({ body: 'as it was' }));
 		const [thread] = review.threads.all;
 		if (!thread) throw new Error('No thread');
-		review.threads.markSent([thread], 1);
+		review.threads.markSent(review.threads.carry([thread]), 1);
 		review.answerer.setAttached(true);
 		review.threads.writing.openEdit(thread);
 
