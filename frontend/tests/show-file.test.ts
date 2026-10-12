@@ -351,3 +351,121 @@ describe('what stands for a line where it is not drawn', () => {
 		expect(sections.lineOrFile('b.py', 'new:9')).toBe(second.toggle);
 	});
 });
+
+// A view just brought on screen has drawn nothing yet: what the reader was
+// being taken to in it is asked for first, and announces itself a moment later
+describe('a section asked for before it is drawn', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** Something on the page that has not announced itself yet, and says when it is brought into view. */
+	function notYetDrawn(): HTMLElement {
+		const element = document.createElement('div');
+		element.scrollIntoView = vi.fn();
+		document.body.append(element);
+		return element;
+	}
+
+	it('is gone to once it is drawn', () => {
+		const late = notYetDrawn();
+
+		sections.scrollTo('a.py');
+		sections.register('a.py', 'a.py', late);
+
+		expect(late.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('is shown and marked once it is drawn, where somebody else pointed at it', async () => {
+		const late = notYetDrawn();
+		late.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+
+		sections.show('a.py');
+		sections.register('a.py', 'a.py', late);
+		await frames();
+
+		expect(late.scrollIntoView).toHaveBeenCalled();
+		expect(isMarked(late)).toBe(true);
+	});
+
+	it('is not gone to when it is drawn long after it was asked for', () => {
+		const late = notYetDrawn();
+		const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
+		sections.scrollTo('a.py');
+
+		clock.mockReturnValue(A_MINUTE);
+		sections.register('a.py', 'a.py', late);
+
+		expect(late.scrollIntoView).not.toHaveBeenCalled();
+		clock.mockRestore();
+	});
+
+	it('is not gone to once the reader has gone somewhere else', () => {
+		const elsewhere = section('b.py');
+		elsewhere.scrollIntoView = vi.fn();
+		const late = notYetDrawn();
+
+		sections.scrollTo('a.py');
+		sections.scrollTo('b.py');
+		sections.register('a.py', 'a.py', late);
+
+		expect(late.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('is the one gone to, not another section drawn meanwhile', () => {
+		const another = notYetDrawn();
+
+		sections.scrollTo('a.py');
+		sections.register('b.py', 'b.py', another);
+
+		expect(another.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('is gone to once, not again when it is drawn anew', () => {
+		const late = notYetDrawn();
+		const drawnAnew = notYetDrawn();
+
+		sections.scrollTo('a.py');
+		sections.register('a.py', 'a.py', late);
+		sections.register('a.py', 'a.py', drawnAnew);
+
+		expect(drawnAnew.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('is no longer the way to a thread once the reader is shown another section', () => {
+		const shown = section('b.py');
+		shown.scrollIntoView = vi.fn();
+		const thread = notYetDrawn();
+
+		sections.goToThread('comment-1', 'a.py');
+		sections.show('b.py');
+		sections.registerThread('comment-1', thread);
+
+		expect(thread.scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it('takes the reader on to the thread asked for in it, once the thread is drawn too', () => {
+		const late = notYetDrawn();
+		const thread = notYetDrawn();
+
+		sections.goToThread('comment-1', 'a.py');
+		sections.register('a.py', 'a.py', late);
+		expect(late.scrollIntoView).toHaveBeenCalled();
+		expect(thread.scrollIntoView).not.toHaveBeenCalled();
+
+		sections.registerThread('comment-1', thread);
+
+		expect(thread.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('does not pull the screen off a thread that was drawn before it', () => {
+		const late = notYetDrawn();
+		const thread = notYetDrawn();
+
+		sections.goToThread('comment-1', 'a.py');
+		sections.registerThread('comment-1', thread);
+		sections.register('a.py', 'a.py', late);
+
+		expect(late.scrollIntoView).not.toHaveBeenCalled();
+	});
+});

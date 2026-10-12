@@ -39,10 +39,11 @@ const SETTLE_WITHIN = 2000;
 const STILL_FRAMES = 2;
 // The class that draws the mark on a section somebody else pointed at
 const MARKED_CLASS = 'cr-marked';
-// How long a thread asked for before it was drawn is waited for: its file
-// is built or unfolded within a frame or two, and one never drawn — hidden
-// by a narrower base, or outdated — must not pull the screen to it later
-const AWAIT_THREAD_FOR = 2000;
+// How long a section or a thread asked for before it was drawn is waited
+// for: a view brought on screen draws its sections, and a file is built or
+// unfolded, within a frame or two, and what is never drawn — hidden by a
+// narrower base, or outdated — must not pull the screen to it later
+const AWAIT_DRAWING_FOR = 2000;
 
 /** A thread asked for before it was drawn, and until when it is waited for. */
 interface AwaitedThread {
@@ -55,6 +56,13 @@ interface Section {
 	key: string;
 	path: string;
 	element: HTMLElement;
+}
+
+/** A section asked for before it was drawn: how the reader is taken to it once it is, and until when it is waited for. */
+interface AwaitedSection {
+	key: string;
+	arrive: (section: Section) => void;
+	until: number;
 }
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
@@ -110,6 +118,9 @@ export class FileSections {
 	// A thread asked for before it was drawn, and until when it is waited
 	// for: brought into view once it is drawn, if that is soon
 	#awaitedThread: AwaitedThread | null = null;
+	// A section asked for before it was drawn — the view that draws it was
+	// only just brought on screen — and until when it is waited for
+	#awaitedSection: AwaitedSection | null = null;
 	// Which section the reader is in, while the reading area is watched
 	readonly #band = new ReadingBand();
 	// What is marked, so a second showing can take the mark off the first
@@ -137,6 +148,11 @@ export class FileSections {
 		this.#sections.set(key, section);
 		this.#byElement.set(element, section);
 		this.#band.add(element);
+		const awaited = this.#awaitedSection;
+		if (awaited?.key === key && performance.now() <= awaited.until) {
+			this.#awaitedSection = null;
+			awaited.arrive(section);
+		}
 		return () => this.#unregister(section);
 	}
 
@@ -145,7 +161,7 @@ export class FileSections {
 		this.#threads.set(threadId, element);
 		const awaited = this.#awaitedThread;
 		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
-			this.#awaitedThread = null;
+			this.#stopWaiting();
 			arriveAt(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
@@ -182,14 +198,13 @@ export class FileSections {
 		return this.#current()?.path ?? null;
 	}
 
-	/** Take the reader to a section: its head to the top, and the section the one being read. */
+	/**
+	 * Take the reader to a section: its head to the top, and the section the
+	 * one being read. One not drawn yet is gone to once it is, if that is soon.
+	 */
 	scrollTo(key: string): void {
-		// Going anywhere else is no longer waiting for a thread
-		this.#awaitedThread = null;
-		const section = this.#sections.get(key);
-		if (!section) return;
-		this.#land(section.element);
-		section.element.scrollIntoView({ block: 'start' });
+		this.#stopWaiting();
+		this.#onceDrawn(key, (section) => this.#scrollToDrawn(section));
 	}
 
 	/**
@@ -200,18 +215,11 @@ export class FileSections {
 	 * reader working out what they are looking at. The mark waits for the
 	 * scroll to stop — across sixty files a smooth scroll outlasts the mark
 	 * itself, and the reader would arrive to a file that had already finished
-	 * saying so.
+	 * saying so. A section not drawn yet is shown once it is, if that is soon.
 	 */
 	show(key: string): void {
-		const element = this.#sections.get(key)?.element;
-		if (!element) return;
-
-		const showing = ++this.#showing;
-		this.#awaitedThread = null;
-		this.#unmark();
-		this.#band.land(element);
-		element.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
-		new SettleWatch(element, () => this.#arrivedAtShown(element, showing)).start();
+		this.#stopWaiting();
+		this.#onceDrawn(key, (section) => this.#showDrawn(section));
 	}
 
 	/**
@@ -221,18 +229,19 @@ export class FileSections {
 	 * A section's rows are only built once it has been near the viewport,
 	 * and a folded file draws none, so a thread further down the review —
 	 * restored from a draft, say — may have nothing drawn yet. Its section is
-	 * brought into view instead, and the thread follows the moment it is
-	 * drawn, however long that takes.
+	 * brought into view instead, itself once it is drawn if its view has only
+	 * just come on screen, and the thread follows the moment it is drawn, if
+	 * that is soon.
 	 */
 	goToThread(threadId: string, sectionKey: string): void {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
-			this.#awaitedThread = null;
+			this.#stopWaiting();
 			arriveAt(drawn);
 			return;
 		}
 		this.scrollTo(sectionKey);
-		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_THREAD_FOR };
+		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_DRAWING_FOR };
 	}
 
 	/** Put the keyboard on a thread once it is drawn, if what had it went: the thread a comment became, or what remains of a change to it. */
@@ -274,6 +283,34 @@ export class FileSections {
 			.map((element) => element.querySelector<HTMLElement>(`[data-place="${lineKey}"]`))
 			.find((found) => found !== null);
 		return line ?? toggleOf(firstInDocument(ofTheFile));
+	}
+
+	/** The reader is being taken somewhere now: whatever was asked for before, and is not drawn yet, is waited for no longer. */
+	#stopWaiting(): void {
+		this.#awaitedThread = null;
+		this.#awaitedSection = null;
+	}
+
+	/** Take the reader to a section as `arrive` does: now if it is drawn, or once it is, if that is soon. */
+	#onceDrawn(key: string, arrive: (section: Section) => void): void {
+		const section = this.#sections.get(key);
+		if (section) arrive(section);
+		else this.#awaitedSection = { key, arrive, until: performance.now() + AWAIT_DRAWING_FOR };
+	}
+
+	/** Bring a section that is drawn to the top, as the one being read from now on. */
+	#scrollToDrawn({ element }: Section): void {
+		this.#land(element);
+		element.scrollIntoView({ block: 'start' });
+	}
+
+	/** Bring a section that is drawn into view, and mark it once it has come to rest. */
+	#showDrawn({ element }: Section): void {
+		const showing = ++this.#showing;
+		this.#unmark();
+		this.#band.land(element);
+		element.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
+		new SettleWatch(element, () => this.#arrivedAtShown(element, showing)).start();
 	}
 
 	/** Where every section is, in the order they announced themselves. */
