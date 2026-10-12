@@ -8,17 +8,19 @@ No name is too short to say what it holds: `index`, not `i`; `error`, not
 `e`. A few words are short and still say what they mean, and `_` says that
 nothing is kept.
 
-No model's fields are named in text: a model is not copied with fields
-updated (`model_copy(update=…)`), and one written out as a mapping
-(`model_dump()`, `dict(model)`) is not spread with `**` or merged with `|`
-into the making of another. No type checker reads the names such a mapping
-carries. A model made from another is made by a method of the model, which
-calls its constructor with every field written out. A mapping carried in a
-variable before it is spread is past what this check can see: the rule
-holds there all the same.
+No model is taken apart into its fields by name, or put together from
+them: a model made from another is made by a method of the model, which
+calls its constructor with every field written out, where a type checker
+reads the names. So what goes the other way is not used at all — pydantic's
+`model_copy`, `model_construct` and `model_dump`, and Python's `__dict__`,
+`vars` and `copy.replace`. A model leaves for the wire as JSON
+(`model_dump_json`), never as a mapping. The check knows these by name
+alone: a model handed to `dict(…)`, or walked field by field, is past what
+it sees, and the rule holds there all the same.
 
-Run on files or directories, in the project's own environment, as the
-pre-commit hook runs it and CI runs the hook:
+Run on files or directories, in the project's own environment. The
+pre-commit hook hands it every Python file outside `tests/`, and CI runs
+the hook:
 
     uv run python scripts/check_code_rules.py src scripts
 
@@ -37,16 +39,23 @@ SHORTEST_NAME = 3
 SHORT_WORDS = frozenset({"_", "id", "at", "to", "ok", "of", "on", "by", "is"})
 PYTHON_FILES = "*.py"
 FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
-# How pydantic copies a model with some of its fields changed
-COPYING = "model_copy"
-FIELDS_CHANGED = "update"
-# How a model is written out as a mapping of its fields: by its own method, or by the builtin handed it
-DUMPING = "model_dump"
-MAPPING = "dict"
-# What each way of naming a model's fields in text is told
-COPIED_BY_NAME = "`model_copy(update=…)` names a model's fields in text: the model makes the copy, by its constructor"
-SPREAD = "a model written out as a mapping is spread with `**`: its fields are named in text no type checker reads"
-MERGED = "a model written out as a mapping is merged with `|`: its fields are named in text no type checker reads"
+# What is said of a function defined inside another, and of a name too short
+DEFINED_INSIDE = "`{name}` is defined inside another function"
+TOO_SHORT = "`{name}` is too short to say what it holds"
+# What takes a model apart into its fields by name, or puts one together from them, as an attribute of
+# anything: each with what is said of it
+FIELDS_BY_NAME = {
+    "model_copy": "`model_copy` copies a model by the names of its fields: the model makes it, by its constructor",
+    "model_construct": "`model_construct` builds a model unchecked, from names in text: build it by its constructor",
+    "model_dump": "`model_dump` writes a model out as a mapping: hand the model on, or write it as JSON",
+    "__dict__": "`__dict__` reads an object's fields as a mapping, by name: read the fields it has",
+}
+# The builtin that does as `__dict__` does, and the module and function that copy an object by the names of its fields
+FIELDS_OF = "vars"
+VARS_READ = "`vars` reads an object's fields as a mapping, by name: read the fields it has"
+COPYING_MODULE = "copy"
+REPLACING = "replace"
+REPLACED_BY_NAME = "`copy.replace` copies an object by the names of its fields: build it by its constructor"
 # What the process exits with
 ALL_KEPT = 0
 RULE_BROKEN = 1
@@ -59,6 +68,15 @@ class GivenName(BaseModel):
 
     name: str
     line: int
+
+
+class Said(BaseModel):
+    """What a rule says of a node that breaks it, and the line the node is on."""
+
+    model_config = ConfigDict(frozen=True)
+
+    line: int
+    says: str
 
 
 class Breach(BaseModel):
@@ -85,68 +103,50 @@ def breaches_in(path: Path) -> list[Breach]:
 def _look_inside(node: ast.AST, path: Path, *, inside_function: bool, found: list[Breach]) -> None:
     """Check everything under a node, knowing whether it already sits in a function."""
     for child in ast.iter_child_nodes(node):
-        if inside_function and isinstance(child, FUNCTIONS):
-            defined_inside = f"`{child.name}` is defined inside another function"
-            found.append(Breach(path=path, line=child.lineno, says=defined_inside))
-        given = _name_given(child)
-        if given is not None and _too_short(given.name):
-            too_short = f"`{given.name}` is too short to say what it holds"
-            found.append(Breach(path=path, line=given.line, says=too_short))
-        named_in_text = _fields_named_in_text(child, path)
-        if named_in_text is not None:
-            found.append(named_in_text)
+        said = [
+            *_said_of_a_function_inside(child, inside_function=inside_function),
+            *_said_of_a_short_name(child),
+            *_said_of_fields_by_name(child),
+        ]
+        found.extend(Breach(path=path, line=one.line, says=one.says) for one in said)
         _look_inside(child, path, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
 
 
-def _fields_named_in_text(node: ast.AST, path: Path) -> Breach | None:
-    """The breach a node makes by naming a model's fields in text, if it makes one.
-
-    A copy with fields updated; a model written out as a mapping and spread
-    into a call or into another mapping; one merged with another mapping.
-    """
+def _said_of_a_function_inside(node: ast.AST, *, inside_function: bool) -> list[Said]:
+    """What is said of a function defined inside another: nothing of any other node."""
     match node:
-        case ast.Call() if _copies_with_an_update(node):
-            return Breach(path=path, line=node.lineno, says=COPIED_BY_NAME)
-        case ast.Call() if _spreads_a_model_into_a_call(node):
-            return Breach(path=path, line=node.lineno, says=SPREAD)
-        case ast.Dict() if _spreads_a_model_into_a_mapping(node):
-            return Breach(path=path, line=node.lineno, says=SPREAD)
-        case ast.BinOp(op=ast.BitOr()) if _writes_a_model_out(node.left) or _writes_a_model_out(node.right):
-            return Breach(path=path, line=node.lineno, says=MERGED)
+        case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name) if inside_function:
+            return [Said(line=node.lineno, says=DEFINED_INSIDE.format(name=name))]
         case _:
-            return None
+            return []
 
 
-def _copies_with_an_update(call: ast.Call) -> bool:
-    """Whether a call is `model.model_copy(update=…)`."""
-    match call.func:
-        case ast.Attribute(attr=called):
-            return called == COPYING and any(keyword.arg == FIELDS_CHANGED for keyword in call.keywords)
-        case _:
-            return False
+def _said_of_a_short_name(node: ast.AST) -> list[Said]:
+    """What is said of a name given that is too short to say what it holds: nothing of any other node."""
+    given = _name_given(node)
+    if given is None or not _too_short(given.name):
+        return []
+    return [Said(line=given.line, says=TOO_SHORT.format(name=given.name))]
 
 
-def _spreads_a_model_into_a_call(call: ast.Call) -> bool:
-    """Whether a call is handed a model written out and spread: a spread is a keyword with no name."""
-    return any(keyword.arg is None and _writes_a_model_out(keyword.value) for keyword in call.keywords)
-
-
-def _spreads_a_model_into_a_mapping(written: ast.Dict) -> bool:
-    """Whether a mapping written out has a model spread into it: a spread stands where a key would, with none."""
-    return any(
-        key is None and _writes_a_model_out(value) for key, value in zip(written.keys, written.values, strict=True)
-    )
-
-
-def _writes_a_model_out(node: ast.expr) -> bool:
-    """Whether an expression writes a model out as a mapping of its fields: `model.model_dump(…)`, or `dict(model)`."""
+def _said_of_fields_by_name(node: ast.AST) -> list[Said]:
+    """What is said of a node that takes a model apart by the names of its fields, or puts one together from them."""
     match node:
-        case ast.Call(func=ast.Attribute(attr=called)):
-            return called == DUMPING
-        case ast.Call(func=ast.Name(id=called), args=[_], keywords=[]):
-            return called == MAPPING
+        case ast.Attribute(value=ast.Name(id=module), attr=name) if module == COPYING_MODULE and name == REPLACING:
+            return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
+        case ast.ImportFrom(module=module, names=names) if module == COPYING_MODULE and _name_among(names, REPLACING):
+            return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
+        case ast.Attribute(attr=name) if name in FIELDS_BY_NAME:
+            return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]
+        case ast.Name(id=name) if name == FIELDS_OF:
+            return [Said(line=node.lineno, says=VARS_READ)]
         case _:
-            return False
+            return []
+
+
+def _name_among(imported: list[ast.alias], name: str) -> bool:
+    """Whether a name is among those an import brings in."""
+    return any(alias.name == name for alias in imported)
 
 
 def _name_given(node: ast.AST) -> GivenName | None:

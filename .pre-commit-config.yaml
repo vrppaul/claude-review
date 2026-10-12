@@ -19,11 +19,11 @@ repos:
         types_or: [python, pyi]
 
       # The code rules no linter here can be told to keep: no function
-      # inside another, no name too short to say what it holds, no model's
-      # fields named in text. The tests are held to formatting alone, here
-      # as by every linter.
+      # inside another, no name too short to say what it holds, no model
+      # taken apart by the names of its fields. The tests are held to
+      # formatting alone, here as by every linter.
       - id: code-rules
-        name: code rules (nested functions, short names, fields named in text)
+        name: code rules (nested functions, short names, models by field names)
         entry: uv run python scripts/check_code_rules.py
         language: system
         types: [python]

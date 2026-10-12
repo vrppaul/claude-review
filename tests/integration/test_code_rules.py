@@ -6,6 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+from pydantic import BaseModel, ConfigDict
 
 CHECK = Path(__file__).parents[2] / "scripts" / "check_code_rules.py"
 # What the check exits with: a rule broken, or every rule kept
@@ -40,33 +41,89 @@ KEPT = """
 """
 
 
-# Ways of naming a model's fields in text, each in a function of its own, and what the check says of each
-COPIED_WITH_AN_UPDATE = """
-    def moved(anchor: Anchor, line: int) -> Anchor:
-        return anchor.model_copy(update={"line": line})
-"""
-SPREAD_INTO_A_MAPPING = """
-    def moved(anchor: Anchor, line: int) -> Anchor:
-        return Anchor.model_validate({**anchor.model_dump(), "line": line})
-"""
-SPREAD_INTO_A_CALL = """
-    def told(step: Step, piece: Piece) -> ToldStep:
-        return ToldStep(**dict(step), piece=piece)
-"""
-MERGED_WITH_ANOTHER = """
-    def changed(record: Record, change: Change) -> Record:
-        return Record.model_validate(record.model_dump() | change.model_dump())
-"""
-FIELDS_NAMED_IN_TEXT = [
-    (COPIED_WITH_AN_UPDATE, "checked.py:3: `model_copy(update=…)` names a model's fields in text"),
-    (SPREAD_INTO_A_MAPPING, "checked.py:3: a model written out as a mapping is spread with `**`"),
-    (SPREAD_INTO_A_CALL, "checked.py:3: a model written out as a mapping is spread with `**`"),
-    (MERGED_WITH_ANOTHER, "checked.py:3: a model written out as a mapping is merged with `|`"),
-]
-WAYS_OF_NAMING_THEM = ["copied-with-an-update", "spread-into-a-mapping", "spread-into-a-call", "merged-with-another"]
+class FieldsByName(BaseModel):
+    """One way of taking a model apart by the names of its fields, or of putting one together from them."""
 
-# What names no model's field in text: a model made by its constructor, a copy with nothing changed, a model
-# written out whole for whoever reads it, and mappings that never were models, spread and merged
+    model_config = ConfigDict(frozen=True)
+
+    what: str
+    source: str
+    said: str
+
+
+FIELDS_BY_NAME = [
+    FieldsByName(
+        what="a copy with fields updated",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return anchor.model_copy(update={"line": line})
+        """,
+        said="checked.py:3: `model_copy` copies a model by the names of its fields",
+    ),
+    FieldsByName(
+        what="a model built unchecked",
+        source="""
+            def moved(line: int) -> Anchor:
+                return Anchor.model_construct(line=line)
+        """,
+        said="checked.py:3: `model_construct` builds a model unchecked",
+    ),
+    FieldsByName(
+        what="a model written out and read back",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return Anchor.model_validate(dict(anchor.model_dump(), line=line))
+        """,
+        said="checked.py:3: `model_dump` writes a model out as a mapping",
+    ),
+    FieldsByName(
+        what="a model written out into a variable first",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                written = anchor.model_dump()
+                written["line"] = line
+                return Anchor(**written)
+        """,
+        said="checked.py:3: `model_dump` writes a model out as a mapping",
+    ),
+    FieldsByName(
+        what="an object's fields read as a mapping",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return Anchor(**{**anchor.__dict__, "line": line})
+        """,
+        said="checked.py:3: `__dict__` reads an object's fields as a mapping",
+    ),
+    FieldsByName(
+        what="an object's fields read by the builtin",
+        source="""
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return Anchor(**{**vars(anchor), "line": line})
+        """,
+        said="checked.py:3: `vars` reads an object's fields as a mapping",
+    ),
+    FieldsByName(
+        what="an object copied by its module's function",
+        source="""
+            import copy
+
+
+            def moved(anchor: Anchor, line: int) -> Anchor:
+                return copy.replace(anchor, line=line)
+        """,
+        said="checked.py:6: `copy.replace` copies an object by the names of its fields",
+    ),
+    FieldsByName(
+        what="that function brought in by name",
+        source="""
+            from copy import replace
+        """,
+        said="checked.py:2: `copy.replace` copies an object by the names of its fields",
+    ),
+]
+
+# What takes no model apart: a model made by its constructor, one written as JSON, mappings that never were
+# models spread and merged, and a text with a part of it replaced
 MODELS_MADE_AND_MAPPINGS_MERGED = """
     class Anchor(BaseModel):
         line: int
@@ -75,24 +132,24 @@ MODELS_MADE_AND_MAPPINGS_MERGED = """
             return Anchor(line=line)
 
 
-    def copied(anchor: Anchor) -> Anchor:
-        return anchor.model_copy()
-
-
     def answered(refusal: Refusal) -> Response:
-        return Response(content=refusal.model_dump())
+        return Response(content=refusal.model_dump_json())
 
 
     def described(replies: dict[int, str], refusals: dict[int, str]) -> dict[int, str]:
         return {**replies, **refusals}
 
 
-    def chosen(defaults: dict[str, str], choices: dict[str, str]) -> dict[str, str]:
-        return defaults | choices
+    def coloured(settings: dict[str, str]) -> dict[str, str]:
+        return dict(os.environ) | settings
 
 
     def rendered(options: dict[str, str]) -> str:
         return render(**options)
+
+
+    def renamed(path: str) -> str:
+        return path.replace("old", "new")
 """
 
 
@@ -123,13 +180,15 @@ def test_methods_lambdas_short_words_and_the_throwaway_pass(tmp_path: Path) -> N
     assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
 
 
-@pytest.mark.parametrize(("source", "said"), FIELDS_NAMED_IN_TEXT, ids=WAYS_OF_NAMING_THEM)
-def test_a_models_fields_named_in_text_are_named_where_they_are(tmp_path: Path, source: str, said: str) -> None:
-    """A copy with an update, a model spread or merged as a mapping: names no type checker reads."""
-    checked = _check(tmp_path, source)
+@pytest.mark.parametrize("named", FIELDS_BY_NAME, ids=[named.what for named in FIELDS_BY_NAME])
+def test_a_model_taken_apart_by_the_names_of_its_fields_is_named_where_it_is(
+    tmp_path: Path, named: FieldsByName
+) -> None:
+    """Whatever is done with the mapping afterwards: the names it carries are text no type checker reads."""
+    checked = _check(tmp_path, named.source)
 
     assert checked.returncode == RULE_BROKEN
-    assert said in checked.stdout
+    assert named.said in checked.stdout
 
 
 def test_a_model_made_by_its_constructor_and_mappings_that_were_never_models_pass(tmp_path: Path) -> None:
