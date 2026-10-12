@@ -17,7 +17,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile
+from claude_review.domain.models import DiffFile, LineSpan
 
 
 class StoryPart(BaseModel):
@@ -28,17 +28,6 @@ class StoryPart(BaseModel):
     """
 
     model_config = ConfigDict(frozen=True)
-
-
-class StepLines(StoryPart):
-    """The lines of a file a step is told of, the first and the last both among them."""
-
-    first: int
-    last: int
-
-    def meets(self, other: StepLines) -> bool:
-        """Whether the two hold a line in common, each running from its first line to its last."""
-        return self.first <= other.last and other.first <= self.last
 
 
 class Step(StoryPart):
@@ -52,7 +41,7 @@ class Step(StoryPart):
     # Any file the change touched: one whose name no thread could carry is
     # still told
     file: str
-    lines: StepLines
+    lines: LineSpan
     reason: str | None = None
 
 

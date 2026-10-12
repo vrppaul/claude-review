@@ -11,8 +11,16 @@ from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldPath
-from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineType
-from claude_review.domain.story import Chapter, Diagram, OverviewItem, Step, StepLines, Story, StoryOverview
+from claude_review.domain.models import (
+    NO_HUNK_HEADER,
+    DiffFile,
+    DiffHunk,
+    DiffLine,
+    FileStatus,
+    LineSpan,
+    LineType,
+)
+from claude_review.domain.story import Chapter, Diagram, OverviewItem, Step, Story, StoryOverview
 from tests.helpers import added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by
@@ -127,7 +135,7 @@ def _paste_chapter() -> Chapter[Step]:
         steps=[
             Step(
                 file=IMAGES_MODULE,
-                lines=StepLines(first=30, last=47),
+                lines=LineSpan(first=30, last=47),
                 reason=(
                     "The body is the image itself, not a form: there is one thing to send,"
                     " and a form would only wrap it. A refusal comes back in the server's own words."
@@ -135,7 +143,7 @@ def _paste_chapter() -> Chapter[Step]:
             ),
             Step(
                 file=ROUTES,
-                lines=StepLines(first=353, last=374),
+                lines=LineSpan(first=353, last=374),
                 reason=(
                     "The route stops reading once the body passes 10 MB. Past the limit the answer is already"
                     " known, and the rest is never held. 413 means too big, 422 means not an image this review keeps."
@@ -160,7 +168,7 @@ def _keeping_chapter() -> Chapter[Step]:
         steps=[
             Step(
                 file=IMAGE_SERVICE,
-                lines=StepLines(first=68, last=92),
+                lines=LineSpan(first=68, last=92),
                 reason=(
                     "A format is known by its first bytes, not by the type the upload claims."
                     " A file is served back as what it is, and a renamed PDF never passes for a PNG."
@@ -168,7 +176,7 @@ def _keeping_chapter() -> Chapter[Step]:
             ),
             Step(
                 file=IMAGE_SERVICE,
-                lines=StepLines(first=102, last=130),
+                lines=LineSpan(first=102, last=130),
                 reason=(
                     "Cheap checks first, the disk last. The quota is reserved before the write is awaited,"
                     " so an upload that arrives meanwhile is measured against it."
@@ -176,7 +184,7 @@ def _keeping_chapter() -> Chapter[Step]:
             ),
             Step(
                 file=IMAGE_SERVICE,
-                lines=StepLines(first=131, last=141),
+                lines=LineSpan(first=131, last=141),
                 reason=(
                     "Whatever stops the write gives the room back."
                     " BaseException on purpose: a cancelled upload must not keep its 10 MB."
@@ -184,7 +192,7 @@ def _keeping_chapter() -> Chapter[Step]:
             ),
             Step(
                 file=IMAGE_STORE,
-                lines=StepLines(first=7, last=23),
+                lines=LineSpan(first=7, last=23),
                 reason=(
                     "The store is the only code that touches the disk for images. Names come from the review,"
                     " never from the reader, so none can reach outside the directory."
@@ -271,7 +279,7 @@ def rows_of(file: DiffFile) -> list[str]:
 
 def step(file: str, first: int, last: int) -> Step:
     """A step told of lines of a file, with no reason given."""
-    return Step(file=file, lines=StepLines(first=first, last=last))
+    return Step(file=file, lines=LineSpan(first=first, last=last))
 
 
 def story_of(*steps: Step, housekeeping: tuple[str, ...] = ()) -> Story[Step]:

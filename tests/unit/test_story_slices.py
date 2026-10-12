@@ -9,8 +9,7 @@ the same rule, so nothing the change did can fall between the two.
 import pytest
 from hypothesis import given, strategies as strategy
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, Unshown
-from claude_review.domain.story import StepLines
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan, Unshown
 from claude_review.services.story_slices import PlacedFile, RowRun
 from tests.stories import ROWS, changed_file, changed_in, hunk, lines_of, rows_of, signs_of
 
@@ -34,8 +33,8 @@ GAP = 5
 FURTHEST_LINE = 60
 
 
-def lines(first: int, last: int) -> StepLines:
-    return StepLines(first=first, last=last)
+def lines(first: int, last: int) -> LineSpan:
+    return LineSpan(first=first, last=last)
 
 
 def piece_at(file: DiffFile, first: int, last: int) -> DiffFile:
@@ -49,13 +48,13 @@ def shown(file: DiffFile, first: int, last: int) -> list[str]:
     return rows_of(piece_at(file, first, last))
 
 
-def told_by(file: DiffFile, steps: list[StepLines]) -> list[RowRun]:
+def told_by(file: DiffFile, steps: list[LineSpan]) -> list[RowRun]:
     """The rows steps of these lines are, each step's as a run."""
     reading = PlacedFile(file)
     return [reading.rows_at(step) for step in steps]
 
 
-def left_out(file: DiffFile, *steps: StepLines) -> DiffFile:
+def left_out(file: DiffFile, *steps: LineSpan) -> DiffFile:
     """What steps of these lines leave out of a file, as it is shown."""
     reading = PlacedFile(file)
     return reading.piece(reading.left_out(told_by(file, list(steps))))
@@ -71,7 +70,7 @@ def lines_in(file: DiffFile, runs: list[RowRun]) -> list[DiffLine]:
     return [line for run in runs for line in lines_of(file)[run.start : run.stop]]
 
 
-def lines_shown_by(part: DiffHunk) -> StepLines:
+def lines_shown_by(part: DiffHunk) -> LineSpan:
     """The lines of the file as it now stands that a hunk shows, from its first to its last."""
     shown_lines = sum(ROWS[sign].new_lines for sign in signs_of(part.lines))
     return lines(part.new_start, part.new_start + shown_lines - 1)
@@ -286,7 +285,7 @@ def files_whose_hunks_each_show_a_line(draw: strategy.DrawFn) -> DiffFile:
 
 
 @strategy.composite
-def steps_apart(draw: strategy.DrawFn) -> list[StepLines]:
+def steps_apart(draw: strategy.DrawFn) -> list[LineSpan]:
     """Steps of one file that share no line, as a story's must."""
     edges = sorted(
         draw(strategy.lists(strategy.integers(min_value=1, max_value=FURTHEST_LINE), unique=True, max_size=8))
@@ -295,7 +294,7 @@ def steps_apart(draw: strategy.DrawFn) -> list[StepLines]:
 
 
 @strategy.composite
-def steps_one_after_another(draw: strategy.DrawFn) -> list[StepLines]:
+def steps_one_after_another(draw: strategy.DrawFn) -> list[LineSpan]:
     """Two steps of one file, the second starting at the line after the first one's last."""
     first, middle, last = sorted(
         draw(strategy.lists(strategy.integers(min_value=1, max_value=FURTHEST_LINE), min_size=3, max_size=3))
@@ -304,7 +303,7 @@ def steps_one_after_another(draw: strategy.DrawFn) -> list[StepLines]:
 
 
 @given(file=changed_files(), steps=steps_apart())
-def test_no_row_is_told_by_two_steps_or_both_told_and_left_out(file: DiffFile, steps: list[StepLines]) -> None:
+def test_no_row_is_told_by_two_steps_or_both_told_and_left_out(file: DiffFile, steps: list[LineSpan]) -> None:
     told = told_by(file, steps)
     rows = [*rows_in(told), *rows_in(PlacedFile(file).left_out(told))]
 
@@ -312,7 +311,7 @@ def test_no_row_is_told_by_two_steps_or_both_told_and_left_out(file: DiffFile, s
 
 
 @given(file=changed_files(), steps=steps_apart())
-def test_every_row_the_change_added_or_removed_is_told_or_left_out(file: DiffFile, steps: list[StepLines]) -> None:
+def test_every_row_the_change_added_or_removed_is_told_or_left_out(file: DiffFile, steps: list[LineSpan]) -> None:
     """No row is counted twice, so counting them all means each is somewhere."""
     told = told_by(file, steps)
     left = PlacedFile(file).left_out(told)
@@ -322,7 +321,7 @@ def test_every_row_the_change_added_or_removed_is_told_or_left_out(file: DiffFil
 
 @given(file=changed_files(), steps=steps_apart())
 def test_the_rows_a_step_changed_are_counted_as_the_file_itself_shows_them(
-    file: DiffFile, steps: list[StepLines]
+    file: DiffFile, steps: list[LineSpan]
 ) -> None:
     reading = PlacedFile(file)
     told = told_by(file, steps)
@@ -331,7 +330,7 @@ def test_the_rows_a_step_changed_are_counted_as_the_file_itself_shows_them(
 
 
 @given(file=changed_files(), steps=steps_apart())
-def test_every_run_of_rows_left_out_holds_a_change(file: DiffFile, steps: list[StepLines]) -> None:
+def test_every_run_of_rows_left_out_holds_a_change(file: DiffFile, steps: list[LineSpan]) -> None:
     left = PlacedFile(file).left_out(told_by(file, steps))
 
     assert all(changed_in(lines_in(file, [run])) > 0 for run in left)
@@ -339,7 +338,7 @@ def test_every_run_of_rows_left_out_holds_a_change(file: DiffFile, steps: list[S
 
 @given(file=changed_files(), steps=steps_apart(), data=strategy.data())
 def test_steps_leave_out_the_same_rows_in_whatever_order_the_story_tells_them(
-    file: DiffFile, steps: list[StepLines], data: strategy.DataObject
+    file: DiffFile, steps: list[LineSpan], data: strategy.DataObject
 ) -> None:
     """A story tells its steps in the order they are best read, which is seldom the order of the file's lines."""
     reading = PlacedFile(file)
@@ -350,7 +349,7 @@ def test_steps_leave_out_the_same_rows_in_whatever_order_the_story_tells_them(
 
 @given(file=changed_files(), steps=steps_apart())
 def test_every_hunk_of_a_piece_numbers_its_rows_from_where_it_starts_as_the_file_numbers_them(
-    file: DiffFile, steps: list[StepLines]
+    file: DiffFile, steps: list[LineSpan]
 ) -> None:
     """Written again from its own starts and signs, a piece's hunk is the very rows it was cut from."""
     reading = PlacedFile(file)
@@ -361,7 +360,7 @@ def test_every_hunk_of_a_piece_numbers_its_rows_from_where_it_starts_as_the_file
 
 @given(file=changed_files(), steps=steps_one_after_another())
 def test_two_steps_one_after_another_tell_together_what_one_step_of_all_their_lines_tells(
-    file: DiffFile, steps: list[StepLines]
+    file: DiffFile, steps: list[LineSpan]
 ) -> None:
     """No row falls between two steps that follow one another, and none is told by both."""
     [upper, lower] = steps

@@ -16,7 +16,7 @@ from claude_review.cli.parameters import (
     STATUS,
     STEP,
     WORK,
-    LineSpan,
+    ThreadLines,
 )
 from claude_review.cli.rendering import render_catch_up, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
@@ -273,7 +273,7 @@ def show_command(*, client: ReviewClient, path: str) -> None:
 )
 @click.argument("body", required=True, type=SAID)
 def point_command(
-    *, client: ReviewClient, path: str, lines: LineSpan, side: LineSide, severity: CommentSeverity, body: str
+    *, client: ReviewClient, path: str, lines: ThreadLines, side: LineSide, severity: CommentSeverity, body: str
 ) -> None:
     """Raise a thread on a line of the review, from this side.
 

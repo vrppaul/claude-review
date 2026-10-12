@@ -6,14 +6,24 @@ words. A round and the exit report are Markdown, and set the path as code,
 so a name with an underscore or an asterisk in it is not read as emphasis.
 """
 
+import re
 from typing import assert_never
 
-from claude_review.domain.models import Anchor, LineAnchor, LineSide
+from claude_review.domain.models import Anchor, LineAnchor, LineSide, LineSpan
 from claude_review.services.markdown_code import code_span
 
 # Said after the numbers of lines that exist only in the file as it was, or
 # they would be read against the file as it is
 REMOVED = " (removed)"
+# What joins the first line of a run to its last
+RANGE_SEPARATOR = "-"
+# The most digits a line's number is written with: no file has a line past it
+MOST_DIGITS = 10
+# A run of lines as a person writes one: a line's number, or a first and a
+# last. Anchored at both ends, so its pattern says the same to a schema, which
+# reads a pattern as found anywhere in a text
+LINES_WRITTEN = re.compile(rf"^[0-9]{{1,{MOST_DIGITS}}}({RANGE_SEPARATOR}[0-9]{{1,{MOST_DIGITS}}})?$")
+NOT_LINES = 'not a line or a range of lines, like "42" or "42-47": {written!r}'
 
 
 def place_in_words(anchor: Anchor) -> str:
@@ -36,7 +46,19 @@ def place_in_markdown(anchor: Anchor) -> str:
 
 def line_span(start: int, end: int) -> str:
     """A run of lines the way a person says it: "12", or "12-19"."""
-    return str(start) if start == end else f"{start}-{end}"
+    return str(start) if start == end else f"{start}{RANGE_SEPARATOR}{end}"
+
+
+def lines_named(written: str) -> LineSpan:
+    """The lines a person wrote as "12" or "12-19": what `line_span` writes, read back.
+
+    Raises:
+        ValueError: if it is neither a line's number nor a first and a last.
+    """
+    if LINES_WRITTEN.fullmatch(written) is None:
+        raise ValueError(NOT_LINES.format(written=written))
+    first, _, last = written.partition(RANGE_SEPARATOR)
+    return LineSpan(first=int(first), last=int(last or first))
 
 
 def _lines_place(anchor: LineAnchor, file_named: str) -> str:

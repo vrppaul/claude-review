@@ -61,6 +61,23 @@ def runs_backwards(first_line: int, last_line: int) -> bool:
     return last_line < first_line
 
 
+class LineSpan(BaseModel):
+    """Lines of a file as somebody names them, the first and the last both among them.
+
+    Whether a file could have such lines — numbered from its first, running
+    forwards — is for whoever is handed them to ask.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    first: int
+    last: int
+
+    def meets(self, other: LineSpan) -> bool:
+        """Whether the two hold a line in common, each running from its first line to its last."""
+        return self.first <= other.last and other.first <= self.last
+
+
 def says_nothing(text: str) -> bool:
     """Whether a text says nothing: it is empty, or blanks alone."""
     return not text.strip()

@@ -9,8 +9,8 @@ what was left out, and a story cannot hide one.
 """
 
 from claude_review.domain.exceptions import StoryRefusedError
-from claude_review.domain.models import DiffFile
-from claude_review.domain.story import Chapter, LeftOut, Step, StepLines, Story, ToldStep, ToldStory
+from claude_review.domain.models import DiffFile, LineSpan
+from claude_review.domain.story import Chapter, LeftOut, Step, Story, ToldStep, ToldStory
 from claude_review.services.story_checks import CHAPTERS, STEPS, document_faults, placement_faults
 from claude_review.services.story_slices import PlacedFile
 
@@ -63,16 +63,16 @@ def _left_out(story: Story[Step], files: list[DiffFile], change: dict[str, Place
     ]
 
 
-def _lines_told_of_each_file(story: Story[Step]) -> dict[str, list[StepLines]]:
+def _lines_told_of_each_file(story: Story[Step]) -> dict[str, list[LineSpan]]:
     """The lines the story's steps tell, by the file they are lines of."""
-    lines_told: dict[str, list[StepLines]] = {}
+    lines_told: dict[str, list[LineSpan]] = {}
     for chapter in story.chapters:
         for step in chapter.steps:
             lines_told.setdefault(step.file, []).append(step.lines)
     return lines_told
 
 
-def _left_out_of(file: DiffFile, placed: PlacedFile, lines_told: list[StepLines]) -> list[LeftOut]:
+def _left_out_of(file: DiffFile, placed: PlacedFile, lines_told: list[LineSpan]) -> list[LeftOut]:
     """What steps of these lines leave out of one file, if anything.
 
     A file the change shows no line of — binary, too large, only moved —

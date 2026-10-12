@@ -22,8 +22,7 @@ from itertools import accumulate, pairwise
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, LineSide, LineType
-from claude_review.domain.story import StepLines
+from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, LineSide, LineSpan, LineType
 
 # Where a file's rows are counted from
 FIRST_ROW = 0
@@ -106,7 +105,7 @@ class PlacedFile:
         """
         return bool(self._rows)
 
-    def rows_at(self, lines: StepLines) -> RowRun:
+    def rows_at(self, lines: LineSpan) -> RowRun:
         """The rows a step of these lines is: every row whose place is among them, which stand together.
 
         Lines the change shows no row at — and lines that run backwards, which
