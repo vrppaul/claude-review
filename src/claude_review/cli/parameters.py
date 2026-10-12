@@ -126,7 +126,7 @@ class ThreadLines(BaseModel):
         return self
 
 
-class LineSpanParameter(click.ParamType):
+class ThreadLinesParameter(click.ParamType):
     """Reads "42" or "42-47" as the lines a thread hangs on."""
 
     name = "lines"
@@ -147,7 +147,7 @@ class LineSpanParameter(click.ParamType):
             self.fail(f'the review would refuse "{value}": {_reasons(invalid)}', param, ctx)
 
 
-LINE_SPAN = LineSpanParameter()
+THREAD_LINES = ThreadLinesParameter()
 
 
 class StoryParameter(click.ParamType):

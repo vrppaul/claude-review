@@ -10,12 +10,12 @@ from claude_review.cli.parameters import (
     BRANCHES,
     FILE,
     ID,
-    LINE_SPAN,
     NAMED_FILES,
     SAID,
     STATUS,
     STEP,
     STORY,
+    THREAD_LINES,
     WORK,
     ThreadLines,
 )
@@ -260,7 +260,7 @@ def show_command(*, client: ReviewClient, path: str) -> None:
 @click.command("point")
 @review_port
 @click.option("--file", "path", required=True, type=FILE, help="File the thread hangs on, as the diff names it.")
-@click.option("--lines", required=True, type=LINE_SPAN, help='Line or range it is about, e.g. "42" or "42-47".')
+@click.option("--lines", required=True, type=THREAD_LINES, help='Line or range it is about, e.g. "42" or "42-47".')
 @click.option(
     "--side",
     type=click.Choice(LineSide, case_sensitive=False),
