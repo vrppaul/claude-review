@@ -19,6 +19,4 @@ async def read_diff(staged: StagedTree, *, base: str, ignore_whitespace: bool) -
     files = await asyncio.to_thread(parse_unified_diff, raw)
     binary = [file for file in files if file.unshown is Unshown.BINARY]
     too_large = await staged.too_large_to_show(base, binary)
-    return [
-        file.model_copy(update={"unshown": Unshown.TOO_LARGE}) if file.path in too_large else file for file in files
-    ]
+    return [file.unshown_for(Unshown.TOO_LARGE) if file.path in too_large else file for file in files]

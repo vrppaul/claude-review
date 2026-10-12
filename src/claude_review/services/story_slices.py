@@ -26,8 +26,6 @@ from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, Diff
 
 # Where a file's rows are counted from
 FIRST_ROW = 0
-# The one field of a file a piece of it has its own of: the rest of a piece is its file's
-HUNKS = "hunks"
 
 
 class PlacedRow(BaseModel):
@@ -143,7 +141,7 @@ class PlacedFile:
         is said of every piece of it, and a story cannot leave it unsaid.
         """
         cut = [self._cut(part) for run in runs for part in self._hunk_by_hunk(run)]
-        return self._file.model_copy(update={HUNKS: cut})
+        return self._file.showing(cut)
 
     def _hunk_by_hunk(self, run: RowRun) -> list[RowRun]:
         """The run cut where one hunk ends and the next begins: of each hunk it holds rows of, a run of those rows."""

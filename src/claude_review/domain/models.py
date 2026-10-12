@@ -156,6 +156,34 @@ class DiffFile(BaseModel):
             return False
         return True
 
+    def showing(self, hunks: list[DiffHunk]) -> DiffFile:
+        """The file showing these rows in place of its own: a piece of it, read as the file is.
+
+        Everything else said of the file is said of the piece: where it was,
+        that its mode changed, that some of it is not shown.
+        """
+        return DiffFile(
+            path=self.path,
+            old_path=self.old_path,
+            status=self.status,
+            hunks=hunks,
+            unshown=self.unshown,
+            old_mode=self.old_mode,
+            new_mode=self.new_mode,
+        )
+
+    def unshown_for(self, reason: Unshown) -> DiffFile:
+        """The file, with another reason why none of its lines are shown."""
+        return DiffFile(
+            path=self.path,
+            old_path=self.old_path,
+            status=self.status,
+            hunks=self.hunks,
+            unshown=reason,
+            old_mode=self.old_mode,
+            new_mode=self.new_mode,
+        )
+
 
 class CommentSeverity(StrEnum):
     """How the reader means a comment to be taken.
