@@ -39,6 +39,8 @@ STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
 # The step that waits for a comment on a line, and the one a comment opened there leads to
 COMMENT_ON_A_LINE = "Comment on a line"
 ADD_IT = "Add it to the review"
+# What a gap says while its lines are being read, in place of how many it hides
+READING = "Reading…"
 
 
 @pytest.fixture
@@ -219,10 +221,12 @@ async def test_the_keyboard_stays_on_a_step_up_and_lands_on_the_first_line_shown
 ) -> None:
     """The button pressed keeps the keyboard while it stays; read whole, the gap goes, and its first line takes it."""
     await _open_review(page, gapped)
-    hidden_before = await page.get_by_test_id("hunk-gap").first.inner_text()
+    gap = page.get_by_test_id("hunk-gap").first
+    hidden_before = await gap.inner_text()
 
     await _press(page, "expand-up")
-    await page.get_by_test_id("hunk-gap").first.filter(has_not_text=hidden_before).wait_for()
+    # Read once the gap says how many it hides now: while reading it says neither that nor what it said before
+    await gap.filter(has_not_text=hidden_before).filter(has_not_text=READING).wait_for()
     assert await _focused(page) == "expand-up"
 
     await _press(page, "expand-all")
