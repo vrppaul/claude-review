@@ -6,10 +6,13 @@ kept whole with the round it was told in, and replaced whole by the next
 telling, never patched.
 """
 
+import asyncio
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from claude_review.domain.models import FIRST_ROUND
-from claude_review.domain.story import ToldStory
+from claude_review.domain.models import FIRST_ROUND, DiffFile
+from claude_review.domain.story import Step, Story, ToldStory
+from claude_review.services.story_telling import tell
 
 
 class StoryHeld(BaseModel):
@@ -26,13 +29,27 @@ class ReviewStory:
 
     def __init__(self) -> None:
         self._held: StoryHeld | None = None
+        # Stories that arrive together are told one after another, as they
+        # arrived: told side by side, a long one sent first would finish last
+        # and take the place of the one sent after it
+        self._telling = asyncio.Lock()
 
     @property
     def held(self) -> StoryHeld | None:
         """The story held, or None while nobody has told one."""
         return self._held
 
-    def keep(self, story: ToldStory, *, round_number: int) -> StoryHeld:
-        """Hold a story just told, in place of any told before, and say how it is held."""
-        self._held = StoryHeld(story=story, round=round_number)
-        return self._held
+    async def tell(self, story: Story[Step], change: list[DiffFile], *, round_number: int) -> StoryHeld:
+        """Tell a story of a change and hold it, in place of any told before, with the round it arrived in.
+
+        Told off the event loop: a story of a large change takes seconds to
+        place on it, and the server has every page's socket and the agent's
+        wait to keep answering meanwhile.
+
+        Raises:
+            StoryRefusedError: if anything is wrong with the story, carrying all of it; the story held stays.
+        """
+        async with self._telling:
+            told = await asyncio.to_thread(tell, story, change)
+            self._held = StoryHeld(story=told, round=round_number)
+            return self._held

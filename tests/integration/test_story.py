@@ -19,6 +19,7 @@ from claude_review.domain.story import Step, Story
 from claude_review.presentation.wire.content import ReviewResponse
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
+from claude_review.services.review.review import Review
 from tests.helpers import REVIEW_ROUTE, ReviewFactory, http_client, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, rows_of, step, story_of
 
@@ -32,6 +33,12 @@ ADDED_FILE = "src/added.py"
 THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "def added() -> None:\n    return None\n"}
 # The edited file as a round's work leaves it: the line the story told, said another way
 REWORDED_SINCE = "initial content\nand a line reworded since\n"
+# A file added whole and long, and a story with a step to every other line of it: long enough in the telling
+# that the loop turns many times meanwhile, and that a short story sent after it is told before it is
+LONG_FILE = "src/long.py"
+LINES_OF_THE_LONG_FILE = 4000
+STEPS_OF_THE_LONG_STORY = [step(LONG_FILE, line, line) for line in range(1, LINES_OF_THE_LONG_FILE, 2)]
+A_LONG_STORY = story_of(*STEPS_OF_THE_LONG_STORY)
 # Steps that tell each of the two, and a story that tells the whole change
 THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
 THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
@@ -163,19 +170,48 @@ async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_say
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 
-async def test_the_review_goes_on_answering_while_a_story_is_told(reviews: ReviewFactory, tmp_git_repo: Path) -> None:
-    """Told on the event loop, a story of a large change kept every page and agent waiting until it was placed."""
-    write_files(tmp_git_repo, THE_CHANGE)
-    review = reviews.hosted(await repository_opening(tmp_git_repo)).review
-    telling = asyncio.ensure_future(review.tell_story(WHOLE_STORY))
-    turns = 0
-    while not telling.done():
-        # A turn of the loop, as any socket the server holds is answered in
-        await asyncio.sleep(0)
-        turns += 1
+@pytest.fixture
+async def review(reviews: ReviewFactory, tmp_git_repo: Path) -> AsyncIterator[Review]:
+    """A review of a repository's changes, opened as a server opens one, for a test that calls it itself."""
+    write_files(tmp_git_repo, {**THE_CHANGE, LONG_FILE: "line\n" * LINES_OF_THE_LONG_FILE})
+    hosted = reviews.hosted(await repository_opening(tmp_git_repo))
+    async with http_client(hosted.app):
+        yield hosted.review
+
+
+async def test_the_review_goes_on_answering_while_a_story_is_told(review: Review) -> None:
+    """Told on the event loop, a long story kept every page and agent waiting until it was placed."""
+    telling = asyncio.ensure_future(review.tell_story(A_LONG_STORY))
+
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+
+    # Turns of the loop, as any socket the server holds is answered in, and the story is still being told
+    assert not telling.done()
+    assert len((await telling).story.chapters[0].steps) == len(STEPS_OF_THE_LONG_STORY)
+
+
+async def test_of_two_stories_told_at_once_the_one_sent_last_is_the_one_held(review: Review) -> None:
+    """A long story sent first is still being told when a short one arrives: the short one is the last word."""
+    sent_first = asyncio.ensure_future(review.tell_story(A_LONG_STORY))
+    sent_last = asyncio.ensure_future(review.tell_story(story_of(THE_LINE_ADDED)))
+
+    await asyncio.gather(sent_first, sent_last)
+
+    assert review.story_held() == sent_last.result()
+
+
+async def test_a_story_is_held_with_the_round_it_arrived_in_though_a_round_begins_while_it_is_told(
+    review: Review,
+) -> None:
+    """It was told of the change as that round had it."""
+    telling = asyncio.ensure_future(review.tell_story(A_LONG_STORY))
+    await asyncio.sleep(0)
+
+    review.submit(threads=[], body="One more line, please.", ends=False)
 
     assert (await telling).round == FIRST_ROUND
-    assert turns > 1, "the loop came back to nothing else until the whole story was told"
 
 
 async def test_telling_a_story_says_the_agent_is_there(agent: AsyncClient) -> None:
