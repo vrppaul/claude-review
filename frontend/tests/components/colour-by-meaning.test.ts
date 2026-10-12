@@ -14,15 +14,22 @@ import { addedLine, diffFile, hunk } from '../diff';
 import { listeningToThePanel } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
+import { colourDrawn, type Drawn, paint, THEMES } from '../stylesheets';
 
-// What a colour means, by the class that draws it: the stylesheet gives each
-// its token, and these are the marks jsdom can see were given the right one
-const AGENT_CHIP = 'cr-thread-chip-agent';
-const UNREAD = 'text-(--cr-unread)';
-const UNREAD_DOT = 'bg-(--cr-unread)';
-const CONTROL = 'text-(--cr-control)';
-const AT_WORK = 'bg-(--cr-agent)';
-const READY = 'bg-(--cr-done)';
+// The colour of each meaning, by the token it is written once in: violet is
+// the agent's — what it raised, said or brought the reader to, and what of
+// it is not read yet; blue is the reader's — their marks in words, and the
+// controls they act with; green, beside what the diff added, is what is done
+const AGENTS = '--cr-agent';
+const READERS_WORDS = '--cr-mark-text';
+const READERS_CONTROLS = '--cr-mark';
+const DONE = '--cr-add-text';
+
+/** That a part of an element is drawn in a meaning's colour, in every theme, whatever token stands between. */
+function expectDrawnIn(element: Element | null | undefined, drawn: Drawn, meaning: string): void {
+	if (!element) throw new Error('nothing is drawn');
+	for (const theme of THEMES) expect(colourDrawn(element, drawn, theme), theme).toEqual(paint(meaning, theme));
+}
 
 const file = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(2, 'y = 3')])] });
 
@@ -31,7 +38,7 @@ function answeredReview(): Review {
 	return openReview({ files: [file], facts: { answerer_attached: true } });
 }
 
-describe('a colour says whose a thing is', () => {
+describe('each thing is drawn in the colour of what it means', () => {
 	it('draws the files the agent names, in what it says and in what it works on, in its own colour', async () => {
 		listeningToThePanel();
 		const review = answeredReview();
@@ -41,8 +48,8 @@ describe('a colour says whose a thing is', () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await tick();
 
-		expect(getByTestId('answer-file').classList).toContain(AGENT_CHIP);
-		expect(getByTestId('progress-file').classList).toContain(AGENT_CHIP);
+		expectDrawnIn(getByTestId('answer-file'), 'color', AGENTS);
+		expectDrawnIn(getByTestId('progress-file'), 'color', AGENTS);
 	});
 
 	it('draws a thread the agent mentions in what it says in its own colour', async () => {
@@ -53,7 +60,7 @@ describe('a colour says whose a thing is', () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await tick();
 
-		expect(getByTestId('answer-thread').classList).toContain(AGENT_CHIP);
+		expectDrawnIn(getByTestId('answer-thread'), 'color', AGENTS);
 	});
 
 	it('draws a thread the agent raised, as the panel notes it, in its own colour', () => {
@@ -64,7 +71,7 @@ describe('a colour says whose a thing is', () => {
 
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		expect(getByTestId('panel-thread-ref').classList).toContain(AGENT_CHIP);
+		expectDrawnIn(getByTestId('panel-thread-ref'), 'color', AGENTS);
 	});
 
 	it('draws a thread the reader pointed at in their own colour, not the agent’s', async () => {
@@ -76,8 +83,7 @@ describe('a colour says whose a thing is', () => {
 
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		expect(getByTestId('panel-thread-ref').classList).toContain('cr-thread-chip');
-		expect(getByTestId('panel-thread-ref').classList).not.toContain(AGENT_CHIP);
+		expectDrawnIn(getByTestId('panel-thread-ref'), 'color', READERS_WORDS);
 	});
 
 	it('says an answer nobody has read in the colour of what is unread, in the thread and in the list of replies', () => {
@@ -89,8 +95,8 @@ describe('a colour says whose a thing is', () => {
 		const inThread = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
 		const inList = render(RepliesMenu, inReview(review));
 
-		expect(inThread.getByTestId('comment-unread').classList).toContain(UNREAD);
-		expect(inList.getByTestId('unread-count').classList).toContain(UNREAD);
+		expectDrawnIn(inThread.getByTestId('comment-unread'), 'color', AGENTS);
+		expectDrawnIn(inList.getByTestId('unread-count'), 'color', AGENTS);
 	});
 
 	it('marks a row of the list of replies nobody has read with the unread colour', async () => {
@@ -102,8 +108,10 @@ describe('a colour says whose a thing is', () => {
 		getByTestId('replies-menu').click();
 		await tick();
 
-		const marks = [...getByTestId('reply-row').querySelectorAll('span')];
-		expect(marks.some((mark) => mark.classList.contains(UNREAD_DOT))).toBe(true);
+		const dot = [...getByTestId('reply-row').querySelectorAll('span')].find((mark) =>
+			mark.classList.contains('rounded-full')
+		);
+		expectDrawnIn(dot, 'background', AGENTS);
 	});
 
 	it('draws the keys in the help as controls', () => {
@@ -113,7 +121,7 @@ describe('a colour says whose a thing is', () => {
 
 		const keys = getByTestId('shortcuts-list').querySelectorAll('dt');
 		expect(keys.length).toBeGreaterThan(0);
-		for (const key of keys) expect(key.classList).toContain(CONTROL);
+		for (const key of keys) expectDrawnIn(key, 'color', READERS_CONTROLS);
 	});
 
 	it('draws an agent listening in the colour of something ready', () => {
@@ -121,7 +129,7 @@ describe('a colour says whose a thing is', () => {
 
 		const { container } = render(PresenceDot, inReview(review));
 
-		expect(container.querySelector('span')?.classList).toContain(READY);
+		expectDrawnIn(container.querySelector('span'), 'background', DONE);
 	});
 
 	it('draws the agent at work on a message in its own colour', async () => {
@@ -132,6 +140,6 @@ describe('a colour says whose a thing is', () => {
 
 		const { container } = render(PresenceDot, inReview(review));
 
-		expect(container.querySelector('span')?.classList).toContain(AT_WORK);
+		expectDrawnIn(container.querySelector('span'), 'background', AGENTS);
 	});
 });
