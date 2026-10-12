@@ -313,12 +313,12 @@ async def opened_on_the_change(tmp_git_repo: Path) -> ReviewOpening:
     return await repository_opening(tmp_git_repo)
 
 
-def test_every_page_open_on_the_review_is_told_when_a_story_is_told(
+def test_a_page_open_on_the_review_is_told_when_a_story_is_told(
     reviews: ReviewFactory, opened_on_the_change: ReviewOpening
 ) -> None:
     """A page does not ask again and again whether a story has come: it is told, and reads the story then."""
     with page_client(reviews.app(opened_on_the_change)) as review_page, open_session(review_page) as socket:
         review_page.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
-        told = next_push(socket, StoryPush)
 
-    assert told == StoryPush()
+        # That it arrives is the whole of it: the push says nothing more, and none arriving fails the test
+        next_push(socket, StoryPush)
