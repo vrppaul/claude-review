@@ -16,6 +16,7 @@ from claude_review.domain.models import (
     FilePath,
     LineSide,
     TurnAuthor,
+    says_nothing,
 )
 from claude_review.presentation.wire.base import (
     MAX_TEXT_LENGTH,
@@ -123,7 +124,7 @@ class SaysSomething(WireModel):
     @model_validator(mode="after")
     def says_something(self) -> Self:
         """A screenshot can be the whole of what is said, but something has to be."""
-        if not self.body.strip() and not self.images:
+        if says_nothing(self.body) and not self.images:
             msg = "needs text or an image"
             raise ValueError(msg)
         return self

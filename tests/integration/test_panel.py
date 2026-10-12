@@ -371,11 +371,13 @@ def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(revi
     assert work.files == ["a.ts"]
 
 
-def test_an_empty_report_says_the_work_is_over(review_page: TestClient) -> None:
+@pytest.mark.parametrize("nothing", ["", " \n"])
+def test_a_report_that_says_nothing_says_the_work_is_over(review_page: TestClient, nothing: str) -> None:
+    """Nothing at all, or blanks alone: there is no work in either to show."""
     with open_session(review_page) as socket:
         review_page.post("/api/progress", json={"text": "reading the handler"})
         next_push(socket, ProgressPush)
-        review_page.post("/api/progress", json={"text": ""})
+        review_page.post("/api/progress", json={"text": nothing})
 
         assert next_push(socket, ProgressPush) == ProgressPush(work=None)
 

@@ -148,6 +148,11 @@ async def test_a_start_line_below_one_is_refused(service: FileWindowService, roo
         await service.read_window(root, "src/app.py", start=0, end=3, in_review=frozenset({"src/app.py"}))
 
 
+async def test_lines_that_run_backwards_are_refused(service: FileWindowService, root: Path) -> None:
+    with pytest.raises(LineRangeError):
+        await service.read_window(root, "src/app.py", start=3, end=1, in_review=frozenset({"src/app.py"}))
+
+
 async def test_only_files_in_the_review_can_be_read(service: FileWindowService, root: Path) -> None:
     """The UI never asks for anything else, and the review is not a way to read
     the rest of the repository."""

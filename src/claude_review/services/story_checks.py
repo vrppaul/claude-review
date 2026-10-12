@@ -18,7 +18,7 @@ from collections.abc import Iterator
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import FIRST_LINE
+from claude_review.domain.models import FIRST_LINE, runs_backwards, says_nothing
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
 from claude_review.services.story_slices import PlacedFile
@@ -169,7 +169,7 @@ def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator
     if text is None:
         return
     held_to = TEXT_LIMITS[kind]
-    if _says_nothing(text):
+    if says_nothing(text):
         yield FieldFault(path=path, reason=SAYS_NOTHING)
     elif len(text) > held_to.characters:
         too_long = TOO_LONG.format(length=len(text), limit=held_to.characters, hint=held_to.hint)
@@ -178,13 +178,8 @@ def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator
 
 def _blank_faults(path: FieldPath, text: str) -> Iterator[FieldFault]:
     """What is wrong with a text that has no length to keep to: it says nothing."""
-    if _says_nothing(text):
+    if says_nothing(text):
         yield FieldFault(path=path, reason=SAYS_NOTHING)
-
-
-def _says_nothing(text: str) -> bool:
-    """Whether a text is blanks alone."""
-    return not text.strip()
 
 
 def _parts_missing(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:
@@ -228,7 +223,7 @@ def _numbering_faults(written: StepInDocument) -> list[FieldFault]:
     faults: list[FieldFault] = []
     if lines.first < FIRST_LINE:
         faults.append(FieldFault(path=path, reason=BEFORE_FIRST_LINE.format(first=lines.first, first_line=FIRST_LINE)))
-    if lines.last < lines.first:
+    if runs_backwards(lines.first, lines.last):
         faults.append(FieldFault(path=path, reason=RUNS_BACKWARDS.format(first=lines.first, last=lines.last)))
     return faults
 

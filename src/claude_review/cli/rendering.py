@@ -7,7 +7,7 @@ full when it is named.
 
 from pathlib import Path
 
-from claude_review.domain.models import TurnAuthor
+from claude_review.domain.models import TurnAuthor, says_nothing
 from claude_review.presentation.wire.agent import CatchUpResponse
 from claude_review.presentation.wire.threads import Thread, ThreadSummary
 from claude_review.services.thread_markdown import tags_of
@@ -106,7 +106,7 @@ def _indent(text: str, *, who: str | None = None) -> str:
 
 def _said(text: str, images: list[Path]) -> str:
     """What was said, or that an image was all of it, where an empty line would say nothing."""
-    return text if text.strip() else (IMAGE_ONLY if images else "")
+    return (IMAGE_ONLY if images else "") if says_nothing(text) else text
 
 
 def _images(images: list[Path]) -> list[str]:
@@ -116,7 +116,7 @@ def _images(images: list[Path]) -> list[str]:
 
 def _gist(text: str) -> str:
     """The first line of something, short enough to scan a list of them."""
-    first = text.strip().splitlines()[0] if text.strip() else ""
+    first = "" if says_nothing(text) else text.strip().splitlines()[0]
     return first if len(first) <= GIST_LENGTH else f"{first[: GIST_LENGTH - len(ELLIPSIS)]}{ELLIPSIS}"
 
 

@@ -56,6 +56,16 @@ class FileStatus(StrEnum):
 FIRST_LINE = 1
 
 
+def runs_backwards(first_line: int, last_line: int) -> bool:
+    """Whether lines named from one to another end before they start: lines no file has."""
+    return last_line < first_line
+
+
+def says_nothing(text: str) -> bool:
+    """Whether a text says nothing: it is empty, or blanks alone."""
+    return not text.strip()
+
+
 class DiffLine(BaseModel):
     """A single line in a diff hunk."""
 
@@ -213,7 +223,7 @@ def check_line_span(start_line: int, end_line: int) -> None:
     Raises:
         ValueError: if the span ends before it starts.
     """
-    if start_line > end_line:
+    if runs_backwards(start_line, end_line):
         msg = "start_line must be <= end_line"
         raise ValueError(msg)
 

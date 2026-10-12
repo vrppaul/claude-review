@@ -21,7 +21,7 @@ from claude_review.cli.parameters import (
 from claude_review.cli.rendering import render_catch_up, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
 from claude_review.cli.terminal_text import terminal_text
-from claude_review.domain.models import CommentSeverity, LineSide
+from claude_review.domain.models import CommentSeverity, LineSide, says_nothing
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.wire.agent import (
     MAX_PROGRESS_STEPS,
@@ -208,7 +208,7 @@ def progress_command(
         return
     # The review shows the work by what it says and what it has branched into;
     # given neither, it would take the line away, which only --done says
-    if not text.strip() and not steps and not finished:
+    if says_nothing(text) and not steps and not finished:
         msg = "nothing to show: say what you are doing, or what it has branched into — or send --done on its own"
         raise click.UsageError(msg)
     client.report_progress(

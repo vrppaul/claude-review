@@ -15,7 +15,7 @@ from collections.abc import Generator
 import structlog
 
 from claude_review.domain.interfaces import Clock, PageChannel
-from claude_review.domain.models import AgentStatus, AgentWork, FilePath, ProgressStep
+from claude_review.domain.models import AgentStatus, AgentWork, FilePath, ProgressStep, says_nothing
 from claude_review.domain.page_events import AnswererChanged, StatusReported, WorkReported
 
 log = structlog.get_logger()
@@ -89,10 +89,10 @@ class Answerer:
         self, *, message_id: str | None, text: str, files: list[FilePath], steps: list[ProgressStep]
     ) -> None:
         """Say what is being done, replacing whatever was showing; a report of nothing says the work is over."""
-        says_nothing = not text.strip() and not steps
+        reports_nothing = says_nothing(text) and not steps
         self._set_work(
             None
-            if says_nothing
+            if reports_nothing
             else AgentWork(message_id=message_id, text=text, files=files, steps=steps, at=self._clock.now())
         )
 

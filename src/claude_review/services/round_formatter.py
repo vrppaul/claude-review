@@ -11,7 +11,7 @@ its own way; the round around them is the same.
 from abc import ABC, abstractmethod
 from typing import Self, override
 
-from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread
+from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread, says_nothing
 from claude_review.services.anchor_service import AnchorService
 from claude_review.services.markdown_code import code_block
 from claude_review.services.place_words import place_in_markdown
@@ -116,7 +116,7 @@ class RoundFormatter:
         A summary of nothing but whitespace is no summary; a round with
         neither is empty, and says nothing.
         """
-        summary = body if body and body.strip() else None
+        summary = None if body is None or says_nothing(body) else body
         count = len(threads) + (1 if summary else 0)
         if count == 0:
             return ReviewResult(markdown="", comment_count=0)

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from claude_review.cli.rendering import GIST_LENGTH, render_catch_up, render_thread
 from claude_review.domain import models
 from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
@@ -10,6 +12,8 @@ from claude_review.presentation.wire.threads import Thread, ThreadSummary
 from tests.helpers import line_anchor, thread
 
 SAID_AT = 1
+# What somebody says who pastes a screenshot and types nothing, or no more than a line break
+NOTHING_TYPED = ["", " \n"]
 
 # A thread as the server holds it, so this reads what the agent is handed
 DISCUSSED = thread(
@@ -117,10 +121,11 @@ def test_a_review_nobody_answers_says_so() -> None:
     assert "nobody answering" in printed
 
 
-def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
+@pytest.mark.parametrize("body", NOTHING_TYPED)
+def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open(body: str) -> None:
     """The words alone would leave "look at this" pointing at nothing."""
     image = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
-    said = ASKED_TO_RUN_THE_TESTS.model_copy(update={"body": "", "images": [image]})
+    said = ASKED_TO_RUN_THE_TESTS.model_copy(update={"body": body, "images": [image]})
 
     printed = render_catch_up(SEEN.model_copy(update={"panel": [said]}))
 
@@ -128,7 +133,8 @@ def test_an_image_said_in_the_panel_is_listed_as_a_file_to_open() -> None:
     assert f"image: {image}" in printed
 
 
-def test_an_image_in_a_thread_read_in_full_is_listed_as_a_file_to_open() -> None:
+@pytest.mark.parametrize("body", NOTHING_TYPED)
+def test_an_image_in_a_thread_read_in_full_is_listed_as_a_file_to_open(body: str) -> None:
     """Reading a thread in full hands its images over; without their paths, nothing could open them."""
     opened_with = Path("/tmp/tmp0a1b.claude-review/images/0a1b.png")
     answered_with = Path("/tmp/tmp0a1b.claude-review/images/2c3d.png")
@@ -136,7 +142,7 @@ def test_an_image_in_a_thread_read_in_full_is_listed_as_a_file_to_open() -> None
         line_anchor("src/app.py", 3),
         "This renders wrong",
         images=[opened_with],
-        turns=[Turn(author=TurnAuthor.READER, body="", round=1, images=[answered_with])],
+        turns=[Turn(author=TurnAuthor.READER, body=body, round=1, images=[answered_with])],
     )
 
     printed = render_thread(Thread.of(pictured))

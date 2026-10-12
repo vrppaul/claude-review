@@ -11,7 +11,7 @@ import click
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 from claude_review.cli.review_client import REASON_SEPARATOR
-from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText
+from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText, runs_backwards
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, AgentText, WireId
 
@@ -109,7 +109,7 @@ class LineSpan(BaseModel):
 
     @model_validator(mode="after")
     def runs_forwards(self) -> Self:
-        if self.last < self.first:
+        if runs_backwards(self.first, self.last):
             msg = "the range runs backwards"
             raise ValueError(msg)
         return self

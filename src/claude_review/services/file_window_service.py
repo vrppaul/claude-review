@@ -19,7 +19,7 @@ from claude_review.domain.exceptions import (
     PathOutsideRepositoryError,
 )
 from claude_review.domain.interfaces import TrackedPaths
-from claude_review.domain.models import FIRST_LINE
+from claude_review.domain.models import FIRST_LINE, runs_backwards
 
 MAX_WINDOW_LINES = 2000
 
@@ -81,7 +81,7 @@ class FileWindowService:
                 file, or nothing readable is there.
             FileUnreadableError: if the file is not text, or too large to read.
         """
-        if start < FIRST_LINE or end < start:
+        if start < FIRST_LINE or runs_backwards(start, end):
             msg = f"not a line range: {start}-{end}"
             raise LineRangeError(msg)
 

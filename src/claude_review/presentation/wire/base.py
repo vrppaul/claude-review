@@ -10,6 +10,7 @@ from typing import Annotated, Self
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
 
+from claude_review.domain.models import says_nothing
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
 
 
@@ -54,7 +55,7 @@ WireBool = Annotated[bool, Strict()]
 
 def _says_something(text: str) -> str:
     """Refuse text that is only blanks: on screen it would be a turn with nothing in it."""
-    if not text.strip():
+    if says_nothing(text):
         msg = "says nothing"
         raise ValueError(msg)
     return text
