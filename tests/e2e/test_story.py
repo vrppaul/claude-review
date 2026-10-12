@@ -1,0 +1,127 @@
+"""E2E: a review read as the story the agent told of it, in a real browser.
+
+A story is the same review read another way: its steps take comments that
+hang on the file's own lines, and what it does not draw is one press away
+in the files, with the keyboard on it. When the diff is taken again under
+it, the story shows code that has moved on, says so, and takes nothing.
+Where the keyboard lands, and what a key does to what is not on screen,
+are only true in a browser.
+"""
+
+from pathlib import Path
+
+import pytest
+from httpx import AsyncClient
+from playwright.async_api import Locator, Page, ViewportSize, expect
+
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
+from tests.stories import as_the_agent_writes, step, story_of
+
+STORY_ROUTE = "/api/story"
+RETAKE_ROUTE = "/api/retake"
+
+TOLD_FILE = "told.py"
+HOUSEKEEPING_FILE = "notes.txt"
+COMMITTED_FILES = {TOLD_FILE: "keep one\nfirst two\nkeep three\n", HOUSEKEEPING_FILE: "a note\n"}
+# The change under review: line 2 of the file the story tells, and a line of the file it names as housekeeping
+THE_CHANGE = {TOLD_FILE: "keep one\nchanged two\nkeep three\n", HOUSEKEEPING_FILE: "another note\n"}
+# The told file as a round's work leaves it: two lines above the one the story told
+MOVED_ON = {TOLD_FILE: "new first\nnew second\nkeep one\nchanged two\nkeep three\n"}
+# The line the story's one step tells, as the step's piece numbers it
+TOLD_LINE = "Comment on line 2"
+# The line the housekeeping file gained, which no piece of the story draws
+CHANGED_NOTE = "Comment on line 1"
+A_STORY = story_of(step(TOLD_FILE, 2, 2), housekeeping=(HOUSEKEEPING_FILE,))
+# Wide enough for the tree of files to stand beside them
+WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
+
+
+@pytest.fixture
+def changed_repo(tmp_path: Path) -> Path:
+    """A repository with a change to tell a story of."""
+    repo = committed_repository(tmp_path / "repo", COMMITTED_FILES)
+    write_files(repo, THE_CHANGE)
+    return repo
+
+
+@pytest.fixture
+async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review of the change, which the agent has told a story of."""
+    started = await servers.start(await repository_opening(changed_repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    return started
+
+
+async def _read_as_story(page: Page, review: RunningReview) -> None:
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.click('[data-testid="read-as-story"]')
+    await page.wait_for_selector('[data-testid="story-piece"]')
+
+
+async def _comment_on(page: Page, drawn_in: Locator, line: str, words: str) -> None:
+    """Write a comment on a line, by its number, in the one part of the page that draws the line."""
+    await drawn_in.get_by_role("button", name=line, exact=True).click()
+    await page.fill('[data-testid="comment-input"]', words)
+    await page.click('[data-testid="save-comment"]')
+    await page.wait_for_selector('[data-testid="comment-thread"]')
+
+
+async def test_a_comment_written_on_a_step_hangs_on_the_same_line_of_the_file(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+
+    await _comment_on(page, page.get_by_test_id("story-piece"), TOLD_LINE, "why this word")
+    await page.click('[data-testid="read-as-files"]')
+
+    in_the_files = page.get_by_test_id("file-section").filter(has_text=TOLD_FILE)
+    await expect(in_the_files.get_by_test_id("comment-thread")).to_contain_text("why this word")
+
+
+async def test_the_way_to_a_comment_the_story_does_not_draw_puts_the_keyboard_on_it(
+    review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    the_note = page.get_by_test_id("file-section").filter(has_text=HOUSEKEEPING_FILE)
+    await _comment_on(page, the_note, CHANGED_NOTE, "about the note")
+    await page.click('[data-testid="read-as-story"]')
+
+    await page.click('[data-testid="show-in-files"]')
+    await page.wait_for_selector('[data-testid="diff-view"]')
+
+    await expect(page.locator('[data-testid="comment-thread"]:focus')).to_contain_text("about the note")
+
+
+async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(
+    review: RunningReview, changed_repo: Path, page: Page
+) -> None:
+    await _read_as_story(page, review)
+
+    write_files(changed_repo, MOVED_ON)
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post(RETAKE_ROUTE, json={})
+
+    await expect(page.get_by_test_id("story-moved-on")).to_contain_text(
+        "The code has changed since this story was told."
+    )
+    told_line = page.get_by_test_id("story-piece").get_by_role("button", name=TOLD_LINE, exact=True)
+    await expect(told_line).to_have_attribute("aria-disabled", "true")
+    # By the keyboard, which reaches a number that takes no comment: a pointer's press waits for one that does
+    await told_line.focus()
+    await page.keyboard.press("Enter")
+    await expect(page.get_by_test_id("comment-input")).to_have_count(0)
+
+
+async def test_f_in_the_story_leaves_the_tree_of_files_where_the_reader_left_it(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+
+    await page.keyboard.press("f")
+    await page.click('[data-testid="read-as-files"]')
+
+    await expect(page.get_by_test_id("file-item").first).to_be_visible()
