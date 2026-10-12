@@ -11,6 +11,7 @@ import { read, send, urlOf } from '$lib/api/request';
 import type {
 	AskRequest,
 	CancelRequest,
+	ConversationResponse,
 	DiffResponse,
 	FileWindowResponse,
 	FollowRequest,
@@ -40,6 +41,11 @@ export function readReview(): Promise<ReviewResponse> {
 /** The threads the review holds: what a page that opens with no draft of the review takes in. */
 export function readHeldThreads(): Promise<ThreadsResponse> {
 	return read('get', '/api/threads', { doing: 'Could not read the threads of the review' });
+}
+
+/** What was said in the panel, as the review holds it: what a page draws as it opens, whatever its draft holds. */
+export function readConversation(): Promise<ConversationResponse> {
+	return read('get', '/api/conversation', { doing: 'Could not read what was said in the panel' });
 }
 
 /** Which diff is asked for: whose whitespace, and against which base. */

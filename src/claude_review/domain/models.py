@@ -417,14 +417,38 @@ class PanelCancel(BaseModel):
     message_id: str
 
 
-class PanelEntry(BaseModel):
-    """One thing said in the panel, kept so a later agent can catch up.
+class SaidInPanel(BaseModel):
+    """One thing said in the panel, as the review holds it.
 
-    The reader's browser remembers the whole conversation across a reload;
-    the agent may be a different process by then and remembers nothing. The
-    server saw both halves go past, so it is the one that can say what was
-    already discussed.
+    A page keeps what it saw of the conversation in its draft; a page opened
+    in another browser, or before anything was said, saw none of it, and the
+    agent may be a different process by then and remembers nothing. The
+    review heard both halves go past, so it is the one that can say what was
+    already discussed — to a page as it was said, and to an agent in short.
     """
+
+    model_config = ConfigDict(frozen=True)
+
+    # What every page knows it by: a message's own id, or the one the review
+    # gave the agent's words, so a page that heard them draws them once
+    said_id: str
+    # The message it is, or the one the agent answers; None when the agent spoke first
+    message_id: str | None
+    author: TurnAuthor
+    body: str
+    at: EpochMillis
+    # Screenshots pasted with a message, by the ids the review keeps them under
+    images: list[str]
+    # The threads a message points at, by their ids
+    threads: list[str]
+    # Files the agent's words name, a chip each
+    files: list[FilePath]
+    # Whether the reader took the message back before it was answered
+    taken_back: bool
+
+
+class PanelEntry(BaseModel):
+    """One thing said in the panel, as an agent catching up reads it: its screenshots as files to open."""
 
     message_id: str | None = None
     author: TurnAuthor

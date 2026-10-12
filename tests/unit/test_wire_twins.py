@@ -51,6 +51,7 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.PanelMessage, agent.PanelMessage, frozenset()),
     (models.PanelCancel, agent.PanelCancel, frozenset()),
     (models.PanelEntry, agent.PanelEntry, frozenset()),
+    (models.SaidInPanel, agent.SaidInPanel, frozenset()),
     (models.RoundSubmission, agent.RoundSubmission, frozenset()),
     (models.ReaderSettings, records.ReaderSettings, frozenset()),
     (models.GuideState, records.GuideState, frozenset()),

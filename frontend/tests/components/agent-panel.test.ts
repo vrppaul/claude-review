@@ -6,14 +6,16 @@ import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import { AGENT_STOPPED_LISTENING, TAKE_BACK } from '$lib/components/agent-waits';
 import { FIELD_KEYS } from '$lib/components/keymap';
-import type { Thread, ReviewResponse } from '$lib/types';
+import type { HeldThread, Thread, ReviewResponse } from '$lib/types';
 import { addedLine, diffFile, diffResponse, hunk, REVIEW_BASE, sinceRound } from '../diff';
 import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
+import { lineAnchor } from '$lib/anchors/line';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { settled } from '../settled';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
+import { chatPush } from '../pushes';
 
 const TITLE = 'claude-review: uncommitted changes';
 // The longest text a test's server takes, short enough to type past
@@ -261,7 +263,9 @@ describe('the agent panel', () => {
 		givenTall(stream);
 
 		await say(review, 'Run the tests');
-		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', []);
+		review.conversation.receive(
+			chatPush('One failed; fixed and green.', { message_id: review.conversation.turns[0].id })
+		);
 		await painted();
 
 		expect(stream.scrollTop).toBe(FULL_HEIGHT);
@@ -278,7 +282,9 @@ describe('the agent panel', () => {
 		stream.scrollTop = 0;
 		stream.dispatchEvent(new Event('scroll'));
 
-		review.conversation.receive(review.conversation.turns[0].id, 'One failed; fixed and green.', []);
+		review.conversation.receive(
+			chatPush('One failed; fixed and green.', { message_id: review.conversation.turns[0].id })
+		);
 		await painted();
 
 		expect(stream.scrollTop).toBe(0);
@@ -346,7 +352,7 @@ describe('the agent panel', () => {
 	it('draws a file the agent names twice in what it says, twice', async () => {
 		const { getAllByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(null, 'Both halves are here.', ['src/routes.py', 'src/routes.py']);
+		review.conversation.receive(chatPush('Both halves are here.', { files: ['src/routes.py', 'src/routes.py'] }));
 		await tick();
 
 		expect(getAllByTestId('answer-file')).toHaveLength(2);
@@ -359,9 +365,7 @@ describe('the agent panel', () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
 		review.conversation.receive(
-			null,
-			'The catch in @src/routes.py:2-2 is for the retry; @src/routes.py:2-20 is not a thread.',
-			[]
+			chatPush('The catch in @src/routes.py:2-2 is for the retry; @src/routes.py:2-20 is not a thread.')
 		);
 		await tick();
 
@@ -395,7 +399,7 @@ describe('the agent panel', () => {
 	it('says when the agent last said something, not that it answered what nobody asked', async () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(null, 'Tests are green again.', []);
+		review.conversation.receive(chatPush('Tests are green again.'));
 		await tick();
 
 		expect(getByTestId('agent-last-answer').textContent?.trim()).toMatch(/^said /);
@@ -404,7 +408,7 @@ describe('the agent panel', () => {
 	it('lets the agent speak first, with a file worth opening at it', async () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(null, 'Tests are green again.', ['src/claude_review/cli.py']);
+		review.conversation.receive(chatPush('Tests are green again.', { files: ['src/claude_review/cli.py'] }));
 		await tick();
 
 		expect(getByTestId('panel-answer').textContent).toContain('Tests are green again.');
@@ -591,6 +595,57 @@ describe('the agent panel', () => {
 	});
 });
 
+describe('what was said before the page opened', () => {
+	it('draws what was said in another browser as it was said there: its screenshot by its id, its thread a chip, taken back', () => {
+		const held: HeldThread = {
+			thread_id: 'comment-1',
+			anchor: lineAnchor(file.path, 'new', 2, 2, ['y = 3']),
+			severity: 'question',
+			body: 'Written in another browser',
+			images: [],
+			turns: [],
+			raised_by: 'reader',
+			resolved: false
+		};
+		const opened = openReview({
+			files: [file],
+			facts: { answerer_attached: true },
+			held: [held],
+			said: [
+				{
+					said_id: 'panel-1',
+					message_id: 'panel-1',
+					author: 'reader',
+					body: 'Why this way?',
+					at: Date.now(),
+					images: [KEPT_AS],
+					threads: [held.thread_id],
+					files: [],
+					taken_back: true
+				},
+				{
+					said_id: 'answer-3f2a',
+					message_id: null,
+					author: 'author',
+					body: 'Moved it.',
+					at: Date.now(),
+					images: [],
+					threads: [],
+					files: [file.path],
+					taken_back: false
+				}
+			]
+		});
+
+		const { getByTestId } = render(AgentPanel, inReview(opened));
+
+		expect(getByTestId('said-image').getAttribute('href')).toBe(`/api/images/${KEPT_AS}`);
+		expect(getByTestId('panel-thread-ref').textContent).toContain('2');
+		expect(getByTestId('panel-cancelled')).toBeTruthy();
+		expect(getByTestId('answer-file').getAttribute('title')).toBe(file.path);
+	});
+});
+
 describe('a file the agent names', () => {
 	let review: Review;
 
@@ -601,7 +656,7 @@ describe('a file the agent names', () => {
 	it('takes the reader to it when the diff holds it', async () => {
 		const user = userEvent.setup();
 		const shown = vi.spyOn(review.sections, 'showFile');
-		review.conversation.receive(null, 'Renamed it.', [file.path]);
+		review.conversation.receive(chatPush('Renamed it.', { files: [file.path] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
 		await user.click(getByTestId('answer-file'));
@@ -622,7 +677,7 @@ describe('a file the agent names', () => {
 		await review.diff.take();
 		await review.diff.setBase('round:1');
 		const shown = vi.spyOn(review.sections, 'showFile');
-		review.conversation.receive(null, 'Changed it too.', [other.path]);
+		review.conversation.receive(chatPush('Changed it too.', { files: [other.path] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
 		expect(getByTestId('answer-file').getAttribute('title')).toBe(other.path);
@@ -636,7 +691,7 @@ describe('a file the agent names', () => {
 	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {
 		const user = userEvent.setup();
 		const shown = vi.spyOn(review.sections, 'showFile');
-		review.conversation.receive(null, 'Split it out.', ['src/made_since.py']);
+		review.conversation.receive(chatPush('Split it out.', { files: ['src/made_since.py'] }));
 		review.answerer.showWork(work({ text: 'splitting it out', files: ['src/made_since.py'] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await tick();

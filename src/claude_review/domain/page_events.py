@@ -41,6 +41,8 @@ class AnswererChanged(PageEventBase):
 class AgentSaid(PageEventBase):
     """The agent speaking in the panel: an answer to a message, or nothing answered at all."""
 
+    # What the review holds the words under, which a page reading the conversation as it opens knows them by
+    said_id: str
     message_id: str | None
     body: str
     files: list[FilePath]

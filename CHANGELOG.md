@@ -39,6 +39,9 @@
   (`catch-up --thread`).
 - **`GET /api/threads`** says the threads the review holds; a page that
   opens with no draft of its own starts from them.
+- **`GET /api/conversation`** says what was said in the panel, oldest first,
+  each part under the id every page knows it by; the `chat` push carries
+  that id as `said_id`.
 
 ### Changed
 - **Every menu is one kind of pane, with an arrow pointing at what opened
@@ -218,6 +221,12 @@
   its fields stop there.
 
 ### Fixed
+- **What the agent said before the page opened is in the panel when it
+  opens.** A page in another browser, or a private window, draws the whole
+  conversation too: the reader's messages with their screenshots and the
+  threads they point at, and a message taken back as stopped. A reload
+  draws each part once, with the review's own notes from the draft between
+  them.
 - **`n` and `p` go on from the thread you are at.** `p` before any thread
   goes to the last one; it went to the one before the last. Removing a
   thread no longer moves the place they go on from onto another thread;

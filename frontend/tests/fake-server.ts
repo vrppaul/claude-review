@@ -46,6 +46,7 @@ type ReplyOf<Path extends keyof paths, Verb extends Method> = paths[Path][Verb] 
 const ROUTES = [
 	'GET /api/review',
 	'GET /api/threads',
+	'GET /api/conversation',
 	'GET /api/diff',
 	'GET /api/versions',
 	'GET /api/file-window',

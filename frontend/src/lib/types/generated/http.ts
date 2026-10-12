@@ -50,6 +50,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Held Conversation
+         * @description Say what was said in the panel, for a page to draw as it opens.
+         *
+         *     What the agent said before any page was open is pushed to nobody, and a
+         *     page in another browser, or a private window, has no draft of what this
+         *     one saw. Every part comes under the id a page that heard it holds it by,
+         *     so a page with a draft draws each part once. Read-only, like the threads.
+         */
+        get: operations["held_conversation_api_conversation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/diff": {
         parameters: {
             query?: never;
@@ -768,6 +793,18 @@ export interface components {
          */
         CommentSeverity: "note" | "question" | "blocker";
         /**
+         * ConversationResponse
+         * @description Response for GET /api/conversation — what was said in the panel, for a page opening to draw.
+         *
+         *     Everything the review heard, oldest first: what was said before any page
+         *     was open, and what a page in another browser saw. Read once, as the page
+         *     opens; from then on what the agent says is pushed, under the same ids.
+         */
+        ConversationResponse: {
+            /** Said */
+            said: components["schemas"]["SaidInPanel"][];
+        };
+        /**
          * DiffFile
          * @description A file that has been changed, and what kind of change it was when it has no lines to show.
          */
@@ -978,7 +1015,7 @@ export interface components {
         };
         /**
          * PanelEntry
-         * @description One thing said in the panel, kept so a later agent can catch up.
+         * @description One thing said in the panel, as an agent catching up reads it: its screenshots as files to open.
          */
         PanelEntry: {
             /** Message Id */
@@ -1207,6 +1244,29 @@ export interface components {
             markdown: string;
             /** Comment Count */
             comment_count: number;
+        };
+        /**
+         * SaidInPanel
+         * @description One thing said in the panel, as a page draws it: the reader's message, or the agent's words.
+         */
+        SaidInPanel: {
+            /** Said Id */
+            said_id: string;
+            /** Message Id */
+            message_id: string | null;
+            author: components["schemas"]["TurnAuthor"];
+            /** Body */
+            body: string;
+            /** At */
+            at: number;
+            /** Images */
+            images: string[];
+            /** Threads */
+            threads: string[];
+            /** Files */
+            files: string[];
+            /** Taken Back */
+            taken_back: boolean;
         };
         /**
          * SayRequest
@@ -1592,6 +1652,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    held_conversation_api_conversation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationResponse"];
                 };
             };
             /** @description Forbidden */

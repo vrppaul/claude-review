@@ -83,6 +83,7 @@ SESSION_MESSAGES = TypeAdapter[SessionMessage](SessionMessage)
 REVIEW_ROUTE = "/api/review"
 DIFF_ROUTE = "/api/diff"
 CATCH_UP_ROUTE = "/api/catch-up"
+CONVERSATION_ROUTE = "/api/conversation"
 EVENTS_ROUTE = "/api/events"
 IMAGES_ROUTE = "/api/images"
 

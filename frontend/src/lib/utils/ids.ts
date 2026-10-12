@@ -1,7 +1,5 @@
 /** What the ids of the reader's panel messages begin with: an answer names one. */
 export const MESSAGE_ID_PREFIX = 'panel-';
-/** What the ids of the agent's answers in the panel begin with. */
-export const ANSWER_ID_PREFIX = 'answer-';
 /** What the ids of the review's own notes in the panel begin with. */
 export const EVENT_ID_PREFIX = 'event-';
 /** What the ids of the reader's threads begin with. */

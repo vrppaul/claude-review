@@ -11,7 +11,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
 import { inReview, openReview } from './review';
-import { handOverNext, pushedAt } from './pushes';
+import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
 
 /** A file whose first line the change left alone. */
@@ -47,7 +47,7 @@ describe('what the server pushes, taken in', () => {
 	it('counts an answer in the panel while the panel is shut', () => {
 		review.layout.agentPanel.setOpen(false);
 
-		handOverNext(review, { type: 'chat', message_id: null, body: 'Done.', files: [] });
+		handOverNext(review, chatPush('Done.'));
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('Done.');
 		expect(review.layout.agentPanel.unread).toBe(1);

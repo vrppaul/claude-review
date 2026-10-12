@@ -39,7 +39,8 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 			if (review.threads.receiveReply(push.thread_id, push.body, push.question_id)) review.sound.announce();
 			return;
 		case 'chat':
-			review.conversation.receive(push.message_id, push.body, push.files);
+			// Read from the review as the page opened, the words are in the panel already
+			if (!review.conversation.receive(push)) return;
 			review.layout.agentPanel.noteAnswer();
 			review.sound.announce();
 			return;

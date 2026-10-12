@@ -9,6 +9,7 @@ import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { leavePage, openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
+import { chatPush } from './pushes';
 
 let review: Review;
 
@@ -44,11 +45,11 @@ describe('an unsent review', () => {
 	});
 
 	it('hands out ids past those said before the reload, so an answer or a note has an id of its own', () => {
-		review.conversation.receive(null, 'answered before the reload', []);
+		review.conversation.receive(chatPush('answered before the reload'));
 		review.conversation.note('noted before the reload');
 
 		reload();
-		review.conversation.receive(null, 'answered after the reload', []);
+		review.conversation.receive(chatPush('answered after the reload'));
 		review.conversation.note('noted after the reload');
 
 		const ids = review.conversation.turns.map((turn) => turn.id);

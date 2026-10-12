@@ -12,6 +12,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { KEPT_AS, keepingImages, screenshot, SEND_LIMITS } from './pasted-images';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
+import { chatPush } from './pushes';
 
 let review: Review;
 
@@ -101,7 +102,7 @@ describe('the panel talks to the agent about the review', () => {
 		listeningToThePanel();
 		await say('What did the round change?');
 
-		review.conversation.receive(review.conversation.turns[0].id, 'Two files; both green.', []);
+		review.conversation.receive(chatPush('Two files; both green.', { message_id: review.conversation.turns[0].id }));
 
 		expect(review.conversation.turns.map((turn) => turn.author)).toEqual(['reader', 'author']);
 		expect(review.conversation.working).toBeUndefined();
@@ -129,7 +130,7 @@ describe('the panel talks to the agent about the review', () => {
 	it('keeps the conversation across a reload', async () => {
 		listeningToThePanel();
 		await say('Where did the None check go?');
-		review.conversation.receive(review.conversation.turns[0].id, 'Into the caller.', []);
+		review.conversation.receive(chatPush('Into the caller.', { message_id: review.conversation.turns[0].id }));
 
 		review = openReview({ files: [file], facts: { title: TITLE } });
 

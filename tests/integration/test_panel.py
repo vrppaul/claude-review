@@ -17,6 +17,7 @@ from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
+    CONVERSATION_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
     REVIEW_ROUTE,
@@ -118,10 +119,63 @@ def test_an_answer_lands_in_the_panel_of_a_review_still_open(review_page: TestCl
     """The answer comes back down the socket every review already holds."""
     with open_session(review_page) as socket:
         review_page.post("/api/say", json={"message_id": "panel-1", "body": "One failed; fixed and green."})
+        pushed = next_push(socket, ChatPush)
 
-        assert next_push(socket, ChatPush) == ChatPush(
-            message_id="panel-1", body="One failed; fixed and green.", files=[]
-        )
+    assert (pushed.message_id, pushed.body, pushed.files) == ("panel-1", "One failed; fixed and green.", [])
+
+
+async def test_a_page_opening_reads_what_was_said_in_the_panel(client: AsyncClient) -> None:
+    """Said before any page was open, or in another browser: a page opening draws it as it was said."""
+    await client.post("/api/message", json={**MESSAGE, "threads": [THREAD]})
+    await client.post(
+        "/api/say", json={"message_id": "panel-1", "body": "One failed; fixed.", "files": [REVIEWED_FILE]}
+    )
+
+    asked, answered = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert (asked["said_id"], asked["author"], asked["body"]) == ("panel-1", "reader", MESSAGE["body"])
+    assert (asked["threads"], asked["taken_back"]) == ([FIRST_THREAD_ID], False)
+    assert (answered["author"], answered["message_id"], answered["body"]) == ("author", "panel-1", "One failed; fixed.")
+    assert answered["files"] == [REVIEWED_FILE]
+
+
+async def test_a_page_opening_before_anything_was_said_reads_nothing(client: AsyncClient) -> None:
+    assert (await client.get(CONVERSATION_ROUTE)).json() == {"said": []}
+
+
+def test_what_the_agent_says_reaches_a_page_by_the_id_the_review_holds_it_by(review_page: TestClient) -> None:
+    """A page that heard it, then reads the conversation as it opens again, draws it once."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/say", json={"body": "Tests are green again."})
+        pushed = next_push(socket, ChatPush)
+
+    [held] = review_page.get(CONVERSATION_ROUTE).json()["said"]
+
+    assert held["said_id"] == pushed.said_id
+
+
+async def test_what_the_agent_says_is_never_known_by_the_id_of_what_it_said_in_another_review(
+    reviews: ReviewFactory,
+) -> None:
+    """A page's draft outlives the review it was kept from: a review on the same files later must not name its words alike."""
+    said_ids = []
+    for _ in range(2):
+        async with http_client(reviews.app(opening_of([one_line_file()]))) as agent:
+            await agent.post("/api/say", json={"body": "Done."})
+            said_ids.append((await agent.get(CONVERSATION_ROUTE)).json()["said"][0]["said_id"])
+
+    first, second = said_ids
+    assert first != second
+
+
+async def test_a_message_taken_back_is_held_as_taken_back(client: AsyncClient) -> None:
+    """A page opening later says it was stopped, as the page that took it back did."""
+    await client.post("/api/message", json=MESSAGE)
+    await client.post("/api/cancel", json={"message_id": "panel-1"})
+
+    [held] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert held["taken_back"] is True
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:

@@ -6,7 +6,6 @@
 import { DraftKeeper } from '$lib/drafts/draft-keeper.svelte';
 import { type KeptDraft, readDraft, setDraftAside } from '$lib/drafts/draft-storage';
 import { type Opening, type ReaderParts, Review } from '$lib/review/review.svelte';
-import type { DiffResponse, HeldThread, ReviewResponse } from '$lib/types';
 
 /** What a review opens on, whatever draft it opens from. */
 type OpeningWithoutDraft = Omit<Opening, 'draft' | 'draftSetAside'>;
@@ -19,17 +18,13 @@ export interface KeptReview {
 }
 
 /**
- * Open a review on what the server says it is, its first diff, and whatever
- * unsent draft of it this browser kept — or, with none kept, the threads the
- * review holds — and keep its draft from then on.
+ * Open a review on what the server says it is, its first diff, what was said
+ * in its panel, and whatever unsent draft of it this browser kept — or, with
+ * none kept, the threads the review holds — and keep its draft from then on.
  */
-export function openKeptReview(
-	facts: ReviewResponse,
-	firstDiff: DiffResponse,
-	held: HeldThread[],
-	reader: ReaderParts
-): KeptReview {
-	const review = openOnKeptDraft({ facts, firstDiff, held }, readDraft(facts.identity, facts.title), reader);
+export function openKeptReview(opening: OpeningWithoutDraft, reader: ReaderParts): KeptReview {
+	const { identity, title } = opening.facts;
+	const review = openOnKeptDraft(opening, readDraft(identity, title), reader);
 	return { review, stopKeeping: new DraftKeeper(review).start() };
 }
 

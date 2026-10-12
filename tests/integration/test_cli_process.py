@@ -568,9 +568,8 @@ def test_a_panel_message_and_its_answer_travel_between_processes(
         answer = cli.run("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
         assert answer.returncode == 0
 
-        assert next_push(review_socket, ChatPush) == ChatPush(
-            message_id="panel-1", body="One failed; fixed and green.", files=[]
-        )
+        pushed = next_push(review_socket, ChatPush)
+        assert (pushed.message_id, pushed.body, pushed.files) == ("panel-1", "One failed; fixed and green.", [])
 
 
 def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cli: CliProcesses, port: int) -> None:

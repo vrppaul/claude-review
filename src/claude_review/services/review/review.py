@@ -22,9 +22,11 @@ from claude_review.domain.models import (
     CommentSeverity,
     FilePath,
     PanelCancel,
+    PanelEntry,
     PanelMessage,
     ProgressStep,
     RoundSubmission,
+    SaidInPanel,
     Thread,
     ThreadDraft,
     ThreadQuestion,
@@ -115,8 +117,12 @@ class Review:
             standing=self.standing(),
             file_count=len(self._source.content.files),
             threads=self._threads.held,
-            panel=self._conversation.entries,
+            panel=[self._as_an_agent_reads(said) for said in self._conversation.said],
         )
+
+    def conversation_held(self) -> list[SaidInPanel]:
+        """What was said in the panel, oldest first: what a page opening draws, whatever its draft holds."""
+        return self._conversation.said
 
     def answers_to(self, identity: str) -> bool:
         """Whether a page naming this identity reads this review, rather than one that ran on its port before."""
@@ -252,13 +258,16 @@ class Review:
                 images=handed,
             )
         )
-        self._conversation.reader_said(message_id=message_id, body=body, images=handed)
+        self._conversation.reader_said(
+            message_id=message_id, body=body, images=image_ids, threads=[thread.thread_id for thread in threads]
+        )
         log.info("panel_message", message_id=message_id, threads=len(threads), images=len(handed))
 
     def take_back(self, message_id: str) -> None:
         """Take back a message the agent has not answered yet: a request it picks up, not a kill."""
         self._inbox.hand_in(PanelCancel(message_id=message_id))
         self._answerer.end_work_for(message_id)
+        self._conversation.taken_back(message_id)
         log.info("panel_cancelled", message_id=message_id)
 
     def agent_says(self, *, message_id: str | None, body: str, files: list[FilePath]) -> None:
@@ -266,9 +275,9 @@ class Review:
 
         The files are any the agent names, as the work it reports names them.
         """
-        self._page.tell(AgentSaid(message_id=message_id, body=body, files=files))
+        said_id = self._conversation.agent_said(message_id=message_id, body=body, files=files)
+        self._page.tell(AgentSaid(said_id=said_id, message_id=message_id, body=body, files=files))
         self._answerer.end_work_for(message_id)
-        self._conversation.agent_said(message_id=message_id, body=body)
         log.info("panel_answer", message_id=message_id, unprompted=message_id is None)
 
     def answer_thread(self, *, thread_id: str, question_id: str | None, body: str) -> None:
@@ -409,3 +418,14 @@ class Review:
         """A thread as the agent is handed it, which the agent may answer in from now on."""
         self._threads.handed(thread.thread_id)
         return self._handover.thread(thread)
+
+    def _as_an_agent_reads(self, said: SaidInPanel) -> PanelEntry:
+        """Something said in the panel, its screenshots as the files the agent was handed them as when it was sent."""
+        kept = [self._images.find(image_id) for image_id in said.images]
+        return PanelEntry(
+            message_id=said.message_id,
+            author=said.author,
+            body=said.body,
+            at=said.at,
+            images=[stored.path for stored in kept if stored is not None],
+        )

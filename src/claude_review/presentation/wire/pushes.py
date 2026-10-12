@@ -65,6 +65,9 @@ class ChatPush(Push):
     """The agent speaking in the panel: an answer to a message, or nothing answered at all."""
 
     type: Literal[PushKind.CHAT] = PushKind.CHAT
+    # What the review holds the words under, as GET /api/conversation says them:
+    # a page that read them there as it opened takes them in once
+    said_id: str
     message_id: str | None
     body: str
     files: list[FilePath]

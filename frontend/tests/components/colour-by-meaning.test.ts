@@ -15,6 +15,7 @@ import { listeningToThePanel } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
 import { colourDrawn, type Drawn, paint, THEMES } from '../stylesheets';
+import { chatPush } from '../pushes';
 
 // The colour of each meaning, by the token it is written once in: violet is
 // the agent's — what it raised, said or brought the reader to, and what of
@@ -44,7 +45,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 	it('draws the files the agent names, in what it says and in what it works on, in its own colour', async () => {
 		listeningToThePanel();
 		const review = answeredReview();
-		review.conversation.receive(null, 'Both halves are here.', ['src/routes.py']);
+		review.conversation.receive(chatPush('Both halves are here.', { files: ['src/routes.py'] }));
 		review.answerer.showWork(work({ files: ['src/routes.py'] }));
 
 		const { getByTestId } = render(AgentPanel, inReview(review));
@@ -57,7 +58,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 	it('draws a thread the agent mentions in what it says in its own colour', async () => {
 		const review = answeredReview();
 		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }));
-		review.conversation.receive(null, 'See @src/routes.py:2-2', []);
+		review.conversation.receive(chatPush('See @src/routes.py:2-2'));
 
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await tick();

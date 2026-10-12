@@ -3,10 +3,11 @@ import { vi } from 'vitest';
 import { FIRST_RETRY, PageConnection, type PushReceiver } from '$lib/connection/page-connection';
 import type { ServerPush, TellingPosition } from '$lib/types';
 import { latestSocket, REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
+import { chatPush } from './pushes';
 
 // Pushes as the server sends them
 export const A_REPLY: ServerPush = { type: 'reply', thread_id: 'comment-1', question_id: null, body: 'first' };
-export const A_CHAT: ServerPush = { type: 'chat', message_id: null, body: 'second', files: [] };
+export const A_CHAT: ServerPush = chatPush('second');
 
 // Where the page's socket is; the fake socket only keeps it
 export const SESSION_URL = 'ws://review.test/api/session';

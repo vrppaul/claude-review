@@ -9,9 +9,9 @@ import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import { lineAnchor } from '$lib/anchors/line';
-import type { FollowRequest, HeldThread, ServerPush } from '$lib/types';
+import type { FollowRequest, HeldThread, SaidInPanel, ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
-import { NO_WORK, pushedAt } from './pushes';
+import { chatPush, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
 
@@ -52,6 +52,46 @@ const A_RAISED_THREAD: HeldThread = {
 	raised_by: 'author',
 	resolved: false
 };
+
+// How long before or after the test runs something was said in the panel
+const A_MINUTE = 60_000;
+const NOW = Date.now();
+// A message the reader sent from another browser, before this page opened
+const A_MESSAGE_SENT_ELSEWHERE: SaidInPanel = {
+	said_id: 'panel-1',
+	message_id: 'panel-1',
+	author: 'reader',
+	body: 'Run the tests and say what fails.',
+	at: NOW - A_MINUTE,
+	images: ['shot.png'],
+	threads: ['comment-1'],
+	files: [],
+	taken_back: false
+};
+// The agent's answer to it, said before any page was open
+const AN_ANSWER_BEFORE_ANY_PAGE: SaidInPanel = {
+	said_id: 'answer-3f2a',
+	message_id: 'panel-1',
+	author: 'author',
+	body: 'One failed; fixed.',
+	at: NOW - A_MINUTE / 2,
+	images: [],
+	threads: [],
+	files: ['a.py'],
+	taken_back: false
+};
+// What the agent said once the test had begun: after any note a page made of its own
+const AN_ANSWER_LATER: SaidInPanel = {
+	...AN_ANSWER_BEFORE_ANY_PAGE,
+	said_id: 'answer-9c1d',
+	body: 'All green.',
+	at: NOW + A_MINUTE
+};
+
+/** What the panel draws, turn by turn: who said it, and what. */
+function panelOf(page: ReviewPage): string[] {
+	return openedReview(page).conversation.turns.map((turn) => `${turn.author}: ${turn.body}`);
+}
 
 /** A page on the review's socket, let go of once the test is over. */
 function newPage(closeTab: () => void = () => undefined): ReviewPage {
@@ -101,6 +141,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('GET /api/diff', diffResponse());
 	server.answer('GET /api/threads', { threads: [] });
+	server.answer('GET /api/conversation', { said: [] });
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
 	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
 	return server;
@@ -175,7 +216,7 @@ describe('opening the page', () => {
 		await page.open();
 		latestSocket().accept();
 		latestSocket().say(welcome({ resumed: true }));
-		const chat: ServerPush = { type: 'chat', message_id: null, body: 'Done.', files: [] };
+		const chat: ServerPush = chatPush('Done.');
 		latestSocket().deliver(chat, 1);
 
 		latestSocket().deliver(chat, 1);
@@ -220,8 +261,8 @@ describe('opening the page', () => {
 		latestSocket().accept();
 		latestSocket().say(welcome({ sequence: FACTS_READ_AT }));
 		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
-		latestSocket().deliver({ type: 'chat', message_id: null, body: 'first', files: [] }, FACTS_READ_AT + 1);
-		latestSocket().deliver({ type: 'chat', message_id: null, body: 'second', files: [] }, FACTS_READ_AT + 2);
+		latestSocket().deliver(chatPush('first'), FACTS_READ_AT + 1);
+		latestSocket().deliver(chatPush('second'), FACTS_READ_AT + 2);
 		facts.answer(0, reviewResponse({ sequence: FACTS_READ_AT }));
 
 		const review = openedReview(page);
@@ -414,6 +455,81 @@ describe('opening the page', () => {
 		await page.open();
 
 		expect(openedReview(page).threads.all.map((thread) => thread.body)).toEqual(['written in this browser']);
+	});
+
+	it('draws what was said in the panel before it opened, as a browser with no draft of it opens, before any push', async () => {
+		serving().answer('GET /api/conversation', { said: [A_MESSAGE_SENT_ELSEWHERE, AN_ANSWER_BEFORE_ANY_PAGE] });
+		const page = newPage();
+
+		await page.open();
+
+		expect(panelOf(page)).toEqual(['reader: Run the tests and say what fails.', 'author: One failed; fixed.']);
+		expect(openedReview(page).conversation.turns).toMatchObject([
+			{ id: 'panel-1', images: ['shot.png'], threads: ['comment-1'] },
+			{ id: 'answer-3f2a', answers: 'panel-1', files: ['a.py'] }
+		]);
+	});
+
+	it('reads what was said in the panel only once it knows how far the telling had got, so nothing said meanwhile is missed', async () => {
+		const server = serving();
+		const facts = server.hold('GET /api/review');
+		const page = newPage();
+
+		const opening = page.open();
+		await vi.waitFor(() => expect(facts.requests).toHaveLength(1));
+
+		expect(server.requestsTo('GET /api/conversation')).toEqual([]);
+		facts.answer(0, reviewResponse());
+		await opening;
+		expect(server.requestsTo('GET /api/conversation')).toHaveLength(1);
+	});
+
+	it('draws each thing said once on a reload, with what only its draft holds, in the order it all came', async () => {
+		const server = serving();
+		openReview({ said: [A_MESSAGE_SENT_ELSEWHERE, AN_ANSWER_BEFORE_ANY_PAGE] }).conversation.note(
+			'Took the diff again'
+		);
+		leavePage();
+		server.answer('GET /api/conversation', {
+			said: [A_MESSAGE_SENT_ELSEWHERE, AN_ANSWER_BEFORE_ANY_PAGE, AN_ANSWER_LATER]
+		});
+		const page = newPage();
+
+		await page.open();
+
+		expect(panelOf(page)).toEqual([
+			'reader: Run the tests and say what fails.',
+			'author: One failed; fixed.',
+			'event: Took the diff again',
+			'author: All green.'
+		]);
+	});
+
+	it('draws a message as the review holds it rather than as its draft kept it: taken back in another window since', async () => {
+		const server = serving();
+		openReview({ said: [A_MESSAGE_SENT_ELSEWHERE] });
+		leavePage();
+		server.answer('GET /api/conversation', { said: [{ ...A_MESSAGE_SENT_ELSEWHERE, taken_back: true }] });
+		const page = newPage();
+
+		await page.open();
+
+		expect(openedReview(page).conversation.turns).toMatchObject([{ id: 'panel-1', cancelled: true }]);
+	});
+
+	it('takes in once what the agent said as the page opened, held and pushed both, and counts it as nothing new', async () => {
+		serving().answer('GET /api/conversation', { said: [AN_ANSWER_BEFORE_ANY_PAGE] });
+		const page = newPage();
+		await page.open();
+		latestSocket().accept();
+		latestSocket().say(welcome({ resumed: true }));
+
+		const { said_id, message_id, body, files } = AN_ANSWER_BEFORE_ANY_PAGE;
+		latestSocket().deliver({ type: 'chat', said_id, message_id, body, files }, 1);
+
+		expect(panelOf(page)).toEqual(['author: One failed; fixed.']);
+		// Nor is it a new answer for the shut panel to count
+		expect(openedReview(page).layout.agentPanel.unread).toBe(0);
 	});
 
 	it('asks before the tab leaves the review with something unsent in it, and only then', async () => {

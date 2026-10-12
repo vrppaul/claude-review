@@ -180,6 +180,14 @@ export type TurnInput = Schemas['TurnInput-Input'];
 export type HeldThread = Schemas['ThreadInput-Output'];
 /** The threads the review holds. */
 export type ThreadsResponse = Schemas['ThreadsResponse'];
+/**
+ * Something said in the panel, as the review holds it: the reader's message
+ * or the agent's words, under the id every page knows it by — what a page
+ * opening draws, whatever its draft holds.
+ */
+export type SaidInPanel = Schemas['SaidInPanel'];
+/** What was said in the panel, oldest first. */
+export type ConversationResponse = Schemas['ConversationResponse'];
 export type SubmitRequest = Schemas['SubmitRequest'];
 /**
  * A question asked in a thread. The whole thread goes, and the server
@@ -223,6 +231,7 @@ export type Delivery = SocketSchemas['Delivery'];
 export type ServerPush = SocketSchemas['ServerPush'];
 export type PointPush = SocketSchemas['PointPush'];
 export type DiffPush = SocketSchemas['DiffPush'];
+export type ChatPush = SocketSchemas['ChatPush'];
 
 /**
  * How far the review's telling has got, as a page holds it: which run of the
@@ -259,7 +268,9 @@ export type PanelSpeaker = TurnAuthor | 'event';
  *
  * The reader's turns keep the id the message was sent under, so an answer
  * that names it lands under the right one — several can be in flight, and
- * the reader goes on reading while the agent writes.
+ * the reader goes on reading while the agent writes. The agent's keep the id
+ * the review holds its words under, so a page that heard them and reads
+ * them again as it opens draws them once.
  */
 export interface PanelTurn {
 	id: string;

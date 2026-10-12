@@ -129,13 +129,44 @@ class PanelCancel(WireModel):
 
 
 class PanelEntry(WireModel):
-    """One thing said in the panel, kept so a later agent can catch up."""
+    """One thing said in the panel, as an agent catching up reads it: its screenshots as files to open."""
 
     message_id: str | None
     author: TurnAuthor
     body: str
     at: EpochMillis
     images: list[Path]
+
+
+class SaidInPanel(WireModel):
+    """One thing said in the panel, as a page draws it: the reader's message, or the agent's words."""
+
+    # What every page knows it by: a message's own id, or the one the agent's words were pushed under
+    said_id: str
+    # The message it is, or the one the agent answers; None when the agent spoke first
+    message_id: str | None
+    author: TurnAuthor
+    body: str
+    at: EpochMillis
+    # Screenshots pasted with a message, by the ids GET /api/images/{image_id} serves them under
+    images: list[str]
+    # The threads a message points at, by their ids
+    threads: list[str]
+    # Files the agent's words name, a chip each
+    files: list[FilePath]
+    # Whether the reader took the message back before it was answered
+    taken_back: WireBool
+
+
+class ConversationResponse(WireModel):
+    """Response for GET /api/conversation — what was said in the panel, for a page opening to draw.
+
+    Everything the review heard, oldest first: what was said before any page
+    was open, and what a page in another browser saw. Read once, as the page
+    opens; from then on what the agent says is pushed, under the same ids.
+    """
+
+    said: list[SaidInPanel]
 
 
 class RoundSubmission(WireModel):

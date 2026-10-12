@@ -49,7 +49,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case AnswererChanged():
             return AnswererPush(attached=event.attached)
         case AgentSaid():
-            return ChatPush(message_id=event.message_id, body=event.body, files=event.files)
+            return ChatPush(said_id=event.said_id, message_id=event.message_id, body=event.body, files=event.files)
         case WorkReported():
             return ProgressPush(work=AgentWork.of(event.work) if event.work is not None else None)
         case FileShown():

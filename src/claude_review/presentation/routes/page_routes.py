@@ -32,7 +32,15 @@ from claude_review.presentation.version_words import (
     key_of,
     version_on_the_wire,
 )
-from claude_review.presentation.wire.agent import AgentStatus, AgentWork, CancelRequest, ImageResponse, MessageRequest
+from claude_review.presentation.wire.agent import (
+    AgentStatus,
+    AgentWork,
+    CancelRequest,
+    ConversationResponse,
+    ImageResponse,
+    MessageRequest,
+    SaidInPanel,
+)
 from claude_review.presentation.wire.base import MAX_ID_LENGTH, WireId
 from claude_review.presentation.wire.content import (
     SEND_LIMITS,
@@ -96,6 +104,18 @@ async def held_threads(review: Review = Depends(get_review)) -> ThreadsResponse:
     holds once it is open.
     """
     return ThreadsResponse(threads=[ThreadInput.of(held) for held in review.threads_held()])
+
+
+@router.get("/conversation")
+async def held_conversation(review: Review = Depends(get_review)) -> ConversationResponse:
+    """Say what was said in the panel, for a page to draw as it opens.
+
+    What the agent said before any page was open is pushed to nobody, and a
+    page in another browser, or a private window, has no draft of what this
+    one saw. Every part comes under the id a page that heard it holds it by,
+    so a page with a draft draws each part once. Read-only, like the threads.
+    """
+    return ConversationResponse(said=[SaidInPanel.of(said) for said in review.conversation_held()])
 
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))

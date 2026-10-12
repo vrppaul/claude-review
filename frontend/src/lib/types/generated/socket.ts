@@ -136,6 +136,8 @@ export interface components {
              * @enum {string}
              */
             type: "chat";
+            /** Said Id */
+            said_id: string;
             /** Message Id */
             message_id: string | null;
             /** Body */

@@ -21,8 +21,10 @@ from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
+    CONVERSATION_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
+    IMAGES_ROUTE,
     PNG,
     REVIEW_ROUTE,
     REVIEWED_FILE,
@@ -213,6 +215,17 @@ async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClie
 
     [entry] = context["panel"]
     assert Path(entry["images"][0]).name == image_id
+
+
+async def test_a_page_opening_draws_an_image_said_in_the_panel_by_the_id_it_is_kept_under(client: AsyncClient) -> None:
+    """The page asks the review for it by that id, as it drew it the moment it was sent."""
+    image_id = await _upload(client, PNG)
+    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
+
+    [said] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert said["images"] == [image_id]
+    assert (await client.get(f"{IMAGES_ROUTE}/{image_id}")).status_code == HTTPStatus.OK
 
 
 async def test_an_image_taken_off_before_sending_is_removed(client: AsyncClient, workspace: ReviewWorkspace) -> None:

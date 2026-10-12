@@ -35,13 +35,17 @@ import type {
 	HeldThread,
 	ReviewMode,
 	ReviewResponse,
+	SaidInPanel,
 	SendLimits,
 	SessionHello
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
 
-/** What a review opens on: what the server says it is, its first diff, any unsent draft, and the threads it holds. */
+/**
+ * What a review opens on: what the server says it is, its first diff, any
+ * unsent draft, and the threads and the panel's conversation it holds.
+ */
 export interface Opening {
 	facts: ReviewResponse;
 	firstDiff: DiffResponse;
@@ -50,6 +54,8 @@ export interface Opening {
 	draftSetAside: boolean;
 	/** What the review holds of its threads: taken in only with no draft to open from. */
 	held: HeldThread[];
+	/** What the review holds as said in the panel: drawn whatever the draft holds, which adds what it does not. */
+	said: SaidInPanel[];
 }
 
 /** Whoever carries what the page holds to the server. */
@@ -119,7 +125,7 @@ export class Review {
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
 
-	constructor({ facts, firstDiff, draft, draftSetAside, held }: Opening, reader: ReaderParts) {
+	constructor({ facts, firstDiff, draft, draftSetAside, held, said }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
 		this.identity = facts.identity;
 		this.mode = facts.mode;
@@ -143,7 +149,7 @@ export class Review {
 		// otherwise say it holds no threads, and the review would forget them
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
-		this.conversation = new Conversation(kept.panel, kept.composer, () => this.threads.all);
+		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same

@@ -13,11 +13,54 @@
 import { threadsIn } from '$lib/anchors/mentions';
 import { cancelMessage, sendMessage } from '$lib/api/review-api';
 import { PanelComposer } from '$lib/review/panel-composer.svelte';
-import type { Composer, Thread, PanelTurn } from '$lib/types';
-import { ANSWER_ID_PREFIX, EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
+import type { ChatPush, Composer, Thread, PanelTurn, SaidInPanel } from '$lib/types';
+import { EVENT_ID_PREFIX, IdSequence, MESSAGE_ID_PREFIX } from '$lib/utils/ids';
 import { threadOnTheWire } from '$lib/api/thread-wire';
 import { messageOf } from '$lib/utils/errors';
 import { AGENT, READER, THE_REVIEW } from '$lib/utils/speakers';
+
+/** What the agent said, as it is pushed and as the review holds it: under its id, answering a message or not. */
+type AgentWords = Pick<ChatPush, 'said_id' | 'message_id' | 'body' | 'files'>;
+
+/** The agent's words as a turn: under what they answer, with their files and the threads they mention by token. */
+function agentTurn(words: AgentWords, at: number, threads: Thread[]): PanelTurn {
+	return {
+		id: words.said_id,
+		author: AGENT,
+		body: words.body,
+		at,
+		...(words.message_id === null ? {} : { answers: words.message_id }),
+		files: words.files,
+		// The threads its words mention by their tokens, as a message of the reader's points at them
+		threads: threadsIn(words.body, threads).map((thread) => thread.id)
+	};
+}
+
+/** Something the review holds as said, as the turn the page drew when it was said. */
+function turnOfHeld(said: SaidInPanel, threads: Thread[]): PanelTurn {
+	if (said.author === AGENT) return agentTurn(said, said.at, threads);
+	return {
+		id: said.said_id,
+		author: READER,
+		body: said.body,
+		at: said.at,
+		threads: said.threads,
+		images: said.images,
+		...(said.taken_back ? { cancelled: true } : {})
+	};
+}
+
+/**
+ * What the panel opens on. What the review holds is drawn as it holds it —
+ * it heard every part, from every window — and the draft adds only what the
+ * review does not hold: the review's own notes, and what was said before it
+ * last started. All of it in the order it came.
+ */
+function openingTurns(held: PanelTurn[], kept: PanelTurn[]): PanelTurn[] {
+	const heldIds = new Set(held.map((turn) => turn.id));
+	const keptOnly = kept.filter((turn) => !heldIds.has(turn.id));
+	return [...held, ...keptOnly].sort((earlier, later) => earlier.at - later.at);
+}
 
 /**
  * The message the agent is still working on.
@@ -36,7 +79,6 @@ export class Conversation {
 	readonly composer: PanelComposer;
 	#turns: PanelTurn[];
 	readonly #messageIds = new IdSequence(MESSAGE_ID_PREFIX);
-	readonly #answerIds = new IdSequence(ANSWER_ID_PREFIX);
 	readonly #eventIds = new IdSequence(EVENT_ID_PREFIX);
 	readonly #working: PanelTurn | undefined;
 	// A message on its way: nothing more is sent until it is answered
@@ -47,20 +89,25 @@ export class Conversation {
 	readonly #threads: () => Thread[];
 
 	/**
-	 * @param said what was said here in an unsent review of the same thing
+	 * @param kept what was said here in an unsent review of the same thing
+	 * @param held what the review holds as said, from whatever window
 	 * @param composer the message being written there
 	 * @param threads the review's threads as they stand
 	 */
-	constructor(said: PanelTurn[], composer: Composer, threads: () => Thread[]) {
+	constructor(kept: PanelTurn[], held: SaidInPanel[], composer: Composer, threads: () => Thread[]) {
 		this.composer = new PanelComposer(composer);
 		this.#threads = threads;
+		const threadsHeld = threads();
+		const said = openingTurns(
+			held.map((entry) => turnOfHeld(entry, threadsHeld)),
+			kept
+		);
 		this.#turns = $state.raw(said);
 		this.#working = $derived(workingOn(this.#turns));
-		// Past the highest id already handed out, so an answer cannot land under
-		// a message that only shares its number
+		// Past the highest id already handed out, here or in another window, so
+		// an answer cannot land under a message that only shares its number
 		const saidIds = said.map((turn) => turn.id);
 		this.#messageIds.continuePast(saidIds);
-		this.#answerIds.continuePast(saidIds);
 		this.#eventIds.continuePast(saidIds);
 	}
 
@@ -129,18 +176,15 @@ export class Conversation {
 		return true;
 	}
 
-	/** Take what the agent said and put it under what it answers, if anything. */
-	receive(messageId: string | null, text: string, files: string[]): void {
-		this.#say({
-			id: this.#answerIds.next(),
-			author: AGENT,
-			body: text,
-			at: Date.now(),
-			...(messageId === null ? {} : { answers: messageId }),
-			files,
-			// The threads its words mention by their tokens, as a message of the reader's points at them
-			threads: threadsIn(text, this.#threads()).map((thread) => thread.id)
-		});
+	/**
+	 * Take what the agent said and put it under what it answers, if anything;
+	 * whether it was new. Words the page read from the review as it opened are
+	 * in the panel already, and their push says them again.
+	 */
+	receive(words: AgentWords): boolean {
+		if (this.#turns.some((turn) => turn.id === words.said_id)) return false;
+		this.#say(agentTurn(words, Date.now(), this.#threads()));
+		return true;
 	}
 
 	/**
