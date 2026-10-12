@@ -26,6 +26,7 @@ export function openKeptReview(
 	held: HeldThread[],
 	reader: ReaderParts
 ): KeptReview {
-	const review = new Review({ facts, firstDiff, draft: readDraft(facts.identity, facts.title), held }, reader);
+	const kept = readDraft(facts.identity, facts.title);
+	const review = new Review({ facts, firstDiff, draft: kept.draft, draftSetAside: kept.setAside, held }, reader);
 	return { review, stopKeeping: new DraftKeeper(review).start() };
 }

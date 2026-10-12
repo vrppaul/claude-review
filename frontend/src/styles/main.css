@@ -831,13 +831,18 @@
 .cr-notice {
 	color: var(--color-base-content);
 }
-/* The code moving on under the reader, and a part of the page that could not be drawn: warnings both */
+/*
+ * The code moving on under the reader, a part of the page that could not be
+ * drawn, and a kept draft that could not be read: warnings all
+ */
 .cr-notice-moved,
-.cr-notice-broken {
+.cr-notice-broken,
+.cr-notice-set-aside {
 	background: var(--cr-warning-tint);
 }
 .cr-notice-moved svg,
-.cr-notice-broken svg {
+.cr-notice-broken svg,
+.cr-notice-set-aside svg {
 	color: var(--color-warning);
 }
 .cr-notice-taken {

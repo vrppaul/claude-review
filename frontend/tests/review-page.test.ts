@@ -325,7 +325,9 @@ describe('opening the page', () => {
 
 		expect(openedReview(page).link.ending).toBe('stopped');
 		expect(socketsOpenedAfterLongWait()).toBe(0);
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads.map((thread) => thread.body)).toEqual(['not sent yet']);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft?.threads.map((thread) => thread.body)).toEqual([
+			'not sent yet'
+		]);
 		expect(closeTab).not.toHaveBeenCalled();
 	});
 
@@ -339,7 +341,7 @@ describe('opening the page', () => {
 
 		expect(openedReview(page).link.ending).toBe('finished');
 		expect(socketsOpenedAfterLongWait()).toBe(0);
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft).toBeNull();
 		expect(closeTab).not.toHaveBeenCalled();
 	});
 
@@ -358,7 +360,7 @@ describe('opening the page', () => {
 
 		expect(elsewhere.said).toEqual([]);
 		expect(openedReview(page).link.ending).toBe('replaced');
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads).toHaveLength(1);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft?.threads).toHaveLength(1);
 	});
 
 	it('takes the threads the review holds as its own when this browser kept no draft of it', async () => {

@@ -15,6 +15,19 @@ import { storageKey } from '$lib/utils/preferences';
 // Where releases up to 1.5 kept the one draft of every review on a port,
 // telling them apart by title
 const RELEASED_DRAFT_KEY = storageKey('draft');
+// What a kept draft that cannot be read is set aside under, beside the key
+// it was kept under, numbered from the first: kept as it was, for a release
+// that reads it, and never written over by a later one
+const SET_ASIDE = ':unreadable:';
+const FIRST_SET_ASIDE = 1;
+
+/** What the browser kept of a review's draft: the draft, if one could be read, and whether one that could not was set aside. */
+export interface KeptDraft {
+	draft: Draft | null;
+	setAside: boolean;
+}
+
+const NOTHING_KEPT: KeptDraft = { draft: null, setAside: false };
 
 /** Where the draft of the review of this identity is kept. */
 function draftKeyOf(identity: string): string {
@@ -53,23 +66,61 @@ function pickUpReleased(identity: string, title: string): Draft | null {
 	return draft;
 }
 
+/** The first place beside a key that nothing set aside from it holds yet. */
+function setAsideKeyOf(key: string): string {
+	let number = FIRST_SET_ASIDE;
+	while (localStorage.getItem(`${key}${SET_ASIDE}${String(number)}`) !== null) number += 1;
+	return `${key}${SET_ASIDE}${String(number)}`;
+}
+
 /**
- * The draft of the review of this identity, in the current shape; null when
- * there is none. A draft an older release kept under the review's title is
- * picked up by the first review of that title to open.
+ * Put what was kept under a key aside, as it was, under a key of its own
+ * beside it; say whether it could be. Taken from where it was, it neither
+ * stops the next page from opening nor is written over by the next save.
  */
-export function readDraft(identity: string, title: string): Draft | null {
+function setAside(key: string): boolean {
 	try {
-		const kept = keptUnder(draftKeyOf(identity));
-		if (isCurrentDraft(kept)) return kept;
-		return pickUpReleased(identity, title);
+		const kept = localStorage.getItem(key);
+		if (kept === null) return false;
+		localStorage.setItem(setAsideKeyOf(key), kept);
+		localStorage.removeItem(key);
+		return true;
 	} catch (error) {
-		// Not JSON, or storage refused: nothing to pick up. Anything else is a
-		// fault in bringing a draft up to date, and passing it off as no draft
-		// would open the review without it for good; said, the draft stays
-		// where it was kept for a release that reads it.
-		if (error instanceof SyntaxError || isStorageRefused(error)) return null;
-		throw error;
+		// Refused, it stays where it was
+		if (!isStorageRefused(error)) throw error;
+		return false;
+	}
+}
+
+/**
+ * What a draft that could not be read leaves: nothing, when it was not JSON
+ * or storage was refused. Anything else is a fault in reading or bringing
+ * up to date what was kept: told whole to the console, and the draft set
+ * aside, so the review opens without it rather than not at all.
+ */
+function unreadable(key: string, error: unknown): KeptDraft {
+	if (error instanceof SyntaxError || isStorageRefused(error)) return NOTHING_KEPT;
+	console.error('claude-review: a kept draft could not be read, and is set aside', error);
+	return { draft: null, setAside: setAside(key) };
+}
+
+/**
+ * The draft of the review of this identity, in the current shape, if one
+ * was kept and can be read. A draft an older release kept under the
+ * review's title is picked up by the first review of that title to open.
+ */
+export function readDraft(identity: string, title: string): KeptDraft {
+	const ownKey = draftKeyOf(identity);
+	try {
+		const kept = keptUnder(ownKey);
+		if (isCurrentDraft(kept)) return { draft: kept, setAside: false };
+	} catch (error) {
+		return unreadable(ownKey, error);
+	}
+	try {
+		return { draft: pickUpReleased(identity, title), setAside: false };
+	} catch (error) {
+		return unreadable(RELEASED_DRAFT_KEY, error);
 	}
 }
 

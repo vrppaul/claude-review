@@ -114,7 +114,7 @@ describe('an unsent review', () => {
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 		flushSync();
 		window.dispatchEvent(new Event('pagehide'));
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.threads).toHaveLength(1);
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft?.threads).toHaveLength(1);
 
 		await review.submission.submit(true);
 
@@ -193,13 +193,13 @@ describe('an unsent review', () => {
 			throw siteDataBlocked();
 		});
 
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft).toBeNull();
 	});
 
 	it('ignores a draft that is not what it should be', () => {
 		localStorage.setItem(DRAFT_KEY, 'not json at all');
 
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft).toBeNull();
 	});
 
 	it('is forgotten when asked', () => {
@@ -207,6 +207,6 @@ describe('an unsent review', () => {
 
 		forgetDraft(REVIEW_IDENTITY);
 
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toBeNull();
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft).toBeNull();
 	});
 });

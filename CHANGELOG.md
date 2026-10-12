@@ -158,8 +158,8 @@
   so a second review on the same port no longer overwrites the first's
   unsent work, and a reload no longer un-ticks every file. The draft 1.5.0
   kept is picked up once, by the first review of its title. A draft that
-  cannot be brought up to date stops the page with words rather than
-  opening it empty, and stays where it was kept.
+  cannot be brought up to date is set aside as it was kept, never written
+  over, and the review opens without it, saying so under the header.
 - **Ending a review sends what was not sent yet as the final review**, and
   a comment still open in its field goes with any round or review, listed
   in the finishing pane. A round marks sent only what it carried, and a

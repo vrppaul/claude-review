@@ -45,6 +45,8 @@ export interface Opening {
 	facts: ReviewResponse;
 	firstDiff: DiffResponse;
 	draft: Draft | null;
+	/** Whether a draft this browser kept could not be read, and was set aside rather than opened from. */
+	draftSetAside: boolean;
 	/** What the review holds of its threads: taken in only with no draft to open from. */
 	held: HeldThread[];
 }
@@ -97,6 +99,9 @@ export class Review {
 	// How many threads came back from the draft, so the reader is told rather
 	// than left to wonder where they came from; zero once they have seen it
 	#restoredCount: number;
+	// Whether a kept draft could not be read and was set aside, so the reader
+	// is told why their unsent work is not here; false once they have seen it
+	#draftSetAside: boolean;
 	// What handing the diff on screen over costs, in characters: counted once
 	// a diff, not again whenever a thread changes
 	readonly #diffCharacters: number;
@@ -110,7 +115,7 @@ export class Review {
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
 
-	constructor({ facts, firstDiff, draft, held }: Opening, reader: ReaderParts) {
+	constructor({ facts, firstDiff, draft, draftSetAside, held }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
 		this.identity = facts.identity;
 		this.mode = facts.mode;
@@ -138,6 +143,7 @@ export class Review {
 		this.navigator = new Navigator(this.threads, this.reading, this.sections, this.diff);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
+		this.#draftSetAside = $state(draftSetAside);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
 		this.#weight = $derived(tokensOf(this.#diffCharacters + threadCharacters(this.threads.all)));
 		this.#hello = $derived({
@@ -182,6 +188,14 @@ export class Review {
 
 	dismissRestored(): void {
 		this.#restoredCount = 0;
+	}
+
+	get draftSetAside(): boolean {
+		return this.#draftSetAside;
+	}
+
+	dismissSetAside(): void {
+		this.#draftSetAside = false;
 	}
 
 	/** What handing this review over costs, in tokens, as far as this side can tell. */

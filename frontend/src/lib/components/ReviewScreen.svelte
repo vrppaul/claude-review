@@ -72,6 +72,26 @@
 			</button>
 		</div>
 	{/if}
+	{#if review.draftSetAside}
+		<!-- With the other news about the review: why unsent work it may have
+			left here is not on screen, and that it is kept rather than lost -->
+		<div
+			data-testid="draft-set-aside"
+			class="cr-notice cr-notice-set-aside flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
+		>
+			<Icon name="notice" class="h-3 w-3 shrink-0" />
+			<span>A kept draft could not be read; it is set aside.</span>
+			<div class="flex-1"></div>
+			<button
+				type="button"
+				data-testid="dismiss-set-aside"
+				class="btn btn-ghost btn-xs"
+				onclick={() => review.dismissSetAside()}
+			>
+				Dismiss
+			</button>
+		</div>
+	{/if}
 	<DiffNotice />
 	<div class="cr-columns">
 		{#if review.layout.fileTree.open}

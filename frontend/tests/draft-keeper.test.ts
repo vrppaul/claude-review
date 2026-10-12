@@ -41,7 +41,7 @@ describe('keeping the draft', () => {
 		vi.advanceTimersByTime(AFTER_A_PAUSE);
 
 		expect(draftWrites(written)).toBe(1);
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.reviewBody).toBe('Overall');
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft?.reviewBody).toBe('Overall');
 	});
 
 	it("waits out a sentence typed at a typist's pace, and keeps it once the typing stops", () => {
@@ -65,7 +65,7 @@ describe('keeping the draft', () => {
 
 		window.dispatchEvent(new Event('pagehide'));
 
-		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)?.reviewBody).toBe('Overall fine');
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft?.reviewBody).toBe('Overall fine');
 	});
 
 	it('brings no draft back as the page goes with nothing waiting to be kept', () => {

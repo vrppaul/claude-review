@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fastCheck from 'fast-check';
-import { DRAFT_SHAPE, isCurrentDraft, isReleasedDraft, type Draft } from '$lib/drafts/draft-shapes';
-import { keepDraft, readDraft } from '$lib/drafts/draft-storage';
+import { DRAFT_SHAPE, emptyDraft, isCurrentDraft, isReleasedDraft, type Draft } from '$lib/drafts/draft-shapes';
+import { forgetDraft, keepDraft, readDraft } from '$lib/drafts/draft-storage';
 import { lineAnchor } from '$lib/anchors/line';
 import type { AwaitedQuestion, Thread } from '$lib/types';
 import { REVIEW_TITLE } from './diff';
@@ -50,7 +50,7 @@ function keptByAnOlderRelease(draft: object) {
 
 /** The draft of the review a test opens, as the page would read it now. */
 function readKept(): Draft | null {
-	return readDraft(REVIEW_IDENTITY, REVIEW_TITLE);
+	return readDraft(REVIEW_IDENTITY, REVIEW_TITLE).draft;
 }
 
 /** A thread as an older release kept it, before it hung on an anchor. */
@@ -327,7 +327,7 @@ describe('the draft an older release kept, the one of its port', () => {
 		keptByAnOlderRelease({ comments: [flatThread({ body: 'written before reviews named themselves' })] });
 
 		const picked = readKept();
-		const again = readDraft('another-review-of-the-same-title', REVIEW_TITLE);
+		const again = readDraft('another-review-of-the-same-title', REVIEW_TITLE).draft;
 
 		expect(picked?.threads.map((thread) => thread.body)).toEqual(['written before reviews named themselves']);
 		expect(again).toBeNull();
@@ -342,18 +342,59 @@ describe('the draft an older release kept, the one of its port', () => {
 		expect(readKept()?.threads).toHaveLength(1);
 	});
 
-	it('is not passed off as no draft when it cannot be brought up to date, and stays where it was kept', () => {
-		keptByAnOlderRelease({ comments: [null] });
-
-		expect(() => readKept()).toThrow(TypeError);
-		expect(localStorage.getItem(RELEASED_DRAFT_KEY)).not.toBeNull();
-	});
-
 	it('is left for its own review by a review of another title', () => {
 		keptByAnOlderRelease({ title: ANOTHER_TITLE, comments: [flatThread()] });
 
 		expect(readKept()).toBeNull();
-		expect(readDraft('the-other-review', ANOTHER_TITLE)?.threads).toHaveLength(1);
+		expect(readDraft('the-other-review', ANOTHER_TITLE).draft?.threads).toHaveLength(1);
+	});
+});
+
+/** What was set aside from a key, oldest first, as it was kept. */
+function setAsideFrom(key: string): (string | null)[] {
+	const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index) ?? '');
+	return keys
+		.filter((kept) => kept.startsWith(`${key}:unreadable:`))
+		.sort()
+		.map((kept) => localStorage.getItem(kept));
+}
+
+describe('a kept draft that cannot be brought up to date', () => {
+	it('is set aside as it was kept and told to the console, and the review opens without it', () => {
+		keptByAnOlderRelease({ comments: [null] });
+		const asItWasKept = localStorage.getItem(RELEASED_DRAFT_KEY);
+		const told = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		const kept = readDraft(REVIEW_IDENTITY, REVIEW_TITLE);
+
+		expect(kept).toEqual({ draft: null, setAside: true });
+		expect(localStorage.getItem(RELEASED_DRAFT_KEY)).toBeNull();
+		expect(setAsideFrom(RELEASED_DRAFT_KEY)).toEqual([asItWasKept]);
+		expect(told).toHaveBeenCalledWith(expect.any(String), expect.any(TypeError));
+	});
+
+	it('locks nobody out: the next page opens with no draft and nothing more to say', () => {
+		keptByAnOlderRelease({ comments: [null] });
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		readKept();
+
+		expect(readDraft(REVIEW_IDENTITY, REVIEW_TITLE)).toEqual({ draft: null, setAside: false });
+	});
+
+	it('is never written over, by the draft kept after it or by another set aside later', () => {
+		keptByAnOlderRelease({ comments: [null] });
+		const first = localStorage.getItem(RELEASED_DRAFT_KEY);
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		readKept();
+		keepDraft(REVIEW_IDENTITY, emptyDraft(1));
+		expect(setAsideFrom(RELEASED_DRAFT_KEY)).toEqual([first]);
+
+		forgetDraft(REVIEW_IDENTITY);
+		keptByAnOlderRelease({ comments: [null], reviewBody: 'written later' });
+		const second = localStorage.getItem(RELEASED_DRAFT_KEY);
+		readKept();
+
+		expect(setAsideFrom(RELEASED_DRAFT_KEY)).toEqual([first, second]);
 	});
 });
 

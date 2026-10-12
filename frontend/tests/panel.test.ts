@@ -157,7 +157,7 @@ describe('the panel talks to the agent about the review', () => {
 		await say('and a message');
 		leavePage();
 
-		const kept = readDraft(REVIEW_IDENTITY, TITLE);
+		const kept = readDraft(REVIEW_IDENTITY, TITLE).draft;
 		expect(kept?.threads).toHaveLength(1);
 		expect(kept?.panel).toHaveLength(1);
 	});

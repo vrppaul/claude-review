@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { contextLine, diffFile, diffResponse, hunk } from '../diff';
+import { REVIEW_TITLE, contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
+import { storeReleasedDraft } from '../stored-draft';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x = 1')])] })];
 
@@ -22,6 +23,24 @@ describe('comments picked up from before a reload', () => {
 		await user.click(getByTestId('dismiss-restored'));
 
 		expect(queryByTestId('restored-notice')).toBeNull();
+	});
+});
+
+describe('a kept draft that could not be read', () => {
+	it('is said to be set aside, once, and the review opens without it', async () => {
+		const user = userEvent.setup();
+		storeReleasedDraft({ title: REVIEW_TITLE, reviewBody: '', comments: [null] });
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const review = openReview({ files });
+
+		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review } });
+
+		expect(review.threads.all).toEqual([]);
+		expect(getByTestId('draft-set-aside').textContent).toContain('A kept draft could not be read; it is set aside.');
+
+		await user.click(getByTestId('dismiss-set-aside'));
+
+		expect(queryByTestId('draft-set-aside')).toBeNull();
 	});
 });
 
