@@ -11,25 +11,25 @@ import type { Numbering } from '$lib/anchors/numbering';
 import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
-import type { DiffFile, DiffResponse, ReviewVersion, ShownBase } from '$lib/types';
+import type { DiffFile, DiffResponse, ReviewVersion } from '$lib/types';
 
 export class ReviewDiff {
 	/** Files changed on disk since this diff was taken. */
 	readonly treeMoved = new TreeMoved();
 
 	readonly #whitespaceIgnored: () => boolean;
+	// The diff on screen, as it arrived: its files, and which base it was
+	// taken against as the server named it — its key, what the header says,
+	// and whether it is narrower than the review's own. The base comes with
+	// the diff rather than out of the version list, so the header can speak
+	// before it knows everything the diff could be compared against; it is
+	// null in a review compared against nothing.
+	#onScreen: DiffResponse;
 	// Lines revealed above the hunks of the diff on screen; every diff starts with none
 	#revealed = $state.raw(new RevealedContext());
-	#files = $state.raw<DiffFile[]>([]);
 	// The files of the review's own diff, as it was last taken: a narrower
 	// base shows fewer of them, and the review holds them all the same
 	#ownFiles = $state.raw<DiffFile[]>([]);
-	// Which base the diff on screen was taken against, as the server named it:
-	// its key, what the header says, and whether it is narrower than the
-	// review's own. It comes with the diff rather than out of the version list,
-	// so the header can speak before it knows everything the diff could be
-	// compared against. Null in a review compared against nothing.
-	#shown = $state.raw<ShownBase | null>(null);
 	// Which base the reader last asked for, null for the review's own. Set the
 	// moment they ask, so a diff taken again while theirs is on its way — a
 	// round landing — is taken against what they picked, not against what is
@@ -47,11 +47,12 @@ export class ReviewDiff {
 	 */
 	constructor(first: DiffResponse, whitespaceIgnored: () => boolean) {
 		this.#whitespaceIgnored = whitespaceIgnored;
-		this.#show(first);
+		this.#onScreen = $state.raw(first);
+		this.#noteWhatCameWithIt();
 	}
 
 	get files(): DiffFile[] {
-		return this.#files;
+		return this.#onScreen.files;
 	}
 
 	/** Whether the review's own diff holds a file, whatever base is on screen. */
@@ -66,12 +67,12 @@ export class ReviewDiff {
 
 	/** Which base the diff on screen was taken against, by its key. */
 	get base(): string | null {
-		return this.#shown?.key ?? null;
+		return this.#onScreen.base?.key ?? null;
 	}
 
 	/** What the header says the diff on screen is. */
 	get phrase(): string {
-		return this.#shown?.phrase ?? '';
+		return this.#onScreen.base?.phrase ?? '';
 	}
 
 	/** Everything the diff could be taken against, once asked for. */
@@ -86,7 +87,7 @@ export class ReviewDiff {
 	 * anchored to the review's own diff, and only that one draws them all.
 	 */
 	get narrowed(): boolean {
-		return this.#shown?.narrowed ?? false;
+		return this.#onScreen.base?.narrowed ?? false;
 	}
 
 	/** Whose numbers the lines of the diff on screen carry: the review's own, unless a narrower base is in force. */
@@ -131,7 +132,7 @@ export class ReviewDiff {
 
 	/** Put the review's own diff back, with every thread it holds: the one the server shows when asked for no other. */
 	async showWholeReview(): Promise<void> {
-		if (this.#shown === null) return;
+		if (this.#onScreen.base === null) return;
 		await this.setBase(null);
 	}
 
@@ -153,13 +154,21 @@ export class ReviewDiff {
 
 	/** Put a diff that has arrived on screen, with everything that came with it. */
 	#show(data: DiffResponse): void {
+		this.#onScreen = data;
+		this.#noteWhatCameWithIt();
+	}
+
+	/**
+	 * Take in what the diff now on screen brings beside itself: nothing read
+	 * in around its hunks yet, the review's own files where it is of the
+	 * review's own base, and how far the tree has moved since it was taken.
+	 */
+	#noteWhatCameWithIt(): void {
 		this.#revealed = new RevealedContext();
-		this.#files = data.files;
-		if (!(data.base?.narrowed ?? false)) this.#ownFiles = data.files;
-		this.#shown = data.base;
+		if (!this.narrowed) this.#ownFiles = this.files;
 		// Said with the diff as well as pushed: a review reloaded while the tree
 		// was moving heard the push and lost it, and one opened later never
 		// heard it at all
-		this.treeMoved.note(data.moved);
+		this.treeMoved.note(this.#onScreen.moved);
 	}
 }
