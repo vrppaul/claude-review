@@ -98,7 +98,17 @@ repos:
         name: bandit (security linter)
         args: [-c, pyproject.toml]
         additional_dependencies: ['bandit[toml]']
-        exclude: ^tests/
+        exclude: ^(tests/|hatch_build\.py$)
+      # The build hook starts pnpm, which is what it is for: bandit says so of
+      # importing subprocess (B404) and of a process started from a list of
+      # arguments (B603), and cannot tell a list written out in the code from
+      # one a caller handed in. Skipped there alone; a shell, which can be
+      # handed words to run, is still refused there (B602, B605)
+      - id: bandit
+        name: bandit (the build hook, which starts pnpm)
+        args: [-c, pyproject.toml, --skip, 'B404,B603']
+        additional_dependencies: ['bandit[toml]']
+        files: ^hatch_build\.py$
 
   # Validate pyproject.toml
   - repo: https://github.com/abravalheri/validate-pyproject
