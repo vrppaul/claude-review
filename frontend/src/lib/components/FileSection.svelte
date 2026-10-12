@@ -9,6 +9,7 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody from './FileBody.svelte';
+	import FilePath from './FilePath.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
@@ -98,11 +99,7 @@
 
 		<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
 		<h2 data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
-			{#if file.old_path}
-				<!-- Moved: where it was, quieter than where it is -->
-				<span class="cr-muted font-normal">{file.old_path} →</span>
-			{/if}
-			{file.path}
+			<FilePath {file} />
 		</h2>
 		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 			<button

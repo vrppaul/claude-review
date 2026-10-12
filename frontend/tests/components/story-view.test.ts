@@ -488,6 +488,23 @@ describe('a story the code has moved on from', () => {
 	});
 });
 
+describe('a piece of a file that was moved', () => {
+	it('says where the file was, as the files do', () => {
+		const moved = diffFile({
+			path: 'new_name.py',
+			old_path: 'old_name.py',
+			status: 'renamed',
+			hunks: [hunk([addedLine(1, 'one')], { header: '', old_start: 1, new_start: 1 })]
+		});
+		const told = storyHeld({ chapters: [toldChapter('ch-1', [{ ...toldStep('new_name.py', 1), piece: moved }])] });
+		review = openReview({ files, story: told });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('story-piece-header').textContent).toContain('old_name.py → new_name.py');
+	});
+});
+
 describe('what a piece of a story leaves out between its hunks', () => {
 	// A step that runs over two changes of a.py, lines 1 and 9, and what no step tells of b.py: two runs
 	// of it, lines 1 and 6, around lines some other step tells

@@ -7,6 +7,7 @@
 	import { languageOf } from '$lib/utils/highlight';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileBody from './FileBody.svelte';
+	import FilePath from './FilePath.svelte';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import { STATUS_LETTERS } from './status-letters';
 
@@ -58,7 +59,7 @@
 		class="cr-file-header flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-300 bg-base-200 px-3 py-2"
 	>
 		<span class={['w-3 shrink-0 text-center font-mono text-xs font-semibold', status.colour]}>{status.letter}</span>
-		<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere">{piece.path}</h3>
+		<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere"><FilePath file={piece} /></h3>
 		{@render beside()}
 		<div class="flex-1"></div>
 		<ChangedLines file={piece} />
