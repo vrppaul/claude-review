@@ -10,10 +10,8 @@ from http import HTTPStatus
 
 from starlette.responses import Response
 
+from claude_review.presentation.wire.base import JSON_MEDIA_TYPE
 from claude_review.presentation.wire.refusal import Refusal
-
-# What a refusal is written in
-JSON_MEDIA_TYPE = "application/json"
 
 
 def answered(refusal: Refusal, status: HTTPStatus) -> Response:

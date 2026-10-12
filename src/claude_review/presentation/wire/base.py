@@ -13,6 +13,9 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
 from claude_review.domain.models import says_nothing
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
 
+# What a model crosses the wire written in, whichever way it goes: a request's body, an answer, a refusal
+JSON_MEDIA_TYPE = "application/json"
+
 
 class WireModel(BaseModel):
     """A model that crosses the wire: written out, it carries every field.

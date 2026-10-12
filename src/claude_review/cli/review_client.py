@@ -27,6 +27,7 @@ from claude_review.presentation.wire.agent import (
     ShowRequest,
     StatusRequest,
 )
+from claude_review.presentation.wire.base import JSON_MEDIA_TYPE
 from claude_review.presentation.wire.content import RetakeResponse
 from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
 from claude_review.presentation.wire.story import StoryRequest, StoryTakenResponse
@@ -44,7 +45,7 @@ WAIT_MARGIN_SECONDS = 10.0
 # text, http.client writes it in Latin-1, which has no Cyrillic, no dash, no
 # emoji: the body goes as bytes.
 BODY_ENCODING = "utf-8"
-JSON_HEADERS = {"Content-Type": "application/json"}
+JSON_HEADERS = {"Content-Type": JSON_MEDIA_TYPE}
 
 EVENTS_ROUTE = "/api/events"
 CATCH_UP_ROUTE = "/api/catch-up"
