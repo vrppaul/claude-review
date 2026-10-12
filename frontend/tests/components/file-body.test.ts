@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileBody from '$lib/components/FileBody.svelte';
+import { A_PIECE } from '$lib/components/file-drawing.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -21,18 +22,11 @@ const file = diffFile({
 	]
 });
 
-/**
- * How a story step draws a file: a piece cut out of it, as lines, on the
- * review's own removed lines, with nothing around its hunks to read into.
- */
-const AS_A_STEP = {
-	file,
-	language: null,
-	view: 'raw',
-	reviewOwnsRemovedLines: true,
-	revealed: null,
-	piece: true
-} as const;
+/** The file drawn as lines in one column: what is asked for whether the whole of it is drawn, or a piece. */
+const AS_LINES = { file, language: null, view: 'raw' } as const;
+
+/** How a story step draws a file: a piece cut out of it. */
+const AS_A_STEP = { ...AS_LINES, extent: A_PIECE } as const;
 
 /** A piece of the same file that runs over two changes: lines 32 to 39 lie between them, unchanged. */
 const overTwoChanges = diffFile({
@@ -47,7 +41,10 @@ beforeEach(() => {
 
 /** How the files' own view draws a file: whole, with what lies around its hunks to be read in. */
 function asAFile() {
-	return { ...AS_A_STEP, revealed: review.diff.revealed, piece: false } as const;
+	return {
+		...AS_LINES,
+		extent: { kind: 'whole', reviewOwnsRemovedLines: true, revealed: review.diff.revealed }
+	} as const;
 }
 
 describe('a piece cut out of a file', () => {
@@ -68,7 +65,7 @@ describe('a piece cut out of a file', () => {
 		expect(queryByTestId('expand-all')).toBeNull();
 	});
 
-	it('says nothing of the file above its first line: that is not the piece', () => {
+	it('says nothing of the file above its first line or below its last: that is not the piece', () => {
 		const { queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
@@ -94,7 +91,7 @@ describe('a file drawn whole', () => {
 	});
 });
 
-describe("a file drawn on the review's own removed lines, whatever base is on screen", () => {
+describe("a piece drawn on the review's own removed lines, whatever base is on screen", () => {
 	beforeEach(async () => {
 		fakeServer().answer('GET /api/diff', diffResponse({ files: [file], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');

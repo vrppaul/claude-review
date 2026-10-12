@@ -8,7 +8,7 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileBody from './FileBody.svelte';
-	import type { FileView } from './file-drawing.svelte';
+	import type { Extent, FileView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
 
@@ -26,8 +26,13 @@
 	const hasRenderablePreview = $derived(isRenderable(language));
 	const view = $derived(viewOf());
 
-	// Files reads the review's own diff unless a narrower base is chosen, whose removed lines are that base's
-	const reviewOwnsRemovedLines = $derived(!review.diff.narrowed);
+	// The file is drawn whole. Files reads the review's own diff unless a
+	// narrower base is chosen, whose removed lines are that base's
+	const extent = $derived<Extent>({
+		kind: 'whole',
+		reviewOwnsRemovedLines: !review.diff.narrowed,
+		revealed: review.diff.revealed
+	});
 
 	const commentCount = $derived(review.threads.onLinesOf(file.path).length);
 	const collapsed = $derived(review.reading.isFolded(file.path));
@@ -150,7 +155,7 @@
 
 	{#if !collapsed}
 		{#if built}
-			<FileBody {file} {language} {view} {reviewOwnsRemovedLines} revealed={review.diff.revealed} piece={false} />
+			<FileBody {file} {language} {view} {extent} />
 		{:else}
 			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 		{/if}

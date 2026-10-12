@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
-	import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 	import { useReview } from '$lib/review/context';
-	import { FileDrawing, type FileView } from './file-drawing.svelte';
+	import { type Extent, FileDrawing, type FileView } from './file-drawing.svelte';
 	import FileNotes from './FileNotes.svelte';
 	import PreviewView from './PreviewView.svelte';
 	import RawView from './RawView.svelte';
@@ -14,24 +13,18 @@
 		/** What it is highlighted and rendered as, if anything. */
 		language: string | null;
 		view: FileView;
-		/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-		reviewOwnsRemovedLines: boolean;
-		/** Where lines read in above the hunks are kept; null where the gaps are said but not read into. */
-		revealed: RevealedContext | null;
-		/** Whether the file given is a piece cut out of one, as a step of a story is: see `DrawnFile`. */
-		piece: boolean;
+		/** How much of a file is given: the whole of it, or a piece cut out of one, as a step of a story is. */
+		extent: Extent;
 	}
 
-	let { file, language, view, reviewOwnsRemovedLines, revealed, piece }: Props = $props();
+	let { file, language, view, extent }: Props = $props();
 	const review = useReview();
 
 	// Made once, whichever way the lines are laid out: switching layout prepares nothing again
 	const drawing = new FileDrawing(review, {
 		file: () => file,
 		language: () => language,
-		reviewOwnsRemovedLines: () => reviewOwnsRemovedLines,
-		revealed: () => revealed,
-		piece: () => piece
+		extent: () => extent
 	});
 </script>
 

@@ -1,6 +1,7 @@
 /**
  * A file made ready to draw, in whichever layout: its lines, commenting on
- * them, and reading in what the diff left out around its hunks.
+ * them, and reading in what the diff left out around its hunks — the whole
+ * of the file, or a piece cut out of it, which has nothing around it to read.
  *
  * Made once by whoever draws the file and handed to the layout, so both
  * layouts lay out the same lines, and switching between them prepares
@@ -17,17 +18,37 @@ import { type ContextGap, gapBelow, type GapRead, readOf, type Widening, withRev
 /** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
 export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
 
+/** A file drawn whole, as the diff on screen has it. */
+interface WholeFile {
+	kind: 'whole';
+	/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
+	reviewOwnsRemovedLines: boolean;
+	/** Where the lines read in around its hunks are kept. */
+	revealed: RevealedContext;
+}
+
+/**
+ * A piece of a file, cut out of the review's own diff: a step of a story.
+ * Its removed lines are the review's own whatever base is on screen, and
+ * what lies around it is the rest of its file, which it does not read in.
+ */
+interface Piece {
+	kind: 'piece';
+}
+
+/** How much of a file a drawing is of: the whole of it, or a piece. */
+export type Extent = WholeFile | Piece;
+
+/** A piece, which has no more to say of itself than that it is one. */
+export const A_PIECE: Extent = { kind: 'piece' };
+
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
 	file: () => DiffFile;
 	/** What it is highlighted as, if anything. */
 	language: () => string | null;
-	/** Whether the removed lines on screen are the review's own: see `DrawnFile`. */
-	reviewOwnsRemovedLines: () => boolean;
-	/** Where lines read in around the hunks are kept; null where the gaps are said but not read into. */
-	revealed: () => RevealedContext | null;
-	/** Whether what is drawn is a piece cut out of the file: see `DrawnFile`. */
-	piece: () => boolean;
+	/** How much of the file is drawn. */
+	extent: () => Extent;
 }
 
 export class FileDrawing implements DrawnFile {
@@ -59,7 +80,8 @@ export class FileDrawing implements DrawnFile {
 	}
 
 	reviewOwnsRemovedLines(): boolean {
-		return this.#source.reviewOwnsRemovedLines();
+		const extent = this.#source.extent();
+		return extent.kind === 'piece' || extent.reviewOwnsRemovedLines;
 	}
 
 	commentable(): boolean {
@@ -67,22 +89,21 @@ export class FileDrawing implements DrawnFile {
 	}
 
 	piece(): boolean {
-		return this.#source.piece();
+		return this.#source.extent().kind === 'piece';
 	}
 
 	/**
 	 * Whether a gap is this drawing's to say. A piece says what it leaves
-	 * out between its own hunks. What lies above its first is the rest of
-	 * the file, which it does not draw; so is what lies below its last,
-	 * which only a drawing that reads into its gaps says.
+	 * out between its own hunks; what lies above its first and below its
+	 * last is the rest of the file, which it does not draw.
 	 */
 	says(gap: ContextGap): boolean {
-		return !this.piece() || gap.above !== null;
+		return !this.piece() || (gap.above !== null && gap.below !== null);
 	}
 
-	/** Whether what the diff left out may be read in here, or only said. */
+	/** Whether what the diff left out may be read in here, or only said: a piece reads nothing in. */
 	get readsGaps(): boolean {
-		return this.#source.revealed() !== null;
+		return this.#revealed() !== null;
 	}
 
 	/** The gap below the last hunk, where the file may go on past it; null where it cannot. */
@@ -92,7 +113,7 @@ export class FileDrawing implements DrawnFile {
 
 	/** Whether the lines of a gap are on their way. */
 	isReading(gap: ContextGap): boolean {
-		return this.#source.revealed()?.isReading(this.path(), gap) ?? false;
+		return this.#revealed()?.isReading(this.path(), gap) ?? false;
 	}
 
 	/** The read a widening makes of a gap, as much as one read of the file hands back; null where it reads nothing. */
@@ -102,13 +123,19 @@ export class FileDrawing implements DrawnFile {
 
 	/** Read lines into a gap. */
 	async read(read: GapRead): Promise<void> {
-		await this.#source.revealed()?.reveal(this.path(), read);
+		await this.#revealed()?.reveal(this.path(), read);
+	}
+
+	/** Where the lines read in around the hunks are kept; null for a piece, which has nowhere to keep any. */
+	#revealed(): RevealedContext | null {
+		const extent = this.#source.extent();
+		return extent.kind === 'whole' ? extent.revealed : null;
 	}
 
 	/** The file as it is drawn: with the lines revealed around its hunks, where they may be. */
 	#shown(): DiffFile {
 		const file = this.#source.file();
-		const revealed = this.#source.revealed();
+		const revealed = this.#revealed();
 		return revealed ? withRevealed(file, revealed.forFile(file.path)) : file;
 	}
 
@@ -116,6 +143,6 @@ export class FileDrawing implements DrawnFile {
 	#gapAtTheEnd(): ContextGap | null {
 		const last = this.#shownFile.hunks.at(-1);
 		if (last === undefined) return null;
-		return gapBelow(last, this.#source.revealed()?.forFile(this.path()).length ?? null);
+		return gapBelow(last, this.#revealed()?.forFile(this.path()).length ?? null);
 	}
 }

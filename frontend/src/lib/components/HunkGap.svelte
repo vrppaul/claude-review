@@ -30,10 +30,9 @@
 	const stepUp = $derived(inOneGo ? null : drawing.readOf(gap, 'up'));
 	const stepDown = $derived(inOneGo ? null : drawing.readOf(gap, 'down'));
 	const allAtOnce = $derived(inOneGo ? null : drawing.readOf(gap, 'all'));
-	// Drawn where the gap is the drawing's to say, while lines are hidden;
-	// below the last hunk, where how many is not known yet, only where they
-	// can be read in to find out
-	const drawn = $derived(drawing.says(gap) && (hidden === null ? drawing.readsGaps : hidden > 0));
+	// Drawn where the gap is the drawing's to say, while it hides lines or
+	// may: below the last hunk, how many is not known until a read finds out
+	const drawn = $derived(drawing.says(gap) && hidden !== 0);
 	// What a gap says of itself: how much it hides, as far as that is known
 	const unchanged = $derived(counted(hidden ?? 0, 'unchanged line', 'unchanged lines'));
 	const hiddenLines = $derived(
