@@ -147,7 +147,7 @@ async def reply_to_thread(request: ReplyRequest, review: Review = Depends(get_re
     review.answer_thread(thread_id=request.thread_id, question_id=request.question_id, body=request.body)
 
 
-@router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
+@router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY))
 async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)) -> None:
     """Push what the agent has to say into a review still open.
 
@@ -158,7 +158,9 @@ async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)
     review.agent_says(message_id=request.message_id, body=request.body, files=request.files)
 
 
-@router.post("/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
+@router.post(
+    "/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY)
+)
 async def report_progress(request: ProgressRequest, review: Review = Depends(get_review)) -> None:
     """Say what is being done, while it is being done.
 

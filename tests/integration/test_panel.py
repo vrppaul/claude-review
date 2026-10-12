@@ -43,6 +43,8 @@ MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails."}
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
+# A file the review does not hold
+ELSEWHERE = "src/elsewhere.py"
 
 THREAD = thread_on_the_wire(
     {**line_on_the_wire(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
@@ -224,11 +226,33 @@ async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClien
 def test_the_agent_may_speak_first(review_page: TestClient) -> None:
     """Work finished while the reader reads is news they should not have to ask for."""
     with open_session(review_page) as socket:
-        review_page.post("/api/say", json={"body": "Tests are green again.", "files": ["src/cli.py"]})
+        review_page.post("/api/say", json={"body": "Tests are green again.", "files": [REVIEWED_FILE]})
         pushed = next_push(socket, ChatPush)
 
     assert pushed.message_id is None
-    assert pushed.files == ["src/cli.py"]
+    assert pushed.files == [REVIEWED_FILE]
+
+
+async def test_words_naming_a_file_the_review_does_not_hold_are_refused_and_nothing_is_said(
+    client: AsyncClient,
+) -> None:
+    """A chip to a file the review does not hold would take the reader nowhere, while the agent took it as said."""
+    response = await client.post("/api/say", json={"body": "Renamed both.", "files": [REVIEWED_FILE, ELSEWHERE]})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert f"{ELSEWHERE} is not in this review" in response.json()["detail"]
+    assert (await client.get(CATCH_UP_ROUTE)).json()["panel"] == []
+
+
+async def test_work_naming_a_file_the_review_does_not_hold_is_refused_and_nothing_is_shown(
+    client: AsyncClient,
+) -> None:
+    """The same chip, on the line that says what is being done."""
+    response = await client.post("/api/progress", json={"text": "renaming", "files": [ELSEWHERE]})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert f"{ELSEWHERE} is not in this review" in response.json()["detail"]
+    assert (await client.get(REVIEW_ROUTE)).json()["work"] is None
 
 
 def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) -> None:
@@ -236,12 +260,12 @@ def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) ->
     with open_session(review_page) as socket:
         review_page.post(
             "/api/progress",
-            json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": ["a.ts", "b.ts"]},
+            json={"message_id": "panel-1", "text": "rewriting the answer handler", "files": [REVIEWED_FILE]},
         )
         work = work_pushed(socket)
 
     assert work.text == "rewriting the answer handler"
-    assert work.files == ["a.ts", "b.ts"]
+    assert work.files == [REVIEWED_FILE]
     assert work.message_id == "panel-1"
 
 
@@ -277,13 +301,13 @@ def test_work_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
 
 def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(review_page: TestClient) -> None:
     """A push is gone once sent, and a reload must not lose the line saying what the agent is doing."""
-    review_page.post("/api/progress", json={"text": "rewriting the answer handler", "files": ["a.ts"]})
+    review_page.post("/api/progress", json={"text": "rewriting the answer handler", "files": [REVIEWED_FILE]})
 
     work = review_facts(review_page).work
 
     assert work is not None
     assert work.text == "rewriting the answer handler"
-    assert work.files == ["a.ts"]
+    assert work.files == [REVIEWED_FILE]
 
 
 def test_an_empty_report_says_the_work_is_over(review_page: TestClient) -> None:

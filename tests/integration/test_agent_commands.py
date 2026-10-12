@@ -147,8 +147,10 @@ async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningR
     [
         (["reply", "--thread", "comment-99", "Because"], "comment-99"),
         (["show", "--file", "src/elsewhere.py"], "src/elsewhere.py"),
+        (["say", "--file", "src/elsewhere.py", "Renamed it"], "src/elsewhere.py"),
+        (["progress", "--file", "src/elsewhere.py", "renaming"], "src/elsewhere.py"),
     ],
-    ids=["a-thread", "a-file"],
+    ids=["a-thread", "a-file", "a-file-said", "a-file-worked-on"],
 )
 async def test_what_the_review_does_not_hold_fails_in_a_line_naming_it(
     review: RunningReview, arguments: list[str], named: str

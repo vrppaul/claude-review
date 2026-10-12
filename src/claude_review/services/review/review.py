@@ -145,7 +145,12 @@ class Review:
     def report_work(
         self, *, message_id: str | None, text: str, files: list[FilePath], steps: list[ProgressStep]
     ) -> None:
-        """Say what the agent is doing, replacing whatever was showing; nothing said ends it."""
+        """Say what the agent is doing, replacing whatever was showing; nothing said ends it.
+
+        Raises:
+            UnknownFileError: if it names a file the review does not hold.
+        """
+        self._require_files(files)
         self._answerer.report_work(message_id=message_id, text=text, files=files, steps=steps)
 
     def report_status(self, *, model: str | None, context: str | None) -> None:
@@ -257,7 +262,12 @@ class Review:
         log.info("panel_cancelled", message_id=message_id)
 
     def agent_says(self, *, message_id: str | None, body: str, files: list[FilePath]) -> None:
-        """Tell the pages what the agent says in the panel: an answer to a message, or the agent speaking first."""
+        """Tell the pages what the agent says in the panel: an answer to a message, or the agent speaking first.
+
+        Raises:
+            UnknownFileError: if it names a file the review does not hold.
+        """
+        self._require_files(files)
         self._page.tell(AgentSaid(message_id=message_id, body=body, files=files))
         self._answerer.end_work_for(message_id)
         self._conversation.agent_said(message_id=message_id, body=body)
@@ -277,11 +287,9 @@ class Review:
         """Take the reader to a file, which they asked to be taken to.
 
         Raises:
-            UnknownFileError: if the review holds no such file: the page would take them nowhere.
+            UnknownFileError: if the review holds no such file.
         """
-        if file not in self._source.content.paths:
-            msg = f"{file} is not in this review"
-            raise UnknownFileError(msg)
+        self._require_files([file])
         self._page.tell(FileShown(file=file))
         log.info("file_shown", file=file)
 
@@ -384,6 +392,18 @@ class Review:
     def exit_report(self) -> str:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
+
+    def _require_files(self, files: list[FilePath]) -> None:
+        """Refuse files the agent names that the review does not hold: the page would take the reader to none of them.
+
+        Raises:
+            UnknownFileError: naming the first such file.
+        """
+        held = self._source.content.paths
+        unknown = next((file for file in files if file not in held), None)
+        if unknown is not None:
+            msg = f"{unknown} is not in this review"
+            raise UnknownFileError(msg)
 
     def _check_threads(self, threads: list[ThreadDraft]) -> None:
         """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.
