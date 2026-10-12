@@ -7,7 +7,7 @@ import { REVIEW_IDENTITY } from './fake-socket';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import { openReview } from './review';
+import { leavePage, openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
 
 let review: Review;
@@ -177,6 +177,8 @@ describe('an unsent review', () => {
 	});
 
 	it('says a fault of its own in keeping or forgetting the draft, rather than taking it for storage refused', () => {
+		// The review this file opens goes first: what it would keep as it goes is not what is asked here
+		leavePage();
 		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
 			throw new TypeError('a fault of the page');
 		});

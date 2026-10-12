@@ -15,9 +15,12 @@ beforeEach(() => {
 	onTestFinished(failOnUnanswered);
 });
 
-// A test that switched to fake timers and failed before switching back would
-// leave the next one on them: every test ends on the real clock
+// Every test ends with its page gone, as it starts: a review left open would
+// keep its draft a moment later, after the test, and the file, are over.
+// And a test that switched to fake timers and failed before switching back
+// would leave the next one on them: every test ends on the real clock
 afterEach(() => {
+	leavePage();
 	vi.useRealTimers();
 });
 

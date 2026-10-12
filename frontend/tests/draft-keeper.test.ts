@@ -5,7 +5,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { REVIEW_TITLE } from './diff';
 import { REVIEW_IDENTITY } from './fake-socket';
 import { newComment } from './new-comment';
-import { openReview } from './review';
+import { leavePage, openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
 // Longer than the keeper waits after the last change
 const AFTER_A_PAUSE = 1000;
@@ -78,5 +78,18 @@ describe('keeping the draft', () => {
 		window.dispatchEvent(new Event('pagehide'));
 
 		expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+	});
+
+	it('cancels the save still pending when the page lets go of its review', () => {
+		review.submission.setBody('Overall');
+		flushSync();
+		leavePage();
+		const written = vi.spyOn(Storage.prototype, 'setItem');
+		// Storage may be gone by the time the save would have come, as it is
+		// once a page is torn down: a save let through would fail there
+		vi.stubGlobal('localStorage', undefined);
+
+		expect(() => vi.advanceTimersByTime(AFTER_A_PAUSE)).not.toThrow();
+		expect(draftWrites(written)).toBe(0);
 	});
 });
