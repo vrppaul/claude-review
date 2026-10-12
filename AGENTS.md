@@ -54,7 +54,7 @@ All Python commands use `uv` — never use pip or manually activate a virtualenv
 - **Tailwind CSS 4 + DaisyUI 5** — styling
 - **pnpm** — JS package manager
 - **Vitest + @testing-library/svelte** — frontend unit tests; **fast-check** for properties
-- **Playwright** (Python, pytest-playwright) — E2E tests
+- **Playwright** (Python, its async API) — E2E tests; the page each test opens is the suite's own fixture (`tests/e2e/conftest.py`), and no pytest plugin of Playwright's is installed, so `--headed` and `--browser` are refused rather than taken and ignored
 - **ESLint + Prettier + svelte-check** — frontend code quality
 
 ## Architecture
