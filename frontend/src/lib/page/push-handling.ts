@@ -87,11 +87,25 @@ function learnFrom(review: Review, push: FactPush): void {
 			review.rounds.reach(push.number);
 			return;
 		case 'story':
-			// Told that there is one: the story itself is read, and the one held stays if it cannot be
-			review.story.read().catch((error: unknown) => review.conversation.note(storyNotReadNote(error)));
+			// Told that there is one: the story itself is read
+			void readStoryAgain(review);
 			return;
 		default:
 			unknown(push);
+	}
+}
+
+/**
+ * Read the story the review holds now, where it takes one at all. A story
+ * that cannot be read is said in the panel, and the one held stays: it is
+ * never a failure of whatever else was being taken in beside it.
+ */
+async function readStoryAgain(review: Review): Promise<void> {
+	if (!review.story.canBeTold) return;
+	try {
+		await review.story.read();
+	} catch (error) {
+		review.conversation.note(storyNotReadNote(error));
 	}
 }
 
@@ -141,13 +155,14 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * Catch up after the connection came back to a review that could not hand
  * over everything it missed; the telling goes on from `from`.
  *
- * What the pushes kept up to date is read again, the story among it. What
- * they alone carried —
+ * What the pushes kept up to date is read again. What they alone carried —
  * an answer in a thread, a thread raised, a word in the panel — is gone, and
  * the panel says so. A retake among them would have left the threads on old
  * lines: following them again moves only those whose lines moved, so it is
  * done whether or not one happened. Which files a missed retake rewrote
- * cannot be told, so the ticks stay as the reader left them.
+ * cannot be told, so the ticks stay as the reader left them. The story is
+ * read last and apart: one that cannot be read is said so by itself, and
+ * what catching up did to the review and its threads is still said.
  */
 export async function catchUp(review: Review, from: TellingPosition): Promise<void> {
 	review.telling.continueFrom(from);
@@ -156,11 +171,12 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.learn(facts);
 		review.telling.factsReadAt({ instance: facts.instance, sequence: facts.sequence });
 		const moved = await review.takeRetakenDiff();
-		if (review.story.canBeTold) await review.story.read();
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {
 		review.conversation.note(notCaughtUpNote(error));
+		return;
 	}
+	await readStoryAgain(review);
 }
 
 /**

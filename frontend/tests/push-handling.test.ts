@@ -251,6 +251,29 @@ describe('catching up on what the server could not hand over again', () => {
 		expect(review.story.held).toEqual(told);
 	});
 
+	it('says what catching up did, and apart from it that the story could not be read, when the story alone fails', async () => {
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, quote: ['x'] }));
+		const moved = { ...review.threads.all[0].anchor, start_line: 2, end_line: 2 };
+		const server = caughtUpFrom();
+		server.answer('POST /api/anchors/follow', { anchors: [moved] });
+		server.refuse('GET /api/story', SERVER_ERROR, 'the review fell over');
+
+		await catchUp(review, GOES_ON_FROM);
+
+		const said = review.conversation.turns.map((turn) => turn.body);
+		expect(said.at(-2)).toContain('1 thread followed its lines');
+		expect(said.at(-1)).toBe('the story could not be read — the review fell over');
+	});
+
+	it('asks for no story where catching up itself failed: one failure is said once', async () => {
+		const server = caughtUpFrom();
+		server.refuse('GET /api/review', SERVER_ERROR, 'the review fell over');
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(server.requestsTo('GET /api/story')).toEqual([]);
+	});
+
 	it('asks for no story of a review that takes none', async () => {
 		review = openReview({ facts: { takes_a_story: false } });
 		const server = caughtUpFrom();
