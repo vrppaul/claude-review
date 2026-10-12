@@ -1,6 +1,6 @@
 /**
  * Moving the reader through the review: from thread to thread, whatever
- * each hangs on, and from file to file.
+ * each hangs on, from section to section, and to a file somebody names.
  *
  * Naming a thread is the anchor's business and touches nothing; bringing one
  * into view opens what hides it and moves the screen, so it lives here, with
@@ -10,8 +10,11 @@
  * arrows, the replies, the finish pane, the panel's chips, the notices — and
  * so do ] and [ from section to section, and a file the agent names. What is
  * walked, and where a thread or a file is drawn, is asked of the view the
- * review is read in (`ReadingView`); what that view does not draw is gone to
- * in the one that draws everything, which is brought on screen for it. The
+ * review is read in (`ReadingView`). No view draws everything by itself: a
+ * story draws what it tells and leaves out, the files under a narrower base
+ * what that base shows. What the view on screen does not draw is gone to
+ * where everything is drawn — the files, read against the review's own
+ * base — which the views bring on screen for it (`showEverything`). The
  * page itself is moved by `FileSections`. j and k move the keyboard line by line
  * (`dom/keyboard.ts`), and have no place among the threads to keep.
  */
@@ -27,9 +30,10 @@ export interface ViewsOnScreen {
 	/** The view the review is read in now. */
 	readonly onScreen: ReadingView;
 	/**
-	 * Bring on screen the view that draws every thread and file the review
-	 * holds, and hand it over. It need not be drawn yet: the page waits for
-	 * a section asked for before it is.
+	 * Bring on screen what draws every thread and file the review holds, and
+	 * hand its view over: as it is, where that could not be brought, and
+	 * then it may draw less. It need not be drawn yet: the page waits for a
+	 * section asked for before it is.
 	 */
 	showEverything: () => Promise<ReadingView>;
 }
@@ -91,8 +95,9 @@ export class Navigator {
 	 * Bring a thread into view with the keyboard on it, and go on from it the
 	 * next time the reader steps. Whatever folds its lines away is opened
 	 * first, and the thread is gone to once it is drawn. A thread the view on
-	 * screen does not draw is gone to in the view that draws them all, which
-	 * comes on screen for it: the reader asked for the thread.
+	 * screen does not draw is gone to where every thread is drawn, which
+	 * comes on screen for it: the reader asked for the thread. Where that
+	 * cannot be brought on screen, the reader stays where they are.
 	 */
 	reveal(thread: Thread): void {
 		const onScreen = this.#views.onScreen;
@@ -130,9 +135,9 @@ export class Navigator {
 	/**
 	 * Bring a file somebody named into view — the agent, in what it said or
 	 * showed — and mark it once it gets there. A file the view on screen
-	 * draws none of is shown in the view that draws every file the review
-	 * holds, which comes on screen for it; one that view does not draw
-	 * either is shown nowhere.
+	 * draws none of is shown where every file the review holds is drawn,
+	 * which comes on screen for it; one not drawn there either is shown
+	 * nowhere.
 	 */
 	showFile(path: string): void {
 		const section = this.#views.onScreen.sectionOfFile(path);

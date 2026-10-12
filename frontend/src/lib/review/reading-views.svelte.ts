@@ -6,11 +6,19 @@
  * screen is the review's own. The reader choosing a view changes both;
  * being taken to something only the files draw changes what is on screen,
  * and leaves the choice as the reader made it.
+ *
+ * Only the files read against the review's own base draw every thread and
+ * file the review holds: a story draws what it tells and what it leaves
+ * out, and a narrower base the lines it shows. Whatever takes the reader to
+ * something neither draws asks for everything here, in one place.
  */
 
 import type { PageLayout, ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { ViewsOnScreen } from '$lib/review/navigator';
 import type { ReadingView } from '$lib/review/reading-view';
+import type { ReviewDiff } from '$lib/review/review-diff.svelte';
+import type { DiffFile } from '$lib/types';
+import { messageOf } from '$lib/utils/errors';
 
 /** Each way a review is read, by its name. */
 type Views = Record<ReadingViewName, ReadingView>;
@@ -18,29 +26,49 @@ type Views = Record<ReadingViewName, ReadingView>;
 /** How the reader chose to read last, as the page's layout keeps it. */
 type KeptChoice = PageLayout['readingView'];
 
-// The view every review can be read in, and the one that draws every thread and file it holds
+/** Why the whole review could not be put back on screen, and the diff that stayed there instead. */
+interface NotPutBack {
+	reason: string;
+	stayed: DiffFile[];
+}
+
+// The view every review can be read in, and the one that can draw every thread and file it holds
 const FILES: ReadingViewName = 'files';
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
 	readonly #kept: KeptChoice;
+	readonly #diff: ReviewDiff;
 	#nameOnScreen: ReadingViewName;
+	#notPutBack = $state.raw<NotPutBack | null>(null);
 
 	/**
 	 * @param views each way this review is read
 	 * @param kept how the reader chose to read last, in whichever review
 	 * @param storyCanBeTold whether this review can be read as a story at all: one that cannot opens
 	 *   by its files, though the reader chose the story last
+	 * @param diff the diff the files are read from, which a narrower base may be in force on
 	 */
-	constructor(views: Views, kept: KeptChoice, storyCanBeTold: boolean) {
+	constructor(views: Views, kept: KeptChoice, storyCanBeTold: boolean, diff: ReviewDiff) {
 		this.#views = views;
 		this.#kept = kept;
+		this.#diff = diff;
 		this.#nameOnScreen = $state(storyCanBeTold ? kept.name : FILES);
 	}
 
 	/** The view the review is read in now. */
 	get onScreen(): ReadingView {
 		return this.#views[this.#nameOnScreen];
+	}
+
+	/**
+	 * Why the whole review could not be put back on screen when it was last
+	 * asked for; null once it was, and once any other diff is on screen: the
+	 * failure is news of the diff it left there.
+	 */
+	get wholeReviewFailed(): string | null {
+		const failure = this.#notPutBack;
+		return failure !== null && failure.stayed === this.#diff.files ? failure.reason : null;
 	}
 
 	/** Read the review the way the reader chooses, and the next review they open too. */
@@ -54,9 +82,28 @@ export class ReadingViews implements ViewsOnScreen {
 		this.#nameOnScreen = FILES;
 	}
 
-	/** Bring on screen the view that draws every thread and file the review holds, and hand it over. */
-	showEverything(): Promise<ReadingView> {
+	/**
+	 * Put the review's own diff back in place of a narrower base, with every
+	 * thread and file the review holds. A failure is kept to be said, never
+	 * thrown: whoever asked goes on with the files as they are.
+	 */
+	async showWholeReview(): Promise<void> {
+		this.#notPutBack = null;
+		try {
+			await this.#diff.showWholeReview();
+		} catch (error) {
+			this.#notPutBack = { reason: messageOf(error), stayed: this.#diff.files };
+		}
+	}
+
+	/**
+	 * Bring on screen what draws every thread and file the review holds — the
+	 * files, read against the review's own base — and hand their view over,
+	 * as it is if the whole review could not be put back.
+	 */
+	async showEverything(): Promise<ReadingView> {
 		this.showFiles();
-		return Promise.resolve(this.#views[FILES]);
+		if (this.#diff.narrowed) await this.showWholeReview();
+		return this.#views[FILES];
 	}
 }

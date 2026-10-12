@@ -9,7 +9,7 @@
  * answer to these questions, not a branch in whoever asks them.
  */
 
-import { inDiffOrder } from '$lib/anchors/placement';
+import { inDiffOrder, isDrawn } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
@@ -33,6 +33,15 @@ export interface ReadingView {
 	unfold: (lines: FileLines) => void;
 	/** The file the reader ticks off and folds from the keyboard: the one being read, where files are what is read. */
 	fileBeingRead: () => string | null;
+}
+
+/**
+ * The threads on lines that a view draws none of. They are still in the
+ * review and still go out with the round: whoever shows the view counts
+ * them and offers the way to where they are drawn.
+ */
+export function threadsNotDrawnIn(view: ReadingView, threads: Threads): Thread[] {
+	return threads.onLines.filter(({ lines }) => view.sectionOf(lines) === null).map(({ thread }) => thread);
 }
 
 /** What the files' own view knows a file's section by: its path, since it draws each file once. */
@@ -59,18 +68,27 @@ export class FilesReading implements ReadingView {
 		return this.#diff.files.map((file) => fileSectionKey(file.path));
 	}
 
-	/** Down the diff, file by file and row by row; those on files it no longer holds first, as they are drawn above it. */
+	/**
+	 * Down the diff, file by file and row by row; those on files it no longer
+	 * holds first, as they are drawn above it. Under a narrower base, only
+	 * the threads that base draws.
+	 */
 	threadsInOrder(): Thread[] {
-		return inDiffOrder(this.#threads.onLines, this.#diff.files);
+		const drawn = this.#threads.onLines.filter(({ lines }) => this.sectionOf(lines) !== null);
+		return inDiffOrder(drawn, this.#diff.files);
 	}
 
 	/**
-	 * Every thread is drawn somewhere here: under its line, at the head of
-	 * its file where the line is not shown, or above the files where the
-	 * diff no longer holds the file. Each is found from the file's section.
+	 * Read against the review's own base, every thread is drawn somewhere
+	 * here: under its line, at the head of its file where the line is not
+	 * shown, or above the files where the diff no longer holds the file.
+	 * Each is found from the file's section. A narrower base draws only the
+	 * threads on lines it shows whose numbers are the review's own; the rest
+	 * are drawn once the whole review is put back.
 	 */
-	sectionOf(lines: FileLines): string {
-		return fileSectionKey(lines.file);
+	sectionOf(lines: FileLines): string | null {
+		const leftOut = this.#diff.narrowed && !isDrawn(lines, this.#diff.files, this.#diff.numbering);
+		return leftOut ? null : fileSectionKey(lines.file);
 	}
 
 	sectionOfFile(path: string): string | null {

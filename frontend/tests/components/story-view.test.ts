@@ -181,17 +181,83 @@ describe('a review read as its story', () => {
 		]);
 	});
 
-	it('says how many comments are on lines it does not show, and takes the reader to the files for them', async () => {
-		const user = userEvent.setup();
+	it('says how many comments are on lines it does not show', () => {
 		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('threads-off-the-story').textContent).toContain(
 			'1 comment is on lines the story does not show.'
 		);
+	});
+
+	it('takes the reader to the first of them in the files, with the keyboard on it', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'on a line the story shows' }));
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
+		render(ReviewScreen, { props: { review } });
+
 		await user.click(screen.getByTestId('show-in-files'));
+		await settled();
+
+		// The files draw both threads, down the diff: the one on a.py, then the one the story did not draw
+		const [, notDrawnByTheStory] = within(screen.getByTestId('diff-view')).getAllByTestId('comment-thread');
+		expect(notDrawnByTheStory.textContent).toContain('about the lock file');
+		expect(document.activeElement).toBe(notDrawnByTheStory);
+	});
+
+	it('asks for no diff to go to a thread in the files, which already read the whole review', async () => {
+		const diffs = fakeServer().hold('GET /api/diff');
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
+		const [thread] = review.threads.all;
+		render(ReviewScreen, { props: { review } });
+
+		review.navigator.reveal(thread);
+		await settled();
+
+		expect(diffs.requests).toEqual([]);
+	});
+
+	it('takes the reader to a thread it does not draw though the files are read against a narrower base, which is put back whole for it', async () => {
+		fakeServer().answerWith('GET /api/diff', (request) =>
+			request.query.base === 'round:1'
+				? diffResponse({ files: files.slice(0, 1), base: sinceRound(1) })
+				: diffResponse({ files })
+		);
+		await review.diff.setBase('round:1');
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
+		const [thread] = review.threads.all;
+		render(ReviewScreen, { props: { review } });
+
+		review.navigator.reveal(thread);
+		await settled();
+
+		expect(review.diff.narrowed).toBe(false);
+		expect(document.activeElement).toBe(screen.getByTestId('comment-thread'));
+	});
+
+	it("leaves the files' narrower base as it is when the reader is taken to a file the story draws", async () => {
+		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
+		await review.diff.setBase('round:1');
+		render(ReviewScreen, { props: { review } });
+
+		review.navigator.showFile('b.py');
+		await settled();
+
+		expect(review.views.onScreen.name).toBe('story');
+		expect(review.diff.narrowed).toBe(true);
+	});
+
+	it('brings the files on screen when the reader asks to see what changed since the last retake', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
+		review.noteRetake({ followed: 0, outdated: 0 }, { since_round: 1, base_key: 'round:1', paths: ['a.py'] });
+		render(ReviewScreen, { props: { review } });
+
+		await user.click(screen.getByTestId('show-what-changed'));
+		await settled();
 
 		expect(screen.getByTestId('diff-view')).toBeTruthy();
+		expect(review.diff.narrowed).toBe(true);
 	});
 
 	it('says nothing of comments while every one is on a line it shows', () => {
@@ -258,11 +324,15 @@ describe('a review read as its story', () => {
 		review.threads.add(newComment({ file: 'b.py', startLine: 5, body: 'in chapter one' }));
 		render(ReviewScreen, { props: { review } });
 
-		await user.keyboard('n');
-		expect(document.activeElement?.textContent).toContain('in chapter one');
+		// b.py is told in chapter one, by the second piece; line 9 of a.py in chapter two, by the third
+		const inChapterOne = within(pieces()[1]).getByTestId('comment-thread');
+		const inChapterTwo = within(pieces()[2]).getByTestId('comment-thread');
 
 		await user.keyboard('n');
-		expect(document.activeElement?.textContent).toContain('in chapter two');
+		expect(document.activeElement).toBe(inChapterOne);
+
+		await user.keyboard('n');
+		expect(document.activeElement).toBe(inChapterTwo);
 	});
 
 	it('keeps what was decided, turned down and left for later one fold away, each saying the chapter it leads to', () => {

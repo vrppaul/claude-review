@@ -5,8 +5,8 @@
  * A story draws a file in pieces — a step's lines, and whatever of the file
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
- * thread on a line no piece shows is not drawn here at all; the files' own
- * view draws every thread. Nor is any thread drawn in a story told of
+ * thread on a line no piece shows is not drawn here at all; the files,
+ * read against the review's own base, draw every thread. Nor is any thread drawn in a story told of
  * another take of the change than the page reads: its lines are numbered
  * as that take, and a thread hangs on a line of the take on screen.
  */
@@ -104,11 +104,6 @@ export class StoryReading implements ReadingView {
 	/** The first piece of the file the story draws: where the file is first told. */
 	sectionOfFile(path: string): string | null {
 		return this.#pieces().find((drawn) => drawn.piece.path === path)?.key ?? null;
-	}
-
-	/** How many of the review's threads the story draws none of: those on lines no piece of it shows. */
-	get threadsNotDrawn(): number {
-		return this.#threads.onLines.filter(({ lines }) => this.sectionOf(lines) === null).length;
 	}
 
 	/** A story folds nothing away. */

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-reading';
-	import type { ToldStep, ToldStory } from '$lib/types';
+	import type { Thread, ToldStep, ToldStory } from '$lib/types';
 	import { counted } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
@@ -23,7 +24,9 @@
 	const numbering = $derived(review.story.numbering);
 	// Whether the story held is of another take of the change than the page reads: the diff was taken again since
 	const codeMovedOn = $derived(numbering === 'another-takes');
-	const offTheStory = $derived(review.storyReading.threadsNotDrawn);
+	// The threads the story draws none of: on lines no piece of it shows, or every one while the code has moved on
+	const notDrawn = $derived(threadsNotDrawnIn(review.views.onScreen, review.threads));
+	const firstNotDrawn = $derived(notDrawn.at(0));
 
 	let container: HTMLElement | undefined = $state();
 
@@ -53,6 +56,18 @@
 	}
 </script>
 
+<!-- The way to the threads the story does not draw: to the first of them, in the files, with the keyboard on it -->
+{#snippet showInFiles(first: Thread)}
+	<button
+		type="button"
+		data-testid="show-in-files"
+		class="btn btn-ghost btn-xs"
+		onclick={() => review.navigator.reveal(first)}
+	>
+		Show in Files
+	</button>
+{/snippet}
+
 <!-- The same change, read as the agent tells it: one scroll, the overview first, then every chapter in a row -->
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
 	{#if held === null}
@@ -81,37 +96,39 @@
 			{#if codeMovedOn}
 				<!-- A state, not news, and a warning: what the story shows is no longer the code under review, so
 					nothing is written on it here, and nothing of the reader's is drawn against it: where that is, is said -->
-				<p data-testid="story-moved-on" class="cr-notice cr-notice-moved rounded px-3 py-1.5 text-xs">
-					The code has changed since this story was told. It shows the code as it was, and takes no comments.
-					{#if review.threads.onLines.length > 0}
-						{counted(review.threads.onLines.length, 'comment is', 'comments are')} in Files.
+				<div
+					data-testid="story-moved-on"
+					class="cr-notice cr-notice-moved flex items-center gap-3 rounded px-3 py-1.5 text-xs"
+				>
+					<span>
+						The code has changed since this story was told. It shows the code as it was, and takes no comments.
+						{#if notDrawn.length > 0}
+							{counted(notDrawn.length, 'comment is', 'comments are')} in Files.
+						{/if}
+						{#if review.threads.writing.openOnLines > 0}
+							{counted(
+								review.threads.writing.openOnLines,
+								'comment you were writing is',
+								'comments you were writing are'
+							)} in Files.
+						{/if}
+					</span>
+					<div class="flex-1"></div>
+					{#if firstNotDrawn}
+						{@render showInFiles(firstNotDrawn)}
 					{/if}
-					{#if review.threads.writing.openOnLines > 0}
-						{counted(
-							review.threads.writing.openOnLines,
-							'comment you were writing is',
-							'comments you were writing are'
-						)} in Files.
-					{/if}
-				</p>
-			{:else if offTheStory > 0}
+				</div>
+			{:else if firstNotDrawn}
 				<!-- A state, not news: the story shows part of the change, and the threads it does not draw are still in the review -->
 				<div
 					data-testid="threads-off-the-story"
 					class="cr-notice cr-notice-taken flex items-center gap-3 rounded px-3 py-1.5 text-xs"
 				>
 					<span>
-						{counted(offTheStory, 'comment is', 'comments are')} on lines the story does not show.
+						{counted(notDrawn.length, 'comment is', 'comments are')} on lines the story does not show.
 					</span>
 					<div class="flex-1"></div>
-					<button
-						type="button"
-						data-testid="show-in-files"
-						class="btn btn-ghost btn-xs"
-						onclick={() => review.views.showFiles()}
-					>
-						Show in Files
-					</button>
+					{@render showInFiles(firstNotDrawn)}
 				</div>
 			{/if}
 

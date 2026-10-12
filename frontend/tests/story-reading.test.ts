@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-reading';
 import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
@@ -91,12 +92,14 @@ describe('a review read as its story', () => {
 		expect(review.views.onScreen.fileBeingRead()).toBeNull();
 	});
 
-	it('counts the threads it draws none of', () => {
-		review.threads.add(newComment({ file: 'a.py', startLine: 9 }));
-		review.threads.add(newComment({ file: 'a.py', startLine: 5 }));
-		review.threads.add(newComment({ file: 'housekeeping.lock', startLine: 1 }));
+	it('says which threads it draws none of', () => {
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'in chapter two' }));
+		review.threads.add(newComment({ file: 'a.py', startLine: 5, body: 'on a line no piece shows' }));
+		review.threads.add(newComment({ file: 'housekeeping.lock', startLine: 1, body: 'on a file it does not tell' }));
 
-		expect(review.storyReading.threadsNotDrawn).toBe(2);
+		const notDrawn = threadsNotDrawnIn(review.views.onScreen, review.threads);
+
+		expect(notDrawn.map((thread) => thread.body)).toEqual(['on a line no piece shows', 'on a file it does not tell']);
 	});
 });
 

@@ -113,8 +113,6 @@ export class Review {
 	/** The ways the review is read — file by file, or as the story told of it — and which is on screen. */
 	readonly views: ReadingViews;
 	readonly navigator: Navigator;
-	/** The review read as the story told of it. */
-	readonly storyReading: StoryReading;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
@@ -165,11 +163,14 @@ export class Review {
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.story = new ReviewStory(facts.takes_a_story, story, () => this.diff.takeOnScreen);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
-		this.storyReading = new StoryReading(this.story, this.threads);
 		this.views = new ReadingViews(
-			{ files: new FilesReading(this.diff, this.threads, this.reading, this.sections), story: this.storyReading },
+			{
+				files: new FilesReading(this.diff, this.threads, this.reading, this.sections),
+				story: new StoryReading(this.story, this.threads)
+			},
 			this.layout.readingView,
-			this.story.canBeTold
+			this.story.canBeTold,
+			this.diff
 		);
 		this.navigator = new Navigator(this.threads, this.sections, this.views);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
@@ -323,10 +324,14 @@ export class Review {
 		return moved;
 	}
 
-	/** Read only what changed since the round the last retake was counted from. */
+	/**
+	 * Read only what changed since the round the last retake was counted
+	 * from: the files against that base, which come on screen for it.
+	 */
 	async showChangesSinceRetake(): Promise<void> {
 		const since = this.lastRetake.changedSinceKey;
 		if (since === null) return;
 		await this.diff.setBase(since);
+		this.views.showFiles();
 	}
 }

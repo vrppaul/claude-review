@@ -1,24 +1,18 @@
 <script lang="ts">
-	import type { Thread, DiffFile } from '$lib/types';
+	import type { DiffFile } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
-	import { isDrawn } from '$lib/anchors/placement';
 	import { useReview } from '$lib/review/context';
+	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted } from '$lib/utils/words';
-	import { Attempt } from './attempt.svelte';
 	import Icon from './Icon.svelte';
 
 	const review = useReview();
-	const widening = new Attempt();
 
 	// Threads the base on screen cannot draw. They are not lost — they are
 	// anchored to the review's own diff — but saying nothing would leave the
 	// reader counting a review they can only see part of.
-	const offScreen = $derived(
-		review.threads.onLines
-			.filter(({ lines }) => !isDrawn(lines, review.diff.files, review.diff.numbering))
-			.map(({ thread }) => thread)
-	);
+	const offScreen = $derived(threadsNotDrawnIn(review.views.onScreen, review.threads));
 	// The diff the list of them was opened over. Every diff taken after it —
 	// another base, a retake — starts folded, so the list is never left open
 	// from a screen the reader has left.
@@ -27,11 +21,6 @@
 	// What the list's button says, while the list is shown and while it is not, of one thread or of several
 	const LIST_WORDS = { shown: { one: 'Hide it', many: 'Hide them' }, folded: { one: 'List it', many: 'List them' } };
 	const listWords = $derived(LIST_WORDS[listing ? 'shown' : 'folded']);
-
-	/** Take the reader back to the whole diff, and to the thread they picked. */
-	async function goTo(thread: Thread) {
-		if (await widening.run(() => review.diff.showWholeReview())) review.navigator.reveal(thread);
-	}
 </script>
 
 <!-- A state, not news: no Dismiss, because dismissing it would leave the
@@ -53,8 +42,8 @@
 		{/if}
 	</span>
 	<div class="flex-1"></div>
-	{#if widening.failed}
-		<span data-testid="narrow-error" class="text-error">{widening.failed}</span>
+	{#if review.views.wholeReviewFailed}
+		<span data-testid="narrow-error" class="text-error">{review.views.wholeReviewFailed}</span>
 	{/if}
 	{#if offScreen.length > 0}
 		<button
@@ -71,7 +60,7 @@
 		type="button"
 		data-testid="show-everything"
 		class="btn btn-ghost btn-xs"
-		onclick={() => widening.run(() => review.diff.showWholeReview())}
+		onclick={() => review.views.showWholeReview()}
 	>
 		Show the whole diff
 	</button>
@@ -79,15 +68,15 @@
 
 {#if listing}
 	<!-- Where they are, so a count is not the end of the road. Picking one
-		puts the whole diff back and goes to it: it is anchored there, and
-		that is the only screen that can draw it. -->
+		goes to it, which puts the whole diff back first: it is anchored
+		there, and that is the only screen that can draw it. -->
 	<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
 		{#each offScreen as thread (thread.id)}
 			<button
 				type="button"
 				data-testid="off-screen-thread"
 				class="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-base-200"
-				onclick={() => goTo(thread)}
+				onclick={() => review.navigator.reveal(thread)}
 			>
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">
 					{anchorShortPlace(thread.anchor)}
