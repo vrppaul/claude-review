@@ -31,8 +31,10 @@
 	const arrived = $derived(review.threads.unread.length + review.layout.agentPanel.unread);
 
 	// An answer can arrive while the review is in a background tab, where
-	// neither the dot beside the thread nor the panel can be seen
+	// neither the dot beside the thread nor the panel can be seen. The icon
+	// is painted in the page's colours, so again once another theme is applied
 	$effect(() => {
+		void review.theme.applied;
 		markTab(arrived, review.title);
 	});
 </script>

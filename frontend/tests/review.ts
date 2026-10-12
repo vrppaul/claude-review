@@ -1,6 +1,7 @@
 /** A review opened the way the page opens one, for a test to read and draw. */
 import { flushSync } from 'svelte';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
+import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
@@ -47,7 +48,8 @@ export function openReview({ files = [], facts, diff, settings = new Settings(),
 	openPage = openKeptReview(reviewResponse(facts), diffResponse({ files, ...diff }), held, {
 		settings,
 		layout: new PageLayout(),
-		sound: new ReplySound(settings)
+		sound: new ReplySound(settings),
+		theme: new PageTheme(settings)
 	});
 	return openPage.review;
 }

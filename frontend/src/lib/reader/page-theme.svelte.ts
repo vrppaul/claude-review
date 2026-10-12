@@ -9,7 +9,8 @@
 import type { Settings } from '$lib/reader/settings.svelte';
 import { stopsTogether } from '$lib/utils/stops';
 
-type ResolvedTheme = 'light' | 'dark';
+/** A theme as the page carries it: the system's choice made one of the two. */
+export type ResolvedTheme = 'light' | 'dark';
 
 // Light only when the system asks for it, dark otherwise — the rule the
 // first paint in index.html keeps too, before any of this has loaded
@@ -30,9 +31,17 @@ export class PageTheme {
 		const chosen = this.#settings.current.theme;
 		return chosen === 'system' ? this.#system : chosen;
 	});
+	// The theme the page carries, once its root says so: set after the root,
+	// so whatever reads the page's colours by it reads them in that theme
+	#applied = $state<ResolvedTheme | null>(null);
 
 	constructor(settings: Settings) {
 		this.#settings = settings;
+	}
+
+	/** The theme the page carries now, once one is applied: what to read the page's colours again by. */
+	get applied(): ResolvedTheme | null {
+		return this.#applied;
 	}
 
 	/**
@@ -51,7 +60,9 @@ export class PageTheme {
 	}
 
 	#apply(): void {
-		document.documentElement.setAttribute(THEME_ATTRIBUTE, this.#resolved);
+		const theme = this.#resolved;
+		document.documentElement.setAttribute(THEME_ATTRIBUTE, theme);
+		this.#applied = theme;
 	}
 
 	readonly #followSystem = (event: MediaQueryListEvent): void => {

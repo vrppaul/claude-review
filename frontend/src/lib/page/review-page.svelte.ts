@@ -72,7 +72,8 @@ export class ReviewPage {
 			const { review, stopKeeping } = openKeptReview(facts, firstDiff, held, {
 				settings: this.#settings,
 				layout: this.#layout,
-				sound: new ReplySound(this.#settings)
+				sound: new ReplySound(this.#settings),
+				theme: this.#theme
 			});
 			window.addEventListener('beforeunload', this.#askBeforeLeaving);
 			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping, () =>

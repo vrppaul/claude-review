@@ -10,6 +10,7 @@
 
 import { Guide } from '$lib/guide/guide.svelte';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
+import type { PageTheme } from '$lib/reader/page-theme.svelte';
 import type { ReplySound } from '$lib/reader/reply-sound';
 import type { Settings } from '$lib/reader/settings.svelte';
 import { Answerer } from '$lib/review/answerer.svelte';
@@ -61,6 +62,7 @@ export interface ReaderParts {
 	settings: Settings;
 	layout: PageLayout;
 	sound: ReplySound;
+	theme: PageTheme;
 }
 
 export class Review {
@@ -75,6 +77,8 @@ export class Review {
 	readonly settings: Settings;
 	readonly layout: PageLayout;
 	readonly sound: ReplySound;
+	/** The theme the page carries, which the tab's icon is painted in. */
+	readonly theme: PageTheme;
 
 	readonly rounds: Rounds;
 	/** Whether the review still runs for this page, and how it ended once it has. */
@@ -123,6 +127,7 @@ export class Review {
 		this.settings = reader.settings;
 		this.layout = reader.layout;
 		this.sound = reader.sound;
+		this.theme = reader.theme;
 
 		// What the review picks up: the draft it opened from, or nothing yet
 		const kept = draft ?? emptyDraft(facts.round);
