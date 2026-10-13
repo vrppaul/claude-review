@@ -63,11 +63,10 @@ export class ReviewPage {
 	 * after the facts too: a thread the agent raises, or words it says, in
 	 * between are then held and pushed both, and taken in once, where read
 	 * before them they would be neither. So is the story it holds, where it
-	 * takes one. Once the review is
-	 * open, the socket goes on from where its draft or its facts left the
-	 * telling, so whatever was said meanwhile is handed over rather than
-	 * missed, and the threads its draft brought back follow onto the diff it
-	 * opened on.
+	 * takes one. Once the review is open, the socket goes on from where its
+	 * draft or its facts left the telling, so whatever was said meanwhile is
+	 * handed over rather than missed, and the threads its draft brought back
+	 * follow onto the diff it opened on.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();

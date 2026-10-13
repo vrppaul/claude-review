@@ -12,6 +12,7 @@ import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
 import { storeDraft } from './stored-draft';
+import { storyHeld } from './story';
 
 // How far the review's telling had got when the page read its facts
 const FACTS_READ_AT = 5;
@@ -88,8 +89,9 @@ interface FactPush {
 	read: (review: Review) => unknown;
 }
 
-// Each kind of push that says something of the review's facts; a retake,
-// which takes the diff, is held by tests of its own
+// Each kind of push that says something of the review's facts and is taken
+// in as it is heard; a retake, which takes the diff, and a story told, which
+// is read from the review, are held by tests of their own
 const FACT_PUSHES: FactPush[] = [
 	{ push: { type: 'answerer', attached: true }, read: (review) => review.answerer.attached },
 	{ push: { type: 'progress', work: work() }, read: (review) => review.answerer.work },
@@ -142,6 +144,27 @@ describe('a fact a page opening from a draft is told', () => {
 		expect(server.requestsTo('GET /api/diff')).toEqual([]);
 		expect(review.lastRetake.outcome).toBeNull();
 		expect(review.lastRetake.changedSince).toBeNull();
+	});
+
+	it('asks for no story when one was told before its facts were read: it read that story with them', async () => {
+		const server = fakeServer();
+		const review = reloadedWithAFileDrawn();
+
+		takePush(review, { type: 'story' }, pushedAt(FACTS_READ_AT));
+		await settled();
+
+		expect(server.requestsTo('GET /api/story')).toEqual([]);
+	});
+
+	it('reads the story the review holds when one was told after its facts were read', async () => {
+		const toldSince = storyHeld({ title: 'Told since' });
+		fakeServer().answer('GET /api/story', { held: toldSince });
+		const review = reloadedWithAFileDrawn();
+
+		takePush(review, { type: 'story' }, pushedAt(FACTS_READ_AT + 1));
+		await settled();
+
+		expect(review.story.held).toEqual(toldSince);
 	});
 });
 

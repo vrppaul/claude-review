@@ -262,7 +262,8 @@ export class FileSections {
 	 * a comment was put away, a thread deleted, or hidden lines shown. Where
 	 * the line is not drawn, the file's own toggle takes it; where the file
 	 * is not drawn at all, the toggle of the first section, which its threads
-	 * were drawn above.
+	 * were drawn above. A section that folds nothing, a piece of a story, has
+	 * no toggle to take it, and the keyboard is left where it is.
 	 */
 	keyboardToLine(path: string, lineKey: string): void {
 		focusWhatRemains(() => this.lineOrFile(path, lineKey));
@@ -272,7 +273,8 @@ export class FileSections {
 	 * A line's number, in whichever section draws that line of its file, by
 	 * the key its place is known by; or the toggle that stands for it where
 	 * it is not drawn: that of the first section on the page to draw the
-	 * file, or of the first section of all where none draws it.
+	 * file, or of the first section of all where none draws it. Null where
+	 * that section has no toggle.
 	 */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
 		const ofTheFile = [...this.#sections.values()]
@@ -394,7 +396,7 @@ function arriveAt(thread: HTMLElement): void {
 	thread.focus({ preventScroll: true });
 }
 
-/** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for. */
+/** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for; null where the section folds nothing. */
 function toggleOf(section: HTMLElement | null): HTMLElement | null {
 	return section?.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`) ?? null;
 }
