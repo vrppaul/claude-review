@@ -103,7 +103,7 @@ export class Jump {
 	readonly #element: HTMLElement;
 	readonly #sentTo: ScrollLogicalPosition;
 	readonly #motion: Motion;
-	readonly #atRest: (() => void) | undefined;
+	readonly #atRest: () => void;
 	// Held while the jump is under way: null before it starts, and once it is over
 	#underWay: UnderWay | null = null;
 	// Whether the reader has moved since it started: the element is then left wherever it comes to rest
@@ -114,9 +114,9 @@ export class Jump {
 	 * @param sentTo where in the area it scrolls in the element is sent: its head to the top, or itself to the middle
 	 * @param motion how the first scroll to it moves
 	 * @param atRest called once the element has come to rest, where it was sent or where the reader
-	 *   left it, by whoever has something to do then
+	 *   left it; never by a jump another took the place of
 	 */
-	constructor(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void) {
+	constructor(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest: () => void) {
 		this.#element = element;
 		this.#sentTo = sentTo;
 		this.#motion = motion;
@@ -166,7 +166,7 @@ export class Jump {
 			return;
 		}
 		this.#end();
-		this.#atRest?.();
+		this.#atRest();
 	}
 
 	#top(): number {

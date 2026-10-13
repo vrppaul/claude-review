@@ -31,11 +31,17 @@ class ReportedObserver {
 let sections: FileSections;
 let observedBefore: typeof IntersectionObserver;
 
-function section(path: string): HTMLElement {
+/** Something drawn on the page that stands still wherever it is scrolled to: jsdom lays nothing out. */
+function drawn(): HTMLElement {
 	const element = document.createElement('div');
 	element.scrollIntoView = () => undefined;
 	element.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 	document.body.append(element);
+	return element;
+}
+
+function section(path: string): HTMLElement {
+	const element = drawn();
 	sections.register(path, path, element);
 	return element;
 }
@@ -108,6 +114,23 @@ describe('the file being read', () => {
 		const watched = band();
 		watched.report([first]);
 		sections.show('c.py');
+		await untilAGlideWouldHaveBegun();
+
+		watched.report([second], [first]);
+
+		expect(sections.fileInView).toBe('b.py');
+	});
+
+	it('is the band’s to say again once the reader moves on from a thread they were taken to through its file', async () => {
+		const first = section('a.py');
+		const second = section('b.py');
+		section('c.py');
+		const watched = band();
+		watched.report([first]);
+		// The thread is not drawn yet: the reader is taken to its file, and on to the thread the moment
+		// it is drawn, before the jump to the file has come to rest
+		sections.goToThread('comment-1', 'c.py');
+		sections.registerThread('comment-1', drawn());
 		await untilAGlideWouldHaveBegun();
 
 		watched.report([second], [first]);

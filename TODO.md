@@ -64,6 +64,12 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(ui)`: `k` brings the line above to the top edge of the reading
       area, under its file's sticky header (`dom/keyboard.ts`,
       `moveByLine`). Read in the code, not looked at in a browser.
+- [ ] `fix(ui)`: a file the page was taking the reader to stays the one
+      being read after a thread in another file took them instead — a
+      file shown, then `n` before the glide ends — until the reader
+      scrolls on: the band is handed back once they are at rest, and
+      nothing crosses it until they move (`dom/reading-band.svelte.ts`).
+      Read in the code, not looked at in a browser.
 
 ## The story, from the reviews of its server side
 

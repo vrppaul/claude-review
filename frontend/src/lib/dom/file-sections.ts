@@ -260,20 +260,20 @@ export class FileSections {
 
 	/** Bring a section that is drawn to the top at once, as the one being read from now on. */
 	#scrollToDrawn({ element }: Section): void {
-		this.#land(element, 'instant', () => this.#band.settle(element));
+		this.#land(element, 'instant');
 	}
 
 	/** Bring a section that is drawn to the top, and mark it once it has come to rest. */
 	#showDrawn({ element }: Section): void {
 		this.#unmark();
-		this.#land(element, scrollMotion(), () => this.#shownCameToRest(element));
+		this.#land(element, scrollMotion(), () => this.#mark(element));
 	}
 
 	/**
 	 * Take the reader to the head of a section: it is the one being read
 	 * from now on, whatever the band says while it is on its way.
 	 */
-	#land(element: HTMLElement, motion: Motion, atRest: () => void): void {
+	#land(element: HTMLElement, motion: Motion, atRest?: () => void): void {
 		this.#band.land(element);
 		this.#jumpTo(element, 'start', motion, atRest);
 	}
@@ -291,11 +291,25 @@ export class FileSections {
 		thread.focus({ preventScroll: true });
 	}
 
-	/** Take the reader to an element, in place of wherever the page was taking them. */
+	/**
+	 * Take the reader to an element, in place of wherever the page was
+	 * taking them. A jump another takes the place of never says it has come
+	 * to rest, and a section it landed is still owed the band handed back
+	 * once the reader is at rest: so every jump hands it back, and the last
+	 * one in flight is the one that does.
+	 *
+	 * @param atRest what this jump alone does once it has come to rest, unless another takes its place first
+	 */
 	#jumpTo(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void): void {
 		this.#jump?.abandon();
-		this.#jump = new Jump(element, sentTo, motion, atRest);
+		this.#jump = new Jump(element, sentTo, motion, () => this.#cameToRest(atRest));
 		this.#jump.start();
+	}
+
+	/** The reader has come to rest where the page took them: from here on the band says where they read. */
+	#cameToRest(atRest: (() => void) | undefined): void {
+		this.#band.settle();
+		atRest?.();
 	}
 
 	/** Where every section is, in the order they announced themselves. */
@@ -332,12 +346,6 @@ export class FileSections {
 
 	#unregisterThread(threadId: string, element: HTMLElement): void {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
-	}
-
-	/** A section the reader was shown has come to rest: it is marked, and from here on the band says where they read. */
-	#shownCameToRest(element: HTMLElement): void {
-		this.#band.settle(element);
-		this.#mark(element);
 	}
 
 	#mark(element: HTMLElement): void {

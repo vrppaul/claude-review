@@ -28,8 +28,9 @@ export class ReadingBand {
 	// it only once the jump has landed, and not at all for a file at the end of
 	// the stream, which cannot scroll up as far as the band
 	#landed = $state.raw<Element | null>(null);
-	// Whether the jump has landed: what the band reports before it is the jump
-	// itself, and what it reports after is the reader moving on
+	// Whether the reader has come to rest since a jump landed that section:
+	// what the band reports before then is the page moving them, and what it
+	// reports after is the reader moving on
 	#landingSettled = false;
 	readonly #earliest = $derived(this.#landed ?? firstInDocument(this.#crossing));
 	#observer: IntersectionObserver | null = null;
@@ -45,9 +46,14 @@ export class ReadingBand {
 		this.#landingSettled = false;
 	}
 
-	/** The jump to a section has come to rest: from here on, what crosses the band is the reader moving on. */
-	settle(section: Element): void {
-		if (this.#landed === section) this.#landingSettled = true;
+	/**
+	 * The page has taken the reader as far as it was taking them, and they
+	 * have come to rest: from here on, what crosses the band is the reader
+	 * moving on. Said by whichever jump was the last, not only by the one
+	 * that landed the section: another may have taken its place on the way.
+	 */
+	settle(): void {
+		this.#landingSettled = true;
 	}
 
 	/** Watch the band of a scrolling area over these sections, and those added later; returns how to stop. */
