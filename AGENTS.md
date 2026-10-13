@@ -46,23 +46,15 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - A parameter every caller must give has no default, which would hide a missing value. One whose absence is a valid state may have one.
 - A new review mode is added code, not a changed conditional: opt in to a mode (`isDiffMode`), never out of one (`!isFilesMode`), and look up what depends on the mode in a table (`COUNTED_AS`).
 
-## Only better, and who says so
+## Only better
 
-Every change leaves the repository better than it found it — cleaner, more readable, more modular, its
-architecture more fitting — in every part it touches, not on balance. The rule being written down has not
-been enough: whoever writes a change can talk themselves into trading it for convenience. So three things
-hold a change to it, and none is its author's own judgement:
+Every change leaves the repository better than it found it: cleaner, easier to read, more modular, its architecture more fitting. In every part it touches, not on balance. A change that only works is not done.
 
-- **The verdict is somebody else's.** A chunk of work is not done, and its author says nothing of it being
-  better, until an independent reviewer has measured its whole diff against this rule, given to it word for
-  word, and listed every place that got worse. That review is part of the chunk, never a favour asked for it.
-- **A regression found becomes a gate.** Whatever a review catches is turned into a rule a tool enforces —
-  `scripts/check_code_rules.py`, a linter's rule, a test over the package — so that kind of mistake cannot be
-  made again whatever its author thinks. A form a type checker refused is never answered with a form it
-  cannot see.
-- **What its author can name as worse is not committed.** Anything that would be listed under "did not get
-  better" is put right before the commit, or the work stops there and the owner is asked: it is never a note
-  in the report afterwards.
+- **Construction first.** Before code, settle who owns each state and for how long, which layer it lives in, and the contract. Build nothing nobody asked for.
+- **Show it with facts, not adjectives.** Say what a reader can check: what was written several times and is now written once, which state has one owner now, which rule a tool now holds. Say as plainly what did not get better.
+- **The verdict is somebody else's.** A chunk is done when an independent reviewer has measured its whole diff against this rule and listed every place that got worse. Its author never calls it better.
+- **A regression found becomes a gate.** What a review catches turns into a rule a tool enforces. A form a checker refused is never answered with a form it cannot see.
+- **What you can name as worse is not committed.** Fix it, or stop and ask.
 
 ## Rules by area
 
