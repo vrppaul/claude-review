@@ -66,11 +66,12 @@ import sys
 import tempfile
 from abc import ABC, abstractmethod
 from asyncio.subprocess import DEVNULL, PIPE, Process
-from collections.abc import AsyncIterator, Iterator, Sequence
+from collections.abc import AsyncIterator, Iterator
 from enum import StrEnum, auto
 from pathlib import Path
 from typing import Self, override
 
+from commands import CommandFailedError, run
 from long_change import CHANGED, COMMITTED, THE_STORY
 from playwright.async_api import Error as BrowserError, Page, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
@@ -83,8 +84,6 @@ ANY_PORT = "0"
 READY_ANNOUNCEMENT = "Review ready at "
 # What stands between an address and its port
 BEFORE_THE_PORT = ":"
-# What a command that did what it was asked exits with
-SUCCEEDED = 0
 # How long the review has to say where it is, and how long to stop once told to, before it is stopped outright
 SERVED_WITHIN_SECONDS = 30
 STOPPED_WITHIN_SECONDS = 10
@@ -193,7 +192,6 @@ END_OF_LINE = "\n"
 NO_PIPE = "the review was started with no pipe for what it says on stderr"
 NOT_SERVED = "the review ended before it said where it is: {said}"
 NOT_SERVED_IN_TIME = f"the review did not say where it is within {SERVED_WITHIN_SECONDS} seconds"
-COMMAND_FAILED = "`{command}` failed: {said}"
 NOT_TAKEN = "{step} could not be taken: {why}"
 NOWHERE_TO_KEEP_IT = "{step} could not be taken: name a directory to keep pictures in with --shots"
 # What is said of what the command line cannot be read as
@@ -467,19 +465,6 @@ def _environment(scratch: Path) -> dict[str, str]:
     }
 
 
-async def _run(command: Sequence[str], environment: dict[str, str]) -> None:
-    """Run a command to its end.
-
-    Raises:
-        LookFailedError: if it fails, saying what it said.
-    """
-    process = await asyncio.create_subprocess_exec(*command, env=environment, stdout=DEVNULL, stderr=PIPE)
-    _, said = await process.communicate()
-    if process.returncode != SUCCEEDED:
-        failure = COMMAND_FAILED.format(command=" ".join(command), said=said.decode().strip())
-        raise LookFailedError(failure)
-
-
 def _write(root: Path, files: dict[str, str]) -> None:
     """Write each file under the root, by its path there."""
     for path, text in files.items():
@@ -488,10 +473,14 @@ def _write(root: Path, files: dict[str, str]) -> None:
 
 
 async def _long_change(repository: Path, environment: dict[str, str]) -> None:
-    """Make the repository: its files committed, then the change left in its working tree."""
+    """Make the repository: its files committed, then the change left in its working tree.
+
+    Raises:
+        CommandFailedError: if git cannot.
+    """
     await asyncio.to_thread(_write, repository, COMMITTED)
     for arguments in GIT_COMMANDS:
-        await _run(("git", "-C", str(repository), *arguments), environment)
+        (await run(("git", "-C", str(repository), *arguments), environment)).must_have_succeeded()
     await asyncio.to_thread(_write, repository, CHANGED)
 
 
@@ -558,9 +547,14 @@ async def _served(repository: Path, environment: dict[str, str]) -> AsyncIterato
 
 
 async def _story_told(served: Served, document: Path, environment: dict[str, str]) -> None:
-    """Tell the story of the change, as an agent tells one: its document handed to the `story` command."""
+    """Tell the story of the change, as an agent tells one: its document handed to the `story` command.
+
+    Raises:
+        CommandFailedError: if the review refuses the story.
+    """
     await asyncio.to_thread(document.write_text, THE_STORY.model_dump_json())
-    await _run((*REVIEW, "story", "--port", served.port(), "--file", str(document)), environment)
+    told = await run((*REVIEW, "story", "--port", served.port(), "--file", str(document)), environment)
+    told.must_have_succeeded()
 
 
 @contextlib.asynccontextmanager
@@ -691,7 +685,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX) as scratch:
         try:
             asyncio.run(_look(asked, Path(scratch)))
-        except LookFailedError as failure:
+        except (LookFailedError, CommandFailedError) as failure:
             print(failure, file=sys.stderr)
             return NOT_LOOKED
         except KeyboardInterrupt:
