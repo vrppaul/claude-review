@@ -50,9 +50,10 @@
 >
 	{#snippet header()}
 		<SectionHeader testId="story-piece-header">
-			<StatusLetter status={piece.status} />
-			<svelte:element this={NAMED_IN[shows]} class="min-w-0 font-mono text-xs font-semibold wrap-anywhere">
-				<FilePath file={piece} />
+			<!-- What became of the file is part of its name: said with it, never before the heading it belongs to -->
+			<svelte:element this={NAMED_IN[shows]} class="flex min-w-0 items-center gap-x-3 font-mono text-xs font-semibold">
+				<StatusLetter status={piece.status} />
+				<span class="min-w-0 wrap-anywhere"><FilePath file={piece} /></span>
 			</svelte:element>
 			{@render beside()}
 			<div class="flex-1"></div>

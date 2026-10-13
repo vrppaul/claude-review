@@ -11,6 +11,9 @@ const RANGE_DASH = '–';
 const NUMBER_SEPARATOR = '.';
 // The number the first of anything in a story goes by: chapters and steps are counted from one
 const FIRST_NUMBER = 1;
+// What a step and a chapter are called before their numbers: at the head of a heading, and inside a sentence
+const A_STEP = 'Step';
+const A_CHAPTER = 'chapter';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -30,9 +33,9 @@ export function linesSaid({ first, last }: StepLines): string {
 	return first === last ? String(first) : `${first}${RANGE_DASH}${last}`;
 }
 
-/** A step's lines in words, for its heading: "line 42", or "lines 42–47". */
-export function linesInWords(lines: StepLines): string {
-	return `${lines.first === lines.last ? 'line' : 'lines'} ${linesSaid(lines)}`;
+/** A step as its heading names it to whoever cannot see where it stands: "Step 1.2". */
+export function stepNamed(number: string): string {
+	return `${A_STEP} ${number}`;
 }
 
 /**
@@ -40,5 +43,5 @@ export function linesInWords(lines: StepLines): string {
  * The review refuses a story that leads to a chapter it does not have.
  */
 export function chapterNamed(chapters: readonly ToldChapter[], id: string): string {
-	return `chapter ${chapterNumber(chapters.findIndex((chapter) => chapter.id === id))}`;
+	return `${A_CHAPTER} ${chapterNumber(chapters.findIndex((chapter) => chapter.id === id))}`;
 }

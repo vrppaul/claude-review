@@ -161,25 +161,27 @@ describe('a review read as its story', () => {
 		expect(screen.getByRole('heading', { level: 2, name: '2 The end' })).toBeTruthy();
 	});
 
-	it('heads each step once, with its number, its file and its lines, so two steps of one file are told apart', () => {
+	it('heads each step once, by its number, so two steps of one file are told apart', () => {
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), toldStepOfLines('a.py', 5, 9)])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		const headings = screen.getAllByTestId('story-step').map((step) => within(step).getByRole('heading'));
+		const [first, second] = screen.getAllByTestId('story-step');
 
-		expect(headings.map((heading) => heading.textContent)).toEqual(['1.1: a.py, line 1', '1.2: a.py, lines 5–9']);
-		expect(headings.map((heading) => heading.tagName)).toEqual(['H3', 'H3']);
+		expect(within(first).getByRole('heading')).toBe(within(first).getByRole('heading', { level: 3, name: 'Step 1.1' }));
+		expect(within(second).getByRole('heading')).toBe(
+			within(second).getByRole('heading', { level: 3, name: 'Step 1.2' })
+		);
 	});
 
-	it('heads what no step tells of a file with the file, under what says it is not in the story', () => {
+	it('heads what no step tells of a file with what became of the file and its name, under what says it is not in the story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		const leftOut = screen.getByTestId('story-left-out');
 
 		expect(within(leftOut).getByRole('heading', { level: 2, name: 'Not in the story' })).toBeTruthy();
-		expect(within(leftOut).getByRole('heading', { level: 3, name: 'a.py' })).toBeTruthy();
+		expect(within(leftOut).getByRole('heading', { level: 3, name: 'modified a.py' })).toBeTruthy();
 	});
 
 	it('says the change in short under a heading of its own, as what is asked of it and what is said', () => {

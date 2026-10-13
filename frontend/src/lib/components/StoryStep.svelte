@@ -3,7 +3,7 @@
 	import type { ToldStep } from '$lib/types';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
-	import { linesInWords, linesSaid } from './story-words';
+	import { linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
@@ -19,12 +19,15 @@
 
 <div data-testid="story-step" class="flex flex-col gap-2">
 	<!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
-		the step, and says its file and lines to whoever cannot see the piece under it -->
+		the step: it is "Step 1.2" to whoever cannot see where it stands, and the piece under it says its
+		file and lines once -->
 	<div class="cr-agent-voice flex gap-3 pl-3.5">
-		<h3 class="pt-0.5 font-mono text-xs font-normal text-(--cr-agent)">
-			<span data-testid="step-number">{number}</span><span class="sr-only"
-				>: {step.file}, {linesInWords(step.lines)}</span
-			>
+		<h3
+			data-testid="step-number"
+			aria-label={stepNamed(number)}
+			class="pt-0.5 font-mono text-xs font-normal text-(--cr-agent)"
+		>
+			{number}
 		</h3>
 		{#if step.reason}
 			<p data-testid="step-reason" class="min-w-0">{step.reason}</p>
