@@ -37,8 +37,14 @@ REFUSED = 1
 STOPPED = 130
 # What stops a run from outside: what a shell sends to end a program, and what it sends at Ctrl-C
 TOLD_TO_STOP_BY = [signal.SIGTERM, signal.SIGINT]
-# Where a run and everything it starts are told to keep their temporary files
+# Where a run and everything it starts are told to keep their temporary files, and the directory
+# of the repository they are told to keep them in
 TEMPORARY_FILES_VARIABLE = "TMPDIR"
+TEMPORARY = "temporary"
+# Where pnpm installs for the working tree, and what stands there in these repositories: a file,
+# which a copy that took it could install nothing over
+INSTALLED = "node_modules"
+NOT_WHAT_PNPM_INSTALLS = "a file where the working tree's dependencies would be\n"
 
 # Where the document of what to break is written, and the directory lines are broken in a copy of
 ASKED = "breaks.json"
@@ -172,8 +178,10 @@ def _repository(root: Path) -> Path:
     (frontend / MODULE).write_text(THE_MODULE)
     (frontend / TESTS).write_text(THE_TESTS)
     (frontend / "vite.config.ts").write_text(VITE_CONFIG)
+    (frontend / INSTALLED).write_text(NOT_WHAT_PNPM_INSTALLS)
     for asked_for in ASKED_OF_PNPM:
         (frontend / asked_for).write_bytes((PAGE / asked_for).read_bytes())
+    (root / TEMPORARY).mkdir()
     return root
 
 
@@ -185,6 +193,7 @@ async def _break_lines(repository: Path, document: str) -> Ran:
         str(BREAK_LINES),
         ASKED,
         cwd=repository,
+        env={**os.environ, TEMPORARY_FILES_VARIABLE: str(repository / TEMPORARY)},
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -237,9 +246,22 @@ async def test_the_working_tree_is_as_it_was_once_its_lines_were_broken(two_line
     frontend = two_lines_broken.repository / FRONTEND
 
     assert (frontend / MODULE).read_text() == THE_MODULE
+    assert (frontend / INSTALLED).read_text() == NOT_WHAT_PNPM_INSTALLS
     assert sorted(kept.name for kept in frontend.iterdir()) == sorted(
-        [*ASKED_OF_PNPM, "src", "tests", "vite.config.ts"]
+        [*ASKED_OF_PNPM, INSTALLED, "src", "tests", "vite.config.ts"]
     )
+
+
+async def test_the_copy_takes_nothing_of_what_is_installed_for_the_working_tree(two_lines_broken: BrokenRun) -> None:
+    """What stands where the working tree's dependencies would is no directory at all, and the tests ran all the same."""
+    assert ONE_OF_TWO_FAILED in two_lines_broken.ran.lines
+
+
+async def test_the_copy_is_removed_once_the_tests_have_run(two_lines_broken: BrokenRun) -> None:
+    """Node keeps a cache of its own where temporary files go; a copy of the page would hold the module."""
+    temporary = two_lines_broken.repository / TEMPORARY
+
+    assert list(temporary.rglob(Path(MODULE).name)) == []
 
 
 async def test_a_test_file_that_can_no_longer_be_read_is_said_to_be_one_that_could_not_be_run(tmp_path: Path) -> None:
@@ -274,10 +296,9 @@ async def test_a_document_with_a_field_it_does_not_have_is_refused_and_nothing_i
 async def test_a_run_stopped_from_outside_ends_without_a_word_and_leaves_no_copy_behind(
     tmp_path: Path, sent: signal.Signals
 ) -> None:
-    repository = _repository(tmp_path / "repository")
+    repository = _repository(tmp_path)
     (repository / ASKED).write_text(TWO_LINES_BROKEN)
-    temporary = tmp_path / "temporary"
-    temporary.mkdir()
+    temporary = repository / TEMPORARY
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         str(BREAK_LINES),

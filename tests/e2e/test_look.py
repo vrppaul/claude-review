@@ -10,6 +10,7 @@ since each is a server and a browser started.
 import asyncio
 import contextlib
 import os
+import re
 import signal
 import sys
 import zlib
@@ -58,6 +59,18 @@ STORY_SHOT = "deep.png"
 # The look at the files: dark, on a narrow window, one picture kept
 NARROW = 700
 FILES_SHOT = "narrow.png"
+# Its steps: the picture, then the keyboard taken to the first line and a comment begun on it
+FILES_STEPS = ["shot:narrow", "key:j", "key:Enter"]
+# How tall the window of every look is
+WINDOW_HEIGHT = 900
+# What a line says of the reading area and of what holds the keyboard, value by value
+AREA_SAID = re.compile(
+    r"area: (?P<test_id>\S+) scrollTop=(?P<scroll_top>\d+) height=(?P<height>\d+) holds=(?P<holds>\d+)"
+)
+KEYBOARD_SAID = re.compile(
+    r"keyboard: (?P<tag>\S+) testid=(?P<test_id>\S+) label=(?P<label>.+) "
+    r"ringed=(?P<ringed>yes|no) box=(?P<width>\d+)x(?P<height>\d+)"
+)
 # How wide the window is unless a look asks
 WIDTH_UNLESS_ASKED = 1440
 # What the long change holds: its files, the chapters of the story told of it, and what the first is called
@@ -157,6 +170,38 @@ def _said(line: str) -> Said:
     return Said(step=step, page=page, area=area, keyboard=keyboard, bar=bar, read=read, reading=reading)
 
 
+class AreaSaid(BaseModel):
+    """What a line says of the reading area: which it is, how far it has scrolled, its height and what it holds."""
+
+    model_config = ConfigDict(frozen=True)
+
+    test_id: str
+    scroll_top: int
+    height: int
+    holds: int
+
+
+class KeyboardSaid(BaseModel):
+    """What a line says of what holds the keyboard: its tag, test id and label, whether ringed, and its box."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tag: str
+    test_id: str
+    label: str
+    ringed: str
+    width: int
+    height: int
+
+
+def _area(said: Said) -> AreaSaid:
+    return AreaSaid.model_validate(AREA_SAID.fullmatch(said.area).groupdict())
+
+
+def _keyboard(said: Said) -> KeyboardSaid:
+    return KeyboardSaid.model_validate(KEYBOARD_SAID.fullmatch(said.keyboard).groupdict())
+
+
 def _first_pixel(picture: Path) -> bytes:
     """The colour of a picture's top left corner."""
     png = picture.read_bytes()
@@ -179,7 +224,7 @@ async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     """One look at the files, dark and on a narrow window, with a picture of how they open."""
     shots = tmp_path_factory.mktemp("files") / "shots"
     looked = await _look(
-        "--view", "files", "--theme", "dark", "--width", str(NARROW), "--shots", str(shots), "shot:narrow"
+        "--view", "files", "--theme", "dark", "--width", str(NARROW), "--shots", str(shots), *FILES_STEPS
     )
     assert looked.exit_code == LOOKED, looked.complaint
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
@@ -257,9 +302,9 @@ async def test_a_key_is_pressed_on_the_page_and_the_line_says_what_holds_the_key
     """Only a key rings what holds the keyboard: nothing is ringed as the page opens, and Tab rings where it lands."""
     opened, _, _, tabbed, *_ = story_look.said
 
-    assert "ringed=no" in opened.keyboard
-    assert "ringed=yes" in tabbed.keyboard
-    assert "testid=none" not in tabbed.keyboard
+    assert _keyboard(opened).ringed == "no"
+    assert _keyboard(tabbed).ringed == "yes"
+    assert _keyboard(tabbed).test_id != "none"
 
 
 async def test_the_line_says_what_the_chapter_bar_says_and_that_there_is_none(story_look: LookWithShots) -> None:
@@ -296,10 +341,49 @@ async def test_a_look_stops_the_server_it_started(story_look: LookWithShots) -> 
 
 
 async def test_the_files_are_looked_at_when_they_are_asked_for(files_look: LookWithShots) -> None:
-    opened, shot = files_look.said
+    opened, shot, *_ = files_look.said
 
     assert opened.area.startswith("area: diff-view ")
     assert shot.area.startswith("area: diff-view ")
+
+
+async def test_the_line_says_how_tall_the_reading_area_is(story_look: LookWithShots, files_look: LookWithShots) -> None:
+    """On the narrow window the header takes a row more, so the area under it is the shorter of the two."""
+    wide, *_ = story_look.said
+    narrow, *_ = files_look.said
+
+    assert 0 < _area(narrow).height < _area(wide).height < WINDOW_HEIGHT
+
+
+async def test_the_line_says_how_much_the_reading_area_holds(files_look: LookWithShots) -> None:
+    """The long change is many screens tall, and a comment begun on a line makes it taller."""
+    opened, _, _, commenting = files_look.said
+
+    assert _area(commenting).holds > _area(opened).holds > _area(opened).height
+
+
+async def test_the_line_says_what_holds_the_keyboard_by_its_tag_its_label_and_its_box(
+    story_look: LookWithShots, files_look: LookWithShots
+) -> None:
+    """Three holders in turn: the switch that chose the story, an entry of the contents, the field of a comment."""
+    opened, _, pressed, *_ = story_look.said
+    *_, commenting = files_look.said
+    switch, entry, field = _keyboard(opened), _keyboard(pressed), _keyboard(commenting)
+
+    assert (switch.tag, switch.test_id, switch.label) == ("BUTTON", "read-as-story", "none")
+    assert (entry.tag, entry.test_id) == ("BUTTON", "go-to-part")
+    assert entry.label.startswith('"Chapter 3:')
+    assert (field.tag, field.test_id) == ("TEXTAREA", "comment-input")
+    assert switch.width < entry.width < field.width
+    assert switch.height < entry.height < field.height
+
+
+async def test_a_line_is_printed_once_the_page_has_come_to_rest(story_look: LookWithShots) -> None:
+    """The press glides to a chapter; the step after it finds the area where the press's own line said it was."""
+    _, _, pressed, tabbed, *_ = story_look.said
+
+    assert _area(pressed).scroll_top > SCROLLED_BY
+    assert pressed.area == tabbed.area
 
 
 async def test_the_window_is_as_wide_as_was_asked(files_look: LookWithShots) -> None:

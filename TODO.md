@@ -198,6 +198,11 @@ tests. Remove items when done — don't check them off.
       lease in it when counted, which `nothing_left_running`
       (`tests/e2e/conftest.py`) cannot see, for it sees tasks. A lease left
       there fires only if browser tests are still running ten minutes on.
+- [ ] No test holds what a look says of the page against its window,
+      `page: taller=0 scrolled=0` (`scripts/look.py`): with either read
+      replaced by 0 every test passes. A page that holds its place shows
+      both as 0 whatever is done to it from the look's command line, and a
+      page that scrolls would have to be a second page, made for the test.
 - [ ] No test holds what `scripts/look.py` says when it cannot begin or
       cannot settle: a review that does not start or does not say where it
       is, a story the review refuses, git failing to make the repository,
