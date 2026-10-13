@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
+import { Jumps } from '$lib/dom/jump';
 import { frames, FRAMES_TO_SETTLE, untilAGlideWouldHaveBegun } from './frames';
 
 let sections: FileSections;
 
 beforeEach(() => {
-	sections = new FileSections();
+	sections = new FileSections(new Jumps());
 });
 
 // Enough for a jump that came to rest, was scrolled on from there, and came to rest where it was sent

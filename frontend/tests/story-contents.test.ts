@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contentsOf } from '$lib/review/story-contents';
+import { contentsOf, LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
 import { stepSectionKey } from '$lib/review/story-pieces';
 import { toldChapter, toldStep, toldStory } from './story';
 
@@ -55,6 +55,12 @@ describe('what a story lists of itself', () => {
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {
 		expect(ofTheFirst.files.map(({ alsoIn }) => alsoIn)).toEqual([[1, 2], [1]]);
 		expect(ofTheSecond.files.map(({ alsoIn }) => alsoIn)).toEqual([[0], [0, 2]]);
+	});
+
+	it("knows each chapter's part of the page by a key of its own, apart from the overview's and from what is left out", () => {
+		const parts = [ofTheFirst, ofTheSecond, ofTheThird].map(({ part }) => part);
+
+		expect(new Set([...parts, OVERVIEW_PART, LEFT_OUT_PART]).size).toBe(5);
 	});
 
 	it('says no other chapter of a file one chapter alone tells', () => {

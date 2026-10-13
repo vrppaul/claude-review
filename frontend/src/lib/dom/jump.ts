@@ -18,6 +18,9 @@
  * move themselves or act where they are, the element is left wherever it
  * comes to rest. Nor does it go on for ever: what something else keeps
  * moving is left to it, and the jump says it is over all the same.
+ *
+ * The page takes the reader one place at a time: `Jumps` holds the jump in
+ * flight for whoever asks, to a section, a thread or a part of a story.
  */
 
 import type { Motion } from '$lib/dom/motion';
@@ -99,7 +102,7 @@ class SettleWatch {
 	}
 }
 
-export class Jump {
+class Jump {
 	readonly #element: HTMLElement;
 	readonly #sentTo: ScrollLogicalPosition;
 	readonly #motion: Motion;
@@ -177,5 +180,63 @@ export class Jump {
 	#end(): void {
 		this.#underWay?.hearing.abort();
 		this.#underWay = null;
+	}
+}
+
+/** What says which of some elements the reader is at, and is told when the page takes them to one: a reading band. */
+interface TakesLandings {
+	/** The page is taking the reader to this element: it is the one they are at from now on. */
+	land: (element: Element) => void;
+	/** The reader has come to rest: from here on, where they are is theirs to say by moving on. */
+	settle: () => void;
+}
+
+/**
+ * Where the page is taking the reader: one place at a time, whoever asks.
+ *
+ * A jump asked for takes the place of the one in flight, which scrolls no
+ * more and never says it has come to rest: an earlier one neither pulls the
+ * reader back nor does what it meant to do at rest once another was asked
+ * for. What it owed whoever it landed on is not lost with it: they hear
+ * that the reader has come to rest from the jump that took its place,
+ * whoever asked for that one.
+ */
+export class Jumps {
+	// The jump in flight, or the last one made
+	#latest: Jump | null = null;
+	// Whoever was told the reader is being taken to one of theirs, and is still owed word that they came to rest
+	readonly #landedOn = new Set<TakesLandings>();
+
+	/**
+	 * Take the reader to an element, in place of wherever the page was taking them.
+	 *
+	 * @param element what the reader is taken to
+	 * @param sentTo where in the area it scrolls in the element is sent: its head to the top, or itself to the middle
+	 * @param motion how the first scroll to it moves
+	 * @param atRest what this jump alone does once it has come to rest, unless another takes its place first
+	 */
+	to(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void): void {
+		this.#latest?.abandon();
+		this.#latest = new Jump(element, sentTo, motion, () => this.#cameToRest(atRest));
+		this.#latest.start();
+	}
+
+	/**
+	 * Take the reader to the head of an element, and tell whoever reads
+	 * which of such elements the reader is at that it is this one from now
+	 * on, whatever is at the top while it is on its way. They hear once the
+	 * reader has come to rest, from this jump or from one that took its place.
+	 */
+	land(reading: TakesLandings, element: HTMLElement, motion: Motion, atRest?: () => void): void {
+		reading.land(element);
+		this.#landedOn.add(reading);
+		this.to(element, 'start', motion, atRest);
+	}
+
+	/** The reader has come to rest where the page took them: whoever was landed on since the last rest hears of it. */
+	#cameToRest(atRest: (() => void) | undefined): void {
+		for (const reading of this.#landedOn) reading.settle();
+		this.#landedOn.clear();
+		atRest?.();
 	}
 }

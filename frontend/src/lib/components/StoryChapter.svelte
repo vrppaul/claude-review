@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ChapterListed } from '$lib/review/story-contents';
-	import { chapterNumber, filesAndSteps, stepNumber } from './story-words';
+	import { chapterEntitled, chapterNumber, filesAndSteps, stepNumber } from './story-words';
+	import StoryPart from './StoryPart.svelte';
 	import StoryStep from './StoryStep.svelte';
 
 	interface Props {
@@ -14,7 +15,12 @@
 </script>
 
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
-<section data-testid="story-chapter" class="flex flex-col gap-5 border-t border-base-300 pt-6">
+<StoryPart
+	partKey={chapter.part}
+	label={chapterEntitled(chapter.place, told.title)}
+	testId="story-chapter"
+	class="flex flex-col gap-5 border-t border-base-300 pt-6"
+>
 	<header class="flex items-baseline gap-3">
 		<h2 class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
 			<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
@@ -33,4 +39,4 @@
 	{#each chapter.steps as step (step.section)}
 		<StoryStep {step} number={stepNumber(chapter.place, step.place)} />
 	{/each}
-</section>
+</StoryPart>

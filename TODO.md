@@ -139,6 +139,17 @@ tests. Remove items when done — don't check them off.
       `setWidth` are written out twice in `reader/page-layout.svelte.ts`:
       for a column the reader puts away (`PutAwayColumn`) and for the
       agent panel.
+- [ ] `refactor(server)`: three routes call two methods of the `Review`
+      where the rule is that a route calls one (`.claude/rules/wire.md`):
+      GET /api/review (`presentation/routes/page_routes.py:79-80`), GET
+      /api/diff (`149-150`) and GET /api/versions (`162-163`).
+- [ ] On Windows, a checkout without `core.symlinks` writes `CLAUDE.md` as
+      a one-line file where it is a link to `AGENTS.md`, and the
+      instruction-files gate (`scripts/check_instruction_files.py`) fails
+      there.
+- [ ] Before a release, decide whether `CLAUDE.md` and `.claude/` are left
+      out of the sdist, which leaves out `/frontend` alone: whether PyPI
+      takes an sdist that holds a symlink is not checked.
 
 ## Testing
 

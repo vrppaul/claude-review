@@ -17,9 +17,9 @@
  */
 
 import { firstInDocument } from '$lib/dom/document-order';
-import { Jump } from '$lib/dom/jump';
+import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains } from '$lib/dom/keyboard';
-import { type Motion, scrollMotion } from '$lib/dom/motion';
+import { scrollMotion } from '$lib/dom/motion';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
@@ -84,10 +84,15 @@ export class FileSections {
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
-	// Where the page is taking the reader, or took them last: one jump at a
-	// time, so an earlier one neither pulls them back nor marks its section
-	// once another was asked for
-	#jump: Jump | null = null;
+	// Where the page is taking the reader: one jump at a time, shared with
+	// whatever else takes them somewhere, so an earlier jump neither pulls
+	// them back nor marks its section once another was asked for
+	readonly #jumps: Jumps;
+
+	/** @param jumps where the page is taking the reader, one place at a time */
+	constructor(jumps: Jumps) {
+		this.#jumps = jumps;
+	}
 
 	/**
 	 * The file the reader is in: the one whose section is pinned at the top
@@ -258,24 +263,18 @@ export class FileSections {
 		else this.#awaitedSection = { key, arrive, until: performance.now() + AWAIT_DRAWING_FOR };
 	}
 
-	/** Bring a section that is drawn to the top at once, as the one being read from now on. */
+	/**
+	 * Bring a section that is drawn to the top at once: it is the one being
+	 * read from now on, whatever the band says while it is on its way.
+	 */
 	#scrollToDrawn({ element }: Section): void {
-		this.#land(element, 'instant');
+		this.#jumps.land(this.#band, element, 'instant');
 	}
 
-	/** Bring a section that is drawn to the top, and mark it once it has come to rest. */
+	/** Bring a section that is drawn to the top, as the one being read from now on, and mark it once it has come to rest. */
 	#showDrawn({ element }: Section): void {
 		this.#unmark();
-		this.#land(element, scrollMotion(), () => this.#mark(element));
-	}
-
-	/**
-	 * Take the reader to the head of a section: it is the one being read
-	 * from now on, whatever the band says while it is on its way.
-	 */
-	#land(element: HTMLElement, motion: Motion, atRest?: () => void): void {
-		this.#band.land(element);
-		this.#jumpTo(element, 'start', motion, atRest);
+		this.#jumps.land(this.#band, element, scrollMotion(), () => this.#mark(element));
 	}
 
 	/**
@@ -287,29 +286,8 @@ export class FileSections {
 	 * does not move the screen again.
 	 */
 	#arriveAtThread(thread: HTMLElement): void {
-		this.#jumpTo(thread, 'center', scrollMotion());
+		this.#jumps.to(thread, 'center', scrollMotion());
 		thread.focus({ preventScroll: true });
-	}
-
-	/**
-	 * Take the reader to an element, in place of wherever the page was
-	 * taking them. A jump another takes the place of never says it has come
-	 * to rest, and a section it landed is still owed the band handed back
-	 * once the reader is at rest: so every jump hands it back, and the last
-	 * one in flight is the one that does.
-	 *
-	 * @param atRest what this jump alone does once it has come to rest, unless another takes its place first
-	 */
-	#jumpTo(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void): void {
-		this.#jump?.abandon();
-		this.#jump = new Jump(element, sentTo, motion, () => this.#cameToRest(atRest));
-		this.#jump.start();
-	}
-
-	/** The reader has come to rest where the page took them: from here on the band says where they read. */
-	#cameToRest(atRest: (() => void) | undefined): void {
-		this.#band.settle();
-		atRest?.();
 	}
 
 	/** Where every section is, in the order they announced themselves. */

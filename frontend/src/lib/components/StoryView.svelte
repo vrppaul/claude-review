@@ -3,7 +3,6 @@
 	import { useReview } from '$lib/review/context';
 	import { counted } from '$lib/utils/words';
 	import StoryChapter from './StoryChapter.svelte';
-	import StoryHead from './StoryHead.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
 	import StoryOverview from './StoryOverview.svelte';
 
@@ -20,6 +19,11 @@
 		if (!container) return;
 		return review.sections.watchInView(container);
 	});
+	// And which part of it: the overview and a chapter's head are read before any piece is
+	$effect(() => {
+		if (!container) return;
+		return review.parts.watchInView(container);
+	});
 </script>
 
 <!-- The same change, read as the agent tells it: one scroll, the overview first, then every chapter in a
@@ -33,8 +37,7 @@
 	{:else}
 		{@const story = held.story}
 		<article class="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8">
-			<StoryHead {held} />
-			<StoryOverview overview={story.overview} chapters={story.chapters} />
+			<StoryOverview {held} />
 
 			{#each review.story.contents.chapters as chapter (chapter.told.id)}
 				<StoryChapter {chapter} />

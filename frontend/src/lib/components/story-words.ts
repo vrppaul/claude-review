@@ -15,6 +15,9 @@ const FIRST_NUMBER = 1;
 // What a step and a chapter are called before their numbers: at the head of a heading, and inside a sentence
 const A_STEP = 'Step';
 const A_CHAPTER = 'chapter';
+// And a chapter where the words begin with it, with what stands between its number and its title
+const CHAPTER_FIRST = 'Chapter';
+const BEFORE_A_TITLE = ': ';
 // What chapters are called before their numbers, of one and of several
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 // What stands between the two counts of a chapter's head
@@ -43,6 +46,17 @@ export function linesSaid({ first, last }: StepLines): string {
 /** A step as its heading names it to whoever cannot see where it stands: "Step 1.2". */
 export function stepNamed(number: string): string {
 	return `${A_STEP} ${number}`;
+}
+
+/** What the overview's part of the page is called, to whoever goes through the page by its parts. */
+export const THE_OVERVIEW = 'Overview';
+
+/** What the part that draws what no step tells is called, in its heading and by its part of the page. */
+export const NOT_IN_THE_STORY = 'Not in the story';
+
+/** What a chapter's part of the page is called: "Chapter 2: The end". */
+export function chapterEntitled(place: number, title: string): string {
+	return `${CHAPTER_FIRST} ${chapterNumber(place)}${BEFORE_A_TITLE}${title}`;
 }
 
 /** How much a chapter tells, as its head says: "3 files · 4 steps". */

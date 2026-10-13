@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileSections } from '$lib/dom/file-sections';
+import { Jumps } from '$lib/dom/jump';
 import { frames, untilAGlideWouldHaveBegun } from './frames';
 
 /** An observer the test reports crossings through, as the browser would once it has laid the page out. */
@@ -58,7 +59,7 @@ beforeEach(() => {
 	document.body.innerHTML = '';
 	observedBefore = globalThis.IntersectionObserver;
 	globalThis.IntersectionObserver = ReportedObserver as unknown as typeof IntersectionObserver;
-	sections = new FileSections();
+	sections = new FileSections(new Jumps());
 });
 
 afterEach(() => {

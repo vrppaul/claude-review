@@ -18,6 +18,8 @@ import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
 import { FileSections } from '$lib/dom/file-sections';
+import { Jumps } from '$lib/dom/jump';
+import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
 import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
@@ -109,7 +111,11 @@ export class Review {
 	/** The story the agent told of the change, if it told one. */
 	readonly story: ReviewStory;
 	readonly guide: Guide;
-	readonly sections = new FileSections();
+	// Where the page is taking the reader: one jump at a time, whether to a section or to a part of the story
+	readonly #jumps = new Jumps();
+	readonly sections = new FileSections(this.#jumps);
+	/** The parts of the story on the page — its overview, each chapter, what it leaves out — and which is being read. */
+	readonly parts = new ReadingParts(this.#jumps);
 	/** The ways the review is read — file by file, or as the story told of it — and which is on screen. */
 	readonly views: ReadingViews;
 	readonly navigator: Navigator;

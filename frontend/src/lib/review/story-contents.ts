@@ -10,6 +10,18 @@
 import { stepSectionKey } from '$lib/review/story-pieces';
 import type { DiffFile, ToldChapter, ToldStep, ToldStory } from '$lib/types';
 
+/**
+ * What each part of a story is known by on the page: its overview, each
+ * chapter, and what it leaves out. A chapter is known by its id, under a
+ * word no other part begins with, so no id an agent chooses is another
+ * part's key.
+ */
+export const OVERVIEW_PART = 'overview';
+export const LEFT_OUT_PART = 'left-out';
+const CHAPTER_PART = 'chapter';
+// What stands between the two halves of a chapter's key
+const KEY_SEPARATOR = ':';
+
 /** A file as a chapter lists it: once, however many of the chapter's steps tell lines of it. */
 interface FileListed {
 	/** The file as the first of the chapter's pieces of it says: its path, and what became of it. */
@@ -34,6 +46,8 @@ export interface ChapterListed {
 	told: ToldChapter;
 	/** Where the chapter stands among the story's chapters: what it is numbered by. */
 	place: number;
+	/** What the chapter's part of the page is known by. */
+	part: string;
 	/** The files it tells, each once, in the order it first tells them. */
 	files: FileListed[];
 	/** Its steps, in the order it tells them. */
@@ -73,7 +87,8 @@ function chapterListed(told: ToldChapter, place: number, chapters: readonly Told
 		files.set(step.file, file);
 		steps.push({ told: step, section: stepSectionKey(step), place: stepPlace, file });
 	}
-	return { told, place, files: [...files.values()], steps };
+	const part = [CHAPTER_PART, told.id].join(KEY_SEPARATOR);
+	return { told, place, part, files: [...files.values()], steps };
 }
 
 /** What a story lists of itself. */
