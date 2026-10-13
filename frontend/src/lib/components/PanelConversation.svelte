@@ -80,7 +80,7 @@
 	aria-label="Conversation with the agent"
 	bind:this={stream}
 	onscroll={onScroll}
-	class="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+	class="cr-scroller min-h-0 flex-1 px-3 py-3"
 >
 	<!-- Work showing outranks the empty state: an agent doing something
 		before anybody has said anything is exactly the case a reader has

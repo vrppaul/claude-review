@@ -138,6 +138,14 @@ const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\
 const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
 // Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
 const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|\\s|$)/`;
+// What scrolls down the page is a `cr-scroller`, which is the box its contents
+// are placed in: words kept for a screen reader are out of the flow, and in a
+// scroller made by a utility they stay put while the rest scrolls, on a page
+// that grows to hold them. A box that only scrolls sideways — a wide line of
+// code — is not one of these
+const SCROLLS_IN_ITS_OWN_BOX = 'Make what scrolls a cr-scroller: it is the box its contents are placed in.';
+// A utility that makes a box scroll down: `overflow-auto`, `overflow-y-auto`, `overflow-scroll`, `overflow-y-scroll`
+const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)(\\s|$)/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {
@@ -154,7 +162,8 @@ const NO_INLINE_STYLING = [
 	{ selector: 'SvelteStyleDirective:not([key.name.name=/^--/])', message: STYLED_BY_CLASSES },
 	...inClassLists(Z_UTILITY, LAYERED_BY_TOKENS),
 	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
-	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS)
+	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS),
+	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
 ];
 
 // The page makes an HTTP request in one place, which holds every request to the

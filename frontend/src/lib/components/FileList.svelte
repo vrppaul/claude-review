@@ -153,7 +153,7 @@
 >
 	<!-- The tree is on the left, so it grows rightward -->
 	<EdgeGrip column={layout} grows="right" label="Resize the file tree" testId="sidebar-resize" />
-	<div bind:this={list} class="min-h-0 flex-1 overflow-y-auto p-3">
+	<div bind:this={list} class="cr-scroller min-h-0 flex-1 p-3">
 		<div class="mb-2 flex items-center gap-2">
 			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
 			<div class="flex-1"></div>

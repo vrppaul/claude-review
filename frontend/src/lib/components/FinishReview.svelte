@@ -55,7 +55,7 @@
 		</span>
 	</div>
 
-	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+	<div class="cr-scroller min-h-0 flex-1 px-4 py-3">
 		{#if open.length > 0}
 			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
 			<div data-testid="open-fields" class="mb-3">

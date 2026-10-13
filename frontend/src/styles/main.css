@@ -1318,7 +1318,21 @@
 	flex: 1;
 	min-height: 0;
 }
+/*
+ * What scrolls on the page — the tree, the panel's conversation, a pane's
+ * list, and the reading area below — is the box its contents are placed in.
+ * Words kept for a screen reader are taken out of the flow; in a scroller
+ * that is not their box they would stay where they were first put while the
+ * rest scrolled: far down a page that grew to hold them, scrolled itself,
+ * and lost its header at the next jump.
+ */
+.cr-scroller {
+	position: relative;
+	overflow-y: auto;
+}
+/* The reading area scrolls both ways, and is the box of what is read in it for the same reason */
 .cr-diff-area {
+	position: relative;
 	flex: 1;
 	min-width: min(var(--cr-diff-least-width), 100%);
 	overflow: auto;
