@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
@@ -6,6 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { FIELD_KEYS } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
+import { broughtIntoView } from '../elements';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
 import { storyHeld, toldChapter, toldStep } from '../story';
@@ -17,17 +18,6 @@ let review: Review;
 beforeEach(() => {
 	review = openReview({ files, facts: { answerer_attached: true } });
 });
-
-/**
- * What records a section being brought into view: its own, given to it here.
- * A spy on the method would be the one every element shares, already called
- * by whatever was brought into view before.
- */
-function broughtIntoView(section: HTMLElement): ReturnType<typeof vi.fn> {
-	const brought = vi.fn();
-	section.scrollIntoView = brought;
-	return brought;
-}
 
 /** What the help lists while it is open, row by row: the keys as it writes them, and what it says they do. */
 function listedInTheHelp(): string[] {

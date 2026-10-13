@@ -2,16 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FinishReview from '$lib/components/FinishReview.svelte';
+import { said } from '../elements';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { SEND_LIMITS } from '../pasted-images';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
-
-/** What an element says, without the template's line breaks. */
-function said(element: HTMLElement): string {
-	return element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-}
 
 // The longest text a test's server takes, short enough to type past
 const SHORTEST = 5;

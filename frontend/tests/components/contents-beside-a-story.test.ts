@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, hunk } from '../diff';
+import { broughtIntoView, said } from '../elements';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { storyHeld, toldChapter, toldStep } from '../story';
@@ -36,18 +37,6 @@ function entries(): HTMLElement[] {
 /** The rows of the files the contents lists, down the column: each chapter's, then what is left out. */
 function fileRows(): HTMLElement[] {
 	return screen.getAllByTestId('contents-file');
-}
-
-/** What an element says, its runs of space made one. */
-function said(element: HTMLElement): string {
-	return element.textContent.replace(/\s+/g, ' ').trim();
-}
-
-/** What records an element being brought into view: its own, given to it here, never the one every element shares. */
-function broughtIntoView(element: HTMLElement): ReturnType<typeof vi.fn> {
-	const brought = vi.fn();
-	element.scrollIntoView = brought;
-	return brought;
 }
 
 describe('the contents beside a story', () => {
