@@ -444,6 +444,31 @@ async def test_f_puts_the_contents_of_a_story_away_and_their_rail_brings_them_ba
     await expect(page.get_by_test_id("contents")).to_be_visible()
 
 
+async def test_the_keyboard_goes_with_the_contents_of_a_story_to_their_rail_and_comes_back_with_them(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+
+    await page.get_by_test_id("hide-contents").press("Enter")
+    await expect(page.get_by_test_id("show-contents")).to_be_focused()
+
+    await page.keyboard.press("Enter")
+    await expect(page.get_by_test_id("hide-contents")).to_be_focused()
+
+
+async def test_f_with_the_keyboard_on_an_entry_of_the_contents_of_a_story_leaves_it_on_their_rail(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+    await page.get_by_test_id("go-to-part").first.focus()
+
+    await page.keyboard.press("f")
+
+    await expect(page.get_by_test_id("show-contents")).to_be_focused()
+
+
 async def test_on_a_narrow_screen_a_story_opens_without_its_contents_which_lie_over_it_once_brought_back(
     review: RunningReview, page: Page
 ) -> None:

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
@@ -37,6 +38,20 @@
 
 	const putAway = $derived(`Put ${called} away`);
 	const bringBack = $derived(`Bring ${called} back`);
+
+	// The column and its way to its rail, while it is on screen; the rail, while it is put away
+	let columnElement: HTMLElement | undefined = $state();
+	let putAwayButton: HTMLElement | undefined = $state();
+	let rail: HTMLElement | undefined = $state();
+
+	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
+	// the keyboard in it: the control pressed, an entry. Looked at before the page redraws it: the
+	// keyboard then goes to the control that undoes what was done, and is never left on nothing
+	$effect.pre(() => {
+		const open = column.open;
+		const drawnBefore = open ? rail : columnElement;
+		if (drawnBefore?.contains(document.activeElement)) focusWhatRemains(() => (open ? putAwayButton : rail));
+	});
 </script>
 
 <!-- A column beside what is read: as wide as the reader left it, scrolling by itself, and put away
@@ -44,6 +59,7 @@
 {#if column.open}
 	<svelte:element
 		this={landmark}
+		bind:this={columnElement}
 		data-testid={testIds.column}
 		data-tour={tour}
 		aria-label={label}
@@ -57,6 +73,7 @@
 				{@render heading()}
 				<div class="flex-1"></div>
 				<button
+					bind:this={putAwayButton}
 					type="button"
 					data-testid={testIds.putAway}
 					class="btn btn-ghost btn-xs px-1"
@@ -72,6 +89,7 @@
 	</svelte:element>
 {:else}
 	<button
+		bind:this={rail}
 		type="button"
 		data-testid={testIds.bringBack}
 		data-tour={tour}

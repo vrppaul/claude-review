@@ -245,3 +245,29 @@ async def test_the_keyboard_lands_on_the_help_once_the_tour_is_skipped(
     await page.get_by_test_id("guide-tour").wait_for(state="detached")
 
     assert await _focused(page) == "open-help"
+
+
+async def test_the_keyboard_goes_with_the_tree_of_files_to_its_rail_and_comes_back_with_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_review(page, review)
+
+    await _press(page, "hide-sidebar")
+    await page.get_by_test_id("show-sidebar").wait_for()
+    assert await _focused(page) == "show-sidebar"
+
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("hide-sidebar").wait_for()
+    assert await _focused(page) == "hide-sidebar"
+
+
+async def test_f_with_the_keyboard_on_a_file_of_the_tree_leaves_it_on_the_rail_of_the_tree(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_review(page, review)
+    await page.get_by_test_id("file-item").first.focus()
+
+    await page.keyboard.press("f")
+    await page.get_by_test_id("show-sidebar").wait_for()
+
+    assert await _focused(page) == "show-sidebar"
