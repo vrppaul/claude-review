@@ -6,14 +6,15 @@
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
  * thread on a line no piece shows is not drawn here at all; the files,
- * read against the review's own base, draw every thread. Nor is any thread drawn in a story told of
- * another take of the change than the page reads: its lines are numbered
- * as that take, and a thread hangs on a line of the take on screen.
+ * read against the review's own base, draw every thread. Nor is any thread
+ * drawn in a story told of another take of the change than the page reads:
+ * its lines are numbered as that take, and a thread hangs on a line of the
+ * take on screen.
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
-import { isDrawn, rowOf } from '$lib/anchors/placement';
-import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
+import { type DrawnRows, fileDraws, inDrawnOrder } from '$lib/anchors/placement';
+import type { FileLines } from '$lib/anchors/views';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
@@ -23,13 +24,6 @@ import type { DiffFile, Thread, ToldStory } from '$lib/types';
 interface DrawnPiece {
 	key: string;
 	piece: DiffFile;
-}
-
-/** A thread as it stands in the story: the piece that draws it, by its place among the pieces, and the row it hangs under. */
-interface Standing {
-	thread: Thread;
-	piecePlace: number;
-	row: number;
 }
 
 /** What a step's section is known by: where the step stands in the story as it was told. */
@@ -51,25 +45,11 @@ function piecesOf(story: ToldStory): DrawnPiece[] {
 	return [...steps, ...leftOut];
 }
 
-/**
- * Whether a piece draws a thread on these lines: it is a piece of their
- * file, holds the line, and numbers it as the review does.
- */
-function draws({ piece }: DrawnPiece, lines: FileLines, numbering: StoryNumbering): boolean {
-	return isDrawn(lines, [piece], numbering);
-}
-
-/** Where a thread stands among the pieces, if one of them draws it. */
-function standingOf(
-	{ thread, lines }: ThreadOnLines,
-	pieces: readonly DrawnPiece[],
-	numbering: StoryNumbering
-): Standing[] {
-	const piecePlace = pieces.findIndex((drawn) => draws(drawn, lines, numbering));
-	const drawn = pieces[piecePlace];
-	if (drawn === undefined) return [];
-	const rows = drawn.piece.hunks.flatMap((hunk) => hunk.lines);
-	return [{ thread, piecePlace, row: rowOf(lines, rows) }];
+/** The rows of the piece that draws a thread on these lines, and its place among the pieces; null where none draws it. */
+function drawnIn(pieces: readonly DrawnPiece[], lines: FileLines, numbering: StoryNumbering): DrawnRows | null {
+	const place = pieces.findIndex(({ piece }) => fileDraws(piece, lines, numbering));
+	const drawn = pieces[place];
+	return drawn === undefined ? null : { place, rows: drawn.piece.hunks.flatMap((hunk) => hunk.lines) };
 }
 
 export class StoryReading implements ReadingView {
@@ -90,15 +70,12 @@ export class StoryReading implements ReadingView {
 	threadsInOrder(): Thread[] {
 		const pieces = this.#pieces();
 		const numbering = this.#story.numbering;
-		return this.#threads.onLines
-			.flatMap((onLines) => standingOf(onLines, pieces, numbering))
-			.sort((one, other) => one.piecePlace - other.piecePlace || one.row - other.row)
-			.map(({ thread }) => thread);
+		return inDrawnOrder(this.#threads.onLines, (lines) => drawnIn(pieces, lines, numbering));
 	}
 
 	sectionOf(lines: FileLines): string | null {
 		const numbering = this.#story.numbering;
-		return this.#pieces().find((drawn) => draws(drawn, lines, numbering))?.key ?? null;
+		return this.#pieces().find(({ piece }) => fileDraws(piece, lines, numbering))?.key ?? null;
 	}
 
 	/** The first piece of the file the story draws: where the file is first told. */

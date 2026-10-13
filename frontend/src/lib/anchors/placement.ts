@@ -2,6 +2,22 @@ import { type Numbering, sideIsTheReviews } from '$lib/anchors/numbering';
 import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
 import type { DiffFile, DiffLine, LineSide, Thread } from '$lib/types';
 
+/** A line's number on one side; null for a line that is not on it. */
+function numberOn(side: LineSide, line: DiffLine): number | null {
+	return side === 'old' ? line.old_number : line.new_number;
+}
+
+/**
+ * Whether a file as it is drawn — a file of the diff, or a piece cut out of
+ * one — has a row for a thread on these lines to hang on: it is their file,
+ * shows their last line, and numbers that side as the review does.
+ */
+export function fileDraws(file: DiffFile, lines: FileLines, numbering: Numbering): boolean {
+	if (file.path !== lines.file || !sideIsTheReviews(lines.side, numbering)) return false;
+
+	return file.hunks.some((hunk) => hunk.lines.some((line) => numberOn(lines.side, line) === lines.end_line));
+}
+
 /**
  * Whether a thread on these lines has a row to hang on among files as they
  * are drawn, their lines numbered as `numbering` says.
@@ -13,14 +29,7 @@ import type { DiffFile, DiffLine, LineSide, Thread } from '$lib/types';
  * instead. Nor is there on a side whose numbers are not the review's own.
  */
 export function isDrawn(lines: FileLines, files: DiffFile[], numbering: Numbering): boolean {
-	if (!sideIsTheReviews(lines.side, numbering)) return false;
-
-	const file = files.find((candidate) => candidate.path === lines.file);
-	if (!file) return false;
-
-	return file.hunks.some((hunk) =>
-		hunk.lines.some((line) => (lines.side === 'old' ? line.old_number : line.new_number) === lines.end_line)
-	);
+	return files.some((file) => fileDraws(file, lines, numbering));
 }
 
 /** The threads on one file the diff does not hold. */
@@ -43,39 +52,52 @@ export function threadsOffTheDiff(onLines: readonly ThreadOnLines[], files: read
 	return [...byFile].map(([file, held]) => ({ file, threads: held.map(({ thread }) => thread) }));
 }
 
-/** A thread as it stands in a file the diff holds: the file's place among the files, and the row it hangs under. */
+/**
+ * The rows one section of a view draws — a file of the diff, a piece of a
+ * story — and the section's place among those the view draws.
+ */
+export interface DrawnRows {
+	place: number;
+	rows: readonly DiffLine[];
+}
+
+/** A thread as it stands in what a view draws: the place of the section that draws it, and the row it hangs under there. */
 interface Standing {
 	thread: Thread;
-	filePlace: number;
+	place: number;
 	row: number;
 }
 
-/** A file's rows as the diff holds them, and the file's place among the files. */
-interface FileRows {
-	place: number;
-	rows: DiffLine[];
-}
-
-/** A line's number on one side; null for a line that is not on it. */
-function numberOn(side: LineSide, line: DiffLine): number | null {
-	return side === 'old' ? line.old_number : line.new_number;
-}
-
 /**
- * The row a thread's lines hang under, among a file's rows: their last line's
- * own, or, that line not among them — read in from between two changes —
- * the row it would stand before. A row with no number on the thread's side,
- * an added line for a thread on removed ones, is never it.
+ * The row a thread's lines hang under, among the rows a section draws: their
+ * last line's own, or, that line not among them — read in from between two
+ * changes — the row it would stand before. A row with no number on the
+ * thread's side, an added line for a thread on removed ones, is never it.
  */
-export function rowOf(lines: FileLines, rows: readonly DiffLine[]): number {
+function rowOf(lines: FileLines, rows: readonly DiffLine[]): number {
 	const at = rows.findIndex((line) => (numberOn(lines.side, line) ?? Number.NEGATIVE_INFINITY) >= lines.end_line);
 	return at === -1 ? rows.length : at;
 }
 
-/** Where a thread stands, if its file is one the diff holds. */
-function standingOf({ thread, lines }: ThreadOnLines, held: ReadonlyMap<string, FileRows>): Standing[] {
-	const file = held.get(lines.file);
-	return file ? [{ thread, filePlace: file.place, row: rowOf(lines, file.rows) }] : [];
+/** Where a thread stands, if a section draws it. */
+function standingOf({ thread, lines }: ThreadOnLines, drawnIn: (lines: FileLines) => DrawnRows | null): Standing[] {
+	const drawn = drawnIn(lines);
+	return drawn === null ? [] : [{ thread, place: drawn.place, row: rowOf(lines, drawn.rows) }];
+}
+
+/**
+ * The threads in the order they stand in what a view draws: section by
+ * section in the view's own order, each section down its rows. A thread
+ * `drawnIn` finds no section for is left out.
+ */
+export function inDrawnOrder(
+	onLines: readonly ThreadOnLines[],
+	drawnIn: (lines: FileLines) => DrawnRows | null
+): Thread[] {
+	return onLines
+		.flatMap((onLine) => standingOf(onLine, drawnIn))
+		.sort((one, other) => one.place - other.place || one.row - other.row)
+		.map(({ thread }) => thread);
 }
 
 /**
@@ -87,9 +109,6 @@ export function inDiffOrder(onLines: readonly ThreadOnLines[], files: readonly D
 	const held = new Map(
 		files.map((file, place) => [file.path, { place, rows: file.hunks.flatMap((hunk) => hunk.lines) }])
 	);
-	const onFiles = onLines
-		.flatMap((onLine) => standingOf(onLine, held))
-		.sort((one, other) => one.filePlace - other.filePlace || one.row - other.row);
 	const above = threadsOffTheDiff(onLines, files).flatMap(({ threads }) => threads);
-	return [...above, ...onFiles.map(({ thread }) => thread)];
+	return [...above, ...inDrawnOrder(onLines, (lines) => held.get(lines.file) ?? null)];
 }
