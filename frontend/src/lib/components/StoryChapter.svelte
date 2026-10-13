@@ -21,13 +21,15 @@
 	testId="story-chapter"
 	class="flex flex-col gap-5 border-t border-base-300 pt-6"
 >
-	<header class="flex items-baseline gap-3">
-		<h2 class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
-			<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
-			<span data-testid="chapter-title">{told.title}</span>
-		</h2>
-		<span class="cr-faint ml-auto text-xs">{filesAndSteps(chapter.files.length, chapter.steps.length)}</span>
-	</header>
+	{#snippet head()}
+		<header class="flex items-baseline gap-3">
+			<h2 class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
+				<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
+				<span data-testid="chapter-title">{told.title}</span>
+			</h2>
+			<span class="cr-faint ml-auto text-xs">{filesAndSteps(chapter.files.length, chapter.steps.length)}</span>
+		</header>
+	{/snippet}
 	<p data-testid="chapter-why" class="cr-agent-voice pl-4.5">{told.why}</p>
 	{#if told.doubt}
 		<p data-testid="chapter-doubt" class="rounded-r border-l-2 border-warning bg-(--cr-warning-tint) px-3 py-2">

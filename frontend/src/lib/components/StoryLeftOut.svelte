@@ -24,10 +24,12 @@
 	testId="story-left-out"
 	class="flex flex-col gap-4 border-t border-base-300 pt-6"
 >
-	<header>
-		<h2 class="text-base font-semibold text-warning">{NOT_IN_THE_STORY}</h2>
-		<p class="cr-muted text-sm">Changed, and told by no step of the story.</p>
-	</header>
+	{#snippet head()}
+		<header>
+			<h2 class="text-base font-semibold text-warning">{NOT_IN_THE_STORY}</h2>
+			<p class="cr-muted text-sm">Changed, and told by no step of the story.</p>
+		</header>
+	{/snippet}
 	{#each leftOut as left (leftOutSectionKey(left))}
 		<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 		<svelte:boundary onerror={reportBroken}>

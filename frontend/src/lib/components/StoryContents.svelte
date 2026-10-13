@@ -7,7 +7,14 @@
 	import ContentsEntry from './ContentsEntry.svelte';
 	import ContentsFile from './ContentsFile.svelte';
 	import SideColumn from './SideColumn.svelte';
-	import { alsoInShort, chapterEntitled, chapterNumber, NOT_IN_THE_STORY, THE_OVERVIEW } from './story-words';
+	import {
+		alsoInShort,
+		chapterEntitled,
+		chapterNumber,
+		chaptersCounted,
+		NOT_IN_THE_STORY,
+		THE_OVERVIEW
+	} from './story-words';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
 
 	const review = useReview();
@@ -17,6 +24,10 @@
 	// The section being read, and the step it is of, where it is a step's: the row of that step's file is lit
 	const sectionRead = $derived(review.sections.sectionInView);
 	const stepRead = $derived(sectionRead === null ? null : contents.stepAt(sectionRead));
+	// How many of the chapters the reader has read through: the overview is read through too, and is no chapter
+	const chaptersRead = $derived(
+		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
+	);
 </script>
 
 <!-- The story's contents, beside it: its parts down an axis, the overview and then every chapter with
@@ -35,7 +46,7 @@
 		{#snippet heading()}
 			<h2 class="text-sm font-semibold">Story</h2>
 			<span data-testid="contents-count" class="cr-faint text-xs">
-				{counted(contents.chapters.length, 'chapter', 'chapters')}
+				{chaptersCounted(contents.chapters.length, chaptersRead)}
 			</span>
 		{/snippet}
 
@@ -54,7 +65,11 @@
 					{#snippet node()}
 						{chapterNumber(chapter.place)}
 					{/snippet}
-					<ul class="cr-contents-files">
+					<!-- The files of a chapter read through step back, as a file the reader has finished with does -->
+					<ul
+						data-testid="contents-files"
+						class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
+					>
 						{#each chapter.files as listed (listed.file.path)}
 							<ContentsFile file={listed.file} opensAt={listed.opensAt} current={stepRead?.file === listed}>
 								<!-- The file's whole change where the story first tells it; after that, where it was told -->

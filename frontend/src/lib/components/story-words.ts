@@ -26,6 +26,8 @@ const BETWEEN_COUNTS = ' · ';
 const BETWEEN_NUMBERS = ', ';
 // How a file says that other chapters tell it too, before it names them
 const ALSO_IN = 'also in';
+// What is said of a part, or of some of the chapters, the reader has read through
+const READ = 'read';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -59,6 +61,19 @@ export const NOT_IN_THE_STORY = 'Not in the story';
 /** What a chapter's part of the page is called: "Chapter 2: The end". */
 export function chapterEntitled(place: number, title: string): string {
 	return `${CHAPTER_FIRST} ${chapterNumber(place)}${BEFORE_A_TITLE}${title}`;
+}
+
+/** What a part is called in the contents once the reader has read it through: "Chapter 2: The end, read". */
+export function calledOnceRead(called: string): string {
+	return `${called}, ${READ}`;
+}
+
+/**
+ * How many chapters a story has, as the head of its contents says: "5
+ * chapters", and once the reader has read any of them through, "1 of 5 read".
+ */
+export function chaptersCounted(chapters: number, read: number): string {
+	return read === 0 ? counted(chapters, CHAPTERS.one, CHAPTERS.many) : `${read} of ${chapters} ${READ}`;
 }
 
 /** How much a chapter tells, as its head says: "3 files · 4 steps". */

@@ -97,6 +97,14 @@ WIDTH_OF = "(element) => element.getBoundingClientRect().width"
 WINDOW_WIDTH = "window.innerWidth"
 # Wide enough for the tree of files to stand beside them
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
+# What the head of the contents says of a story of two chapters: with neither read through, and with one
+TWO_CHAPTERS = "2 chapters"
+ONE_OF_TWO_READ = "1 of 2 read"
+# Bring an element to the middle of the area it scrolls in, at once
+TO_THE_MIDDLE = "(element) => element.scrollIntoView({ block: 'center' })"
+# How strongly an element is drawn, and the strength of one that has not stepped back
+OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
+FULLY_DRAWN = 1
 
 
 @pytest.fixture
@@ -382,3 +390,53 @@ async def test_on_a_narrow_screen_a_story_opens_without_its_contents_which_lie_o
     await rail.click()
     assert await page.get_by_test_id("contents").evaluate(RIGHT_OF) > await story.evaluate(LEFT_OF)
     assert await story.evaluate(WIDTH_OF) >= await page.evaluate(WINDOW_WIDTH) - LESS_THAN_A_PIXEL
+
+
+async def _read_the_first_chapter_through(page: Page, review: RunningReview) -> None:
+    """Read a story with its contents beside it, from the head of its first chapter to where that chapter ends.
+
+    The story opens with that head on screen, under an overview shorter than the screen; the chapter is
+    longer than one, so its end comes on screen only once the reader has scrolled to it.
+    """
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+    await expect(page.get_by_test_id("contents-count")).to_have_text(TWO_CHAPTERS)
+    # The end of the overview comes first, then the first chapter's
+    await page.get_by_test_id("part-end").nth(1).evaluate(TO_THE_MIDDLE)
+
+
+async def test_a_chapter_scrolled_through_is_ticked_in_the_contents_and_its_files_step_back(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await _read_the_first_chapter_through(page, review_of_a_long_file_in_two_chapters)
+
+    await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
+    # The overview's entry, then the first chapter's
+    of_the_first = page.get_by_test_id("contents-entry").nth(1)
+    await expect(of_the_first.get_by_test_id("part-read-mark")).to_be_visible()
+    files_of_the_first, files_of_the_second = await page.get_by_test_id("contents-files").all()
+    assert await files_of_the_first.evaluate(OPACITY_OF) < FULLY_DRAWN
+    assert await files_of_the_second.evaluate(OPACITY_OF) == FULLY_DRAWN
+
+
+async def test_what_was_read_of_a_story_is_still_read_once_the_page_is_loaded_again(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await _read_the_first_chapter_through(page, review_of_a_long_file_in_two_chapters)
+    await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
+
+    await page.reload()
+
+    await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
+
+
+async def test_nothing_is_read_of_a_story_the_agent_has_told_again(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await _read_the_first_chapter_through(page, review_of_a_long_file_in_two_chapters)
+    await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
+
+    async with AsyncClient(base_url=review_of_a_long_file_in_two_chapters.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(THE_LONG_FILE_IN_TWO_CHAPTERS))
+
+    await expect(page.get_by_test_id("contents-count")).to_have_text(TWO_CHAPTERS)

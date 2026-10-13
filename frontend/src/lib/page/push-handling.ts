@@ -23,14 +23,15 @@ import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
 
 /** A push that says something of the review's facts, which the draft does not keep. */
-type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' | 'ended' }>;
+type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' | 'story' | 'ended' }>;
 
 /**
  * Take in what the server said while the review is open.
  *
- * What a push adds to the draft — an answer, a raised thread, a note — is
- * always added. What it says of the review's facts — its agent, its round,
- * its diff — is taken in only when the facts the page read do not hold it
+ * What a push does to the draft — an answer, a raised thread or a note
+ * added, what was read of a story told again forgotten — is always done.
+ * What it says of the review's facts — its agent, its round, its diff, its
+ * story — is taken in only when the facts the page read do not hold it
  * already: a page opening from a draft is handed what was said since the
  * draft, some of it before the facts were read.
  */
@@ -52,6 +53,9 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 			// A round landing half-applied is worse than not at all: the code
 			// under the reader has moved and their threads have not
 			landed(review, push, heard).catch((error: unknown) => review.conversation.note(diffNotTakenNote(error)));
+			return;
+		case 'story':
+			void toldAnotherStory(review, heard);
 			return;
 		case 'ended':
 			// Facts are read from a review still running: they never hold its end
@@ -86,13 +90,20 @@ function learnFrom(review: Review, push: FactPush): void {
 		case 'round':
 			review.rounds.reach(push.number);
 			return;
-		case 'story':
-			// Told that there is one: the story itself is read
-			void readStoryAgain(review);
-			return;
 		default:
 			unknown(push);
 	}
+}
+
+/**
+ * Take in that the review was told another story. Told only that there is
+ * one, the page reads the story itself, unless the one it read as it opened
+ * is that story already. With it held, nothing of it is read: what the
+ * reader had read through of the story before is no reading of this one.
+ */
+async function toldAnotherStory(review: Review, heard: HeardPush): Promise<void> {
+	if (!heard.factsHoldIt) await readStoryAgain(review);
+	review.story.progress.forget();
 }
 
 /**

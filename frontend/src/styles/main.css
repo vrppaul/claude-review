@@ -469,7 +469,7 @@
 	z-index: var(--cr-layer-over-content);
 }
 
-/* What the reader has finished with steps back, its row in the tree and its header alike */
+/* What the reader has finished with steps back: a file's row in the tree and its header, the files of a chapter read through */
 .cr-viewed {
 	opacity: 0.5;
 }
@@ -1014,6 +1014,10 @@
 .cr-contents-entry:only-child::before {
 	content: none;
 }
+/* The stretch of the axis of a part read through, in the colour of what is done */
+.cr-contents-entry-read::before {
+	background: var(--cr-done-line);
+}
 /* An entry's node and title: one press to the head of its part. Placed, so its node is drawn over the axis */
 .cr-contents-row {
 	position: relative;
@@ -1042,6 +1046,17 @@
 	color: var(--cr-faint);
 	font-size: 0.625rem;
 	font-variant-numeric: tabular-nums;
+}
+/*
+ * The node of a part read through: a check in the colour of what is done,
+ * on a wash of it laid over the column's ground, which still hides the axis.
+ * Written before the rule of the part being read: a part read through and
+ * read again keeps the reader's ring, and its check is in their colour
+ */
+.cr-contents-node-read {
+	border-color: var(--cr-done-border);
+	background-image: linear-gradient(var(--cr-done-soft), var(--cr-done-soft));
+	color: var(--cr-done);
 }
 /* The node of the part being read, in the reader's own mark */
 .cr-contents-node-current {

@@ -58,6 +58,12 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	{ said: "a chapter's number, on its node in the contents", text: '--cr-faint', grounds: ['--color-base-200'] },
 	{ said: 'what is said of a file in the contents', text: '--cr-faint', grounds: ['--color-base-100'] },
 	{ said: 'what a story leaves out, named in its contents', text: '--color-warning', grounds: ['--color-base-200'] },
+	{ said: 'the title of a part read through, in the contents', text: '--cr-muted', grounds: ['--color-base-200'] },
+	{
+		said: 'the check of a part read through, on its node in the contents',
+		text: '--cr-done',
+		grounds: ['--color-base-200', '--cr-done-soft']
+	},
 	{ said: 'unread, in a comment', text: '--cr-unread', grounds: ['--color-base-100', '--cr-mark-tint'] },
 	{ said: "a control, on a gap's bar", text: '--cr-control', grounds: ['--color-base-200'] },
 	{

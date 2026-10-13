@@ -3,7 +3,8 @@
  *
  * The review holds the story, whole, and replaces it whole: the page reads
  * it as it opens and again whenever the review says another was told. It is
- * no part of the reader's draft — nothing of it is theirs to lose.
+ * no part of the reader's draft — nothing of it is theirs to lose. How far
+ * they have got through it is theirs, and the draft keeps it: `progress`.
  *
  * A story is pieces of the take of the change it was told of, and stays as
  * told when the diff is taken again: the page then holds a story of one
@@ -15,11 +16,14 @@ import type { StoryNumbering } from '$lib/anchors/numbering';
 import { readStory } from '$lib/api/review-api';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { NO_PIECES, piecesOf, type StoryPieces } from '$lib/review/story-pieces';
+import { StoryProgress } from '$lib/review/story-progress.svelte';
 import type { StoryHeld } from '$lib/types';
 
 export class ReviewStory {
 	/** Whether a story can be told of this review at all: the review says, the page never works it out. */
 	readonly canBeTold: boolean;
+	/** How far the reader has got through the story: which of its parts they have read through. */
+	readonly progress: StoryProgress;
 	readonly #takeOnScreen: () => number;
 	#held = $state.raw<StoryHeld | null>(null);
 	// Laid out once for the story held, not at every question asked of them
@@ -35,9 +39,11 @@ export class ReviewStory {
 	 * @param canBeTold whether the review takes a story
 	 * @param held the story it held as the page opened, if the agent had told one
 	 * @param takeOnScreen which take of the review the page reads now
+	 * @param partsRead the parts of the story the reader had read through when the page was last open in this run of the review
 	 */
-	constructor(canBeTold: boolean, held: StoryHeld | null, takeOnScreen: () => number) {
+	constructor(canBeTold: boolean, held: StoryHeld | null, takeOnScreen: () => number, partsRead: readonly string[]) {
 		this.canBeTold = canBeTold;
+		this.progress = new StoryProgress(partsRead);
 		this.#held = held;
 		this.#takeOnScreen = takeOnScreen;
 		this.#pieces = $derived(this.#held === null ? NO_PIECES : piecesOf(this.#held.story));

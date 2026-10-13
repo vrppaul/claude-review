@@ -80,6 +80,15 @@ export interface ReaderParts {
 	theme: PageTheme;
 }
 
+/**
+ * The parts of the story a draft says the reader had read through, where it
+ * was kept in this run of the review. Each run is told its story anew: of
+ * that one, a draft kept in another run says nothing.
+ */
+function partsReadInRun(kept: Draft, run: string): readonly string[] {
+	return kept.told?.instance === run ? kept.storyRead : [];
+}
+
 export class Review {
 	/** What is under review — which repository, and against what. */
 	readonly title: string;
@@ -167,7 +176,12 @@ export class Review {
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
-		this.story = new ReviewStory(facts.takes_a_story, story, () => this.diff.takeOnScreen);
+		this.story = new ReviewStory(
+			facts.takes_a_story,
+			story,
+			() => this.diff.takeOnScreen,
+			partsReadInRun(kept, facts.instance)
+		);
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.views = new ReadingViews(
 			{
@@ -313,6 +327,7 @@ export class Review {
 			issued: this.threads.issued,
 			told: this.telling.heard,
 			files: this.reading.kept,
+			storyRead: this.story.progress.kept,
 			round: this.rounds.current
 		};
 	}

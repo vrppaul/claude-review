@@ -27,7 +27,9 @@
 	short. The agent's voice carries its colour down the edge; what to doubt is a warning, and says so
 	in yellow -->
 <StoryPart partKey={OVERVIEW_PART} label={THE_OVERVIEW} testId="story-overview" class="flex flex-col gap-8">
-	<StoryHead {held} />
+	{#snippet head()}
+		<StoryHead {held} />
+	{/snippet}
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>

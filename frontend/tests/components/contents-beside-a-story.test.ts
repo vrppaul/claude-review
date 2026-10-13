@@ -52,6 +52,8 @@ function broughtIntoView(element: HTMLElement): ReturnType<typeof vi.fn> {
 
 describe('the contents beside a story', () => {
 	beforeEach(() => {
+		// A story nobody has scrolled yet: with everything on screen at once, all of it would be read through as it is drawn
+		scriptTheScroll();
 		review = openReview({ files, story: TOLD });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });

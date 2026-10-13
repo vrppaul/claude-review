@@ -94,6 +94,10 @@
 	--cr-unread: var(--cr-agent);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
+	/* And at the strengths the mark is drawn with, on the node and the axis of a part of a story read through */
+	--cr-done-soft: color-mix(in srgb, var(--cr-done) 10%, transparent);
+	--cr-done-border: color-mix(in srgb, var(--cr-done) 35%, transparent);
+	--cr-done-line: color-mix(in srgb, var(--cr-done) 45%, transparent);
 	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
 	--cr-placeholder: var(--cr-faint);
 
