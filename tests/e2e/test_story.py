@@ -93,11 +93,17 @@ async def review_of_a_reconstruction(changed_repo: Path, servers: ReviewServers)
 
 
 @pytest.fixture
-async def review_of_a_long_file(tmp_path: Path, servers: ReviewServers) -> RunningReview:
-    """A review whose story tells, in one step, a file added whole and longer than any screen."""
+def long_file_repo(tmp_path: Path) -> Path:
+    """A repository whose change adds one file whole, longer than any screen."""
     repo = committed_repository(tmp_path / "long", COMMITTED_FILES)
     write_files(repo, {LONG_FILE: "".join(f"line {number}\n" for number in range(1, LINES_OF_THE_LONG_FILE + 1))})
-    started = await servers.start(await repository_opening(repo))
+    return repo
+
+
+@pytest.fixture
+async def review_of_a_long_file(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose story tells, in one step, the file its change adds whole."""
+    started = await servers.start(await repository_opening(long_file_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(LONG_FILE, 1, LINES_OF_THE_LONG_FILE))))
     return started
@@ -193,10 +199,10 @@ async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(
 
 
 async def test_deep_in_a_story_the_code_has_moved_on_from_the_page_still_says_so(
-    review_of_a_long_file: RunningReview, tmp_path: Path, page: Page
+    review_of_a_long_file: RunningReview, long_file_repo: Path, page: Page
 ) -> None:
     await _read_as_story(page, review_of_a_long_file)
-    write_files(tmp_path / "long", {LONG_FILE: "a line above them all\n"})
+    write_files(long_file_repo, {LONG_FILE: "a line above them all\n"})
     async with AsyncClient(base_url=review_of_a_long_file.url) as agent:
         await agent.post(RETAKE_ROUTE, json={})
     moved_on = page.get_by_test_id("story-moved-on")

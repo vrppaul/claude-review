@@ -3,7 +3,8 @@
 A review of a repository can be read against other bases, widened past its
 hunks, taken again after a round and watched for the tree moving under it.
 Files and a conversation can do none of that. Each kind of review answers
-for itself here, so nothing else asks which kind it is.
+for itself here. The one thing the review asks a source about its kind is
+whether its content is a change (`is_a_change`): what a story can be told of.
 """
 
 import asyncio

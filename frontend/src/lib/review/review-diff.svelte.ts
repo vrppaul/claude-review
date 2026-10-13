@@ -191,8 +191,9 @@ export class ReviewDiff {
 
 	/**
 	 * Take in what the diff now on screen brings beside itself: nothing read
-	 * in around its hunks yet, the review's own files where it is of the
-	 * review's own base, and how far the tree has moved since it was taken.
+	 * in around its hunks yet, no failure to put the whole review back left
+	 * to say, the review's own files where it is of the review's own base,
+	 * and how far the tree has moved since it was taken.
 	 */
 	#noteWhatCameWithIt(): void {
 		this.#revealed = new RevealedContext();

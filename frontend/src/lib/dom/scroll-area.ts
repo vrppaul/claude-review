@@ -10,7 +10,7 @@
 import { getContext, setContext } from 'svelte';
 
 /** Reads the area as it is now: null while it is not drawn yet. */
-type ScrollArea = () => HTMLElement | null;
+export type ScrollArea = () => HTMLElement | null;
 
 const SCROLL_AREA = Symbol('scroll area');
 
