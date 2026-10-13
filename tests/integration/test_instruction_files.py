@@ -40,6 +40,14 @@ RULES_IN_LATIN_1 = "- Ask the server through a café.\n".encode("latin-1")
 NOT_THE_LINK = (
     "CLAUDE.md: is not a symlink to AGENTS.md, which is how Claude Code is given the rules: ln -s AGENTS.md CLAUDE.md"
 )
+# What is said of a directory, and of a link to nothing, where a file of rules is read
+A_DIRECTORY = (
+    "is a directory, and every `*.md` under .claude/rules is read as the rules of an area: "
+    "name it without `.md`, or remove it"
+)
+A_LINK_TO_NOTHING = "is a link to nothing, so there are no rules in it to read: link it to what is there, or remove it"
+# What a pattern no file of the repository matches is told
+NAME_WHAT_IS_THERE = "so no file opened brings these rules: name what is there"
 
 # Seven lines, the last of them naming the rules of an area: its dash takes three bytes, so bytes and characters differ
 GENERAL_RULES = dedent("""\
@@ -225,6 +233,24 @@ RULES_OF_PATHS_NOT_THERE = dedent("""\
     - Ask the server through `frontend/request.ts`.
     """)
 
+# Rules for the page, and for a directory of the machine the repository is on: a pattern written from its root
+RULES_OF_THE_MACHINES_PATHS = dedent("""\
+    ---
+    paths:
+      - "frontend/**"
+      - "/etc/**"
+    ---
+
+    - Ask the server through `frontend/request.ts`.
+    """)
+
+# A directory beside the repository, the file in it, and the link in the repository that leads there
+OUTSIDE = "outside"
+NOTES_OUTSIDE = "notes.md"
+LINK_OUTSIDE = "linked"
+# What is named through that link: the file itself, and a pattern that matches it
+THROUGH_A_LINK = [f"{LINK_OUTSIDE}/{NOTES_OUTSIDE}", f"{LINK_OUTSIDE}/*.md"]
+
 
 def _written(root: Path, files: list[Written]) -> Path:
     """A repository holding these files and nothing else."""
@@ -347,6 +373,65 @@ def test_a_path_that_leaves_the_repository_names_nothing_in_it_though_a_file_is_
     assert (checked.returncode, checked.stdout.splitlines()) == (
         FAULT_FOUND,
         [f"AGENTS.md:8: `../outside/notes.md` names nothing in the repository: {FROM_THE_ROOT}"],
+    )
+
+
+@pytest.mark.parametrize("named", THROUGH_A_LINK)
+def test_a_path_that_leaves_the_repository_through_a_link_names_nothing_in_it_though_a_file_is_there(
+    tmp_path: Path, named: str
+) -> None:
+    (tmp_path / OUTSIDE).mkdir()
+    (tmp_path / OUTSIDE / NOTES_OUTSIDE).write_text("Notes kept beside the repository.\n")
+    leaving = Written(path="AGENTS.md", text=GENERAL_RULES + f"- Read `{named}` first.\n")
+    repository = _written(tmp_path / "repository", [*KEPT, leaving])
+    (repository / LINK_OUTSIDE).symlink_to(tmp_path / OUTSIDE)
+
+    checked = _check(_linked(repository))
+
+    assert (checked.returncode, checked.stdout.splitlines()) == (
+        FAULT_FOUND,
+        [f"AGENTS.md:8: `{named}` names nothing in the repository: {FROM_THE_ROOT}"],
+    )
+
+
+def test_rules_for_a_pattern_written_from_the_machines_root_are_refused_at_the_pattern(tmp_path: Path) -> None:
+    """Whatever the machine holds there, no file of the repository is opened by such a pattern."""
+    for_the_machines_paths = Written(path=".claude/rules/page.md", text=RULES_OF_THE_MACHINES_PATHS)
+
+    checked = _check(_linked(_written(tmp_path, [*KEPT, for_the_machines_paths])))
+
+    assert (checked.returncode, checked.stdout.splitlines(), checked.stderr) == (
+        FAULT_FOUND,
+        [f".claude/rules/page.md:4: no file matches `/etc/**`, {NAME_WHAT_IS_THERE}"],
+        "",
+    )
+
+
+def test_a_directory_named_as_a_file_of_rules_is_refused_by_name_and_nothing_more_is_said(tmp_path: Path) -> None:
+    repository = _written(tmp_path, KEPT)
+    (repository / ".claude" / "rules" / "old.md").mkdir()
+
+    checked = _check(_linked(repository))
+
+    assert (checked.returncode, checked.stdout.splitlines(), checked.stderr) == (
+        FAULT_FOUND,
+        [f".claude/rules/old.md: {A_DIRECTORY}"],
+        "",
+    )
+
+
+def test_a_link_to_nothing_named_as_a_file_of_rules_is_refused_by_name_and_nothing_more_is_said(
+    tmp_path: Path,
+) -> None:
+    repository = _written(tmp_path, KEPT)
+    (repository / ".claude" / "rules" / "gone.md").symlink_to("moved.md")
+
+    checked = _check(_linked(repository))
+
+    assert (checked.returncode, checked.stdout.splitlines(), checked.stderr) == (
+        FAULT_FOUND,
+        [f".claude/rules/gone.md: {A_LINK_TO_NOTHING}"],
+        "",
     )
 
 

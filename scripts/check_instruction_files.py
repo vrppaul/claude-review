@@ -11,11 +11,13 @@ built to its module's docstring, what a tool can hold to a gate.
 Every path the files name is held to being in the repository. A path is a
 word of code — of what stands between two backticks on one line — that
 names a directory (it has a `/` in it) or ends as a file's name does, and
-it is written from the repository's root: one that climbs out of the root
-with `..` names nothing in it, whatever stands outside. One with `*`, `?`
-or `[` in it is a pattern, held to matching something: a kind of file,
-`**/__init__.py`, is named so. A word that starts with `/` is an address
-the server answers, not a file.
+it is written from the repository's root. One that climbs out of the root
+with `..`, or reaches what a link in the repository keeps outside it,
+names nothing in it, whatever stands there. One with `*`, `?` or `[` in it
+is a pattern, held to matching something: a kind of file, `**/__init__.py`,
+is named so. What it matches is looked at one path at a time, and no
+further than the first that will do. A word that starts with `/` is an
+address the server answers, not a file.
 
 The rules of an area are reached two ways, and both are held. Claude Code
 loads a file of them when it opens a file one of its patterns matches, so
@@ -23,17 +25,19 @@ each opens with those patterns — `---`, `paths:`, a quoted pattern on each
 line after, `---`, written without braces, which are not expanded here —
 and each pattern matches a file, not a directory alone: without them every
 session would read the rules, and for a pattern no file matches, none
-would. Every other reader, another agent or a reviewer of a diff, finds a
-file of rules by the line `AGENTS.md` gives it, so `AGENTS.md` names every
-one.
+would. One written from the machine's root matches no file of the
+repository. Every other reader, another agent or a reviewer of a diff,
+finds a file of rules by the line `AGENTS.md` gives it, so `AGENTS.md`
+names every one.
 
 `CLAUDE.md` is a symlink to `AGENTS.md`: Claude Code reads `CLAUDE.md`
 alone where there is one, so a file of its own there stands in place of
 the rules.
 
-All of it is asked of the files as UTF-8 text. One that is not written so
-is said by name, and nothing else is said: its bytes cannot be counted as
-text, nor a path read in them.
+All of it is asked of the files as UTF-8 text, each read once. One that
+cannot be read so — it is not written as UTF-8, or what is named as rules
+is a directory, or a link to nothing — is said by name, and nothing else
+is said: its bytes cannot be counted as text, nor a path read in them.
 
 Run in the repository's root, in the project's own environment. The
 pre-commit hook runs it on every commit, whatever the commit touches: a
@@ -46,6 +50,7 @@ Prints each fault and exits 1, or says nothing and exits 0.
 
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
@@ -100,8 +105,13 @@ NO_SCOPE = (
     'open it with `---`, `paths:`, a line `  - "pattern"` for each pattern, `---`'
 )
 MATCHES_NOTHING = "no file matches `{named}`, so no file opened brings these rules: name what is there"
-# What is said of a file whose bytes are not the text it is read as
+# What is said of a file whose bytes are not the text it is read as, and of what is named as rules and is no file
 NOT_UTF8 = "is not written as UTF-8, so nothing in it can be read or counted: save it as UTF-8"
+A_DIRECTORY = (
+    f"is a directory, and every `{AREA_FILES}` under {AREA_DIRECTORY} is read as the rules of an area: "
+    "name it without `.md`, or remove it"
+)
+A_LINK_TO_NOTHING = "is a link to nothing, so there are no rules in it to read: link it to what is there, or remove it"
 # What is said of the two files every reader starts from
 NOT_THE_LINK = (
     f"is not a symlink to {GENERAL_FILE}, which is how Claude Code is given the rules: ln -s {GENERAL_FILE} {LINK}"
@@ -187,16 +197,13 @@ def faults_in(root: Path) -> list[Fault]:
     if not (root / GENERAL_FILE).is_file():
         return [Fault(path=GENERAL_FILE, line=None, says=GENERAL_MISSING)]
     area_paths = [found.relative_to(root) for found in sorted((root / AREA_DIRECTORY).rglob(AREA_FILES))]
-    unreadable = [
-        Fault(path=path, line=None, says=NOT_UTF8)
-        for path in [GENERAL_FILE, *area_paths]
-        if not _is_written_as_utf8(root / path)
-    ]
+    read = [_read(root, GENERAL_FILE, GENERAL_LIMITS), *(_read(root, path, AREA_LIMITS) for path in area_paths)]
+    unreadable = [fault for fault in read if isinstance(fault, Fault)]
     if unreadable:
         return unreadable
-    general = _read(root, GENERAL_FILE, GENERAL_LIMITS)
+    # Every one of them was read, and the general file first
+    general, *areas = [file for file in read if isinstance(file, InstructionFile)]
     named_in_general = frozenset(path.written for path in _paths_named(general))
-    areas = [_read(root, path, AREA_LIMITS) for path in area_paths]
     return [
         *_faults_of_size(general),
         *_faults_of_paths(general, root),
@@ -205,17 +212,17 @@ def faults_in(root: Path) -> list[Fault]:
     ]
 
 
-def _is_written_as_utf8(file: Path) -> bool:
-    """Whether a file's bytes read as the text they are counted and searched as."""
+def _read(root: Path, path: Path, limits: Limits) -> InstructionFile | Fault:
+    """A file of instructions, read once; or what is said of one that cannot be read as the text it is asked as."""
     try:
-        file.read_text(encoding=ENCODING)
+        text = (root / path).read_text(encoding=ENCODING)
     except UnicodeDecodeError:
-        return False
-    return True
-
-
-def _read(root: Path, path: Path, limits: Limits) -> InstructionFile:
-    return InstructionFile(path=path, text=(root / path).read_text(encoding=ENCODING), limits=limits)
+        return Fault(path=path, line=None, says=NOT_UTF8)
+    except IsADirectoryError:
+        return Fault(path=path, line=None, says=A_DIRECTORY)
+    except FileNotFoundError:
+        return Fault(path=path, line=None, says=A_LINK_TO_NOTHING)
+    return InstructionFile(path=path, text=text, limits=limits)
 
 
 def _faults_of_an_area(area: InstructionFile, root: Path, named_in_general: frozenset[str]) -> list[Fault]:
@@ -278,16 +285,19 @@ def _is_there(root: Path, named: str) -> bool:
     return any(_found(root, named))
 
 
-def _found(root: Path, named: str) -> list[Path]:
-    """What a path names in the repository: one thing, whatever a pattern matches, or nothing.
+def _found(root: Path, named: str) -> Iterator[Path]:
+    """What a path names in the repository, one thing at a time: itself, whatever a pattern matches, or nothing.
 
-    A path that climbs out of the root names nothing in the repository, whatever stands outside it.
+    A path written from the machine's root, or one that climbs out of the repository's, names nothing in
+    the repository, whatever stands there; nor is anything it reaches through a link that leads outside.
+    Whoever asks takes no more than they need: a pattern is not matched against every path first.
     """
-    if LEAVES_THE_ROOT in Path(named).parts:
-        return []
-    if not PATTERN_MARKS.isdisjoint(named):
-        return list(root.glob(named))
-    return [root / named] if (root / named).exists() else []
+    written = Path(named)
+    if written.is_absolute() or LEAVES_THE_ROOT in written.parts:
+        return iter(())
+    reached = root.glob(named) if not PATTERN_MARKS.isdisjoint(named) else iter((root / named,))
+    inside = root.resolve()
+    return (path for path in reached if path.exists() and path.resolve().is_relative_to(inside))
 
 
 def _matches_a_file(root: Path, pattern: str) -> bool:
