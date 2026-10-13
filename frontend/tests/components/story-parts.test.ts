@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
@@ -77,6 +77,19 @@ describe('the part of a story being read', () => {
 		await settled();
 
 		expect(review.parts.beingRead).toBeNull();
+	});
+
+	it('is watched for no longer in a chapter the story, told again, has dropped: neither the chapter nor its head', async () => {
+		const [, theEnd] = screen.getAllByTestId('story-chapter');
+		const itsHead = within(theEnd).getByTestId('part-head');
+		const [onlyTheBeginnings] = TOLD.story.chapters;
+		fakeServer().answer('GET /api/story', { held: storyHeld({ chapters: [onlyTheBeginnings] }) });
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect(areasWatching(theEnd)).toEqual([]);
+		expect(areasWatching(itsHead)).toEqual([]);
 	});
 });
 

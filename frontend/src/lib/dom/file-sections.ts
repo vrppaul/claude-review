@@ -16,11 +16,11 @@
  * query string.
  */
 
+import { Announced, type Announcement } from '$lib/dom/announced';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains } from '$lib/dom/keyboard';
 import { scrollMotion } from '$lib/dom/motion';
-import { ReadingBand } from '$lib/dom/reading-band.svelte';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /**
@@ -47,11 +47,9 @@ interface AwaitedThread {
 	until: number;
 }
 
-/** A section as it announced itself: what it is known by, the file it draws lines of, and where it is. */
-interface Section {
-	key: string;
+/** A section as it announced itself: what it is known by and where it is, and the file it draws lines of. */
+interface Section extends Announcement {
 	path: string;
-	element: HTMLElement;
 }
 
 /** A section asked for before it was drawn: how the reader is taken to it once it is, and until when it is waited for. */
@@ -68,10 +66,8 @@ interface Mark {
 }
 
 export class FileSections {
-	// Every section on the page, by what whoever draws it knows it by
-	readonly #sections = new Map<string, Section>();
-	// The section each element is, so the one being read names itself
-	readonly #byElement = new Map<Element, Section>();
+	// Every section on the page, and which of them the reader is in, while the reading area is watched
+	readonly #sections = new Announced<Section>();
 	readonly #threads = new Map<string, HTMLElement>();
 	// A thread asked for before it was drawn, and until when it is waited
 	// for: brought into view once it is drawn, if that is soon
@@ -79,8 +75,6 @@ export class FileSections {
 	// A section asked for before it was drawn — the view that draws it was
 	// only just brought on screen — and until when it is waited for
 	#awaitedSection: AwaitedSection | null = null;
-	// Which section the reader is in, while the reading area is watched
-	readonly #band = new ReadingBand();
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
@@ -99,12 +93,12 @@ export class FileSections {
 	 * reading area, while the reading area is watched.
 	 */
 	get sectionInView(): string | null {
-		return this.#inView()?.key ?? null;
+		return this.#sections.beingRead?.key ?? null;
 	}
 
 	/** The file the reader is in: the one that section draws lines of. */
 	get fileInView(): string | null {
-		return this.#inView()?.path ?? null;
+		return this.#sections.beingRead?.path ?? null;
 	}
 
 	/**
@@ -113,15 +107,13 @@ export class FileSections {
 	 */
 	register(key: string, path: string, element: HTMLElement): () => void {
 		const section = { key, path, element };
-		this.#sections.set(key, section);
-		this.#byElement.set(element, section);
-		this.#band.add(element);
+		const takeBack = this.#sections.add(section);
 		const awaited = this.#awaitedSection;
 		if (awaited?.key === key && performance.now() <= awaited.until) {
 			this.#awaitedSection = null;
 			awaited.arrive(section);
 		}
-		return () => this.#unregister(section);
+		return takeBack;
 	}
 
 	/** Say where a thread is drawn; returns how to take it back. */
@@ -141,12 +133,12 @@ export class FileSections {
 	 * later are watched as they arrive. Returns how to stop.
 	 */
 	watchInView(root: HTMLElement): () => void {
-		return this.#band.watch(root, this.#elements());
+		return this.#sections.watch(root);
 	}
 
 	/** Where the reader is reading in an area: the first line still showing at its top, in the section being read. */
 	readingPlace(root: HTMLElement): ReadingPlace | null {
-		const section = this.#inView();
+		const section = this.#sections.beingRead;
 		return section === null ? null : readingPlaceIn(section.key, section.element, root);
 	}
 
@@ -245,9 +237,7 @@ export class FileSections {
 	 * that section has no toggle.
 	 */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
-		const ofTheFile = [...this.#sections.values()]
-			.filter((section) => section.path === path)
-			.map((section) => section.element);
+		const ofTheFile = this.#sections.all.filter((section) => section.path === path).map((section) => section.element);
 		if (ofTheFile.length === 0) return toggleOf(firstInDocument(this.#elements()));
 		const line = ofTheFile
 			.map((element) => element.querySelector<HTMLElement>(`[data-place="${lineKey}"]`))
@@ -273,13 +263,13 @@ export class FileSections {
 	 * read from now on, whatever the band says while it is on its way.
 	 */
 	#scrollToDrawn({ element }: Section): void {
-		this.#jumps.land(this.#band, element, 'instant');
+		this.#jumps.land(this.#sections.band, element, 'instant');
 	}
 
 	/** Bring a section that is drawn to the top, as the one being read from now on, and mark it once it has come to rest. */
 	#showDrawn({ element }: Section): void {
 		this.#unmark();
-		this.#jumps.land(this.#band, element, scrollMotion(), () => this.#mark(element));
+		this.#jumps.land(this.#sections.band, element, scrollMotion(), () => this.#mark(element));
 	}
 
 	/**
@@ -297,34 +287,22 @@ export class FileSections {
 
 	/** Where every section is, in the order they announced themselves. */
 	#elements(): HTMLElement[] {
-		return [...this.#sections.values()].map((section) => section.element);
+		return this.#sections.all.map((section) => section.element);
 	}
 
 	/** The section the reader is in: the one holding the focus, if one does, or else the one being read. */
 	#current(): Section | null {
-		return this.#focused() ?? this.#inView();
+		return this.#focused() ?? this.#sections.beingRead;
 	}
 
 	/** The section holding the focus, if any does. */
 	#focused(): Section | null {
 		const focus = document.activeElement;
 		if (focus === null) return null;
-		for (const section of this.#sections.values()) {
+		for (const section of this.#sections.all) {
 			if (section.element.contains(focus)) return section;
 		}
 		return null;
-	}
-
-	/** The section being read, while the reading area is watched. */
-	#inView(): Section | null {
-		const earliest = this.#band.earliest;
-		return earliest === null ? null : (this.#byElement.get(earliest) ?? null);
-	}
-
-	#unregister(section: Section): void {
-		this.#band.remove(section.element);
-		this.#byElement.delete(section.element);
-		if (this.#sections.get(section.key) === section) this.#sections.delete(section.key);
 	}
 
 	#unregisterThread(threadId: string, element: HTMLElement): void {

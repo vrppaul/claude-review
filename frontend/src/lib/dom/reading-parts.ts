@@ -16,30 +16,24 @@
  * says which part it is, unless the page does.
  */
 
-import { SvelteSet } from 'svelte/reactivity';
-
+import { Announced, type Announcement } from '$lib/dom/announced';
+import { Crossing } from '$lib/dom/crossing';
 import type { Jumps } from '$lib/dom/jump';
 import { lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
-import { ReadingBand } from '$lib/dom/reading-band.svelte';
 
-/** A part as it announced itself: what whoever draws it knows it by, the whole of it, and its head. */
-interface Part {
-	key: string;
-	whole: HTMLElement;
+/** A part as it announced itself: what whoever draws it knows it by, the whole of it, which the band reads it by, and its head. */
+interface Part extends Announcement {
 	head: HTMLElement;
 }
 
+// The whole of the reading area, as a strip of it: nothing is taken off its edges
+const THE_WHOLE_AREA = '0px';
+
 export class ReadingParts {
-	// Every part on the page, by its key
-	readonly #byKey = new Map<string, Part>();
-	// And by the element that is the whole of it, so the one being read names itself
-	readonly #byWhole = new Map<Element, Part>();
-	// Which part the reader is in, while the reading area is watched
-	readonly #band = new ReadingBand();
+	// Every part on the page, and which of them the reader is in, while the reading area is watched
+	readonly #parts = new Announced<Part>();
 	// The heads in view anywhere in the reading area, while it is watched
-	readonly #headsInView = new SvelteSet<Element>();
-	// What watches the heads, while the reading area is watched
-	#headsWatch: IntersectionObserver | null = null;
+	readonly #headsInView = new Crossing(THE_WHOLE_AREA);
 	// Where the page is taking the reader: one jump at a time, shared with whatever else takes them somewhere
 	readonly #jumps: Jumps;
 
@@ -54,7 +48,7 @@ export class ReadingParts {
 	 * None while the area is not watched, or no part is at its top.
 	 */
 	get beingRead(): string | null {
-		return this.#partBeingRead()?.key ?? null;
+		return this.#parts.beingRead?.key ?? null;
 	}
 
 	/**
@@ -62,7 +56,7 @@ export class ReadingParts {
 	 * its head has left the reading area. None while that head is in view.
 	 */
 	get deepIn(): string | null {
-		const read = this.#partBeingRead();
+		const read = this.#parts.beingRead;
 		return read === null || this.#headsInView.has(read.head) ? null : read.key;
 	}
 
@@ -71,12 +65,9 @@ export class ReadingParts {
 	 * draws it knows it by. Returns how to take it back.
 	 */
 	register(key: string, whole: HTMLElement, head: HTMLElement): () => void {
-		const part = { key, whole, head };
-		this.#byKey.set(key, part);
-		this.#byWhole.set(whole, part);
-		this.#band.add(whole);
-		this.#headsWatch?.observe(head);
-		return () => this.#unregister(part);
+		const takeBackPart = this.#parts.add({ key, element: whole, head });
+		this.#headsInView.add(head);
+		return () => this.#unregister(takeBackPart, head);
 	}
 
 	/**
@@ -85,15 +76,12 @@ export class ReadingParts {
 	 * Returns how to stop.
 	 */
 	watchInView(root: HTMLElement): () => void {
-		const parts = [...this.#byKey.values()];
-		const stopBand = this.#band.watch(
+		const stopParts = this.#parts.watch(root);
+		const stopHeads = this.#headsInView.watch(
 			root,
-			parts.map((part) => part.whole)
+			this.#parts.all.map((part) => part.head)
 		);
-		const headsWatch = new IntersectionObserver((entries) => this.#headsMoved(entries), { root });
-		this.#headsWatch = headsWatch;
-		for (const part of parts) headsWatch.observe(part.head);
-		return () => this.#stopWatching(stopBand, headsWatch);
+		return () => this.#stopWatching(stopParts, stopHeads);
 	}
 
 	/**
@@ -102,11 +90,11 @@ export class ReadingParts {
 	 * that is not drawn.
 	 */
 	goTo(key: string): void {
-		const part = this.#byKey.get(key);
+		const part = this.#parts.get(key);
 		if (!part) return;
 		// Where the reader is taken is its head: in view from now on, before what watches the heads has looked again
-		this.#headsInView.add(part.head);
-		this.#jumps.land(this.#band, part.whole, 'instant');
+		this.#headsInView.countIn(part.head);
+		this.#jumps.land(this.#parts.band, part.element, 'instant');
 	}
 
 	/**
@@ -117,36 +105,16 @@ export class ReadingParts {
 	 * only until the keyboard leaves it.
 	 */
 	keyboardToBeingRead(): void {
-		lendKeyboardToWhatRemains(() => this.#partBeingRead()?.head);
+		lendKeyboardToWhatRemains(() => this.#parts.beingRead?.head);
 	}
 
-	/** The part being read, while the reading area is watched and one is at its top. */
-	#partBeingRead(): Part | null {
-		const whole = this.#band.earliest;
-		return whole === null ? null : (this.#byWhole.get(whole) ?? null);
+	#stopWatching(stopParts: () => void, stopHeads: () => void): void {
+		stopParts();
+		stopHeads();
 	}
 
-	#headsMoved(entries: IntersectionObserverEntry[]): void {
-		for (const entry of entries) {
-			// What the observer noted before a part was taken away still arrives after it
-			if (entry.isIntersecting && entry.target.isConnected) this.#headsInView.add(entry.target);
-			else this.#headsInView.delete(entry.target);
-		}
-	}
-
-	#stopWatching(stopBand: () => void, headsWatch: IntersectionObserver): void {
-		stopBand();
-		headsWatch.disconnect();
-		if (this.#headsWatch !== headsWatch) return;
-		this.#headsWatch = null;
-		this.#headsInView.clear();
-	}
-
-	#unregister(part: Part): void {
-		this.#band.remove(part.whole);
-		this.#headsWatch?.unobserve(part.head);
-		this.#headsInView.delete(part.head);
-		this.#byWhole.delete(part.whole);
-		if (this.#byKey.get(part.key) === part) this.#byKey.delete(part.key);
+	#unregister(takeBackPart: () => void, head: HTMLElement): void {
+		takeBackPart();
+		this.#headsInView.remove(head);
 	}
 }

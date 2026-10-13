@@ -72,6 +72,13 @@ tests. Remove items when done — don't check them off.
       nothing crosses it until they move (`dom/reading-band.svelte.ts`).
       Read in the code, not looked at in a browser.
 
+- [ ] `fix(ui)`: what the browser noted of a section before it was taken
+      back, and says after, is counted as crossing the band where the
+      section still stands on the page, and stays counted until the area is
+      watched anew (`dom/crossing.ts`): no file is then said to be read
+      while that section comes first of those counted. Read in the code,
+      not seen in a browser.
+
 ## The story, from the reviews of its server side
 
 - [ ] `fix(cli)`: `story` says "0 lines not in the story (docs/logo.png)" of
@@ -120,8 +127,9 @@ tests. Remove items when done — don't check them off.
       of its chapter, or under the page's header, with no room above its
       reason.
 - [ ] `refactor(ui)`: what is being read has three names: `fileInView` and
-      `sectionInView` in `FileSections`, `beingRead` in `ReadingParts`, and
-      `earliest` in the band both read with
+      `sectionInView` in `FileSections`; `beingRead` in `ReadingParts` and
+      in what keeps whatever announced itself for both
+      (`dom/announced.ts`); and `earliest` in the band they are read in
       (`dom/reading-band.svelte.ts`).
 - [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
       a file the reader asked for, the files come on screen and the bar

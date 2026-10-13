@@ -6,8 +6,11 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, hunk } from '../diff';
 import { broughtIntoView, said } from '../elements';
+import { fakeServer } from '../fake-server';
+import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
+import { settled } from '../settled';
 import { storyHeld, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: a first chapter of two steps, then two chapters
@@ -69,6 +72,21 @@ describe('the bar a chapter of a story is read under', () => {
 		readerAt(theMiddle);
 
 		readerAt(theMiddle, within(theMiddle).getByTestId('part-head'));
+
+		expect(screen.queryByTestId('chapter-bar')).toBeNull();
+	});
+
+	it('is not drawn at the head of a chapter the story gained when it was told again, with its area watched already', async () => {
+		const withAnAfterword = [
+			...TOLD.story.chapters,
+			toldChapter('ch-4', [toldStep('a.py', 9)], { title: 'The afterword' })
+		];
+		fakeServer().answer('GET /api/story', { held: storyHeld({ chapters: withAnAfterword }) });
+		handOverNext(review, { type: 'story' });
+		await settled();
+		const [, , , theAfterword] = screen.getAllByTestId('story-chapter');
+
+		readerAt(theAfterword, within(theAfterword).getByTestId('part-head'));
 
 		expect(screen.queryByTestId('chapter-bar')).toBeNull();
 	});

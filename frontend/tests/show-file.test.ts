@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
+import { broughtIntoView } from './elements';
 import { frames, FRAMES_TO_SETTLE, untilAGlideWouldHaveBegun } from './frames';
 
 let sections: FileSections;
@@ -208,6 +209,16 @@ describe('being taken to a section', () => {
 		await frames(FRAMES_TO_SETTLE_TWICE);
 
 		expect(first.top).toBe(PUSHED_DOWN);
+	});
+
+	it('finds the section as it is drawn now, when it was drawn anew before the one drawn before was taken back', () => {
+		const takeBackTheOneBefore = sections.register('a.py', 'a.py', document.createElement('div'));
+		const toTheOneDrawnAnew = broughtIntoView(section('a.py'));
+
+		takeBackTheOneBefore();
+		sections.scrollTo('a.py');
+
+		expect(toTheOneDrawnAnew).toHaveBeenCalled();
 	});
 });
 

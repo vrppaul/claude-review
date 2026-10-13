@@ -8,8 +8,7 @@
  * has just taken the reader to a section, which is then the one being read.
  */
 
-import { SvelteSet } from 'svelte/reactivity';
-
+import { Crossing } from '$lib/dom/crossing';
 import { firstInDocument } from '$lib/dom/document-order';
 
 // How far into the band a section must reach to cross it, in pixels. After a
@@ -22,7 +21,7 @@ const READING_BAND = `-${CROSSING_DEPTH}px 0px -85% 0px`;
 
 export class ReadingBand {
 	// The sections crossing the band, while it is watched
-	readonly #crossing = new SvelteSet<Element>();
+	readonly #crossing = new Crossing(READING_BAND, () => this.#lookedAgain());
 	// The section a jump took the reader to. It is the one being read until the
 	// reader moves on from it, whatever the band says meanwhile: the band says
 	// it only once the jump has landed, and not at all for a file at the end of
@@ -32,8 +31,7 @@ export class ReadingBand {
 	// what the band reports before then is the page moving them, and what it
 	// reports after is the reader moving on
 	#landingSettled = false;
-	readonly #earliest = $derived(this.#landed ?? firstInDocument(this.#crossing));
-	#observer: IntersectionObserver | null = null;
+	readonly #earliest = $derived(this.#landed ?? firstInDocument(this.#crossing.elements));
 
 	/** The section being read: the one a jump took the reader to, or of those crossing the band, the first on the page. */
 	get earliest(): Element | null {
@@ -58,43 +56,29 @@ export class ReadingBand {
 
 	/** Watch the band of a scrolling area over these sections, and those added later; returns how to stop. */
 	watch(root: HTMLElement, sections: Iterable<Element>): () => void {
-		const observer = new IntersectionObserver((entries) => this.#crossed(entries), {
-			root,
-			rootMargin: READING_BAND,
-			threshold: 0
-		});
-		this.#observer = observer;
-		for (const section of sections) observer.observe(section);
-		return () => this.#stop(observer);
+		const stopCrossing = this.#crossing.watch(root, sections);
+		return () => this.#stop(stopCrossing);
 	}
 
 	/** A section drawn, watched along with the rest while the band is. */
 	add(section: Element): void {
-		this.#observer?.observe(section);
+		this.#crossing.add(section);
 	}
 
 	/** A section gone, no longer watched nor counted. */
 	remove(section: Element): void {
-		this.#observer?.unobserve(section);
-		this.#crossing.delete(section);
+		this.#crossing.remove(section);
 		if (this.#landed === section) this.#landed = null;
 	}
 
-	#crossed(entries: IntersectionObserverEntry[]): void {
-		for (const entry of entries) {
-			// What the observer noted before a section was taken away still
-			// arrives after it: a section no longer on the page is not read
-			if (entry.isIntersecting && entry.target.isConnected) this.#crossing.add(entry.target);
-			else this.#crossing.delete(entry.target);
-		}
+	/** The band has been looked at again: once the reader had come to rest where a jump took them, that is them moving on. */
+	#lookedAgain(): void {
 		if (this.#landingSettled) this.#landed = null;
 	}
 
-	#stop(observer: IntersectionObserver): void {
-		observer.disconnect();
-		if (this.#observer !== observer) return;
-		this.#observer = null;
-		this.#crossing.clear();
-		this.#landed = null;
+	#stop(stopCrossing: () => void): void {
+		stopCrossing();
+		// Where another area is watched in place of this one, the reader is still where a jump took them in it
+		if (!this.#crossing.watched) this.#landed = null;
 	}
 }

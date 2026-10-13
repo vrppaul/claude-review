@@ -139,6 +139,38 @@ describe('the file being read', () => {
 		expect(sections.fileInView).toBe('b.py');
 	});
 
+	it('is not a file taken back while it stood on the page, though the browser says afterwards that it crossed the band', () => {
+		const stillOnThePage = drawn();
+		const takeBack = sections.register('a.py', 'a.py', stillOnThePage);
+		const watched = band();
+
+		takeBack();
+		watched.report([stillOnThePage]);
+
+		expect(sections.fileInView).toBeNull();
+	});
+
+	it('is none once the reading area is watched no longer, though a jump took the reader to a file', () => {
+		section('a.py');
+		const stop = sections.watchInView(document.body);
+		sections.scrollTo('a.py');
+
+		stop();
+
+		expect(sections.fileInView).toBeNull();
+	});
+
+	it('is still the file a jump took the reader to, when the area watched before this one is let go of after that', () => {
+		section('a.py');
+		const stopTheFirst = sections.watchInView(document.body);
+		sections.watchInView(document.body);
+		sections.scrollTo('a.py');
+
+		stopTheFirst();
+
+		expect(sections.fileInView).toBe('a.py');
+	});
+
 	it('leaves out a section that touches the band by less than a pixel', () => {
 		band();
 
