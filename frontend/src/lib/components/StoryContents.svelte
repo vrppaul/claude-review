@@ -23,7 +23,7 @@
 	const contents = $derived(review.story.contents);
 	// The section being read, and the step it is of, where it is a step's: the row of that step's file is lit
 	const sectionRead = $derived(review.sections.sectionInView);
-	const stepRead = $derived(sectionRead === null ? null : contents.stepAt(sectionRead));
+	const stepRead = $derived(contents.stepAt(sectionRead));
 	// How many of the chapters the reader has read through: the overview is read through too, and is no chapter
 	const chaptersRead = $derived(
 		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length

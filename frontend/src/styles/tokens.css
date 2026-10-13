@@ -46,13 +46,22 @@
 	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
 
 	/*
+	 * The bar a chapter of a story is read under: one row, never wrapping,
+	 * so as tall as its small buttons, half a rem above and below them, and
+	 * the line under it. What is read under it stands that far down.
+	 */
+	--cr-chapter-bar-height: 3.0625rem;
+
+	/*
 	 * What lies over what, lowest first: a file's sticky header and a
-	 * column's grip over what scrolls under them, the tree or the panel
-	 * lying over the diff on a narrow screen, the tour's light over the
-	 * review, what the reader opens over the light (so it is never dimmed),
-	 * and the guide's card over everything it talks about.
+	 * column's grip over what scrolls under them, a chapter's bar over the
+	 * headers that slide away under it, the tree or the panel lying over
+	 * the diff on a narrow screen, the tour's light over the review, what
+	 * the reader opens over the light (so it is never dimmed), and the
+	 * guide's card over everything it talks about.
 	 */
 	--cr-layer-over-content: 10;
+	--cr-layer-over-headers: 15;
 	--cr-layer-column: 20;
 	--cr-layer-spotlight: 25;
 	--cr-layer-popover: 30;

@@ -19,7 +19,7 @@
 	partKey={chapter.part}
 	label={chapterEntitled(chapter.place, told.title)}
 	testId="story-chapter"
-	class="flex flex-col gap-5 border-t border-base-300 pt-6"
+	class="cr-story-chapter flex flex-col gap-5 border-t border-base-300 pt-6"
 >
 	{#snippet head()}
 		<header class="flex items-baseline gap-3">

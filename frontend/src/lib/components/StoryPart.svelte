@@ -30,7 +30,7 @@
 
 	const read = $derived(review.story.progress.isRead(partKey));
 
-	$effect(() => (element ? review.parts.register(partKey, element) : undefined));
+	$effect(() => (element && headElement ? review.parts.register(partKey, element, headElement) : undefined));
 	// Watched until the reader has read it through, and again once that is forgotten
 	$effect(() =>
 		read || !headElement || !endElement
@@ -40,9 +40,10 @@
 </script>
 
 <!-- A part of the story with a place among its contents: its overview, a chapter, what it leaves out.
-	It says where it is, so the page can say which part is being read and take the reader to its head,
-	and says when the reader has read it through. Placed, so that its end is its own foot -->
-<section bind:this={element} data-testid={testId} aria-label={label} class={['relative', laidOut]}>
+	It says where it and its head are, so the page can say which part is being read and how deep in it
+	the reader is, and take them to its head; and says when the reader has read it through. It takes the
+	keyboard only when the page puts it there. Placed, so that its end is its own foot -->
+<section bind:this={element} data-testid={testId} aria-label={label} tabindex="-1" class={['relative', laidOut]}>
 	<!-- Its head in a box of its own, spaced as the part is: what heads it stands as it would among the rest -->
 	<div bind:this={headElement} data-testid="part-head" class="flex flex-col gap-[inherit]">
 		{@render head()}

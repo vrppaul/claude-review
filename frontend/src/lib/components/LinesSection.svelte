@@ -46,7 +46,13 @@
 <!-- A section of the page that draws lines of a file, whichever view draws it: it says where it is and
 	which file it is of, holds the room its rows will take, and builds them once the reader comes near.
 	What its view says above the lines is inside it: a reader taken to the section reads from there -->
-<section bind:this={element} data-testid={testId} data-path={file.path} style:--cr-rows={rowsDrawn}>
+<section
+	bind:this={element}
+	data-testid={testId}
+	data-path={file.path}
+	class="cr-lines-section"
+	style:--cr-rows={rowsDrawn}
+>
 	{@render above?.()}
 	<!-- The header and the lines in a frame of their own: what is left undrawn off screen, and what the
 		header stays in sight within -->

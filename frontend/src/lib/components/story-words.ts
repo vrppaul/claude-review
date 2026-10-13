@@ -20,6 +20,8 @@ const CHAPTER_FIRST = 'Chapter';
 const BEFORE_A_TITLE = ': ';
 // What chapters are called before their numbers, of one and of several
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
+// What steps are called where they are counted, and one of them inside a sentence
+const STEPS: CountedWords = { one: 'step', many: 'steps' };
 // What stands between the two counts of a chapter's head
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters
@@ -58,9 +60,19 @@ export const THE_OVERVIEW = 'Overview';
 /** What the part that draws what no step tells is called, in its heading and by its part of the page. */
 export const NOT_IN_THE_STORY = 'Not in the story';
 
+/** A chapter as a way to it says where it leads: "Chapter 2". */
+export function chapterCalled(place: number): string {
+	return `${CHAPTER_FIRST} ${chapterNumber(place)}`;
+}
+
 /** What a chapter's part of the page is called: "Chapter 2: The end". */
 export function chapterEntitled(place: number, title: string): string {
-	return `${CHAPTER_FIRST} ${chapterNumber(place)}${BEFORE_A_TITLE}${title}`;
+	return `${chapterCalled(place)}${BEFORE_A_TITLE}${title}`;
+}
+
+/** Which of its chapter's steps a step is, as the bar a chapter is read under says: "step 2 of 5". */
+export function stepAmong(stepPlace: number, steps: number): string {
+	return `${STEPS.one} ${stepPlace + FIRST_NUMBER} of ${steps}`;
 }
 
 /** What a part is called in the contents once the reader has read it through: "Chapter 2: The end, read". */
@@ -78,7 +90,7 @@ export function chaptersCounted(chapters: number, read: number): string {
 
 /** How much a chapter tells, as its head says: "3 files · 4 steps". */
 export function filesAndSteps(files: number, steps: number): string {
-	return [counted(files, 'file', 'files'), counted(steps, 'step', 'steps')].join(BETWEEN_COUNTS);
+	return [counted(files, 'file', 'files'), counted(steps, STEPS.one, STEPS.many)].join(BETWEEN_COUNTS);
 }
 
 /** The numbers of some chapters, by their places: "1", "1, 4". */

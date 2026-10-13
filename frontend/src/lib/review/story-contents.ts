@@ -68,11 +68,23 @@ export interface ChapterListed {
 	steps: StepListed[];
 }
 
-/** What a story lists of itself: its chapters, in the order it tells them, and each step by its section. */
+/**
+ * What a story lists of itself: its chapters, in the order it tells them,
+ * and each chapter and step by what its place on the page is known by. Both
+ * are asked with what is being read, which may be nothing: nothing is then
+ * found.
+ */
 export interface StoryContents {
 	chapters: ChapterListed[];
+	/** The chapter whose part is known by this key; null for the key of a part that is no chapter. */
+	chapterAt: (part: string | null) => ChapterListed | null;
 	/** The step whose section is known by this key, as its chapter lists it; null for a key no step has. */
-	stepAt: (section: string) => StepListed | null;
+	stepAt: (section: string | null) => StepListed | null;
+}
+
+/** What a table holds under a key: nothing under a key it does not hold, nor under none. */
+function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): Held | null {
+	return key === null ? null : (table.get(key) ?? null);
 }
 
 /** Every piece of a file the story draws: each step's, then what no step tells. */
@@ -138,11 +150,16 @@ function chapterListed(told: ToldChapter, place: number, story: ToldStory, piece
 export function contentsOf(story: ToldStory): StoryContents {
 	const pieces = piecesDrawn(story);
 	const chapters = story.chapters.map((told, place) => chapterListed(told, place, story, pieces));
+	const byPart = new Map(chapters.map((chapter): [string, ChapterListed] => [chapter.part, chapter]));
 	const bySection = new Map(
 		chapters.flatMap((chapter) => chapter.steps).map((step): [string, StepListed] => [step.section, step])
 	);
-	return { chapters, stepAt: (section) => bySection.get(section) ?? null };
+	return {
+		chapters,
+		chapterAt: (part) => heldUnder(byPart, part),
+		stepAt: (section) => heldUnder(bySection, section)
+	};
 }
 
 /** What no story lists: while none is held, nothing is drawn. */
-export const NO_CONTENTS: StoryContents = { chapters: [], stepAt: () => null };
+export const NO_CONTENTS: StoryContents = { chapters: [], chapterAt: () => null, stepAt: () => null };

@@ -77,8 +77,12 @@ THE_LONG_FILE_IN_TWO_CHAPTERS = story_of_chapters(
         ),
     ),
 )
+# The first line the second of those chapters tells, as its piece numbers it
+FIRST_LINE_OF_THE_SECOND_CHAPTER = f"Comment on line {LAST_LINE_OF_THE_FIRST_STEP + 1}"
 # A fraction of a pixel: where an edge stands is not a whole number, and the area scrolls by whole ones
 LESS_THAN_A_PIXEL = 1
+# How tall everything an area scrolls is, in pixels
+HEIGHT_HELD = "(area) => area.scrollHeight"
 # A wide screen zoomed in: too narrow for a column to stand beside what is read
 ZOOMED: ViewportSize = {"width": 640, "height": 400}
 # Where an element's left edge is, in pixels from the left of the window
@@ -300,7 +304,27 @@ async def test_the_agents_words_carry_its_colour_down_their_edge_and_a_reconstru
     assert await reconstruction.evaluate(EDGE_COLOUR) == the_agents_colour
 
 
-async def test_deep_in_a_long_piece_its_header_stays_in_view_saying_which_file_is_read(
+async def _below_the_bar(page: Page, drawn: Locator) -> float:
+    """How far under the bar of the chapter being read the top of something stands, in pixels."""
+    return await drawn.evaluate(TOP_OF) - await page.get_by_test_id("chapter-bar").evaluate(BOTTOM_OF)
+
+
+async def test_deep_in_a_chapter_its_bar_stands_at_the_top_of_what_is_read_and_takes_no_room_of_the_story(
+    review_of_a_long_file: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file)
+    story = page.get_by_test_id("story-view")
+    held_without_the_bar = await story.evaluate(HEIGHT_HELD)
+
+    await story.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+
+    bar = page.get_by_test_id("chapter-bar")
+    await expect(bar).to_be_in_viewport()
+    assert await bar.evaluate(TOP_OF) == await story.evaluate(TOP_OF)
+    assert await story.evaluate(HEIGHT_HELD) == held_without_the_bar
+
+
+async def test_deep_in_a_long_piece_its_header_stays_in_view_right_under_the_bar_of_its_chapter(
     review_of_a_long_file: RunningReview, page: Page
 ) -> None:
     await _read_as_story(page, review_of_a_long_file)
@@ -310,10 +334,10 @@ async def test_deep_in_a_long_piece_its_header_stays_in_view_saying_which_file_i
 
     header = page.get_by_test_id("story-piece-header")
     await expect(header).to_be_in_viewport()
-    assert await header.evaluate(TOP_OF) == await story.evaluate(TOP_OF)
+    assert abs(await _below_the_bar(page, header)) < LESS_THAN_A_PIXEL
 
 
-async def test_a_step_gone_to_stands_at_the_top_of_what_is_read_from_its_reason_down(
+async def test_a_step_gone_to_stands_right_under_the_bar_of_its_chapter_from_its_reason_down(
     review_of_a_long_file_in_two_steps: RunningReview, page: Page
 ) -> None:
     await _read_as_story(page, review_of_a_long_file_in_two_steps)
@@ -324,11 +348,10 @@ async def test_a_step_gone_to_stands_at_the_top_of_what_is_read_from_its_reason_
 
     reason = page.get_by_test_id("step-reason")
     await expect(reason).to_be_in_viewport()
-    below_the_top = await reason.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
-    assert abs(below_the_top) < LESS_THAN_A_PIXEL
+    assert abs(await _below_the_bar(page, reason)) < LESS_THAN_A_PIXEL
 
 
-async def test_a_file_picked_in_the_contents_of_a_story_lands_its_step_from_its_reason_down(
+async def test_a_file_picked_in_the_contents_of_a_story_lands_its_step_under_the_bar_from_its_reason_down(
     review_of_a_long_file_in_two_chapters: RunningReview, page: Page
 ) -> None:
     await page.set_viewport_size(WIDE_SCREEN)
@@ -339,11 +362,10 @@ async def test_a_file_picked_in_the_contents_of_a_story_lands_its_step_from_its_
 
     reason = page.get_by_test_id("step-reason")
     await expect(reason).to_be_in_viewport()
-    below_the_top = await reason.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
-    assert abs(below_the_top) < LESS_THAN_A_PIXEL
+    assert abs(await _below_the_bar(page, reason)) < LESS_THAN_A_PIXEL
 
 
-async def test_a_chapter_picked_in_the_contents_of_a_story_stands_at_the_top_of_what_is_read(
+async def test_a_chapter_picked_in_the_contents_of_a_story_stands_at_the_top_of_what_is_read_under_no_bar(
     review_of_a_long_file_in_two_chapters: RunningReview, page: Page
 ) -> None:
     await page.set_viewport_size(WIDE_SCREEN)
@@ -356,6 +378,26 @@ async def test_a_chapter_picked_in_the_contents_of_a_story_stands_at_the_top_of_
     await expect(page.get_by_test_id("go-to-part").nth(2)).to_have_attribute("aria-current", "location")
     below_the_top = await the_second.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
     assert abs(below_the_top) < LESS_THAN_A_PIXEL
+    await expect(page.get_by_test_id("chapter-bar")).to_have_count(0)
+
+
+async def test_the_bar_of_a_chapter_takes_the_reader_to_the_head_of_the_next_and_the_keyboard_with_them(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    story = page.get_by_test_id("story-view")
+    the_second = page.get_by_test_id("story-chapter").nth(1)
+    await story.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+
+    await page.get_by_test_id("go-to-chapter-after").click()
+
+    # At its head no bar is over it: the keyboard the bar's button held is on the chapter, and j goes on from there
+    await expect(page.get_by_test_id("chapter-bar")).to_have_count(0)
+    below_the_top = await the_second.evaluate(TOP_OF) - await story.evaluate(TOP_OF)
+    assert abs(below_the_top) < LESS_THAN_A_PIXEL
+    await expect(the_second).to_be_focused()
+    await page.keyboard.press("j")
+    await expect(the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)).to_be_focused()
 
 
 async def test_f_puts_the_contents_of_a_story_away_and_their_rail_brings_them_back(

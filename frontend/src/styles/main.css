@@ -462,11 +462,20 @@
 	font-weight: 600;
 }
 
-/* A file's name and controls, kept in sight while its rows scroll under them */
+/*
+ * A file's name and controls, kept in sight while its rows scroll under
+ * them: at the top of the area, or under what stands over the top of the
+ * area where the file is drawn, which says how much room it takes
+ * (--cr-top-room)
+ */
 .cr-file-header {
 	position: sticky;
-	top: 0;
+	top: var(--cr-top-room, 0);
 	z-index: var(--cr-layer-over-content);
+}
+/* A section the reader is taken to lands under what stands over the area too, not behind it */
+.cr-lines-section {
+	scroll-margin-top: var(--cr-top-room, 0);
 }
 
 /* What the reader has finished with steps back: a file's row in the tree and its header, the files of a chapter read through */
@@ -1113,6 +1122,36 @@
 	padding: 0.25rem 0.125rem 0.25rem var(--cr-contents-indent);
 	font-size: 0.75rem;
 	text-align: left;
+}
+
+/* The measure a story is read at, in the middle of its area: the story's, and that of the bar over it */
+.cr-story-measure {
+	max-width: 64rem;
+	margin-inline: auto;
+	padding-inline: 1.5rem;
+}
+/*
+ * Where the bar a chapter is read under stands: a slot of no height, stuck
+ * to the top of the story's area whichever way that scrolls, so the story
+ * never moves as the bar comes and goes. The bar hangs from it, over what
+ * scrolls under.
+ */
+.cr-chapter-bar-slot {
+	position: sticky;
+	top: 0;
+	left: 0;
+	z-index: var(--cr-layer-over-headers);
+	height: 0;
+}
+/* The bar: one row on the ground a file's header stands on, a line under it */
+.cr-chapter-bar {
+	height: var(--cr-chapter-bar-height);
+	border-bottom: 1px solid var(--color-base-300);
+	background: var(--color-base-200);
+}
+/* A chapter is read under its bar: the headers of its pieces stick under the bar, and a step gone to lands under it */
+.cr-story-chapter {
+	--cr-top-room: var(--cr-chapter-bar-height);
 }
 
 /*

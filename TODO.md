@@ -62,8 +62,9 @@ tests. Remove items when done — don't check them off.
       same. Read in the code, and seen in a browser by the second review
       of the story's page.
 - [ ] `fix(ui)`: `k` brings the line above to the top edge of the reading
-      area, under its file's sticky header (`dom/keyboard.ts`,
-      `moveByLine`). Read in the code, not looked at in a browser.
+      area, under its file's sticky header, and deep in a chapter of a
+      story under the chapter's bar too (`dom/keyboard.ts`, `moveByLine`).
+      Read in the code, not looked at in a browser.
 - [ ] `fix(ui)`: a file the page was taking the reader to stays the one
       being read after a thread in another file took them instead — a
       file shown, then `n` before the glide ends — until the reader
@@ -110,6 +111,14 @@ tests. Remove items when done — don't check them off.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
+- [ ] `fix(ui)`: deep in a chapter, the step its bar and the contents say
+      is being read changes late. The band that says which section is read
+      begins at the top of the reading area (`dom/reading-band.svelte.ts`),
+      behind the bar: a piece whose last rows are behind the bar is still
+      the one read. Read in the code, not looked at in a browser.
+- [ ] `feat(ui)`: a step the reader is taken to stands right under the bar
+      of its chapter, or under the page's header, with no room above its
+      reason.
 - [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
       a file the reader asked for, the files come on screen and the bar
       says why, and the keyboard is left on nothing.

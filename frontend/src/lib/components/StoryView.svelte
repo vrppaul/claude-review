@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
+	import ChapterBar from './ChapterBar.svelte';
 	import StoryChapter from './StoryChapter.svelte';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
@@ -27,7 +28,8 @@
 </script>
 
 <!-- The same change, read as the agent tells it: one scroll, the overview first, then every chapter in a
-	row, then what no step tells and what the agent called housekeeping -->
+	row, then what no step tells and what the agent called housekeeping. Over it, deep in a chapter, the
+	bar that says which -->
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
 	{#if held === null}
 		<p data-testid="no-story" class="cr-muted px-4 py-8 text-center text-sm">
@@ -36,7 +38,8 @@
 		</p>
 	{:else}
 		{@const story = held.story}
-		<article class="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8">
+		<ChapterBar />
+		<article class="cr-story-measure flex flex-col gap-8 py-8">
 			<StoryOverview {held} />
 
 			{#each review.story.contents.chapters as chapter (chapter.told.id)}
