@@ -9,7 +9,6 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-import pytest_asyncio
 from playwright.async_api import Browser, Page, async_playwright
 
 from tests.e2e.browsers_loop import BROWSERS_LOOP, in_the_browsers_loop
@@ -28,7 +27,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
     item.add_marker(pytest.mark.asyncio(loop_scope=BROWSERS_LOOP), append=False)
 
 
-@pytest_asyncio.fixture(scope="session", loop_scope=BROWSERS_LOOP)
+@in_the_browsers_loop(scope="session")
 async def browser() -> AsyncIterator[Browser]:
     """The run's one Chromium."""
     async with async_playwright() as playwright:
@@ -37,7 +36,7 @@ async def browser() -> AsyncIterator[Browser]:
         await launched.close()
 
 
-@pytest_asyncio.fixture(autouse=True, loop_scope=BROWSERS_LOOP)
+@in_the_browsers_loop(autouse=True)
 async def nothing_left_running() -> AsyncIterator[None]:
     """Hold a browser test to ending what it started: whatever it left running would run on beside the next test."""
     running_before = asyncio.all_tasks()

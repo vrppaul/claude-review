@@ -84,16 +84,17 @@ import re
 import sys
 import tempfile
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncGenerator, Callable, Generator
 from enum import StrEnum, auto
 from functools import partial
 from pathlib import Path
 from typing import Self, override
 
-from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, Running, StoppedError, complete, run, running
-from long_change import CHANGED, COMMITTED, THE_STORY
 from playwright.async_api import Error as BrowserError, Page, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
+
+from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, Running, StoppedError, complete, run, running
+from long_change import CHANGED, COMMITTED, THE_STORY
 
 # The review's own command line, run in the environment the look runs in
 REVIEW = (sys.executable, "-m", "claude_review")
@@ -600,7 +601,7 @@ async def _address_of(server: Running) -> str:
 
 
 @contextlib.asynccontextmanager
-async def _served(repository: Path, environment: dict[str, str]) -> AsyncIterator[Served]:
+async def _served(repository: Path, environment: dict[str, str]) -> AsyncGenerator[Served]:
     """Serve the review of the repository's change through the review's own command line, while the block runs.
 
     Raises:
@@ -623,7 +624,7 @@ async def _story_told(served: Served, document: Path, environment: dict[str, str
 
 
 @contextlib.asynccontextmanager
-async def _window(asked: Asked) -> AsyncIterator[Page]:
+async def _window(asked: Asked) -> AsyncGenerator[Page]:
     """A Chromium window of the width and the theme asked for, closed as the block ends."""
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch()
@@ -638,7 +639,7 @@ async def _window(asked: Asked) -> AsyncIterator[Page]:
 
 
 @contextlib.contextmanager
-def _ending_the_look_at(step: str) -> Iterator[None]:
+def _ending_the_look_at(step: str) -> Generator[None]:
     """End the look, naming the step, if the browser cannot do what the block asks of it."""
     try:
         yield

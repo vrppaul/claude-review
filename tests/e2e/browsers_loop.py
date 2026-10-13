@@ -12,10 +12,14 @@ answer nobody, for that loop stands still while the test runs, so
 `servers` were made in.
 """
 
+from functools import partial
+
 import pytest_asyncio
 
 # The scope of the loop the browser lives in, as pytest-asyncio names it: one loop for the whole run
 BROWSERS_LOOP = "session"
 
-# How an async fixture of a browser test is declared
-in_the_browsers_loop = pytest_asyncio.fixture(loop_scope=BROWSERS_LOOP)
+# How an async fixture of a browser test is declared, the one way: bare over a fixture a test has for
+# itself, or called with what pytest takes for any fixture, as one kept for a module (`scope="module"`)
+# or had by every test (`autouse=True`)
+in_the_browsers_loop = partial(pytest_asyncio.fixture, loop_scope=BROWSERS_LOOP)

@@ -59,8 +59,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, StoppedError, complete, run
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, StoppedError, complete, run
 
 # The page, from the repository's root, and the directory of what pnpm installed for it
 FRONTEND = Path("frontend")

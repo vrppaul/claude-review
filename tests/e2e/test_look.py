@@ -18,12 +18,11 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient, ConnectError
 from playwright.async_api import Page
 from pydantic import BaseModel, ConfigDict
 
-from tests.e2e.browsers_loop import BROWSERS_LOOP, in_the_browsers_loop
+from tests.e2e.browsers_loop import in_the_browsers_loop
 
 REPOSITORY = Path(__file__).parents[2]
 LOOK = REPOSITORY / "scripts" / "look.py"
@@ -242,7 +241,7 @@ def _first_pixel(picture: Path) -> bytes:
     return row[ROW_PACKING:]
 
 
-@pytest_asyncio.fixture(scope="module", loop_scope=BROWSERS_LOOP)
+@in_the_browsers_loop(scope="module")
 async def story_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     """One look at the story: a scroll, a press on the fourth entry of the contents, a key, and a picture."""
     shots = tmp_path_factory.mktemp("story") / "shots"
@@ -251,7 +250,7 @@ async def story_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
 
 
-@pytest_asyncio.fixture(scope="module", loop_scope=BROWSERS_LOOP)
+@in_the_browsers_loop(scope="module")
 async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     """One look at the files, dark and on a narrow window, with a picture of how they open."""
     shots = tmp_path_factory.mktemp("files") / "shots"

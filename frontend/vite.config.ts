@@ -42,6 +42,13 @@ export default defineConfig({
 		// Four ran the whole suite as fast as eight or sixteen did, and leave
 		// the machine's other cores to whatever else works on it
 		maxWorkers: 4,
+		// A worker holding more than this is replaced by a fresh one before its
+		// next file. Left unset, the limit is the machine's memory shared out
+		// between the workers, which a worker never reaches before the machine
+		// feels it. Over a whole run of 87 files a worker's heap grew from
+		// 73 MB to 684 MB (`vitest run --logHeapUsage`): the limit is half as
+		// much again, so no worker is replaced today
+		vmMemoryLimit: '1GB',
 		// A stub or a spy left behind by a test that failed half way would answer
 		// the next test's calls; each test starts from the real globals
 		unstubGlobals: true,

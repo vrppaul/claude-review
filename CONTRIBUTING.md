@@ -35,7 +35,7 @@ cd frontend && pnpm test             # frontend tests
 # Lint & type check
 uv run ruff check src/               # Python lint (the tests are formatted, never linted)
 uv run ruff format src/ tests/       # Python format
-uv run ty check src/                 # Python type check
+uv run ty check src scripts          # Python type check
 cd frontend && pnpm lint             # frontend lint
 cd frontend && pnpm check            # frontend type check
 

@@ -48,7 +48,8 @@ build-backend = "hatchling.build"
 [tool.ruff]
 target-version = "py314"
 line-length = 120
-src = ["src"]
+# Where the project's own modules are: the package, and the scripts, which import each other by path
+src = ["src", "scripts"]
 # What is excluded stays excluded when a hook names the file outright
 force-exclude = true
 exclude = [
@@ -188,7 +189,7 @@ source_modules = ["claude_review.cli.agent_commands"]
 forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto"]
 
 [tool.vulture]
-paths = ["src", "tests"]
+paths = ["src", "tests", "scripts"]
 min_confidence = 60
 # Called through what they are decorated as, never by name in this code:
 # routes, validators, click commands, fixtures, and whatever an interface or a
@@ -200,8 +201,8 @@ ignore_decorators = [
     "@field_validator",
     "@click.*",
     "@pytest.fixture",
-    # A fixture that names the event loop it runs in
-    "@pytest_asyncio.fixture",
+    # A fixture of the browser tests, which runs in the browser's event loop
+    "@in_the_browsers_loop",
 ]
 ignore_names = [
     # Pydantic's own setting

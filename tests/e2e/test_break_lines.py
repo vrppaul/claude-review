@@ -19,10 +19,9 @@ import sys
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from pydantic import BaseModel, ConfigDict
 
-from tests.e2e.browsers_loop import BROWSERS_LOOP
+from tests.e2e.browsers_loop import in_the_browsers_loop
 
 BREAK_LINES = Path(__file__).parents[2] / "scripts" / "break_lines.py"
 # The page, for what it asks pnpm for
@@ -215,7 +214,7 @@ class BrokenRun(BaseModel):
     ran: Ran
 
 
-@pytest_asyncio.fixture(scope="module", loop_scope=BROWSERS_LOOP)
+@in_the_browsers_loop(scope="module")
 async def two_lines_broken(tmp_path_factory: pytest.TempPathFactory) -> BrokenRun:
     """One run with two lines broken: one a test holds, and one nothing holds."""
     repository = _repository(tmp_path_factory.mktemp("broken"))

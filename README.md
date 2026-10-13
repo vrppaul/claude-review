@@ -214,7 +214,7 @@ Ships as a prebuilt wheel on [PyPI](https://pypi.org/project/claude-review/) —
 uv sync                          # install dependencies
 uv run pytest tests -n 4         # run all tests (unit + integration + e2e), on four workers
 uv run ruff check src/ tests/    # lint
-uv run ty check src/             # type check
+uv run ty check src scripts      # type check
 
 # Frontend
 cd frontend && pnpm install      # install dependencies
