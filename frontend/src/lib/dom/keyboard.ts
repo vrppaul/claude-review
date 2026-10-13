@@ -173,6 +173,15 @@ export function focusWhatRemains(find: FindWhatRemains): void {
 }
 
 /**
+ * As `focusWhatRemains`, where what remains stands far from what went and
+ * is the one thing on the page that carries a role: the header's button
+ * that brings back, or opens again, what was put away.
+ */
+export function focusWhatCarries(role: string): void {
+	focusWhatRemains(() => document.querySelector<HTMLElement>(`[data-role="${role}"]`));
+}
+
+/**
  * As `focusWhatRemains`, where what remains is words and no control: the
  * head of the part of a story the reader was taken to. The words hold the
  * keyboard until it leaves them, and can take it no more after.

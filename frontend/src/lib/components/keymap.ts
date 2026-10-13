@@ -26,6 +26,13 @@ import type { Review } from '$lib/review/review.svelte';
  */
 export const HELP_BUTTON_ROLE = 'open-help';
 
+/**
+ * What the header's button that opens and shuts the agent panel carries:
+ * where the keyboard goes when the panel is put away by its own button,
+ * which goes with it.
+ */
+export const PANEL_TOGGLE_ROLE = 'toggle-panel';
+
 /** The chord that finishes the review, as the help and the hints beside its button write it. */
 export const FINISH_KEYS = 'Ctrl+Shift+Enter';
 

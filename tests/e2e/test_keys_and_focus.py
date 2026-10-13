@@ -316,6 +316,19 @@ async def test_the_keyboard_goes_with_the_tree_of_files_to_its_rail_and_comes_ba
     assert await _focused(page) == "hide-sidebar"
 
 
+async def test_the_keyboard_goes_from_the_agent_panels_own_button_to_the_control_that_brings_the_panel_back(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_review(page, review)
+    await page.keyboard.press("c")
+    await page.get_by_test_id("agent-panel").wait_for()
+
+    await _press(page, "close-panel")
+    await page.get_by_test_id("agent-panel").wait_for(state="detached")
+
+    assert await _focused(page) == "toggle-panel"
+
+
 async def test_f_with_the_keyboard_on_a_file_of_the_tree_leaves_it_on_the_rail_of_the_tree(
     review: RunningReview, page: Page
 ) -> None:

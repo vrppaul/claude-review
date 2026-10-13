@@ -6,7 +6,7 @@
 	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
 	import Icon from './Icon.svelte';
-	import { FINISH_KEYS, HELP_BUTTON_ROLE } from './keymap';
+	import { FINISH_KEYS, HELP_BUTTON_ROLE, PANEL_TOGGLE_ROLE } from './keymap';
 	import Popover from './Popover.svelte';
 	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
@@ -153,6 +153,7 @@
 		<button
 			type="button"
 			data-testid="toggle-panel"
+			data-role={PANEL_TOGGLE_ROLE}
 			data-tour="agent-panel-toggle"
 			class="cr-chip"
 			aria-pressed={review.layout.agentPanel.open}

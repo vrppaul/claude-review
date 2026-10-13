@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { focusWhatRemains } from '$lib/dom/keyboard';
+	import { focusWhatCarries, focusWhatRemains } from '$lib/dom/keyboard';
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
 	import NewsIllustration from './NewsIllustration.svelte';
@@ -36,7 +36,7 @@
 	 * tour and the news are found again.
 	 */
 	function keyboardToHelp() {
-		focusWhatRemains(() => document.querySelector<HTMLElement>(`[data-role="${HELP_BUTTON_ROLE}"]`));
+		focusWhatCarries(HELP_BUTTON_ROLE);
 	}
 
 	function skipTour() {

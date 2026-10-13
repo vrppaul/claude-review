@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { focusWhatCarries } from '$lib/dom/keyboard';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
+	import { PANEL_TOGGLE_ROLE } from './keymap';
 	import PresenceDot from './PresenceDot.svelte';
 
 	const review = useReview();
@@ -21,6 +23,15 @@
 	/** How long ago the agent reported its context, if it ever has. */
 	function reportedAgo(at: number | null): string {
 		return at === null ? '' : since(at);
+	}
+
+	/**
+	 * The panel goes, and the button pressed with it: the keyboard goes to
+	 * the header's button that brings the panel back.
+	 */
+	function putAway() {
+		review.layout.agentPanel.setOpen(false);
+		focusWhatCarries(PANEL_TOGGLE_ROLE);
 	}
 </script>
 
@@ -51,7 +62,7 @@
 		data-testid="close-panel"
 		class="btn btn-ghost btn-xs px-1"
 		aria-label="Hide the agent panel"
-		onclick={() => review.layout.agentPanel.setOpen(false)}
+		onclick={putAway}
 	>
 		<Icon name="chevron" class="h-3 w-3 -rotate-90" />
 	</button>
