@@ -175,6 +175,19 @@ repos:
         files: ^(skills/review-ui/SKILL\.md|plugin/commands/review-ui\.md)$
         pass_filenames: false
 
+  # The instruction files — AGENTS.md, and the rules of each area under
+  # .claude/rules/ — are read into agents' sessions, so each is held to its
+  # size. They are held to naming what is there too, which a commit breaks
+  # by moving a file without touching them: so this runs on every commit
+  - repo: local
+    hooks:
+      - id: instruction-files
+        name: instruction files (their size, the paths they name, how they are reached)
+        entry: uv run python scripts/check_instruction_files.py
+        language: system
+        always_run: true
+        pass_filenames: false
+
   # Conventional commits enforcement
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0

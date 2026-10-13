@@ -80,3 +80,4 @@ Before you change or review code in an area, read its file whole. Claude Code lo
 - How a thing is built is said in its module's docstring, not here.
 - What a tool can hold is a gate, not a rule: write the gate.
 - `CLAUDE.md` is a symlink to this file, for Claude Code to read it by: edit this one.
+- `scripts/check_instruction_files.py` holds each of these files to its size, and every path they name to being there.
