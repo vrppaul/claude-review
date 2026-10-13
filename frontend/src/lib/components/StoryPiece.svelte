@@ -22,6 +22,8 @@
 		above?: Snippet;
 		/** What is said beside the file's name: the lines a step tells, how much was left out. */
 		beside: Snippet;
+		/** What is said at the far end of the header, before how much the piece changes: where else a step's file is told. */
+		atFarEnd?: Snippet;
 	}
 
 	// What the file's name is in the piece's header: the piece's heading, or plain words where the piece is
@@ -29,7 +31,7 @@
 	const AS_ITS_HEADING = 'h3';
 	const AS_PLAIN_WORDS = 'p';
 
-	let { sectionKey, piece, shows, above, beside }: Props = $props();
+	let { sectionKey, piece, shows, above, beside, atFarEnd }: Props = $props();
 	const review = useReview();
 
 	const fileNamed = $derived(above === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
@@ -59,6 +61,7 @@
 			</svelte:element>
 			{@render beside()}
 			<div class="flex-1"></div>
+			{@render atFarEnd?.()}
 			<ChangedLines file={piece} />
 		</SectionHeader>
 	{/snippet}

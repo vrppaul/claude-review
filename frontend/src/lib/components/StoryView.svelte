@@ -36,8 +36,8 @@
 			<StoryHead {held} />
 			<StoryOverview overview={story.overview} chapters={story.chapters} />
 
-			{#each story.chapters as chapter, chapterPlace (chapter.id)}
-				<StoryChapter {chapter} {chapterPlace} />
+			{#each review.story.contents.chapters as chapter (chapter.told.id)}
+				<StoryChapter {chapter} />
 			{/each}
 
 			{#if story.left_out.length > 0}

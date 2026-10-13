@@ -50,6 +50,11 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--color-base-100', '--cr-agent-tint']
 	},
 	{ said: "an agent's chip, in the panel", text: '--cr-agent', grounds: ['--color-base-100', '--cr-agent-chip'] },
+	{
+		said: "the other chapters that tell a file, on the header of a story's piece",
+		text: '--cr-agent',
+		grounds: ['--color-base-200']
+	},
 	{ said: 'unread, in a comment', text: '--cr-unread', grounds: ['--color-base-100', '--cr-mark-tint'] },
 	{ said: "a control, on a gap's bar", text: '--cr-control', grounds: ['--color-base-200'] },
 	{

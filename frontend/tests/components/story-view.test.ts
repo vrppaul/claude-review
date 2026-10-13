@@ -133,15 +133,51 @@ describe('a review read as its story', () => {
 		]);
 	});
 
-	it('says of each chapter why its changes belong together, and how many steps tell it', () => {
+	it('says of each chapter why its changes belong together, and how many files it tells in how many steps', () => {
 		render(ReviewScreen, { props: { review } });
 
 		const [beginnings, end] = screen.getAllByTestId('story-chapter');
 
 		expect(within(beginnings).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-1 belong together.');
-		expect(within(beginnings).getByText('2 steps')).toBeTruthy();
+		expect(within(beginnings).getByText('2 files · 2 steps')).toBeTruthy();
 		expect(within(end).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-2 belong together.');
-		expect(within(end).getByText('1 step')).toBeTruthy();
+		expect(within(end).getByText('1 file · 1 step')).toBeTruthy();
+	});
+
+	it('counts a file a chapter tells in two steps once', () => {
+		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), toldStep('b.py', 5), toldStep('a.py', 9)])];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(within(screen.getByTestId('story-chapter')).getByText('2 files · 3 steps')).toBeTruthy();
+	});
+
+	it('says in the head of a piece the other chapter that tells its file, and nothing of a file told in one', () => {
+		render(ReviewScreen, { props: { review } });
+
+		// a.py is told in both chapters, b.py in the first alone; what no step tells of a.py is in no chapter
+		const [ofAInTheFirst, ofB, ofAInTheSecond, leftOutOfA] = pieces();
+
+		expect(within(ofAInTheFirst).getByTestId('also-in').textContent).toBe('also in chapter 2');
+		expect(within(ofAInTheSecond).getByTestId('also-in').textContent).toBe('also in chapter 1');
+		expect(within(ofB).queryByTestId('also-in')).toBeNull();
+		expect(within(leftOutOfA).queryByTestId('also-in')).toBeNull();
+	});
+
+	it('names every other chapter that tells the file of a piece, where they are several', () => {
+		const chapters = [
+			toldChapter('ch-1', [toldStep('a.py', 1)]),
+			toldChapter('ch-2', [toldStep('a.py', 5)]),
+			toldChapter('ch-3', [toldStep('a.py', 9)])
+		];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [, inTheSecond] = pieces();
+
+		expect(within(inTheSecond).getByTestId('also-in').textContent).toBe('also in chapters 1, 3');
 	});
 
 	it('says where to doubt a chapter, where the agent said', () => {

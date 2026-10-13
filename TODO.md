@@ -107,10 +107,6 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `feat(ui)`: a chapter's head says how many steps tell it, where the
-      canvas says its files too: "3 files · 4 steps".
-- [ ] `feat(ui)`: a piece of a file told in two chapters does not say so:
-      the canvas draws "also in chapter 1" in its head.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

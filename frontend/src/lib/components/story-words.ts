@@ -1,10 +1,11 @@
 /**
- * How a story's parts are numbered and named on the page, said one way
- * wherever they are said: in a chapter's heading, beside a step, in what the
- * overview says a decision leads to.
+ * How a story's parts are numbered, named and counted on the page, said one
+ * way wherever they are said: in a chapter's heading, beside a step, in the
+ * head of a piece, in what the overview says a decision leads to.
  */
 
 import type { ToldChapter, ToldStep } from '$lib/types';
+import { counted, type CountedWords, wordsFor } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
 const RANGE_DASH = '–';
@@ -14,6 +15,12 @@ const FIRST_NUMBER = 1;
 // What a step and a chapter are called before their numbers: at the head of a heading, and inside a sentence
 const A_STEP = 'Step';
 const A_CHAPTER = 'chapter';
+// What chapters are called before their numbers, of one and of several
+const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
+// What stands between the two counts of a chapter's head
+const BETWEEN_COUNTS = ' · ';
+// What stands between the numbers of several chapters
+const BETWEEN_NUMBERS = ', ';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -36,6 +43,20 @@ export function linesSaid({ first, last }: StepLines): string {
 /** A step as its heading names it to whoever cannot see where it stands: "Step 1.2". */
 export function stepNamed(number: string): string {
 	return `${A_STEP} ${number}`;
+}
+
+/** How much a chapter tells, as its head says: "3 files · 4 steps". */
+export function filesAndSteps(files: number, steps: number): string {
+	return [counted(files, 'file', 'files'), counted(steps, 'step', 'steps')].join(BETWEEN_COUNTS);
+}
+
+/**
+ * The other chapters that tell the file of a piece, by their places, as its
+ * head says them: "also in chapter 1", "also in chapters 1, 4".
+ */
+export function alsoInChapters(places: readonly number[]): string {
+	const numbers = places.map(chapterNumber).join(BETWEEN_NUMBERS);
+	return `also in ${wordsFor(places.length, CHAPTERS)} ${numbers}`;
 }
 
 /**

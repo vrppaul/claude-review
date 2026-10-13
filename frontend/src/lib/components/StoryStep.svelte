@@ -1,18 +1,20 @@
 <script lang="ts">
-	import { stepSectionKey } from '$lib/review/story-pieces';
-	import type { ToldStep } from '$lib/types';
+	import type { StepListed } from '$lib/review/story-contents';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
-	import { linesSaid, stepNamed } from './story-words';
+	import { alsoInChapters, linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
-		step: ToldStep;
+		/** The step as its chapter lists it: as told, with what its section is known by and its file as the chapter lists it. */
+		step: StepListed;
 		/** The step as the story numbers it: its chapter's number, then its own. */
 		number: string;
 	}
 
 	let { step, number }: Props = $props();
+
+	const told = $derived(step.told);
 </script>
 
 <!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
@@ -27,8 +29,8 @@
 		>
 			{number}
 		</h3>
-		{#if step.reason}
-			<p data-testid="step-reason" class="min-w-0">{step.reason}</p>
+		{#if told.reason}
+			<p data-testid="step-reason" class="min-w-0">{told.reason}</p>
 		{/if}
 	</div>
 {/snippet}
@@ -37,16 +39,22 @@
 	reads why before the code. A piece that cannot be drawn says so in its place, under the number and
 	reason it still has, and takes no other piece down with it -->
 <svelte:boundary onerror={reportBroken}>
-	<StoryPiece sectionKey={stepSectionKey(step)} piece={step.piece} shows="a-step" above={numberAndReason}>
+	<StoryPiece sectionKey={step.section} piece={told.piece} shows="a-step" above={numberAndReason}>
 		{#snippet beside()}
-			<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(step.lines)}</span>
+			<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(told.lines)}</span>
+		{/snippet}
+		{#snippet atFarEnd()}
+			{#if step.file.alsoIn.length > 0}
+				<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
+				<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(step.file.alsoIn)}</span>
+			{/if}
 		{/snippet}
 	</StoryPiece>
 	{#snippet failed(error, retry)}
 		<!-- One block among the chapter's steps, as the section it stands in for is -->
 		<div>
 			{@render numberAndReason()}
-			<PartFailed what={step.file} {error} {retry} />
+			<PartFailed what={told.file} {error} {retry} />
 		</div>
 	{/snippet}
 </svelte:boundary>
