@@ -10,7 +10,7 @@
 	import EdgeGrip from './EdgeGrip.svelte';
 	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
-	import { STATUS_LETTERS } from './status-letters';
+	import StatusLetter from './StatusLetter.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed {
@@ -68,7 +68,6 @@
 </script>
 
 {#snippet fileRow(file: DiffFile, name: string, depth: number)}
-	{@const status = STATUS_LETTERS[file.status]}
 	{@const threadCount = review.threads.onLinesOf(file.path).length}
 	{@const viewed = review.reading.isViewed(file.path)}
 	<li>
@@ -85,7 +84,7 @@
 			onclick={() => review.sections.scrollTo(fileSectionKey(file.path))}
 		>
 			{#if isDiffMode}
-				<span class={['w-3 shrink-0 text-center font-semibold', status.colour]}>{status.letter}</span>
+				<StatusLetter status={file.status} />
 			{/if}
 			<span class="flex-1 truncate">
 				{#if file.old_path}

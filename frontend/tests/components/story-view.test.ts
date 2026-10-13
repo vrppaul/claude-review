@@ -180,6 +180,20 @@ describe('a review read as its story', () => {
 		expect(within(ofTheMade).getByText('−0')).toBeTruthy();
 	});
 
+	it('says what became of the file of each piece in a word too, to whoever cannot see the letter', () => {
+		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x')])] });
+		const ofTheFileMade = { file: 'new.py', lines: { first: 1, last: 1 }, reason: null, piece: made };
+		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [ofTheChanged, ofTheMade] = screen.getAllByTestId('story-piece-header');
+
+		expect(within(ofTheChanged).getByText('modified')).toBeTruthy();
+		expect(within(ofTheMade).getByText('added')).toBeTruthy();
+	});
+
 	it('shows under each step the piece of its file the step tells, and no more of the file', () => {
 		render(ReviewScreen, { props: { review } });
 

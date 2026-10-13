@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
 import { addedLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
@@ -101,6 +101,24 @@ describe('the file tree', () => {
 		const { getByRole } = render(FileList, inReview(review));
 
 		expect(getByRole('img', { name: 'Viewed' })).toBeTruthy();
+	});
+
+	it('says what became of each file in a word, to whoever cannot see the letter that says it', () => {
+		const review = openReview({ files: diffFiles });
+
+		const { getAllByTestId } = render(FileList, inReview(review));
+		const [changed, made] = getAllByTestId('file-item');
+
+		expect(within(changed).getByText('modified')).toBeTruthy();
+		expect(within(made).getByText('added')).toBeTruthy();
+	});
+
+	it('says nothing became of a plain file, which is no change', () => {
+		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { mode: 'files' } });
+
+		const { getByTestId } = render(FileList, inReview(review));
+
+		expect(within(getByTestId('file-item')).queryByText('added')).toBeNull();
 	});
 
 	it('counts a transcript in messages', () => {

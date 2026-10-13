@@ -89,8 +89,7 @@ tests. Remove items when done — don't check them off.
       will hang on that block.
 - [ ] `fix(ui)`: a step has no heading, two steps of one file give the same
       one, a chapter's and a step's number stand outside their headings,
-      the overview's labels are spans, and a piece says its file's status
-      as a bare letter.
+      and the overview's labels are spans.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

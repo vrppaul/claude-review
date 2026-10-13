@@ -10,7 +10,7 @@
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import LinesSection from './LinesSection.svelte';
 	import SectionHeader from './SectionHeader.svelte';
-	import { STATUS_LETTERS } from './status-letters';
+	import StatusLetter from './StatusLetter.svelte';
 
 	interface Props {
 		/** What the piece's section is known by among those the story draws. */
@@ -30,7 +30,6 @@
 	let { sectionKey, piece, shows, numbering, scrollRoot, beside }: Props = $props();
 	const review = useReview();
 
-	const status = $derived(STATUS_LETTERS[piece.status]);
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
 	const extent = $derived<Extent>({ kind: 'piece', shows, numbering });
@@ -49,7 +48,7 @@
 >
 	{#snippet header()}
 		<SectionHeader testId="story-piece-header">
-			<span class={['w-3 shrink-0 text-center font-mono text-xs font-semibold', status.colour]}>{status.letter}</span>
+			<StatusLetter status={piece.status} />
 			<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere"><FilePath file={piece} /></h3>
 			{@render beside()}
 			<div class="flex-1"></div>
