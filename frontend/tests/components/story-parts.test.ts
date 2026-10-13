@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { addedLine, diffFile, hunk } from '../diff';
+import { broughtIntoView } from '../elements';
 import { fakeServer } from '../fake-server';
 import { frames } from '../frames';
 import { handOverNext } from '../pushes';
@@ -105,13 +106,11 @@ describe('a part of a story the reader is taken to', () => {
 	it('is brought to the top of what is read at once, from its head', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');
 		const [, ofTheEnd] = review.story.contents.chapters;
-		// Its own, given to it here: a spy on the method would be the one every element shares
-		const broughtIntoView = vi.fn();
-		theEnd.scrollIntoView = broughtIntoView;
+		const toTheEnd = broughtIntoView(theEnd);
 
 		review.parts.goTo(ofTheEnd.part);
 
-		expect(broughtIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
+		expect(toTheEnd).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
 	});
 
 	it('is the one being read from then on, whatever is at the top while the page takes them there', () => {

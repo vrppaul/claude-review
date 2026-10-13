@@ -19,6 +19,13 @@ const PUSHED_DOWN = 300;
 const WHERE_THE_READER_WENT = 500;
 // And scrolled off it, above the area, by going to a thread far down the section
 const OFF_THE_TOP = -400;
+// Where a section far down the review stands before a glide to it begins, and where the glide has it half-way
+const FAR_BELOW = 900;
+const HALF_WAY_THERE = 450;
+// A frame in which a glide has moved nothing yet; and the two after it moved: it is seen to have
+// moved in the first, and to stand still, for one frame, in the second
+const FRAMES_BEFORE_IT_MOVES = 1;
+const FRAMES_TO_SEE_IT_STILL_ONCE = 2;
 // What a reader does to move themselves, or to act where they are
 const READERS_OWN_MOVES = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
 // A moment into a scroll that is still on its way
@@ -153,6 +160,34 @@ describe('being taken to a file somebody else pointed at', () => {
 
 		expect(standing.top).toBe(AT_THE_TOP);
 		expect(isMarked(shown)).toBe(true);
+	});
+
+	it('is left where the reader went when what they pressed a key on keeps the key to itself', async () => {
+		const shown = section('a.py');
+		const standing = placed(shown, AT_THE_TOP);
+		const keepsItsKeys = document.body.appendChild(document.createElement('button'));
+		keepsItsKeys.addEventListener('keydown', (event) => event.stopPropagation());
+
+		sections.show('a.py');
+		keepsItsKeys.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+		standing.top = WHERE_THE_READER_WENT;
+		await frames(FRAMES_TO_SETTLE_TWICE);
+
+		expect(standing.top).toBe(WHERE_THE_READER_WENT);
+	});
+
+	it('is not scrolled to again for standing still one frame on its way: a glide may pause that long', async () => {
+		const gliding = section('a.py');
+		const standing = { top: FAR_BELOW };
+		gliding.getBoundingClientRect = () => ({ top: standing.top }) as DOMRect;
+		const scrolledTo = broughtIntoView(gliding);
+
+		sections.show('a.py');
+		await frames(FRAMES_BEFORE_IT_MOVES);
+		standing.top = HALF_WAY_THERE;
+		await frames(FRAMES_TO_SEE_IT_STILL_ONCE);
+
+		expect(scrolledTo).toHaveBeenCalledTimes(1);
 	});
 
 	it.each(READERS_OWN_MOVES)(

@@ -111,6 +111,8 @@ OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
 FULLY_DRAWN = 1
 # Whether nothing on the page holds the keyboard
 KEYBOARD_ON_NOTHING = "document.activeElement === document.body"
+# How wide a story's contents stand, in pixels, until the reader sizes them
+CONTENTS_WIDTH_AT_FIRST = 260
 
 
 @pytest.fixture
@@ -467,6 +469,20 @@ async def test_f_with_the_keyboard_on_an_entry_of_the_contents_of_a_story_leaves
     await page.keyboard.press("f")
 
     await expect(page.get_by_test_id("show-contents")).to_be_focused()
+
+
+async def test_the_contents_of_a_story_stand_as_wide_as_their_design_draws_them_and_widen_from_their_edge(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+    contents = page.get_by_test_id("contents")
+    assert await contents.evaluate(WIDTH_OF) == CONTENTS_WIDTH_AT_FIRST
+
+    # The edge the contents are sized by takes the keyboard: an arrow towards the story widens them a step
+    await page.get_by_test_id("contents-resize").press("ArrowRight")
+
+    assert await contents.evaluate(WIDTH_OF) > CONTENTS_WIDTH_AT_FIRST
 
 
 async def test_on_a_narrow_screen_a_story_opens_without_its_contents_which_lie_over_it_once_brought_back(

@@ -14,6 +14,11 @@ const WIDE = 1280;
 const PIXELS_PER_REM = 16;
 // Where each column stops lying over the diff and stands beside it, as the stylesheet names them
 const BREAKPOINTS = ['--breakpoint-cr-side-column-beside', '--breakpoint-cr-panel-beside'];
+// How wide the tree of files and a story's contents each stand until the reader sizes them, in pixels,
+// and a width the reader leaves the contents at
+const TREE_AT_FIRST = 240;
+const CONTENTS_AT_FIRST = 260;
+const CONTENTS_AS_LEFT = 300;
 // How a media query asks for a screen at least so wide: `(width >= 46rem)`
 const AT_LEAST = /^\(width >= ([\d.]+)rem\)$/;
 
@@ -33,17 +38,17 @@ function columns(layout: PageLayout): { tree: boolean; panel: boolean } {
 	return { tree: layout.fileTree.open, panel: layout.agentPanel.open };
 }
 
+beforeEach(() => {
+	// The breakpoints as the built stylesheet sets them on the page's root
+	for (const name of BREAKPOINTS) document.documentElement.style.setProperty(name, themeVariable(name));
+});
+
+afterEach(() => {
+	for (const name of BREAKPOINTS) document.documentElement.style.removeProperty(name);
+	vi.unstubAllGlobals();
+});
+
 describe('the columns, until the reader opens or shuts them', () => {
-	beforeEach(() => {
-		// The breakpoints as the built stylesheet sets them on the page's root
-		for (const name of BREAKPOINTS) document.documentElement.style.setProperty(name, themeVariable(name));
-	});
-
-	afterEach(() => {
-		for (const name of BREAKPOINTS) document.documentElement.style.removeProperty(name);
-		vi.unstubAllGlobals();
-	});
-
 	it('start put away on a narrow screen: the tree from the start, the panel when an agent turns up', () => {
 		screenOf(NARROW);
 		const review = openReview();
@@ -93,5 +98,36 @@ describe('the columns, until the reader opens or shuts them', () => {
 		const narrow = new PageLayout();
 
 		expect(columns(narrow)).toEqual({ tree: true, panel: true });
+	});
+});
+
+describe('the contents beside a story, which the reader puts away and sizes apart from the tree of files', () => {
+	beforeEach(() => {
+		screenOf(WIDE);
+	});
+
+	it('start as wide as their design draws them, and the tree as wide as its own', () => {
+		const layout = new PageLayout();
+
+		expect(layout.storyContents.width).toBe(CONTENTS_AT_FIRST);
+		expect(layout.fileTree.width).toBe(TREE_AT_FIRST);
+	});
+
+	it('are still put away when the page opens again, and the tree still beside the files', () => {
+		new PageLayout().storyContents.toggle();
+
+		const openedAgain = new PageLayout();
+
+		expect(openedAgain.storyContents.open).toBe(false);
+		expect(openedAgain.fileTree.open).toBe(true);
+	});
+
+	it('are as wide as the reader left them when the page opens again, and the tree as wide as it was', () => {
+		new PageLayout().storyContents.setWidth(CONTENTS_AS_LEFT);
+
+		const openedAgain = new PageLayout();
+
+		expect(openedAgain.storyContents.width).toBe(CONTENTS_AS_LEFT);
+		expect(openedAgain.fileTree.width).toBe(TREE_AT_FIRST);
 	});
 });

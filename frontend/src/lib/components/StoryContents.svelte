@@ -50,7 +50,7 @@
 			</span>
 		{/snippet}
 
-		<ol>
+		<ol data-testid="contents-parts">
 			<ContentsEntry part={OVERVIEW_PART} label={THE_OVERVIEW} title={THE_OVERVIEW}>
 				{#snippet node()}
 					<span class="cr-contents-dot"></span>
@@ -96,7 +96,7 @@
 			>
 				{NOT_IN_THE_STORY}
 			</button>
-			<ul class="cr-contents-files cr-contents-files-left-out">
+			<ul data-testid="contents-left-out-files" class="cr-contents-files cr-contents-files-left-out">
 				{#each contents.leftOut as left (left.section)}
 					{@const piece = left.told.piece}
 					<ContentsFile file={piece} opensAt={left.section} current={sectionRead === left.section}>

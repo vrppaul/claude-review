@@ -283,11 +283,12 @@ describe('putting the tree away', () => {
 	it('says by name what each way does: to put the file tree away, and to bring it back', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: diffFiles });
-		const { getByRole } = render(FileList, inReview(review));
+		const { getByRole, getByTestId } = render(FileList, inReview(review));
+		expect(getByRole('button', { name: 'Put the file tree away' })).toBe(getByTestId('hide-sidebar'));
 
-		await user.click(getByRole('button', { name: 'Put the file tree away' }));
+		await user.click(getByTestId('hide-sidebar'));
 
-		expect(getByRole('button', { name: 'Bring the file tree back' })).toBeTruthy();
+		expect(getByRole('button', { name: 'Bring the file tree back' })).toBe(getByTestId('show-sidebar'));
 	});
 
 	it('leaves the rail where the tour looks for the tree', async () => {
