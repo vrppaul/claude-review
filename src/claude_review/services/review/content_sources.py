@@ -65,14 +65,6 @@ class ContentSource(ABC):
         """Whether the content is a change somebody made to a repository: what a story can be told of."""
 
     @abstractmethod
-    def change(self) -> ReviewContent:
-        """The take of the change on screen now: what a story is told of, and says it was told of.
-
-        Raises:
-            NoRepositoryError: if the content came from no repository: nobody changed it.
-        """
-
-    @abstractmethod
     async def open(self) -> None:
         """Note what the review opens on: whatever later takes are measured against."""
 
@@ -128,10 +120,6 @@ class RepositorySource(ContentSource):
     @override
     def is_a_change(self) -> bool:
         return True
-
-    @override
-    def change(self) -> ReviewContent:
-        return self._content
 
     @override
     async def open(self) -> None:
@@ -231,12 +219,6 @@ class FixedSource(ContentSource):
     @override
     def is_a_change(self) -> bool:
         return False
-
-    @override
-    def change(self) -> ReviewContent:
-        """Raises: NoRepositoryError, always."""
-        msg = "This review is of no change: its content came from no repository"
-        raise NoRepositoryError(msg)
 
     @override
     async def open(self) -> None:

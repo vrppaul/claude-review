@@ -13,7 +13,7 @@ from contextlib import AbstractContextManager
 
 import structlog
 
-from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
+from claude_review.domain.exceptions import NoRepositoryError, ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
 from claude_review.domain.models import (
     AgentEvent,
@@ -64,6 +64,9 @@ from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.round_formatter import RoundFormatter
 
 log = structlog.get_logger()
+
+# What a review of files read once, or of a conversation, says to a story told of it
+NO_CHANGE_TO_TELL = "This review is of no change: its content came from no repository"
 
 
 class Review:
@@ -387,7 +390,9 @@ class Review:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
             StoryRefusedError: if anything is wrong with the story, carrying all of it.
         """
-        held = await self._story.tell(story, self._source.change(), round_number=self._rounds.current)
+        if not self._source.is_a_change:
+            raise NoRepositoryError(NO_CHANGE_TO_TELL)
+        held = await self._story.tell(story, self._source.content, round_number=self._rounds.current)
         self._page.tell(StoryTold())
         log.info(
             "story_told",

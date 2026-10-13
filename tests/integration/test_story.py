@@ -21,6 +21,7 @@ from claude_review.presentation.wire.pushes import StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
 from claude_review.services.review.review import Review
+from claude_review.services.review.review_content import FIRST_TAKE
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
@@ -304,6 +305,11 @@ async def test_a_review_of_no_change_says_it_takes_no_story(client: AsyncClient)
     facts = ReviewResponse.model_validate_json((await client.get(REVIEW_ROUTE)).content)
 
     assert facts.takes_a_story is False
+
+
+async def test_a_review_of_no_change_is_read_at_the_take_it_was_made_with(client: AsyncClient) -> None:
+    """Nothing takes it again, so the take its page reads is the first."""
+    assert (await own_diff(client)).take == FIRST_TAKE
 
 
 @pytest.fixture

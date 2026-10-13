@@ -3,7 +3,9 @@
 from claude_review.domain.models import DiffFile, TreeState
 from claude_review.services.anchor_service import AnchorService
 
-# The take a review opens on: every take after it is counted on from here
+# The take a review is made with, from what its opening read: every take
+# after it is counted on from here. A review of a repository takes its diff
+# again as it opens, so the first take its page reads is the one after.
 FIRST_TAKE = 1
 
 
@@ -27,7 +29,7 @@ class ReviewContent:
 
     @classmethod
     def opening_on(cls, files: list[DiffFile]) -> ReviewContent:
-        """The take a review opens on: what was read for it, before any tree was read beside it."""
+        """The take a review is made with: what its opening read, before any tree was read beside it."""
         return cls(files, tree=frozenset(), take=FIRST_TAKE)
 
     def on_tree(self, tree: TreeState) -> ReviewContent:
@@ -56,5 +58,5 @@ class ReviewContent:
 
     @property
     def take(self) -> int:
-        """Which take of the review this is, counted from the one it opened on."""
+        """Which take of the review this is, counted from the one it was made with."""
         return self._take
