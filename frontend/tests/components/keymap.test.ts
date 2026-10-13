@@ -11,6 +11,9 @@ import { newComment } from '../new-comment';
 import { openReview } from '../review';
 import { storyHeld, toldChapter, toldStep } from '../story';
 
+// What each key does is asked as a reader presses it: the page is drawn whole, and its window hands
+// every key to `pressKey` (components/keymap.ts), which no test calls itself. Where the keyboard
+// lands after a key is held in a browser too, in tests/e2e/test_keys_and_focus.py
 const files = ['a.py', 'b.py'].map((path) => diffFile({ path, hunks: [hunk([contextLine(1, 1, `in ${path}`)])] }));
 
 let review: Review;

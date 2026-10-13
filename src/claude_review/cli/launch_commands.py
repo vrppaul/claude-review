@@ -2,6 +2,12 @@
 
 Each reads what it reviews its own way and hands it to the same launch,
 which serves it until it ends and prints what it handed back.
+
+A diff is read through a `GitRepository` given no object store: whatever
+staging the tree writes is thrown away as the read ends, so opening a
+review leaves nothing in the repository under review. The review, once
+hosted, is read through another, which keeps what it writes in the
+review's own workspace (`hosting/serving.py`).
 """
 
 import asyncio

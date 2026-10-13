@@ -45,7 +45,8 @@
 
 <!-- A section of the page that draws lines of a file, whichever view draws it: it says where it is and
 	which file it is of, holds the room its rows will take, and builds them once the reader comes near.
-	What its view says above the lines is inside it: a reader taken to the section reads from there -->
+	Of what is drawn in it, its view says three things: what stands in its header, what its lines are,
+	and what stands above them. That last is inside the section: a reader taken to it reads from there -->
 <section
 	bind:this={element}
 	data-testid={testId}

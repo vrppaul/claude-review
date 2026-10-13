@@ -40,6 +40,10 @@
 	}
 </script>
 
+<!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`: a layer above the page,
+	which holds the keyboard inside it, and gives it back to what had it when it is closed with `close()`.
+	A pane open under it neither closes nor takes what is pressed in it: `Popover` asks whether a modal
+	is above it -->
 <dialog
 	{...marked}
 	bind:this={dialog}

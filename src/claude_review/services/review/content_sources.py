@@ -5,6 +5,11 @@ hunks, taken again after a round and watched for the tree moving under it.
 Files and a conversation can do none of that. Each kind of review answers
 for itself here. The one thing the review asks a source about its kind is
 whether its content is a change (`is_a_change`): what a story can be told of.
+
+Either source holds the take on screen, a `ReviewContent`. A repository's
+holds beside it what that take can be compared against, its
+`ReviewVersions`, with what watches the tree for moving and what reads the
+lines a hunk left out; a fixed source holds its one take alone.
 """
 
 import asyncio

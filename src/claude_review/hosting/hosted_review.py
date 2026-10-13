@@ -38,7 +38,9 @@ def host_review(
     Whoever hosts it says how the repository is read — the command line
     through git, writing the trees the review is read against into the
     workspace rather than into the repository under review — and its images
-    are kept in the workspace too.
+    are kept in the workspace too. One broadcast is made with it and handed
+    to both: to the review, as the channel it tells its pages through, and
+    to the app, which serves those pages.
     """
     broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     review = Review(

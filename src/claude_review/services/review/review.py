@@ -6,6 +6,17 @@ other passes through here: what the reader asks lands in the agent's inbox,
 what the agent says is told to every page on screen, and what the review
 holds — its content, its rounds, the threads the page described — is kept
 by the part that answers for it.
+
+`Review` is made of those parts, each the one keeper of its own:
+`ReviewLifetime` of when the review ends and why, `BrowserPresence` of
+whether it is on the reader's screen, `Answerer` of the agent answering it,
+`AgentInbox` of what the reader handed over for the agent, `RoundTracker`
+of which round is being written, `Conversation` of what was said in the
+panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
+story told of its change, and a `ContentSource` of where its content comes
+from. `ThreadHandover` makes a thread's screenshots files the agent may
+open, and a `RoundFormatter`, chosen once for the kind of review, writes a
+round as it is sent.
 """
 
 from collections.abc import Awaitable

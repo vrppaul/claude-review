@@ -130,6 +130,10 @@ repos:
         files: ^frontend/(src/|eslint\.config\.js$|stylelint\.config\.js$)
         pass_filenames: false
 
+      # Reads frontend/tsconfig.json, which includes src/ alone: the tests are
+      # held to formatting, and no type checker reads them. The file takes no
+      # comment, so it is said here. frontend/tests/tsconfig.json includes
+      # the tests too, and no hook is given it
       - id: frontend-check
         name: svelte-check (frontend)
         entry: bash scripts/page_check.sh check
