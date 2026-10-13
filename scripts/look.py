@@ -21,6 +21,11 @@ every time.
         [--width PIXELS] [--shots DIRECTORY] STEP...
     uv run python scripts/look.py --keep
 
+Run in the repository's root. The review serves the page as it was last
+built, so a look is refused when a file under `frontend/src` was written
+after the build: it would be a look at an older page than the one written.
+Build first, `cd frontend && pnpm build`.
+
 A step is one of
 
     press:TEST_ID        press the first element of that test id
@@ -193,6 +198,18 @@ KEPT = "kept"
 STILL_MOVING = {True: ", still moving", False: ""}
 # What ends a line of what the browser says went wrong: the rest is its own log
 END_OF_LINE = "\n"
+
+# The page's sources and the page as it was built, from the repository's root, where a look is run;
+# how the page is built, and what is said of a page that cannot be looked at as it is
+PAGE_SOURCES = Path("frontend/src")
+BUILT_PAGE = Path("src/claude_review/static/dist/index.html")
+HOW_IT_IS_BUILT = "`cd frontend && pnpm build`"
+NO_PAGE_HERE = f"there is no {PAGE_SOURCES} here: a look is run in the repository's root"
+NOT_BUILT = f"the page is not built: build it, {HOW_IT_IS_BUILT}"
+BUILT_BEFORE = (
+    "the page was built before {source} was last written, so a look would be a look at an older page: "
+    f"build it again, {HOW_IT_IS_BUILT}"
+)
 
 # What is said of a look that cannot go on
 NOT_SERVED = "the review ended before it said where it is: {said}"
@@ -660,10 +677,37 @@ def _asked(arguments: list[str]) -> Asked:
     )
 
 
+def _last_written(root: Path) -> Path | None:
+    """The file under a directory that was written last, or none where there is no file."""
+    files = [path for path in root.rglob("*") if path.is_file()]
+    return max(files, key=lambda path: path.stat().st_mtime, default=None)
+
+
+def _held_to_the_page_as_it_is() -> None:
+    """Hold the look to a page built since its sources were last written.
+
+    The review serves the page as it was built, so a source changed since is not in what a look
+    would see, and the line it printed would be said of a page that is no longer the one written.
+
+    Raises:
+        LookFailedError: if the look is not run where the page is, or the page is not built, or was
+            built before a source of it was last written.
+    """
+    source = _last_written(PAGE_SOURCES)
+    if source is None:
+        raise LookFailedError(NO_PAGE_HERE)
+    if not BUILT_PAGE.is_file():
+        raise LookFailedError(NOT_BUILT)
+    if source.stat().st_mtime > BUILT_PAGE.stat().st_mtime:
+        failure = BUILT_BEFORE.format(source=source)
+        raise LookFailedError(failure)
+
+
 def main() -> int:
     asked = _asked(sys.argv[1:])
     with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX) as scratch:
         try:
+            _held_to_the_page_as_it_is()
             complete(_look(asked, Path(scratch)))
         except (LookFailedError, CommandFailedError) as failure:
             print(failure, file=sys.stderr)

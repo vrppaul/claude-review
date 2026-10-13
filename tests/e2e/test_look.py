@@ -24,7 +24,16 @@ from pydantic import BaseModel, ConfigDict
 
 from tests.e2e.browsers_loop import BROWSERS_LOOP, in_the_browsers_loop
 
-LOOK = Path(__file__).parents[2] / "scripts" / "look.py"
+REPOSITORY = Path(__file__).parents[2]
+LOOK = REPOSITORY / "scripts" / "look.py"
+# Where a repository keeps a source of its page, and the page as it was built, from its root
+A_SOURCE = "frontend/src/lib/changed.ts"
+THE_BUILT_PAGE = "src/claude_review/static/dist/index.html"
+# A moment a source was last written at, and one a minute before it, as the clock files are stamped by counts them
+WRITTEN_AT = 1_700_000_000
+A_MINUTE_BEFORE = WRITTEN_AT - 60
+# What a look says of a page it will not look at: how it is built
+HOW_IT_IS_BUILT = "`cd frontend && pnpm build`"
 # How long a look may take before it is cut: several times what one takes
 LOOK_SECONDS = 60
 # What a look exits with: looked, a step not taken, and asked for what it cannot read
@@ -119,9 +128,19 @@ class LookUnderWay(BaseModel):
 
 
 async def _look(*arguments: str) -> Looked:
-    """Run a look to its end, as it is run from a shell."""
+    """Run a look to its end, as it is run from a shell in the repository's root."""
+    return await _look_in(REPOSITORY, *arguments)
+
+
+async def _look_in(root: Path, *arguments: str) -> Looked:
+    """Run a look to its end in a directory, which it takes for the root of the repository whose page it shows."""
     process = await asyncio.create_subprocess_exec(
-        sys.executable, str(LOOK), *arguments, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        sys.executable,
+        str(LOOK),
+        *arguments,
+        cwd=root,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     try:
         printed, complaint = await asyncio.wait_for(process.communicate(), timeout=LOOK_SECONDS)
@@ -175,6 +194,7 @@ async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
         sys.executable,
         str(LOOK),
         "press:no-such-thing",
+        cwd=REPOSITORY,
         env={**os.environ, TEMPORARY_FILES_VARIABLE: str(temporary)},
         stdout=asyncio.subprocess.PIPE,
     )
@@ -190,7 +210,9 @@ async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
 @in_the_browsers_loop
 async def kept_look() -> AsyncIterator[KeptLook]:
     """A look kept for a reader, stopped after the test as a shell stops one."""
-    process = await asyncio.create_subprocess_exec(sys.executable, str(LOOK), "--keep", stdout=asyncio.subprocess.PIPE)
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, str(LOOK), "--keep", cwd=REPOSITORY, stdout=asyncio.subprocess.PIPE
+    )
     said = await asyncio.wait_for(process.stdout.readline(), timeout=LOOK_SECONDS)
     kept, address = said.decode().split()
     assert kept == KEPT
@@ -316,6 +338,44 @@ async def test_what_is_not_a_step_is_refused_by_name_before_anything_is_started(
 
     assert looked.exit_code == NOT_UNDERSTOOD
     assert "wave:hello" in looked.complaint
+    assert looked.lines == []
+
+
+def _written_at(root: Path, path: str, moment: int) -> None:
+    """Write a file of a repository, stamped as last written at a moment."""
+    (root / path).parent.mkdir(parents=True)
+    (root / path).write_text("")
+    os.utime(root / path, (moment, moment))
+
+
+async def test_a_page_built_before_its_sources_were_last_written_is_not_looked_at(tmp_path: Path) -> None:
+    """A look at it would be a look at the page as it was, said of the page as it is."""
+    _written_at(tmp_path, A_SOURCE, WRITTEN_AT)
+    _written_at(tmp_path, THE_BUILT_PAGE, A_MINUTE_BEFORE)
+
+    looked = await _look_in(tmp_path, "key:j")
+
+    assert looked.exit_code == NOT_TAKEN
+    assert A_SOURCE in looked.complaint
+    assert HOW_IT_IS_BUILT in looked.complaint
+    assert looked.lines == []
+
+
+async def test_a_page_that_was_never_built_is_not_looked_at(tmp_path: Path) -> None:
+    _written_at(tmp_path, A_SOURCE, WRITTEN_AT)
+
+    looked = await _look_in(tmp_path, "key:j")
+
+    assert looked.exit_code == NOT_TAKEN
+    assert HOW_IT_IS_BUILT in looked.complaint
+    assert looked.lines == []
+
+
+async def test_a_look_run_where_there_is_no_page_says_where_it_is_run(tmp_path: Path) -> None:
+    looked = await _look_in(tmp_path, "key:j")
+
+    assert looked.exit_code == NOT_TAKEN
+    assert "in the repository's root" in looked.complaint
     assert looked.lines == []
 
 
