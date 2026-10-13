@@ -16,7 +16,7 @@
 <!-- What the agent called housekeeping: named, quiet and folded away, and drawn nowhere -->
 <details data-testid={testId} class={set}>
 	<summary class="cursor-pointer">
-		Housekeeping · {counted(paths.length, 'file', 'files')}
+		Housekeeping · {counted(paths.length, { one: 'file', many: 'files' })}
 	</summary>
 	<ul class="mt-2 flex flex-col gap-0.5 font-mono text-xs">
 		{#each paths as path (path)}

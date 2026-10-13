@@ -22,6 +22,8 @@ const BEFORE_A_TITLE = ': ';
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 // What steps are called where they are counted, and one of them inside a sentence
 const STEPS: CountedWords = { one: 'step', many: 'steps' };
+// What the files a chapter tells are called where they are counted
+const FILES: CountedWords = { one: 'file', many: 'files' };
 // What stands between the two counts of a chapter's head
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters
@@ -85,12 +87,12 @@ export function calledOnceRead(called: string): string {
  * chapters", and once the reader has read any of them through, "1 of 5 read".
  */
 export function chaptersCounted(chapters: number, read: number): string {
-	return read === 0 ? counted(chapters, CHAPTERS.one, CHAPTERS.many) : `${read} of ${chapters} ${READ}`;
+	return read === 0 ? counted(chapters, CHAPTERS) : `${read} of ${chapters} ${READ}`;
 }
 
 /** How much a chapter tells, as its head says: "3 files · 4 steps". */
 export function filesAndSteps(files: number, steps: number): string {
-	return [counted(files, 'file', 'files'), counted(steps, STEPS.one, STEPS.many)].join(BETWEEN_COUNTS);
+	return [counted(files, FILES), counted(steps, STEPS)].join(BETWEEN_COUNTS);
 }
 
 /** The numbers of some chapters, by their places: "1", "1, 4". */

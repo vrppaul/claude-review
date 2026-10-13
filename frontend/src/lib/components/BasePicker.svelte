@@ -56,7 +56,7 @@
 
 	/** What a row says about a base on its right: its size, or its age. */
 	function meta(version: ReviewVersion): string {
-		if (version.changed !== null) return counted(version.changed, 'file', 'files');
+		if (version.changed !== null) return counted(version.changed, { one: 'file', many: 'files' });
 		return version.at === null ? '' : timeAgo(version.at, review.clock.now);
 	}
 </script>

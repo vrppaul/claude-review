@@ -3,13 +3,15 @@ import { counted, wordsFor } from '$lib/utils/words';
 import { fileName } from '$lib/utils/paths';
 
 describe('a count in words', () => {
+	const FILES = { one: 'file', many: 'files' };
+
 	it('says one thing in the singular', () => {
-		expect(counted(1, 'file', 'files')).toBe('1 file');
+		expect(counted(1, FILES)).toBe('1 file');
 	});
 
 	it('says none, and more than one, in the plural', () => {
-		expect(counted(0, 'file', 'files')).toBe('0 files');
-		expect(counted(3, 'file has', 'files have')).toBe('3 files have');
+		expect(counted(0, FILES)).toBe('0 files');
+		expect(counted(3, { one: 'file has', many: 'files have' })).toBe('3 files have');
 	});
 });
 

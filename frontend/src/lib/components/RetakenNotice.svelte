@@ -35,7 +35,7 @@
 		}
 		if (since === null) return 'Diff retaken';
 		if (count === 0) return `Diff retaken — nothing has changed since round ${since}`;
-		return `Diff retaken — ${counted(count, 'file has', 'files have')} changed since round ${since}`;
+		return `Diff retaken — ${counted(count, { one: 'file has', many: 'files have' })} changed since round ${since}`;
 	}
 
 	async function showWhatChanged() {

@@ -121,7 +121,7 @@
 			{#if inRounds}
 				{review.threads.unsent.length} unsent · {review.threads.count}
 			{:else}
-				{counted(review.threads.count, 'comment', 'comments')}
+				{counted(review.threads.count, { one: 'comment', many: 'comments' })}
 			{/if}
 		</span>
 

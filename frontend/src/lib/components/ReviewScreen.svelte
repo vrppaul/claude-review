@@ -70,7 +70,7 @@
 		<!-- Under the header, with the other news about the review: what the
 			draft brought back, counted as the header counts what is unsent -->
 		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
-			Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
+			Picked up {counted(review.restoredCount, { one: 'comment', many: 'comments' })} you had not sent yet.
 			{#snippet actions()}
 				<button
 					type="button"

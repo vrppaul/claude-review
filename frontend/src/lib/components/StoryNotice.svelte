@@ -39,16 +39,16 @@
 		<NoticeBar testId="story-moved-on" kind="cr-notice-moved" icon="notice" actions={showInFiles}>
 			The code has changed since this story was told. It shows the code as it was, and takes no comments.
 			{#if notDrawn.length > 0}
-				{counted(notDrawn.length, 'comment is', 'comments are')} in Files.
+				{counted(notDrawn.length, { one: 'comment is', many: 'comments are' })} in Files.
 			{/if}
 			{#if beingWritten > 0}
-				{counted(beingWritten, 'comment you were writing is', 'comments you were writing are')} in Files.
+				{counted(beingWritten, { one: 'comment you were writing is', many: 'comments you were writing are' })} in Files.
 			{/if}
 		</NoticeBar>
 	{:else if firstNotDrawn}
 		<!-- A state, not news: the story shows part of the change, and the threads it does not draw are still in the review -->
 		<NoticeBar testId="threads-off-the-story" kind="cr-notice-taken" icon="story" actions={showInFiles}>
-			{counted(notDrawn.length, 'comment is', 'comments are')} on lines the story does not show.
+			{counted(notDrawn.length, { one: 'comment is', many: 'comments are' })} on lines the story does not show.
 		</NoticeBar>
 	{/if}
 {/if}

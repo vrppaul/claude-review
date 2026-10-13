@@ -48,7 +48,7 @@
 	const headedBy = $derived.by(() => {
 		const total = review.diff.files.length;
 		const shown = matching.length;
-		const count = shown === total ? counted(total, listed.one, listed.many) : `${shown} of ${total}`;
+		const count = shown === total ? counted(total, listed) : `${shown} of ${total}`;
 		return review.reading.viewedCount > 0 ? `${count} · ${review.reading.viewedCount} viewed` : count;
 	});
 

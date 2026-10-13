@@ -16,6 +16,6 @@ export function wordsFor(count: number, words: CountedWords): string {
 }
 
 /** A count and the words that go with it: "1 file", "0 files". */
-export function counted(count: number, one: string, many: string): string {
-	return `${count} ${wordsFor(count, { one, many })}`;
+export function counted(count: number, words: CountedWords): string {
+	return `${count} ${wordsFor(count, words)}`;
 }

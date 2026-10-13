@@ -50,7 +50,7 @@
 			{#if submission.inRounds}
 				{unsent} unsent of {review.threads.count}
 			{:else}
-				{counted(review.threads.count, 'comment', 'comments')}
+				{counted(review.threads.count, { one: 'comment', many: 'comments' })}
 			{/if}
 		</span>
 	</div>
@@ -60,7 +60,7 @@
 			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
 			<div data-testid="open-fields" class="mb-3">
 				<p class="cr-faint mb-1.5 text-xs">
-					{counted(open.length, 'comment still open goes', 'comments still open go')} with the review:
+					{counted(open.length, { one: 'comment still open goes', many: 'comments still open go' })} with the review:
 				</p>
 				<ul class="flex flex-col gap-1.5">
 					{#each open as { field, anchor } (field.key)}

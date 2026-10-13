@@ -102,7 +102,7 @@
 					<ContentsFile file={piece} opensAt={left.section} current={sectionRead === left.section}>
 						<!-- A file that shows no line has no hunk to count -->
 						{#if piece.hunks.length > 0}
-							{counted(piece.hunks.length, 'hunk', 'hunks')}
+							{counted(piece.hunks.length, { one: 'hunk', many: 'hunks' })}
 						{/if}
 					</ContentsFile>
 				{/each}

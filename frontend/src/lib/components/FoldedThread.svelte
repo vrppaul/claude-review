@@ -50,7 +50,7 @@
 		<span class="cr-muted truncate text-sm">{plainWords(thread.body) || 'an image'}</span>
 		{#if thread.turns.length > 0}
 			<!-- Everything said under the comment that opened it, the agent's and the reader's alike -->
-			<span class="cr-faint shrink-0 text-xs">{counted(thread.turns.length, 'reply', 'replies')}</span>
+			<span class="cr-faint shrink-0 text-xs">{counted(thread.turns.length, { one: 'reply', many: 'replies' })}</span>
 		{/if}
 	</button>
 	{#if unread}

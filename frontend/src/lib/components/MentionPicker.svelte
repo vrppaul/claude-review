@@ -21,7 +21,7 @@
 	function threadState(thread: Thread): string {
 		if (thread.anchor.outdated) return 'outdated';
 		if (thread.resolved) return 'resolved';
-		if (thread.turns.length > 0) return counted(thread.turns.length, 'turn', 'turns');
+		if (thread.turns.length > 0) return counted(thread.turns.length, { one: 'turn', many: 'turns' });
 		return '';
 	}
 

@@ -13,7 +13,7 @@
 <!-- The warning's yellow, not the mark colour: this is the code moving, not
 	the reader's own mark. Never a swap: whoever is mid-sentence decides when. -->
 <NoticeBar testId="tree-moved" kind="cr-notice-moved" icon="notice">
-	The working tree has moved on — {counted(moved, 'file has', 'files have')} changed since this diff was taken.
+	The working tree has moved on — {counted(moved, { one: 'file has', many: 'files have' })} changed since this diff was taken.
 	{#snippet actions()}
 		{#if retaking.failed}
 			<span data-testid="retake-error" class="text-error">{retaking.failed}</span>

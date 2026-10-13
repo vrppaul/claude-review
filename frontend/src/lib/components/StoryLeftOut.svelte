@@ -36,7 +36,7 @@
 				{#snippet beside()}
 					{#if told.changed_lines > 0}
 						<span class="cr-muted text-xs">
-							{counted(told.changed_lines, 'changed line', 'changed lines')}
+							{counted(told.changed_lines, { one: 'changed line', many: 'changed lines' })}
 						</span>
 					{/if}
 				{/snippet}

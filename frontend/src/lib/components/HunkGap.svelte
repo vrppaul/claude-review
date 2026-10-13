@@ -38,7 +38,7 @@
 	// then says how many it hides, as far as that is known
 	const onlySaid = $derived(drawing.saidOfAGap);
 	const hiddenLines = $derived(
-		hidden === null ? 'The file may go on below' : counted(hidden, 'hidden line', 'hidden lines')
+		hidden === null ? 'The file may go on below' : counted(hidden, { one: 'hidden line', many: 'hidden lines' })
 	);
 
 	/**
@@ -70,7 +70,7 @@
 	{/if}
 	<div data-testid="hunk-gap" class="flex items-center gap-1 border-y border-base-300 bg-base-200 font-mono text-xs">
 		{#if onlySaid}
-			<span class="cr-muted px-4 py-1.5">⋯ {counted(hidden ?? 0, onlySaid.one, onlySaid.many)}</span>
+			<span class="cr-muted px-4 py-1.5">⋯ {counted(hidden ?? 0, onlySaid)}</span>
 		{:else}
 			{#if inOneGo}
 				<button
