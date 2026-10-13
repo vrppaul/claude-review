@@ -31,6 +31,17 @@ export default defineConfig({
 		environment: 'jsdom',
 		include: ['tests/**/*.test.ts'],
 		setupFiles: ['./tests/setup.ts'],
+		// A few workers that stay, each test file in a VM context of its own.
+		// The default pool starts a process for every file, and bringing jsdom
+		// and the review's modules up in each was 61% of a whole run's work.
+		// What vitest's docs warn of in this pool: ES modules in a VM are
+		// unstable in Node; a module imported there is never dropped, so a
+		// worker's memory grows with every file it runs; and what a native
+		// module throws is no `instanceof` the test's own `Error`
+		pool: 'vmThreads',
+		// Four ran the whole suite as fast as eight or sixteen did, and leave
+		// the machine's other cores to whatever else works on it
+		maxWorkers: 4,
 		// A stub or a spy left behind by a test that failed half way would answer
 		// the next test's calls; each test starts from the real globals
 		unstubGlobals: true,
