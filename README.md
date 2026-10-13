@@ -212,7 +212,7 @@ Ships as a prebuilt wheel on [PyPI](https://pypi.org/project/claude-review/) —
 ```bash
 # Python
 uv sync                          # install dependencies
-uv run pytest                    # run all tests (unit + integration + e2e)
+uv run pytest tests -n 4         # run all tests (unit + integration + e2e), on four workers
 uv run ruff check src/ tests/    # lint
 uv run ty check src/             # type check
 

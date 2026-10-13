@@ -29,7 +29,7 @@ uv run claude-review diff
 uv run claude-review files some-file.md
 
 # Run tests
-uv run pytest                        # all Python tests
+uv run pytest tests -n 4             # all Python tests, on four workers
 cd frontend && pnpm test             # frontend tests
 
 # Lint & type check
