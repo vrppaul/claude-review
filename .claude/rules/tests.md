@@ -31,6 +31,6 @@ paths:
 ## The browser
 
 - A test that drives the browser itself opens the suite's own `page` fixture (`tests/e2e/conftest.py`), on Playwright's async API: each process of a run launches Chromium once.
-- An async fixture such a test asks for is declared with `in_the_browsers_loop` (`tests/e2e/browsers_loop.py`): a browser is driven from the event loop it was launched in.
+- Every test under `tests/e2e/` runs in the event loop the browser was launched in, so an async fixture one of them asks for is declared with `in_the_browsers_loop` (`tests/e2e/browsers_loop.py`).
 - No pytest plugin of Playwright's is installed, so `--headed` and `--browser` are refused, not taken and ignored.
 - Where the keyboard lands, what a dialog holds and what the layout does are tested in the browser: jsdom cannot stand in for one. What each key does is tested in vitest.
