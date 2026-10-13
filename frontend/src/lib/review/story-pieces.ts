@@ -36,17 +36,14 @@ export function leftOutSectionKey(left: LeftOut): string {
 	return [LEFT_OUT_SECTION, left.piece.path].join(KEY_SEPARATOR);
 }
 
-/** A piece of a file as a story draws it: its rows and its place among the pieces, and what its section is known by. */
-interface DrawnPiece extends DrawnRows {
-	key: string;
-	piece: DiffFile;
-}
-
-/** A piece and what its section is known by, before it has a place among the pieces. */
+/** A piece of a file a story draws, and what its section is known by. */
 interface KeyedPiece {
 	key: string;
 	piece: DiffFile;
 }
+
+/** A piece as it stands among those the story draws: with its rows, and its place among the pieces. */
+type DrawnPiece = KeyedPiece & DrawnRows;
 
 export class StoryPieces {
 	readonly #inOrder: readonly DrawnPiece[];
