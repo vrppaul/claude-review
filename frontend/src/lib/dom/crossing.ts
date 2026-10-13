@@ -27,7 +27,7 @@ export class Crossing {
 	// What whoever watches does each time the strip has been looked at again; nothing, where only what crosses it is asked
 	readonly #lookedAgain: (() => void) | undefined;
 	// The elements crossing the strip, while it is watched
-	readonly #crossing = new SvelteSet<Element>();
+	readonly #inTheStrip = new SvelteSet<Element>();
 	// The watch of the area watched last, until it is stopped
 	#underWay: Watch | null = null;
 
@@ -42,7 +42,7 @@ export class Crossing {
 
 	/** The elements crossing the strip, while it is watched. */
 	get elements(): Iterable<Element> {
-		return this.#crossing;
+		return this.#inTheStrip;
 	}
 
 	/** Whether the strip of some area is being watched. */
@@ -57,7 +57,7 @@ export class Crossing {
 
 	/** Whether an element crosses the strip. */
 	has(element: Element): boolean {
-		return this.#crossing.has(element);
+		return this.#inTheStrip.has(element);
 	}
 
 	/** Watch the strip of a scrolling area over these elements, and those added later; returns how to stop. */
@@ -80,20 +80,20 @@ export class Crossing {
 	/** An element gone, no longer watched nor counted. */
 	remove(element: Element): void {
 		this.#underWay?.observer.unobserve(element);
-		this.#crossing.delete(element);
+		this.#inTheStrip.delete(element);
 	}
 
 	/** The page has just brought an element into the strip: it crosses it from now on, before the strip is looked at again. */
 	countIn(element: Element): void {
-		this.#crossing.add(element);
+		this.#inTheStrip.add(element);
 	}
 
 	#looked(entries: IntersectionObserverEntry[]): void {
 		for (const entry of entries) {
 			// What the observer noted before an element was taken away still
 			// arrives after it: what is no longer on the page crosses nothing
-			if (entry.isIntersecting && entry.target.isConnected) this.#crossing.add(entry.target);
-			else this.#crossing.delete(entry.target);
+			if (entry.isIntersecting && entry.target.isConnected) this.#inTheStrip.add(entry.target);
+			else this.#inTheStrip.delete(entry.target);
 		}
 		this.#lookedAgain?.();
 	}
@@ -102,6 +102,6 @@ export class Crossing {
 		observer.disconnect();
 		if (this.#underWay?.observer !== observer) return;
 		this.#underWay = null;
-		this.#crossing.clear();
+		this.#inTheStrip.clear();
 	}
 }

@@ -7,17 +7,17 @@
  */
 
 /** How an icon is drawn: filled in, or traced with a line this wide. */
-type Drawn = { kind: 'filled' } | { kind: 'traced'; width: number };
+type HowDrawn = { kind: 'filled' } | { kind: 'traced'; width: number };
 
 export interface IconShape {
 	viewBox: string;
 	paths: readonly string[];
-	drawn: Drawn;
+	drawn: HowDrawn;
 }
 
-const FILLED: Drawn = { kind: 'filled' };
+const FILLED: HowDrawn = { kind: 'filled' };
 // The line most icons are traced with
-const TRACED: Drawn = { kind: 'traced', width: 1.5 };
+const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
 
 export const ICONS = {
 	// An open book: the change read as the story told of it

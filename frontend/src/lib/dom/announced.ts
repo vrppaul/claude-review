@@ -18,11 +18,11 @@ export interface Announcement {
 	element: HTMLElement;
 }
 
-export class Announced<Drawn extends Announcement> {
+export class Announced<Said extends Announcement> {
 	// Each of them, by what whoever draws it knows it by
-	readonly #byKey = new Map<string, Drawn>();
+	readonly #byKey = new Map<string, Said>();
 	// And by its element, so the one being read names itself
-	readonly #byElement = new Map<Element, Drawn>();
+	readonly #byElement = new Map<Element, Said>();
 	/** The band they are read in: what a jump to one of them lands it in. */
 	readonly band = new ReadingBand();
 
@@ -30,23 +30,23 @@ export class Announced<Drawn extends Announcement> {
 	 * The one being read, while their area is watched: the one a jump took
 	 * the reader to, or the first on the page of those at the top of the area.
 	 */
-	get beingRead(): Drawn | null {
+	get beingRead(): Said | null {
 		const earliest = this.band.earliest;
 		return earliest === null ? null : (this.#byElement.get(earliest) ?? null);
 	}
 
 	/** Every one of them, in the order they announced themselves. */
-	get all(): Drawn[] {
+	get all(): Said[] {
 		return [...this.#byKey.values()];
 	}
 
 	/** The one known by a key, where it is drawn. */
-	get(key: string): Drawn | undefined {
+	get(key: string): Said | undefined {
 		return this.#byKey.get(key);
 	}
 
 	/** One of them is drawn: it is read in the band with the rest. Returns how to take it back. */
-	add(drawn: Drawn): () => void {
+	add(drawn: Said): () => void {
 		this.#byKey.set(drawn.key, drawn);
 		this.#byElement.set(drawn.element, drawn);
 		this.band.add(drawn.element);
@@ -64,7 +64,7 @@ export class Announced<Drawn extends Announcement> {
 		);
 	}
 
-	#takeBack(drawn: Drawn): void {
+	#takeBack(drawn: Said): void {
 		this.band.remove(drawn.element);
 		// What the band noted of it before it went may still arrive: it then names nothing being read
 		this.#byElement.delete(drawn.element);
