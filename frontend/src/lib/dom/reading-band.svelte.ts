@@ -38,6 +38,11 @@ export class ReadingBand {
 		return this.#earliest;
 	}
 
+	/** The reading area the band is across, while it is watched; null while none is. */
+	get area(): HTMLElement | null {
+		return this.#crossing.area;
+	}
+
 	/** A jump is taking the reader to a section: it is the one being read from now on, until they move from it. */
 	land(section: Element): void {
 		this.#landed = section;

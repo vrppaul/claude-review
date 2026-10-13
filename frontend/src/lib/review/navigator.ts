@@ -15,8 +15,9 @@
  * what that base shows. What the view on screen does not draw is gone to
  * where everything is drawn — the files, read against the review's own
  * base — which the views bring on screen for it (`showEverything`). The
- * page itself is moved by `FileSections`. j and k move the keyboard line by line
- * (`dom/keyboard.ts`), and have no place among the threads to keep.
+ * page itself is moved by `FileSections`. j and k move the keyboard line by
+ * line there (`FileSections.stepLine`), and have no place among the threads
+ * to keep.
  */
 
 import { anchorLines } from '$lib/anchors/views';

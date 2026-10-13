@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
+	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
 
 	interface Props {
 		testId: string;
@@ -16,6 +17,7 @@
 	kept in sight while the lines scroll under it -->
 <div
 	data-testid={testId}
+	data-role={KEPT_IN_SIGHT_ROLE}
 	class={[
 		'cr-file-header flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-300 bg-base-200 px-3 py-2',
 		added

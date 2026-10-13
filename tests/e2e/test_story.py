@@ -82,8 +82,21 @@ THE_LONG_FILE_IN_TWO_CHAPTERS = story_of_chapters(
 FIRST_LINE_OF_THE_SECOND_CHAPTER = f"Comment on line {LAST_LINE_OF_THE_FIRST_STEP + 1}"
 # A fraction of a pixel: where an edge stands is not a whole number, and the area scrolls by whole ones
 LESS_THAN_A_PIXEL = 1
-# How tall everything an area scrolls is, in pixels
+# How tall everything an area scrolls is, in pixels, and how far down it has scrolled
 HEIGHT_HELD = "(area) => area.scrollHeight"
+SCROLLED = "(area) => area.scrollTop"
+# The keys that step a line down and up
+LINE_KEYS = ("j", "k")
+# How far under the foot of its piece's header the line that holds the keyboard begins, in heights of a
+# line: under 0 the header is drawn over it, and from 1 on a line above it is in sight too
+LINES_UNDER_ITS_HEADER = """() => {
+    const line = document.activeElement;
+    const header = line.closest('[data-testid="story-piece"]').querySelector('[data-testid="story-piece-header"]');
+    const under = line.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
+    return under / line.getBoundingClientRect().height;
+}"""
+# A fraction of a line: where an edge stands is not a whole number of pixels
+LESS_THAN_A_LINE_APART = 0.05
 # A wide screen zoomed in: too narrow for a column to stand beside what is read
 ZOOMED: ViewportSize = {"width": 640, "height": 400}
 # Where an element's left edge is, in pixels from the left of the window
@@ -110,8 +123,9 @@ TO_THE_MIDDLE = "(element) => element.scrollIntoView({ block: 'center' })"
 # How strongly an element is drawn, and the strength of one that has not stepped back
 OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
 FULLY_DRAWN = 1
-# Whether nothing on the page holds the keyboard
+# Whether nothing on the page holds the keyboard, and what does, by the test id it carries
 KEYBOARD_ON_NOTHING = "document.activeElement === document.body"
+HOLDS_THE_KEYBOARD = "document.activeElement?.dataset.testid"
 # How wide a story's contents stand, in pixels, until the reader sizes them
 CONTENTS_WIDTH_AT_FIRST = 260
 
@@ -342,6 +356,23 @@ async def test_deep_in_a_long_piece_its_header_stays_in_view_right_under_the_bar
     assert abs(await _below_the_bar(page, header)) < LESS_THAN_A_PIXEL
 
 
+@pytest.mark.parametrize("line_key", LINE_KEYS)
+async def test_a_line_key_deep_in_a_chapter_lands_on_the_first_line_in_sight_under_its_bar_and_the_header_of_its_piece(
+    review_of_a_long_file: RunningReview, page: Page, line_key: str
+) -> None:
+    """Scrolled by hand, the keyboard is still on the switch in the header: the key starts at the first line the reader sees."""
+    await _read_as_story(page, review_of_a_long_file)
+    story = page.get_by_test_id("story-view")
+    await story.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+    await expect(page.get_by_test_id("chapter-bar")).to_be_in_viewport()
+
+    await page.keyboard.press(line_key)
+
+    assert await page.evaluate(HOLDS_THE_KEYBOARD) == "line-gutter"
+    assert -LESS_THAN_A_LINE_APART <= await page.evaluate(LINES_UNDER_ITS_HEADER) < 1
+    assert await story.evaluate(SCROLLED) == DEEP_IN_THE_PIECE
+
+
 async def test_a_step_gone_to_stands_right_under_the_bar_of_its_chapter_from_its_reason_down(
     review_of_a_long_file_in_two_steps: RunningReview, page: Page
 ) -> None:
@@ -384,6 +415,26 @@ async def test_a_chapter_picked_in_the_contents_of_a_story_stands_at_the_top_of_
     below_the_top = await the_second.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
     assert abs(below_the_top) < LESS_THAN_A_PIXEL
     await expect(page.get_by_test_id("chapter-bar")).to_have_count(0)
+
+
+@pytest.mark.parametrize("line_key", LINE_KEYS)
+async def test_a_line_key_after_a_chapter_picked_in_the_contents_lands_on_its_first_line_and_takes_the_reader_nowhere_back(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page, line_key: str
+) -> None:
+    """The pick leaves the keyboard on the contents' entry, outside what is read: the key starts where the reader reads."""
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    story = page.get_by_test_id("story-view")
+    the_second = page.get_by_test_id("story-chapter").nth(1)
+    # The overview's entry, the first chapter's, then the second's
+    await page.get_by_test_id("go-to-part").nth(2).click()
+    await expect(page.get_by_test_id("go-to-part").nth(2)).to_have_attribute("aria-current", "location")
+    scrolled_to = await story.evaluate(SCROLLED)
+
+    await page.keyboard.press(line_key)
+
+    await expect(the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)).to_be_focused()
+    assert await story.evaluate(SCROLLED) >= scrolled_to > 0
 
 
 async def test_the_bar_of_a_chapter_takes_the_reader_to_the_head_of_the_next_and_the_keyboard_with_them(

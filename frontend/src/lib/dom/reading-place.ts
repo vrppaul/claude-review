@@ -6,7 +6,7 @@
  * another file; kept on the line they were reading, they stay where they were.
  */
 
-import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
+import { lineNumbersIn } from '$lib/dom/keyboard';
 
 /** Where the reader is reading: a line of a section, and how far below the top of the reading area it stands. */
 export interface ReadingPlace {
@@ -16,11 +16,6 @@ export interface ReadingPlace {
 	line: string | null;
 	/** How far below the top of the reading area it stands, in pixels. */
 	offset: number;
-}
-
-/** The numbers of a section's lines, one for each row, in the order the page draws them. */
-function lineNumbersIn(section: HTMLElement): HTMLElement[] {
-	return Array.from(section.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
 }
 
 /** Where the reader is reading in a section: its first line still showing at the top of the area, or its top. */

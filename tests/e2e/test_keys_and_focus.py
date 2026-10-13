@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 import pytest
-from playwright.async_api import Page
+from playwright.async_api import Page, expect
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
@@ -26,6 +26,27 @@ FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 # the top of the screen, for jumps between them to land on a file's header
 JUMPED_TO = ("first.py", "second.py", "third.py", "fourth.py")
 JUMPED_FILE_LINES = 40
+# The file picked in the tree: under the one the review opens on, which is drawn already, so nothing
+# above it is built after the pick and moves it
+PICKED_FILE = "second.py"
+# The first line of a file added whole, as its number names it
+FIRST_LINE = "Comment on line 1"
+# The keys that step a line down and up
+LINE_KEYS = ("j", "k")
+# How far down an area has scrolled, in pixels
+SCROLLED = "(area) => area.scrollTop"
+# How far into the first file the reader scrolls by hand: past its head, with screens of it below still
+DEEP_IN_THE_FILE = 300
+# How far under the foot of its file's header the line that holds the keyboard begins, in heights of a
+# line: under 0 the header is drawn over it, and from 1 on a line above it is in sight too
+LINES_UNDER_ITS_HEADER = """() => {
+    const line = document.activeElement;
+    const header = line.closest('[data-testid="file-section"]').querySelector('[data-testid="file-header"]');
+    const under = line.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
+    return under / line.getBoundingClientRect().height;
+}"""
+# A fraction of a line: where an edge stands is not a whole number of pixels
+LESS_THAN_A_LINE_APART = 0.05
 # A file long enough for the diff to leave out more lines above its change,
 # which is near its end, than one step shows: what the reader shows a step at
 # a time, then all at once
@@ -116,6 +137,39 @@ async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_fil
         await page.keyboard.press("v")
         section = page.locator(f'[data-testid="file-section"][data-path="{path}"]')
         assert await section.get_by_test_id("viewed-toggle").is_checked(), f"v after jumping to {path}"
+
+
+@pytest.mark.parametrize("line_key", LINE_KEYS)
+async def test_a_line_key_after_a_file_picked_in_the_tree_lands_on_its_first_line_and_takes_the_reader_nowhere_back(
+    several_files: RunningReview, page: Page, line_key: str
+) -> None:
+    """The pick leaves the keyboard on the tree's row, outside what is read: the key starts where the reader reads."""
+    await _open_review(page, several_files)
+    files = page.get_by_test_id("diff-view")
+    picked = page.locator(f'[data-testid="file-section"][data-path="{PICKED_FILE}"]')
+    await page.get_by_test_id("file-item").filter(has_text=PICKED_FILE).click()
+    scrolled_to = await files.evaluate(SCROLLED)
+
+    await page.keyboard.press(line_key)
+
+    await expect(picked.get_by_role("button", name=FIRST_LINE, exact=True)).to_be_focused()
+    assert await files.evaluate(SCROLLED) >= scrolled_to > 0
+
+
+@pytest.mark.parametrize("line_key", LINE_KEYS)
+async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_the_header_kept_over_it(
+    several_files: RunningReview, page: Page, line_key: str
+) -> None:
+    """Scrolled by hand, the keyboard is on nothing: the key starts at the first line the reader sees."""
+    await _open_review(page, several_files)
+    files = page.get_by_test_id("diff-view")
+    await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
+
+    await page.keyboard.press(line_key)
+
+    assert await _focused(page) == "line-gutter"
+    assert -LESS_THAN_A_LINE_APART <= await page.evaluate(LINES_UNDER_ITS_HEADER) < 1
+    assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
 
 
 async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_count(

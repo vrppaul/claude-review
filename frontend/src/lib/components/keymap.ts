@@ -14,7 +14,7 @@
  * diff that holds no file, a piece of a story not told.
  */
 
-import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
+import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { Drawn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
@@ -124,7 +124,10 @@ const KEYMAP: readonly KeyRow[] = [
 	{
 		keys: 'j / k',
 		does: 'Down / up a line',
-		presses: [alone('j', () => moveByLine(1)), alone('k', () => moveByLine(-1))],
+		presses: [
+			alone('j', (review) => review.sections.stepLine(1)),
+			alone('k', (review) => review.sections.stepLine(-1))
+		],
 		views: EVERY_VIEW,
 		live: WHILE_LINES_ARE_DRAWN
 	},

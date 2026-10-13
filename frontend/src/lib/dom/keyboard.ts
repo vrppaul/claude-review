@@ -44,8 +44,9 @@ export function isComposingText(event: KeyboardEvent): boolean {
  */
 export const LINE_NUMBER_ROLE = 'line-number';
 
-function lineNumbers(): HTMLElement[] {
-	return Array.from(document.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
+/** The numbers of the lines drawn within an element, one for each row, in the order the page draws them. */
+export function lineNumbersIn(within: HTMLElement): HTMLElement[] {
+	return Array.from(within.querySelectorAll<HTMLElement>(`[data-role="${LINE_NUMBER_ROLE}"]`));
 }
 
 /** Whether an element comes after another in the document. */
@@ -54,13 +55,59 @@ function follows(element: Element, other: Element): boolean {
 }
 
 /**
- * The line a step lands on from whatever has the focus: the next or the
- * previous line from a line; from anything else on the page — a thread the
- * reader was taken to, a button in a file's header — the first line below it
- * or the last above it; from nothing, the first line. Never past either end.
+ * What everything kept in sight at the top of a reading area carries, while
+ * what it heads scrolls under it: the header of a section, the bar of a
+ * chapter. A line behind one is drawn, and the reader does not see it.
  */
-function steppedTo(lines: HTMLElement[], focused: Element | null, step: 1 | -1): HTMLElement | undefined {
-	if (focused === null || focused === document.body) return lines.at(0);
+export const KEPT_IN_SIGHT_ROLE = 'kept-in-sight';
+
+// How near two edges stand that touch, in pixels: where an edge stands is not a whole number
+const TOUCHING_WITHIN = 1;
+
+/**
+ * Where what the reader sees of a reading area begins: at its top edge, or
+ * at the foot of what is kept in sight there, one thing under another — the
+ * bar of a chapter, and under it the header of the piece being read. They
+ * are looked at in the order the page draws them, which is down the area:
+ * each one that begins no lower than what is seen so far takes its room too.
+ */
+function inSightFrom(area: HTMLElement): number {
+	let seenFrom = area.getBoundingClientRect().top;
+	for (const kept of area.querySelectorAll(`[data-role="${KEPT_IN_SIGHT_ROLE}"]`)) {
+		const box = kept.getBoundingClientRect();
+		if (box.top - seenFrom < TOUCHING_WITHIN) seenFrom = Math.max(seenFrom, box.bottom);
+	}
+	return seenFrom;
+}
+
+/**
+ * The line the reader reads from in a reading area: the first that begins
+ * where what they see of the area does, or below. With every line above
+ * that, the last.
+ */
+function lineReadFrom(lines: HTMLElement[], area: HTMLElement): HTMLElement | undefined {
+	const seenFrom = inSightFrom(area);
+	return lines.find((line) => seenFrom - line.getBoundingClientRect().top < TOUCHING_WITHIN) ?? lines.at(-1);
+}
+
+/**
+ * The line a step lands on from whatever has the keyboard. From a line, the
+ * next or the previous. From anything else in the reading area — a thread
+ * the reader was taken to, a button in a file's header — the first line
+ * below it or the last above it. From outside the area — an entry of the
+ * column beside it, a control of the page's header — or from nothing, the
+ * line the reader reads from, whichever way the step goes: what holds the
+ * keyboard there stands before everything that is read, and a step counted
+ * from it would throw the reader back to the first line of all. Never past
+ * either end.
+ */
+function steppedTo(
+	lines: HTMLElement[],
+	area: HTMLElement,
+	focused: Element | null,
+	step: 1 | -1
+): HTMLElement | undefined {
+	if (focused === null || !area.contains(focused)) return lineReadFrom(lines, area);
 	const at = lines.findIndex((line) => line === focused);
 	if (at !== -1) return lines[Math.min(lines.length - 1, Math.max(0, at + step))];
 	const beyond =
@@ -68,9 +115,9 @@ function steppedTo(lines: HTMLElement[], focused: Element | null, step: 1 | -1):
 	return beyond ?? (step === 1 ? lines.at(-1) : lines.at(0));
 }
 
-/** Move focus one line down or up, from wherever the focus is, starting at the top when nothing is focused. */
-export function moveByLine(step: 1 | -1): void {
-	steppedTo(lineNumbers(), document.activeElement, step)?.focus();
+/** Move the keyboard one line down or up among the lines of a reading area, from wherever the keyboard is. */
+export function moveByLine(area: HTMLElement, step: 1 | -1): void {
+	steppedTo(lineNumbersIn(area), area, document.activeElement, step)?.focus();
 }
 
 /** What remains to take the keyboard, looked for once the page has drawn what changed: none, if it went too. */

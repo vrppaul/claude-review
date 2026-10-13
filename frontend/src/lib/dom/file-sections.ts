@@ -1,6 +1,7 @@
 /**
  * Where each section that draws a file's lines, and each thread, sits in the
- * stream, which of them the reader is in, and bringing one into view.
+ * stream, which of them the reader is in, bringing one into view, and
+ * stepping the keyboard through the lines they draw.
  *
  * A section is known by a key whoever draws it gives: the files' own view
  * draws each file in one section and knows it by the file's path; a story
@@ -19,7 +20,7 @@
 import { Announced, type Announcement } from '$lib/dom/announced';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
-import { focusWhatRemains } from '$lib/dom/keyboard';
+import { focusWhatRemains, moveByLine } from '$lib/dom/keyboard';
 import { scrollMotion } from '$lib/dom/motion';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
@@ -156,6 +157,17 @@ export class FileSections {
 	/** The file of the section the reader is in. */
 	currentFile(): string | null {
 		return this.#current()?.path ?? null;
+	}
+
+	/**
+	 * Move the keyboard a line down or up among the lines of the reading
+	 * area: from the line that holds it to the next, and from outside the
+	 * area to the line the reader reads from (`moveByLine`). Nowhere while
+	 * no area is watched: every line is drawn in one.
+	 */
+	stepLine(step: 1 | -1): void {
+		const area = this.#sections.band.area;
+		if (area !== null) moveByLine(area, step);
 	}
 
 	/**

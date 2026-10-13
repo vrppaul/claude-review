@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Icon from './Icon.svelte';
 	import { chapterByNumber, chapterNumber, stepAmong } from './story-words';
@@ -28,7 +29,7 @@
 		<!-- The chapters beside it: none before the first, none after the last -->
 		{@const before = contents.chapters[chapter.place - 1]}
 		{@const after = contents.chapters[chapter.place + 1]}
-		<div data-testid="chapter-bar" class="cr-chapter-bar">
+		<div data-testid="chapter-bar" data-role={KEPT_IN_SIGHT_ROLE} class="cr-chapter-bar">
 			<div class="cr-story-measure flex h-full items-center gap-3">
 				<span data-testid="chapter-bar-number" class="cr-faint text-xs">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>

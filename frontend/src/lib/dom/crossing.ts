@@ -15,6 +15,12 @@
 
 import { SvelteSet } from 'svelte/reactivity';
 
+/** A strip being watched: the area it is a strip of, and what looks at it. */
+interface Watch {
+	area: HTMLElement;
+	observer: IntersectionObserver;
+}
+
 export class Crossing {
 	// The strip, as the margin that leaves it of the area
 	readonly #strip: string;
@@ -22,7 +28,8 @@ export class Crossing {
 	readonly #lookedAgain: (() => void) | undefined;
 	// The elements crossing the strip, while it is watched
 	readonly #crossing = new SvelteSet<Element>();
-	#observer: IntersectionObserver | null = null;
+	// The watch of the area watched last, until it is stopped
+	#underWay: Watch | null = null;
 
 	/**
 	 * @param strip the strip, as the margin that leaves it of the area it is a strip of
@@ -40,7 +47,12 @@ export class Crossing {
 
 	/** Whether the strip of some area is being watched. */
 	get watched(): boolean {
-		return this.#observer !== null;
+		return this.#underWay !== null;
+	}
+
+	/** The area whose strip is being watched; null while none is. */
+	get area(): HTMLElement | null {
+		return this.#underWay?.area ?? null;
 	}
 
 	/** Whether an element crosses the strip. */
@@ -55,19 +67,19 @@ export class Crossing {
 			rootMargin: this.#strip,
 			threshold: 0
 		});
-		this.#observer = observer;
+		this.#underWay = { area: root, observer };
 		for (const element of elements) observer.observe(element);
 		return () => this.#stop(observer);
 	}
 
 	/** An element drawn, watched along with the rest while the strip is. */
 	add(element: Element): void {
-		this.#observer?.observe(element);
+		this.#underWay?.observer.observe(element);
 	}
 
 	/** An element gone, no longer watched nor counted. */
 	remove(element: Element): void {
-		this.#observer?.unobserve(element);
+		this.#underWay?.observer.unobserve(element);
 		this.#crossing.delete(element);
 	}
 
@@ -88,8 +100,8 @@ export class Crossing {
 
 	#stop(observer: IntersectionObserver): void {
 		observer.disconnect();
-		if (this.#observer !== observer) return;
-		this.#observer = null;
+		if (this.#underWay?.observer !== observer) return;
+		this.#underWay = null;
 		this.#crossing.clear();
 	}
 }
