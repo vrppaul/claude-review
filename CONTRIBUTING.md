@@ -75,7 +75,7 @@ The frontend uses a `ReviewMode` that flows from the backend API to control rend
 - `files` — single line numbers, no diff decoration, flat file list sidebar
 - `transcript` — conversation messages as reviewable entries, markdown highlighting
 
-See [AGENTS.md](AGENTS.md) for the full conventions reference.
+See [AGENTS.md](AGENTS.md) for the rules that bind all code, and the files under `.claude/rules/` it names for the rules of each area.
 
 ## Releasing
 
@@ -83,13 +83,14 @@ See [AGENTS.md](AGENTS.md) for the full conventions reference.
    - `pyproject.toml` — Python package version
    - `plugin/.claude-plugin/plugin.json` — plugin marketplace version
    - `CHANGELOG.md` — release notes
-   - `frontend/src/lib/guide/news.ts` — what a returning reader is told about this release, if anything (optional; no entry, no card)
-2. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
-3. Commit: `chore: release vX.Y.Z`
-4. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), and publishes to PyPI via trusted publishing. The workflow fails if the tag doesn't match the `pyproject.toml` version or if `plugin.json` is out of sync.
-5. **Wait for the Release workflow to go green** — the version must be live on PyPI before skills point users at it (`uv tool install claude-review` fails until then).
-6. Update local skill: `npx skills update review-ui -g -y`
-7. Reinstall CLI locally: `uv tool install --upgrade --editable .`
+2. If the release is worth telling a returning reader about, write its entry in `frontend/src/lib/guide/news.ts` under the same version — the review shows it once to whoever last saw an older release (optional; no entry, no card)
+3. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
+4. Update `README.md` features and `TODO.md` (remove completed items)
+5. Commit: `chore: release vX.Y.Z`
+6. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), and publishes to PyPI via trusted publishing. The workflow fails if the tag doesn't match the `pyproject.toml` version or if `plugin.json` is out of sync.
+7. **Wait for the Release workflow to go green** — the version must be live on PyPI before skills point users at it (`uv tool install claude-review` fails until then).
+8. Update local skill: `npx skills update review-ui -g -y`
+9. Reinstall CLI locally: `uv tool install --upgrade --editable .`
 
 Users install/upgrade the CLI via:
 ```bash
