@@ -354,6 +354,13 @@ describe('a review read as its story', () => {
 		);
 	});
 
+	it('offers the way to them by where it leads: Show in Files', () => {
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('show-in-files').textContent.trim()).toBe('Show in Files');
+	});
+
 	it('takes the reader to the first of them in the files, with the keyboard on it', async () => {
 		const user = userEvent.setup();
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'on a line the story shows' }));
@@ -712,17 +719,27 @@ describe('a story the code has moved on from', () => {
 		expect(screen.queryByTestId('threads-off-the-story')).toBeNull();
 	});
 
+	it('says that it shows the code as it was, and takes no comments', () => {
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('story-moved-on').textContent).toContain(
+			'It shows the code as it was, and takes no comments.'
+		);
+	});
+
 	it('takes the reader to the first of those comments in the files, with the keyboard on it', async () => {
 		const user = userEvent.setup();
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
+		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
 		render(ReviewScreen, { props: { review } });
 
 		await user.click(screen.getByTestId('show-in-files'));
 		await settled();
 
-		const inTheFiles = within(screen.getByTestId('diff-view')).getByTestId('comment-thread');
-		expect(inTheFiles.textContent).toContain('about the last line');
-		expect(document.activeElement).toBe(inTheFiles);
+		// The files draw both, down the diff: the first of them is the one on a.py
+		const [first] = within(screen.getByTestId('diff-view')).getAllByTestId('comment-thread');
+		expect(first.textContent).toContain('about the last line');
+		expect(document.activeElement).toBe(first);
 	});
 
 	it('shows a file the agent names in the files, though a step tells it: its pieces are the code as it was', async () => {

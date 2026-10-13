@@ -11,6 +11,7 @@
 	import Guide from './Guide.svelte';
 	import HelpDialog from './HelpDialog.svelte';
 	import { pressKey } from './keymap';
+	import NoticeBar from './NoticeBar.svelte';
 	import ReviewHeader from './ReviewHeader.svelte';
 	import StoryNotice from './StoryNotice.svelte';
 	import StoryView from './StoryView.svelte';
@@ -57,44 +58,36 @@
 	{#if review.restoredCount > 0}
 		<!-- Under the header, with the other news about the review: what the
 			draft brought back, counted as the header counts what is unsent -->
-		<div
-			data-testid="restored-notice"
-			class="cr-notice cr-notice-taken flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
-		>
-			<Icon name="check" class="h-3 w-3 shrink-0" />
-			<span>
-				Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
-			</span>
-			<div class="flex-1"></div>
-			<button
-				type="button"
-				data-testid="dismiss-restored"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.dismissRestored()}
-			>
-				Dismiss
-			</button>
-		</div>
+		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
+			Picked up {counted(review.restoredCount, 'comment', 'comments')} you had not sent yet.
+			{#snippet actions()}
+				<button
+					type="button"
+					data-testid="dismiss-restored"
+					class="btn btn-ghost btn-xs"
+					onclick={() => review.dismissRestored()}
+				>
+					Dismiss
+				</button>
+			{/snippet}
+		</NoticeBar>
 	{/if}
 	{#if review.draftSetAside}
 		<!-- With the other news about the review: why unsent work it may have
 			left here is not on screen, and that it is kept rather than lost -->
-		<div
-			data-testid="draft-set-aside"
-			class="cr-notice cr-notice-set-aside flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
-		>
-			<Icon name="notice" class="h-3 w-3 shrink-0" />
-			<span>A kept draft could not be read; it is set aside.</span>
-			<div class="flex-1"></div>
-			<button
-				type="button"
-				data-testid="dismiss-set-aside"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.dismissSetAside()}
-			>
-				Dismiss
-			</button>
-		</div>
+		<NoticeBar testId="draft-set-aside" kind="cr-notice-set-aside" icon="notice">
+			A kept draft could not be read; it is set aside.
+			{#snippet actions()}
+				<button
+					type="button"
+					data-testid="dismiss-set-aside"
+					class="btn btn-ghost btn-xs"
+					onclick={() => review.dismissSetAside()}
+				>
+					Dismiss
+				</button>
+			{/snippet}
+		</NoticeBar>
 	{/if}
 	<DiffNotice />
 	<!-- What a story says of itself, while it is the story that is read: a bar above the reading

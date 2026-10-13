@@ -52,6 +52,16 @@ LINES_OF_THE_LONG_FILE = 200
 DEEP_IN_THE_PIECE = 1500
 # Where an element's top edge is on screen, in pixels from the top of the window
 TOP_OF = "(element) => element.getBoundingClientRect().top"
+# And its bottom edge
+BOTTOM_OF = "(element) => element.getBoundingClientRect().bottom"
+# Where an element's right edge is, in pixels from the left of the window, and where what it holds must end: its padding short of that
+RIGHT_OF = "(element) => element.getBoundingClientRect().right"
+RIGHT_INSIDE_ITS_PADDING = (
+    "(element) => element.getBoundingClientRect().right - parseFloat(getComputedStyle(element).paddingRight)"
+)
+# How wide an element is on screen, and how wide the window it is drawn in
+WIDTH_OF = "(element) => element.getBoundingClientRect().width"
+WINDOW_WIDTH = "window.innerWidth"
 # Wide enough for the tree of files to stand beside them
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
 
@@ -120,19 +130,46 @@ async def test_a_comment_written_on_a_step_hangs_on_the_same_line_of_the_file(
     await expect(in_the_files.get_by_test_id("comment-thread")).to_contain_text("why this word")
 
 
-async def test_the_way_to_a_comment_the_story_does_not_draw_puts_the_keyboard_on_it(
-    review: RunningReview, page: Page
-) -> None:
+async def _read_as_story_with_a_comment_it_does_not_draw(page: Page, review: RunningReview) -> None:
+    """Comment in the files on the housekeeping file, which no piece of the story draws, then read the story."""
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
     the_note = page.get_by_test_id("file-section").filter(has_text=HOUSEKEEPING_FILE)
     await _comment_on(page, the_note, CHANGED_NOTE, "about the note")
     await page.click('[data-testid="read-as-story"]')
 
+
+async def test_the_way_to_a_comment_the_story_does_not_draw_puts_the_keyboard_on_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story_with_a_comment_it_does_not_draw(page, review)
+
     await page.click('[data-testid="show-in-files"]')
     await page.wait_for_selector('[data-testid="diff-view"]')
 
     await expect(page.locator('[data-testid="comment-thread"]:focus')).to_contain_text("about the note")
+
+
+async def test_what_a_story_says_of_itself_stands_across_the_page_right_above_what_is_read(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story_with_a_comment_it_does_not_draw(page, review)
+    said = page.get_by_test_id("threads-off-the-story")
+    await said.wait_for()
+
+    assert await said.evaluate(WIDTH_OF) == await page.evaluate(WINDOW_WIDTH)
+    assert await said.evaluate(BOTTOM_OF) == await page.get_by_test_id("story-view").evaluate(TOP_OF)
+
+
+async def test_the_way_to_what_a_story_does_not_draw_stands_at_the_far_end_of_what_it_says(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story_with_a_comment_it_does_not_draw(page, review)
+    said = page.get_by_test_id("threads-off-the-story")
+    await said.wait_for()
+
+    the_way = said.get_by_test_id("show-in-files")
+    assert await the_way.evaluate(RIGHT_OF) == await said.evaluate(RIGHT_INSIDE_ITS_PADDING)
 
 
 async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(

@@ -5,7 +5,7 @@
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted } from '$lib/utils/words';
-	import Icon from './Icon.svelte';
+	import NoticeBar from './NoticeBar.svelte';
 
 	const review = useReview();
 
@@ -26,45 +26,40 @@
 <!-- A state, not news: no Dismiss, because dismissing it would leave the
 	reader looking at part of the review with nothing saying so. The way
 	out is the only other thing here. -->
-<div
-	data-testid="narrowed-to"
-	class="cr-notice cr-notice-taken flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
->
-	<Icon name="compare" class="h-3 w-3 shrink-0" />
-	<span>
-		{#if review.diff.files.length === 0}
-			Nothing has changed — {review.diff.phrase}.
-		{:else}
-			Showing {review.diff.phrase} — {counted(review.diff.files.length, 'file', 'files')}.
-		{/if}
-		{#if offScreen.length > 0}
-			{counted(offScreen.length, 'thread is', 'threads are')} not on this screen.
-		{/if}
-	</span>
-	<div class="flex-1"></div>
-	{#if review.diff.wholeReviewFailed}
-		<span data-testid="narrow-error" class="text-error">{review.diff.wholeReviewFailed}</span>
+<NoticeBar testId="narrowed-to" kind="cr-notice-taken" icon="compare">
+	{#if review.diff.files.length === 0}
+		Nothing has changed — {review.diff.phrase}.
+	{:else}
+		Showing {review.diff.phrase} — {counted(review.diff.files.length, 'file', 'files')}.
 	{/if}
 	{#if offScreen.length > 0}
+		{counted(offScreen.length, 'thread is', 'threads are')} not on this screen.
+	{/if}
+	{#snippet actions()}
+		{#if review.diff.wholeReviewFailed}
+			<span data-testid="narrow-error" class="text-error">{review.diff.wholeReviewFailed}</span>
+		{/if}
+		{#if offScreen.length > 0}
+			<button
+				type="button"
+				data-testid="list-off-screen"
+				class="btn btn-ghost btn-xs"
+				aria-expanded={listing}
+				onclick={() => (listedOver = listing ? null : review.diff.files)}
+			>
+				{offScreen.length === 1 ? listWords.one : listWords.many}
+			</button>
+		{/if}
 		<button
 			type="button"
-			data-testid="list-off-screen"
+			data-testid="show-everything"
 			class="btn btn-ghost btn-xs"
-			aria-expanded={listing}
-			onclick={() => (listedOver = listing ? null : review.diff.files)}
+			onclick={() => review.diff.showWholeReview()}
 		>
-			{offScreen.length === 1 ? listWords.one : listWords.many}
+			Show the whole diff
 		</button>
-	{/if}
-	<button
-		type="button"
-		data-testid="show-everything"
-		class="btn btn-ghost btn-xs"
-		onclick={() => review.diff.showWholeReview()}
-	>
-		Show the whole diff
-	</button>
-</div>
+	{/snippet}
+</NoticeBar>
 
 {#if listing}
 	<!-- Where they are, so a count is not the end of the road. Picking one
