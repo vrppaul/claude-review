@@ -9,17 +9,32 @@
  * the parts they give a node, the overview and each chapter.
  *
  * What was read is of one story. The review says when it was told another,
- * and what was read is then forgotten; and each run of the review is told
- * its story anew, so a draft kept in another run brings nothing read. Not
- * guarded: where the review was told another story and this page never
- * heard so — it was said in a gap the review could not hand over again —
- * what was read of the story before stands for the parts of the new one
- * known by the same names.
+ * and what was read is forgotten as the page comes to hold that one, which
+ * `ReviewStory` sees to; and each run of the review is told its story anew,
+ * so a draft kept in another run brings nothing read. Not guarded: where
+ * the review was told another story and this page never heard so — it was
+ * said in a gap the review could not hand over again — what was read of
+ * the story before stands for the parts of the new one known by the same
+ * names.
  */
 
 import { SvelteSet } from 'svelte/reactivity';
 
-export class StoryProgress {
+/**
+ * What was read through, to whoever draws a part of the story or keeps the
+ * draft. Forgetting is left out: only the story, which knows when the one
+ * it holds is another, forgets.
+ */
+export interface PartsRead {
+	/** The parts read through, as the draft keeps them. */
+	readonly kept: string[];
+	/** Whether the reader has read a part through. */
+	isRead: (part: string) => boolean;
+	/** The reader has read a part through. */
+	markRead: (part: string) => void;
+}
+
+export class StoryProgress implements PartsRead {
 	// The parts read through, by what each is known by on the page
 	readonly #read: SvelteSet<string>;
 
@@ -28,22 +43,19 @@ export class StoryProgress {
 		this.#read = new SvelteSet(kept);
 	}
 
-	/** The parts read through, as the draft keeps them. */
 	get kept(): string[] {
 		return [...this.#read];
 	}
 
-	/** Whether the reader has read a part through. */
 	isRead(part: string): boolean {
 		return this.#read.has(part);
 	}
 
-	/** The reader has read a part through. */
 	markRead(part: string): void {
 		this.#read.add(part);
 	}
 
-	/** The review was told another story: nothing of it is read yet. */
+	/** The story held is another: nothing of it is read yet. */
 	forget(): void {
 		this.#read.clear();
 	}

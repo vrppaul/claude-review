@@ -18,6 +18,7 @@ import {
 	retakenNote,
 	storyNotReadNote
 } from '$lib/review/panel-notes';
+import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
@@ -98,23 +99,25 @@ function learnFrom(review: Review, push: FactPush): void {
 /**
  * Take in that the review was told another story. Told only that there is
  * one, the page reads the story itself, unless the one it read as it opened
- * is that story already. With it held, nothing of it is read: what the
- * reader had read through of the story before is no reading of this one.
+ * is that story already. The story is told which of the two it is: what
+ * the reader had read through was of the story before, and forgetting it,
+ * as this one comes to be held, is the story's own.
  */
 async function toldAnotherStory(review: Review, heard: HeardPush): Promise<void> {
-	if (!heard.factsHoldIt) await readStoryAgain(review);
-	review.story.progress.forget();
+	if (heard.factsHoldIt) review.story.heldIsAnother();
+	else await readStoryAgain(review, (story) => story.readAnother());
 }
 
 /**
- * Read the story the review holds now, where it takes one at all. A story
- * that cannot be read is said in the panel, and the one held stays: it is
- * never a failure of whatever else was being taken in beside it.
+ * Read the story the review holds now, where it takes one at all: as
+ * another it was told, or again after a gap. A story that cannot be read is
+ * said in the panel, and the one held stays: it is never a failure of
+ * whatever else was being taken in beside it.
  */
-async function readStoryAgain(review: Review): Promise<void> {
+async function readStoryAgain(review: Review, read: (story: ReviewStory) => Promise<void>): Promise<void> {
 	if (!review.story.canBeTold) return;
 	try {
-		await review.story.read();
+		await read(review.story);
 	} catch (error) {
 		review.conversation.note(storyNotReadNote(error));
 	}
@@ -187,7 +190,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.conversation.note(notCaughtUpNote(error));
 		return;
 	}
-	await readStoryAgain(review);
+	await readStoryAgain(review, (story) => story.read());
 }
 
 /**

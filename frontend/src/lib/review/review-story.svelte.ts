@@ -5,6 +5,9 @@
  * it as it opens and again whenever the review says another was told. It is
  * no part of the reader's draft — nothing of it is theirs to lose. How far
  * they have got through it is theirs, and the draft keeps it: `progress`.
+ * It is of the story held: once the review has said it was told another,
+ * what was read is forgotten the moment that one is held here, whichever
+ * read brings it, and stands with the story before until then.
  *
  * A story is pieces of the take of the change it was told of, and stays as
  * told when the diff is taken again: the page then holds a story of one
@@ -16,14 +19,17 @@ import type { StoryNumbering } from '$lib/anchors/numbering';
 import { readStory } from '$lib/api/review-api';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { NO_PIECES, piecesOf, type StoryPieces } from '$lib/review/story-pieces';
-import { StoryProgress } from '$lib/review/story-progress.svelte';
+import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
 import type { StoryHeld } from '$lib/types';
 
 export class ReviewStory {
 	/** Whether a story can be told of this review at all: the review says, the page never works it out. */
 	readonly canBeTold: boolean;
-	/** How far the reader has got through the story: which of its parts they have read through. */
-	readonly progress: StoryProgress;
+	// How far the reader has got through the story held. Forgotten only here, as another story is held
+	readonly #progress: StoryProgress;
+	// The review said it was told another story, and that one is not held here yet: one that could not
+	// be read, or is on its way. Whichever read holds it, what was read was of the story before
+	#anotherAwaited = false;
 	readonly #takeOnScreen: () => number;
 	#held = $state.raw<StoryHeld | null>(null);
 	// Laid out once for the story held, not at every question asked of them
@@ -43,7 +49,7 @@ export class ReviewStory {
 	 */
 	constructor(canBeTold: boolean, held: StoryHeld | null, takeOnScreen: () => number, partsRead: readonly string[]) {
 		this.canBeTold = canBeTold;
-		this.progress = new StoryProgress(partsRead);
+		this.#progress = new StoryProgress(partsRead);
 		this.#held = held;
 		this.#takeOnScreen = takeOnScreen;
 		this.#pieces = $derived(this.#held === null ? NO_PIECES : piecesOf(this.#held.story));
@@ -53,6 +59,15 @@ export class ReviewStory {
 	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */
 	get held(): StoryHeld | null {
 		return this.#held;
+	}
+
+	/**
+	 * How far the reader has got through the story held: which of its parts
+	 * they have read through, asked and said by whoever draws a part, and
+	 * kept by the draft. That it is of the story held is kept here alone.
+	 */
+	get progress(): PartsRead {
+		return this.#progress;
 	}
 
 	/** The pieces of files the story held draws; none while no story is held. */
@@ -77,10 +92,42 @@ export class ReviewStory {
 		return held === null || held.take === this.#takeOnScreen() ? 'the-reviews' : 'another-takes';
 	}
 
-	/** Read the story the review holds now, in place of the one held here. */
+	/**
+	 * Read the story the review holds now, in place of the one held here: the
+	 * page was away, and reads again what it may have missed. For all it
+	 * knows the story is the one it held, and what was read of it stands.
+	 */
 	async read(): Promise<void> {
 		const mine = ++this.#reading;
 		const { held } = await readStory();
-		if (mine === this.#reading) this.#held = held;
+		if (mine === this.#reading) this.#hold(held);
+	}
+
+	/**
+	 * The review said it was told another story: read it in place of the one
+	 * held here. What the reader had read through was of the story before,
+	 * and is forgotten as this one is held. A story that cannot be read
+	 * leaves the one before as it was, and as far read.
+	 */
+	async readAnother(): Promise<void> {
+		this.#anotherAwaited = true;
+		await this.read();
+	}
+
+	/**
+	 * The review said it was told another story, and the one held here is
+	 * that story: the page read it as it opened. What the draft brought as
+	 * read through was read of the story before.
+	 */
+	heldIsAnother(): void {
+		this.#progress.forget();
+	}
+
+	/** Hold a story read from the review; where it is another the review was told, nothing of it is read yet. */
+	#hold(held: StoryHeld | null): void {
+		this.#held = held;
+		if (!this.#anotherAwaited) return;
+		this.#anotherAwaited = false;
+		this.#progress.forget();
 	}
 }
