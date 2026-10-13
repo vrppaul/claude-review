@@ -152,6 +152,9 @@ tests. Remove items when done — don't check them off.
       the last row" (`anchors/placement.ts`); `chapterNamed` as any one
       chapter (`components/story-words.ts`); the guard for a review
       compared against nothing in `ReviewDiff.showWholeReview`.
+- [ ] eslint's rule for a utility that makes a box scroll down reads the
+      named values alone: one written in place, `overflow-y-[auto]` or
+      `[overflow-y:auto]`, is let through. The page writes neither.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.

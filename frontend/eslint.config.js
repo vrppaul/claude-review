@@ -126,18 +126,19 @@ const PAINTED_BY_TOKENS =
 	'Paint with a cr- class or a token (text-(--cr-…)); colours and shadows are written in tokens.css.';
 // Where a utility starts in a class list: the start or a space, then any variants (`hover:`, `md:`) and its marks
 const UTILITY_START = '(^|\\s)([^\\s:]+:)*!?-?';
+// Where one ends: at a space or the list's end, behind the mark that makes it important (`shadow!`)
+const UTILITY_END = '!?(\\s|$)';
 // The utilities that take a colour
 const PAINTS =
 	'(bg|text|border(-[xytblrse])?|ring(-offset)?|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|inset-ring)';
 // A colour of Tailwind's own palette, at any shade, or its black and white. A
 // slash in a pattern is escaped: a selector's regex ends at one
-const PALETTE =
-	'((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+|(black|white)(\\s|\\/|$))';
+const PALETTE = `((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+|(black|white)(\\/|${UTILITY_END}))`;
 // A colour written in place, as an arbitrary value
 const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\\b)';
 const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
 // Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
-const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|\\s|$)/`;
+const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|${UTILITY_END})/`;
 // What scrolls down the page is a `cr-scroller`, which is the box its contents
 // are placed in: words kept for a screen reader are out of the flow, and in a
 // scroller made by a utility they stay put while the rest scrolls, on a page
@@ -145,7 +146,7 @@ const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|\\s|$)/`;
 // code — is not one of these
 const SCROLLS_IN_ITS_OWN_BOX = 'Make what scrolls a cr-scroller: it is the box its contents are placed in.';
 // A utility that makes a box scroll down: `overflow-auto`, `overflow-y-auto`, `overflow-scroll`, `overflow-y-scroll`
-const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)(\\s|$)/`;
+const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY_END}/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {
