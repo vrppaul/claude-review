@@ -14,8 +14,9 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page, ViewportSize, expect
 
+from claude_review.domain.story import ToldFrom
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
-from tests.stories import as_the_agent_writes, step, story_of
+from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, step, story_of, story_of_chapters
 
 STORY_ROUTE = "/api/story"
 RETAKE_ROUTE = "/api/retake"
@@ -32,6 +33,18 @@ TOLD_LINE = "Comment on line 2"
 # The line the housekeeping file gained, which no piece of the story draws
 CHANGED_NOTE = "Comment on line 1"
 A_STORY = story_of(step(TOLD_FILE, 2, 2), housekeeping=(HOUSEKEEPING_FILE,))
+# The same change told by an agent that did not make it, from its commits
+A_RECONSTRUCTION = story_of_chapters(
+    chapter_of(ONLY_CHAPTER, step(TOLD_FILE, 2, 2)), housekeeping=(HOUSEKEEPING_FILE,), told_from=ToldFrom.COMMITS
+)
+# The edge down the left of a block, as the browser draws it: how it is drawn, how wide, and in what colour
+EDGE_STYLE = "(element) => getComputedStyle(element).borderLeftStyle"
+EDGE_WIDTH = "(element) => getComputedStyle(element).borderLeftWidth"
+EDGE_COLOUR = "(element) => getComputedStyle(element).borderLeftColor"
+# The colour an element's words are drawn in
+WORDS_COLOUR = "(element) => getComputedStyle(element).color"
+# How wide the agent's edge is drawn
+AGENT_EDGE_WIDTH = "2px"
 # A file added whole, long enough that its piece runs far past the bottom of the screen
 LONG_FILE = "long.py"
 LINES_OF_THE_LONG_FILE = 200
@@ -57,6 +70,15 @@ async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     started = await servers.start(await repository_opening(changed_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    return started
+
+
+@pytest.fixture
+async def review_of_a_reconstruction(changed_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review of the change, whose story an agent that did not make it told from the commits."""
+    started = await servers.start(await repository_opening(changed_repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_RECONSTRUCTION))
     return started
 
 
@@ -143,6 +165,22 @@ async def test_f_in_the_story_leaves_the_tree_of_files_where_the_reader_left_it(
     await page.click('[data-testid="read-as-files"]')
 
     await expect(page.get_by_test_id("file-item").first).to_be_visible()
+
+
+async def test_the_agents_words_carry_its_colour_down_their_edge_and_a_reconstruction_a_broken_one(
+    review_of_a_reconstruction: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_reconstruction)
+    why = page.get_by_test_id("chapter-why")
+    reconstruction = page.get_by_test_id("story-reconstruction")
+    the_agents_colour = await page.get_by_test_id("story-reconstructed").evaluate(WORDS_COLOUR)
+
+    assert await why.evaluate(EDGE_STYLE) == "solid"
+    assert await why.evaluate(EDGE_WIDTH) == AGENT_EDGE_WIDTH
+    assert await why.evaluate(EDGE_COLOUR) == the_agents_colour
+    assert await reconstruction.evaluate(EDGE_STYLE) == "dashed"
+    assert await reconstruction.evaluate(EDGE_WIDTH) == AGENT_EDGE_WIDTH
+    assert await reconstruction.evaluate(EDGE_COLOUR) == the_agents_colour
 
 
 async def test_deep_in_a_long_piece_its_header_stays_in_view_saying_which_file_is_read(

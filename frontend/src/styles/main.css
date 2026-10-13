@@ -872,6 +872,20 @@
 }
 
 /*
+ * The agent's own words about the change, in a story: its colour down their
+ * edge, wherever it speaks — the change in short, why a chapter's changes
+ * belong together, the reason above a step. How far the words stand from
+ * the edge is each block's own.
+ */
+.cr-agent-voice {
+	border-left: 2px solid var(--cr-agent);
+}
+/* Words about a change the agent did not make: read out of the code and the commits, so the edge is broken */
+.cr-agent-voice-reconstructed {
+	border-left-style: dashed;
+}
+
+/*
  * A thread the agent raised.
  *
  * Not the reader's mark colour: the marks in a review are theirs, and one

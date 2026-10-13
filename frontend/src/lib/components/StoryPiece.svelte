@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { StoryNumbering } from '$lib/anchors/numbering';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
 	import { languageOf } from '$lib/utils/highlight';
@@ -19,20 +18,23 @@
 		piece: DiffFile;
 		/** What it is cut out to show: the lines a step tells, or what no step tells of the file. */
 		shows: PieceShows;
-		/** Whose numbers its lines carry, as the story it is a piece of says. */
-		numbering: StoryNumbering;
 		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
 		scrollRoot: HTMLElement | null;
 		/** What is said beside the file's name: the lines a step tells, how much was left out. */
 		beside: Snippet;
 	}
 
-	let { sectionKey, piece, shows, numbering, scrollRoot, beside }: Props = $props();
+	// What the file's name is in the piece's header. A step is headed by its number, above its reason, so
+	// the name under it is no heading; what no step tells has no heading but its file
+	const NAMED_IN: Record<PieceShows, 'h3' | 'p'> = { 'a-step': 'p', 'what-no-step-tells': 'h3' };
+
+	let { sectionKey, piece, shows, scrollRoot, beside }: Props = $props();
 	const review = useReview();
 
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
-	const extent = $derived<Extent>({ kind: 'piece', shows, numbering });
+	// Its lines carry the numbers of the take the story was told of, as the story says
+	const extent = $derived<Extent>({ kind: 'piece', shows, numbering: review.story.numbering });
 </script>
 
 <!-- A piece of a file in a frame of its own. Clipped to its rounded corners, never hidden past them:
@@ -49,7 +51,9 @@
 	{#snippet header()}
 		<SectionHeader testId="story-piece-header">
 			<StatusLetter status={piece.status} />
-			<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere"><FilePath file={piece} /></h3>
+			<svelte:element this={NAMED_IN[shows]} class="min-w-0 font-mono text-xs font-semibold wrap-anywhere">
+				<FilePath file={piece} />
+			</svelte:element>
 			{@render beside()}
 			<div class="flex-1"></div>
 			<ChangedLines file={piece} />

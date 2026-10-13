@@ -303,11 +303,13 @@ def chapter_of(chapter_id: str, *steps: Step) -> Chapter[Step]:
     )
 
 
-def story_of_chapters(*chapters: Chapter[Step], housekeeping: tuple[str, ...] = ()) -> Story[Step]:
-    """A story that tells these chapters, with nothing wrong in what it says."""
+def story_of_chapters(
+    *chapters: Chapter[Step], housekeeping: tuple[str, ...] = (), told_from: ToldFrom = ToldFrom.MEMORY
+) -> Story[Step]:
+    """A story that tells these chapters, from memory unless it says otherwise, with nothing wrong in what it says."""
     return Story[Step](
         title="A change",
-        told_from=ToldFrom.MEMORY,
+        told_from=told_from,
         overview=StoryOverview(task="Change it.", done="It is changed.", decisions=[], turned_down=[], later=[]),
         chapters=list(chapters),
         housekeeping=list(housekeeping),

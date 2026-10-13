@@ -82,14 +82,10 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `refactor(ui)`: `StoryView.svelte` draws every part of a story in one
-      component, and says the agent's edge as utilities five times. The
-      agent's words are one block; the overview, a chapter, a step and what
-      was left out are parts. Asking about a block and a thread under it
-      will hang on that block.
-- [ ] `fix(ui)`: a step has no heading, two steps of one file give the same
-      one, a chapter's and a step's number stand outside their headings,
-      and the overview's labels are spans.
+- [ ] `feat(ui)`: a chapter's head says how many steps tell it, where the
+      canvas says its files too: "3 files · 4 steps".
+- [ ] `feat(ui)`: a piece of a file told in two chapters does not say so:
+      the canvas draws "also in chapter 1" in its head.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

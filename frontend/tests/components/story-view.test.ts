@@ -154,6 +154,55 @@ describe('a review read as its story', () => {
 		expect(within(steps[1]).queryByTestId('step-reason')).toBeNull();
 	});
 
+	it('heads each chapter with its number and its name', () => {
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByRole('heading', { level: 2, name: '1 The beginnings' })).toBeTruthy();
+		expect(screen.getByRole('heading', { level: 2, name: '2 The end' })).toBeTruthy();
+	});
+
+	it('heads each step once, with its number, its file and its lines, so two steps of one file are told apart', () => {
+		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), toldStepOfLines('a.py', 5, 9)])];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const headings = screen.getAllByTestId('story-step').map((step) => within(step).getByRole('heading'));
+
+		expect(headings.map((heading) => heading.textContent)).toEqual(['1.1: a.py, line 1', '1.2: a.py, lines 5–9']);
+		expect(headings.map((heading) => heading.tagName)).toEqual(['H3', 'H3']);
+	});
+
+	it('heads what no step tells of a file with the file, under what says it is not in the story', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const leftOut = screen.getByTestId('story-left-out');
+
+		expect(within(leftOut).getByRole('heading', { level: 2, name: 'Not in the story' })).toBeTruthy();
+		expect(within(leftOut).getByRole('heading', { level: 3, name: 'a.py' })).toBeTruthy();
+	});
+
+	it('says the change in short under a heading of its own, as what is asked of it and what is said', () => {
+		const overview = { ...TOLD.story.overview, doubt: 'Whether a.py is the place for them.' };
+		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const inShort = screen.getByTestId('story-overview');
+
+		expect(within(inShort).getByRole('heading', { level: 2, name: 'The change in short' })).toBeTruthy();
+		expect(
+			within(inShort)
+				.getAllByRole('term')
+				.map((term) => term.textContent)
+		).toEqual(['Task', 'Done', 'Doubt']);
+		expect(
+			within(inShort)
+				.getAllByRole('definition')
+				.map((said) => said.textContent)
+		).toEqual(['What was asked.', 'What was done.', 'Whether a.py is the place for them.']);
+	});
+
 	it('says which lines of its file each step tells: one by its number, several from the first to the last', () => {
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), toldStepOfLines('a.py', 5, 9)])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
@@ -250,6 +299,15 @@ describe('a review read as its story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByText('Housekeeping · 2 files')).toBeTruthy();
+	});
+
+	it('says nothing of what it leaves out, nor of housekeeping, where every change is told by a step', () => {
+		review = openReview({ files, story: storyHeld() });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.queryByTestId('story-left-out')).toBeNull();
+		expect(screen.queryByTestId('story-housekeeping')).toBeNull();
 	});
 
 	it('draws a thread under its line once, in the piece that shows the line', () => {
@@ -445,6 +503,21 @@ describe('a review read as its story', () => {
 		expect(more.textContent).toContain('The last line closes the file. — chapter 2');
 		expect(more.textContent).toContain('Left for later');
 		expect(more.textContent).not.toContain('Turned down');
+	});
+
+	it('heads each of those lists a level under the change in short, never beside the chapters', () => {
+		const overview = {
+			...TOLD.story.overview,
+			decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }],
+			later: [{ text: 'A line for c.py.', chapter: null }]
+		};
+		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const headings = within(screen.getByTestId('story-more')).getAllByRole('heading', { level: 3 });
+
+		expect(headings.map((heading) => heading.textContent)).toEqual(['Decided, and why', 'Left for later']);
 	});
 
 	it('offers no more about a change the overview lists nothing of', () => {
