@@ -164,6 +164,12 @@ tests. Remove items when done — don't check them off.
 
 ## Testing
 
+- [ ] `test_whatever_a_route_is_sent_it_answers_as_its_schema_says`
+      (`tests/integration/test_api_schema.py`) failed once for `POST
+      /api/anchors/follow`, in a run of every test at `3090d46`, and passed
+      in the six runs of it that followed, one of them of every test again.
+      Schemathesis draws its requests anew each run, and the request that
+      failed was not kept.
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
 - [ ] The Python tests hold 138 branches in 28 files — an `if`, a
