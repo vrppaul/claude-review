@@ -18,12 +18,13 @@ import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
 /**
- * What a view draws of the review as it stands: nothing; lines of its
- * files, to be read; or lines that take comments too, and carry the threads
- * on them. A key that acts on what is not drawn does nothing, and is
- * neither answered nor listed.
+ * What a view draws of the review as it stands: nothing; threads alone,
+ * the lines they hang on gone from what is read; lines of its files, to be
+ * read; or lines that take comments too, and carry the threads on them. A
+ * key that acts on what is not drawn does nothing, and is neither answered
+ * nor listed.
  */
-export type Drawn = 'nothing' | 'lines' | 'lines-taking-comments';
+export type Drawn = 'nothing' | 'threads-alone' | 'lines' | 'lines-taking-comments';
 
 export interface ReadingView {
 	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */
@@ -69,9 +70,15 @@ export class FilesReading implements ReadingView {
 		this.#reading = reading;
 	}
 
-	/** The files' own view takes a comment on a line whatever base it is read against: on the side that is the review's own. */
+	/**
+	 * While the diff on screen holds a file, lines that take a comment
+	 * whatever base they are read against: on the side that is the review's
+	 * own. Over a diff of no file, the threads on files it held, which are
+	 * drawn above it; and with none of those, nothing.
+	 */
 	drawn(): Drawn {
-		return 'lines-taking-comments';
+		if (this.#diff.files.length > 0) return 'lines-taking-comments';
+		return this.threadsInOrder().length > 0 ? 'threads-alone' : 'nothing';
 	}
 
 	sectionKeys(): string[] {

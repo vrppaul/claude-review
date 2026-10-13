@@ -209,6 +209,44 @@ describe('the keys the review answers', () => {
 		]);
 	});
 
+	it('lists in the help no key of a line, a file or a comment over a diff of no file: none of them is drawn', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files: [], facts: { answerer_attached: true } });
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+
+		expect(listedInTheHelp()).toEqual([
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'a: Next unread reply',
+			'c: Talk to the agent',
+			'f: Show or hide the file tree',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
+			'Esc: Close it'
+		]);
+	});
+
+	it('lists n / p over a diff of no file while a comment on a file it held is drawn above it', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files: [], facts: { answerer_attached: true } });
+		review.threads.add(newComment({ file: 'gone.py', body: 'Why?' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+
+		expect(listedInTheHelp()).toEqual([
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'n / p: Next / previous comment',
+			'a: Next unread reply',
+			'c: Talk to the agent',
+			'f: Show or hide the file tree',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
+			'Esc: Close it'
+		]);
+	});
+
 	it('closes the help on ? as it opened it', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });

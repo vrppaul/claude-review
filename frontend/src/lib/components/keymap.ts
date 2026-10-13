@@ -10,11 +10,13 @@
  * when they do anything there. What is answered, and what the help lists,
  * are the rows of the view on screen that do something as the review
  * stands: a key of the files alone does nothing unseen while a story is
- * read, and no key is listed for what the view does not draw.
+ * read, and no key is listed for what the view does not draw — a line of a
+ * diff that holds no file, a piece of a story not told.
  */
 
 import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { Drawn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 
 /**
@@ -60,8 +62,9 @@ export interface KeyRow {
 	views: readonly ReadingViewName[];
 	/**
 	 * Whether the keys do anything in such a view as the review stands: what
-	 * they act on is drawn. A story's view draws nothing until a story is
-	 * told, and one told of another take takes no comment and carries none.
+	 * they act on is drawn. The files draw no line of a diff that holds no
+	 * file; a story's view draws nothing until a story is told, and one told
+	 * of another take takes no comment and carries none.
 	 */
 	live: Live;
 }
@@ -71,11 +74,16 @@ const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
 const THE_FILES: readonly ReadingViewName[] = ['files'];
 const THE_STORY: readonly ReadingViewName[] = ['story'];
 
-// When a row's keys do something: whatever is on screen; while the view on screen draws lines; and
-// while those lines take comments, and so carry the threads on them
+// What a view may say it draws that has lines in it to walk, and what has threads in it to step through
+const DRAWN_WITH_LINES: readonly Drawn[] = ['lines', 'lines-taking-comments'];
+const DRAWN_WITH_THREADS: readonly Drawn[] = ['threads-alone', 'lines-taking-comments'];
+
+// When a row's keys do something: whatever is on screen; while the view on screen draws lines; while
+// those lines take comments; and while it draws threads, on such lines or on none
 const ALWAYS: Live = () => true;
-const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn() !== 'nothing';
+const WHILE_LINES_ARE_DRAWN: Live = (review) => DRAWN_WITH_LINES.includes(review.views.onScreen.drawn());
 const WHILE_LINES_TAKE_COMMENTS: Live = (review) => review.views.onScreen.drawn() === 'lines-taking-comments';
+const WHILE_THREADS_ARE_DRAWN: Live = (review) => DRAWN_WITH_THREADS.includes(review.views.onScreen.drawn());
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -137,7 +145,13 @@ const KEYMAP: readonly KeyRow[] = [
 		views: EVERY_VIEW,
 		live: ALWAYS
 	},
-	{ keys: '] / [', does: 'Next / previous file', presses: SECTION_PRESSES, views: THE_FILES, live: ALWAYS },
+	{
+		keys: '] / [',
+		does: 'Next / previous file',
+		presses: SECTION_PRESSES,
+		views: THE_FILES,
+		live: WHILE_LINES_ARE_DRAWN
+	},
 	// A story's sections are its pieces: every step, then what no step tells
 	{
 		keys: '] / [',
@@ -146,12 +160,14 @@ const KEYMAP: readonly KeyRow[] = [
 		views: THE_STORY,
 		live: WHILE_LINES_ARE_DRAWN
 	},
+	// Threads are stepped through wherever they are drawn: under lines that take comments, or above
+	// a diff that no longer holds their file, even one that holds no file at all
 	{
 		keys: 'n / p',
 		does: 'Next / previous comment',
 		presses: [alone('n', (review) => review.navigator.step(1)), alone('p', (review) => review.navigator.step(-1))],
 		views: EVERY_VIEW,
-		live: WHILE_LINES_TAKE_COMMENTS
+		live: WHILE_THREADS_ARE_DRAWN
 	},
 	// An answer on a line the view does not draw is gone to in the files, whatever is on screen
 	{
@@ -162,6 +178,7 @@ const KEYMAP: readonly KeyRow[] = [
 		live: ALWAYS
 	},
 	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW, live: ALWAYS },
+	// The tree stands beside the files whatever the diff holds: of no file, it says so
 	{
 		keys: 'f',
 		does: 'Show or hide the file tree',
@@ -183,14 +200,14 @@ const KEYMAP: readonly KeyRow[] = [
 		does: 'Mark this file viewed',
 		presses: [alone('v', (review) => onCurrentFile(review, (path) => review.reading.toggleViewed(path)))],
 		views: THE_FILES,
-		live: ALWAYS
+		live: WHILE_LINES_ARE_DRAWN
 	},
 	{
 		keys: 'u',
 		does: 'Fold or unfold this file',
 		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))],
 		views: THE_FILES,
-		live: ALWAYS
+		live: WHILE_LINES_ARE_DRAWN
 	},
 	{
 		keys: FINISH_KEYS,

@@ -213,6 +213,11 @@ tests. Remove items when done — don't check them off.
       where vitest leaves no report; and of `scripts/commands.py`, of a
       command that runs out of its limit, which neither script's command
       line can make one do.
+- [ ] A look serves one change (`scripts/look.py`), so a diff of no file
+      cannot be looked at with it, and the review's command line serves no
+      such diff either: the page reaches one only when a change is undone
+      under a review being served and the diff is taken again. The help
+      over one was looked at by hand, so.
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
 - [ ] The Python tests hold 138 branches in 28 files — an `if`, a
