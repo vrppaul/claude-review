@@ -26,7 +26,7 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - **Understand before writing.** No code without full understanding of what exists and where the change belongs.
 - **Tests first.** Write the test before the code: it states a requirement, not how the code meets it.
 - **Review before presenting.** Read every changed file: the right layer? redundant work? the non-obvious commented? every line needed?
-- After a change, run the tests and every gate.
+- **Test runs have a budget.** While you iterate, run only the tests of the code in hand; pre-commit runs the gates at the commit. The whole suite runs once per chunk, at its end.
 - **Ask first** before adding a dependency, changing the architecture, or changing a domain model.
 - Never commit secrets or credentials.
 - A commit follows Conventional Commits, `type(scope): description`; a hook holds the types.
