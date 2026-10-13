@@ -2,16 +2,19 @@
  * What a story lists of itself, read off its steps once for the story held.
  *
  * A story says its chapters and the steps of each. Which files a chapter
- * tells, which other chapters tell a file of it and how much the story
- * changes that file, no field of it says: all are read off its steps and
- * what it leaves out. Every head the story draws asks one or another, and
- * the contents beside it ask them all, so they are worked out here once.
+ * tells, and which other chapters tell a file of it, no field of it says:
+ * both are read off its steps. Every head the story draws asks one or
+ * another, and the contents beside it ask them all, so they are worked out
+ * here once.
+ *
+ * Here too every step, and whatever the story leaves out of a file, is
+ * given what its section of the page is known by: this is the one walk of
+ * the story that names them. The pieces the story draws are laid out from
+ * this listing (`story-pieces.ts`), under the keys it gave.
  */
 
 import { chapterPartKey, leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
-import type { StoryPieces } from '$lib/review/story-pieces';
 import type { DiffFile, LeftOut, ToldChapter, ToldStep, ToldStory } from '$lib/types';
-import { type FileStats, fileStats, totalOf } from '$lib/utils/file-stats';
 
 /** A file as a chapter lists it: once, however many of the chapter's steps tell lines of it. */
 export interface FileListed {
@@ -19,14 +22,6 @@ export interface FileListed {
 	firstPiece: DiffFile;
 	/** What the section of the chapter's first step of the file is known by: where a reader who picks the file is taken. */
 	opensAt: string;
-	/**
-	 * How much the whole story changes the file: every piece it draws of it,
-	 * a step's in any chapter or what no step tells. That is the file's whole
-	 * change: the review refuses a line told twice, and what no step tells
-	 * is drawn as left out. The diff on screen cannot be asked instead: it
-	 * may be narrowed, or another take.
-	 */
-	change: FileStats;
 	/** The other chapters that tell the file, by their places among the story's chapters, in the story's order. */
 	alsoIn: number[];
 }
@@ -114,45 +109,40 @@ export function tellsFirst(chapter: ChapterListed, listed: FileListed): boolean 
  * A file as a chapter lists it, from the first of the chapter's steps that tells it.
  *
  * @param first the first step of the chapter that tells the file
+ * @param opensAt what that step's section is known by
  * @param chapterPlace where that chapter stands among the story's
  * @param telling which chapters tell each file
- * @param pieces every piece the story draws, for how much it changes the file
  */
-function fileListed(first: ToldStep, chapterPlace: number, telling: ChaptersTelling, pieces: StoryPieces): FileListed {
+function fileListed(first: ToldStep, opensAt: string, chapterPlace: number, telling: ChaptersTelling): FileListed {
 	const tellers = telling.get(first.file) ?? [];
 	return {
 		firstPiece: first.piece,
-		opensAt: stepSectionKey(first),
-		change: totalOf(pieces.ofFile(first.file).map(({ piece }) => fileStats(piece))),
+		opensAt,
 		alsoIn: tellers.map(({ place }) => place).filter((place) => place !== chapterPlace)
 	};
 }
 
 /**
- * A chapter as the story lists it. Its steps are walked once: a file is
- * listed at the first step that tells it, and every later step of the file
- * is given that same listing.
+ * A chapter as the story lists it. Its steps are walked once: each is given
+ * what its section is known by, a file is listed at the first step that
+ * tells it, and every later step of the file is given that same listing.
  */
-function chapterListed(told: ToldChapter, place: number, telling: ChaptersTelling, pieces: StoryPieces): ChapterListed {
+function chapterListed(told: ToldChapter, place: number, telling: ChaptersTelling): ChapterListed {
 	const files = new Map<string, FileListed>();
 	const steps: StepListed[] = [];
 	for (const [stepPlace, step] of told.steps.entries()) {
-		const listed = files.get(step.file) ?? fileListed(step, place, telling, pieces);
+		const section = stepSectionKey(step);
+		const listed = files.get(step.file) ?? fileListed(step, section, place, telling);
 		files.set(step.file, listed);
-		steps.push({ told: step, section: stepSectionKey(step), place: stepPlace, fileListed: listed });
+		steps.push({ told: step, section, place: stepPlace, fileListed: listed });
 	}
 	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps };
 }
 
-/**
- * What a story lists of itself.
- *
- * @param story the story held
- * @param pieces the pieces that story draws, laid out by file already
- */
-export function contentsOf(story: ToldStory, pieces: StoryPieces): StoryContents {
+/** What a story lists of itself. */
+export function contentsOf(story: ToldStory): StoryContents {
 	const telling = chaptersTelling(story.chapters);
-	const chapters = story.chapters.map((told, place) => chapterListed(told, place, telling, pieces));
+	const chapters = story.chapters.map((told, place) => chapterListed(told, place, telling));
 	const byPart = new Map(chapters.map((chapter): [string, ChapterListed] => [chapter.part, chapter]));
 	const bySection = new Map(
 		chapters.flatMap((chapter) => chapter.steps).map((step): [string, StepListed] => [step.section, step])

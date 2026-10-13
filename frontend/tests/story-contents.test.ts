@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contentsOf, tellsFirst } from '$lib/review/story-contents';
-import { LEFT_OUT_PART, leftOutSectionKey, OVERVIEW_PART, stepSectionKey } from '$lib/review/story-keys';
+import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { piecesOf } from '$lib/review/story-pieces';
 import { addedLine, diffFile, hunk, removedLine } from './diff';
 import { toldChapter, toldStep, toldStory } from './story';
@@ -21,7 +21,7 @@ const leftOutOfA = {
 	changed_lines: 2
 };
 const story = toldStory({ chapters, left_out: [leftOutOfA] });
-const contents = contentsOf(story, piecesOf(story));
+const contents = contentsOf(story);
 const [ofTheFirst, ofTheSecond, ofTheThird] = contents.chapters;
 
 describe('what a story lists of itself', () => {
@@ -46,9 +46,9 @@ describe('what a story lists of itself', () => {
 
 	it("lists a chapter's steps in the order it tells them, each by its section and its place among them", () => {
 		expect(ofTheFirst.steps.map(({ told, section, place }) => [told, section, place])).toEqual([
-			[aFirst, stepSectionKey(aFirst), 0],
-			[bFirst, stepSectionKey(bFirst), 1],
-			[aAgain, stepSectionKey(aAgain), 2]
+			[aFirst, 'step:a.py:1', 0],
+			[bFirst, 'step:b.py:1', 1],
+			[aAgain, 'step:a.py:5', 2]
 		]);
 	});
 
@@ -73,25 +73,17 @@ describe('what a story lists of itself', () => {
 	});
 
 	it('lists what it leaves out, file by file, each with what its section is known by', () => {
-		expect(contents.leftOut).toEqual([{ told: leftOutOfA, section: leftOutSectionKey(leftOutOfA) }]);
+		expect(contents.leftOut).toEqual([{ told: leftOutOfA, section: 'left-out:a.py' }]);
 	});
 
 	it('says where a reader who picks a file is taken: to the first step of the chapter that tells it', () => {
-		expect(ofTheFirst.files.map(({ opensAt }) => opensAt)).toEqual([stepSectionKey(aFirst), stepSectionKey(bFirst)]);
-	});
-
-	it('says how much of a file the whole story changes: every piece of it, in whichever chapter, and what no step tells', () => {
-		const [a, b] = ofTheFirst.files;
-
-		// a.py gained a line in each of four steps and one that no step tells, and lost one no step tells
-		expect(a.change).toEqual({ additions: 5, deletions: 1 });
-		expect(b.change).toEqual({ additions: 2, deletions: 0 });
+		expect(ofTheFirst.files.map(({ opensAt }) => opensAt)).toEqual(['step:a.py:1', 'step:b.py:1']);
 	});
 
 	it('finds a step by what its section is known by', () => {
 		const [, , ofAAgain] = ofTheFirst.steps;
 
-		expect(contents.stepAt(stepSectionKey(aAgain))).toBe(ofAAgain);
+		expect(contents.stepAt('step:a.py:5')).toBe(ofAAgain);
 	});
 
 	it('finds no step by a key no step has', () => {
@@ -108,5 +100,32 @@ describe('what a story lists of itself', () => {
 		const [c] = ofTheThird.files;
 
 		expect(c.alsoIn).toEqual([]);
+	});
+});
+
+describe('the pieces of what a story lists', () => {
+	const pieces = piecesOf(contents);
+
+	it('are known by the sections the story lists them under, in the order it lists them: every step, then what it leaves out', () => {
+		expect(pieces.keys).toEqual([
+			'step:a.py:1',
+			'step:b.py:1',
+			'step:a.py:5',
+			'step:b.py:5',
+			'step:a.py:7',
+			'step:c.py:1',
+			'step:a.py:9',
+			'left-out:a.py'
+		]);
+	});
+
+	it('say how much of a file the whole story changes: every piece of it, in whichever chapter, and what no step tells', () => {
+		// a.py gained a line in each of four steps and one that no step tells, and lost one no step tells
+		expect(pieces.changeOf('a.py')).toEqual({ additions: 5, deletions: 1 });
+		expect(pieces.changeOf('b.py')).toEqual({ additions: 2, deletions: 0 });
+	});
+
+	it('say a file the story draws nothing of changes by nothing', () => {
+		expect(pieces.changeOf('z.py')).toEqual({ additions: 0, deletions: 0 });
 	});
 });

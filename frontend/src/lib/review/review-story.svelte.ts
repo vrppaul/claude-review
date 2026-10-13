@@ -18,7 +18,7 @@
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { readStory } from '$lib/api/review-api';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
-import { NO_PIECES, piecesOf, type StoryPieces } from '$lib/review/story-pieces';
+import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
 import type { StoryHeld } from '$lib/types';
 
@@ -32,10 +32,10 @@ export class ReviewStory {
 	#anotherAwaited = false;
 	readonly #takeOnScreen: () => number;
 	#held = $state.raw<StoryHeld | null>(null);
-	// Laid out once for the story held, not at every question asked of them
-	readonly #pieces: StoryPieces;
-	// And what the story lists of itself, read off its steps once for the story held
+	// What the story lists of itself, read off its steps once for the story held
 	readonly #contents: StoryContents;
+	// And the pieces of what it lists, laid out once, not at every question asked of them
+	readonly #pieces: StoryPieces;
 	// Which read is the latest. Two can be in flight — two stories told one
 	// after the other — and only the latest is held, whatever order the
 	// answers come back in.
@@ -52,8 +52,8 @@ export class ReviewStory {
 		this.#progress = new StoryProgress(partsRead);
 		this.#held = held;
 		this.#takeOnScreen = takeOnScreen;
-		this.#pieces = $derived(this.#held === null ? NO_PIECES : piecesOf(this.#held.story));
-		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story, this.#pieces));
+		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story));
+		this.#pieces = $derived(piecesOf(this.#contents));
 	}
 
 	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */

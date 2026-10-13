@@ -4,16 +4,19 @@
  * A story draws a file in pieces — the lines of each step, and whatever of
  * the file no step tells — and whoever reads the review as its story asks
  * of them over and over: which piece shows this line, where is this file
- * first told, what comes after what. They are laid out once here, in the
- * order the story draws them, and found by file. What the section of each
- * is known by is said in `story-keys.ts`.
+ * first told, what comes after what, how much does the story change this
+ * file. They are laid out once here, in the order the story draws them, and
+ * found by file. They are the pieces of what the story lists of itself
+ * (`story-contents.ts`), each under the key its section was listed by:
+ * nothing here walks the story or names a section again.
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { type DrawnRows, fileDraws } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
-import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
-import type { DiffFile, ToldStory } from '$lib/types';
+import type { StoryContents } from '$lib/review/story-contents';
+import type { DiffFile } from '$lib/types';
+import { type FileStats, fileStats, totalOf } from '$lib/utils/file-stats';
 
 /** A piece of a file a story draws, and what its section is known by. */
 interface KeyedPiece {
@@ -24,10 +27,20 @@ interface KeyedPiece {
 /** A piece as it stands among those the story draws: with its rows, and its place among the pieces. */
 type DrawnPiece = KeyedPiece & DrawnRows;
 
+// How much a story changes a file it draws nothing of
+const NO_CHANGE = totalOf([]);
+
+/** How much some pieces of a file change it together. */
+function changeIn(pieces: readonly DrawnPiece[]): FileStats {
+	return totalOf(pieces.map(({ piece }) => fileStats(piece)));
+}
+
 export class StoryPieces {
 	readonly #inOrder: readonly DrawnPiece[];
 	// The pieces of each file, in the order the story draws them: a line is looked for among its own file's alone
 	readonly #byFile: ReadonlyMap<string, readonly DrawnPiece[]>;
+	// How much the pieces of each file change it together, counted once
+	readonly #changeByFile: ReadonlyMap<string, FileStats>;
 
 	/** @param keyed the pieces in the order the story draws them, each with what its section is known by */
 	constructor(keyed: readonly KeyedPiece[]) {
@@ -38,6 +51,9 @@ export class StoryPieces {
 			rows: piece.hunks.flatMap((hunk) => hunk.lines)
 		}));
 		this.#byFile = Map.groupBy(this.#inOrder, ({ piece }) => piece.path);
+		this.#changeByFile = new Map(
+			[...this.#byFile].map(([path, pieces]): [string, FileStats] => [path, changeIn(pieces)])
+		);
 	}
 
 	/** What each piece's section is known by, in the order the story draws them. */
@@ -59,16 +75,28 @@ export class StoryPieces {
 	ofFile(path: string): readonly DrawnPiece[] {
 		return this.#byFile.get(path) ?? [];
 	}
+
+	/**
+	 * How much the whole story changes a file: every piece it draws of it, a
+	 * step's in any chapter or what no step tells. That is the file's whole
+	 * change: the review refuses a line told twice, and what no step tells
+	 * is drawn as left out. The diff on screen cannot be asked instead: it
+	 * may be narrowed, or another take.
+	 */
+	changeOf(path: string): FileStats {
+		return this.#changeByFile.get(path) ?? NO_CHANGE;
+	}
 }
 
-/** The pieces a story draws, in the order it draws them: its steps as it tells them, then what it leaves out. */
-export function piecesOf(story: ToldStory): StoryPieces {
-	const steps = story.chapters.flatMap((chapter) =>
-		chapter.steps.map((step) => ({ key: stepSectionKey(step), piece: step.piece }))
+/**
+ * The pieces of what a story lists of itself, in the order it draws them:
+ * every step as its chapter lists it, then what the story leaves out; each
+ * under the key the listing knows its section by.
+ */
+export function piecesOf(contents: StoryContents): StoryPieces {
+	const steps = contents.chapters.flatMap((chapter) =>
+		chapter.steps.map(({ section, told }) => ({ key: section, piece: told.piece }))
 	);
-	const leftOut = story.left_out.map((left) => ({ key: leftOutSectionKey(left), piece: left.piece }));
+	const leftOut = contents.leftOut.map(({ section, told }) => ({ key: section, piece: told.piece }));
 	return new StoryPieces([...steps, ...leftOut]);
 }
-
-/** The pieces of no story: while none is held, nothing is drawn. */
-export const NO_PIECES = new StoryPieces([]);

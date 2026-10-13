@@ -74,7 +74,7 @@
 							<ContentsFile file={listed.firstPiece} opensAt={listed.opensAt} current={stepRead?.fileListed === listed}>
 								<!-- The file's whole change where the story first tells it; after that, where it was told -->
 								{#if tellsFirst(chapter, listed)}
-									<ChangedLines changed={listed.change} />
+									<ChangedLines changed={review.story.pieces.changeOf(listed.firstPiece.path)} />
 								{:else}
 									{alsoInShort(listed.alsoIn)}
 								{/if}
