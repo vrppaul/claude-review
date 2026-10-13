@@ -6,6 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { work } from '../agent-work';
 import { openReview } from '../review';
+import { storyHeld, toldChapter, toldStep } from '../story';
 
 // What breaks: drawing one file, and naming one file in the panel. Hoisted
 // with the mocks below, which run before anything else in this file.
@@ -55,6 +56,18 @@ describe('a part of the review that breaks', () => {
 		expect(getAllByTestId('file-section').map((section) => section.dataset.path)).toEqual(['first.py', 'last.py']);
 		expect(getByTestId('top-bar')).toBeTruthy();
 		expect(getByTestId('agent-panel')).toBeTruthy();
+	});
+
+	it('is a step of a story that still says its number and reason, over where its piece could not be drawn', () => {
+		const why = 'Why the file changed.';
+		const story = storyHeld({ chapters: [toldChapter('ch-1', [toldStep(breaking.section, 1, why)])] });
+		const review = openReview({ files, story });
+		review.views.choose('story');
+		const { getByTestId } = render(ReviewScreen, { props: { review } });
+
+		expect(getByTestId('part-failed').textContent).toContain(`${breaking.section} could not be drawn`);
+		expect(getByTestId('step-number').textContent.trim()).toBe('1.1');
+		expect(getByTestId('step-reason').textContent).toBe(why);
 	});
 
 	it('is a panel that says it broke, beside the review still on screen', async () => {

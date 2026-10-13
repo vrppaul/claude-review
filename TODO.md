@@ -162,8 +162,8 @@ tests. Remove items when done — don't check them off.
       `frontend/tests/push-handling.test.ts`, and the rest of the page's
       tests were not searched for the first.
 - [ ] Lines of the page that can be broken with every test passing, found
-      by an independent review: the classes `cr-section` and
-      `cr-file-placeholder` on a section (`LinesSection.svelte`: what is
+      by an independent review: the classes `cr-file-frame` and
+      `cr-file-placeholder` in a section (`LinesSection.svelte`: what is
       left undrawn off screen, and the room a section holds before its
       rows are built); going to a thread already drawn ending the wait for
       a section (`dom/file-sections.ts`, `goToThread`); `rowOf`'s "past

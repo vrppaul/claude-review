@@ -14,15 +14,17 @@
 		/** Whether its lines are folded away, its header left alone on the page. */
 		folded: boolean;
 		testId: string;
-		/** How it is set among its neighbours: a rule under it, a frame around it. */
+		/** How its header and lines are set among their neighbours: a rule under them, a frame around them. */
 		class: ClassValue;
+		/** What its view says before the header, inside the section: the number and reason of a story's step. */
+		above?: Snippet | undefined;
 		/** Its header, a `SectionHeader`: the file's name, and what its view says and offers beside it. */
 		header: Snippet;
 		/** Its lines, asked for once the reader has come near, and not while they are folded away. */
 		lines: Snippet;
 	}
 
-	let { sectionKey, file, folded, testId, class: framed, header, lines }: Props = $props();
+	let { sectionKey, file, folded, testId, class: framed, above, header, lines }: Props = $props();
 	const review = useReview();
 	// The area its view scrolls in, which it comes near to be built: null while that is not drawn yet
 	const scrollArea = useScrollArea();
@@ -42,20 +44,20 @@
 </script>
 
 <!-- A section of the page that draws lines of a file, whichever view draws it: it says where it is and
-	which file it is of, holds the room its rows will take, and builds them once the reader comes near -->
-<section
-	bind:this={element}
-	data-testid={testId}
-	data-path={file.path}
-	class={['cr-section', framed]}
-	style:--cr-rows={rowsDrawn}
->
-	{@render header()}
-	{#if !folded}
-		{#if nearness.built}
-			{@render lines()}
-		{:else}
-			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
+	which file it is of, holds the room its rows will take, and builds them once the reader comes near.
+	What its view says above the lines is inside it: a reader taken to the section reads from there -->
+<section bind:this={element} data-testid={testId} data-path={file.path} style:--cr-rows={rowsDrawn}>
+	{@render above?.()}
+	<!-- The header and the lines in a frame of their own: what is left undrawn off screen, and what the
+		header stays in sight within -->
+	<div class={['cr-file-frame', framed]}>
+		{@render header()}
+		{#if !folded}
+			{#if nearness.built}
+				{@render lines()}
+			{:else}
+				<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </section>

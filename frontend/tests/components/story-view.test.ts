@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
@@ -153,15 +153,31 @@ describe('a review read as its story', () => {
 	it('numbers each step by its chapter and its place in it, and says its reason where it has one', () => {
 		render(ReviewScreen, { props: { review } });
 
-		const steps = screen.getAllByTestId('story-step');
+		const [first, second] = pieces();
 
-		expect(steps.map((step) => within(step).getByTestId('step-number').textContent.trim())).toEqual([
+		expect(screen.getAllByTestId('step-number').map((number) => number.textContent.trim())).toEqual([
 			'1.1',
 			'1.2',
 			'2.1'
 		]);
-		expect(within(steps[0]).getByTestId('step-reason').textContent).toBe('The first line comes first.');
-		expect(within(steps[1]).queryByTestId('step-reason')).toBeNull();
+		expect(within(first).getByTestId('step-reason').textContent).toBe('The first line comes first.');
+		expect(within(second).queryByTestId('step-reason')).toBeNull();
+	});
+
+	it('takes the reader to a step from its number and reason down: they head the section gone to', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const [, second, third] = pieces();
+		// Its own, given to it here: a spy on the method would be the one every element shares
+		const broughtIntoView = vi.fn();
+		third.scrollIntoView = broughtIntoView;
+
+		within(second).getByTestId('line-gutter').focus();
+		await user.keyboard(']');
+
+		expect(broughtIntoView).toHaveBeenCalled();
+		expect(within(third).getByRole('heading', { level: 3, name: 'Step 2.1' })).toBeTruthy();
+		expect(within(third).getByTestId('step-reason').textContent).toBe('The last line closes the file.');
 	});
 
 	it('heads each chapter with its number and its name', () => {
@@ -177,7 +193,7 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		const [first, second] = screen.getAllByTestId('story-step');
+		const [first, second] = pieces();
 
 		expect(within(first).getByRole('heading')).toBe(within(first).getByRole('heading', { level: 3, name: 'Step 1.1' }));
 		expect(within(second).getByRole('heading')).toBe(
@@ -255,15 +271,14 @@ describe('a review read as its story', () => {
 		expect(within(ofTheMade).getByText('added')).toBeTruthy();
 	});
 
-	it('shows under each step the piece of its file the step tells, and no more of the file', () => {
+	it('shows in each step the piece of its file the step tells, and no more of the file', () => {
 		render(ReviewScreen, { props: { review } });
 
-		const [firstStep] = screen.getAllByTestId('story-step');
-		const shown = within(firstStep).getByTestId('story-piece');
+		const [firstStep] = pieces();
 
-		expect(shown.dataset.path).toBe('a.py');
-		expect(shown.textContent).toContain('line 1 of a.py');
-		expect(shown.textContent).not.toContain('line 9 of a.py');
+		expect(firstStep.dataset.path).toBe('a.py');
+		expect(firstStep.textContent).toContain('line 1 of a.py');
+		expect(firstStep.textContent).not.toContain('line 9 of a.py');
 	});
 
 	it('sets the lines of every piece across two columns where the reader reads changes so', async () => {
@@ -810,9 +825,9 @@ describe('what a piece of a story leaves out between its hunks', () => {
 	it('is said to be unchanged in a step: between two changes it tells lie lines the change kept', () => {
 		render(ReviewScreen, { props: { review } });
 
-		const inTheStep = within(screen.getByTestId('story-step')).getByTestId('hunk-gap');
+		const [theStep] = pieces();
 
-		expect(inTheStep.textContent.trim()).toBe('⋯ 7 unchanged lines');
+		expect(within(theStep).getByTestId('hunk-gap').textContent.trim()).toBe('⋯ 7 unchanged lines');
 	});
 
 	it('is said only to be not shown where no step tells the lines around it: a step may tell those between', () => {

@@ -14,7 +14,8 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page, ViewportSize, expect
 
-from claude_review.domain.story import ToldFrom
+from claude_review.domain.models import LineSpan
+from claude_review.domain.story import Step, ToldFrom
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, step, story_of, story_of_chapters
 
@@ -50,6 +51,20 @@ LONG_FILE = "long.py"
 LINES_OF_THE_LONG_FILE = 200
 # How far into the long piece the reader scrolls: well past its head, well short of its end
 DEEP_IN_THE_PIECE = 1500
+# The long file told in two steps, each longer than a screen: the last line the first of them tells,
+# and why the second is as it is, said above its piece
+LAST_LINE_OF_THE_FIRST_STEP = 100
+REASON_OF_THE_SECOND_STEP = "The second half of the file goes on from the first."
+THE_LONG_FILE_IN_TWO_STEPS = story_of(
+    step(LONG_FILE, 1, LAST_LINE_OF_THE_FIRST_STEP),
+    Step(
+        file=LONG_FILE,
+        lines=LineSpan(first=LAST_LINE_OF_THE_FIRST_STEP + 1, last=LINES_OF_THE_LONG_FILE),
+        reason=REASON_OF_THE_SECOND_STEP,
+    ),
+)
+# A fraction of a pixel: where an edge stands is not a whole number, and the area scrolls by whole ones
+LESS_THAN_A_PIXEL = 1
 # Where an element's top edge is on screen, in pixels from the top of the window
 TOP_OF = "(element) => element.getBoundingClientRect().top"
 # And its bottom edge
@@ -106,6 +121,15 @@ async def review_of_a_long_file(long_file_repo: Path, servers: ReviewServers) ->
     started = await servers.start(await repository_opening(long_file_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(LONG_FILE, 1, LINES_OF_THE_LONG_FILE))))
+    return started
+
+
+@pytest.fixture
+async def review_of_a_long_file_in_two_steps(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose story tells the file its change adds in two steps, the second with its reason."""
+    started = await servers.start(await repository_opening(long_file_repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(THE_LONG_FILE_IN_TWO_STEPS))
     return started
 
 
@@ -252,3 +276,18 @@ async def test_deep_in_a_long_piece_its_header_stays_in_view_saying_which_file_i
     header = page.get_by_test_id("story-piece-header")
     await expect(header).to_be_in_viewport()
     assert await header.evaluate(TOP_OF) == await story.evaluate(TOP_OF)
+
+
+async def test_a_step_gone_to_stands_at_the_top_of_what_is_read_from_its_reason_down(
+    review_of_a_long_file_in_two_steps: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file_in_two_steps)
+
+    # Twice, so the reader ends on the second step wherever the first press took them from: ] goes no further than the last
+    await page.keyboard.press("]")
+    await page.keyboard.press("]")
+
+    reason = page.get_by_test_id("step-reason")
+    await expect(reason).to_be_in_viewport()
+    below_the_top = await reason.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
+    assert abs(below_the_top) < LESS_THAN_A_PIXEL
