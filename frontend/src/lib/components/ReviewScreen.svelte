@@ -12,6 +12,7 @@
 	import HelpDialog from './HelpDialog.svelte';
 	import { pressKey } from './keymap';
 	import ReviewHeader from './ReviewHeader.svelte';
+	import StoryNotice from './StoryNotice.svelte';
 	import StoryView from './StoryView.svelte';
 	import Icon from './Icon.svelte';
 	import PartFailed from './PartFailed.svelte';
@@ -96,6 +97,11 @@
 		</div>
 	{/if}
 	<DiffNotice />
+	<!-- What a story says of itself, while it is the story that is read: a bar above the reading
+		area, as the diff's own are, so it stands however far down the story the reader is -->
+	{#if review.views.onScreen.name === 'story'}
+		<StoryNotice />
+	{/if}
 	<div class="cr-columns">
 		{#if review.views.onScreen.name === 'story'}
 			<!-- The same review, read as its story: the tree of files is the files' own -->

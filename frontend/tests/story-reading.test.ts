@@ -170,6 +170,10 @@ describe('a story told of another take of the change than the page reads', () =>
 
 		expect(review.views.onScreen.threadsInOrder()).toEqual([]);
 	});
+
+	it('takes the reader to no file, though a step tells it: its pieces are of the file as it was', () => {
+		expect(review.views.onScreen.sectionOfFile('a.py')).toBeNull();
+	});
 });
 
 describe('which way a review is read', () => {

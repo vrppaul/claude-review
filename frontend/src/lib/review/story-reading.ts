@@ -44,8 +44,13 @@ export class StoryReading implements ReadingView {
 		return this.#story.pieces.drawing(lines, this.#story.numbering)?.key ?? null;
 	}
 
-	/** The first piece of the file the story draws: where the file is first told. */
+	/**
+	 * The first piece of the file the story draws: where the file is first
+	 * told. None in a story of another take: its pieces are the file as it
+	 * was, and whoever names a file means it as it is.
+	 */
 	sectionOfFile(path: string): string | null {
+		if (this.#story.numbering === 'another-takes') return null;
 		return this.#story.pieces.firstOf(path)?.key ?? null;
 	}
 

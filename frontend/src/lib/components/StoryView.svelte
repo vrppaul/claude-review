@@ -5,7 +5,6 @@
 	import StoryHead from './StoryHead.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
 	import StoryOverview from './StoryOverview.svelte';
-	import StoryThreadsNotice from './StoryThreadsNotice.svelte';
 
 	const review = useReview();
 
@@ -32,7 +31,6 @@
 		{@const story = held.story}
 		<article class="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8">
 			<StoryHead {held} />
-			<StoryThreadsNotice />
 			<StoryOverview overview={story.overview} chapters={story.chapters} />
 
 			{#each story.chapters as chapter, chapterPlace (chapter.id)}

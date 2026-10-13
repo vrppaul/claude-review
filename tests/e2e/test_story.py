@@ -155,6 +155,21 @@ async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(
     await expect(page.get_by_test_id("comment-input")).to_have_count(0)
 
 
+async def test_deep_in_a_story_the_code_has_moved_on_from_the_page_still_says_so(
+    review_of_a_long_file: RunningReview, tmp_path: Path, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file)
+    write_files(tmp_path / "long", {LONG_FILE: "a line above them all\n"})
+    async with AsyncClient(base_url=review_of_a_long_file.url) as agent:
+        await agent.post(RETAKE_ROUTE, json={})
+    moved_on = page.get_by_test_id("story-moved-on")
+    await moved_on.wait_for()
+
+    await page.get_by_test_id("story-view").evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+
+    await expect(moved_on).to_be_in_viewport()
+
+
 async def test_f_in_the_story_leaves_the_tree_of_files_where_the_reader_left_it(
     review: RunningReview, page: Page
 ) -> None:

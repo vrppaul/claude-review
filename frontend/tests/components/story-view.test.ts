@@ -695,6 +695,29 @@ describe('a story the code has moved on from', () => {
 		expect(screen.queryByTestId('threads-off-the-story')).toBeNull();
 	});
 
+	it('takes the reader to the first of those comments in the files, with the keyboard on it', async () => {
+		const user = userEvent.setup();
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
+		render(ReviewScreen, { props: { review } });
+
+		await user.click(screen.getByTestId('show-in-files'));
+		await settled();
+
+		const inTheFiles = within(screen.getByTestId('diff-view')).getByTestId('comment-thread');
+		expect(inTheFiles.textContent).toContain('about the last line');
+		expect(document.activeElement).toBe(inTheFiles);
+	});
+
+	it('shows a file the agent names in the files, though a step tells it: its pieces are the code as it was', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		handOverNext(review, { type: 'show', file: 'b.py' });
+		await settled();
+
+		expect(review.views.onScreen.name).toBe('files');
+		expect(review.sections.fileInView).toBe('b.py');
+	});
+
 	it('is of the code on screen again once the agent tells it again', async () => {
 		fakeServer().answer('GET /api/story', { held: storyHeld(TOLD.story, { take: A_LATER_TAKE }) });
 		render(ReviewScreen, { props: { review } });
@@ -778,6 +801,14 @@ describe('the files, read where a story could be', () => {
 
 		expect(screen.getByTestId('diff-view')).toBe(drawn);
 	});
+
+	it('say nothing of the story the code has moved on from: they are the code as it is', () => {
+		review = openReview({ files, story: TOLD, diff: { take: A_LATER_TAKE } });
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('diff-view')).toBeTruthy();
+		expect(screen.queryByTestId('story-moved-on')).toBeNull();
+	});
 });
 
 describe('a review nobody has told a story of yet', () => {
@@ -787,6 +818,16 @@ describe('a review nobody has told a story of yet', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('no-story').textContent).toContain('No story has been told of this change yet.');
+	});
+
+	it('says nothing of the comments it holds: there is no story for them to be off', () => {
+		review = openReview({ files });
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.queryByTestId('threads-off-the-story')).toBeNull();
+		expect(screen.queryByTestId('story-moved-on')).toBeNull();
 	});
 });
 
