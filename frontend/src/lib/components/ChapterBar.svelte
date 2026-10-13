@@ -15,7 +15,7 @@
 
 	// The bar goes once the head of its chapter is back in view, as it is wherever its own buttons take the
 	// reader. Looked at before the page takes the bar away: the keyboard one of its buttons holds would be
-	// left on nothing, and goes to the part being read
+	// left on nothing, and goes to the head of the part being read
 	$effect.pre(() => {
 		if (chapter === null && slot?.contains(document.activeElement)) review.parts.keyboardToBeingRead();
 	});

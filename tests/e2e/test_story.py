@@ -109,6 +109,8 @@ TO_THE_MIDDLE = "(element) => element.scrollIntoView({ block: 'center' })"
 # How strongly an element is drawn, and the strength of one that has not stepped back
 OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
 FULLY_DRAWN = 1
+# Whether nothing on the page holds the keyboard
+KEYBOARD_ON_NOTHING = "document.activeElement === document.body"
 
 
 @pytest.fixture
@@ -389,15 +391,43 @@ async def test_the_bar_of_a_chapter_takes_the_reader_to_the_head_of_the_next_and
     the_second = page.get_by_test_id("story-chapter").nth(1)
     await story.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
 
-    await page.get_by_test_id("go-to-chapter-after").click()
+    await page.get_by_test_id("go-to-chapter-after").press("Enter")
 
-    # At its head no bar is over it: the keyboard the bar's button held is on the chapter, and j goes on from there
+    # At its head no bar is over it: the keyboard the bar's button held is on that head, and j goes on from there
     await expect(page.get_by_test_id("chapter-bar")).to_have_count(0)
     below_the_top = await the_second.evaluate(TOP_OF) - await story.evaluate(TOP_OF)
     assert abs(below_the_top) < LESS_THAN_A_PIXEL
-    await expect(the_second).to_be_focused()
+    await expect(the_second.get_by_test_id("part-head")).to_be_focused()
     await page.keyboard.press("j")
     await expect(the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)).to_be_focused()
+
+
+async def test_the_head_of_a_chapter_holds_the_keyboard_the_bar_handed_it_only_until_the_keyboard_leaves(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    the_second = page.get_by_test_id("story-chapter").nth(1)
+    await page.get_by_test_id("story-view").evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+    await page.get_by_test_id("go-to-chapter-after").press("Enter")
+    await expect(page.get_by_test_id("chapter-bar")).to_have_count(0)
+
+    # The keyboard goes on to a line; a press on the head's words then is a press on any words
+    await page.keyboard.press("j")
+    await the_second.get_by_test_id("chapter-title").click()
+
+    assert await page.evaluate(KEYBOARD_ON_NOTHING)
+
+
+async def test_a_press_on_the_words_of_a_chapter_puts_the_keyboard_on_nothing(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+
+    await page.get_by_test_id("chapter-why").click()
+    # A key, at which a browser rings whatever holds the keyboard
+    await page.keyboard.press("Shift")
+
+    assert await page.evaluate(KEYBOARD_ON_NOTHING)
 
 
 async def test_f_puts_the_contents_of_a_story_away_and_their_rail_brings_them_back(

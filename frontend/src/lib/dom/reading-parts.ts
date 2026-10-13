@@ -19,7 +19,7 @@
 import { SvelteSet } from 'svelte/reactivity';
 
 import type { Jumps } from '$lib/dom/jump';
-import { focusWhatRemains } from '$lib/dom/keyboard';
+import { lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
 
 /** A part as it announced itself: what whoever draws it knows it by, the whole of it, and its head. */
@@ -110,11 +110,14 @@ export class ReadingParts {
 	}
 
 	/**
-	 * Put the keyboard on the part being read, if what had it went: a bar
-	 * over the part that is drawn only while the reader is deep in it.
+	 * Put the keyboard on the head of the part being read, if what had it
+	 * went: a bar over the part that is drawn only while the reader is deep
+	 * in it. The head is where the bar's own buttons take the reader, and
+	 * the next key starts from it; it is words, so it holds the keyboard
+	 * only until the keyboard leaves it.
 	 */
 	keyboardToBeingRead(): void {
-		focusWhatRemains(() => this.#partBeingRead()?.whole);
+		lendKeyboardToWhatRemains(() => this.#partBeingRead()?.head);
 	}
 
 	/** The part being read, while the reading area is watched and one is at its top. */

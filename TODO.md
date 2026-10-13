@@ -126,6 +126,13 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
       a file the reader asked for, the files come on screen and the bar
       says why, and the keyboard is left on nothing.
+- [ ] `fix(ui)`: a button of a chapter's bar that goes while the bar stays
+      drops the keyboard it holds. The bar hands the keyboard on only when
+      the whole of it goes (`ChapterBar.svelte`); the way to the chapter
+      after goes alone when the reader is at once deep in the last chapter,
+      no head having crossed the screen. Seen in a browser: the keyboard
+      on that button deep in chapter 2 of 3, the area scrolled at once to
+      deep in chapter 3, and the keyboard is on the page itself.
 - [ ] `fix(ui)`: a story the code has moved on from still lists Enter and
       n / p in its help, which do nothing in it.
 - [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named

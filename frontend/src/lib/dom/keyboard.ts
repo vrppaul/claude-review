@@ -73,10 +73,43 @@ export function moveByLine(step: 1 | -1): void {
 	steppedTo(lineNumbers(), document.activeElement, step)?.focus();
 }
 
-/** Put the keyboard on what is found, if it is on nothing now; the screen stays where it is. */
-function focusIfOnNothing(find: () => HTMLElement | null | undefined): void {
+/** What remains to take the keyboard, looked for once the page has drawn what changed: none, if it went too. */
+type FindWhatRemains = () => HTMLElement | null | undefined;
+
+/** The tab index of what only the page can put the keyboard on: Tab never reaches it. */
+const KEYBOARD_BY_THE_PAGE_ONLY = -1;
+
+/** Put the keyboard on an element; the screen stays where it is. */
+function focusInPlace(element: HTMLElement): void {
+	element.focus({ preventScroll: true });
+}
+
+/** What was lent the keyboard can take it no more, once the keyboard is on something else. */
+function takeBackOnceLeft(element: HTMLElement, lent: AbortController): void {
+	// A window the reader leaves blurs what holds the keyboard, which holds it still when they are back
+	if (document.activeElement === element) return;
+	element.removeAttribute('tabindex');
+	lent.abort();
+}
+
+/**
+ * Put the keyboard on words, which are no control. Whatever can hold the
+ * keyboard takes it on a press too, and a press on words must put it on
+ * nothing: so the words can hold it only until it leaves them.
+ */
+function lendKeyboard(element: HTMLElement): void {
+	const lent = new AbortController();
+	element.tabIndex = KEYBOARD_BY_THE_PAGE_ONLY;
+	element.addEventListener('blur', () => takeBackOnceLeft(element, lent), { signal: lent.signal });
+	focusInPlace(element);
+}
+
+/** Give the keyboard to what is found, if it is on nothing now. */
+function giveIfOnNothing(find: FindWhatRemains, give: (element: HTMLElement) => void): void {
 	const focused = document.activeElement;
-	if (focused === null || focused === document.body) find()?.focus({ preventScroll: true });
+	if (focused !== null && focused !== document.body) return;
+	const found = find();
+	if (found) give(found);
 }
 
 /**
@@ -88,6 +121,15 @@ function focusIfOnNothing(find: () => HTMLElement | null | undefined): void {
  * drawn: a keyboard something else has taken stays where it is. The screen
  * does not move; the reader is looking there already.
  */
-export function focusWhatRemains(find: () => HTMLElement | null | undefined): void {
-	void tick().then(() => focusIfOnNothing(find));
+export function focusWhatRemains(find: FindWhatRemains): void {
+	void tick().then(() => giveIfOnNothing(find, focusInPlace));
+}
+
+/**
+ * As `focusWhatRemains`, where what remains is words and no control: the
+ * head of the part of a story the reader was taken to. The words hold the
+ * keyboard until it leaves them, and can take it no more after.
+ */
+export function lendKeyboardToWhatRemains(find: FindWhatRemains): void {
+	void tick().then(() => giveIfOnNothing(find, lendKeyboard));
 }
