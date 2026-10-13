@@ -220,7 +220,7 @@
 									scrollRoot={container ?? null}
 								>
 									{#snippet beside()}
-										<span class="cr-muted font-mono text-xs">{linesOf(step)}</span>
+										<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesOf(step)}</span>
 									{/snippet}
 								</StoryPiece>
 								{#snippet failed(error, retry)}

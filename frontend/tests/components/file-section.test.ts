@@ -8,6 +8,7 @@ import { BAD_REQUEST, fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { lineAnchor } from '$lib/anchors/line';
 
 const file = diffFile({
@@ -45,6 +46,28 @@ describe('a file in the review', () => {
 		flushSync();
 
 		expect(section.style.getPropertyValue('--cr-rows')).toBe('0');
+	});
+
+	it('holds a row of room for a file it shows no line of', () => {
+		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
+		review = openReview({ files: [picture] });
+
+		const { getByTestId } = render(FileSection, inReview(review, { file: picture, scrollRoot: null }));
+
+		expect(getByTestId('file-section').style.getPropertyValue('--cr-rows')).toBe('1');
+	});
+
+	it('is not built until the reader comes near it', () => {
+		scriptTheScroll();
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		expect(getByTestId('file-placeholder')).toBeTruthy();
+		expect(queryByTestId('raw-view')).toBeNull();
+
+		scrollTo(getByTestId('file-section'));
+		flushSync();
+
+		expect(queryByTestId('file-placeholder')).toBeNull();
+		expect(getByTestId('raw-view')).toBeTruthy();
 	});
 
 	it('folds the body away and brings it back', async () => {

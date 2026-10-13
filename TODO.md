@@ -104,13 +104,6 @@ tests. Remove items when done — don't check them off.
       on every question, and looks a thread's line up by walking them. An
       index of the story held, built once. Its `Standing` and `standingOf`
       are a second copy of those in `anchors/placement.ts`.
-- [ ] `test(ui)`: much of what a story says is held by no test: its task,
-      its doubt, a chapter's why, a step's lines, the counts of steps and
-      of housekeeping files, the paragraph of a reconstruction, the round
-      where it is not the first, a piece's status letter and counts, a
-      piece left unbuilt until it is near, and which piece is being read.
-- [ ] `test(ui)`: the test that a thread is drawn in one piece picks the
-      pieces that draw it with a `.filter`, a branch in a test.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
@@ -8,8 +9,9 @@ import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
 import { openReview } from '../review';
+import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, toldChapter, toldStep } from '../story';
+import { storyHeld, toldChapter, toldStep, toldStepOfLines } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py gained a line, and so did a lock file
 const files = [
@@ -35,6 +37,8 @@ const TOLD = storyHeld({
 	left_out: [{ piece: LEFT_OUT_OF_A, changed_lines: 1 }],
 	housekeeping: ['uv.lock']
 });
+// What a story told from commits says of itself, by how it begins
+const NOT_THE_AGENTS_OWN_CHANGE = /^The agent did not make this change\./;
 
 let review: Review;
 
@@ -83,6 +87,33 @@ describe('a review read as its story', () => {
 		expect(screen.getByTestId('story-round').textContent).toBe('Round 1');
 	});
 
+	it('says the round it was told in where that was a later one', () => {
+		review = openReview({ files, story: storyHeld(TOLD.story, { round: 3 }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('story-round').textContent).toBe('Round 3');
+	});
+
+	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const overview = screen.getByTestId('story-overview');
+
+		expect(within(overview).getByText('What was asked.')).toBeTruthy();
+		expect(within(overview).getByText('What was done.')).toBeTruthy();
+		expect(screen.queryByTestId('story-doubt')).toBeNull();
+	});
+
+	it('says what to doubt of the whole change, where the agent said', () => {
+		const overview = { ...TOLD.story.overview, doubt: 'Whether a.py is the place for them.' };
+		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('story-doubt').textContent).toBe('Whether a.py is the place for them.');
+	});
+
 	it('tells every chapter in a row, each by its name', () => {
 		render(ReviewScreen, { props: { review } });
 
@@ -90,6 +121,17 @@ describe('a review read as its story', () => {
 			'The beginnings',
 			'The end'
 		]);
+	});
+
+	it('says of each chapter why its changes belong together, and how many steps tell it', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings, end] = screen.getAllByTestId('story-chapter');
+
+		expect(within(beginnings).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-1 belong together.');
+		expect(within(beginnings).getByText('2 steps')).toBeTruthy();
+		expect(within(end).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-2 belong together.');
+		expect(within(end).getByText('1 step')).toBeTruthy();
 	});
 
 	it('says where to doubt a chapter, where the agent said', () => {
@@ -110,6 +152,32 @@ describe('a review read as its story', () => {
 		]);
 		expect(within(steps[0]).getByTestId('step-reason').textContent).toBe('The first line comes first.');
 		expect(within(steps[1]).queryByTestId('step-reason')).toBeNull();
+	});
+
+	it('says which lines of its file each step tells: one by its number, several from the first to the last', () => {
+		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), toldStepOfLines('a.py', 5, 9)])];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getAllByTestId('step-lines').map((lines) => lines.textContent)).toEqual(['1', '5–9']);
+	});
+
+	it('says of each piece what became of its file, and how many lines the piece adds and removes', () => {
+		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x'), addedLine(2, 'y')])] });
+		const ofTheFileMade = { file: 'new.py', lines: { first: 1, last: 2 }, reason: null, piece: made };
+		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
+		review = openReview({ files, story: storyHeld({ chapters }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [ofTheChanged, ofTheMade] = screen.getAllByTestId('story-piece-header');
+
+		expect(within(ofTheChanged).getByText('M')).toBeTruthy();
+		expect(within(ofTheChanged).getByText('+1')).toBeTruthy();
+		expect(within(ofTheMade).getByText('A')).toBeTruthy();
+		expect(within(ofTheMade).getByText('+2')).toBeTruthy();
+		expect(within(ofTheMade).getByText('−0')).toBeTruthy();
 	});
 
 	it('shows under each step the piece of its file the step tells, and no more of the file', () => {
@@ -152,20 +220,32 @@ describe('a review read as its story', () => {
 		expect(leftOut.textContent).not.toContain('changed line');
 	});
 
-	it('names the files the agent called housekeeping, and draws none of them', () => {
+	it('names the one file the agent called housekeeping, and draws none of it', () => {
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByTestId('story-housekeeping').textContent).toContain('uv.lock');
+		const housekeeping = screen.getByTestId('story-housekeeping');
+
+		expect(within(housekeeping).getByText('Housekeeping · 1 file')).toBeTruthy();
+		expect(housekeeping.textContent).toContain('uv.lock');
 		expect(pieces().map((piece) => piece.dataset.path)).toEqual(['a.py', 'b.py', 'a.py', 'a.py']);
 	});
 
-	it('draws a thread under its line, in the one piece that shows the line', () => {
+	it('says how many files are housekeeping where they are several', () => {
+		review = openReview({ files, story: storyHeld({ housekeeping: ['uv.lock', 'pnpm-lock.yaml'] }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByText('Housekeeping · 2 files')).toBeTruthy();
+	});
+
+	it('draws a thread under its line once, in the piece that shows the line', () => {
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
 		render(ReviewScreen, { props: { review } });
 
-		const drawingIt = pieces().filter((piece) => within(piece).queryByText('about the last line') !== null);
+		const [, , ofLineNine] = pieces();
 
-		expect(drawingIt).toEqual([pieces()[2]]);
+		expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+		expect(within(ofLineNine).getByTestId('comment-thread').textContent).toContain('about the last line');
 	});
 
 	it('takes a comment on a line of a step, which hangs on that line of the file', async () => {
@@ -384,12 +464,63 @@ describe('a review read as its story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('story-reconstructed').textContent).toBe('reconstructed');
+		expect(screen.getByText(NOT_THE_AGENTS_OWN_CHANGE)).toBeTruthy();
 	});
 
 	it('says nothing of a reconstruction where the agent told it from memory', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.queryByTestId('story-reconstructed')).toBeNull();
+		expect(screen.queryByText(NOT_THE_AGENTS_OWN_CHANGE)).toBeNull();
+	});
+});
+
+describe('a piece of a story, as the reader scrolls', () => {
+	beforeEach(() => {
+		scriptTheScroll();
+		review = openReview({ files, story: TOLD });
+		review.views.choose('story');
+	});
+
+	it('is not built until the reader comes near it, and stays built once they have', () => {
+		render(ReviewScreen, { props: { review } });
+		const [first, second] = pieces();
+		expect(within(first).getByTestId('file-placeholder')).toBeTruthy();
+		expect(first.textContent).not.toContain('line 1 of a.py');
+
+		scrollTo(first);
+		flushSync();
+		expect(first.textContent).toContain('line 1 of a.py');
+		expect(within(second).getByTestId('file-placeholder')).toBeTruthy();
+
+		scrollTo(second);
+		flushSync();
+		expect(first.textContent).toContain('line 1 of a.py');
+		expect(second.textContent).toContain('line 5 of b.py');
+	});
+
+	it('is the one the reader is in once they have scrolled to it', () => {
+		render(ReviewScreen, { props: { review } });
+		const [, second] = pieces();
+
+		scrollTo(second);
+
+		expect(review.sections.fileInView).toBe('b.py');
+	});
+});
+
+describe('the room a piece of a story holds before it is built', () => {
+	it('is a row for every line it shows, and one row where it shows no line', () => {
+		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
+		const chapters = [toldChapter('ch-1', [toldStepOfLines('a.py', 5, 9)])];
+		review = openReview({ files, story: storyHeld({ chapters, left_out: [{ piece: picture, changed_lines: 0 }] }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [ofFiveLines, ofNoLine] = pieces();
+
+		expect(ofFiveLines.style.getPropertyValue('--cr-rows')).toBe('5');
+		expect(ofNoLine.style.getPropertyValue('--cr-rows')).toBe('1');
 	});
 });
 

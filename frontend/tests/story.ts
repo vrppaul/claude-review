@@ -5,13 +5,24 @@ import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 /** The round a story is told in, unless a test says another. */
 const FIRST_ROUND = 1;
 
-/** A step that shows one line a file gained, and says why if it is given a reason. */
-export function toldStep(file: string, line: number, reason: string | null = null): ToldStep {
+/** A step that shows the lines a file gained from one to another, both among them, and says why if it is given a reason. */
+export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): ToldStep {
+	const gained = Array.from(Array(last - first + 1).keys(), (offset) => first + offset);
 	const piece = diffFile({
 		path: file,
-		hunks: [hunk([addedLine(line, `line ${line} of ${file}`)], { header: '', old_start: line, new_start: line })]
+		hunks: [
+			hunk(
+				gained.map((line) => addedLine(line, `line ${line} of ${file}`)),
+				{ header: '', old_start: first, new_start: first }
+			)
+		]
 	});
-	return { file, lines: { first: line, last: line }, reason, piece };
+	return { file, lines: { first, last }, reason, piece };
+}
+
+/** A step that shows one line a file gained, and says why if it is given a reason. */
+export function toldStep(file: string, line: number, reason: string | null = null): ToldStep {
+	return toldStepOfLines(file, line, line, reason);
 }
 
 /** A chapter of these steps, known by its id. */

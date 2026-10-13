@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
@@ -9,6 +9,7 @@ import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
+import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 
 let review: Review;
 
@@ -474,51 +475,11 @@ describe('showing how a comment is meant', () => {
 	});
 });
 
-/**
- * Observers that report only when the test scrolls: each tells, of the
- * elements it watches, which are now in view.
- */
-class ScriptedObserver {
-	static made: ScriptedObserver[] = [];
-	readonly #callback: IntersectionObserverCallback;
-	readonly #watched = new Set<Element>();
-
-	constructor(callback: IntersectionObserverCallback) {
-		this.#callback = callback;
-		ScriptedObserver.made.push(this);
-	}
-
-	observe(target: Element): void {
-		this.#watched.add(target);
-	}
-
-	unobserve(target: Element): void {
-		this.#watched.delete(target);
-	}
-
-	disconnect(): void {
-		this.#watched.clear();
-	}
-
-	/** The reader scrolled until these, and only these, are in view. */
-	static scrollTo(...shown: Element[]): void {
-		for (const observer of ScriptedObserver.made) {
-			const entries = [...observer.#watched].map((target) => ({ target, isIntersecting: shown.includes(target) }));
-			observer.#callback(entries as IntersectionObserverEntry[], observer as unknown as IntersectionObserver);
-		}
-	}
-}
-
 // The scroll is scripted here; the reader kept in the file they read across a
 // real retake is held by tests/e2e/test_reading_place.py
 describe('the file being read', () => {
 	beforeEach(() => {
-		ScriptedObserver.made = [];
-		vi.stubGlobal('IntersectionObserver', ScriptedObserver);
-	});
-
-	afterEach(() => {
-		vi.unstubAllGlobals();
+		scriptTheScroll();
 	});
 
 	it('is followed into a file that a retake put where another was', async () => {
@@ -528,9 +489,10 @@ describe('the file being read', () => {
 		await review.diff.take();
 		flushSync();
 
-		const arrived = getAllByTestId('file-section').find((section) => section.dataset.path === secondFile.path);
-		if (!arrived) throw new Error('The retaken file is not drawn');
-		ScriptedObserver.scrollTo(arrived);
+		const [, arrived] = getAllByTestId('file-section');
+		expect(arrived.dataset.path).toBe(secondFile.path);
+
+		scrollTo(arrived);
 
 		expect(review.sections.fileInView).toBe(secondFile.path);
 	});
