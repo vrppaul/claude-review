@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
 	import { messageOf } from '$lib/utils/errors';
+	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
@@ -99,7 +100,7 @@
 
 			{#if isDiffMode}
 				<span class="cr-muted text-xs">{file.status}</span>
-				<ChangedLines {file} />
+				<ChangedLines changed={fileStats(file)} />
 			{/if}
 
 			{#if commentCount > 0}

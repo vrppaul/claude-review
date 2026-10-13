@@ -110,8 +110,6 @@ tests. Remove items when done — don't check them off.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
-- [ ] `feat(ui)`: a story has no contents beside it: the canvas draws its
-      chapters down an axis, each with its files, and marks the one read.
 - [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
       a file the reader asked for, the files come on screen and the bar
       says why, and the keyboard is left on nothing.

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
@@ -16,19 +17,23 @@
 	interface Props {
 		/** Whether the column is on screen, and how wide the reader left it. */
 		column: PutAwayColumn;
-		/** What the column is called to whoever goes through the page by its parts: "Files". */
+		/** What the column is to whoever goes through the page by its parts: something beside what is read, or a way through it. */
+		landmark: 'aside' | 'nav';
+		/** What that part of the page is called: "Files". */
 		label: string;
 		/** What its own controls call it: "the file tree". */
 		called: string;
-		/** The name the tour lights it by, on screen or put away. */
-		tour: TourTarget;
+		/** The name the tour lights it by, on screen or put away, where the tour stops at it. */
+		tour?: TourTarget;
+		/** The ground it stands on. */
+		class: ClassValue;
 		testIds: TestIds;
 		/** What heads the column, beside the way to put it away. */
 		heading: Snippet;
 		children: Snippet;
 	}
 
-	let { column, label, called, tour, testIds, heading, children }: Props = $props();
+	let { column, landmark, label, called, tour, class: ground, testIds, heading, children }: Props = $props();
 
 	const putAway = $derived(`Put ${called} away`);
 	const bringBack = $derived(`Bring ${called} back`);
@@ -37,11 +42,12 @@
 <!-- A column beside what is read: as wide as the reader left it, scrolling by itself, and put away
 	to a rail where it stood, so the way back is where it went -->
 {#if column.open}
-	<aside
+	<svelte:element
+		this={landmark}
 		data-testid={testIds.column}
 		data-tour={tour}
 		aria-label={label}
-		class="cr-tree flex flex-col border-r border-base-300 bg-base-100"
+		class={['cr-tree flex flex-col border-r border-base-300', ground]}
 		style:--cr-tree-width="{column.width}px"
 	>
 		<!-- The column is on the left, so it grows rightward -->
@@ -63,7 +69,7 @@
 			</div>
 			{@render children()}
 		</div>
-	</aside>
+	</svelte:element>
 {:else}
 	<button
 		type="button"

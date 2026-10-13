@@ -957,7 +957,7 @@
 	}
 }
 
-/* The file tree, as wide as the reader left it */
+/* A column beside what is read, the tree of files or a story's contents, as wide as the reader left it */
 .cr-tree {
 	position: relative;
 	flex-shrink: 1;
@@ -969,7 +969,7 @@
 	padding-left: calc(var(--cr-depth) * 0.75rem + 0.5rem);
 }
 
-/* What the file tree leaves behind when it is put away */
+/* What such a column leaves behind when it is put away */
 .cr-tree-rail {
 	display: flex;
 	align-items: flex-start;
@@ -984,6 +984,120 @@
 .cr-tree-rail:hover {
 	background: var(--color-base-200);
 	color: var(--color-base-content);
+}
+
+/*
+ * A story's contents: its parts down an axis, each a node on it, and under
+ * a chapter the files it tells. An entry holds its stretch of the axis: a
+ * line through the middle of its node, from the first entry's node to the
+ * last one's, and none where there is one entry alone.
+ */
+.cr-contents-entry {
+	position: relative;
+	padding-bottom: 0.625rem;
+}
+.cr-contents-entry::before {
+	content: '';
+	position: absolute;
+	inset-block: 0;
+	left: calc(var(--cr-contents-inset) + var(--cr-contents-node) / 2);
+	width: 1px;
+	background: var(--cr-axis);
+}
+.cr-contents-entry:first-child::before {
+	top: calc(var(--cr-contents-row-pad) + var(--cr-contents-node) / 2);
+}
+.cr-contents-entry:last-child::before {
+	bottom: auto;
+	height: calc(var(--cr-contents-row-pad) + var(--cr-contents-node) / 2);
+}
+.cr-contents-entry:only-child::before {
+	content: none;
+}
+/* An entry's node and title: one press to the head of its part. Placed, so its node is drawn over the axis */
+.cr-contents-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--cr-contents-gap);
+	width: 100%;
+	padding: var(--cr-contents-row-pad) 0.125rem var(--cr-contents-row-pad) var(--cr-contents-inset);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.35;
+	text-align: left;
+	cursor: pointer;
+}
+/* A node: a ring on the column's ground, over the axis, round a chapter's number or the overview's dot */
+.cr-contents-node {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: var(--cr-contents-node);
+	height: var(--cr-contents-node);
+	border: 1px solid var(--cr-node-edge);
+	border-radius: 999px;
+	background: var(--color-base-200);
+	color: var(--cr-faint);
+	font-size: 0.625rem;
+	font-variant-numeric: tabular-nums;
+}
+/* The node of the part being read, in the reader's own mark */
+.cr-contents-node-current {
+	border-color: var(--cr-mark);
+	color: var(--cr-mark-text);
+	box-shadow: var(--cr-shadow-current-node);
+}
+/* The overview has no number: a dot stands in its node, in the node's own colour */
+.cr-contents-dot {
+	width: 0.375rem;
+	height: 0.375rem;
+	border-radius: 999px;
+	background: currentColor;
+}
+/* The files under an entry: a block of rows on the page's ground, set in as far as the entry's title */
+.cr-contents-files {
+	margin: 0.25rem 0 0.125rem var(--cr-contents-indent);
+	padding: 0.25rem 0;
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	background: var(--color-base-100);
+}
+/* What no step tells is a warning's: its block is ringed in it */
+.cr-contents-files-left-out {
+	border-color: var(--cr-warning-border);
+}
+/* A file of the block: what became of it, its name, and what is said of it at the row's end */
+.cr-contents-file {
+	display: grid;
+	grid-template-columns: 0.75rem minmax(0, 1fr) auto;
+	align-items: baseline;
+	gap: 0.5rem;
+	width: 100%;
+	padding: 0.1875rem 0.625rem;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	line-height: 1.125rem;
+	text-align: left;
+	cursor: pointer;
+}
+.cr-contents-file:hover:not(.cr-current) {
+	background: var(--color-base-200);
+}
+/* What is said at the end of a file's row, quieter than its name */
+.cr-contents-said {
+	color: var(--cr-faint);
+	font-size: 0.6875rem;
+	white-space: nowrap;
+}
+/* What stands under the entries, set in as far as their files: what the story leaves out, and housekeeping */
+.cr-contents-aside {
+	display: block;
+	width: 100%;
+	padding: 0.25rem 0.125rem 0.25rem var(--cr-contents-indent);
+	font-size: 0.75rem;
+	text-align: left;
 }
 
 /*

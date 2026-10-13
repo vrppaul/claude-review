@@ -24,6 +24,8 @@ const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters
 const BETWEEN_NUMBERS = ', ';
+// How a file says that other chapters tell it too, before it names them
+const ALSO_IN = 'also in';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -64,13 +66,22 @@ export function filesAndSteps(files: number, steps: number): string {
 	return [counted(files, 'file', 'files'), counted(steps, 'step', 'steps')].join(BETWEEN_COUNTS);
 }
 
+/** The numbers of some chapters, by their places: "1", "1, 4". */
+function numbersOf(places: readonly number[]): string {
+	return places.map(chapterNumber).join(BETWEEN_NUMBERS);
+}
+
 /**
  * The other chapters that tell the file of a piece, by their places, as its
  * head says them: "also in chapter 1", "also in chapters 1, 4".
  */
 export function alsoInChapters(places: readonly number[]): string {
-	const numbers = places.map(chapterNumber).join(BETWEEN_NUMBERS);
-	return `also in ${wordsFor(places.length, CHAPTERS)} ${numbers}`;
+	return `${ALSO_IN} ${wordsFor(places.length, CHAPTERS)} ${numbersOf(places)}`;
+}
+
+/** The same in the contents, a column with no room for the word: "also in 1", "also in 1, 4". */
+export function alsoInShort(places: readonly number[]): string {
+	return `${ALSO_IN} ${numbersOf(places)}`;
 }
 
 /**

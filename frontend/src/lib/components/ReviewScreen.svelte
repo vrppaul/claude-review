@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
+	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
@@ -13,6 +15,7 @@
 	import { pressKey } from './keymap';
 	import NoticeBar from './NoticeBar.svelte';
 	import ReviewHeader from './ReviewHeader.svelte';
+	import StoryContents from './StoryContents.svelte';
 	import StoryNotice from './StoryNotice.svelte';
 	import StoryView from './StoryView.svelte';
 	import PartFailed from './PartFailed.svelte';
@@ -21,7 +24,16 @@
 		review: Review;
 	}
 
+	// What each way of reading the review draws: the reading itself, and what stands beside it as the
+	// way through it. Another way of reading is another row here, never a longer chain in the markup
+	const DRAWN_AS: Record<ReadingViewName, { beside: Component; reading: Component }> = {
+		files: { beside: FileList, reading: DiffView },
+		story: { beside: StoryContents, reading: StoryView }
+	};
+
 	let { review }: Props = $props();
+
+	const drawn = $derived(DRAWN_AS[review.views.onScreen.name]);
 
 	// Everything drawn below reads the review from here. The screen is drawn
 	// for one review and never handed another, so its first is its only one.
@@ -95,14 +107,10 @@
 		<StoryNotice />
 	{/if}
 	<div class="cr-columns">
-		{#if review.views.onScreen.name === 'story'}
-			<!-- The same review, read as its story: the tree of files is the files' own -->
-			<StoryView />
-		{:else if review.views.onScreen.name === 'files'}
-			<!-- One diff, whether the tree stands beside it or is put away to its rail -->
-			<FileList />
-			<DiffView />
-		{/if}
+		<!-- The review as it is read now, and the column that is the way through it: each stays drawn
+			whether its column stands beside it or is put away to its rail -->
+		<drawn.beside />
+		<drawn.reading />
 		{#if review.layout.agentPanel.open}
 			<!-- A panel that cannot be drawn says so in its column, and leaves the review to be read and sent -->
 			<svelte:boundary onerror={reportBroken}>

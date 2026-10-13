@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
-	import { counted } from '$lib/utils/words';
 	import StoryChapter from './StoryChapter.svelte';
+	import StoryHousekeeping from './StoryHousekeeping.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
 	import StoryOverview from './StoryOverview.svelte';
 
@@ -48,16 +48,11 @@
 			{/if}
 
 			{#if story.housekeeping.length > 0}
-				<details data-testid="story-housekeeping" class="cr-muted border-t border-base-300 pt-6 text-sm">
-					<summary class="cursor-pointer">
-						Housekeeping · {counted(story.housekeeping.length, 'file', 'files')}
-					</summary>
-					<ul class="mt-2 flex flex-col gap-0.5 font-mono text-xs">
-						{#each story.housekeeping as path (path)}
-							<li>{path}</li>
-						{/each}
-					</ul>
-				</details>
+				<StoryHousekeeping
+					paths={story.housekeeping}
+					testId="story-housekeeping"
+					class="cr-muted border-t border-base-300 pt-6 text-sm"
+				/>
 			{/if}
 		</article>
 	{/if}

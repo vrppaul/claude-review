@@ -320,7 +320,7 @@ describe('the keys of a review read as its story', () => {
 		expect(toWhatIsLeftOut).toHaveBeenCalled();
 	});
 
-	it('leave the tree of files as the reader left it: f is a key of the files, and the story has no tree', async () => {
+	it('leave the tree of files as the reader left it: f in a story is a key of its contents', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
 		const treeOpen = review.layout.fileTree.open;
@@ -328,6 +328,30 @@ describe('the keys of a review read as its story', () => {
 		await user.keyboard('f');
 
 		expect(review.layout.fileTree.open).toBe(treeOpen);
+	});
+
+	it('put the contents beside the story away with f, and bring them back with it', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const shownAtFirst = review.layout.storyContents.open;
+
+		await user.keyboard('f');
+		expect(review.layout.storyContents.open).toBe(!shownAtFirst);
+
+		await user.keyboard('f');
+		expect(review.layout.storyContents.open).toBe(shownAtFirst);
+	});
+
+	it('leave the contents as the reader left them while no story has been told: there are none to put away', async () => {
+		const user = userEvent.setup();
+		review = openReview({ files, facts: { answerer_attached: true } });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+		const shownAtFirst = review.layout.storyContents.open;
+
+		await user.keyboard('f');
+
+		expect(review.layout.storyContents.open).toBe(shownAtFirst);
 	});
 
 	it('mark no file viewed and fold none: v and u are keys of the files', async () => {
@@ -356,6 +380,7 @@ describe('the keys of a review read as its story', () => {
 			'n / p: Next / previous comment',
 			'a: Next unread reply',
 			'c: Talk to the agent',
+			'f: Show or hide the contents',
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
 			'Esc: Close it'

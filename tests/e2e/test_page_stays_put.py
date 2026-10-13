@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
-from playwright.async_api import Page
+from playwright.async_api import Page, expect
 
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
@@ -70,6 +70,21 @@ async def test_stepping_down_a_long_story_leaves_the_page_where_it_is(
 
     for _ in range(STEPS_DOWN_THE_STORY):
         await page.keyboard.press("]")
+
+    assert await page.evaluate(TALLER_THAN_THE_WINDOW_BY) == 0
+    assert await page.evaluate(PAGE_SCROLLED_BY) == 0
+
+
+async def test_a_file_picked_at_the_foot_of_a_story_s_long_contents_leaves_the_page_where_it_is(
+    review_of_many_files: RunningReview, page: Page
+) -> None:
+    await page.goto(review_of_many_files.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.click('[data-testid="read-as-story"]')
+    await page.wait_for_selector('[data-testid="story-piece"]')
+
+    await page.get_by_test_id("contents-file").filter(has_text=LAST_FILE).click()
+    await expect(page.get_by_test_id("story-piece").last).to_be_in_viewport()
 
     assert await page.evaluate(TALLER_THAN_THE_WINDOW_BY) == 0
     assert await page.evaluate(PAGE_SCROLLED_BY) == 0

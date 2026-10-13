@@ -1,6 +1,7 @@
 /**
- * How this reader lays the page out: the file tree, the agent panel, how a
- * renderable file is shown, and which way a review is read.
+ * How this reader lays the page out: the file tree, the contents beside a
+ * story, the agent panel, how a renderable file is shown, and which way a
+ * review is read.
  *
  * None of these belong to a review — they are how this person reads this
  * page — so they are kept in this port's storage, not with the review and
@@ -30,10 +31,15 @@ const FILE_TREE_WIDTH: WidthBounds = { min: 160, max: 560, fallback: 240 };
 // Below this there is no room for a sentence; above it the diff — which the
 // conversation is about — stops being readable
 const AGENT_PANEL_WIDTH: WidthBounds = { min: 280, max: 720, fallback: 380 };
+// A story's contents name files too, beside what they are a table of contents for: the tree's bounds,
+// and at first as wide as its design draws it
+const STORY_CONTENTS_WIDTH: WidthBounds = { ...FILE_TREE_WIDTH, fallback: 260 };
 
 // The names each choice is kept under in this port's storage
 const FILE_TREE_OPEN_KEY = 'sidebar-open';
 const FILE_TREE_WIDTH_KEY = 'sidebar-width';
+const STORY_CONTENTS_OPEN_KEY = 'contents-open';
+const STORY_CONTENTS_WIDTH_KEY = 'contents-width';
 const AGENT_PANEL_OPEN_KEY = 'panel-open';
 const AGENT_PANEL_WIDTH_KEY = 'panel-width';
 const CONTENT_VIEW_KEY = 'content-view';
@@ -291,6 +297,11 @@ class ReadingViewChoice {
 /** Everything about how the page is laid out, as this reader left it. */
 export class PageLayout {
 	readonly fileTree = new FileTreeLayout();
+	/** The contents beside a story: put away and sized by itself, whatever the tree of files is. */
+	readonly storyContents = new PutAwayColumn(
+		{ open: STORY_CONTENTS_OPEN_KEY, width: STORY_CONTENTS_WIDTH_KEY },
+		STORY_CONTENTS_WIDTH
+	);
 	readonly agentPanel = new AgentPanelLayout();
 	readonly contentView = new ContentViewChoice();
 	readonly readingView = new ReadingViewChoice();

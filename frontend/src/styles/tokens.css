@@ -34,6 +34,16 @@
 	--cr-comment-measure: 96ch;
 	/* The tallest a field being written in grows with its text, before it scrolls instead */
 	--cr-field-tallest: 30rem;
+	/*
+	 * A story's contents: a node on its axis; how far a row stands in from
+	 * the column's own padding, and its room above and below; the gap beside
+	 * a node; and so how far in what hangs under an entry begins.
+	 */
+	--cr-contents-node: 1.125rem;
+	--cr-contents-inset: 0.1875rem;
+	--cr-contents-row-pad: 0.3125rem;
+	--cr-contents-gap: 0.625rem;
+	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
 
 	/*
 	 * What lies over what, lowest first: a file's sticky header and a
@@ -54,6 +64,8 @@
 	--cr-shadow-marked-edge: inset 2px 0 0 var(--cr-mark);
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
 	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
+	/* The reader's mark round the node of the part of a story they are reading */
+	--cr-shadow-current-node: 0 0 0 3px var(--cr-mark-chip);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);
@@ -105,8 +117,9 @@
 	 */
 	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 20%, transparent);
 	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 20%, transparent);
-	/* The ground of something the review warns about */
+	/* The ground of something the review warns about, and the edge of it */
 	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
+	--cr-warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
 }
 
 /*
@@ -173,6 +186,9 @@
 	--cr-agent: #a68dd8;
 	/* The edge of a pane the reader opened, a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
+	/* A story's contents: the axis its parts stand on, a step above the lines between surfaces, and the ring of a node on it, two above */
+	--cr-axis: #2a3341;
+	--cr-node-edge: #3a4556;
 	/* A modified file's letter: the one place orange appears outside the code's own colours */
 	--cr-status-modified: #e0a458;
 	--cr-gutter-fg: #7c8a9e;
@@ -233,6 +249,8 @@
 	--cr-shade: rgb(27 36 48 / 0.45);
 	--cr-agent: #6b4bb8;
 	--cr-popover-edge: #c3cdd9;
+	--cr-axis: #d0d8e2;
+	--cr-node-edge: #b3bfcd;
 	--cr-status-modified: #935f0f;
 	--cr-gutter-fg: #5d6a7a;
 	--cr-muted: #4c5866;

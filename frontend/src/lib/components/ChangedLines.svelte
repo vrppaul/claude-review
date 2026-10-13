@@ -1,18 +1,16 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
-	import { fileStats } from '$lib/utils/file-stats';
+	import type { FileStats } from '$lib/utils/file-stats';
 
 	interface Props {
-		file: DiffFile;
+		/** How much changed: of one file, of a piece of one, or of several pieces added up. */
+		changed: FileStats;
 	}
 
-	let { file }: Props = $props();
-
-	const stats = $derived(fileStats(file));
+	let { changed }: Props = $props();
 </script>
 
-<!-- How much of a file changed, in the diff's own colours: the lines it added, and the lines it removed -->
+<!-- How much changed, in the diff's own colours: the lines added, and the lines removed -->
 <span class="font-mono text-xs whitespace-nowrap">
-	<span class="text-(--cr-add-text)">+{stats.additions}</span>
-	<span class="text-(--cr-del-text)">−{stats.deletions}</span>
+	<span class="text-(--cr-add-text)">+{changed.additions}</span>
+	<span class="text-(--cr-del-text)">−{changed.deletions}</span>
 </span>

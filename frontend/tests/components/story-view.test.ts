@@ -361,7 +361,7 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByText('Housekeeping · 2 files')).toBeTruthy();
+		expect(within(screen.getByTestId('story-housekeeping')).getByText('Housekeeping · 2 files')).toBeTruthy();
 	});
 
 	it('says nothing of what it leaves out, nor of housekeeping, where every change is told by a step', () => {

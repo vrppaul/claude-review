@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
+	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileBody from './FileBody.svelte';
@@ -62,7 +63,7 @@
 			{@render beside()}
 			<div class="flex-1"></div>
 			{@render atFarEnd?.()}
-			<ChangedLines file={piece} />
+			<ChangedLines changed={fileStats(piece)} />
 		</SectionHeader>
 	{/snippet}
 	{#snippet lines()}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, ReviewMode } from '$lib/types';
+	import { fileStats } from '$lib/utils/file-stats';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { formerName } from '$lib/utils/paths';
@@ -111,7 +112,7 @@
 				<span class="badge badge-xs badge-primary">{threadCount}</span>
 			{/if}
 			{#if isDiffMode}
-				<ChangedLines {file} />
+				<ChangedLines changed={fileStats(file)} />
 			{/if}
 		</button>
 	</li>
@@ -148,9 +149,11 @@
 <!-- The files of the review, in the column beside them: the frame, its width and being put away are the column's -->
 <SideColumn
 	column={layout}
+	landmark="aside"
 	label="Files"
 	called="the file tree"
 	tour="file-tree"
+	class="bg-base-100"
 	testIds={{ column: 'sidebar', resize: 'sidebar-resize', putAway: 'hide-sidebar', bringBack: 'show-sidebar' }}
 >
 	{#snippet heading()}

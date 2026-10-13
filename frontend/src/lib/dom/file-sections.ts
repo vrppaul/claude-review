@@ -95,9 +95,14 @@ export class FileSections {
 	}
 
 	/**
-	 * The file the reader is in: the one whose section is pinned at the top
-	 * of the reading area, while the reading area is watched.
+	 * The section the reader is in, by its key: the one at the top of the
+	 * reading area, while the reading area is watched.
 	 */
+	get sectionInView(): string | null {
+		return this.#inView()?.key ?? null;
+	}
+
+	/** The file the reader is in: the one that section draws lines of. */
 	get fileInView(): string | null {
 		return this.#inView()?.path ?? null;
 	}

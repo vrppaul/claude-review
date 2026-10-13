@@ -83,6 +83,15 @@ function onCurrentFile(review: Review, act: (path: string) => void): void {
 	if (path) act(path);
 }
 
+/**
+ * Put the contents beside the story away, or bring them back, while a story
+ * is held: with none told there are no contents on screen, and a key must
+ * not change what the reader cannot see.
+ */
+function toggleContents(review: Review): void {
+	if (review.story.held !== null) review.layout.storyContents.toggle();
+}
+
 // ] and [ walk the sections of whichever view is on screen; what a section is, each view's row says
 const SECTION_PRESSES: readonly Press[] = [
 	alone(']', (review) => review.navigator.stepSection(1)),
@@ -133,6 +142,8 @@ const KEYMAP: readonly KeyRow[] = [
 		presses: [alone('f', (review) => review.layout.fileTree.toggle())],
 		views: THE_FILES
 	},
+	// The same key in a story is its own column's: the contents, not the tree it does not draw
+	{ keys: 'f', does: 'Show or hide the contents', presses: [alone('f', toggleContents)], views: THE_STORY },
 	{
 		keys: 'v',
 		does: 'Mark this file viewed',

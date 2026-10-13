@@ -63,8 +63,26 @@ THE_LONG_FILE_IN_TWO_STEPS = story_of(
         reason=REASON_OF_THE_SECOND_STEP,
     ),
 )
+# The same two steps as a chapter each: the long file is then told in two chapters, and the contents
+# list it under both
+SECOND_CHAPTER = "ch-2"
+THE_LONG_FILE_IN_TWO_CHAPTERS = story_of_chapters(
+    chapter_of(ONLY_CHAPTER, step(LONG_FILE, 1, LAST_LINE_OF_THE_FIRST_STEP)),
+    chapter_of(
+        SECOND_CHAPTER,
+        Step(
+            file=LONG_FILE,
+            lines=LineSpan(first=LAST_LINE_OF_THE_FIRST_STEP + 1, last=LINES_OF_THE_LONG_FILE),
+            reason=REASON_OF_THE_SECOND_STEP,
+        ),
+    ),
+)
 # A fraction of a pixel: where an edge stands is not a whole number, and the area scrolls by whole ones
 LESS_THAN_A_PIXEL = 1
+# A wide screen zoomed in: too narrow for a column to stand beside what is read
+ZOOMED: ViewportSize = {"width": 640, "height": 400}
+# Where an element's left edge is, in pixels from the left of the window
+LEFT_OF = "(element) => element.getBoundingClientRect().left"
 # Where an element's top edge is on screen, in pixels from the top of the window
 TOP_OF = "(element) => element.getBoundingClientRect().top"
 # And its bottom edge
@@ -130,6 +148,15 @@ async def review_of_a_long_file_in_two_steps(long_file_repo: Path, servers: Revi
     started = await servers.start(await repository_opening(long_file_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(THE_LONG_FILE_IN_TWO_STEPS))
+    return started
+
+
+@pytest.fixture
+async def review_of_a_long_file_in_two_chapters(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose story tells the file its change adds in two chapters, a step each."""
+    started = await servers.start(await repository_opening(long_file_repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(THE_LONG_FILE_IN_TWO_CHAPTERS))
     return started
 
 
@@ -291,3 +318,67 @@ async def test_a_step_gone_to_stands_at_the_top_of_what_is_read_from_its_reason_
     await expect(reason).to_be_in_viewport()
     below_the_top = await reason.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
     assert abs(below_the_top) < LESS_THAN_A_PIXEL
+
+
+async def test_a_file_picked_in_the_contents_of_a_story_lands_its_step_from_its_reason_down(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+
+    # The long file as the second chapter lists it: its step there is the one with a reason
+    await page.get_by_test_id("contents-file").nth(1).click()
+
+    reason = page.get_by_test_id("step-reason")
+    await expect(reason).to_be_in_viewport()
+    below_the_top = await reason.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
+    assert abs(below_the_top) < LESS_THAN_A_PIXEL
+
+
+async def test_a_chapter_picked_in_the_contents_of_a_story_stands_at_the_top_of_what_is_read(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    the_second = page.get_by_test_id("story-chapter").nth(1)
+
+    # The overview's entry, the first chapter's, then the second's
+    await page.get_by_test_id("go-to-part").nth(2).click()
+
+    await expect(page.get_by_test_id("go-to-part").nth(2)).to_have_attribute("aria-current", "location")
+    below_the_top = await the_second.evaluate(TOP_OF) - await page.get_by_test_id("story-view").evaluate(TOP_OF)
+    assert abs(below_the_top) < LESS_THAN_A_PIXEL
+
+
+async def test_f_puts_the_contents_of_a_story_away_and_their_rail_brings_them_back(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+    await expect(page.get_by_test_id("contents")).to_be_visible()
+
+    await page.keyboard.press("f")
+    await expect(page.get_by_test_id("contents")).to_have_count(0)
+
+    await page.get_by_test_id("show-contents").click()
+    await expect(page.get_by_test_id("contents")).to_be_visible()
+
+
+async def test_on_a_narrow_screen_a_story_opens_without_its_contents_which_lie_over_it_once_brought_back(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(ZOOMED)
+    await page.goto(review.url)
+    await page.click('[data-testid="read-as-story"]')
+    story = page.get_by_test_id("story-view")
+    await page.wait_for_selector('[data-testid="story-piece"]')
+
+    # Opened, nothing lies over the story: its contents are put away to their rail
+    assert await page.get_by_test_id("contents").count() == 0
+    rail = page.get_by_test_id("show-contents")
+    assert await story.evaluate(LEFT_OF) >= await rail.evaluate(RIGHT_OF) - LESS_THAN_A_PIXEL
+
+    # Brought back, they lie over the story, which keeps the screen's width under them
+    await rail.click()
+    assert await page.get_by_test_id("contents").evaluate(RIGHT_OF) > await story.evaluate(LEFT_OF)
+    assert await story.evaluate(WIDTH_OF) >= await page.evaluate(WINDOW_WIDTH) - LESS_THAN_A_PIXEL

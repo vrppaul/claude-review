@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { contentsOf, LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
 import { stepSectionKey } from '$lib/review/story-pieces';
+import { addedLine, diffFile, hunk, removedLine } from './diff';
 import { toldChapter, toldStep, toldStory } from './story';
 
 // A story of three chapters. The first tells a.py twice, around b.py; the second tells b.py and a.py;
-// the third tells c.py, which no other chapter tells, and a.py once more
+// the third tells c.py, which no other chapter tells, and a.py once more. Every step tells one line
+// its file gained. No step tells two more changes of a.py: a line it gained, and one it lost
 const aFirst = toldStep('a.py', 1);
 const bFirst = toldStep('b.py', 1);
 const aAgain = toldStep('a.py', 5);
@@ -13,7 +15,9 @@ const chapters = [
 	toldChapter('ch-2', [toldStep('b.py', 5), toldStep('a.py', 7)]),
 	toldChapter('ch-3', [toldStep('c.py', 1), toldStep('a.py', 9)])
 ];
-const [ofTheFirst, ofTheSecond, ofTheThird] = contentsOf(toldStory({ chapters })).chapters;
+const leftOutOfA = diffFile({ path: 'a.py', hunks: [hunk([addedLine(20, 'gained'), removedLine(21, 'lost')])] });
+const contents = contentsOf(toldStory({ chapters, left_out: [{ piece: leftOutOfA, changed_lines: 2 }] }));
+const [ofTheFirst, ofTheSecond, ofTheThird] = contents.chapters;
 
 describe('what a story lists of itself', () => {
 	it('lists its chapters as they were told, each by its place among them', () => {
@@ -55,6 +59,34 @@ describe('what a story lists of itself', () => {
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {
 		expect(ofTheFirst.files.map(({ alsoIn }) => alsoIn)).toEqual([[1, 2], [1]]);
 		expect(ofTheSecond.files.map(({ alsoIn }) => alsoIn)).toEqual([[0], [0, 2]]);
+	});
+
+	it('says whether a chapter is the first to tell a file', () => {
+		expect(ofTheFirst.files.map(({ firstToldHere }) => firstToldHere)).toEqual([true, true]);
+		expect(ofTheSecond.files.map(({ firstToldHere }) => firstToldHere)).toEqual([false, false]);
+		expect(ofTheThird.files.map(({ firstToldHere }) => firstToldHere)).toEqual([true, false]);
+	});
+
+	it('says where a reader who picks a file is taken: to the first step of the chapter that tells it', () => {
+		expect(ofTheFirst.files.map(({ opensAt }) => opensAt)).toEqual([stepSectionKey(aFirst), stepSectionKey(bFirst)]);
+	});
+
+	it('says how much of a file the whole story changes: every piece of it, in whichever chapter, and what no step tells', () => {
+		const [a, b] = ofTheFirst.files;
+
+		// a.py gained a line in each of four steps and one that no step tells, and lost one no step tells
+		expect(a.change).toEqual({ additions: 5, deletions: 1 });
+		expect(b.change).toEqual({ additions: 2, deletions: 0 });
+	});
+
+	it('finds a step by what its section is known by', () => {
+		const [, , ofAAgain] = ofTheFirst.steps;
+
+		expect(contents.stepAt(stepSectionKey(aAgain))).toBe(ofAAgain);
+	});
+
+	it('finds no step by a key no step has', () => {
+		expect(contents.stepAt('left-out:a.py')).toBeNull();
 	});
 
 	it("knows each chapter's part of the page by a key of its own, apart from the overview's and from what is left out", () => {
