@@ -1,7 +1,6 @@
 ---
 paths:
   - "src/**"
-  - "scripts/**"
 ---
 
 # The server and the command line

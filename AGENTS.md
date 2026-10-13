@@ -63,7 +63,7 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 
 Before you change or review code in an area, read its file whole. Claude Code loads it only when it opens a file of the area, and nothing else loads it: a brief to another agent names the files.
 
-- `.claude/rules/server.md` — anything under `src/` or `scripts/`: Python, the package's parts, models, errors, time, the command line.
+- `.claude/rules/server.md` — anything under `src/`: Python, the package's parts, models, errors, time, the command line.
 - `.claude/rules/wire.md` — a wire model, a route, the API's schema, the page's generated types and its requests.
 - `.claude/rules/page.md` — anything under `frontend/`: types, state, parts, styling, panes and keys, moving the reader.
 - `.claude/rules/tests.md` — any test, under `tests/` or `frontend/tests/`.
