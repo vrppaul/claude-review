@@ -58,20 +58,20 @@
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" onToggle={foldAway} />
 	<AnchorHeading anchor={thread.anchor} />
 	{#if thread.severity !== 'note'}
-		<span data-testid="comment-severity" class="cr-severity cr-severity-{thread.severity}">{thread.severity}</span>
+		<span data-testid="comment-severity" class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
 	{/if}
 	{#if thread.anchor.outdated}
-		<span data-testid="comment-outdated" class="cr-severity cr-muted">outdated</span>
+		<span data-testid="comment-outdated" class="cr-tag cr-muted">outdated</span>
 	{/if}
 	{#if thread.resolved}
-		<span data-testid="comment-resolved" class="cr-severity cr-muted">resolved</span>
+		<span data-testid="comment-resolved" class="cr-tag cr-muted">resolved</span>
 	{/if}
 	{#if unread}
 		<NewReplyMark />
 	{/if}
 	<div class="flex-1"></div>
 	{#if raised}
-		<span data-testid="comment-raised" class="cr-severity cr-raised-tag">from the agent</span>
+		<span data-testid="comment-raised" class="cr-tag cr-raised-tag">from the agent</span>
 	{:else if sentIn !== undefined}
 		<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
 	{/if}

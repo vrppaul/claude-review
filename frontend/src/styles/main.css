@@ -435,10 +435,10 @@
 }
 
 /*
- * Said only when it differs from an ordinary note, and weighted by what it
- * asks for: a question wants an answer, a blocker has to be dealt with.
+ * A word or two said beside a heading, in a ring of the colour they are said
+ * in: what a thread asks for, that it is outdated, resolved or the agent's.
  */
-.cr-severity {
+.cr-tag {
 	padding: 0 0.375rem;
 	border: 1px solid currentColor;
 	border-radius: 999px;
@@ -446,7 +446,12 @@
 	font-size: 0.6875rem;
 	text-transform: lowercase;
 }
-/* A question is asked by whoever wrote the thread: the reader's in their colour, the agent's in its own */
+/*
+ * What a thread asks for is said only when it differs from an ordinary note,
+ * and weighted by it: a question wants an answer, a blocker has to be dealt
+ * with. A question is asked by whoever wrote the thread: the reader's in
+ * their colour, the agent's in its own.
+ */
 .cr-severity-question {
 	color: var(--cr-mark-text);
 }

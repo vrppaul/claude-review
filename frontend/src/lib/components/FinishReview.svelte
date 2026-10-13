@@ -92,13 +92,13 @@
 									{anchorPlace(thread.anchor)}
 								</span>
 								{#if thread.severity !== 'note'}
-									<span class="cr-severity cr-severity-{thread.severity}">{thread.severity}</span>
+									<span class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
 								{/if}
 								{#if raisedByAgent(thread)}
-									<span class="cr-severity cr-raised-tag">agent</span>
+									<span class="cr-tag cr-raised-tag">agent</span>
 								{/if}
 								{#if thread.resolved}
-									<span class="cr-severity cr-muted">resolved</span>
+									<span class="cr-tag cr-muted">resolved</span>
 								{/if}
 								<span class="flex-1"></span>
 								{#if sent !== undefined}
