@@ -119,6 +119,10 @@ tests. Remove items when done — don't check them off.
 - [ ] `feat(ui)`: a step the reader is taken to stands right under the bar
       of its chapter, or under the page's header, with no room above its
       reason.
+- [ ] `refactor(ui)`: what is being read has three names: `fileInView` and
+      `sectionInView` in `FileSections`, `beingRead` in `ReadingParts`, and
+      `earliest` in the band both read with
+      (`dom/reading-band.svelte.ts`).
 - [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
       a file the reader asked for, the files come on screen and the bar
       says why, and the keyboard is left on nothing.
