@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
-	import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-reading';
+	import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-pieces';
 	import type { Thread, ToldStep, ToldStory } from '$lib/types';
 	import { counted } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
@@ -199,7 +199,7 @@
 						</p>
 					{/if}
 
-					{#each chapter.steps as step, stepPlace (stepPlace)}
+					{#each chapter.steps as step, stepPlace (stepSectionKey(step))}
 						<div data-testid="story-step" class="flex flex-col gap-2">
 							<!-- The reason above the code, never beside it: the code and the panel need the width -->
 							<div class="flex gap-3 border-l-2 border-(--cr-agent) pl-3">
@@ -213,7 +213,7 @@
 							<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 							<svelte:boundary onerror={reportBroken}>
 								<StoryPiece
-									sectionKey={stepSectionKey(chapterPlace, stepPlace)}
+									sectionKey={stepSectionKey(step)}
 									piece={step.piece}
 									shows="a-step"
 									{numbering}
@@ -239,10 +239,10 @@
 						<h2 class="text-base font-semibold text-warning">Not in the story</h2>
 						<p class="cr-muted text-sm">Changed, and told by no step of the story.</p>
 					</header>
-					{#each story.left_out as left, place (left.piece.path)}
+					{#each story.left_out as left (leftOutSectionKey(left))}
 						<svelte:boundary onerror={reportBroken}>
 							<StoryPiece
-								sectionKey={leftOutSectionKey(place)}
+								sectionKey={leftOutSectionKey(left)}
 								piece={left.piece}
 								shows="what-no-step-tells"
 								{numbering}

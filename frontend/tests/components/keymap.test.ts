@@ -287,6 +287,22 @@ describe('the keys of a review read as its story', () => {
 		expect(toTheFirst).toHaveBeenCalled();
 	});
 
+	it('take the reader on from the last step to what the story leaves out', async () => {
+		const user = userEvent.setup();
+		const leftOutOfA = { piece: toldStep('a.py', 5).piece, changed_lines: 1 };
+		const story = storyHeld({ ...TOLD.story, left_out: [leftOutOfA] });
+		review = openReview({ files, story, facts: { answerer_attached: true } });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+		const [, lastStep, whatIsLeftOut] = screen.getAllByTestId('story-piece');
+		const toWhatIsLeftOut = broughtIntoView(whatIsLeftOut);
+
+		within(lastStep).getByTestId('line-gutter').focus();
+		await user.keyboard(']');
+
+		expect(toWhatIsLeftOut).toHaveBeenCalled();
+	});
+
 	it('leave the tree of files as the reader left it: f is a key of the files, and the story has no tree', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });

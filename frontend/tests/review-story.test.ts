@@ -61,3 +61,27 @@ describe('whose numbers the lines of the story held carry', () => {
 		expect(story.numbering).toBe('the-reviews');
 	});
 });
+
+describe('the pieces of the story a page holds', () => {
+	it('are laid out once for the story held, however often they are asked for', () => {
+		const story = new ReviewStory(true, storyHeld(), readingTheFirstTake);
+
+		expect(story.pieces).toBe(story.pieces);
+	});
+
+	it('are laid out afresh once another story is held', async () => {
+		fakeServer().answer('GET /api/story', { held: storyHeld({ title: 'Told again' }) });
+		const story = new ReviewStory(true, storyHeld(), readingTheFirstTake);
+		const ofTheFirstStory = story.pieces;
+
+		await story.read();
+
+		expect(story.pieces).not.toBe(ofTheFirstStory);
+	});
+
+	it('are none while no story is held', () => {
+		const story = new ReviewStory(true, null, readingTheFirstTake);
+
+		expect(story.pieces.keys).toEqual([]);
+	});
+});

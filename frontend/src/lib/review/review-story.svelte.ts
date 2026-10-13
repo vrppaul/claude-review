@@ -13,6 +13,7 @@
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { readStory } from '$lib/api/review-api';
+import { NO_PIECES, piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import type { StoryHeld } from '$lib/types';
 
 export class ReviewStory {
@@ -20,6 +21,8 @@ export class ReviewStory {
 	readonly canBeTold: boolean;
 	readonly #takeOnScreen: () => number;
 	#held = $state.raw<StoryHeld | null>(null);
+	// Laid out once for the story held, not at every question asked of them
+	readonly #pieces: StoryPieces;
 	// Which read is the latest. Two can be in flight — two stories told one
 	// after the other — and only the latest is held, whatever order the
 	// answers come back in.
@@ -34,11 +37,17 @@ export class ReviewStory {
 		this.canBeTold = canBeTold;
 		this.#held = held;
 		this.#takeOnScreen = takeOnScreen;
+		this.#pieces = $derived(this.#held === null ? NO_PIECES : piecesOf(this.#held.story));
 	}
 
 	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */
 	get held(): StoryHeld | null {
 		return this.#held;
+	}
+
+	/** The pieces of files the story held draws; none while no story is held. */
+	get pieces(): StoryPieces {
+		return this.#pieces;
 	}
 
 	/**

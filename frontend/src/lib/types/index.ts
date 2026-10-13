@@ -44,6 +44,8 @@ export type StoryHeld = Schemas['StoryHeld'];
 export type ToldStory = Schemas['ToldStory'];
 export type ToldChapter = Schemas['ToldChapter'];
 export type ToldStep = Schemas['ToldStep'];
+/** What a story leaves out of one file: the piece of it no step tells, and how many of its lines changed. */
+export type LeftOut = Schemas['LeftOut'];
 /** The base a diff was taken against: its key, what the header says, and whether it is narrower than the review's own. */
 export type ShownBase = Schemas['ShownBase'];
 /** What the server takes — images, the lines one comment covers, the length of what is written — so the browser checks before sending; and the largest file it shows line by line. */

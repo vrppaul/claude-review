@@ -1,8 +1,9 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
-import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-reading';
+import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-pieces';
 import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
+import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
@@ -10,16 +11,24 @@ import { storyHeld, toldChapter, toldStep } from './story';
 
 // A story of two chapters: a.py is told in both, line 1 in the first and line 9 in the second, with
 // b.py between them; what no step tells of c.py is left out
-const LEFT_OUT_OF_C = diffFile({
-	path: 'c.py',
-	hunks: [hunk([removedLine(4, 'gone'), addedLine(4, 'here')], { header: '', old_start: 4, new_start: 4 })]
-});
+const LINE_ONE_OF_A = toldStep('a.py', 1);
+const LINE_FIVE_OF_B = toldStep('b.py', 5);
+const LINE_NINE_OF_A = toldStep('a.py', 9);
+const LEFT_OUT_OF_C = {
+	piece: diffFile({
+		path: 'c.py',
+		hunks: [hunk([removedLine(4, 'gone'), addedLine(4, 'here')], { header: '', old_start: 4, new_start: 4 })]
+	}),
+	changed_lines: 2
+};
 const TOLD = storyHeld({
-	chapters: [
-		toldChapter('ch-1', [toldStep('a.py', 1), toldStep('b.py', 5)]),
-		toldChapter('ch-2', [toldStep('a.py', 9)])
-	],
-	left_out: [{ piece: LEFT_OUT_OF_C, changed_lines: 2 }]
+	chapters: [toldChapter('ch-1', [LINE_ONE_OF_A, LINE_FIVE_OF_B]), toldChapter('ch-2', [LINE_NINE_OF_A])],
+	left_out: [LEFT_OUT_OF_C]
+});
+// The same steps told in another order, in one chapter
+const TOLD_IN_ANOTHER_ORDER = storyHeld({
+	chapters: [toldChapter('ch-1', [LINE_NINE_OF_A, LINE_FIVE_OF_B, LINE_ONE_OF_A])],
+	left_out: [LEFT_OUT_OF_C]
 });
 
 let review: Review;
@@ -32,23 +41,52 @@ describe('a review read as its story', () => {
 
 	it('draws a section for every step, in the order the story tells them, then what it leaves out', () => {
 		expect(review.views.onScreen.sectionKeys()).toEqual([
-			stepSectionKey(0, 0),
-			stepSectionKey(0, 1),
-			stepSectionKey(1, 0),
-			leftOutSectionKey(0)
+			stepSectionKey(LINE_ONE_OF_A),
+			stepSectionKey(LINE_FIVE_OF_B),
+			stepSectionKey(LINE_NINE_OF_A),
+			leftOutSectionKey(LEFT_OUT_OF_C)
 		]);
+	});
+
+	it('knows every section apart: steps of one file, steps that begin at one line in two files, and what is left out of each', () => {
+		const lineOneOfB = toldStep('b.py', 1);
+		const leftOutOfA = { piece: toldStep('a.py', 5).piece, changed_lines: 1 };
+		const chapters = [toldChapter('ch-1', [LINE_ONE_OF_A, lineOneOfB, LINE_NINE_OF_A])];
+		review = openReview({ story: storyHeld({ chapters, left_out: [leftOutOfA, LEFT_OUT_OF_C] }) });
+		review.views.choose('story');
+
+		const keys = review.views.onScreen.sectionKeys();
+
+		expect(keys).toHaveLength(5);
+		expect(new Set(keys).size).toBe(5);
+	});
+
+	it('knows the section of a step by what the step tells, wherever the story puts it once it is told again', async () => {
+		const onLineNine = newComment({ file: 'a.py', startLine: 9 }).anchor;
+		const asFirstTold = review.views.onScreen.sectionOf(onLineNine);
+		fakeServer().answer('GET /api/story', { held: TOLD_IN_ANOTHER_ORDER });
+
+		await review.story.read();
+
+		expect(review.views.onScreen.sectionKeys()).toEqual([
+			stepSectionKey(LINE_NINE_OF_A),
+			stepSectionKey(LINE_FIVE_OF_B),
+			stepSectionKey(LINE_ONE_OF_A),
+			leftOutSectionKey(LEFT_OUT_OF_C)
+		]);
+		expect(review.views.onScreen.sectionOf(onLineNine)).toBe(asFirstTold);
 	});
 
 	it('draws a thread in the piece that shows its line, whichever chapter tells that piece of the file', () => {
 		const onLineNine = newComment({ file: 'a.py', startLine: 9 }).anchor;
 
-		expect(review.views.onScreen.sectionOf(onLineNine)).toBe(stepSectionKey(1, 0));
+		expect(review.views.onScreen.sectionOf(onLineNine)).toBe(stepSectionKey(LINE_NINE_OF_A));
 	});
 
 	it('draws a thread on a removed line in the piece that shows the line removed', () => {
 		const onTheLineRemoved = newComment({ file: 'c.py', side: 'old', startLine: 4 }).anchor;
 
-		expect(review.views.onScreen.sectionOf(onTheLineRemoved)).toBe(leftOutSectionKey(0));
+		expect(review.views.onScreen.sectionOf(onTheLineRemoved)).toBe(leftOutSectionKey(LEFT_OUT_OF_C));
 	});
 
 	it('draws no thread on a line no piece shows', () => {
@@ -58,7 +96,14 @@ describe('a review read as its story', () => {
 	});
 
 	it('takes the reader to a file where the story first tells it', () => {
-		expect(review.views.onScreen.sectionOfFile('a.py')).toBe(stepSectionKey(0, 0));
+		expect(review.views.onScreen.sectionOfFile('a.py')).toBe(stepSectionKey(LINE_ONE_OF_A));
+	});
+
+	it('takes the reader to a file where the story first tells it, though a later line of it', () => {
+		review = openReview({ story: TOLD_IN_ANOTHER_ORDER });
+		review.views.choose('story');
+
+		expect(review.views.onScreen.sectionOfFile('a.py')).toBe(stepSectionKey(LINE_NINE_OF_A));
 	});
 
 	it('draws nothing of a file it neither tells nor leaves out', () => {
@@ -107,10 +152,10 @@ describe('a story told of another take of the change than the page reads', () =>
 
 	it('is still read piece by piece, as it was told', () => {
 		expect(review.views.onScreen.sectionKeys()).toEqual([
-			stepSectionKey(0, 0),
-			stepSectionKey(0, 1),
-			stepSectionKey(1, 0),
-			leftOutSectionKey(0)
+			stepSectionKey(LINE_ONE_OF_A),
+			stepSectionKey(LINE_FIVE_OF_B),
+			stepSectionKey(LINE_NINE_OF_A),
+			leftOutSectionKey(LEFT_OUT_OF_C)
 		]);
 	});
 

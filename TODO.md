@@ -96,14 +96,6 @@ tests. Remove items when done — don't check them off.
       one, a chapter's and a step's number stand outside their headings,
       the overview's labels are spans, and a piece says its file's status
       as a bare letter.
-- [ ] `refactor(ui)`: a story's sections are known by their place
-      (`step:<chapter>:<step>`, `left-out:<n>`), which is another step's
-      once a story is told again. A step has an identity: its file and
-      first line, since a line is told once.
-- [ ] `perf(ui)`: `StoryReading` builds the list of a story's pieces again
-      on every question, and looks a thread's line up by walking them. An
-      index of the story held, built once. Its `Standing` and `standingOf`
-      are a second copy of those in `anchors/placement.ts`.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
