@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { OVERVIEW_PART } from '$lib/review/story-contents';
+	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { StoryHeld } from '$lib/types';
 	import { chapterNamed, THE_OVERVIEW } from './story-words';
 	import StoryHead from './StoryHead.svelte';

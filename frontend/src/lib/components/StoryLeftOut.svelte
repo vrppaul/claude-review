@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { LEFT_OUT_PART } from '$lib/review/story-contents';
-	import { leftOutSectionKey } from '$lib/review/story-pieces';
-	import type { LeftOut } from '$lib/types';
+	import type { LeftOutListed } from '$lib/review/story-contents';
+	import { LEFT_OUT_PART } from '$lib/review/story-keys';
 	import { counted } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
@@ -10,8 +9,8 @@
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
-		/** What the story leaves out, file by file: the piece of each no step tells. */
-		leftOut: LeftOut[];
+		/** What the story leaves out, file by file, as it lists it: the piece of each no step tells, and its section. */
+		leftOut: LeftOutListed[];
 	}
 
 	let { leftOut }: Props = $props();
@@ -30,20 +29,20 @@
 			<p class="cr-muted text-sm">Changed, and told by no step of the story.</p>
 		</header>
 	{/snippet}
-	{#each leftOut as left (leftOutSectionKey(left))}
+	{#each leftOut as { told, section } (section)}
 		<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 		<svelte:boundary onerror={reportBroken}>
-			<StoryPiece sectionKey={leftOutSectionKey(left)} piece={left.piece} shows="what-no-step-tells">
+			<StoryPiece sectionKey={section} piece={told.piece} shows="what-no-step-tells">
 				{#snippet beside()}
-					{#if left.changed_lines > 0}
+					{#if told.changed_lines > 0}
 						<span class="cr-muted text-xs">
-							{counted(left.changed_lines, 'changed line', 'changed lines')}
+							{counted(told.changed_lines, 'changed line', 'changed lines')}
 						</span>
 					{/if}
 				{/snippet}
 			</StoryPiece>
 			{#snippet failed(error, retry)}
-				<PartFailed what={left.piece.path} {error} {retry} />
+				<PartFailed what={told.piece.path} {error} {retry} />
 			{/snippet}
 		</svelte:boundary>
 	{/each}

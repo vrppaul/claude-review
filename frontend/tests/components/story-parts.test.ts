@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
+import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
 import { frames } from '../frames';

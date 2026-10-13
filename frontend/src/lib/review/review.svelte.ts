@@ -27,6 +27,7 @@ import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
+import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
@@ -232,6 +233,15 @@ export class Review {
 	/** Whether a question asked in a thread reaches anybody now: an agent is there, and the review is reached. */
 	get canAsk(): boolean {
 		return this.answerer.attached && this.link.connected;
+	}
+
+	/**
+	 * The step of the story being read, as its chapter lists it: the one
+	 * whose section is at the top of the reading area. None while that
+	 * section is no step's, or no section is there at all.
+	 */
+	get stepBeingRead(): StepListed | null {
+		return this.story.contents.stepAt(this.sections.sectionInView);
 	}
 
 	get restoredCount(): number {

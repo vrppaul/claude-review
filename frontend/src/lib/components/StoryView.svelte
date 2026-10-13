@@ -10,6 +10,7 @@
 	const review = useReview();
 
 	const held = $derived(review.story.held);
+	const contents = $derived(review.story.contents);
 
 	let container: HTMLElement | undefined = $state();
 	// Every piece of the story scrolls in this area, and builds its rows as it comes near it
@@ -42,12 +43,12 @@
 		<article class="cr-story-measure flex flex-col gap-8 py-8">
 			<StoryOverview {held} />
 
-			{#each review.story.contents.chapters as chapter (chapter.told.id)}
+			{#each contents.chapters as chapter (chapter.told.id)}
 				<StoryChapter {chapter} />
 			{/each}
 
-			{#if story.left_out.length > 0}
-				<StoryLeftOut leftOut={story.left_out} />
+			{#if contents.leftOut.length > 0}
+				<StoryLeftOut leftOut={contents.leftOut} />
 			{/if}
 
 			{#if story.housekeeping.length > 0}

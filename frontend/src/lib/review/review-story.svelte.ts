@@ -53,7 +53,7 @@ export class ReviewStory {
 		this.#held = held;
 		this.#takeOnScreen = takeOnScreen;
 		this.#pieces = $derived(this.#held === null ? NO_PIECES : piecesOf(this.#held.story));
-		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story));
+		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story, this.#pieces));
 	}
 
 	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */
@@ -75,7 +75,10 @@ export class ReviewStory {
 		return this.#pieces;
 	}
 
-	/** What the story held lists of itself: its chapters, each with its files and steps; nothing while no story is held. */
+	/**
+	 * What the story held lists of itself: its chapters, each with its files
+	 * and steps, and what it leaves out; nothing while no story is held.
+	 */
 	get contents(): StoryContents {
 		return this.#contents;
 	}

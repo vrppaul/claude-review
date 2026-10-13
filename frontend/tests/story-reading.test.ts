@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
-import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-pieces';
+import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
 import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
 import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';

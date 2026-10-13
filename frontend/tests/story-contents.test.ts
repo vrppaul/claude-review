@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { contentsOf, LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
-import { stepSectionKey } from '$lib/review/story-pieces';
+import { contentsOf, tellsFirst } from '$lib/review/story-contents';
+import { LEFT_OUT_PART, leftOutSectionKey, OVERVIEW_PART, stepSectionKey } from '$lib/review/story-keys';
+import { piecesOf } from '$lib/review/story-pieces';
 import { addedLine, diffFile, hunk, removedLine } from './diff';
 import { toldChapter, toldStep, toldStory } from './story';
 
@@ -15,8 +16,12 @@ const chapters = [
 	toldChapter('ch-2', [toldStep('b.py', 5), toldStep('a.py', 7)]),
 	toldChapter('ch-3', [toldStep('c.py', 1), toldStep('a.py', 9)])
 ];
-const leftOutOfA = diffFile({ path: 'a.py', hunks: [hunk([addedLine(20, 'gained'), removedLine(21, 'lost')])] });
-const contents = contentsOf(toldStory({ chapters, left_out: [{ piece: leftOutOfA, changed_lines: 2 }] }));
+const leftOutOfA = {
+	piece: diffFile({ path: 'a.py', hunks: [hunk([addedLine(20, 'gained'), removedLine(21, 'lost')])] }),
+	changed_lines: 2
+};
+const story = toldStory({ chapters, left_out: [leftOutOfA] });
+const contents = contentsOf(story, piecesOf(story));
 const [ofTheFirst, ofTheSecond, ofTheThird] = contents.chapters;
 
 describe('what a story lists of itself', () => {
@@ -29,14 +34,14 @@ describe('what a story lists of itself', () => {
 	});
 
 	it('lists each file a chapter tells once, in the order the chapter first tells it', () => {
-		expect(ofTheFirst.files.map(({ file }) => file.path)).toEqual(['a.py', 'b.py']);
+		expect(ofTheFirst.files.map(({ firstPiece }) => firstPiece.path)).toEqual(['a.py', 'b.py']);
 	});
 
 	it('says a file as the first piece of it in the chapter says it', () => {
 		const [a, b] = ofTheFirst.files;
 
-		expect(a.file).toBe(aFirst.piece);
-		expect(b.file).toBe(bFirst.piece);
+		expect(a.firstPiece).toBe(aFirst.piece);
+		expect(b.firstPiece).toBe(bFirst.piece);
 	});
 
 	it("lists a chapter's steps in the order it tells them, each by its section and its place among them", () => {
@@ -51,9 +56,9 @@ describe('what a story lists of itself', () => {
 		const [a, b] = ofTheFirst.files;
 		const [ofAFirst, ofB, ofAAgain] = ofTheFirst.steps;
 
-		expect(ofAFirst.file).toBe(a);
-		expect(ofB.file).toBe(b);
-		expect(ofAAgain.file).toBe(a);
+		expect(ofAFirst.fileListed).toBe(a);
+		expect(ofB.fileListed).toBe(b);
+		expect(ofAAgain.fileListed).toBe(a);
 	});
 
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {
@@ -62,9 +67,13 @@ describe('what a story lists of itself', () => {
 	});
 
 	it('says whether a chapter is the first to tell a file', () => {
-		expect(ofTheFirst.files.map(({ firstToldHere }) => firstToldHere)).toEqual([true, true]);
-		expect(ofTheSecond.files.map(({ firstToldHere }) => firstToldHere)).toEqual([false, false]);
-		expect(ofTheThird.files.map(({ firstToldHere }) => firstToldHere)).toEqual([true, false]);
+		expect(ofTheFirst.files.map((listed) => tellsFirst(ofTheFirst, listed))).toEqual([true, true]);
+		expect(ofTheSecond.files.map((listed) => tellsFirst(ofTheSecond, listed))).toEqual([false, false]);
+		expect(ofTheThird.files.map((listed) => tellsFirst(ofTheThird, listed))).toEqual([true, false]);
+	});
+
+	it('lists what it leaves out, file by file, each with what its section is known by', () => {
+		expect(contents.leftOut).toEqual([{ told: leftOutOfA, section: leftOutSectionKey(leftOutOfA) }]);
 	});
 
 	it('says where a reader who picks a file is taken: to the first step of the chapter that tells it', () => {

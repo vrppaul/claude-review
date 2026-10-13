@@ -44,9 +44,9 @@
 			<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(told.lines)}</span>
 		{/snippet}
 		{#snippet atFarEnd()}
-			{#if step.file.alsoIn.length > 0}
+			{#if step.fileListed.alsoIn.length > 0}
 				<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
-				<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(step.file.alsoIn)}</span>
+				<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(step.fileListed.alsoIn)}</span>
 			{/if}
 		{/snippet}
 	</StoryPiece>

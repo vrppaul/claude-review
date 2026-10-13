@@ -8,8 +8,7 @@
 	const contents = $derived(review.story.contents);
 	// The chapter the reader is deep in: the part being read, once its head has left the area, where it is a chapter
 	const chapter = $derived(contents.chapterAt(review.parts.deepIn));
-	// The step being read, where the section being read is a step's
-	const stepRead = $derived(contents.stepAt(review.sections.sectionInView));
+	const stepRead = $derived(review.stepBeingRead);
 
 	let slot: HTMLElement | undefined = $state();
 

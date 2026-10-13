@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
-	import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-contents';
-	import { leftOutSectionKey } from '$lib/review/story-pieces';
+	import { tellsFirst } from '$lib/review/story-contents';
+	import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 	import { counted } from '$lib/utils/words';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
@@ -23,7 +23,7 @@
 	const contents = $derived(review.story.contents);
 	// The section being read, and the step it is of, where it is a step's: the row of that step's file is lit
 	const sectionRead = $derived(review.sections.sectionInView);
-	const stepRead = $derived(contents.stepAt(sectionRead));
+	const stepRead = $derived(review.stepBeingRead);
 	// How many of the chapters the reader has read through: the overview is read through too, and is no chapter
 	const chaptersRead = $derived(
 		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
@@ -70,10 +70,10 @@
 						data-testid="contents-files"
 						class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
 					>
-						{#each chapter.files as listed (listed.file.path)}
-							<ContentsFile file={listed.file} opensAt={listed.opensAt} current={stepRead?.file === listed}>
+						{#each chapter.files as listed (listed.firstPiece.path)}
+							<ContentsFile file={listed.firstPiece} opensAt={listed.opensAt} current={stepRead?.fileListed === listed}>
 								<!-- The file's whole change where the story first tells it; after that, where it was told -->
-								{#if listed.firstToldHere}
+								{#if tellsFirst(chapter, listed)}
 									<ChangedLines changed={listed.change} />
 								{:else}
 									{alsoInShort(listed.alsoIn)}
@@ -85,7 +85,7 @@
 			{/each}
 		</ol>
 
-		{#if story.left_out.length > 0}
+		{#if contents.leftOut.length > 0}
 			<!-- Nothing can be hidden: what no step tells has its place here too, said to be outside the story -->
 			<button
 				type="button"
@@ -97,12 +97,12 @@
 				{NOT_IN_THE_STORY}
 			</button>
 			<ul class="cr-contents-files cr-contents-files-left-out">
-				{#each story.left_out as left (leftOutSectionKey(left))}
-					{@const section = leftOutSectionKey(left)}
-					<ContentsFile file={left.piece} opensAt={section} current={sectionRead === section}>
+				{#each contents.leftOut as left (left.section)}
+					{@const piece = left.told.piece}
+					<ContentsFile file={piece} opensAt={left.section} current={sectionRead === left.section}>
 						<!-- A file that shows no line has no hunk to count -->
-						{#if left.piece.hunks.length > 0}
-							{counted(left.piece.hunks.length, 'hunk', 'hunks')}
+						{#if piece.hunks.length > 0}
+							{counted(piece.hunks.length, 'hunk', 'hunks')}
 						{/if}
 					</ContentsFile>
 				{/each}
