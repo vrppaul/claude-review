@@ -141,8 +141,6 @@ tests. Remove items when done — don't check them off.
       no head having crossed the screen. Seen in a browser: the keyboard
       on that button deep in chapter 2 of 3, the area scrolled at once to
       deep in chapter 3, and the keyboard is on the page itself.
-- [ ] `fix(ui)`: a story the code has moved on from still lists Enter and
-      n / p in its help, which do nothing in it.
 - [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named
       `'the-reviews'`, `'a-narrower-bases'`, `'another-takes'`
       (`anchors/numbering.ts`): possessives with the apostrophe gone, and

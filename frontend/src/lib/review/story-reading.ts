@@ -12,12 +12,19 @@
  * take on screen.
  */
 
+import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
-import type { ReadingView } from '$lib/review/reading-view';
+import type { Drawn, ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
+
+// What a story held draws, by whose numbers its lines carry: only the review's own take a comment
+const DRAWN_NUMBERED: Record<StoryNumbering, Drawn> = {
+	'the-reviews': 'lines-taking-comments',
+	'another-takes': 'lines'
+};
 
 export class StoryReading implements ReadingView {
 	readonly name = 'story';
@@ -27,6 +34,11 @@ export class StoryReading implements ReadingView {
 	constructor(story: ReviewStory, threads: Threads) {
 		this.#story = story;
 		this.#threads = threads;
+	}
+
+	/** Nothing until a story is told; and of a story told of another take, lines that are read and take nothing. */
+	drawn(): Drawn {
+		return this.#story.held === null ? 'nothing' : DRAWN_NUMBERED[this.#story.numbering];
 	}
 
 	sectionKeys(): string[] {

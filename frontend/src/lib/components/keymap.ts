@@ -6,9 +6,11 @@
  * a comment is a letter. A chord is the review's anywhere: finishing the
  * review from inside a comment field is what it is for.
  *
- * A row says which ways of reading the review its keys are keys of. What is
- * answered, and what the help lists, are the rows of the view on screen: a
- * key of the files alone does nothing unseen while a story is read.
+ * A row says which ways of reading the review its keys are keys of, and
+ * when they do anything there. What is answered, and what the help lists,
+ * are the rows of the view on screen that do something as the review
+ * stands: a key of the files alone does nothing unseen while a story is
+ * read, and no key is listed for what the view does not draw.
  */
 
 import { isComposingText, isTypingTarget, moveByLine } from '$lib/dom/keyboard';
@@ -42,7 +44,10 @@ interface Press {
 	run: (review: Review) => void;
 }
 
-/** One line of the help: the keys as it writes them, what they do, each press, and where they are keys at all. */
+/** Whether a row's keys do anything, as the review stands. */
+type Live = (review: Review) => boolean;
+
+/** One line of the help: the keys as it writes them, what they do, each press, and where and when they are keys at all. */
 export interface KeyRow {
 	keys: string;
 	does: string;
@@ -53,12 +58,24 @@ export interface KeyRow {
 	 * and fold; a story has none — is neither answered nor listed in the other.
 	 */
 	views: readonly ReadingViewName[];
+	/**
+	 * Whether the keys do anything in such a view as the review stands: what
+	 * they act on is drawn. A story's view draws nothing until a story is
+	 * told, and one told of another take takes no comment and carries none.
+	 */
+	live: Live;
 }
 
 // The keys of every view, of the files alone, and of the story alone
 const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
 const THE_FILES: readonly ReadingViewName[] = ['files'];
 const THE_STORY: readonly ReadingViewName[] = ['story'];
+
+// When a row's keys do something: whatever is on screen; while the view on screen draws lines; and
+// while those lines take comments, and so carry the threads on them
+const ALWAYS: Live = () => true;
+const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn() !== 'nothing';
+const WHILE_LINES_TAKE_COMMENTS: Live = (review) => review.views.onScreen.drawn() === 'lines-taking-comments';
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -83,15 +100,6 @@ function onCurrentFile(review: Review, act: (path: string) => void): void {
 	if (path) act(path);
 }
 
-/**
- * Put the contents beside the story away, or bring them back, while a story
- * is held: with none told there are no contents on screen, and a key must
- * not change what the reader cannot see.
- */
-function toggleContents(review: Review): void {
-	if (review.story.held !== null) review.layout.storyContents.toggle();
-}
-
 // ] and [ walk the sections of whichever view is on screen; what a section is, each view's row says
 const SECTION_PRESSES: readonly Press[] = [
 	alone(']', (review) => review.navigator.stepSection(1)),
@@ -109,70 +117,104 @@ const KEYMAP: readonly KeyRow[] = [
 		keys: 'j / k',
 		does: 'Down / up a line',
 		presses: [alone('j', () => moveByLine(1)), alone('k', () => moveByLine(-1))],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: WHILE_LINES_ARE_DRAWN
 	},
 	// Enter on a line's number is the number's own: it is a button
-	{ keys: 'Enter', does: 'Comment on this line', presses: [], views: EVERY_VIEW },
-	// The chord in a comment or a message is the field's own: it knows where what it holds goes
+	{
+		keys: 'Enter',
+		does: 'Comment on this line',
+		presses: [],
+		views: EVERY_VIEW,
+		live: WHILE_LINES_TAKE_COMMENTS
+	},
+	// The chord in a comment or a message is the field's own: it knows where what it holds goes.
+	// A message is written whatever is drawn
 	{
 		keys: FIELD_KEYS,
 		does: 'Add the comment, or send the message, being written',
 		presses: [],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: ALWAYS
 	},
-	{ keys: '] / [', does: 'Next / previous file', presses: SECTION_PRESSES, views: THE_FILES },
+	{ keys: '] / [', does: 'Next / previous file', presses: SECTION_PRESSES, views: THE_FILES, live: ALWAYS },
 	// A story's sections are its pieces: every step, then what no step tells
-	{ keys: '] / [', does: 'Next / previous piece of the story', presses: SECTION_PRESSES, views: THE_STORY },
+	{
+		keys: '] / [',
+		does: 'Next / previous piece of the story',
+		presses: SECTION_PRESSES,
+		views: THE_STORY,
+		live: WHILE_LINES_ARE_DRAWN
+	},
 	{
 		keys: 'n / p',
 		does: 'Next / previous comment',
 		presses: [alone('n', (review) => review.navigator.step(1)), alone('p', (review) => review.navigator.step(-1))],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: WHILE_LINES_TAKE_COMMENTS
 	},
+	// An answer on a line the view does not draw is gone to in the files, whatever is on screen
 	{
 		keys: 'a',
 		does: 'Next unread reply',
 		presses: [alone('a', (review) => review.navigator.nextUnread())],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: ALWAYS
 	},
-	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW },
+	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW, live: ALWAYS },
 	{
 		keys: 'f',
 		does: 'Show or hide the file tree',
 		presses: [alone('f', (review) => review.layout.fileTree.toggle())],
-		views: THE_FILES
+		views: THE_FILES,
+		live: ALWAYS
 	},
-	// The same key in a story is its own column's: the contents, not the tree it does not draw
-	{ keys: 'f', does: 'Show or hide the contents', presses: [alone('f', toggleContents)], views: THE_STORY },
+	// The same key in a story is its own column's: the contents, not the tree it does not draw.
+	// The contents stand beside a story's lines, and with none told there are none to put away
+	{
+		keys: 'f',
+		does: 'Show or hide the contents',
+		presses: [alone('f', (review) => review.layout.storyContents.toggle())],
+		views: THE_STORY,
+		live: WHILE_LINES_ARE_DRAWN
+	},
 	{
 		keys: 'v',
 		does: 'Mark this file viewed',
 		presses: [alone('v', (review) => onCurrentFile(review, (path) => review.reading.toggleViewed(path)))],
-		views: THE_FILES
+		views: THE_FILES,
+		live: ALWAYS
 	},
 	{
 		keys: 'u',
 		does: 'Fold or unfold this file',
 		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))],
-		views: THE_FILES
+		views: THE_FILES,
+		live: ALWAYS
 	},
 	{
 		keys: FINISH_KEYS,
 		does: 'Finish the review',
 		presses: [{ key: 'Enter', held: 'command-and-shift', run: finish }],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: ALWAYS
 	},
 	{
 		keys: '?',
 		does: 'Show this list',
 		presses: [alone('?', (review) => review.guide.setHelpOpen(true))],
-		views: EVERY_VIEW
+		views: EVERY_VIEW,
+		live: ALWAYS
 	}
 ];
 
-/** The keys of one way of reading the review: what is answered while it is on screen, and what the help lists then. */
-export function keysOf(view: ReadingViewName): KeyRow[] {
-	return KEYMAP.filter((row) => row.views.includes(view));
+/**
+ * The keys that do something as the review stands: those of the view on
+ * screen whose rows are live. What is answered, and what the help lists.
+ */
+export function keysOf(review: Review): KeyRow[] {
+	const onScreen = review.views.onScreen.name;
+	return KEYMAP.filter((row) => row.views.includes(onScreen) && row.live(review));
 }
 
 /** What is held with a press, if it is anything the review answers; Alt is never the review's. */
@@ -187,10 +229,10 @@ export function isFieldChord(event: KeyboardEvent): boolean {
 	return event.key === 'Enter' && heldWith(event) === 'command';
 }
 
-/** The press this keystroke is among the keys of the view on screen, if any. */
+/** The press this keystroke is among the keys that do something as the review stands, if any. */
 function pressOf(review: Review, event: KeyboardEvent): Press | undefined {
 	const held = heldWith(event);
-	return keysOf(review.views.onScreen.name)
+	return keysOf(review)
 		.flatMap((row) => row.presses)
 		.find((press) => press.key === event.key && press.held === held);
 }

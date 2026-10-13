@@ -17,9 +17,19 @@ import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
+/**
+ * What a view draws of the review as it stands: nothing; lines of its
+ * files, to be read; or lines that take comments too, and carry the threads
+ * on them. A key that acts on what is not drawn does nothing, and is
+ * neither answered nor listed.
+ */
+export type Drawn = 'nothing' | 'lines' | 'lines-taking-comments';
+
 export interface ReadingView {
 	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */
 	readonly name: ReadingViewName;
+	/** What it draws of the review as it stands. */
+	drawn: () => Drawn;
 	/** The sections it draws, by their keys, in the order it draws them: what ] and [ walk. */
 	sectionKeys: () => string[];
 	/** The threads it draws, in the order they stand in it: what n and p walk. */
@@ -57,6 +67,11 @@ export class FilesReading implements ReadingView {
 		this.#diff = diff;
 		this.#threads = threads;
 		this.#reading = reading;
+	}
+
+	/** The files' own view takes a comment on a line whatever base it is read against: on the side that is the review's own. */
+	drawn(): Drawn {
+		return 'lines-taking-comments';
 	}
 
 	sectionKeys(): string[] {
