@@ -55,6 +55,15 @@ tests. Remove items when done — don't check them off.
       before a story's lines that name none.
 - [ ] `fix(cli)`: `point --lines 0` says "Input should be greater than or
       equal to 1" twice, once for each end of the range.
+- [ ] `fix(ui)`: `]` pressed twice with the keyboard on a line goes to the
+      same section twice. The section the reader is in is the one holding
+      the keyboard before the one in view (`FileSections.current`), and a
+      jump moves the screen and leaves the keyboard where it was. `[` the
+      same. Read in the code, and seen in a browser by the second review
+      of the story's page.
+- [ ] `fix(ui)`: `k` brings the line above to the top edge of the reading
+      area, under its file's sticky header (`dom/keyboard.ts`,
+      `moveByLine`). Read in the code, not looked at in a browser.
 
 ## The story, from the reviews of its server side
 
@@ -124,6 +133,9 @@ tests. Remove items when done — don't check them off.
       (`services/text_files.py`) into `repositories/`, behind interfaces, the
       way `ImageService` keeps policy and `DirectoryImageStore` touches the
       disk. Both read files themselves today.
+- [ ] `refactor(ui)`: a column's width, its least and its most, and
+      `setWidth` are written out twice in `reader/page-layout.svelte.ts`:
+      for the file tree and for the agent panel.
 
 ## Testing
 
@@ -155,6 +167,14 @@ tests. Remove items when done — don't check them off.
 - [ ] eslint's rule for a utility that makes a box scroll down reads the
       named values alone: one written in place, `overflow-y-[auto]` or
       `[overflow-y:auto]`, is let through. The page writes neither.
+- [ ] Nothing holds the finish pane, the mention list and the panel's
+      conversation to being `cr-scroller`s: with the class taken off any of
+      the three every browser test passes, since none has a pane longer
+      than its box.
+- [ ] `RequestPart.QUERY` and `RequestPart.PATH`
+      (`src/claude_review/presentation/wire/refusal.py`) are named by a
+      test alone, `tests/unit/test_refused_fields.py`: the package matches
+      them by value.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
