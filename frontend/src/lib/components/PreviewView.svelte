@@ -1,16 +1,13 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
 	import { assembleText } from '$lib/utils/renderable';
-	import { counted, type CountedWords } from '$lib/utils/words';
+	import { COMMENTS, counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 
 	interface Props {
 		file: DiffFile;
 	}
-
-	// What the comments on a file drawn as a preview are called where they are counted
-	const COMMENTS: CountedWords = { one: 'comment', many: 'comments' };
 
 	let { file }: Props = $props();
 	const review = useReview();

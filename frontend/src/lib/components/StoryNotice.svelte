@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
-	import { counted } from '$lib/utils/words';
+	import { counted, type CountedWords } from '$lib/utils/words';
 	import NoticeBar from './NoticeBar.svelte';
+
+	// What the comments a story does not draw are called where they are counted, with where they are said to be
+	const COMMENTS_BEING: CountedWords = { one: 'comment is', many: 'comments are' };
 
 	const review = useReview();
 
@@ -39,7 +42,7 @@
 		<NoticeBar testId="story-moved-on" kind="cr-notice-moved" icon="notice" actions={showInFiles}>
 			The code has changed since this story was told. It shows the code as it was, and takes no comments.
 			{#if notDrawn.length > 0}
-				{counted(notDrawn.length, { one: 'comment is', many: 'comments are' })} in Files.
+				{counted(notDrawn.length, COMMENTS_BEING)} in Files.
 			{/if}
 			{#if beingWritten > 0}
 				{counted(beingWritten, { one: 'comment you were writing is', many: 'comments you were writing are' })} in Files.
@@ -48,7 +51,7 @@
 	{:else if firstNotDrawn}
 		<!-- A state, not news: the story shows part of the change, and the threads it does not draw are still in the review -->
 		<NoticeBar testId="threads-off-the-story" kind="cr-notice-taken" icon="story" actions={showInFiles}>
-			{counted(notDrawn.length, { one: 'comment is', many: 'comments are' })} on lines the story does not show.
+			{counted(notDrawn.length, COMMENTS_BEING)} on lines the story does not show.
 		</NoticeBar>
 	{/if}
 {/if}

@@ -5,7 +5,7 @@
 	import { useReview } from '$lib/review/context';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
-	import { counted } from '$lib/utils/words';
+	import { COMMENTS, counted } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
 	import SuggestionDiff from './SuggestionDiff.svelte';
@@ -50,7 +50,7 @@
 			{#if submission.inRounds}
 				{unsent} unsent of {review.threads.count}
 			{:else}
-				{counted(review.threads.count, { one: 'comment', many: 'comments' })}
+				{counted(review.threads.count, COMMENTS)}
 			{/if}
 		</span>
 	</div>

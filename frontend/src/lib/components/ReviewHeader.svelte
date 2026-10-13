@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
-	import { counted } from '$lib/utils/words';
+	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
@@ -121,7 +121,7 @@
 			{#if inRounds}
 				{review.threads.unsent.length} unsent · {review.threads.count}
 			{:else}
-				{counted(review.threads.count, { one: 'comment', many: 'comments' })}
+				{counted(review.threads.count, COMMENTS)}
 			{/if}
 		</span>
 

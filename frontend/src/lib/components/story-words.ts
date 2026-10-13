@@ -5,7 +5,7 @@
  */
 
 import type { ToldChapter, ToldStep } from '$lib/types';
-import { counted, type CountedWords, wordsFor } from '$lib/utils/words';
+import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
 const RANGE_DASH = '–';
@@ -22,8 +22,6 @@ const BEFORE_A_TITLE = ': ';
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 // What steps are called where they are counted, and one of them inside a sentence
 const STEPS: CountedWords = { one: 'step', many: 'steps' };
-// What the files a chapter tells are called where they are counted
-const FILES: CountedWords = { one: 'file', many: 'files' };
 // What stands between the two counts of a chapter's head
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters

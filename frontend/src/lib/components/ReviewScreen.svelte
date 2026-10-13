@@ -4,7 +4,7 @@
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
-	import { counted } from '$lib/utils/words';
+	import { COMMENTS, counted } from '$lib/utils/words';
 	import AgentPanel from './AgentPanel.svelte';
 	import { reportBroken } from './broken-parts';
 	import DiffNotice from './DiffNotice.svelte';
@@ -70,7 +70,7 @@
 		<!-- Under the header, with the other news about the review: what the
 			draft brought back, counted as the header counts what is unsent -->
 		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
-			Picked up {counted(review.restoredCount, { one: 'comment', many: 'comments' })} you had not sent yet.
+			Picked up {counted(review.restoredCount, COMMENTS)} you had not sent yet.
 			{#snippet actions()}
 				<button
 					type="button"

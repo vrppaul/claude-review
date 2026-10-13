@@ -4,7 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import { plainWords } from '$lib/utils/plain-words';
-	import { counted, wordsFor } from '$lib/utils/words';
+	import { counted, FILES, wordsFor } from '$lib/utils/words';
 	import NoticeBar from './NoticeBar.svelte';
 
 	const review = useReview();
@@ -30,7 +30,7 @@
 	{#if review.diff.files.length === 0}
 		Nothing has changed — {review.diff.phrase}.
 	{:else}
-		Showing {review.diff.phrase} — {counted(review.diff.files.length, { one: 'file', many: 'files' })}.
+		Showing {review.diff.phrase} — {counted(review.diff.files.length, FILES)}.
 	{/if}
 	{#if offScreen.length > 0}
 		{counted(offScreen.length, { one: 'thread is', many: 'threads are' })} not on this screen.

@@ -9,14 +9,12 @@ import { anchorShortPlace } from '$lib/anchors/views';
 import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 import type { Anchor, FollowOutcome } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
-import { counted, type CountedWords } from '$lib/utils/words';
+import { counted, FILES } from '$lib/utils/words';
 
 // Pushes were missed that the server could not hand over again
 const CONNECTION_LOST = 'connection lost for a while — anything said meanwhile may be missing';
 // The threads a draft brought back, followed onto the diff the review opened on
 const KEPT_THREADS = 'threads picked up from the draft';
-// What the files a retaken diff holds are called where they are counted
-const FILES: CountedWords = { one: 'file', many: 'files' };
 
 /** The diff taken again: how many files the review holds now, and what following the threads did. */
 export function retakenNote(fileCount: number, moved: FollowOutcome): string {

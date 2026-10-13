@@ -2,7 +2,7 @@
 	import type { FollowOutcome } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
-	import { counted, wordsFor } from '$lib/utils/words';
+	import { counted, FILES_HAVING, wordsFor } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
 	import NoticeBar from './NoticeBar.svelte';
 
@@ -35,7 +35,7 @@
 		}
 		if (since === null) return 'Diff retaken';
 		if (count === 0) return `Diff retaken — nothing has changed since round ${since}`;
-		return `Diff retaken — ${counted(count, { one: 'file has', many: 'files have' })} changed since round ${since}`;
+		return `Diff retaken — ${counted(count, FILES_HAVING)} changed since round ${since}`;
 	}
 
 	async function showWhatChanged() {

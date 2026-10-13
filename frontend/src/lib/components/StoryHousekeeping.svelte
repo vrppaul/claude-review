@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
-	import { counted } from '$lib/utils/words';
+	import { counted, FILES } from '$lib/utils/words';
 
 	interface Props {
 		/** The files the agent called housekeeping, by their paths. */
@@ -16,7 +16,7 @@
 <!-- What the agent called housekeeping: named, quiet and folded away, and drawn nowhere -->
 <details data-testid={testId} class={set}>
 	<summary class="cursor-pointer">
-		Housekeeping · {counted(paths.length, { one: 'file', many: 'files' })}
+		Housekeeping · {counted(paths.length, FILES)}
 	</summary>
 	<ul class="mt-2 flex flex-col gap-0.5 font-mono text-xs">
 		{#each paths as path (path)}

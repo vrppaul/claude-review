@@ -4,7 +4,7 @@
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { formerName } from '$lib/utils/paths';
-	import { counted } from '$lib/utils/words';
+	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
@@ -14,9 +14,7 @@
 	import StatusLetter from './StatusLetter.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
-	interface Listed {
-		one: string;
-		many: string;
+	interface Listed extends CountedWords {
 		/** One of them, as the filter looks for it, and what of it the filter reads. */
 		sought: string;
 		soughtBy: string;
@@ -25,7 +23,7 @@
 	// What the tree lists, in each kind of review
 	const COUNTED_AS: Record<ReviewMode, Listed> = {
 		diff: { one: 'changed file', many: 'changed files', sought: 'file', soughtBy: 'path' },
-		files: { one: 'file', many: 'files', sought: 'file', soughtBy: 'path' },
+		files: { ...FILES, sought: 'file', soughtBy: 'path' },
 		transcript: { one: 'message', many: 'messages', sought: 'message', soughtBy: 'name' }
 	};
 	// What every row that names a file carries, so the filter can hand the keyboard to the first of them

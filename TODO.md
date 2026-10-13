@@ -153,6 +153,9 @@ tests. Remove items when done — don't check them off.
       it lands on the first line of the story, and from a file's header
       kept over the middle of its file, on that file's first line. Read in
       the code, not looked at in a browser.
+- [ ] `fix(ui)`: in a review that is over, the agent panel put away by its
+      own button leaves the keyboard on nothing: the header then draws no
+      control to take it (`ReviewHeader.svelte`).
 - [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named
       `'the-reviews'`, `'a-narrower-bases'`, `'another-takes'`
       (`anchors/numbering.ts`): possessives with the apostrophe gone, and
@@ -269,6 +272,10 @@ tests. Remove items when done — don't check them off.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
+- [ ] No tool holds a pair of counted words to being written once: the
+      words several places count by stand in `utils/words.ts` because a
+      review found the same pair in five places, and the next pair written
+      twice is found by a review again.
 - [ ] No test holds what the button of the list of threads a narrower base
       cannot draw says of several, "List them" and "Hide them"
       (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
