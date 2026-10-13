@@ -31,6 +31,7 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - **Ask first** before adding a dependency, changing the architecture, or changing a domain model.
 - Never commit secrets or credentials.
 - A commit follows Conventional Commits, `type(scope): description`; a hook holds the types.
+- Every sentence of a commit message is a claim: look before you write it, and read a count off a command's output.
 - Planned work is tracked in `TODO.md`, where an item done is removed, not ticked off; what changed, in `CHANGELOG.md`.
 
 ## Layers
@@ -46,6 +47,7 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - Dependencies are explicit — FastAPI's `Depends()`, a constructor's parameters — so a service or a component is tested by itself, and nothing couples two layers out of sight.
 - A parameter every caller must give has no default, which would hide a missing value. One whose absence is a valid state may have one.
 - A new review mode is added code, not a changed conditional: opt in to a mode (`isDiffMode`), never out of one (`!isFilesMode`), and look up what depends on the mode in a table (`COUNTED_AS`).
+- Shared code comes with its second user, not before; once there are two, it is written once.
 
 ## Only better
 
