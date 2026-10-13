@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { FIELD_KEYS, KEYMAP } from '$lib/components/keymap';
+import { FIELD_KEYS } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { newComment } from '../new-comment';
@@ -27,6 +27,13 @@ function broughtIntoView(section: HTMLElement): ReturnType<typeof vi.fn> {
 	const brought = vi.fn();
 	section.scrollIntoView = brought;
 	return brought;
+}
+
+/** What the help lists while it is open, row by row: the keys as it writes them, and what it says they do. */
+function listedInTheHelp(): string[] {
+	const list = within(screen.getByTestId('shortcuts-list'));
+	const does = list.getAllByRole('definition').map((said) => said.textContent);
+	return list.getAllByRole('term').map((keys, row) => `${keys.textContent}: ${does[row]}`);
 }
 
 /** The section a file is drawn in. */
@@ -186,13 +193,34 @@ describe('the keys the review answers', () => {
 		expect(review.layout.fileTree.open).toBe(treeOpen);
 	});
 
-	it('lists in the help every key it answers, and closes the help on ? as it opened it', async () => {
+	it('lists in the help what every key of the files does, and no key of another view', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
 
 		await user.keyboard('?');
-		const listed = screen.getByTestId('shortcuts-list').textContent ?? '';
-		for (const row of KEYMAP) expect(listed).toContain(row.keys);
+
+		expect(listedInTheHelp()).toEqual([
+			'j / k: Down / up a line',
+			'Enter: Comment on this line',
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'] / [: Next / previous file',
+			'n / p: Next / previous comment',
+			'a: Next unread reply',
+			'c: Talk to the agent',
+			'f: Show or hide the file tree',
+			'v: Mark this file viewed',
+			'u: Fold or unfold this file',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
+			'Esc: Close it'
+		]);
+	});
+
+	it('closes the help on ? as it opened it', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
 		await user.keyboard('?');
 
 		expect(screen.queryByTestId('shortcuts-list')).toBeNull();
@@ -247,17 +275,6 @@ describe('the keys the review answers', () => {
 		await user.keyboard('f');
 
 		expect(review.layout.fileTree.open).toBe(treeOpen);
-	});
-
-	it("lists in the help what ] and [ do among the files, and nothing of a story's keys", async () => {
-		const user = userEvent.setup();
-		render(ReviewScreen, { props: { review } });
-
-		await user.keyboard('?');
-		const listed = screen.getByTestId('shortcuts-list').textContent;
-
-		expect(listed).toContain('Next / previous file');
-		expect(listed).not.toContain('piece of the story');
 	});
 });
 
@@ -325,18 +342,23 @@ describe('the keys of a review read as its story', () => {
 		expect(review.reading.isFolded('a.py')).toBe(false);
 	});
 
-	it("are listed in the help, and none that are the files' own", async () => {
+	it("are listed in the help by what each does: every key the story shares with the files, and none that are the files' own", async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
 
 		await user.keyboard('?');
-		const listed = screen.getByTestId('shortcuts-list').textContent;
 
-		expect(listed).toContain('Next / previous piece of the story');
-		expect(listed).toContain('Next / previous comment');
-		expect(listed).not.toContain('Next / previous file');
-		expect(listed).not.toContain('Show or hide the file tree');
-		expect(listed).not.toContain('Mark this file viewed');
-		expect(listed).not.toContain('Fold or unfold this file');
+		expect(listedInTheHelp()).toEqual([
+			'j / k: Down / up a line',
+			'Enter: Comment on this line',
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'] / [: Next / previous piece of the story',
+			'n / p: Next / previous comment',
+			'a: Next unread reply',
+			'c: Talk to the agent',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
+			'Esc: Close it'
+		]);
 	});
 });

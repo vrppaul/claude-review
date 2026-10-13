@@ -95,7 +95,7 @@ function finish(review: Review): void {
 	else review.submission.setFinishing(true);
 }
 
-export const KEYMAP: readonly KeyRow[] = [
+const KEYMAP: readonly KeyRow[] = [
 	{
 		keys: 'j / k',
 		does: 'Down / up a line',
