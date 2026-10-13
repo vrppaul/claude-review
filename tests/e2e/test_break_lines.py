@@ -13,6 +13,8 @@ the directory CI runs with pnpm and its store at hand.
 
 import asyncio
 import contextlib
+import os
+import signal
 import sys
 from pathlib import Path
 
@@ -31,6 +33,12 @@ RUN_SECONDS = 120
 # What the script exits with: it broke the lines and ran the tests, or it refused what it was asked
 RAN = 0
 REFUSED = 1
+# And with when it is stopped from outside, as a shell says of a program stopped at Ctrl-C
+STOPPED = 130
+# What stops a run from outside: what a shell sends to end a program, and what it sends at Ctrl-C
+TOLD_TO_STOP_BY = [signal.SIGTERM, signal.SIGINT]
+# Where a run and everything it starts are told to keep their temporary files
+TEMPORARY_FILES_VARIABLE = "TMPDIR"
 
 # Where the document of what to break is written, and the directory lines are broken in a copy of
 ASKED = "breaks.json"
@@ -260,3 +268,35 @@ async def test_a_document_with_a_field_it_does_not_have_is_refused_and_nothing_i
     assert ran.refusal.startswith(f"{ASKED} is not a document of lines to break: ")
     assert "braeks" in ran.refusal
     assert ran.lines == []
+
+
+@pytest.mark.parametrize("sent", TOLD_TO_STOP_BY, ids=lambda sent: sent.name)
+async def test_a_run_stopped_from_outside_ends_without_a_word_and_leaves_no_copy_behind(
+    tmp_path: Path, sent: signal.Signals
+) -> None:
+    repository = _repository(tmp_path / "repository")
+    (repository / ASKED).write_text(TWO_LINES_BROKEN)
+    temporary = tmp_path / "temporary"
+    temporary.mkdir()
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(BREAK_LINES),
+        ASKED,
+        cwd=repository,
+        env={**os.environ, TEMPORARY_FILES_VARIABLE: str(temporary)},
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        # Its first line says a line is broken in the copy: vitest starts next
+        await asyncio.wait_for(process.stdout.readline(), timeout=RUN_SECONDS)
+        process.send_signal(sent)
+        _, said = await asyncio.wait_for(process.communicate(), timeout=RUN_SECONDS)
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+
+    assert process.returncode == STOPPED
+    assert said == b""
+    # Node keeps a cache of its own where temporary files go; a copy of the page would hold the module
+    assert list(temporary.rglob(Path(MODULE).name)) == []

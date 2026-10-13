@@ -205,7 +205,9 @@ tests. Remove items when done — don't check them off.
       "still moving". None of these can be brought about from the look's
       command line, which is all its tests use. The same holds of
       `scripts/break_lines.py` where pnpm cannot install for the copy, and
-      where vitest leaves no report.
+      where vitest leaves no report; and of `scripts/commands.py`, of a
+      command that runs out of its limit, which neither script's command
+      line can make one do.
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
 - [ ] The Python tests hold 138 branches in 28 files — an `if`, a

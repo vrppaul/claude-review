@@ -13,6 +13,19 @@ CHECK = Path(__file__).parents[2] / "scripts" / "check_code_rules.py"
 RULE_BROKEN = 1
 ALL_KEPT = 0
 
+# A file that starts two processes itself, what a script that does so is told, and the files that may
+STARTS_PROCESSES = """
+    import asyncio
+    from asyncio import create_subprocess_shell
+
+
+    async def listed(directory: str) -> None:
+        await asyncio.create_subprocess_exec("ls", directory)
+        await create_subprocess_shell("ls")
+"""
+A_SCRIPT_STARTS_NONE = "starts a process: a script starts one through `scripts/commands.py`, which stops what it starts"
+MAY_START_PROCESSES = ["scripts/commands.py", "src/package/repository.py"]
+
 NESTED_HELPER = """
     def outer(names: list[str]) -> list[str]:
         def tidy(name: str) -> str:
@@ -204,7 +217,13 @@ REPLACES_OF_ANOTHER_KIND = """
 
 
 def _check(tmp_path: Path, source: str) -> subprocess.CompletedProcess[str]:
-    checked = tmp_path / "checked.py"
+    return _check_as(tmp_path, "checked.py", source)
+
+
+def _check_as(tmp_path: Path, path: str, source: str) -> subprocess.CompletedProcess[str]:
+    """Run the check on a directory that holds the source as the file of this path."""
+    checked = tmp_path / path
+    checked.parent.mkdir(parents=True, exist_ok=True)
     checked.write_text(dedent(source))
     return subprocess.run([sys.executable, str(CHECK), str(tmp_path)], capture_output=True, text=True, check=False)
 
@@ -251,6 +270,24 @@ def test_a_copy_that_changes_no_field_is_refused_all_the_same(tmp_path: Path) ->
 
 def test_a_model_made_by_its_constructor_and_mappings_that_were_never_models_pass(tmp_path: Path) -> None:
     checked = _check(tmp_path, MODELS_MADE_AND_MAPPINGS_MERGED)
+
+    assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
+
+
+def test_a_script_that_starts_a_process_itself_is_named_where_it_does(tmp_path: Path) -> None:
+    """Whatever name asyncio's way of starting one is reached by: imported, or asked of the module."""
+    checked = _check_as(tmp_path, "scripts/looked.py", STARTS_PROCESSES)
+
+    assert checked.returncode == RULE_BROKEN
+    assert f"scripts/looked.py:3: `create_subprocess_shell` {A_SCRIPT_STARTS_NONE}" in checked.stdout
+    assert f"scripts/looked.py:7: `create_subprocess_exec` {A_SCRIPT_STARTS_NONE}" in checked.stdout
+
+
+@pytest.mark.parametrize("path", MAY_START_PROCESSES)
+def test_the_script_that_runs_commands_and_a_file_that_is_no_script_may_start_a_process(
+    tmp_path: Path, path: str
+) -> None:
+    checked = _check_as(tmp_path, path, STARTS_PROCESSES)
 
     assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
 

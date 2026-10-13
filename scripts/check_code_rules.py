@@ -26,6 +26,15 @@ call anything `copy`. In a file that does, whatever else goes by one of
 those names is taken for the module: the check reads names, not what a
 name stands for where it is used.
 
+No script starts a process itself. A file of `scripts/` runs a command
+through `scripts/commands.py`, which gives the wait a limit and stops what
+it started when the script is stopped; so asyncio's ways of starting one —
+`create_subprocess_exec`, `create_subprocess_shell`, and the event loop's
+`subprocess_exec` and `subprocess_shell` — are refused in every other file
+of that directory, by name, however the file reaches them. bandit refuses
+the `subprocess` module and `os.system` there already, and has no rule for
+these.
+
 Run on files or directories, in the project's own environment. The
 pre-commit hook hands it every Python file outside `tests/`, and CI runs
 the hook:
@@ -64,6 +73,16 @@ VARS_READ = "`vars` reads an object's fields as a mapping, by name: read the fie
 COPY_MODULE = "copy"
 REPLACING = "replace"
 REPLACED_BY_NAME = "`copy.replace` copies an object by the names of its fields: build it by its constructor"
+# What starts a process, by the names asyncio and its event loop give it, however a file reaches them
+PROCESS_STARTERS = frozenset(
+    {"create_subprocess_exec", "create_subprocess_shell", "subprocess_exec", "subprocess_shell"}
+)
+# The directory the scripts are in, the one of them that may start a process, and what any other is told
+SCRIPTS = "scripts"
+RUNS_COMMANDS = "commands.py"
+STARTED_BY_A_SCRIPT = (
+    "`{name}` starts a process: a script starts one through `scripts/commands.py`, which stops what it starts"
+)
 # What the process exits with
 ALL_KEPT = 0
 RULE_BROKEN = 1
@@ -86,6 +105,8 @@ class CheckedFile(BaseModel):
     path: Path
     # Every name the file's imports give the module `copy`: its own, or the one after `as`
     copy_module_names: frozenset[str]
+    # Whether it may start a process itself: any file but a script, and of the scripts the one that runs commands
+    may_start_processes: bool
 
 
 class Said(BaseModel):
@@ -114,7 +135,11 @@ def breaches_in(path: Path) -> list[Breach]:
     """Every place in one file that breaks a rule, in the order they are found."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: list[Breach] = []
-    file = CheckedFile(path=path, copy_module_names=_names_of_the_copy_module(tree))
+    file = CheckedFile(
+        path=path,
+        copy_module_names=_names_of_the_copy_module(tree),
+        may_start_processes=path.parent.name != SCRIPTS or path.name == RUNS_COMMANDS,
+    )
     _look_inside(tree, file, inside_function=False, found=found)
     return found
 
@@ -137,6 +162,7 @@ def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, fou
             *_said_of_a_function_inside(child, inside_function=inside_function),
             *_said_of_a_short_name(child),
             *_said_of_fields_by_name(child, file.copy_module_names),
+            *_said_of_a_process_started(child, may_start_processes=file.may_start_processes),
         ]
         found.extend(Breach(path=file.path, line=one.line, says=one.says) for one in said)
         _look_inside(child, file, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
@@ -175,6 +201,17 @@ def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) ->
             return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]
         case ast.Name(id=name) if name == FIELDS_OF:
             return [Said(line=node.lineno, says=VARS_READ)]
+        case _:
+            return []
+
+
+def _said_of_a_process_started(node: ast.AST, *, may_start_processes: bool) -> list[Said]:
+    """What is said of a node that names a way of starting a process, in a file that may not start one."""
+    match node:
+        case ast.Attribute(attr=name) | ast.Name(id=name) | ast.alias(name=name) if (
+            not may_start_processes and name in PROCESS_STARTERS
+        ):
+            return [Said(line=node.lineno, says=STARTED_BY_A_SCRIPT.format(name=name))]
         case _:
             return []
 

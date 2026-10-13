@@ -69,17 +69,15 @@ import asyncio
 import contextlib
 import os
 import re
-import signal
 import sys
 import tempfile
 from abc import ABC, abstractmethod
-from asyncio.subprocess import DEVNULL, PIPE, Process
-from collections.abc import AsyncIterator, Coroutine, Iterator
+from collections.abc import AsyncIterator, Iterator
 from enum import StrEnum, auto
 from pathlib import Path
 from typing import Self, override
 
-from commands import CommandFailedError, run
+from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, Running, StoppedError, complete, run, running
 from long_change import CHANGED, COMMITTED, THE_STORY
 from playwright.async_api import Error as BrowserError, Page, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
@@ -92,9 +90,9 @@ ANY_PORT = "0"
 READY_ANNOUNCEMENT = "Review ready at "
 # What stands between an address and its port
 BEFORE_THE_PORT = ":"
-# How long the review has to say where it is, and how long to stop once told to, before it is stopped outright
+# How long the review has to say where it is, and how long git and the review's commands have to end
 SERVED_WITHIN_SECONDS = 30
-STOPPED_WITHIN_SECONDS = 10
+COMMAND_WITHIN_SECONDS = 60
 
 # Where the review keeps what it remembers about its reader, by the XDG base directory rules
 CONFIG_HOME_VARIABLE = "XDG_CONFIG_HOME"
@@ -197,7 +195,6 @@ STILL_MOVING = {True: ", still moving", False: ""}
 END_OF_LINE = "\n"
 
 # What is said of a look that cannot go on
-NO_PIPE = "the review was started with no pipe for what it says on stderr"
 NOT_SERVED = "the review ended before it said where it is: {said}"
 NOT_SERVED_IN_TIME = f"the review did not say where it is within {SERVED_WITHIN_SECONDS} seconds"
 NOT_TAKEN = "{step} could not be taken: {why}"
@@ -207,10 +204,9 @@ NOT_A_STEP = "{written} is not a step: a step is press:TEST_ID, press:TEST_ID:NT
 KEPT_TAKES_NO_STEPS = "--keep takes no steps: a kept look opens no page to take them on"
 
 # What the look exits with: looked, or kept until its review ended; ended at a step or before the
-# page opened; stopped from outside, as a shell says of a program stopped at Ctrl-C
+# page opened. Stopped from outside, it exits as every script does
 LOOKED = 0
 NOT_LOOKED = 1
-STOPPED_FROM_OUTSIDE = 130
 
 FROZEN = ConfigDict(frozen=True)
 
@@ -438,7 +434,7 @@ class Served(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     address: str
-    server: Process
+    server: Running
 
     def port(self) -> str:
         _, _, port = self.address.rpartition(BEFORE_THE_PORT)
@@ -488,25 +484,19 @@ async def _long_change(repository: Path, environment: dict[str, str]) -> None:
     """
     await asyncio.to_thread(_write, repository, COMMITTED)
     for arguments in GIT_COMMANDS:
-        (await run(("git", "-C", str(repository), *arguments), environment)).must_have_succeeded()
+        made = await run(("git", "-C", str(repository), *arguments), environment, COMMAND_WITHIN_SECONDS)
+        made.must_have_succeeded()
     await asyncio.to_thread(_write, repository, CHANGED)
 
 
-def _errors_of(server: Process) -> asyncio.StreamReader:
-    """Where a review started with a pipe for its errors says them."""
-    if server.stderr is None:
-        raise LookFailedError(NO_PIPE)
-    return server.stderr
-
-
-async def _address_announced(errors: asyncio.StreamReader) -> str:
+async def _address_announced(server: Running) -> str:
     """Where the review says it is, as whoever starts one in the background reads it: off its stderr.
 
     Raises:
         LookFailedError: if the review ends without saying, with what it said in its place.
     """
     said = []
-    while line := (await errors.readline()).decode():
+    while line := await server.line_said():
         if line.startswith(READY_ANNOUNCEMENT):
             return line.removeprefix(READY_ANNOUNCEMENT).strip()
         said.append(line.strip())
@@ -514,28 +504,16 @@ async def _address_announced(errors: asyncio.StreamReader) -> str:
     raise LookFailedError(failure)
 
 
-async def _address_of(server: Process) -> str:
+async def _address_of(server: Running) -> str:
     """Where a review just started is served, once it says.
 
     Raises:
         LookFailedError: if it has not said in the time a review takes to start many times over.
     """
     try:
-        return await asyncio.wait_for(_address_announced(_errors_of(server)), timeout=SERVED_WITHIN_SECONDS)
+        return await asyncio.wait_for(_address_announced(server), timeout=SERVED_WITHIN_SECONDS)
     except TimeoutError as error:
         raise LookFailedError(NOT_SERVED_IN_TIME) from error
-
-
-async def _stopped(server: Process) -> None:
-    """Stop a server by its pid and wait until it is gone: told to first, then stopped outright."""
-    with contextlib.suppress(ProcessLookupError):
-        server.terminate()
-    try:
-        await asyncio.wait_for(server.wait(), timeout=STOPPED_WITHIN_SECONDS)
-    except TimeoutError:
-        with contextlib.suppress(ProcessLookupError):
-            server.kill()
-        await server.wait()
 
 
 @contextlib.asynccontextmanager
@@ -545,13 +523,8 @@ async def _served(repository: Path, environment: dict[str, str]) -> AsyncIterato
     Raises:
         LookFailedError: if the review does not say where it is.
     """
-    server = await asyncio.create_subprocess_exec(
-        *REVIEW, "diff", "--port", ANY_PORT, "--no-open", str(repository), env=environment, stdout=DEVNULL, stderr=PIPE
-    )
-    try:
+    async with running((*REVIEW, "diff", "--port", ANY_PORT, "--no-open", str(repository)), environment) as server:
         yield Served(address=await _address_of(server), server=server)
-    finally:
-        await _stopped(server)
 
 
 async def _story_told(served: Served, document: Path, environment: dict[str, str]) -> None:
@@ -561,7 +534,8 @@ async def _story_told(served: Served, document: Path, environment: dict[str, str
         CommandFailedError: if the review refuses the story.
     """
     await asyncio.to_thread(document.write_text, THE_STORY.model_dump_json())
-    told = await run((*REVIEW, "story", "--port", served.port(), "--file", str(document)), environment)
+    story = (*REVIEW, "story", "--port", served.port(), "--file", str(document))
+    told = await run(story, environment, COMMAND_WITHIN_SECONDS)
     told.must_have_succeeded()
 
 
@@ -639,7 +613,7 @@ async def _steps_taken(served: Served, asked: Asked) -> None:
 async def _kept(served: Served) -> None:
     """Say where the review is, and stay until it ends."""
     print(f"{KEPT} {served.address}", flush=True)
-    await served.server.wait()
+    await served.server.ended()
 
 
 async def _look(asked: Asked, scratch: Path) -> None:
@@ -686,26 +660,15 @@ def _asked(arguments: list[str]) -> Asked:
     )
 
 
-async def _until_stopped(look: Coroutine[None, None, None]) -> None:
-    """Take a look to its end, or until it is told from outside to stop.
-
-    Told to stop, it is cancelled where it stands, as Ctrl-C cancels it: the
-    browser it opened and the server it started are closed on its way out.
-    """
-    taking = asyncio.create_task(look)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, taking.cancel)
-    await taking
-
-
 def main() -> int:
     asked = _asked(sys.argv[1:])
     with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX) as scratch:
         try:
-            asyncio.run(_until_stopped(_look(asked, Path(scratch))))
+            complete(_look(asked, Path(scratch)))
         except (LookFailedError, CommandFailedError) as failure:
             print(failure, file=sys.stderr)
             return NOT_LOOKED
-        except KeyboardInterrupt, asyncio.CancelledError:
+        except StoppedError:
             return STOPPED_FROM_OUTSIDE
     return LOOKED
 

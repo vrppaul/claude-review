@@ -27,13 +27,16 @@ nobody meant.
 pnpm installs the copy's own there from its store, without the network:
 vite serves nothing from outside its root, so the copy cannot borrow the
 working tree's. The lines are broken in the copy and never in the working
-tree, and the copy is removed as the run ends, so a run cut short leaves
-nothing broken.
+tree, so a run cut short leaves nothing broken; and the copy is removed as
+the run ends, also when the run is stopped from outside, by SIGTERM or at
+Ctrl-C, with pnpm or vitest stopped first. pnpm and vitest each have a
+limit, and one that runs out of it is stopped and said to have failed.
 
-It prints `broke NAME: FILE` for every break; `failed: FILE > TEST` for
-every test that failed; `could not run FILE: why` for a test file vitest
-could not read, as when a break leaves a module it imports unreadable; and
-how many of the tests failed.
+It prints `broke NAME: FILE` for every break, once the copy is broken and
+before vitest starts; then `failed: FILE > TEST` for every test that
+failed; `could not run FILE: why` for a test file vitest could not read, as
+when a break leaves a module it imports unreadable; and how many of the
+tests failed.
 
 Its limit: every break is in place for the one run. A test that fails says
 that some break reached it, not which one; and a break whose effect another
@@ -44,7 +47,8 @@ The page's tests only.
 
 Exits 0 having broken the lines and run the tests, whatever failed; 1
 having refused the document or been unable to run, with the reason on
-stderr and nothing copied for a document refused.
+stderr and nothing copied for a document refused; 2 at a command line it
+cannot read; 130 stopped from outside.
 """
 
 import argparse
@@ -55,7 +59,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from commands import CommandFailedError, run
+from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, StoppedError, complete, run
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 # The page, from the repository's root, and the directory of what pnpm installed for it
@@ -65,6 +69,11 @@ INSTALLED = "node_modules"
 COPY = "frontend"
 REPORT = "report.json"
 SCRATCH_PREFIX = "claude-review-break-lines-"
+
+# How long pnpm has to install for the copy, and vitest to run the tests named: many times what
+# either takes, the whole of the page's tests being run in twenty seconds
+INSTALLED_WITHIN_SECONDS = 120
+TESTS_RUN_WITHIN_SECONDS = 600
 
 # How many times a break's text stands in its file
 ONCE = 1
@@ -222,7 +231,8 @@ async def _copied(frontend: Path, copy: Path) -> None:
         CommandFailedError: if pnpm cannot, as when its store does not hold what the lockfile names.
     """
     await asyncio.to_thread(shutil.copytree, frontend, copy, symlinks=True, ignore=shutil.ignore_patterns(INSTALLED))
-    installed = await run(("pnpm", "--dir", str(copy), "install", "--frozen-lockfile", "--offline"), os.environ)
+    install = ("pnpm", "--dir", str(copy), "install", "--frozen-lockfile", "--offline")
+    installed = await run(install, os.environ, INSTALLED_WITHIN_SECONDS)
     installed.must_have_succeeded()
 
 
@@ -233,7 +243,7 @@ async def _reported(copy: Path, tests: list[str], report: Path) -> Report:
         RefusedError: if it left none, with what it printed in its place.
     """
     command = ("pnpm", "--dir", str(copy), "exec", "vitest", "run", "--reporter=json", f"--outputFile={report}")
-    ran = await run((*command, *tests), os.environ)
+    ran = await run((*command, *tests), os.environ, TESTS_RUN_WITHIN_SECONDS)
     try:
         written = await asyncio.to_thread(report.read_bytes)
     except FileNotFoundError as error:
@@ -247,6 +257,8 @@ async def _run_broken(frontend: Path, asked: Asked, texts: dict[str, str], scrat
     copy = scratch / COPY
     await _copied(frontend, copy)
     await asyncio.to_thread(_write, copy, texts)
+    for made in asked.breaks:
+        print(BROKE.format(name=made.name, file=made.file), flush=True)
     return await _reported(copy, asked.tests, scratch / REPORT)
 
 
@@ -259,10 +271,9 @@ def _said_of(file: FileReported, copy: Path) -> list[str]:
     return [TEST_FAILED.format(file=written, test=test.full_name) for test in file.failed_tests()]
 
 
-def _said(asked: Asked, report: Report, copy: Path) -> list[str]:
-    """Every line printed of a run: the breaks made, what failed, and how many of the tests did."""
+def _said(report: Report, copy: Path) -> list[str]:
+    """Every line printed of what vitest reports: what failed, and how many of the tests did."""
     return [
-        *(BROKE.format(name=made.name, file=made.file) for made in asked.breaks),
         *(line for file in report.files for line in _said_of(file, copy)),
         HOW_MANY_FAILED.format(failed=report.failed, total=report.total),
     ]
@@ -273,7 +284,8 @@ def _broken_and_run(document: Path) -> list[str]:
 
     Raises:
         RefusedError: if the document is refused, before anything is copied, or vitest reports nothing.
-        CommandFailedError: if pnpm cannot install for the copy.
+        CommandFailedError: if pnpm cannot install for the copy, or either command runs out of time.
+        StoppedError: if the run is stopped from outside; the copy is removed on the way out.
     """
     frontend = Path.cwd() / FRONTEND
     asked = _asked(document)
@@ -282,8 +294,8 @@ def _broken_and_run(document: Path) -> list[str]:
     with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX) as scratch:
         # vitest says where a test file is by the path it really has, whatever links lead to the directory
         run_in = Path(scratch).resolve()
-        report = asyncio.run(_run_broken(frontend, asked, texts, run_in))
-        return _said(asked, report, run_in / COPY)
+        report = complete(_run_broken(frontend, asked, texts, run_in))
+        return _said(report, run_in / COPY)
 
 
 def main() -> int:
@@ -294,6 +306,8 @@ def main() -> int:
     except (RefusedError, CommandFailedError) as refusal:
         print(refusal, file=sys.stderr)
         return REFUSED
+    except StoppedError:
+        return STOPPED_FROM_OUTSIDE
     for line in said:
         print(line)
     return RAN
