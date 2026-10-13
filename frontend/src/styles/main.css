@@ -721,7 +721,7 @@
 	min-width: var(--cr-panel-least-width);
 	background: var(--color-base-100);
 }
-/* A column's edge, there to be dragged: the panel's on its left, the tree's on its right */
+/* A column's edge, there to be dragged: the panel's on its left, the side column's on its right */
 .cr-grip {
 	position: absolute;
 	inset-block: 0;
@@ -966,20 +966,15 @@
 	}
 }
 
-/* A column beside what is read, the tree of files or a story's contents, as wide as the reader left it */
-.cr-tree {
+/* The side column: a column beside what is read, the tree of files or a story's contents, as wide as the reader left it */
+.cr-side-column {
 	position: relative;
 	flex-shrink: 1;
-	width: var(--cr-tree-width);
-	min-width: var(--cr-tree-least-width);
+	width: var(--cr-side-column-width);
+	min-width: var(--cr-side-column-least-width);
 }
-/* A row of the tree, set in by how deep its folder is */
-.cr-tree-row {
-	padding-left: calc(var(--cr-depth) * 0.75rem + 0.5rem);
-}
-
 /* What such a column leaves behind when it is put away */
-.cr-tree-rail {
+.cr-side-column-rail {
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
@@ -990,9 +985,14 @@
 	background: var(--color-base-100);
 	color: var(--cr-faint);
 }
-.cr-tree-rail:hover {
+.cr-side-column-rail:hover {
 	background: var(--color-base-200);
 	color: var(--color-base-content);
+}
+
+/* A row of the tree of files, set in by how deep its folder is */
+.cr-tree-row {
+	padding-left: calc(var(--cr-depth) * 0.75rem + 0.5rem);
 }
 
 /*
@@ -1481,11 +1481,12 @@
 }
 
 /*
- * The review's columns on a screen of any width: the tree, the diff, the
- * panel. The tree and the panel give up their width to the diff, which
- * never goes below the width it reads at; where even their least leaves it
- * less, each lies over the diff, lifted off it, until the reader puts it
- * away. A screen narrower than the diff's least width still shows it whole.
+ * The review's columns on a screen of any width: the side column, the
+ * diff, the panel. The side column and the panel give up their width to
+ * the diff, which never goes below the width it reads at; where even their
+ * least leaves it less, each lies over the diff, lifted off it, until the
+ * reader puts it away. A screen narrower than the diff's least width still
+ * shows it whole.
  */
 .cr-columns {
 	position: relative;
@@ -1494,8 +1495,9 @@
 	min-height: 0;
 }
 /*
- * What scrolls on the page — the tree, the panel's conversation, a pane's
- * list, and the reading area below — is the box its contents are placed in.
+ * What scrolls on the page — the side column, the panel's conversation, a
+ * pane's list, and the reading area below — is the box its contents are
+ * placed in.
  * Words kept for a screen reader are taken out of the flow; in a scroller
  * that is not their box they would stay where they were first put while the
  * rest scrolled: far down a page that grew to hold them, scrolled itself,
@@ -1522,8 +1524,8 @@
 		box-shadow: var(--cr-shadow-raised);
 	}
 }
-@media (width < theme(--breakpoint-cr-tree-beside)) {
-	.cr-tree {
+@media (width < theme(--breakpoint-cr-side-column-beside)) {
+	.cr-side-column {
 		position: absolute;
 		inset-block: 0;
 		left: 0;

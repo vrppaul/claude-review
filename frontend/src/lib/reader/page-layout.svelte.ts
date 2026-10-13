@@ -46,8 +46,8 @@ const CONTENT_VIEW_KEY = 'content-view';
 const READING_VIEW_KEY = 'reading-view';
 
 // Where a column stops lying over the diff and stands beside it, as the stylesheet names it: one
-// the reader puts away, which the stylesheet draws as the tree, and the panel
-const PUT_AWAY_BESIDE = '--breakpoint-cr-tree-beside';
+// the reader puts away, which the stylesheet draws as its side column, and the panel
+const PUT_AWAY_BESIDE = '--breakpoint-cr-side-column-beside';
 const AGENT_PANEL_BESIDE = '--breakpoint-cr-panel-beside';
 
 /** Every way a renderable file can be shown: as text, rendered, or both side by side. */

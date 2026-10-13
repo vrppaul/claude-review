@@ -13,7 +13,7 @@ const WIDE = 1280;
 // What a rem is in a media query: the browser's own size of type, whatever the page sets
 const PIXELS_PER_REM = 16;
 // Where each column stops lying over the diff and stands beside it, as the stylesheet names them
-const BREAKPOINTS = ['--breakpoint-cr-tree-beside', '--breakpoint-cr-panel-beside'];
+const BREAKPOINTS = ['--breakpoint-cr-side-column-beside', '--breakpoint-cr-panel-beside'];
 // How a media query asks for a screen at least so wide: `(width >= 46rem)`
 const AT_LEAST = /^\(width >= ([\d.]+)rem\)$/;
 

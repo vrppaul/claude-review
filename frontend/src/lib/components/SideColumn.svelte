@@ -63,8 +63,8 @@
 		data-testid={testIds.column}
 		data-tour={tour}
 		aria-label={label}
-		class={['cr-tree flex flex-col border-r border-base-300', ground]}
-		style:--cr-tree-width="{column.width}px"
+		class={['cr-side-column flex flex-col border-r border-base-300', ground]}
+		style:--cr-side-column-width="{column.width}px"
 	>
 		<!-- The column is on the left, so it grows rightward -->
 		<EdgeGrip {column} grows="right" label="Resize {called}" testId={testIds.resize} />
@@ -93,7 +93,7 @@
 		type="button"
 		data-testid={testIds.bringBack}
 		data-tour={tour}
-		class="cr-tree-rail"
+		class="cr-side-column-rail"
 		title={bringBack}
 		aria-label={bringBack}
 		onclick={() => column.toggle()}
