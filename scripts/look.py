@@ -48,10 +48,17 @@ The page is read once it has said the same for a moment, so a glide is over
 when its line is printed. A page that has not come to rest after a few
 seconds is printed as it is, its step marked as still moving.
 
-A step that cannot be taken ends the look: no element of that test id, a
-key Playwright does not know, a picture with no directory to keep it in.
-The step is named on stderr and the look exits 1; the steps after it are
-not taken.
+A step that cannot be taken ends the look. Of a press it is said which of
+three things stood in its way: no element of that test id, fewer of them
+than were counted to, or one that is there and takes no press. A key
+Playwright does not know ends it too. The step is named on stderr and the
+look exits 1; the steps after it are not taken. A picture with no
+directory named to keep it in is refused earlier, as the command line is
+read.
+
+With a story's contents put away, as they are on a narrow window until
+they are brought back, `read` and `reading` say so: the contents are what
+says them.
 
 `--keep`, in place of steps: serve the change, tell its story, print where
 the review is, and stay until the review ends. A review ends once its page
@@ -77,8 +84,9 @@ import re
 import sys
 import tempfile
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from enum import StrEnum, auto
+from functools import partial
 from pathlib import Path
 from typing import Self, override
 
@@ -190,6 +198,10 @@ PICTURE_SUFFIX = ".png"
 BETWEEN_VALUES = " | "
 BETWEEN_NAMES = " + "
 NOTHING = "none"
+# What brings a story's contents back once they are put away, there only then; and what a line says
+# then of what is read, which the contents alone say
+BRINGS_THE_CONTENTS_BACK = "show-contents"
+CONTENTS_PUT_AWAY = "contents put away"
 YES_OR_NO = {True: "yes", False: "no"}
 # What a line opens with as the page opens, and a kept look's line of where its review is
 OPENED = "open"
@@ -215,7 +227,16 @@ BUILT_BEFORE = (
 NOT_SERVED = "the review ended before it said where it is: {said}"
 NOT_SERVED_IN_TIME = f"the review did not say where it is within {SERVED_WITHIN_SECONDS} seconds"
 NOT_TAKEN = "{step} could not be taken: {why}"
-NOWHERE_TO_KEEP_IT = "{step} could not be taken: name a directory to keep pictures in with --shots"
+# What is said of a press that cannot be taken, by what stood in its way
+NO_SUCH_ELEMENT = "{step} could not be taken: there is no element of test id {test_id} on the page"
+TOO_FEW_ELEMENTS = "{step} could not be taken: there are {count} elements of test id {test_id}, counted from 0"
+NOT_PRESSED = (
+    "{step} could not be taken: the element is there and could not be pressed "
+    f"within {STEP_WITHIN_MS} ms: it is hidden, disabled, or under something else"
+)
+# What is said of a picture with nowhere to go, and of one with no name
+NOWHERE_TO_KEEP_IT = "{step} keeps a picture, and no directory was named to keep it in: name one with --shots"
+NO_NAME = "a picture is kept under a name"
 # What is said of what the command line cannot be read as
 NOT_A_STEP = "{written} is not a step: a step is press:TEST_ID, press:TEST_ID:NTH, key:KEY, scroll:PIXELS or shot:NAME"
 KEPT_TAKES_NO_STEPS = "--keep takes no steps: a kept look opens no page to take them on"
@@ -230,6 +251,14 @@ FROZEN = ConfigDict(frozen=True)
 
 class LookFailedError(Exception):
     """The look cannot go on: what it says is what is printed."""
+
+
+class NotAStepError(Exception):
+    """A word of the command line writes no step: what it says is what the command line is refused with."""
+
+
+class NowhereToKeepError(Exception):
+    """A step keeps a picture, and the command line names no directory for pictures."""
 
 
 class View(BaseModel):
@@ -264,18 +293,13 @@ class Step(BaseModel, ABC):
 
     written: str
 
-    @classmethod
     @abstractmethod
-    def read(cls, written: str, detail: str) -> Self:
-        """The step a word of the command line writes, from what stands after its kind.
+    async def take(self, page: Page) -> None:
+        """Do it on the page.
 
         Raises:
-            ValueError: if what stands there is not what a step of this kind takes.
+            LookFailedError: if it cannot be done, for a reason the step can say itself.
         """
-
-    @abstractmethod
-    async def take(self, page: Page, shots: Path | None) -> None:
-        """Do it on the page; a picture it keeps goes to the directory for them, where there is one."""
 
 
 class Press(Step):
@@ -285,14 +309,30 @@ class Press(Step):
     nth: int = Field(ge=0)
 
     @classmethod
-    @override
     def read(cls, written: str, detail: str) -> Self:
+        """The press a step writes: a test id, and after it the place among those of that id, the first unless said.
+
+        Raises:
+            ValueError: if no test id is written, or the place is no number.
+        """
         test_id, _, nth = detail.partition(WITHIN_A_STEP)
         return cls(written=written, test_id=test_id, nth=int(nth or THE_FIRST))
 
     @override
-    async def take(self, page: Page, shots: Path | None) -> None:
-        await page.get_by_test_id(self.test_id).nth(self.nth).click()
+    async def take(self, page: Page) -> None:
+        elements = page.get_by_test_id(self.test_id)
+        count = await elements.count()
+        if count == 0:
+            failure = NO_SUCH_ELEMENT.format(step=self.written, test_id=self.test_id)
+            raise LookFailedError(failure)
+        if self.nth >= count:
+            failure = TOO_FEW_ELEMENTS.format(step=self.written, count=count, test_id=self.test_id)
+            raise LookFailedError(failure)
+        try:
+            await elements.nth(self.nth).click()
+        except BrowserError as error:
+            failure = NOT_PRESSED.format(step=self.written)
+            raise LookFailedError(failure) from error
 
 
 class Key(Step):
@@ -301,12 +341,16 @@ class Key(Step):
     key: str = Field(min_length=1)
 
     @classmethod
-    @override
     def read(cls, written: str, detail: str) -> Self:
+        """The key a step writes.
+
+        Raises:
+            ValueError: if none is written.
+        """
         return cls(written=written, key=detail)
 
     @override
-    async def take(self, page: Page, shots: Path | None) -> None:
+    async def take(self, page: Page) -> None:
         await page.keyboard.press(self.key)
 
 
@@ -316,35 +360,50 @@ class Scroll(Step):
     pixels: int
 
     @classmethod
-    @override
     def read(cls, written: str, detail: str) -> Self:
+        """The scroll a step writes.
+
+        Raises:
+            ValueError: if what is written is no number of pixels.
+        """
         return cls(written=written, pixels=int(detail))
 
     @override
-    async def take(self, page: Page, shots: Path | None) -> None:
+    async def take(self, page: Page) -> None:
         await page.get_by_test_id(READING_AREA).evaluate(SCROLLED_DOWN_BY, self.pixels)
 
 
 class Shot(Step):
-    """A picture of the window, kept under a name."""
+    """A picture of the window, and the file it is kept in."""
 
-    name: str = Field(min_length=1)
+    file: Path
 
     @classmethod
-    @override
-    def read(cls, written: str, detail: str) -> Self:
-        return cls(written=written, name=detail)
+    def kept_in(cls, shots: Path | None, written: str, detail: str) -> Self:
+        """The picture a step writes, kept under its name in the directory for pictures.
 
-    @override
-    async def take(self, page: Page, shots: Path | None) -> None:
+        Raises:
+            NowhereToKeepError: if no directory was named for them.
+            ValueError: if no name is written.
+        """
         if shots is None:
-            failure = NOWHERE_TO_KEEP_IT.format(step=self.written)
-            raise LookFailedError(failure)
-        await page.screenshot(path=shots / f"{self.name}{PICTURE_SUFFIX}")
+            raise NowhereToKeepError(NOWHERE_TO_KEEP_IT.format(step=written))
+        if not detail:
+            raise ValueError(NO_NAME)
+        return cls(written=written, file=shots / f"{detail}{PICTURE_SUFFIX}")
+
+    @override
+    async def take(self, page: Page) -> None:
+        await page.screenshot(path=self.file)
 
 
-# What a step's kind is written as, before what it is done to
-STEP_KINDS: dict[str, type[Step]] = {"press": Press, "key": Key, "scroll": Scroll, "shot": Shot}
+# What makes a step of what is written on the command line, given the step as written and what stands after its kind
+StepReader = Callable[[str, str], Step]
+
+
+def _step_readers(shots: Path | None) -> dict[str, StepReader]:
+    """What reads each kind of step, by what the kind is written as: a picture is read knowing where pictures go."""
+    return {"press": Press.read, "key": Key.read, "scroll": Scroll.read, "shot": partial(Shot.kept_in, shots)}
 
 
 class Asked(BaseModel):
@@ -355,7 +414,6 @@ class Asked(BaseModel):
     view: View
     theme: Theme
     width: int
-    shots: Path | None
     keep: bool
     steps: list[Step]
 
@@ -417,6 +475,14 @@ class Seen(BaseModel):
     bar: list[str]
     read: list[str]
     being_read: list[str]
+    # Whether a story's contents are put away: they are what says which parts are read and being read
+    contents_put_away: bool
+
+    def _said_by_the_contents(self, names: list[str]) -> str:
+        """Names the contents say, or that the contents are put away and say nothing a look can read."""
+        if self.contents_put_away:
+            return CONTENTS_PUT_AWAY
+        return _listed(names)
 
     def said_after(self, step: str) -> str:
         """The one line of it, each value under its name, after the step that led to it."""
@@ -427,8 +493,8 @@ class Seen(BaseModel):
                 f"area: {self.area}",
                 f"keyboard: {self.keyboard}",
                 f"bar: {_listed(self.bar)}",
-                f"read: {_listed(self.read)}",
-                f"reading: {_listed(self.being_read)}",
+                f"read: {self._said_by_the_contents(self.read)}",
+                f"reading: {self._said_by_the_contents(self.being_read)}",
             ]
         )
 
@@ -599,6 +665,7 @@ async def _seen(page: Page) -> Seen:
         bar=await page.get_by_test_id(CHAPTER_BAR).all_inner_texts(),
         read=await page.get_by_test_id(PART_ENTRY).filter(has=page.get_by_test_id(READ_MARK)).evaluate_all(THEIR_NAMES),
         being_read=await page.get_by_test_id(ANY_ENTRY).evaluate_all(NAMES_OF_THOSE_BEING_READ),
+        contents_put_away=await page.get_by_test_id(BRINGS_THE_CONTENTS_BACK).count() > 0,
     )
 
 
@@ -623,7 +690,7 @@ async def _steps_taken(served: Served, asked: Asked) -> None:
             print((await _at_rest(page)).said_after(f"{OPENED} {served.address}"), flush=True)
         for step in asked.steps:
             with _ending_the_look_at(step.written):
-                await step.take(page, asked.shots)
+                await step.take(page)
                 print((await _at_rest(page)).said_after(step.written), flush=True)
 
 
@@ -645,18 +712,20 @@ async def _look(asked: Asked, scratch: Path) -> None:
             await _steps_taken(served, asked)
 
 
-def _step(written: str) -> Step:
+def _step(written: str, readers: dict[str, StepReader]) -> Step:
     """The step a word of the command line writes.
 
     Raises:
-        argparse.ArgumentTypeError: if it writes none, for the command line to be refused with.
+        NotAStepError: if it writes none, saying what a step is, or that its picture has nowhere to go.
     """
     kind, _, detail = written.partition(WITHIN_A_STEP)
     try:
-        step = STEP_KINDS[kind].read(written, detail)
+        step = readers[kind](written, detail)
+    except NowhereToKeepError as error:
+        raise NotAStepError(str(error)) from error
     except (KeyError, ValueError) as error:
         refusal = NOT_A_STEP.format(written=written)
-        raise argparse.ArgumentTypeError(refusal) from error
+        raise NotAStepError(refusal) from error
     return step
 
 
@@ -668,13 +737,17 @@ def _asked(arguments: list[str]) -> Asked:
     parser.add_argument("--width", type=int, default=WIDTH_UNLESS_ASKED, metavar="PIXELS")
     parser.add_argument("--shots", type=Path, default=None, metavar="DIRECTORY")
     parser.add_argument("--keep", action="store_true")
-    parser.add_argument("steps", nargs="*", type=_step, metavar="STEP")
+    parser.add_argument("steps", nargs="*", metavar="STEP")
     read = parser.parse_args(arguments)
     if read.keep and read.steps:
         parser.error(KEPT_TAKES_NO_STEPS)
-    return Asked(
-        view=VIEWS[read.view], theme=read.theme, width=read.width, shots=read.shots, keep=read.keep, steps=read.steps
-    )
+    # The steps are read last: a picture is read knowing where pictures go, wherever --shots stood among them
+    readers = _step_readers(read.shots)
+    try:
+        steps = [_step(written, readers) for written in read.steps]
+    except NotAStepError as refusal:
+        parser.error(str(refusal))
+    return Asked(view=VIEWS[read.view], theme=read.theme, width=read.width, keep=read.keep, steps=steps)
 
 
 def _last_written(root: Path) -> Path | None:

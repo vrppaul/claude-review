@@ -54,7 +54,9 @@ OPENED_AT = "open http://"
 KEPT = "kept"
 # The steps of the one look at the story, and the picture the last of them keeps
 SCROLLED_BY = 900
-STORY_STEPS = [f"scroll:{SCROLLED_BY}", "press:go-to-part:3", "key:Tab", "shot:deep"]
+STORY_STEPS = [f"scroll:{SCROLLED_BY}", "press:go-to-part:3", "key:Tab", "shot:deep", "press:hide-contents"]
+# Steps enough to be under way for seconds: each waits for the page to come to rest
+MANY_STEPS = ["key:j"] * 40
 STORY_SHOT = "deep.png"
 # The look at the files: dark, on a narrow window, one picture kept
 NARROW = 700
@@ -138,6 +140,36 @@ class LookUnderWay(BaseModel):
     address: str
     process: asyncio.subprocess.Process
     temporary: Path
+
+
+class NotPressed(BaseModel):
+    """A press that cannot be taken: what stands in its way, what the look is asked, and what it says of it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    what: str
+    asked: list[str]
+    said: str
+
+
+PRESSES_NOT_TAKEN = [
+    NotPressed(
+        what="no element of that test id",
+        asked=["press:no-such-thing"],
+        said="there is no element of test id no-such-thing on the page",
+    ),
+    NotPressed(
+        what="fewer of them than were counted to",
+        asked=["press:go-to-part:99"],
+        said="there are 7 elements of test id go-to-part, counted from 0",
+    ),
+    NotPressed(
+        what="one that is there and cannot be pressed",
+        # A comment begun on a line and left empty: there is nothing to save, so its button takes no press
+        asked=["--view", "files", "key:j", "key:Enter", "press:save-comment"],
+        said="the element is there and could not be pressed",
+    ),
+]
 
 
 async def _look(*arguments: str) -> Looked:
@@ -232,13 +264,13 @@ async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
 
 @in_the_browsers_loop
 async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
-    """A look with its page open and a step under way: a press on nothing, which waits for it to appear."""
+    """A look with its page open and steps under way: enough of them to last for seconds."""
     temporary = tmp_path / "temporary"
     temporary.mkdir()
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         str(LOOK),
-        "press:no-such-thing",
+        *MANY_STEPS,
         cwd=REPOSITORY,
         env={**os.environ, TEMPORARY_FILES_VARIABLE: str(temporary)},
         stdout=asyncio.subprocess.PIPE,
@@ -409,12 +441,33 @@ async def test_a_step_that_cannot_be_taken_ends_the_look_and_is_named() -> None:
     assert _said(only_line).step.startswith(OPENED_AT)
 
 
-async def test_a_shot_with_no_directory_to_keep_it_in_cannot_be_taken() -> None:
-    looked = await _look("shot:nowhere")
+@pytest.mark.parametrize("not_pressed", PRESSES_NOT_TAKEN, ids=lambda not_pressed: not_pressed.what)
+async def test_a_press_that_cannot_be_taken_says_which_of_three_things_stood_in_its_way(
+    not_pressed: NotPressed,
+) -> None:
+    looked = await _look(*not_pressed.asked)
 
     assert looked.exit_code == NOT_TAKEN
+    assert not_pressed.said in looked.complaint
+
+
+async def test_a_shot_with_no_directory_to_keep_it_in_is_refused_before_anything_is_started() -> None:
+    looked = await _look("shot:nowhere")
+
+    assert looked.exit_code == NOT_UNDERSTOOD
     assert "shot:nowhere" in looked.complaint
     assert "--shots" in looked.complaint
+    assert looked.lines == []
+
+
+async def test_the_line_says_that_the_contents_are_put_away_where_it_cannot_say_what_is_read(
+    story_look: LookWithShots,
+) -> None:
+    """What is read is said by the contents; with them put away the page says it nowhere a look can read."""
+    *_, put_away = story_look.said
+
+    assert put_away.read == "read: contents put away"
+    assert put_away.reading == "reading: contents put away"
 
 
 async def test_what_is_not_a_step_is_refused_by_name_before_anything_is_started() -> None:
