@@ -9,7 +9,7 @@ import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
 import { openReview } from '../review';
-import { scriptTheScroll, scrollTo } from '../scripted-scroll';
+import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
 import { storyHeld, toldChapter, toldStep, toldStepOfLines } from '../story';
 
@@ -603,6 +603,13 @@ describe('a piece of a story, as the reader scrolls', () => {
 		scrollTo(second);
 
 		expect(review.sections.fileInView).toBe('b.py');
+	});
+
+	it('is watched for coming near within the area the story scrolls in, not within the page', () => {
+		render(ReviewScreen, { props: { review } });
+		const [first] = pieces();
+
+		expect(new Set(areasWatching(first))).toEqual(new Set([screen.getByTestId('story-view')]));
 	});
 });
 

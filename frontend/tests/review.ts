@@ -1,5 +1,6 @@
 /** A review opened the way the page opens one, for a test to read and draw. */
 import { flushSync } from 'svelte';
+import { pageAsScrollArea } from '$lib/dom/scroll-area';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
@@ -64,10 +65,13 @@ export function openReview({
 	return openPage.review;
 }
 
-/** The options a component drawn on its own needs to be drawn inside this review. */
-export function inReview(review: Review): { context: Map<symbol, Review> };
-export function inReview<Props>(review: Review, props: Props): { props: Props; context: Map<symbol, Review> };
+/**
+ * The options a component drawn on its own needs to be drawn inside this
+ * review: the review, and the page itself as the area it scrolls in.
+ */
+export function inReview(review: Review): { context: Map<symbol, unknown> };
+export function inReview<Props>(review: Review, props: Props): { props: Props; context: Map<symbol, unknown> };
 export function inReview<Props>(review: Review, props?: Props) {
-	const context = reviewContext(review);
+	const context = new Map<symbol, unknown>([...reviewContext(review), ...pageAsScrollArea()]);
 	return props === undefined ? { context } : { props, context };
 }

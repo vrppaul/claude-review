@@ -9,7 +9,7 @@ import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
-import { scriptTheScroll, scrollTo } from '../scripted-scroll';
+import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 
 let review: Review;
 
@@ -495,5 +495,13 @@ describe('the file being read', () => {
 		scrollTo(arrived);
 
 		expect(review.sections.fileInView).toBe(secondFile.path);
+	});
+
+	it('is watched for coming near within the area the files scroll in, not within the page', () => {
+		review = openReview({ files: [changedFile] });
+		const { getByTestId } = render(DiffView, inReview(review));
+		flushSync();
+
+		expect(new Set(areasWatching(getByTestId('file-section')))).toEqual(new Set([getByTestId('diff-view')]));
 	});
 });

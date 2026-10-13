@@ -10,11 +10,14 @@ const made: ScriptedObserver[] = [];
 
 /** An observer that tells, of the elements it watches, which are in view — when the test scrolls, never before. */
 class ScriptedObserver {
+	/** The area it was told to watch within; null for the page itself. */
+	readonly area: Element | Document | null;
 	readonly #callback: IntersectionObserverCallback;
 	readonly #watched = new Set<Element>();
 
-	constructor(callback: IntersectionObserverCallback) {
+	constructor(callback: IntersectionObserverCallback, options: IntersectionObserverInit = {}) {
 		this.#callback = callback;
+		this.area = options.root ?? null;
 		made.push(this);
 	}
 
@@ -28,6 +31,11 @@ class ScriptedObserver {
 
 	disconnect(): void {
 		this.#watched.clear();
+	}
+
+	/** Whether it is still watching an element. */
+	watches(element: Element): boolean {
+		return this.#watched.has(element);
 	}
 
 	/** Tell whoever watches which of what it watches is in view now. */
@@ -44,6 +52,14 @@ class ScriptedObserver {
 export function scriptTheScroll(): void {
 	made.length = 0;
 	vi.stubGlobal('IntersectionObserver', ScriptedObserver);
+}
+
+/**
+ * The areas an element is being watched within now, one for each observer
+ * still watching it: an observer the page has let go of watches nothing.
+ */
+export function areasWatching(element: Element): (Element | Document | null)[] {
+	return made.filter((observer) => observer.watches(element)).map((observer) => observer.area);
 }
 
 /** The reader scrolled until these, and only these, are in view. */

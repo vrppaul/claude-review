@@ -10,11 +10,9 @@
 		step: ToldStep;
 		/** The step as the story numbers it: its chapter's number, then its own. */
 		number: string;
-		/** The area the story scrolls in, which the step's piece comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 	}
 
-	let { step, number, scrollRoot }: Props = $props();
+	let { step, number }: Props = $props();
 </script>
 
 <div data-testid="story-step" class="flex flex-col gap-2">
@@ -35,7 +33,7 @@
 	</div>
 	<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 	<svelte:boundary onerror={reportBroken}>
-		<StoryPiece sectionKey={stepSectionKey(step)} piece={step.piece} shows="a-step" {scrollRoot}>
+		<StoryPiece sectionKey={stepSectionKey(step)} piece={step.piece} shows="a-step">
 			{#snippet beside()}
 				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(step.lines)}</span>
 			{/snippet}

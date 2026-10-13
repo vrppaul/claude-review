@@ -24,7 +24,7 @@ describe('a file in the review', () => {
 	});
 
 	it('names the file and how much it changed', () => {
-		const { getByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByText } = render(FileSection, inReview(review, { file }));
 
 		expect(getByText('src/core/session.py')).toBeTruthy();
 		expect(getByText('+1')).toBeTruthy();
@@ -32,13 +32,13 @@ describe('a file in the review', () => {
 	});
 
 	it('says which line each row is at its number, for the reader to be kept on it across a new diff', () => {
-		const { getAllByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getAllByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getAllByTestId('line-gutter').map((number) => number.dataset.place)).toEqual(['new:1', 'old:2', 'new:2']);
 	});
 
 	it('says how many rows it draws, for the room it takes before it is drawn, and none once folded', () => {
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 		const section = getByTestId('file-section');
 		expect(section.style.getPropertyValue('--cr-rows')).toBe('3');
 
@@ -52,14 +52,14 @@ describe('a file in the review', () => {
 		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
 		review = openReview({ files: [picture] });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: picture, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: picture }));
 
 		expect(getByTestId('file-section').style.getPropertyValue('--cr-rows')).toBe('1');
 	});
 
 	it('is not built until the reader comes near it', () => {
 		scriptTheScroll();
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 		expect(getByTestId('file-placeholder')).toBeTruthy();
 		expect(queryByTestId('raw-view')).toBeNull();
 
@@ -72,7 +72,7 @@ describe('a file in the review', () => {
 
 	it('folds the body away and brings it back', async () => {
 		const user = userEvent.setup();
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(queryByTestId('raw-view')).toBeTruthy();
 
@@ -85,7 +85,7 @@ describe('a file in the review', () => {
 
 	it('folds the file when it is marked viewed', async () => {
 		const user = userEvent.setup();
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		await user.click(getByTestId('viewed-toggle'));
 
@@ -95,7 +95,7 @@ describe('a file in the review', () => {
 
 	it('brings the file back when it is unmarked', async () => {
 		const user = userEvent.setup();
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		await user.click(getByTestId('viewed-toggle'));
 		await user.click(getByTestId('viewed-toggle'));
@@ -106,7 +106,7 @@ describe('a file in the review', () => {
 
 	it('can be reopened after being marked viewed, without unmarking it', async () => {
 		const user = userEvent.setup();
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		await user.click(getByTestId('viewed-toggle'));
 		await user.click(getByTestId('collapse-file'));
@@ -118,13 +118,13 @@ describe('a file in the review', () => {
 	it('shows how many comments the file carries', () => {
 		review.threads.add(newComment({ file: 'src/core/session.py', startLine: 2, body: 'rename this' }));
 
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getByTestId('section-comment-count').textContent?.trim()).toBe('1');
 	});
 
 	it('leaves the comment count off a file with none', () => {
-		const { queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(queryByTestId('section-comment-count')).toBeNull();
 	});
@@ -145,7 +145,7 @@ describe('a file the last round rewrote', () => {
 		const user = userEvent.setup({ delay: null });
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse({ files: [file], base: sinceRound(2) }));
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 
 		await user.click(getByTestId('file-changed-since'));
 
@@ -156,7 +156,7 @@ describe('a file the last round rewrote', () => {
 	it('says so when that round cannot be shown', async () => {
 		const user = userEvent.setup({ delay: null });
 		fakeServer().refuse('GET /api/diff', BAD_REQUEST);
-		const { getByTestId, findByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, findByTestId } = render(FileSection, inReview(review, { file }));
 
 		await user.click(getByTestId('file-changed-since'));
 
@@ -170,10 +170,7 @@ describe('a file whose name holds control characters', () => {
 	it('says it cannot be commented on, and its lines take no comment', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: [named] });
-		const { getByTestId, getAllByTestId, queryByTestId } = render(
-			FileSection,
-			inReview(review, { file: named, scrollRoot: null })
-		);
+		const { getByTestId, getAllByTestId, queryByTestId } = render(FileSection, inReview(review, { file: named }));
 
 		expect(getByTestId('not-commentable-note').textContent).toContain('This file cannot be commented on');
 		const [lineNumber] = getAllByTestId('line-gutter');
@@ -202,7 +199,7 @@ describe('a comment whose line the diff no longer shows', () => {
 		review.threads.add(onTheRemovedLine);
 		review.threads.add(newComment({ file: 'src/core/session.py', startLine: 3, body: 'on a line still there' }));
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: restored }));
 
 		const head = getByTestId('threads-off-their-lines');
 		expect(head.textContent).toContain('1 comment on a line no longer shown');
@@ -216,7 +213,7 @@ describe('a comment whose line the diff no longer shows', () => {
 		const review = openReview({ files: [restored] });
 		review.threads.add(newComment({ file: 'src/core/session.py', startLine: 9, quote: ['z = 3'], body: 'read in' }));
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: restored }));
 
 		expect(getByTestId('threads-off-their-lines').textContent).toContain('read in');
 	});
@@ -230,7 +227,7 @@ describe('a comment whose line the diff no longer shows', () => {
 		fakeServer().answer('GET /api/diff', diffResponse({ files: [restored], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
 
-		const { queryByTestId } = render(FileSection, inReview(review, { file: restored, scrollRoot: null }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file: restored }));
 
 		expect(queryByTestId('threads-off-their-lines')).toBeNull();
 	});

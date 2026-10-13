@@ -17,11 +17,9 @@
 
 	interface Props {
 		file: DiffFile;
-		/** The area the review scrolls in, which a file comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 	}
 
-	let { file, scrollRoot }: Props = $props();
+	let { file }: Props = $props();
 	const review = useReview();
 
 	const isDiffMode = $derived(review.mode === 'diff');
@@ -68,7 +66,6 @@
 	sectionKey={fileSectionKey(file.path)}
 	{file}
 	folded={collapsed}
-	{scrollRoot}
 	testId="file-section"
 	class="border-b border-base-300"
 >

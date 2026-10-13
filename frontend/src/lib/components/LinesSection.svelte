@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
 	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
+	import { useScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
 
@@ -12,8 +13,6 @@
 		file: DiffFile;
 		/** Whether its lines are folded away, its header left alone on the page. */
 		folded: boolean;
-		/** The area it scrolls in, which it comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 		testId: string;
 		/** How it is set among its neighbours: a rule under it, a frame around it. */
 		class: ClassValue;
@@ -23,8 +22,10 @@
 		lines: Snippet;
 	}
 
-	let { sectionKey, file, folded, scrollRoot, testId, class: framed, header, lines }: Props = $props();
+	let { sectionKey, file, folded, testId, class: framed, header, lines }: Props = $props();
 	const review = useReview();
+	// The area its view scrolls in, which it comes near to be built: null while that is not drawn yet
+	const scrollArea = useScrollArea();
 
 	// How many rows it will draw, so the browser can leave it undrawn off
 	// screen without the scrollbar lurching once it is drawn for real: the
@@ -37,7 +38,7 @@
 	const nearness = new BuiltWhenNear();
 
 	$effect(() => (element ? review.sections.register(sectionKey, file.path, element) : undefined));
-	$effect(() => (element ? nearness.watch(element, scrollRoot) : undefined));
+	$effect(() => (element ? nearness.watch(element, scrollArea()) : undefined));
 </script>
 
 <!-- A section of the page that draws lines of a file, whichever view draws it: it says where it is and

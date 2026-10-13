@@ -176,7 +176,7 @@ describe("a base that is not the review's own", () => {
 		const server = fakeServer();
 		server.answer('GET /api/diff', diffResponse({ files: [answered], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
-		return render(FileSection, inReview(review, { file: answered, scrollRoot: null }));
+		return render(FileSection, inReview(review, { file: answered }));
 	}
 
 	/** The number a reader comments on a line by, named as a screen reader names it. */

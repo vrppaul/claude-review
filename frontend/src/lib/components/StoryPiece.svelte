@@ -18,8 +18,6 @@
 		piece: DiffFile;
 		/** What it is cut out to show: the lines a step tells, or what no step tells of the file. */
 		shows: PieceShows;
-		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 		/** What is said beside the file's name: the lines a step tells, how much was left out. */
 		beside: Snippet;
 	}
@@ -28,7 +26,7 @@
 	// the name under it is no heading; what no step tells has no heading but its file
 	const NAMED_IN: Record<PieceShows, 'h3' | 'p'> = { 'a-step': 'p', 'what-no-step-tells': 'h3' };
 
-	let { sectionKey, piece, shows, scrollRoot, beside }: Props = $props();
+	let { sectionKey, piece, shows, beside }: Props = $props();
 	const review = useReview();
 
 	const language = $derived(languageOf(review.mode, piece.path));
@@ -44,7 +42,6 @@
 	{sectionKey}
 	file={piece}
 	folded={false}
-	{scrollRoot}
 	testId="story-piece"
 	class="overflow-clip rounded-md border border-base-300"
 >

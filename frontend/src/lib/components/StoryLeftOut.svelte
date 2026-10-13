@@ -9,11 +9,9 @@
 	interface Props {
 		/** What the story leaves out, file by file: the piece of each no step tells. */
 		leftOut: LeftOut[];
-		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 	}
 
-	let { leftOut, scrollRoot }: Props = $props();
+	let { leftOut }: Props = $props();
 </script>
 
 <!-- Nothing can be hidden: what no step tells is shown all the same, and said to be outside the story -->
@@ -25,7 +23,7 @@
 	{#each leftOut as left (leftOutSectionKey(left))}
 		<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 		<svelte:boundary onerror={reportBroken}>
-			<StoryPiece sectionKey={leftOutSectionKey(left)} piece={left.piece} shows="what-no-step-tells" {scrollRoot}>
+			<StoryPiece sectionKey={leftOutSectionKey(left)} piece={left.piece} shows="what-no-step-tells">
 				{#snippet beside()}
 					{#if left.changed_lines > 0}
 						<span class="cr-muted text-xs">

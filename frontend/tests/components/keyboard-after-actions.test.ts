@@ -199,7 +199,7 @@ describe('where the keyboard is after the hidden lines are shown', () => {
 		review = openReview({ files: [near] });
 		const server = fakeServer();
 		server.answer('GET /api/file-window', { start: 1, lines: ['one', 'two', 'three', 'four'], total: 5 });
-		render(FileSection, inReview(review, { file: near, scrollRoot: null }));
+		render(FileSection, inReview(review, { file: near }));
 
 		await user.click(screen.getByTestId('expand-all'));
 		await settled();

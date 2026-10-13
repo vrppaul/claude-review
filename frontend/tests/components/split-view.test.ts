@@ -50,13 +50,13 @@ describe('split layout', () => {
 			'const b = 3;'
 		]);
 
-		const oneColumn = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const oneColumn = render(FileSection, inReview(review, { file }));
 		const row = oneColumn.getByRole('button', { name: 'Comment on line 2' }).closest('tr');
 		expect([...(row?.classList ?? [])]).toEqual(expect.arrayContaining(['cr-row-add', 'cr-row-marked']));
 		oneColumn.unmount();
 
 		await inTwoColumns();
-		render(FileSection, inReview(review, { file, scrollRoot: null }));
+		render(FileSection, inReview(review, { file }));
 		const cell = within(rowHolding('const b = 3;')).getByTestId('split-new-code');
 		expect([...cell.classList]).toEqual(expect.arrayContaining(['cr-cell-add', 'cr-cell-marked']));
 	});
@@ -67,14 +67,14 @@ describe('split layout', () => {
 		review = openReview({ files: [goesOn] });
 		await inTwoColumns();
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: goesOn, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: goesOn }));
 
 		expect(getByTestId('split-view')).toBeTruthy();
 		expect(getByTestId('expand-down')).toBeTruthy();
 	});
 
 	it('reads down one column until asked for two', () => {
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getByTestId('raw-view')).toBeTruthy();
 		expect(queryByTestId('split-view')).toBeNull();
@@ -83,7 +83,7 @@ describe('split layout', () => {
 	it('faces the old version against the new one', async () => {
 		await inTwoColumns();
 
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getByTestId('split-view')).toBeTruthy();
 		expect(queryByTestId('raw-view')).toBeNull();
@@ -92,7 +92,7 @@ describe('split layout', () => {
 	it('shows both versions of a replaced line on one row', async () => {
 		await inTwoColumns();
 
-		render(FileSection, inReview(review, { file, scrollRoot: null }));
+		render(FileSection, inReview(review, { file }));
 		const replaced = rowHolding('const b = 2;');
 
 		expect(within(replaced).getByTestId('split-old-code').textContent).toContain('const b = 2;');
@@ -102,7 +102,7 @@ describe('split layout', () => {
 	it('leaves the old side of a pure insertion empty', async () => {
 		await inTwoColumns();
 
-		render(FileSection, inReview(review, { file, scrollRoot: null }));
+		render(FileSection, inReview(review, { file }));
 		const inserted = rowHolding('const c = 4;');
 
 		expect(within(inserted).getByTestId('split-old-code').textContent?.trim()).toBe('');
@@ -113,7 +113,7 @@ describe('split layout', () => {
 		const user = userEvent.setup();
 		await inTwoColumns();
 
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 		await user.click(within(rowHolding('const b = 2;')).getByTestId('old-line-gutter'));
 		await user.click(document.body);
 		await user.type(getByTestId('comment-input'), 'why did this go');
@@ -126,7 +126,7 @@ describe('split layout', () => {
 		review.threads.add(newComment({ file: 'src/app.ts', startLine: 2, body: 'tighten this' }));
 		await inTwoColumns();
 
-		const { getByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByText } = render(FileSection, inReview(review, { file }));
 
 		expect(getByText('tighten this')).toBeTruthy();
 	});
@@ -136,7 +136,7 @@ describe('split layout', () => {
 		review.threads.add(newComment({ file: 'src/app.ts', startLine: 1, body: 'name this' }));
 		await inTwoColumns();
 
-		const { getAllByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getAllByText } = render(FileSection, inReview(review, { file }));
 
 		expect(getAllByText('name this')).toHaveLength(1);
 	});
@@ -146,7 +146,7 @@ describe('split layout', () => {
 		review.threads.add(newComment({ file: 'src/app.ts', side: 'new', startLine: 2, body: 'why this' }));
 		await inTwoColumns();
 
-		const { getAllByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getAllByText } = render(FileSection, inReview(review, { file }));
 
 		expect(getAllByText('why gone')).toHaveLength(1);
 		expect(getAllByText('why this')).toHaveLength(1);
@@ -167,7 +167,7 @@ describe('reaching every row from the keyboard in two columns', () => {
 	});
 
 	it('stops once on every row, a removed line with nothing beside it included', () => {
-		const { getAllByTestId } = render(FileSection, inReview(review, { file: removal, scrollRoot: null }));
+		const { getAllByTestId } = render(FileSection, inReview(review, { file: removal }));
 
 		const stops = getAllByTestId('line-gutter');
 
@@ -184,7 +184,7 @@ describe('a removed line facing the line that replaced it', () => {
 	});
 
 	it('takes the keyboard by Tab, and is not a stop j and k move between', () => {
-		render(FileSection, inReview(review, { file, scrollRoot: null }));
+		render(FileSection, inReview(review, { file }));
 
 		const removed = within(rowHolding('const b = 2;')).getByTestId('old-line-gutter');
 		const stops = screen.getAllByTestId('line-gutter').map((stop) => stop.getAttribute('aria-label'));
@@ -195,7 +195,7 @@ describe('a removed line facing the line that replaced it', () => {
 	});
 
 	it('leaves the left number of an unchanged line to the mouse: its row stops on the same line', () => {
-		render(FileSection, inReview(review, { file, scrollRoot: null }));
+		render(FileSection, inReview(review, { file }));
 
 		expect(within(rowHolding('const a = 1;')).getByTestId('old-line-gutter').tabIndex).toBe(-1);
 	});

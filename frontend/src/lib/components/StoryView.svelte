@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import { counted } from '$lib/utils/words';
 	import StoryChapter from './StoryChapter.svelte';
@@ -11,6 +12,8 @@
 	const held = $derived(review.story.held);
 
 	let container: HTMLElement | undefined = $state();
+	// Every piece of the story scrolls in this area, and builds its rows as it comes near it
+	provideScrollArea(() => container ?? null);
 
 	// The story reports which piece is being read, as the files' view does of its files
 	$effect(() => {
@@ -34,11 +37,11 @@
 			<StoryOverview overview={story.overview} chapters={story.chapters} />
 
 			{#each story.chapters as chapter, chapterPlace (chapter.id)}
-				<StoryChapter {chapter} {chapterPlace} scrollRoot={container ?? null} />
+				<StoryChapter {chapter} {chapterPlace} />
 			{/each}
 
 			{#if story.left_out.length > 0}
-				<StoryLeftOut leftOut={story.left_out} scrollRoot={container ?? null} />
+				<StoryLeftOut leftOut={story.left_out} />
 			{/if}
 
 			{#if story.housekeeping.length > 0}

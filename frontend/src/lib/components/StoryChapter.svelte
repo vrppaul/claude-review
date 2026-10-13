@@ -9,11 +9,9 @@
 		chapter: ToldChapter;
 		/** Where the chapter stands among the story's chapters: what it is numbered by. */
 		chapterPlace: number;
-		/** The area the story scrolls in, which a piece comes near to be built; null for the page itself. */
-		scrollRoot: HTMLElement | null;
 	}
 
-	let { chapter, chapterPlace, scrollRoot }: Props = $props();
+	let { chapter, chapterPlace }: Props = $props();
 </script>
 
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
@@ -34,6 +32,6 @@
 	{/if}
 
 	{#each chapter.steps as step, stepPlace (stepSectionKey(step))}
-		<StoryStep {step} number={stepNumber(chapterPlace, stepPlace)} {scrollRoot} />
+		<StoryStep {step} number={stepNumber(chapterPlace, stepPlace)} />
 	{/each}
 </section>

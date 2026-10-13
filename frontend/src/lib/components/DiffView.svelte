@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { threadsOffTheDiff } from '$lib/anchors/placement';
+	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
@@ -24,6 +25,8 @@
 	}
 
 	let container: HTMLElement | undefined = $state();
+	// Every file's section scrolls in this area, and builds its rows as it comes near it
+	provideScrollArea(() => container ?? null);
 
 	// The sidebar scrolls the stream, and the stream reports back which file is
 	// current — one direction each way, so the two cannot fight over it.
@@ -53,7 +56,7 @@
 	{#each review.diff.files as file (file.path)}
 		<!-- A file that cannot be drawn says so in its place, and takes no other file down with it -->
 		<svelte:boundary onerror={reportBroken}>
-			<FileSection {file} scrollRoot={container ?? null} />
+			<FileSection {file} />
 			{#snippet failed(error, retry)}
 				<PartFailed what={file.path} {error} {retry} />
 			{/snippet}

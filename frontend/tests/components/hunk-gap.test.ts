@@ -38,7 +38,7 @@ describe('widening the context around a hunk', () => {
 	});
 
 	it('offers to read up from the change, or all of it, where nothing is above it', () => {
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 
 		expect(getByTestId('hunk-gap').textContent).toContain('29 hidden lines');
 		expect(getByTestId('expand-up').textContent).toContain('20');
@@ -55,7 +55,7 @@ describe('widening the context around a hunk', () => {
 			total: FILE_LENGTH
 		});
 
-		const { getByTestId, getByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, getByText } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-up'));
 
 		expect(server.requests).toMatchObject([
@@ -72,7 +72,7 @@ describe('widening the context around a hunk', () => {
 		const near = diffFile({ path: 'src/near.py', hunks: [replacedAt(15)] });
 		review = openReview({ files: [near] });
 
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file: near, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file: near }));
 		expect(queryByTestId('expand-up')).toBeNull();
 		await user.click(getByTestId('expand-all'));
 
@@ -93,7 +93,7 @@ describe('widening the context around a hunk', () => {
 		};
 		review = openReview({ files: [distant] });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: distant, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: distant }));
 		expect(getByTestId('hunk-gap').textContent).toContain('500 hidden lines');
 
 		await user.click(getByTestId('expand-up'));
@@ -110,7 +110,7 @@ describe('widening the context around a hunk', () => {
 		const apart = diffFile({ path: 'src/apart.py', hunks: [replacedAt(10), replacedAt(100)] });
 		review = openReview({ files: [apart] });
 
-		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: apart, scrollRoot: null }));
+		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: apart }));
 		const [, between] = getAllByTestId('hunk-gap');
 		if (!between) throw new Error('No gap between the two changes');
 		expect(within(between).getByTestId('expand-up').getAttribute('aria-label')).toContain('Show 20 more lines');
@@ -129,7 +129,7 @@ describe('widening the context around a hunk', () => {
 		const distant = diffFile({ path: 'src/long.py', hunks: [replacedAt(501)] });
 		review = openReview({ files: [distant], facts: { limits: { ...SEND_LIMITS, max_window_lines: 50 } } });
 
-		const { getByTestId } = render(FileSection, inReview(review, { file: distant, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file: distant }));
 		expect(getByTestId('expand-all').textContent).toContain('Show 50');
 		await user.click(getByTestId('expand-all'));
 
@@ -153,7 +153,7 @@ describe('widening the context around a hunk', () => {
 		});
 		review = openReview({ files: [goesOn] });
 
-		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: goesOn, scrollRoot: null }));
+		const { getAllByTestId, getByText } = render(FileSection, inReview(review, { file: goesOn }));
 		const below = getAllByTestId('hunk-gap').at(-1);
 		if (!below) throw new Error('No gap below the change');
 		expect(below.textContent).toContain('The file may go on below');
@@ -168,7 +168,7 @@ describe('widening the context around a hunk', () => {
 	});
 
 	it('offers nothing below a change that ends the file', () => {
-		const { getAllByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getAllByTestId } = render(FileSection, inReview(review, { file }));
 
 		// Only the gap above the change: the diff would have carried the lines after it
 		expect(getAllByTestId('hunk-gap')).toHaveLength(1);
@@ -178,7 +178,7 @@ describe('widening the context around a hunk', () => {
 		const user = userEvent.setup();
 		fakeServer().refuse('GET /api/file-window', BAD_REQUEST);
 
-		const { getByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-up'));
 
 		expect(getByTestId('expand-error')).toBeTruthy();
@@ -192,7 +192,7 @@ describe('widening the context around a hunk', () => {
 		};
 		review = openReview({ files: [fromTop] });
 
-		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop, scrollRoot: null }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
@@ -201,7 +201,7 @@ describe('widening the context around a hunk', () => {
 		const plain = wholeFile('/tmp/plan.md', '# Plan', 'Ship it.');
 		review = openReview({ files: [plain], facts: { mode: 'files' } });
 
-		const { queryByTestId } = render(FileSection, inReview(review, { file: plain, scrollRoot: null }));
+		const { queryByTestId } = render(FileSection, inReview(review, { file: plain }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});
@@ -214,7 +214,7 @@ describe('widening the context around a hunk', () => {
 			lines: Array.from({ length: 29 }, (_, offset) => `line ${offset + 1}`),
 			total: 30
 		});
-		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
 		expect(getByTestId('hunk-header')).toBeTruthy();
 
 		await user.click(getByTestId('expand-all'));
@@ -231,7 +231,7 @@ describe('lines asked for while the file is drawn again', () => {
 		const user = userEvent.setup();
 		review = openReview({ files: [file] });
 		const windows = fakeServer().hold('GET /api/file-window');
-		const { getByTestId, getAllByText } = render(FileSection, inReview(review, { file, scrollRoot: null }));
+		const { getByTestId, getAllByText } = render(FileSection, inReview(review, { file }));
 		await user.click(getByTestId('expand-up'));
 
 		// Folded and opened while the lines are on their way, and asked for again
@@ -303,7 +303,7 @@ describe('what hangs under a line, when lines are revealed above it', () => {
 
 	it('keeps the comment being written under its own line, words and all', async () => {
 		const user = userEvent.setup();
-		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks, scrollRoot: null }));
+		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks }));
 		const line61 = getAllByTestId('line-gutter').find((gutter) => gutter.textContent?.trim() === '61');
 		if (!line61) throw new Error('Line 61 is not drawn');
 		await user.click(line61);
@@ -319,7 +319,7 @@ describe('what hangs under a line, when lines are revealed above it', () => {
 	it('keeps a reply being written, and what was pasted into it', async () => {
 		const user = userEvent.setup();
 		review.threads.add(newComment({ file: 'src/app.py', startLine: 31, body: 'why kept' }));
-		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks, scrollRoot: null }));
+		const { getAllByTestId, getByTestId } = render(FileSection, inReview(review, { file: twoHunks }));
 		await user.click(getByTestId('open-reply'));
 		await user.type(getByTestId('comment-input'), 'my reply');
 		await paste(getByTestId('comment-input'), screenshot());
