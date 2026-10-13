@@ -11,6 +11,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 
@@ -39,7 +40,7 @@ def picker_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review that has already been through one round."""
     started = await servers.start(await repository_opening(picker_repo))

@@ -16,6 +16,7 @@ from playwright.async_api import Locator, Page, ViewportSize, expect
 
 from claude_review.domain.models import LineSpan
 from claude_review.domain.story import Step, ToldFrom
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, step, story_of, story_of_chapters
 
@@ -123,7 +124,7 @@ def changed_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review of the change, which the agent has told a story of."""
     started = await servers.start(await repository_opening(changed_repo))
@@ -132,7 +133,7 @@ async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     return started
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review_of_a_reconstruction(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review of the change, whose story an agent that did not make it told from the commits."""
     started = await servers.start(await repository_opening(changed_repo))
@@ -149,7 +150,7 @@ def long_file_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review_of_a_long_file(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review whose story tells, in one step, the file its change adds whole."""
     started = await servers.start(await repository_opening(long_file_repo))
@@ -158,7 +159,7 @@ async def review_of_a_long_file(long_file_repo: Path, servers: ReviewServers) ->
     return started
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review_of_a_long_file_in_two_steps(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review whose story tells the file its change adds in two steps, the second with its reason."""
     started = await servers.start(await repository_opening(long_file_repo))
@@ -167,7 +168,7 @@ async def review_of_a_long_file_in_two_steps(long_file_repo: Path, servers: Revi
     return started
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review_of_a_long_file_in_two_chapters(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review whose story tells the file its change adds in two chapters, a step each."""
     started = await servers.start(await repository_opening(long_file_repo))

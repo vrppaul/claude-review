@@ -14,6 +14,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # Three files, each changed far down: one above the file being read, and one
@@ -55,7 +56,7 @@ def three_files(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(three_files: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(three_files))
 

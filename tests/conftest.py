@@ -23,6 +23,7 @@ from tests.helpers import (
     one_line_file,
     opening_of,
     page_client,
+    review_servers,
 )
 
 
@@ -66,9 +67,8 @@ def reviews(workspace: ReviewWorkspace, marking_workspace: ReviewWorkspace, read
 @pytest.fixture
 async def servers(reviews: ReviewFactory) -> AsyncIterator[ReviewServers]:
     """Serves reviews on real ports for the test, and stops every one of them after it."""
-    started = ReviewServers(reviews)
-    yield started
-    await started.stop()
+    async with review_servers(reviews) as started:
+        yield started
 
 
 @pytest.fixture

@@ -12,6 +12,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 READ_FILE = "read.py"
@@ -31,7 +32,7 @@ def narrowed_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(narrowed_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review whose round 1 was answered by removing line 2."""
     started = await servers.start(await repository_opening(narrowed_repo))

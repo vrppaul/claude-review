@@ -1,0 +1,21 @@
+"""The event loop the browser tests of a run share, and how a fixture is put in it.
+
+A run launches Chromium once, and a browser is driven from the event loop
+it was launched in and from no other. So that loop is the run's, and
+whatever of a browser test awaits runs in it: the test, which `conftest.py`
+puts there, and every async fixture the test asks for, which says so itself
+by being declared with `in_the_browsers_loop` where another test's fixture
+has `pytest.fixture`. One declared the plain way runs in a loop of its own,
+as the other tests and their fixtures do. A review started there would
+answer nobody, for that loop stands still while the test runs, so
+`ReviewServers.start` refuses it: the loop is not the one the test's
+`servers` were made in.
+"""
+
+import pytest_asyncio
+
+# The scope of the loop the browser lives in, as pytest-asyncio names it: one loop for the whole run
+BROWSERS_LOOP = "session"
+
+# How an async fixture of a browser test is declared
+in_the_browsers_loop = pytest_asyncio.fixture(loop_scope=BROWSERS_LOOP)

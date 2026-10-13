@@ -187,6 +187,17 @@ tests. Remove items when done — don't check them off.
       in the six runs of it that followed, one of them of every test again.
       Schemathesis draws its requests anew each run, and the request that
       failed was not kept.
+- [ ] A review leaves in its event loop what nothing ends. The answerer's
+      lease is a timer of ten minutes (`Answerer.heard`,
+      `src/claude_review/services/review/answerer.py`) that outlives the
+      review. A server that cannot listen leaves uvicorn's lifespan task
+      pending: `test_a_server_that_cannot_listen_ends_the_review_and_says_it_never_came_up`
+      (`tests/integration/test_review_server.py`) ends with it. One process
+      serves one review, and such a test has a loop of its own that takes
+      both away. The browser tests share one loop: 37 of the 101 left a
+      lease in it when counted, which `nothing_left_running`
+      (`tests/e2e/conftest.py`) cannot see, for it sees tasks. A lease left
+      there fires only if browser tests are still running ten minutes on.
 - [ ] Drop `tmp_path` from unit tests — services should accept data in memory
       so unit tests don't touch the filesystem
 - [ ] The Python tests hold 138 branches in 28 files — an `if`, a

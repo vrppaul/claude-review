@@ -13,6 +13,7 @@ import pytest
 from playwright.async_api import Page
 
 from claude_review.hosting.workspace import ReaderFiles
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -51,12 +52,12 @@ def repository(tmp_path: Path) -> Path:
     return tmp_path
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(repository: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(repository))
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def gapped(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A review of one long file changed near its end, with the lines above the change left out."""
     lines = [f"line_{number} = {number}" for number in range(1, LONG_FILE_LINES + 1)]
@@ -66,7 +67,7 @@ async def gapped(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(tmp_path))
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def several_files(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A review of several files, each added whole: a stream of file sections to jump between."""
     committed_repository(tmp_path, COMMITTED)

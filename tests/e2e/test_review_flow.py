@@ -13,6 +13,7 @@ from claude_review.domain.models import ReviewMode
 from claude_review.hosting.workspace import ReaderFiles
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import (
     SETTLE_SECONDS,
     ReviewServers,
@@ -198,7 +199,7 @@ def e2e_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def diff_review(e2e_repo: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing the e2e repo's uncommitted changes."""
     return await servers.start(await repository_opening(e2e_repo))
@@ -352,7 +353,7 @@ def text_files(tmp_path: Path) -> list[Path]:
     return [plan, notes]
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def files_review(text_files: list[Path], servers: ReviewServers, tmp_path: Path) -> RunningReview:
     """A real server reviewing two text files."""
     return await servers.start(
@@ -526,7 +527,7 @@ def transcript_file(tmp_path: Path) -> Path:
     return conversation
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
     return await servers.start(opening_of(await read_transcript(transcript_file), mode=ReviewMode.TRANSCRIPT))
@@ -636,7 +637,7 @@ async def test_sidebar_counts_files_marked_viewed(diff_review: RunningReview, pa
     await heading.filter(has_text="1 viewed").wait_for()
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def long_review(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing more lines than are built before the reader comes near them."""
     repository = committed_repository(tmp_path, {"README.md": "# A long review\n"})

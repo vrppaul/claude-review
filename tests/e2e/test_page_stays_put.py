@@ -11,10 +11,10 @@ a browser lays a page out, so only here can that be seen.
 
 from pathlib import Path
 
-import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page, expect
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
 
@@ -36,7 +36,7 @@ TALLER_THAN_THE_WINDOW_BY = "() => document.documentElement.scrollHeight - windo
 STEPS_DOWN_THE_STORY = 5
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review_of_many_files(tmp_path: Path, servers: ReviewServers) -> RunningReview:
     """A review of more added files than fit on a screen, which the agent has told a story of, a step to a file."""
     repository = committed_repository(tmp_path / "repo", {"README.md": "# Many files\n"})

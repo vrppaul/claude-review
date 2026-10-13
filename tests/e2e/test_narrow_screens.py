@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from playwright.async_api import FloatRect, Locator, Page
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # A file whose header is long: its path alone is wider than the diff on a laptop's screen, and as
@@ -37,7 +38,7 @@ def repository(tmp_path: Path) -> Path:
     return tmp_path
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(repository: Path, servers: ReviewServers) -> RunningReview:
     return await servers.start(await repository_opening(repository))
 

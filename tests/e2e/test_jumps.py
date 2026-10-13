@@ -13,6 +13,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page
 
+from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
 
@@ -67,7 +68,7 @@ def many_hunks(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
+@in_the_browsers_loop
 async def review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
     """A review of the change, which the agent has told a story of."""
     started = await servers.start(await repository_opening(many_hunks))

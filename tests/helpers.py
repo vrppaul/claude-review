@@ -131,6 +131,11 @@ WAIT_FOR_EVENT = {"wait_seconds": SETTLE_SECONDS}
 GLANCE_AT_EVENTS = {"wait_seconds": GLANCE_SECONDS}
 # How long a server started for a browser has to come up
 STARTUP_SECONDS = 5.0
+# What is said of a review started in another event loop than its servers', where it would answer nobody
+STARTED_IN_ANOTHER_LOOP = (
+    "a review is started in the event loop its servers were made in: "
+    "the fixture that starts one runs in the loop of the `servers` it asks for"
+)
 
 
 # What git reads as yes in a variable of its environment
@@ -650,8 +655,11 @@ class ReviewServers:
     def __init__(self, reviews: ReviewFactory) -> None:
         self._reviews = reviews
         self._running: list[ServedReview] = []
+        # The loop the servers are stopped in, and so the one each is started in
+        self._loop = asyncio.get_running_loop()
 
     async def start(self, opening: ReviewOpening) -> RunningReview:
+        assert asyncio.get_running_loop() is self._loop, STARTED_IN_ANOTHER_LOOP
         hosted = self._reviews.hosted(opening)
         lifetime = hosted.review.lifetime
         # The server the command line runs, so a browser test meets the same one
@@ -670,3 +678,17 @@ class ReviewServers:
         for served in self._running:
             served.lifetime.end(EndReason.FINISHED)
             await served.serving
+
+
+@contextlib.asynccontextmanager
+async def review_servers(reviews: ReviewFactory) -> AsyncGenerator[ReviewServers]:
+    """Serve reviews on real ports until the block is left, and stop every one of them then.
+
+    Entered in the event loop its reviews are reached from: a server runs in
+    the loop it was started in, and answers only while that loop does.
+    """
+    started = ReviewServers(reviews)
+    try:
+        yield started
+    finally:
+        await started.stop()

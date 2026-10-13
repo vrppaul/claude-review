@@ -192,7 +192,16 @@ min_confidence = 60
 # Called through what they are decorated as, never by name in this code:
 # routes, validators, click commands, fixtures, and whatever an interface or a
 # base class calls
-ignore_decorators = ["@router.*", "@override", "@model_validator", "@field_validator", "@click.*", "@pytest.fixture"]
+ignore_decorators = [
+    "@router.*",
+    "@override",
+    "@model_validator",
+    "@field_validator",
+    "@click.*",
+    "@pytest.fixture",
+    # A fixture that names the event loop it runs in
+    "@pytest_asyncio.fixture",
+]
 ignore_names = [
     # Pydantic's own setting
     "model_config",
@@ -218,6 +227,8 @@ ignore_names = [
     "ASSISTANT",
     # http.server calls do_<METHOD> by name
     "do_POST",
+    # pytest calls a conftest's hook by name
+    "pytest_itemcollected",
 ]
 
 [tool.deptry.per_rule_ignores]
