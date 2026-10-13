@@ -1,7 +1,8 @@
 /**
  * The review's stylesheets read as the files they are, for the tests that
- * ask what colour something is drawn in: jsdom applies none of them, and a
- * stylesheet imported into a test comes back empty.
+ * ask what colour something is drawn in, or what a rule declares: jsdom
+ * applies none of them, and a stylesheet imported into a test comes back
+ * empty.
  *
  * A token is followed through tokens.css to the colour it is in a theme. An
  * element's colour is the token its own classes name: a `cr-` class by its
@@ -72,11 +73,24 @@ export function paint(token: string, theme: Theme): Paint {
 	return { channels: [red, green, blue], alpha };
 }
 
+/** A rule of main.css as it is written: what it is a rule for, and what stands between its braces. */
+export interface StyleRule {
+	selectors: string;
+	declarations: string;
+}
+
+/** Every rule of main.css, in the file's order: one written inside an `@media` among them. */
+export function styleRules(): StyleRule[] {
+	return [...main.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
+		selectors: selectors.trim(),
+		declarations
+	}));
+}
+
 /** Every rule of main.css that sets a part's colour by a token, for a selector of one class alone: the class and the token, in the file's order. */
 function classRules(drawn: Drawn): { className: string; token: string }[] {
-	const rules = [...main.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
-	return rules.flatMap(([, selectors, body]) => {
-		const token = new RegExp(`(?:^|[;\\s])${drawn}:\\s*var\\((--[a-z0-9-]+)\\)`).exec(body)?.[1];
+	return styleRules().flatMap(({ selectors, declarations }) => {
+		const token = new RegExp(`(?:^|[;\\s])${drawn}:\\s*var\\((--[a-z0-9-]+)\\)`).exec(declarations)?.[1];
 		if (token === undefined) return [];
 		return selectors
 			.split(',')
