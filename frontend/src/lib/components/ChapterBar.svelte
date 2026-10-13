@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Icon from './Icon.svelte';
-	import { chapterCalled, chapterNumber, stepAmong } from './story-words';
+	import { chapterByNumber, chapterNumber, stepAmong } from './story-words';
 
 	const review = useReview();
 
@@ -47,7 +47,7 @@
 						class="btn shrink-0 btn-ghost btn-sm"
 						onclick={() => review.parts.goTo(before.part)}
 					>
-						{chapterCalled(before.place)}
+						{chapterByNumber(before.place)}
 					</button>
 				{/if}
 				{#if after}
@@ -57,7 +57,7 @@
 						class="btn shrink-0 btn-ghost btn-sm"
 						onclick={() => review.parts.goTo(after.part)}
 					>
-						{chapterCalled(after.place)}
+						{chapterByNumber(after.place)}
 						<Icon name="caret" class="h-2.5 w-2.5" />
 					</button>
 				{/if}

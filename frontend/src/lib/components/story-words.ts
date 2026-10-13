@@ -60,14 +60,14 @@ export const THE_OVERVIEW = 'Overview';
 /** What the part that draws what no step tells is called, in its heading and by its part of the page. */
 export const NOT_IN_THE_STORY = 'Not in the story';
 
-/** A chapter as a way to it says where it leads: "Chapter 2". */
-export function chapterCalled(place: number): string {
+/** A chapter by its number, where the words begin with it, as a way to it says where it leads: "Chapter 2". */
+export function chapterByNumber(place: number): string {
 	return `${CHAPTER_FIRST} ${chapterNumber(place)}`;
 }
 
 /** What a chapter's part of the page is called: "Chapter 2: The end". */
 export function chapterEntitled(place: number, title: string): string {
-	return `${chapterCalled(place)}${BEFORE_A_TITLE}${title}`;
+	return `${chapterByNumber(place)}${BEFORE_A_TITLE}${title}`;
 }
 
 /** Which of its chapter's steps a step is, as the bar a chapter is read under says: "step 2 of 5". */
