@@ -254,6 +254,20 @@
   the line being read. Tab out of a pane closes it, so two can no longer be
   open at once, and a selection let go outside the keys list leaves it
   open.
+- **Nor does putting a column away.** The file tree put away by its button,
+  or by `f` with the keyboard on one of its files, hands the keyboard to
+  the rail that brings it back; brought back, to the button that puts it
+  away. The agent panel closed by its own button hands it to the Agent
+  button in the header.
+- **`j` and `k` start where you are reading.** With the keyboard outside
+  the diff — on a file just picked in the tree, on a button of the header —
+  or on nothing, the first `j` or `k` went to the first line of the whole
+  review and scrolled back to its top. It now lands on the first line in
+  sight, under the file's header, and the screen stays where it is.
+- **The list of keys leaves out the keys that have nothing to act on.**
+  Over a diff with no file left in it, it listed `j / k`, Enter, `] / [`,
+  `v` and `u`, which did nothing there. `n / p` stay while a comment on a
+  file no longer in the diff is shown above it.
 - **Taking a thread out of a panel message leaves a longer one alone**:
   dropping `@a.py:1-2` used to cut into `@a.py:1-20`, losing that thread
   from the message and leaving a stray `0`.
