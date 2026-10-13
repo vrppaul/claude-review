@@ -9,6 +9,7 @@ since each is a server and a browser started.
 
 import asyncio
 import contextlib
+import os
 import signal
 import sys
 import zlib
@@ -30,6 +31,11 @@ LOOK_SECONDS = 60
 LOOKED = 0
 NOT_TAKEN = 1
 NOT_UNDERSTOOD = 2
+# And with when it is stopped from outside, as a shell says of a program stopped at Ctrl-C; how long it has to stop
+STOPPED = 130
+STOPPED_WITHIN_SECONDS = 10
+# Where everything a look starts is told to keep its temporary files
+TEMPORARY_FILES_VARIABLE = "TMPDIR"
 
 # What parts the values of a line
 BETWEEN_VALUES = " | "
@@ -102,6 +108,16 @@ class KeptLook(BaseModel):
     process: asyncio.subprocess.Process
 
 
+class LookUnderWay(BaseModel):
+    """A look with its browser open: where its review is, its process, and where its temporary files go."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    address: str
+    process: asyncio.subprocess.Process
+    temporary: Path
+
+
 async def _look(*arguments: str) -> Looked:
     """Run a look to its end, as it is run from a shell."""
     process = await asyncio.create_subprocess_exec(
@@ -148,6 +164,27 @@ async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     )
     assert looked.exit_code == LOOKED, looked.complaint
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
+
+
+@in_the_browsers_loop
+async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
+    """A look with its page open and a step under way: a press on nothing, which waits for it to appear."""
+    temporary = tmp_path / "temporary"
+    temporary.mkdir()
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(LOOK),
+        "press:no-such-thing",
+        env={**os.environ, TEMPORARY_FILES_VARIABLE: str(temporary)},
+        stdout=asyncio.subprocess.PIPE,
+    )
+    opened = _said((await asyncio.wait_for(process.stdout.readline(), timeout=LOOK_SECONDS)).decode())
+    _, address = opened.step.split()
+    yield LookUnderWay(address=address, process=process, temporary=temporary)
+    # One that did not end when it was told to is ended outright
+    with contextlib.suppress(ProcessLookupError):
+        process.kill()
+    await process.wait()
 
 
 @in_the_browsers_loop
@@ -312,3 +349,16 @@ async def test_a_look_stopped_from_outside_stops_its_server(kept_look: KeptLook)
     async with AsyncClient(base_url=kept_look.address) as anybody:
         with pytest.raises(ConnectError):
             await anybody.get("/")
+
+
+async def test_a_look_stopped_with_its_browser_open_ends_at_once_and_leaves_nothing_behind(
+    look_under_way: LookUnderWay,
+) -> None:
+    """Its server, its browser and its own directory all keep what they write where temporary files go."""
+    look_under_way.process.send_signal(signal.SIGTERM)
+
+    assert await asyncio.wait_for(look_under_way.process.wait(), timeout=STOPPED_WITHIN_SECONDS) == STOPPED
+    async with AsyncClient(base_url=look_under_way.address) as anybody:
+        with pytest.raises(ConnectError):
+            await anybody.get("/")
+    assert list(look_under_way.temporary.iterdir()) == []

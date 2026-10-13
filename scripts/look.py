@@ -51,9 +51,17 @@ not taken.
 `--keep`, in place of steps: serve the change, tell its story, print where
 the review is, and stay until the review ends. A review ends once its page
 has been closed, so a kept look opens none: it is how a page is put before
-a person. Stopped from outside, a look stops its server on the way out.
+a person.
+
+Stopped from outside, by SIGTERM or at Ctrl-C, a look ends where it stands:
+it closes its browser, stops its server and removes its directory on the
+way out.
 
 Elements are found by test id alone.
+
+Exits 0 having looked, or having kept a review until it ended; 1 at a step
+that could not be taken, or when the review could not be served; 2 at a
+command line it cannot read; 130 stopped from outside.
 """
 
 import argparse
@@ -66,7 +74,7 @@ import sys
 import tempfile
 from abc import ABC, abstractmethod
 from asyncio.subprocess import DEVNULL, PIPE, Process
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Coroutine, Iterator
 from enum import StrEnum, auto
 from pathlib import Path
 from typing import Self, override
@@ -678,17 +686,26 @@ def _asked(arguments: list[str]) -> Asked:
     )
 
 
+async def _until_stopped(look: Coroutine[None, None, None]) -> None:
+    """Take a look to its end, or until it is told from outside to stop.
+
+    Told to stop, it is cancelled where it stands, as Ctrl-C cancels it: the
+    browser it opened and the server it started are closed on its way out.
+    """
+    taking = asyncio.create_task(look)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, taking.cancel)
+    await taking
+
+
 def main() -> int:
     asked = _asked(sys.argv[1:])
-    # Stopped from outside, the look leaves as it does at Ctrl-C: its server stopped on the way out
-    signal.signal(signal.SIGTERM, signal.default_int_handler)
     with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX) as scratch:
         try:
-            asyncio.run(_look(asked, Path(scratch)))
+            asyncio.run(_until_stopped(_look(asked, Path(scratch))))
         except (LookFailedError, CommandFailedError) as failure:
             print(failure, file=sys.stderr)
             return NOT_LOOKED
-        except KeyboardInterrupt:
+        except KeyboardInterrupt, asyncio.CancelledError:
             return STOPPED_FROM_OUTSIDE
     return LOOKED
 
