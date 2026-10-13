@@ -24,7 +24,7 @@ How a part of the page is built is said at the top of its module. What eslint an
 - The page's own code never finds an element by test id or by a page-wide id. An element announces itself to whoever needs it, as every file section and thread does to `FileSections`.
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
 - Every new button, input, textarea and container gets a `data-testid`, for the tests to act on.
-- A change to what the reader sees is looked at in a browser before it is called done: light, dark and a narrow screen, and the page itself must not have scrolled.
+- A change to what the reader sees is looked at in a browser before it is called done: light, dark and a narrow screen, and the page itself must not have scrolled. `scripts/look.py` is that look.
 
 ## Styling
 

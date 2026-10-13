@@ -6,7 +6,7 @@ A code review in the browser for Claude Code: it shows a git diff, files or a tr
 
 ```bash
 uv sync                              # Python dependencies
-uv run pytest                        # every Python test: tests/unit, tests/integration, tests/e2e
+uv run pytest tests -n 4             # every Python test, in four processes: tests/unit, tests/integration, tests/e2e
 uv run pre-commit run --all-files    # every gate a commit runs, over every file (CI's lint job runs this)
 uv run claude-review diff            # run the tool; `files` and `transcript` are its other modes
 cd frontend && pnpm install          # the page's dependencies
@@ -67,6 +67,7 @@ Before you change or review code in an area, read its file whole. Claude Code lo
 - `.claude/rules/wire.md` — a wire model, a route, the API's schema, the page's generated types and its requests.
 - `.claude/rules/page.md` — anything under `frontend/`: types, state, parts, styling, panes and keys, moving the reader.
 - `.claude/rules/tests.md` — any test, under `tests/` or `frontend/tests/`.
+- `.claude/rules/scripts.md` — anything under `scripts/`: what a script is, how it runs a command, how it is tested.
 - `CONTRIBUTING.md`, under Releasing — a release.
 
 ## Changing these files
