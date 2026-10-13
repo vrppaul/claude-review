@@ -7,9 +7,9 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
-	import EdgeGrip from './EdgeGrip.svelte';
 	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
+	import SideColumn from './SideColumn.svelte';
 	import StatusLetter from './StatusLetter.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
@@ -44,13 +44,14 @@
 	// Only a diff is a tree: the files of a plan, or the messages of a transcript, are a list
 	const tree = $derived(isDiffMode ? fileTree(matching) : []);
 
-	const heading = $derived.by(() => {
+	const headedBy = $derived.by(() => {
 		const total = review.diff.files.length;
 		const shown = matching.length;
 		const count = shown === total ? counted(total, listed.one, listed.many) : `${shown} of ${total}`;
 		return review.reading.viewedCount > 0 ? `${count} · ${review.reading.viewedCount} viewed` : count;
 	});
 
+	// What the filter leaves, drawn: where it looks for the first file to go to
 	let list: HTMLElement | undefined = $state();
 
 	/**
@@ -144,60 +145,46 @@
 	{/if}
 {/snippet}
 
-<aside
-	data-testid="sidebar"
-	data-tour="file-tree"
-	aria-label="Files"
-	class="cr-tree flex flex-col border-r border-base-300 bg-base-100"
-	style:--cr-tree-width="{layout.width}px"
+<!-- The files of the review, in the column beside them: the frame, its width and being put away are the column's -->
+<SideColumn
+	column={layout}
+	label="Files"
+	called="the file tree"
+	tour="file-tree"
+	testIds={{ column: 'sidebar', resize: 'sidebar-resize', putAway: 'hide-sidebar', bringBack: 'show-sidebar' }}
 >
-	<!-- The tree is on the left, so it grows rightward -->
-	<EdgeGrip column={layout} grows="right" label="Resize the file tree" testId="sidebar-resize" />
-	<div bind:this={list} class="cr-scroller min-h-0 flex-1 p-3">
-		<div class="mb-2 flex items-center gap-2">
-			<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{heading}</h2>
-			<div class="flex-1"></div>
-			<button
-				type="button"
-				data-testid="hide-sidebar"
-				class="btn btn-ghost btn-xs px-1"
-				title="Put the tree away"
-				aria-label="Put the file tree away"
-				onclick={() => layout.toggle()}
-			>
-				<Icon name="caret" class="h-3 w-3 rotate-180" />
-			</button>
-		</div>
+	{#snippet heading()}
+		<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{headedBy}</h2>
+	{/snippet}
 
-		<input
-			data-testid="file-filter"
-			type="search"
-			class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
-			placeholder="Jump to a {listed.sought}"
-			aria-label="Find a {listed.sought} by its {listed.soughtBy}"
-			bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
-			onkeydown={onFilterKey}
-		/>
+	<input
+		data-testid="file-filter"
+		type="search"
+		class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
+		placeholder="Jump to a {listed.sought}"
+		aria-label="Find a {listed.sought} by its {listed.soughtBy}"
+		bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
+		onkeydown={onFilterKey}
+	/>
 
-		{#if review.diff.files.length === 0}
-			<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
-			<p data-testid="no-files" class="cr-muted px-2 py-4 text-xs">No {listed.many}.</p>
-		{:else if matching.length === 0}
-			<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
-				No {listed.sought} matches “{layout.filter}”.
-			</p>
-		{:else if isDiffMode}
-			<ul>
+	{#if review.diff.files.length === 0}
+		<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
+		<p data-testid="no-files" class="cr-muted px-2 py-4 text-xs">No {listed.many}.</p>
+	{:else if matching.length === 0}
+		<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
+			No {listed.sought} matches “{layout.filter}”.
+		</p>
+	{:else}
+		<ul bind:this={list}>
+			{#if isDiffMode}
 				{#each tree as node (node.path)}
 					{@render treeNode(node, 0)}
 				{/each}
-			</ul>
-		{:else}
-			<ul>
+			{:else}
 				{#each matching as file (file.path)}
 					{@render fileRow(file, file.path, 0)}
 				{/each}
-			</ul>
-		{/if}
-	</div>
-</aside>
+			{/if}
+		</ul>
+	{/if}
+</SideColumn>

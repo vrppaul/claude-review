@@ -39,8 +39,9 @@ const AGENT_PANEL_WIDTH_KEY = 'panel-width';
 const CONTENT_VIEW_KEY = 'content-view';
 const READING_VIEW_KEY = 'reading-view';
 
-// Where each column stops lying over the diff and stands beside it, as the stylesheet names it
-const FILE_TREE_BESIDE = '--breakpoint-cr-tree-beside';
+// Where a column stops lying over the diff and stands beside it, as the stylesheet names it: one
+// the reader puts away, which the stylesheet draws as the tree, and the panel
+const PUT_AWAY_BESIDE = '--breakpoint-cr-tree-beside';
 const AGENT_PANEL_BESIDE = '--breakpoint-cr-panel-beside';
 
 /** Every way a renderable file can be shown: as text, rendered, or both side by side. */
@@ -91,18 +92,32 @@ class StoredWidth {
 	}
 }
 
-/**
- * The file tree: on screen or put away, how wide, and how the reader left
- * it — what they were looking for in it, and the folders they folded. Those
- * two outlive the tree being put away and brought back, not a reload.
- */
-class FileTreeLayout {
-	#open = $state(readFlag(FILE_TREE_OPEN_KEY, screenReaches(FILE_TREE_BESIDE)));
-	readonly #width = new StoredWidth(FILE_TREE_WIDTH_KEY, FILE_TREE_WIDTH);
-	#filter = $state('');
-	readonly #foldedFolders = new SvelteSet<string>();
+/** The names the two choices of a column the reader puts away are kept under in this port's storage. */
+interface PutAwayKeys {
+	open: string;
+	width: string;
+}
 
-	/** Whether the tree is on screen. Put away, it gives its room back. */
+/**
+ * A column beside what is read, which the reader puts away and brings back:
+ * on screen or not, and how wide.
+ */
+export class PutAwayColumn {
+	readonly #openKey: string;
+	#open: boolean;
+	readonly #width: StoredWidth;
+
+	/**
+	 * @param keys the names its two choices are kept under
+	 * @param bounds how narrow and how wide it may be, and how wide it starts
+	 */
+	constructor(keys: PutAwayKeys, bounds: WidthBounds) {
+		this.#openKey = keys.open;
+		this.#open = $state(readFlag(keys.open, screenReaches(PUT_AWAY_BESIDE)));
+		this.#width = new StoredWidth(keys.width, bounds);
+	}
+
+	/** Whether the column is on screen. Put away, it gives its room back. */
 	get open(): boolean {
 		return this.#open;
 	}
@@ -121,11 +136,25 @@ class FileTreeLayout {
 
 	toggle(): void {
 		this.#open = !this.#open;
-		writeChoice(FILE_TREE_OPEN_KEY, this.#open);
+		writeChoice(this.#openKey, this.#open);
 	}
 
 	setWidth(next: number): void {
 		this.#width.set(next);
+	}
+}
+
+/**
+ * The file tree: a column the reader puts away, and how they left it — what
+ * they were looking for in it, and the folders they folded. Those two
+ * outlive the tree being put away and brought back, not a reload.
+ */
+class FileTreeLayout extends PutAwayColumn {
+	#filter = $state('');
+	readonly #foldedFolders = new SvelteSet<string>();
+
+	constructor() {
+		super({ open: FILE_TREE_OPEN_KEY, width: FILE_TREE_WIDTH_KEY }, FILE_TREE_WIDTH);
 	}
 
 	/** What the reader typed into the tree's filter. */

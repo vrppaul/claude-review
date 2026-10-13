@@ -187,16 +187,16 @@ describe('finding a file in a long review', () => {
 	it('keeps what was looked for, and the folders folded, while the tree is put away and brought back', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: [...diffFiles, diffFile({ path: 'docs/guide.md', status: 'added' })] });
-		const first = render(FileList, inReview(review));
-		await user.type(first.getByTestId('file-filter'), '.');
-		await user.click(first.getByRole('button', { name: 'src/' }));
-		const folded = first.getByRole('button', { name: 'src/' }).textContent;
-		first.unmount();
+		const { getByTestId, getByRole, getAllByTestId } = render(FileList, inReview(review));
+		await user.type(getByTestId('file-filter'), '.');
+		await user.click(getByRole('button', { name: 'src/' }));
+		const folded = getByRole('button', { name: 'src/' }).textContent;
 
-		const again = render(FileList, inReview(review));
+		await user.click(getByTestId('hide-sidebar'));
+		await user.click(getByTestId('show-sidebar'));
 
-		expect((again.getByTestId('file-filter') as HTMLInputElement).value).toBe('.');
-		const folder = again.getAllByTestId('folder-item').find((row) => row.textContent === folded);
+		expect((getByTestId('file-filter') as HTMLInputElement).value).toBe('.');
+		const folder = getAllByTestId('folder-item').find((row) => row.textContent === folded);
 		expect(folder?.getAttribute('aria-expanded')).toBe('false');
 	});
 
@@ -263,6 +263,41 @@ describe('finding a file in a long review', () => {
 
 		await user.click(getByRole('button', { name: 'src/' }));
 		expect(queryAllByTestId('file-item')).toHaveLength(2);
+	});
+});
+
+describe('putting the tree away', () => {
+	it('leaves a rail where it stood, which brings it back', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const { getByTestId, queryByTestId } = render(FileList, inReview(review));
+
+		await user.click(getByTestId('hide-sidebar'));
+		expect(queryByTestId('sidebar')).toBeNull();
+
+		await user.click(getByTestId('show-sidebar'));
+		expect(getByTestId('sidebar')).toBeTruthy();
+		expect(queryByTestId('show-sidebar')).toBeNull();
+	});
+
+	it('says by name what each way does: to put the file tree away, and to bring it back', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const { getByRole } = render(FileList, inReview(review));
+
+		await user.click(getByRole('button', { name: 'Put the file tree away' }));
+
+		expect(getByRole('button', { name: 'Bring the file tree back' })).toBeTruthy();
+	});
+
+	it('leaves the rail where the tour looks for the tree', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const { getByTestId } = render(FileList, inReview(review));
+
+		await user.click(getByTestId('hide-sidebar'));
+
+		expect(getByTestId('show-sidebar').dataset.tour).toBe('file-tree');
 	});
 });
 

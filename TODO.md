@@ -137,7 +137,8 @@ tests. Remove items when done — don't check them off.
       disk. Both read files themselves today.
 - [ ] `refactor(ui)`: a column's width, its least and its most, and
       `setWidth` are written out twice in `reader/page-layout.svelte.ts`:
-      for the file tree and for the agent panel.
+      for a column the reader puts away (`PutAwayColumn`) and for the
+      agent panel.
 
 ## Testing
 
