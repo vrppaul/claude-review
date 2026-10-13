@@ -4,7 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import { plainWords } from '$lib/utils/plain-words';
-	import { counted } from '$lib/utils/words';
+	import { counted, wordsFor } from '$lib/utils/words';
 	import NoticeBar from './NoticeBar.svelte';
 
 	const review = useReview();
@@ -47,7 +47,7 @@
 				aria-expanded={listing}
 				onclick={() => (listedOver = listing ? null : review.diff.files)}
 			>
-				{offScreen.length === 1 ? listWords.one : listWords.many}
+				{wordsFor(offScreen.length, listWords)}
 			</button>
 		{/if}
 		<button

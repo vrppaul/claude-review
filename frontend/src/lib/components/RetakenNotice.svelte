@@ -2,7 +2,7 @@
 	import type { FollowOutcome } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
-	import { counted } from '$lib/utils/words';
+	import { counted, wordsFor } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
 	import NoticeBar from './NoticeBar.svelte';
 
@@ -63,7 +63,7 @@
 				class="btn btn-ghost btn-xs"
 				onclick={() => review.navigator.reveal(stranded)}
 			>
-				{outdated.length === 1 ? SHOW_OUTDATED.one : SHOW_OUTDATED.many}
+				{wordsFor(outdated.length, SHOW_OUTDATED)}
 			</button>
 		{/if}
 		<button

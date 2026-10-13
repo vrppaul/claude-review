@@ -10,7 +10,12 @@ export interface CountedWords {
 	many: string;
 }
 
-/** A count and the words that go with it: the singular for one, the plural for none and for many. */
+/** The words that go with a count, said without it: the singular for one, the plural for none and for many. */
+export function wordsFor(count: number, words: CountedWords): string {
+	return count === 1 ? words.one : words.many;
+}
+
+/** A count and the words that go with it: "1 file", "0 files". */
 export function counted(count: number, one: string, many: string): string {
-	return `${count} ${count === 1 ? one : many}`;
+	return `${count} ${wordsFor(count, { one, many })}`;
 }

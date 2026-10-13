@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { counted } from '$lib/utils/words';
+import { counted, wordsFor } from '$lib/utils/words';
 import { fileName } from '$lib/utils/paths';
 
 describe('a count in words', () => {
@@ -10,6 +10,19 @@ describe('a count in words', () => {
 	it('says none, and more than one, in the plural', () => {
 		expect(counted(0, 'file', 'files')).toBe('0 files');
 		expect(counted(3, 'file has', 'files have')).toBe('3 files have');
+	});
+});
+
+describe('the words that go with a count, said without it', () => {
+	const CHAPTERS = { one: 'chapter', many: 'chapters' };
+
+	it('are the singular for one', () => {
+		expect(wordsFor(1, CHAPTERS)).toBe('chapter');
+	});
+
+	it('are the plural for none, and for more than one', () => {
+		expect(wordsFor(0, CHAPTERS)).toBe('chapters');
+		expect(wordsFor(2, CHAPTERS)).toBe('chapters');
 	});
 });
 

@@ -184,6 +184,9 @@ tests. Remove items when done — don't check them off.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
+- [ ] No test holds what the button of the list of threads a narrower base
+      cannot draw says of several, "List them" and "Hide them"
+      (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
 
 ## Known limits
 
