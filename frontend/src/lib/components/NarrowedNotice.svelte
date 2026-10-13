@@ -42,8 +42,8 @@
 		{/if}
 	</span>
 	<div class="flex-1"></div>
-	{#if review.views.wholeReviewFailed}
-		<span data-testid="narrow-error" class="text-error">{review.views.wholeReviewFailed}</span>
+	{#if review.diff.wholeReviewFailed}
+		<span data-testid="narrow-error" class="text-error">{review.diff.wholeReviewFailed}</span>
 	{/if}
 	{#if offScreen.length > 0}
 		<button
@@ -60,7 +60,7 @@
 		type="button"
 		data-testid="show-everything"
 		class="btn btn-ghost btn-xs"
-		onclick={() => review.views.showWholeReview()}
+		onclick={() => review.diff.showWholeReview()}
 	>
 		Show the whole diff
 	</button>

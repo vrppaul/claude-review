@@ -12,6 +12,7 @@ import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
 import type { DiffFile, DiffResponse, ReviewVersion } from '$lib/types';
+import { messageOf } from '$lib/utils/errors';
 
 export class ReviewDiff {
 	/** Files changed on disk since this diff was taken. */
@@ -35,6 +36,8 @@ export class ReviewDiff {
 	// round landing — is taken against what they picked, not against what is
 	// still on screen.
 	#requestedBase: string | null = null;
+	// Why the review's own diff could not be put back when it was last asked for
+	#wholeReviewFailed = $state<string | null>(null);
 	#versions = $state.raw<ReviewVersion[]>([]);
 	// Which request is the latest. Two can be in flight — a round landing
 	// while the reader picks a base — and only the latest is drawn, whatever
@@ -140,10 +143,28 @@ export class ReviewDiff {
 		}
 	}
 
-	/** Put the review's own diff back, with every thread it holds: the one the server shows when asked for no other. */
+	/**
+	 * Put the review's own diff back, with every thread it holds: the one the
+	 * server shows when asked for no other. A failure is kept to be said,
+	 * never thrown: whoever asked goes on with the diff as it is.
+	 */
 	async showWholeReview(): Promise<void> {
 		if (this.#onScreen.base === null) return;
-		await this.setBase(null);
+		this.#wholeReviewFailed = null;
+		try {
+			await this.setBase(null);
+		} catch (error) {
+			this.#wholeReviewFailed = messageOf(error);
+		}
+	}
+
+	/**
+	 * Why the review's own diff could not be put back when it was last asked
+	 * for; null once it was, and once any other diff is on screen: the
+	 * failure is news of the diff it left there.
+	 */
+	get wholeReviewFailed(): string | null {
+		return this.#wholeReviewFailed;
 	}
 
 	/** Ask what the diff could be taken against. */
@@ -175,6 +196,7 @@ export class ReviewDiff {
 	 */
 	#noteWhatCameWithIt(): void {
 		this.#revealed = new RevealedContext();
+		this.#wholeReviewFailed = null;
 		if (!this.narrowed) this.#ownFiles = this.files;
 		// Said with the diff as well as pushed: a review reloaded while the tree
 		// was moving heard the push and lost it, and one opened later never

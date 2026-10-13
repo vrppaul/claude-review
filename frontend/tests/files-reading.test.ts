@@ -126,29 +126,29 @@ describe('the files read against a narrower base', () => {
 		review.navigator.reveal(thread);
 		await settled();
 
-		expect(review.views.wholeReviewFailed).toContain('The diff could not be read');
+		expect(review.diff.wholeReviewFailed).toContain('The diff could not be read');
 		expect(brought).toEqual([]);
 	});
 
 	it('no longer say so while the whole review is asked for again', async () => {
 		const server = fakeServer();
 		server.refuse('GET /api/diff', SERVER_ERROR, 'The diff could not be read');
-		await review.views.showWholeReview();
+		await review.diff.showWholeReview();
 		server.hold('GET /api/diff');
 
-		void review.views.showWholeReview();
+		void review.diff.showWholeReview();
 
-		expect(review.views.wholeReviewFailed).toBeNull();
+		expect(review.diff.wholeReviewFailed).toBeNull();
 	});
 
 	it('no longer say so once another diff is on screen', async () => {
 		const server = fakeServer();
 		server.refuse('GET /api/diff', SERVER_ERROR, 'The diff could not be read');
-		await review.views.showWholeReview();
+		await review.diff.showWholeReview();
 
 		server.answer('GET /api/diff', diffResponse({ files: [A_PY], base: sinceRound(1) }));
 		await review.diff.take();
 
-		expect(review.views.wholeReviewFailed).toBeNull();
+		expect(review.diff.wholeReviewFailed).toBeNull();
 	});
 });

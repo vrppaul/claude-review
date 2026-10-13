@@ -17,20 +17,12 @@ import type { PageLayout, ReadingViewName } from '$lib/reader/page-layout.svelte
 import type { ViewsOnScreen } from '$lib/review/navigator';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
-import type { DiffFile } from '$lib/types';
-import { messageOf } from '$lib/utils/errors';
 
 /** Each way a review is read, by its name. */
 type Views = Record<ReadingViewName, ReadingView>;
 
 /** How the reader chose to read last, as the page's layout keeps it. */
 type KeptChoice = PageLayout['readingView'];
-
-/** Why the whole review could not be put back on screen, and the diff that stayed there instead. */
-interface NotPutBack {
-	reason: string;
-	stayed: DiffFile[];
-}
 
 // The view every review can be read in, and the one that can draw every thread and file it holds
 const FILES: ReadingViewName = 'files';
@@ -40,7 +32,6 @@ export class ReadingViews implements ViewsOnScreen {
 	readonly #kept: KeptChoice;
 	readonly #diff: ReviewDiff;
 	#nameOnScreen: ReadingViewName;
-	#notPutBack = $state.raw<NotPutBack | null>(null);
 
 	/**
 	 * @param views each way this review is read
@@ -61,16 +52,6 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#views[this.#nameOnScreen];
 	}
 
-	/**
-	 * Why the whole review could not be put back on screen when it was last
-	 * asked for; null once it was, and once any other diff is on screen: the
-	 * failure is news of the diff it left there.
-	 */
-	get wholeReviewFailed(): string | null {
-		const failure = this.#notPutBack;
-		return failure !== null && failure.stayed === this.#diff.files ? failure.reason : null;
-	}
-
 	/** Read the review the way the reader chooses, and the next review they open too. */
 	choose(name: ReadingViewName): void {
 		this.#nameOnScreen = name;
@@ -83,27 +64,14 @@ export class ReadingViews implements ViewsOnScreen {
 	}
 
 	/**
-	 * Put the review's own diff back in place of a narrower base, with every
-	 * thread and file the review holds. A failure is kept to be said, never
-	 * thrown: whoever asked goes on with the files as they are.
-	 */
-	async showWholeReview(): Promise<void> {
-		this.#notPutBack = null;
-		try {
-			await this.#diff.showWholeReview();
-		} catch (error) {
-			this.#notPutBack = { reason: messageOf(error), stayed: this.#diff.files };
-		}
-	}
-
-	/**
 	 * Bring on screen what draws every thread and file the review holds — the
 	 * files, read against the review's own base — and hand their view over,
-	 * as it is if the whole review could not be put back.
+	 * as it is if the whole review could not be put back: the diff keeps why,
+	 * and the files' bar says it.
 	 */
 	async showEverything(): Promise<ReadingView> {
 		this.showFiles();
-		if (this.#diff.narrowed) await this.showWholeReview();
+		if (this.#diff.narrowed) await this.#diff.showWholeReview();
 		return this.#views[FILES];
 	}
 }
