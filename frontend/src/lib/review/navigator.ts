@@ -96,8 +96,9 @@ export class Navigator {
 	 * next time the reader steps. Whatever folds its lines away is opened
 	 * first, and the thread is gone to once it is drawn. A thread the view on
 	 * screen does not draw is gone to where every thread is drawn, which
-	 * comes on screen for it: the reader asked for the thread. Where that
-	 * cannot be brought on screen, the reader stays where they are.
+	 * comes on screen for it: the reader asked for the thread. Where the
+	 * whole review cannot be put back for it, the files are on screen as
+	 * their base has them, their bar says why, and the thread is not gone to.
 	 */
 	reveal(thread: Thread): void {
 		const onScreen = this.#views.onScreen;

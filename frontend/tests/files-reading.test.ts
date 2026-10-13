@@ -1,5 +1,5 @@
-import { beforeEach, describe, it, expect } from 'vitest';
-import { threadsNotDrawnIn } from '$lib/review/reading-view';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { fileSectionKey, threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, diffResponse, hunk, removedLine, REVIEW_BASE, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR } from './fake-server';
@@ -13,15 +13,6 @@ const B_PY = diffFile({ path: 'b.py', hunks: [hunk([addedLine(5, 'in b.py')])] }
 const files = [A_PY, B_PY];
 
 let review: Review;
-
-/** Serve the review's own diff when no base is asked for, and a.py alone since round one. */
-function serveBothBases(): void {
-	fakeServer().answerWith('GET /api/diff', (request) =>
-		request.query.base === 'round:1'
-			? diffResponse({ files: [A_PY], base: sinceRound(1) })
-			: diffResponse({ files, base: REVIEW_BASE })
-	);
-}
 
 /** Draw every thread of the review where the page would, and keep the body of each one brought into view. */
 function drawThreads(): string[] {
@@ -50,8 +41,10 @@ describe("the files read against the review's own base", () => {
 describe('the files read against a narrower base', () => {
 	beforeEach(async () => {
 		review = openReview({ files });
-		serveBothBases();
+		// Since round one, a.py alone; whatever diff is asked for after that is the review's own
+		fakeServer().answer('GET /api/diff', diffResponse({ files: [A_PY], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
+		fakeServer().answer('GET /api/diff', diffResponse({ files, base: REVIEW_BASE }));
 	});
 
 	it('draw a thread on a line the base shows', () => {
@@ -111,11 +104,17 @@ describe('the files read against a narrower base', () => {
 		expect(review.diff.narrowed).toBe(true);
 	});
 
-	it('are put back whole for a file the base leaves out, which the reader is then shown', async () => {
+	it('are put back whole for a file the base leaves out, which the reader is shown once it is drawn', async () => {
+		const section = document.createElement('section');
+		const broughtIntoView = vi.fn();
+		section.scrollIntoView = broughtIntoView;
+
 		review.navigator.showFile('b.py');
 		await settled();
+		review.sections.register(fileSectionKey('b.py'), 'b.py', section);
 
 		expect(review.diff.narrowed).toBe(false);
+		expect(broughtIntoView).toHaveBeenCalled();
 	});
 
 	it('say why the whole review could not be put back, and take the reader nowhere', async () => {

@@ -72,6 +72,16 @@ describe('a review a story can be told of', () => {
 		expect(screen.getByTestId('diff-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-view')).toBeNull();
 	});
+
+	it('says in the header which way it is read now', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.click(screen.getByTestId('read-as-story'));
+
+		expect(screen.getByTestId('read-as-story').getAttribute('aria-pressed')).toBe('true');
+		expect(screen.getByTestId('read-as-files').getAttribute('aria-pressed')).toBe('false');
+	});
 });
 
 describe('a review read as its story', () => {
@@ -372,12 +382,10 @@ describe('a review read as its story', () => {
 	});
 
 	it('takes the reader to a thread it does not draw though the files are read against a narrower base, which is put back whole for it', async () => {
-		fakeServer().answerWith('GET /api/diff', (request) =>
-			request.query.base === 'round:1'
-				? diffResponse({ files: files.slice(0, 1), base: sinceRound(1) })
-				: diffResponse({ files })
-		);
+		// Since round one, the first file alone; the diff asked for after that is the review's own
+		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
 		await review.diff.setBase('round:1');
+		fakeServer().answer('GET /api/diff', diffResponse({ files }));
 		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
 		const [thread] = review.threads.all;
 		render(ReviewScreen, { props: { review } });
