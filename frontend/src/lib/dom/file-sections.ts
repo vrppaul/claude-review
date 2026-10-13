@@ -17,8 +17,9 @@
  */
 
 import { firstInDocument } from '$lib/dom/document-order';
+import { Jump } from '$lib/dom/jump';
 import { focusWhatRemains } from '$lib/dom/keyboard';
-import { scrollMotion } from '$lib/dom/motion';
+import { type Motion, scrollMotion } from '$lib/dom/motion';
 import { ReadingBand } from '$lib/dom/reading-band.svelte';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
@@ -32,11 +33,6 @@ export const FOLD_TOGGLE_ROLE = 'fold-toggle';
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
 const MARKED_FOR = 2000;
-// A smooth scroll that never ends — a scroll container that cannot reach the
-// file, a tab put in the background mid-flight — must not swallow the mark
-const SETTLE_WITHIN = 2000;
-// How many frames in a row an element has to stay put to count as arrived
-const STILL_FRAMES = 2;
 // The class that draws the mark on a section somebody else pointed at
 const MARKED_CLASS = 'cr-marked';
 // How long a section or a thread asked for before it was drawn is waited
@@ -71,44 +67,6 @@ interface Mark {
 	timer: ReturnType<typeof setTimeout>;
 }
 
-/**
- * Call back once an element has stopped moving.
- *
- * Where the element actually is, rather than which element is doing the
- * scrolling: a section sits inside whatever container the layout gives it,
- * and asking the element itself works wherever it ends up.
- */
-class SettleWatch {
-	readonly #element: HTMLElement;
-	readonly #then: () => void;
-	readonly #startedAt = performance.now();
-	#previousTop = Number.NaN;
-	#stillFor = 0;
-
-	constructor(element: HTMLElement, then: () => void) {
-		this.#element = element;
-		this.#then = then;
-	}
-
-	/** Start looking, once a frame, until the element is still. */
-	start(): void {
-		requestAnimationFrame(() => this.#look());
-	}
-
-	#look(): void {
-		const top = this.#element.getBoundingClientRect().top;
-		this.#stillFor = top === this.#previousTop ? this.#stillFor + 1 : 0;
-		this.#previousTop = top;
-
-		const settled = this.#stillFor >= STILL_FRAMES;
-		if (settled || performance.now() - this.#startedAt > SETTLE_WITHIN) {
-			this.#then();
-			return;
-		}
-		requestAnimationFrame(() => this.#look());
-	}
-}
-
 export class FileSections {
 	// Every section on the page, by what whoever draws it knows it by
 	readonly #sections = new Map<string, Section>();
@@ -126,10 +84,10 @@ export class FileSections {
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
-	// Which showing is the current one: an earlier scroll may still be
-	// settling when another arrives, and only the last one asked for is worth
-	// marking
-	#showing = 0;
+	// Where the page is taking the reader, or took them last: one jump at a
+	// time, so an earlier one neither pulls them back nor marks its section
+	// once another was asked for
+	#jump: Jump | null = null;
 
 	/**
 	 * The file the reader is in: the one whose section is pinned at the top
@@ -162,7 +120,7 @@ export class FileSections {
 		const awaited = this.#awaitedThread;
 		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
 			this.#stopWaiting();
-			arriveAt(element);
+			this.#arriveAtThread(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
 	}
@@ -237,7 +195,7 @@ export class FileSections {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
 			this.#stopWaiting();
-			arriveAt(drawn);
+			this.#arriveAtThread(drawn);
 			return;
 		}
 		this.scrollTo(sectionKey);
@@ -300,19 +258,44 @@ export class FileSections {
 		else this.#awaitedSection = { key, arrive, until: performance.now() + AWAIT_DRAWING_FOR };
 	}
 
-	/** Bring a section that is drawn to the top, as the one being read from now on. */
+	/** Bring a section that is drawn to the top at once, as the one being read from now on. */
 	#scrollToDrawn({ element }: Section): void {
-		this.#land(element);
-		element.scrollIntoView({ block: 'start' });
+		this.#land(element, 'instant', () => this.#band.settle(element));
 	}
 
-	/** Bring a section that is drawn into view, and mark it once it has come to rest. */
+	/** Bring a section that is drawn to the top, and mark it once it has come to rest. */
 	#showDrawn({ element }: Section): void {
-		const showing = ++this.#showing;
 		this.#unmark();
+		this.#land(element, scrollMotion(), () => this.#shownCameToRest(element));
+	}
+
+	/**
+	 * Take the reader to the head of a section: it is the one being read
+	 * from now on, whatever the band says while it is on its way.
+	 */
+	#land(element: HTMLElement, motion: Motion, atRest: () => void): void {
 		this.#band.land(element);
-		element.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
-		new SettleWatch(element, () => this.#arrivedAtShown(element, showing)).start();
+		this.#jumpTo(element, 'start', motion, atRest);
+	}
+
+	/**
+	 * Take the reader to a thread, to the middle of its scrolling area —
+	 * smoothly, unless they asked for less motion — and put the keyboard on
+	 * it: the reader is there now, and the next key — a line down, the next
+	 * file, marking it viewed — acts from there rather than from where the
+	 * keyboard was before. The scroll is under way, so taking the keyboard
+	 * does not move the screen again.
+	 */
+	#arriveAtThread(thread: HTMLElement): void {
+		this.#jumpTo(thread, 'center', scrollMotion());
+		thread.focus({ preventScroll: true });
+	}
+
+	/** Take the reader to an element, in place of wherever the page was taking them. */
+	#jumpTo(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void): void {
+		this.#jump?.abandon();
+		this.#jump = new Jump(element, sentTo, motion, atRest);
+		this.#jump.start();
 	}
 
 	/** Where every section is, in the order they announced themselves. */
@@ -351,16 +334,10 @@ export class FileSections {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
 	}
 
-	/** The section being read from now on is the one a jump is taking the reader to, once it has come to rest. */
-	#land(element: HTMLElement): void {
-		this.#band.land(element);
-		new SettleWatch(element, () => this.#band.settle(element)).start();
-	}
-
-	/** A section the reader was brought to has come to rest: mark it, unless another showing has come since. */
-	#arrivedAtShown(element: HTMLElement, showing: number): void {
+	/** A section the reader was shown has come to rest: it is marked, and from here on the band says where they read. */
+	#shownCameToRest(element: HTMLElement): void {
 		this.#band.settle(element);
-		if (showing === this.#showing) this.#mark(element);
+		this.#mark(element);
 	}
 
 	#mark(element: HTMLElement): void {
@@ -381,19 +358,6 @@ export class FileSections {
 		delete this.#marked.element.dataset.marked;
 		this.#marked = null;
 	}
-}
-
-/**
- * Scroll until a thread stands in the middle of its scrolling area —
- * smoothly, unless the reader asked for less motion — and put the keyboard
- * on it: the reader is there now, and the next key — a line down, the next
- * file, marking it viewed — acts from there rather than from where the
- * keyboard was before. The scroll is under way, so taking the keyboard does
- * not move the screen again.
- */
-function arriveAt(thread: HTMLElement): void {
-	thread.scrollIntoView({ behavior: scrollMotion(), block: 'center' });
-	thread.focus({ preventScroll: true });
 }
 
 /** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for; null where the section folds nothing. */

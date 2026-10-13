@@ -161,6 +161,11 @@ tests. Remove items when done — don't check them off.
 
 ## Known limits
 
+- A file the agent shows far down the review is glided to, and then put in
+  place at once: the glide ends where the file stood before the files on
+  the way were built, and what is left to go is not glided. Showing the
+  last of 46 files, that was 446 pixels. A glide that far also builds every
+  file it passes.
 - A single generated file of ~12,000 lines takes about 2.6s to become
   readable, because a file is built as one unit. Splitting a hunk into
   separately contained blocks was measured and made it worse. Worth

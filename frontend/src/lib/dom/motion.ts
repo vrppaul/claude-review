@@ -9,8 +9,11 @@
 // The wish for less motion, as the browser reports it
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 
+/** How a scroll the page starts moves: gliding, or at once. */
+export type Motion = 'smooth' | 'instant';
+
 /** How a scroll the page starts on its own moves. */
-export function scrollMotion(): ScrollBehavior {
+export function scrollMotion(): Motion {
 	const lessMotion = typeof window.matchMedia === 'function' && window.matchMedia(LESS_MOTION).matches;
 	return lessMotion ? 'instant' : 'smooth';
 }

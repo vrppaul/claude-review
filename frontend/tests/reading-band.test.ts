@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileSections } from '$lib/dom/file-sections';
-
-// Enough frames for the settling watch, which looks once a frame until
-// nothing has moved for two of them
-const FRAMES_TO_SETTLE = 6;
+import { frames, untilAGlideWouldHaveBegun } from './frames';
 
 /** An observer the test reports crossings through, as the browser would once it has laid the page out. */
 class ReportedObserver {
@@ -49,12 +46,6 @@ function band(): ReportedObserver {
 	const observer = ReportedObserver.latest;
 	if (!observer) throw new Error('The band is not watched');
 	return observer;
-}
-
-async function frames(count = FRAMES_TO_SETTLE): Promise<void> {
-	for (let frame = 0; frame < count; frame += 1) {
-		await new Promise((resolve) => requestAnimationFrame(resolve));
-	}
 }
 
 beforeEach(() => {
@@ -104,6 +95,20 @@ describe('the file being read', () => {
 		watched.report([first]);
 		sections.scrollTo('c.py');
 		await frames();
+
+		watched.report([second], [first]);
+
+		expect(sections.fileInView).toBe('b.py');
+	});
+
+	it('is the band’s to say again once the reader moves on from a file somebody else showed them', async () => {
+		const first = section('a.py');
+		const second = section('b.py');
+		section('c.py');
+		const watched = band();
+		watched.report([first]);
+		sections.show('c.py');
+		await untilAGlideWouldHaveBegun();
 
 		watched.report([second], [first]);
 
