@@ -149,13 +149,10 @@ COPIED_WHOLE = """
         return anchor.model_copy(deep=True)
 """
 
-# What takes no model apart: a model made by its constructor, one written as JSON, mappings that never were
-# models spread and merged, a text with a part of it replaced, whatever the text is called, and a `replace`
-# that is another module's — the system's, or a module of the package's own that is called `copy`
+# What takes no model apart: a model made by its constructor, one written as JSON, and mappings that never
+# were models spread and merged
 MODELS_MADE_AND_MAPPINGS_MERGED = """
     import os
-
-    from .copy import replace
 
 
     class Anchor(BaseModel):
@@ -179,6 +176,14 @@ MODELS_MADE_AND_MAPPINGS_MERGED = """
 
     def rendered(options: dict[str, str]) -> str:
         return render(**options)
+"""
+
+# A `replace` that is not the module `copy`'s: a text's, whatever the text is called, the system's, and one
+# brought in from a module of the package's own that is called `copy`
+REPLACES_OF_ANOTHER_KIND = """
+    import os
+
+    from .copy import replace
 
 
     def renamed(path: str) -> str:
@@ -237,7 +242,7 @@ def test_a_model_taken_apart_by_the_names_of_its_fields_is_named_where_it_is(
 
 
 def test_a_copy_that_changes_no_field_is_refused_all_the_same(tmp_path: Path) -> None:
-    """A name cannot show which use it is, and what is said of it is true of this one too: no rule is asked again."""
+    """A name cannot show which use it is, so the rule for `model_copy` holds here too, and says of it what is true."""
     checked = _check(tmp_path, COPIED_WHOLE)
 
     assert checked.returncode == RULE_BROKEN
@@ -246,5 +251,12 @@ def test_a_copy_that_changes_no_field_is_refused_all_the_same(tmp_path: Path) ->
 
 def test_a_model_made_by_its_constructor_and_mappings_that_were_never_models_pass(tmp_path: Path) -> None:
     checked = _check(tmp_path, MODELS_MADE_AND_MAPPINGS_MERGED)
+
+    assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
+
+
+def test_a_replace_that_is_not_the_module_copys_passes(tmp_path: Path) -> None:
+    """The rule is against one function of one module: a text's `replace`, the system's, a sibling module's are not it."""
+    checked = _check(tmp_path, REPLACES_OF_ANOTHER_KIND)
 
     assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
