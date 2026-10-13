@@ -1153,6 +1153,13 @@
 .cr-story-chapter {
 	--cr-top-room: var(--cr-chapter-bar-height);
 }
+/*
+ * The head of a part of a story, while it holds the keyboard: words with no
+ * room of their own around them, so the ring stands off them
+ */
+.cr-part-head:focus-visible {
+	outline-offset: 0.5rem;
+}
 
 /*
  * A pane the reader opens from a control: one look for every menu, list and

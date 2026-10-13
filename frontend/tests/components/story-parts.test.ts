@@ -102,6 +102,14 @@ describe('the parts of a story, to whoever goes through the page by its parts', 
 	});
 });
 
+describe('the head of a part of a story, which holds the keyboard a bar that goes hands on', () => {
+	it('says what it is to whoever cannot see it: a group, named as its part is', () => {
+		const [, theEnd] = screen.getAllByTestId('story-chapter');
+
+		expect(screen.getByRole('group', { name: 'Chapter 2: The end' })).toBe(within(theEnd).getByTestId('part-head'));
+	});
+});
+
 describe('a part of a story the reader is taken to', () => {
 	it('is brought to the top of what is read at once, from its head', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');

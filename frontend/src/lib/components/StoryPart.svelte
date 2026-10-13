@@ -20,6 +20,8 @@
 	}
 
 	let { partKey, label, testId, class: laidOut, head, children }: Props = $props();
+	// What the part's head is known by on the page, for the part to be named after it
+	const headId = $props.id();
 	const review = useReview();
 	// The area the story scrolls in: where the part's head and its end come on screen
 	const scrollArea = useScrollArea();
@@ -43,10 +45,20 @@
 	It says where it and its head are, so the page can say which part is being read and how deep in it
 	the reader is, and take them to its head; and says when the reader has read it through. A press on
 	its words puts the keyboard on nothing; its head holds the keyboard when a bar that goes hands it
-	on, until the keyboard leaves it. Placed, so that its end is its own foot -->
-<section bind:this={element} data-testid={testId} aria-label={label} class={['relative', laidOut]}>
-	<!-- Its head in a box of its own, spaced as the part is: what heads it stands as it would among the rest -->
-	<div bind:this={headElement} data-testid="part-head" class="flex flex-col gap-[inherit]">
+	on, until the keyboard leaves it. Placed, so that its end is its own foot. What it is called is
+	said once, by its head, and the part is named after that -->
+<section bind:this={element} data-testid={testId} aria-labelledby={headId} class={['relative', laidOut]}>
+	<!-- Its head in a box of its own, spaced as the part is: what heads it stands as it would among the
+		rest. Holding the keyboard it is a group of that name to whoever cannot see it, as a control is
+		a button -->
+	<div
+		bind:this={headElement}
+		id={headId}
+		data-testid="part-head"
+		role="group"
+		aria-label={label}
+		class="cr-part-head flex flex-col gap-[inherit]"
+	>
 		{@render head()}
 	</div>
 	{@render children()}
