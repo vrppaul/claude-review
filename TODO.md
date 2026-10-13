@@ -79,6 +79,16 @@ tests. Remove items when done — don't check them off.
       another thread is the fact, and a test of that needs no count.
 - [ ] `refactor(story)`: a told story is frozen, and the rows its pieces
       show are the take's own `DiffLine`s, which are not.
+- [ ] `feat(story)`: a story's steps do not follow the code when the diff
+      is taken again: the whole story is read as the code was, and takes
+      no comment, until the agent tells it again. And the agent is not
+      told its story is stale.
+- [ ] `fix(story)`: a story told while the working tree has moved on from
+      the take on screen is checked against the take, and nobody is told.
+- [ ] `fix(cli)`: `story` prints every file it left out on its one line.
+- [ ] `docs`: the switch to a story is offered in every review of a
+      change, and neither the skill nor the README tells an agent to tell
+      one.
 
 ## The story, on the page
 
@@ -89,16 +99,20 @@ tests. Remove items when done — don't check them off.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
-- [ ] `feat(story)`: a story's steps do not follow the code when the diff
-      is taken again: the whole story is read as the code was, and takes
-      no comment, until the agent tells it again. And the agent is not
-      told its story is stale.
-- [ ] `fix(story)`: a story told while the working tree has moved on from
-      the take on screen is checked against the take, and nobody is told.
-- [ ] `docs`: the switch to a story is offered in every review of a
-      change, and neither the skill nor the README tells an agent to tell
-      one.
-- [ ] `fix(cli)`: `story` prints every file it left out on its one line.
+- [ ] `feat(ui)`: a story has no contents beside it: the canvas draws its
+      chapters down an axis, each with its files, and marks the one read.
+- [ ] `fix(ui)`: when the whole review cannot be put back for a thread or
+      a file the reader asked for, the files come on screen and the bar
+      says why, and the keyboard is left on nothing.
+- [ ] `fix(ui)`: a story the code has moved on from still lists Enter and
+      n / p in its help, which do nothing in it.
+- [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named
+      `'the-reviews'`, `'a-narrower-bases'`, `'another-takes'`
+      (`anchors/numbering.ts`): possessives with the apostrophe gone, and
+      the last reads as a plural where it is compared.
+- [ ] `refactor(ui)`: a failed request for a diff is said three ways: an
+      `Attempt` in two notices, `changedSinceFailed` in `FileSection`, and
+      what the diff itself keeps of the whole review not put back.
 
 ## Infrastructure
 
@@ -129,6 +143,15 @@ tests. Remove items when done — don't check them off.
       tests of `]` and `[`, were put right; one spy is left, in
       `frontend/tests/push-handling.test.ts`, and the rest of the page's
       tests were not searched for the first.
+- [ ] Lines of the page that can be broken with every test passing, found
+      by an independent review: the classes `cr-section` and
+      `cr-file-placeholder` on a section (`LinesSection.svelte`: what is
+      left undrawn off screen, and the room a section holds before its
+      rows are built); going to a thread already drawn ending the wait for
+      a section (`dom/file-sections.ts`, `goToThread`); `rowOf`'s "past
+      the last row" (`anchors/placement.ts`); `chapterNamed` as any one
+      chapter (`components/story-words.ts`); the guard for a review
+      compared against nothing in `ReviewDiff.showWholeReview`.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
