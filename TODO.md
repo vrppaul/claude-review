@@ -186,6 +186,12 @@ tests. Remove items when done — don't check them off.
       on one line of prose (`scripts/check_instruction_files.py`): a path
       inside a fenced block, or one a Markdown link points at, is not held
       to being there.
+- [ ] A file of instructions the reader may not open ends the
+      instruction-files gate in an exception, `PermissionError`, where one
+      that is a directory, a link to nothing or not UTF-8 is a fault said
+      by name (`_read`, `scripts/check_instruction_files.py`). And no test
+      holds the gate to stopping at a pattern's first match: with every
+      path listed first, as it was, all its tests pass.
 - [ ] On Windows, a checkout without `core.symlinks` writes `CLAUDE.md` as
       a one-line file where it is a link to `AGENTS.md`, and the
       instruction-files gate (`scripts/check_instruction_files.py`) fails

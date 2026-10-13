@@ -150,6 +150,18 @@ describe('the file being read', () => {
 		expect(sections.fileInView).toBeNull();
 	});
 
+	it('is the band’s to say at once when the file a jump took the reader to is taken back, before they have come to rest', () => {
+		const first = section('a.py');
+		const takeBackTheSecond = sections.register('b.py', 'b.py', drawn());
+		const watched = band();
+		watched.report([first]);
+		sections.scrollTo('b.py');
+
+		takeBackTheSecond();
+
+		expect(sections.fileInView).toBe('a.py');
+	});
+
 	it('is none once the reading area is watched no longer, though a jump took the reader to a file', () => {
 		section('a.py');
 		const stop = sections.watchInView(document.body);
