@@ -11,23 +11,29 @@ built to its module's docstring, what a tool can hold to a gate.
 Every path the files name is held to being in the repository. A path is a
 word of code — of what stands between two backticks on one line — that
 names a directory (it has a `/` in it) or ends as a file's name does, and
-it is written from the repository's root. One with `*`, `?` or `[` in it is
-a pattern, held to matching something: a kind of file, `**/__init__.py`,
-is named so. A word that starts with `/` is an address the server answers,
-not a file.
+it is written from the repository's root: one that climbs out of the root
+with `..` names nothing in it, whatever stands outside. One with `*`, `?`
+or `[` in it is a pattern, held to matching something: a kind of file,
+`**/__init__.py`, is named so. A word that starts with `/` is an address
+the server answers, not a file.
 
 The rules of an area are reached two ways, and both are held. Claude Code
 loads a file of them when it opens a file one of its patterns matches, so
 each opens with those patterns — `---`, `paths:`, a quoted pattern on each
 line after, `---`, written without braces, which are not expanded here —
-and each pattern matches a file: without them every session would read the
-rules, and for a pattern nothing matches, none would. Every other reader,
-another agent or a reviewer of a diff, finds a file of rules by the line
-`AGENTS.md` gives it, so `AGENTS.md` names every one.
+and each pattern matches a file, not a directory alone: without them every
+session would read the rules, and for a pattern no file matches, none
+would. Every other reader, another agent or a reviewer of a diff, finds a
+file of rules by the line `AGENTS.md` gives it, so `AGENTS.md` names every
+one.
 
 `CLAUDE.md` is a symlink to `AGENTS.md`: Claude Code reads `CLAUDE.md`
 alone where there is one, so a file of its own there stands in place of
 the rules.
+
+All of it is asked of the files as UTF-8 text. One that is not written so
+is said by name, and nothing else is said: its bytes cannot be counted as
+text, nor a path read in them.
 
 Run in the repository's root, in the project's own environment. The
 pre-commit hook runs it on every commit, whatever the commit touches: a
@@ -63,6 +69,8 @@ SEPARATOR = "/"
 FILE_SUFFIXES = frozenset({".md", ".py", ".ts", ".js", ".css", ".svelte", ".yaml", ".yml", ".toml", ".json", ".sh"})
 # What makes a path a pattern for many
 PATTERN_MARKS = frozenset("*?[")
+# The step of a path that climbs out of the directory it is written from
+LEAVES_THE_ROOT = ".."
 
 # How the rules of an area open: the patterns of the paths they are rules for, each quoted on a line of its own
 PATTERNS = "patterns"
@@ -92,6 +100,8 @@ NO_SCOPE = (
     'open it with `---`, `paths:`, a line `  - "pattern"` for each pattern, `---`'
 )
 MATCHES_NOTHING = "no file matches `{named}`, so no file opened brings these rules: name what is there"
+# What is said of a file whose bytes are not the text it is read as
+NOT_UTF8 = "is not written as UTF-8, so nothing in it can be read or counted: save it as UTF-8"
 # What is said of the two files every reader starts from
 NOT_THE_LINK = (
     f"is not a symlink to {GENERAL_FILE}, which is how Claude Code is given the rules: ln -s {GENERAL_FILE} {LINK}"
@@ -169,20 +179,39 @@ class Fault(BaseModel):
 
 
 def faults_in(root: Path) -> list[Fault]:
-    """Every fault in the instruction files of the repository at this root: the general file's, then each area's."""
+    """Every fault in the instruction files of the repository at this root: the general file's, then each area's.
+
+    A file that cannot be read is the one thing said: nothing else can be asked of it, nor of
+    the files that are read against it.
+    """
     if not (root / GENERAL_FILE).is_file():
         return [Fault(path=GENERAL_FILE, line=None, says=GENERAL_MISSING)]
+    area_paths = [found.relative_to(root) for found in sorted((root / AREA_DIRECTORY).rglob(AREA_FILES))]
+    unreadable = [
+        Fault(path=path, line=None, says=NOT_UTF8)
+        for path in [GENERAL_FILE, *area_paths]
+        if not _is_written_as_utf8(root / path)
+    ]
+    if unreadable:
+        return unreadable
     general = _read(root, GENERAL_FILE, GENERAL_LIMITS)
     named_in_general = frozenset(path.written for path in _paths_named(general))
-    areas = [
-        _read(root, found.relative_to(root), AREA_LIMITS) for found in sorted((root / AREA_DIRECTORY).rglob(AREA_FILES))
-    ]
+    areas = [_read(root, path, AREA_LIMITS) for path in area_paths]
     return [
         *_faults_of_size(general),
         *_faults_of_paths(general, root),
         *(fault for area in areas for fault in _faults_of_an_area(area, root, named_in_general)),
         *_faults_of_the_link(root),
     ]
+
+
+def _is_written_as_utf8(file: Path) -> bool:
+    """Whether a file's bytes read as the text they are counted and searched as."""
+    try:
+        file.read_text(encoding=ENCODING)
+    except UnicodeDecodeError:
+        return False
+    return True
 
 
 def _read(root: Path, path: Path, limits: Limits) -> InstructionFile:
@@ -246,20 +275,35 @@ def _names_a_path(word: str) -> bool:
 
 def _is_there(root: Path, named: str) -> bool:
     """Whether the repository holds what a path names: the file or directory itself, or anything a pattern matches."""
-    if PATTERN_MARKS.isdisjoint(named):
-        return (root / named).exists()
-    return any(root.glob(named))
+    return any(_found(root, named))
+
+
+def _found(root: Path, named: str) -> list[Path]:
+    """What a path names in the repository: one thing, whatever a pattern matches, or nothing.
+
+    A path that climbs out of the root names nothing in the repository, whatever stands outside it.
+    """
+    if LEAVES_THE_ROOT in Path(named).parts:
+        return []
+    if not PATTERN_MARKS.isdisjoint(named):
+        return list(root.glob(named))
+    return [root / named] if (root / named).exists() else []
+
+
+def _matches_a_file(root: Path, pattern: str) -> bool:
+    """Whether a pattern matches a file: a directory matched brings rules to nobody, for it is files that are opened."""
+    return any(found.is_file() for found in _found(root, pattern))
 
 
 def _faults_of_scope(area: InstructionFile, root: Path) -> list[Fault]:
-    """What is said of rules that do not open with the paths they are for, or name a pattern nothing matches."""
+    """What is said of rules that do not open with the paths they are for, or name a pattern no file matches."""
     opening = SCOPE.match(area.text)
     if opening is None:
         return [Fault(path=area.path, line=None, says=NO_SCOPE)]
     return [
         Fault(path=area.path, line=number, says=MATCHES_NOTHING.format(named=pattern))
         for number, pattern in enumerate(QUOTED.findall(opening.group(PATTERNS)), start=FIRST_PATTERN_LINE)
-        if not _is_there(root, pattern)
+        if not _matches_a_file(root, pattern)
     ]
 
 

@@ -33,6 +33,9 @@ A_SHORTER_LINE = f"1 over the {LONGEST_LINE} a line may hold: a rule is a short 
 FROM_THE_ROOT = "write the path from the repository's root, to what is there"
 A_LINE_AMONG_THE_AREAS = "give it a line there, among the rules by area, saying when to read it"
 HOW_RULES_OPEN = 'open it with `---`, `paths:`, a line `  - "pattern"` for each pattern, `---`'
+# What a file that cannot be read as UTF-8 is told, and the rules of an area saved as Latin-1: its é is one byte, 0xE9
+SAVE_IT_AS_UTF8 = "is not written as UTF-8, so nothing in it can be read or counted: save it as UTF-8"
+RULES_IN_LATIN_1 = "- Ask the server through a café.\n".encode("latin-1")
 # What is said of a `CLAUDE.md` that is anything but the link
 NOT_THE_LINK = (
     "CLAUDE.md: is not a symlink to AGENTS.md, which is how Claude Code is given the rules: ln -s AGENTS.md CLAUDE.md"
@@ -316,6 +319,47 @@ def test_rules_for_a_pattern_no_file_matches_are_refused_at_the_pattern(tmp_path
         [
             ".claude/rules/page.md:4: no file matches `backend/**`, so no file opened brings these rules: name what is there"
         ],
+    )
+
+
+def test_rules_for_a_pattern_that_matches_a_directory_and_no_file_are_refused(tmp_path: Path) -> None:
+    """Claude Code loads rules when it opens a file: a directory with nothing in it brings them to nobody."""
+    repository = _written(tmp_path, [*KEPT, Written(path=".claude/rules/page.md", text=RULES_OF_PATHS_NOT_THERE)])
+    (repository / "backend").mkdir()
+
+    checked = _check(_linked(repository))
+
+    assert (checked.returncode, checked.stdout.splitlines()) == (
+        FAULT_FOUND,
+        [
+            ".claude/rules/page.md:4: no file matches `backend/**`, so no file opened brings these rules: name what is there"
+        ],
+    )
+
+
+def test_a_path_that_leaves_the_repository_names_nothing_in_it_though_a_file_is_there(tmp_path: Path) -> None:
+    (tmp_path / "outside").mkdir()
+    (tmp_path / "outside" / "notes.md").write_text("Notes kept beside the repository.\n")
+    leaving = Written(path="AGENTS.md", text=GENERAL_RULES + "- Read `../outside/notes.md` first.\n")
+
+    checked = _check(_linked(_written(tmp_path / "repository", [*KEPT, leaving])))
+
+    assert (checked.returncode, checked.stdout.splitlines()) == (
+        FAULT_FOUND,
+        [f"AGENTS.md:8: `../outside/notes.md` names nothing in the repository: {FROM_THE_ROOT}"],
+    )
+
+
+def test_a_file_that_is_not_written_as_utf8_is_refused_by_name_and_nothing_more_is_said(tmp_path: Path) -> None:
+    repository = _written(tmp_path, KEPT)
+    (repository / ".claude" / "rules" / "page.md").write_bytes(RULES_IN_LATIN_1)
+
+    checked = _check(_linked(repository))
+
+    assert (checked.returncode, checked.stdout.splitlines(), checked.stderr) == (
+        FAULT_FOUND,
+        [f".claude/rules/page.md: {SAVE_IT_AS_UTF8}"],
+        "",
     )
 
 

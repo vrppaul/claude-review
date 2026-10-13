@@ -167,6 +167,10 @@ tests. Remove items when done — don't check them off.
       where the rule is that a route calls one (`.claude/rules/wire.md`):
       GET /api/review (`presentation/routes/page_routes.py:79-80`), GET
       /api/diff (`149-150`) and GET /api/versions (`162-163`).
+- [ ] The instruction-files gate reads a path only between two backticks
+      on one line of prose (`scripts/check_instruction_files.py`): a path
+      inside a fenced block, or one a Markdown link points at, is not held
+      to being there.
 - [ ] On Windows, a checkout without `core.symlinks` writes `CLAUDE.md` as
       a one-line file where it is a link to `AGENTS.md`, and the
       instruction-files gate (`scripts/check_instruction_files.py`) fails
