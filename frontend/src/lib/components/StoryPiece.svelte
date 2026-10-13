@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { StoryNumbering } from '$lib/anchors/numbering';
-	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
 	import { languageOf } from '$lib/utils/highlight';
@@ -9,6 +8,8 @@
 	import FileBody from './FileBody.svelte';
 	import FilePath from './FilePath.svelte';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
+	import LinesSection from './LinesSection.svelte';
+	import SectionHeader from './SectionHeader.svelte';
 	import { STATUS_LETTERS } from './status-letters';
 
 	interface Props {
@@ -33,40 +34,29 @@
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
 	const extent = $derived<Extent>({ kind: 'piece', shows, numbering });
-	// How many rows the piece will draw, so the browser can leave it undrawn off
-	// screen without the scrollbar lurching once it is drawn: at least one
-	const rowCount = $derived(piece.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
-	const rowsDrawn = $derived(Math.max(rowCount, 1));
-
-	let element: HTMLElement | undefined = $state();
-	const nearness = new BuiltWhenNear();
-
-	$effect(() => (element ? review.sections.register(sectionKey, piece.path, element) : undefined));
-	$effect(() => (element ? nearness.watch(element, scrollRoot) : undefined));
 </script>
 
-<!-- Clipped to its rounded corners, never hidden past them: `overflow: hidden` would make the piece what
-	its header sticks to, and deep in a long piece the header would scroll away with it -->
-<section
-	bind:this={element}
-	data-testid="story-piece"
-	data-path={piece.path}
-	class="cr-section overflow-clip rounded-md border border-base-300"
-	style:--cr-rows={rowsDrawn}
+<!-- A piece of a file in a frame of its own. Clipped to its rounded corners, never hidden past them:
+	`overflow: hidden` would make the piece what its header sticks to, and deep in a long piece the header
+	would scroll away with it. Nothing of a story is folded away -->
+<LinesSection
+	{sectionKey}
+	file={piece}
+	folded={false}
+	{scrollRoot}
+	testId="story-piece"
+	class="overflow-clip rounded-md border border-base-300"
 >
-	<div
-		data-testid="story-piece-header"
-		class="cr-file-header flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-300 bg-base-200 px-3 py-2"
-	>
-		<span class={['w-3 shrink-0 text-center font-mono text-xs font-semibold', status.colour]}>{status.letter}</span>
-		<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere"><FilePath file={piece} /></h3>
-		{@render beside()}
-		<div class="flex-1"></div>
-		<ChangedLines file={piece} />
-	</div>
-	{#if nearness.built}
+	{#snippet header()}
+		<SectionHeader testId="story-piece-header">
+			<span class={['w-3 shrink-0 text-center font-mono text-xs font-semibold', status.colour]}>{status.letter}</span>
+			<h3 class="min-w-0 font-mono text-xs font-semibold wrap-anywhere"><FilePath file={piece} /></h3>
+			{@render beside()}
+			<div class="flex-1"></div>
+			<ChangedLines file={piece} />
+		</SectionHeader>
+	{/snippet}
+	{#snippet lines()}
 		<FileBody file={piece} {language} {view} {extent} />
-	{:else}
-		<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
-	{/if}
-</section>
+	{/snippet}
+</LinesSection>

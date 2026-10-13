@@ -54,6 +54,8 @@ MOVED_AFTER_THE_RETAKE = {MAIN_FILE: "def hello():\n    return 'hey'\n", UTILS_F
 NEW_FILE_TYPED = Path(NEW_FILE).stem
 # What has the keyboard, by what it says it does
 FOCUSED_LABEL = "document.activeElement?.getAttribute('aria-label')"
+# How solidly an element is drawn, as the browser worked it out: 1 at full strength
+OPACITY_DRAWN = "element => getComputedStyle(element).opacity"
 # A review long enough that its last file stands far further below the screen
 # than a file is built ahead of being reached: files added whole, each of many lines
 LONG_FILE_COUNT = 8
@@ -102,6 +104,11 @@ def _section(page: Page, path_suffix: str) -> Locator:
 
 def _first_gutter(page: Page, path_suffix: str) -> Locator:
     return _section(page, path_suffix).get_by_test_id("line-gutter").first
+
+
+async def _opacity(drawn: Locator) -> float:
+    """How solidly something is drawn on the page: 1 at full strength, less where it steps back."""
+    return float(await drawn.evaluate(OPACITY_DRAWN))
 
 
 async def _send(page: Page) -> str:
@@ -589,6 +596,19 @@ async def test_marking_a_file_viewed_folds_it(diff_review: RunningReview, page: 
 
     await main.get_by_test_id("viewed-toggle").check()
     await main.get_by_test_id("raw-view").wait_for(state="detached")
+
+
+async def test_a_file_marked_viewed_steps_back(diff_review: RunningReview, page: Page) -> None:
+    """What the reader has finished with is drawn fainter: its header beside that of a file not viewed yet."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    main = _section(page, MAIN_FILE)
+
+    await main.get_by_test_id("viewed-toggle").check()
+
+    viewed = await _opacity(main.get_by_test_id("file-header"))
+    not_viewed = await _opacity(_section(page, NEW_FILE).get_by_test_id("file-header"))
+    assert viewed < not_viewed
 
 
 async def test_filtering_the_sidebar_narrows_the_list(diff_review: RunningReview, page: Page) -> None:

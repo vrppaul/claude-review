@@ -3,7 +3,6 @@
 	import { messageOf } from '$lib/utils/errors';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
-	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
@@ -13,6 +12,8 @@
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
+	import LinesSection from './LinesSection.svelte';
+	import SectionHeader from './SectionHeader.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -39,12 +40,6 @@
 	const collapsed = $derived(review.reading.isFolded(file.path));
 	const viewed = $derived(review.reading.isViewed(file.path));
 
-	// How many rows the file will draw, so the browser can leave it undrawn off
-	// screen without the scrollbar lurching once it is drawn for real: the
-	// stylesheet turns the count into a height. At least one, unless folded.
-	const rowCount = $derived(file.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
-	const rowsDrawn = $derived(collapsed ? 0 : Math.max(rowCount, 1));
-
 	let changedSinceFailed = $state<string | null>(null);
 
 	/**
@@ -66,91 +61,76 @@
 			changedSinceFailed = messageOf(error);
 		}
 	}
-
-	let element: HTMLElement | undefined = $state();
-	// Rows are built when the file comes within reach, and kept from then on
-	const nearness = new BuiltWhenNear();
-
-	$effect(() => (element ? review.sections.register(fileSectionKey(file.path), file.path, element) : undefined));
-
-	$effect(() => (element ? nearness.watch(element, scrollRoot) : undefined));
 </script>
 
-<section
-	bind:this={element}
-	data-testid="file-section"
-	data-path={file.path}
-	class="cr-section border-b border-base-300"
-	style:--cr-rows={rowsDrawn}
+<!-- A file of the review in a section of its own, under a rule that parts it from the next -->
+<LinesSection
+	sectionKey={fileSectionKey(file.path)}
+	{file}
+	folded={collapsed}
+	{scrollRoot}
+	testId="file-section"
+	class="border-b border-base-300"
 >
-	<div
-		data-testid="file-header"
-		class={[
-			'cr-file-header flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-300 bg-base-200 px-3 py-2',
-			viewed && 'cr-viewed'
-		]}
-	>
-		<FoldToggle
-			folded={collapsed}
-			subject={file.path}
-			testId="collapse-file"
-			onToggle={() => review.reading.toggleFolded(file.path)}
-		/>
-
-		<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
-		<h2 data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
-			<FilePath {file} />
-		</h2>
-		{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
-			<button
-				type="button"
-				data-testid="file-changed-since"
-				class="cr-chip cr-chip-marked"
-				title="Show only what changed since then"
-				onclick={showChangesSince}
-			>
-				changed since round {review.lastRetake.changedSince}
-			</button>
-			{#if changedSinceFailed}
-				<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
-			{/if}
-		{/if}
-
-		{#if isDiffMode}
-			<span class="cr-muted text-xs">{file.status}</span>
-			<ChangedLines {file} />
-		{/if}
-
-		{#if commentCount > 0}
-			<span data-testid="section-comment-count" class="badge badge-sm badge-primary">
-				{commentCount}
-			</span>
-		{/if}
-
-		<div class="flex-1"></div>
-
-		{#if hasRenderablePreview && !collapsed}
-			<ContentViewToggle />
-		{/if}
-
-		<label class="cr-chip">
-			<input
-				data-testid="viewed-toggle"
-				type="checkbox"
-				checked={viewed}
-				onchange={() => review.reading.toggleViewed(file.path)}
+	{#snippet header()}
+		<SectionHeader testId="file-header" class={{ 'cr-viewed': viewed }}>
+			<FoldToggle
+				folded={collapsed}
+				subject={file.path}
+				testId="collapse-file"
+				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>
-			<Icon name={viewed ? 'ticked' : 'box'} class="h-3 w-3" />
-			<!-- One box per file, so the box says which file it is about -->
-			Viewed<span class="sr-only">: {file.path}</span>
-		</label>
-	</div>
 
-	{#if !collapsed}
-		{#if nearness.built}
-			<FileBody {file} {language} {view} {extent} />
-		{:else}
-			<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
-		{/if}
-	{/if}
-</section>
+			<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
+			<h2 data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
+				<FilePath {file} />
+			</h2>
+			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
+				<button
+					type="button"
+					data-testid="file-changed-since"
+					class="cr-chip cr-chip-marked"
+					title="Show only what changed since then"
+					onclick={showChangesSince}
+				>
+					changed since round {review.lastRetake.changedSince}
+				</button>
+				{#if changedSinceFailed}
+					<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
+				{/if}
+			{/if}
+
+			{#if isDiffMode}
+				<span class="cr-muted text-xs">{file.status}</span>
+				<ChangedLines {file} />
+			{/if}
+
+			{#if commentCount > 0}
+				<span data-testid="section-comment-count" class="badge badge-sm badge-primary">
+					{commentCount}
+				</span>
+			{/if}
+
+			<div class="flex-1"></div>
+
+			{#if hasRenderablePreview && !collapsed}
+				<ContentViewToggle />
+			{/if}
+
+			<label class="cr-chip">
+				<input
+					data-testid="viewed-toggle"
+					type="checkbox"
+					checked={viewed}
+					onchange={() => review.reading.toggleViewed(file.path)}
+				/>
+				<Icon name={viewed ? 'ticked' : 'box'} class="h-3 w-3" />
+				<!-- One box per file, so the box says which file it is about -->
+				Viewed<span class="sr-only">: {file.path}</span>
+			</label>
+		</SectionHeader>
+	{/snippet}
+	{#snippet lines()}
+		<FileBody {file} {language} {view} {extent} />
+	{/snippet}
+</LinesSection>

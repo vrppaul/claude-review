@@ -82,11 +82,6 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `refactor(ui)`: a story's piece writes a section's shell beside the
-      files' own — how many rows it will draw, its announcing itself to the
-      page, its being built when near, the header's classes, the
-      placeholder. One component for "a section of a file's lines", used by
-      `FileSection` and `StoryPiece`.
 - [ ] `refactor(ui)`: `StoryView.svelte` draws every part of a story in one
       component, and says the agent's edge as utilities five times. The
       agent's words are one block; the overview, a chapter, a step and what
