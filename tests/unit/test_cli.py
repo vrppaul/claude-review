@@ -17,7 +17,7 @@ from click.testing import CliRunner, Result
 import claude_review
 from claude_review.cli.main import main
 from claude_review.domain.models import MAX_QUOTE_LINES
-from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit
+from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
@@ -49,9 +49,10 @@ LOAD_AN_AGENTS_COMMAND = (
 WEB_STACK = {"uvicorn", "fastapi", "starlette", "wsproto"}
 # How a review that is not there is said: the command got past what it was typed with
 NO_REVIEW = "no review is listening"
-# What a JSON document opens and closes with
-DOCUMENT_OPENS = "{"
-DOCUMENT_CLOSES = "}"
+# A JSON document as the help shows one: from the line that opens it to the line that closes it, each set in by two
+A_DOCUMENT_SHOWN = re.compile(r"^  \{$.*?^  \}$", re.MULTILINE | re.DOTALL)
+# What the least story the help shows is made of, at its top
+PARTS_OF_THE_LEAST_STORY = ["title", "told_from", "overview", "chapters"]
 # What parts the words of a kind of text in its name, and a pattern for either way the help may part them
 BETWEEN_WORDS_OF_A_NAME = "_"
 EITHER_WAY_WORDS_ARE_PARTED = "[ _]"
@@ -365,10 +366,15 @@ def test_a_story_file_that_is_not_there_is_said_to_be_missing(unused_port: str, 
     assert str(missing) in result.output
 
 
+def _documents_in_the_help_of_story() -> list[str]:
+    """The documents the help of `story` shows, each from the line that opens it to the line that closes it."""
+    return A_DOCUMENT_SHOWN.findall(_run("story", "--help").output)
+
+
 def _example_in_the_help_of_story() -> str:
-    """The document the help of `story` shows: from its first brace to its last, which nothing else in the help has."""
-    said = _run("story", "--help").output
-    return said[said.index(DOCUMENT_OPENS) : said.rindex(DOCUMENT_CLOSES) + len(DOCUMENT_CLOSES)]
+    """The first document the help of `story` shows: a story with every part one may have."""
+    whole, _ = _documents_in_the_help_of_story()
+    return whole
 
 
 @pytest.mark.parametrize(("kind", "limit"), TEXT_LIMITS.items(), ids=lambda given: str(given))
@@ -392,3 +398,29 @@ def test_the_example_in_the_help_of_story_is_a_document_the_review_reads_and_fin
 def test_the_example_in_the_help_of_story_leaves_out_no_part_a_story_may_have(left_out: str) -> None:
     """A part the example does not show is one no agent learns it may write."""
     assert left_out not in _example_in_the_help_of_story()
+
+
+def test_the_help_of_story_shows_the_least_a_story_may_be_which_the_review_reads_and_finds_no_fault_in() -> None:
+    """What the first document has and this one lacks may be left out: an agent learns it by seeing both."""
+    _, least = _documents_in_the_help_of_story()
+
+    assert document_faults(StoryRequest.model_validate_json(least).in_the_review()) == []
+
+
+@pytest.mark.parametrize("part", PARTS_OF_THE_LEAST_STORY)
+def test_the_least_story_in_the_help_holds_no_part_that_may_be_left_out(unused_port: str, part: str) -> None:
+    """With any one of its parts gone, the review reads no story in it."""
+    _, least = _documents_in_the_help_of_story()
+    lacking = without_field(json.loads(least), part)
+
+    result = _run("story", "--port", unused_port, "--file", FROM_STDIN, typed=json.dumps(lacking))
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert part in result.output
+
+
+@pytest.mark.parametrize("told_from", ToldFrom)
+def test_the_help_of_story_says_everything_a_story_may_be_told_from(told_from: ToldFrom) -> None:
+    said = _run("story", "--help").output
+
+    assert re.search(rf"told_from.*\b{told_from}\b", said)
