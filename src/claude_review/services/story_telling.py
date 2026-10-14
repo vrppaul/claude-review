@@ -17,7 +17,6 @@ the story as it was told, every time, so code put back as it was reads as
 told again.
 """
 
-from bisect import bisect_left, bisect_right
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict
@@ -71,38 +70,6 @@ class _EndsMoved(BaseModel):
     last: int
 
 
-class _StepsApart:
-    """Steps of one file, each placed on lines no other step tells, and taken out as steps come to tell them.
-
-    No two share a line, so in the order they start they also end in order,
-    and the steps that tell any of some lines stand together in it: they are
-    found by halving, not one by one. A step going back to the lines it was
-    told of may send the next back, and that one the next, through a whole
-    file: asked of every step each time, that took seconds for a few hundred.
-    """
-
-    def __init__(self, standing: dict[int, LineSpan]) -> None:
-        self._standing = dict(standing)
-        # The steps' places in the story in the order of the file, and the lines each starts and ends at
-        self._places = sorted(self._standing, key=lambda place: self._standing[place].first)
-        self._firsts = [self._standing[place].first for place in self._places]
-        self._lasts = [self._standing[place].last for place in self._places]
-
-    def lines_of(self, place: int) -> LineSpan | None:
-        """Where the step at this place in the story stands; None if it is not among these."""
-        return self._standing.get(place)
-
-    def take_out_meeting(self, lines: LineSpan) -> list[int]:
-        """Take out the steps that tell any of these lines, and say their places in the story."""
-        start = bisect_left(self._lasts, lines.first)
-        stop = bisect_right(self._firsts, lines.last)
-        taken = self._places[start:stop]
-        del self._places[start:stop], self._firsts[start:stop], self._lasts[start:stop]
-        for place in taken:
-            del self._standing[place]
-        return taken
-
-
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory[ToldStep]:
     """The story on the change it is told of.
 
@@ -118,22 +85,20 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory[ToldStep]:
     if faults:
         raise StoryRefusedError(STORY_REFUSED, faults)
     chapters = [_told_chapter(chapter, change) for chapter in story.chapters]
-    return story.told(chapters, _left_out(_steps_of(story.chapters), story.housekeeping, files, change))
+    lines_told = {
+        path: [step.lines for step in steps] for path, steps in _steps_of_each_file(_steps_of(story.chapters)).items()
+    }
+    return story.told(chapters, _left_out(lines_told, story.housekeeping, files, change))
 
 
 def as_told(told: ToldStory[ToldStep]) -> ToldStory[FollowedStep]:
     """A story as it was told, on the take it was told of: each step where it was told, showing what it was told."""
-    chapters = [
-        chapter.followed(
-            [step.followed(step.lines, StepNow(piece=step.piece, changed_since_told=False)) for step in chapter.steps]
-        )
-        for chapter in told.chapters
-    ]
+    chapters = [chapter.followed([_as_told_step(step) for step in chapter.steps]) for chapter in told.chapters]
     return told.followed(chapters, told.left_out)
 
 
 def follow(told: ToldStory[ToldStep], files: list[DiffFile]) -> ToldStory[FollowedStep]:
-    """A story as it was told, on a later take of the change: each step on its lines as they now stand.
+    """A story as it was told, on a later take of the change: each step where its code now stands, if anywhere.
 
     The steps of one file are followed together, since two of them must not
     come to tell one line, and each is found again by its file and the line
@@ -147,9 +112,11 @@ def follow(told: ToldStory[ToldStep], files: list[DiffFile]) -> ToldStory[Follow
     chapters = [
         chapter.followed([followed[step.file][step.lines.first] for step in chapter.steps]) for chapter in told.chapters
     ]
-    # A step that shows no code tells none of the lines it was told of: what stands there now is left out
-    showing_code = [followed_step for followed_step in _steps_of(chapters) if followed_step.now is not None]
-    return told.followed(chapters, _left_out(showing_code, told.housekeeping, files, change))
+    # A step that stands nowhere tells none of the lines it was told of: what stands there now is left out
+    lines_told = {
+        path: [step.now.lines for step in steps.values() if step.now is not None] for path, steps in followed.items()
+    }
+    return told.followed(chapters, _left_out(lines_told, told.housekeeping, files, change))
 
 
 def _told_chapter(chapter: Chapter[Step], change: dict[str, PlacedFile]) -> Chapter[ToldStep]:
@@ -176,44 +143,40 @@ def _followed_steps(steps: list[ToldStep], file: PlacedFile | None) -> dict[int,
     }
 
 
+def _as_told_step(step: ToldStep) -> FollowedStep:
+    """A step on the take it was told of: on the lines it was told on, showing what it was told with."""
+    return step.followed(StepNow(lines=step.lines, piece=step.piece, changed_since_told=False))
+
+
 def _not_placed(step: ToldStep) -> FollowedStep:
-    """A step whose code the review cannot place in the change now: on its lines as told, standing nowhere."""
-    return step.followed(step.lines, None)
+    """A step whose code the review cannot place in the change now: standing nowhere, and claiming no line."""
+    return step.followed(None)
 
 
 def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan | None]:
     """Where the steps of one file stand in a later take of it, in the order given; None for one not placed.
 
     Each moves as what is left of its lines moved, and one nothing of which
-    is found is not placed: it stays on the lines it was told of. A step
-    that then meets another is not placed either, since which lines both
-    tell are whose nobody can say, and the steps it does not meet keep their
-    places. It goes back to the lines it was told of, where a step that met
-    nothing may have come to stand: that one goes back too, and so on. The
-    lines told never meet, so the steps of a file are still told apart by
-    where they start.
+    is found is not placed. A step that then meets another is not placed
+    either, since which lines both tell are whose nobody can say; the steps
+    it does not meet keep their places. One not placed claims no line, so
+    no other step goes without its code for having come to stand where it
+    was told.
     """
     sides_now = {side: _SideNow.of(side_lines(file, side)) for side in LineSide}
     moved = [_moved_lines(step, sides_now) for step in steps]
-    claimed = [step.lines if lines is None else lines for step, lines in zip(steps, moved, strict=True)]
-    meeting = _meeting(claimed)
-    apart = _StepsApart(
-        {place: lines for place, lines in enumerate(moved) if lines is not None and place not in meeting}
-    )
-    going_back = [place for place in meeting if moved[place] is not None]
-    while going_back:
-        told = steps[going_back.pop()].lines
-        going_back.extend(apart.take_out_meeting(told))
-    return [apart.lines_of(place) for place in range(len(steps))]
+    meeting = _meeting({place: lines for place, lines in enumerate(moved) if lines is not None})
+    return [None if place in meeting else lines for place, lines in enumerate(moved)]
 
 
-def _meeting(claimed: list[LineSpan]) -> frozenset[int]:
-    """The places of the steps of one file that tell a line another of them tells, before or after them."""
+def _meeting(placed: dict[int, LineSpan]) -> frozenset[int]:
+    """The places of the steps placed that tell a line another of them tells, before or after them."""
+    claimed = list(placed.values())
     meets_earlier = first_met(claimed)
     meets_later = first_met(claimed[::-1])[::-1]
     return frozenset(
         place
-        for place, (earlier, later) in enumerate(zip(meets_earlier, meets_later, strict=True))
+        for place, earlier, later in zip(placed, meets_earlier, meets_later, strict=True)
         if earlier is not None or later is not None
     )
 
@@ -290,7 +253,7 @@ def _where_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> FollowedStep:
     """A step on the lines it now stands at, cut again, and marked if it shows other rows than it was told with."""
     piece = file.piece([file.rows_at(lines)])
-    return step.followed(lines, StepNow(piece=piece, changed_since_told=_shows_other_rows(step.piece, piece)))
+    return step.followed(StepNow(lines=lines, piece=piece, changed_since_told=_shows_other_rows(step.piece, piece)))
 
 
 def _shows_other_rows(told: DiffFile, now: DiffFile) -> bool:
@@ -307,19 +270,16 @@ def _rows_of(piece: DiffFile) -> list[DiffLine]:
     return [line for hunk in piece.hunks for line in hunk.lines]
 
 
-def _left_out[StepKind: Step](
-    steps: list[StepKind], housekeeping: list[str], files: list[DiffFile], change: dict[str, PlacedFile]
+def _left_out(
+    lines_told: dict[str, list[LineSpan]], housekeeping: list[str], files: list[DiffFile], change: dict[str, PlacedFile]
 ) -> list[LeftOut]:
-    """What these steps leave out, file by file in the order of the change: nothing of a housekeeping file."""
-    steps_of_each_file = _steps_of_each_file(steps)
+    """What steps of these lines, by file, leave out, file by file in the order of the change: none of housekeeping."""
     named = frozenset(housekeeping)
     return [
         left
         for file in files
         if file.path not in named
-        for left in _left_out_of(
-            file, change[file.path], [step.lines for step in steps_of_each_file.get(file.path, [])]
-        )
+        for left in _left_out_of(file, change[file.path], lines_told.get(file.path, []))
     ]
 
 

@@ -56,9 +56,9 @@ describe('what a story lists of itself', () => {
 		const [a, b] = ofTheFirst.files;
 		const [ofAFirst, ofB, ofAAgain] = ofTheFirst.steps;
 
-		expect(ofAFirst.shown).toEqual({ piece: aFirst.now?.piece, fileListed: a });
-		expect(ofB.shown).toEqual({ piece: bFirst.now?.piece, fileListed: b });
-		expect(ofAAgain.shown).toEqual({ piece: aAgain.now?.piece, fileListed: a });
+		expect(ofAFirst.shown).toEqual({ piece: aFirst.now?.piece, lines: aFirst.now?.lines, fileListed: a });
+		expect(ofB.shown).toEqual({ piece: bFirst.now?.piece, lines: bFirst.now?.lines, fileListed: b });
+		expect(ofAAgain.shown).toEqual({ piece: aAgain.now?.piece, lines: aAgain.now?.lines, fileListed: a });
 	});
 
 	it('lists no file of a chapter where no step of it shows code of it, and shows nothing of such a step', () => {
@@ -70,7 +70,10 @@ describe('what a story lists of itself', () => {
 		const [b] = listed.files;
 
 		expect(listed.files.map(({ firstPiece, alsoIn }) => [firstPiece.path, alsoIn])).toEqual([['b.py', []]]);
-		expect(listed.steps.map(({ shown }) => shown)).toEqual([null, { piece: ofB.now?.piece, fileListed: b }]);
+		expect(listed.steps.map(({ shown }) => shown)).toEqual([
+			null,
+			{ piece: ofB.now?.piece, lines: ofB.now?.lines, fileListed: b }
+		]);
 	});
 
 	it('says no chapter tells a file where its only step of the file shows no code of it', () => {

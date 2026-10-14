@@ -151,6 +151,8 @@ class StoryOverview(WireModel):
 class StepNow(WireModel):
     """Where a step's code stands on the take of the change the story is on."""
 
+    # The lines it stands at there, which a round's work may have moved from those it was told on
+    lines: LineSpan
     # The rows of the file the step is, to be drawn as a file is
     piece: DiffFile
     # Whether a round's work changed them after the step was told
@@ -161,6 +163,7 @@ class ToldStep(WireModel):
     """A step as it is told: its reason, when it has one, and where its code stands now, if anywhere."""
 
     file: str
+    # The lines it was told on, which it is known by: a round's work never moves them
     lines: LineSpan
     reason: str | None
     # Null where its code is not in the change as it now stands

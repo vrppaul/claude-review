@@ -6,8 +6,9 @@
  * A place is known by what it is, never by where the story happens to put
  * it. A chapter by its id, under a word no other part begins with, so no id
  * an agent chooses is another part's key. A step's section by its file and
- * the first line it tells, which no two steps share since the review
- * refuses a story that tells a line twice; the section of what is left out
+ * the first line it was told on, which no two steps share since the review
+ * refuses a story that tells a line twice, and which a round's work moving
+ * its code never changes; the section of what is left out
  * of a file by that file, which is left out once. So a place is the same
  * place when the story is told again in another order.
  */
@@ -33,7 +34,7 @@ export function chapterPartKey(chapter: ToldChapter): string {
 	return [CHAPTER, chapter.id].join(KEY_SEPARATOR);
 }
 
-/** What a step's section is known by: its file, and the first of the lines it tells. */
+/** What a step's section is known by: its file, and the first of the lines it was told on, which never move. */
 export function stepSectionKey(step: ToldStep): string {
 	return [STEP, step.file, step.lines.first].join(KEY_SEPARATOR);
 }

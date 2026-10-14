@@ -419,10 +419,11 @@ class ChapterBlock(StoryPlace):
 
 
 class ReasonBlock(StoryPlace):
-    """A step's reason, the step by its file and the first line it tells: no two steps of a story share both."""
+    """A step's reason, the step by its file and the first line it was told on: no two steps of a story share both."""
 
     at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
     file: FilePath
+    # The first of the lines the step was told on, which a round's work moving its code never changes
     first_line: int = Field(ge=FIRST_LINE)
 
 

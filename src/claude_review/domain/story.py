@@ -218,14 +218,15 @@ class ToldStep(Step):
 
     piece: DiffFile
 
-    def followed(self, lines: LineSpan, now: StepNow | None) -> FollowedStep:
-        """The step on a take of the change: on these lines, and where its code stands there, if anywhere."""
-        return FollowedStep(file=self.file, lines=lines, reason=self.reason, now=now)
+    def followed(self, now: StepNow | None) -> FollowedStep:
+        """The step on a take of the change: everything it says, and where its code stands there, if anywhere."""
+        return FollowedStep(file=self.file, lines=self.lines, reason=self.reason, now=now)
 
 
 class StepNow(StoryPart):
-    """Where a step's code stands on a take of the change: the piece it shows there, and whether it changed since."""
+    """Where a step's code stands on a take of the change: its lines there, the piece they are, and if it changed."""
 
+    lines: LineSpan
     piece: DiffFile
     # Whether a round's work changed it after the step was told: its rows say something else than those told
     changed_since_told: bool
@@ -234,10 +235,13 @@ class StepNow(StoryPart):
 class FollowedStep(Step):
     """A step as it stands on a take of the change: as told, changed since, or not placed.
 
-    A round's work may leave the review unable to say where a step's code
-    is now: its file left the change, nothing of its lines is found, or it
-    would meet another step of its file once followed. It then shows no
-    piece, on the lines it was told of: a piece cut there would show other
+    It is known by the lines it was told on, which a round's work never
+    moves: the page knows its section by them, and a thread on its reason
+    its block. Where its code stands now is said beside them. A round's
+    work may leave the review unable to say where that is: its file left
+    the change, nothing of its lines is found, or it would meet another
+    step of its file once followed. It then stands nowhere and claims no
+    line, and shows no piece: a piece cut at its old lines would show other
     code, and an empty one would claim a status its file no longer has.
     Whether its code changed is said only of code it shows.
     """

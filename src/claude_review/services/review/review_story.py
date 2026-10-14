@@ -181,7 +181,7 @@ class ReviewStory:
         return StoryWentStale(
             round=held.moved_on.round,
             steps=[
-                StaleStep(chapter=chapter.id, file=step.file, lines=None if step.now is None else step.lines)
+                StaleStep(chapter=chapter.id, file=step.file, lines=None if step.now is None else step.now.lines)
                 for chapter in held.story.chapters
                 for step in chapter.steps
                 if not step.stands_as_told

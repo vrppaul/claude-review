@@ -298,13 +298,23 @@ describe('a review read as its story', () => {
 		expect(screen.getAllByTestId('step-lines').map((lines) => lines.textContent)).toEqual(['1', '5–9']);
 	});
 
+	it("says the lines a step's code stands at now, where a round moved it from those it was told on", () => {
+		const told = toldStep('a.py', 1);
+		const movedDown = { ...told, now: { ...toldStepOfLines('a.py', 3, 4).now, changed_since_told: false } };
+		review = openReview({ files, story: storyHeld({ chapters: [toldChapter('ch-1', [movedDown])] }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getAllByTestId('step-lines').map((lines) => lines.textContent)).toEqual(['3–4']);
+	});
+
 	it('says of each piece what became of its file, and how many lines the piece adds and removes', () => {
 		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x'), addedLine(2, 'y')])] });
 		const ofTheFileMade = {
 			file: 'new.py',
 			lines: { first: 1, last: 2 },
 			reason: null,
-			now: { piece: made, changed_since_told: false }
+			now: { lines: { first: 1, last: 2 }, piece: made, changed_since_told: false }
 		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
@@ -326,7 +336,7 @@ describe('a review read as its story', () => {
 			file: 'new.py',
 			lines: { first: 1, last: 1 },
 			reason: null,
-			now: { piece: made, changed_since_told: false }
+			now: { lines: { first: 1, last: 1 }, piece: made, changed_since_told: false }
 		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
@@ -844,7 +854,12 @@ describe('a piece of a file that was moved', () => {
 		});
 		const told = storyHeld({
 			chapters: [
-				toldChapter('ch-1', [{ ...toldStep('new_name.py', 1), now: { piece: moved, changed_since_told: false } }])
+				toldChapter('ch-1', [
+					{
+						...toldStep('new_name.py', 1),
+						now: { lines: { first: 1, last: 1 }, piece: moved, changed_since_told: false }
+					}
+				])
 			]
 		});
 		review = openReview({ files, story: told });
@@ -878,7 +893,7 @@ describe('what a piece of a story leaves out between its hunks', () => {
 				{
 					...toldStep('a.py', 1),
 					lines: { first: 1, last: 9 },
-					now: { piece: overTwoChanges, changed_since_told: false }
+					now: { lines: { first: 1, last: 9 }, piece: overTwoChanges, changed_since_told: false }
 				}
 			])
 		],

@@ -63,6 +63,19 @@ REWRITTEN_AGAIN = [
     )
 ]
 
+# The rewritten first line pushed two lines down by two put above it, said as it was
+PUSHED_DOWN = [
+    changed_file(
+        REWRITTEN,
+        DiffHunk(
+            header=NO_HUNK_HEADER,
+            old_start=1,
+            new_start=1,
+            lines=[added_line(1, "x"), added_line(2, "y"), removed_line(1, "a"), added_line(3, "A")],
+        ),
+    )
+]
+
 THE_DOUBT = OverviewBlock(text=OverviewText.DOUBT)
 THE_DOUBT_SAID = ("overview", "doubt")
 # Words the story never said, as a thread on a block may quote them
@@ -114,6 +127,15 @@ def test_the_reason_of_a_step_whose_code_a_round_took_out_of_sight_may_still_be_
     assert held.quote(StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first))).quote == [
         WHY_REWRITTEN
     ]
+
+
+def test_a_thread_on_a_steps_reason_keeps_its_block_once_a_round_moves_the_steps_code() -> None:
+    """A step is known by where it was told: its code two lines down, its reason is still where the thread hangs."""
+    told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
+    held = StoryAnchorHandler(follow(told, PUSHED_DOWN))
+    on_the_reason = StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first), quote=[WHY_REWRITTEN])
+
+    assert held.follow(on_the_reason) == on_the_reason
 
 
 def test_a_thread_on_the_story_is_refused_while_no_story_is_told() -> None:

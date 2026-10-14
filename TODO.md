@@ -127,13 +127,6 @@ tests. Remove items when done — don't check them off.
       run of `}` — is followed onto a later take by nearness alone
       (`find_run`), so it may land on other lines that say the same and
       show them as current.
-- [ ] `refactor(story)`: a step whose code the review cannot place stays
-      on the lines it was told of, so a step a round moved onto them shows
-      no code either: a file's first step taken out whole takes the
-      second's code with it. It stays there because a step is known by its
-      file and first line (the page's keys, a thread on its reason). Known
-      by where it was told, a step not placed would claim no line, and no
-      step going back to its told lines would send another back.
 
 ## The story, on the page
 

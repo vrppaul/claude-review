@@ -77,7 +77,7 @@
 	<svelte:boundary onerror={reportBroken}>
 		<StoryPiece sectionKey={step.section} piece={shown.piece} shows="a-step" above={numberAndReason}>
 			{#snippet beside()}
-				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(told.lines)}</span>
+				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(shown.lines)}</span>
 			{/snippet}
 			{#snippet atFarEnd()}
 				{#if shown.fileListed.alsoIn.length > 0}

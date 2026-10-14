@@ -1745,6 +1745,7 @@ export interface components {
          * @description Where a step's code stands on the take of the change the story is on.
          */
         StepNow: {
+            lines: components["schemas"]["LineSpan-Output"];
             piece: components["schemas"]["DiffFile"];
             /** Changed Since Told */
             changed_since_told: boolean;

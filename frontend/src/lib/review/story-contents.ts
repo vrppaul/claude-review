@@ -30,6 +30,8 @@ export interface FileListed {
 interface StepShown {
 	/** The piece of its file it shows. */
 	piece: DiffFile;
+	/** The lines its code stands at now: a round's work may have moved them from those it was told on. */
+	lines: ToldStep['lines'];
 	/** Its file, as its chapter lists it: one listing for every step of the file that shows code of it. */
 	fileListed: FileListed;
 }
@@ -146,10 +148,10 @@ function chapterListed(told: ToldChapter, place: number, telling: ChaptersTellin
 		const section = stepSectionKey(step);
 		let shown: StepShown | null = null;
 		if (step.now !== null) {
-			const { piece } = step.now;
+			const { piece, lines } = step.now;
 			const listed = files.get(piece.path) ?? fileListed(piece, section, place, telling);
 			files.set(piece.path, listed);
-			shown = { piece, fileListed: listed };
+			shown = { piece, lines, fileListed: listed };
 		}
 		steps.push({ told: step, section, place: stepPlace, shown });
 	}

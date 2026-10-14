@@ -29,8 +29,9 @@ export function gainedPiece(file: string, first: number, last: number): DiffFile
  * them, and says why if it is given a reason: its code as it was told.
  */
 export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): ToldStep {
-	const now = { piece: gainedPiece(file, first, last), changed_since_told: false };
-	return { file, lines: { first, last }, reason, now, commentable: true };
+	const lines = { first, last };
+	const now = { lines, piece: gainedPiece(file, first, last), changed_since_told: false };
+	return { file, lines, reason, now, commentable: true };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
@@ -40,7 +41,7 @@ export function toldStep(file: string, line: number, reason: string | null = nul
 
 /** A step that shows one line a file gained, which a round's work changed after it was told. */
 export function changedStep(file: string, line: number, reason: string | null = null): ToldStep {
-	const now = { piece: gainedPiece(file, line, line), changed_since_told: true };
+	const now = { lines: { first: line, last: line }, piece: gainedPiece(file, line, line), changed_since_told: true };
 	return { ...toldStep(file, line, reason), now };
 }
 

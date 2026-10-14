@@ -140,12 +140,16 @@
   said as it was to the last; it is cut again from the take as it now
   stands, and what the round added that no step tells is left out beside
   it. Each step of `GET /api/story` says where its code stands now, `now`:
-  the piece it shows and whether a round changed it since it was told
-  (`changed_since_told`), or `null` where the review cannot place its
-  code in the change now — its file left it, nothing of its lines is
-  found, its last line stands above its first, or it would meet another
-  step of its file. Such a step shows no code, never other code at its old
-  numbers: its number and its reason, still open to a question, and one
+  the lines it stands at, the piece they are and whether a round changed
+  it since it was told (`changed_since_told`), or `null` where the review
+  cannot place its code in the change now — its file left it, nothing of
+  its lines is found, its last line stands above its first, or it would
+  meet another step of its file. A step's own `lines` stay the lines it was
+  told on: the page knows its place by them and a thread on its reason its
+  block, so neither moves with its code, and a step that stands nowhere
+  claims no line another step's code has moved to. Such a step shows no
+  code, never other code at its old numbers: its number and its reason,
+  still open to a question, and one
   line, "Its code in app.py is no longer found."; it counts as no file of
   its chapter, whose head then counts only its steps, and the agent asked
   for the story again is told it with `lines` `null`. Every told step says
