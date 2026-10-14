@@ -8,6 +8,7 @@ import { formatWeight } from '$lib/review/weight';
 import { addedLine, diffFile, hunk } from '../diff';
 import { said } from '../elements';
 import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
+import { guideServer } from '../guide-server';
 import { handOverNext } from '../pushes';
 import { AGENT_ATTACHED, openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
@@ -135,6 +136,18 @@ describe('Story pressed in the header', () => {
 			expect(screen.queryByTestId('story-opt-in')).toBeNull();
 		}
 	);
+
+	it('keeps that Story was introduced to the reader, who tried it: it is introduced to them no more', async () => {
+		const server = guideServer('1.5.0');
+		const user = userEvent.setup();
+		const review = drawn({ facts: { release: '1.5.0' } });
+		await review.guide.open();
+
+		await user.click(screen.getByTestId('read-as-story'));
+
+		expect(review.guide.introducesStory).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
 
 	it('asks first where the story was stopped and stories are off: writing it again spends tokens', async () => {
 		const user = userEvent.setup();

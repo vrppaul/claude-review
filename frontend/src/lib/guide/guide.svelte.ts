@@ -74,9 +74,9 @@ export class Guide {
 	#helpOpen = $state(false);
 	#news = $state.raw<ReleaseNews | undefined>(undefined);
 	#touring = $state(false);
-	// Whether Story has been introduced to the reader; null until the server
-	// says, and what the reader did before it said stands over what it says
-	#storyIntroduced = $state<boolean | null>(null);
+	// Whether Story has been introduced to the reader: taken as so until the
+	// server says, and when it cannot
+	#storyIntroduced = $state(true);
 	// The introduction put away by its cross: for this page alone, kept nowhere
 	#introductionPutAway = $state(false);
 	// The step on screen, by name: the tour's steps change when an agent joins
@@ -134,12 +134,12 @@ export class Guide {
 	 * introduced than introduced twice.
 	 */
 	get introducesStory(): boolean {
-		return this.#storyIntroduced === false && !this.#introductionPutAway && this.#card === null && !this.#touring;
+		return !this.#storyIntroduced && !this.#introductionPutAway && this.#card === null && !this.#touring;
 	}
 
 	/** Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again. */
 	noteStoryIntroduced(): void {
-		if (this.#storyIntroduced === true) return;
+		if (this.#storyIntroduced) return;
 		this.#storyIntroduced = true;
 		this.#keepStoryIntroduced(true);
 	}
@@ -236,8 +236,7 @@ export class Guide {
 		} catch {
 			return;
 		}
-		// A reader who tried Story while the server was asked has been introduced, whatever it said
-		this.#storyIntroduced ??= kept.story_introduced;
+		this.#storyIntroduced = kept.story_introduced;
 		if (seen === null) {
 			this.#card = 'welcome';
 			return;

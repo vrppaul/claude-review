@@ -15,8 +15,6 @@
 	// The button of each view, as it is drawn: the keyboard goes to the one on screen, and the note of a
 	// story's arrival points at Story's
 	const buttons: Partial<Record<ReadingViewName, HTMLButtonElement>> = $state({});
-	// Whether the reader is being asked before stories are turned on
-	let askedToTurnStoriesOn = $state(false);
 
 	const onScreen = $derived(review.views.onScreen.name);
 	const readingFiles = $derived(onScreen === 'files');
@@ -40,21 +38,10 @@
 		const shown = onScreen;
 		if (document.activeElement !== document.body) focusWhatRemains(() => buttons[shown]);
 	});
-
-	/** Read the review as its story; where that means having one written, the reader is asked first. */
-	function readAsStory() {
-		if (review.storyViewOpens) review.views.choose('story');
-		else askedToTurnStoriesOn = true;
-	}
-
-	/** The reader said yes: stories are on from now, this review's is asked for, and where it will be comes on screen. */
-	function turnStoriesOnAndRead() {
-		void review.turnStoriesOn();
-		review.views.choose('story');
-	}
 </script>
 
-<!-- How the review is read, and the one place that changes it. Offered only where a story can be told: the
+<!-- How the review is read, and where the reader changes it; Try Story, where Story is introduced, is the one
+	other place they choose. Offered only where a story can be told: the
 	review says, and nothing here asks what kind it is. The story first, as the canvas has it: an open book,
 	then a stack of files. While the agent writes the story, dots that breathe stand for its book -->
 {#if review.story.canBeTold}
@@ -70,7 +57,7 @@
 					storySays === 'unread' && 'cr-segment-unread'
 				]}
 				aria-pressed={onScreen === 'story'}
-				onclick={readAsStory}
+				onclick={() => review.readAsStory()}
 			>
 				{#if storySays === 'writing'}
 					<TypingIndicator />
@@ -97,10 +84,10 @@
 			</button>
 		</div>
 		{#if storyOffered}
-			<StoryArrivalNote pointsAt={buttons.story} onOpen={readAsStory} />
+			<StoryArrivalNote pointsAt={buttons.story} onOpen={() => review.readAsStory()} />
 		{/if}
 	</div>
-	{#if askedToTurnStoriesOn}
-		<StoryOptIn onTurnOn={turnStoriesOnAndRead} onClose={() => (askedToTurnStoriesOn = false)} />
+	{#if review.askingToTurnStoriesOn}
+		<StoryOptIn onTurnOn={() => review.turnStoriesOnAndRead()} onClose={() => review.stopAskingToTurnStoriesOn()} />
 	{/if}
 {/if}

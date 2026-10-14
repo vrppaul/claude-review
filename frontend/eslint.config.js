@@ -109,6 +109,22 @@ const NO_PAGE_LOOKUPS = [
 	}
 ];
 
+// How the reader chose to read is written only where they ask to read a way:
+// the switch in the header, and Try Story where Story is introduced, through
+// the review's `readAsStory`. Taking the reader to what only one view draws
+// changes what is on screen and leaves their choice alone
+const CHOSEN_BY_THE_READER =
+	'Only the switch and Try Story write how the reader chose to read; to bring a view on screen, call showFiles or showStory.';
+const NO_CHOOSING = [
+	{
+		selector: "CallExpression[callee.property.name='choose'][callee.object.property.name='views']",
+		message: CHOSEN_BY_THE_READER
+	},
+	{ selector: "CallExpression[callee.property.name='readAsStory']", message: CHOSEN_BY_THE_READER }
+];
+// Where the reader asks to read a way: the switch, and the review that holds the way into Story
+const CHOOSERS = ['src/lib/components/ViewSwitch.svelte', 'src/lib/review/review.svelte.ts'];
+
 // How a component is styled: by classes, and by the stylesheet's tokens. A
 // number only the component knows — a dragged width, a depth — reaches the
 // stylesheet as a custom property; what lies over what is a layer token,
@@ -320,6 +336,12 @@ export default tseslint.config(
 	},
 	{
 		files: ['src/lib/**'],
+		rules: {
+			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_PAGE_LOOKUPS, ...NO_CHOOSING]
+		}
+	},
+	{
+		files: CHOOSERS,
 		rules: {
 			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_PAGE_LOOKUPS]
 		}

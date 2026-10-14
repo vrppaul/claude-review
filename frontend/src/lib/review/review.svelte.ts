@@ -152,6 +152,9 @@ export class Review {
 	readonly #draft: Draft | null;
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
+	// Whether the reader is being asked before stories are turned on: asked from
+	// the switch or from wherever Story is introduced, drawn by the switch
+	#askingToTurnStoriesOn = $state(false);
 
 	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
@@ -346,6 +349,34 @@ export class Review {
 		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
 			await this.story.askFor();
 		}
+	}
+
+	/** Whether the reader is being asked before stories are turned on, having asked to read the story. */
+	get askingToTurnStoriesOn(): boolean {
+		return this.#askingToTurnStoriesOn;
+	}
+
+	/**
+	 * The reader asks to read the review as its story: Story in the header,
+	 * or Try Story where Story is introduced. Story is introduced to them
+	 * from now; where reading it means having one written, they are asked
+	 * first.
+	 */
+	readAsStory(): void {
+		this.guide.noteStoryIntroduced();
+		if (this.storyViewOpens) this.views.choose('story');
+		else this.#askingToTurnStoriesOn = true;
+	}
+
+	/** The reader said yes: stories are on from now, this review's is asked for, and where it will be comes on screen. */
+	turnStoriesOnAndRead(): void {
+		void this.turnStoriesOn();
+		this.views.choose('story');
+	}
+
+	/** The question before stories are turned on is closed, whatever the reader said. */
+	stopAskingToTurnStoriesOn(): void {
+		this.#askingToTurnStoriesOn = false;
 	}
 
 	/**

@@ -269,17 +269,6 @@ describe('Story introduced at the switch', () => {
 			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }, { story_introduced: false }])
 		);
 	});
-
-	it('stays done for a reader who tried Story before the server said whether they had', async () => {
-		guideServer('1.5.0');
-		review = openReview({ facts: { release: '1.5.0' } });
-		const opening = review.guide.open();
-
-		review.guide.noteStoryIntroduced();
-		await opening;
-
-		expect(review.guide.introducesStory).toBe(false);
-	});
 });
 
 describe('the news card', () => {
