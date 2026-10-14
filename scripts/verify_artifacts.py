@@ -9,6 +9,9 @@ on machines without Node/pnpm:
 Also enforces the release rule that pyproject.toml and the Claude Code plugin
 manifest advertise the same version, and that no source maps bloat the
 artifacts. Used by both ci.yml (build job) and release.yml (pre-publish).
+
+Prints one line, `OK: …` or `FAIL: …` with the first fault found, and exits
+0 with none, 1 at that fault.
 """
 
 import json
