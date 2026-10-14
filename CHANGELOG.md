@@ -387,6 +387,10 @@
   its fields stop there.
 
 ### Fixed
+- **On a phone the page is no wider than the screen.** On a screen
+  narrower than the diff reads at, the diff took the whole width of the
+  row beside the rail of the file tree put away, and the page scrolled
+  sideways by the rail's width; it now takes what the rail leaves.
 - **A line's number sent as `true` or `false` is refused.** A thread's
   lines, or the first line of a step of the story, were read as 1 or 0: a
   line nobody named.

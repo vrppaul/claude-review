@@ -24,6 +24,8 @@ CHANGED = {LONG_PATH: "first = 10\nsecond = 2\n", SHORT_PATH: "value = 2\n"}
 LAPTOP = {"width": 1024, "height": 768}
 # A wide screen zoomed to twice its size: too narrow to stand a column beside the diff
 ZOOMED = {"width": 640, "height": 400}
+# A phone's screen: narrower than the diff reads at, even before the rail of the tree put away stands beside it
+PHONE = {"width": 420, "height": 800}
 # How far, in pixels, a box may stand past another: rounding, not overlap
 WITHIN_ROUNDING = 1
 # What a file's path is read across at the least: half the diff, not a sliver beside the header's controls
@@ -141,3 +143,17 @@ async def test_zoomed_in_the_review_opens_on_the_diff_alone_and_the_toggles_lay_
     diff = await _box(page.get_by_test_id("diff-view"))
     assert diff["x"] >= rail["x"] + rail["width"] - WITHIN_ROUNDING
     assert diff["x"] + diff["width"] <= ZOOMED["width"] + WITHIN_ROUNDING
+
+
+async def test_on_a_phone_the_diff_takes_what_the_rail_leaves_and_the_page_is_no_wider_than_the_screen(
+    review: RunningReview, page: Page
+) -> None:
+    """Narrower than it reads at, the diff stands beside the tree's rail, not under it nor past the screen's edge."""
+    await page.set_viewport_size(PHONE)
+    await page.goto(review.url)
+    await page.get_by_test_id("file-section").first.wait_for()
+
+    rail = await _box(page.get_by_test_id("show-sidebar"))
+    diff = await _box(page.get_by_test_id("diff-view"))
+    assert diff["x"] >= rail["x"] + rail["width"] - WITHIN_ROUNDING
+    assert await page.evaluate("document.documentElement.scrollWidth") == PHONE["width"]

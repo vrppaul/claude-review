@@ -139,37 +139,21 @@ function fileListed(firstPiece: DiffFile, opensAt: string, chapterPlace: number,
  * given that same listing. A step that shows none lists nothing.
  */
 function chapterListed(told: ToldChapter, place: number, telling: ChaptersTelling): ChapterListed {
+	// The chapter's files listed so far, by path: each at the first step that shows code of it
 	const files = new Map<string, FileListed>();
 	const steps: StepListed[] = [];
 	for (const [stepPlace, step] of told.steps.entries()) {
 		const section = stepSectionKey(step);
-		const shown = step.piece === null ? null : stepShown(step.piece, section, files, place, telling);
+		let shown: StepShown | null = null;
+		if (step.piece !== null) {
+			const listed = files.get(step.piece.path) ?? fileListed(step.piece, section, place, telling);
+			files.set(step.piece.path, listed);
+			shown = { piece: step.piece, fileListed: listed };
+		}
 		steps.push({ told: step, section, place: stepPlace, shown });
 	}
 	const changedSteps = told.steps.filter((step) => step.changed_since_told).length;
 	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps, changedSteps };
-}
-
-/**
- * What a step shows of its file, listing the file in its chapter where no
- * step before it in the chapter showed code of it.
- *
- * @param piece the piece the step shows
- * @param section what the step's section is known by
- * @param files the chapter's files listed so far, by path, which this adds to
- * @param chapterPlace where the chapter stands among the story's
- * @param telling which chapters tell each file
- */
-function stepShown(
-	piece: DiffFile,
-	section: string,
-	files: Map<string, FileListed>,
-	chapterPlace: number,
-	telling: ChaptersTelling
-): StepShown {
-	const listed = files.get(piece.path) ?? fileListed(piece, section, chapterPlace, telling);
-	files.set(piece.path, listed);
-	return { piece, fileListed: listed };
 }
 
 /** What a story lists of itself. */

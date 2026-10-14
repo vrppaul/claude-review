@@ -185,6 +185,8 @@
 	--cr-diff-least-width: 36rem;
 	--cr-side-column-least-width: 10rem;
 	--cr-panel-least-width: 17.5rem;
+	/* What a side column put away leaves standing beside the diff, at every width */
+	--cr-side-column-rail-width: 1.5rem;
 
 	/*
 	 * What differs inside a changed line, in the change's own colour: still a
