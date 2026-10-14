@@ -59,6 +59,8 @@ KEPT = "kept"
 # The steps of the one look at the story, and the picture the last of them keeps
 SCROLLED_BY = 900
 STORY_STEPS = [f"scroll:{SCROLLED_BY}", "press:go-to-part:3", "key:Tab", "shot:deep", "press:hide-contents"]
+# What the line says of the parts read through while the reader has scrolled past none
+NOTHING_READ = "read: none"
 # Steps enough to be under way for seconds: each waits for the page to come to rest
 MANY_STEPS = ["key:j"] * 40
 STORY_SHOT = "deep.png"
@@ -375,11 +377,12 @@ async def test_the_line_says_what_the_chapter_bar_says_and_that_there_is_none(st
 
 
 async def test_the_line_says_which_parts_are_read_through_and_which_is_being_read(story_look: LookWithShots) -> None:
-    """The overview fits on the screen it opens on, so it is read through as the page opens."""
+    """The story opens on its overview, read through only once the reader has scrolled past it."""
     opened, scrolled, *_ = story_look.said
 
-    assert opened.read.startswith("read: Overview")
+    assert opened.read == NOTHING_READ
     assert opened.reading.startswith("reading: Overview")
+    assert scrolled.read.startswith("read: Overview")
     assert scrolled.reading.startswith("reading: Chapter 1:")
 
 
@@ -539,7 +542,7 @@ async def test_the_reviews_agent_tells_the_story_in_a_look_while_the_page_is_ope
     *_, read_as_story = untold_look
 
     assert read_as_story.area.startswith("area: story-view ")
-    assert read_as_story.read.startswith("read: Overview")
+    assert read_as_story.reading.startswith("reading: Overview")
 
 
 def _written_at(root: Path, path: str, moment: int) -> None:
