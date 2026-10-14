@@ -53,6 +53,32 @@ function started() {
 	return field;
 }
 
+/** Lines 10 and 11 removed, 12 kept, 13 removed: on the old side, 12 is not a removed line. */
+const removals = diffFile({
+	path: 'b.py',
+	hunks: [
+		hunk(
+			[removedLine(10, 'gone 10'), removedLine(11, 'gone 11'), contextLine(12, 10, 'kept'), removedLine(13, 'gone 13')],
+			{
+				old_start: 10,
+				new_start: 10
+			}
+		)
+	]
+});
+const [drawnRemovals] = drawnHunks(removals, null, true);
+
+function removedLines(): LineCommenting {
+	review = openReview({ files: [removals], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: LONGEST_RANGE } } });
+	return new LineCommenting(review, {
+		path: () => removals.path,
+		hunks: () => [drawnRemovals],
+		numbering: () => 'the-reviews',
+		commentable: () => true,
+		standsForItsFile: () => true
+	});
+}
+
 describe('picking lines to comment on', () => {
 	it('stops a drag at the most lines one comment may cover', () => {
 		const lines = commenting();
@@ -107,37 +133,6 @@ describe('picking lines to comment on', () => {
 });
 
 describe('picking removed lines', () => {
-	/** Lines 10 and 11 removed, 12 kept, 13 removed: on the old side, 12 is not a removed line. */
-	const removals = diffFile({
-		path: 'b.py',
-		hunks: [
-			hunk(
-				[
-					removedLine(10, 'gone 10'),
-					removedLine(11, 'gone 11'),
-					contextLine(12, 10, 'kept'),
-					removedLine(13, 'gone 13')
-				],
-				{
-					old_start: 10,
-					new_start: 10
-				}
-			)
-		]
-	});
-	const [drawnRemovals] = drawnHunks(removals, null, true);
-
-	function removedLines(): LineCommenting {
-		review = openReview({ files: [removals], facts: { limits: { ...SEND_LIMITS, max_quoted_lines: LONGEST_RANGE } } });
-		return new LineCommenting(review, {
-			path: () => removals.path,
-			hunks: () => [drawnRemovals],
-			numbering: () => 'the-reviews',
-			commentable: () => true,
-			standsForItsFile: () => true
-		});
-	}
-
 	function removedLine13(): DrawnLine {
 		const found = drawnRemovals.lines.find((candidate) => candidate.line.content === 'gone 13');
 		if (!found) throw new Error('Line 13 is not drawn');
@@ -249,6 +244,34 @@ describe('the lines a thread hangs on', () => {
 		review.threads.add(newComment({ file: file.path, startLine: LAST_LINE - 1, endLine: LAST_LINE + 1 }));
 
 		expect([LAST_LINE - 1, LAST_LINE].map((number) => lines.isMarked(line(number).place))).toEqual([false, false]);
+	});
+
+	it('are marked on their own side only, the line of the same number on the other side left as it is', () => {
+		const lines = removedLines();
+		review.threads.add(newComment({ file: removals.path, side: 'old', startLine: 10, body: 'on a removed line' }));
+
+		expect(lines.isMarked({ side: 'old', number: 10 })).toBe(true);
+		expect(lines.isMarked({ side: 'new', number: 10 })).toBe(false);
+	});
+});
+
+describe("a drawing under a narrower base, whose removed lines are the base's", () => {
+	function underANarrowerBase(): LineCommenting {
+		review = openReview({ files: [removals] });
+		return new LineCommenting(review, {
+			path: () => removals.path,
+			hunks: () => [drawnRemovals],
+			numbering: () => 'a-narrower-bases',
+			commentable: () => true,
+			standsForItsFile: () => false
+		});
+	}
+
+	it('draws no thread under a removed line of the number the thread hangs on', () => {
+		const lines = underANarrowerBase();
+		review.threads.add(newComment({ file: removals.path, side: 'old', startLine: 10, body: 'on a removed line' }));
+
+		expect(lines.threadsUnder({ side: 'old', number: 10 })).toEqual([]);
 	});
 });
 

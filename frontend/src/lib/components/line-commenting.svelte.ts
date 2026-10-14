@@ -12,7 +12,7 @@
 
 import { ThreadsByLine } from '$lib/anchors/comment-index';
 import { type Numbering, sideIsTheReviews, whyNotTheReviews } from '$lib/anchors/numbering';
-import type { FileLines } from '$lib/anchors/views';
+import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
@@ -34,11 +34,14 @@ type LineField = CommentField<WrittenOnLines>;
 // Why no line of a file takes a comment, said by each line's number when asked, and by the file of itself
 export const FILE_NOT_COMMENTABLE = 'This file cannot be commented on: its name holds control characters.';
 
-/** A drag across lines of one side, from where it began to where it has reached. */
-interface Drag {
-	side: LineSide;
-	start: number;
-	end: number;
+/**
+ * Lines of one side, from one number to another, whichever way round: what
+ * is dragged over, what is picked, and what an open thread is about.
+ */
+type LineSpan = Pick<PickedLines, 'side' | 'startLine' | 'endLine'>;
+
+/** A drag across lines of one side, from the line it began on to the line it has reached. */
+interface Drag extends LineSpan {
 	/** The line the comment field opens under once the drag is let go. */
 	opensBelow: LinePlace;
 }
@@ -108,14 +111,9 @@ function isBetween(lineNumber: number, one: number, other: number): boolean {
 	return lineNumber >= Math.min(one, other) && lineNumber <= Math.max(one, other);
 }
 
-/** Whether a line is among picked lines. */
-function isPicked(place: LinePlace, picked: PickedLines): boolean {
-	return place.side === picked.side && isBetween(place.number, picked.startLine, picked.endLine);
-}
-
-/** Whether a line is among the lines a thread hangs on. */
-function isAmong(place: LinePlace, lines: FileLines): boolean {
-	return place.side === lines.side && isBetween(place.number, lines.start_line, lines.end_line);
+/** Whether a line is among lines of one side. */
+function isAmong(place: LinePlace, lines: LineSpan): boolean {
+	return place.side === lines.side && isBetween(place.number, lines.startLine, lines.endLine);
 }
 
 export class LineCommenting {
@@ -123,17 +121,20 @@ export class LineCommenting {
 	readonly #file: DrawnFile;
 	#drag = $state<Drag | null>(null);
 	readonly #drawn: DrawnNumbers;
+	// The file's threads that hang under a line drawn here
+	readonly #hanging: readonly ThreadOnLines[];
 	readonly #threads: ThreadsByLine;
 	readonly #unplaced: readonly Thread[];
 	// The lines of each thread drawn open under a line here
-	readonly #underOpenThreads: readonly FileLines[];
+	readonly #underOpenThreads: readonly LineSpan[];
 	readonly #fields: LineField[];
 
 	constructor(review: Review, file: DrawnFile) {
 		this.#review = review;
 		this.#file = file;
 		this.#drawn = $derived(drawnNumbers(file.hunks()));
-		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.numbering()));
+		this.#hanging = $derived(review.threads.onLinesOf(file.path()).filter(({ lines }) => this.#hangsHere(lines)));
+		this.#threads = $derived(new ThreadsByLine(this.#hanging));
 		this.#unplaced = $derived(this.#withoutTheirLine());
 		this.#underOpenThreads = $derived(this.#linesOfOpenThreads());
 		this.#fields = $derived(
@@ -162,7 +163,7 @@ export class LineCommenting {
 	press(drawn: DrawnLine): void {
 		if (!this.mayComment(drawn.place)) return;
 		const { side, number } = drawn.place;
-		this.#drag = { side, start: number, end: number, opensBelow: drawn.place };
+		this.#drag = { side, startLine: number, endLine: number, opensBelow: drawn.place };
 	}
 
 	/** The pointer came onto a line: a drag reaches it, as far as one comment may. */
@@ -171,11 +172,11 @@ export class LineCommenting {
 		// A range spans one side only: old line 42 and new line 42 are different
 		// places, so dragging across the other side must not extend the range.
 		if (drag === null || drawn.place.side !== drag.side || drawn.place.number === NO_NUMBER) return;
-		const furthest = reach(drag.start, drawn.place.number, this.#review.longestQuotedRange);
+		const furthest = reach(drag.startLine, drawn.place.number, this.#review.longestQuotedRange);
 		// The field opens under the line the drag reached, following the drag
 		// back up rather than staying at the furthest point
-		const reached = furthestInRun(this.#drawn[drag.side], drag.start, furthest);
-		this.#drag = { ...drag, end: reached, opensBelow: { side: drag.side, number: reached } };
+		const reached = furthestInRun(this.#drawn[drag.side], drag.startLine, furthest);
+		this.#drag = { ...drag, endLine: reached, opensBelow: { side: drag.side, number: reached } };
 	}
 
 	/** The pointer was let go, anywhere: a comment is started on the lines dragged over. */
@@ -185,8 +186,8 @@ export class LineCommenting {
 		this.#drag = null;
 		this.#pick({
 			side: drag.side,
-			startLine: Math.min(drag.start, drag.end),
-			endLine: Math.max(drag.start, drag.end),
+			startLine: Math.min(drag.startLine, drag.endLine),
+			endLine: Math.max(drag.startLine, drag.endLine),
 			opensBelow: drag.opensBelow
 		});
 	}
@@ -208,9 +209,9 @@ export class LineCommenting {
 	 */
 	isMarked(place: LinePlace): boolean {
 		const drag = this.#drag;
-		if (drag !== null && drag.side === place.side && isBetween(place.number, drag.start, drag.end)) return true;
 		return (
-			this.#fields.some((field) => isPicked(place, field.at.lines)) ||
+			(drag !== null && isAmong(place, drag)) ||
+			this.#fields.some((field) => isAmong(place, field.at.lines)) ||
 			this.#underOpenThreads.some((lines) => isAmong(place, lines))
 		);
 	}
@@ -241,28 +242,30 @@ export class LineCommenting {
 	}
 
 	/**
-	 * The threads of the file whose last line is not drawn here, where the
+	 * Whether a thread on these lines hangs under a line of this drawing: its
+	 * last line is drawn, on a side whose numbers are the review's own.
+	 */
+	#hangsHere(lines: FileLines): boolean {
+		return sideIsTheReviews(lines.side, this.#file.numbering()) && this.#drawn[lines.side].has(lines.end_line);
+	}
+
+	/**
+	 * The threads of the file that hang under no line drawn here, where the
 	 * drawing stands for the file; none where it does not.
 	 */
 	#withoutTheirLine(): readonly Thread[] {
 		if (!this.#file.standsForItsFile()) return [];
 		return this.#review.threads
 			.onLinesOf(this.#file.path())
-			.filter(({ lines }) => !this.#drawn[lines.side].has(lines.end_line))
+			.filter(({ lines }) => !this.#hangsHere(lines))
 			.map(({ thread }) => thread);
 	}
 
-	/**
-	 * The lines of each thread drawn open here: on a side whose numbers are
-	 * the review's own, under a line drawn, and not folded away.
-	 */
-	#linesOfOpenThreads(): readonly FileLines[] {
-		return this.#review.threads
-			.onLinesOf(this.#file.path())
-			.filter(({ lines }) => sideIsTheReviews(lines.side, this.#file.numbering()))
-			.filter(({ lines }) => this.#drawn[lines.side].has(lines.end_line))
+	/** The lines of each thread hanging here that is not folded away. */
+	#linesOfOpenThreads(): readonly LineSpan[] {
+		return this.#hanging
 			.filter(({ thread }) => !this.#review.threads.reading.isFolded(thread.id))
-			.map(({ lines }) => lines);
+			.map(({ lines }) => ({ side: lines.side, startLine: lines.start_line, endLine: lines.end_line }));
 	}
 
 	/** Start a comment on picked lines, quoting what they say as they are picked. */
@@ -270,7 +273,7 @@ export class LineCommenting {
 		const quote = this.#file
 			.hunks()
 			.flatMap((hunk) => hunk.lines)
-			.filter(({ place }) => isPicked(place, lines))
+			.filter(({ place }) => isAmong(place, lines))
 			.map(({ line }) => line.content);
 		this.#review.threads.writing.pickLines(this.#file.path(), lines, quote);
 	}
