@@ -67,6 +67,15 @@ repos:
         types: [python]
         pass_filenames: false
         stages: [pre-commit]
+      # Every test module loads, though a commit runs only the tests of its own code: a change elsewhere can
+      # leave one that no longer imports, unseen until the whole suite runs. Loading all of them takes seconds
+      - id: tests-collect
+        name: pytest (every test module loads)
+        entry: uv run pytest tests --collect-only -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]
       - id: import-layers
         name: import-linter (the package's layers)
         entry: uv run lint-imports
