@@ -146,10 +146,11 @@ tests. Remove items when done — don't check them off.
       gap the review could not hand over, is held and never offered under
       the switch: the page notes a story as arrived unseen only where it
       heard it being told (`ReviewStory.readAnother`).
-- [ ] `fix(ui)`: a note that goes by itself — a story's arrival, Story put
-      away for good — is as wide as the window had room for when it was
-      drawn (`PassingNote.svelte`, `standsAt`): a window made narrower
-      under it cuts it off until it is drawn again.
+- [ ] `fix(ui)`: a pane the page puts under the switch — a story's
+      arrival, Story's introduction, the note that it is put away for
+      good — is as wide as the window had room for when it was drawn
+      (`PopoverPanel.svelte`, `standsAt`): a window made narrower under it
+      cuts it off until it is drawn again.
 - [ ] `fix(ui)`: at 420 pixels the reading area stands one pixel lower
       while the Story segment says "writing" than while it says "Story":
       the dots that breathe in place of its icon make the header's first

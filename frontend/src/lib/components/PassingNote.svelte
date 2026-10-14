@@ -25,7 +25,7 @@
 
 	let pane: HTMLDivElement | undefined = $state();
 	// How far in from its left edge the note points at the control, where it draws an arrow
-	const arrowOffset = $derived(pointsAt ? arrowOffsetTo(pointsAt) : 0);
+	const arrowOffset = $derived(arrowOffsetTo(pointsAt));
 
 	// Started as the note is drawn, and let go with it: put away before, it puts nothing away
 	$effect(() => {

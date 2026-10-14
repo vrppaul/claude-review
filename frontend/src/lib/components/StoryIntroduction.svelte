@@ -25,7 +25,7 @@
 	// Whether the notice that Story will not be introduced again stands in the introduction's place
 	let hiddenForGood = $state(false);
 
-	const arrowOffset = $derived(pointsAt ? arrowOffsetTo(pointsAt) : 0);
+	const arrowOffset = $derived(arrowOffsetTo(pointsAt));
 
 	// A reader with the story on screen, however it came there, is trying Story: it is introduced to them,
 	// and kept so, as Try Story's press keeps it. Looked at again once the guide hears whether it was

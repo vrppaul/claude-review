@@ -71,7 +71,7 @@
 	let keyboardHere = false;
 
 	// How far in from the edge the pane lines up with the arrow points
-	const arrowOffset = $derived(open && control ? arrowOffsetTo(control) : 0);
+	const arrowOffset = $derived(open ? arrowOffsetTo(control) : 0);
 
 	const triggerProps = $derived<TriggerProps>({
 		'aria-haspopup': 'dialog',

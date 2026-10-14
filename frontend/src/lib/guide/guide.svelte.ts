@@ -7,10 +7,11 @@
  * The tour narrates from that same card while a light moves over the review.
  *
  * Story, a way of reading the reader may never have tried, is introduced
- * once: at the switch, once the card and the tour are done. It counts as
- * introduced once its release news was shown, once the reader said at the
- * switch not to show it again, or once they tried it; that is kept for
- * every review on the machine, as the release seen is.
+ * once: by the news of the release that brought it, or else at the switch,
+ * once the card and the tour are done. It counts as introduced once that
+ * news was shown, once the reader said at the switch not to show it again,
+ * or once they tried it, by pressing it or with the story on screen; that
+ * is kept for every review on the machine, as the release seen is.
  */
 
 import { keepGuide, readGuide } from '$lib/api/review-api';
