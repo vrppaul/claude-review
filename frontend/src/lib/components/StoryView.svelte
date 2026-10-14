@@ -60,9 +60,13 @@
 <!-- The same change, read as the agent tells it: one scroll, the overview first, then every chapter in a
 	row, then what no step tells and what the agent called housekeeping. Over it, deep in a chapter, the
 	bar that says which; above it, any thread on words it no longer says. Until a story is told, what the
-	reader waits on stands in its place -->
+	reader waits on stands in its place, under any thread on the words of a story told before -->
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
 	{#if drawn.kind === 'wait'}
+		<!-- Threads the review picked up on the words of a story it no longer holds: nothing else draws them -->
+		<div class="cr-story-measure">
+			<UnplacedThreads threads={offTheStory} why={OFF_THE_STORY} />
+		</div>
 		<div bind:this={waitingRoom} class="cr-story-waiting-room">
 			<StoryWaiting wait={drawn.wait} />
 		</div>

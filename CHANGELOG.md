@@ -29,7 +29,9 @@
   under its block, outdated, or stands at the head of the story when the
   story no longer has that block, and `n` takes the reader there first.
   Either way it shows the words it was written against, wrapped as the
-  story said them.
+  story said them. A review that picks up such threads from an unsent
+  draft before any story is told stands them there too, above what the
+  reader waits on.
 - **The reader asks the agent for a story of the change, and sees it being
   written.** A story is the change told by the agent that made it: a short
   overview, then chapters with its reason above each piece of code. Story in

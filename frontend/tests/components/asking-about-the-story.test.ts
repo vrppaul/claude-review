@@ -223,6 +223,32 @@ describe("the story's other blocks", () => {
 	});
 });
 
+describe('no story held', () => {
+	beforeEach(() => {
+		// The review picked up a draft written on a story it does not hold: none has been told since it began
+		review = openReview({ files, facts: AGENT_ATTACHED });
+		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'Is it checked at all?'));
+		review.views.choose('story');
+	});
+
+	it('stands a thread on the words of a story told before at the head of the story, above what the reader waits on', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const head = screen.getByTestId('unplaced-threads');
+		expect(within(head).getByTestId('comment-thread').textContent).toContain('Is it checked at all?');
+		const waiting = screen.getByTestId('story-waiting');
+		expect(head.compareDocumentPosition(waiting) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it('takes the next thread key to a thread standing at its head', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		await userEvent.setup().keyboard('n');
+
+		expect(document.activeElement).toBe(within(screen.getByTestId('unplaced-threads')).getByTestId('comment-thread'));
+	});
+});
+
 describe('a story told again', () => {
 	it('stands a thread on words it says nowhere at its head, saying why, and under no block', () => {
 		// The story told now says nothing to doubt: the thread was on what the story before said

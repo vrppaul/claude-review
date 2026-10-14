@@ -3,7 +3,7 @@
  * its own, in the order the story tells them, then what no step tells. The
  * threads on the story's own words are drawn here alone: under their blocks,
  * and at its head where the story held has no such block, which a story
- * told before it had.
+ * told before it had — or where no story is held at all.
  *
  * A story draws a file in pieces — a step's lines, and whatever of the file
  * no step tells — so a file may stand in several sections, and a line of it
@@ -125,9 +125,14 @@ export class StoryReading implements ReadingView {
 		this.#threads = threads;
 	}
 
-	/** Nothing until a story is told; and of a story told of another take, lines that are read and take nothing. */
+	/**
+	 * Until a story is told, no line: the threads on the words of a story
+	 * told before, drawn at its head, and with none of those, nothing. Of a
+	 * story told of another take, lines that are read and take nothing.
+	 */
 	drawn(): Drawn {
-		return this.#story.held === null ? NOTHING_DRAWN : DRAWN_NUMBERED[this.#story.numbering];
+		if (this.#story.held === null) return { ...NOTHING_DRAWN, threads: this.threadsInOrder().length > 0 };
+		return DRAWN_NUMBERED[this.#story.numbering];
 	}
 
 	sectionKeys(): string[] {
@@ -137,10 +142,10 @@ export class StoryReading implements ReadingView {
 	/**
 	 * Down the story, from its head: those on words it says nowhere, then
 	 * part by part, the overview's, each chapter's, and those on what no step
-	 * tells. None until a story is told.
+	 * tells. Until a story is told, those at its head alone: on the words of
+	 * a story told before.
 	 */
 	threadsInOrder(): Thread[] {
-		if (this.#story.held === null) return [];
 		const placed = threadsPlaced(this.#story, this.#threads);
 		return [...offTheStoryAmong(placed, this.#threads), ...placed];
 	}

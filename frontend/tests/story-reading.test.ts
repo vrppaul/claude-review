@@ -321,11 +321,13 @@ describe('which way a review is read', () => {
 		expect(review.views.onScreen.sectionKeys()).toEqual([]);
 	});
 
-	it("walks no thread while no story is held, though a thread hangs on the words of the overview's task", () => {
+	it('walks the threads on the words of a story told before while no story is held: they stand at its head', () => {
 		review = openReview();
 		review.views.choose('story');
 		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task of a story since lost'));
 
-		expect(review.views.onScreen.threadsInOrder()).toEqual([]);
+		expect(review.views.onScreen.threadsInOrder().map((thread) => thread.body)).toEqual([
+			'on the task of a story since lost'
+		]);
 	});
 });
