@@ -7,7 +7,9 @@ thirty files changed in four places each, far apart, ten files added whole,
 and a note: forty-one files. The story tells it in six chapters and
 twenty-nine steps: chapters of one step and of ten, steps with a reason and
 without one, a chapter with a doubt, and most of the changed files told by
-no step at all, so the story has its part for what is left out.
+no step at all, so the story has its part for what is left out. Its
+overview draws the change, wider than a narrow column, nodes leading to
+chapters.
 
 Data alone: the files as they are committed and as the change leaves them,
 and the story as the document the review's `story` command takes. Nothing
@@ -76,6 +78,16 @@ class Decision(BaseModel):
     chapter: str
 
 
+class Diagram(BaseModel):
+    """The change drawn, in Mermaid, and the chapter each node leads to, by the node's name."""
+
+    model_config = FROZEN
+
+    mermaid: str
+    caption: str
+    links: dict[str, str]
+
+
 class Overview(BaseModel):
     """The change in short."""
 
@@ -84,6 +96,7 @@ class Overview(BaseModel):
     task: str
     done: str
     doubt: str
+    diagram: Diagram
     decisions: list[Decision]
 
 
@@ -154,6 +167,17 @@ THE_STORY = Story(
         task="Change many files in a few places each, and add ten.",
         done="Thirty files changed in four places each; ten files added.",
         doubt="The last chapter tells one line of a file changed in four places.",
+        # Wider than a narrow column, with its heart marked, a node that leads nowhere, and one whose name
+        # begins another's
+        diagram=Diagram(
+            mermaid=(
+                "flowchart LR\n"
+                "  added[Ten files added] --> heads[Heads changed]:::heart\n"
+                "  heads --> heads-2[Ten more heads] --> last[One line more] --> notes[A note]"
+            ),
+            caption="How the change runs",
+            links={"added": "ch-1", "heads": "ch-2", "heads-2": "ch-4", "last": "ch-6"},
+        ),
         decisions=[Decision(text="The added files come before the changed ones.", chapter="ch-2")],
     ),
     chapters=[
