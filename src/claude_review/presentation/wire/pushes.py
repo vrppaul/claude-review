@@ -142,14 +142,15 @@ class StoryPush(Push):
 
 
 class StoryAskingPush(Push):
-    """How the reader's asking for a story now stands, whole: asked, taken by an agent, or stopped.
+    """How the reader's asking for a story now stands, whole: asked, taken, stopped, or ended by a story told.
 
     Pushed whole, where a story is only announced and then fetched: it is
     three values, not the code of a change.
     """
 
     type: Literal[PushKind.STORY_ASKING] = PushKind.STORY_ASKING
-    asking: StoryAsking
+    # None once a story told ended it
+    asking: StoryAsking | None
 
 
 class EndedPush(Push):

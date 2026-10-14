@@ -14,7 +14,7 @@ import { newComment, storyComment } from './new-comment';
 import { inReview, openReview, settingsWithStoriesOn } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
-import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
+import { ASKED, codeMovedOn, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -136,6 +136,21 @@ describe('what the server pushes, taken in', () => {
 		await settled();
 
 		expect(review.story.held).toEqual(told);
+	});
+
+	it('takes the asking as ended once the review says a story told ended it: a round that moves that story on asks anew', async () => {
+		const movedOn = storyHeld({}, { moved_on: codeMovedOn() });
+		const server = fakeServer();
+		server.answer('GET /api/story', storyResponse({ held: storyHeld() }));
+		review = openReview({ story: movedOn, asking: TAKEN });
+
+		handOverNext(review, { type: 'story' });
+		handOverNext(review, { type: 'story_asking', asking: null });
+		await settled();
+		server.answer('GET /api/story', storyResponse({ held: movedOn }));
+		await review.story.read();
+
+		expect(review.story.wait).toEqual({ kind: 'unasked' });
 	});
 
 	it('says in the panel when the story told could not be read, and keeps the one it had', async () => {
@@ -294,7 +309,7 @@ describe('what the server pushes, taken in', () => {
 
 	describe('with a story held that the retake leaves moved on', () => {
 		// The story the review followed onto the diff taken again, a round having moved the code on under it
-		const MOVED_ON = storyHeld({}, { take: A_LATER_TAKE, moved_on: { round: 2, left_out_when_told: 0 } });
+		const MOVED_ON = storyHeld({}, { take: A_LATER_TAKE, moved_on: codeMovedOn() });
 
 		/** A server a retake lands from, holding that story, and taking a story asked for. */
 		function retakingUnderAStoryThatMovedOn(): FakeServer {

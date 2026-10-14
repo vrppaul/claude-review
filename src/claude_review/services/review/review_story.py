@@ -30,7 +30,7 @@ from claude_review.services.review.review_content import FIRST_TAKE, ReviewConte
 
 
 class CodeMovedOn(BaseModel):
-    """That a round's work moved the code under a story told before it: in which round, and what was left out then."""
+    """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -38,8 +38,9 @@ class CodeMovedOn(BaseModel):
     # it still so keeps it
     round: int = Field(ge=FIRST_ROUND)
     # How many lines the change added or removed that no step told when the
-    # story was told: said beside how many no step tells now
+    # story was told, and how many no step tells now
     left_out_when_told: int
+    left_out_now: int
 
 
 class StoryHeld(BaseModel):
@@ -177,7 +178,7 @@ class ReviewStory:
                 for step in chapter.steps
                 if step.changed_since_told
             ],
-            left_out=_changed_lines_left_out(held.story),
+            left_out=held.moved_on.left_out_now,
         )
 
     @property
@@ -199,11 +200,12 @@ def _moved_on(
     it left the story moved on too.
     """
     left_out_when_told = _changed_lines_left_out(told)
+    left_out_now = _changed_lines_left_out(followed)
     step_changed = any(step.changed_since_told for chapter in followed.chapters for step in chapter.steps)
-    if not step_changed and _changed_lines_left_out(followed) <= left_out_when_told:
+    if not step_changed and left_out_now <= left_out_when_told:
         return None
     first_round = round_number if moved_on_before is None else moved_on_before.round
-    return CodeMovedOn(round=first_round, left_out_when_told=left_out_when_told)
+    return CodeMovedOn(round=first_round, left_out_when_told=left_out_when_told, left_out_now=left_out_now)
 
 
 def _changed_lines_left_out(story: ToldStory) -> int:

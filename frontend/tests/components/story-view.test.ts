@@ -13,7 +13,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { ASKED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep, toldStepOfLines } from '../story';
+import { ASKED, codeMovedOn, storyHeld, storyResponse, TAKEN, toldChapter, toldStep, toldStepOfLines } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py gained a line, and so did a lock file
 const files = [
@@ -108,7 +108,8 @@ describe('a review read as its story', () => {
 	});
 
 	it('says the round it was told in, and the round a later one moved the code on in', () => {
-		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: { round: 2, left_out_when_told: 1 } }) });
+		const movedOn = codeMovedOn({ left_out_when_told: 1, left_out_now: 1 });
+		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: movedOn }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -929,7 +930,7 @@ describe('a story whose code a round changed after it was told', () => {
 				...TOLD.story,
 				chapters: [toldChapter('ch-1', first, { title: 'The beginnings' }), ...TOLD.story.chapters.slice(1)]
 			},
-			{ moved_on: { round: MOVED_ON_IN, left_out_when_told: 1 } }
+			{ moved_on: codeMovedOn({ round: MOVED_ON_IN, left_out_when_told: 1, left_out_now: 1 }) }
 		);
 	}
 	const changed = (step: ToldStep): ToldStep => ({ ...step, changed_since_told: true });

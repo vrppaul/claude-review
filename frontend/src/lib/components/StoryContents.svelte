@@ -31,12 +31,11 @@
 	const chaptersRead = $derived(
 		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
 	);
-	// How many changed lines no step tells now
-	const changedLinesLeftOut = $derived(contents.leftOut.reduce((lines, left) => lines + left.told.changed_lines, 0));
-	// And how many none told when the story was told, where a round moved the code on since and changed that:
-	// said beside it. Null otherwise, when nothing is said of either
-	const leftOutWhenTold = $derived(
-		held?.moved_on && held.moved_on.left_out_when_told !== changedLinesLeftOut ? held.moved_on.left_out_when_told : null
+	// How many changed lines no step told when the story was told, and how many none tells now, as the review
+	// counts them: said beside what is left out where a round moved the code on and changed how many. Null
+	// otherwise, when neither is said
+	const leftOutChanged = $derived(
+		held?.moved_on && held.moved_on.left_out_when_told !== held.moved_on.left_out_now ? held.moved_on : null
 	);
 </script>
 
@@ -109,14 +108,18 @@
 				data-testid="contents-left-out"
 				class="cr-contents-aside mt-2 font-semibold text-warning"
 				aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
-				aria-label={leftOutWhenTold === null ? undefined : leftOutThenAndNowSaid(leftOutWhenTold, changedLinesLeftOut)}
+				aria-label={leftOutChanged === null
+					? undefined
+					: leftOutThenAndNowSaid(leftOutChanged.left_out_when_told, leftOutChanged.left_out_now)}
 				onclick={() => review.parts.goTo(LEFT_OUT_PART)}
 			>
 				{NOT_IN_THE_STORY}
-				{#if leftOutWhenTold !== null}
+				{#if leftOutChanged !== null}
 					<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
 						words to whoever cannot see the arrow -->
-					<span class="ml-2" aria-hidden="true">{leftOutThenAndNow(leftOutWhenTold, changedLinesLeftOut)}</span>
+					<span class="ml-2" aria-hidden="true"
+						>{leftOutThenAndNow(leftOutChanged.left_out_when_told, leftOutChanged.left_out_now)}</span
+					>
 				{/if}
 			</button>
 			<ul data-testid="contents-left-out-files" class="cr-contents-files cr-contents-files-left-out">

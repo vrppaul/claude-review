@@ -3,7 +3,7 @@ import { ReviewStory, type StoryOpening } from '$lib/review/review-story.svelte'
 import type { StoryResponse } from '$lib/types';
 import { A_LATER_TAKE, FIRST_TAKE } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings } from './fake-server';
-import { ASKED, storyHeld, storyResponse, TAKEN } from './story';
+import { ASKED, codeMovedOn, storyHeld, storyResponse, TAKEN } from './story';
 
 /** What a reader who opens the review for the first time has read through of its story. */
 const NOTHING_READ: string[] = [];
@@ -29,7 +29,7 @@ function nobodyAttached(): boolean {
 function saidToNobody(): void {}
 
 /** A story held that a round moved the code on under. */
-const MOVED_ON = storyHeld({}, { moved_on: { round: 2, left_out_when_told: 0 } });
+const MOVED_ON = storyHeld({}, { moved_on: codeMovedOn() });
 
 /** What a review that holds a story answers of it. */
 function holdingAStory(): StoryResponse {
@@ -147,18 +147,6 @@ describe('what a page holds of the asking for a story', () => {
 
 	it('lets a story be asked for over one a round moved the code on under', () => {
 		expect(pageStory({ held: MOVED_ON }).canBeAskedFor).toBe(true);
-	});
-
-	it('is over once the review says another story was told: the next round to move it on asks again', async () => {
-		const server = fakeServer();
-		const story = pageStory({ held: MOVED_ON, asking: TAKEN });
-		server.answer('GET /api/story', holdingAStory());
-		await story.readAnother();
-
-		server.answer('GET /api/story', storyResponse({ held: MOVED_ON }));
-		await story.read();
-
-		expect(story.wait).toEqual({ kind: 'unasked' });
 	});
 });
 

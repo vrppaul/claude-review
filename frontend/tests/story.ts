@@ -4,6 +4,11 @@ import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 
 /** The round a story is told in, unless a test says another. */
 const FIRST_ROUND = 1;
+/** The round a round's work moved the code on under a story in, unless a test says another. */
+const SECOND_ROUND = FIRST_ROUND + 1;
+
+/** That a round moved the code on under a story, as the review says it. */
+type CodeMovedOn = NonNullable<StoryHeld['moved_on']>;
 
 /**
  * A step that shows the lines a file gained from one to another, both among
@@ -60,6 +65,14 @@ export function toldStory(given: Partial<ToldStory> = {}): ToldStory {
  */
 export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<StoryHeld, 'story'>> = {}): StoryHeld {
 	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, moved_on: null, ...held };
+}
+
+/**
+ * That the second round moved the code on under a story, with no changed
+ * line left out when it was told nor now, unless a test says otherwise.
+ */
+export function codeMovedOn(given: Partial<CodeMovedOn> = {}): CodeMovedOn {
+	return { round: SECOND_ROUND, left_out_when_told: 0, left_out_now: 0, ...given };
 }
 
 /** What the review answers of its story: none told, unless a test says one was. */

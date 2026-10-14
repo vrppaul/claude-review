@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { fakeServer, keepingSettings, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { handOverNext } from './pushes';
 import { openReview, settingsWithStoriesOn } from './review';
-import { ASKED, STOPPED, storyHeld, TAKEN } from './story';
+import { ASKED, codeMovedOn, STOPPED, storyHeld, TAKEN } from './story';
 
 // A story held that a round moved the code on under
-const MOVED_ON = storyHeld({}, { moved_on: { round: 2, left_out_when_told: 0 } });
+const MOVED_ON = storyHeld({}, { moved_on: codeMovedOn() });
 
 /** A server that keeps the reader's choices, and takes every story asked for or stopped. */
 function serving(): FakeServer {

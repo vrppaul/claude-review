@@ -9,7 +9,7 @@ import { broughtIntoView, said } from '../elements';
 import { newComment, storyComment } from '../new-comment';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
-import { storyHeld, toldChapter, toldStep } from '../story';
+import { codeMovedOn, storyHeld, toldChapter, toldStep } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py a line, and so did a lock file
 const files = [
@@ -243,7 +243,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 				toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
 			]
 		},
-		{ moved_on: { round: 2, left_out_when_told: 0 } }
+		{ moved_on: codeMovedOn() }
 	);
 
 	beforeEach(() => {
@@ -275,6 +275,7 @@ describe('what a story leaves out, once a round moved the code on under it', () 
 		{ piece: toldStep('src/a.py', 5).piece, changed_lines: 1 },
 		{ piece: toldStep('src/b.py', 7).piece, changed_lines: 4 }
 	];
+	const CHANGED_LINES_LEFT_OUT_NOW = 5;
 
 	/** Draw the story with what it leaves out now, the code moved on in round 2, and what it left out when told. */
 	function drawnLeavingOut(leftOutWhenTold: number): void {
@@ -282,7 +283,7 @@ describe('what a story leaves out, once a round moved the code on under it', () 
 			files,
 			story: storyHeld(
 				{ ...TOLD.story, left_out: LEFT_OUT_NOW },
-				{ moved_on: { round: 2, left_out_when_told: leftOutWhenTold } }
+				{ moved_on: codeMovedOn({ left_out_when_told: leftOutWhenTold, left_out_now: CHANGED_LINES_LEFT_OUT_NOW }) }
 			)
 		});
 		review.views.choose('story');

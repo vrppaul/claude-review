@@ -105,14 +105,15 @@ class StoryTold(PageEventBase):
 
 
 class StoryAskingChanged(PageEventBase):
-    """How the reader's asking for a story now stands: asked, taken by an agent, or stopped.
+    """How the reader's asking for a story now stands: asked, taken by an agent, stopped, or ended by a story told.
 
     Told whole, as a fact, so a page takes it as told and asks nothing. A
-    story told ends the asking and is told as `StoryTold` alone: a page
-    reads the story, and with it that nothing is asked any more.
+    story told ends the asking: it is told after `StoryTold`, with nothing
+    asked any more.
     """
 
-    asking: StoryAsking
+    # None once a story told ended it
+    asking: StoryAsking | None
 
 
 class ReviewEnded(PageEventBase):

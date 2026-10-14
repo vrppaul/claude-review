@@ -535,7 +535,7 @@ export interface components {
         };
         /**
          * StoryAskingPush
-         * @description How the reader's asking for a story now stands, whole: asked, taken by an agent, or stopped.
+         * @description How the reader's asking for a story now stands, whole: asked, taken, stopped, or ended by a story told.
          *
          *     Pushed whole, where a story is only announced and then fetched: it is
          *     three values, not the code of a change.
@@ -546,7 +546,7 @@ export interface components {
              * @enum {string}
              */
             type: "story_asking";
-            asking: components["schemas"]["StoryAsking"];
+            asking: components["schemas"]["StoryAsking"] | null;
         };
         "StoryBlock-Input": components["schemas"]["OverviewBlock-Input"] | components["schemas"]["ItemBlock-Input"] | components["schemas"]["ChapterBlock-Input"] | components["schemas"]["ReasonBlock-Input"];
         "StoryBlock-Output": components["schemas"]["OverviewBlock-Output"] | components["schemas"]["ItemBlock-Output"] | components["schemas"]["ChapterBlock-Output"] | components["schemas"]["ReasonBlock-Output"];

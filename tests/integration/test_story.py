@@ -247,7 +247,10 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     await take_again_after_a_round(agent, tmp_git_repo)
 
     held = (await held_by(agent)).held
-    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out_when_told=0))
+    assert (held.round, held.moved_on) == (
+        FIRST_ROUND,
+        CodeMovedOn(round=FIRST_ROUND + 1, left_out_when_told=0, left_out_now=0),
+    )
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 
@@ -418,7 +421,7 @@ def taken_by_an_agent(review: TestClient, clock: FixedClock) -> None:
     agent_waits(review)
 
 
-def next_askings(socket: WebSocketTestSession, how_many: int) -> list[StoryAsking]:
+def next_askings(socket: WebSocketTestSession, how_many: int) -> list[StoryAsking | None]:
     """How the asking stands each of the next few times a page is told, in the order it is told."""
     return [next_push(socket, StoryAskingPush).asking for _ in range(how_many)]
 
@@ -520,6 +523,21 @@ def test_a_story_asked_for_twice_is_told_to_the_pages_once(page_of_the_change: T
         told = next_askings(socket, len(ASKED_STOPPED))
 
     assert told == ASKED_STOPPED
+
+
+def test_every_page_is_told_a_story_was_told_and_then_that_it_ended_the_asking(page_of_the_change: TestClient) -> None:
+    """The story first: a page that waited never holds, between the two, a story moved on that nobody is asked for."""
+    with open_session(page_of_the_change) as socket:
+        page_of_the_change.post(STORY_REQUEST_ROUTE)
+        next_push(socket, StoryAskingPush)
+
+        page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+        # An asking told before the story would be passed over here, and none would come after it
+        next_push(socket, StoryPush)
+        told = next_push(socket, StoryAskingPush)
+
+    assert told.asking is None
 
 
 def test_a_page_opening_while_a_story_is_awaited_reads_when_it_was_asked_for_and_taken(

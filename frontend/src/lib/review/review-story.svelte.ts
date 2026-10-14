@@ -17,8 +17,8 @@
  *
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
- * which say how far the telling had got, and changed by what the review
- * tells after them, a story told among it, which ends the asking. What the
+ * which say how far the telling had got, and replaced by whatever the
+ * review tells of it after them, the end a story told brings too. What the
  * reader is waiting on while no story held is current — none is held, or a
  * round moved the code on under it — is worked out from it
  * (`story-wait.ts`), never kept. Asking and stopping are requests made here
@@ -267,13 +267,12 @@ export class ReviewStory {
 	 * The review said it was told another story: read it in place of the one
 	 * held here. What the reader had read through was of the story before,
 	 * and is forgotten as this one is held. A story that cannot be read
-	 * leaves the one before as it was, and as far read. Told, a story ends
-	 * the asking for one, as the review's own telling does: it says so to
-	 * no page, and a round that moves this story on asks anew.
+	 * leaves the one before as it was, and as far read. That the telling
+	 * ended the asking for one the review says next, as it says any change
+	 * to the asking.
 	 */
 	async readAnother(): Promise<void> {
 		this.#anotherAwaited = true;
-		this.#asking = null;
 		await this.read();
 	}
 

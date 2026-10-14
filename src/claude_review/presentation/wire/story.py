@@ -190,12 +190,13 @@ class ToldStory(WireModel):
 
 
 class CodeMovedOn(WireModel):
-    """That a round's work moved the code under a story told before it: in which round, and what was left out then."""
+    """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
 
     # The round of the take that first found it so: a later take that finds it still so keeps it
     round: int
-    # How many lines the change added or removed that no step told when the story was told
+    # How many lines the change added or removed that no step told when the story was told, and how many none tells now
     left_out_when_told: int
+    left_out_now: int
 
 
 class StoryHeld(WireModel):

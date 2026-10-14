@@ -77,7 +77,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case StoryTold():
             return StoryPush()
         case StoryAskingChanged():
-            return StoryAskingPush(asking=StoryAsking.of(event.asking))
+            return StoryAskingPush(asking=StoryAsking.of(event.asking) if event.asking is not None else None)
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

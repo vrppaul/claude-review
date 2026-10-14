@@ -408,8 +408,8 @@ class Review:
         Told of the review's own diff as it stands when the story arrives,
         whatever base a page reads, and kept with the round it arrived in
         and the take it was told of. Every page open is told there is one,
-        and reads it from here. It ends the reader's asking for one, asked
-        for or not, stopped or not.
+        and reads it from here; then that it ended the reader's asking for
+        one, asked for or not, stopped or not.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
@@ -423,6 +423,7 @@ class Review:
         self._inbox.withdraw(StoryRequested())
         self._inbox.withdraw(StoryCancelled())
         self._page.tell(StoryTold())
+        self._page.tell(StoryAskingChanged(asking=self._story.asking))
         log.info(
             "story_told",
             chapters=len(held.story.chapters),

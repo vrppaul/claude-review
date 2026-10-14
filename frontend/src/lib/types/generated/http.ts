@@ -864,13 +864,15 @@ export interface components {
         };
         /**
          * CodeMovedOn
-         * @description That a round's work moved the code under a story told before it: in which round, and what was left out then.
+         * @description That a round's work moved the code under a story told before it: in which round, and how much is left out.
          */
         CodeMovedOn: {
             /** Round */
             round: number;
             /** Left Out When Told */
             left_out_when_told: number;
+            /** Left Out Now */
+            left_out_now: number;
         };
         /**
          * CommentSeverity

@@ -22,7 +22,7 @@ from claude_review.domain.interfaces import GitError, ReviewedRepository, Staged
 from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
 from claude_review.services.review.content_sources import ContentSource, content_source
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
-from claude_review.services.review.review_story import CodeMovedOn, ReviewStory
+from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file
@@ -219,11 +219,12 @@ async def test_a_story_followed_onto_a_later_take_is_of_that_take_and_still_of_t
     assert (held.take, held.round) == (FIRST_TAKE + 1, FIRST_ROUND)
 
 
-async def test_a_story_more_is_left_out_of_says_the_round_the_code_moved_on_in_and_what_it_left_out_when_told() -> None:
+async def test_a_story_more_is_left_out_of_says_the_round_it_moved_on_in_and_what_was_left_out_then_and_now() -> None:
     held = (await told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
 
     assert held is not None
-    assert held.moved_on == CodeMovedOn(round=SECOND_ROUND, left_out_when_told=1)
+    assert held.moved_on is not None
+    assert (held.moved_on.round, held.moved_on.left_out_when_told, held.moved_on.left_out_now) == (SECOND_ROUND, 1, 2)
 
 
 async def test_a_story_the_code_stays_moved_on_under_says_the_round_it_first_moved_on_in() -> None:
