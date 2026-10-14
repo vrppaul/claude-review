@@ -1,24 +1,29 @@
-"""Every process a script starts, and how a script's work is run so that none outlives it.
+"""The commands a script starts, and how a script's work is run so that no command outlives it.
 
 `look.py` drives the review through its command line and `break_lines.py`
 the page's tools through pnpm: each runs commands to their end, and the look
-starts one that stays, the review's server. They are all started here, so
-that two things hold of every script. A wait has a limit: a command still
-running when its limit runs out is stopped, and said to have failed. And
-nothing a script starts outlives it: a script's work is one coroutine
+starts one that stays, the review's server. Every command is started here,
+so that two things hold of each. A wait has a limit: a command still
+running when its limit runs out is stopped, and said to have failed. And no
+command a script starts outlives it: a script's work is one coroutine
 handed to `complete`, which cancels it when the script is told from outside
 to stop, by SIGTERM or at Ctrl-C, and a command or a server running at that
 moment is stopped on the way out.
 
-A process is started as the head of a group of its own and stopped as that
+Commands, and not every process a script is the cause of. The browser a
+look opens is Playwright's to start, with the driver it is run by, and
+Playwright's to stop: they go as the block the look opened them in ends,
+which it does on the way out of cancelled work too.
+
+A command is started as the head of a group of its own and stopped as that
 group, by its pid: pnpm starts vitest, and a stop that reached pnpm alone
 would leave vitest running over a directory already removed.
 
-Processes are started through asyncio, as the review itself starts git:
+Commands are started through asyncio, as the review itself starts git:
 waiting with a limit and stopping on the way out of cancelled work are what
 that form is for. bandit, which reads the scripts, refuses the `subprocess`
-module and has no rule for this form; `check_code_rules.py` holds every
-other script to starting its processes here.
+module and has no rule for this form; `check_code_rules.py` refuses the
+form's four names in every other Python file under `scripts/`.
 """
 
 import asyncio

@@ -13,7 +13,8 @@ CHECK = Path(__file__).parents[2] / "scripts" / "check_code_rules.py"
 RULE_BROKEN = 1
 ALL_KEPT = 0
 
-# A file that starts two processes itself, what a script that does so is told, and the files that may
+# A file that starts a process each way asyncio has of starting one: by a name imported, asked of the module,
+# used bare, and asked of the event loop
 STARTS_PROCESSES = """
     import asyncio
     from asyncio import create_subprocess_shell
@@ -22,8 +23,22 @@ STARTS_PROCESSES = """
     async def listed(directory: str) -> None:
         await asyncio.create_subprocess_exec("ls", directory)
         await create_subprocess_shell("ls")
+        loop = asyncio.get_running_loop()
+        await loop.subprocess_exec(asyncio.SubprocessProtocol, "ls", directory)
+        await loop.subprocess_shell(asyncio.SubprocessProtocol, "ls")
 """
+# Where that file names such a way, by the line, and the name it is named by there
+WAYS_NAMED = [
+    (3, "create_subprocess_shell"),
+    (7, "create_subprocess_exec"),
+    (8, "create_subprocess_shell"),
+    (10, "subprocess_exec"),
+    (11, "subprocess_shell"),
+]
+# What a script that names one is told; the files that may not, a script in whatever directory under
+# `scripts/`; and the files that may
 A_SCRIPT_STARTS_NONE = "starts a process: a script starts one through `scripts/commands.py`, which stops what it starts"
+MAY_START_NO_PROCESS = ["scripts/looked.py", "scripts/kept/looked.py", "scripts/kept/commands.py"]
 MAY_START_PROCESSES = ["scripts/commands.py", "src/package/repository.py"]
 
 NESTED_HELPER = """
@@ -274,13 +289,17 @@ def test_a_model_made_by_its_constructor_and_mappings_that_were_never_models_pas
     assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
 
 
-def test_a_script_that_starts_a_process_itself_is_named_where_it_does(tmp_path: Path) -> None:
-    """Whatever name asyncio's way of starting one is reached by: imported, or asked of the module."""
-    checked = _check_as(tmp_path, "scripts/looked.py", STARTS_PROCESSES)
+@pytest.mark.parametrize("path", MAY_START_NO_PROCESS)
+def test_a_script_that_starts_a_process_itself_is_named_wherever_it_names_a_way_of_starting_one(
+    tmp_path: Path, path: str
+) -> None:
+    """Whichever of asyncio's four ways, however the file reaches it, and in whatever directory under `scripts/`."""
+    checked = _check_as(tmp_path, path, STARTS_PROCESSES)
 
-    assert checked.returncode == RULE_BROKEN
-    assert f"scripts/looked.py:3: `create_subprocess_shell` {A_SCRIPT_STARTS_NONE}" in checked.stdout
-    assert f"scripts/looked.py:7: `create_subprocess_exec` {A_SCRIPT_STARTS_NONE}" in checked.stdout
+    assert (checked.returncode, checked.stdout.splitlines()) == (
+        RULE_BROKEN,
+        [f"{tmp_path / path}:{line}: `{name}` {A_SCRIPT_STARTS_NONE}" for line, name in WAYS_NAMED],
+    )
 
 
 @pytest.mark.parametrize("path", MAY_START_PROCESSES)

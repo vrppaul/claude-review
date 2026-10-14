@@ -26,14 +26,19 @@ call anything `copy`. In a file that does, whatever else goes by one of
 those names is taken for the module: the check reads names, not what a
 name stands for where it is used.
 
-No script starts a process itself. A file of `scripts/` runs a command
-through `scripts/commands.py`, which gives the wait a limit and stops what
-it started when the script is stopped; so asyncio's ways of starting one —
-`create_subprocess_exec`, `create_subprocess_shell`, and the event loop's
-`subprocess_exec` and `subprocess_shell` — are refused in every other file
-of that directory, by name, however the file reaches them. bandit refuses
-the `subprocess` module and `os.system` there already, and has no rule for
-these.
+No script starts a command by asyncio's ways of starting one. A script runs
+a command through `scripts/commands.py`, which gives the wait a limit and
+stops what it started when the script is stopped. So four names are
+refused: `create_subprocess_exec` and `create_subprocess_shell`, and the
+event loop's `subprocess_exec` and `subprocess_shell`, wherever a file
+writes one — imported, asked of a module or of a loop, or used bare. They
+are refused in every Python file under a directory `scripts`, however deep
+under it, but `commands.py` in that directory itself. That is all this
+rule holds. bandit refuses the `subprocess` module and `os.system` in the
+scripts already; a name put together in text, and Python's other ways of
+starting a process (`os.fork`, `os.posix_spawn`, `pty.spawn`,
+`multiprocessing`), are past what either sees. Nor is what a library
+starts a script's to start here: Playwright starts the browser of a look.
 
 Run on files or directories, in the project's own environment. The
 pre-commit hook hands it every Python file outside `tests/`, and CI runs
@@ -77,7 +82,7 @@ REPLACED_BY_NAME = "`copy.replace` copies an object by the names of its fields: 
 PROCESS_STARTERS = frozenset(
     {"create_subprocess_exec", "create_subprocess_shell", "subprocess_exec", "subprocess_shell"}
 )
-# The directory the scripts are in, the one of them that may start a process, and what any other is told
+# The directory the scripts are under, the one file right in it that may start a process, and what any other is told
 SCRIPTS = "scripts"
 RUNS_COMMANDS = "commands.py"
 STARTED_BY_A_SCRIPT = (
@@ -138,10 +143,17 @@ def breaches_in(path: Path) -> list[Breach]:
     file = CheckedFile(
         path=path,
         copy_module_names=_names_of_the_copy_module(tree),
-        may_start_processes=path.parent.name != SCRIPTS or path.name == RUNS_COMMANDS,
+        may_start_processes=_may_start_processes(path),
     )
     _look_inside(tree, file, inside_function=False, found=found)
     return found
+
+
+def _may_start_processes(path: Path) -> bool:
+    """Whether a file may start a process itself: one under no directory of scripts, or the one that runs commands."""
+    is_a_script = SCRIPTS in path.parent.parts
+    runs_commands = path.parent.name == SCRIPTS and path.name == RUNS_COMMANDS
+    return runs_commands or not is_a_script
 
 
 def _names_of_the_copy_module(tree: ast.AST) -> frozenset[str]:
