@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
@@ -137,13 +137,11 @@ describe('a story asked for with no agent attached', () => {
 		);
 	});
 
-	it('offers nothing that cannot work: its one button waits for an agent, and takes no press', () => {
+	it('offers the files to read meanwhile, and no button that takes no press', () => {
 		waiting({ asking: ASKED });
 
-		const button = screen.getByTestId<HTMLButtonElement>('waiting-for-an-agent');
-		expect(said(button)).toBe('Waiting for an agent');
-		expect(button.disabled).toBe(true);
-		expect(screen.queryByTestId('stop-writing')).toBeNull();
+		const offered = within(screen.getByTestId('story-waiting')).getAllByRole('button');
+		expect(offered.map(said)).toEqual(['Read the files meanwhile']);
 	});
 });
 

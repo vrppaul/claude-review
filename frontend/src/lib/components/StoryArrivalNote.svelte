@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { focusWhatRemains, isComposingText, isTypingTarget } from '$lib/dom/keyboard';
-	import { inModalAbove } from '$lib/dom/modal';
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import { arrowOffsetTo } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
@@ -13,8 +12,10 @@
 		onOpen: () => void;
 	}
 
-	// The key that puts the note away
-	const PUT_AWAY_KEY = 'Escape';
+	// How long the note stands before it puts itself away, the mouse over it or not. The bar along its foot
+	// runs out over as long; the note goes by this clock, not by the bar, which runs for no reader who asked
+	// for less motion
+	const STANDS_FOR_MS = 4_000;
 
 	let { pointsAt, onOpen }: Props = $props();
 	const review = useReview();
@@ -27,33 +28,23 @@
 	// wrap, and nothing of it is cut off
 	const standsAt = $derived(pane?.offsetParent?.getBoundingClientRect().left ?? 0);
 
+	// Started as the note is drawn, and let go with it: opened or closed before, it puts nothing away
+	$effect(() => {
+		const timer = setTimeout(putAway, STANDS_FOR_MS);
+		return () => clearTimeout(timer);
+	});
+
 	/** Put the note away. The keyboard it held, if it held it, goes to the control it pointed at. */
 	function putAway() {
 		if (pane?.contains(document.activeElement)) focusWhatRemains(() => pointsAt);
 		review.story.putOfferAway();
 	}
-
-	/** Escape puts it away, unless the key is a field's, part of a word being composed, or a modal's above it. */
-	function putAwayOnEscape(event: KeyboardEvent) {
-		if (event.key !== PUT_AWAY_KEY || isComposingText(event)) return;
-		if (isTypingTarget(event.target) || inModalAbove(event.target)) return;
-		putAway();
-	}
-
-	/** A press anywhere else on the page puts it away, and does what it would have done anyway. */
-	function putAwayIfPressedElsewhere(event: PointerEvent) {
-		if (!(event.target instanceof Node) || pane?.contains(event.target) || inModalAbove(event.target)) return;
-		putAway();
-	}
 </script>
-
-<svelte:document onpointerdown={putAwayIfPressedElsewhere} />
-<svelte:window onkeydown={putAwayOnEscape} />
 
 <!-- Said under the control that leads to a story, once one told while the reader read the files has arrived.
 	A note, and no popover: it opens from no control, and takes the keyboard from nothing the reader is
-	doing. It lies over what is under it, so Escape or a press elsewhere puts it away; the view is the
-	reader's to change -->
+	doing. It lies over what is under it, so it goes by itself in a few seconds, or at once by its ×; the
+	view is the reader's to change -->
 <div class="contents" style:--cr-note-stands-at="{standsAt}px">
 	<PopoverPanel
 		bind:pane
@@ -67,6 +58,19 @@
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3.5 text-sm">
 			<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
 			<button type="button" data-testid="open-story" class="btn btn-primary btn-xs" onclick={onOpen}>Open it</button>
+			<button
+				type="button"
+				data-testid="story-ready-close"
+				class="btn btn-ghost btn-xs"
+				aria-label="Close"
+				onclick={putAway}>×</button
+			>
 		</div>
+		<div
+			data-testid="story-ready-time-left"
+			class="cr-note-time-left"
+			style:--cr-note-lasts="{STANDS_FOR_MS}ms"
+			aria-hidden="true"
+		></div>
 	</PopoverPanel>
 </div>

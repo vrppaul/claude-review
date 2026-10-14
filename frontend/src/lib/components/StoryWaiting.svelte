@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { focusWhatRemains, lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import type { StoryWait } from '$lib/review/story-wait';
 	import Icon from './Icon.svelte';
@@ -23,19 +23,10 @@
 		awaited: { mark: 'awaited', class: 'cr-wait-fact-awaited' }
 	};
 
-	// How the keyboard is handed on as the wait changes under it: to the first control now drawn, or,
-	// where the one control drawn takes no press, lent to the words that say why
-	const HANDS_KEYBOARD_ON: Record<StoryWait['kind'], typeof focusWhatRemains> = {
-		unasked: focusWhatRemains,
-		writing: focusWhatRemains,
-		'nobody-attached': lendKeyboardToWhatRemains,
-		stopped: focusWhatRemains
-	};
-
 	let { wait }: Props = $props();
 	const review = useReview();
 
-	// Everything drawn of the wait, and what of it takes the keyboard: each kind of wait says which
+	// Everything drawn of the wait, and the control of it that takes the keyboard: each kind of wait says which
 	let drawn: HTMLElement | undefined = $state();
 	let takesKeyboard: HTMLElement | undefined = $state();
 
@@ -43,8 +34,9 @@
 	// that held the keyboard goes with what was drawn. Looked at before the page redraws: the keyboard
 	// then goes to what the wait now draws for it, and is never left on nothing
 	$effect.pre(() => {
-		const handOn = HANDS_KEYBOARD_ON[wait.kind];
-		if (drawn?.contains(document.activeElement)) handOn(() => takesKeyboard);
+		// Looked at again whenever the wait changes kind
+		void wait.kind;
+		if (drawn?.contains(document.activeElement)) focusWhatRemains(() => takesKeyboard);
 	});
 </script>
 
@@ -53,14 +45,12 @@
 <section bind:this={drawn} data-testid="story-waiting" role="status" class="cr-story-waiting">
 	{#if wait.kind === 'nobody-attached'}
 		<div class="flex flex-col items-center gap-3 text-center">
-			<p bind:this={takesKeyboard} data-testid="no-agent-to-tell-it">
-				No story for this review. A story is told by the agent that made the change, and no agent is attached.
-			</p>
+			<p>No story for this review. A story is told by the agent that made the change, and no agent is attached.</p>
 			<p class="cr-muted">
 				Attach one with <code class="font-mono text-base-content">/review-ui</code> in that session; the story starts as soon
 				as it joins.
 			</p>
-			<button type="button" data-testid="waiting-for-an-agent" class="btn btn-sm" disabled>Waiting for an agent</button>
+			{@render readFilesMeanwhile()}
 		</div>
 	{:else if wait.kind === 'stopped'}
 		<div class="flex flex-col items-center gap-3 text-center">
@@ -97,15 +87,7 @@
 			{/each}
 		</ul>
 		<div class="flex flex-wrap justify-center gap-2.5">
-			<button
-				bind:this={takesKeyboard}
-				type="button"
-				data-testid="read-files-meanwhile"
-				class="btn btn-sm"
-				onclick={() => review.views.showFiles()}
-			>
-				Read the files meanwhile
-			</button>
+			{@render readFilesMeanwhile()}
 			{#if wait.kind === 'writing'}
 				<button
 					type="button"
@@ -119,3 +101,17 @@
 		</div>
 	{/if}
 </section>
+
+<!-- The way to the files while the story is not there: offered wherever one is still awaited, and the
+	control that takes the keyboard there -->
+{#snippet readFilesMeanwhile()}
+	<button
+		bind:this={takesKeyboard}
+		type="button"
+		data-testid="read-files-meanwhile"
+		class="btn btn-sm"
+		onclick={() => review.views.showFiles()}
+	>
+		Read the files meanwhile
+	</button>
+{/snippet}

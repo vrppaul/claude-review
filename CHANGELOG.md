@@ -12,8 +12,10 @@
   when it was asked for, when the agent took the request and how long it has
   been waited for, with the files to read meanwhile and a way to stop and to
   ask again. While the files are read the switch says the story is being
-  written, and offers it once it has arrived: the view never changes by
-  itself. With no agent attached the page says how one is attached.
+  written, and offers it once it has arrived, in a note that goes by itself
+  after four seconds, a bar running out as it waits, or at once by its ×:
+  the view never changes by itself. With no agent attached the page says
+  how one is attached, and offers the files meanwhile.
 - **The agent is told when a story is wanted, and how one is written.**
   `wait` hands over `story_request` and `story_cancel`; `claude-review story
   --help` shows the document whole and says how long each of its texts may

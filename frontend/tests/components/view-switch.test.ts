@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -17,6 +18,9 @@ const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one'), added
 const IN_TWO_CHAPTERS = storyHeld({
 	chapters: [toldChapter('ch-1', [toldStep('a.py', 1)]), toldChapter('ch-2', [toldStep('a.py', 9)])]
 });
+// How long the note of a story's arrival stands before it puts itself away: four seconds, the owner's word
+const NOTE_STANDS_FOR = 4_000;
+const A_SECOND = 1_000;
 
 /** A server that keeps the reader's choices, and takes every story asked for or stopped. */
 function serving(): FakeServer {
@@ -226,7 +230,7 @@ describe('a story told while the files are read', () => {
 
 		await toldMeanwhile(review, server);
 
-		expect(said(screen.getByTestId('story-ready'))).toBe('The story is ready: 2 chapters. Open it');
+		expect(said(screen.getByTestId('story-ready'))).toBe('The story is ready: 2 chapters. Open it ×');
 		expect(screen.getByTestId('story-ready').getAttribute('role')).toBe('status');
 	});
 
@@ -249,49 +253,39 @@ describe('a story told while the files are read', () => {
 		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
-	it('is put away by Escape, and the Story segment stays marked: the story is not read yet', async () => {
+	it('is put away by its close button, and the Story segment stays marked: the story is not read yet', async () => {
 		const server = serving();
 		const user = userEvent.setup();
 		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
-		await user.keyboard('{Escape}');
+		await user.click(screen.getByTestId('story-ready-close'));
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
 		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
-	it('is put away by a press elsewhere on the page, and the Story segment stays marked', async () => {
+	it('puts itself away once its four seconds are out, and the Story segment stays marked', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const server = serving();
-		const user = userEvent.setup();
 		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
-		await user.click(screen.getByTestId('diff-view'));
+		vi.advanceTimersByTime(NOTE_STANDS_FOR);
+		flushSync();
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
 		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
-	it('stays where the reader presses on the note itself', async () => {
+	it('stands until its four seconds are out', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const server = serving();
-		const user = userEvent.setup();
 		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
-		await user.click(screen.getByTestId('story-ready'));
-
-		expect(screen.getByTestId('story-ready')).toBeTruthy();
-	});
-
-	it('stays where Escape is typed in a field: the key belongs to the field', async () => {
-		const server = serving();
-		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN, facts: AGENT_ATTACHED });
-		await toldMeanwhile(review, server);
-		screen.getByTestId('panel-input').focus();
-
-		await user.keyboard('{Escape}');
+		vi.advanceTimersByTime(NOTE_STANDS_FOR - A_SECOND);
+		flushSync();
 
 		expect(screen.getByTestId('story-ready')).toBeTruthy();
 	});
@@ -301,7 +295,7 @@ describe('a story told while the files are read', () => {
 		const user = userEvent.setup();
 		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
-		await user.keyboard('{Escape}');
+		await user.click(screen.getByTestId('story-ready-close'));
 
 		await user.click(screen.getByTestId('read-as-story'));
 		await user.click(screen.getByTestId('read-as-files'));

@@ -1336,6 +1336,26 @@
 	width: max-content;
 	max-width: calc(100vw - var(--cr-note-stands-at) - var(--cr-note-margin));
 }
+/*
+ * How long a note that goes by itself has left: a bar along its foot, in
+ * the colour of its edge, that runs out over the time whoever draws the
+ * note gives it (--cr-note-lasts). The bar only shows the time: the note
+ * keeps its own clock, and goes by it where the bar does not run.
+ */
+.cr-note-time-left {
+	height: 2px;
+	background: var(--cr-popover-edge);
+	transform-origin: left;
+	animation: cr-run-out var(--cr-note-lasts) linear forwards;
+}
+@keyframes cr-run-out {
+	from {
+		transform: scaleX(1);
+	}
+	to {
+		transform: scaleX(0);
+	}
+}
 .cr-finish-row:hover {
 	background: var(--cr-control-tint);
 }

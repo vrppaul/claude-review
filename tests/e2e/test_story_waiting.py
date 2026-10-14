@@ -167,17 +167,16 @@ async def test_asking_for_the_story_again_puts_the_keyboard_on_the_way_to_the_fi
     await expect(page.get_by_test_id("read-files-meanwhile")).to_be_focused()
 
 
-async def test_asking_again_with_no_agent_attached_puts_the_keyboard_on_the_words_that_say_so(
+async def test_asking_again_with_no_agent_attached_puts_the_keyboard_on_the_way_to_the_files_meanwhile(
     review: RunningReview, page: Page
 ) -> None:
-    """The one button drawn then takes no press: the words hold the keyboard, where the next key starts from."""
     await _wait_for_a_story(page, review)
     async with AsyncClient(base_url=review.url) as another_page:
         await another_page.post(STORY_CANCEL_ROUTE)
 
     await page.get_by_test_id("write-story-again").press("Enter")
 
-    await expect(page.get_by_test_id("no-agent-to-tell-it")).to_be_focused()
+    await expect(page.get_by_test_id("read-files-meanwhile")).to_be_focused()
 
 
 async def test_reading_the_files_meanwhile_puts_the_keyboard_on_the_files_in_the_header(
@@ -293,7 +292,20 @@ async def test_the_note_of_a_storys_arrival_stands_whole_in_a_narrow_window(revi
     assert await page.get_by_test_id("story-ready").evaluate(RIGHT_OF) < await page.evaluate(WINDOW_WIDTH)
 
 
-async def test_the_note_of_a_storys_arrival_put_away_from_the_keyboard_gives_the_keyboard_to_story_in_the_header(
+async def test_the_note_of_a_storys_arrival_closed_from_the_keyboard_gives_the_keyboard_to_story_in_the_header(
+    review: RunningReview, page: Page
+) -> None:
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await _the_agent_tells_the_story(review)
+
+    await page.get_by_test_id("story-ready-close").press("Enter")
+
+    await page.get_by_test_id("story-ready").wait_for(state="detached")
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+
+async def test_the_note_of_a_storys_arrival_going_by_itself_gives_the_keyboard_it_held_to_story_in_the_header(
     review: RunningReview, page: Page
 ) -> None:
     await _an_agent_attaches(review)
@@ -301,10 +313,24 @@ async def test_the_note_of_a_storys_arrival_put_away_from_the_keyboard_gives_the
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("open-story").focus()
 
-    await page.keyboard.press("Escape")
+    await page.get_by_test_id("story-ready").wait_for(state="detached")
+
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+
+async def test_the_note_of_a_storys_arrival_goes_by_itself_for_a_reader_who_asked_for_less_motion(
+    review: RunningReview, page: Page
+) -> None:
+    """Its bar does not run for them, and the note goes all the same: its time is not the bar's."""
+    await page.emulate_media(reduced_motion="reduce")
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await _the_agent_tells_the_story(review)
+    await page.get_by_test_id("story-ready").wait_for()
 
     await page.get_by_test_id("story-ready").wait_for(state="detached")
-    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+    await expect(page.get_by_test_id("segment-unread")).to_be_visible()
 
 
 async def test_what_the_note_of_a_storys_arrival_stood_over_takes_a_press_once_the_note_is_put_away(
@@ -317,7 +343,7 @@ async def test_what_the_note_of_a_storys_arrival_stood_over_takes_a_press_once_t
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("story-ready").wait_for()
 
-    await page.keyboard.press("Escape")
+    await page.get_by_test_id("story-ready-close").click()
     await page.get_by_test_id("collapse-file").first.click()
 
     await page.get_by_test_id("raw-view").first.wait_for(state="detached")
