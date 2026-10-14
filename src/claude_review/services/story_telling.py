@@ -17,6 +17,7 @@ the story as it was told, every time, so code put back as it was reads as
 told again.
 """
 
+from bisect import bisect_left, bisect_right
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict
@@ -56,6 +57,50 @@ class _SideNow(BaseModel):
     def says_all_of(self, lines: list[SideLine]) -> bool:
         """Whether each of these lines says what some line of this side says."""
         return all(line.content in self.said for line in lines)
+
+
+class _EndsMoved(BaseModel):
+    """How many lines further down the first and the last line of a run now stand.
+
+    The two differ where a round took lines out of the run or put lines in.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    first: int
+    last: int
+
+
+class _StepsApart:
+    """Steps of one file, each placed on lines no other step tells, and taken out as steps come to tell them.
+
+    No two share a line, so in the order they start they also end in order,
+    and the steps that tell any of some lines stand together in it: they are
+    found by halving, not one by one. A step going back to the lines it was
+    told of may send the next back, and that one the next, through a whole
+    file: asked of every step each time, that took seconds for a few hundred.
+    """
+
+    def __init__(self, standing: dict[int, LineSpan]) -> None:
+        self._standing = dict(standing)
+        # The steps' places in the story in the order of the file, and the lines each starts and ends at
+        self._places = sorted(self._standing, key=lambda place: self._standing[place].first)
+        self._firsts = [self._standing[place].first for place in self._places]
+        self._lasts = [self._standing[place].last for place in self._places]
+
+    def lines_of(self, place: int) -> LineSpan | None:
+        """Where the step at this place in the story stands; None if it is not among these."""
+        return self._standing.get(place)
+
+    def take_out_meeting(self, lines: LineSpan) -> list[int]:
+        """Take out the steps that tell any of these lines, and say their places in the story."""
+        start = bisect_left(self._lasts, lines.first)
+        stop = bisect_right(self._firsts, lines.last)
+        taken = self._places[start:stop]
+        del self._places[start:stop], self._firsts[start:stop], self._lasts[start:stop]
+        for place in taken:
+            del self._standing[place]
+        return taken
 
 
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
@@ -129,17 +174,37 @@ def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan |
     """Where the steps of one file stand in a later take of it, in the order given; None for one not placed.
 
     Each moves as what is left of its lines moved, and one nothing of which
-    is found is not placed. Should two then meet — one not placed counted on
-    the lines it was told of, where it stays — none is: which lines are
-    whose nobody can say, and the lines told never meet, so the steps of a
-    file are still told apart by where they start.
+    is found is not placed: it stays on the lines it was told of. A step
+    that then meets another is not placed either, since which lines both
+    tell are whose nobody can say, and the steps it does not meet keep their
+    places. It goes back to the lines it was told of, where a step that met
+    nothing may have come to stand: that one goes back too, and so on. The
+    lines told never meet, so the steps of a file are still told apart by
+    where they start.
     """
     sides_now = {side: _SideNow.of(side_lines(file, side)) for side in LineSide}
     moved = [_moved_lines(step, sides_now) for step in steps]
-    standing = [step.lines if lines is None else lines for step, lines in zip(steps, moved, strict=True)]
-    if any(met is not None for met in first_met(standing)):
-        return [None] * len(steps)
-    return moved
+    claimed = [step.lines if lines is None else lines for step, lines in zip(steps, moved, strict=True)]
+    meeting = _meeting(claimed)
+    apart = _StepsApart(
+        {place: lines for place, lines in enumerate(moved) if lines is not None and place not in meeting}
+    )
+    going_back = [place for place in meeting if moved[place] is not None]
+    while going_back:
+        told = steps[going_back.pop()].lines
+        going_back.extend(apart.take_out_meeting(told))
+    return [apart.lines_of(place) for place in range(len(steps))]
+
+
+def _meeting(claimed: list[LineSpan]) -> frozenset[int]:
+    """The places of the steps of one file that tell a line another of them tells, before or after them."""
+    meets_earlier = first_met(claimed)
+    meets_later = first_met(claimed[::-1])[::-1]
+    return frozenset(
+        place
+        for place, (earlier, later) in enumerate(zip(meets_earlier, meets_later, strict=True))
+        if earlier is not None or later is not None
+    )
 
 
 def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpan | None:
@@ -147,10 +212,11 @@ def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpa
 
     The lines it shows, on the side its file is told by, are runs that follow
     one another, broken where a hunk ends. Its first line moves as the first
-    run found moved, and its last as the last. A step whose piece shows no
-    line of that side — a file the change shows no line of — has nothing to
-    look for, and stays; one that shows no piece has nothing either, and is
-    found nowhere.
+    line of the first run found moved, and its last as the last line of the
+    last; one whose last line now stands above its first is not placed. A
+    step whose piece shows no line of that side — a file the change shows no
+    line of — has nothing to look for, and stays; one that shows no piece has
+    nothing either, and is found nowhere.
     """
     piece = step.piece
     if piece is None:
@@ -162,7 +228,8 @@ def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpa
     moves = [move for run in runs if (move := _how_far_moved(run, sides_now[side])) is not None]
     if not moves:
         return None
-    return LineSpan(first=step.lines.first + moves[0], last=step.lines.last + moves[-1])
+    lines = LineSpan(first=step.lines.first + moves[0].first, last=step.lines.last + moves[-1].last)
+    return lines if lines.first <= lines.last else None
 
 
 def _runs(lines: list[SideLine]) -> list[list[SideLine]]:
@@ -176,27 +243,41 @@ def _runs(lines: list[SideLine]) -> list[list[SideLine]]:
     return runs
 
 
-def _how_far_moved(run: list[SideLine], side_now: _SideNow) -> int | None:
-    """How many lines further down a run now stands; None where no line of it is said as it was.
+def _how_far_moved(run: list[SideLine], side_now: _SideNow) -> _EndsMoved | None:
+    """How far down a run's first and last lines moved; None where no line of it is said as it was.
 
-    Where it stands whole, nearest where it was, it moved as that place
-    says. Where a round rewrote some of it, it moved as the first of its
-    lines still said as it was moved, each looked for alone nearest where it
-    stood: what is left of the run is where it now is.
+    Where it stands whole, nearest where it was, both moved as that place
+    says. Where a round took lines out of it, put lines in or rewrote some,
+    what is left of it is where it now is: it starts where the first of its
+    lines still said as it was now stands, and ends where the last does,
+    each looked for alone nearest where it stood. A line rewritten at either
+    end is then no line of the run: nobody can say it was not put in beside
+    it.
     """
-    whole = _how_far_found(run, side_now)
+    first, last = run[0], run[-1]
+    whole = _where_found(run, side_now)
     if whole is not None:
-        return whole
-    return next((moved for line in run if (moved := _how_far_found([line], side_now)) is not None), None)
+        moved = whole - first.number
+        return _EndsMoved(first=moved, last=moved)
+    first_left = _where_first_found(run, side_now)
+    last_left = _where_first_found(run[::-1], side_now)
+    if first_left is None or last_left is None:
+        return None
+    return _EndsMoved(first=first_left - first.number, last=last_left - last.number)
 
 
-def _how_far_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
-    """How many lines further down these lines stand together, where what they say stands nearest; None if nowhere."""
+def _where_first_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
+    """Where the first of these lines still said as it was now stands, each looked for alone; None if none is."""
+    return next((found for line in lines if (found := _where_found([line], side_now)) is not None), None)
+
+
+def _where_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
+    """The line the first of these now stands at, where what they say together stands nearest; None if nowhere."""
     if not side_now.says_all_of(lines):
         return None
     [first, *_] = lines
     found = find_run(side_now.lines, [line.content for line in lines], near=first.number)
-    return None if found is None else side_now.lines[found].number - first.number
+    return None if found is None else side_now.lines[found].number
 
 
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> ToldStep:

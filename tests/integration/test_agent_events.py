@@ -148,13 +148,14 @@ async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_
 async def test_a_step_a_round_pushed_down_and_partly_rewrote_is_told_to_the_agent_where_it_now_stands(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
-    """Not on the lines it was told of, which now hold other code."""
+    """Not on the lines it was told of, which now hold other code: on what is left of its own, the line said another
+    way at its top left out with the two put above."""
     stale = await stale_once_rewritten(reviews, tmp_git_repo, TWO_ABOVE_AND_TWO_REWORDED)
 
     assert stale == {
         "round": 2,
-        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "4-5"}],
-        "left_out": 2,
+        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "5"}],
+        "left_out": 3,
     }
 
 

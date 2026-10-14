@@ -11,7 +11,10 @@ stands: a step whose code changed after it was told is marked, and what the
 round added that no step tells is left out.
 """
 
+from itertools import pairwise
+
 import pytest
+from hypothesis import example, given, strategies as strategy
 
 from claude_review.domain.exceptions import FieldFault, FieldPath, StoryRefusedError
 from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan, Unshown
@@ -67,6 +70,12 @@ def hunk_of_lines(old_start: int, new_start: int, *lines: DiffLine) -> DiffHunk:
     return DiffHunk(header=NO_HUNK_HEADER, old_start=old_start, new_start=new_start, lines=list(lines))
 
 
+def added_whole(path: str, contents: list[str]) -> DiffFile:
+    """A file the change added whole, saying these lines in order."""
+    numbered = [added_line(number, content) for number, content in enumerate(contents, start=1)]
+    return changed_file(path, hunk_of_lines(0, 1, *numbered), status=FileStatus.ADDED)
+
+
 # The change a story is told of, and how the round's work leaves it. Rewritten: "b" as "B", and "f" as "F"
 LINE_B = hunk_of_lines(2, 2, removed_line(2, "b"), added_line(2, "B"))
 LINE_F = hunk_of_lines(6, 6, removed_line(6, "f"), added_line(6, "F"))
@@ -103,19 +112,12 @@ TWO_ABOVE_AND_FIVE_REWORDED = changed_file(
     hunk_of_lines(1, 1, added_line(1, "first"), added_line(2, "second")),
     hunk_of_lines(5, 7, added_line(7, "FIVE"), added_line(8, "six")),
 )
-# Four lines added whole, the second and the fourth alike, and how a round's work leaves them: a line put
-# above, and the fourth taken out, so a step of the fourth finds its like inside a step of the first two
+# Five lines added whole, the second and the fourth alike, and how a round's work leaves them: a line put
+# above, and the fourth taken out, so a step of the fourth finds its like inside a step of the first two, and
+# a step of the fifth meets neither
 ALIKE = "src/alike.py"
-SECOND_AND_FOURTH_ALIKE = changed_file(
-    ALIKE,
-    hunk_of_lines(0, 1, added_line(1, "a"), added_line(2, "x"), added_line(3, "y"), added_line(4, "x")),
-    status=FileStatus.ADDED,
-)
-ONE_ABOVE_AND_THE_FOURTH_GONE = changed_file(
-    ALIKE,
-    hunk_of_lines(0, 1, added_line(1, "new"), added_line(2, "a"), added_line(3, "x"), added_line(4, "y")),
-    status=FileStatus.ADDED,
-)
+SECOND_AND_FOURTH_ALIKE = added_whole(ALIKE, ["a", "x", "y", "x", "z"])
+ONE_ABOVE_AND_THE_FOURTH_GONE = added_whole(ALIKE, ["new", "a", "x", "y", "z"])
 # Four lines added whole that all say the same, and a fifth like them put above
 SAME = "src/same.py"
 FOUR_THE_SAME = changed_file(SAME, hunk_of_lines(0, 1, *[added_line(line, "x") for line in range(1, 5)]))
@@ -144,6 +146,47 @@ ONE_BELOW = changed_file(
     ),
     status=FileStatus.ADDED,
 )
+# The two lines added whole, "x" and "y", as a round's work leaves them: said the other way round, apart
+THE_OTHER_WAY_ROUND = added_whole(ADDED, ["y", "z", "x"])
+# Twenty lines added whole, and how a round's work leaves them: one of them taken out, or a line put in after
+# the fifth
+TWENTY = "src/twenty.py"
+TWENTY_LINES = [f"line {number}" for number in range(1, 21)]
+PUT_IN = "put in"
+TWENTY_ADDED = added_whole(TWENTY, TWENTY_LINES)
+FIRST_TAKEN_OUT = added_whole(TWENTY, TWENTY_LINES[1:])
+THIRD_TAKEN_OUT = added_whole(TWENTY, [*TWENTY_LINES[:2], *TWENTY_LINES[3:]])
+FIFTH_TAKEN_OUT = added_whole(TWENTY, [*TWENTY_LINES[:4], *TWENTY_LINES[5:]])
+PUT_IN_AFTER_THE_FIFTH = added_whole(TWENTY, [*TWENTY_LINES[:5], PUT_IN, *TWENTY_LINES[5:]])
+# How many lines a take of the twenty may have, as a round's work leaves them, and how many steps a story of
+# them tells at most, counted by the lines that start and end them
+MOST_LINES_NOW = 30
+MOST_STEP_EDGES = 12
+# A line past the last of the twenty, where a step that ends at the last stops
+PAST_THE_TWENTY = len(TWENTY_LINES) + 1
+
+
+@strategy.composite
+def steps_of_the_twenty(draw: strategy.DrawFn) -> list[Step]:
+    """Steps of the twenty lines that share no line, as a story's must."""
+    edges = sorted(
+        draw(
+            strategy.lists(
+                strategy.integers(min_value=1, max_value=PAST_THE_TWENTY),
+                unique=True,
+                min_size=2,
+                max_size=MOST_STEP_EDGES,
+            )
+        )
+    )
+    return [step(TWENTY, first, following - 1) for first, following in zip(edges[::2], edges[1::2], strict=False)]
+
+
+def takes_of_the_twenty() -> strategy.SearchStrategy[DiffFile]:
+    """The twenty lines as any round's work could leave them: taken out, put in again elsewhere, said twice, or new."""
+    return strategy.lists(strategy.sampled_from([*TWENTY_LINES, PUT_IN]), min_size=1, max_size=MOST_LINES_NOW).map(
+        lambda contents: added_whole(TWENTY, contents)
+    )
 
 
 def followed(story: Story[Step], told_of: list[DiffFile], now: list[DiffFile]) -> ToldStory:
@@ -403,11 +446,12 @@ def test_a_line_the_round_added_outside_every_step_is_left_out_and_counted() -> 
 
 
 def test_a_step_a_line_of_which_was_said_another_way_moves_with_the_rest_of_it_marked() -> None:
-    """Pushed down and partly rewritten, it is found by what is left of it, never left on lines that say else."""
+    """Pushed down and its first line rewritten, it is found by what is left of it, never left on lines that say
+    else: the line said another way is not one it told, and nobody can say it is not one put in above it."""
     [told_step] = steps_of(followed(story_of(step(NUMBERS, 5, 6)), [FIVE_AND_SIX], [TWO_ABOVE_AND_FIVE_REWORDED]))
 
-    assert told_step.lines == LineSpan(first=7, last=8)
-    assert rows_of(told_step.piece) == ["FIVE", "six"]
+    assert told_step.lines == LineSpan(first=8, last=8)
+    assert rows_of(told_step.piece) == ["six"]
     assert told_step.changed_since_told is True
 
 
@@ -418,13 +462,86 @@ def test_a_step_of_lines_that_all_say_the_same_follows_them_by_nearness() -> Non
     assert (told_step.lines, told_step.changed_since_told) == (LineSpan(first=2, last=3), False)
 
 
-def test_steps_of_a_file_that_would_meet_once_followed_all_show_no_code_on_the_lines_they_were_told_of() -> None:
+def test_steps_of_a_file_that_would_meet_once_followed_show_no_code_and_its_other_steps_keep_theirs() -> None:
     """The second step's line is found inside the first's lines followed: where each one's code is, nobody can say."""
     story = followed(
-        story_of(step(ALIKE, 1, 2), step(ALIKE, 4, 4)), [SECOND_AND_FOURTH_ALIKE], [ONE_ABOVE_AND_THE_FOURTH_GONE]
+        story_of(step(ALIKE, 1, 2), step(ALIKE, 4, 4), step(ALIKE, 5, 5)),
+        [SECOND_AND_FOURTH_ALIKE],
+        [ONE_ABOVE_AND_THE_FOURTH_GONE],
     )
 
-    assert [(told_step.piece, told_step.lines, told_step.changed_since_told) for told_step in steps_of(story)] == [
+    [first, second, other] = steps_of(story)
+    assert [(told_step.piece, told_step.lines, told_step.changed_since_told) for told_step in [first, second]] == [
         (None, LineSpan(first=1, last=2), True),
         (None, LineSpan(first=4, last=4), True),
     ]
+    assert (other.lines, rows_of(other.piece), other.changed_since_told) == (LineSpan(first=5, last=5), ["z"], False)
+
+
+def test_a_line_taken_out_inside_a_step_brings_its_end_up_and_leaves_the_next_step_its_code() -> None:
+    story = followed(story_of(step(TWENTY, 1, 10), step(TWENTY, 11, 20)), [TWENTY_ADDED], [FIFTH_TAKEN_OUT])
+
+    assert [
+        (told_step.lines, rows_of(told_step.piece), told_step.changed_since_told) for told_step in steps_of(story)
+    ] == [
+        (LineSpan(first=1, last=9), [*TWENTY_LINES[:4], *TWENTY_LINES[5:10]], True),
+        (LineSpan(first=10, last=19), TWENTY_LINES[10:], False),
+    ]
+
+
+def test_a_line_put_inside_a_step_takes_its_end_down_and_leaves_the_next_step_its_code() -> None:
+    story = followed(story_of(step(TWENTY, 1, 10), step(TWENTY, 11, 20)), [TWENTY_ADDED], [PUT_IN_AFTER_THE_FIFTH])
+
+    assert [
+        (told_step.lines, rows_of(told_step.piece), told_step.changed_since_told) for told_step in steps_of(story)
+    ] == [
+        (LineSpan(first=1, last=11), [*TWENTY_LINES[:5], PUT_IN, *TWENTY_LINES[5:10]], True),
+        (LineSpan(first=12, last=21), TWENTY_LINES[10:], False),
+    ]
+
+
+def test_a_line_taken_out_of_the_first_of_three_steps_leaves_every_step_its_code() -> None:
+    story = followed(
+        story_of(step(TWENTY, 1, 5), step(TWENTY, 6, 10), step(TWENTY, 15, 20)), [TWENTY_ADDED], [THIRD_TAKEN_OUT]
+    )
+
+    assert [
+        (told_step.lines, rows_of(told_step.piece), told_step.changed_since_told) for told_step in steps_of(story)
+    ] == [
+        (LineSpan(first=1, last=4), [*TWENTY_LINES[:2], *TWENTY_LINES[3:5]], True),
+        (LineSpan(first=5, last=9), TWENTY_LINES[5:10], False),
+        (LineSpan(first=14, last=19), TWENTY_LINES[14:], False),
+    ]
+
+
+def test_a_step_whose_first_line_was_taken_out_starts_where_what_is_left_of_it_starts() -> None:
+    [told_step] = steps_of(followed(story_of(step(TWENTY, 1, 10)), [TWENTY_ADDED], [FIRST_TAKEN_OUT]))
+
+    assert (told_step.lines, rows_of(told_step.piece), told_step.changed_since_told) == (
+        LineSpan(first=1, last=9),
+        TWENTY_LINES[1:10],
+        True,
+    )
+
+
+@given(steps=steps_of_the_twenty(), now=takes_of_the_twenty())
+# The fourth line found inside the first step: the two meet, and the second stays on the fourth line, where the
+# sixth has come to stand
+@example(
+    steps=[step(TWENTY, 1, 3), step(TWENTY, 4, 4), step(TWENTY, 6, 6)],
+    now=added_whole(TWENTY, [TWENTY_LINES[0], TWENTY_LINES[3], TWENTY_LINES[2], TWENTY_LINES[5]]),
+)
+def test_whatever_a_round_did_each_step_of_a_file_stands_on_lines_of_its_own(steps: list[Step], now: DiffFile) -> None:
+    """Each runs forwards, and no two share a line: the page tells the steps of a file apart by where they start."""
+    story = followed(story_of(*steps), [TWENTY_ADDED], [now])
+
+    standing = sorted((told_step.lines for told_step in steps_of(story)), key=lambda lines: lines.first)
+    assert all(lines.first <= lines.last for lines in standing)
+    assert all(earlier.last < later.first for earlier, later in pairwise(standing))
+
+
+def test_a_step_whose_ends_now_stand_the_wrong_way_round_shows_no_code_on_the_lines_it_was_told_of() -> None:
+    """Its last line now stands above its first: where its code begins and ends, nobody can say."""
+    [told_step] = steps_of(followed(story_of(step(ADDED, 1, 2)), [TWO_ADDED], [THE_OTHER_WAY_ROUND]))
+
+    assert (told_step.piece, told_step.lines, told_step.changed_since_told) == (None, LineSpan(first=1, last=2), True)

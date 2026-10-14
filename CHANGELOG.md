@@ -129,13 +129,15 @@
 ### Changed
 - **A story follows its code when the diff is taken again.** Each step
   looks for the lines it showed as a thread looks for its own, nearest
-  where they were, or, where a round rewrote some of them, moves with the
-  first of them still said as it was; it is cut again from the take as it
-  now stands, and a step whose code changed since it was told is marked,
+  where they were, or, where a round took lines out of them, put lines in
+  or rewrote some, stands on what is left of them, from the first still
+  said as it was to the last; it is cut again from the take as it now
+  stands, and a step whose code changed since it was told is marked,
   `changed_since_told` in `GET /api/story`, and what the round added that
   no step tells is left out beside it. A step whose code the review cannot
   place in the change now — its file left it, nothing of its lines is
-  found, or the steps of its file would meet — shows no code, never other
+  found, its last line stands above its first, or it would meet another
+  step of its file — shows no code, never other
   code at its old numbers: its number, its reason, still open to a
   question, and its file's name, marked; its `piece` is `null`, and every
   told step says whether a thread may name its file (`commentable`). The
