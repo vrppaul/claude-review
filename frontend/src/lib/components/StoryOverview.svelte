@@ -4,9 +4,11 @@
 		blockLabel,
 		OVERVIEW_LISTS_IN_ORDER,
 		overviewItem,
+		overviewItems,
 		overviewLine,
 		type OverviewBlock
 	} from '$lib/anchors/story';
+	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import AskableBlock from './AskableBlock.svelte';
@@ -35,8 +37,24 @@
 		later: 'Left for later'
 	};
 
+	const review = useReview();
 	const overview = $derived(held.story.overview);
 	const listsSomething = $derived(OVERVIEW_LISTS_IN_ORDER.some((list) => overview[list].length > 0));
+	// Whether a thread, or a comment being written, hangs under anything the lists hold: they are drawn open
+	// while one does, so that nothing hung there is out of sight
+	const listsHeld = $derived(
+		overviewItems(overview).some(
+			(item) => review.threads.onBlock(item).length > 0 || review.threads.writing.aboutBlock(item) !== undefined
+		)
+	);
+	// Whether the lists were last left open, by the reader or by what hung under them: what goes from under
+	// them closes nothing, and the keyboard it gives back to what offered it stays in sight
+	let leftOpen = $state(false);
+
+	/** A press on the lists' heading opens or folds them, but folds nothing while something hangs under them. */
+	function toggleUnlessHeld(press: MouseEvent) {
+		if (listsHeld) press.preventDefault();
+	}
 </script>
 
 <!-- One of the overview's three lines, which the reader may ask about: what the story heads it with, then
@@ -81,8 +99,14 @@
 	{/if}
 
 	{#if listsSomething}
-		<details data-testid="story-more">
-			<summary class="cursor-pointer text-sm">More about this change</summary>
+		<details data-testid="story-more" bind:open={() => listsHeld || leftOpen, (open: boolean) => (leftOpen = open)}>
+			<summary
+				data-testid="story-more-toggle"
+				class={['text-sm', !listsHeld && 'cursor-pointer']}
+				onclick={toggleUnlessHeld}
+			>
+				More about this change
+			</summary>
 			<div class="cr-agent-voice mt-3 flex flex-col gap-4">
 				{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
 					{#if overview[list].length > 0}

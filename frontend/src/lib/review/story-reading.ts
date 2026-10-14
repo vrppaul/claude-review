@@ -22,8 +22,7 @@ import {
 	CHAPTER_TEXTS_IN_ORDER,
 	chapterText,
 	OVERVIEW_LINES_IN_ORDER,
-	OVERVIEW_LISTS_IN_ORDER,
-	overviewItem,
+	overviewItems,
 	overviewLine,
 	stepReason
 } from '$lib/anchors/story';
@@ -45,10 +44,9 @@ function threadsOnWordsSaid(words: string | null, block: StoryBlock, threads: Th
 
 /** The threads on the overview's words, in the order it says them: on each line it says, then on each of its lists. */
 export function threadsOnTheOverview(overview: ToldStory['overview'], threads: Threads): Thread[] {
-	const items = OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
 	return [
 		...OVERVIEW_LINES_IN_ORDER.flatMap((text) => threadsOnWordsSaid(overview[text], overviewLine(text), threads)),
-		...items.flatMap((block) => threads.onBlock(block))
+		...overviewItems(overview).flatMap((block) => threads.onBlock(block))
 	];
 }
 

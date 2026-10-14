@@ -12,7 +12,9 @@
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
   stronger meanwhile: below the frame of a chapter's why, its warning of
-  where to doubt, or a step's reason, never inside it.
+  where to doubt, or a step's reason, never inside it. The overview's
+  lists, under "More about this change", stand open whenever a thread or a
+  comment hangs under anything they hold, and fold away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;
   picked there, it brings the story on screen at it, and `n` and `p` walk
   the story's threads in the order it says what they hang on. A blue dot

@@ -29,7 +29,13 @@ DOUBT = (
     "Whether the second line needed changing at all, when nothing that reads it changed with it"
     " and every test of the file passed before the change as it passes after it."
 )
-A_STORY = planted(story_of(step(TOLD_FILE, 2, 2)), ("overview", "doubt"), DOUBT)
+# What it decided, which the overview lists one fold away, under "More about this change"
+DECISION = "The second line is changed where it stands, not removed and written again."
+A_STORY = planted(
+    planted(story_of(step(TOLD_FILE, 2, 2)), ("overview", "doubt"), DOUBT),
+    ("overview", "decisions"),
+    [{"text": DECISION}],
+)
 # The same change told again, with nothing to doubt
 TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))
 # Where an element's edges stand on screen, in pixels from the top and the left of the window
@@ -175,6 +181,52 @@ async def test_the_next_thread_key_in_the_story_puts_the_keyboard_on_a_thread_on
     await page.keyboard.press("n")
 
     await expect(doubt.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Was it needed?")
+
+
+async def _open_the_lists(page: Page) -> Locator:
+    """Open what more the overview says, and hand back the one thing it lists."""
+    await page.click('[data-testid="story-more-toggle"]')
+    return page.get_by_test_id("overview-item")
+
+
+async def test_a_thread_on_a_thing_the_overview_lists_is_in_sight_once_the_page_is_loaded_again_and_the_next_thread_key_reaches_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    decision = await _open_the_lists(page)
+    await _ask_about(page, decision, "Why in place?")
+
+    await page.reload()
+
+    await expect(decision.get_by_test_id("comment-thread")).to_be_visible()
+    await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
+    await page.keyboard.press("n")
+    await expect(decision.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Why in place?")
+
+
+async def test_a_press_on_the_heading_of_the_lists_a_thread_hangs_in_leaves_them_open(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    decision = await _open_the_lists(page)
+    await _ask_about(page, decision, "Why in place?")
+
+    await page.click('[data-testid="story-more-toggle"]')
+
+    await expect(decision.get_by_test_id("comment-thread")).to_be_visible()
+
+
+async def test_a_comment_on_a_thing_the_overview_lists_put_away_leaves_the_list_open_with_the_keyboard_on_what_offered_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    decision = await _open_the_lists(page)
+    await decision.hover()
+    await decision.get_by_test_id("ask-about-this").click()
+
+    await page.press('[data-testid="comment-input"]', "Escape")
+
+    await expect(decision.get_by_test_id("ask-about-this")).to_be_focused()
 
 
 async def test_a_thread_on_words_a_story_told_again_says_nowhere_stands_at_its_head_with_those_words_whole(

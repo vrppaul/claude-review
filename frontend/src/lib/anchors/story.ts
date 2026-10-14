@@ -1,4 +1,4 @@
-import type { ChapterText, OverviewList, OverviewText, StoryAnchor, StoryBlock, ToldStep } from '$lib/types';
+import type { ChapterText, OverviewList, OverviewText, StoryAnchor, StoryBlock, ToldStep, ToldStory } from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
 import { mentionStarts } from '$lib/anchors/token-mentions';
 import { fileName } from '$lib/utils/paths';
@@ -125,6 +125,11 @@ export function overviewLine(text: OverviewText): OverviewBlock {
 /** The block of one thing a list of the overview holds, by where it stands in the list. */
 export function overviewItem(list: OverviewList, item: number): StoryBlock {
 	return { at: 'item', list, item };
+}
+
+/** The blocks of everything the overview's lists hold, list after list, in the order the story says them. */
+export function overviewItems(overview: ToldStory['overview']): StoryBlock[] {
+	return OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
 }
 
 /** The block of what a chapter says of itself, the chapter by its id. */
