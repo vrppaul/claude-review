@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fakeServer, keepingSettings, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
+import { handOverNext } from './pushes';
 import { openReview, settingsWithStoriesOn } from './review';
 import { ASKED, STOPPED, storyHeld, TAKEN } from './story';
 
@@ -33,7 +34,7 @@ describe('turning stories on', () => {
 	it.each([
 		{ where: 'the review holds a story', opened: { story: storyHeld() } },
 		{ where: 'one is being written already', opened: { asking: TAKEN } },
-		{ where: 'the reader stopped the one asked for', opened: { asking: STOPPED } },
+		{ where: 'one asked for waits for an agent to attach', opened: { asking: ASKED } },
 		{ where: 'no story can be told of the review', opened: { facts: { takes_a_story: false } } }
 	])('asks for no story where $where', async ({ opened }) => {
 		const server = serving();
@@ -42,6 +43,26 @@ describe('turning stories on', () => {
 		await review.turnStoriesOn();
 
 		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
+	});
+
+	it('asks for a story the reader stopped: turned on, stories are wanted again', async () => {
+		const server = serving();
+		const review = openReview({ asking: STOPPED });
+
+		await review.turnStoriesOn();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('asks again for the story that turning stories off stopped', async () => {
+		const server = serving();
+		const review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		await review.turnStoriesOff();
+		handOverNext(review, { type: 'story_asking', asking: { ...TAKEN, stopped: true } });
+
+		await review.turnStoriesOn();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
 	});
 
 	it('says in the panel why a story could not be asked for', async () => {

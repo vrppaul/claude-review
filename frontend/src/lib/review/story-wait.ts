@@ -57,3 +57,11 @@ export function waitOf(asking: StoryAsking | null, agentAttached: boolean): Stor
 export function isAwaited(wait: StoryWait | null): boolean {
 	return wait !== null && AWAITED[wait.kind];
 }
+
+/**
+ * Whether a story can be asked for now: none is held, and none is on its
+ * way. One the reader stopped can be: asking again is theirs to do.
+ */
+export function canBeAskedFor(wait: StoryWait | null): boolean {
+	return wait !== null && !AWAITED[wait.kind];
+}

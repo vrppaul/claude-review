@@ -30,7 +30,7 @@ import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
-import { isAwaited } from '$lib/review/story-wait';
+import { canBeAskedFor, isAwaited } from '$lib/review/story-wait';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -315,9 +315,9 @@ export class Review {
 	/**
 	 * Ask the agent for a story where the reader wants one and has none
 	 * coming: they turned stories on, one can be told of this review, none
-	 * is held and none was asked for. Called as the page opens, after a gap
-	 * in what the server told, and as stories are turned on. Never where the
-	 * reader stopped the one asked for: a reload does not start it again.
+	 * is held and none was asked for. Called as the page opens and after a
+	 * gap in what the server told. Never where the reader stopped the one
+	 * asked for: a reload does not start it again.
 	 */
 	async wantStory(): Promise<void> {
 		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
@@ -347,10 +347,15 @@ export class Review {
 		}
 	}
 
-	/** Turn stories on, for this review and every later one, and ask for this review's. */
+	/**
+	 * Turn stories on, for this review and every later one, and ask for this
+	 * review's wherever none is on its way. One the reader stopped is asked
+	 * for again, whether they stopped it by hand or by turning stories off:
+	 * turning them on says a story is wanted.
+	 */
 	async turnStoriesOn(): Promise<void> {
 		await this.settings.change({ stories: true });
-		await this.wantStory();
+		if (this.story.canBeTold && canBeAskedFor(this.story.wait)) await this.askAgentForStory();
 	}
 
 	/**
