@@ -7,10 +7,10 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
-import { readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
+import { writeSeenRelease } from '$lib/guide/seen-release';
 import { contextLine, diffFile, hunk } from './diff';
 import { fakeServer, SERVER_ERROR } from './fake-server';
-import { guideServer } from './guide-server';
+import { guideServer, guideServerIntroduced } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
 
@@ -76,9 +76,10 @@ describe('which release a reader has seen', () => {
 	it('is kept by the server, for every review on the machine', async () => {
 		guideServer(null);
 
-		expect(await readSeenRelease()).toBeNull();
 		await writeSeenRelease('1.5.0');
-		expect(await readSeenRelease()).toBe('1.5.0');
+		await arriveAt('1.5.0');
+
+		expect(review.guide.card).toBeNull();
 	});
 
 	it('takes over the cookie an older release kept it in, once', async () => {
@@ -162,6 +163,122 @@ describe('what the guide shows a reader arriving', () => {
 		await arriveAt('1.5.0');
 
 		expect(review.guide.card).toBeNull();
+	});
+});
+
+describe('Story introduced at the switch', () => {
+	it('waits while a newcomer is welcomed', async () => {
+		guideServer(null);
+
+		await arriveAt('1.5.0');
+
+		expect(review.guide.introducesStory).toBe(false);
+	});
+
+	it('is introduced to a newcomer once the welcome is put away', async () => {
+		guideServer(null);
+		await arriveAt('1.5.0');
+
+		review.guide.dismiss();
+
+		expect(review.guide.introducesStory).toBe(true);
+	});
+
+	it('waits while the tour runs', async () => {
+		guideServer(null);
+		await arriveAt('1.5.0');
+
+		review.guide.startTour();
+
+		expect(review.guide.introducesStory).toBe(false);
+	});
+
+	it('is introduced to a newcomer once the tour ends', async () => {
+		guideServer(null);
+		await arriveAt('1.5.0');
+		review.guide.startTour();
+
+		review.guide.endTour();
+
+		expect(review.guide.introducesStory).toBe(true);
+	});
+
+	it('is introduced at once to a returning reader with no news to read', async () => {
+		guideServer('1.5.0');
+
+		await arriveAt('1.5.0');
+
+		expect(review.guide.introducesStory).toBe(true);
+	});
+
+	it('is never introduced to a reader it was introduced to', async () => {
+		guideServerIntroduced('1.5.0');
+
+		await arriveAt('1.5.0');
+
+		expect(review.guide.introducesStory).toBe(false);
+	});
+
+	it('is introduced to no one when the server cannot say: better not introduced than introduced twice', async () => {
+		fakeServer().refuse('GET /api/guide', SERVER_ERROR);
+
+		await arriveAt('1.5.0');
+
+		expect(review.guide.introducesStory).toBe(false);
+	});
+
+	it('is put away for this page alone by its cross, and nothing is kept', async () => {
+		const server = guideServer('1.5.0');
+		await arriveAt('1.5.0');
+
+		review.guide.putIntroductionAway();
+
+		expect(review.guide.introducesStory).toBe(false);
+		expect(server.bodiesSentTo('PUT /api/guide')).toEqual([]);
+	});
+
+	it('is kept as done once the reader is introduced, for every review', async () => {
+		const server = guideServer('1.5.0');
+		await arriveAt('1.5.0');
+
+		review.guide.noteStoryIntroduced();
+
+		expect(review.guide.introducesStory).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+
+	it('is kept as done once, however often the reader is introduced', async () => {
+		const server = guideServer('1.5.0');
+		await arriveAt('1.5.0');
+
+		review.guide.noteStoryIntroduced();
+		review.guide.noteStoryIntroduced();
+
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+
+	it('comes back where the reader undoes having it put away for good, and is kept as not done', async () => {
+		const server = guideServer('1.5.0');
+		await arriveAt('1.5.0');
+		review.guide.noteStoryIntroduced();
+
+		review.guide.introduceStoryAgain();
+
+		expect(review.guide.introducesStory).toBe(true);
+		await vi.waitFor(() =>
+			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }, { story_introduced: false }])
+		);
+	});
+
+	it('stays done for a reader who tried Story before the server said whether they had', async () => {
+		guideServer('1.5.0');
+		review = openReview({ facts: { release: '1.5.0' } });
+		const opening = review.guide.open();
+
+		review.guide.noteStoryIntroduced();
+		await opening;
+
+		expect(review.guide.introducesStory).toBe(false);
 	});
 });
 

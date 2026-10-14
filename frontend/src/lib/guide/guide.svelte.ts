@@ -1,18 +1,25 @@
 /**
- * Showing a reader around: the welcome, what is new, and the tour.
+ * Showing a reader around: the welcome, what is new, the tour, and Story.
  *
  * One card, bottom left. Somebody who has never opened a review is
  * welcomed; somebody whose last review was an older release is told what
  * changed, when there is anything to tell; everybody else sees nothing.
  * The tour narrates from that same card while a light moves over the review.
+ *
+ * Story, a way of reading the reader may never have tried, is introduced
+ * once: at the switch, once the card and the tour are done. It counts as
+ * introduced once its release news was shown, once the reader said at the
+ * switch not to show it again, or once they tried it; that is kept for
+ * every review on the machine, as the release seen is.
  */
 
+import { keepGuide, readGuide } from '$lib/api/review-api';
 import type { CommentRoute, TourStep, TourTarget } from '$lib/guide/tour';
-import type { CommentFieldEvent } from '$lib/types';
+import type { CommentFieldEvent, GuideState } from '$lib/types';
 import { DRAWN_BY_THE_READER, TOUR_STEPS, stepsFor } from '$lib/guide/tour';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
-import { handOverLegacyRelease, legacySeenRelease, readSeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
+import { handOverLegacyRelease, legacySeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
 
 export type GuideCard = 'welcome' | 'news';
 
@@ -67,6 +74,11 @@ export class Guide {
 	#helpOpen = $state(false);
 	#news = $state.raw<ReleaseNews | undefined>(undefined);
 	#touring = $state(false);
+	// Whether Story has been introduced to the reader; null until the server
+	// says, and what the reader did before it said stands over what it says
+	#storyIntroduced = $state<boolean | null>(null);
+	// The introduction put away by its cross: for this page alone, kept nowhere
+	#introductionPutAway = $state(false);
 	// The step on screen, by name: the tour's steps change when an agent joins
 	// or leaves, and a position would then point at a different step
 	#stepId = $state<string | null>(null);
@@ -112,6 +124,35 @@ export class Guide {
 
 	get touring(): boolean {
 		return this.#touring;
+	}
+
+	/**
+	 * Whether Story is introduced at the switch now: to a reader it was never
+	 * introduced to, who has not put it away on this page. It waits while the
+	 * card or the tour stands, so the two never stand together; and while the
+	 * server has not said, as when it cannot, it is not introduced: better not
+	 * introduced than introduced twice.
+	 */
+	get introducesStory(): boolean {
+		return this.#storyIntroduced === false && !this.#introductionPutAway && this.#card === null && !this.#touring;
+	}
+
+	/** Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again. */
+	noteStoryIntroduced(): void {
+		if (this.#storyIntroduced === true) return;
+		this.#storyIntroduced = true;
+		this.#keepStoryIntroduced(true);
+	}
+
+	/** The reader undid "Don't show again": Story is introduced again, here and in every review. */
+	introduceStoryAgain(): void {
+		this.#storyIntroduced = false;
+		this.#keepStoryIntroduced(false);
+	}
+
+	/** Put the introduction away for this page alone: it comes back in the next review. */
+	putIntroductionAway(): void {
+		this.#introductionPutAway = true;
 	}
 
 	/**
@@ -180,14 +221,23 @@ export class Guide {
 		this.#onPage = null;
 	}
 
-	/** Decide what to show a reader arriving at a review served by this release. */
+	/**
+	 * Decide what to show a reader arriving at a review served by this
+	 * release, from what the server keeps of having shown them around.
+	 * Nothing, when the server cannot say: a reader who cannot be told apart
+	 * from a newcomer is better left unwelcomed than welcomed twice.
+	 */
 	async open(): Promise<void> {
+		let kept: GuideState;
 		let seen: string | null;
 		try {
-			seen = (await readSeenRelease()) ?? (await this.#fromLegacyCookie());
+			kept = (await readGuide()).record;
+			seen = kept.seen_release ?? (await this.#fromLegacyCookie());
 		} catch {
 			return;
 		}
+		// A reader who tried Story while the server was asked has been introduced, whatever it said
+		this.#storyIntroduced ??= kept.story_introduced;
 		if (seen === null) {
 			this.#card = 'welcome';
 			return;
@@ -281,6 +331,12 @@ export class Guide {
 	#settle(): void {
 		// Not remembered this time, if it fails: the card comes back with the next review
 		writeSeenRelease(this.#release).catch(() => undefined);
+	}
+
+	/** Keep whether Story has been introduced, for every review. */
+	#keepStoryIntroduced(introduced: boolean): void {
+		// Not kept this time, if it fails: the next review asks again
+		keepGuide({ story_introduced: introduced }).catch(() => undefined);
 	}
 
 	/**

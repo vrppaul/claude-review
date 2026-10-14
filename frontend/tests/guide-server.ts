@@ -25,11 +25,23 @@ class GuideMemory {
 	}
 }
 
-/** A server remembering which release this reader was shown, as `/api/guide` does; nothing kept for a newcomer. */
-export function guideServer(seen: string | null): FakeServer {
+/** A server answering `/api/guide` from what it keeps. */
+function servingFrom(memory: GuideMemory): FakeServer {
 	const server = fakeServer();
-	const memory = new GuideMemory({ seen_release: seen, story_introduced: false }, seen !== null);
 	server.answerWith('GET /api/guide', () => memory.read());
 	server.answerWith('PUT /api/guide', (request) => memory.write(request));
 	return server;
+}
+
+/**
+ * A server remembering which release this reader was shown, as `/api/guide`
+ * does, Story not yet introduced to them; nothing kept for a newcomer.
+ */
+export function guideServer(seen: string | null): FakeServer {
+	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: false }, seen !== null));
+}
+
+/** A server remembering a reader shown this release, Story introduced to them already. */
+export function guideServerIntroduced(seen: string): FakeServer {
+	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: true }, true));
 }

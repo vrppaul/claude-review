@@ -6,20 +6,9 @@
  * this browser is handed over to the server once, by whoever finds it.
  */
 
-import { keepGuide, readGuide } from '$lib/api/review-api';
+import { keepGuide } from '$lib/api/review-api';
 
 const LEGACY_COOKIE = 'claude-review-seen';
-
-/**
- * The release last seen, as the server keeps it, or null when it keeps none.
- *
- * Throws when the server cannot say: a reader who cannot be told apart from
- * a newcomer is better left unwelcomed than welcomed twice.
- */
-export async function readSeenRelease(): Promise<string | null> {
-	const kept = await readGuide();
-	return kept.stored ? kept.record.seen_release : null;
-}
 
 export async function writeSeenRelease(release: string): Promise<void> {
 	await keepGuide({ seen_release: release });
