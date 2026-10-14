@@ -33,8 +33,17 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	{ said: 'a placeholder, in the panel', text: '--cr-placeholder', grounds: ['--color-base-100'] },
 	{ said: 'a placeholder, in a field being written', text: '--cr-placeholder', grounds: ['--color-base-200'] },
 	{ said: "a placeholder, on a thread's card", text: '--cr-placeholder', grounds: ['--color-base-200'] },
+	{
+		said: 'a placeholder, in the field a thread offers a reply in',
+		text: '--cr-placeholder',
+		grounds: ['--color-base-100']
+	},
 	{ said: "faint words, on a thread's card", text: '--cr-faint', grounds: ['--color-base-200'] },
-	{ said: "the agent's place, on the card of a thread it raised", text: '--cr-agent', grounds: ['--color-base-200'] },
+	{
+		said: "the agent's name, and its place on the card of a thread it raised",
+		text: '--cr-agent',
+		grounds: ['--color-base-200']
+	},
 	{
 		said: 'faint words, on the folded line of a thread the agent raised',
 		text: '--cr-faint',

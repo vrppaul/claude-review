@@ -16,13 +16,13 @@
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
 	// What a field with no place said above it is called: a reply, inside the thread it answers
 	const REPLY = 'Reply';
-	// What an empty field says, by what is being written in it: a reply reads as the thread's own "Write a
-	// reply…", and a comment on the story's words as the offer that opened it
+	// What an empty field says, by what is being written in it: a reply reads as the field the thread
+	// offers it in, "Reply…", and a comment on the story's words as the offer that opened it
 	const PLACEHOLDERS: Record<WrittenAt['kind'], string> = {
 		new: 'What should change here?',
 		story: 'Ask about this…',
 		edit: 'What should change here?',
-		reply: 'Write a reply…'
+		reply: 'Reply…'
 	};
 	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
 		{ value: 'note', label: 'Note' },

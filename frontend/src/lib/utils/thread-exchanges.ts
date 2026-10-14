@@ -7,13 +7,15 @@
  * the last question — where it used to go anyway.
  */
 
-import type { Thread, Turn } from '$lib/types';
+import type { Thread, Turn, TurnAuthor } from '$lib/types';
 import { READER } from '$lib/utils/speakers';
 
 /** One question — the comment that opened the thread, or a reply of the reader's — and the answers to it. */
 export interface Exchange {
 	/** What an answer names it by: the comment's id, or the reply's. */
 	id: string;
+	/** Who asked it: whoever opened the thread, the agent where it raised it, and the reader every reply. */
+	by: TurnAuthor;
 	asked: string;
 	round: number;
 	/** Whether it was asked in another round than the question before it: where a new round begins in the thread. */
@@ -27,6 +29,7 @@ export interface Exchange {
 export function exchangesOf(thread: Thread): Exchange[] {
 	const opening: Exchange = {
 		id: thread.id,
+		by: thread.raised_by,
 		asked: thread.body,
 		round: thread.round,
 		startsRound: false,
@@ -53,6 +56,7 @@ export function exchangesOf(thread: Thread): Exchange[] {
 function exchangeAfter(previous: Exchange, reply: Turn): Exchange {
 	return {
 		id: reply.id,
+		by: reply.author,
 		asked: reply.body,
 		round: reply.round,
 		startsRound: reply.round !== previous.round,

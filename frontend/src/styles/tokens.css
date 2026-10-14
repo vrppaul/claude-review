@@ -62,6 +62,15 @@
 	 */
 	--cr-thread-inset: 0.75rem;
 	--cr-thread-tail-at: 6rem;
+	/*
+	 * A thread's turns, a row each: the room between rows, the avatar each
+	 * speaker stands by and the gap between it and what was said, and the
+	 * field a reply is begun in, which its avatar stands level with.
+	 */
+	--cr-thread-row-gap: 1rem;
+	--cr-avatar-size: 1.5rem;
+	--cr-turn-gap: 0.75rem;
+	--cr-reply-field-height: 2.25rem;
 
 	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
@@ -101,6 +110,8 @@
 	--cr-shadow-floating: 0 2px 8px rgb(0 0 0 / 0.25);
 	/* What lifts a thread's card off what it hangs under */
 	--cr-shadow-thread: 0 8px 24px rgb(0 0 0 / 0.25);
+	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
+	--cr-shadow-avatar-ring: 0 0 0 3px var(--color-base-200);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-soft: color-mix(in srgb, var(--cr-mark) 10%, transparent);
@@ -121,6 +132,13 @@
 	--cr-agent-chip-hover: color-mix(in srgb, var(--cr-agent) 28%, transparent);
 	--cr-agent-border: color-mix(in srgb, var(--cr-agent) 35%, transparent);
 	--cr-agent-line: color-mix(in srgb, var(--cr-agent) 45%, transparent);
+	/*
+	 * The ground of the avatar the reader, and the agent, speak by in a
+	 * thread: their colour over the card's, opaque, so the spine behind it
+	 * stops at its edge
+	 */
+	--cr-avatar-reader: color-mix(in srgb, var(--cr-mark) 14%, var(--color-base-200));
+	--cr-avatar-agent: color-mix(in srgb, var(--cr-agent) 12%, var(--color-base-200));
 
 	/*
 	 * A control is the reader's, so it is drawn in their blue: every focus
@@ -233,7 +251,11 @@
 	--cr-agent: #a68dd8;
 	/* The edge of a pane the reader opened, a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
-	/* A story's contents: the axis its parts stand on, a step above the lines between surfaces, and the ring of a node on it, two above */
+	/*
+	 * The axis a story's parts stand on in its contents, and the spine a
+	 * thread's turns are joined by, a step above the lines between surfaces;
+	 * and the ring of a node on the axis, two above
+	 */
 	--cr-axis: #2a3341;
 	--cr-node-edge: #3a4556;
 	/* A modified file's letter: the one place orange appears outside the code's own colours */

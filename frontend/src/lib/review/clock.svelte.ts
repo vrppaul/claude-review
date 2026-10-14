@@ -2,8 +2,9 @@
  * The time now, for whatever on screen says how long ago something was.
  *
  * One clock for the whole review, and it ticks only while something drawn
- * reads it: a dozen questions waiting on the agent run one timer, and a
- * review with nothing waiting runs none.
+ * reads it — a turn of an open thread saying how long ago it was said, a
+ * question or a message waiting on the agent, the list of bases. However
+ * many read it, they run one timer; a review drawing none of them runs none.
  */
 
 import { createSubscriber } from 'svelte/reactivity';

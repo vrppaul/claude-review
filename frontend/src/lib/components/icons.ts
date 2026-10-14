@@ -20,10 +20,16 @@ const FILLED: HowDrawn = { kind: 'filled' };
 const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
 
 export const ICONS = {
-	// An open book: the change read as the story told of it
+	// An open book: the change read as the story told of it, and the agent that tells it, where it speaks in a thread
 	story: {
 		viewBox: '0 0 16 16',
 		paths: ['M8 4.5C6.6 3.4 4.6 3 2 3v9.5c2.6 0 4.6.4 6 1.5 1.4-1.1 3.4-1.5 6-1.5V3c-2.6 0-4.6.4-6 1.5Z', 'M8 4.5V14'],
+		drawn: TRACED
+	},
+	// A head and shoulders: the reader, where they speak in a thread
+	person: {
+		viewBox: '0 0 16 16',
+		paths: ['M5.4 5.5a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0 -5.2 0', 'M3 13.5c.8-2.6 2.7-3.8 5-3.8s4.2 1.2 5 3.8'],
 		drawn: TRACED
 	},
 	// A stack of files: the change read file by file

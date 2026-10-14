@@ -88,7 +88,12 @@
   the story has nothing above it to point at, and no tail. Its edge says
   where it stands: in the reader's colour while it is theirs, faint once
   what it was written on is gone, quieter once it went out with a round,
-  and in the agent's colour when the agent raised it.
+  and in the agent's colour when the agent raised it. Inside, it reads as
+  a conversation, a turn to a row: the avatar of who said it, "You" or
+  "Agent", and how long ago, "2m ago" or "answered 40s ago", the avatars
+  joined down the card by a thin line. A comment nobody has answered says
+  who wrote it too; an answer still awaited is the agent's turn; the last
+  turn is the field to reply in, "Reply…".
 - **A story's chapter goes by an id a thread can name.** `story` refuses a
   chapter's id that holds anything but letters, digits, dots, dashes and
   underscores, or runs past 200 of them, at `chapters.N.id`, and `story

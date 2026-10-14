@@ -274,7 +274,7 @@ describe('a comment field, to whoever cannot see it', () => {
 			CommentBox,
 			inReview(review, { field: reply, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, nested: true })
 		);
-		expect(replying.getByTestId('comment-input').getAttribute('placeholder')).toBe('Write a reply…');
+		expect(replying.getByTestId('comment-input').getAttribute('placeholder')).toBe('Reply…');
 		replying.unmount();
 
 		const commenting = drawnSaving(newField());

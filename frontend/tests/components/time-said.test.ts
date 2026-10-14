@@ -5,12 +5,15 @@ import { flushSync } from 'svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { contextLine, diffFile, diffResponse, hunk } from '../diff';
+import { said } from '../elements';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
 
 const A_MINUTE_AND_A_BIT = 61_000;
 const TWELVE_SECONDS = 12_000;
+const FORTY_SECONDS = 40_000;
+const TWO_MINUTES = 120_000;
 // Longer than the draft waits before it keeps what changed: the timers left after it are the clock's
 const THE_DRAFT_KEPT = 1_000;
 
@@ -55,17 +58,54 @@ describe('how long a question has waited', () => {
 		expect(vi.getTimerCount()).toBe(1);
 	});
 
-	it('keeps no clock once nothing is waited on', async () => {
+	it('keeps no clock while every thread is folded', async () => {
 		vi.useFakeTimers();
 		const review = waitingOn([1]);
-		render(DiffView, inReview(review));
-		flushSync();
-
 		const [thread] = review.threads.all;
-		review.threads.receiveReply(thread.id, 'because', thread.id);
+		review.threads.reading.setFolded(thread.id, true);
+		render(DiffView, inReview(review));
+
 		await vi.advanceTimersByTimeAsync(THE_DRAFT_KEPT);
 
 		expect(vi.getTimerCount()).toBe(0);
+	});
+});
+
+describe('who said each turn of a thread, and how long ago', () => {
+	it('says the reader asked two minutes ago and the agent answered forty seconds ago', async () => {
+		vi.useFakeTimers();
+		const review = openReview({ files: [file] });
+		const id = review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'why' }));
+		await vi.advanceTimersByTimeAsync(TWO_MINUTES - FORTY_SECONDS);
+		review.threads.receiveReply(id, 'because', id);
+		render(DiffView, inReview(review));
+
+		await vi.advanceTimersByTimeAsync(FORTY_SECONDS);
+		flushSync();
+
+		expect(said(screen.getByTestId('thread-question'))).toMatch(/^You 2m ago/);
+		expect(said(screen.getByTestId('thread-answer'))).toMatch(/^Agent answered 40s ago/);
+	});
+
+	it('names the reader on a comment nobody has answered yet', () => {
+		const review = openReview({ files: [file] });
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'why' }));
+
+		render(DiffView, inReview(review));
+
+		expect(said(screen.getByTestId('thread-question'))).toMatch(/^You /);
+	});
+
+	it('keeps one clock however many threads say how long ago', async () => {
+		vi.useFakeTimers();
+		const review = openReview({ files: [file] });
+		for (const line of [1, 2, 3]) review.threads.add(newComment({ file: 'a.py', startLine: line, body: 'why' }));
+		render(DiffView, inReview(review));
+
+		await vi.advanceTimersByTimeAsync(THE_DRAFT_KEPT);
+
+		expect(screen.getAllByTestId('thread-question')).toHaveLength(3);
+		expect(vi.getTimerCount()).toBe(1);
 	});
 });
 

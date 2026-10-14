@@ -8,6 +8,7 @@
 	import CommentBox from './CommentBox.svelte';
 	import ThreadConversation from './ThreadConversation.svelte';
 	import ThreadHeading from './ThreadHeading.svelte';
+	import ThreadTurn from './ThreadTurn.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -101,44 +102,46 @@
 
 	<ThreadConversation {thread} />
 
-	{#if askable}
-		<!-- Hands over everything said so far, the comment included, and hangs
-			under the last of it rather than beside the empty field below. -->
-		<div>
-			<button
-				type="button"
-				data-testid="ask-now-thread"
-				class="btn btn-outline btn-xs"
-				onclick={() => asking(review.threads.ask(thread.id))}
-			>
-				{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
-			</button>
+	{#if askable || failed}
+		<!-- Hands over everything said so far, the comment included: a row of its own under the last of it, in
+			the column of what was said, rather than beside the empty field below; and why it could not be -->
+		<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
+			{#if askable}
+				<button
+					type="button"
+					data-testid="ask-now-thread"
+					class="btn btn-outline btn-xs"
+					onclick={() => asking(review.threads.ask(thread.id))}
+				>
+					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
+				</button>
+			{/if}
+			{#if failed}
+				<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
+			{/if}
 		</div>
 	{/if}
 
-	{#if failed}
-		<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
-	{/if}
-
-	{#if replying}
-		<CommentBox
-			field={replying}
-			onSave={() => reply(replying)}
-			onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
-			onCancel={() => putAway(replying)}
-			severityPicker={false}
-			nested
-		/>
-	{:else}
-		<div class="border-t border-base-300 pt-3">
+	<!-- The reader's next turn, the last of the thread: a field to begin it in, the field itself once begun -->
+	<ThreadTurn voice="reply" testId="reply-turn">
+		{#if replying}
+			<CommentBox
+				field={replying}
+				onSave={() => reply(replying)}
+				onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
+				onCancel={() => putAway(replying)}
+				severityPicker={false}
+				nested
+			/>
+		{:else}
 			<button
 				type="button"
 				data-testid="open-reply"
-				class="cr-field cr-comment-body block w-full rounded px-3 py-1.5 text-left"
+				class="cr-reply-field"
 				onclick={() => writing.openReply(thread.id)}
 			>
-				<span class="cr-muted">Write a reply…</span>
+				Reply…
 			</button>
-		</div>
-	{/if}
+		{/if}
+	</ThreadTurn>
 </div>

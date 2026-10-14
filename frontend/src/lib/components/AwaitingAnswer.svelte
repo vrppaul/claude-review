@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
+	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
+	import ThreadTurn from './ThreadTurn.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
 	interface Props {
@@ -12,11 +14,9 @@
 		questionId: string;
 		/** When the question was handed over. */
 		askedAt: number;
-		/** Whether it is the first thing under its question, which the tie joins to it. */
-		first: boolean;
 	}
 
-	let { threadId, questionId, askedAt, first }: Props = $props();
+	let { threadId, questionId, askedAt }: Props = $props();
 	const review = useReview();
 
 	let failed = $state<string | null>(null);
@@ -37,20 +37,15 @@
 	}
 </script>
 
-<!-- A turn that has not arrived is still a turn: it holds its place, and says
-	how long it has been waited on, so silence reads as silence rather than as
-	something broken -->
-<div class="cr-reply">
-	{#if first}
-		<span class="cr-tie" aria-hidden="true"></span>
-	{/if}
-	<div data-testid="awaiting-answer" data-tour="awaited-answer" class="cr-answer flex items-center gap-3">
-		<span class="cr-who"><strong>Agent</strong></span>
+<!-- A turn that has not arrived is still a turn, the agent's: it holds its place, and says how long it has
+	been waited on, so silence reads as silence rather than as something broken -->
+<ThreadTurn voice={AGENT} testId="awaiting-answer" tour="awaited-answer">
+	{#snippet head()}
 		{#if listening}
 			<TypingIndicator />
 		{/if}
-		<div class="flex-1"></div>
-		<span class="cr-muted text-xs">
+		<span class="flex-1"></span>
+		<span class="cr-muted">
 			{listening
 				? `asked ${timeAgo(askedAt, review.clock.now)} — keep reading, the answer lands here`
 				: AGENT_STOPPED_LISTENING}
@@ -58,8 +53,8 @@
 		<button type="button" data-testid="take-back-question" class="btn btn-outline btn-xs" onclick={takeBack}>
 			{TAKE_BACK}
 		</button>
-	</div>
+	{/snippet}
 	{#if failed}
-		<p data-testid="take-back-error" class="mt-1 text-xs text-error">{failed}</p>
+		<p data-testid="take-back-error" class="text-xs text-error">{failed}</p>
 	{/if}
-</div>
+</ThreadTurn>

@@ -558,7 +558,7 @@
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: var(--cr-thread-row-gap);
 	padding: 0.875rem 1rem;
 	border: 1px solid var(--cr-mark-line);
 	border-radius: 0.5rem;
@@ -603,52 +603,106 @@
 }
 
 /*
- * A thread reads as a conversation.
- *
- * The reader's turns stay on the comment's own tint — the colour their
- * marks are made in everywhere else — and an answer sits on the page's
- * untinted ground, indented under the question, held to it by a short rail.
- * The distinction is the tint rather than a new colour, so it survives both
- * themes without either side being invented for the occasion.
+ * A thread reads as a conversation, a turn to a row: the avatar of who said
+ * it, beside their name, how long ago, and what was said. A spine joins the
+ * avatars down the card. Each row draws its own piece of it, from its top
+ * into the room before the next row, so the spine holds whatever a row's
+ * height: it begins at the first avatar and ends at the last row's, the
+ * field to reply in.
  */
-.cr-thread {
-	display: flex;
-	flex-direction: column;
-	gap: 0.875rem;
-}
-.cr-exchange {
-	display: flex;
-	flex-direction: column;
-	gap: 0.4375rem;
-}
-.cr-reply {
+.cr-thread-row {
 	position: relative;
-	padding-left: 1.5rem;
 }
-.cr-tie {
+.cr-thread-row::before {
+	content: '';
 	position: absolute;
-	left: 4px;
 	top: 0;
-	width: 20px;
-	height: 17px;
-	border-left: 1.5px solid var(--cr-mark-line);
-	border-bottom: 1.5px solid var(--cr-mark-line);
-	border-bottom-left-radius: 8px;
+	bottom: calc(-1 * var(--cr-thread-row-gap));
+	left: calc(var(--cr-avatar-size) / 2);
+	width: 1px;
+	background: var(--cr-axis);
 }
-.cr-answer {
-	background: var(--color-base-100);
-	border: 1px solid var(--color-base-300);
-	border-radius: var(--radius-box);
-	padding: 0.625rem 0.75rem;
+.cr-thread-row:nth-child(1 of .cr-thread-row)::before {
+	top: calc(var(--cr-avatar-size) / 2);
 }
-/* Said once per turn, and quieter than what was said */
-.cr-who {
-	font-size: 0.6875rem;
+.cr-thread-row:nth-last-child(1 of .cr-thread-row)::before {
+	bottom: auto;
+	height: calc(var(--cr-reply-field-height) / 2);
+}
+.cr-thread-turn {
+	display: grid;
+	grid-template-columns: var(--cr-avatar-size) minmax(0, 1fr);
+	gap: var(--cr-turn-gap);
+	align-items: start;
+}
+/* A row nobody says — where a round ended, the offer to ask — stands in the column of what was said */
+.cr-thread-aside {
+	padding-left: calc(var(--cr-avatar-size) + var(--cr-turn-gap));
+}
+/* Positioned, and drawn after its row's piece of the spine, so it lies over the spine */
+.cr-avatar {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--cr-avatar-size);
+	height: var(--cr-avatar-size);
+	border-radius: 999px;
+	box-shadow: var(--cr-shadow-avatar-ring);
+}
+.cr-avatar > svg {
+	width: 0.8125rem;
+	height: 0.8125rem;
+}
+.cr-turn-reader .cr-avatar {
+	background: var(--cr-avatar-reader);
+	color: var(--cr-mark);
+}
+.cr-turn-agent .cr-avatar {
+	background: var(--cr-avatar-agent);
+	color: var(--cr-agent);
+}
+/* The reader's turn not said yet, in the field to reply in: grey, and level with the field */
+.cr-turn-reply .cr-avatar {
+	margin-top: calc((var(--cr-reply-field-height) - var(--cr-avatar-size)) / 2);
+	background: var(--color-base-300);
 	color: var(--cr-faint);
 }
-.cr-who strong {
+.cr-turn-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1875rem;
+	min-width: 0;
+}
+/* Who said it and when, quieter than what was said; wrapped on a narrow screen */
+.cr-turn-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.75rem;
+	color: var(--cr-faint);
+}
+.cr-turn-name {
+	font-size: 0.8125rem;
 	font-weight: 600;
 	color: var(--color-base-content);
+}
+.cr-turn-agent .cr-turn-name {
+	color: var(--cr-agent);
+}
+/* Where a reply is begun: drawn as the field it opens, before anything is written in it */
+.cr-reply-field {
+	display: block;
+	width: 100%;
+	height: var(--cr-reply-field-height);
+	padding: 0 0.75rem;
+	border: 1px solid var(--color-base-300);
+	border-radius: 0.375rem;
+	background: var(--color-base-100);
+	color: var(--cr-placeholder);
+	font-size: 0.875rem;
+	text-align: left;
 }
 
 /*
@@ -685,19 +739,16 @@
 }
 @keyframes cr-land {
 	0% {
-		border-color: var(--cr-agent);
 		background: var(--cr-agent-tint);
 	}
 	100% {
-		border-color: var(--color-base-300);
-		background: var(--color-base-100);
+		background: transparent;
 	}
 }
 
 /*
- * Where the reader writes, inside a thread. It takes the comment's tint
- * rather than the page's ground, which is what an answer sits on: the two
- * are different things and must not read as the same box.
+ * Where the reader writes: on the ground of whatever it is written in, so
+ * only its edge, in the reader's mark, says it is theirs to fill.
  */
 .cr-field {
 	background: transparent;
@@ -801,10 +852,9 @@
  * The agent panel: the conversation about everything a thread is not.
  *
  * It takes the right edge and the diff keeps the rest, because what is
- * being discussed has to stay on screen. Its vocabulary is the thread's —
- * the reader's turns on the mark's tint, an answer on the page's own
- * ground — so the two conversations read as one habit rather than two
- * designs.
+ * being discussed has to stay on screen. The reader's turns stand on the
+ * mark's tint, by its edge; the agent's answers, and its work while it does
+ * it, in a box on the page's own ground.
  */
 .cr-panel {
 	position: relative;
@@ -876,6 +926,21 @@
 .cr-panel-said {
 	background: var(--cr-mark-tint);
 	border-left: 2px solid var(--cr-mark);
+}
+.cr-answer {
+	background: var(--color-base-100);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	padding: 0.625rem 0.75rem;
+}
+/* Who said a turn in the panel, and when: once per turn, and quieter than what was said */
+.cr-who {
+	font-size: 0.6875rem;
+	color: var(--cr-faint);
+}
+.cr-who strong {
+	font-weight: 600;
+	color: var(--color-base-content);
 }
 
 /* A measurement, said quietly and once */
@@ -1075,9 +1140,6 @@
 }
 .cr-raised .cr-field {
 	border-color: var(--cr-agent-border);
-}
-.cr-raised .cr-tie {
-	border-color: var(--cr-agent-line);
 }
 .cr-raised-tag {
 	color: var(--cr-agent);

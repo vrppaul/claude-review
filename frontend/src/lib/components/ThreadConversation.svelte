@@ -2,14 +2,15 @@
 	import type { Thread } from '$lib/types';
 	import { anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
-	import { raisedByAgent } from '$lib/utils/speakers';
+	import { AGENT } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
-	import { clockTime } from '$lib/utils/time';
+	import { timeAgo } from '$lib/utils/time';
 	import AwaitingAnswer from './AwaitingAnswer.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
+	import ThreadTurn from './ThreadTurn.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -24,9 +25,9 @@
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
 
-	/** When a turn was said; a turn kept from an older version may not say. */
-	function said(at: number | undefined): string {
-		return at === undefined ? '' : clockTime(at);
+	/** How long ago a turn was said, by the review's clock, which ticks while it is drawn. */
+	function ago(at: number): string {
+		return timeAgo(at, review.clock.now);
 	}
 
 	/** When a question was handed over, if it is still waited on. */
@@ -35,59 +36,51 @@
 	}
 </script>
 
-<!-- A thread reads as a conversation: each question, and the answers held to it -->
-<div class="cr-thread">
-	{#each exchanges as exchange, index (exchange.id)}
-		{@const waitedOn = askedAt(exchange.id)}
-		{#if exchange.startsRound}
-			<!-- Where one round ended and the next began, in this thread -->
-			<div data-testid="round-mark" class="cr-round-mark">
-				<span></span>
-				<span class="cr-faint text-xs">round {exchange.round}</span>
-				<span></span>
-			</div>
-		{/if}
-		<div class="cr-exchange">
-			<div>
-				{#if index === 0 && raisedByAgent(thread)}
-					<p class="cr-who"><strong>Agent</strong> {said(exchange.at)}</p>
-				{:else if thread.turns.length > 0}
-					<p class="cr-who"><strong>You</strong> {said(exchange.at)}</p>
-				{/if}
-				{#each splitSuggestions(exchange.asked) as part, partIndex (partIndex)}
-					{#if part.kind === 'suggestion'}
-						<SuggestionDiff {replaced} suggested={part.text} />
-					{:else}
-						<MarkdownRenderer text={part.text} dense />
-					{/if}
-				{/each}
-				<SaidImages images={exchange.images} />
-			</div>
-
-			{#each exchange.answers as answer, answerIndex (answer.id)}
-				<div class="cr-reply">
-					{#if answerIndex === 0}
-						<span class="cr-tie" aria-hidden="true"></span>
-					{/if}
-					<div
-						data-testid="thread-answer"
-						data-tour="answer"
-						class={['cr-answer', review.threads.reading.isNewAnswer(thread.id, answer.id) && 'cr-answer-new']}
-					>
-						<p class="cr-who"><strong>Agent</strong> {said(answer.at)}</p>
-						<MarkdownRenderer text={answer.body} dense />
-					</div>
-				</div>
-			{/each}
-
-			{#if waitedOn !== undefined}
-				<AwaitingAnswer
-					threadId={thread.id}
-					questionId={exchange.id}
-					askedAt={waitedOn}
-					first={exchange.answers.length === 0}
-				/>
-			{/if}
+<!-- A thread reads as a conversation, a turn to a row: each question, the answers held to it, and the answer
+	still awaited. A turn kept from an older version may not say when it was said -->
+{#each exchanges as exchange (exchange.id)}
+	{@const waitedOn = askedAt(exchange.id)}
+	{#if exchange.startsRound}
+		<!-- Where one round ended and the next began, in this thread -->
+		<div data-testid="round-mark" class="cr-thread-row cr-thread-aside cr-round-mark">
+			<span></span>
+			<span class="cr-faint text-xs">round {exchange.round}</span>
+			<span></span>
 		</div>
+	{/if}
+	<ThreadTurn voice={exchange.by} testId="thread-question">
+		{#snippet head()}
+			{#if exchange.at !== undefined}
+				<span>{ago(exchange.at)}</span>
+			{/if}
+		{/snippet}
+		{#each splitSuggestions(exchange.asked) as part, partIndex (partIndex)}
+			{#if part.kind === 'suggestion'}
+				<SuggestionDiff {replaced} suggested={part.text} />
+			{:else}
+				<MarkdownRenderer text={part.text} dense />
+			{/if}
+		{/each}
+		<SaidImages images={exchange.images} />
+	</ThreadTurn>
+
+	{#each exchange.answers as answer (answer.id)}
+		<ThreadTurn
+			voice={AGENT}
+			testId="thread-answer"
+			tour="answer"
+			landing={review.threads.reading.isNewAnswer(thread.id, answer.id)}
+		>
+			{#snippet head()}
+				{#if answer.at !== undefined}
+					<span>answered {ago(answer.at)}</span>
+				{/if}
+			{/snippet}
+			<MarkdownRenderer text={answer.body} dense />
+		</ThreadTurn>
 	{/each}
-</div>
+
+	{#if waitedOn !== undefined}
+		<AwaitingAnswer threadId={thread.id} questionId={exchange.id} askedAt={waitedOn} />
+	{/if}
+{/each}

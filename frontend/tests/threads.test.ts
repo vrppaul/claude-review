@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import { addedLine, contextLine, diffFile, hunk } from './diff';
+import { said } from './elements';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -220,6 +221,23 @@ describe('a thread is a conversation', () => {
 		expect(getAllByTestId('comment-thread')).toHaveLength(2);
 		expect(getAllByTestId('edit-comment')).toHaveLength(1);
 		expect(getAllByTestId('open-reply')).toHaveLength(2);
+	});
+
+	it('opens a thread the agent raised with the agent speaking', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(said(getByTestId('thread-question'))).toMatch(/^Agent /);
+	});
+
+	it('offers a reply in a field that reads "Reply…"', () => {
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(said(getByTestId('open-reply'))).toBe('Reply…');
 	});
 
 	it('offers no delete of a thread the agent raised, which the review keeps whatever a page says, but lets it be settled', () => {
