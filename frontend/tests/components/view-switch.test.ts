@@ -8,7 +8,7 @@ import { addedLine, diffFile, hunk } from '../diff';
 import { said } from '../elements';
 import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
 import { handOverNext } from '../pushes';
-import { openReview, settingsWithStoriesOn, type Opened } from '../review';
+import { AGENT_ATTACHED, openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
 import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN, toldChapter, toldStep } from '../story';
 
@@ -17,9 +17,6 @@ const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one'), added
 const IN_TWO_CHAPTERS = storyHeld({
 	chapters: [toldChapter('ch-1', [toldStep('a.py', 1)]), toldChapter('ch-2', [toldStep('a.py', 9)])]
 });
-
-// What the review says of itself with an agent attached: the panel then offers its field
-const AGENT_ATTACHED = { answerer_attached: true };
 
 /** A server that keeps the reader's choices, and takes every story asked for or stopped. */
 function serving(): FakeServer {

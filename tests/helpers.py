@@ -309,14 +309,14 @@ class RecordingPage(PageChannel):
 
 
 class FixedClock(Clock):
-    """A clock that always says the same moment, so a test can say when things happened."""
+    """A clock that says the moment a test set it to, until the test sets another: so a test says when things happened."""
 
     def __init__(self, moment: EpochMillis) -> None:
-        self._moment = moment
+        self.moment = moment
 
     @override
     def now(self) -> EpochMillis:
-        return self._moment
+        return self.moment
 
 
 def opening_of(diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, title: str = "") -> ReviewOpening:

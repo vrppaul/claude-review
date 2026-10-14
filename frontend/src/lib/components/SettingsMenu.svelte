@@ -100,20 +100,19 @@
 			/>
 		</label>
 
-		{#if review.story.canBeTold}
-			<label class="flex items-center justify-between gap-3">
-				<span>
-					Stories
-					<span class="cr-faint block text-xs">Each story spends the agent's tokens</span>
-				</span>
-				<input
-					data-testid="stories"
-					type="checkbox"
-					class="checkbox checkbox-xs"
-					checked={review.settings.current.stories}
-					onchange={(event) => (event.currentTarget.checked ? review.turnStoriesOn() : review.turnStoriesOff())}
-				/>
-			</label>
-		{/if}
+		<!-- Drawn in every review, one no story can be told of too: the choice is the reader's, for all of them -->
+		<label class="flex items-center justify-between gap-3">
+			<span>
+				Stories
+				<span class="cr-faint block text-xs">Each story spends the agent's tokens</span>
+			</span>
+			<input
+				data-testid="stories"
+				type="checkbox"
+				class="checkbox checkbox-xs"
+				checked={review.settings.current.stories}
+				onchange={(event) => (event.currentTarget.checked ? review.turnStoriesOn() : review.turnStoriesOff())}
+			/>
+		</label>
 	</div>
 </Popover>

@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import { formatWeight } from '$lib/review/weight';
 	import Dialog from './Dialog.svelte';
+	import type { Closing } from './dialog-closing';
 	import Icon from './Icon.svelte';
 
 	interface Props {
@@ -22,7 +23,7 @@
 	the reader's to say, knowing what this review would cost. The way on comes first, and takes the
 	keyboard; Escape and a press outside are "Not now" -->
 <Dialog label={QUESTION} data-testid="story-opt-in" class="w-full max-w-lg" {onClose}>
-	{#snippet children(close: () => void, closeThen: (then: () => void) => void)}
+	{#snippet children({ close, closeThen }: Closing)}
 		<div class="flex flex-col gap-3.5 text-sm">
 			<div class="flex items-center gap-2.5">
 				<Icon name="story" class="h-4.5 w-4.5 text-(--cr-agent)" />

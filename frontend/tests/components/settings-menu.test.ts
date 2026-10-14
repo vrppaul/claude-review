@@ -88,13 +88,13 @@ describe('the settings', () => {
 		expect(getByText("Each story spends the agent's tokens")).toBeTruthy();
 	});
 
-	it('offer no stories in a review no story can be told of', async () => {
+	it('offer stories in a review no story can be told of too: the choice is for every review', async () => {
 		const user = userEvent.setup();
 		review = openReview({ facts: { takes_a_story: false } });
-		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
+		const { getByTestId } = render(ReviewHeader, inReview(review));
 
 		await user.click(getByTestId('settings-toggle'));
 
-		expect(queryByTestId('stories')).toBeNull();
+		expect(getByTestId('stories')).toBeTruthy();
 	});
 });

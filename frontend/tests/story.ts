@@ -64,9 +64,14 @@ export function storyStanding(given: Partial<StoryResponse> = {}): StoryResponse
 	return { held: null, asking: null, ...given };
 }
 
-/** When the reader asked for a story, and when an agent took the request, a few seconds later. */
-export const ASKED_AT = 1_791_000_000_000;
-export const TAKEN_AT = ASKED_AT + 4_000;
+/**
+ * When the reader asked for a story: ten seconds past four minutes past
+ * one in the afternoon, wherever the tests are run, so a test can say what
+ * the page says of that moment. And when an agent took the request, two
+ * seconds later.
+ */
+export const ASKED_AT = new Date(2026, 9, 14, 13, 4, 10).getTime();
+export const TAKEN_AT = ASKED_AT + 2_000;
 
 /** The asking for a story as the review says it stands: asked for and taken by no agent yet. */
 export const ASKED: StoryAsking = { asked_at: ASKED_AT, taken_at: null, stopped: false };

@@ -511,9 +511,7 @@ async def test_a_change_left_untold_has_no_part_of_a_story_to_go_to() -> None:
     assert "there is no element of test id go-to-part on the page" in looked.complaint
 
 
-async def test_a_look_at_an_untold_change_asked_for_as_its_story_opens_on_what_the_page_asks_first_and_goes_on() -> (
-    None
-):
+async def test_a_look_at_an_untold_change_asked_for_as_its_story_opens_on_the_pages_question_and_goes_on() -> None:
     """A look's reader is new to the review: stories are off, and the page asks before a story is written.
 
     The look goes on from the question: answered, the page shows where the story will be.

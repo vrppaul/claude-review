@@ -4,25 +4,16 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { StoryAsking } from '$lib/types';
 import { addedLine, diffFile, hunk } from '../diff';
 import { said } from '../elements';
 import { takingStoryAskings } from '../fake-server';
 import { handOverNext } from '../pushes';
-import { openReview, type Opened } from '../review';
-import { STOPPED } from '../story';
+import { AGENT_ATTACHED, openReview, type Opened } from '../review';
+import { ASKED, ASKED_AT, STOPPED, TAKEN, TAKEN_AT } from '../story';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one')])] })];
 
 const SECOND = 1000;
-// Ten seconds past four minutes past one in the afternoon, wherever the tests are run: when the reader
-// asked for a story. An agent took the request two seconds later
-const ASKED_AT = new Date(2026, 9, 14, 13, 4, 10).getTime();
-const TAKEN_AT = ASKED_AT + 2 * SECOND;
-const ASKED: StoryAsking = { asked_at: ASKED_AT, taken_at: null, stopped: false };
-const TAKEN: StoryAsking = { asked_at: ASKED_AT, taken_at: TAKEN_AT, stopped: false };
-// What the review says of itself with an agent attached
-const AGENT_ATTACHED = { answerer_attached: true };
 
 /** Draw a review that holds no story, read as its story: what the reader waits on is all there is to draw. */
 function waiting(opened: Opened): Review {

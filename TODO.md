@@ -130,6 +130,10 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(ui)`: the note of a story's arrival is as wide as the window
       had room for when it was drawn (`StoryArrivalNote.svelte`, `standsAt`):
       a window made narrower under it cuts it off until it is drawn again.
+- [ ] `fix(ui)`: at 420 pixels the reading area stands one pixel lower
+      while the Story segment says "writing" than while it says "Story":
+      the dots that breathe in place of its icon make the header's first
+      row a pixel taller. Measured by an independent review, in a look.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

@@ -39,6 +39,9 @@ export interface Opened {
 	asking?: StoryAsking | null;
 }
 
+/** What the review says of itself with an agent attached: the panel then offers its field, and a story asked for is written. */
+export const AGENT_ATTACHED: Partial<ReviewResponse> = { answerer_attached: true };
+
 // The page open in this tab: the review it holds, keeping its draft as the page does
 let openPage: KeptReview | null = null;
 

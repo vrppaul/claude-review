@@ -15,7 +15,6 @@ import asyncio
 from collections.abc import AsyncIterator, Iterator
 from http import HTTPStatus
 from pathlib import Path
-from typing import override
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,8 +22,7 @@ from httpx import AsyncClient
 from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 
-from claude_review.domain.interfaces import Clock
-from claude_review.domain.models import FIRST_ROUND, EpochMillis
+from claude_review.domain.models import FIRST_ROUND
 from claude_review.domain.story import Step, Story
 from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse
@@ -41,6 +39,7 @@ from tests.helpers import (
     REVIEW_ROUTE,
     STORY_REQUEST_ROUTE,
     WAIT_FOR_EVENT,
+    FixedClock,
     ReviewFactory,
     http_client,
     next_push,
@@ -364,26 +363,15 @@ def test_a_page_open_on_the_review_is_told_when_a_story_is_told(
         next_push(socket, StoryPush)
 
 
-class HandSetClock(Clock):
-    """A clock a test sets by hand, so it can say at which moment each thing happened."""
-
-    def __init__(self, moment: EpochMillis) -> None:
-        self.moment = moment
-
-    @override
-    def now(self) -> EpochMillis:
-        return self.moment
-
-
 @pytest.fixture
-def clock() -> HandSetClock:
-    """The clock of the review a story is asked from, at the moment the reader asks."""
-    return HandSetClock(ASKED_AT)
+def clock() -> FixedClock:
+    """The clock of the review a story is asked from, at the moment the reader asks: a test moves it on by hand."""
+    return FixedClock(ASKED_AT)
 
 
 @pytest.fixture
 def page_of_the_change(
-    reviews: ReviewFactory, opened_on_the_change: ReviewOpening, clock: HandSetClock
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening, clock: FixedClock
 ) -> Iterator[TestClient]:
     """The page of a review of the repository's change, which a test speaks through as the reader and as the agent."""
     with page_client(reviews.app(opened_on_the_change, clock=clock)) as review_page:
@@ -400,7 +388,7 @@ def story_standing(review: TestClient) -> StoryResponse:
     return StoryResponse.model_validate_json(review.get(STORY_ROUTE).content)
 
 
-def taken_by_an_agent(review: TestClient, clock: HandSetClock) -> None:
+def taken_by_an_agent(review: TestClient, clock: FixedClock) -> None:
     """Have the reader ask for a story, and an agent's wait take the request a few seconds later."""
     review.post(STORY_REQUEST_ROUTE)
     clock.moment = TAKEN_AT
@@ -448,7 +436,7 @@ def test_a_story_stopped_before_any_agent_took_the_request_reaches_no_agent(page
 
 
 def test_a_story_stopped_after_an_agent_took_the_request_tells_the_agent_to_stop(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     taken_by_an_agent(page_of_the_change, clock)
 
@@ -457,7 +445,7 @@ def test_a_story_stopped_after_an_agent_took_the_request_tells_the_agent_to_stop
     assert agent_waits(page_of_the_change) == StoryCancelEvent()
 
 
-def test_a_story_stopped_twice_tells_the_agent_once(page_of_the_change: TestClient, clock: HandSetClock) -> None:
+def test_a_story_stopped_twice_tells_the_agent_once(page_of_the_change: TestClient, clock: FixedClock) -> None:
     taken_by_an_agent(page_of_the_change, clock)
 
     page_of_the_change.post(STORY_CANCEL_ROUTE)
@@ -474,7 +462,7 @@ def test_stopping_a_story_nobody_asked_for_is_no_refusal_and_tells_no_agent(page
 
 
 def test_every_page_is_told_when_a_story_was_asked_for_when_an_agent_took_the_request_and_that_it_was_stopped(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     """Told as facts, each as it happens: a page waiting for a story draws them, and asks nothing."""
     with open_session(page_of_the_change) as socket:
@@ -498,7 +486,7 @@ def test_a_story_asked_for_twice_is_told_to_the_pages_once(page_of_the_change: T
 
 
 def test_a_page_opening_while_a_story_is_awaited_reads_when_it_was_asked_for_and_taken(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     """A reload, or a second page, was told none of it: it reads what the pages open then were told."""
     taken_by_an_agent(page_of_the_change, clock)
@@ -518,7 +506,7 @@ def test_a_page_opening_after_the_reader_stopped_the_story_reads_that_it_was_sto
 
 
 def test_a_story_asked_for_again_while_it_is_awaited_is_still_asked_when_it_first_was(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     """The reader's wait is counted from the request the agent was handed."""
     taken_by_an_agent(page_of_the_change, clock)
@@ -529,7 +517,7 @@ def test_a_story_asked_for_again_while_it_is_awaited_is_still_asked_when_it_firs
 
 
 def test_a_story_asked_for_again_after_it_was_stopped_is_asked_anew(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     taken_by_an_agent(page_of_the_change, clock)
     page_of_the_change.post(STORY_CANCEL_ROUTE)
@@ -543,7 +531,7 @@ def test_a_story_asked_for_again_after_it_was_stopped_is_asked_anew(
 
 
 def test_a_story_asked_for_again_after_it_was_stopped_reaches_the_agent_after_the_word_to_stop(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     """In the order the reader said them: an agent that stops, then starts, ends up writing."""
     taken_by_an_agent(page_of_the_change, clock)
@@ -557,7 +545,7 @@ def test_a_story_asked_for_again_after_it_was_stopped_reaches_the_agent_after_th
     ]
 
 
-def test_a_story_told_ends_the_asking_for_it(page_of_the_change: TestClient, clock: HandSetClock) -> None:
+def test_a_story_told_ends_the_asking_for_it(page_of_the_change: TestClient, clock: FixedClock) -> None:
     taken_by_an_agent(page_of_the_change, clock)
 
     page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
@@ -566,7 +554,7 @@ def test_a_story_told_ends_the_asking_for_it(page_of_the_change: TestClient, clo
 
 
 def test_a_story_told_after_the_reader_stopped_it_is_held_all_the_same(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     """The agent had written it by then: thrown away, it would have been paid for and never read."""
     taken_by_an_agent(page_of_the_change, clock)
@@ -589,7 +577,7 @@ def test_a_story_told_before_any_agent_took_the_request_for_it_leaves_no_request
 
 
 def test_a_story_told_before_the_agent_heard_it_was_stopped_leaves_nothing_to_stop(
-    page_of_the_change: TestClient, clock: HandSetClock
+    page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
     taken_by_an_agent(page_of_the_change, clock)
     page_of_the_change.post(STORY_CANCEL_ROUTE)
@@ -609,9 +597,7 @@ def test_a_story_asked_for_while_one_is_held_asks_nothing(page_of_the_change: Te
     assert agent_waits(page_of_the_change) == TimeoutEvent()
 
 
-def test_a_story_refused_leaves_the_asking_for_it_as_it_was(
-    page_of_the_change: TestClient, clock: HandSetClock
-) -> None:
+def test_a_story_refused_leaves_the_asking_for_it_as_it_was(page_of_the_change: TestClient, clock: FixedClock) -> None:
     """The agent mends the story and sends it again: the reader is still waiting for it."""
     taken_by_an_agent(page_of_the_change, clock)
     awaited = story_standing(page_of_the_change)
