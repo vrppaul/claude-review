@@ -5,7 +5,6 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import ChangedLines from './ChangedLines.svelte';
-	import FileBody from './FileBody.svelte';
 	import FilePath from './FilePath.svelte';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import LinesSection from './LinesSection.svelte';
@@ -48,9 +47,12 @@
 <LinesSection
 	{sectionKey}
 	file={piece}
+	{language}
+	{view}
+	{extent}
 	folded={false}
 	testId="story-piece"
-	class="overflow-clip rounded-md border border-base-300"
+	class="cr-piece-frame overflow-clip rounded-md border border-base-300"
 	{above}
 >
 	{#snippet header()}
@@ -65,8 +67,5 @@
 			{@render atFarEnd?.()}
 			<ChangedLines changed={fileStats(piece)} />
 		</SectionHeader>
-	{/snippet}
-	{#snippet lines()}
-		<FileBody file={piece} {language} {view} {extent} />
 	{/snippet}
 </LinesSection>

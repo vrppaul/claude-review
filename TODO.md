@@ -354,11 +354,15 @@ tests. Remove items when done — don't check them off.
 
 - A file the agent shows far down the review is glided to, and then put in
   place at once: the glide ends where the file stood before the files on
-  the way were built, and what is left to go is not glided. How far that
-  is depends on the review: whoever built it measured 446 pixels showing
-  the last of 46 files; an independent review measured 7021 pixels, gone in
-  one frame, showing the last of 41 files in the files' view, and 1918 and
-  173 pixels in a story. A glide that far also builds every file it passes.
+  the way were built, and what is left to go is not glided. A section holds
+  the room its rows, hunk headers and bars take, so what is left is what it
+  does not count: a thread's card, about 155 pixels each, a comment being
+  written, and lines and headers that wrap. On the look's long change,
+  without threads, the 38 files not yet built held 25 pixels more than they
+  took, and the story's 58 pieces 17; with four threads among those files
+  they held 595 pixels less, and at 420 pixels wide, where its lines wrap,
+  the story held 7029 less. A glide that far also builds every file it
+  passes.
 - A single generated file of ~12,000 lines takes about 2.6s to become
   readable, because a file is built as one unit. Splitting a hunk into
   separately contained blocks was measured and made it worse. Worth

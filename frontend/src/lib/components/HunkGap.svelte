@@ -30,9 +30,8 @@
 	const stepUp = $derived(inOneGo ? null : drawing.readOf(gap, 'up'));
 	const stepDown = $derived(inOneGo ? null : drawing.readOf(gap, 'down'));
 	const allAtOnce = $derived(inOneGo ? null : drawing.readOf(gap, 'all'));
-	// Drawn where the gap is the drawing's to say, while it hides lines or
-	// may: below the last hunk, how many is not known until a read finds out
-	const drawn = $derived(drawing.says(gap) && hidden !== 0);
+	// Drawn where the gap is the drawing's to say, while it hides lines or may
+	const drawn = $derived(drawing.draws(gap));
 	// The words for the lines a gap hides where it is only said, in a piece
 	// of a file; null where the lines may be read in instead, and the gap
 	// then says how many it hides, as far as that is known
@@ -61,7 +60,8 @@
 
 <!-- The jump and what it says are one thing: with nothing hidden above this
 	hunk the code runs on unbroken, and a marker saying otherwise is a line of
-	punctuation in the middle of a sentence. -->
+	punctuation in the middle of a sentence. What is drawn here is counted
+	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
 {#if drawn}
 	{#if header}
 		<div data-testid="hunk-header" class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">

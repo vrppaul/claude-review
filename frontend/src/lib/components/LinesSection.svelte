@@ -5,12 +5,20 @@
 	import { useScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
+	import FileBody from './FileBody.svelte';
+	import { type Extent, type FileView, type LinesRoom, roomOf } from './file-drawing.svelte';
 
 	interface Props {
 		/** What the section is known by among those its view draws. */
 		sectionKey: string;
 		/** The file it draws lines of, or the piece of one cut out for a story. */
 		file: DiffFile;
+		/** What its lines are highlighted and rendered as, if anything. */
+		language: string | null;
+		/** How its lines are drawn. */
+		view: FileView;
+		/** How much of the file it draws: the whole of it, or a piece cut out for a story. */
+		extent: Extent;
 		/** Whether its lines are folded away, its header left alone on the page. */
 		folded: boolean;
 		testId: string;
@@ -20,20 +28,20 @@
 		above?: Snippet | undefined;
 		/** Its header, a `SectionHeader`: the file's name, and what its view says and offers beside it. */
 		header: Snippet;
-		/** Its lines, asked for once the reader has come near, and not while they are folded away. */
-		lines: Snippet;
 	}
 
-	let { sectionKey, file, folded, testId, class: framed, above, header, lines }: Props = $props();
+	// Folded away, its lines take no room
+	const FOLDED: LinesRoom = { rows: 0, hunks: 0, gaps: 0, hunkHeaders: 0 };
+
+	let { sectionKey, file, language, view, extent, folded, testId, class: framed, above, header }: Props = $props();
 	const review = useReview();
 	// The area its view scrolls in, which it comes near to be built: null while that is not drawn yet
 	const scrollArea = useScrollArea();
 
-	// How many rows it will draw, so the browser can leave it undrawn off
-	// screen without the scrollbar lurching once it is drawn for real: the
-	// stylesheet turns the count into a height. At least one, unless folded.
-	const rowCount = $derived(file.hunks.reduce((count, hunk) => count + hunk.lines.length, 0));
-	const rowsDrawn = $derived(folded ? 0 : Math.max(rowCount, 1));
+	// What its lines will take up, so the browser can leave it undrawn off
+	// screen, and its rows be built late, without what lies below moving as
+	// they are: the stylesheet turns the counts into a height
+	const room = $derived(folded ? FOLDED : roomOf(file, extent, view));
 
 	let element: HTMLElement | undefined = $state();
 	// Rows are built when the section comes within reach, and kept from then on
@@ -44,15 +52,19 @@
 </script>
 
 <!-- A section of the page that draws lines of a file, whichever view draws it: it says where it is and
-	which file it is of, holds the room its rows will take, and builds them once the reader comes near.
-	Of what is drawn in it, its view says three things: what stands in its header, what its lines are,
-	and what stands above them. That last is inside the section: a reader taken to it reads from there -->
+	which file it is of, holds the room its lines will take, and builds them once the reader comes near.
+	Of what is drawn in it, its view says three things: what stands in its header, how its lines are
+	drawn, and what stands above them. That last is inside the section: a reader taken to it reads from
+	there -->
 <section
 	bind:this={element}
 	data-testid={testId}
 	data-path={file.path}
 	class="cr-lines-section"
-	style:--cr-rows={rowsDrawn}
+	style:--cr-rows={room.rows}
+	style:--cr-hunks={room.hunks}
+	style:--cr-gaps={room.gaps}
+	style:--cr-hunk-headers={room.hunkHeaders}
 >
 	{@render above?.()}
 	<!-- The header and the lines in a frame of their own: what is left undrawn off screen, and what the
@@ -61,7 +73,7 @@
 		{@render header()}
 		{#if !folded}
 			{#if nearness.built}
-				{@render lines()}
+				<FileBody {file} {language} {view} {extent} />
 			{:else}
 				<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 			{/if}

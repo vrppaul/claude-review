@@ -83,18 +83,28 @@
 /*
  * Off-screen files are left undrawn. Unlike a virtual list this keeps every
  * row in the document, so find-in-page, anchors and text selection across
- * files all still work. What is left undrawn is a file's header and rows,
+ * files all still work. What is left undrawn is a file's header and lines,
  * whose room can be counted; words a view says above them in the same
  * section, a step's reason, are drawn always.
  */
 .cr-file-frame {
+	/* What its lines take up, drawn: as many rows, hunks, bars and hunk headers as its section counts */
+	--cr-lines-room: calc(
+		var(--cr-rows) * var(--cr-row-height) + var(--cr-hunks) * var(--cr-hunk-rule) + var(--cr-gaps) *
+			var(--cr-gap-estimate) + var(--cr-hunk-headers) * var(--cr-hunk-header-estimate)
+	);
+	--cr-header-estimate: var(--cr-file-header-estimate);
 	content-visibility: auto;
-	/* What it would take up, drawn: its header, and as many rows as the file says it draws */
-	contain-intrinsic-size: auto calc(var(--cr-file-header-estimate) + var(--cr-rows) * var(--cr-row-height));
+	/* What it would take up, drawn: its header, and its lines */
+	contain-intrinsic-size: auto calc(var(--cr-header-estimate) + var(--cr-lines-room));
 }
-/* Where a file's rows go before they are built, as tall as they will be */
+/* A piece of a story is headed by a line of small text, not by the files' chips */
+.cr-piece-frame {
+	--cr-header-estimate: var(--cr-piece-header-estimate);
+}
+/* Where a file's lines go before they are built, as tall as they will be */
 .cr-file-placeholder {
-	height: calc(var(--cr-rows) * var(--cr-row-height));
+	height: var(--cr-lines-room);
 }
 
 /*

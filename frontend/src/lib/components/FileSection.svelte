@@ -8,7 +8,6 @@
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
-	import FileBody from './FileBody.svelte';
 	import FilePath from './FilePath.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
@@ -66,6 +65,9 @@
 <LinesSection
 	sectionKey={fileSectionKey(file.path)}
 	{file}
+	{language}
+	{view}
+	{extent}
 	folded={collapsed}
 	testId="file-section"
 	class="border-b border-base-300"
@@ -127,8 +129,5 @@
 				Viewed<span class="sr-only">: {file.path}</span>
 			</label>
 		</SectionHeader>
-	{/snippet}
-	{#snippet lines()}
-		<FileBody {file} {language} {view} {extent} />
 	{/snippet}
 </LinesSection>

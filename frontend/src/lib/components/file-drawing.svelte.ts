@@ -6,15 +6,29 @@
  * Made once by whoever draws the file and handed to the layout, so both
  * layouts lay out the same lines, and switching between them prepares
  * nothing again.
+ *
+ * What the lines will take up is counted here too, from the same rules,
+ * before any of them is drawn: their section holds that room until they are
+ * built, so what lies below stays where it is as they are.
  */
 
 import type { DiffNumbering, Numbering, StoryNumbering } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, DiffLayout } from '$lib/types';
+import type { DiffFile, DiffLayout, DiffLine } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
-import { type ContextGap, gapBelow, type GapRead, readOf, type Widening, withRevealed } from '$lib/utils/expansions';
+import {
+	type ContextGap,
+	gapAbove,
+	gapBelow,
+	type GapRead,
+	hiddenIn,
+	readOf,
+	type Widening,
+	withRevealed
+} from '$lib/utils/expansions';
+import { splitRowCount } from '$lib/utils/split-rows';
 import type { CountedWords } from '$lib/utils/words';
 
 /** How a file's lines are drawn: rendered, rendered beside their text, in two columns, or in one. */
@@ -62,6 +76,91 @@ const SAID_OF_A_GAP: Record<PieceShows, CountedWords> = {
 /** How much of a file a drawing is of: the whole of it, or a piece. */
 export type Extent = WholeFile | Piece;
 
+/**
+ * What a file's lines take up on the page, counted from what is drawn of
+ * them: the room their section holds until they are built. What hangs under
+ * a line — a thread, a comment being written — and a line or a header that
+ * wraps take more, and are not counted.
+ */
+export interface LinesRoom {
+	/** Rows of code, as many as the layout lays the lines out in. */
+	rows: number;
+	/** Hunks, each drawn above a rule of its own. */
+	hunks: number;
+	/** Bars saying what the diff left out around the hunks. */
+	gaps: number;
+	/** Hunk headers: each heads the bar above its hunk, where that is drawn. */
+	hunkHeaders: number;
+}
+
+/** A layout that draws a hunk's lines one to a row. */
+function oneToARow(lines: readonly DiffLine[]): number {
+	return lines.length;
+}
+
+// How many rows each way of drawing a file lays a hunk's lines out in. A rendered preview draws no
+// rows, and what it draws instead cannot be counted before it is drawn: it is taken to be as tall as them
+const ROWS_OF_A_HUNK: Record<FileView, (lines: readonly DiffLine[]) => number> = {
+	preview: oneToARow,
+	'side-by-side': oneToARow,
+	split: splitRowCount,
+	raw: oneToARow
+};
+// A file with no lines says why in their place, and is held this many rows for it
+const ROWS_FOR_NO_LINES = 1;
+
+/** Where the lines read in around a file's hunks are kept; null for a piece, which has nowhere to keep any. */
+function revealedIn(extent: Extent): RevealedContext | null {
+	return extent.kind === 'whole' ? extent.revealed : null;
+}
+
+/** A file as it is drawn: with the lines revealed around its hunks, where they may be. */
+function shownFile(file: DiffFile, extent: Extent): DiffFile {
+	const revealed = revealedIn(extent);
+	return revealed ? withRevealed(file, revealed.forFile(file.path)) : file;
+}
+
+/** The gap below the last hunk of a file as drawn, as far as a read has said how long the file is. */
+function gapAtTheEnd(shown: DiffFile, extent: Extent): ContextGap | null {
+	const last = shown.hunks.at(-1);
+	if (last === undefined) return null;
+	return gapBelow(last, revealedIn(extent)?.forFile(shown.path).length ?? null);
+}
+
+/**
+ * Whether a gap is drawn: where it is the drawing's to say, while it hides
+ * lines or may — below the last hunk, how many is not known until a read
+ * finds out. A piece says what it leaves out between its own hunks; what
+ * lies above its first and below its last is the rest of the file, which it
+ * does not draw.
+ */
+function drawsGap(extent: Extent, gap: ContextGap): boolean {
+	const says = extent.kind === 'whole' || (gap.above !== null && gap.below !== null);
+	return says && hiddenIn(gap) !== 0;
+}
+
+/**
+ * What a file's lines take up drawn in a view, counted without drawing
+ * them, as `RawView`, `SplitView` and `HunkGap` draw them: the rows of each
+ * hunk under the bar for what was left out above it, headed by the hunk's
+ * header, and below the last hunk a bar headed by nothing.
+ */
+export function roomOf(file: DiffFile, extent: Extent, view: FileView): LinesRoom {
+	const shown = shownFile(file, extent);
+	const { hunks } = shown;
+	const barred = hunks.filter((hunk, index) => drawsGap(extent, gapAbove(hunk, hunks[index - 1])));
+	// Below the last hunk, one bar more where that is drawn
+	const end = gapAtTheEnd(shown, extent);
+	const barsBelow = end !== null && drawsGap(extent, end) ? 1 : 0;
+	const rows = hunks.reduce((counted, hunk) => counted + ROWS_OF_A_HUNK[view](hunk.lines), 0);
+	return {
+		rows: Math.max(rows, ROWS_FOR_NO_LINES),
+		hunks: hunks.length,
+		gaps: barred.length + barsBelow,
+		hunkHeaders: barred.filter((hunk) => hunk.header !== '').length
+	};
+}
+
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
 	file: () => DiffFile;
@@ -84,10 +183,10 @@ export class FileDrawing implements DrawnFile {
 		this.#source = source;
 		// Lines revealed from the file sit inside the hunk beside which they were
 		// read, so numbering, highlighting and anchoring need no special case
-		this.#shownFile = $derived(this.#shown());
+		this.#shownFile = $derived(shownFile(source.file(), source.extent()));
 		// What changed inside a replaced line is marked in a diff, where lines are replaced
 		this.#hunks = $derived(drawnHunks(this.#shownFile, source.language(), review.mode === 'diff'));
-		this.#end = $derived(this.#gapAtTheEnd());
+		this.#end = $derived(gapAtTheEnd(this.#shownFile, source.extent()));
 		this.commenting = new LineCommenting(review, this);
 	}
 
@@ -112,13 +211,9 @@ export class FileDrawing implements DrawnFile {
 		return extent.kind === 'whole' && extent.numbering === 'the-reviews';
 	}
 
-	/**
-	 * Whether a gap is this drawing's to say. A piece says what it leaves
-	 * out between its own hunks; what lies above its first and below its
-	 * last is the rest of the file, which it does not draw.
-	 */
-	says(gap: ContextGap): boolean {
-		return this.#source.extent().kind === 'whole' || (gap.above !== null && gap.below !== null);
+	/** Whether a gap is drawn here: see `drawsGap`. */
+	draws(gap: ContextGap): boolean {
+		return drawsGap(this.#source.extent(), gap);
 	}
 
 	/**
@@ -138,7 +233,7 @@ export class FileDrawing implements DrawnFile {
 
 	/** Whether the lines of a gap are on their way. */
 	isReading(gap: ContextGap): boolean {
-		return this.#revealed()?.isReading(this.path(), gap) ?? false;
+		return revealedIn(this.#source.extent())?.isReading(this.path(), gap) ?? false;
 	}
 
 	/** The read a widening makes of a gap, as much as one read of the file hands back; null where it reads nothing. */
@@ -148,26 +243,6 @@ export class FileDrawing implements DrawnFile {
 
 	/** Read lines into a gap. */
 	async read(read: GapRead): Promise<void> {
-		await this.#revealed()?.reveal(this.path(), read);
-	}
-
-	/** Where the lines read in around the hunks are kept; null for a piece, which has nowhere to keep any. */
-	#revealed(): RevealedContext | null {
-		const extent = this.#source.extent();
-		return extent.kind === 'whole' ? extent.revealed : null;
-	}
-
-	/** The file as it is drawn: with the lines revealed around its hunks, where they may be. */
-	#shown(): DiffFile {
-		const file = this.#source.file();
-		const revealed = this.#revealed();
-		return revealed ? withRevealed(file, revealed.forFile(file.path)) : file;
-	}
-
-	/** The gap below the last hunk as drawn, as far as a read has said how long the file is. */
-	#gapAtTheEnd(): ContextGap | null {
-		const last = this.#shownFile.hunks.at(-1);
-		if (last === undefined) return null;
-		return gapBelow(last, this.#revealed()?.forFile(this.path()).length ?? null);
+		await revealedIn(this.#source.extent())?.reveal(this.path(), read);
 	}
 }

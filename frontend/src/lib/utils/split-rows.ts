@@ -1,3 +1,4 @@
+import type { DiffLine } from '$lib/types';
 import type { DrawnLine } from '$lib/utils/drawn-file';
 import { facingLines, type Run, runsOf } from '$lib/utils/replacements';
 
@@ -25,6 +26,16 @@ export function splitRows(lines: DrawnLine[]): SplitRow[] {
 function rowsOf(run: Run<DrawnLine>): SplitRow[] {
 	if (run.kind === 'kept') return [rowOf(run.line, run.line)];
 	return facingLines(run).map(({ removed, added }) => rowOf(removed, added));
+}
+
+/** How many rows `splitRows` lays a hunk's lines out in, counted before they are made ready to draw. */
+export function splitRowCount(lines: readonly DiffLine[]): number {
+	return runsOf(lines.map((line) => ({ line }))).reduce((rows, run) => rows + rowsTaken(run), 0);
+}
+
+/** How many rows a run takes in two columns: a kept line one, a replacement as many as its longer side. */
+function rowsTaken(run: Run<unknown>): number {
+	return run.kind === 'kept' ? 1 : facingLines(run).length;
 }
 
 function rowOf(left: DrawnLine | null, right: DrawnLine | null): SplitRow {

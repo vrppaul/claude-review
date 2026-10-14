@@ -402,6 +402,17 @@
   its fields stop there.
 
 ### Fixed
+- **A file not drawn yet holds the room it takes.** Until the reader came
+  near a file, its section held room for its rows alone; drawn, it took the
+  header of each hunk and the bar for the lines left out around it too, 57
+  pixels more a hunk, so what lay below moved as the files on the way were
+  drawn: 7025 pixels over the 37 files of the look's long change not drawn
+  as it opens, and 1808 over its story's 58 pieces. The room now counts
+  those bars, the rows two columns lay a file out in, and a story's piece
+  by its own smaller header: the 38 files not drawn as it opens now hold 25
+  pixels too many, and the 58 pieces 17, as a row is a fraction of a pixel
+  shorter than counted. A thread under a line, a comment being written and
+  a line that wraps are still not counted.
 - **On a phone the page is no wider than the screen.** On a screen
   narrower than the diff reads at, the diff took the whole width of the
   row beside the rail of the file tree put away, and the page scrolled
