@@ -94,19 +94,32 @@ FOUR_ADDED = changed_file(
     hunk_of_lines(0, 1, added_line(1, "one"), added_line(2, "two"), added_line(3, "three"), added_line(4, "four")),
     status=FileStatus.ADDED,
 )
-ONE_ABOVE_AND_THE_THIRD_REWORDED = changed_file(
-    ADDED,
-    hunk_of_lines(
-        0,
-        1,
-        added_line(1, "zero"),
-        added_line(2, "one"),
-        added_line(3, "two"),
-        added_line(4, "Three"),
-        added_line(5, "four"),
-    ),
+# Two lines a change added below four it kept, and how a round's work leaves them: two lines put above
+# everything, and the first of the two said another way
+NUMBERS = "src/numbers.py"
+FIVE_AND_SIX = changed_file(NUMBERS, hunk_of_lines(5, 5, added_line(5, "five"), added_line(6, "six")))
+TWO_ABOVE_AND_FIVE_REWORDED = changed_file(
+    NUMBERS,
+    hunk_of_lines(1, 1, added_line(1, "first"), added_line(2, "second")),
+    hunk_of_lines(5, 7, added_line(7, "FIVE"), added_line(8, "six")),
+)
+# Four lines added whole, the second and the fourth alike, and how a round's work leaves them: a line put
+# above, and the fourth taken out, so a step of the fourth finds its like inside a step of the first two
+ALIKE = "src/alike.py"
+SECOND_AND_FOURTH_ALIKE = changed_file(
+    ALIKE,
+    hunk_of_lines(0, 1, added_line(1, "a"), added_line(2, "x"), added_line(3, "y"), added_line(4, "x")),
     status=FileStatus.ADDED,
 )
+ONE_ABOVE_AND_THE_FOURTH_GONE = changed_file(
+    ALIKE,
+    hunk_of_lines(0, 1, added_line(1, "new"), added_line(2, "a"), added_line(3, "x"), added_line(4, "y")),
+    status=FileStatus.ADDED,
+)
+# Four lines added whole that all say the same, and a fifth like them put above
+SAME = "src/same.py"
+FOUR_THE_SAME = changed_file(SAME, hunk_of_lines(0, 1, *[added_line(line, "x") for line in range(1, 5)]))
+FIVE_THE_SAME = changed_file(SAME, hunk_of_lines(0, 1, *[added_line(line, "x") for line in range(1, 6)]))
 # A file whose first line the change kept and whose second it added, and how a round's work leaves it: the same
 # two lines, both added
 KEPT_THEN_ADDED = changed_file(LETTERS, hunk_of_lines(1, 1, context_line(1, 1, "a"), added_line(2, "x")))
@@ -374,11 +387,29 @@ def test_a_line_the_round_added_outside_every_step_is_left_out_and_counted() -> 
     assert steps_of(story)[0].changed_since_told is False
 
 
+def test_a_step_a_line_of_which_was_said_another_way_moves_with_the_rest_of_it_marked() -> None:
+    """Pushed down and partly rewritten, it is found by what is left of it, never left on lines that say else."""
+    [told_step] = steps_of(followed(story_of(step(NUMBERS, 5, 6)), [FIVE_AND_SIX], [TWO_ABOVE_AND_FIVE_REWORDED]))
+
+    assert told_step.lines == LineSpan(first=7, last=8)
+    assert rows_of(told_step.piece) == ["FIVE", "six"]
+    assert told_step.changed_since_told is True
+
+
+def test_a_step_of_lines_that_all_say_the_same_follows_them_by_nearness() -> None:
+    """Nothing tells such lines apart: the place nearest where they were is taken, here where they were."""
+    [told_step] = steps_of(followed(story_of(step(SAME, 2, 3)), [FOUR_THE_SAME], [FIVE_THE_SAME]))
+
+    assert (told_step.lines, told_step.changed_since_told) == (LineSpan(first=2, last=3), False)
+
+
 def test_steps_of_a_file_that_would_meet_once_followed_all_stay_on_their_lines() -> None:
-    """The first step's lines followed would take a line the second, lost, still tells: no line is told twice."""
-    story = followed(story_of(step(ADDED, 1, 2), step(ADDED, 3, 4)), [FOUR_ADDED], [ONE_ABOVE_AND_THE_THIRD_REWORDED])
+    """The second step's line is found inside the first's lines followed: no line is told twice."""
+    story = followed(
+        story_of(step(ALIKE, 1, 2), step(ALIKE, 4, 4)), [SECOND_AND_FOURTH_ALIKE], [ONE_ABOVE_AND_THE_FOURTH_GONE]
+    )
 
     assert [(told_step.lines, told_step.changed_since_told) for told_step in steps_of(story)] == [
         (LineSpan(first=1, last=2), True),
-        (LineSpan(first=3, last=4), True),
+        (LineSpan(first=4, last=4), True),
     ]

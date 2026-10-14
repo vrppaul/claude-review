@@ -92,39 +92,41 @@
 ### Changed
 - **A story follows its code when the diff is taken again.** Each step
   looks for the lines it showed as a thread looks for its own, nearest
-  where they were, and is cut again from the take as it now stands; a step
-  whose code changed since it was told is marked, `changed_since_told` in
-  `GET /api/story`, and what the round added that no step tells is left out
-  beside it. The story is always followed from the story as told, so code
-  put back reads as told again. It is still the story of the round it was
-  told in; `moved_on` says the round a take first found the code moved on
-  in, which later takes keep while it stays so, and, where the round
-  changed them, how many changed lines no step told when it was told and
-  how many none tells now (`left_out`, else `null`). The page
-  reads the story again after the diff, keeping what was read of it: its
-  lines are the code under review again, and take comments. "The code has
-  changed since this story was told" is said only of a story the page
-  could not read again. A step whose code changed shows it as it now
-  stands under a number and reason that step back, and is named "Step 2.2,
-  changed after it was told"; its chapter says first, in the frame of its
-  doubt, "Changed after it was told. 3 steps in this chapter changed in
-  round 2. The code below is current; the reasons beside it may not be.";
-  and its node in the contents rings its number in the warning's colour,
-  in place of the check of a chapter read through, which it still is. The
-  round the story was told in is a tag beside its title, "Round 1" and a
-  green dot with "current" on the agent's colour, and once a later round
-  moved the code on, "Round 1 the code moved on in round 2" on the
-  warning's; the contents then say beside "Not in the story" how many
-  changed lines no step told when it was told, and how many none tells
-  now, "2 → 5", where the two differ, said in words to a screen reader.
-  Where the reader turned stories on, a story the code moved on under is
-  asked for again, by the one asking a first story is asked by: while the
-  files are read the header says "Story · writing", the warning ends "The
-  agent is updating them." while it is so, and turning stories off in the
-  gear stops it. The agent's `story_request` carries `stale`, `null` for a
-  first story: the round, each changed step's chapter, file and lines as
-  they now stand ("104-131"), and how many changed lines no step tells,
-  read as the agent takes the request.
+  where they were, or, where a round rewrote some of them, moves with the
+  first of them still said as it was; it is cut again from the take as it
+  now stands, and a step whose code changed since it was told is marked,
+  `changed_since_told` in `GET /api/story`, and what the round added that
+  no step tells is left out beside it. The story is always followed from
+  the story as told, so code put back reads as told again. It is still the
+  story of the round it was told in; `moved_on` says the round a take
+  first found the code moved on in, which later takes keep while it stays
+  so, and, where the round changed them, how many changed lines no step
+  told when it was told and how many none tells now (`left_out`, else
+  `null`). The page reads the story again after the diff, keeping what was
+  read of it: its lines are the code under review again, and take
+  comments. "The code has changed since this story was told" is said only
+  of a story the page could not read again. A step whose code changed
+  shows it as it now stands under a number and reason that step back, and
+  is named "Step 2.2, changed after it was told"; its chapter says first,
+  in the frame of its doubt, "Changed after it was told. 3 steps in this
+  chapter changed in round 2. The code below is current; the reasons
+  beside it may not be."; and its node in the contents rings its number
+  in the warning's colour, in place of the check of a chapter read
+  through, which it still is. The round the story was told in is a tag
+  beside its title, "Round 1" and a green dot with "current" on the
+  agent's colour, and once a later round moved the code on, "Round 1 the
+  code moved on in round 2" on the warning's; the contents then say
+  beside "Not in the story" how many changed lines no step told when it
+  was told, and how many none tells now, "2 → 5", where the two differ,
+  said in words to a screen reader. Where the reader turned stories on, a
+  story the code moved on under is asked for again, by the one asking a
+  first story is asked by: while the files are read the header says
+  "Story · writing", the warning ends "The agent is updating them." while
+  it is so, and turning stories off in the gear stops it. The agent's
+  `story_request` carries `stale`, `null` for a first story: the round,
+  each changed step's chapter, file and lines as they now stand
+  ("104-131"), and how many changed lines no step tells, read as the agent
+  takes the request.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

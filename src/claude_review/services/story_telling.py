@@ -9,12 +9,17 @@ what was left out, and a story cannot hide one.
 
 A round's work then moves the code under the story, and the story follows
 it onto each take of the change as a thread follows its lines: by what the
-lines say, looked for nearest where they were (`find_run`). Each step is cut
+lines say, looked for nearest where they were (`find_run`), and where the
+round rewrote some of them, by what is left of them. Each step is cut
 again by the same rule, and marked where what it shows is not what it was
 told with; what no step tells is worked out again. A story is followed from
 the story as it was told, every time, so code put back as it was reads as
 told again.
 """
+
+from typing import Self
+
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile, DiffLine, LineSide, LineSpan
@@ -28,6 +33,29 @@ from claude_review.services.story_slices import PlacedFile, side_told_by
 STORY_REFUSED = "the story may not be told as it is written"
 # How far down a file the line after another stands
 NEXT_LINE = 1
+
+
+class _SideNow(BaseModel):
+    """One side of a file as a later take shows it: its lines in order, and every text any of them says.
+
+    Lines a side says nowhere are not looked for in it: a round that rewrote
+    a long step whole would otherwise have each of its lines looked for
+    alone through the whole file, which took seconds.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    lines: list[SideLine]
+    said: frozenset[str]
+
+    @classmethod
+    def of(cls, lines: list[SideLine]) -> Self:
+        """The side these lines make up, in order."""
+        return cls(lines=lines, said=frozenset(line.content for line in lines))
+
+    def says_all_of(self, lines: list[SideLine]) -> bool:
+        """Whether each of these lines says what some line of this side says."""
+        return all(line.content in self.said for line in lines)
 
 
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory:
@@ -93,25 +121,25 @@ def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan]:
     the lines it was told of, which never meet: a line is told once, and the
     steps of a file are told apart by where they start.
     """
-    lines_now = {side: side_lines(file, side) for side in LineSide}
-    moved = [_moved_lines(step, lines_now) for step in steps]
+    sides_now = {side: _SideNow.of(side_lines(file, side)) for side in LineSide}
+    moved = [_moved_lines(step, sides_now) for step in steps]
     if any(met is not None for met in first_met(moved)):
         return [step.lines for step in steps]
     return moved
 
 
-def _moved_lines(step: ToldStep, lines_now: dict[LineSide, list[SideLine]]) -> LineSpan:
-    """A step's lines moved as the lines its piece shows moved: on the lines it was told of, unless all are found.
+def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpan:
+    """A step's lines moved as what is left of the lines its piece shows moved.
 
     The lines it shows, on the side its file is told by, are runs that follow
     one another, broken where a hunk ends. Its first line moves as the first
-    run moved, and its last as the last; a step whose piece shows no line of
-    that side has nothing to look for, and stays.
+    run found moved, and its last as the last; a step nothing of which is
+    found, or whose piece shows no line of that side, stays.
     """
     side = side_told_by(step.piece)
     runs = _runs(side_lines(step.piece, side))
-    moves = [move for run in runs if (move := _how_far_moved(run, lines_now[side])) is not None]
-    if not runs or len(moves) != len(runs):
+    moves = [move for run in runs if (move := _how_far_moved(run, sides_now[side])) is not None]
+    if not moves:
         return step.lines
     return LineSpan(first=step.lines.first + moves[0], last=step.lines.last + moves[-1])
 
@@ -127,11 +155,27 @@ def _runs(lines: list[SideLine]) -> list[list[SideLine]]:
     return runs
 
 
-def _how_far_moved(run: list[SideLine], lines_now: list[SideLine]) -> int | None:
-    """How many lines further down a run now stands, where what it says stands nearest; None where it is gone."""
-    [first, *_] = run
-    found = find_run(lines_now, [line.content for line in run], near=first.number)
-    return None if found is None else lines_now[found].number - first.number
+def _how_far_moved(run: list[SideLine], side_now: _SideNow) -> int | None:
+    """How many lines further down a run now stands; None where no line of it is said as it was.
+
+    Where it stands whole, nearest where it was, it moved as that place
+    says. Where a round rewrote some of it, it moved as the first of its
+    lines still said as it was moved, each looked for alone nearest where it
+    stood: what is left of the run is where it now is.
+    """
+    whole = _how_far_found(run, side_now)
+    if whole is not None:
+        return whole
+    return next((moved for line in run if (moved := _how_far_found([line], side_now)) is not None), None)
+
+
+def _how_far_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
+    """How many lines further down these lines stand together, where what they say stands nearest; None if nowhere."""
+    if not side_now.says_all_of(lines):
+        return None
+    [first, *_] = lines
+    found = find_run(side_now.lines, [line.content for line in lines], near=first.number)
+    return None if found is None else side_now.lines[found].number - first.number
 
 
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> ToldStep:
