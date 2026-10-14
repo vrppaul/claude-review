@@ -48,6 +48,6 @@ How a part of the page is built is said at the top of its module; what eslint an
 - Whatever takes the reader to a thread or a file — a chip, a notice's list, a key — asks the `Navigator` and widens nothing itself.
 - Only the page's own ways through what is read go there directly: a file picked in the tree or in a story's contents to `FileSections`; a part of a story, picked in its contents or its chapter bar, to `ReadingParts`.
 - A component asks which view is on screen by its name (`review.views.onScreen.name === 'files'`), never by what it is not.
-- Only the switch in the header writes how the reader chose to read (`choose`). Taking them to something only one view draws changes what is on screen (`showFiles`, `showStory`) and leaves the choice alone.
+- `choose` writes how the reader chose to read, and eslint holds who may call it. Taking them to something only one view draws changes what is on screen (`showFiles`, `showStory`) and leaves the choice alone.
 - What hangs on a line's number — a thread, a comment being written — is drawn and taken only where the `Numbering` is the review's own.
 - A section that draws lines of a file is a `LinesSection`, whichever view draws it.
