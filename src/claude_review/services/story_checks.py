@@ -13,36 +13,40 @@ against the change: a step or a housekeeping file the change does not
 have, and a step that tells nothing the change did.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import CHAPTER_ID_RULE, CHAPTER_IDS, FIRST_LINE, LineSpan, runs_backwards, says_nothing
-from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
+from claude_review.domain.models import (
+    CHAPTER_ID_RULE,
+    CHAPTER_IDS,
+    FIRST_LINE,
+    ChapterText,
+    LineSpan,
+    OverviewText,
+    runs_backwards,
+    says_nothing,
+)
+from claude_review.domain.story import TEXT_LIMITS, Chapter, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
 from claude_review.services.story_slices import PlacedFile
 
 # The fields of a story's document, by the names the document's own models
 # give them: what a fault names its field by, since that is what the agent
-# wrote
+# wrote. Those a thread on the story's words names a block by too — the
+# overview's lines and lists, what a chapter says of itself — are the
+# domain's own names for them (`OverviewText`, `OverviewList`, `ChapterText`)
 TITLE = "title"
 OVERVIEW = "overview"
-TASK = "task"
-DONE = "done"
-DOUBT = "doubt"
 DIAGRAM = "diagram"
 MERMAID = "mermaid"
 CAPTION = "caption"
 LINKS = "links"
-DECISIONS = "decisions"
-TURNED_DOWN = "turned_down"
-LATER = "later"
 TEXT = "text"
 CHAPTER = "chapter"
 CHAPTERS = "chapters"
 ID = "id"
-WHY = "why"
 STEPS = "steps"
 FILE = "file"
 LINES = "lines"
@@ -143,23 +147,23 @@ def _texts_out_of_bounds(story: Story[Step], steps: list[StepInDocument]) -> Ite
     for index, chapter in enumerate(story.chapters):
         yield from _id_faults((CHAPTERS, index, ID), chapter.id)
         yield from _text_faults((CHAPTERS, index, TITLE), chapter.title, StoryText.CHAPTER_TITLE)
-        yield from _text_faults((CHAPTERS, index, WHY), chapter.why, StoryText.CHAPTER_WHY)
-        yield from _text_faults((CHAPTERS, index, DOUBT), chapter.doubt, StoryText.CHAPTER_DOUBT)
+        yield from _text_faults((CHAPTERS, index, ChapterText.WHY), chapter.why, StoryText.CHAPTER_WHY)
+        yield from _text_faults((CHAPTERS, index, ChapterText.DOUBT), chapter.doubt, StoryText.CHAPTER_DOUBT)
     for written in steps:
         yield from _text_faults((*written.path, REASON), written.step.reason, StoryText.STEP_REASON)
 
 
 def _overview_texts_out_of_bounds(overview: StoryOverview) -> Iterator[FieldFault]:
     """Every text of the overview that says nothing or too much: its three lines, its drawing, what it lists."""
-    yield from _text_faults((OVERVIEW, TASK), overview.task, StoryText.TASK)
-    yield from _text_faults((OVERVIEW, DONE), overview.done, StoryText.DONE)
-    yield from _text_faults((OVERVIEW, DOUBT), overview.doubt, StoryText.DOUBT)
+    yield from _text_faults((OVERVIEW, OverviewText.TASK), overview.task, StoryText.TASK)
+    yield from _text_faults((OVERVIEW, OverviewText.DONE), overview.done, StoryText.DONE)
+    yield from _text_faults((OVERVIEW, OverviewText.DOUBT), overview.doubt, StoryText.DOUBT)
     if overview.diagram is not None:
         yield from _blank_faults((OVERVIEW, DIAGRAM, MERMAID), overview.diagram.mermaid)
         yield from _text_faults((OVERVIEW, DIAGRAM, CAPTION), overview.diagram.caption, StoryText.CAPTION)
-    for name, items in _item_lists(overview).items():
+    for listed, items in overview.lists().items():
         for index, item in enumerate(items):
-            yield from _text_faults((OVERVIEW, name, index, TEXT), item.text, StoryText.ITEM)
+            yield from _text_faults((OVERVIEW, listed, index, TEXT), item.text, StoryText.ITEM)
 
 
 def _text_faults(path: FieldPath, text: str | None, kind: StoryText) -> Iterator[FieldFault]:
@@ -220,9 +224,9 @@ def _links_to_no_chapter(story: Story[Step]) -> Iterator[FieldFault]:
     """Every link the overview makes to a chapter the story does not have."""
     known = frozenset(chapter.id for chapter in story.chapters)
     overview = story.overview
-    for name, items in _item_lists(overview).items():
+    for listed, items in overview.lists().items():
         for index, item in enumerate(items):
-            yield from _link_faults((OVERVIEW, name, index, CHAPTER), item.chapter, known)
+            yield from _link_faults((OVERVIEW, listed, index, CHAPTER), item.chapter, known)
     if overview.diagram is not None:
         for part, chapter in overview.diagram.links.items():
             yield from _link_faults((OVERVIEW, DIAGRAM, LINKS, part), chapter, known)
@@ -287,7 +291,8 @@ def _lines_told_twice(steps: list[StepInDocument]) -> list[FieldFault]:
     neither. Which of them should tell it is the agent's to say, so each of
     them is refused.
     """
-    told_twice = (fault for of_one_file in _steps_by_file(steps).values() for fault in _told_twice_in(of_one_file))
+    of_each_file = steps_by_file(steps, lambda written: written.step.file)
+    told_twice = (fault for of_one_file in of_each_file.values() for fault in _told_twice_in(of_one_file))
     return sorted(told_twice, key=lambda fault: fault.path)
 
 
@@ -306,12 +311,16 @@ def _told_twice_in(of_one_file: list[StepInDocument]) -> Iterator[FieldFault]:
             yield FieldFault(path=(*written.path, LINES), reason=told_twice)
 
 
-def _steps_by_file(steps: list[StepInDocument]) -> dict[str, list[StepInDocument]]:
-    """The steps told of each file, in the order the story tells them."""
-    by_file: dict[str, list[StepInDocument]] = {}
-    for written in steps:
-        by_file.setdefault(written.step.file, []).append(written)
-    return by_file
+def steps_by_file[HeldStep](steps: list[HeldStep], file_of: Callable[[HeldStep], str]) -> dict[str, list[HeldStep]]:
+    """These steps by the file each tells, each file's in the order given.
+
+    A step comes as whoever asks holds one — by itself, or where it stands
+    in its document — so what file it tells is read off it by `file_of`.
+    """
+    of_each_file: dict[str, list[HeldStep]] = {}
+    for step in steps:
+        of_each_file.setdefault(file_of(step), []).append(step)
+    return of_each_file
 
 
 def _files_named_twice(housekeeping: list[str]) -> Iterator[FieldFault]:
@@ -327,11 +336,6 @@ def _steps_of(chapters: list[Chapter[Step]]) -> list[StepInDocument]:
         for chapter_index, chapter in enumerate(chapters)
         for step_index, step in enumerate(chapter.steps)
     ]
-
-
-def _item_lists(overview: StoryOverview) -> dict[str, list[OverviewItem]]:
-    """The lists of the overview, each by the field that holds it."""
-    return {DECISIONS: overview.decisions, TURNED_DOWN: overview.turned_down, LATER: overview.later}
 
 
 def _repeated_at(names: list[str]) -> list[int]:

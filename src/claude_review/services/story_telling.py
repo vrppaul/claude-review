@@ -25,7 +25,7 @@ from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile, DiffLine, LineSide, LineSpan
 from claude_review.domain.story import Chapter, FollowedStep, LeftOut, Step, StepNow, Story, ToldStep, ToldStory
 from claude_review.services.anchor_service import SideLine, find_run, side_lines
-from claude_review.services.story_checks import document_faults, one_met_by_each, placement_faults
+from claude_review.services.story_checks import document_faults, one_met_by_each, placement_faults, steps_by_file
 from claude_review.services.story_slices import PlacedFile, side_told_by
 
 # What a story refused is refused with, before its faults are said one by one
@@ -84,9 +84,7 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory[ToldStep]:
     if faults:
         raise StoryRefusedError(STORY_REFUSED, faults)
     chapters = [_told_chapter(chapter, change) for chapter in story.chapters]
-    lines_told = {
-        path: [step.lines for step in steps] for path, steps in _steps_of_each_file(_steps_of(story.chapters)).items()
-    }
+    lines_told = {path: [step.lines for step in steps] for path, steps in _steps_of_each_file(story.chapters).items()}
     return story.told(chapters, _left_out(lines_told, story.housekeeping, files, change))
 
 
@@ -105,8 +103,7 @@ def follow(told: ToldStory[ToldStep], files: list[DiffFile]) -> ToldStory[Follow
     """
     change = {file.path: PlacedFile(file) for file in files}
     followed = {
-        path: _followed_steps(steps, change.get(path))
-        for path, steps in _steps_of_each_file(_steps_of(told.chapters)).items()
+        path: _followed_steps(steps, change.get(path)) for path, steps in _steps_of_each_file(told.chapters).items()
     }
     chapters = [
         chapter.followed([followed[step.file][step.lines.first] for step in chapter.steps]) for chapter in told.chapters
@@ -272,17 +269,9 @@ def _left_out(
     ]
 
 
-def _steps_of[StepKind: Step](chapters: list[Chapter[StepKind]]) -> list[StepKind]:
-    """Every step of these chapters, in the order the story tells them."""
-    return [step for chapter in chapters for step in chapter.steps]
-
-
-def _steps_of_each_file[StepKind: Step](steps: list[StepKind]) -> dict[str, list[StepKind]]:
-    """These steps by the file they tell, each file's in the order given."""
-    steps_of_each_file: dict[str, list[StepKind]] = {}
-    for step in steps:
-        steps_of_each_file.setdefault(step.file, []).append(step)
-    return steps_of_each_file
+def _steps_of_each_file[StepKind: Step](chapters: list[Chapter[StepKind]]) -> dict[str, list[StepKind]]:
+    """The steps of these chapters by the file each tells, each file's in the order the story tells them."""
+    return steps_by_file([step for chapter in chapters for step in chapter.steps], lambda step: step.file)
 
 
 def _left_out_of(file: DiffFile, placed: PlacedFile, lines_told: list[LineSpan]) -> list[LeftOut]:

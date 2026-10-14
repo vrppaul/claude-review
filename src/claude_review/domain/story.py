@@ -21,7 +21,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, EpochMillis, LineSpan, thread_may_name
+from claude_review.domain.models import DiffFile, EpochMillis, LineSpan, OverviewList, thread_may_name
 
 
 class StoryPart(BaseModel):
@@ -107,6 +107,14 @@ class StoryOverview(StoryPart):
     decisions: list[OverviewItem]
     turned_down: list[OverviewItem]
     later: list[OverviewItem]
+
+    def lists(self) -> dict[OverviewList, list[OverviewItem]]:
+        """What the overview lists, each list by the name its field and a thread on its items go by."""
+        return {
+            OverviewList.DECISIONS: self.decisions,
+            OverviewList.TURNED_DOWN: self.turned_down,
+            OverviewList.LATER: self.later,
+        }
 
 
 class ToldFrom(StrEnum):

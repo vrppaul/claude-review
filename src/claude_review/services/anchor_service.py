@@ -32,7 +32,6 @@ from claude_review.domain.models import (
     LineSide,
     LineType,
     OverviewBlock,
-    OverviewList,
     OverviewText,
     ReasonBlock,
     StoryAnchor,
@@ -326,18 +325,13 @@ def _said_in(story: ToldStory[FollowedStep]) -> dict[StoryBlock, str]:
 
 def _overview_said(overview: StoryOverview) -> dict[StoryBlock, str | None]:
     """The overview's three lines, then every item of its lists, by their blocks."""
-    lists = {
-        OverviewList.DECISIONS: overview.decisions,
-        OverviewList.TURNED_DOWN: overview.turned_down,
-        OverviewList.LATER: overview.later,
-    }
     return {
         OverviewBlock(text=OverviewText.TASK): overview.task,
         OverviewBlock(text=OverviewText.DONE): overview.done,
         OverviewBlock(text=OverviewText.DOUBT): overview.doubt,
         **{
             ItemBlock(list=listed, item=place): item.text
-            for listed, items in lists.items()
+            for listed, items in overview.lists().items()
             for place, item in enumerate(items, start=FIRST_ITEM)
         },
     }
