@@ -33,6 +33,11 @@ CAPTION = "How the file is told"
 DRAWN = "flowchart LR\n  asked[Asked for] --> first[The first half] --> second[The second half]"
 # The same with its third line's arrow drawn twice, where mermaid's parser stops
 BROKEN = "flowchart LR\n  asked[Asked for] --> first[The first half]\n  first --> --> second[The second half]"
+# The same, asking in a directive of its own for nodes filled red
+SOURCES_OWN_FILL = "rgb(255, 0, 0)"
+DRAWN_IN_ITS_OWN_LOOK = '%%{init: {"themeCSS": ".node rect { fill: red; }"}}%%\n' + DRAWN
+# How a node's box is filled, as the browser draws it
+FILL_OF = "(box) => getComputedStyle(box).fill"
 # The nodes the page marks as leading somewhere, in the order mermaid draws them: the first half, the second
 LEADING_SOMEWHERE = "[data-role='diagram-link']"
 THE_SECOND_HALF = 1
@@ -77,6 +82,12 @@ async def review_drawn_broken(long_file_repo: Path, servers: ReviewServers) -> R
     return await _told(long_file_repo, servers, _told_in_two_chapters(BROKEN))
 
 
+@in_the_browsers_loop
+async def review_drawn_in_its_own_look(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose story's overview draws them, its source asking for a look of its own."""
+    return await _told(long_file_repo, servers, _told_in_two_chapters(DRAWN_IN_ITS_OWN_LOOK))
+
+
 async def _read_as_story(page: Page, review: RunningReview) -> None:
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
@@ -106,6 +117,16 @@ async def test_a_press_on_a_node_takes_the_reader_to_the_chapter_it_leads_to(
 
     # The overview's entry of the contents, the first chapter's, then the second's
     await expect(page.get_by_test_id("go-to-part").nth(2)).to_have_attribute("aria-current", "location")
+
+
+async def test_a_source_s_own_settings_do_not_change_the_look_the_page_draws_it_in(
+    review_drawn_in_its_own_look: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_drawn_in_its_own_look)
+
+    a_node = page.get_by_test_id("diagram-drawing").locator(LEADING_SOMEWHERE).first.locator("rect").first
+
+    assert await a_node.evaluate(FILL_OF) != SOURCES_OWN_FILL
 
 
 async def test_a_diagram_that_does_not_draw_says_where_it_breaks_and_shows_its_source(
