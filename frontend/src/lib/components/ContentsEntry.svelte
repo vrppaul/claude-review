@@ -24,7 +24,7 @@
 
 	const beingRead = $derived(review.parts.beingRead === part);
 	const read = $derived(review.story.progress.isRead(part));
-	// What the entry is called, with whether it is read through and how many threads hang in its part
+	// What the entry is called, with whether its part is read through; its name adds how many threads hang there
 	const called = $derived(read ? calledOnceRead(label) : label);
 </script>
 

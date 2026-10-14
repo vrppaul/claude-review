@@ -43,7 +43,7 @@ function threadsOnWordsSaid(words: string | null, block: StoryBlock, threads: Th
 	return words === null ? [] : threads.onBlock(block);
 }
 
-/** The threads on the overview's words, in the order it says them: its lines it says, then each of its lists. */
+/** The threads on the overview's words, in the order it says them: on each line it says, then on each of its lists. */
 export function threadsOnTheOverview(overview: ToldStory['overview'], threads: Threads): Thread[] {
 	const items = OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
 	return [
