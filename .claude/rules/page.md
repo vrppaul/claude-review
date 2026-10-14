@@ -11,13 +11,13 @@ How a part of the page is built is said at the top of its module; what eslint an
 
 - The page draws what the server says: a rule that decides from the review's state (what counts, what is stale, where a thread hangs) is the server's. The page keeps layout, what is in sight, keys, focus, scroll, the draft.
 - Svelte 5 runes; TypeScript in strict mode, no `any`.
-- The compiler takes a value read from a list or a table by position or key as possibly missing. Build so that holds, never check around it: a line carries its markup rather than sitting beside it in another list.
+- To the compiler a value read from a list or a table by position or key may be missing. Build so that holds, never check around it: a line carries its markup, not a list beside it.
 - A place the reader is at is the thing they are at (an id), not its position in a list that changes.
 - Find, walk or pair things; reach for an index only where the position is the meaning.
 - A function an interface asks for is written as a property (`label: (anchor: Kind) => string`), so the compiler holds it to its parameter types.
 - A component's module script exports nothing another module imports: eslint reads a `.svelte` import only through Svelte's catch-all declaration. A type or a function others use lives in a `.ts` module.
 - A callback handed to a child component or to `<svelte:window>` names its parameter's type; svelte-check holds it to the prop.
-- An object or array only ever replaced whole — what the server sent, a list rebuilt with `map`, `filter` or a spread — is `$state.raw`, never deep `$state`, which wraps every line of a diff in a proxy and pays for it on every read.
+- An object or array only ever replaced whole — what the server sent, a list rebuilt with `map`, `filter` or a spread — is `$state.raw`: deep `$state` wraps every line of a diff in a proxy.
 
 ## Parts and elements
 
@@ -25,15 +25,16 @@ How a part of the page is built is said at the top of its module; what eslint an
 - The page's own code never finds an element by test id or by a page-wide id. An element announces itself to whoever needs it, as every file section and thread does to `FileSections`.
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
 - Every new button, input, textarea and container gets a `data-testid`, for the tests to act on.
-- A change to what the reader sees is looked at in a browser before it is called done: light, dark and a narrow screen, and the page itself must not have scrolled. `scripts/look.py` is that look.
+- Markup a library draws (mermaid's `g.node`) is read by the library's names in the module that calls it, and gets its test ids there by `setAttribute`.
+- A change to what the reader sees is looked at in a browser before it is called done: light, dark and narrow, the page never scrolled. `scripts/look.py` is that look.
 
 ## Styling
 
-- A colour, a layer or a shadow is written once, in `frontend/src/styles/tokens.css`, for both themes. `frontend/src/styles/main.css` and the markup only name tokens.
+- A colour, a layer or a shadow is written once, in `frontend/src/styles/tokens.css`, for both themes. Every other stylesheet and the markup only name tokens.
 - A colour is named by what it means, never by its hue: the top of `frontend/src/styles/tokens.css` says whose each is.
 - A utility never overrides what a `cr-` class sets on the same element: change it with another `cr-` class, or use the utility in place of the class.
 - Markup carries no `style="…"` and no `z-` utility: a number only a component knows reaches the stylesheet as `style:--cr-name`, and a layer is a token.
-- What scrolls down the page is a `cr-scroller`, never a box a utility makes scroll. It is the box its contents are placed in, so words kept for a screen reader (`sr-only`) scroll with the rest and never stretch the page.
+- What scrolls down the page is a `cr-scroller`, never a box a utility makes scroll. Its contents are placed in it, so `sr-only` words scroll with them and never stretch the page.
 
 ## Panes and keys
 
