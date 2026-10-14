@@ -9,10 +9,11 @@
  * what was read is forgotten the moment that one is held here, whichever
  * read brings it, and stands with the story before until then.
  *
- * A story is pieces of the take of the change it was told of, and stays as
- * told when the diff is taken again: the page then holds a story of one
- * take beside threads and a diff of another, and says so by whose numbers
- * the story's lines carry.
+ * A story is pieces of one take of the change. When the diff is taken
+ * again the review follows the story onto the new take, and the page reads
+ * it again after the diff; until it does, or where it cannot, the page
+ * holds a story of one take beside threads and a diff of another, and says
+ * so by whose numbers the story's lines carry.
  *
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
@@ -131,7 +132,7 @@ export class ReviewStory {
 		this.#wait = $derived(this.#storyOrWait.kind === 'wait' ? this.#storyOrWait.wait : null);
 	}
 
-	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */
+	/** The story held, on a take of the change, with the round it was told in; null while the agent has told none. */
 	get held(): StoryHeld | null {
 		return this.#held;
 	}
@@ -193,10 +194,11 @@ export class ReviewStory {
 
 	/**
 	 * Whose numbers the lines of the story held carry: the review's own
-	 * while it was told of the take the page reads, another take's once the
-	 * diff was taken again and the story was not told again. One read just
-	 * before the diff it was told of lands is another take's until it does.
-	 * With no story held there are no lines to carry any.
+	 * while it is of the take the page reads, another take's once the diff
+	 * was taken again and the story followed onto it is not read yet, or
+	 * could not be. One read just before the diff it is of lands is another
+	 * take's until it does. With no story held there are no lines to carry
+	 * any.
 	 */
 	get numbering(): StoryNumbering {
 		const held = this.#held;

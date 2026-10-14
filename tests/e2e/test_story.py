@@ -3,7 +3,9 @@
 A story is the same review read another way: its steps take comments that
 hang on the file's own lines, and what it does not draw is one press away
 in the files, with the keyboard on it. When the diff is taken again under
-it, the story shows code that has moved on, says so, and takes nothing.
+it, the story follows its code and takes comments on it; one the page
+could not read again shows code that has moved on, says so, and takes
+nothing.
 Where the keyboard lands, and what a key does to what is not on screen,
 are only true in a browser.
 """
@@ -31,8 +33,9 @@ COMMITTED_FILES = {TOLD_FILE: "keep one\nfirst two\nkeep three\n", HOUSEKEEPING_
 THE_CHANGE = {TOLD_FILE: "keep one\nchanged two\nkeep three\n", HOUSEKEEPING_FILE: "another note\n"}
 # The told file as a round's work leaves it: two lines above the one the story told
 MOVED_ON = {TOLD_FILE: "new first\nnew second\nkeep one\nchanged two\nkeep three\n"}
-# The line the story's one step tells, as the step's piece numbers it
+# The line the story's one step tells, as the step's piece numbers it, and once two lines stand above it
 TOLD_LINE = "Comment on line 2"
+MOVED_LINE = "Comment on line 4"
 # The line the housekeeping file gained, which no piece of the story draws
 CHANGED_NOTE = "Comment on line 1"
 A_STORY = story_of(step(TOLD_FILE, 2, 2), housekeeping=(HOUSEKEEPING_FILE,))
@@ -250,14 +253,31 @@ async def test_the_way_to_what_a_story_does_not_draw_stands_at_the_far_end_of_wh
     assert await the_way.evaluate(RIGHT_OF) == await said.evaluate(RIGHT_INSIDE_ITS_PADDING)
 
 
-async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(
+async def _take_again(review: RunningReview, repository: Path, files: dict[str, str]) -> None:
+    """Leave the working tree as a round's work would, and take the diff again."""
+    write_files(repository, files)
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post(RETAKE_ROUTE, json={})
+
+
+async def test_a_story_followed_onto_the_diff_taken_again_shows_its_code_where_it_now_stands_and_takes_a_comment(
     review: RunningReview, changed_repo: Path, page: Page
 ) -> None:
     await _read_as_story(page, review)
 
-    write_files(changed_repo, MOVED_ON)
-    async with AsyncClient(base_url=review.url) as agent:
-        await agent.post(RETAKE_ROUTE, json={})
+    await _take_again(review, changed_repo, MOVED_ON)
+
+    await _comment_on(page, page.get_by_test_id("story-piece"), MOVED_LINE, "still this word?")
+    await expect(page.get_by_test_id("story-moved-on")).to_have_count(0)
+
+
+async def test_a_story_the_page_could_not_read_again_after_the_code_moved_on_says_so_and_takes_no_comment(
+    review: RunningReview, changed_repo: Path, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    await page.route(f"**{STORY_ROUTE}", lambda route: route.abort())
+
+    await _take_again(review, changed_repo, MOVED_ON)
 
     await expect(page.get_by_test_id("story-moved-on")).to_contain_text(
         "The code has changed since this story was told."
@@ -270,13 +290,12 @@ async def test_a_story_the_code_has_moved_on_from_says_so_and_takes_no_comment(
     await expect(page.get_by_test_id("comment-input")).to_have_count(0)
 
 
-async def test_deep_in_a_story_the_code_has_moved_on_from_the_page_still_says_so(
+async def test_deep_in_a_story_the_page_could_not_read_again_after_the_code_moved_on_it_still_says_so(
     review_of_a_long_file: RunningReview, long_file_repo: Path, page: Page
 ) -> None:
     await _read_as_story(page, review_of_a_long_file)
-    write_files(long_file_repo, {LONG_FILE: "a line above them all\n"})
-    async with AsyncClient(base_url=review_of_a_long_file.url) as agent:
-        await agent.post(RETAKE_ROUTE, json={})
+    await page.route(f"**{STORY_ROUTE}", lambda route: route.abort())
+    await _take_again(review_of_a_long_file, long_file_repo, {LONG_FILE: "a line above them all\n"})
     moved_on = page.get_by_test_id("story-moved-on")
     await moved_on.wait_for()
 

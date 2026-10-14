@@ -98,8 +98,11 @@
   beside it. The story is always followed from the story as told, so code
   put back reads as told again. It is still the story of the round it was
   told in; `moved_on` says the round the code moved on in, and how many
-  changed lines no step told when it was told. A page that reads the story
-  again shows the code under review, and takes comments on it.
+  changed lines no step told when it was told. The page reads the story
+  again after the diff, keeping what was read of it: its lines are the
+  code under review again, and take comments. "The code has changed since
+  this story was told" is said only of a story the page could not read
+  again.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

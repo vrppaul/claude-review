@@ -5,7 +5,7 @@ import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
-import { fakeServer, keepingSettings } from '../fake-server';
+import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
 import { openReview } from '../review';
@@ -711,10 +711,11 @@ describe('a story told of the take of the change the page reads', () => {
 		expect(screen.queryByTestId('story-moved-on')).toBeNull();
 	});
 
-	it('says the code has changed since it was told, once the diff is taken again under it', async () => {
+	it('says the code has changed since it was told, once the diff is taken again under it and the story followed onto it cannot be read', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files, take: A_LATER_TAKE }));
+		server.refuse('GET /api/story', SERVER_ERROR, 'the review fell over');
 		render(ReviewScreen, { props: { review } });
 
 		handOverNext(review, { type: 'diff', file_count: 3, changes: null });

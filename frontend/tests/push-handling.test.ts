@@ -7,7 +7,7 @@ import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
-import { contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
+import { A_LATER_TAKE, contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment, storyComment } from './new-comment';
@@ -23,6 +23,13 @@ function untouched(path: string) {
 
 // What the story said to doubt, which a thread on it quotes
 const DOUBT_SAID = 'Whether an image is checked before it is kept.';
+
+/** A server a retake lands from, holding no story: the page reads the story again after the retaken diff. */
+function serverTellingNoStory(): FakeServer {
+	const server = fakeServer();
+	server.answer('GET /api/story', storyResponse());
+	return server;
+}
 
 let review: Review;
 
@@ -191,7 +198,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it("counts the review's files after a retake, not those of a narrower base on screen", async () => {
-		const server = fakeServer();
+		const server = serverTellingNoStory();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		// A narrower base shows one file of the review's three
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], base: sinceRound(1) }));
@@ -204,7 +211,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('takes one retake in at a time, so threads never follow onto a diff older than the one shown', async () => {
-		const server = fakeServer();
+		const server = serverTellingNoStory();
 		const follows = server.hold('POST /api/anchors/follow');
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
 		const retake: ServerPush = { type: 'diff', file_count: 1, changes: null };
@@ -220,7 +227,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('says the tree moved again when it moved while the retaken diff was on its way', async () => {
-		const server = fakeServer();
+		const server = serverTellingNoStory();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], moved: 2 }));
 
@@ -232,7 +239,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('says the tree moved after a retake, though the reader waved away as many files before it', async () => {
-		const server = fakeServer();
+		const server = serverTellingNoStory();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
 		handOverNext(review, { type: 'changed', moved_count: 1 });
@@ -246,7 +253,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('says one file as one', async () => {
-		const server = fakeServer();
+		const server = serverTellingNoStory();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')] }));
 
@@ -254,6 +261,35 @@ describe('what the server pushes, taken in', () => {
 		await settled();
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('diff retaken · 1 file');
+	});
+
+	describe('with a story held', () => {
+		// The story the review followed onto the diff taken again, and what the reader had read of it
+		const FOLLOWED = storyHeld({}, { take: A_LATER_TAKE });
+		const CHAPTER_READ = 'ch-1';
+
+		beforeEach(() => {
+			review = openReview({ files: [untouched('a.py')], story: storyHeld() });
+			review.story.progress.markRead(CHAPTER_READ);
+			const server = fakeServer();
+			server.answer('POST /api/anchors/follow', { anchors: [] });
+			server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], take: A_LATER_TAKE }));
+			server.answer('GET /api/story', storyResponse({ held: FOLLOWED }));
+		});
+
+		it('reads the story the review followed onto the diff taken again, so its lines are the review’s own', async () => {
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await settled();
+
+			expect([review.story.held, review.story.numbering]).toEqual([FOLLOWED, 'the-reviews']);
+		});
+
+		it('keeps what was read of the story followed, and offers no new one', async () => {
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await settled();
+
+			expect([review.story.progress.isRead(CHAPTER_READ), review.story.arrival]).toEqual([true, 'none']);
+		});
 	});
 });
 
