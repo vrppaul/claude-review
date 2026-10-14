@@ -31,23 +31,25 @@
 			<span class="cr-faint ml-auto text-xs">{filesAndSteps(chapter.files.length, chapter.steps.length)}</span>
 		</header>
 	{/snippet}
-	<!-- Why its changes belong together, and where to doubt them: each may be asked about -->
-	<div data-testid="chapter-why-voice" class="cr-agent-voice">
-		<AskableBlock block={chapterText(told.id, 'why')} words={told.why} testId="chapter-why-block">
-			<p data-testid="chapter-why">{told.why}</p>
-		</AskableBlock>
-	</div>
+	<!-- Why its changes belong together, in the agent's voice, and where to doubt them, in a warning: each
+		may be asked about, and what is asked hangs below its frame -->
+	<AskableBlock block={chapterText(told.id, 'why')} words={told.why} testId="chapter-why-block" frame="cr-agent-voice">
+		<p data-testid="chapter-why">{told.why}</p>
+	</AskableBlock>
 	{#if told.doubt}
 		{@const doubt = chapterText(told.id, 'doubt')}
-		<!-- As deep as the band reaches, so a band over the doubt stays inside its warning -->
-		<div class="rounded-r border-l-2 border-warning bg-(--cr-warning-tint) py-2">
-			<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block">
-				<p data-testid="chapter-doubt">
-					<span class="block text-xs font-semibold text-warning">{blockLabel(doubt)}</span>
-					{told.doubt}
-				</p>
-			</AskableBlock>
-		</div>
+		<!-- The warning as deep as the band reaches, so a band over the doubt stays inside it -->
+		<AskableBlock
+			block={doubt}
+			words={told.doubt}
+			testId="chapter-doubt-block"
+			frame="rounded-r border-l-2 border-warning bg-(--cr-warning-tint) py-2"
+		>
+			<p data-testid="chapter-doubt">
+				<span class="block text-xs font-semibold text-warning">{blockLabel(doubt)}</span>
+				{told.doubt}
+			</p>
+		</AskableBlock>
 	{/if}
 
 	{#each chapter.steps as step (step.section)}

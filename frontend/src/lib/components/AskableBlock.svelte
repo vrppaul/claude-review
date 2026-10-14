@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import { blockKey, blockLabel } from '$lib/anchors/story';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
@@ -16,10 +17,24 @@
 		testId: string;
 		/** The block itself, as its part of the story draws it: what the story heads it with, and its words. */
 		children: Snippet;
+		/**
+		 * The frame its words stand in where they have one of their own, as its
+		 * part of the story draws it: the band stays inside the frame, and what
+		 * hangs under the block hangs below it. None for a block that shares
+		 * the frame of the blocks around it.
+		 */
+		frame?: ClassValue;
 	}
 
-	let { block, words, testId, children }: Props = $props();
+	let { block, words, testId, children, frame }: Props = $props();
 	const review = useReview();
+
+	// What the offer says
+	const ASK_ABOUT_THIS = 'Ask about this';
+	// What stands between those words and the block's label in the offer's name
+	const NAME_SEPARATOR = ': ';
+	// The offer's name, for whoever cannot see which block it stands over: "Ask about this: Doubt"
+	const name = $derived([ASK_ABOUT_THIS, blockLabel(block)].join(NAME_SEPARATOR));
 
 	let asking: HTMLButtonElement | undefined = $state();
 
@@ -37,15 +52,14 @@
 	}
 </script>
 
-<!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is
-	pointed at, it offers "Ask about this"; what is asked hangs under it as a thread, as under a line -->
-<div data-testid={testId}>
+{#snippet band()}
 	<div data-testid="askable-band" class={['cr-askable', (threads.length > 0 || field) && 'cr-askable-held']}>
 		{@render children()}
 		<button
 			bind:this={asking}
 			type="button"
 			data-testid="ask-about-this"
+			aria-label={name}
 			class="cr-ask"
 			onclick={() => review.threads.writing.askAbout(block, words)}
 		>
@@ -61,9 +75,22 @@
 			>
 				<path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" />
 			</svg>
-			Ask about this
+			{ASK_ABOUT_THIS}
 		</button>
 	</div>
+{/snippet}
+
+<!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is
+	pointed at, it offers "Ask about this"; what is asked hangs under it as a thread, as under a line, and
+	outside any frame of the block's own -->
+<div data-testid={testId}>
+	{#if frame}
+		<div data-testid="askable-frame" class={frame}>
+			{@render band()}
+		</div>
+	{:else}
+		{@render band()}
+	{/if}
 	{#each threads as thread (thread.id)}
 		<CommentThread {thread} />
 	{/each}

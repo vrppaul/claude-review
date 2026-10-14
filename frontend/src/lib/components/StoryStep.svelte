@@ -25,14 +25,20 @@
 	the step: it is "Step 1.2" to whoever cannot see where it stands, and the piece under it says its
 	file and lines once -->
 {#snippet numberAndReason()}
-	<!-- A reason may be asked about, its number banded with it; a step of a file no thread can name takes none -->
-	<div class="cr-agent-voice mb-2">
+	<!-- A reason may be asked about, its number banded with it, and what is asked hangs below the agent's
+		voice; a step of a file no thread can name takes none -->
+	<div class="mb-2">
 		{#if askable !== null}
-			<AskableBlock block={stepReason(told.file, told.lines.first)} words={askable} testId="step-reason-block">
+			<AskableBlock
+				block={stepReason(told.file, told.lines.first)}
+				words={askable}
+				testId="step-reason-block"
+				frame="cr-agent-voice"
+			>
 				{@render numberWithReason(askable)}
 			</AskableBlock>
 		{:else}
-			<div class="cr-voice-inset">{@render numberWithReason(told.reason)}</div>
+			<div class="cr-agent-voice cr-voice-inset">{@render numberWithReason(told.reason)}</div>
 		{/if}
 	</div>
 {/snippet}

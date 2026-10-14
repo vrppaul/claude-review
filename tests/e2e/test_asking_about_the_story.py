@@ -114,6 +114,19 @@ async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neit
     assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) != unbanded
 
 
+async def test_a_thread_on_a_chapters_own_words_hangs_below_the_frame_they_stand_in(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    why = page.get_by_test_id("chapter-why-block")
+
+    await _ask_about(page, why, "Why do these belong together?")
+
+    # The frame holds the words and their band, and ends with them: the thread under them is no part of it
+    frame_ends = await why.get_by_test_id("askable-frame").evaluate(BOTTOM_OF)
+    assert frame_ends == await why.get_by_test_id("askable-band").evaluate(BOTTOM_OF)
+
+
 async def test_a_thread_on_the_story_deleted_gives_the_keyboard_back_to_what_offered_its_block(
     review: RunningReview, page: Page
 ) -> None:

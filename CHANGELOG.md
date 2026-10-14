@@ -7,9 +7,12 @@
   by the keyboard, every block of the agent's words — the Task, Done and
   Doubt of the overview, each thing its lists hold, a chapter's why and
   where to doubt it, a step's reason — is banded and offers "Ask about
-  this", floating over the block's top edge so no word moves. The comment
-  is written under the block, with Ask, Save and Cancel as on a line of
-  code, and its thread hangs there, the block banded stronger meanwhile.
+  this", floating over the block's top edge so no word moves; a screen
+  reader names each by its block, "Ask about this: Doubt". The comment is
+  written under the block, inviting "Ask about this…", with Ask, Save and
+  Cancel as on a line of code, and its thread hangs there, the block banded
+  stronger meanwhile: below the frame of a chapter's why, its warning of
+  where to doubt, or a step's reason, never inside it.
   The replies, the finish pane and the panel name it `Story · Doubt`;
   picked there, it brings the story on screen at it, and `n` and `p` walk
   the story's threads in the order it says what they hang on. A blue dot

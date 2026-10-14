@@ -55,6 +55,13 @@ const EVERY_OTHER_BLOCK = [
 	}
 ];
 
+// The blocks whose words stand in a frame of their own, by the test id of what draws each
+const FRAMED_BLOCKS = [
+	{ called: "a chapter's why", drawnIn: 'chapter-why-block' },
+	{ called: 'where to doubt a chapter', drawnIn: 'chapter-doubt-block' },
+	{ called: "a step's reason", drawnIn: 'step-reason-block' }
+];
+
 let review: Review;
 
 /** Ask about a block of the overview, by its test id, and write a comment on it. */
@@ -79,6 +86,16 @@ describe("the overview's three lines", () => {
 		}
 	});
 
+	it('each name their offer by the line, so that whoever cannot see which line it stands over hears it', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const names = ['overview-task', 'overview-done', 'overview-doubt'].map((block) =>
+			within(screen.getByTestId(block)).getByTestId('ask-about-this').getAttribute('aria-label')
+		);
+
+		expect(names).toEqual(['Ask about this: Task', 'Ask about this: Done', 'Ask about this: Doubt']);
+	});
+
 	it('open a comment under the block asked about, headed by what the story heads it with, which may ask straight away', async () => {
 		render(ReviewScreen, { props: { review } });
 
@@ -87,6 +104,14 @@ describe("the overview's three lines", () => {
 		const field = within(screen.getByTestId('overview-doubt')).getByTestId('comment-box');
 		expect(within(field).getByText('Doubt')).toBeTruthy();
 		expect(within(field).getByTestId('ask-now')).toBeTruthy();
+	});
+
+	it('invite a comment in the words of their offer', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		await userEvent.setup().click(within(screen.getByTestId('overview-task')).getByTestId('ask-about-this'));
+
+		expect(screen.getByTestId('comment-input').getAttribute('placeholder')).toBe('Ask about this…');
 	});
 
 	it('take a comment as a thread on the words of the block, drawn under it alone and named as the story heads it', async () => {
@@ -131,6 +156,26 @@ describe("the overview's three lines", () => {
 			expect(review.threads.all.map((thread) => thread.anchor)).toMatchObject([{ kind: 'story', block }]);
 			expect(within(asked).getAllByTestId('comment-thread')).toHaveLength(1);
 			expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+		}
+	);
+
+	it.each(FRAMED_BLOCKS)(
+		'hang what is written on $called, and its thread, below the frame the words stand in',
+		async ({ drawnIn }) => {
+			review = openReview({ files, story: TOLD_WHOLE, facts: AGENT_ATTACHED });
+			review.views.choose('story');
+			render(ReviewScreen, { props: { review } });
+			const asked = screen.getByTestId(drawnIn);
+			const frame = within(asked).getByTestId('askable-frame');
+
+			await userEvent.setup().click(within(asked).getByTestId('ask-about-this'));
+			expect(within(asked).getByTestId('comment-box')).toBeTruthy();
+			expect(within(frame).queryByTestId('comment-box')).toBeNull();
+			await userEvent.setup().type(screen.getByTestId('comment-input'), 'Why so?');
+			await userEvent.setup().click(screen.getByTestId('save-comment'));
+
+			expect(within(asked).getAllByTestId('comment-thread')).toHaveLength(1);
+			expect(within(frame).queryByTestId('comment-thread')).toBeNull();
 		}
 	);
 
