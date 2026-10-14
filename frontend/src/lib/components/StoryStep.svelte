@@ -4,7 +4,7 @@
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
-	import { alsoInChapters, linesSaid, stepNamed } from './story-words';
+	import { alsoInChapters, changedStepNamed, linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
@@ -19,15 +19,18 @@
 	const told = $derived(step.told);
 	// Its reason, where the reader may ask about it
 	const askable = $derived(askableReason(told));
+	// What its heading is named, with whether a round changed its code after it was told
+	const named = $derived(told.changed_since_told ? changedStepNamed(number) : stepNamed(number));
 </script>
 
 <!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
 	the step: it is "Step 1.2" to whoever cannot see where it stands, and the piece under it says its
-	file and lines once -->
+	file and lines once. A step a round changed after it was told shows the code as it now stands under
+	a number and reason that step back, and is named so -->
 {#snippet numberAndReason()}
 	<!-- A reason may be asked about, its number banded with it, and what is asked hangs below the agent's
 		voice; a step of a file no thread can name takes none -->
-	<div class="mb-2">
+	<div class={['mb-2', told.changed_since_told && 'cr-step-changed']}>
 		{#if askable !== null}
 			<AskableBlock
 				block={stepReason(told.file, told.lines.first)}
@@ -45,11 +48,7 @@
 
 {#snippet numberWithReason(reason: string | null)}
 	<div class="flex gap-3">
-		<h3
-			data-testid="step-number"
-			aria-label={stepNamed(number)}
-			class="pt-0.5 font-mono text-xs font-normal text-(--cr-agent)"
-		>
+		<h3 data-testid="step-number" aria-label={named} class="pt-0.5 font-mono text-xs font-normal text-(--cr-agent)">
 			{number}
 		</h3>
 		{#if reason}

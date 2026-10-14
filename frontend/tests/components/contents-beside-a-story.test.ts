@@ -232,6 +232,43 @@ describe('the contents beside a story, as the reader scrolls', () => {
 	});
 });
 
+describe('the contents of a story whose code a round changed after it was told, read through', () => {
+	// The first chapter's second step shows code the second round changed; nothing the second chapter shows changed
+	const FOLLOWED = storyHeld(
+		{
+			chapters: [
+				toldChapter('ch-1', [toldStep('src/a.py', 1), { ...toldStep('src/b.py', 5), changed_since_told: true }], {
+					title: 'The beginnings'
+				}),
+				toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
+			]
+		},
+		{ moved_on: { round: 2, left_out_when_told: 0 } }
+	);
+
+	beforeEach(() => {
+		scriptTheScroll();
+		review = openReview({ files, story: FOLLOWED });
+		review.views.choose('story');
+		review.story.contents.chapters.forEach((chapter) => review.story.progress.markRead(chapter.part));
+		render(ReviewScreen, { props: { review } });
+	});
+
+	it('draws the number of a chapter with a changed step in its node, in place of the check of one read through', () => {
+		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
+			'Overview',
+			'1 The beginnings',
+			'The end'
+		]);
+	});
+
+	it('still names a chapter with a changed step as read through', () => {
+		const contents = within(screen.getByTestId('contents'));
+
+		expect(contents.getByRole('button', { name: 'Chapter 1: The beginnings, read' })).toBeTruthy();
+	});
+});
+
 describe('the contents of a story that tells every change, and names no housekeeping', () => {
 	it('says nothing of what is left out, nor of housekeeping', () => {
 		review = openReview({ files, story: storyHeld() });

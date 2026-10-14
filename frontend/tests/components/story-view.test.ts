@@ -4,7 +4,9 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
+import type { StoryHeld, ToldStep } from '$lib/types';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
+import { said } from '../elements';
 import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
@@ -907,6 +909,73 @@ describe('the files, read where a story could be', () => {
 
 		expect(screen.getByTestId('diff-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-moved-on')).toBeNull();
+	});
+});
+
+describe('a story whose code a round changed after it was told', () => {
+	// The round the code moved on in, and a story whose first chapter has these steps, marked as a round changed them
+	const MOVED_ON_IN = 2;
+	function followedWith(first: ToldStep[]): StoryHeld {
+		return storyHeld(
+			{
+				...TOLD.story,
+				chapters: [toldChapter('ch-1', first, { title: 'The beginnings' }), ...TOLD.story.chapters.slice(1)]
+			},
+			{ moved_on: { round: MOVED_ON_IN, left_out_when_told: 1 } }
+		);
+	}
+	const changed = (step: ToldStep): ToldStep => ({ ...step, changed_since_told: true });
+
+	it('says so first under the head of a chapter with steps it changed, how many, and in which round', () => {
+		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), changed(toldStep('b.py', 5))]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings] = screen.getAllByTestId('story-chapter');
+		const inOrder = beginnings.querySelectorAll<HTMLElement>(
+			'[data-testid="part-head"], [data-testid="chapter-changed"], [data-testid="chapter-why-block"]'
+		);
+
+		expect([...inOrder].map((element) => element.dataset.testid)).toEqual([
+			'part-head',
+			'chapter-changed',
+			'chapter-why-block'
+		]);
+		expect(said(within(beginnings).getByTestId('chapter-changed'))).toBe(
+			'Changed after it was told. 2 steps in this chapter changed in round 2. The code below is current; the reasons beside it may not be.'
+		);
+	});
+
+	it('says one step as one', () => {
+		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(said(screen.getByTestId('chapter-changed'))).toContain('1 step in this chapter changed in round 2.');
+	});
+
+	it('says nothing of it in a chapter none of whose steps it changed', () => {
+		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [, theEnd] = screen.getAllByTestId('story-chapter');
+
+		expect(within(theEnd).queryByTestId('chapter-changed')).toBeNull();
+	});
+
+	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {
+		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings] = screen.getAllByTestId('story-chapter');
+
+		expect(
+			within(beginnings)
+				.getAllByTestId('step-number')
+				.map((number) => number.getAttribute('aria-label'))
+		).toEqual(['Step 1.1, changed after it was told', 'Step 1.2']);
 	});
 });
 

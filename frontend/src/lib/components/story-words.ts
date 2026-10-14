@@ -32,6 +32,13 @@ const BETWEEN_NUMBERS = ', ';
 const ALSO_IN = 'also in';
 // What is said of a part, or of some of the chapters, the reader has read through
 const READ = 'read';
+// What a step whose code a round changed after the story was told is said to be, to whoever cannot see it step back
+const CHANGED_AFTER_TOLD = 'changed after it was told';
+
+/** What heads the warning of a chapter whose code a round changed after the story was told. */
+export const CHANGED_AFTER_TOLD_HEAD = 'Changed after it was told.';
+/** What that warning says of the code under it, and of the reasons beside it. */
+export const CODE_BELOW_IS_CURRENT = 'The code below is current; the reasons beside it may not be.';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -54,6 +61,16 @@ export function linesSaid({ first, last }: StepLines): string {
 /** A step as its heading names it to whoever cannot see where it stands: "Step 1.2". */
 export function stepNamed(number: string): string {
 	return `${A_STEP} ${number}`;
+}
+
+/** The same of a step whose code a round changed after it was told: "Step 1.2, changed after it was told". */
+export function changedStepNamed(number: string): string {
+	return `${stepNamed(number)}, ${CHANGED_AFTER_TOLD}`;
+}
+
+/** How many of a chapter's steps a round changed, and which round: "3 steps in this chapter changed in round 2." */
+export function stepsChangedIn(steps: number, round: number): string {
+	return `${counted(steps, STEPS)} in this ${A_CHAPTER} changed in round ${round}.`;
 }
 
 /** What the overview's part of the page is called, to whoever goes through the page by its parts. */

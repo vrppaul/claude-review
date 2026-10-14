@@ -15,22 +15,28 @@
 		node: Snippet;
 		/** How many threads hang in the part: on its words, or on the lines of its pieces. */
 		threads: number;
+		/** Whether a round changed the code of any of its steps after the story was told: a chapter's alone can be. */
+		changed?: boolean;
 		/** What hangs under it: the files a chapter tells. */
 		children?: Snippet;
 	}
 
-	let { part, label, title, node, threads, children }: Props = $props();
+	let { part, label, title, node, threads, changed = false, children }: Props = $props();
 	const review = useReview();
 
 	const beingRead = $derived(review.parts.beingRead === part);
 	const read = $derived(review.story.progress.isRead(part));
+	// Read through, its node holds a check, unless a step changed since: then it holds what it held unread
+	const checked = $derived(read && !changed);
 	// What the entry is called, with whether its part is read through; its name adds how many threads hang there
 	const called = $derived(read ? calledOnceRead(label) : label);
 </script>
 
 <!-- An entry of a story's contents: a node on the axis and the part's title, one press to its head.
 	A part read through steps back, a check in its node and its stretch of the axis in the colour of
-	what is done. The node is for the eye; the entry's name says the same in words -->
+	what is done. A chapter a round changed code of after it was told rings its number in the warning's
+	colour in place of the check, read through or not. The node is for the eye; the entry's name says
+	whether the part is read through in words -->
 <li data-testid="contents-entry" class={['cr-contents-entry', read && 'cr-contents-entry-read']}>
 	<button
 		type="button"
@@ -42,9 +48,14 @@
 	>
 		<span
 			aria-hidden="true"
-			class={['cr-contents-node', read && 'cr-contents-node-read', beingRead && 'cr-contents-node-current']}
+			class={[
+				'cr-contents-node',
+				checked && 'cr-contents-node-read',
+				changed && 'cr-contents-node-changed',
+				beingRead && 'cr-contents-node-current'
+			]}
 		>
-			{#if read}
+			{#if checked}
 				<Icon name="check" data-testid="part-read-mark" class="h-2.5 w-2.5" />
 			{:else}
 				{@render node()}

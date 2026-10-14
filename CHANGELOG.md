@@ -102,7 +102,13 @@
   again after the diff, keeping what was read of it: its lines are the
   code under review again, and take comments. "The code has changed since
   this story was told" is said only of a story the page could not read
-  again.
+  again. A step whose code changed shows it as it now stands under a
+  number and reason that step back, and is named "Step 2.2, changed after
+  it was told"; its chapter says first, in the frame of its doubt, "Changed
+  after it was told. 3 steps in this chapter changed in round 2. The code
+  below is current; the reasons beside it may not be."; and its node in
+  the contents rings its number in the warning's colour, in place of the
+  check of a chapter read through, which it still is.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

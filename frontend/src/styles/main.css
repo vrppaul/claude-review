@@ -1082,6 +1082,21 @@
 	border-left-style: dashed;
 }
 
+/*
+ * A warning a chapter of a story carries, among the agent's words: the
+ * warning's colour down the same edge, over a wash of it. Where to doubt
+ * the chapter, and that a round changed its code after it was told.
+ */
+.cr-warning-frame {
+	border-left: var(--cr-voice-axis) solid var(--color-warning);
+	border-radius: 0 0.25rem 0.25rem 0;
+	background: var(--cr-warning-tint);
+}
+/* The number and reason of a step a round changed after it was told step back: the code under them is what stands now */
+.cr-step-changed {
+	opacity: 0.6;
+}
+
 /* A thread on a block of the agent's words hangs flush with it, its tail pointing up at what the block is headed with */
 .cr-askable-block {
 	--cr-thread-inset: 0;
@@ -1314,6 +1329,15 @@
 	border-color: var(--cr-done-border);
 	background-image: linear-gradient(var(--cr-done-soft), var(--cr-done-soft));
 	color: var(--cr-done);
+}
+/*
+ * The node of a chapter a round changed code of after the story was told:
+ * its number ringed in the warning's colour. Written before the rule of the
+ * part being read, which keeps the reader's ring
+ */
+.cr-contents-node-changed {
+	border-color: var(--color-warning);
+	color: var(--color-warning);
 }
 /* The node of the part being read, in the reader's own mark */
 .cr-contents-node-current {

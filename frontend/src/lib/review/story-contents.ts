@@ -2,10 +2,10 @@
  * What a story lists of itself, read off its steps once for the story held.
  *
  * A story says its chapters and the steps of each. Which files a chapter
- * tells, and which other chapters tell a file of it, no field of it says:
- * both are read off its steps. Every head the story draws asks one or
- * another, and the contents beside it ask them all, so they are worked out
- * here once.
+ * tells, which other chapters tell a file of it, and how many of its steps
+ * a round changed after the story was told, no field of it says: each is
+ * read off its steps. Every head the story draws asks one or another, and
+ * the contents beside it ask them all, so they are worked out here once.
  *
  * Here too every step, and whatever the story leaves out of a file, is
  * given what its section of the page is known by: this is the one walk of
@@ -48,6 +48,8 @@ export interface ChapterListed {
 	files: FileListed[];
 	/** Its steps, in the order it tells them. */
 	steps: StepListed[];
+	/** How many of its steps show code a round changed after the story was told: what its node and its warning say. */
+	changedSteps: number;
 }
 
 /** What a story leaves out of a file, as the story lists it. */
@@ -136,7 +138,8 @@ function chapterListed(told: ToldChapter, place: number, telling: ChaptersTellin
 		files.set(step.file, listed);
 		steps.push({ told: step, section, place: stepPlace, fileListed: listed });
 	}
-	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps };
+	const changedSteps = told.steps.filter((step) => step.changed_since_told).length;
+	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps, changedSteps };
 }
 
 /** What a story lists of itself. */

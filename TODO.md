@@ -106,8 +106,8 @@ tests. Remove items when done — don't check them off.
 - [ ] `refactor(story)`: a told story is frozen, and the rows its pieces
       show are the take's own `DiffLine`s, which are not.
 - [ ] `feat(story)`: the agent is not told its story moved on when the
-      diff is taken again, and the page marks nothing of it (story step 10,
-      pieces 3-5).
+      diff is taken again, and the page says nothing of it in the story's
+      title row nor beside what it leaves out (story step 10, pieces 4-5).
 - [ ] `fix(story)`: a story told while the working tree has moved on from
       the take on screen is checked against the take, and nobody is told.
 - [ ] `fix(cli)`: `story` prints every file it left out on its one line.

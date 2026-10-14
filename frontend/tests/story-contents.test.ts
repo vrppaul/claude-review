@@ -101,6 +101,19 @@ describe('what a story lists of itself', () => {
 
 		expect(c.alsoIn).toEqual([]);
 	});
+
+	it('counts the steps of each chapter whose code a round changed after it was told', () => {
+		const changed = { ...toldStep('a.py', 1), changed_since_told: true };
+		const changedToo = { ...toldStep('b.py', 1), changed_since_told: true };
+		const followed = toldStory({
+			chapters: [
+				toldChapter('ch-1', [changed, toldStep('a.py', 5), changedToo]),
+				toldChapter('ch-2', [toldStep('c.py', 1)])
+			]
+		});
+
+		expect(contentsOf(followed).chapters.map((chapter) => chapter.changedSteps)).toEqual([2, 0]);
+	});
 });
 
 describe('the pieces of what a story lists', () => {
