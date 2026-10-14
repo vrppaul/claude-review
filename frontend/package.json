@@ -46,6 +46,7 @@
   "dependencies": {
     "highlight.js": "^11.11.1",
     "marked": "^18.0.0",
-    "marked-highlight": "^2.2.4"
+    "marked-highlight": "^2.2.4",
+    "mermaid": "^12.2.0"
   }
 }

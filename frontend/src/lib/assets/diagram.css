@@ -1,0 +1,58 @@
+/*
+ * How a story's diagram is drawn: mermaid's look, rule by rule, in the
+ * page's tokens.
+ *
+ * Mermaid writes the look of a drawing into a style inside its svg, each
+ * rule scoped by the drawing's id, and takes this sheet into that style
+ * after its own, scoped the same way (lib/dom/diagram.ts). So each rule
+ * here names what one of mermaid's names, and outranks it by coming later.
+ * The drawing lies in the page, so a token here is the page's, in either
+ * theme.
+ */
+
+/* A node: drawn as the page's raised surfaces are */
+.node rect,
+.node circle,
+.node ellipse,
+.node polygon,
+.node path {
+	fill: var(--color-base-200);
+	stroke: var(--color-base-300);
+}
+
+/* The node the agent drew as the heart of the change (`name:::heart`): edged in the agent's colour */
+.node.heart rect,
+.node.heart circle,
+.node.heart ellipse,
+.node.heart polygon,
+.node.heart path {
+	stroke: var(--cr-agent);
+}
+
+/* The words of a node, and of a line between two: the page's own colour */
+.label text,
+span {
+	fill: var(--color-base-content);
+	color: var(--color-base-content);
+}
+
+/* The lines between nodes, and their heads: quieter than the nodes they join */
+.flowchart-link,
+.edgePaths .path {
+	stroke: var(--cr-faint);
+}
+.marker,
+.arrowheadPath {
+	fill: var(--cr-faint);
+	stroke: var(--cr-faint);
+}
+
+/* What a line says, on the page's ground */
+.edgeLabel,
+.edgeLabel p,
+.labelBkg {
+	background-color: var(--color-base-100);
+}
+.edgeLabel rect {
+	fill: var(--color-base-100);
+}
