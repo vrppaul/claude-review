@@ -10,7 +10,7 @@ paths:
 
 - A test states a requirement, not how the code meets it: what the user cares about ("diff shows all changed files"), never an internal data structure ("parse_hunk returns a list").
 - Its name reads as the requirement: "file content is preserved line by line", not "returns list of DiffLine with type CONTEXT". `tests/integration/test_diff_reading.py` is the standard.
-- `tests/unit/` is pure logic with no I/O, `tests/integration/` real git and a real server, `tests/e2e/` the browser and whatever else needs the built page or the page's own tools.
+- `tests/unit/` is pure logic with no I/O, `tests/integration/` real git and a real server, `tests/e2e/` the page in the suite's browser, `tests/scripts/` the tools of `scripts/` that serve the built page or run its tools.
 - A property that must hold whatever the input is a hypothesis test, and on the page a fast-check one.
 
 ## How a test is written
