@@ -7,13 +7,18 @@
 		label: string;
 		/** Called once it closes, by Escape, a press outside it or its own words, for whoever drew it to stop drawing it. */
 		onClose: () => void;
-		/** What it holds, handed the way to close it as Escape does, so the browser gives the keyboard back. */
-		children: Snippet<[close: () => void]>;
+		/**
+		 * What it holds, handed the way to close it as Escape does, so the browser gives the keyboard back,
+		 * and the way to close it and then do something, for what must find the keyboard back where it was.
+		 */
+		children: Snippet<[close: () => void, closeThen: (then: () => void) => void]>;
 	}
 
 	let { label, onClose, children, class: sized, ...marked }: Props = $props();
 
 	let dialog = $state<HTMLDialogElement>();
+	// What the dialog's own words asked to be done once it has closed: nothing, where it is closed any other way
+	let doneOnceClosed: (() => void) | null = null;
 	// Whether the press now under way began on the backdrop: a selection dragged out of the
 	// dialog is let go there too, and must not close it
 	let pressedOnBackdrop = false;
@@ -38,6 +43,24 @@
 	function close() {
 		dialog?.close();
 	}
+
+	/**
+	 * Close it, and then do what its words asked for. The dialog closes
+	 * first, so the browser gives the keyboard back to where it was, and
+	 * what was asked follows.
+	 */
+	function closeThen(then: () => void) {
+		doneOnceClosed = then;
+		close();
+	}
+
+	/** It has closed: whoever drew it is told, and then what its words asked for is done, once. */
+	function closed() {
+		const asked = doneOnceClosed;
+		doneOnceClosed = null;
+		onClose();
+		asked?.();
+	}
 </script>
 
 <!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`: a layer above the page,
@@ -49,11 +72,11 @@
 	bind:this={dialog}
 	aria-label={label}
 	class={['cr-dialog', sized]}
-	onclose={onClose}
+	onclose={closed}
 	onpointerdown={notePress}
 	onclick={closeOnBackdrop}
 >
 	<div class="cr-dialog-body">
-		{@render children(close)}
+		{@render children(close, closeThen)}
 	</div>
 </dialog>

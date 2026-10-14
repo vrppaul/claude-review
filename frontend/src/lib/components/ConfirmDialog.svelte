@@ -16,25 +16,11 @@
 	}
 
 	let { question, goAhead, keep, onGoAhead, onClose, testId }: Props = $props();
-
-	// Whether the reader went ahead. The dialog closes first, so the browser
-	// gives the keyboard back to where it was, and what was asked follows
-	let wentAhead = false;
-
-	function goAheadAndClose(close: () => void) {
-		wentAhead = true;
-		close();
-	}
-
-	function closed() {
-		onClose();
-		if (wentAhead) onGoAhead();
-	}
 </script>
 
 <!-- A question before something written is lost: the safe answer comes first, and takes the keyboard -->
-<Dialog label={question} data-testid={testId} class="w-full max-w-sm" onClose={closed}>
-	{#snippet children(close: () => void)}
+<Dialog label={question} data-testid={testId} class="w-full max-w-sm" {onClose}>
+	{#snippet children(close: () => void, closeThen: (then: () => void) => void)}
 		<p class="mb-4 text-sm font-semibold">{question}</p>
 		<div class="flex justify-end gap-2">
 			<button type="button" data-testid="confirm-keep" class="btn btn-ghost btn-sm" onclick={close}>{keep}</button>
@@ -42,7 +28,7 @@
 				type="button"
 				data-testid="confirm-go-ahead"
 				class="btn btn-outline btn-sm"
-				onclick={() => goAheadAndClose(close)}
+				onclick={() => closeThen(onGoAhead)}
 			>
 				{goAhead}
 			</button>

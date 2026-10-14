@@ -126,6 +126,13 @@ tests. Remove items when done — don't check them off.
       stories are turned on again (`Review.wantStory`). The story view
       goes on saying "Asking the agent for a story", with the files as the
       one way on (`StoryWaiting.svelte`).
+- [ ] `fix(ui)`: a story the page reads only as it catches up, told in a
+      gap the review could not hand over, is held and never offered under
+      the switch: the page notes a story as arrived unseen only where it
+      heard it being told (`ReviewStory.readAnother`).
+- [ ] `fix(ui)`: the note of a story's arrival is as wide as the window
+      had room for when it was drawn (`ViewSwitch.svelte`, `noteStandsAt`):
+      a window made narrower under it cuts it off until it is drawn again.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

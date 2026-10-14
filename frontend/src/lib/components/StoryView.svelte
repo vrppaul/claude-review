@@ -22,6 +22,12 @@
 	// Where what the reader waits on stands, while there is no story
 	let waitingRoom: HTMLElement | undefined = $state();
 
+	// A story drawn here is one the reader has been shown: one told while they read the files is new to
+	// them no longer
+	$effect(() => {
+		if (held !== null) review.story.seen();
+	});
+
 	// A story told takes the place of what the reader waited on, and whatever held the keyboard there
 	// goes with it. Looked at before the page redraws: the keyboard then goes to the head of the story,
 	// which is the head of its overview

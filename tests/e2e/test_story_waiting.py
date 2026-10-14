@@ -1,11 +1,14 @@
-"""E2E: what stands where a story will be while the reader waits for one, in a real browser.
+"""E2E: a reader asks for a story and waits for it, in a real browser.
 
-A reader who turned stories on reads the review as its story before there
-is one: what they wait on is drawn in its place, and changes under them as
-they stop the story, ask for it again, or the agent tells it. Each change
-takes away the control that held the keyboard, and the keyboard goes to
-what is drawn in its place. Where it lands, and where the words stand in
-their area, are only true in a browser.
+Story in the header asks before the first story is written, in a dialog
+that holds the keyboard and gives it back. A reader who turned stories on
+reads the review as its story before there is one: what they wait on is
+drawn in its place, and changes under them as they stop the story, ask for
+it again, or the agent tells it. Each change takes away the control that
+held the keyboard, and the keyboard goes to what is drawn in its place. A
+story told while they read the files is offered under the switch, and
+takes the keyboard from nothing. Where the keyboard lands, and where the
+words stand in their area, are only true in a browser.
 """
 
 from pathlib import Path
@@ -45,6 +48,9 @@ MIDDLE_OF = """(element) => {
 }"""
 # How near two middles stand that are the same: where an edge stands is not a whole number
 LESS_THAN_A_PIXEL = 1
+# Where an element's right edge is, in pixels from the left of the window, and how wide the window is
+RIGHT_OF = "(element) => element.getBoundingClientRect().right"
+WINDOW_WIDTH = "window.innerWidth"
 
 
 class Middle(BaseModel):
@@ -54,6 +60,31 @@ class Middle(BaseModel):
 
     across: float
     down: float
+
+
+class Answered(BaseModel):
+    """A way the question asked before stories are turned on is answered from the keyboard, and what is read after."""
+
+    model_config = ConfigDict(frozen=True)
+
+    how: str
+    keys: tuple[str, ...]
+    then_on_screen: str
+
+
+# The question opens with the keyboard on the way to turn stories on; the way to put it off comes next
+ANSWERS_BY_KEY = [
+    Answered(how="stories turned on", keys=("Enter",), then_on_screen="story-view"),
+    Answered(how="not now", keys=("Tab", "Enter"), then_on_screen="diff-view"),
+    Answered(how="Escape", keys=("Escape",), then_on_screen="diff-view"),
+]
+# What holds the keyboard, by the test id it carries: none, on the page itself
+HOLDS_THE_KEYBOARD = "document.activeElement.dataset.testid ?? null"
+# What Tab puts the keyboard on, press by press, from the way to turn stories on: the other answer, nothing
+# of the page while the keyboard is on the browser's own controls, and the first answer again
+ROUND_THE_QUESTION = ["stories-not-now", None, "turn-on-stories"]
+# A corner of the window, which the question stands in the middle of: a press there is a press outside it
+BESIDE_THE_QUESTION = (5, 5)
 
 
 @pytest.fixture
@@ -76,15 +107,37 @@ async def _an_agent_attaches(review: RunningReview) -> None:
         await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
 
 
-async def _wait_for_a_story(page: Page, review: RunningReview) -> None:
-    """Open the review, turn stories on behind the gear, and read the review as its story: there is none yet."""
+async def _the_agent_tells_the_story(review: RunningReview) -> None:
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+
+
+async def _open(page: Page, review: RunningReview) -> None:
+    """Open the review: a reader new to it reads it by its files."""
     await page.goto(review.url)
     await page.get_by_test_id("diff-view").wait_for()
+
+
+async def _open_with_stories_on(page: Page, review: RunningReview) -> None:
+    """Open the review and turn stories on behind the gear: the agent is asked for a story, and the files stay."""
+    await _open(page, review)
     await page.get_by_test_id("settings-toggle").click()
     await page.get_by_test_id("stories").check()
     await page.keyboard.press("Escape")
+
+
+async def _wait_for_a_story(page: Page, review: RunningReview) -> None:
+    """Open the review with stories on, and read it as its story: there is none yet."""
+    await _open_with_stories_on(page, review)
     await page.get_by_test_id("read-as-story").click()
     await page.get_by_test_id("story-waiting").wait_for()
+
+
+async def _ask_to_read_the_story(page: Page, review: RunningReview) -> None:
+    """Open the review with stories off, and press Story from the keyboard: the reader is asked first."""
+    await _open(page, review)
+    await page.get_by_test_id("read-as-story").press("Enter")
+    await page.get_by_test_id("story-opt-in").wait_for()
 
 
 async def _middle_of(page: Page, test_id: str) -> Middle:
@@ -144,8 +197,7 @@ async def test_a_story_told_under_the_keyboard_puts_the_keyboard_on_its_head(rev
     await _wait_for_a_story(page, review)
     await page.get_by_test_id("read-files-meanwhile").focus()
 
-    async with AsyncClient(base_url=review.url) as agent:
-        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    await _the_agent_tells_the_story(review)
 
     await expect(page.get_by_test_id("part-head").first).to_be_focused()
 
@@ -162,3 +214,93 @@ async def test_what_the_reader_waits_on_stands_in_the_middle_of_the_storys_area(
 
     assert abs(waited_on.across - area.across) < LESS_THAN_A_PIXEL
     assert abs(waited_on.down - area.down) < LESS_THAN_A_PIXEL
+
+
+async def test_the_question_before_stories_opens_with_the_keyboard_on_turning_them_on(
+    review: RunningReview, page: Page
+) -> None:
+    await _ask_to_read_the_story(page, review)
+
+    await expect(page.get_by_test_id("turn-on-stories")).to_be_focused()
+
+
+async def test_the_question_before_stories_holds_the_keyboard_until_it_is_answered(
+    review: RunningReview, page: Page
+) -> None:
+    """Tab goes to the other answer, out to what is the browser's own, and back to the first: never to the page."""
+    await _ask_to_read_the_story(page, review)
+
+    held_the_keyboard = []
+    for _ in ROUND_THE_QUESTION:
+        await page.keyboard.press("Tab")
+        held_the_keyboard.append(await page.evaluate(HOLDS_THE_KEYBOARD))
+
+    assert held_the_keyboard == ROUND_THE_QUESTION
+
+
+@pytest.mark.parametrize("answered", ANSWERS_BY_KEY, ids=lambda answered: answered.how)
+async def test_the_question_before_stories_gives_the_keyboard_back_to_story_however_it_is_answered(
+    review: RunningReview, page: Page, answered: Answered
+) -> None:
+    await _ask_to_read_the_story(page, review)
+
+    for key in answered.keys:
+        await page.keyboard.press(key)
+
+    await page.get_by_test_id("story-opt-in").wait_for(state="detached")
+    await expect(page.get_by_test_id(answered.then_on_screen)).to_be_visible()
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+
+async def test_a_press_outside_the_question_is_not_now_and_gives_the_keyboard_back_to_story(
+    review: RunningReview, page: Page
+) -> None:
+    await _ask_to_read_the_story(page, review)
+
+    await page.mouse.click(*BESIDE_THE_QUESTION)
+
+    await page.get_by_test_id("story-opt-in").wait_for(state="detached")
+    await expect(page.get_by_test_id("diff-view")).to_be_visible()
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+
+async def test_a_story_told_while_a_comment_is_written_leaves_the_keyboard_in_the_comment(
+    review: RunningReview, page: Page
+) -> None:
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await page.get_by_test_id("line-gutter").first.press("Enter")
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type("Half a thought")
+
+    await _the_agent_tells_the_story(review)
+    await page.get_by_test_id("story-ready").wait_for()
+    await page.keyboard.type(", and the rest")
+
+    await expect(page.get_by_test_id("comment-input")).to_be_focused()
+    await expect(page.get_by_test_id("comment-input")).to_have_value("Half a thought, and the rest")
+    await expect(page.get_by_test_id("diff-view")).to_be_visible()
+
+
+async def test_the_note_of_a_storys_arrival_stands_whole_in_a_narrow_window(review: RunningReview, page: Page) -> None:
+    """Its words wrap where the window has no room for them on one line: nothing of it is cut off at the edge."""
+    await page.set_viewport_size(NARROW)
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+
+    await _the_agent_tells_the_story(review)
+
+    assert await page.get_by_test_id("story-ready").evaluate(RIGHT_OF) < await page.evaluate(WINDOW_WIDTH)
+
+
+async def test_opening_a_story_from_the_note_of_its_arrival_puts_the_keyboard_on_story_in_the_header(
+    review: RunningReview, page: Page
+) -> None:
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await _the_agent_tells_the_story(review)
+
+    await page.get_by_test_id("open-story").press("Enter")
+
+    await expect(page.get_by_test_id("story-chapter")).to_be_visible()
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()

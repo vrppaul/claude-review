@@ -6,8 +6,6 @@
 
 	// How the control that opens a popover is made known to it, as part of what it is given to carry
 	const HELD_AS_CONTROL = createAttachmentKey();
-	// Where along the control the arrow points: its middle
-	const MIDDLE = 0.5;
 
 	/** What the control that opens a popover carries: spread on it, it says what it opens, and opens it. */
 	type TriggerProps = {
@@ -44,7 +42,7 @@
 	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import type { Placement } from './pane-placement';
+	import { arrowOffsetTo, type Placement } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -73,7 +71,7 @@
 	let keyboardHere = false;
 
 	// How far in from the edge the pane lines up with the arrow points
-	const arrowOffset = $derived(open && control ? control.offsetWidth * MIDDLE : 0);
+	const arrowOffset = $derived(open && control ? arrowOffsetTo(control) : 0);
 
 	const triggerProps = $derived<TriggerProps>({
 		'aria-haspopup': 'dialog',

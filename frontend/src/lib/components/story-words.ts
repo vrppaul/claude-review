@@ -80,12 +80,17 @@ export function calledOnceRead(called: string): string {
 	return `${called}, ${READ}`;
 }
 
+/** How many chapters a story has: "5 chapters", "1 chapter". */
+export function chaptersIn(chapters: number): string {
+	return counted(chapters, CHAPTERS);
+}
+
 /**
  * How many chapters a story has, as the head of its contents says: "5
  * chapters", and once the reader has read any of them through, "1 of 5 read".
  */
 export function chaptersCounted(chapters: number, read: number): string {
-	return read === 0 ? counted(chapters, CHAPTERS) : `${read} of ${chapters} ${READ}`;
+	return read === 0 ? chaptersIn(chapters) : `${read} of ${chapters} ${READ}`;
 }
 
 /** How much a chapter tells, as its head says: "3 files · 4 steps". */

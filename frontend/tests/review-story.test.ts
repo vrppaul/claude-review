@@ -212,3 +212,59 @@ describe('what the reader has read through of the story a page holds', () => {
 		expect(story.progress.isRead(A_PART)).toBe(false);
 	});
 });
+
+describe('a story told while the page is open', () => {
+	it('has arrived unseen once it is held', async () => {
+		fakeServer().answer('GET /api/story', holdingAStory());
+		const story = pageStory();
+
+		await story.readAnother();
+
+		expect(story.arrivedUnseen).toBe(true);
+	});
+
+	it('is unseen no more once the reader has been shown it', async () => {
+		fakeServer().answer('GET /api/story', holdingAStory());
+		const story = pageStory();
+		await story.readAnother();
+
+		story.seen();
+
+		expect(story.arrivedUnseen).toBe(false);
+	});
+
+	it('has not arrived while it could not be read: there is nothing to show', async () => {
+		fakeServer().refuse('GET /api/story', SERVER_ERROR);
+		const story = pageStory();
+
+		await story.readAnother().catch(() => undefined);
+
+		expect(story.arrivedUnseen).toBe(false);
+	});
+
+	it('has not arrived where the review holds none after all', async () => {
+		fakeServer().answer('GET /api/story', storyStanding());
+		const story = pageStory();
+
+		await story.readAnother();
+
+		expect(story.arrivedUnseen).toBe(false);
+	});
+});
+
+describe('a story the page did not hear being told', () => {
+	it('is not one that arrived unseen where the page read it as it opened', () => {
+		const story = pageStory({ standing: holdingAStory() });
+
+		expect(story.arrivedUnseen).toBe(false);
+	});
+
+	it('is not one that arrived unseen where the page read it only to catch up', async () => {
+		fakeServer().answer('GET /api/story', holdingAStory());
+		const story = pageStory();
+
+		await story.read();
+
+		expect(story.arrivedUnseen).toBe(false);
+	});
+});

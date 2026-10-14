@@ -75,6 +75,8 @@
 	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
 	/* The reader's mark round the node of the part of a story they are reading */
 	--cr-shadow-current-node: 0 0 0 3px var(--cr-mark-chip);
+	/* A line inside the edge of a control that leads to what the agent brought and the reader has not read */
+	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);

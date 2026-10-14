@@ -19,6 +19,12 @@
  * both come in one answer when the story is read, and the review tells
  * each change of the asking in between. What the reader is waiting on is
  * worked out from it (`story-wait.ts`), never kept.
+ *
+ * A story told while the page is open may land while the reader reads the
+ * files, and the page never changes the view for them: it notes that the
+ * story arrived unseen, until whoever draws it says the reader has seen it.
+ * The note is the page's own and lasts as long as the page: a reload opens
+ * on the story held, with nothing to say of how it came.
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
@@ -56,6 +62,8 @@ export class ReviewStory {
 	#held = $state.raw<StoryHeld | null>(null);
 	// How the reader's asking for a story stands, as the review last said: replaced whole, by a read or by what it tells
 	#asking = $state.raw<StoryAsking | null>(null);
+	// Whether the story held was told while the page was open, and the reader has not been shown it yet
+	#arrivedUnseen = $state(false);
 	// What the story lists of itself, read off its steps once for the story held
 	readonly #contents: StoryContents;
 	// And the pieces of what it lists, laid out once, not at every question asked of them
@@ -91,6 +99,20 @@ export class ReviewStory {
 	 */
 	get wait(): StoryWait | null {
 		return this.#wait;
+	}
+
+	/**
+	 * Whether the story held was told while this page was open and the
+	 * reader has not been shown it yet: what the header offers them, where
+	 * they are reading the files.
+	 */
+	get arrivedUnseen(): boolean {
+		return this.#arrivedUnseen;
+	}
+
+	/** The reader has been shown the story held: said by whoever draws it. */
+	seen(): void {
+		this.#arrivedUnseen = false;
 	}
 
 	/**
@@ -167,7 +189,7 @@ export class ReviewStory {
 	/**
 	 * Hold what the review answered of its story: the story, and how the
 	 * asking for one stands. Where the story is another the review was told,
-	 * nothing of it is read yet.
+	 * nothing of it is read yet, and the reader has not seen it.
 	 */
 	#hold({ held, asking }: StoryResponse): void {
 		this.#held = held;
@@ -175,5 +197,6 @@ export class ReviewStory {
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
 		this.#progress.forget();
+		this.#arrivedUnseen = held !== null;
 	}
 }

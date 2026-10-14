@@ -36,15 +36,15 @@ export class ReadingViews implements ViewsOnScreen {
 	/**
 	 * @param views each way this review is read
 	 * @param kept how the reader chose to read last, in whichever review
-	 * @param storyCanBeTold whether this review can be read as a story at all: one that cannot opens
-	 *   by its files, though the reader chose the story last
+	 * @param mayOpenAsStory whether this review may open as its story: any other opens by its files,
+	 *   though the reader chose the story last
 	 * @param diff the diff the files are read from, which a narrower base may be in force on
 	 */
-	constructor(views: Views, kept: KeptChoice, storyCanBeTold: boolean, diff: ReviewDiff) {
+	constructor(views: Views, kept: KeptChoice, mayOpenAsStory: boolean, diff: ReviewDiff) {
 		this.#views = views;
 		this.#kept = kept;
 		this.#diff = diff;
-		this.#nameOnScreen = $state(storyCanBeTold ? kept.name : FILES);
+		this.#nameOnScreen = $state(mayOpenAsStory ? kept.name : FILES);
 	}
 
 	/** The view the review is read in now. */

@@ -193,7 +193,7 @@ export class Review {
 				story: new StoryReading(this.story, this.threads)
 			},
 			this.layout.readingView,
-			this.story.canBeTold,
+			this.story.canBeTold && this.storyViewOpens,
 			this.diff
 		);
 		this.navigator = new Navigator(this.threads, this.sections, this.views);
@@ -298,6 +298,18 @@ export class Review {
 			// Nobody is waiting on this but the reader, so it is said where they will see it
 			this.conversation.note(diffNotTakenNote(error));
 		}
+	}
+
+	/**
+	 * Whether the story view opens without the reader being asked first:
+	 * they turned stories on, or a story is held already, told by an agent of
+	 * its own accord and so paid for. Where neither holds, reading the review
+	 * as its story means having one written, which spends the agent's tokens:
+	 * the reader is asked before that, and a review they open is read by its
+	 * files though they chose the story last.
+	 */
+	get storyViewOpens(): boolean {
+		return this.settings.current.stories || this.story.held !== null;
 	}
 
 	/**

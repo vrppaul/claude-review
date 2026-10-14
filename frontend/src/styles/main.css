@@ -332,6 +332,18 @@
 	color: var(--color-base-content);
 	font-weight: 600;
 }
+/* A segment whose view the agent is writing: said in the agent's colour, its dots with it */
+.cr-segment-writing {
+	color: var(--cr-agent);
+}
+.cr-segment-writing .cr-dot {
+	background: var(--cr-agent);
+}
+/* A segment whose view holds what the agent brought and the reader has not read */
+.cr-segment-unread {
+	color: var(--color-base-content);
+	box-shadow: var(--cr-shadow-unread-edge);
+}
 
 /* A chip the whole of which is the hit target, over a 16px checkbox */
 .cr-chip {
@@ -418,6 +430,16 @@
 /* What the dialog holds, inside its edge: a press here is not a press outside it */
 .cr-dialog-body {
 	padding: 1.5rem;
+}
+/* What something costs, said before the reader agrees to it: a warning's mark, and the words beside it */
+.cr-cost-note {
+	display: grid;
+	grid-template-columns: 1rem minmax(0, 1fr);
+	gap: 0.625rem;
+	padding: 0.75rem 0.875rem;
+	background: var(--cr-warning-tint);
+	border: 1px solid var(--cr-warning-border);
+	border-radius: 0.375rem;
 }
 
 /*
@@ -1299,6 +1321,20 @@
 .cr-popover-below-end::before {
 	right: var(--cr-arrow-offset);
 	translate: 50% 0;
+}
+/* A pane that says the agent brought something not read yet: its edge, and its arrow's, in that colour */
+.cr-popover-unread {
+	--cr-popover-edge: var(--cr-unread);
+}
+/*
+ * A pane the page puts by a control as a note: as wide as its words on one
+ * line, and no wider than the window has room for from where it stands,
+ * which whoever draws it says. Past that its words wrap.
+ */
+.cr-popover-note {
+	--cr-note-margin: 0.5rem;
+	width: max-content;
+	max-width: calc(100vw - var(--cr-note-stands-at) - var(--cr-note-margin));
 }
 .cr-finish-row:hover {
 	background: var(--cr-control-tint);
