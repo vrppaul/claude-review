@@ -36,19 +36,6 @@ class StoryHeld(BaseModel):
     take: int = Field(ge=FIRST_TAKE)
 
 
-class StoryStanding(BaseModel):
-    """How a review stands with its story: the one it holds, and the reader's asking for one.
-
-    Never both. Each is None in a review nobody has told a story of, or
-    asked one from.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    held: StoryHeld | None
-    asking: StoryAsking | None
-
-
 class ReviewStory:
     """The story told of the review's change, the last told in place of any before, and the asking for one until then.
 
@@ -68,9 +55,14 @@ class ReviewStory:
         self._telling = asyncio.Lock()
 
     @property
-    def standing(self) -> StoryStanding:
-        """The story held and the asking for one, as they stand together now."""
-        return StoryStanding(held=self._held, asking=self._asking)
+    def held(self) -> StoryHeld | None:
+        """The story held, as it was told: None while nobody has told one."""
+        return self._held
+
+    @property
+    def asking(self) -> StoryAsking | None:
+        """How the reader's asking for a story stands: None while nothing is asked, and once a story is held."""
+        return self._asking
 
     def ask(self) -> StoryAsking | None:
         """Begin the reader's asking for a story, now, unless a story is held or one is still awaited.

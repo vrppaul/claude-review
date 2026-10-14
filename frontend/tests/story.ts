@@ -59,9 +59,9 @@ export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<Sto
 	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, ...held };
 }
 
-/** What the review answers of its story: none told and none asked for, unless a test says one was. */
+/** What the review answers of its story: none told, unless a test says one was. */
 export function storyStanding(given: Partial<StoryResponse> = {}): StoryResponse {
-	return { held: null, asking: null, ...given };
+	return { held: null, ...given };
 }
 
 /**

@@ -49,9 +49,10 @@ from claude_review.presentation.wire.content import (
     FileWindowResponse,
     RetakeResponse,
     ReviewResponse,
+    StoryAsking,
     VersionsResponse,
 )
-from claude_review.presentation.wire.story import StoryResponse
+from claude_review.presentation.wire.story import StoryHeld, StoryResponse
 from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,
@@ -78,6 +79,7 @@ async def get_the_review(
     """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
     standing = review.standing()
     work = review.work_under_way()
+    asking = review.story_asking()
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
@@ -88,6 +90,7 @@ async def get_the_review(
         agent=AgentStatus.of(standing.agent),
         work=AgentWork.of(work) if work is not None else None,
         takes_a_story=standing.takes_a_story,
+        story_asking=StoryAsking.of(asking) if asking is not None else None,
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,
@@ -125,11 +128,12 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     """Say what story the review holds: the last the agent told of its change, each step with what it shows.
 
     None while nobody has told one, which is no refusal: a review is read
-    without a story as it always was. With it, how the reader's asking for
-    one stands: a page that opens while a story is awaited was told none of
-    it, and reads here what the pages open before it were told.
+    without a story as it always was. How the reader's asking for one
+    stands is read with the review's facts, which say how far the telling
+    had got.
     """
-    return StoryResponse.of(review.story_standing())
+    held = review.story_held()
+    return StoryResponse(held=StoryHeld.of(held) if held is not None else None)
 
 
 @router.post(

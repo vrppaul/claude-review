@@ -18,9 +18,9 @@ from typing import Annotated, Self
 from pydantic import ConfigDict, Field, PlainSerializer, PlainValidator, WithJsonSchema
 
 from claude_review.domain import models, story
-from claude_review.domain.models import MAX_PATH_LENGTH, EpochMillis
+from claude_review.domain.models import MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH, WireBool, WireModel
+from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH, WireModel
 from claude_review.presentation.wire.content import DiffFile
 from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 from claude_review.services.review import review_story
@@ -234,26 +234,10 @@ class StoryHeld(WireModel):
     take: int
 
 
-class StoryAsking(WireModel):
-    """The reader asking the agent for a story, and how far that has got."""
-
-    asked_at: EpochMillis
-    # When an agent took the request; None while none has
-    taken_at: EpochMillis | None
-    # Whether the reader stopped it
-    stopped: WireBool
-
-
 class StoryResponse(WireModel):
-    """Response for GET /api/story — the story the review holds, and how the reader's asking for one stands.
-
-    Read together, so a page never draws a moment with neither: no story is
-    held while one is asked for, and a story told ends the asking. Both are
-    None in a review nobody has told a story of or asked one from.
-    """
+    """Response for GET /api/story — the story the review holds, or none while nobody has told one."""
 
     held: StoryHeld | None
-    asking: StoryAsking | None
 
 
 class LeftOutOfFile(WireModel):

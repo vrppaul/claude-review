@@ -75,11 +75,11 @@ export function openReview({
 	leavePage();
 	openPage = openKeptReview(
 		{
-			facts: reviewResponse(facts),
+			facts: reviewResponse({ story_asking: asking, ...facts }),
 			firstDiff: diffResponse({ files, ...diff }),
 			held,
 			said,
-			story: { held: story, asking }
+			story
 		},
 		{ settings, layout: new PageLayout(), sound: new ReplySound(settings), theme: new PageTheme(settings) }
 	);

@@ -3,7 +3,7 @@ import { ReviewStory, type StoryOpening } from '$lib/review/review-story.svelte'
 import type { StoryResponse } from '$lib/types';
 import { A_LATER_TAKE, FIRST_TAKE } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings } from './fake-server';
-import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN } from './story';
+import { ASKED, storyHeld, storyStanding, TAKEN } from './story';
 
 /** What a reader who opens the review for the first time has read through of its story. */
 const NOTHING_READ: string[] = [];
@@ -41,7 +41,8 @@ function holdingAStory(): StoryResponse {
 function pageStory(given: Partial<StoryOpening> = {}): ReviewStory {
 	return new ReviewStory({
 		canBeTold: true,
-		standing: storyStanding(),
+		held: null,
+		asking: null,
 		partsRead: NOTHING_READ,
 		takeOnScreen: readingTheFirstTake,
 		agentAttached: nobodyAttached,
@@ -52,14 +53,14 @@ function pageStory(given: Partial<StoryOpening> = {}): ReviewStory {
 
 describe('what stands where the story is read', () => {
 	it('is what the reader waits on, while the review holds no story', () => {
-		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+		const story = pageStory({ asking: TAKEN });
 
 		expect(story.storyOrWait).toEqual({ kind: 'wait', wait: { kind: 'writing', asking: TAKEN } });
 	});
 
 	it('is the story, once the review holds one', () => {
 		const held = storyHeld();
-		const story = pageStory({ standing: storyStanding({ held }) });
+		const story = pageStory({ held });
 
 		expect(story.storyOrWait).toEqual({ kind: 'story', held });
 	});
@@ -89,7 +90,7 @@ describe('asking the agent for a story', () => {
 describe('stopping the story asked for', () => {
 	it('sends the stop to the review', async () => {
 		const server = takingStoryAskings();
-		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+		const story = pageStory({ asking: TAKEN });
 
 		await story.stop();
 
@@ -100,7 +101,7 @@ describe('stopping the story asked for', () => {
 		fakeServer().refuse('POST /api/story/cancel', SERVER_ERROR, 'the review fell over');
 		const saidInPanel: string[] = [];
 		const story = pageStory({
-			standing: storyStanding({ asking: TAKEN }),
+			asking: TAKEN,
 			sayInPanel: (words) => saidInPanel.push(words)
 		});
 
@@ -112,31 +113,43 @@ describe('stopping the story asked for', () => {
 
 describe('what a page holds of the asking for a story', () => {
 	it('is how the review said it stood as the page opened', () => {
-		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+		const story = pageStory({ asking: TAKEN });
 
 		expect(story.wait).toEqual({ kind: 'writing', asking: TAKEN });
 	});
 
 	it('is replaced whole by how the review says it stands next', () => {
-		const story = pageStory({ standing: storyStanding({ asking: ASKED }) });
+		const story = pageStory({ asking: ASKED });
 
 		story.learnAsking(TAKEN);
 
 		expect(story.wait).toEqual({ kind: 'writing', asking: TAKEN });
 	});
 
-	it('comes with the story read: one answer says both', async () => {
-		fakeServer().answer('GET /api/story', storyStanding({ asking: STOPPED }));
-		const story = pageStory();
+	it('ends once a story is held: one told ended it, though the review holds none again', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/story', holdingAStory());
+		const story = pageStory({ asking: TAKEN });
+		await story.read();
+		server.answer('GET /api/story', storyStanding());
 
 		await story.read();
 
-		expect(story.wait).toEqual({ kind: 'stopped' });
+		expect(story.wait).toEqual({ kind: 'unasked' });
+	});
+
+	it('ends with the story the page opens on, though the facts it opened with were read before it was told', async () => {
+		fakeServer().answer('GET /api/story', storyStanding());
+		const story = pageStory({ held: storyHeld(), asking: TAKEN });
+
+		await story.read();
+
+		expect(story.wait).toEqual({ kind: 'unasked' });
 	});
 
 	it('is nothing to wait on once a story is held', async () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
-		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+		const story = pageStory({ asking: TAKEN });
 
 		await story.read();
 
@@ -161,7 +174,7 @@ describe('the story a page holds', () => {
 
 	it('is none once the review holds none', async () => {
 		fakeServer().answer('GET /api/story', storyStanding());
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 
 		await story.read();
 
@@ -171,20 +184,20 @@ describe('the story a page holds', () => {
 
 describe('whose numbers the lines of the story held carry', () => {
 	it("are the review's own while the page reads the take the story was told of", () => {
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 
 		expect(story.numbering).toBe('the-reviews');
 	});
 
 	it("are another take's once the page reads another take of the change", () => {
-		const story = pageStory({ standing: holdingAStory(), takeOnScreen: readingALaterTake });
+		const story = pageStory({ held: storyHeld(), takeOnScreen: readingALaterTake });
 
 		expect(story.numbering).toBe('another-takes');
 	});
 
 	it("are the review's own again once the story held is one told of the take the page reads", async () => {
 		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({}, { take: A_LATER_TAKE }) }));
-		const story = pageStory({ standing: holdingAStory(), takeOnScreen: readingALaterTake });
+		const story = pageStory({ held: storyHeld(), takeOnScreen: readingALaterTake });
 
 		await story.read();
 
@@ -194,14 +207,14 @@ describe('whose numbers the lines of the story held carry', () => {
 
 describe('the pieces of the story a page holds', () => {
 	it('are laid out once for the story held, however often they are asked for', () => {
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 
 		expect(story.pieces).toBe(story.pieces);
 	});
 
 	it('are laid out afresh once another story is held', async () => {
 		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ title: 'Told again' }) }));
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 		const ofTheFirstStory = story.pieces;
 
 		await story.read();
@@ -219,7 +232,7 @@ describe('the pieces of the story a page holds', () => {
 describe('what the reader has read through of the story a page holds', () => {
 	it('stands while another story the review was told is on its way: the one before is still held', async () => {
 		const reads = fakeServer().hold('GET /api/story');
-		const story = pageStory({ standing: holdingAStory(), partsRead: [A_PART] });
+		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 
 		void story.readAnother();
 		await vi.waitFor(() => expect(reads.requests).toHaveLength(1));
@@ -229,7 +242,7 @@ describe('what the reader has read through of the story a page holds', () => {
 
 	it('is forgotten once that story is held: nothing of it is read yet', async () => {
 		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ title: 'Told again' }) }));
-		const story = pageStory({ standing: holdingAStory(), partsRead: [A_PART] });
+		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 
 		await story.readAnother();
 
@@ -238,7 +251,7 @@ describe('what the reader has read through of the story a page holds', () => {
 
 	it('stands with the story before, where the other could not be read', async () => {
 		fakeServer().refuse('GET /api/story', SERVER_ERROR);
-		const story = pageStory({ standing: holdingAStory(), partsRead: [A_PART] });
+		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 
 		await story.readAnother().catch(() => undefined);
 
@@ -248,7 +261,7 @@ describe('what the reader has read through of the story a page holds', () => {
 	it('is forgotten once the other story is held after all, read when the page caught up', async () => {
 		const server = fakeServer();
 		server.refuse('GET /api/story', SERVER_ERROR);
-		const story = pageStory({ standing: holdingAStory(), partsRead: [A_PART] });
+		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 		await story.readAnother().catch(() => undefined);
 		server.answer('GET /api/story', storyStanding({ held: storyHeld({ title: 'Told again' }) }));
 
@@ -259,7 +272,7 @@ describe('what the reader has read through of the story a page holds', () => {
 
 	it('stands when the page reads the story again only to catch up, and of a story told again before that too', async () => {
 		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ title: 'Told again' }) }));
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 		await story.readAnother();
 		story.progress.markRead(A_PART);
 
@@ -269,7 +282,7 @@ describe('what the reader has read through of the story a page holds', () => {
 	});
 
 	it('is forgotten when the story held is the one the review was told: the draft kept what was read of the one before', () => {
-		const story = pageStory({ standing: holdingAStory(), partsRead: [A_PART] });
+		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 
 		story.heldIsAnother();
 
@@ -343,7 +356,7 @@ describe('a story told while the page is open', () => {
 
 describe('a story the page did not hear being told', () => {
 	it('is not one that arrived unseen where the page read it as it opened', () => {
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 
 		expect(story.arrival).toBe('none');
 	});
@@ -358,7 +371,7 @@ describe('a story the page did not hear being told', () => {
 	});
 
 	it('has no offer to put away: putting one away changes nothing', () => {
-		const story = pageStory({ standing: holdingAStory() });
+		const story = pageStory({ held: storyHeld() });
 
 		story.putOfferAway();
 

@@ -46,7 +46,7 @@ import type {
 	SaidInPanel,
 	SendLimits,
 	SessionHello,
-	StoryResponse
+	StoryHeld
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
@@ -65,8 +65,8 @@ export interface Opening {
 	held: HeldThread[];
 	/** What the review holds as said in the panel: drawn whatever the draft holds, which adds what it does not. */
 	said: SaidInPanel[];
-	/** What the review answers of its story: the one it holds, if the agent told one, and how the asking for one stands. */
-	story: StoryResponse;
+	/** The story the review holds, if the agent told one. */
+	story: StoryHeld | null;
 }
 
 /** Whoever carries what the page holds to the server. */
@@ -180,7 +180,8 @@ export class Review {
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.story = new ReviewStory({
 			canBeTold: facts.takes_a_story,
-			standing: story,
+			held: story,
+			asking: facts.story_asking,
 			partsRead: partsReadInRun(kept, facts.instance),
 			takeOnScreen: () => this.diff.takeOnScreen,
 			agentAttached: () => this.answerer.attached,
@@ -225,6 +226,7 @@ export class Review {
 		this.noteAnswerer(facts.answerer_attached);
 		this.answerer.report(facts.agent);
 		this.answerer.showWork(facts.work);
+		this.story.learnAsking(facts.story_asking);
 	}
 
 	/** An agent turned up, or went quiet long enough to count as gone; one that turns up is offered the panel. */

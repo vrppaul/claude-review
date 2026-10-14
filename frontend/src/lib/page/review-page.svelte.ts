@@ -17,8 +17,8 @@ import { openKeptReview } from '$lib/page/kept-review';
 import { messageOf } from '$lib/utils/errors';
 import { stopsTogether } from '$lib/utils/stops';
 
-// What a review that takes no story is known to hold of one, and of anybody asking for one, without asking it
-const NO_STORY: StoryResponse = { held: null, asking: null };
+// What a review that takes no story is known to hold of one, without asking it
+const NO_STORY: StoryResponse = { held: null };
 
 /** The story a review holds: asked of one that takes a story, known of one that takes none. */
 function storyOf(facts: ReviewResponse): Promise<StoryResponse> {
@@ -63,12 +63,12 @@ export class ReviewPage {
 	 * after the facts too: a thread the agent raises, or words it says, in
 	 * between are then held and pushed both, and taken in once, where read
 	 * before them they would be neither. So is the story it holds, where it
-	 * takes one, and how the asking for one stands. Once the review is open,
-	 * the socket goes on from where its draft or its facts left the telling,
-	 * so whatever was said meanwhile is handed over rather than missed, and
-	 * the threads its draft brought back follow onto the diff it opened on.
-	 * A reader who turned stories on is asked for a story then, where none
-	 * is held or on its way.
+	 * takes one; how the asking for one stands is among the facts. Once the
+	 * review is open, the socket goes on from where its draft or its facts
+	 * left the telling, so whatever was said meanwhile is handed over rather
+	 * than missed, and the threads its draft brought back follow onto the
+	 * diff it opened on. A reader who turned stories on is asked for a story
+	 * then, where none is held or on its way.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -76,7 +76,7 @@ export class ReviewPage {
 		try {
 			await this.#settings.load();
 			const facts = await readReview();
-			const [firstDiff, { threads: held }, { said }, story] = await Promise.all([
+			const [firstDiff, { threads: held }, { said }, { held: story }] = await Promise.all([
 				takeDiff({ ignoreWhitespace: this.#settings.current.ignore_whitespace, base: null }),
 				readHeldThreads(),
 				readConversation(),

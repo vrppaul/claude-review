@@ -87,9 +87,9 @@ export interface paths {
          * @description Say what story the review holds: the last the agent told of its change, each step with what it shows.
          *
          *     None while nobody has told one, which is no refusal: a review is read
-         *     without a story as it always was. With it, how the reader's asking for
-         *     one stands: a page that opens while a story is awaited was told none of
-         *     it, and reads here what the pages open before it were told.
+         *     without a story as it always was. How the reader's asking for one
+         *     stands is read with the review's facts, which say how far the telling
+         *     had got.
          */
         get: operations["held_story_api_story_get"];
         /**
@@ -1392,6 +1392,7 @@ export interface components {
             work: components["schemas"]["AgentWork"] | null;
             /** Takes A Story */
             takes_a_story: boolean;
+            story_asking: components["schemas"]["StoryAsking"] | null;
             limits: components["schemas"]["SendLimits"];
             /** Instance */
             instance: string;
@@ -1669,15 +1670,10 @@ export interface components {
         };
         /**
          * StoryResponse
-         * @description Response for GET /api/story — the story the review holds, and how the reader's asking for one stands.
-         *
-         *     Read together, so a page never draws a moment with neither: no story is
-         *     held while one is asked for, and a story told ends the asking. Both are
-         *     None in a review nobody has told a story of or asked one from.
+         * @description Response for GET /api/story — the story the review holds, or none while nobody has told one.
          */
         StoryResponse: {
             held: components["schemas"]["StoryHeld"] | null;
-            asking: components["schemas"]["StoryAsking"] | null;
         };
         /**
          * StoryTakenResponse

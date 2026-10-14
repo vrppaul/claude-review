@@ -178,7 +178,7 @@ describe('opening the page', () => {
 	});
 
 	it('opens on how the asking for a story stands, where the reader asked for one before it opened', async () => {
-		serving().answer('GET /api/story', storyStanding({ asking: TAKEN }));
+		serving().answer('GET /api/review', reviewResponse({ story_asking: TAKEN }));
 		const page = newPage();
 
 		await page.open();
@@ -197,12 +197,21 @@ describe('opening the page', () => {
 	});
 
 	it.each([
-		{ where: 'the review holds a story', standing: storyStanding({ held: storyHeld() }) },
-		{ where: 'one is awaited already, asked for from another page', standing: storyStanding({ asking: TAKEN }) },
-		{ where: 'the reader stopped the one asked for, before a reload', standing: storyStanding({ asking: STOPPED }) }
-	])('asks for no story as it opens where $where', async ({ standing }) => {
+		{ where: 'the review holds a story', facts: reviewResponse(), story: storyStanding({ held: storyHeld() }) },
+		{
+			where: 'one is awaited already, asked for from another page',
+			facts: reviewResponse({ story_asking: TAKEN }),
+			story: storyStanding()
+		},
+		{
+			where: 'the reader stopped the one asked for, before a reload',
+			facts: reviewResponse({ story_asking: STOPPED }),
+			story: storyStanding()
+		}
+	])('asks for no story as it opens where $where', async ({ facts, story }) => {
 		const server = takingStoryAskings(servingAReaderWithStoriesOn());
-		server.answer('GET /api/story', standing);
+		server.answer('GET /api/review', facts);
+		server.answer('GET /api/story', story);
 		const page = newPage();
 
 		await page.open();

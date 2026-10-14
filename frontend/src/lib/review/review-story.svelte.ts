@@ -15,13 +15,15 @@
  * the story's lines carry.
  *
  * The reader may ask for a story, and the review holds how that asking
- * stands. The page holds one copy of it, beside the story that ends it:
- * both come in one answer when the story is read, and the review tells
- * each change of the asking in between. What the reader is waiting on is
- * worked out from it (`story-wait.ts`), never kept. Asking and stopping are
- * requests made here and answered there: nothing of the asking changes on
- * this page until the review says so. When a story is wanted — the
- * reader's settings, the view on screen — is the review's own to join.
+ * stands. The page holds one copy of it: read with the review's facts,
+ * which say how far the telling had got, and changed by what the review
+ * tells after them. A story held ends it here as it does in the review,
+ * though facts read before the story was told still held it. What the
+ * reader is waiting on is worked out from it (`story-wait.ts`), never
+ * kept. Asking and stopping are requests made here and answered there:
+ * nothing of the asking changes on this page until the review says so.
+ * When a story is wanted — the reader's settings, the view on screen — is
+ * the review's own to join.
  *
  * A story told while the page is open may land while the reader reads the
  * files, and the page never changes the view for them: it holds how that
@@ -38,7 +40,7 @@ import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-c
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
 import { canBeAskedFor, waitOf, type StoryWait } from '$lib/review/story-wait';
-import type { StoryAsking, StoryHeld, StoryResponse } from '$lib/types';
+import type { StoryAsking, StoryHeld } from '$lib/types';
 
 /**
  * What stands where the story is read: the story the review holds, or what
@@ -46,6 +48,14 @@ import type { StoryAsking, StoryHeld, StoryResponse } from '$lib/types';
  * and never neither, which whoever draws it reads off the kind.
  */
 export type StoryOrWait = { kind: 'story'; held: StoryHeld } | { kind: 'wait'; wait: StoryWait };
+
+/**
+ * How the asking for a story stands beside the story held: a story told
+ * ended it, though facts read before it was told say it stood.
+ */
+function askingBeside(held: StoryHeld | null, asking: StoryAsking | null): StoryAsking | null {
+	return held === null ? asking : null;
+}
 
 /** What stands where the story is read, worked out from what the page holds of the story, its asking and its agent. */
 function storyOrWaitOf(held: StoryHeld | null, asking: StoryAsking | null, agentAttached: boolean): StoryOrWait {
@@ -73,8 +83,10 @@ const OFFER_PUT_AWAY: Record<StoryArrival, StoryArrival> = {
 export interface StoryOpening {
 	/** Whether the review takes a story. */
 	canBeTold: boolean;
-	/** The story the review held as the page opened, if the agent had told one, and how the asking for one stood. */
-	standing: StoryResponse;
+	/** The story the review held as the page opened, if the agent had told one. */
+	held: StoryHeld | null;
+	/** How the reader's asking for a story stood, as the review's facts said it as the page opened. */
+	asking: StoryAsking | null;
 	/** The parts of the story the reader had read through when the page was last open in this run of the review. */
 	partsRead: readonly string[];
 	/** Which take of the review the page reads now. */
@@ -97,7 +109,7 @@ export class ReviewStory {
 	readonly #agentAttached: () => boolean;
 	readonly #sayInPanel: (words: string) => void;
 	#held = $state.raw<StoryHeld | null>(null);
-	// How the reader's asking for a story stands, as the review last said: replaced whole, by a read or by what it tells
+	// How the reader's asking for a story stands, as the review last said: replaced whole, by its facts or by what it tells
 	#asking = $state.raw<StoryAsking | null>(null);
 	// How the story held stands with the reader, where it was told while the page was open
 	#arrival = $state<StoryArrival>('none');
@@ -114,11 +126,11 @@ export class ReviewStory {
 	// answers come back in.
 	#reading = 0;
 
-	constructor({ canBeTold, standing, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
+	constructor({ canBeTold, held, asking, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
 		this.canBeTold = canBeTold;
 		this.#progress = new StoryProgress(partsRead);
-		this.#held = standing.held;
-		this.#asking = standing.asking;
+		this.#held = held;
+		this.#asking = askingBeside(held, asking);
 		this.#takeOnScreen = takeOnScreen;
 		this.#agentAttached = agentAttached;
 		this.#sayInPanel = sayInPanel;
@@ -204,16 +216,15 @@ export class ReviewStory {
 	 * Read the story the review holds now, in place of the one held here: the
 	 * page was away, and reads again what it may have missed. For all it
 	 * knows the story is the one it held, and what was read of it stands.
-	 * How the asking for one stands comes in the same answer.
 	 */
 	async read(): Promise<void> {
 		const mine = ++this.#reading;
-		const standing = await readStory();
-		if (mine === this.#reading) this.#hold(standing);
+		const { held } = await readStory();
+		if (mine === this.#reading) this.#hold(held);
 	}
 
-	/** Take in how the asking for a story stands now, as the review tells it between two reads of the story. */
-	learnAsking(asking: StoryAsking): void {
+	/** Take in how the asking for a story stands, as the review's facts say it or the review tells it after them. */
+	learnAsking(asking: StoryAsking | null): void {
 		this.#asking = asking;
 	}
 
@@ -269,14 +280,13 @@ export class ReviewStory {
 	}
 
 	/**
-	 * Hold what the review answered of its story: the story, and how the
-	 * asking for one stands. Where the story is another the review was told,
-	 * nothing of it is read yet, and it is offered to the reader, who has
-	 * not seen it.
+	 * Hold the story the review answered with. Where it is another the
+	 * review was told, nothing of it is read yet, and it is offered to the
+	 * reader, who has not seen it.
 	 */
-	#hold({ held, asking }: StoryResponse): void {
+	#hold(held: StoryHeld | null): void {
 		this.#held = held;
-		this.#asking = asking;
+		this.#asking = askingBeside(held, this.#asking);
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
 		this.#progress.forget();

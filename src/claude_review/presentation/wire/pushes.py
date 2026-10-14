@@ -8,8 +8,7 @@ from pydantic import ConfigDict, Field
 from claude_review.domain.models import CommentSeverity, FilePath
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.base import WireBool, WireModel
-from claude_review.presentation.wire.content import ChangesSince
-from claude_review.presentation.wire.story import StoryAsking
+from claude_review.presentation.wire.content import ChangesSince, StoryAsking
 from claude_review.presentation.wire.threads import Anchor
 
 

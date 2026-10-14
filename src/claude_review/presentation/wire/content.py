@@ -1,4 +1,4 @@
-"""What the page is served of the review's content: the diff, the bases it can be read against, and its limits."""
+"""What the page is served of the review: its facts, its diff, the bases it can be read against, and its limits."""
 
 from enum import StrEnum, auto
 
@@ -131,6 +131,16 @@ class ChangesSince(WireModel):
     paths: list[str]
 
 
+class StoryAsking(WireModel):
+    """The reader asking the agent for a story, and how far that has got."""
+
+    asked_at: EpochMillis
+    # When an agent took the request; None while none has
+    taken_at: EpochMillis | None
+    # Whether the reader stopped it
+    stopped: WireBool
+
+
 class ReviewResponse(WireModel):
     """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
 
@@ -154,6 +164,10 @@ class ReviewResponse(WireModel):
     # Whether a story can be told of the review, so the page offers one only
     # where it can be, and never asks what kind of review this is to know
     takes_a_story: WireBool
+    # How the reader's asking for a story stands: None while nobody asked for
+    # one, and once a story is told. Read here, a page orders it against the
+    # pushes that change it, by the sequence below, as it does every fact here
+    story_asking: StoryAsking | None
     # What the browser checks before uploading an image or quoting lines
     limits: SendLimits
     # How far the review's telling had got when this was read, in which run of

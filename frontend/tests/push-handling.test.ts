@@ -267,9 +267,20 @@ describe('catching up on what the server could not hand over again', () => {
 
 	it('reads how the asking for a story stands now, in case it changed among what was missed', async () => {
 		review = openReview({ asking: TAKEN });
-		caughtUpFrom().answer('GET /api/story', storyStanding({ asking: STOPPED }));
+		caughtUpFrom().answer('GET /api/review', reviewResponse({ story_asking: STOPPED }));
 
 		await catchUp(review, GOES_ON_FROM);
+
+		expect(review.story.wait).toEqual({ kind: 'stopped' });
+	});
+
+	it('takes in no asking told before the facts it read again: they hold how it stands since', async () => {
+		review = openReview({ asking: ASKED });
+		caughtUpFrom().answer('GET /api/review', reviewResponse({ sequence: 2, story_asking: STOPPED }));
+		await catchUp(review, GOES_ON_FROM);
+
+		// Told while the page caught up, and handed over once it had
+		takePush(review, { type: 'story_asking', asking: TAKEN }, pushedAt(1));
 
 		expect(review.story.wait).toEqual({ kind: 'stopped' });
 	});

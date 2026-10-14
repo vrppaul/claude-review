@@ -58,7 +58,7 @@ from claude_review.domain.page_events import (
     ThreadRaised,
     TreeMoved,
 )
-from claude_review.domain.story import Step, Story
+from claude_review.domain.story import Step, Story, StoryAsking
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -70,7 +70,7 @@ from claude_review.services.review.content_sources import ContentSource, DiffVie
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review.review_story import ReviewStory, StoryHeld, StoryStanding
+from claude_review.services.review.review_story import ReviewStory, StoryHeld
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
@@ -461,9 +461,13 @@ class Review:
         self._page.tell(StoryAskingChanged(asking=stopped))
         log.info("story_stopped")
 
-    def story_standing(self) -> StoryStanding:
-        """How the review stands with its story: the one it holds, as it was told, and the reader's asking for one."""
-        return self._story.standing
+    def story_held(self) -> StoryHeld | None:
+        """The story the review holds, as it was told: None while nobody has told one."""
+        return self._story.held
+
+    def story_asking(self) -> StoryAsking | None:
+        """How the reader's asking for a story stands: None while nobody asked for one, and once a story is told."""
+        return self._story.asking
 
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, and tell the pages to fetch it.

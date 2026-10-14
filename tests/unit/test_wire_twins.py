@@ -78,9 +78,8 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.LeftOut, story.LeftOut, frozenset()),
     (told.ToldStory, story.ToldStory, frozenset()),
     (review_story.StoryHeld, story.StoryHeld, frozenset()),
-    # and the reader's asking for one, read with the story held
-    (told.StoryAsking, story.StoryAsking, frozenset()),
-    (review_story.StoryStanding, story.StoryResponse, frozenset()),
+    # and the reader's asking for one, read with the review's facts
+    (told.StoryAsking, content.StoryAsking, frozenset()),
     *EVENTS_AND_PUSHES,
     # A hello as the server hears it, and as the page says it
     (threads.ReceivedHello, threads.SessionHello, frozenset()),
