@@ -52,6 +52,8 @@
 	 */
 	--cr-voice-axis: 2px;
 	--cr-voice-inset: 1.25rem;
+	/* How far that band reaches above and below the block's words */
+	--cr-band-reach: 0.5rem;
 
 	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,

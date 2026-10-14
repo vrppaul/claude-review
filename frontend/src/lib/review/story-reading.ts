@@ -15,15 +15,56 @@
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
-import { overviewLine } from '$lib/anchors/story';
+import {
+	chapterText,
+	OVERVIEW_LINES_IN_ORDER,
+	OVERVIEW_LISTS_IN_ORDER,
+	overviewItem,
+	overviewLine,
+	stepReason
+} from '$lib/anchors/story';
 import type { FileLines } from '$lib/anchors/views';
 import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
+import type { ChapterListed } from '$lib/review/story-contents';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { Thread } from '$lib/types';
+import type { DiffFile, Thread, ToldStory } from '$lib/types';
 
-// The overview's three lines, in the order the story says them
-const OVERVIEW_LINES = (['task', 'done', 'doubt'] as const).map(overviewLine);
+/** The threads on the overview's words, in the order it says them: its three lines, then each of its lists. */
+export function threadsOnTheOverview(overview: ToldStory['overview'], threads: Threads): Thread[] {
+	const lines = OVERVIEW_LINES_IN_ORDER.map(overviewLine);
+	const items = OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
+	return [...lines, ...items].flatMap((block) => threads.onBlock(block));
+}
+
+/**
+ * The threads a chapter draws, in the order it says what they hang on: on
+ * why its changes belong together, on where to doubt them, then step by
+ * step on its reason and down the rows of its piece.
+ */
+export function threadsInTheChapter(chapter: ChapterListed, story: ReviewStory, threads: Threads): Thread[] {
+	const { id } = chapter.told;
+	return [
+		...threads.onBlock(chapterText(id, 'why')),
+		...threads.onBlock(chapterText(id, 'doubt')),
+		...chapter.steps.flatMap(({ told, section }) => [
+			...threads.onBlock(stepReason(told.file, told.lines.first)),
+			...threadsOnThePiece(section, told.piece, story, threads)
+		])
+	];
+}
+
+/** The threads on lines one piece of a file draws, down its rows. */
+function threadsOnThePiece(section: string, piece: DiffFile, story: ReviewStory, threads: Threads): Thread[] {
+	return inDrawnOrder(threads.onLinesOf(piece.path), (lines) =>
+		drawnBy(section, story.pieces.drawing(lines, story.numbering))
+	);
+}
+
+/** A piece that draws a thread's lines, if it is the piece known by this key. */
+function drawnBy<Piece extends { key: string }>(section: string, drawn: Piece | null): Piece | null {
+	return drawn?.key === section ? drawn : null;
+}
 
 // What a story held draws, by whose numbers its lines carry: only the review's own take a comment, and
 // only they carry threads
@@ -51,14 +92,17 @@ export class StoryReading implements ReadingView {
 		return this.#story.pieces.keys;
 	}
 
-	/** Down the story: the threads on the overview's lines in the order it says them, then piece by piece and row by row, only those a piece draws. */
+	/** Down the story, part by part: the overview's, each chapter's, then those on what no step tells. */
 	threadsInOrder(): Thread[] {
-		if (this.#story.held === null) return [];
-		const pieces = this.#story.pieces;
-		const numbering = this.#story.numbering;
+		const held = this.#story.held;
+		if (held === null) return [];
+		const contents = this.#story.contents;
 		return [
-			...OVERVIEW_LINES.flatMap((block) => this.#threads.onBlock(block)),
-			...inDrawnOrder(this.#threads.onLines, (lines) => pieces.drawing(lines, numbering))
+			...threadsOnTheOverview(held.story.overview, this.#threads),
+			...contents.chapters.flatMap((chapter) => threadsInTheChapter(chapter, this.#story, this.#threads)),
+			...contents.leftOut.flatMap((left) =>
+				threadsOnThePiece(left.section, left.told.piece, this.#story, this.#threads)
+			)
 		];
 	}
 

@@ -1,8 +1,14 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
-	import { blockLabel, overviewLine, type OverviewBlock } from '$lib/anchors/story';
+	import {
+		blockLabel,
+		OVERVIEW_LISTS_IN_ORDER,
+		overviewItem,
+		overviewLine,
+		type OverviewBlock
+	} from '$lib/anchors/story';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
-	import type { OverviewText, StoryHeld } from '$lib/types';
+	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import AskableBlock from './AskableBlock.svelte';
 	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
@@ -22,15 +28,15 @@
 		doubt: 'font-semibold text-warning'
 	};
 
-	// What each list of the overview is headed by, in the order they are drawn
-	const OVERVIEW_LISTS = [
-		{ field: 'decisions', heading: 'Decided, and why' },
-		{ field: 'turned_down', heading: 'Turned down' },
-		{ field: 'later', heading: 'Left for later' }
-	] as const;
+	// What each list of the overview is headed by
+	const LIST_HEADINGS: Record<OverviewList, string> = {
+		decisions: 'Decided, and why',
+		turned_down: 'Turned down',
+		later: 'Left for later'
+	};
 
 	const overview = $derived(held.story.overview);
-	const listsSomething = $derived(OVERVIEW_LISTS.some((list) => overview[list.field].length > 0));
+	const listsSomething = $derived(OVERVIEW_LISTS_IN_ORDER.some((list) => overview[list].length > 0));
 </script>
 
 <!-- One of the overview's three lines, which the reader may ask about: what the story heads it with, then
@@ -54,7 +60,7 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<div data-testid="story-in-short" class="cr-agent-voice flex flex-col">
+		<div data-testid="story-in-short" class="cr-agent-voice flex flex-col gap-4">
 			{@render line(overviewLine('task'), overview.task, 'overview-task')}
 			{@render line(overviewLine('done'), overview.done, 'overview-done')}
 			{#if overview.doubt}
@@ -77,18 +83,23 @@
 	{#if listsSomething}
 		<details data-testid="story-more">
 			<summary class="cursor-pointer text-sm">More about this change</summary>
-			<div class="cr-agent-voice mt-3 flex flex-col gap-4 pl-5">
-				{#each OVERVIEW_LISTS as list (list.field)}
-					{#if overview[list.field].length > 0}
+			<div class="cr-agent-voice mt-3 flex flex-col gap-4">
+				{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
+					{#if overview[list].length > 0}
 						<section>
-							<h3 class="cr-muted text-xs font-semibold">{list.heading}</h3>
-							<ul class="mt-1 flex list-disc flex-col gap-1 pl-5 text-sm">
-								{#each overview[list.field] as item, itemPlace (itemPlace)}
+							<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+							<!-- Each thing listed may be asked about, as the overview's lines may -->
+							<ul class="mt-2 flex flex-col gap-3 text-sm">
+								{#each overview[list] as item, itemPlace (itemPlace)}
 									<li>
-										{item.text}
-										{#if item.chapter}
-											<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
-										{/if}
+										<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
+											<p data-testid="block-words">
+												{item.text}
+												{#if item.chapter}
+													<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
+												{/if}
+											</p>
+										</AskableBlock>
 									</li>
 								{/each}
 							</ul>

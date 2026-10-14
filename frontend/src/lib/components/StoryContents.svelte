@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import { tellsFirst } from '$lib/review/story-contents';
 	import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
+	import { threadsInTheChapter, threadsOnTheOverview } from '$lib/review/story-reading';
 	import { counted } from '$lib/utils/words';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
@@ -51,7 +52,12 @@
 		{/snippet}
 
 		<ol data-testid="contents-parts">
-			<ContentsEntry part={OVERVIEW_PART} label={THE_OVERVIEW} title={THE_OVERVIEW}>
+			<ContentsEntry
+				part={OVERVIEW_PART}
+				label={THE_OVERVIEW}
+				title={THE_OVERVIEW}
+				threads={threadsOnTheOverview(story.overview, review.threads).length}
+			>
 				{#snippet node()}
 					<span class="cr-contents-dot"></span>
 				{/snippet}
@@ -61,6 +67,7 @@
 					part={chapter.part}
 					label={chapterEntitled(chapter.place, chapter.told.title)}
 					title={chapter.told.title}
+					threads={threadsInTheChapter(chapter, review.story, review.threads).length}
 				>
 					{#snippet node()}
 						{chapterNumber(chapter.place)}

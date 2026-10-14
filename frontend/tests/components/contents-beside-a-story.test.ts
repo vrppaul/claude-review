@@ -6,6 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, hunk } from '../diff';
 import { broughtIntoView, said } from '../elements';
+import { newComment, storyComment } from '../new-comment';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { storyHeld, toldChapter, toldStep } from '../story';
@@ -62,6 +63,20 @@ describe('the contents beside a story', () => {
 			'1 The beginnings',
 			'2 The end'
 		]);
+	});
+
+	it('marks the overview and each chapter that draw a thread, and says how many', () => {
+		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task'));
+		review.threads.add(newComment({ file: 'src/a.py', startLine: 9, body: 'in the end' }));
+		review.threads.add(newComment({ file: 'src/a.py', startLine: 9, body: 'in the end again' }));
+		flushSync();
+
+		const marked = entries().map((entry) => within(entry).queryAllByTestId('part-threads').length);
+		const contents = within(screen.getByTestId('contents'));
+
+		expect(marked).toEqual([1, 0, 1]);
+		expect(contents.getByRole('button', { name: 'Overview, 1 thread' })).toBeTruthy();
+		expect(contents.getByRole('button', { name: 'Chapter 2: The end, 2 threads' })).toBeTruthy();
 	});
 
 	it('names each entry in full to whoever cannot see its node', () => {

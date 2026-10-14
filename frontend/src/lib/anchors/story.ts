@@ -109,9 +109,28 @@ export const storyAnchorView: AnchorView<StoryAnchor> = {
 /** One of the overview's three lines, as a block of the story. */
 export type OverviewBlock = Extract<StoryBlock, { at: 'overview' }>;
 
+/** The overview's three lines, and its lists, in the order the story says them. */
+export const OVERVIEW_LINES_IN_ORDER: readonly OverviewText[] = ['task', 'done', 'doubt'];
+export const OVERVIEW_LISTS_IN_ORDER: readonly OverviewList[] = ['decisions', 'turned_down', 'later'];
+
 /** The block of one of the overview's three lines. */
 export function overviewLine(text: OverviewText): OverviewBlock {
 	return { at: 'overview', text };
+}
+
+/** The block of one thing a list of the overview holds, by where it stands in the list. */
+export function overviewItem(list: OverviewList, item: number): StoryBlock {
+	return { at: 'item', list, item };
+}
+
+/** The block of what a chapter says of itself, the chapter by its id. */
+export function chapterText(chapter: string, text: ChapterText): StoryBlock {
+	return { at: 'chapter', chapter, text };
+}
+
+/** The block of a step's reason, the step by its file and the first line it tells. */
+export function stepReason(file: string, firstLine: number): StoryBlock {
+	return { at: 'reason', file, first_line: firstLine };
 }
 
 /** A block of the story as the reader asks about it, with the words it says now. */

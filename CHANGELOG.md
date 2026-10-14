@@ -4,14 +4,17 @@
 
 ### Added
 - **The reader asks about the story's own words.** Pointed at, or reached
-  by the keyboard, the Task, Done and Doubt of a story's overview are
-  banded and offer "Ask about this", floating over the line's top edge so
-  no word moves. The comment is written under the line, with Ask, Save and
-  Cancel as on a line of code, and its thread hangs there, the line banded
-  stronger meanwhile. The replies, the finish pane and the panel name it
-  `Story · Doubt`; picked there, it brings the story on screen at it, and
-  `n` and `p` walk the overview's threads first. The agent is handed the
-  words with the question.
+  by the keyboard, every block of the agent's words — the Task, Done and
+  Doubt of the overview, each thing its lists hold, a chapter's why and
+  where to doubt it, a step's reason — is banded and offers "Ask about
+  this", floating over the block's top edge so no word moves. The comment
+  is written under the block, with Ask, Save and Cancel as on a line of
+  code, and its thread hangs there, the block banded stronger meanwhile.
+  The replies, the finish pane and the panel name it `Story · Doubt`;
+  picked there, it brings the story on screen at it, and `n` and `p` walk
+  the story's threads in the order it says what they hang on. A blue dot
+  marks the contents' row of a part a thread hangs in, and its name says
+  how many. The agent is handed the words with the question.
 - **The reader asks the agent for a story of the change, and sees it being
   written.** A story is the change told by the agent that made it: a short
   overview, then chapters with its reason above each piece of code. Story in

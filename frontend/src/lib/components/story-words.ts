@@ -22,6 +22,8 @@ const BEFORE_A_TITLE = ': ';
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 // What steps are called where they are counted, and one of them inside a sentence
 const STEPS: CountedWords = { one: 'step', many: 'steps' };
+// What threads are called where a part of the story counts those hanging in it
+const THREADS: CountedWords = { one: 'thread', many: 'threads' };
 // What stands between the two counts of a chapter's head
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters
@@ -78,6 +80,11 @@ export function stepAmong(stepPlace: number, steps: number): string {
 /** What a part is called in the contents once the reader has read it through: "Chapter 2: The end, read". */
 export function calledOnceRead(called: string): string {
 	return `${called}, ${READ}`;
+}
+
+/** What a part is called in the contents while threads hang in it: "Chapter 2: The end, 2 threads". */
+export function calledWithThreads(called: string, threads: number): string {
+	return `${called}, ${counted(threads, THREADS)}`;
 }
 
 /** How many chapters a story has: "5 chapters", "1 chapter". */

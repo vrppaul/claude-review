@@ -135,6 +135,27 @@ describe('a review read as its story', () => {
 		]);
 	});
 
+	it("walks a chapter's own words before its steps, and a step's reason before the lines of its piece", () => {
+		const later = [{ text: 'Dragging a file in.', chapter: null }];
+		review = openReview({ story: storyHeld({ ...TOLD.story, overview: { ...TOLD.story.overview, later } }) });
+		review.views.choose('story');
+		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'on a line of chapter two' }));
+		review.threads.add(storyComment({ at: 'reason', file: 'a.py', first_line: 9 }, 'on the reason in chapter two'));
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'on a line of chapter one' }));
+		review.threads.add(storyComment({ at: 'chapter', chapter: 'ch-2', text: 'why' }, 'on why chapter two'));
+		review.threads.add(storyComment({ at: 'chapter', chapter: 'ch-1', text: 'doubt' }, 'on the doubt of chapter one'));
+		review.threads.add(storyComment({ at: 'item', list: 'later', item: 0 }, 'on what is left for later'));
+
+		expect(review.views.onScreen.threadsInOrder().map((thread) => thread.body)).toEqual([
+			'on what is left for later',
+			'on the doubt of chapter one',
+			'on a line of chapter one',
+			'on why chapter two',
+			'on the reason in chapter two',
+			'on a line of chapter two'
+		]);
+	});
+
 	it('takes a removed line before the line that replaced it, as a piece draws them', () => {
 		review.threads.add(newComment({ file: 'c.py', startLine: 4, body: 'on the line added' }));
 		review.threads.add(newComment({ file: 'c.py', side: 'old', startLine: 4, body: 'on the line removed' }));

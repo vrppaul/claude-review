@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { stepReason } from '$lib/anchors/story';
 	import type { StepListed } from '$lib/review/story-contents';
+	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
 	import { alsoInChapters, linesSaid, stepNamed } from './story-words';
@@ -21,7 +23,20 @@
 	the step: it is "Step 1.2" to whoever cannot see where it stands, and the piece under it says its
 	file and lines once -->
 {#snippet numberAndReason()}
-	<div class="cr-agent-voice mb-2 flex gap-3 pl-3.5">
+	<!-- A reason may be asked about, its number banded with it; a step of a file no thread can name takes none -->
+	<div class="cr-agent-voice mb-2">
+		{#if told.reason && told.piece.commentable}
+			<AskableBlock block={stepReason(told.file, told.lines.first)} words={told.reason} testId="step-reason-block">
+				{@render numberWithReason(told.reason)}
+			</AskableBlock>
+		{:else}
+			<div class="cr-voice-inset">{@render numberWithReason(told.reason)}</div>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet numberWithReason(reason: string | null)}
+	<div class="flex gap-3">
 		<h3
 			data-testid="step-number"
 			aria-label={stepNamed(number)}
@@ -29,8 +44,8 @@
 		>
 			{number}
 		</h3>
-		{#if told.reason}
-			<p data-testid="step-reason" class="min-w-0">{told.reason}</p>
+		{#if reason}
+			<p data-testid="step-reason" class="min-w-0">{reason}</p>
 		{/if}
 	</div>
 {/snippet}

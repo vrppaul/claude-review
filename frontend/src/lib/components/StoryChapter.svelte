@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { blockLabel, chapterText } from '$lib/anchors/story';
 	import type { ChapterListed } from '$lib/review/story-contents';
+	import AskableBlock from './AskableBlock.svelte';
 	import { chapterNumber, filesAndSteps, stepNumber } from './story-words';
 	import StoryPart from './StoryPart.svelte';
 	import StoryStep from './StoryStep.svelte';
@@ -29,12 +31,23 @@
 			<span class="cr-faint ml-auto text-xs">{filesAndSteps(chapter.files.length, chapter.steps.length)}</span>
 		</header>
 	{/snippet}
-	<p data-testid="chapter-why" class="cr-agent-voice pl-4.5">{told.why}</p>
+	<!-- Why its changes belong together, and where to doubt them: each may be asked about -->
+	<div data-testid="chapter-why-voice" class="cr-agent-voice">
+		<AskableBlock block={chapterText(told.id, 'why')} words={told.why} testId="chapter-why-block">
+			<p data-testid="chapter-why">{told.why}</p>
+		</AskableBlock>
+	</div>
 	{#if told.doubt}
-		<p data-testid="chapter-doubt" class="rounded-r border-l-2 border-warning bg-(--cr-warning-tint) px-3 py-2">
-			<span class="block text-xs font-semibold text-warning">Where to doubt</span>
-			{told.doubt}
-		</p>
+		{@const doubt = chapterText(told.id, 'doubt')}
+		<!-- As deep as the band reaches, so a band over the doubt stays inside its warning -->
+		<div class="rounded-r border-l-2 border-warning bg-(--cr-warning-tint) py-2">
+			<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block">
+				<p data-testid="chapter-doubt">
+					<span class="block text-xs font-semibold text-warning">{blockLabel(doubt)}</span>
+					{told.doubt}
+				</p>
+			</AskableBlock>
+		</div>
 	{/if}
 
 	{#each chapter.steps as step (step.section)}

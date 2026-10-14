@@ -301,7 +301,7 @@ async def test_the_agents_words_carry_its_colour_down_their_edge_and_a_reconstru
     review_of_a_reconstruction: RunningReview, page: Page
 ) -> None:
     await _read_as_story(page, review_of_a_reconstruction)
-    why = page.get_by_test_id("chapter-why")
+    why = page.get_by_test_id("chapter-why-voice")
     reconstruction = page.get_by_test_id("story-reconstruction")
     the_agents_colour = await page.get_by_test_id("story-reconstructed").evaluate(WORDS_COLOUR)
 

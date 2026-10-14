@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
 	import Icon from './Icon.svelte';
-	import { calledOnceRead } from './story-words';
+	import { calledOnceRead, calledWithThreads } from './story-words';
 
 	interface Props {
 		/** What the part of the story it leads to is known by. */
@@ -13,15 +13,19 @@
 		title: string;
 		/** What stands in its node until the part is read through: a chapter's number, the overview's dot. */
 		node: Snippet;
+		/** How many threads hang in the part: on its words, or on the lines of its pieces. */
+		threads: number;
 		/** What hangs under it: the files a chapter tells. */
 		children?: Snippet;
 	}
 
-	let { part, label, title, node, children }: Props = $props();
+	let { part, label, title, node, threads, children }: Props = $props();
 	const review = useReview();
 
 	const beingRead = $derived(review.parts.beingRead === part);
 	const read = $derived(review.story.progress.isRead(part));
+	// What the entry is called, with whether it is read through and how many threads hang in its part
+	const called = $derived(read ? calledOnceRead(label) : label);
 </script>
 
 <!-- An entry of a story's contents: a node on the axis and the part's title, one press to its head.
@@ -32,7 +36,7 @@
 		type="button"
 		data-testid="go-to-part"
 		class={['cr-contents-row', read && 'cr-muted']}
-		aria-label={read ? calledOnceRead(label) : label}
+		aria-label={threads > 0 ? calledWithThreads(called, threads) : called}
 		aria-current={beingRead ? 'location' : undefined}
 		onclick={() => review.parts.goTo(part)}
 	>
@@ -47,6 +51,10 @@
 			{/if}
 		</span>
 		<span class="min-w-0">{title}</span>
+		{#if threads > 0}
+			<!-- A thread hangs in the part: a dot at the row's far end, its count said in the entry's name -->
+			<span data-testid="part-threads" aria-hidden="true" class="cr-contents-dot cr-contents-threads"></span>
+		{/if}
 	</button>
 	{@render children?.()}
 </li>

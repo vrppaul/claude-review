@@ -947,12 +947,14 @@
  * this", floating half over its top edge. Banded stronger while a thread or
  * a comment being written hangs under it. Its room is the same either way,
  * and so is the place of every word in it: only the band and the button
- * come and go.
+ * come and go. The band reaches as far above and below its words as it
+ * stands off them, and takes no room for it: a block stands where its words
+ * would without it.
  */
 .cr-askable {
 	position: relative;
-	margin-left: calc(-1 * var(--cr-voice-axis));
-	padding: 0.5rem 0.75rem 0.5rem calc(var(--cr-voice-axis) + var(--cr-voice-inset));
+	margin: calc(-1 * var(--cr-band-reach)) 0 calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-voice-axis));
+	padding: var(--cr-band-reach) 0.75rem var(--cr-band-reach) calc(var(--cr-voice-axis) + var(--cr-voice-inset));
 	border-radius: 0 0.375rem 0.375rem 0;
 }
 .cr-askable:hover,
@@ -965,6 +967,10 @@
 .cr-askable-held:focus-within {
 	background: var(--cr-mark-band-held);
 	box-shadow: var(--cr-shadow-marked-edge);
+}
+/* Words beside blocks the reader may ask about, which stand as far from the agent's edge as theirs do */
+.cr-voice-inset {
+	padding-left: var(--cr-voice-inset);
 }
 /* Half its height over the block's top edge, near its far end: over the room between blocks, never over a word */
 .cr-ask {
@@ -1175,6 +1181,12 @@
 	height: 0.375rem;
 	border-radius: 999px;
 	background: currentColor;
+}
+/* A thread hangs in the part: the reader's mark at the row's far end */
+.cr-contents-threads {
+	flex-shrink: 0;
+	margin-left: auto;
+	background: var(--cr-mark);
 }
 /* The files under an entry: a block of rows on the page's ground, set in as far as the entry's title */
 .cr-contents-files {

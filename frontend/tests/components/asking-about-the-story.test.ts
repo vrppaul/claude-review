@@ -6,7 +6,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
 import { AGENT_ATTACHED, openReview } from '../review';
-import { storyHeld, toldStory } from '../story';
+import { storyHeld, toldChapter, toldStep, toldStory } from '../story';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one')])] })];
 // What the overview says: the task, what was done, and what to doubt
@@ -14,6 +14,44 @@ const TASK = 'Let the reader paste a screenshot.';
 const DONE = 'A pasted image goes to the review.';
 const DOUBT = 'Whether an image is checked before it is kept.';
 const TOLD = storyHeld({ overview: { ...toldStory().overview, task: TASK, done: DONE, doubt: DOUBT } });
+// A story with every other kind of block: items in two of the overview's lists, a chapter's why and where
+// to doubt it, and a step's reason
+const DECISIONS = [
+	{ text: 'Images are kept on disk.', chapter: null },
+	{ text: 'They are known by their bytes.', chapter: null }
+];
+const TOLD_WHOLE = storyHeld({
+	overview: { ...toldStory().overview, decisions: DECISIONS, later: [{ text: 'Dragging.', chapter: null }] },
+	chapters: [toldChapter('ch-1', [toldStep('a.py', 1, 'The first line comes first.')], { doubt: 'Line one?' })]
+});
+// Each of those blocks: the test id of what draws it, which of those it is, and the block a thread on it hangs on
+const EVERY_OTHER_BLOCK = [
+	{
+		called: 'the second decision',
+		drawnIn: 'overview-item',
+		nth: 1,
+		block: { at: 'item', list: 'decisions', item: 1 }
+	},
+	{ called: 'a thing left for later', drawnIn: 'overview-item', nth: 2, block: { at: 'item', list: 'later', item: 0 } },
+	{
+		called: "a chapter's why",
+		drawnIn: 'chapter-why-block',
+		nth: 0,
+		block: { at: 'chapter', chapter: 'ch-1', text: 'why' }
+	},
+	{
+		called: 'where to doubt a chapter',
+		drawnIn: 'chapter-doubt-block',
+		nth: 0,
+		block: { at: 'chapter', chapter: 'ch-1', text: 'doubt' }
+	},
+	{
+		called: "a step's reason",
+		drawnIn: 'step-reason-block',
+		nth: 0,
+		block: { at: 'reason', file: 'a.py', first_line: 1 }
+	}
+];
 
 let review: Review;
 
@@ -74,6 +112,35 @@ describe("the overview's three lines", () => {
 		expect(server.bodiesSentTo('POST /api/ask')).toMatchObject([
 			{ thread: { anchor: { kind: 'story', block: { at: 'overview', text: 'task' }, quote: [TASK] } } }
 		]);
+	});
+
+	it.each(EVERY_OTHER_BLOCK)(
+		'take a thread on $called, drawn under it and nowhere else',
+		async ({ drawnIn, nth, block }) => {
+			review = openReview({ files, story: TOLD_WHOLE, facts: AGENT_ATTACHED });
+			review.views.choose('story');
+			render(ReviewScreen, { props: { review } });
+			const asked = screen.getAllByTestId(drawnIn)[nth] as HTMLElement;
+
+			await userEvent.setup().click(within(asked).getByTestId('ask-about-this'));
+			await userEvent.setup().type(screen.getByTestId('comment-input'), 'Why so?');
+			await userEvent.setup().click(screen.getByTestId('save-comment'));
+
+			expect(review.threads.all.map((thread) => thread.anchor)).toMatchObject([{ kind: 'story', block }]);
+			expect(within(asked).getAllByTestId('comment-thread')).toHaveLength(1);
+			expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+		}
+	);
+
+	it('offer nothing on the reason of a step of a file no thread can name', () => {
+		const step = toldStep('a.py', 1, 'The first line comes first.');
+		const unnamable = { ...step, piece: { ...step.piece, commentable: false } };
+		review = openReview({ files, story: storyHeld({ chapters: [toldChapter('ch-1', [unnamable])] }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getByTestId('step-reason').textContent).toBe('The first line comes first.');
+		expect(screen.queryByTestId('step-reason-block')).toBeNull();
 	});
 
 	it('put a comment away unsaid, and leave the block as it was', async () => {
