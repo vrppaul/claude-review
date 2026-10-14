@@ -249,7 +249,7 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
 ) -> None:
     """The browser holds the threads and the server holds the diff they hang on."""
     (tmp_git_repo / "a.py").write_text("def run():\n    return 1\n")
-    on_run = {"file": "a.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["def run():"]}
+    on_run = {**line_on_the_wire("a.py", 1), "quote": ["def run():"]}
     on_walk = {**on_run, "quote": ["def walk():"]}
 
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:

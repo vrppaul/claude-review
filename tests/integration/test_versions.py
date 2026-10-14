@@ -24,6 +24,7 @@ from tests.helpers import (
     ReviewFactory,
     git,
     http_client,
+    line_on_the_wire,
     opening_of,
     repository_opening,
 )
@@ -311,7 +312,7 @@ async def test_a_commit_made_during_the_review_leaves_its_diff_and_its_threads_a
 ) -> None:
     """The agent commits its work, as agents do: the review is of that work, and must not lose it to the commit."""
     (tmp_git_repo / "work.py").write_text("written for review\n")
-    on_the_work = {"file": "work.py", "side": "new", "start_line": 1, "end_line": 1, "quote": ["written for review"]}
+    on_the_work = {**line_on_the_wire("work.py", 1), "quote": ["written for review"]}
 
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         _commit_everything(tmp_git_repo, "the agent's work")
