@@ -27,6 +27,13 @@
 
 	const arrowOffset = $derived(pointsAt ? arrowOffsetTo(pointsAt) : 0);
 
+	// A reader with the story on screen, however it came there, is trying Story: it is introduced to them,
+	// and kept so, as Try Story's press keeps it. Looked at again once the guide hears whether it was
+	// introduced before: until then it counts as introduced, and nothing is kept
+	$effect(() => {
+		if (review.views.onScreen.name === 'story') review.guide.noteStoryIntroduced();
+	});
+
 	// The introduction that appears offers Try Story, unless the reader is busy: it takes the keyboard from no one
 	$effect(() => {
 		if (review.guide.introducesStory) focusWhatRemains(() => tryStory);

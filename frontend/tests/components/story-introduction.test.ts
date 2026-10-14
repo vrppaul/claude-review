@@ -19,6 +19,8 @@ const RELEASE = '1.5.0';
 // How long the notice that Story is put away for good stands: four seconds, as every note that goes by itself
 const NOTICE_STANDS_FOR = 4_000;
 const A_SECOND = 1_000;
+// A story of the change, told already, for a reader who reads the review as its story
+const A_STORY = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('a.py', 1)])] });
 
 /** A server that keeps how far the reader was shown around and their choices, and takes every story asked for. */
 function serving(): FakeServer {
@@ -181,13 +183,28 @@ describe('Story introduced at the switch', () => {
 		expect(screen.queryByTestId('story-introduction')).toBeNull();
 	});
 
+	it('stands nowhere while the reader reads the story: they are trying it', async () => {
+		openReview({ files, story: A_STORY }).views.choose('story');
+		serving();
+
+		await drawn({ story: A_STORY });
+
+		expect(screen.queryByTestId('story-introduction')).toBeNull();
+	});
+
+	it('is kept as done once the reader reads the story, as Try Story keeps it', async () => {
+		openReview({ files, story: A_STORY }).views.choose('story');
+		const server = serving();
+
+		await drawn({ story: A_STORY });
+
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+
 	it('waits while the note of a story that arrived stands under the switch', async () => {
 		const server = serving();
 		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
-		server.answer(
-			'GET /api/story',
-			storyResponse({ held: storyHeld({ chapters: [toldChapter('ch-1', [toldStep('a.py', 1)])] }) })
-		);
+		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();

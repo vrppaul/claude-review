@@ -58,7 +58,8 @@
   the view never changes by itself. With no agent attached the page says
   how one is attached, and offers the files meanwhile.
 - **Story is introduced once, at the switch.** A reader who has never
-  tried it meets, once the welcome card and the tour are done, a pane
+  tried it, by pressing it or by having a story on screen, meets, once the
+  welcome card and the tour are done, a pane
   under the switch pointing at Story, which is ringed in the agent's
   colour: what a story is, sketched, and what it spends, with Try Story
   and Don't show again. Try Story does what Story in the header does,
