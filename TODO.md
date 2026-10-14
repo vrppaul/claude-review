@@ -160,28 +160,12 @@ tests. Remove items when done — don't check them off.
       no head having crossed the screen. Seen in a browser: the keyboard
       on that button deep in chapter 2 of 3, the area scrolled at once to
       deep in chapter 3, and the keyboard is on the page itself.
-- [ ] `fix(ui)`: a line the keyboard steps up to at the top of the reading
-      area is drawn behind what is kept in sight there, a file's header or
-      a chapter's bar, and the area does not move to show it. Seen in a
-      browser, deep in a piece of a story: `k` from line 41, the first in
-      sight, puts the keyboard on line 40 behind the piece's header, the
-      area still at 9327 pixels.
 - [ ] `fix(ui)`: a line key pressed with the keyboard on a button that is
       kept in sight counts from where the button stands in the document,
       not on screen (`steppedTo`, `dom/keyboard.ts`): from a chapter's bar
       it lands on the first line of the story, and from a file's header
       kept over the middle of its file, on that file's first line. Read in
       the code, not looked at in a browser.
-- [ ] For the owner to decide, not a fault of the code as it is written:
-      with the keyboard on a line the reader has since scrolled away from
-      by hand, `j` and `k` step from that line and bring the reader back to
-      it. Seen in a look by an independent review: `j` on line 1, the area
-      scrolled by hand to 9520 pixels, `j`, and the area is at 0.
-      `dom/keyboard.ts` says the line that holds the keyboard is the
-      cursor, and a step goes from the cursor; a key pressed with the
-      keyboard outside what is read starts at the first line in sight.
-      Whether a line out of sight still counts as where the reader is, is
-      a choice of what the reader sees.
 - [ ] `fix(ui)`: in a review that is over, the agent panel put away by its
       own button leaves the keyboard on nothing: the header then draws no
       control to take it (`ReviewHeader.svelte`).

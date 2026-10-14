@@ -4,7 +4,8 @@
  * Focus is the cursor: the line numbers are buttons, so moving between them
  * is moving focus, the browser scrolls it into view, and the focus ring shows
  * where you are. That saves inventing a second notion of "current line" that
- * would have to be kept in step with the real one.
+ * would have to be kept in step with the real one. It is the cursor while
+ * the reader sees it: a line they scrolled away from is not where they read.
  */
 
 import { tick } from 'svelte';
@@ -93,15 +94,28 @@ function lineReadFrom(lines: HTMLElement[], area: HTMLElement): HTMLElement | un
 }
 
 /**
- * The line a step lands on from whatever has the keyboard. From a line, the
- * next or the previous. From anything else in the reading area — a thread
- * the reader was taken to, a button in a file's header — the first line
- * below it or the last above it. From outside the area — an entry of the
- * column beside it, a control of the page's header — or from nothing, the
- * line the reader reads from, whichever way the step goes: what holds the
- * keyboard there stands before everything that is read, and a step counted
- * from it would throw the reader back to the first line of all. Never past
- * either end.
+ * How far a line stands out of what the reader sees of its area, in pixels:
+ * above, under what is kept in sight at the top or past it, under zero;
+ * below the area's foot, over zero; zero for a line seen whole.
+ */
+function outOfSightBy(line: Element, area: HTMLElement): number {
+	const box = line.getBoundingClientRect();
+	const hiddenAbove = inSightFrom(area) - box.top;
+	const hiddenBelow = box.bottom - area.getBoundingClientRect().bottom;
+	if (hiddenAbove >= TOUCHING_WITHIN) return -hiddenAbove;
+	return hiddenBelow >= TOUCHING_WITHIN ? hiddenBelow : 0;
+}
+
+/**
+ * The line a step lands on from whatever has the keyboard. From a line in
+ * sight, the next or the previous. From anything else in the reading area —
+ * a thread the reader was taken to, a button in a file's header — the first
+ * line below it or the last above it. From outside the area — an entry of
+ * the column beside it, a control of the page's header — from a line out of
+ * sight, scrolled away from or under what is kept in sight, or from nothing,
+ * the line the reader reads from, whichever way the step goes: a step
+ * counted from there would throw the reader back to where they no longer
+ * read. Never past either end.
  */
 function steppedTo(
 	lines: HTMLElement[],
@@ -111,15 +125,25 @@ function steppedTo(
 ): HTMLElement | undefined {
 	if (focused === null || !area.contains(focused)) return lineReadFrom(lines, area);
 	const at = lines.findIndex((line) => line === focused);
+	if (at !== -1 && outOfSightBy(focused, area) !== 0) return lineReadFrom(lines, area);
 	if (at !== -1) return lines[Math.min(lines.length - 1, Math.max(0, at + step))];
 	const beyond =
 		step === 1 ? lines.find((line) => follows(line, focused)) : lines.findLast((line) => follows(focused, line));
 	return beyond ?? (step === 1 ? lines.at(-1) : lines.at(0));
 }
 
-/** Move the keyboard one line down or up among the lines of a reading area, from wherever the keyboard is. */
+/**
+ * Move the keyboard one line down or up among the lines of a reading area,
+ * from wherever the keyboard is. The line it lands on is one the reader
+ * sees: the browser brings a line into its area, but not out from under
+ * what is kept in sight at the top, so the area is moved, at once as the
+ * browser moves it, by what still hides it.
+ */
 export function moveByLine(area: HTMLElement, step: 1 | -1): void {
-	steppedTo(lineNumbersIn(area), area, document.activeElement, step)?.focus();
+	const line = steppedTo(lineNumbersIn(area), area, document.activeElement, step);
+	if (line === undefined) return;
+	line.focus();
+	area.scrollTop += outOfSightBy(line, area);
 }
 
 /** What remains to take the keyboard, looked for once the page has drawn what changed: none, if it went too. */

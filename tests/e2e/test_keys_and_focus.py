@@ -42,6 +42,10 @@ LONG_FILE_LINES = 60
 CHANGED_NEAR_THE_END = 55
 # What the keyboard is on: the test id it carries, and the line its number names
 FOCUSED_PLACE = "document.activeElement?.dataset.place"
+# What stands between the side of a line and its number in the place a line number names, and how far
+# up two steps of `k` go
+PLACE_PARTS = ":"
+TWO_LINES = 2
 # How the welcome says how many stops the tour has, and how the tour says where it is
 STOPS_ANNOUNCED = re.compile(r"(\d+) stops")
 STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
@@ -159,6 +163,42 @@ async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_
     assert await _focused(page) == "line-gutter"
     assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
     assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
+
+
+@pytest.mark.parametrize("line_key", LINE_KEYS)
+async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_the_first_line_in_sight(
+    several_files: RunningReview, page: Page, line_key: str
+) -> None:
+    """The line the keyboard was left on is out of sight: the key starts where the reader reads, and takes them nowhere back."""
+    await _open_review(page, several_files)
+    files = page.get_by_test_id("diff-view")
+    await page.keyboard.press("j")
+    await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
+
+    await page.keyboard.press(line_key)
+
+    kept_in_sight = page.get_by_test_id("file-header").first
+    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
+    assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
+
+
+async def test_k_from_the_first_line_in_sight_brings_each_line_above_it_into_sight_under_the_header(
+    several_files: RunningReview, page: Page
+) -> None:
+    """A line the keyboard steps to is one the reader sees: never one behind the header kept in sight over it."""
+    await _open_review(page, several_files)
+    files = page.get_by_test_id("diff-view")
+    await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
+    await page.keyboard.press("j")
+    side, first_in_sight = (await page.evaluate(FOCUSED_PLACE)).split(PLACE_PARTS)
+
+    await page.keyboard.press("k")
+    await page.keyboard.press("k")
+
+    kept_in_sight = page.get_by_test_id("file-header").first
+    assert await page.evaluate(FOCUSED_PLACE) == f"{side}{PLACE_PARTS}{int(first_in_sight) - TWO_LINES}"
+    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < LESS_THAN_A_LINE_APART
+    assert await files.evaluate(SCROLLED) < DEEP_IN_THE_FILE
 
 
 async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_count(
