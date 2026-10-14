@@ -14,7 +14,7 @@ import { newComment } from './new-comment';
 import { chatPush, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
-import { STOPPED, storyHeld, storyStanding, TAKEN } from './story';
+import { STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
 const SESSION_URL = 'ws://review.test/api/session';
 // How far the review's telling had got when the page read its facts
@@ -143,7 +143,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/diff', diffResponse());
 	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/conversation', { said: [] });
-	server.answer('GET /api/story', storyStanding());
+	server.answer('GET /api/story', storyResponse());
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
 	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
 	return server;
@@ -169,7 +169,7 @@ describe('opening the page', () => {
 
 	it('opens on the story the review holds, where the agent has told one', async () => {
 		const told = storyHeld({ title: 'Told before the page opened' });
-		serving().answer('GET /api/story', storyStanding({ held: told }));
+		serving().answer('GET /api/story', storyResponse({ held: told }));
 		const page = newPage();
 
 		await page.open();
@@ -197,16 +197,16 @@ describe('opening the page', () => {
 	});
 
 	it.each([
-		{ where: 'the review holds a story', facts: reviewResponse(), story: storyStanding({ held: storyHeld() }) },
+		{ where: 'the review holds a story', facts: reviewResponse(), story: storyResponse({ held: storyHeld() }) },
 		{
 			where: 'one is awaited already, asked for from another page',
 			facts: reviewResponse({ story_asking: TAKEN }),
-			story: storyStanding()
+			story: storyResponse()
 		},
 		{
 			where: 'the reader stopped the one asked for, before a reload',
 			facts: reviewResponse({ story_asking: STOPPED }),
-			story: storyStanding()
+			story: storyResponse()
 		}
 	])('asks for no story as it opens where $where', async ({ facts, story }) => {
 		const server = takingStoryAskings(servingAReaderWithStoriesOn());
@@ -690,6 +690,18 @@ describe('the tab shown again', () => {
 			{},
 			{ ignore_whitespace: 'true' }
 		]);
+	});
+
+	it('takes the diff no more where whether whitespace counts is as it was, whatever else another tab changed', async () => {
+		const server = serving();
+		const page = newPage();
+		await page.open();
+		changedElsewhere(server, { diff_layout: 'split' });
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('GET /api/diff')).toHaveLength(1);
 	});
 
 	it('asks the agent for a story where another tab turned stories on', async () => {

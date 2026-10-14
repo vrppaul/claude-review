@@ -11,7 +11,7 @@ import { handOverNext, pushedAt } from '../pushes';
 import { type Opened, openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, storyStanding, toldChapter, toldStep } from '../story';
+import { storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: two chapters of a step each, and a line of a.py no step tells
 const files = [
@@ -82,7 +82,7 @@ function serverToCatchUpFrom(): void {
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('POST /api/anchors/follow', { anchors: [] });
 	server.answer('GET /api/diff', diffResponse({ files }));
-	server.answer('GET /api/story', storyStanding({ held: TOLD }));
+	server.answer('GET /api/story', storyResponse({ held: TOLD }));
 }
 
 beforeEach(() => {
@@ -155,7 +155,7 @@ describe('a part of a story the reader has scrolled through', () => {
 describe('what the reader has read of a story, once the story is told again', () => {
 	it('is nothing: what was read of the story before is no reading of this one', async () => {
 		readThrough(theBeginnings());
-		fakeServer().answer('GET /api/story', storyStanding({ held: TOLD }));
+		fakeServer().answer('GET /api/story', storyResponse({ held: TOLD }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();

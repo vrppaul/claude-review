@@ -60,7 +60,7 @@ export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<Sto
 }
 
 /** What the review answers of its story: none told, unless a test says one was. */
-export function storyStanding(given: Partial<StoryResponse> = {}): StoryResponse {
+export function storyResponse(given: Partial<StoryResponse> = {}): StoryResponse {
 	return { held: null, ...given };
 }
 

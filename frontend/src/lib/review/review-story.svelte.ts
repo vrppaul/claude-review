@@ -17,13 +17,12 @@
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
  * which say how far the telling had got, and changed by what the review
- * tells after them. A story held ends it here as it does in the review,
- * though facts read before the story was told still held it. What the
- * reader is waiting on is worked out from it (`story-wait.ts`), never
- * kept. Asking and stopping are requests made here and answered there:
- * nothing of the asking changes on this page until the review says so.
- * When a story is wanted — the reader's settings, the view on screen — is
- * the review's own to join.
+ * tells after them. What the reader is waiting on while no story is held
+ * is worked out from it (`story-wait.ts`), never kept. Asking and
+ * stopping are requests made here and answered there: nothing of the
+ * asking changes on this page until the review says so. When a story is
+ * wanted — the reader's settings, the view on screen — is the review's own
+ * to join.
  *
  * A story told while the page is open may land while the reader reads the
  * files, and the page never changes the view for them: it holds how that
@@ -48,14 +47,6 @@ import type { StoryAsking, StoryHeld } from '$lib/types';
  * and never neither, which whoever draws it reads off the kind.
  */
 export type StoryOrWait = { kind: 'story'; held: StoryHeld } | { kind: 'wait'; wait: StoryWait };
-
-/**
- * How the asking for a story stands beside the story held: a story told
- * ended it, though facts read before it was told say it stood.
- */
-function askingBeside(held: StoryHeld | null, asking: StoryAsking | null): StoryAsking | null {
-	return held === null ? asking : null;
-}
 
 /** What stands where the story is read, worked out from what the page holds of the story, its asking and its agent. */
 function storyOrWaitOf(held: StoryHeld | null, asking: StoryAsking | null, agentAttached: boolean): StoryOrWait {
@@ -130,7 +121,7 @@ export class ReviewStory {
 		this.canBeTold = canBeTold;
 		this.#progress = new StoryProgress(partsRead);
 		this.#held = held;
-		this.#asking = askingBeside(held, asking);
+		this.#asking = asking;
 		this.#takeOnScreen = takeOnScreen;
 		this.#agentAttached = agentAttached;
 		this.#sayInPanel = sayInPanel;
@@ -286,7 +277,6 @@ export class ReviewStory {
 	 */
 	#hold(held: StoryHeld | null): void {
 		this.#held = held;
-		this.#asking = askingBeside(held, this.#asking);
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
 		this.#progress.forget();

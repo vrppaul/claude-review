@@ -11,7 +11,7 @@ import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-se
 import { handOverNext } from '../pushes';
 import { AGENT_ATTACHED, openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
-import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN, toldChapter, toldStep } from '../story';
+import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one'), addedLine(9, 'nine')])] })];
 // A story of the change, in two chapters
@@ -48,7 +48,7 @@ function havingChosenTheStoryLast(): void {
 
 /** The agent tells a story while the page is open: the review says one was told, and the page reads it. */
 async function toldMeanwhile(review: Review, server: FakeServer): Promise<void> {
-	server.answer('GET /api/story', storyStanding({ held: IN_TWO_CHAPTERS }));
+	server.answer('GET /api/story', storyResponse({ held: IN_TWO_CHAPTERS }));
 	handOverNext(review, { type: 'story' });
 	await settled();
 }
@@ -314,6 +314,24 @@ describe('a story told while the files are read', () => {
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-ready')).toBeNull();
 		expect(screen.queryByTestId('segment-unread')).toBeNull();
+	});
+
+	it('leaves no clock running once opened: the note of a story told next stands its own four seconds', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		await toldMeanwhile(review, server);
+		await user.click(screen.getByTestId('open-story'));
+		await user.click(screen.getByTestId('read-as-files'));
+		vi.advanceTimersByTime(A_SECOND);
+		await toldMeanwhile(review, server);
+
+		// Past the four seconds of the note opened, short of those of the note now standing
+		vi.advanceTimersByTime(NOTE_STANDS_FOR - A_SECOND);
+		flushSync();
+
+		expect(screen.getByTestId('story-ready')).toBeTruthy();
 	});
 
 	it('is offered no more once the reader has read it by the switch and come back to the files', async () => {

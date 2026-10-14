@@ -13,7 +13,7 @@ import { newComment } from './new-comment';
 import { inReview, openReview, settingsWithStoriesOn } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
-import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN } from './story';
+import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -119,7 +119,7 @@ describe('what the server pushes, taken in', () => {
 
 	it('reads the story the review holds when it says one was told', async () => {
 		const told = storyHeld({ title: 'Told just now' });
-		fakeServer().answer('GET /api/story', storyStanding({ held: told }));
+		fakeServer().answer('GET /api/story', storyResponse({ held: told }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();
@@ -234,7 +234,7 @@ function caughtUpFrom(): FakeServer {
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('POST /api/anchors/follow', { anchors: [] });
 	server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py'), untouched('b.py')] }));
-	server.answer('GET /api/story', storyStanding());
+	server.answer('GET /api/story', storyResponse());
 	return server;
 }
 
@@ -258,7 +258,7 @@ describe('catching up on what the server could not hand over again', () => {
 
 	it('reads the story the review holds now, in case one was told among what was missed', async () => {
 		const told = storyHeld({ title: 'Told while the page was away' });
-		caughtUpFrom().answer('GET /api/story', storyStanding({ held: told }));
+		caughtUpFrom().answer('GET /api/story', storyResponse({ held: told }));
 
 		await catchUp(review, GOES_ON_FROM);
 

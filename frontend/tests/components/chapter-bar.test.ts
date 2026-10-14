@@ -11,7 +11,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, storyStanding, toldChapter, toldStep } from '../story';
+import { storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: a first chapter of two steps, then two chapters
 // of a step each, and a line of a.py no step tells
@@ -81,7 +81,7 @@ describe('the bar a chapter of a story is read under', () => {
 			...TOLD.story.chapters,
 			toldChapter('ch-4', [toldStep('a.py', 9)], { title: 'The afterword' })
 		];
-		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ chapters: withAnAfterword }) }));
+		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld({ chapters: withAnAfterword }) }));
 		handOverNext(review, { type: 'story' });
 		await settled();
 		const [, , , theAfterword] = screen.getAllByTestId('story-chapter');
