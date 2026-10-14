@@ -193,12 +193,14 @@ const NO_INLINE_STYLING = [
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
 ];
 
-// Every icon is drawn once, as a row of ICONS that Icon draws by name: a
-// review found a speech bubble written into another component with numbers
-// of its own, beside the same bubble in ICONS
-const DRAWN_BY_ICON = 'Draw an icon with <Icon name="…">: its drawing is a row of ICONS in components/icons.ts.';
-// The one component that writes a drawing
-const ICON_COMPONENT = 'src/lib/components/Icon.svelte';
+// Every drawing is drawn in its one component: an icon as a row of ICONS that
+// Icon draws by name, the sketch of a story by StorySketch. A review found a
+// speech bubble written into another component with numbers of its own,
+// beside the same bubble in ICONS
+const DRAWN_IN_ITS_COMPONENT =
+	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in components/icons.ts; a story sketched is <StorySketch>.';
+// The components that write a drawing: Icon, every icon; StorySketch, the sketch of a story
+const DRAWING_COMPONENTS = ['src/lib/components/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
 
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
@@ -283,8 +285,8 @@ export default tseslint.config(
 	},
 	{
 		files: ['**/*.svelte'],
-		ignores: [ICON_COMPONENT],
-		rules: { 'svelte/no-restricted-html-elements': ['error', { elements: ['svg'], message: DRAWN_BY_ICON }] }
+		ignores: DRAWING_COMPONENTS,
+		rules: { 'svelte/no-restricted-html-elements': ['error', { elements: ['svg'], message: DRAWN_IN_ITS_COMPONENT }] }
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
