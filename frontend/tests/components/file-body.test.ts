@@ -99,7 +99,7 @@ describe('a piece cut out of a file', () => {
 
 		const { queryByTestId } = render(FileBody, inReview(review, AS_A_STEP));
 
-		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+		expect(queryByTestId('unplaced-threads')).toBeNull();
 	});
 });
 
@@ -170,12 +170,12 @@ describe('a comment no line drawn here can hang under', () => {
 	it('is drawn at the head of the file, where the lines are drawn', () => {
 		const { getByTestId } = render(FileBody, inReview(review, asAFile()));
 
-		expect(getByTestId('threads-off-their-lines').textContent).toContain('off its line');
+		expect(getByTestId('unplaced-threads').textContent).toContain('off its line');
 	});
 
 	it('is left to the count a rendered preview gives, which draws no lines', () => {
 		const { queryByTestId } = render(FileBody, inReview(review, { ...asAFile(), view: 'preview' }));
 
-		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+		expect(queryByTestId('unplaced-threads')).toBeNull();
 	});
 });

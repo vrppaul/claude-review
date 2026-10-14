@@ -220,10 +220,11 @@ class AnchorKind(StrEnum):
 # image, a base — and the longest a story's chapter may go by
 MAX_ID_LENGTH = 200
 
-# What an id may hold. A thread is read back at a path of its own —
-# `/api/catch-up/threads/{id}` — where a slash would name another route, so
-# an id is letters, digits, dots, dashes and underscores, and nothing else.
-# A story's chapter is held to it too: a thread on the chapter names it.
+# What an id may hold: letters, digits, dots, dashes and underscores, and
+# nothing else. An id stays one word wherever it is written, and is read
+# back whole: a thread on a story's chapter names the chapter by its id in
+# the token that mentions the thread, `@story:images-kept:why`, which a
+# colon, a space or a slash would cut short or split.
 SAFE_ID = r"^[A-Za-z0-9._-]+$"
 
 # A chapter of a story, by the id a thread on it names it by

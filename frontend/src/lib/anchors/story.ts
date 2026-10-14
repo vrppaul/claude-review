@@ -70,6 +70,11 @@ function holderOf(block: StoryBlock, fileNamed: (path: string) => string): strin
 	}
 }
 
+/** Where a block is, where room is short: what it belongs to, or the story itself, then its label: "ch-2 · Why". */
+export function blockShortPlace(block: StoryBlock): string {
+	return [holderOf(block, fileName).at(0) ?? STORY, blockLabel(block)].join(PLACE_SEPARATOR);
+}
+
 /** What a block is known by: the name its token gives it, which no other block has. */
 export function blockKey(block: StoryBlock): string {
 	switch (block.at) {
@@ -97,8 +102,7 @@ function token({ block }: StoryAnchor): string {
 export const storyAnchorView: AnchorView<StoryAnchor> = {
 	label: (anchor) => blockLabel(anchor.block),
 	place: (anchor) => [STORY, ...holderOf(anchor.block, (path) => path), blockLabel(anchor.block)].join(PLACE_SEPARATOR),
-	shortPlace: (anchor) =>
-		[holderOf(anchor.block, fileName).at(0) ?? STORY, blockLabel(anchor.block)].join(PLACE_SEPARATOR),
+	shortPlace: (anchor) => blockShortPlace(anchor.block),
 	token,
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
 	sameSpot: (one, other) => blockKey(one.block) === blockKey(other.block),

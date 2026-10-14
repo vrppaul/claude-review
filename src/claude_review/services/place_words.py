@@ -76,7 +76,7 @@ def place_in_words(anchor: Anchor) -> str:
         case LineAnchor():
             return _lines_place(anchor, anchor.file)
         case StoryAnchor():
-            return _block_place(anchor.block, _as_named)
+            return _block_place(anchor.block, str)
         case _:
             assert_never(anchor)
 
@@ -129,8 +129,3 @@ def _block_place(block: StoryBlock, named: Callable[[str], str]) -> str:
             return REASON_PLACE.format(file=named(block.file), line=block.first_line)
         case _:
             assert_never(block)
-
-
-def _as_named(name: str) -> str:
-    """A name as plain text says it: as it is."""
-    return name

@@ -8,7 +8,6 @@ from pydantic import (
     ConfigDict,
     Field,
     JsonValue,
-    Strict,
     TypeAdapter,
     ValidationError,
     computed_field,
@@ -43,6 +42,7 @@ from claude_review.presentation.wire.base import (
     WireBool,
     WireId,
     WireModel,
+    WireNumber,
 )
 from claude_review.services.place_words import place_in_words
 
@@ -66,8 +66,8 @@ class LineAnchor(WireModel):
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
     file: FilePath
     side: LineSide
-    start_line: int = Field(ge=FIRST_LINE)
-    end_line: int = Field(ge=FIRST_LINE)
+    start_line: WireNumber = Field(ge=FIRST_LINE)
+    end_line: WireNumber = Field(ge=FIRST_LINE)
     quote: list[QuoteLine] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
     outdated: WireBool = False
 
@@ -89,8 +89,7 @@ class ItemBlock(WireModel):
 
     at: Literal[StoryBlockKind.ITEM] = StoryBlockKind.ITEM
     list: OverviewList
-    # A number as JSON writes one, and nothing else: `false` would otherwise be read as the first item
-    item: Annotated[int, Strict()] = Field(ge=FIRST_ITEM)
+    item: WireNumber = Field(ge=FIRST_ITEM)
 
 
 class ChapterBlock(WireModel):
@@ -106,7 +105,7 @@ class ReasonBlock(WireModel):
 
     at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
     file: FilePath
-    first_line: int = Field(ge=FIRST_LINE)
+    first_line: WireNumber = Field(ge=FIRST_LINE)
 
 
 # A block of the story's words, as the wire carries it
@@ -402,11 +401,12 @@ class ThreadSummary(WireModel):
 class PointRequest(WireModel):
     """Request body for POST /api/point — the author raising a thread.
 
-    The same anchor a reader's comment carries, because it becomes exactly
-    that: a thread on a line, which the reader answers, settles or removes.
+    The same anchor a reader's comment on lines carries, because it becomes
+    exactly that: a thread on a line, which the reader answers, settles or
+    removes. Lines alone: the agent points at no block of the story's words.
     """
 
-    anchor: Anchor
+    anchor: LineAnchor
     body: AgentText
     severity: CommentSeverity
 

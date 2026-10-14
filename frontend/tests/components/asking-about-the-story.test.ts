@@ -93,7 +93,11 @@ describe("the overview's three lines", () => {
 			within(screen.getByTestId(block)).getByTestId('ask-about-this').getAttribute('aria-label')
 		);
 
-		expect(names).toEqual(['Ask about this: Task', 'Ask about this: Done', 'Ask about this: Doubt']);
+		expect(names).toEqual([
+			'Ask about this: Story · Task',
+			'Ask about this: Story · Done',
+			'Ask about this: Story · Doubt'
+		]);
 	});
 
 	it('open a comment under the block asked about, headed by what the story heads it with, which may ask straight away', async () => {
@@ -141,11 +145,27 @@ describe("the overview's three lines", () => {
 		]);
 	});
 
+	it('put a comment away unsaid, and leave the block as it was', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		const user = await writeAbout('overview-done', 'Not this one.');
+		await user.click(screen.getByTestId('cancel-comment'));
+		await user.click(screen.getByTestId('confirm-go-ahead'));
+
+		expect(screen.queryByTestId('comment-box')).toBeNull();
+		expect(review.threads.all).toEqual([]);
+	});
+});
+
+describe("the story's other blocks", () => {
+	beforeEach(() => {
+		review = openReview({ files, story: TOLD_WHOLE, facts: AGENT_ATTACHED });
+		review.views.choose('story');
+	});
+
 	it.each(EVERY_OTHER_BLOCK)(
 		'take a thread on $called, drawn under it and nowhere else',
 		async ({ drawnIn, nth, block }) => {
-			review = openReview({ files, story: TOLD_WHOLE, facts: AGENT_ATTACHED });
-			review.views.choose('story');
 			render(ReviewScreen, { props: { review } });
 			const asked = screen.getAllByTestId(drawnIn)[nth] as HTMLElement;
 
@@ -162,8 +182,6 @@ describe("the overview's three lines", () => {
 	it.each(FRAMED_BLOCKS)(
 		'hang what is written on $called, and its thread, below the frame the words stand in',
 		async ({ drawnIn }) => {
-			review = openReview({ files, story: TOLD_WHOLE, facts: AGENT_ATTACHED });
-			review.views.choose('story');
 			render(ReviewScreen, { props: { review } });
 			const asked = screen.getByTestId(drawnIn);
 			const frame = within(asked).getByTestId('askable-frame');
@@ -179,6 +197,20 @@ describe("the overview's three lines", () => {
 		}
 	);
 
+	it('name their offers by their chapter or their step too, so that no two chapters offer alike', () => {
+		render(ReviewScreen, { props: { review } });
+
+		const names = ['chapter-why-block', 'chapter-doubt-block', 'step-reason-block'].map((block) =>
+			within(screen.getByTestId(block)).getByTestId('ask-about-this').getAttribute('aria-label')
+		);
+
+		expect(names).toEqual([
+			'Ask about this: ch-1 · Why',
+			'Ask about this: ch-1 · Where to doubt',
+			'Ask about this: a.py:1 · Reason'
+		]);
+	});
+
 	it('offer nothing on the reason of a step of a file no thread can name', () => {
 		const step = toldStep('a.py', 1, 'The first line comes first.');
 		const unnamable = { ...step, piece: { ...step.piece, commentable: false } };
@@ -188,17 +220,6 @@ describe("the overview's three lines", () => {
 
 		expect(screen.getByTestId('step-reason').textContent).toBe('The first line comes first.');
 		expect(screen.queryByTestId('step-reason-block')).toBeNull();
-	});
-
-	it('put a comment away unsaid, and leave the block as it was', async () => {
-		render(ReviewScreen, { props: { review } });
-
-		const user = await writeAbout('overview-done', 'Not this one.');
-		await user.click(screen.getByTestId('cancel-comment'));
-		await user.click(screen.getByTestId('confirm-go-ahead'));
-
-		expect(screen.queryByTestId('comment-box')).toBeNull();
-		expect(review.threads.all).toEqual([]);
 	});
 });
 
@@ -211,7 +232,7 @@ describe('a story told again', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		const head = screen.getByTestId('threads-off-their-lines');
+		const head = screen.getByTestId('unplaced-threads');
 		expect(head.textContent).toContain('1 thread on words the story no longer says');
 		expect(within(head).getByTestId('comment-thread').textContent).toContain('Is it checked at all?');
 		expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);

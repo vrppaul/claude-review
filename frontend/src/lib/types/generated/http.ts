@@ -1336,11 +1336,12 @@ export interface components {
          * PointRequest
          * @description Request body for POST /api/point — the author raising a thread.
          *
-         *     The same anchor a reader's comment carries, because it becomes exactly
-         *     that: a thread on a line, which the reader answers, settles or removes.
+         *     The same anchor a reader's comment on lines carries, because it becomes
+         *     exactly that: a thread on a line, which the reader answers, settles or
+         *     removes. Lines alone: the agent points at no block of the story's words.
          */
         PointRequest: {
-            anchor: components["schemas"]["Anchor-Input"];
+            anchor: components["schemas"]["LineAnchor-Input"];
             /** Body */
             body: string;
             severity: components["schemas"]["CommentSeverity"];

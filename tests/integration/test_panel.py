@@ -12,7 +12,15 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, LineSide, TurnAuthor
+from claude_review.domain.models import (
+    MAX_QUOTE_LINES,
+    AnchorKind,
+    CommentSeverity,
+    LineSide,
+    OverviewText,
+    StoryBlockKind,
+    TurnAuthor,
+)
 from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
@@ -60,6 +68,8 @@ THREAD = thread_on_the_wire(
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
 
 POINT_ROUTE = "/api/point"
+# A block of the story's words, as an agent would name it: what the overview says to doubt
+ON_THE_DOUBT = {"kind": AnchorKind.STORY, "block": {"at": StoryBlockKind.OVERVIEW, "text": OverviewText.DOUBT}}
 
 
 def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
@@ -233,6 +243,14 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
 async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
     """A thread that ends before it starts hangs on nothing."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 9, 2), "nowhere"))
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+
+
+async def test_a_thread_on_a_block_of_the_storys_words_is_refused_for_the_author_points_at_lines_alone(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(POINT_ROUTE, json=_pointing(ON_THE_DOUBT, "Doubt this"))
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 

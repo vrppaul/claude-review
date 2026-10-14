@@ -60,6 +60,25 @@ def _quoting(line: str) -> dict[str, object]:
     return {**line_on_the_wire("a.py", 1), "quote": [line]}
 
 
+# Each number an anchor names, written as true or false, as the page or the agent might send it
+NUMBERS_SENT_AS_YES_OR_NO = {
+    "the first of some lines": {**line_on_the_wire("a.py", 1), "start_line": True},
+    "the last of some lines": {**line_on_the_wire("a.py", 1), "end_line": True},
+    "an item of a list": {"kind": "story", "block": {"at": "item", "list": "decisions", "item": False}},
+    "the first line of a step": {"kind": "story", "block": {"at": "reason", "file": "a.py", "first_line": True}},
+}
+
+
+@pytest.mark.parametrize("anchor", NUMBERS_SENT_AS_YES_OR_NO.values(), ids=NUMBERS_SENT_AS_YES_OR_NO.keys())
+async def test_a_number_an_anchor_names_is_refused_written_as_true_or_false(
+    client: AsyncClient, anchor: dict[str, object]
+) -> None:
+    """Read as 1 or 0, it would name a line or an item nobody named."""
+    response = await client.post("/api/anchors/follow", json={"anchors": [anchor]})
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+
+
 async def test_a_quoted_line_is_no_longer_than_any_line_the_review_shows(client: AsyncClient) -> None:
     """The longest a line of a shown file can be is taken; a line longer than that came from nowhere the review shows."""
     longest = await client.post("/api/anchors/follow", json={"anchors": [_quoting("x" * MAX_QUOTE_LINE_LENGTH)]})

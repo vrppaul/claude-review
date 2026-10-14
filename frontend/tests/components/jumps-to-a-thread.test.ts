@@ -114,7 +114,7 @@ describe('every control that takes the reader to a thread', () => {
 
 		await user.click(screen.getByTestId('show-outdated'));
 
-		const onIt = within(screen.getByTestId('threads-off-their-lines')).getByTestId('comment-thread');
+		const onIt = within(screen.getByTestId('unplaced-threads')).getByTestId('comment-thread');
 		expect(document.activeElement).toBe(onIt);
 	});
 

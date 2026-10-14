@@ -43,12 +43,19 @@ MAX_TEXT_LENGTH = 50_000
 
 # An id as a request names it, in its body or in a route's path: a thread, a
 # turn, a question, a message, an image. Held to the review's one rule for an
-# id (`SAFE_ID`), which a story's chapter is held to as well
+# id (`SAFE_ID`), which a story's chapter is held to as well: a thread is read
+# back at a path of its own, `/api/catch-up/threads/{id}`, where a slash would
+# name another route
 WireId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
 
 # A yes or a no as JSON says it: true or false, never 0, 1 or "yes", which
 # pydantic would otherwise read as one
 WireBool = Annotated[bool, Strict()]
+
+# A number of what an anchor names — a line, an item of a list — as JSON
+# writes one, and nothing else: true or false, which pydantic would otherwise
+# read as 1 or 0, would name a line or an item nobody named
+WireNumber = Annotated[int, Strict()]
 
 
 def _says_something(text: str) -> str:

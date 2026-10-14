@@ -75,6 +75,7 @@ export const ICONS = {
 		drawn: TRACED
 	},
 	reply: { viewBox: '0 0 16 16', paths: ['M4 3v5.5a2 2 0 0 0 2 2h6', 'M9.5 8l3 2.5-3 2.5'], drawn: TRACED },
+	// A speech bubble: a word with the agent, in its panel or about a block of the story
 	conversation: { viewBox: '0 0 16 16', paths: ['M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z'], drawn: TRACED },
 	notice: {
 		viewBox: '0 0 16 16',

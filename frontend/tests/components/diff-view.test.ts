@@ -344,7 +344,7 @@ describe('a comment on a file the diff no longer has', () => {
 
 		const { getByTestId } = render(DiffView, inReview(review));
 
-		const above = getByTestId('threads-off-their-lines');
+		const above = getByTestId('unplaced-threads');
 		expect(above.textContent).toContain('1 comment on src/reverted.ts, a file no longer in the diff');
 		expect(within(above).getAllByTestId('comment-thread')).toHaveLength(1);
 		expect(above.textContent).toContain('why this change');
@@ -360,7 +360,7 @@ describe('a comment on a file the diff no longer has', () => {
 
 		const { getAllByTestId } = render(DiffView, inReview(review));
 
-		const [first, second] = getAllByTestId('threads-off-their-lines');
+		const [first, second] = getAllByTestId('unplaced-threads');
 		expect(first.textContent).toContain('2 comments on src/reverted.ts, a file no longer in the diff');
 		expect(within(first).getAllByTestId('comment-thread')).toHaveLength(2);
 		expect(second.textContent).toContain('1 comment on src/also-reverted.ts, a file no longer in the diff');
@@ -374,7 +374,7 @@ describe('a comment on a file the diff no longer has', () => {
 		const { getByTestId } = render(DiffView, inReview(review));
 
 		expect(getByTestId('no-changes')).toBeTruthy();
-		expect(within(getByTestId('threads-off-their-lines')).getByText('why this change')).toBeTruthy();
+		expect(within(getByTestId('unplaced-threads')).getByText('why this change')).toBeTruthy();
 	});
 
 	it('can be deleted where it is drawn', async () => {
@@ -383,11 +383,11 @@ describe('a comment on a file the diff no longer has', () => {
 		review.threads.add(onTheRevertedFile);
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
-		await user.click(within(getByTestId('threads-off-their-lines')).getByTestId('delete-comment'));
+		await user.click(within(getByTestId('unplaced-threads')).getByTestId('delete-comment'));
 		await user.click(getByTestId('confirm-go-ahead'));
 
 		expect(review.threads.all).toEqual([]);
-		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+		expect(queryByTestId('unplaced-threads')).toBeNull();
 	});
 
 	it('is left to the notice above the diff under a narrower base, which names every thread it cannot draw', async () => {
@@ -398,7 +398,7 @@ describe('a comment on a file the diff no longer has', () => {
 
 		const { queryByTestId } = render(DiffView, inReview(review));
 
-		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+		expect(queryByTestId('unplaced-threads')).toBeNull();
 	});
 });
 

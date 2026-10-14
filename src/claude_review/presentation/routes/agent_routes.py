@@ -13,7 +13,6 @@ from claude_review.domain.exceptions import (
     StoryRefusedError,
     UnknownAnchorFileError,
     UnknownFileError,
-    UnknownStoryBlockError,
     UnknownThreadError,
 )
 from claude_review.presentation.asgi import HTTP_DISCONNECT
@@ -201,7 +200,6 @@ async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)
         UnknownAnchorFileError,
         AnchorLinesNotShownError,
         AnchorTooLongError,
-        UnknownStoryBlockError,
         takes=Takes.JSON_BODY,
     ),
 )

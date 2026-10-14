@@ -250,7 +250,7 @@ async def test_a_thread_on_words_a_story_told_again_says_nowhere_stands_at_its_h
 
     await _tell(review, TOLD_AGAIN)
 
-    at_the_head = page.get_by_test_id("threads-off-their-lines")
+    at_the_head = page.get_by_test_id("unplaced-threads")
     await expect(at_the_head).to_contain_text("1 thread on words the story no longer says")
     written_against = at_the_head.get_by_test_id("stale-quote")
     await expect(written_against).to_contain_text(DOUBT)
@@ -263,7 +263,7 @@ async def test_a_thread_at_the_head_of_the_story_points_at_nothing_above_it(revi
 
     await _tell(review, TOLD_AGAIN)
 
-    assert not await page.get_by_test_id("threads-off-their-lines").get_by_test_id("thread-card").evaluate(TAIL_DRAWN)
+    assert not await page.get_by_test_id("unplaced-threads").get_by_test_id("thread-card").evaluate(TAIL_DRAWN)
 
 
 async def test_a_thread_at_the_head_of_the_story_deleted_gives_the_keyboard_to_the_head_of_the_story(
@@ -272,7 +272,7 @@ async def test_a_thread_at_the_head_of_the_story_deleted_gives_the_keyboard_to_t
     doubt = await _read_as_story(page, review)
     await _ask_about(page, doubt, "Was it needed?")
     await _tell(review, TOLD_AGAIN)
-    at_the_head = page.get_by_test_id("threads-off-their-lines")
+    at_the_head = page.get_by_test_id("unplaced-threads")
 
     await at_the_head.get_by_test_id("delete-comment").click()
     await page.click('[data-testid="confirm-go-ahead"]')

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
-	import { blockKey, blockLabel } from '$lib/anchors/story';
+	import { blockKey, blockLabel, blockShortPlace } from '$lib/anchors/story';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { StoryBlock } from '$lib/types';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import { askComment, sayComment } from './comment-endings';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** The block of the story's words it draws. */
@@ -31,10 +32,11 @@
 
 	// What the offer says
 	const ASK_ABOUT_THIS = 'Ask about this';
-	// What stands between those words and the block's label in the offer's name
+	// What stands between those words and the block's place in the offer's name
 	const NAME_SEPARATOR = ': ';
-	// The offer's name, for whoever cannot see which block it stands over: "Ask about this: Doubt"
-	const name = $derived([ASK_ABOUT_THIS, blockLabel(block)].join(NAME_SEPARATOR));
+	// The offer's name, for whoever cannot see which block it stands over, and told apart from every other
+	// chapter's and step's: "Ask about this: ch-2 · Why"
+	const name = $derived([ASK_ABOUT_THIS, blockShortPlace(block)].join(NAME_SEPARATOR));
 
 	let asking: HTMLButtonElement | undefined = $state();
 
@@ -66,18 +68,7 @@
 			class="cr-ask"
 			onclick={() => review.threads.writing.askAbout(block, words)}
 		>
-			<svg
-				width="13"
-				height="13"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.4"
-				stroke-linejoin="round"
-				aria-hidden="true"
-			>
-				<path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" />
-			</svg>
+			<Icon name="conversation" class="h-3.25 w-3.25" />
 			{ASK_ABOUT_THIS}
 		</button>
 	</div>

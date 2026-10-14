@@ -8,7 +8,10 @@
   Doubt of the overview, each thing its lists hold, a chapter's why and
   where to doubt it, a step's reason — is banded and offers "Ask about
   this", floating over the block's top edge so no word moves; a screen
-  reader names each by its block, "Ask about this: Doubt". The comment is
+  reader names each by its place, "Ask about this: Story · Doubt", "Ask
+  about this: ch-2 · Why", so no two chapters' offers sound alike. The
+  agent points at lines alone: a block of the story it names is refused.
+  The comment is
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
   stronger meanwhile: below the frame of a chapter's why, its warning of
@@ -294,6 +297,9 @@
   its fields stop there.
 
 ### Fixed
+- **A line's number sent as `true` or `false` is refused.** A thread's
+  lines, or the first line of a step of the story, were read as 1 or 0: a
+  line nobody named.
 - **A tab you come back to takes in the settings changed in another.**
   Every review keeps the reader's settings in one place, and a tab read
   them only as it opened. Now a tab shown again reads them again: the theme

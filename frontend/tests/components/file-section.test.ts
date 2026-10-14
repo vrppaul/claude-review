@@ -201,7 +201,7 @@ describe('a comment whose line the diff no longer shows', () => {
 
 		const { getByTestId } = render(FileSection, inReview(review, { file: restored }));
 
-		const head = getByTestId('threads-off-their-lines');
+		const head = getByTestId('unplaced-threads');
 		expect(head.textContent).toContain('1 comment on a line no longer shown');
 		expect(within(head).getAllByTestId('comment-thread')).toHaveLength(1);
 		expect(head.textContent).toContain('why did this go');
@@ -215,7 +215,7 @@ describe('a comment whose line the diff no longer shows', () => {
 
 		const { getByTestId } = render(FileSection, inReview(review, { file: restored }));
 
-		expect(getByTestId('threads-off-their-lines').textContent).toContain('read in');
+		expect(getByTestId('unplaced-threads').textContent).toContain('read in');
 	});
 
 	it('is left to the notice above the diff under a narrower base, which names every thread it cannot draw', async () => {
@@ -229,6 +229,6 @@ describe('a comment whose line the diff no longer shows', () => {
 
 		const { queryByTestId } = render(FileSection, inReview(review, { file: restored }));
 
-		expect(queryByTestId('threads-off-their-lines')).toBeNull();
+		expect(queryByTestId('unplaced-threads')).toBeNull();
 	});
 });

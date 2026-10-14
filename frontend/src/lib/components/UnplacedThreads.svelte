@@ -16,7 +16,7 @@
 {#if threads.length > 0}
 	<!-- Never off the screen: whole, with everything that can be done to them, at the head of the file, the
 		diff or the story they lost their place in -->
-	<div data-testid="threads-off-their-lines" class="cr-threads-at-the-head border-b border-base-300">
+	<div data-testid="unplaced-threads" class="cr-threads-at-the-head border-b border-base-300">
 		<p class="cr-muted px-4 pt-2 text-xs">{counted(threads.length, why)}</p>
 		{#each threads as thread (thread.id)}
 			<CommentThread {thread} />
