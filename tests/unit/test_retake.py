@@ -22,7 +22,7 @@ from claude_review.domain.interfaces import GitError, ReviewedRepository, Staged
 from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
 from claude_review.services.review.content_sources import ContentSource, content_source
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
-from claude_review.services.review.review_story import ReviewStory
+from claude_review.services.review.review_story import CodeMovedOn, LeftOutChanged, ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file
@@ -32,6 +32,10 @@ from tests.stories import (
     ONE_MORE_LEFT_OUT,
     SECOND_ROUND,
     TOLD_OF,
+    changed_file,
+    hunk,
+    step,
+    story_of,
     told_then_followed,
 )
 
@@ -49,6 +53,13 @@ NEWER_FILE = "newer.py"
 FIRST_RETAKES_STAGING = 1
 # The round a story's fourth take is taken in, each take after the first in a round of its own
 FOURTH_ROUND = SECOND_ROUND + 2
+# A file added whole and long, and a story with a step to every other line of it: long in the telling, so it is
+# surely still being told when a test that started it follows the story onto a later take, of one line more
+LONG_FILE = "src/long.py"
+LINES_OF_THE_LONG_FILE = 4000
+LONG_FILE_ADDED = [changed_file(LONG_FILE, hunk(0, 1, "+" * LINES_OF_THE_LONG_FILE))]
+ONE_LINE_MORE_OF_IT = [changed_file(LONG_FILE, hunk(0, 1, "+" * (LINES_OF_THE_LONG_FILE + 1)))]
+A_LONG_STORY = story_of(*[step(LONG_FILE, line, line) for line in range(1, LINES_OF_THE_LONG_FILE, 2)])
 
 
 def _diff_adding(path: str) -> str:
@@ -223,8 +234,15 @@ async def test_a_story_more_is_left_out_of_says_the_round_it_moved_on_in_and_wha
     held = (await told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
 
     assert held is not None
-    assert held.moved_on is not None
-    assert (held.moved_on.round, held.moved_on.left_out_when_told, held.moved_on.left_out_now) == (SECOND_ROUND, 1, 2)
+    assert held.moved_on == CodeMovedOn(round=SECOND_ROUND, left_out=LeftOutChanged(when_told=1, now=2))
+
+
+async def test_a_story_that_moved_on_leaving_out_as_much_as_when_it_was_told_says_nothing_of_what_is_left_out() -> None:
+    """The counts are said only where the round changed them: "1 → 1" would say nothing."""
+    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN)).held
+
+    assert held is not None
+    assert held.moved_on == CodeMovedOn(round=SECOND_ROUND, left_out=None)
 
 
 async def test_a_story_the_code_stays_moved_on_under_says_the_round_it_first_moved_on_in() -> None:
@@ -265,6 +283,21 @@ async def test_a_story_whose_code_was_put_back_as_it_was_told_is_current_again()
     assert held is not None
     assert held.moved_on is None
     assert [told_step.changed_since_told for told_step in held.story.chapters[0].steps] == [False]
+
+
+async def test_a_story_told_while_the_diff_is_taken_again_is_followed_onto_the_new_take_once_it_is_held() -> None:
+    """The take waits for the telling under way: followed before it, the story told would stay on the take before."""
+    story = ReviewStory(FixedClock(MARKED_AT))
+    told_of = ReviewContent.opening_on(LONG_FILE_ADDED)
+    telling = asyncio.create_task(story.tell(A_LONG_STORY, told_of, round_number=FIRST_ROUND))
+    # A turn of the loop, in which the telling begins
+    await asyncio.sleep(0)
+
+    await story.follow(told_of.taken_again(ONE_LINE_MORE_OF_IT, frozenset()), round_number=SECOND_ROUND)
+    await telling
+
+    assert story.held is not None
+    assert story.held.take == FIRST_TAKE + 1
 
 
 async def test_a_take_with_no_story_told_holds_none() -> None:

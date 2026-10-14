@@ -275,29 +275,27 @@ describe('what a story leaves out, once a round moved the code on under it', () 
 		{ piece: toldStep('src/a.py', 5).piece, changed_lines: 1 },
 		{ piece: toldStep('src/b.py', 7).piece, changed_lines: 4 }
 	];
-	const CHANGED_LINES_LEFT_OUT_NOW = 5;
+	// How many changed lines no step told when it was told, and how many none tells now, as the review says them
+	const TWO_THEN_FIVE_NOW = { when_told: 2, now: 5 };
 
-	/** Draw the story with what it leaves out now, the code moved on in round 2, and what it left out when told. */
-	function drawnLeavingOut(leftOutWhenTold: number): void {
+	/** Draw the story with what it leaves out now, the code moved on in round 2, and what the review says of it. */
+	function drawnLeavingOut(leftOut: typeof TWO_THEN_FIVE_NOW | null): void {
 		review = openReview({
 			files,
-			story: storyHeld(
-				{ ...TOLD.story, left_out: LEFT_OUT_NOW },
-				{ moved_on: codeMovedOn({ left_out_when_told: leftOutWhenTold, left_out_now: CHANGED_LINES_LEFT_OUT_NOW }) }
-			)
+			story: storyHeld({ ...TOLD.story, left_out: LEFT_OUT_NOW }, { moved_on: codeMovedOn({ left_out: leftOut }) })
 		});
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 	}
 
 	it('says how many changed lines no step told when the story was told, and how many none tells now', () => {
-		drawnLeavingOut(2);
+		drawnLeavingOut(TWO_THEN_FIVE_NOW);
 
 		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story 2 → 5');
 	});
 
 	it('says both counts in words to whoever cannot see the arrow', () => {
-		drawnLeavingOut(2);
+		drawnLeavingOut(TWO_THEN_FIVE_NOW);
 
 		const named = 'Not in the story, 2 changed lines no step told when the story was told, 5 now';
 		expect(within(screen.getByTestId('contents')).getByRole('button', { name: named })).toBe(
@@ -305,8 +303,8 @@ describe('what a story leaves out, once a round moved the code on under it', () 
 		);
 	});
 
-	it('says no count where as many are left out as when it was told', () => {
-		drawnLeavingOut(5);
+	it('says no count where the review says none changed', () => {
+		drawnLeavingOut(null);
 
 		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story');
 	});

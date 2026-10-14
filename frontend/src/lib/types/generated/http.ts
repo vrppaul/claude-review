@@ -869,10 +869,7 @@ export interface components {
         CodeMovedOn: {
             /** Round */
             round: number;
-            /** Left Out When Told */
-            left_out_when_told: number;
-            /** Left Out Now */
-            left_out_now: number;
+            left_out: components["schemas"]["LeftOutChanged"] | null;
         };
         /**
          * CommentSeverity
@@ -1117,6 +1114,16 @@ export interface components {
             piece: components["schemas"]["DiffFile"];
             /** Changed Lines */
             changed_lines: number;
+        };
+        /**
+         * LeftOutChanged
+         * @description How many changed lines no step told when a story was told, and how many none tells now.
+         */
+        LeftOutChanged: {
+            /** When Told */
+            when_told: number;
+            /** Now */
+            now: number;
         };
         /**
          * LeftOutOfFile

@@ -88,6 +88,7 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.ToldStory, story.ToldStory, frozenset()),
     (review_story.StoryHeld, story.StoryHeld, frozenset()),
     (review_story.CodeMovedOn, story.CodeMovedOn, frozenset()),
+    (review_story.LeftOutChanged, story.LeftOutChanged, frozenset()),
     # and the reader's asking for one, read with the review's facts
     (told.StoryAsking, content.StoryAsking, frozenset()),
     *EVENTS_AND_PUSHES,

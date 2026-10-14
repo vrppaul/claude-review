@@ -31,12 +31,9 @@
 	const chaptersRead = $derived(
 		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
 	);
-	// How many changed lines no step told when the story was told, and how many none tells now, as the review
-	// counts them: said beside what is left out where a round moved the code on and changed how many. Null
-	// otherwise, when neither is said
-	const leftOutChanged = $derived(
-		held?.moved_on && held.moved_on.left_out_when_told !== held.moved_on.left_out_now ? held.moved_on : null
-	);
+	// How many changed lines no step told when the story was told, and how many none tells now: said beside what
+	// is left out where the review says a round changed how many. Null otherwise, when neither is said
+	const leftOutChanged = $derived(held?.moved_on?.left_out ?? null);
 </script>
 
 <!-- The story's contents, beside it: its parts down an axis, the overview and then every chapter with
@@ -110,16 +107,14 @@
 				aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
 				aria-label={leftOutChanged === null
 					? undefined
-					: leftOutThenAndNowSaid(leftOutChanged.left_out_when_told, leftOutChanged.left_out_now)}
+					: leftOutThenAndNowSaid(leftOutChanged.when_told, leftOutChanged.now)}
 				onclick={() => review.parts.goTo(LEFT_OUT_PART)}
 			>
 				{NOT_IN_THE_STORY}
 				{#if leftOutChanged !== null}
 					<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
 						words to whoever cannot see the arrow -->
-					<span class="ml-2" aria-hidden="true"
-						>{leftOutThenAndNow(leftOutChanged.left_out_when_told, leftOutChanged.left_out_now)}</span
-					>
+					<span class="ml-2" aria-hidden="true">{leftOutThenAndNow(leftOutChanged.when_told, leftOutChanged.now)}</span>
 				{/if}
 			</button>
 			<ul data-testid="contents-left-out-files" class="cr-contents-files cr-contents-files-left-out">

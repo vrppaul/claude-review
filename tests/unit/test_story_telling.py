@@ -17,7 +17,7 @@ from claude_review.domain.exceptions import FieldFault, FieldPath, StoryRefusedE
 from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan, Unshown
 from claude_review.domain.story import Step, Story, ToldStep, ToldStory
 from claude_review.services.story_telling import follow, tell
-from tests.helpers import added_line, removed_line
+from tests.helpers import added_line, context_line, removed_line
 from tests.stories import (
     ONLY_CHAPTER,
     changed_file,
@@ -105,6 +105,17 @@ ONE_ABOVE_AND_THE_THIRD_REWORDED = changed_file(
         added_line(4, "Three"),
         added_line(5, "four"),
     ),
+    status=FileStatus.ADDED,
+)
+# A file whose first line the change kept and whose second it added, and how a round's work leaves it: the same
+# two lines, both added
+KEPT_THEN_ADDED = changed_file(LETTERS, hunk_of_lines(1, 1, context_line(1, 1, "a"), added_line(2, "x")))
+BOTH_ADDED = changed_file(LETTERS, hunk_of_lines(1, 1, added_line(1, "a"), added_line(2, "x")))
+# Two lines added whole, and how a round's work leaves them: the first said again alone above both of them
+TWO_ADDED = changed_file(ADDED, hunk_of_lines(0, 1, added_line(1, "x"), added_line(2, "y")), status=FileStatus.ADDED)
+THE_FIRST_ALONE_ABOVE_BOTH = changed_file(
+    ADDED,
+    hunk_of_lines(0, 1, added_line(1, "x"), added_line(2, "z"), added_line(3, "x"), added_line(4, "y")),
     status=FileStatus.ADDED,
 )
 ONE_BELOW = changed_file(
@@ -301,6 +312,18 @@ def test_steps_whose_code_moved_down_unchanged_follow_it_unmarked() -> None:
     ]
 
 
+def test_steps_of_one_file_in_two_chapters_each_follow_their_own_code() -> None:
+    """The later chapter tells the earlier lines: each step is its own wherever the story tells it."""
+    story = story_of_chapters(
+        chapter_of(EARLIER_CHAPTER, step(LETTERS, 6, 6)), chapter_of(LATER_CHAPTER, step(LETTERS, 2, 2))
+    )
+
+    assert [told_step.lines for told_step in steps_of(followed(story, [LETTERS_TOLD], [PUSHED_DOWN]))] == [
+        LineSpan(first=8, last=8),
+        LineSpan(first=4, last=4),
+    ]
+
+
 def test_a_step_whose_line_was_said_another_way_stays_on_its_lines_marked_showing_the_code_as_it_now_stands() -> None:
     [told_step, _] = steps_of(
         followed(story_of(step(LETTERS, 2, 2), step(LETTERS, 6, 6)), [LETTERS_TOLD], [B_REWORDED])
@@ -317,6 +340,20 @@ def test_a_step_with_a_line_put_between_its_pieces_takes_it_in_and_is_marked() -
     assert told_step.lines == LineSpan(first=2, last=7)
     assert rows_of(told_step.piece) == ["b", "B", "between", "f", "F"]
     assert told_step.changed_since_told is True
+
+
+def test_a_step_a_line_of_which_the_change_now_adds_where_it_kept_it_is_marked() -> None:
+    """Every row still says what it said: what the change does to one of them is what changed."""
+    [told_step] = steps_of(followed(story_of(step(LETTERS, 1, 2)), [KEPT_THEN_ADDED], [BOTH_ADDED]))
+
+    assert told_step.changed_since_told is True
+
+
+def test_lines_of_a_step_that_follow_one_another_are_looked_for_together() -> None:
+    """One of them said again alone, nearer where it stood, does not pull the step apart."""
+    [told_step] = steps_of(followed(story_of(step(ADDED, 1, 2)), [TWO_ADDED], [THE_FIRST_ALONE_ABOVE_BOTH]))
+
+    assert (told_step.lines, told_step.changed_since_told) == (LineSpan(first=3, last=4), False)
 
 
 def test_a_step_whose_file_left_the_change_shows_its_file_with_no_rows_and_is_marked() -> None:

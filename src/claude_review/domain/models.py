@@ -726,7 +726,7 @@ class StoryWentStale(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    # The round the diff that found it was taken again in
+    # The round of the take that first found it so
     round: int = Field(ge=FIRST_ROUND)
     # The steps whose code changed since they were told
     steps: list[StaleStep]
@@ -748,10 +748,6 @@ class StoryRequested(BaseModel):
 
     # None for a first story, and for a request not yet taken
     stale: StoryWentStale | None = None
-
-    def as_taken(self, stale: StoryWentStale | None) -> StoryRequested:
-        """The request as an agent takes it, saying what went stale of the story held at that moment, if anything."""
-        return StoryRequested(stale=stale)
 
 
 class StoryCancelled(BaseModel):

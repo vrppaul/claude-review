@@ -108,8 +108,7 @@ describe('a review read as its story', () => {
 	});
 
 	it('says the round it was told in, and the round a later one moved the code on in', () => {
-		const movedOn = codeMovedOn({ left_out_when_told: 1, left_out_now: 1 });
-		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: movedOn }) });
+		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: codeMovedOn() }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -930,7 +929,7 @@ describe('a story whose code a round changed after it was told', () => {
 				...TOLD.story,
 				chapters: [toldChapter('ch-1', first, { title: 'The beginnings' }), ...TOLD.story.chapters.slice(1)]
 			},
-			{ moved_on: codeMovedOn({ round: MOVED_ON_IN, left_out_when_told: 1, left_out_now: 1 }) }
+			{ moved_on: codeMovedOn({ round: MOVED_ON_IN }) }
 		);
 	}
 	const changed = (step: ToldStep): ToldStep => ({ ...step, changed_since_told: true });

@@ -335,7 +335,7 @@ class StaleStep(WireModel):
 class StoryWentStale(WireModel):
     """What of the story the agent told a round moved the code on under."""
 
-    # The round the diff that found it was taken again in
+    # The round of the take that first found it so
     round: int
     steps: list[StaleStep]
     # How many lines the change added or removed that no step tells now

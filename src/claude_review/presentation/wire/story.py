@@ -189,14 +189,20 @@ class ToldStory(WireModel):
     left_out: list[LeftOut]
 
 
+class LeftOutChanged(WireModel):
+    """How many changed lines no step told when a story was told, and how many none tells now."""
+
+    when_told: int
+    now: int
+
+
 class CodeMovedOn(WireModel):
     """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
 
     # The round of the take that first found it so: a later take that finds it still so keeps it
     round: int
-    # How many lines the change added or removed that no step told when the story was told, and how many none tells now
-    left_out_when_told: int
-    left_out_now: int
+    # Said only where the round changed how much is left out; None where as much is left out as when it was told
+    left_out: LeftOutChanged | None
 
 
 class StoryHeld(WireModel):

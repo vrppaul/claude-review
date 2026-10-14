@@ -244,7 +244,8 @@ class Review:
             # reader's stopping finds the request either still waiting or noted as taken, never between
             if isinstance(taken, StoryRequested):
                 self._story_request_taken()
-                return taken.as_taken(self._story.went_stale())
+                # Made anew with what went stale by now: the request handed over says nothing of its own
+                return StoryRequested(stale=self._story.went_stale())
             return taken
 
     def ask(self, question_id: str, thread: ThreadDraft) -> None:

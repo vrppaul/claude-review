@@ -29,6 +29,15 @@ from claude_review.services import story_telling
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
 
 
+class LeftOutChanged(BaseModel):
+    """How many changed lines no step told when a story was told, and how many none tells now."""
+
+    model_config = ConfigDict(frozen=True)
+
+    when_told: int
+    now: int
+
+
 class CodeMovedOn(BaseModel):
     """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
 
@@ -37,10 +46,9 @@ class CodeMovedOn(BaseModel):
     # The round of the take that first found it so: a later take that finds
     # it still so keeps it
     round: int = Field(ge=FIRST_ROUND)
-    # How many lines the change added or removed that no step told when the
-    # story was told, and how many no step tells now
-    left_out_when_told: int
-    left_out_now: int
+    # Said only where the round changed how much is left out; None where as
+    # much is left out as when it was told
+    left_out: LeftOutChanged | None
 
 
 class StoryHeld(BaseModel):
@@ -178,7 +186,7 @@ class ReviewStory:
                 for step in chapter.steps
                 if step.changed_since_told
             ],
-            left_out=held.moved_on.left_out_now,
+            left_out=_changed_lines_left_out(held.story),
         )
 
     @property
@@ -205,7 +213,12 @@ def _moved_on(
     if not step_changed and left_out_now <= left_out_when_told:
         return None
     first_round = round_number if moved_on_before is None else moved_on_before.round
-    return CodeMovedOn(round=first_round, left_out_when_told=left_out_when_told, left_out_now=left_out_now)
+    return CodeMovedOn(round=first_round, left_out=_left_out_changed(left_out_when_told, left_out_now))
+
+
+def _left_out_changed(when_told: int, now: int) -> LeftOutChanged | None:
+    """How many changed lines no step tells then and now, where they differ: None where they do not."""
+    return None if now == when_told else LeftOutChanged(when_told=when_told, now=now)
 
 
 def _changed_lines_left_out(story: ToldStory) -> int:

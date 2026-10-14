@@ -52,15 +52,16 @@ def follow(told: ToldStory, files: list[DiffFile]) -> ToldStory:
     """A story as it was told, on a later take of the change: each step on its lines as they now stand.
 
     The steps of one file are followed together, since two of them must not
-    come to tell one line; a file's steps come back in the order the story
-    tells them, and are taken in that order again here.
+    come to tell one line, and each is found again by its file and the line
+    it was told to start at: no two steps of a file start at one line.
     """
     change = {file.path: PlacedFile(file) for file in files}
     followed = {
-        path: iter(_followed_steps(steps, change.get(path)))
-        for path, steps in _steps_of_each_file(told.chapters).items()
+        path: _followed_steps(steps, change.get(path)) for path, steps in _steps_of_each_file(told.chapters).items()
     }
-    chapters = [chapter.told([next(followed[step.file]) for step in chapter.steps]) for chapter in told.chapters]
+    chapters = [
+        chapter.told([followed[step.file][step.lines.first] for step in chapter.steps]) for chapter in told.chapters
+    ]
     return told.told(chapters, _left_out(chapters, told.housekeeping, files, change))
 
 
@@ -74,12 +75,15 @@ def _told_step(step: Step, file: PlacedFile) -> ToldStep:
     return step.told(file.piece([file.rows_at(step.lines)]), changed_since_told=False)
 
 
-def _followed_steps(steps: list[ToldStep], file: PlacedFile | None) -> list[ToldStep]:
-    """Steps of one file, in the order given, on a later take of it; marked, with no rows, if it left the change."""
+def _followed_steps(steps: list[ToldStep], file: PlacedFile | None) -> dict[int, ToldStep]:
+    """Steps of one file on a later take of it, by the line each was told to start at.
+
+    Each is marked, and shows no rows, where the file left the change.
+    """
     if file is None:
-        return [step.told(step.piece.showing([]), changed_since_told=True) for step in steps]
+        return {step.lines.first: step.told(step.piece.showing([]), changed_since_told=True) for step in steps}
     standing = _where_steps_stand(steps, file.file)
-    return [_cut_again(step, lines, file) for step, lines in zip(steps, standing, strict=True)]
+    return {step.lines.first: _cut_again(step, lines, file) for step, lines in zip(steps, standing, strict=True)}
 
 
 def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan]:

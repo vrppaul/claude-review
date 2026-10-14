@@ -68,11 +68,11 @@ export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<Sto
 }
 
 /**
- * That the second round moved the code on under a story, with no changed
- * line left out when it was told nor now, unless a test says otherwise.
+ * That the second round moved the code on under a story, leaving out as
+ * much as when it was told, unless a test says otherwise.
  */
 export function codeMovedOn(given: Partial<CodeMovedOn> = {}): CodeMovedOn {
-	return { round: SECOND_ROUND, left_out_when_told: 0, left_out_now: 0, ...given };
+	return { round: SECOND_ROUND, left_out: null, ...given };
 }
 
 /** What the review answers of its story: none told, unless a test says one was. */

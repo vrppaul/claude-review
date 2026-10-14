@@ -16,6 +16,7 @@ import asyncio
 from collections.abc import AsyncIterator, Iterator
 from http import HTTPStatus
 from pathlib import Path
+from typing import override
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,15 +24,23 @@ from httpx import AsyncClient
 from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 
+from claude_review.domain.interfaces import PageChannel
 from claude_review.domain.models import FIRST_ROUND
+from claude_review.domain.page_events import DiffRetaken, PageEvent
 from claude_review.domain.story import Step, Story
+from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import CodeMovedOn, LeftOutOfFile, StoryResponse, StoryTakenResponse
+from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.image_store import DirectoryImageStore
+from claude_review.repositories.system_clock import SystemClock
+from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_content import FIRST_TAKE
+from claude_review.services.review.review_story import StoryHeld
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
@@ -247,10 +256,7 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     await take_again_after_a_round(agent, tmp_git_repo)
 
     held = (await held_by(agent)).held
-    assert (held.round, held.moved_on) == (
-        FIRST_ROUND,
-        CodeMovedOn(round=FIRST_ROUND + 1, left_out_when_told=0, left_out_now=0),
-    )
+    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out=None))
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 
@@ -302,6 +308,50 @@ async def review(reviews: ReviewFactory, tmp_git_repo: Path) -> AsyncIterator[Re
     hosted = reviews.hosted(await repository_opening(tmp_git_repo))
     async with http_client(hosted.app):
         yield hosted.review
+
+
+class PageReadingTheStory(PageChannel):
+    """Pages that read the story the review holds the moment they are told anything, as a page told of a push does."""
+
+    def __init__(self) -> None:
+        # The review they read it from, once it is made: it is made with them
+        self.review: Review | None = None
+        # Each kind of event told, with the story held as it was told
+        self.read: list[tuple[type[PageEvent], StoryHeld | None]] = []
+
+    @override
+    def tell(self, event: PageEvent) -> None:
+        self.read.append((type(event), self.review.story_held()))
+
+
+@pytest.fixture
+async def page_reading_the_story(workspace: ReviewWorkspace, tmp_git_repo: Path) -> PageReadingTheStory:
+    """The pages of a review of the repository's change, put together as `host_review` puts one, and opened."""
+    write_files(tmp_git_repo, THE_CHANGE)
+    page = PageReadingTheStory()
+    page.review = Review(
+        await repository_opening(tmp_git_repo),
+        repository=GitRepository(objects=workspace.objects),
+        images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
+        page=page,
+        clock=SystemClock(),
+    )
+    await page.review.open()
+    return page
+
+
+async def test_a_page_told_the_diff_was_taken_again_reads_the_story_already_followed_onto_it(
+    page_reading_the_story: PageReadingTheStory, tmp_git_repo: Path
+) -> None:
+    """Followed before the pages are told: a page that reads the diff, then the story, reads both of one take."""
+    review = page_reading_the_story.review
+    await review.tell_story(WHOLE_STORY)
+    write_files(tmp_git_repo, {EDITED_FILE: REWORDED_SINCE})
+
+    await review.retake()
+
+    [*_, (told, held)] = page_reading_the_story.read
+    assert (told, held) == (DiffRetaken, review.story_held())
 
 
 async def test_the_review_goes_on_answering_while_a_story_is_told(review: Review) -> None:
