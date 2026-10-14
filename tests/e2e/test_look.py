@@ -511,15 +511,20 @@ async def test_a_change_left_untold_has_no_part_of_a_story_to_go_to() -> None:
     assert "there is no element of test id go-to-part on the page" in looked.complaint
 
 
-async def test_a_look_at_an_untold_change_asked_for_as_its_story_opens_on_what_the_page_asks_first() -> None:
-    """A look's reader is new to the review: stories are off, and the page asks before a story is written."""
-    looked = await _look("--untold")
+async def test_a_look_at_an_untold_change_asked_for_as_its_story_opens_on_what_the_page_asks_first_and_goes_on() -> (
+    None
+):
+    """A look's reader is new to the review: stories are off, and the page asks before a story is written.
+
+    The look goes on from the question: answered, the page shows where the story will be.
+    """
+    looked = await _look("--untold", "press:turn-on-stories")
 
     assert looked.exit_code == LOOKED, looked.complaint
-    (only_line,) = looked.lines
-    opened = _said(only_line)
+    opened, answered = [_said(line) for line in looked.lines]
     assert opened.area.startswith("area: diff-view ")
     assert _keyboard(opened).test_id == "turn-on-stories"
+    assert answered.area.startswith("area: story-view ")
 
 
 async def test_the_reviews_agent_waits_in_a_look_and_the_reader_can_write_to_it(untold_look: list[Said]) -> None:

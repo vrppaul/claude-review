@@ -258,7 +258,10 @@ tests. Remove items when done — don't check them off.
 - [ ] No test holds what `scripts/look.py` says when it cannot begin or
       cannot settle: a review that does not start or does not say where it
       is, a story or a wait of its agent's that the review refuses, before
-      the page opens or as a step, git failing to make the repository,
+      the page opens or as a step, a page that shows neither the view it
+      was asked for nor the question before a story as it opens (seen once
+      in a copy of the look whose name for the question was wrong: "open
+      could not be taken", exit 1), git failing to make the repository,
       and a page still moving after five seconds, whose step is marked
       "still moving". None of these can be brought about from the look's
       command line, which is all its tests use. The same holds of
