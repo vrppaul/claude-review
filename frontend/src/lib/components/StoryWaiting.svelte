@@ -4,6 +4,7 @@
 	import type { StoryWait } from '$lib/review/story-wait';
 	import Icon from './Icon.svelte';
 	import type { IconName } from './icons';
+	import StorySketch from './StorySketch.svelte';
 	import { factsOnTheWay, type WaitFact } from './story-wait-facts';
 
 	interface Props {
@@ -70,6 +71,7 @@
 		</div>
 	{:else}
 		<!-- What is left is a story on its way: its request not landed yet, or being written -->
+		<StorySketch waiting />
 		<div class="flex flex-col gap-2 text-center">
 			<h1 class="text-xl font-semibold">The agent is writing the story</h1>
 			<p class="cr-muted">

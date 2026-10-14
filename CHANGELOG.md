@@ -61,6 +61,13 @@
   `GET /api/guide` says `story_introduced` beside the release last shown,
   false for a reader shown around by a release before stories; `PUT
   /api/guide` takes either fact alone and keeps the other as it was.
+- **A story, sketched.** The question asked before stories are turned on
+  shows what a story is in the review's own colours, without a word: the
+  contents on their axis, a chapter read and the one being read with its
+  files, beside the overview with its doubt, a diagram, and a step's reason
+  over its code. Where a story is being written the same sketch stands
+  greyed over the wait, what the agent writes first pulsing in its colour,
+  and standing still for a reader who asked for less motion.
 - **The agent is told when a story is wanted, and how one is written.**
   `wait` hands over `story_request` and `story_cancel`; `claude-review story
   --help` shows the document whole and says how long each of its texts may

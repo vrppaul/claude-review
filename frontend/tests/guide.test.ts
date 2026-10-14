@@ -188,6 +188,15 @@ describe('the news card', () => {
 		expect(image.getAttribute('src')).toBe('/news/paste.gif');
 		expect(image.alt).toBe('A screenshot pasted');
 	});
+
+	it('draws a story sketched, for an entry that names it', () => {
+		const { getByTestId } = render(
+			NewsIllustration,
+			inReview(review, { illustration: { kind: 'drawing', name: 'story-sketch' } })
+		);
+
+		expect(getByTestId('story-sketch')).toBeTruthy();
+	});
 });
 
 describe('the ? list', () => {

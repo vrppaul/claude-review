@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
@@ -165,6 +165,15 @@ describe('what is asked before stories are turned on', () => {
 		expect(asked).toContain(
 			'Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.'
 		);
+	});
+
+	it('shows a story, sketched', async () => {
+		const user = userEvent.setup();
+		drawn();
+
+		await user.click(screen.getByTestId('read-as-story'));
+
+		expect(within(screen.getByTestId('story-opt-in')).getByTestId('story-sketch')).toBeTruthy();
 	});
 
 	it('turns stories on for every review, asks the agent for this one and shows where it will be', async () => {

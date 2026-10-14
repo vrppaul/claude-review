@@ -2,6 +2,7 @@
 	import type { Component } from 'svelte';
 	import type { DrawingName, Illustration } from '$lib/guide/news';
 	import PastedScreenshot from './PastedScreenshot.svelte';
+	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
 		illustration: Illustration;
@@ -11,7 +12,8 @@
 
 	// Every drawing an entry can name; a name missing here does not type-check
 	const DRAWINGS: Record<DrawingName, Component> = {
-		'pasted-screenshot': PastedScreenshot
+		'pasted-screenshot': PastedScreenshot,
+		'story-sketch': StorySketch
 	};
 </script>
 

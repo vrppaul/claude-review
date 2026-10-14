@@ -4,6 +4,7 @@
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import Icon from './Icon.svelte';
+	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
 		/** What turning stories on does, once the dialog has closed and given the keyboard back. */
@@ -29,6 +30,7 @@
 				<Icon name="story" class="h-4.5 w-4.5 text-(--cr-agent)" />
 				<h2 class="text-base font-semibold">{QUESTION}</h2>
 			</div>
+			<StorySketch />
 			<p>
 				The agent that made the change tells it as a story: a short overview, then chapters with its reason above each
 				piece of code.

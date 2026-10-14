@@ -7,7 +7,7 @@
  */
 
 /** The drawings an entry can ask for, by name; `NewsIllustration` draws them. */
-export type DrawingName = 'pasted-screenshot';
+export type DrawingName = 'pasted-screenshot' | 'story-sketch';
 
 /**
  * A picture above the words. Either a file — a screenshot, or a GIF to show
