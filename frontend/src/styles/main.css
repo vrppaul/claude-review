@@ -344,6 +344,11 @@
 	color: var(--color-base-content);
 	box-shadow: var(--cr-shadow-unread-edge);
 }
+/* The segment of a way of reading the page introduces, while the introduction points at it */
+.cr-segment-introduced {
+	color: var(--color-base-content);
+	box-shadow: var(--cr-shadow-introduced-edge);
+}
 
 /* A chip the whole of which is the hit target, over a 16px checkbox */
 .cr-chip {
@@ -1610,15 +1615,44 @@
 .cr-popover-unread {
 	--cr-popover-edge: var(--cr-unread);
 }
+/* A pane that speaks for the agent, or of what it does: its edge, and its arrow's, in its colour */
+.cr-popover-agent {
+	--cr-popover-edge: var(--cr-agent);
+}
+/* A note under a control that is not about the control, as the note that Story will not be introduced again: no arrow */
+.cr-popover-arrowless::before {
+	content: none;
+}
 /*
  * A pane the page puts by a control as a note: as wide as its words on one
  * line, and no wider than the window has room for from where it stands,
- * which whoever draws it says. Past that its words wrap.
+ * which the pane measures as it is drawn. Past that its words wrap.
  */
 .cr-popover-note {
 	--cr-note-margin: 0.5rem;
 	width: max-content;
-	max-width: calc(100vw - var(--cr-note-stands-at) - var(--cr-note-margin));
+	max-width: calc(100vw - var(--cr-pane-stands-at) - var(--cr-note-margin));
+}
+/* Story introduced at the switch: a note of a set width, for its sketch, still no wider than the window has room for */
+.cr-story-introduction {
+	width: 21.25rem;
+}
+/*
+ * A note that fades as its time runs out (--cr-note-lasts): whole for most
+ * of it, gone by its end. One class, so asking the system for less motion
+ * stills it, and the note just goes
+ */
+.cr-note-fading {
+	animation: cr-fade-out var(--cr-note-lasts) ease-in forwards;
+}
+@keyframes cr-fade-out {
+	0%,
+	75% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
 }
 /*
  * How long a note that goes by itself has left: a bar along its foot, in

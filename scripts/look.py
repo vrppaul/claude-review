@@ -171,6 +171,9 @@ GIVEN_UP_AFTER_SECONDS = 5.0
 
 # The button that puts away the card offering a fresh reader the tour: the card stands over the page
 TOUR_NOT_NOW = "guide-not-now"
+# The button that puts away, for this page, Story introduced under the switch once that card is gone: it
+# stands over the page too
+STORY_INTRODUCTION_FOR_NOW = "story-introduction-close"
 # The question the page asks before the first story is written, in place of showing the story view
 ASKED_BEFORE_A_STORY = "story-opt-in"
 # The bar that says which chapter is read, an entry of the story's contents, the mark of one read
@@ -757,15 +760,17 @@ def _ending_the_look_at(step: str) -> Generator[None]:
 
 
 async def _opened(page: Page, address: str, view: View) -> None:
-    """Open the review as a reader new to it would, put the offer of a tour away, and ask to read it the way asked.
+    """Open the review as a reader new to it would, put away what the page offers such a reader, and read it as asked.
 
-    The page shows that view, or asks first: a reader who has not turned stories on is asked before
-    a story is written, and what the look then reads is the files, with that question over them.
-    The look goes on from either. A page that shows neither did not open as it was asked to, and
-    the browser says so, which ends the look.
+    What it offers is the tour, then Story, introduced under the switch. The page shows the view
+    asked for, or asks first: a reader who has not turned stories on is asked before a story is
+    written, and what the look then reads is the files, with that question over them. The look goes
+    on from either. A page that shows neither did not open as it was asked to, and the browser says
+    so, which ends the look.
     """
     await page.goto(address)
     await page.get_by_test_id(TOUR_NOT_NOW).click()
+    await page.get_by_test_id(STORY_INTRODUCTION_FOR_NOW).click()
     await page.get_by_test_id(view.switch).click()
     await page.get_by_test_id(view.area).or_(page.get_by_test_id(ASKED_BEFORE_A_STORY)).wait_for()
 

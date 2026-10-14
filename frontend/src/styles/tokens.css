@@ -114,6 +114,8 @@
 	--cr-shadow-written-node: 0 0 0 3px var(--cr-agent-chip);
 	/* A line inside the edge of a control that leads to what the agent brought and the reader has not read */
 	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
+	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
+	--cr-shadow-introduced-edge: inset 0 0 0 1px var(--cr-agent);
 	/* The edge of the band over a block of a story's words the reader points at, laid inside it */
 	--cr-shadow-band-edge: inset var(--cr-voice-axis) 0 0 var(--cr-mark-band-edge);
 	/* What lifts a control floating over words off them */

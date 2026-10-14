@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import Icon from './Icon.svelte';
 	import StoryArrivalNote from './StoryArrivalNote.svelte';
+	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
@@ -13,7 +14,7 @@
 	const review = useReview();
 
 	// The button of each view, as it is drawn: the keyboard goes to the one on screen, and the note of a
-	// story's arrival points at Story's
+	// story's arrival and Story's introduction point at Story's
 	const buttons: Partial<Record<ReadingViewName, HTMLButtonElement>> = $state({});
 
 	const onScreen = $derived(review.views.onScreen.name);
@@ -29,6 +30,8 @@
 	// Whether a story that arrived is offered under the switch: while the files are read, until the reader
 	// reads it or puts the offer away
 	const storyOffered = $derived(readingFiles && review.story.arrival === 'offered');
+	// Whether Story is introduced under the switch now: the note of a story's arrival stands there first
+	const introducingStory = $derived(!storyOffered && review.guide.introducesStory);
 
 	// The view on screen changes from elsewhere too — the files brought on screen from where a story
 	// will be — and whatever held the keyboard in the view that went goes with it. Looked at before the
@@ -54,7 +57,8 @@
 				class={[
 					SEGMENT_CLASSES,
 					storySays === 'writing' && 'cr-segment-writing',
-					storySays === 'unread' && 'cr-segment-unread'
+					storySays === 'unread' && 'cr-segment-unread',
+					introducingStory && 'cr-segment-introduced'
 				]}
 				aria-pressed={onScreen === 'story'}
 				onclick={() => review.readAsStory()}
@@ -85,6 +89,8 @@
 		</div>
 		{#if storyOffered}
 			<StoryArrivalNote pointsAt={buttons.story} onOpen={() => review.readAsStory()} />
+		{:else}
+			<StoryIntroduction pointsAt={buttons.story} onTry={() => review.readAsStory()} />
 		{/if}
 	</div>
 	{#if review.askingToTurnStoriesOn}

@@ -26,10 +26,6 @@
 	let pane: HTMLDivElement | undefined = $state();
 	// How far in from its left edge the note points at the control, where it draws an arrow
 	const arrowOffset = $derived(pointsAt ? arrowOffsetTo(pointsAt) : 0);
-	// How far from the left of the window the note stands, as it is drawn: where the box it is placed in
-	// begins. It is no wider than the window has room for from there, so on a narrow screen its words
-	// wrap, and nothing of it is cut off
-	const standsAt = $derived(pane?.offsetParent?.getBoundingClientRect().left ?? 0);
 
 	// Started as the note is drawn, and let go with it: put away before, it puts nothing away
 	$effect(() => {
@@ -47,7 +43,7 @@
 <!-- Said under a control by the page, of something that happened: a note, and no popover, for it opens from no
 	control and takes the keyboard from nothing the reader is doing. It lies over what is under it, so it goes
 	by itself in a few seconds, or at once as it is put away -->
-<div class="contents" style:--cr-note-stands-at="{standsAt}px" style:--cr-note-lasts="{STANDS_FOR_MS}ms">
+<div class="contents" style:--cr-note-lasts="{STANDS_FOR_MS}ms">
 	<PopoverPanel
 		{...marked}
 		bind:pane
