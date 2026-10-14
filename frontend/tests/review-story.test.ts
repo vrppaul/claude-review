@@ -3,7 +3,7 @@ import { ReviewStory, type StoryOpening } from '$lib/review/review-story.svelte'
 import type { StoryResponse } from '$lib/types';
 import { A_LATER_TAKE, FIRST_TAKE } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings } from './fake-server';
-import { ASKED, codeMovedOn, storyHeld, storyResponse, TAKEN } from './story';
+import { ASKED, codeMovedOn, readTheStoryAgain, storyHeld, storyResponse, TAKEN } from './story';
 
 /** What a reader who opens the review for the first time has read through of its story. */
 const NOTHING_READ: string[] = [];
@@ -133,7 +133,7 @@ describe('what a page holds of the asking for a story', () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
 		const story = pageStory({ asking: TAKEN });
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.wait).toBeNull();
 	});
@@ -151,50 +151,27 @@ describe('what a page holds of the asking for a story', () => {
 });
 
 describe('the story a page holds', () => {
-	it('is the one the review held when it was read last, though an earlier read is answered after it', async () => {
-		const reads = fakeServer().hold('GET /api/story');
-		const story = pageStory();
-		const readFirst = story.read();
-		const readLast = story.read();
-		await vi.waitFor(() => expect(reads.requests).toHaveLength(2));
-
-		reads.answer(1, storyResponse({ held: storyHeld({ title: 'Told second' }) }));
-		reads.answer(0, storyResponse({ held: storyHeld({ title: 'Told first' }) }));
-		await Promise.all([readFirst, readLast]);
-
-		expect(story.held?.story.title).toBe('Told second');
-	});
-
 	it('is none once the review holds none', async () => {
 		fakeServer().answer('GET /api/story', storyResponse());
 		const story = pageStory({ held: storyHeld() });
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.held).toBeNull();
 	});
 });
 
-describe('whose numbers the lines of the story held carry', () => {
-	it("are the review's own while the page reads the take the story was told of", () => {
-		const story = pageStory({ held: storyHeld() });
+describe('the story a page opens on', () => {
+	it('is the one the review held, of the take the page reads', () => {
+		const held = storyHeld();
 
-		expect(story.numbering).toBe('the-reviews');
+		expect(pageStory({ held }).held).toBe(held);
 	});
 
-	it("are another take's once the page reads another take of the change", () => {
+	it('is none where the review held it on another take than the page read: it comes with that take’s diff', () => {
 		const story = pageStory({ held: storyHeld(), takeOnScreen: readingALaterTake });
 
-		expect(story.numbering).toBe('another-takes');
-	});
-
-	it("are the review's own again once the story held is one told of the take the page reads", async () => {
-		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld({}, { take: A_LATER_TAKE }) }));
-		const story = pageStory({ held: storyHeld(), takeOnScreen: readingALaterTake });
-
-		await story.read();
-
-		expect(story.numbering).toBe('the-reviews');
+		expect(story.held).toBeNull();
 	});
 });
 
@@ -210,7 +187,7 @@ describe('the pieces of the story a page holds', () => {
 		const story = pageStory({ held: storyHeld() });
 		const ofTheFirstStory = story.pieces;
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.pieces).not.toBe(ofTheFirstStory);
 	});
@@ -246,7 +223,7 @@ describe('what the reader has read through of the story a page holds', () => {
 		fakeServer().refuse('GET /api/story', SERVER_ERROR);
 		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
 
-		await story.readAnother().catch(() => undefined);
+		await story.readAnother();
 
 		expect(story.progress.isRead(A_PART)).toBe(true);
 	});
@@ -255,10 +232,10 @@ describe('what the reader has read through of the story a page holds', () => {
 		const server = fakeServer();
 		server.refuse('GET /api/story', SERVER_ERROR);
 		const story = pageStory({ held: storyHeld(), partsRead: [A_PART] });
-		await story.readAnother().catch(() => undefined);
+		await story.readAnother();
 		server.answer('GET /api/story', storyResponse({ held: storyHeld({ title: 'Told again' }) }));
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.progress.isRead(A_PART)).toBe(false);
 	});
@@ -269,7 +246,7 @@ describe('what the reader has read through of the story a page holds', () => {
 		await story.readAnother();
 		story.progress.markRead(A_PART);
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.progress.isRead(A_PART)).toBe(true);
 	});
@@ -332,7 +309,7 @@ describe('a story told while the page is open', () => {
 		fakeServer().refuse('GET /api/story', SERVER_ERROR);
 		const story = pageStory();
 
-		await story.readAnother().catch(() => undefined);
+		await story.readAnother();
 
 		expect(story.arrival).toBe('none');
 	});
@@ -358,7 +335,7 @@ describe('a story the page did not hear being told', () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
 		const story = pageStory();
 
-		await story.read();
+		await readTheStoryAgain(story);
 
 		expect(story.arrival).toBe('none');
 	});

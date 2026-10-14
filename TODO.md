@@ -182,9 +182,8 @@ tests. Remove items when done — don't check them off.
       own button leaves the keyboard on nothing: the header then draws no
       control to take it (`ReviewHeader.svelte`).
 - [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named
-      `'the-reviews'`, `'a-narrower-bases'`, `'another-takes'`
-      (`anchors/numbering.ts`): possessives with the apostrophe gone, and
-      the last reads as a plural where it is compared.
+      `'the-reviews'`, `'a-narrower-bases'` (`anchors/numbering.ts`):
+      possessives with the apostrophe gone.
 - [ ] `refactor(ui)`: where a thread hangs is said twice: `#hangsHere` in
       `components/line-commenting.svelte.ts`, over the lines a drawing
       places, and `fileDraws` in `anchors/placement.ts`, over the diff's

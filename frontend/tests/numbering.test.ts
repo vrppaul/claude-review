@@ -11,11 +11,6 @@ describe("whose a side's line numbers are", () => {
 		expect(sideIsTheReviews('old', 'a-narrower-bases')).toBe(false);
 		expect(sideIsTheReviews('new', 'a-narrower-bases')).toBe(true);
 	});
-
-	it("are another take's on both sides of a story told of another take", () => {
-		expect(sideIsTheReviews('old', 'another-takes')).toBe(false);
-		expect(sideIsTheReviews('new', 'another-takes')).toBe(false);
-	});
 });
 
 describe("why nothing is written on a line whose number is not the review's own", () => {
@@ -27,12 +22,5 @@ describe("why nothing is written on a line whose number is not the review's own"
 		expect(whyNotTheReviews('old', 'a-narrower-bases')).toBe(
 			'A removed line belongs to the base on screen. Show the whole diff to write here.'
 		);
-	});
-
-	it('says a line of a story told of another take is the code as it was, on either side', () => {
-		const asItWas = 'This is the code as the story was told; it has changed since. Comment on it in Files.';
-
-		expect(whyNotTheReviews('old', 'another-takes')).toBe(asItWas);
-		expect(whyNotTheReviews('new', 'another-takes')).toBe(asItWas);
 	});
 });

@@ -25,7 +25,7 @@ const file = diffFile({
 const AS_LINES = { file, language: null, view: 'raw' } as const;
 
 /** How a story step draws a file: a piece cut out of it, of the take the page reads. */
-const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', shows: 'a-step', numbering: 'the-reviews' } } as const;
+const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', shows: 'a-step' } } as const;
 
 /** A piece of the same file that runs over two changes: lines 32 to 39 lie between them, unchanged. */
 const overTwoChanges = diffFile({
@@ -49,7 +49,7 @@ const aroundWhatAStepTells = diffFile({
 const WHAT_NO_STEP_TELLS = {
 	...AS_LINES,
 	file: aroundWhatAStepTells,
-	extent: { kind: 'piece', shows: 'what-no-step-tells', numbering: 'the-reviews' }
+	extent: { kind: 'piece', shows: 'what-no-step-tells' }
 } as const;
 
 beforeEach(() => {

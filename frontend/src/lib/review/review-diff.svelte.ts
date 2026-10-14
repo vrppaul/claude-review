@@ -7,7 +7,7 @@
  * nothing about the review is written down by choosing one.
  */
 
-import type { DiffNumbering } from '$lib/anchors/numbering';
+import type { Numbering } from '$lib/anchors/numbering';
 import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
@@ -94,7 +94,7 @@ export class ReviewDiff {
 	}
 
 	/** Whose numbers the lines of the diff on screen carry: the review's own, unless a narrower base is in force. */
-	get numbering(): DiffNumbering {
+	get numbering(): Numbering {
 		return this.narrowed ? 'a-narrower-bases' : 'the-reviews';
 	}
 
@@ -110,14 +110,22 @@ export class ReviewDiff {
 
 	/** Take the diff again against the base the reader asked for. */
 	async take(): Promise<void> {
+		const hold = await this.read();
+		hold();
+	}
+
+	/**
+	 * Read the diff again against the base the reader asked for, and return
+	 * how to put it on screen: whoever reads it with something else holds
+	 * both once both are read.
+	 */
+	async read(): Promise<() => void> {
 		const mine = ++this.#asking;
-		const against = this.#requestedBase;
 		const data = await takeDiff({
 			ignoreWhitespace: this.#whitespaceIgnored(),
-			base: against
+			base: this.#requestedBase
 		});
-		if (mine !== this.#asking) return;
-		this.#show(data);
+		return () => this.#showIfLatest(mine, data);
 	}
 
 	/**
@@ -181,6 +189,11 @@ export class ReviewDiff {
 	 */
 	async retake(): Promise<void> {
 		await retakeDiff();
+	}
+
+	/** Put a diff read on screen, unless a later read was asked for since: only the latest is drawn. */
+	#showIfLatest(asked: number, data: DiffResponse): void {
+		if (asked === this.#asking) this.#show(data);
 	}
 
 	/** Put a diff that has arrived on screen, with everything that came with it. */

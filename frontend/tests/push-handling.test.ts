@@ -7,14 +7,23 @@ import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
-import { A_LATER_TAKE, contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
+import {
+	A_LATER_TAKE,
+	contextLine,
+	diffFile,
+	diffResponse,
+	FIRST_TAKE,
+	hunk,
+	reviewResponse,
+	sinceRound
+} from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment, storyComment } from './new-comment';
 import { inReview, openReview, settingsWithStoriesOn } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
-import { ASKED, codeMovedOn, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
+import { ASKED, codeMovedOn, readTheStoryAgain, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -148,9 +157,33 @@ describe('what the server pushes, taken in', () => {
 		handOverNext(review, { type: 'story_asking', asking: null });
 		await settled();
 		server.answer('GET /api/story', storyResponse({ held: movedOn }));
-		await review.story.read();
+		await readTheStoryAgain(review.story);
 
 		expect(review.story.wait).toEqual({ kind: 'unasked' });
+	});
+
+	it('holds the later of two stories told one after the other', async () => {
+		const reads = fakeServer().hold('GET /api/story');
+
+		handOverNext(review, { type: 'story' });
+		handOverNext(review, { type: 'story' });
+		await vi.waitFor(() => expect(reads.requests).toHaveLength(1));
+		reads.answer(0, storyResponse({ held: storyHeld({ title: 'Told first' }) }));
+		await vi.waitFor(() => expect(reads.requests).toHaveLength(2));
+		reads.answer(1, storyResponse({ held: storyHeld({ title: 'Told second' }) }));
+		await settled();
+
+		expect(review.story.held?.story.title).toBe('Told second');
+	});
+
+	it('holds no story told of a take of the change the page has not taken in: it is held with that take’s diff', async () => {
+		review = openReview({ story: storyHeld() });
+		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld({}, { take: A_LATER_TAKE }) }));
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect(review.story.held).toBeNull();
 	});
 
 	it('says in the panel when the story told could not be read, and keeps the one it had', async () => {
@@ -282,21 +315,59 @@ describe('what the server pushes, taken in', () => {
 		// The story the review followed onto the diff taken again, and what the reader had read of it
 		const FOLLOWED = storyHeld({}, { take: A_LATER_TAKE });
 		const CHAPTER_READ = 'ch-1';
+		let server: FakeServer;
 
 		beforeEach(() => {
 			review = openReview({ files: [untouched('a.py')], story: storyHeld() });
 			review.story.progress.markRead(CHAPTER_READ);
-			const server = fakeServer();
+			server = fakeServer();
 			server.answer('POST /api/anchors/follow', { anchors: [] });
 			server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], take: A_LATER_TAKE }));
 			server.answer('GET /api/story', storyResponse({ held: FOLLOWED }));
 		});
 
-		it('reads the story the review followed onto the diff taken again, so its lines are the review’s own', async () => {
+		it('reads the story the review followed onto the diff taken again, and holds it with that diff', async () => {
 			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
 			await settled();
 
-			expect([review.story.held, review.story.numbering]).toEqual([FOLLOWED, 'the-reviews']);
+			expect([review.story.held, review.diff.takeOnScreen]).toEqual([FOLLOWED, A_LATER_TAKE]);
+		});
+
+		it('holds neither the diff taken again nor the story followed onto it until both are read', async () => {
+			const stories = server.hold('GET /api/story');
+			const before = review.story.held;
+
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await vi.waitFor(() => expect(stories.requests).toHaveLength(1));
+			await settled();
+
+			expect([review.story.held, review.diff.takeOnScreen]).toEqual([before, FIRST_TAKE]);
+			stories.answer(0, storyResponse({ held: FOLLOWED }));
+		});
+
+		it('holds no story once the story followed onto the diff taken again cannot be read, and says so in the panel', async () => {
+			server.refuse('GET /api/story', SERVER_ERROR, 'the review fell over');
+
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await settled();
+
+			expect([review.story.held, review.diff.takeOnScreen]).toEqual([null, A_LATER_TAKE]);
+			expect(review.conversation.turns.map((turn) => turn.body)).toContain(
+				'the story could not be read — the review fell over'
+			);
+		});
+
+		it('reads a story told while the diff is taken again once the diff and the story followed are held', async () => {
+			const follows = server.hold('POST /api/anchors/follow');
+
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			handOverNext(review, { type: 'story' });
+			await settled();
+			expect(server.requestsTo('GET /api/story')).toEqual([]);
+
+			follows.answer(0, { anchors: [] });
+			await settled();
+			expect(server.requestsTo('GET /api/story')).toHaveLength(2);
 		});
 
 		it('keeps what was read of the story followed, and offers no new one', async () => {
@@ -432,8 +503,8 @@ describe('catching up on what the server could not hand over again', () => {
 		await catchUp(review, GOES_ON_FROM);
 
 		const said = review.conversation.turns.map((turn) => turn.body);
-		expect(said.at(-2)).toContain('1 thread followed its lines');
-		expect(said.at(-1)).toBe('the story could not be read — the review fell over');
+		expect(said.at(-2)).toBe('the story could not be read — the review fell over');
+		expect(said.at(-1)).toContain('1 thread followed its lines');
 	});
 
 	it('asks for no story where catching up itself failed: one failure is said once', async () => {

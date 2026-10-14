@@ -37,8 +37,7 @@
 	const fileNamed = $derived(above === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
-	// Its lines carry the numbers of the take the story was told of, as the story says
-	const extent = $derived<Extent>({ kind: 'piece', shows, numbering: review.story.numbering });
+	const extent = $derived<Extent>({ kind: 'piece', shows });
 </script>
 
 <!-- A piece of a file in a frame of its own, under whatever heads it. Clipped to its rounded corners,

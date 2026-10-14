@@ -9,13 +9,9 @@
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
  * thread on a line no piece shows is not drawn here at all; the files,
- * read against the review's own base, draw every thread. Nor is any thread
- * on lines drawn in a story told of another take of the change than the
- * page reads: its lines are numbered as that take, and a thread hangs on a
- * line of the take on screen.
+ * read against the review's own base, draw every thread.
  */
 
-import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
 import {
 	askableReason,
@@ -101,22 +97,13 @@ function threadsPlaced(story: ReviewStory, threads: Threads): Thread[] {
  * draws, down its rows: none where that section draws no piece.
  */
 function threadsOnThePiece(section: string, path: string, story: ReviewStory, threads: Threads): Thread[] {
-	return inDrawnOrder(threads.onLinesOf(path), (lines) =>
-		drawnBy(section, story.pieces.drawing(lines, story.numbering))
-	);
+	return inDrawnOrder(threads.onLinesOf(path), (lines) => drawnBy(section, story.pieces.drawing(lines)));
 }
 
 /** A piece that draws a thread's lines, if it is the piece known by this key. */
 function drawnBy<Piece extends { key: string }>(section: string, drawn: Piece | null): Piece | null {
 	return drawn?.key === section ? drawn : null;
 }
-
-// What a story held draws, by whose numbers its lines carry: only the review's own take a comment, and
-// only they carry threads
-const DRAWN_NUMBERED: Record<StoryNumbering, Drawn> = {
-	'the-reviews': LINES_WITH_THEIR_THREADS,
-	'another-takes': { lines: 'to-read', threads: false }
-};
 
 export class StoryReading implements ReadingView {
 	readonly name = 'story';
@@ -130,12 +117,11 @@ export class StoryReading implements ReadingView {
 
 	/**
 	 * Until a story is told, no line: the threads on the words of a story
-	 * told before, drawn at its head, and with none of those, nothing. Of a
-	 * story told of another take, lines that are read and take nothing.
+	 * told before, drawn at its head, and with none of those, nothing.
 	 */
 	drawn(): Drawn {
 		if (this.#story.held === null) return { ...NOTHING_DRAWN, threads: this.threadsInOrder().length > 0 };
-		return DRAWN_NUMBERED[this.#story.numbering];
+		return LINES_WITH_THEIR_THREADS;
 	}
 
 	sectionKeys(): string[] {
@@ -154,16 +140,11 @@ export class StoryReading implements ReadingView {
 	}
 
 	sectionOf(lines: FileLines): string | null {
-		return this.#story.pieces.drawing(lines, this.#story.numbering)?.key ?? null;
+		return this.#story.pieces.drawing(lines)?.key ?? null;
 	}
 
-	/**
-	 * The first piece of the file the story draws: where the file is first
-	 * told. None in a story of another take: its pieces are the file as it
-	 * was, and whoever names a file means it as it is.
-	 */
+	/** The first piece of the file the story draws: where the file is first told. */
 	sectionOfFile(path: string): string | null {
-		if (this.#story.numbering === 'another-takes') return null;
 		return this.#story.pieces.firstOf(path)?.key ?? null;
 	}
 

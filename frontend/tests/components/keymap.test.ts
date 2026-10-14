@@ -5,7 +5,7 @@ import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { FIELD_KEYS } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
-import { A_LATER_TAKE, contextLine, diffFile, hunk } from '../diff';
+import { contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
@@ -430,28 +430,6 @@ describe('the keys of a review read as its story', () => {
 			'Ctrl+Enter: Add the comment, or send the message, being written',
 			'a: Next unread reply',
 			'c: Talk to the agent',
-			'Ctrl+Shift+Enter: Finish the review',
-			'?: Show this list',
-			'Esc: Close it'
-		]);
-	});
-
-	it('are listed without Enter and n / p in a story the code has moved on from: its lines take no comment, and it draws none', async () => {
-		const user = userEvent.setup();
-		const toldOfAnotherTake = storyHeld(TOLD.story, { take: A_LATER_TAKE });
-		review = openReview({ files, story: toldOfAnotherTake, facts: { answerer_attached: true } });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		await user.keyboard('?');
-
-		expect(listedInTheHelp()).toEqual([
-			'j / k: Down / up a line',
-			'Ctrl+Enter: Add the comment, or send the message, being written',
-			'] / [: Next / previous piece of the story',
-			'a: Next unread reply',
-			'c: Talk to the agent',
-			'f: Show or hide the contents',
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
 			'Esc: Close it'

@@ -2,12 +2,12 @@ import { beforeEach, describe, it, expect } from 'vitest';
 import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
-import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
+import { addedLine, diffFile, hunk, removedLine } from './diff';
 import { fakeServer } from './fake-server';
 import { newComment, storyComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
-import { gainedPiece, storyHeld, storyResponse, toldChapter, toldStep } from './story';
+import { gainedPiece, readTheStoryAgain, storyHeld, storyResponse, toldChapter, toldStep } from './story';
 
 // A story of two chapters: a.py is told in both, line 1 in the first and line 9 in the second, with
 // b.py between them; what no step tells of c.py is left out
@@ -80,7 +80,7 @@ describe('a review read as its story', () => {
 		const asFirstTold = review.views.onScreen.sectionOf(onLineNine);
 		fakeServer().answer('GET /api/story', storyResponse({ held: TOLD_IN_ANOTHER_ORDER }));
 
-		await review.story.read();
+		await readTheStoryAgain(review.story);
 
 		expect(review.views.onScreen.sectionKeys()).toEqual([
 			stepSectionKey(LINE_NINE_OF_A),
@@ -205,38 +205,6 @@ describe('a review read as its story', () => {
 		const notDrawn = threadsNotDrawnIn(review.views.onScreen, review.threads);
 
 		expect(notDrawn.map((thread) => thread.body)).toEqual(['on a line no piece shows', 'on a file it does not tell']);
-	});
-});
-
-describe('a story told of another take of the change than the page reads', () => {
-	beforeEach(() => {
-		review = openReview({ story: TOLD, diff: { take: A_LATER_TAKE } });
-		review.views.choose('story');
-	});
-
-	it('is still read piece by piece, as it was told', () => {
-		expect(review.views.onScreen.sectionKeys()).toEqual([
-			stepSectionKey(LINE_ONE_OF_A),
-			stepSectionKey(LINE_FIVE_OF_B),
-			stepSectionKey(LINE_NINE_OF_A),
-			leftOutSectionKey(LEFT_OUT_OF_C)
-		]);
-	});
-
-	it('draws no thread, though a piece shows a line of the number the thread hangs on: it is numbered as that take', () => {
-		const onLineNine = newComment({ file: 'a.py', startLine: 9 }).anchor;
-
-		expect(review.views.onScreen.sectionOf(onLineNine)).toBeNull();
-	});
-
-	it('walks no thread', () => {
-		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'in chapter two' }));
-
-		expect(review.views.onScreen.threadsInOrder()).toEqual([]);
-	});
-
-	it('takes the reader to no file, though a step tells it: its pieces are of the file as it was', () => {
-		expect(review.views.onScreen.sectionOfFile('a.py')).toBeNull();
 	});
 });
 

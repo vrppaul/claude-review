@@ -11,9 +11,11 @@
  *
  * A story is pieces of one take of the change. When the diff is taken
  * again the review follows the story onto the new take, and the page reads
- * it again after the diff; until it does, or where it cannot, the page
- * holds a story of one take beside threads and a diff of another, and says
- * so by whose numbers the story's lines carry.
+ * the two together, holding neither until both are read (`Review`). It
+ * holds a story only beside the diff of its take: a story read of another
+ * take, and one that cannot be read with the diff taken again, leave none
+ * held, until the diff of its take is read with it. Reads are taken in one
+ * at a time by the review, so the last read is the last held.
  *
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
@@ -34,9 +36,8 @@
  * held, with nothing to say of how it came.
  */
 
-import type { StoryNumbering } from '$lib/anchors/numbering';
 import { askForStory, readStory, stopStory } from '$lib/api/review-api';
-import { storyNotAskedForNote, storyNotStoppedNote } from '$lib/review/panel-notes';
+import { storyNotAskedForNote, storyNotReadNote, storyNotStoppedNote } from '$lib/review/panel-notes';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
@@ -58,6 +59,11 @@ function storyOrWaitOf(held: StoryHeld | null, wait: StoryWait): StoryOrWait {
 /** Whether a story is held that is current: told of the code under review, which no round moved on since. */
 function isCurrent(held: StoryHeld | null): boolean {
 	return held !== null && held.moved_on === null;
+}
+
+/** Whether what the review answered of its story is of the take the page reads: no story at all goes with any. */
+function isOfTake(held: StoryHeld | null, take: number): boolean {
+	return held === null || held.take === take;
 }
 
 /**
@@ -91,7 +97,7 @@ export interface StoryOpening {
 	takeOnScreen: () => number;
 	/** Whether an agent is attached to the review now. */
 	agentAttached: () => boolean;
-	/** Say something in the panel, where the reader is told what a request of theirs came to. */
+	/** Say something in the panel, where the reader is told what a request of theirs, or of the page's, came to. */
 	sayInPanel: (words: string) => void;
 }
 
@@ -121,15 +127,12 @@ export class ReviewStory {
 	readonly #storyOrWait: StoryOrWait;
 	// What the reader waits on: nothing while the story held is current
 	readonly #wait: StoryWait | null;
-	// Which read is the latest. Two can be in flight — two stories told one
-	// after the other — and only the latest is held, whatever order the
-	// answers come back in.
-	#reading = 0;
 
 	constructor({ canBeTold, held, asking, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
 		this.canBeTold = canBeTold;
 		this.#progress = new StoryProgress(partsRead);
-		this.#held = held;
+		// Read beside the diff as the page opened, it may straddle a retake: then the retake brings both
+		this.#held = isOfTake(held, takeOnScreen()) ? held : null;
 		this.#asking = asking;
 		this.#takeOnScreen = takeOnScreen;
 		this.#agentAttached = agentAttached;
@@ -203,27 +206,22 @@ export class ReviewStory {
 	}
 
 	/**
-	 * Whose numbers the lines of the story held carry: the review's own
-	 * while it is of the take the page reads, another take's once the diff
-	 * was taken again and the story followed onto it is not read yet, or
-	 * could not be. One read just before the diff it is of lands is another
-	 * take's until it does. With no story held there are no lines to carry
-	 * any.
+	 * Read the story the review holds now, in place of the one held here,
+	 * and return how to hold it: whoever reads it with the diff holds both
+	 * once both are read. For all the page knows the story is the one it
+	 * held, and what was read of it stands. One that cannot be read is said
+	 * in the panel, and none is held: the one held here is of the take
+	 * before. A review that takes no story is not asked, and holds none.
 	 */
-	get numbering(): StoryNumbering {
-		const held = this.#held;
-		return held === null || held.take === this.#takeOnScreen() ? 'the-reviews' : 'another-takes';
-	}
-
-	/**
-	 * Read the story the review holds now, in place of the one held here: the
-	 * page was away, and reads again what it may have missed. For all it
-	 * knows the story is the one it held, and what was read of it stands.
-	 */
-	async read(): Promise<void> {
-		const mine = ++this.#reading;
-		const { held } = await readStory();
-		if (mine === this.#reading) this.#hold(held);
+	async read(): Promise<() => void> {
+		if (!this.canBeTold) return () => this.#holdNone();
+		try {
+			const { held } = await readStory();
+			return () => this.#hold(held);
+		} catch (error) {
+			this.#sayInPanel(storyNotReadNote(error));
+			return () => this.#holdNone();
+		}
 	}
 
 	/** Take in how the asking for a story stands, as the review's facts say it or the review tells it after them. */
@@ -266,14 +264,20 @@ export class ReviewStory {
 	/**
 	 * The review said it was told another story: read it in place of the one
 	 * held here. What the reader had read through was of the story before,
-	 * and is forgotten as this one is held. A story that cannot be read
-	 * leaves the one before as it was, and as far read. That the telling
-	 * ended the asking for one the review says next, as it says any change
-	 * to the asking.
+	 * and is forgotten as this one is held. A story that cannot be read is
+	 * said in the panel, and leaves the one before as it was, and as far
+	 * read: it is of the take on screen still. That the telling ended the
+	 * asking for one the review says next, as it says any change to the
+	 * asking.
 	 */
 	async readAnother(): Promise<void> {
 		this.#anotherAwaited = true;
-		await this.read();
+		try {
+			const { held } = await readStory();
+			this.#hold(held);
+		} catch (error) {
+			this.#sayInPanel(storyNotReadNote(error));
+		}
 	}
 
 	/**
@@ -288,13 +292,29 @@ export class ReviewStory {
 	/**
 	 * Hold the story the review answered with. Where it is another the
 	 * review was told, nothing of it is read yet, and it is offered to the
-	 * reader, who has not seen it.
+	 * reader, who has not seen it. One of a take the page has not taken in
+	 * — the review took the diff again between this read and the diff's —
+	 * is held with that take's diff, which the review is on its way to
+	 * hand over: none is held until then.
 	 */
 	#hold(held: StoryHeld | null): void {
+		if (!isOfTake(held, this.#takeOnScreen())) {
+			this.#holdNone();
+			return;
+		}
 		this.#held = held;
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
 		this.#progress.forget();
 		this.#arrival = held === null ? 'none' : 'offered';
+	}
+
+	/**
+	 * Hold no story, where none to hold is of the take on screen. A story the
+	 * review said it was told is still awaited, and what was read of the one
+	 * before stands until it is held.
+	 */
+	#holdNone(): void {
+		this.#held = null;
 	}
 }

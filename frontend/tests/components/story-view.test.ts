@@ -19,7 +19,6 @@ import {
 	codeMovedOn,
 	stepWithoutCode,
 	storyHeld,
-	storyResponse,
 	TAKEN,
 	toldChapter,
 	toldStep,
@@ -715,19 +714,10 @@ describe('the room a piece of a story holds before it is built', () => {
 	});
 });
 
-describe('a story told of the take of the change the page reads', () => {
-	beforeEach(() => {
+describe('a story the diff is taken again under', () => {
+	it('is drawn no more once the story followed onto the diff taken again cannot be read', async () => {
 		review = openReview({ files, story: TOLD });
 		review.views.choose('story');
-	});
-
-	it('says nothing of the code having changed', () => {
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.queryByTestId('story-moved-on')).toBeNull();
-	});
-
-	it('says the code has changed since it was told, once the diff is taken again under it and the story followed onto it cannot be read', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/anchors/follow', { anchors: [] });
 		server.answer('GET /api/diff', diffResponse({ files, take: A_LATER_TAKE }));
@@ -737,110 +727,7 @@ describe('a story told of the take of the change the page reads', () => {
 		handOverNext(review, { type: 'diff', file_count: 3, changes: null });
 		await settled();
 
-		expect(screen.getByTestId('story-moved-on').textContent).toContain(
-			'The code has changed since this story was told.'
-		);
-	});
-});
-
-describe('a story the code has moved on from', () => {
-	beforeEach(() => {
-		review = openReview({ files, story: TOLD, diff: { take: A_LATER_TAKE } });
-		review.views.choose('story');
-	});
-
-	it('is still told whole, every step with the code as it was', () => {
-		render(ReviewScreen, { props: { review } });
-
-		expect(pieces().map((piece) => piece.dataset.path)).toEqual(['a.py', 'b.py', 'a.py', 'a.py']);
-		expect(pieces()[1].textContent).toContain('line 5 of b.py');
-	});
-
-	it('takes no comment on a line of a step, whose number is no longer that line of the file, and says why', async () => {
-		const user = userEvent.setup();
-		render(ReviewScreen, { props: { review } });
-		const lineNumber = within(pieces()[1]).getByRole('button', { name: 'Comment on line 5' });
-
-		await user.click(lineNumber);
-
-		expect(screen.queryByTestId('comment-input')).toBeNull();
-		expect(lineNumber.getAttribute('aria-disabled')).toBe('true');
-		expect(lineNumber.title).toBe(
-			'This is the code as the story was told; it has changed since. Comment on it in Files.'
-		);
-	});
-
-	it('draws no thread under a line of the number the thread hangs on, and says the comments are in Files', () => {
-		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.queryByText('about the last line')).toBeNull();
-		expect(screen.getByTestId('story-moved-on').textContent).toContain('1 comment is in Files.');
-	});
-
-	it('says nothing of comments while the review holds none', () => {
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.getByTestId('story-moved-on').textContent).not.toContain('in Files');
-	});
-
-	it('says a comment that was being written on a line of it is in Files, where its line now is', () => {
-		const onLineFive = { side: 'new', startLine: 5, endLine: 5, opensBelow: { side: 'new', number: 5 } } as const;
-		review.threads.writing.pickLines('b.py', onLineFive, ['in b.py']);
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.queryByTestId('comment-input')).toBeNull();
-		expect(screen.getByTestId('story-moved-on').textContent).toContain('1 comment you were writing is in Files.');
-	});
-
-	it('counts no comment as on a line it does not show: it shows no line of the code as it is', () => {
-		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.queryByTestId('threads-off-the-story')).toBeNull();
-	});
-
-	it('says that it shows the code as it was, and takes no comments', () => {
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.getByTestId('story-moved-on').textContent).toContain(
-			'It shows the code as it was, and takes no comments.'
-		);
-	});
-
-	it('takes the reader to the first of those comments in the files, with the keyboard on it', async () => {
-		const user = userEvent.setup();
-		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));
-		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
-		render(ReviewScreen, { props: { review } });
-
-		await user.click(screen.getByTestId('show-in-files'));
-		await settled();
-
-		// The files draw both, down the diff: the first of them is the one on a.py
-		const [first] = within(screen.getByTestId('diff-view')).getAllByTestId('comment-thread');
-		expect(first.textContent).toContain('about the last line');
-		expect(document.activeElement).toBe(first);
-	});
-
-	it('shows a file the agent names in the files, though a step tells it: its pieces are the code as it was', async () => {
-		render(ReviewScreen, { props: { review } });
-
-		handOverNext(review, { type: 'show', file: 'b.py' });
-		await settled();
-
-		expect(review.views.onScreen.name).toBe('files');
-		expect(review.sections.fileInView).toBe('b.py');
-	});
-
-	it('is of the code on screen again once the agent tells it again', async () => {
-		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld(TOLD.story, { take: A_LATER_TAKE }) }));
-		render(ReviewScreen, { props: { review } });
-
-		handOverNext(review, { type: 'story' });
-		await settled();
-
-		expect(screen.queryByTestId('story-moved-on')).toBeNull();
+		expect(screen.queryAllByTestId('story-piece')).toEqual([]);
 	});
 });
 
@@ -932,14 +819,6 @@ describe('the files, read where a story could be', () => {
 		await user.click(screen.getByTestId('hide-sidebar'));
 
 		expect(screen.getByTestId('diff-view')).toBe(drawn);
-	});
-
-	it('say nothing of the story the code has moved on from: they are the code as it is', () => {
-		review = openReview({ files, story: TOLD, diff: { take: A_LATER_TAKE } });
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.getByTestId('diff-view')).toBeTruthy();
-		expect(screen.queryByTestId('story-moved-on')).toBeNull();
 	});
 });
 
@@ -1080,7 +959,6 @@ describe('a review nobody has told a story of yet', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.queryByTestId('threads-off-the-story')).toBeNull();
-		expect(screen.queryByTestId('story-moved-on')).toBeNull();
 	});
 });
 

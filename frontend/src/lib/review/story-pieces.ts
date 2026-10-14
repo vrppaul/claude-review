@@ -11,7 +11,7 @@
  * nothing here walks the story or names a section again.
  */
 
-import type { StoryNumbering } from '$lib/anchors/numbering';
+import { STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
 import { type DrawnRows, fileDraws } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
 import type { StoryContents } from '$lib/review/story-contents';
@@ -61,9 +61,9 @@ export class StoryPieces {
 		return this.#inOrder.map(({ key }) => key);
 	}
 
-	/** The piece that draws a thread on these lines, numbered as the story's lines are; null where none does. */
-	drawing(lines: FileLines, numbering: StoryNumbering): DrawnPiece | null {
-		return this.ofFile(lines.file).find(({ piece }) => fileDraws(piece, lines, numbering)) ?? null;
+	/** The piece that draws a thread on these lines; null where none does. */
+	drawing(lines: FileLines): DrawnPiece | null {
+		return this.ofFile(lines.file).find(({ piece }) => fileDraws(piece, lines, STORY_PIECES_NUMBERING)) ?? null;
 	}
 
 	/** The first piece of a file the story draws: where the file is first told; null where it draws none of it. */
@@ -81,7 +81,7 @@ export class StoryPieces {
 	 * step's in any chapter or what no step tells. That is the file's whole
 	 * change: the review refuses a line told twice, and what no step tells
 	 * is drawn as left out. The diff on screen cannot be asked instead: it
-	 * may be narrowed, or another take.
+	 * may be narrowed.
 	 */
 	changeOf(path: string): FileStats {
 		return this.#changeByFile.get(path) ?? NO_CHANGE;

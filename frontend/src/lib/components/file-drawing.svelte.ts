@@ -12,7 +12,7 @@
  * built, so what lies below stays where it is as they are.
  */
 
-import type { DiffNumbering, Numbering, StoryNumbering } from '$lib/anchors/numbering';
+import { type Numbering, STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -43,7 +43,7 @@ export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
 interface WholeFile {
 	kind: 'whole';
 	/** Whose numbers its lines carry, as the diff on screen was taken: see `DrawnFile`. */
-	numbering: DiffNumbering;
+	numbering: Numbering;
 	/** Where the lines read in around its hunks are kept. */
 	revealed: RevealedContext;
 }
@@ -52,16 +52,13 @@ interface WholeFile {
 export type PieceShows = 'a-step' | 'what-no-step-tells';
 
 /**
- * A piece of a file, cut out of the review's own diff for a story. Its
- * lines are numbered as the take the story was told of, whatever base is
- * on screen, and what lies around it is the rest of its file, which it
- * does not read in.
+ * A piece of a file, cut out of the review's own diff for a story, its
+ * lines numbered as `STORY_PIECES_NUMBERING` says. What lies around it is
+ * the rest of its file, which it does not read in.
  */
 interface Piece {
 	kind: 'piece';
 	shows: PieceShows;
-	/** Whose numbers its lines carry, as the story it is a piece of says. */
-	numbering: StoryNumbering;
 }
 
 // What a piece says of the lines between two of its hunks, which it does not
@@ -199,7 +196,8 @@ export class FileDrawing implements DrawnFile {
 	}
 
 	numbering(): Numbering {
-		return this.#source.extent().numbering;
+		const extent = this.#source.extent();
+		return extent.kind === 'whole' ? extent.numbering : STORY_PIECES_NUMBERING;
 	}
 
 	commentable(): boolean {

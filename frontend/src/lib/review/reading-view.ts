@@ -17,9 +17,6 @@ import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
-/** The lines a view draws: none; lines of its files, to be read; or lines that take comments too. */
-type LinesDrawn = 'none' | 'to-read' | 'taking-comments';
-
 /**
  * What a view draws of the review as it stands, in the two things a key
  * acts on. A key that acts on what is not drawn does nothing, and is
@@ -27,16 +24,17 @@ type LinesDrawn = 'none' | 'to-read' | 'taking-comments';
  * that draws them another way is no change to any key.
  */
 export interface Drawn {
-	lines: LinesDrawn;
+	/** Whether it draws lines of the review's files, which take comments. */
+	lines: boolean;
 	/** Whether it draws threads: under lines that take comments, or with the lines they hung on gone from what is read. */
 	threads: boolean;
 }
 
 /** What a view draws while it has nothing of the review to draw. */
-export const NOTHING_DRAWN: Drawn = { lines: 'none', threads: false };
+export const NOTHING_DRAWN: Drawn = { lines: false, threads: false };
 
-/** What a view draws of lines that are the review's own: they take comments, and carry the threads on them. */
-export const LINES_WITH_THEIR_THREADS: Drawn = { lines: 'taking-comments', threads: true };
+/** What a view draws of the review's lines: they take comments, and carry the threads on them. */
+export const LINES_WITH_THEIR_THREADS: Drawn = { lines: true, threads: true };
 
 export interface ReadingView {
 	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */

@@ -1,4 +1,5 @@
 /** Stories as the review hands them to its page, built with only what a test cares about. */
+import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { DiffFile, StoryAsking, StoryHeld, StoryResponse, ToldChapter, ToldStep, ToldStory } from '$lib/types';
 import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 
@@ -98,6 +99,12 @@ export function codeMovedOn(given: Partial<CodeMovedOn> = {}): CodeMovedOn {
 /** What the review answers of its story: none told, unless a test says one was. */
 export function storyResponse(given: Partial<StoryResponse> = {}): StoryResponse {
 	return { held: null, ...given };
+}
+
+/** Read the story the review holds and hold it, as a page does that reads nothing beside it. */
+export async function readTheStoryAgain(story: ReviewStory): Promise<void> {
+	const hold = await story.read();
+	hold();
 }
 
 /**

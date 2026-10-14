@@ -69,8 +69,7 @@ export interface KeyRow {
 	/**
 	 * Whether the keys do anything in such a view as the review stands: what
 	 * they act on is drawn. The files draw no line of a diff that holds no
-	 * file; a story's view draws nothing until a story is told, and one told
-	 * of another take takes no comment and carries none.
+	 * file; a story's view draws nothing until a story is told.
 	 */
 	live: Live;
 }
@@ -80,12 +79,11 @@ const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
 const THE_FILES: readonly ReadingViewName[] = ['files'];
 const THE_STORY: readonly ReadingViewName[] = ['story'];
 
-// When a row's keys do something: whatever is on screen; while the view on screen draws lines; while
-// those lines take comments; and while it draws threads, on such lines or on none. Each asks the view
-// of the one thing its keys act on
+// When a row's keys do something: whatever is on screen; while the view on screen draws lines, which
+// take comments; and while it draws threads, on such lines or on none. Each asks the view of the one
+// thing its keys act on
 const ALWAYS: Live = () => true;
-const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().lines !== 'none';
-const WHILE_LINES_TAKE_COMMENTS: Live = (review) => review.views.onScreen.drawn().lines === 'taking-comments';
+const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().lines;
 const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().threads;
 
 /** A key pressed on its own. */
@@ -140,7 +138,7 @@ const KEYMAP: readonly KeyRow[] = [
 		does: 'Comment on this line',
 		presses: [],
 		views: EVERY_VIEW,
-		live: WHILE_LINES_TAKE_COMMENTS
+		live: WHILE_LINES_ARE_DRAWN
 	},
 	// The chord in a comment or a message is the field's own: it knows where what it holds goes.
 	// A message is written whatever is drawn

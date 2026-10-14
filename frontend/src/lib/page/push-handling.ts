@@ -16,10 +16,8 @@ import {
 	notCaughtUpNote,
 	raisedNote,
 	retakenNote,
-	storyNotFollowedNote,
-	storyNotReadNote
+	storyNotFollowedNote
 } from '$lib/review/panel-notes';
-import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
@@ -113,7 +111,7 @@ function learnFrom(review: Review, push: FactPush): void {
  */
 async function toldAnotherStory(review: Review, heard: HeardPush): Promise<void> {
 	if (heard.factsHoldIt) review.story.heldIsAnother();
-	else await readStoryAgain(review, (story) => story.readAnother());
+	else await review.takeToldStory();
 	await followTheStory(review);
 }
 
@@ -130,21 +128,6 @@ async function followTheStory(review: Review): Promise<void> {
 		await review.followThreads();
 	} catch (error) {
 		review.conversation.note(storyNotFollowedNote(error));
-	}
-}
-
-/**
- * Read the story the review holds now, where it takes one at all: as
- * another it was told, or again after a gap. A story that cannot be read is
- * said in the panel, and the one held stays: it is never a failure of
- * whatever else was being taken in beside it.
- */
-async function readStoryAgain(review: Review, read: (story: ReviewStory) => Promise<void>): Promise<void> {
-	if (!review.story.canBeTold) return;
-	try {
-		await read(review.story);
-	} catch (error) {
-		review.conversation.note(storyNotReadNote(error));
 	}
 }
 
@@ -172,7 +155,7 @@ function raise(review: Review, push: PointPush): void {
  * follows them, one whose lines are gone says so — whatever narrower base
  * is being read on screen. Which files changed is what takes the tick off
  * the ones the agent rewrote. The review followed the story it holds onto
- * the diff before it said it was taken: read after the diff, the story is
+ * the diff before it said it was taken: read with the diff, the story is
  * of the same take, and what was read of it stands; one the round moved the
  * code on under is asked for again where the reader wants stories, as a
  * page opening asks for one it has not got. A diff the page read after the
@@ -188,17 +171,6 @@ async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise
 	// panel says where one lot of answers stops applying
 	review.conversation.note(retakenNote(push.file_count, moved));
 	if (heard.factsHoldIt) return;
-	await storyAgain(review);
-}
-
-/**
- * Read the story the review holds now, then ask for one where the reader
- * wants stories and no story held is current: after a gap, which may have
- * hidden anything, and after a retake, which may have moved the code on
- * under the story held.
- */
-async function storyAgain(review: Review): Promise<void> {
-	await readStoryAgain(review, (story) => story.read());
 	await review.wantStory();
 }
 
@@ -218,7 +190,7 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * lines: following them again moves only those whose lines moved, so it is
  * done whether or not one happened. Which files a missed retake rewrote
  * cannot be told, so the ticks stay as the reader left them. The story is
- * read last and apart: one that cannot be read is said so by itself, and
+ * read with the diff: one that cannot be read is said so by itself, and
  * what catching up did to the review and its threads is still said. How
  * the asking for one stands comes with the facts: a review started again
  * in the gap holds none, and a reader who turned stories on is asked for
@@ -236,7 +208,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.conversation.note(notCaughtUpNote(error));
 		return;
 	}
-	await storyAgain(review);
+	await review.wantStory();
 }
 
 /**

@@ -9,7 +9,7 @@ import { addedLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
 import { fakeServer } from '../fake-server';
 import { openReview } from '../review';
-import { storyHeld, storyResponse, toldChapter, toldStep } from '../story';
+import { readTheStoryAgain, storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
 // jsdom cannot lay a drawing out, so mermaid's part is played here: the page is handed what a test says
 // mermaid drew, or why it could not draw
@@ -144,7 +144,7 @@ describe("a story's diagram", () => {
 		await within(figure()).findByTestId('diagram-drawing');
 		const broughtTo = chapters().map(broughtIntoView);
 
-		await review.story.read();
+		await readTheStoryAgain(review.story);
 		flushSync();
 		await user.click(within(figure()).getByTestId('node-store'));
 
@@ -218,7 +218,7 @@ describe("a story's diagram", () => {
 		render(ReviewScreen, { props: { review } });
 		await within(figure()).findByTestId('diagram-drawing');
 
-		await review.story.read();
+		await readTheStoryAgain(review.story);
 		flushSync();
 
 		expect(drawDiagram).toHaveBeenCalledOnce();

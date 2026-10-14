@@ -153,8 +153,8 @@ export class Review {
 	readonly #hello: SessionHello;
 	// The unsent review as a draft keeps it; none once the review is over
 	readonly #draft: Draft | null;
-	// The retake being taken in, so the next waits for it
-	#retaking: Promise<unknown> = Promise.resolve();
+	// What is being taken in of the review as it now stands — a retake, a story told — so the next waits for it
+	#takingIn: Promise<unknown> = Promise.resolve();
 
 	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
@@ -381,16 +381,21 @@ export class Review {
 	}
 
 	/**
-	 * Move the threads onto the review's diff as it now stands, and take it.
+	 * Move the threads onto the review's diff as it now stands, and take it
+	 * with the story the review followed onto it.
 	 *
 	 * The threads go first: the server already holds the new diff, and a
-	 * thread left on old numbers would be kept that way in the draft. One
-	 * retake is taken in at a time, so threads never follow onto a diff older
-	 * than the one on screen. Whatever had moved on disk is in the diff taken,
-	 * so the tree has nothing more to say — unless it moves again meanwhile.
+	 * thread left on old numbers would be kept that way in the draft. The
+	 * diff and the story are read together and held together, so the story
+	 * held is never of another take than the diff on screen. A story that
+	 * cannot be read is said in the panel, and none is held: the one held
+	 * was of the take before. One retake is taken in at a time, so threads
+	 * never follow onto a diff older than the one on screen. Whatever had
+	 * moved on disk is in the diff taken, so the tree has nothing more to
+	 * say — unless it moves again meanwhile.
 	 */
 	takeRetakenDiff(): Promise<FollowOutcome> {
-		return this.#oneRetakeAtATime(() => this.#followAndTake());
+		return this.#oneAtATime(() => this.#followAndTake());
 	}
 
 	/**
@@ -398,7 +403,17 @@ export class Review {
 	 * diff on screen as it is: it was taken after the retake already.
 	 */
 	followThreads(): Promise<FollowOutcome> {
-		return this.#oneRetakeAtATime(() => this.threads.follow());
+		return this.#oneAtATime(() => this.threads.follow());
+	}
+
+	/**
+	 * Read the story the review says it was told, once whatever is being
+	 * taken in is: a retake under way reads the story before this one, and
+	 * holding it after this one would put the earlier in its place. One that
+	 * cannot be read is said in the panel, and the one held stays.
+	 */
+	takeToldStory(): Promise<void> {
+		return this.#oneAtATime(() => this.story.readAnother());
 	}
 
 	/** Note what a retake did, and take the tick off what it rewrote. */
@@ -435,16 +450,18 @@ export class Review {
 		}
 	}
 
-	#oneRetakeAtATime(retake: () => Promise<FollowOutcome>): Promise<FollowOutcome> {
-		const taken = this.#retaking.then(retake);
-		this.#retaking = taken.catch(() => undefined);
+	#oneAtATime<Taken>(takeIn: () => Promise<Taken>): Promise<Taken> {
+		const taken = this.#takingIn.then(takeIn);
+		this.#takingIn = taken.catch(() => undefined);
 		return taken;
 	}
 
 	async #followAndTake(): Promise<FollowOutcome> {
 		const moved = await this.threads.follow();
 		this.diff.treeMoved.settle();
-		await this.diff.take();
+		const [holdDiff, holdStory] = await Promise.all([this.diff.read(), this.story.read()]);
+		holdDiff();
+		holdStory();
 		return moved;
 	}
 

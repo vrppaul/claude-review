@@ -271,37 +271,16 @@ async def test_a_story_followed_onto_the_diff_taken_again_shows_its_code_where_i
     await expect(page.get_by_test_id("story-moved-on")).to_have_count(0)
 
 
-async def test_a_story_the_page_could_not_read_again_after_the_code_moved_on_says_so_and_takes_no_comment(
+async def test_a_story_the_page_could_not_read_again_after_the_code_moved_on_is_drawn_no_more(
     review: RunningReview, changed_repo: Path, page: Page
 ) -> None:
+    """Its lines are numbered as the take before: a comment on one would name a line the code no longer has."""
     await _read_as_story(page, review)
     await page.route(f"**{STORY_ROUTE}", lambda route: route.abort())
 
     await _take_again(review, changed_repo, MOVED_ON)
 
-    await expect(page.get_by_test_id("story-moved-on")).to_contain_text(
-        "The code has changed since this story was told."
-    )
-    told_line = page.get_by_test_id("story-piece").get_by_role("button", name=TOLD_LINE, exact=True)
-    await expect(told_line).to_have_attribute("aria-disabled", "true")
-    # By the keyboard, which reaches a number that takes no comment: a pointer's press waits for one that does
-    await told_line.focus()
-    await page.keyboard.press("Enter")
-    await expect(page.get_by_test_id("comment-input")).to_have_count(0)
-
-
-async def test_deep_in_a_story_the_page_could_not_read_again_after_the_code_moved_on_it_still_says_so(
-    review_of_a_long_file: RunningReview, long_file_repo: Path, page: Page
-) -> None:
-    await _read_as_story(page, review_of_a_long_file)
-    await page.route(f"**{STORY_ROUTE}", lambda route: route.abort())
-    await _take_again(review_of_a_long_file, long_file_repo, {LONG_FILE: "a line above them all\n"})
-    moved_on = page.get_by_test_id("story-moved-on")
-    await moved_on.wait_for()
-
-    await page.get_by_test_id("story-view").evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
-
-    await expect(moved_on).to_be_in_viewport()
+    await expect(page.get_by_test_id("story-piece")).to_have_count(0)
 
 
 async def test_f_in_the_story_leaves_the_tree_of_files_where_the_reader_left_it(
