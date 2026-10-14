@@ -15,6 +15,7 @@ What crosses between the server, its page and its agent. How a module does its p
 - The domain never carries wire settings.
 - A wire model may implement an interface the domain holds, where a service asks for what the request carries: a change to a reader's record is a `RecordChange`.
 - A yes or a no in a request's or an answer's body is a `WireBool`, `true` or `false` and nothing else. A query parameter is read as FastAPI reads one.
+- A number that names a place in a body — a line, an item of a list — is a `WireNumber`, a number and nothing else: read leniently, `false` would name the first.
 - A route is thin: it reads the wire, calls one method of the `Review` it gets from `get_review`, and writes the answer.
 - A route raises a `ReviewError`, and never catches one or raises `HTTPException`: `src/claude_review/presentation/refusals.py` is the one table from kind to status.
 
