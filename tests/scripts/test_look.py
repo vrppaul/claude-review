@@ -18,11 +18,14 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient, ConnectError
-from playwright.async_api import Page
+import pytest_asyncio
+from httpx import URL, AsyncClient, ConnectError
 from pydantic import BaseModel, ConfigDict
 
-from tests.e2e.browsers_loop import in_the_browsers_loop
+from claude_review.presentation.wire.content import DiffResponse
+from claude_review.presentation.wire.story import StoryResponse
+from tests.helpers import DIFF_ROUTE, STORY_ROUTE
+from tests.page_socket import PageSocket
 
 REPOSITORY = Path(__file__).parents[2]
 LOOK = REPOSITORY / "scripts" / "look.py"
@@ -258,7 +261,7 @@ def _first_pixel(picture: Path) -> bytes:
     return row[ROW_PACKING:]
 
 
-@in_the_browsers_loop(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def story_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     """One look at the story: a scroll, a press on the fourth entry of the contents, a key, and a picture."""
     shots = tmp_path_factory.mktemp("story") / "shots"
@@ -267,7 +270,7 @@ async def story_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
 
 
-@in_the_browsers_loop(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     """One look at the files, dark and on a narrow window, with a picture of how they open."""
     shots = tmp_path_factory.mktemp("files") / "shots"
@@ -278,7 +281,7 @@ async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
 
 
-@in_the_browsers_loop(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def untold_look() -> list[Said]:
     """One look at a change left untold, by its files: its agent waits, and then tells the story."""
     looked = await _look("--untold", "--view", "files", *UNTOLD_STEPS)
@@ -286,7 +289,7 @@ async def untold_look() -> list[Said]:
     return [_said(line) for line in looked.lines]
 
 
-@in_the_browsers_loop
+@pytest.fixture
 async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
     """A look with its page open and steps under way: enough of them to last for seconds."""
     temporary = tmp_path / "temporary"
@@ -308,7 +311,7 @@ async def look_under_way(tmp_path: Path) -> AsyncIterator[LookUnderWay]:
     await process.wait()
 
 
-@in_the_browsers_loop
+@pytest.fixture
 async def kept_look() -> AsyncIterator[KeptLook]:
     """A look kept for a reader, stopped after the test as a shell stops one."""
     process = await asyncio.create_subprocess_exec(
@@ -590,17 +593,17 @@ async def test_a_look_kept_for_a_reader_takes_no_steps() -> None:
 
 
 async def test_a_look_kept_for_a_reader_serves_the_long_change_and_its_story_until_the_page_is_closed(
-    kept_look: KeptLook, page: Page
+    kept_look: KeptLook,
 ) -> None:
-    await page.goto(kept_look.address)
-    await page.get_by_test_id("guide-not-now").click()
-    assert await page.get_by_test_id("file-item").count() == FILES_OF_THE_CHANGE
-    await page.get_by_test_id("read-as-story").click()
-    await page.get_by_test_id("story-chapter").first.wait_for()
-    assert await page.get_by_test_id("story-chapter").count() == CHAPTERS_OF_THE_STORY
+    """Read as its page reads it, by the review's routes and its socket: a test of a script drives no browser."""
+    async with AsyncClient(base_url=kept_look.address) as reader:
+        diff = DiffResponse.model_validate_json((await reader.get(DIFF_ROUTE)).content)
+        told = StoryResponse.model_validate_json((await reader.get(STORY_ROUTE)).content)
+    page = await asyncio.to_thread(PageSocket, URL(kept_look.address).port)
 
-    await page.close()
+    page.close()
 
+    assert (len(diff.files), len(told.held.story.chapters)) == (FILES_OF_THE_CHANGE, CHAPTERS_OF_THE_STORY)
     assert await asyncio.wait_for(kept_look.process.wait(), timeout=LOOK_SECONDS) == LOOKED
 
 

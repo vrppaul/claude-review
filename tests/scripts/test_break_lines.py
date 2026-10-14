@@ -7,8 +7,8 @@ network; what it holds is a module of three functions and a test for two of
 them. The script is held to what vitest really reports, and to no line of
 the page.
 
-It is here, among the browser tests, though it opens no browser: this is
-the directory CI runs with pnpm and its store at hand.
+It opens no browser, and is among the tests of the scripts: CI runs them
+where pnpm and its store are at hand.
 """
 
 import asyncio
@@ -19,9 +19,8 @@ import sys
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from pydantic import BaseModel, ConfigDict
-
-from tests.e2e.browsers_loop import in_the_browsers_loop
 
 BREAK_LINES = Path(__file__).parents[2] / "scripts" / "break_lines.py"
 # The page, for what it asks pnpm for
@@ -214,7 +213,7 @@ class BrokenRun(BaseModel):
     ran: Ran
 
 
-@in_the_browsers_loop(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def two_lines_broken(tmp_path_factory: pytest.TempPathFactory) -> BrokenRun:
     """One run with two lines broken: one a test holds, and one nothing holds."""
     repository = _repository(tmp_path_factory.mktemp("broken"))
