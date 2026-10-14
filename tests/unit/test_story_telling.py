@@ -18,8 +18,8 @@ from hypothesis import example, given, strategies as strategy
 
 from claude_review.domain.exceptions import FieldFault, FieldPath, StoryRefusedError
 from claude_review.domain.models import NO_HUNK_HEADER, DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan, Unshown
-from claude_review.domain.story import Step, Story, ToldStep, ToldStory
-from claude_review.services.story_telling import follow, tell
+from claude_review.domain.story import FollowedStep, Step, Story, ToldStory
+from claude_review.services.story_telling import as_told, follow, tell
 from tests.helpers import added_line, context_line, removed_line
 from tests.stories import (
     ONLY_CHAPTER,
@@ -50,9 +50,8 @@ CHANGE = [SERVICE_FILE, STORE_FILE, LOCK_FILE, LOGO_FILE]
 # Steps that between them tell everything the service and the store changed
 WHOLE_SERVICE = [step(SERVICE, 12, 13), step(SERVICE, 15, 15)]
 WHOLE_STORE = step(STORE, 1, 3)
-# What a told story holds that the story as written does not: the piece each step shows and whether it changed
-# since, and what is left out
-WHAT_TELLING_ADDS = {"left_out": True, "chapters": {"__all__": {"steps": {"__all__": {"piece", "changed_since_told"}}}}}
+# What a told story holds that the story as written does not: the piece each step shows, and what is left out
+WHAT_TELLING_ADDS = {"left_out": True, "chapters": {"__all__": {"steps": {"__all__": {"piece"}}}}}
 # Where the first step of a story of one chapter stands, and the first file it names as housekeeping
 FIRST_STEP: FieldPath = ("chapters", 0, "steps", 0)
 FIRST_HOUSEKEEPING: FieldPath = ("housekeeping", 0)
@@ -189,12 +188,12 @@ def takes_of_the_twenty() -> strategy.SearchStrategy[DiffFile]:
     )
 
 
-def followed(story: Story[Step], told_of: list[DiffFile], now: list[DiffFile]) -> ToldStory:
+def followed(story: Story[Step], told_of: list[DiffFile], now: list[DiffFile]) -> ToldStory[FollowedStep]:
     """A story told of one take of the change, followed onto the next."""
     return follow(tell(story, told_of), now)
 
 
-def steps_of(told: ToldStory) -> list[ToldStep]:
+def steps_of[StepKind: Step](told: ToldStory[StepKind]) -> list[StepKind]:
     """Every step of a story, in the order it tells them."""
     return [told_step for chapter in told.chapters for told_step in chapter.steps]
 
@@ -352,7 +351,7 @@ def test_what_is_wrong_with_the_document_and_what_is_wrong_against_the_change_ar
 
 
 def test_a_story_as_told_marks_no_step_changed() -> None:
-    told = tell(story_of(step(LETTERS, 2, 2), step(LETTERS, 6, 6)), [LETTERS_TOLD])
+    told = as_told(tell(story_of(step(LETTERS, 2, 2), step(LETTERS, 6, 6)), [LETTERS_TOLD]))
 
     assert [told_step.changed_since_told for told_step in steps_of(told)] == [False, False]
 
@@ -425,16 +424,6 @@ def test_a_step_whose_file_left_the_change_shows_no_code_and_is_marked_on_the_li
     )
 
     assert (told_step.piece, told_step.lines, told_step.changed_since_told) == (None, LineSpan(first=2, last=2), True)
-
-
-def test_a_step_that_shows_no_code_still_shows_none_followed_onto_a_take_its_file_is_back_in() -> None:
-    """Nothing of what it was told with is left to look for."""
-    story = story_of(step(LETTERS, 2, 2), step(ADDED, 1, 4))
-    gone = followed(story, [LETTERS_TOLD, FOUR_ADDED], [FOUR_ADDED])
-
-    [told_step, _] = steps_of(follow(gone, [LETTERS_TOLD, FOUR_ADDED]))
-
-    assert (told_step.piece, told_step.changed_since_told) == (None, True)
 
 
 def test_a_line_the_round_added_outside_every_step_is_left_out_and_counted() -> None:

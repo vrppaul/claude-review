@@ -73,6 +73,15 @@ describe('what a story lists of itself', () => {
 		expect(listed.steps.map(({ shown }) => shown)).toEqual([null, { piece: ofB.piece, fileListed: b }]);
 	});
 
+	it('says no chapter tells a file where its only step of the file shows no code of it', () => {
+		const withoutCode = toldChapter('ch-1', [stepWithoutCode('a.py', 1), toldStep('b.py', 1)]);
+		const [, listed] = contentsOf(
+			toldStory({ chapters: [withoutCode, toldChapter('ch-2', [toldStep('a.py', 5)])] })
+		).chapters;
+
+		expect(listed.files.map(({ firstPiece, alsoIn }) => [firstPiece.path, alsoIn])).toEqual([['a.py', []]]);
+	});
+
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {
 		expect(ofTheFirst.files.map(({ alsoIn }) => alsoIn)).toEqual([[1, 2], [1]]);
 		expect(ofTheSecond.files.map(({ alsoIn }) => alsoIn)).toEqual([[0], [0, 2]]);

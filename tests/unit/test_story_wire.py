@@ -22,7 +22,7 @@ from claude_review.presentation.wire.story import (
     StoryRequest,
     ToldStory,
 )
-from claude_review.services.story_telling import tell
+from claude_review.services.story_telling import as_told, tell
 from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of, without_field
 
 SERVICE = "src/service.py"
@@ -218,7 +218,7 @@ def test_a_document_written_out_again_is_the_document_that_was_read(lines: str) 
 
 
 def test_a_told_story_reaches_a_page_with_every_piece_and_every_line_it_was_told_with() -> None:
-    told = tell(story_of(step(SERVICE, 12, 13)), CHANGE)
+    told = as_told(tell(story_of(step(SERVICE, 12, 13)), CHANGE))
 
     on_the_wire = ToldStory.of(told)
 

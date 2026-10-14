@@ -10,9 +10,11 @@ told. That is asked of the whole document at once
 (`services/story_checks.py`), so the agent hears everything wrong with it in
 one answer, each fault at the field it is about. A story that may be told
 is then the same story with what each step shows cut out of the change
-(`ToldStory`). Each part makes its own told form, since it is the part that
-knows what it says; only `services/story_telling.py` decides that a story
-may be told, and cuts what its steps show.
+(`ToldStory` of `ToldStep`s), and, followed onto each take of the change
+after, the same story with each step as it stands there (`ToldStory` of
+`FollowedStep`s). Each part makes its own told and followed forms, since it
+is the part that knows what it says; only `services/story_telling.py`
+decides that a story may be told, cuts what its steps show, and follows it.
 """
 
 from enum import StrEnum, auto
@@ -46,15 +48,9 @@ class Step(StoryPart):
     lines: LineSpan
     reason: str | None = None
 
-    def told(self, piece: DiffFile | None, *, changed_since_told: bool) -> ToldStep:
-        """The step as it is told: everything it says, the piece of its file it shows if any, and whether it changed."""
-        return ToldStep(
-            file=self.file, lines=self.lines, reason=self.reason, piece=piece, changed_since_told=changed_since_told
-        )
-
-    def at(self, lines: LineSpan) -> Step:
-        """The step on other lines of its file, where a round's work moved what it tells: everything else it says."""
-        return Step(file=self.file, lines=lines, reason=self.reason)
+    def told(self, piece: DiffFile) -> ToldStep:
+        """The step as it is told: everything it says, and the piece of its file it shows."""
+        return ToldStep(file=self.file, lines=self.lines, reason=self.reason, piece=piece)
 
 
 class Chapter[StepKind: Step](StoryPart):
@@ -76,6 +72,10 @@ class Chapter[StepKind: Step](StoryPart):
     def told(self, steps: list[ToldStep]) -> Chapter[ToldStep]:
         """The chapter as it is told: everything it says, with its steps as they are told in place of its own."""
         return Chapter[ToldStep](id=self.id, title=self.title, why=self.why, doubt=self.doubt, steps=steps)
+
+    def followed(self, steps: list[FollowedStep]) -> Chapter[FollowedStep]:
+        """The chapter on a take of the change: everything it says, with its steps as they stand there."""
+        return Chapter[FollowedStep](id=self.id, title=self.title, why=self.why, doubt=self.doubt, steps=steps)
 
 
 class OverviewItem(StoryPart):
@@ -132,9 +132,9 @@ class Story[StepKind: Step](StoryPart):
     # named so that what changed in them is not held against the story
     housekeeping: list[str]
 
-    def told(self, chapters: list[Chapter[ToldStep]], left_out: list[LeftOut]) -> ToldStory:
+    def told(self, chapters: list[Chapter[ToldStep]], left_out: list[LeftOut]) -> ToldStory[ToldStep]:
         """The story as it is told: everything it says, its chapters as they are told, and what no step tells."""
-        return ToldStory(
+        return ToldStory[ToldStep](
             title=self.title,
             told_from=self.told_from,
             overview=self.overview,
@@ -210,13 +210,29 @@ TEXT_LIMITS: dict[StoryText, TextLimit] = {
 
 
 class ToldStep(Step):
-    """A step as it is told: with the piece of its file it shows, cut out of the change, while its code is there.
+    """A step as it is told: with the piece of its file it shows, cut out of the change.
+
+    What every take after the one it was told of follows it from: its piece
+    is what it was told with.
+    """
+
+    piece: DiffFile
+
+    def followed(self, lines: LineSpan, piece: DiffFile | None, *, changed_since_told: bool) -> FollowedStep:
+        """The step on a take of the change: on these lines, the piece it shows there if any, and whether it changed."""
+        return FollowedStep(
+            file=self.file, lines=lines, reason=self.reason, piece=piece, changed_since_told=changed_since_told
+        )
+
+
+class FollowedStep(Step):
+    """A step as it stands on a take of the change: with the piece of its file it shows, while its code is there.
 
     A round's work may leave the review unable to say where a step's code
-    is now: its file left the change, nothing of its lines is found, or the
-    steps of its file would meet once followed. It then shows no piece, on
-    the lines it was told of: a piece cut there would show other code, and
-    an empty one would claim a status its file no longer has.
+    is now: its file left the change, nothing of its lines is found, or it
+    would meet another step of its file once followed. It then shows no
+    piece, on the lines it was told of: a piece cut there would show other
+    code, and an empty one would claim a status its file no longer has.
     """
 
     # None where its code is not in the change as it now stands
@@ -245,10 +261,25 @@ class LeftOut(StoryPart):
     changed_lines: int
 
 
-class ToldStory(Story[ToldStep]):
-    """A story on the change it is told of: every step with what it shows, and what no step tells."""
+class ToldStory[StepKind: Step](Story[StepKind]):
+    """A story on the change it is told of: every step with what it shows, and what no step tells.
+
+    As it is told, each step a `ToldStep`; followed onto a take of the
+    change, each a `FollowedStep`, as it stands there.
+    """
 
     left_out: list[LeftOut]
+
+    def followed(self, chapters: list[Chapter[FollowedStep]], left_out: list[LeftOut]) -> ToldStory[FollowedStep]:
+        """The story on a take of the change: everything it says, its chapters as they stand there, what none tells."""
+        return ToldStory[FollowedStep](
+            title=self.title,
+            told_from=self.told_from,
+            overview=self.overview,
+            chapters=chapters,
+            housekeeping=self.housekeeping,
+            left_out=left_out,
+        )
 
 
 class StoryAsking(BaseModel):

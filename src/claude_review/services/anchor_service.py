@@ -38,7 +38,7 @@ from claude_review.domain.models import (
     StoryAnchor,
     StoryBlock,
 )
-from claude_review.domain.story import Chapter, StoryOverview, ToldStep, ToldStory
+from claude_review.domain.story import Chapter, FollowedStep, StoryOverview, ToldStory
 from claude_review.services.place_words import line_span, place_in_words
 
 # How many of the review's files a refusal names, so whoever named the wrong
@@ -201,7 +201,7 @@ class StoryAnchorHandler(AnchorHandler[StoryAnchor]):
     then stays where it was, outdated.
     """
 
-    def __init__(self, story: ToldStory | None) -> None:
+    def __init__(self, story: ToldStory[FollowedStep] | None) -> None:
         # Every block the story held says something at, with its words, in the order the story tells them:
         # None while no story is told
         self._said = None if story is None else _said_in(story)
@@ -311,7 +311,7 @@ class AnchorService:
                 assert_never(anchor)
 
 
-def _said_in(story: ToldStory) -> dict[StoryBlock, str]:
+def _said_in(story: ToldStory[FollowedStep]) -> dict[StoryBlock, str]:
     """Every block a story says something at, with its words, in the order the story tells them.
 
     A text the story left out — a doubt, a step's reason — is no block of
@@ -343,7 +343,7 @@ def _overview_said(overview: StoryOverview) -> dict[StoryBlock, str | None]:
     }
 
 
-def _chapter_said(chapter: Chapter[ToldStep]) -> dict[StoryBlock, str | None]:
+def _chapter_said(chapter: Chapter[FollowedStep]) -> dict[StoryBlock, str | None]:
     """What a chapter says of itself, then each of its steps' reasons, by their blocks."""
     return {
         ChapterBlock(chapter=chapter.id, text=ChapterText.WHY): chapter.why,

@@ -24,6 +24,7 @@ from claude_review.domain.models import (
 from claude_review.domain.story import (
     Chapter,
     Diagram,
+    FollowedStep,
     OverviewItem,
     Step,
     Story,
@@ -34,6 +35,7 @@ from claude_review.domain.story import (
 from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_story import ReviewStory
+from claude_review.services.story_telling import as_told
 from tests.helpers import FixedClock, added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by
@@ -64,14 +66,16 @@ def canvas_story() -> Story[Step]:
     )
 
 
-def told_as_written(story: Story[Step]) -> ToldStory:
+def told_as_written(story: Story[Step]) -> ToldStory[FollowedStep]:
     """A story as the review holds one once told, each step showing a piece with no rows: for a test of its words alone."""
-    return story.told(
-        [
-            chapter.told([shown.told(changed_file(shown.file), changed_since_told=False) for shown in chapter.steps])
-            for chapter in story.chapters
-        ],
-        [],
+    return as_told(
+        story.told(
+            [
+                chapter.told([shown.told(changed_file(shown.file)) for shown in chapter.steps])
+                for chapter in story.chapters
+            ],
+            [],
+        )
     )
 
 

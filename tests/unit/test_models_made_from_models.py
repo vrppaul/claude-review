@@ -93,9 +93,13 @@ SETTINGS = ReaderSettings(
 GUIDE = GuideState(seen_release="1.5.0", story_introduced=True)
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
-TOLD_STEP = STEP.told(FILE, changed_since_told=True)
-TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
+TOLD_STEP = STEP.told(FILE)
+TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
+TOLD_STORY = STORY.told([TOLD_CHAPTER], [LEFT_OUT])
+# Each followed onto a later take: the step moved down, showing other rows, and marked; nothing left out there
+FOLLOWED_STEP = TOLD_STEP.followed(LineSpan(first=14, last=15), FILE.showing(OTHER_ROWS), changed_since_told=True)
+FOLLOWED_CHAPTER = TOLD_CHAPTER.followed([FOLLOWED_STEP])
 # A story asked for and not yet taken, and one an agent took: stopping one writes only that it was stopped,
 # and which of the two it is made from shows that when it was taken is still said
 ASKED_AT = 1_760_000_000_000
@@ -158,13 +162,20 @@ MADE = [
         made=GuideChange(story_introduced=False).applied_to(GUIDE),
         replaced={"story_introduced"},
     ),
-    MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece", "changed_since_told"}),
-    MadeFrom(what="a step on other lines", source=STEP, made=STEP.at(LineSpan(first=14, last=15)), replaced={"lines"}),
-    MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
+    MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
     MadeFrom(
-        what="a story told",
-        source=STORY,
-        made=STORY.told([TOLD_CHAPTER], [LEFT_OUT]),
+        what="a step followed",
+        source=TOLD_STEP,
+        made=FOLLOWED_STEP,
+        replaced={"lines", "piece", "changed_since_told"},
+    ),
+    MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
+    MadeFrom(what="a chapter followed", source=TOLD_CHAPTER, made=FOLLOWED_CHAPTER, replaced={"steps"}),
+    MadeFrom(what="a story told", source=STORY, made=TOLD_STORY, replaced={"chapters", "left_out"}),
+    MadeFrom(
+        what="a story followed",
+        source=TOLD_STORY,
+        made=TOLD_STORY.followed([FOLLOWED_CHAPTER], []),
         replaced={"chapters", "left_out"},
     ),
     MadeFrom(

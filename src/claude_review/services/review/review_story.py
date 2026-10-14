@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import FIRST_ROUND, StaleStep, StoryWentStale
-from claude_review.domain.story import Step, Story, StoryAsking, ToldStory
+from claude_review.domain.story import FollowedStep, Step, Story, StoryAsking, ToldStep, ToldStory
 from claude_review.services import story_telling
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
 
@@ -56,7 +56,7 @@ class StoryHeld(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    story: ToldStory
+    story: ToldStory[FollowedStep]
     round: int = Field(ge=FIRST_ROUND)
     # The take of the change its pieces were cut out of
     take: int = Field(ge=FIRST_TAKE)
@@ -72,7 +72,7 @@ class _StoryKept(BaseModel):
 
     # What every take after the one it was told of follows it from: its
     # pieces are what each step was told with
-    told: ToldStory
+    told: ToldStory[ToldStep]
     # The story told until the diff is taken again; followed onto each take after
     held: StoryHeld
 
@@ -149,7 +149,7 @@ class ReviewStory:
         """
         async with self._telling:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
-            held = StoryHeld(story=told, round=round_number, take=change.take, moved_on=None)
+            held = StoryHeld(story=story_telling.as_told(told), round=round_number, take=change.take, moved_on=None)
             self._kept = _StoryKept(told=told, held=held)
             self._asking = None
             return held
@@ -198,7 +198,11 @@ class ReviewStory:
 
 
 def _moved_on(
-    told: ToldStory, followed: ToldStory, *, moved_on_before: CodeMovedOn | None, round_number: int
+    told: ToldStory[ToldStep],
+    followed: ToldStory[FollowedStep],
+    *,
+    moved_on_before: CodeMovedOn | None,
+    round_number: int,
 ) -> CodeMovedOn | None:
     """That the round's work moved the code on under the story, if it did: a step changed, or more is left out.
 
@@ -221,6 +225,6 @@ def _left_out_changed(when_told: int, now: int) -> LeftOutChanged | None:
     return None if now == when_told else LeftOutChanged(when_told=when_told, now=now)
 
 
-def _changed_lines_left_out(story: ToldStory) -> int:
+def _changed_lines_left_out[StepKind: Step](story: ToldStory[StepKind]) -> int:
     """How many lines the change added or removed that no step of the story tells."""
     return sum(left.changed_lines for left in story.left_out)
