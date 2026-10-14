@@ -19,6 +19,10 @@
  * the page's tokens. The page's font goes in as a setting, read off the
  * page as it draws: mermaid measures every label in its own font, so a font
  * set only in the stylesheet would draw labels it had measured in another.
+ *
+ * A node of a flowchart may lead to a chapter, by the name the source gives
+ * it. Mermaid writes no name on a node, only an id it makes of the name,
+ * so that id is where the page reads it.
  */
 
 import type { MermaidConfig } from 'mermaid';
@@ -60,12 +64,25 @@ const SETTINGS: MermaidConfig = {
 	// The one theme whose colours are all its settings: the page's look then overrides it rule by rule
 	theme: 'base',
 	themeCSS: diagramLook,
+	// Flat nodes, edged and filled as the page's surfaces are: mermaid 12 draws a flowchart in its own neo look
+	// otherwise, with shadows, and edges in a gradient no rule of the page's look outranks
+	look: 'classic',
 	// Mermaid's own layout is elk: a flowchart it lays out fetches 2.2 MB, one dagre lays out 0.8 MB, and draws
 	// in a third of the time. Named here, the layout stays when mermaid next changes its own
 	layout: 'dagre',
 	// A flowchart is drawn at its own size, not shrunk to its column: its box scrolls sideways instead
 	flowchart: { useMaxWidth: false }
 };
+
+// Mermaid's own mark on a node of a flowchart, the one thing it marks every node with
+const FLOWCHART_NODE = 'g.node';
+// The id mermaid gives a node of a flowchart: `flowchart-`, the name the source gives the node, and a number of
+// mermaid's own. Mermaid 12 puts the drawing's id before it and 11 did not, so the name is read from the end
+const FLOWCHART_NODE_ID = /flowchart-(?<name>.+)-\d+$/;
+// What a node that leads somewhere is marked with: the stylesheet points at it, and a press is followed from it
+const LEADS_SOMEWHERE = 'diagram-link';
+const ROLE = 'data-role';
+const LEADING_SOMEWHERE = `[${ROLE}='${LEADS_SOMEWHERE}']`;
 
 /** The page's own font, as the page has it now. */
 function pageFont(): string {
@@ -90,4 +107,49 @@ export async function drawDiagram(source: string, drawingId: string): Promise<Dr
 	} catch (fault: unknown) {
 		return { fault };
 	}
+}
+
+/** The name the source gives a node of a flowchart, read off the id mermaid gave it; none off any other id. */
+function nodeName(nodeId: string): string | null {
+	return FLOWCHART_NODE_ID.exec(nodeId)?.groups?.name ?? null;
+}
+
+/** Where a node leads, by the name the source gives it: nowhere, for a node no link names. */
+function placeOf(node: Element, leadsTo: ReadonlyMap<string, string>): string | undefined {
+	const name = nodeName(node.id);
+	return name === null ? undefined : leadsTo.get(name);
+}
+
+/** Mark a node that leads somewhere as one, and a node that no longer does as none. */
+function markWhetherLeading(node: Element, leadsTo: ReadonlyMap<string, string>): void {
+	if (placeOf(node, leadsTo) === undefined) node.removeAttribute(ROLE);
+	else node.setAttribute(ROLE, LEADS_SOMEWHERE);
+}
+
+/** Follow a press, from the node it landed in, to where that node leads: nowhere, from outside every such node. */
+function followPress(press: MouseEvent, leadsTo: ReadonlyMap<string, string>, follow: (place: string) => void): void {
+	const node = press.target instanceof Element ? press.target.closest(LEADING_SOMEWHERE) : null;
+	const place = node === null ? undefined : placeOf(node, leadsTo);
+	if (place !== undefined) follow(place);
+}
+
+/**
+ * Lead the nodes of a drawn flowchart where the source's links say, by
+ * the names the source gives them: each such node is marked, and a press
+ * on it is followed. Mermaid wires no node itself at its strict level.
+ * Hands back what stops following them.
+ *
+ * @param drawing what holds the drawing
+ * @param leadsTo where each node leads, by its name
+ * @param follow what going there is
+ */
+export function followLinks(
+	drawing: HTMLElement,
+	leadsTo: ReadonlyMap<string, string>,
+	follow: (place: string) => void
+): () => void {
+	for (const node of drawing.querySelectorAll(FLOWCHART_NODE)) markWhetherLeading(node, leadsTo);
+	const followed = (press: MouseEvent) => followPress(press, leadsTo, follow);
+	drawing.addEventListener('click', followed);
+	return () => drawing.removeEventListener('click', followed);
 }

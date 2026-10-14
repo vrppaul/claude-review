@@ -627,19 +627,6 @@ describe('a review read as its story', () => {
 		expect(screen.queryByTestId('story-more')).toBeNull();
 	});
 
-	it('shows a diagram as the agent wrote it, under what it is called', () => {
-		const diagram = { mermaid: 'flowchart LR; a --> b', caption: 'How a line travels', links: {} };
-		const overview = { ...TOLD.story.overview, diagram };
-		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		const drawn = screen.getByTestId('story-diagram');
-
-		expect(drawn.textContent).toContain('How a line travels');
-		expect(drawn.textContent).toContain('flowchart LR; a --> b');
-	});
-
 	it('shows no base in the header: a story is of the whole change, whatever the files are read against', () => {
 		render(ReviewScreen, { props: { review } });
 

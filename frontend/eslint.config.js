@@ -250,6 +250,12 @@ export default tseslint.config(
 		rules: { 'svelte/no-at-html-tags': 'off' }
 	},
 	{
+		// A story's diagram as mermaid draws it (lib/dom/diagram.ts): at its strict level, which no source may
+		// change, it cleans the drawing with DOMPurify and writes no handler, and wires none of a source's clicks
+		files: ['src/lib/components/StoryDiagram.svelte'],
+		rules: { 'svelte/no-at-html-tags': 'off' }
+	},
+	{
 		files: ['**/*.svelte'],
 		ignores: [ICON_COMPONENT],
 		rules: { 'svelte/no-restricted-html-elements': ['error', { elements: ['svg'], message: DRAWN_BY_ICON }] }

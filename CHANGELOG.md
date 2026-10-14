@@ -3,6 +3,15 @@
 ## [Unreleased]
 
 ### Added
+- **A story's diagram is drawn.** The diagram the agent writes in Mermaid
+  stands under the overview's lines at its own size, under its caption, its
+  box scrolling sideways where it is wider than the column; a node the agent
+  links to a chapter takes the reader to it when pressed, and "Open large"
+  draws it again in a dialog, where a press closes the dialog first. One that
+  does not draw says why, by the line and the text mermaid did not expect
+  there, and shows its source as written. Mermaid is fetched only when a
+  story has a diagram to draw, and a source's own settings cannot change how
+  safely, in what look or in what layout it is drawn.
 - **The reader asks about the story's own words.** Pointed at, or reached
   by the keyboard, every block of the agent's words — the Task, Done and
   Doubt of the overview, each thing its lists hold, a chapter's why and

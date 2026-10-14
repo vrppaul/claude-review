@@ -12,6 +12,7 @@
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import AskableBlock from './AskableBlock.svelte';
+	import StoryDiagram from './StoryDiagram.svelte';
 	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
 	import StoryPart from './StoryPart.svelte';
@@ -88,14 +89,7 @@
 	</section>
 
 	{#if overview.diagram}
-		<!-- Drawn as its source until the page draws diagrams: nothing of what the agent sent is kept from the reader -->
-		<figure data-testid="story-diagram" class="flex flex-col gap-2">
-			{#if overview.diagram.caption}
-				<figcaption class="cr-muted text-xs">{overview.diagram.caption}</figcaption>
-			{/if}
-			<pre class="overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2 font-mono text-xs">{overview
-					.diagram.mermaid}</pre>
-		</figure>
+		<StoryDiagram diagram={overview.diagram} chapters={held.story.chapters} />
 	{/if}
 
 	{#if listsSomething}

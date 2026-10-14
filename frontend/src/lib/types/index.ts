@@ -45,6 +45,8 @@ export type StoryHeld = Schemas['StoryHeld'];
 /** A story on the change it is told of: each step with the piece of its file it shows, and what no step tells. */
 export type ToldStory = Schemas['ToldStory'];
 export type ToldChapter = Schemas['ToldChapter'];
+/** The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to, by the part's name. */
+export type Diagram = Schemas['Diagram'];
 export type ToldStep = Schemas['ToldStep'];
 /** What a story leaves out of one file: the piece of it no step tells, and how many of its lines changed. */
 export type LeftOut = Schemas['LeftOut'];

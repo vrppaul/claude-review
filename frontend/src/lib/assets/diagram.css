@@ -29,6 +29,11 @@
 	stroke: var(--cr-agent);
 }
 
+/* A node that leads to a chapter, as the page marks one: a press there goes */
+[data-role='diagram-link'] {
+	cursor: pointer;
+}
+
 /* The words of a node, and of a line between two: the page's own colour */
 .label text,
 span {
