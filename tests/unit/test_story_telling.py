@@ -349,7 +349,7 @@ def test_a_file_named_as_housekeeping_and_told_in_a_step_is_refused_naming_the_c
 
 
 def test_a_housekeeping_file_told_in_several_chapters_is_refused_naming_the_first_that_tells_it() -> None:
-    """As a line told twice names the chapter that told it first: the agent is sent to the same place every time."""
+    """Named the same chapter however many tell it, the agent is sent to the same place every time."""
     told_in_two = story_of_chapters(
         chapter_of(EARLIER_CHAPTER, step(SERVICE, 12, 13)),
         chapter_of(LATER_CHAPTER, step(SERVICE, 15, 15)),

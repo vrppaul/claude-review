@@ -113,8 +113,6 @@ tests. Remove items when done — don't check them off.
       reads lines with `fullmatch`, so only the API's schema needs them,
       which reads a pattern as found anywhere in a text: with either anchor
       gone, every unit and integration test passes.
-- [ ] `refactor(story)`: in `story_lines_told.py`, `told` names a run of
-      lines in `ToldOfRun.tell` and the tree of them in `first_met`.
 - [ ] `test(story)`: the test that a story is told off the event loop waits
       three turns of the loop and then looks. That the telling runs in
       another thread is the fact, and a test of that needs no count.

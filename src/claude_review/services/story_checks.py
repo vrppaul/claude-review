@@ -18,10 +18,9 @@ from collections.abc import Iterator
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import CHAPTER_IDS, FIRST_LINE, MAX_ID_LENGTH, runs_backwards, says_nothing
+from claude_review.domain.models import CHAPTER_IDS, FIRST_LINE, MAX_ID_LENGTH, LineSpan, runs_backwards, says_nothing
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
-from claude_review.services.story_lines_told import first_met
 from claude_review.services.story_slices import PlacedFile
 
 # The fields of a story's document, by the names the document's own models
@@ -65,7 +64,7 @@ NOT_AN_ID = f"is no id. {CHAPTER_ID_RULE}"
 NO_SUCH_CHAPTER = "leads to chapter {chapter}, and the story has none by that id"
 BEFORE_FIRST_LINE = "starts at line {first}: a file's lines are numbered from {first_line}"
 RUNS_BACKWARDS = "runs backwards, from line {first} to line {last}"
-TOLD_TWICE = "meets lines {lines} of the same file, which chapter {chapter} tells already: a line is told once"
+TOLD_TWICE = "meets lines {lines} of the same file, which chapter {chapter} tells as well: a line is told once"
 NAMED_TWICE = "names {file} a second time"
 NO_SUCH_FILE = "is no file of this change"
 NO_LINES_SHOWN = "is a file the change shows no line of: a step has nothing of it to tell"
@@ -257,30 +256,59 @@ def _numbered_rightly(steps: list[StepInDocument]) -> list[StepInDocument]:
     return [written for written in steps if not _numbering_faults(written)]
 
 
+def one_met_by_each(lines_told: list[LineSpan]) -> list[int | None]:
+    """For each of these runs of lines of one file, the place of one other it shares a line with; None if none.
+
+    Read down the file, a run shares a line with one above it exactly when
+    it starts at or before the furthest line any of those reaches, and then
+    it meets the run that reaches it. A run that shares none with any above
+    it reaches further than all of them, so the next run down meets it if
+    any run below does. One reading down the file thus names every run that
+    shares a line with another. The runs are of lines a file could have:
+    none runs backwards.
+    """
+    met: list[int | None] = [None] * len(lines_told)
+    down_the_file = sorted(range(len(lines_told)), key=lambda place: lines_told[place].first)
+    if not down_the_file:
+        return met
+    [reaching_furthest, *below] = down_the_file
+    for place in below:
+        lines = lines_told[place]
+        if lines.first <= lines_told[reaching_furthest].last:
+            met[place] = reaching_furthest
+            # A run that meets none above it is named the first run below that meets it
+            if met[reaching_furthest] is None:
+                met[reaching_furthest] = place
+        if lines.last > lines_told[reaching_furthest].last:
+            reaching_furthest = place
+    return met
+
+
 def _lines_told_twice(steps: list[StepInDocument]) -> list[FieldFault]:
-    """Every step that tells a line an earlier step of the same file tells already, in the order the story tells them.
+    """Every step that tells a line another step of the same file tells too, in the order the story tells them.
 
     A line is told once: told twice, whatever hangs on it — a thread, a
     comment being written — would be drawn under both steps and belong to
-    neither.
+    neither. Which of them should tell it is the agent's to say, so each of
+    them is refused.
     """
     told_twice = (fault for of_one_file in _steps_by_file(steps).values() for fault in _told_twice_in(of_one_file))
     return sorted(told_twice, key=lambda fault: fault.path)
 
 
 def _told_twice_in(of_one_file: list[StepInDocument]) -> Iterator[FieldFault]:
-    """Of the steps of one file in the order they are told, each that tells a line one told before it tells already.
+    """Of the steps of one file, each that tells a line another tells too.
 
-    Said at the later step, naming the first it meets: its lines, and the
-    chapter that tells them, so the agent finds the other step.
+    Said at each of them, naming one it meets: its lines, and the chapter
+    that tells them, so the agent finds the other step.
     """
-    met = first_met([written.step.lines for written in of_one_file])
-    for later, place_met in zip(of_one_file, met, strict=True):
+    met = one_met_by_each([written.step.lines for written in of_one_file])
+    for written, place_met in zip(of_one_file, met, strict=True):
         if place_met is not None:
-            earlier = of_one_file[place_met]
-            lines_met = line_span(earlier.step.lines.first, earlier.step.lines.last)
-            told_twice = TOLD_TWICE.format(lines=lines_met, chapter=earlier.chapter.id)
-            yield FieldFault(path=(*later.path, LINES), reason=told_twice)
+            other = of_one_file[place_met]
+            lines_met = line_span(other.step.lines.first, other.step.lines.last)
+            told_twice = TOLD_TWICE.format(lines=lines_met, chapter=other.chapter.id)
+            yield FieldFault(path=(*written.path, LINES), reason=told_twice)
 
 
 def _steps_by_file(steps: list[StepInDocument]) -> dict[str, list[StepInDocument]]:

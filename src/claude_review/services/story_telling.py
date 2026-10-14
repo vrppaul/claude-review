@@ -25,8 +25,7 @@ from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile, DiffLine, LineSide, LineSpan
 from claude_review.domain.story import Chapter, FollowedStep, LeftOut, Step, StepNow, Story, ToldStep, ToldStory
 from claude_review.services.anchor_service import SideLine, find_run, side_lines
-from claude_review.services.story_checks import document_faults, placement_faults
-from claude_review.services.story_lines_told import first_met
+from claude_review.services.story_checks import document_faults, one_met_by_each, placement_faults
 from claude_review.services.story_slices import PlacedFile, side_told_by
 
 # What a story refused is refused with, before its faults are said one by one
@@ -170,15 +169,9 @@ def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan |
 
 
 def _meeting(placed: dict[int, LineSpan]) -> frozenset[int]:
-    """The places of the steps placed that tell a line another of them tells, before or after them."""
-    claimed = list(placed.values())
-    meets_earlier = first_met(claimed)
-    meets_later = first_met(claimed[::-1])[::-1]
-    return frozenset(
-        place
-        for place, earlier, later in zip(placed, meets_earlier, meets_later, strict=True)
-        if earlier is not None or later is not None
-    )
+    """The places of the steps placed that tell a line another of them tells."""
+    met = one_met_by_each(list(placed.values()))
+    return frozenset(place for place, other in zip(placed, met, strict=True) if other is not None)
 
 
 def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpan | None:

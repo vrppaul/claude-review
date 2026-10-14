@@ -134,8 +134,8 @@ Each rule of `good_story.md`, and what it rests on.
 - The document and what it is held to: `src/claude_review/domain/story.py`,
   `src/claude_review/services/story_checks.py`.
 - A story told on the change and followed onto later takes:
-  `src/claude_review/services/story_telling.py`, `story_slices.py` and
-  `story_lines_told.py` beside it, `anchor_service.py` for the threads.
+  `src/claude_review/services/story_telling.py`, `story_slices.py` beside
+  it, `anchor_service.py` for the threads.
 - The page: `frontend/src/lib/components/Story*.svelte`, with
   `frontend/src/lib/review/review-story.svelte.ts` holding the story.
 

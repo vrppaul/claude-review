@@ -65,6 +65,9 @@ FIRST_STEP_LINES: FieldPath = ("chapters", 1, "steps", 0, "lines")
 SECOND_STEP_LINES: FieldPath = ("chapters", 1, "steps", 1, "lines")
 THIRD_STEP_LINES: FieldPath = ("chapters", 1, "steps", 2, "lines")
 OTHER_FILE_STEP_LINES: FieldPath = ("chapters", 1, "steps", 3, "lines")
+# The file and the lines of the first chapter's first step
+PASTE_STEP_FILE: FieldPath = ("chapters", 0, "steps", 0, "file")
+PASTE_STEP_LINES: FieldPath = ("chapters", 0, "steps", 0, "lines")
 # Lines well above every step the canvas tells of that file, for steps a test moves about;
 # how far a generated step reaches from where it is made; and a line far below them all
 ROOM_ABOVE = 60
@@ -245,19 +248,19 @@ def test_a_step_may_start_at_a_files_first_line() -> None:
 
 
 @pytest.mark.parametrize(("first", "last"), [(130, 141), (95, 102)])
-def test_a_line_two_steps_both_tell_is_refused_at_the_later_step(first: int, last: int) -> None:
+def test_a_line_two_steps_both_tell_is_refused_at_each_naming_the_other(first: int, last: int) -> None:
     """Told twice, a thread on the line would be drawn twice, and nobody could say which step it belongs to.
 
-    One line is enough: the last of the earlier step's, or its first.
+    One line is enough: the last of the other step's, or its first.
     """
     story = planted(canvas_story(), THIRD_STEP_LINES, lines(first, last))
 
-    [fault] = document_faults(story)
+    [second, third] = document_faults(story)
 
-    assert fault.path == THIRD_STEP_LINES
-    # The lines it meets, and the chapter that tells them, so the agent finds the other step
-    assert "102-130" in fault.reason
-    assert KEEPING_CHAPTER in fault.reason
+    assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
+    # The lines each meets, and the chapter that tells them, so the agent finds the other step
+    assert (f"{first}-{last}" in second.reason, KEEPING_CHAPTER in second.reason) == (True, True)
+    assert ("102-130" in third.reason, KEEPING_CHAPTER in third.reason) == (True, True)
 
 
 def test_steps_that_follow_one_another_line_after_line_share_none() -> None:
@@ -273,52 +276,55 @@ def test_the_same_lines_of_two_files_are_two_different_things() -> None:
 
 
 def test_a_file_may_stand_in_two_chapters_with_different_lines() -> None:
-    story = planted(canvas_story(), ("chapters", 0, "steps", 0, "file"), IMAGE_SERVICE)
+    story = planted(canvas_story(), PASTE_STEP_FILE, IMAGE_SERVICE)
 
     assert document_faults(story) == []
 
 
-def test_a_line_told_in_two_chapters_is_refused_naming_the_chapter_that_told_it_first() -> None:
-    moved = planted(canvas_story(), ("chapters", 0, "steps", 0, "file"), IMAGE_STORE)
-    story = planted(moved, ("chapters", 0, "steps", 0, "lines"), lines(20, 40))
+def test_a_line_told_in_two_chapters_is_refused_at_each_naming_the_chapter_that_tells_the_other() -> None:
+    moved = planted(canvas_story(), PASTE_STEP_FILE, IMAGE_STORE)
+    story = planted(moved, PASTE_STEP_LINES, lines(20, 40))
 
-    [fault] = document_faults(story)
+    [in_paste, in_keeping] = document_faults(story)
 
-    assert fault.path == OTHER_FILE_STEP_LINES
-    assert "20-40" in fault.reason
-    assert PASTE_CHAPTER in fault.reason
+    assert (in_paste.path, in_keeping.path) == (PASTE_STEP_LINES, OTHER_FILE_STEP_LINES)
+    assert ("7-23" in in_paste.reason, KEEPING_CHAPTER in in_paste.reason) == (True, True)
+    assert ("20-40" in in_keeping.reason, PASTE_CHAPTER in in_keeping.reason) == (True, True)
 
 
-def test_a_step_is_held_against_every_earlier_step_of_its_file_not_only_the_one_just_above_it() -> None:
+def test_a_step_is_held_against_every_other_step_of_its_file_not_only_the_one_beside_it() -> None:
     """A long step with a short one inside it: a third further down still meets the long one, past the short."""
     story = planted(two_steps_of_one_file(lines(1, 100), lines(2, 3)), THIRD_STEP_LINES, lines(50, 60))
 
-    [second, third] = document_faults(story)
+    [first, second, third] = document_faults(story)
 
-    assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
+    assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
     assert "1-100" in second.reason
     assert "1-100" in third.reason
 
 
-def test_a_step_that_meets_only_a_step_already_refused_is_refused_as_well() -> None:
+def test_every_step_of_a_chain_of_steps_that_meet_is_refused_in_one_answer() -> None:
     """The second meets the first, and the third only the second: all that is wrong is said at once."""
     story = planted(two_steps_of_one_file(lines(1, 10), lines(5, 20)), THIRD_STEP_LINES, lines(15, 18))
 
-    [second, third] = document_faults(story)
+    [first, second, third] = document_faults(story)
 
-    assert (second.path, third.path) == (SECOND_STEP_LINES, THIRD_STEP_LINES)
-    assert "1-10" in second.reason
+    assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
+    assert "5-20" in first.reason
     assert "5-20" in third.reason
 
 
-def test_a_step_that_meets_two_earlier_steps_is_told_of_the_one_the_story_told_first() -> None:
-    """First in the story, though the other lies above it in the file: the agent is sent to one place, the same every time."""
-    story = planted(two_steps_of_one_file(lines(50, 60), lines(1, 10)), THIRD_STEP_LINES, lines(5, 55))
+def test_in_a_knot_of_three_steps_every_one_is_refused_in_one_answer_naming_one_it_meets() -> None:
+    """The second shares lines with the first, and the third lies across both: refused for one step at a
+    time, the agent would send the story once more for each."""
+    story = planted(two_steps_of_one_file(lines(10, 20), lines(15, 30)), THIRD_STEP_LINES, lines(1, 100))
 
-    [third] = document_faults(story)
+    [first, second, third] = document_faults(story)
 
-    assert third.path == THIRD_STEP_LINES
-    assert "50-60" in third.reason
+    assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
+    assert any(met in first.reason for met in ["15-30", "1-100"])
+    assert any(met in second.reason for met in ["10-20", "1-100"])
+    assert any(met in third.reason for met in ["10-20", "15-30"])
 
 
 class CallsCounted:
@@ -361,12 +367,17 @@ def test_a_story_four_times_as_long_takes_little_more_than_four_times_the_work_t
 
 
 def test_steps_that_meet_in_two_files_are_each_refused_in_the_order_the_story_tells_them() -> None:
-    """The store is told of first, and its steps meet at the story's last step: the service's are said before it."""
+    """The store is told of first, and its steps meet at the story's last step: the service's are said between."""
     other_file = planted(canvas_story(), ("chapters", 0, "steps", 1, "file"), IMAGE_STORE)
     met_there = planted(other_file, ("chapters", 0, "steps", 1, "lines"), lines(20, 40))
     story = planted(met_there, THIRD_STEP_LINES, lines(120, 141))
 
-    assert paths_of(document_faults(story)) == [THIRD_STEP_LINES, OTHER_FILE_STEP_LINES]
+    assert paths_of(document_faults(story)) == [
+        ("chapters", 0, "steps", 1, "lines"),
+        SECOND_STEP_LINES,
+        THIRD_STEP_LINES,
+        OTHER_FILE_STEP_LINES,
+    ]
 
 
 def test_lines_already_refused_for_their_numbers_are_not_held_to_meet_others_too() -> None:
@@ -404,8 +415,8 @@ def stories_whose_steps_stand_apart(draw: strategy.DrawFn) -> Story[Step]:
 
 
 @given(story=stories_whose_steps_share_a_line())
-def test_two_steps_of_a_file_that_share_a_line_are_always_refused_at_the_later(story: Story[Step]) -> None:
-    assert paths_of(document_faults(story)) == [SECOND_STEP_LINES]
+def test_two_steps_of_a_file_that_share_a_line_are_always_refused_at_both(story: Story[Step]) -> None:
+    assert paths_of(document_faults(story)) == [FIRST_STEP_LINES, SECOND_STEP_LINES]
 
 
 @given(story=stories_whose_steps_stand_apart())
@@ -423,44 +434,49 @@ def test_a_file_named_twice_as_housekeeping_is_refused_the_second_time() -> None
 
 
 class Planting(BaseModel):
-    """Something written into a story's document that keeps it from being told, and the field the fault is said at."""
+    """Something written into a story's document that keeps it from being told, and the fields its faults are said at."""
 
     model_config = ConfigDict(frozen=True)
 
     at: FieldPath
     written: JsonValue
-    faulted_at: FieldPath
+    faulted_at: list[FieldPath]
 
 
 # Faults of many kinds in one document. None of them makes another: the
 # chapter that loses its id is the one nothing but the diagram led to
 EVERYTHING_WRONG = [
-    Planting(at=("title",), written="", faulted_at=("title",)),
+    Planting(at=("title",), written="", faulted_at=[("title",)]),
     Planting(
         at=("overview", "task"),
         written=text_of(TEXT_LIMITS[StoryText.TASK].characters + 1),
-        faulted_at=("overview", "task"),
+        faulted_at=[("overview", "task")],
     ),
     Planting(
-        at=("overview", "later", 1, "chapter"), written=NO_CHAPTER, faulted_at=("overview", "later", 1, "chapter")
+        at=("overview", "later", 1, "chapter"), written=NO_CHAPTER, faulted_at=[("overview", "later", 1, "chapter")]
     ),
     Planting(
         at=("overview", "diagram", "links", "paste"),
         written=NO_CHAPTER,
-        faulted_at=("overview", "diagram", "links", "paste"),
+        faulted_at=[("overview", "diagram", "links", "paste")],
     ),
-    Planting(at=DRAWING, written="", faulted_at=DRAWING),
-    Planting(at=("chapters", 0, "id"), written=KEEPING_CHAPTER, faulted_at=("chapters", 1, "id")),
-    Planting(at=("chapters", 0, "steps"), written=[], faulted_at=("chapters", 0, "steps")),
-    Planting(at=FIRST_STEP_LINES, written=lines(0, 3), faulted_at=FIRST_STEP_LINES),
-    Planting(at=THIRD_STEP_LINES, written=lines(120, 141), faulted_at=THIRD_STEP_LINES),
+    Planting(at=DRAWING, written="", faulted_at=[DRAWING]),
+    Planting(at=("chapters", 0, "id"), written=KEEPING_CHAPTER, faulted_at=[("chapters", 1, "id")]),
+    Planting(at=("chapters", 0, "steps"), written=[], faulted_at=[("chapters", 0, "steps")]),
+    Planting(at=FIRST_STEP_LINES, written=lines(0, 3), faulted_at=[FIRST_STEP_LINES]),
+    # Lines the second step tells too: said at both
+    Planting(at=THIRD_STEP_LINES, written=lines(120, 141), faulted_at=[SECOND_STEP_LINES, THIRD_STEP_LINES]),
     Planting(
         at=("chapters", 1, "steps", 3, "reason"),
         written=text_of(TEXT_LIMITS[StoryText.STEP_REASON].characters + 1),
-        faulted_at=("chapters", 1, "steps", 3, "reason"),
+        faulted_at=[("chapters", 1, "steps", 3, "reason")],
     ),
-    Planting(at=("housekeeping",), written=["CHANGELOG.md", "uv.lock", "CHANGELOG.md"], faulted_at=("housekeeping", 2)),
+    Planting(
+        at=("housekeeping",), written=["CHANGELOG.md", "uv.lock", "CHANGELOG.md"], faulted_at=[("housekeeping", 2)]
+    ),
 ]
+# Every field a fault of those is said at
+FAULTED_AT = [path for planting in EVERYTHING_WRONG for path in planting.faulted_at]
 
 
 def story_with_everything_wrong() -> Story[Step]:
@@ -473,8 +489,8 @@ def story_with_everything_wrong() -> Story[Step]:
 def test_everything_wrong_with_a_story_is_said_at_once_each_fault_at_its_own_field() -> None:
     said_at = paths_of(document_faults(story_with_everything_wrong()))
 
-    assert len(said_at) == len(EVERYTHING_WRONG)
-    assert set(said_at) == {planting.faulted_at for planting in EVERYTHING_WRONG}
+    assert len(said_at) == len(FAULTED_AT)
+    assert set(said_at) == set(FAULTED_AT)
 
 
 def test_every_fault_is_at_a_field_the_document_has() -> None:
@@ -483,4 +499,4 @@ def test_every_fault_is_at_a_field_the_document_has() -> None:
 
     found = [field_at(story, fault.path) for fault in document_faults(story)]
 
-    assert len(found) == len(EVERYTHING_WRONG)
+    assert len(found) == len(FAULTED_AT)
