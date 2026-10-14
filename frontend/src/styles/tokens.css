@@ -72,7 +72,11 @@
 	--cr-avatar-size: 1.5rem;
 	--cr-turn-gap: 0.75rem;
 	--cr-reply-field-height: 2.25rem;
-	/* An icon in a thread, on an avatar or a button of what can be done to it, and such a button's height */
+	/*
+	 * An icon in a thread, on an avatar or a button of what can be done to
+	 * it; and how tall such a button stands, and how wide one that is an
+	 * icon alone
+	 */
 	--cr-thread-icon-size: 0.8125rem;
 	--cr-thread-action-height: 1.625rem;
 

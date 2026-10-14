@@ -30,7 +30,7 @@
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
 
 	/** How long ago a turn was said, by the review's clock, which ticks while it is drawn. */
-	function ago(at: number): string {
+	function howLongAgo(at: number): string {
 		return timeAgo(at, review.clock.now);
 	}
 
@@ -59,7 +59,7 @@
 	<ThreadTurn voice={exchange.by} testId="thread-question">
 		{#snippet head()}
 			{#if exchange.at !== undefined}
-				<span>{ago(exchange.at)}</span>
+				<span>{howLongAgo(exchange.at)}</span>
 			{/if}
 			{#if opening}
 				<ThreadHeading {thread} />
@@ -97,7 +97,7 @@
 		>
 			{#snippet head()}
 				{#if answer.at !== undefined}
-					<span>answered {ago(answer.at)}</span>
+					<span>answered {howLongAgo(answer.at)}</span>
 				{/if}
 			{/snippet}
 			<MarkdownRenderer text={answer.body} dense />

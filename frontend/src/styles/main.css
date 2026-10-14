@@ -583,9 +583,9 @@
 	transform: rotate(45deg);
 }
 /*
- * Its edge, and its tail's, says where the thread stands: in the reader's
- * mark while it is in their hands, faint once what it was written on is
- * gone, quieter once it went out with a round, and in the agent's colour
+ * The colour of its edge and its tail says where the thread stands: the
+ * reader's mark while it is in their hands, faint once what it was written
+ * on is gone, quieter once it went out with a round, and the agent's colour
  * when the agent raised it. Where two hold, the later rule here wins.
  */
 .cr-thread-card.cr-stale {
@@ -635,7 +635,7 @@
 	gap: var(--cr-turn-gap);
 	align-items: start;
 }
-/* A row nobody says — where a round ended, the offer to ask — stands in the column of what was said */
+/* A row with no speaker — where a round ended, the offer to ask — stands in the column of what was said */
 .cr-thread-aside {
 	padding-left: calc(var(--cr-avatar-size) + var(--cr-turn-gap));
 }

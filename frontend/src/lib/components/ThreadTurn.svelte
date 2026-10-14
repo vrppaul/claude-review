@@ -47,9 +47,9 @@
 	class={['cr-thread-row cr-thread-turn', speaker.look, landing && 'cr-answer-new']}
 >
 	<span class="cr-avatar"><Icon name={speaker.icon} /></span>
-	<div class="cr-turn-body">
+	<div data-testid="turn-body" class="cr-turn-body">
 		{#if speaker.name !== null}
-			<div class="cr-turn-head">
+			<div data-testid="turn-head" class="cr-turn-head">
 				<strong class="cr-turn-name">{speaker.name}</strong>
 				{@render head?.()}
 			</div>

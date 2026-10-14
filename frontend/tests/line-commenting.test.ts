@@ -243,6 +243,13 @@ describe('the lines a thread hangs on', () => {
 
 		expect([12, 13].map((number) => lines.isMarked(line(number).place))).toEqual([false, false]);
 	});
+
+	it('are not marked where the thread hangs at the head of the file, its last line not drawn', () => {
+		const lines = commenting();
+		review.threads.add(newComment({ file: file.path, startLine: LAST_LINE - 1, endLine: LAST_LINE + 1 }));
+
+		expect([LAST_LINE - 1, LAST_LINE].map((number) => lines.isMarked(line(number).place))).toEqual([false, false]);
+	});
 });
 
 describe('a file no comment may name', () => {
@@ -293,5 +300,12 @@ describe("a drawing whose lines are numbered as another take's", () => {
 		review.threads.add(newComment({ file: file.path, startLine: 11, body: 'on line 11 as the file now stands' }));
 
 		expect(lines.threadsUnder({ side: 'new', number: 11 })).toEqual([]);
+	});
+
+	it('marks no line of the number an open thread hangs on', () => {
+		const lines = ofAnotherTake();
+		review.threads.add(newComment({ file: file.path, startLine: 11, body: 'on line 11 as the file now stands' }));
+
+		expect(lines.isMarked(line(11).place)).toBe(false);
 	});
 });

@@ -6,7 +6,8 @@
 
 import type { WrittenAt } from '$lib/types';
 
-// A reply reads as a turn of the conversation, and a comment on the story's words as the offer that opened it
+// A reply is begun in a field the thread draws saying the same; a comment on the story's words reads as the
+// offer that opened it
 export const PLACEHOLDERS: Record<WrittenAt['kind'], string> = {
 	new: 'What should change here?',
 	story: 'Ask about this…',
