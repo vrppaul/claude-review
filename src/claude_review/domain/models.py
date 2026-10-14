@@ -724,7 +724,8 @@ class StaleStep(BaseModel):
     # The chapter that tells it, by its id
     chapter: str
     file: str
-    lines: LineSpan
+    # None where its code is no longer found in the change: no lines of it are the step's
+    lines: LineSpan | None
 
 
 class StoryWentStale(BaseModel):

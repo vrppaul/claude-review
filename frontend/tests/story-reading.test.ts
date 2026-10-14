@@ -7,7 +7,7 @@ import { fakeServer } from './fake-server';
 import { newComment, storyComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
-import { storyHeld, storyResponse, toldChapter, toldStep } from './story';
+import { gainedPiece, storyHeld, storyResponse, toldChapter, toldStep } from './story';
 
 // A story of two chapters: a.py is told in both, line 1 in the first and line 9 in the second, with
 // b.py between them; what no step tells of c.py is left out
@@ -64,7 +64,7 @@ describe('a review read as its story', () => {
 
 	it('knows every section apart: steps of one file, steps that begin at one line in two files, and what is left out of each', () => {
 		const lineOneOfB = toldStep('b.py', 1);
-		const leftOutOfA = { piece: toldStep('a.py', 5).piece, changed_lines: 1 };
+		const leftOutOfA = { piece: gainedPiece('a.py', 5, 5), changed_lines: 1 };
 		const chapters = [toldChapter('ch-1', [LINE_ONE_OF_A, lineOneOfB, LINE_NINE_OF_A])];
 		review = openReview({ story: storyHeld({ chapters, left_out: [leftOutOfA, LEFT_OUT_OF_C] }) });
 		review.views.choose('story');

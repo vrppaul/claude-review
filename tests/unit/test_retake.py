@@ -282,7 +282,7 @@ async def test_a_story_whose_code_was_put_back_as_it_was_told_is_current_again()
 
     assert held is not None
     assert held.moved_on is None
-    assert [told_step.changed_since_told for told_step in held.story.chapters[0].steps] == [False]
+    assert [told_step.now.changed_since_told for told_step in held.story.chapters[0].steps] == [False]
 
 
 async def test_a_story_told_while_the_diff_is_taken_again_is_followed_onto_the_new_take_once_it_is_held() -> None:

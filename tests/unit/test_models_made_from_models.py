@@ -28,7 +28,7 @@ from claude_review.domain.models import (
     TurnAuthor,
     Unshown,
 )
-from claude_review.domain.story import Chapter, LeftOut, Step, StoryAsking
+from claude_review.domain.story import Chapter, LeftOut, Step, StepNow, StoryAsking
 from claude_review.presentation.wire.records import GuideChange, SettingsChange
 from claude_review.presentation.wire.refusal import FieldRefusal
 from tests.helpers import line_anchor
@@ -98,7 +98,9 @@ TOLD_STEP = STEP.told(FILE)
 TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 TOLD_STORY = STORY.told([TOLD_CHAPTER], [LEFT_OUT])
 # Each followed onto a later take: the step moved down, showing other rows, and marked; nothing left out there
-FOLLOWED_STEP = TOLD_STEP.followed(LineSpan(first=14, last=15), FILE.showing(OTHER_ROWS), changed_since_told=True)
+FOLLOWED_STEP = TOLD_STEP.followed(
+    LineSpan(first=14, last=15), StepNow(piece=FILE.showing(OTHER_ROWS), changed_since_told=True)
+)
 FOLLOWED_CHAPTER = TOLD_CHAPTER.followed([FOLLOWED_STEP])
 # A story asked for and not yet taken, and one an agent took: stopping one writes only that it was stopped,
 # and which of the two it is made from shows that when it was taken is still said
@@ -167,7 +169,7 @@ MADE = [
         what="a step followed",
         source=TOLD_STEP,
         made=FOLLOWED_STEP,
-        replaced={"lines", "piece", "changed_since_told"},
+        replaced={"lines", "piece", "now"},
     ),
     MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
     MadeFrom(what="a chapter followed", source=TOLD_CHAPTER, made=FOLLOWED_CHAPTER, replaced={"steps"}),

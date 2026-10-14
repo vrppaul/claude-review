@@ -3,7 +3,7 @@ import { contentsOf, tellsFirst } from '$lib/review/story-contents';
 import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { piecesOf } from '$lib/review/story-pieces';
 import { addedLine, diffFile, hunk, removedLine } from './diff';
-import { stepWithoutCode, toldChapter, toldStep, toldStory } from './story';
+import { changedStep, stepWithoutCode, toldChapter, toldStep, toldStory } from './story';
 
 // A story of three chapters. The first tells a.py twice, around b.py; the second tells b.py and a.py;
 // the third tells c.py, which no other chapter tells, and a.py once more. Every step tells one line
@@ -40,8 +40,8 @@ describe('what a story lists of itself', () => {
 	it('says a file as the first piece of it in the chapter says it', () => {
 		const [a, b] = ofTheFirst.files;
 
-		expect(a.firstPiece).toBe(aFirst.piece);
-		expect(b.firstPiece).toBe(bFirst.piece);
+		expect(a.firstPiece).toBe(aFirst.now?.piece);
+		expect(b.firstPiece).toBe(bFirst.now?.piece);
 	});
 
 	it("lists a chapter's steps in the order it tells them, each by its section and its place among them", () => {
@@ -56,9 +56,9 @@ describe('what a story lists of itself', () => {
 		const [a, b] = ofTheFirst.files;
 		const [ofAFirst, ofB, ofAAgain] = ofTheFirst.steps;
 
-		expect(ofAFirst.shown).toEqual({ piece: aFirst.piece, fileListed: a });
-		expect(ofB.shown).toEqual({ piece: bFirst.piece, fileListed: b });
-		expect(ofAAgain.shown).toEqual({ piece: aAgain.piece, fileListed: a });
+		expect(ofAFirst.shown).toEqual({ piece: aFirst.now?.piece, fileListed: a });
+		expect(ofB.shown).toEqual({ piece: bFirst.now?.piece, fileListed: b });
+		expect(ofAAgain.shown).toEqual({ piece: aAgain.now?.piece, fileListed: a });
 	});
 
 	it('lists no file of a chapter where no step of it shows code of it, and shows nothing of such a step', () => {
@@ -70,7 +70,7 @@ describe('what a story lists of itself', () => {
 		const [b] = listed.files;
 
 		expect(listed.files.map(({ firstPiece, alsoIn }) => [firstPiece.path, alsoIn])).toEqual([['b.py', []]]);
-		expect(listed.steps.map(({ shown }) => shown)).toEqual([null, { piece: ofB.piece, fileListed: b }]);
+		expect(listed.steps.map(({ shown }) => shown)).toEqual([null, { piece: ofB.now?.piece, fileListed: b }]);
 	});
 
 	it('says no chapter tells a file where its only step of the file shows no code of it', () => {
@@ -124,16 +124,20 @@ describe('what a story lists of itself', () => {
 	});
 
 	it('counts the steps of each chapter whose code a round changed after it was told', () => {
-		const changed = { ...toldStep('a.py', 1), changed_since_told: true };
-		const changedToo = { ...toldStep('b.py', 1), changed_since_told: true };
 		const followed = toldStory({
 			chapters: [
-				toldChapter('ch-1', [changed, toldStep('a.py', 5), changedToo]),
+				toldChapter('ch-1', [changedStep('a.py', 1), toldStep('a.py', 5), changedStep('b.py', 1)]),
 				toldChapter('ch-2', [toldStep('c.py', 1)])
 			]
 		});
 
 		expect(contentsOf(followed).chapters.map((chapter) => chapter.changedSteps)).toEqual([2, 0]);
+	});
+
+	it('counts no step whose code is no longer found among those a round changed: it shows no code to be current', () => {
+		const followed = toldStory({ chapters: [toldChapter('ch-1', [stepWithoutCode('a.py', 1), toldStep('b.py', 1)])] });
+
+		expect(contentsOf(followed).chapters.map((chapter) => chapter.changedSteps)).toEqual([0]);
 	});
 });
 

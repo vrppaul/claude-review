@@ -98,7 +98,7 @@ function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): 
 
 /** The files a chapter tells, each once: those it shows code of. */
 function filesTold(chapter: ToldChapter): Set<string> {
-	return new Set(chapter.steps.flatMap((step) => (step.piece === null ? [] : [step.file])));
+	return new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.file])));
 }
 
 /** Which chapters tell each file: the story's chapters walked once, for every file any of them lists. */
@@ -145,14 +145,16 @@ function chapterListed(told: ToldChapter, place: number, telling: ChaptersTellin
 	for (const [stepPlace, step] of told.steps.entries()) {
 		const section = stepSectionKey(step);
 		let shown: StepShown | null = null;
-		if (step.piece !== null) {
-			const listed = files.get(step.piece.path) ?? fileListed(step.piece, section, place, telling);
-			files.set(step.piece.path, listed);
-			shown = { piece: step.piece, fileListed: listed };
+		if (step.now !== null) {
+			const { piece } = step.now;
+			const listed = files.get(piece.path) ?? fileListed(piece, section, place, telling);
+			files.set(piece.path, listed);
+			shown = { piece, fileListed: listed };
 		}
 		steps.push({ told: step, section, place: stepPlace, shown });
 	}
-	const changedSteps = told.steps.filter((step) => step.changed_since_told).length;
+	// Only a step that shows code shows it changed: one whose code is no longer found shows none to be current
+	const changedSteps = told.steps.filter((step) => step.now?.changed_since_told === true).length;
 	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps, changedSteps };
 }
 

@@ -147,9 +147,18 @@ export function chaptersCounted(chapters: number, read: number): string {
 	return read === 0 ? chaptersIn(chapters) : `${read} of ${chapters} ${READ}`;
 }
 
-/** How much a chapter tells, as its head says: "3 files · 4 steps". */
+/**
+ * How much a chapter tells, as its head says: "3 files · 4 steps"; "1 step" where none of its steps shows code
+ * of any file any more.
+ */
 export function filesAndSteps(files: number, steps: number): string {
+	if (files === 0) return counted(steps, STEPS);
 	return [counted(files, FILES), counted(steps, STEPS)].join(BETWEEN_COUNTS);
+}
+
+/** What a step whose code the review cannot place in the change now says in its place. */
+export function codeNoLongerFound(file: string): string {
+	return `Its code in ${file} is no longer found.`;
 }
 
 /** The numbers of some chapters, by their places: "1", "1, 4". */

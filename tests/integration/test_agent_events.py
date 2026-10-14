@@ -135,12 +135,13 @@ async def test_a_story_asked_for_where_none_was_told_says_nothing_went_stale(
 async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_agent_what_went_stale(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
-    """Each step whose code changed, by its chapter, its file and its lines as they now stand; and what no step tells."""
+    """Each step whose code changed, by its chapter, its file and its lines as they now stand, or none where its code
+    is no longer found, as here, every line of it said another way; and what no step tells."""
     stale = await stale_once_rewritten(reviews, tmp_git_repo, SAID_ANOTHER_WAY)
 
     assert stale == {
         "round": 2,
-        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "2-3"}],
+        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": None}],
         "left_out": 3,
     }
 

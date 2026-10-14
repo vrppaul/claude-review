@@ -184,9 +184,10 @@ somebody who is waiting.
      fault at its field of the document: mend every one and send the
      document whole again. Then wait again. When it carries `stale`
      (`{"round":2,"steps":[{"chapter":"…","file":"…","lines":"104-131"}],"left_out":5}`),
-     the story you told moved on in a round: these steps' lines changed, and
-     `left_out` changed lines are told by no step. Tell it again, whole, of
-     the code as it now stands.
+     the story you told moved on in a round: these steps' lines changed, a
+     step's `lines` null where its code is no longer found, and `left_out`
+     changed lines are told by no step. Tell it again, whole, of the code as
+     it now stands.
    - `{"type":"story_cancel"}` — the user has stopped the story they asked
      for. Stop writing it, and send nothing.
    - `{"type":"timeout"}` — nothing was asked. Only a `wait` without

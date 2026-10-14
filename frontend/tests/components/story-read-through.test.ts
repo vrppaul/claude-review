@@ -11,7 +11,7 @@ import { handOverNext, pushedAt } from '../pushes';
 import { type Opened, openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, storyResponse, toldChapter, toldStep } from '../story';
+import { gainedPiece, storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: two chapters of a step each, and a line of a.py no step tells
 const files = [
@@ -23,7 +23,7 @@ const TOLD = storyHeld({
 		toldChapter('ch-1', [toldStep('a.py', 1)], { title: 'The beginnings' }),
 		toldChapter('ch-2', [toldStep('b.py', 1)], { title: 'The end' })
 	],
-	left_out: [{ piece: toldStep('a.py', 5).piece, changed_lines: 1 }]
+	left_out: [{ piece: gainedPiece('a.py', 5, 5), changed_lines: 1 }]
 });
 // A review restarted on the same port: another run of it, told its story anew
 const NEXT_RUN = 'next-run';

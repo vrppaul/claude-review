@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import StoryRefusedError
 from claude_review.domain.models import DiffFile, DiffLine, LineSide, LineSpan
-from claude_review.domain.story import Chapter, FollowedStep, LeftOut, Step, Story, ToldStep, ToldStory
+from claude_review.domain.story import Chapter, FollowedStep, LeftOut, Step, StepNow, Story, ToldStep, ToldStory
 from claude_review.services.anchor_service import SideLine, find_run, side_lines
 from claude_review.services.story_checks import document_faults, placement_faults
 from claude_review.services.story_lines_told import first_met
@@ -124,7 +124,9 @@ def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory[ToldStep]:
 def as_told(told: ToldStory[ToldStep]) -> ToldStory[FollowedStep]:
     """A story as it was told, on the take it was told of: each step where it was told, showing what it was told."""
     chapters = [
-        chapter.followed([step.followed(step.lines, step.piece, changed_since_told=False) for step in chapter.steps])
+        chapter.followed(
+            [step.followed(step.lines, StepNow(piece=step.piece, changed_since_told=False)) for step in chapter.steps]
+        )
         for chapter in told.chapters
     ]
     return told.followed(chapters, told.left_out)
@@ -146,7 +148,7 @@ def follow(told: ToldStory[ToldStep], files: list[DiffFile]) -> ToldStory[Follow
         chapter.followed([followed[step.file][step.lines.first] for step in chapter.steps]) for chapter in told.chapters
     ]
     # A step that shows no code tells none of the lines it was told of: what stands there now is left out
-    showing_code = [followed_step for followed_step in _steps_of(chapters) if followed_step.piece is not None]
+    showing_code = [followed_step for followed_step in _steps_of(chapters) if followed_step.now is not None]
     return told.followed(chapters, _left_out(showing_code, told.housekeeping, files, change))
 
 
@@ -175,8 +177,8 @@ def _followed_steps(steps: list[ToldStep], file: PlacedFile | None) -> dict[int,
 
 
 def _not_placed(step: ToldStep) -> FollowedStep:
-    """A step whose code the review cannot place in the change now: on its lines as told, with no piece, marked."""
-    return step.followed(step.lines, None, changed_since_told=True)
+    """A step whose code the review cannot place in the change now: on its lines as told, standing nowhere."""
+    return step.followed(step.lines, None)
 
 
 def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan | None]:
@@ -288,7 +290,7 @@ def _where_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> FollowedStep:
     """A step on the lines it now stands at, cut again, and marked if it shows other rows than it was told with."""
     piece = file.piece([file.rows_at(lines)])
-    return step.followed(lines, piece, changed_since_told=_shows_other_rows(step.piece, piece))
+    return step.followed(lines, StepNow(piece=piece, changed_since_told=_shows_other_rows(step.piece, piece)))
 
 
 def _shows_other_rows(told: DiffFile, now: DiffFile) -> bool:

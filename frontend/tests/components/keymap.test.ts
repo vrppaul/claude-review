@@ -9,7 +9,7 @@ import { A_LATER_TAKE, contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
-import { storyHeld, toldChapter, toldStep } from '../story';
+import { gainedPiece, storyHeld, toldChapter, toldStep } from '../story';
 
 // What each key does is asked as a reader presses it: the page is drawn whole, and its window hands
 // every key to `pressKey` (components/keymap.ts), which no test calls itself. Where the keyboard
@@ -337,7 +337,7 @@ describe('the keys of a review read as its story', () => {
 
 	it('take the reader on from the last step to what the story leaves out', async () => {
 		const user = userEvent.setup();
-		const leftOutOfA = { piece: toldStep('a.py', 5).piece, changed_lines: 1 };
+		const leftOutOfA = { piece: gainedPiece('a.py', 5, 5), changed_lines: 1 };
 		const story = storyHeld({ ...TOLD.story, left_out: [leftOutOfA] });
 		review = openReview({ files, story, facts: { answerer_attached: true } });
 		review.views.choose('story');

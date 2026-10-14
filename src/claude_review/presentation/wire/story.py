@@ -148,17 +148,23 @@ class StoryOverview(WireModel):
     later: list[OverviewItem]
 
 
+class StepNow(WireModel):
+    """Where a step's code stands on the take of the change the story is on."""
+
+    # The rows of the file the step is, to be drawn as a file is
+    piece: DiffFile
+    # Whether a round's work changed them after the step was told
+    changed_since_told: WireBool
+
+
 class ToldStep(WireModel):
-    """A step as it is told: its reason, when it has one, and the piece of its file it shows while its code is there."""
+    """A step as it is told: its reason, when it has one, and where its code stands now, if anywhere."""
 
     file: str
     lines: LineSpan
     reason: str | None
-    # The rows of the file the step is, to be drawn as a file is; null where
-    # its code is not in the change as it now stands
-    piece: DiffFile | None
-    # Whether a round's work changed the code it shows after it was told, or left it showing none
-    changed_since_told: WireBool
+    # Null where its code is not in the change as it now stands
+    now: StepNow | None
     # Whether a thread may hang on what it says: a path holding a control character is shown, but only to be read
     commentable: WireBool
 

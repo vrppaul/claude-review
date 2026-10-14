@@ -328,8 +328,8 @@ class StaleStep(WireModel):
 
     chapter: str
     file: str
-    # Written as the agent writes a step's lines: "104-131"
-    lines: LinesWritten
+    # Written as the agent writes a step's lines: "104-131"; null where its code is no longer found
+    lines: LinesWritten | None
 
 
 class StoryWentStale(WireModel):

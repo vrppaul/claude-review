@@ -9,7 +9,7 @@ import { broughtIntoView, said } from '../elements';
 import { newComment, storyComment } from '../new-comment';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
-import { codeMovedOn, storyHeld, toldChapter, toldStep } from '../story';
+import { changedStep, codeMovedOn, gainedPiece, stepWithoutCode, storyHeld, toldChapter, toldStep } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py a line, and so did a lock file
 const files = [
@@ -24,7 +24,7 @@ const TOLD = storyHeld({
 		toldChapter('ch-1', [toldStep('src/a.py', 1), toldStep('src/b.py', 5)], { title: 'The beginnings' }),
 		toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
 	],
-	left_out: [{ piece: toldStep('src/a.py', 5).piece, changed_lines: 1 }],
+	left_out: [{ piece: gainedPiece('src/a.py', 5, 5), changed_lines: 1 }],
 	housekeeping: ['uv.lock']
 });
 
@@ -237,7 +237,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 	const FOLLOWED = storyHeld(
 		{
 			chapters: [
-				toldChapter('ch-1', [toldStep('src/a.py', 1), { ...toldStep('src/b.py', 5), changed_since_told: true }], {
+				toldChapter('ch-1', [toldStep('src/a.py', 1), changedStep('src/b.py', 5)], {
 					title: 'The beginnings'
 				}),
 				toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
@@ -269,11 +269,30 @@ describe('the contents of a story whose code a round changed after it was told, 
 	});
 });
 
+describe('the contents of a story a chapter of which shows no code any more', () => {
+	it('lists no files under that chapter, and leaves no empty list in their place', () => {
+		const story = storyHeld(
+			{
+				chapters: [
+					toldChapter('ch-1', [stepWithoutCode('src/a.py', 1)], { title: 'The beginnings' }),
+					toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
+				]
+			},
+			{ moved_on: codeMovedOn() }
+		);
+		review = openReview({ files, story });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.getAllByTestId('contents-files')).toHaveLength(1);
+	});
+});
+
 describe('what a story leaves out, once a round moved the code on under it', () => {
 	// What no step tells now: line 5 of a.py and four lines of b.py, five changed lines
 	const LEFT_OUT_NOW = [
-		{ piece: toldStep('src/a.py', 5).piece, changed_lines: 1 },
-		{ piece: toldStep('src/b.py', 7).piece, changed_lines: 4 }
+		{ piece: gainedPiece('src/a.py', 5, 5), changed_lines: 1 },
+		{ piece: gainedPiece('src/b.py', 7, 7), changed_lines: 4 }
 	];
 	// How many changed lines no step told when it was told, and how many none tells now, as the review says them
 	const TWO_THEN_FIVE_NOW = { when_told: 2, now: 5 };

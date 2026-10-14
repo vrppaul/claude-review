@@ -84,6 +84,15 @@ async def test_what_went_stale_is_the_round_the_code_moved_on_in_the_steps_it_ch
     )
 
 
+async def test_what_went_stale_names_a_step_whose_code_is_no_longer_found_by_its_chapter_and_file_alone() -> None:
+    """Its file left the change: no lines of the take are its own, and none is named as if they were."""
+    story = await told_then_followed(TOLD_OF, [])
+
+    assert story.went_stale() == StoryWentStale(
+        round=SECOND_ROUND, steps=[StaleStep(chapter=ONLY_CHAPTER, file=STORIED, lines=None)], left_out=0
+    )
+
+
 async def test_nothing_went_stale_of_a_story_held_that_is_current() -> None:
     story = await told_then_followed(TOLD_OF, NOTHING_LEFT_OUT)
 

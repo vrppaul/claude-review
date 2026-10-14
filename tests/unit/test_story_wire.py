@@ -227,7 +227,7 @@ def test_a_told_story_reaches_a_page_with_every_piece_and_every_line_it_was_told
     whether_commentable = {"piece": {"commentable"}}
     as_the_review_holds_it = on_the_wire.model_dump(
         exclude={
-            "chapters": {"__all__": {"steps": {"__all__": {"commentable": True, **whether_commentable}}}},
+            "chapters": {"__all__": {"steps": {"__all__": {"commentable": True, "now": whether_commentable}}}},
             "left_out": {"__all__": whether_commentable},
         }
     )

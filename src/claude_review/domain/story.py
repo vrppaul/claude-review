@@ -218,28 +218,37 @@ class ToldStep(Step):
 
     piece: DiffFile
 
-    def followed(self, lines: LineSpan, piece: DiffFile | None, *, changed_since_told: bool) -> FollowedStep:
-        """The step on a take of the change: on these lines, the piece it shows there if any, and whether it changed."""
-        return FollowedStep(
-            file=self.file, lines=lines, reason=self.reason, piece=piece, changed_since_told=changed_since_told
-        )
+    def followed(self, lines: LineSpan, now: StepNow | None) -> FollowedStep:
+        """The step on a take of the change: on these lines, and where its code stands there, if anywhere."""
+        return FollowedStep(file=self.file, lines=lines, reason=self.reason, now=now)
+
+
+class StepNow(StoryPart):
+    """Where a step's code stands on a take of the change: the piece it shows there, and whether it changed since."""
+
+    piece: DiffFile
+    # Whether a round's work changed it after the step was told: its rows say something else than those told
+    changed_since_told: bool
 
 
 class FollowedStep(Step):
-    """A step as it stands on a take of the change: with the piece of its file it shows, while its code is there.
+    """A step as it stands on a take of the change: as told, changed since, or not placed.
 
     A round's work may leave the review unable to say where a step's code
     is now: its file left the change, nothing of its lines is found, or it
     would meet another step of its file once followed. It then shows no
     piece, on the lines it was told of: a piece cut there would show other
     code, and an empty one would claim a status its file no longer has.
+    Whether its code changed is said only of code it shows.
     """
 
     # None where its code is not in the change as it now stands
-    piece: DiffFile | None
-    # Whether a round's work changed the code it shows after it was told: its
-    # rows say something else now, or it shows none
-    changed_since_told: bool
+    now: StepNow | None
+
+    @property
+    def stands_as_told(self) -> bool:
+        """Whether it shows the code it was told with: placed in the change, and not changed since."""
+        return self.now is not None and not self.now.changed_since_told
 
     @property
     def commentable(self) -> bool:

@@ -4,7 +4,7 @@
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
-	import { alsoInChapters, changedStepNamed, linesSaid, stepNamed } from './story-words';
+	import { alsoInChapters, changedStepNamed, codeNoLongerFound, linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
@@ -19,8 +19,10 @@
 	const told = $derived(step.told);
 	// Its reason, where the reader may ask about it
 	const askable = $derived(askableReason(told));
+	// Whether it shows code a round changed after it was told: one whose code is no longer found shows none
+	const changed = $derived(told.now?.changed_since_told === true);
 	// What its heading is named, with whether a round changed its code after it was told
-	const named = $derived(told.changed_since_told ? changedStepNamed(number) : stepNamed(number));
+	const named = $derived(changed ? changedStepNamed(number) : stepNamed(number));
 </script>
 
 <!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
@@ -30,7 +32,7 @@
 {#snippet numberAndReason()}
 	<!-- A reason may be asked about, its number banded with it, and what is asked hangs below the agent's
 		voice; a step of a file no thread can name takes none -->
-	<div class={['mb-2', told.changed_since_told && 'cr-step-changed']}>
+	<div class={['mb-2', changed && 'cr-step-changed']}>
 		{#if askable !== null}
 			<AskableBlock
 				block={stepReason(told.file, told.lines.first)}
@@ -58,12 +60,14 @@
 {/snippet}
 
 {#if step.shown === null}
-	<!-- A step whose code the review cannot place in the change now: its number, its reason and its
-		file, and no code, which would be other code or a file's status no longer true. It draws no
-		lines, so it is no section of the page -->
+	<!-- A step whose code the review cannot place in the change now: its number, its reason, and a line
+		that says its code in its file is no longer found, and no code, which would be other code or a
+		file's status no longer true. It draws no lines, so it is no section of the page -->
 	<div data-testid="story-step-without-code">
 		{@render numberAndReason()}
-		<p data-testid="step-file" class="cr-voice-inset cr-muted font-mono text-xs wrap-anywhere">{told.file}</p>
+		<p data-testid="step-code-not-found" class="cr-voice-inset cr-muted text-xs wrap-anywhere">
+			{codeNoLongerFound(told.file)}
+		</p>
 	</div>
 {:else}
 	{@const shown = step.shown}

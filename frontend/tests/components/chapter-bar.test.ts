@@ -11,7 +11,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, storyResponse, toldChapter, toldStep } from '../story';
+import { gainedPiece, storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: a first chapter of two steps, then two chapters
 // of a step each, and a line of a.py no step tells
@@ -26,7 +26,7 @@ const TOLD = storyHeld({
 		toldChapter('ch-2', [toldStep('b.py', 1)], { title: 'The middle' }),
 		toldChapter('ch-3', [toldStep('c.py', 1)], { title: 'The end' })
 	],
-	left_out: [{ piece: toldStep('a.py', 9).piece, changed_lines: 1 }]
+	left_out: [{ piece: gainedPiece('a.py', 9, 9), changed_lines: 1 }]
 });
 
 let review: Review;

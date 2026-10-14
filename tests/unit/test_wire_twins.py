@@ -83,6 +83,7 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.Diagram, story.Diagram, frozenset()),
     (told.StoryOverview, story.StoryOverview, frozenset()),
     # Whether a thread may name its file, which the review's model answers from its path rather than keeps
+    (told.StepNow, story.StepNow, frozenset()),
     (told.FollowedStep, story.ToldStep, frozenset({"commentable"})),
     (told.Chapter[told.FollowedStep], story.ToldChapter, frozenset()),
     (told.LeftOut, story.LeftOut, frozenset()),

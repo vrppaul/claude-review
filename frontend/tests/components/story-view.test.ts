@@ -15,6 +15,7 @@ import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
 import {
 	ASKED,
+	changedStep,
 	codeMovedOn,
 	stepWithoutCode,
 	storyHeld,
@@ -303,8 +304,7 @@ describe('a review read as its story', () => {
 			file: 'new.py',
 			lines: { first: 1, last: 2 },
 			reason: null,
-			piece: made,
-			changed_since_told: false
+			now: { piece: made, changed_since_told: false }
 		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
@@ -326,8 +326,7 @@ describe('a review read as its story', () => {
 			file: 'new.py',
 			lines: { first: 1, last: 1 },
 			reason: null,
-			piece: made,
-			changed_since_told: false
+			now: { piece: made, changed_since_told: false }
 		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
@@ -843,7 +842,11 @@ describe('a piece of a file that was moved', () => {
 			status: 'renamed',
 			hunks: [hunk([addedLine(1, 'one')], { header: '', old_start: 1, new_start: 1 })]
 		});
-		const told = storyHeld({ chapters: [toldChapter('ch-1', [{ ...toldStep('new_name.py', 1), piece: moved }])] });
+		const told = storyHeld({
+			chapters: [
+				toldChapter('ch-1', [{ ...toldStep('new_name.py', 1), now: { piece: moved, changed_since_told: false } }])
+			]
+		});
 		review = openReview({ files, story: told });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -870,7 +873,15 @@ describe('what a piece of a story leaves out between its hunks', () => {
 		]
 	});
 	const told = storyHeld({
-		chapters: [toldChapter('ch-1', [{ ...toldStep('a.py', 1), lines: { first: 1, last: 9 }, piece: overTwoChanges }])],
+		chapters: [
+			toldChapter('ch-1', [
+				{
+					...toldStep('a.py', 1),
+					lines: { first: 1, last: 9 },
+					now: { piece: overTwoChanges, changed_since_told: false }
+				}
+			])
+		],
 		left_out: [{ piece: twoRunsNoStepTells, changed_lines: 2 }]
 	});
 
@@ -929,10 +940,9 @@ describe('a story whose code a round changed after it was told', () => {
 			{ moved_on: codeMovedOn({ round: MOVED_ON_IN }) }
 		);
 	}
-	const changed = (step: ToldStep): ToldStep => ({ ...step, changed_since_told: true });
 
 	it('says so first under the head of a chapter with steps it changed, how many, and in which round', () => {
-		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), changed(toldStep('b.py', 5))]) });
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), changedStep('b.py', 5)]) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -952,7 +962,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('says last that the agent is updating the reasons, while it tells the story again', () => {
-		const story = followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]);
+		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)]);
 		review = openReview({ files, story, asking: TAKEN });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -963,7 +973,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('says nothing of the agent updating them where the story asked for again waits for an agent to attach', () => {
-		const story = followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]);
+		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)]);
 		review = openReview({ files, story, asking: ASKED });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -972,7 +982,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('says one step as one', () => {
-		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)]) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -980,7 +990,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('says nothing of it in a chapter none of whose steps it changed', () => {
-		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)]) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -989,7 +999,7 @@ describe('a story whose code a round changed after it was told', () => {
 		expect(within(theEnd).queryByTestId('chapter-changed')).toBeNull();
 	});
 
-	it('draws a step whose code is out of the change by its number, its reason and its file, with no code', () => {
+	it('draws a step whose code is out of the change by its number and its reason, and says in a line it is gone', () => {
 		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)]);
 		review = openReview({ files, story });
 		review.views.choose('story');
@@ -999,8 +1009,26 @@ describe('a story whose code a round changed after it was told', () => {
 		const [withoutCode] = within(beginnings).getAllByTestId('story-step-without-code');
 
 		expect(said(within(withoutCode).getByTestId('step-reason'))).toBe('Why a.py starts so.');
-		expect(said(within(withoutCode).getByTestId('step-file'))).toBe('a.py');
+		expect(said(within(withoutCode).getByTestId('step-code-not-found'))).toBe('Its code in a.py is no longer found.');
 		expect(within(beginnings).getAllByTestId('story-piece')).toHaveLength(1);
+	});
+
+	it('says nothing of the code below being current where the step it would count shows no code', () => {
+		review = openReview({ files, story: followedWith([stepWithoutCode('a.py', 1), toldStep('b.py', 5)]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.queryByTestId('chapter-changed')).toBeNull();
+	});
+
+	it('counts in the head of a chapter whose steps show no code only its steps, and no files', () => {
+		review = openReview({ files, story: followedWith([stepWithoutCode('a.py', 1)]) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings] = screen.getAllByTestId('story-chapter');
+
+		expect(said(within(beginnings).getByTestId('chapter-counts'))).toBe('1 step');
 	});
 
 	it('lets the reader ask about the reason of a step whose code is out of the change', () => {
@@ -1015,7 +1043,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {
-		review = openReview({ files, story: followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]) });
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)]) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 

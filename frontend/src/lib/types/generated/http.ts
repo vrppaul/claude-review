@@ -1713,7 +1713,7 @@ export interface components {
             /** File */
             file: string;
             /** Lines */
-            lines: string;
+            lines: string | null;
         };
         /**
          * StatusRequest
@@ -1739,6 +1739,15 @@ export interface components {
             lines: string;
             /** Reason */
             reason?: string | null;
+        };
+        /**
+         * StepNow
+         * @description Where a step's code stands on the take of the change the story is on.
+         */
+        StepNow: {
+            piece: components["schemas"]["DiffFile"];
+            /** Changed Since Told */
+            changed_since_told: boolean;
         };
         /**
          * StoryAnchor
@@ -2104,7 +2113,7 @@ export interface components {
         ToldFrom: "memory" | "commits";
         /**
          * ToldStep
-         * @description A step as it is told: its reason, when it has one, and the piece of its file it shows while its code is there.
+         * @description A step as it is told: its reason, when it has one, and where its code stands now, if anywhere.
          */
         ToldStep: {
             /** File */
@@ -2112,9 +2121,7 @@ export interface components {
             lines: components["schemas"]["LineSpan-Output"];
             /** Reason */
             reason: string | null;
-            piece: components["schemas"]["DiffFile"] | null;
-            /** Changed Since Told */
-            changed_since_told: boolean;
+            now: components["schemas"]["StepNow"] | null;
             /** Commentable */
             commentable: boolean;
         };

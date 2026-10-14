@@ -40,7 +40,9 @@
 				<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-title">{told.title}</span>
 			</h2>
-			<span class="cr-faint ml-auto text-xs">{filesAndSteps(chapter.files.length, chapter.steps.length)}</span>
+			<span data-testid="chapter-counts" class="cr-faint ml-auto text-xs"
+				>{filesAndSteps(chapter.files.length, chapter.steps.length)}</span
+			>
 		</header>
 	{/snippet}
 	{#if chapter.changedSteps > 0 && movedOn !== null}

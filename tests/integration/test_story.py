@@ -174,7 +174,7 @@ async def test_a_page_reads_the_story_as_told_each_step_with_the_piece_of_the_ch
 
     assert held is not None
     assert held.round == FIRST_ROUND
-    assert [(told.file, rows_of(told.piece)) for told in held.story.chapters[0].steps] == [
+    assert [(told.file, rows_of(told.now.piece)) for told in held.story.chapters[0].steps] == [
         (EDITED_FILE, ["and a line since"]),
         (ADDED_FILE, ["def added() -> None:", "    return None"]),
     ]
@@ -242,15 +242,15 @@ async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client:
 async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands_and_none_where_it_is_gone(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """The round's work moved the code under a story: a step shows the code under review, or none, marked, once
+    """The round's work moved the code under a story: a step shows the code under review, or stands nowhere once
     nothing of its own is there."""
     await tell(agent, WHOLE_STORY)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
     [reworded, untouched] = (await held_by(agent)).held.story.chapters[0].steps
-    assert (reworded.file, reworded.piece, reworded.changed_since_told) == (EDITED_FILE, None, True)
-    assert (untouched.file, rows_of(untouched.piece), untouched.changed_since_told) == (
+    assert (reworded.file, reworded.now) == (EDITED_FILE, None)
+    assert (untouched.file, rows_of(untouched.now.piece), untouched.now.changed_since_told) == (
         ADDED_FILE,
         ["def added() -> None:", "    return None"],
         False,

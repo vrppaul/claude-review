@@ -78,26 +78,29 @@
 					{#snippet node()}
 						{chapterNumber(chapter.place)}
 					{/snippet}
-					<!-- The files of a chapter read through step back, as a file the reader has finished with does -->
-					<ul
-						data-testid="contents-files"
-						class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
-					>
-						{#each chapter.files as listed (listed.firstPiece.path)}
-							<ContentsFile
-								file={listed.firstPiece}
-								opensAt={listed.opensAt}
-								current={stepRead?.shown?.fileListed === listed}
-							>
-								<!-- The file's whole change where the story first tells it; after that, where it was told -->
-								{#if tellsFirst(chapter, listed)}
-									<ChangedLines changed={review.story.pieces.changeOf(listed.firstPiece.path)} />
-								{:else}
-									{alsoInShort(listed.alsoIn)}
-								{/if}
-							</ContentsFile>
-						{/each}
-					</ul>
+					<!-- The files of a chapter read through step back, as a file the reader has finished with does. A
+						chapter none of whose steps shows code any more lists none, and no empty list -->
+					{#if chapter.files.length > 0}
+						<ul
+							data-testid="contents-files"
+							class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
+						>
+							{#each chapter.files as listed (listed.firstPiece.path)}
+								<ContentsFile
+									file={listed.firstPiece}
+									opensAt={listed.opensAt}
+									current={stepRead?.shown?.fileListed === listed}
+								>
+									<!-- The file's whole change where the story first tells it; after that, where it was told -->
+									{#if tellsFirst(chapter, listed)}
+										<ChangedLines changed={review.story.pieces.changeOf(listed.firstPiece.path)} />
+									{:else}
+										{alsoInShort(listed.alsoIn)}
+									{/if}
+								</ContentsFile>
+							{/each}
+						</ul>
+					{/if}
 				</ContentsEntry>
 			{/each}
 		</ol>

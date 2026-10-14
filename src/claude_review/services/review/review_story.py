@@ -181,10 +181,10 @@ class ReviewStory:
         return StoryWentStale(
             round=held.moved_on.round,
             steps=[
-                StaleStep(chapter=chapter.id, file=step.file, lines=step.lines)
+                StaleStep(chapter=chapter.id, file=step.file, lines=None if step.now is None else step.lines)
                 for chapter in held.story.chapters
                 for step in chapter.steps
-                if step.changed_since_told
+                if not step.stands_as_told
             ],
             left_out=_changed_lines_left_out(held.story),
         )
@@ -213,8 +213,8 @@ def _moved_on(
     """
     left_out_when_told = _changed_lines_left_out(told)
     left_out_now = _changed_lines_left_out(followed)
-    step_changed = any(step.changed_since_told for chapter in followed.chapters for step in chapter.steps)
-    if not step_changed and left_out_now <= left_out_when_told:
+    all_as_told = all(step.stands_as_told for chapter in followed.chapters for step in chapter.steps)
+    if all_as_told and left_out_now <= left_out_when_told:
         return None
     first_round = round_number if moved_on_before is None else moved_on_before.round
     return CodeMovedOn(round=first_round, left_out=_left_out_changed(left_out_when_told, left_out_now))
