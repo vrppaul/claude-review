@@ -7,6 +7,9 @@
 	import StoryOptIn from './StoryOptIn.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
+	// The classes both buttons carry: a segment of the switch, its icon and its words in a row
+	const SEGMENT_CLASSES = 'cr-segment flex items-center gap-1.5';
+
 	const review = useReview();
 
 	// The button of each view, as it is drawn: the keyboard goes to the one on screen, and the note of a
@@ -62,7 +65,7 @@
 				type="button"
 				data-testid="read-as-story"
 				class={[
-					'cr-segment flex items-center gap-1.5',
+					SEGMENT_CLASSES,
 					storySays === 'writing' && 'cr-segment-writing',
 					storySays === 'unread' && 'cr-segment-unread'
 				]}
@@ -85,7 +88,7 @@
 				bind:this={buttons.files}
 				type="button"
 				data-testid="read-as-files"
-				class="cr-segment flex items-center gap-1.5"
+				class={SEGMENT_CLASSES}
 				aria-pressed={readingFiles}
 				onclick={() => review.views.choose('files')}
 			>
