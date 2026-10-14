@@ -35,6 +35,12 @@ const READ = 'read';
 // What a step whose code a round changed after the story was told is said to be, to whoever cannot see it step back
 const CHANGED_AFTER_TOLD = 'changed after it was told';
 
+// What stands between how much a story left out when it was told and how much it leaves out now
+const THEN_AND_NOW = ' → ';
+
+/** What the tag beside a story's title says of the code under it while that is the code it was told of. */
+export const CODE_CURRENT = 'current';
+
 /** What heads the warning of a chapter whose code a round changed after the story was told. */
 export const CHANGED_AFTER_TOLD_HEAD = 'Changed after it was told.';
 /** What that warning says of the code under it, and of the reasons beside it. */
@@ -66,6 +72,19 @@ export function stepNamed(number: string): string {
 /** The same of a step whose code a round changed after it was told: "Step 1.2, changed after it was told". */
 export function changedStepNamed(number: string): string {
 	return `${stepNamed(number)}, ${CHANGED_AFTER_TOLD}`;
+}
+
+/** What that tag says once a later round moved the code on: "the code moved on in round 2". */
+export function codeMovedOnIn(round: number): string {
+	return `the code moved on in round ${round}`;
+}
+
+/**
+ * How many changed lines no step told when the story was told, then how
+ * many none tells now, as its contents say beside what it leaves out: "2 → 5".
+ */
+export function leftOutThenAndNow(then: number, now: number): string {
+	return `${then}${THEN_AND_NOW}${now}`;
 }
 
 /** How many of a chapter's steps a round changed, and which round: "3 steps in this chapter changed in round 2." */

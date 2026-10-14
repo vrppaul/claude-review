@@ -13,6 +13,7 @@
 		chapterEntitled,
 		chapterNumber,
 		chaptersCounted,
+		leftOutThenAndNow,
 		NOT_IN_THE_STORY,
 		THE_OVERVIEW
 	} from './story-words';
@@ -29,6 +30,8 @@
 	const chaptersRead = $derived(
 		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
 	);
+	// How many changed lines no step tells now: said beside how many none told, once a round moved the code on
+	const changedLinesLeftOut = $derived(contents.leftOut.reduce((lines, left) => lines + left.told.changed_lines, 0));
 </script>
 
 <!-- The story's contents, beside it: its parts down an axis, the overview and then every chapter with
@@ -103,6 +106,10 @@
 				onclick={() => review.parts.goTo(LEFT_OUT_PART)}
 			>
 				{NOT_IN_THE_STORY}
+				{#if held.moved_on !== null && held.moved_on.left_out_when_told !== changedLinesLeftOut}
+					<!-- A round moved the code on and changed how much no step tells: how much then, and now -->
+					<span class="ml-2">{leftOutThenAndNow(held.moved_on.left_out_when_told, changedLinesLeftOut)}</span>
+				{/if}
 			</button>
 			<ul data-testid="contents-left-out-files" class="cr-contents-files cr-contents-files-left-out">
 				{#each contents.leftOut as left (left.section)}

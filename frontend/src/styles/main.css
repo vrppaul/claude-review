@@ -1097,6 +1097,43 @@
 	opacity: 0.6;
 }
 
+/*
+ * The tag beside a story's title: the round it was told in, on the agent's
+ * colour while the code under it is the code it was told of, and on the
+ * warning's once a later round moved the code on. It stands in the middle
+ * of the title's line, not on its words' base
+ */
+.cr-round-tag {
+	display: inline-flex;
+	align-self: center;
+	align-items: center;
+	gap: 0.5rem;
+	height: 1.5rem;
+	padding: 0 0.625rem;
+	border: 1px solid var(--cr-agent-border);
+	border-radius: 999px;
+	background: var(--cr-agent-tint);
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+.cr-round-tag svg {
+	color: var(--cr-agent);
+}
+.cr-round-tag-moved-on {
+	border-color: var(--cr-warning-border);
+	background: var(--cr-warning-tint);
+}
+.cr-round-tag-moved-on svg {
+	color: var(--color-warning);
+}
+/* What the tag says of the code, after the round: quieter than the round */
+.cr-round-tag-said {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3125rem;
+	font-weight: 400;
+}
+
 /* A thread on a block of the agent's words hangs flush with it, its tail pointing up at what the block is headed with */
 .cr-askable-block {
 	--cr-thread-inset: 0;

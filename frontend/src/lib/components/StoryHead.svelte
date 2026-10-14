@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { StoryHeld } from '$lib/types';
+	import Icon from './Icon.svelte';
+	import { CODE_CURRENT, codeMovedOnIn } from './story-words';
 
 	interface Props {
-		/** The story as the review holds it: as told, and the round it was told in. */
+		/** The story as the review holds it: the round it was told in, and whether a later one moved its code on. */
 		held: StoryHeld;
 		/** What the story's title carries as the heading of the part it begins: the overview has no heading but this. */
 		heading: HTMLAttributes<HTMLHeadingElement>;
@@ -21,7 +23,20 @@
 	<h1 {...heading} data-testid="part-head" class="text-xl font-semibold">
 		<span data-testid="story-title">{held.story.title}</span>
 	</h1>
-	<span data-testid="story-round" class="cr-muted text-xs">Round {held.round}</span>
+	<!-- The round the story was told in, in the agent's colour while its code is current; in the
+		warning's, saying when, once a later round moved the code on under it -->
+	<span data-testid="story-round" class={['cr-round-tag', held.moved_on !== null && 'cr-round-tag-moved-on']}>
+		<Icon name="round" class="h-3 w-3" />
+		Round {held.round}
+		{#if held.moved_on === null}
+			<span class="cr-round-tag-said cr-muted">
+				<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-(--cr-done)" aria-hidden="true"></span>
+				{CODE_CURRENT}
+			</span>
+		{:else}
+			<span class="cr-round-tag-said text-warning">{codeMovedOnIn(held.moved_on.round)}</span>
+		{/if}
+	</span>
 	{#if reconstructed}
 		<span data-testid="story-reconstructed" class="text-xs text-(--cr-agent)">reconstructed</span>
 	{/if}

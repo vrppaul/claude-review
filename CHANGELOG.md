@@ -108,7 +108,13 @@
   after it was told. 3 steps in this chapter changed in round 2. The code
   below is current; the reasons beside it may not be."; and its node in
   the contents rings its number in the warning's colour, in place of the
-  check of a chapter read through, which it still is.
+  check of a chapter read through, which it still is. The round the story
+  was told in is a tag beside its title, "Round 1" and a green dot with
+  "current" on the agent's colour, and once a later round moved the code
+  on, "Round 1 the
+  code moved on in round 2" on the warning's; the contents then say beside
+  "Not in the story" how many changed lines no step told when it was told,
+  and how many none tells now, "2 → 5", where the two differ.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

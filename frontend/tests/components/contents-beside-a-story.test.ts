@@ -269,6 +269,47 @@ describe('the contents of a story whose code a round changed after it was told, 
 	});
 });
 
+describe('what a story leaves out, once a round moved the code on under it', () => {
+	// What no step tells now: line 5 of a.py and four lines of b.py, five changed lines
+	const LEFT_OUT_NOW = [
+		{ piece: toldStep('src/a.py', 5).piece, changed_lines: 1 },
+		{ piece: toldStep('src/b.py', 7).piece, changed_lines: 4 }
+	];
+
+	/** Draw the story with what it leaves out now, the code moved on in round 2, and what it left out when told. */
+	function drawnLeavingOut(leftOutWhenTold: number): void {
+		review = openReview({
+			files,
+			story: storyHeld(
+				{ ...TOLD.story, left_out: LEFT_OUT_NOW },
+				{ moved_on: { round: 2, left_out_when_told: leftOutWhenTold } }
+			)
+		});
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+	}
+
+	it('says how many changed lines no step told when the story was told, and how many none tells now', () => {
+		drawnLeavingOut(2);
+
+		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story 2 → 5');
+	});
+
+	it('says no count where as many are left out as when it was told', () => {
+		drawnLeavingOut(5);
+
+		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story');
+	});
+
+	it('says no count of a story whose code has not moved on', () => {
+		review = openReview({ files, story: storyHeld({ ...TOLD.story, left_out: LEFT_OUT_NOW }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story');
+	});
+});
+
 describe('the contents of a story that tells every change, and names no housekeeping', () => {
 	it('says nothing of what is left out, nor of housekeeping', () => {
 		review = openReview({ files, story: storyHeld() });

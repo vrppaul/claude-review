@@ -22,6 +22,8 @@ const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
 const TRACED_FINE: HowDrawn = { kind: 'traced', width: 1.4 };
 
 export const ICONS = {
+	// An arrow coming round to where it began: a round of the review, and the one a story was told in
+	round: { viewBox: '0 0 16 16', paths: ['M13 8a5 5 0 1 1-1.5-3.6', 'M13 2.5v3h-3'], drawn: TRACED },
 	// An open book: the change read as the story told of it, and the agent that tells it, where it speaks in a thread
 	story: {
 		viewBox: '0 0 16 16',

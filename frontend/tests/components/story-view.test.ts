@@ -92,11 +92,11 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 	});
 
-	it('says what the change is called, and which round the story was told in', () => {
+	it('says what the change is called, which round the story was told in, and that its code is current', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('story-title').textContent).toBe('Lines for a.py and b.py');
-		expect(screen.getByTestId('story-round').textContent).toBe('Round 1');
+		expect(said(screen.getByTestId('story-round'))).toBe('Round 1 current');
 	});
 
 	it('says the round it was told in where that was a later one', () => {
@@ -104,7 +104,15 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByTestId('story-round').textContent).toBe('Round 3');
+		expect(said(screen.getByTestId('story-round'))).toBe('Round 3 current');
+	});
+
+	it('says the round it was told in, and the round a later one moved the code on in', () => {
+		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: { round: 2, left_out_when_told: 1 } }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(said(screen.getByTestId('story-round'))).toBe('Round 1 the code moved on in round 2');
 	});
 
 	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {
