@@ -344,7 +344,7 @@ def story_command(*, client: ReviewClient, story: StoryRequest) -> None:
     doubt, then chapters, each a run of steps — a piece of the change, and
     why it is the way it is. It takes the place of any story told before:
     there is no patching one, so send it again whole. This help shows one
-    below, and how long each of its texts may be.
+    below, how long each of its texts may be, and what makes a story good.
 
     Refused, it comes back with everything wrong at once, each fault at its
     field of the document. Taken, it prints what its steps left out of the

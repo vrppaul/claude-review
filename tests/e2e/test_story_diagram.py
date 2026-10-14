@@ -53,8 +53,11 @@ EDGED_AS_THE_AGENT = """(box) => {
 # The nodes the page marks as leading somewhere, in the order mermaid draws them: the first half, the second
 LEADING_SOMEWHERE = "diagram-link"
 THE_SECOND_HALF = 1
-# The help's own example of a diagram, whose second node is the heart of the change
+# The help's own example of a diagram, the chapters its nodes lead to, and which of its four nodes, in the order
+# mermaid draws them, it marks as the heart of the change: the second
 THE_HELPS_DIAGRAM = EXAMPLE.overview.diagram
+THE_HELPS_CHAPTERS = [chapter.id for chapter in EXAMPLE.chapters]
+THE_HELPS_HEART = [False, True, False, False]
 # Wide enough for the contents to stand beside the story
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
 
@@ -66,6 +69,20 @@ def _told_in_two_chapters(drawn: str, links: dict[str, str]) -> Story[Step]:
         chapter_of(SECOND_CHAPTER, step(LONG_FILE, LAST_LINE_OF_THE_FIRST_HALF + 1, LINES_OF_THE_LONG_FILE)),
     )
     diagram = {"mermaid": drawn, "caption": CAPTION, "links": links}
+    return planted(story, ("overview", "diagram"), diagram)
+
+
+def _told_in_the_helps_chapters() -> Story[Step]:
+    """The long file told in the chapters of the help's own example, a run of its lines each, its overview drawing
+    them as the example does."""
+    run = LINES_OF_THE_LONG_FILE // len(THE_HELPS_CHAPTERS)
+    story = story_of_chapters(
+        *(
+            chapter_of(chapter_id, step(LONG_FILE, place * run + 1, (place + 1) * run))
+            for place, chapter_id in enumerate(THE_HELPS_CHAPTERS)
+        )
+    )
+    diagram = {"mermaid": THE_HELPS_DIAGRAM.mermaid, "caption": CAPTION, "links": THE_HELPS_DIAGRAM.links}
     return planted(story, ("overview", "diagram"), diagram)
 
 
@@ -104,9 +121,8 @@ async def review_drawn_in_its_own_look(long_file_repo: Path, servers: ReviewServ
 
 @in_the_browsers_loop
 async def review_drawn_as_the_help_draws(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
-    """A review whose story's overview draws them as the help's own example does, its heart marked."""
-    told = _told_in_two_chapters(THE_HELPS_DIAGRAM.mermaid, THE_HELPS_DIAGRAM.links)
-    return await _told(long_file_repo, servers, told)
+    """A review whose story is told in the help's own example's chapters and drawn as it draws them, its heart marked."""
+    return await _told(long_file_repo, servers, _told_in_the_helps_chapters())
 
 
 async def _read_as_story(page: Page, review: RunningReview) -> None:
@@ -157,12 +173,11 @@ async def test_the_helps_own_example_draws_its_heart_edged_in_the_agents_colour_
     await _read_as_story(page, review_drawn_as_the_help_draws)
 
     nodes = page.get_by_test_id("diagram-drawing").get_by_test_id(LEADING_SOMEWHERE)
-    await expect(nodes).to_have_count(2)
+    await expect(nodes).to_have_count(len(THE_HELPS_HEART))
 
-    assert [await node.locator("rect").first.evaluate(EDGED_AS_THE_AGENT) for node in await nodes.all()] == [
-        False,
-        True,
-    ]
+    assert [
+        await node.locator("rect").first.evaluate(EDGED_AS_THE_AGENT) for node in await nodes.all()
+    ] == THE_HELPS_HEART
 
 
 async def test_a_diagram_that_does_not_draw_says_where_it_breaks_and_shows_its_source(

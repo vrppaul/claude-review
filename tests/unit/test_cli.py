@@ -16,6 +16,7 @@ from click.testing import CliRunner, Result
 
 import claude_review
 from claude_review.cli.main import main
+from claude_review.cli.story_help import GOOD_STORY
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
 from claude_review.hosting.address import LOOPBACK
@@ -400,6 +401,19 @@ def test_the_example_in_the_help_of_story_marks_the_node_at_the_heart_of_the_cha
 def test_the_example_in_the_help_of_story_leaves_out_no_part_a_story_may_have(left_out: str) -> None:
     """A part the example does not show is one no agent learns it may write."""
     assert left_out not in _example_in_the_help_of_story()
+
+
+def _line_by_line(text: str) -> str:
+    """A text's lines without the margin the help sets them in, so a text and the help that shows it compare."""
+    return "\n".join(line.strip() for line in text.splitlines())
+
+
+def test_the_help_of_story_says_what_makes_a_story_good_line_by_line_as_it_is_written() -> None:
+    """An agent learns here, before it writes one, what the reader needs of a story; filled to the width, its lists
+    would run together."""
+    said = _run("story", "--help").output
+
+    assert _line_by_line(GOOD_STORY.read_text(encoding="utf-8")) in _line_by_line(said)
 
 
 def test_the_help_of_story_says_what_a_chapters_id_may_hold() -> None:

@@ -92,6 +92,14 @@
   `wait` hands over `story_request` and `story_cancel`; `claude-review story
   --help` shows the document whole and says how long each of its texts may
   be; the skill says what to do at each.
+- **The agent is told what makes a story good.** `claude-review story
+  --help` ends with it, written for the person who reads the story: a
+  chapter is one idea, not a file, and its title alone tells it; each
+  chapter needs only what came before it; a reason says why, never what; a
+  doubt is one the reader can check; a test stands in the chapter of what it
+  holds, every assertion the change altered named; and the story is told in
+  the language the agent speaks with the user. Its example is a story told
+  so, of the change that let a reader paste a screenshot.
 - **A comment being written is never lost.** What is typed and pasted into a
   new comment, a reply or an edit is kept by the review, not by the box that
   shows it: folding the file or the thread, switching to two columns and
