@@ -29,6 +29,12 @@ tests. Remove items when done — don't check them off.
       whether a row says its size or its age. Nor do the marks it produces:
       the dot in the tree, the chip in the file header, "Show what changed".
 
+- [ ] `build(page)`: `pnpm build` warns of a chunk over 500 kB: mermaid's
+      langium parsers (630 kB), fetched only by the kinds of diagram mermaid
+      parses with them (architecture, git graphs and others), never by a
+      flowchart. Leave them out of the build if mermaid lets it be done
+      cleanly, as elkjs is; the warning's limit is not raised to hide it.
+
 - [ ] `feat(ui)`: let a turn be deleted. A comment can be removed and a
       thread resolved, but a reply — the reader's or the author's — stays
       whatever it says. A duplicate answer has no way out of the thread.
