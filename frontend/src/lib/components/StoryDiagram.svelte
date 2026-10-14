@@ -16,7 +16,7 @@
 
 	let { diagram, chapters }: Props = $props();
 
-	// What the dialog that draws it large is called, where the agent called the drawing nothing
+	// What the drawing, and the dialog that draws it large, are called where the agent called it nothing
 	const UNCAPTIONED = 'The change drawn';
 
 	// What its two drawings are known by, on the page and to mermaid, which scopes each one's look by it
@@ -27,6 +27,7 @@
 	// The source alone: reading the story again hands over an equal diagram, which must draw nothing again
 	const source = $derived(diagram.mermaid);
 	const leadsTo = $derived(partsLinked(diagram.links, chapters));
+	const name = $derived(diagram.caption ?? UNCAPTIONED);
 	// Whether the reader opened it large
 	let large = $state(false);
 
@@ -88,7 +89,7 @@
 
 <!-- The diagram under the overview's lines: only its caption while mermaid draws it. Its caption is written
 	in each branch, where the compiler sees it is the figure's own -->
-<figure data-testid="story-diagram" aria-label={diagram.caption ?? undefined} class="flex flex-col gap-2.5">
+<figure data-testid="story-diagram" aria-label={name} class="flex flex-col gap-2.5">
 	{#await drawDiagram(source, inlineId)}
 		{#if diagram.caption}
 			<figcaption class="flex items-baseline gap-3 text-xs">{@render caption(false)}</figcaption>
@@ -104,7 +105,7 @@
 {#if large}
 	<!-- Drawn again, not moved: a drawing's arrowheads and look hang on ids, which one drawing twice on the page
 		would repeat. A press on a node closes it, then goes -->
-	<Dialog label={diagram.caption ?? UNCAPTIONED} data-testid="diagram-large" onClose={() => (large = false)}>
+	<Dialog label={name} data-testid="diagram-large" onClose={() => (large = false)}>
 		{#snippet children({ closeThen }: Closing)}
 			{#await drawDiagram(source, largeId) then drawing}
 				{@render shown(drawing, (part) => closeThen(() => review.parts.goTo(part)))}

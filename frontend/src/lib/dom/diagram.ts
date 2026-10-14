@@ -79,7 +79,8 @@ const FLOWCHART_NODE = 'g.node';
 // The id mermaid gives a node of a flowchart: `flowchart-`, the name the source gives the node, and a number of
 // mermaid's own. Mermaid 12 puts the drawing's id before it and 11 did not, so the name is read from the end
 const FLOWCHART_NODE_ID = /flowchart-(?<name>.+)-\d+$/;
-// What a node that leads somewhere is marked with: the stylesheet points at it, and a press is followed from it
+// What a node that leads somewhere is marked with: the stylesheet points at it, a press is followed from it,
+// and, as its test id, a test presses it by it
 const LEADS_SOMEWHERE = 'diagram-link';
 const ROLE = 'data-role';
 const LEADING_SOMEWHERE = `[${ROLE}='${LEADS_SOMEWHERE}']`;
@@ -122,8 +123,13 @@ function placeOf(node: Element, leadsTo: ReadonlyMap<string, string>): string | 
 
 /** Mark a node that leads somewhere as one, and a node that no longer does as none. */
 function markWhetherLeading(node: Element, leadsTo: ReadonlyMap<string, string>): void {
-	if (placeOf(node, leadsTo) === undefined) node.removeAttribute(ROLE);
-	else node.setAttribute(ROLE, LEADS_SOMEWHERE);
+	if (placeOf(node, leadsTo) === undefined) {
+		node.removeAttribute(ROLE);
+		node.removeAttribute('data-testid');
+	} else {
+		node.setAttribute(ROLE, LEADS_SOMEWHERE);
+		node.setAttribute('data-testid', LEADS_SOMEWHERE);
+	}
 }
 
 /** Follow a press, from the node it landed in, to where that node leads: nowhere, from outside every such node. */

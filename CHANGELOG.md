@@ -5,7 +5,10 @@
 ### Added
 - **A story's diagram is drawn.** The diagram the agent writes in Mermaid
   stands under the overview's lines at its own size, under its caption, its
-  box scrolling sideways where it is wider than the column. The node the
+  box scrolling sideways where it is wider than the column; its nodes have
+  the page's rounded corners, and the lines between them are drawn twice as
+  wide as a node's edge. A screen reader names it by its caption, or "The
+  change drawn" where the agent gave none. The node the
   agent marks as the heart of the change, with mermaid's `:::heart` as the
   example in `claude-review story --help` does, is edged in the agent's
   colour. A node the agent links to a chapter takes the reader to it when

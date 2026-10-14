@@ -20,6 +20,12 @@
 	stroke: var(--color-base-300);
 }
 
+/* A box's corners rounded as the page's boxes are */
+.node rect {
+	rx: var(--radius-box);
+	ry: var(--radius-box);
+}
+
 /* The node the agent drew as the heart of the change (`name:::heart`): edged in the agent's colour */
 .node.heart rect,
 .node.heart circle,
@@ -41,10 +47,12 @@ span {
 	color: var(--color-base-content);
 }
 
-/* The lines between nodes, and their heads: quieter than the nodes they join */
+/* The lines between nodes, and their heads: quieter than the nodes they join, so drawn twice as wide as a node's
+   edge */
 .flowchart-link,
 .edgePaths .path {
 	stroke: var(--cr-faint);
+	stroke-width: 2px;
 }
 .marker,
 .arrowheadPath {

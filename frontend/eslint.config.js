@@ -98,8 +98,14 @@ const BY_PAGE_WIDE_ID = 'Do not find elements by a page-wide id: register them w
 const SELECTOR_CALL = 'CallExpression[callee.property.name=/^(querySelector(All)?|closest|matches)$/]';
 // What in a selector names an id: `#name`, or `[id=…]`
 const NAMES_AN_ID = '/#|\\[id\\b/';
+// The attribute an element's markup cannot give it, named where code gives it or takes it away: an element a
+// library draws, as mermaid draws a diagram's nodes, gets its test id so and is found by none
+const SETS_AN_ATTRIBUTE = 'CallExpression[callee.property.name=/^(setAttribute|removeAttribute)$/]';
 const NO_PAGE_LOOKUPS = [
-	{ selector: 'Literal[value=/data-testid/]', message: BY_TEST_ID },
+	{
+		selector: `Literal[value=/data-testid/]:not(${SETS_AN_ATTRIBUTE} > Literal.arguments:first-child)`,
+		message: BY_TEST_ID
+	},
 	{ selector: 'TemplateElement[value.raw=/data-testid/]', message: BY_TEST_ID },
 	{ selector: "CallExpression[callee.property.name='getElementById']", message: BY_PAGE_WIDE_ID },
 	{ selector: `${SELECTOR_CALL} > Literal[value=${NAMES_AN_ID}]`, message: BY_PAGE_WIDE_ID },

@@ -24,13 +24,18 @@ const NODES = ['store', 'store-2', 'agent'];
 const SOURCE = 'flowchart LR\n  store[Image store] --> store-2[Second store] --> agent[Agent opens it]';
 const CAPTION = 'How an image travels';
 const DIAGRAM = { mermaid: SOURCE, caption: CAPTION, links: { store: 'ch-1', 'store-2': 'ch-2' } };
-const HELD = storyHeld({
-	overview: { ...storyHeld().story.overview, diagram: DIAGRAM },
-	chapters: [
-		toldChapter('ch-1', [toldStep('a.py', 1)], { title: 'The beginnings' }),
-		toldChapter('ch-2', [toldStep('a.py', 9)], { title: 'The end' })
-	]
+const CHAPTERS = [
+	toldChapter('ch-1', [toldStep('a.py', 1)], { title: 'The beginnings' }),
+	toldChapter('ch-2', [toldStep('a.py', 9)], { title: 'The end' })
+];
+const HELD = storyHeld({ overview: { ...storyHeld().story.overview, diagram: DIAGRAM }, chapters: CHAPTERS });
+// The same story told again: the same drawing, its first node no longer linked
+const RELINKED = storyHeld({
+	overview: { ...storyHeld().story.overview, diagram: { ...DIAGRAM, links: { 'store-2': 'ch-2' } } },
+	chapters: CHAPTERS
 });
+// What the page calls a drawing the agent called nothing
+const UNCAPTIONED = 'The change drawn';
 // Why mermaid could not draw a source, as it might say
 const MERMAIDS_REASON = 'No diagram type detected';
 
@@ -38,12 +43,13 @@ let review: Review;
 
 /**
  * What mermaid draws of the source, as far as the page reads it: a node for each name, under the id
- * mermaid gives a node of a flowchart, which begins with the drawing's own.
+ * mermaid gives a node of a flowchart, which begins with the drawing's own. Its box carries a test id of
+ * the test's own, which the page leaves alone: the node itself is the page's to mark.
  */
 function drawnAs(_source: string, drawingId: string): Promise<{ svg: string }> {
 	const nodes = NODES.map(
 		(name, place) =>
-			`<g class="node" id="${drawingId}-flowchart-${name}-${place}" data-testid="node-${name}"><rect></rect><text>${name}</text></g>`
+			`<g class="node" id="${drawingId}-flowchart-${name}-${place}"><rect data-testid="node-${name}"></rect><text>${name}</text></g>`
 	);
 	return Promise.resolve({ svg: `<svg id="${drawingId}">${nodes.join('')}</svg>` });
 }
@@ -116,6 +122,57 @@ describe("a story's diagram", () => {
 
 		expect(toTheEnd).toHaveBeenCalled();
 		expect(toTheBeginnings).not.toHaveBeenCalled();
+	});
+
+	it('marks each node that leads to a chapter, for a test to press, and no other', async () => {
+		vi.mocked(drawDiagram).mockImplementation(drawnAs);
+		render(ReviewScreen, { props: { review } });
+		await within(figure()).findByTestId('diagram-drawing');
+
+		expect(
+			within(figure())
+				.getAllByTestId('diagram-link')
+				.map((node) => node.textContent)
+		).toEqual(['store', 'store-2']);
+	});
+
+	it('takes the reader nowhere from a node the story, read again, no longer links, and no longer marks it', async () => {
+		vi.mocked(drawDiagram).mockImplementation(drawnAs);
+		fakeServer().answer('GET /api/story', storyResponse({ held: RELINKED }));
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		await within(figure()).findByTestId('diagram-drawing');
+		const broughtTo = chapters().map(broughtIntoView);
+
+		await review.story.read();
+		flushSync();
+		await user.click(within(figure()).getByTestId('node-store'));
+
+		expect(broughtTo.map((brought) => brought.mock.calls.length)).toEqual([0, 0]);
+		expect(
+			within(figure())
+				.getAllByTestId('diagram-link')
+				.map((node) => node.textContent)
+		).toEqual(['store-2']);
+	});
+
+	it('is named all the same where the agent called it nothing, and so is the dialog that draws it large', async () => {
+		vi.mocked(drawDiagram).mockImplementation(drawnAs);
+		review = openReview({
+			files,
+			story: storyHeld({
+				overview: { ...storyHeld().story.overview, diagram: { ...DIAGRAM, caption: null } },
+				chapters: CHAPTERS
+			})
+		});
+		review.views.choose('story');
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.click(await within(figure()).findByTestId('diagram-open-large'));
+
+		expect(figure().getAttribute('aria-label')).toBe(UNCAPTIONED);
+		expect(screen.getByTestId('diagram-large').getAttribute('aria-label')).toBe(UNCAPTIONED);
 	});
 
 	it('takes the reader nowhere from a node that leads nowhere', async () => {
