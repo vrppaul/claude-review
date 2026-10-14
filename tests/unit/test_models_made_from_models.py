@@ -93,7 +93,7 @@ SETTINGS = ReaderSettings(
 GUIDE = GuideState(seen_release="1.5.0")
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
-TOLD_STEP = STEP.told(FILE)
+TOLD_STEP = STEP.told(FILE, changed_since_told=True)
 TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
 # A story asked for and not yet taken, and one an agent took: stopping one writes only that it was stopped,
@@ -152,7 +152,8 @@ MADE = [
         made=GuideChange(seen_release="1.6.0").applied_to(GUIDE),
         replaced={"seen_release"},
     ),
-    MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
+    MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece", "changed_since_told"}),
+    MadeFrom(what="a step on other lines", source=STEP, made=STEP.at(LineSpan(first=14, last=15)), replaced={"lines"}),
     MadeFrom(what="a chapter told", source=CHAPTER, made=TOLD_CHAPTER, replaced={"steps"}),
     MadeFrom(
         what="a story told",

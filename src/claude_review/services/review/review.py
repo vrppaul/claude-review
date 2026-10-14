@@ -464,7 +464,7 @@ class Review:
         log.info("story_stopped")
 
     def story_held(self) -> StoryHeld | None:
-        """The story the review holds, as it was told: None while nobody has told one."""
+        """The story the review holds, on the take of its change on screen: None while nobody has told one."""
         return self._story.held
 
     def story_asking(self) -> StoryAsking | None:
@@ -472,12 +472,16 @@ class Review:
         return self._story.asking
 
     async def retake(self) -> Retaken:
-        """Take the diff again, after the work a round asked for, and tell the pages to fetch it.
+        """Take the diff again, after the work a round asked for, follow the story told onto it, and tell the pages.
+
+        Followed before the pages are told, so a page that reads the diff
+        and then the story reads both of one take.
 
         Raises:
             NoRepositoryError: if the review's content did not come from a repository.
         """
         retaken = await self._source.retake()
+        await self._story.follow(self._source.content, round_number=retaken.round)
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
         return retaken
 

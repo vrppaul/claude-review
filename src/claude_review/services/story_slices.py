@@ -87,13 +87,18 @@ class PlacedFile:
 
     def __init__(self, file: DiffFile) -> None:
         self._file = file
-        told_by = _side_told_by(file)
+        told_by = side_told_by(file)
         self._rows = [row for hunk in file.hunks for row in _placed_rows(hunk, told_by)]
         # Where each hunk ends among the file's rows: one past its last row
         self._hunk_ends = list(accumulate(len(hunk.lines) for hunk in file.hunks))
         # How many of the rows above each row the change added or removed,
         # and last, how many of them all
         self._changes_above = list(accumulate((_changes_in(row) for row in self._rows), initial=0))
+
+    @property
+    def file(self) -> DiffFile:
+        """The file as the change shows it, whole."""
+        return self._file
 
     @property
     def shows_lines(self) -> bool:
@@ -164,13 +169,16 @@ class PlacedFile:
         )
 
 
-def _side_told_by(file: DiffFile) -> LineSide:
-    """The side whose numbers a file is told by.
+def side_told_by(file: DiffFile) -> LineSide:
+    """The side whose numbers a file, or a step's piece of it, is told by.
 
     A file is told as it now stands, by the numbers of its new side. One the
     change left no line of — deleted, or emptied — has only the lines it had,
     and is told by those: every row of it is a removed line, with a number
-    on the old side.
+    on the old side. A step's piece is told by its file's side: git shows
+    the lines kept around whatever it removed, and a removed row is placed
+    with such a row, which has a number on the new side wherever the file
+    still has lines.
     """
     still_has_lines = any(line.new_number is not None for hunk in file.hunks for line in hunk.lines)
     return LineSide.NEW if still_has_lines else LineSide.OLD

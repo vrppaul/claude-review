@@ -20,7 +20,7 @@ from pydantic import ConfigDict, Field, PlainSerializer, PlainValidator, WithJso
 from claude_review.domain import models, story
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireModel
+from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireBool, WireModel
 from claude_review.presentation.wire.content import DiffFile
 from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 from claude_review.services.review import review_story
@@ -192,6 +192,8 @@ class ToldStep(WireModel):
     reason: str | None
     # The rows of the file the step is, to be drawn as a file is
     piece: DiffFile
+    # Whether a round's work changed the code it shows after it was told
+    changed_since_told: WireBool
 
 
 class ToldChapter(WireModel):
@@ -223,8 +225,17 @@ class ToldStory(WireModel):
     left_out: list[LeftOut]
 
 
+class CodeMovedOn(WireModel):
+    """That a round's work moved the code under a story told before it: in which round, and what was left out then."""
+
+    # The round the diff that found it was taken again in
+    round: int
+    # How many lines the change added or removed that no step told when the story was told
+    left_out_when_told: int
+
+
 class StoryHeld(WireModel):
-    """A story as the review holds it: as it was told, the round it was told in, and the take it was told of."""
+    """A story as the review holds it: on a take of the change, with the round it was told in."""
 
     story: ToldStory
     round: int
@@ -232,6 +243,8 @@ class StoryHeld(WireModel):
     # numbered as the threads' are only while the diff a page read says the
     # same take
     take: int
+    # Set while the code under it moved on after it was told; None while it is current
+    moved_on: CodeMovedOn | None
 
 
 class StoryResponse(WireModel):

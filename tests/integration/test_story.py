@@ -3,7 +3,8 @@
 The agent sends the story it wrote in one piece. The review tells it of the
 change it holds, and from then on answers a page with the story as told —
 each step with the piece of the change it shows — until the agent tells
-another, which takes its place whole.
+another, which takes its place whole. Each time the diff is taken again,
+the story follows it, and says where its code changed.
 
 The reader may ask for one. The request waits for an agent as everything
 handed over does, the reader may stop it before or after one takes it, and
@@ -28,7 +29,7 @@ from claude_review.presentation.wire.agent import EventResponse, StoryCancelEven
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
-from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
+from claude_review.presentation.wire.story import CodeMovedOn, LeftOutOfFile, StoryResponse, StoryTakenResponse
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_content import FIRST_TAKE
 from claude_review.services.review_opening import ReviewOpening
@@ -223,16 +224,30 @@ async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client:
     assert "no change" in Refusal.model_validate_json(answered.content).detail
 
 
-async def test_a_story_stays_as_it_was_told_when_the_diff_is_taken_again_and_says_which_round_told_it(
+async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands_marked_where_it_changed(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """The round's work may move the code under a story; what was told is still what was told, and of which round."""
+    """The round's work moved the code under a story: its steps show the code under review, and say where it changed."""
     await tell(agent, WHOLE_STORY)
-    told_first = await held_by(agent)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
-    assert await held_by(agent) == told_first
+    held = (await held_by(agent)).held
+    assert [(told.file, rows_of(told.piece), told.changed_since_told) for told in held.story.chapters[0].steps] == [
+        (EDITED_FILE, ["and a line reworded since"], True),
+        (ADDED_FILE, ["def added() -> None:", "    return None"], False),
+    ]
+
+
+async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_moved_on(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    await tell(agent, WHOLE_STORY)
+
+    await take_again_after_a_round(agent, tmp_git_repo)
+
+    held = (await held_by(agent)).held
+    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out_when_told=0))
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 
@@ -243,15 +258,15 @@ async def test_a_story_is_of_the_take_of_the_change_the_review_holds_as_it_is_to
     assert (await held_by(agent)).held.take == (await own_diff(agent)).take
 
 
-async def test_the_diff_taken_again_is_of_another_take_than_the_story_told_before_it(
+async def test_a_story_told_before_the_diff_was_taken_again_is_of_the_take_the_diff_is_now(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """So a page can tell a story of code that has moved on from one of the code it shows."""
+    """Followed onto it before the pages are told to read the diff again, so its pieces are numbered as threads are."""
     await tell(agent, WHOLE_STORY)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
-    assert (await held_by(agent)).held.take != (await own_diff(agent)).take
+    assert (await held_by(agent)).held.take == (await own_diff(agent)).take
 
 
 async def test_a_story_told_after_the_diff_was_taken_again_is_of_the_take_the_diff_is_now(

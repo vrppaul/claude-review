@@ -90,6 +90,16 @@
   that id as `said_id`.
 
 ### Changed
+- **A story follows its code when the diff is taken again.** Each step
+  looks for the lines it showed as a thread looks for its own, nearest
+  where they were, and is cut again from the take as it now stands; a step
+  whose code changed since it was told is marked, `changed_since_told` in
+  `GET /api/story`, and what the round added that no step tells is left out
+  beside it. The story is always followed from the story as told, so code
+  put back reads as told again. It is still the story of the round it was
+  told in; `moved_on` says the round the code moved on in, and how many
+  changed lines no step told when it was told. A page that reads the story
+  again shows the code under review, and takes comments on it.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

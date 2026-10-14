@@ -1,11 +1,14 @@
-"""The story a review holds: the last one the agent told of its change, with the round and the take it was told of.
+"""The story a review holds: the last one the agent told of its change, on the take of it on screen.
 
-A story is told of the change as it stood. The round's work may move the
-code under it afterwards, and the story is still what was told: so it is
-kept whole with the round it was told in, and replaced whole by the next
-telling, never patched. Its pieces are cut out of one take of the change,
-so it says which: beside a later take they are no longer the code under
-review, and only the take's number can tell whoever reads both.
+A story is told of the change as it stood, and kept as it was told, with
+the round it was told in, until the next telling replaces it whole. The
+round's work then moves the code under it, and each take of the change the
+review makes, the story told is followed onto: the story held is that one,
+showing the code as it now stands and saying whether it moved on. It is
+always followed from the story as it was told, whose pieces are what each
+step was told with, as a thread follows from its quote. Its pieces are cut
+out of one take of the change, so it says which: a page that read the diff
+of a later take can tell that they are not yet of the code it shows.
 
 The reader may ask for a story rather than wait to be told one. That
 asking is kept here, beside the story that ends it: when it was asked, when
@@ -21,12 +24,24 @@ from pydantic import BaseModel, ConfigDict, Field
 from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import FIRST_ROUND
 from claude_review.domain.story import Step, Story, StoryAsking, ToldStory
+from claude_review.services import story_telling
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
-from claude_review.services.story_telling import tell
+
+
+class CodeMovedOn(BaseModel):
+    """That a round's work moved the code under a story told before it: in which round, and what was left out then."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The round the diff that found it was taken again in
+    round: int = Field(ge=FIRST_ROUND)
+    # How many lines the change added or removed that no step told when the
+    # story was told: said beside how many no step tells now
+    left_out_when_told: int
 
 
 class StoryHeld(BaseModel):
-    """A story as the review holds it: as it was told, the round it was told in, and the take it was told of."""
+    """A story as the review holds it: on a take of the change, with the round it was told in."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -34,6 +49,9 @@ class StoryHeld(BaseModel):
     round: int = Field(ge=FIRST_ROUND)
     # The take of the change its pieces were cut out of
     take: int = Field(ge=FIRST_TAKE)
+    # Set while the code under it moved on after it was told: a step shows
+    # other code than it was told with, or more is left out than was
+    moved_on: CodeMovedOn | None
 
 
 class ReviewStory:
@@ -46,6 +64,9 @@ class ReviewStory:
 
     def __init__(self, clock: Clock) -> None:
         self._clock = clock
+        # As it was told, on the take it was told of: what every take after it follows it from
+        self._told: StoryHeld | None = None
+        # On the take on screen; the story told until the diff is taken again
         self._held: StoryHeld | None = None
         # From the reader's request until a story is told; None while nothing is asked
         self._asking: StoryAsking | None = None
@@ -56,7 +77,7 @@ class ReviewStory:
 
     @property
     def held(self) -> StoryHeld | None:
-        """The story held, as it was told: None while nobody has told one."""
+        """The story held, on the take of the change on screen: None while nobody has told one."""
         return self._held
 
     @property
@@ -103,10 +124,28 @@ class ReviewStory:
                 and so does the asking.
         """
         async with self._telling:
-            told = await asyncio.to_thread(tell, story, change.files)
-            self._held = StoryHeld(story=told, round=round_number, take=change.take)
+            told = await asyncio.to_thread(story_telling.tell, story, change.files)
+            self._told = self._held = StoryHeld(story=told, round=round_number, take=change.take, moved_on=None)
             self._asking = None
             return self._held
+
+    async def follow(self, change: ReviewContent, *, round_number: int) -> None:
+        """Follow the story told onto a later take of the change, taken again in this round; with none told, nothing.
+
+        Off the event loop and in turn with tellings, as a story is told: a
+        story told while the diff was taken again is followed once it is held.
+        """
+        async with self._telling:
+            told = self._told
+            if told is None:
+                return
+            followed = await asyncio.to_thread(story_telling.follow, told.story, change.files)
+            self._held = StoryHeld(
+                story=followed,
+                round=told.round,
+                take=change.take,
+                moved_on=_moved_on(told.story, followed, round_number=round_number),
+            )
 
     @property
     def _awaited(self) -> StoryAsking | None:
@@ -114,3 +153,21 @@ class ReviewStory:
         if self._asking is None or self._asking.stopped:
             return None
         return self._asking
+
+
+def _moved_on(told: ToldStory, followed: ToldStory, *, round_number: int) -> CodeMovedOn | None:
+    """That the round's work moved the code on under the story, if it did: a step changed, or more is left out.
+
+    Fewer lines left out than when it was told is no reason: what the round
+    took out of the change leaves the story as true as it was.
+    """
+    left_out_when_told = _changed_lines_left_out(told)
+    step_changed = any(step.changed_since_told for chapter in followed.chapters for step in chapter.steps)
+    if not step_changed and _changed_lines_left_out(followed) <= left_out_when_told:
+        return None
+    return CodeMovedOn(round=round_number, left_out_when_told=left_out_when_told)
+
+
+def _changed_lines_left_out(story: ToldStory) -> int:
+    """How many lines the change added or removed that no step of the story tells."""
+    return sum(left.changed_lines for left in story.left_out)

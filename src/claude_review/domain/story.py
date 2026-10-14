@@ -46,9 +46,15 @@ class Step(StoryPart):
     lines: LineSpan
     reason: str | None = None
 
-    def told(self, piece: DiffFile) -> ToldStep:
-        """The step as it is told: everything it says, and the piece of its file it shows."""
-        return ToldStep(file=self.file, lines=self.lines, reason=self.reason, piece=piece)
+    def told(self, piece: DiffFile, *, changed_since_told: bool) -> ToldStep:
+        """The step as it is told: everything it says, the piece of its file it shows, and whether that changed."""
+        return ToldStep(
+            file=self.file, lines=self.lines, reason=self.reason, piece=piece, changed_since_told=changed_since_told
+        )
+
+    def at(self, lines: LineSpan) -> Step:
+        """The step on other lines of its file, where a round's work moved what it tells: everything else it says."""
+        return Step(file=self.file, lines=lines, reason=self.reason)
 
 
 class Chapter[StepKind: Step](StoryPart):
@@ -207,6 +213,9 @@ class ToldStep(Step):
     """A step as it is told: with the piece of its file it shows, cut out of the change."""
 
     piece: DiffFile
+    # Whether a round's work changed the code it shows after it was told: its
+    # rows say something else now, or its file left the change
+    changed_since_told: bool
 
 
 class LeftOut(StoryPart):

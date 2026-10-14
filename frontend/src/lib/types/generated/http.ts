@@ -863,6 +863,16 @@ export interface components {
             type: "closed";
         };
         /**
+         * CodeMovedOn
+         * @description That a round's work moved the code under a story told before it: in which round, and what was left out then.
+         */
+        CodeMovedOn: {
+            /** Round */
+            round: number;
+            /** Left Out When Told */
+            left_out_when_told: number;
+        };
+        /**
          * CommentSeverity
          * @description How the reader means a comment to be taken.
          *
@@ -1768,7 +1778,7 @@ export interface components {
         };
         /**
          * StoryHeld
-         * @description A story as the review holds it: as it was told, the round it was told in, and the take it was told of.
+         * @description A story as the review holds it: on a take of the change, with the round it was told in.
          */
         StoryHeld: {
             story: components["schemas"]["ToldStory"];
@@ -1776,6 +1786,7 @@ export interface components {
             round: number;
             /** Take */
             take: number;
+            moved_on: components["schemas"]["CodeMovedOn"] | null;
         };
         /**
          * StoryOverview
@@ -2061,6 +2072,8 @@ export interface components {
             /** Reason */
             reason: string | null;
             piece: components["schemas"]["DiffFile"];
+            /** Changed Since Told */
+            changed_since_told: boolean;
         };
         /**
          * ToldStory

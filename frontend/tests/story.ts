@@ -5,7 +5,10 @@ import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 /** The round a story is told in, unless a test says another. */
 const FIRST_ROUND = 1;
 
-/** A step that shows the lines a file gained from one to another, both among them, and says why if it is given a reason. */
+/**
+ * A step that shows the lines a file gained from one to another, both among
+ * them, and says why if it is given a reason: its code as it was told.
+ */
 export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): ToldStep {
 	const gained = Array.from(Array(last - first + 1).keys(), (offset) => first + offset);
 	const piece = diffFile({
@@ -17,7 +20,7 @@ export function toldStepOfLines(file: string, first: number, last: number, reaso
 			)
 		]
 	});
-	return { file, lines: { first, last }, reason, piece };
+	return { file, lines: { first, last }, reason, piece, changed_since_told: false };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
@@ -53,10 +56,10 @@ export function toldStory(given: Partial<ToldStory> = {}): ToldStory {
 
 /**
  * A story as the review holds it: as told, in the first round, of the take
- * a test's diff is read at, unless it is held otherwise.
+ * a test's diff is read at, its code not moved on, unless it is held otherwise.
  */
 export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<StoryHeld, 'story'>> = {}): StoryHeld {
-	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, ...held };
+	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, moved_on: null, ...held };
 }
 
 /** What the review answers of its story: none told, unless a test says one was. */

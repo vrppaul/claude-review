@@ -279,7 +279,13 @@ describe('a review read as its story', () => {
 
 	it('says of each piece what became of its file, and how many lines the piece adds and removes', () => {
 		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x'), addedLine(2, 'y')])] });
-		const ofTheFileMade = { file: 'new.py', lines: { first: 1, last: 2 }, reason: null, piece: made };
+		const ofTheFileMade = {
+			file: 'new.py',
+			lines: { first: 1, last: 2 },
+			reason: null,
+			piece: made,
+			changed_since_told: false
+		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
 		review.views.choose('story');
@@ -296,7 +302,13 @@ describe('a review read as its story', () => {
 
 	it('says what became of the file of each piece in a word too, to whoever cannot see the letter', () => {
 		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x')])] });
-		const ofTheFileMade = { file: 'new.py', lines: { first: 1, last: 1 }, reason: null, piece: made };
+		const ofTheFileMade = {
+			file: 'new.py',
+			lines: { first: 1, last: 1 },
+			reason: null,
+			piece: made,
+			changed_since_told: false
+		};
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
 		review.views.choose('story');

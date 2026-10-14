@@ -178,7 +178,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
             return anchor.lost()
 
         lines = self._lines_of(shown, anchor.side)
-        found = _find_run(lines, anchor.quote, near=anchor.start_line)
+        found = find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
             return anchor.lost()
 
@@ -187,7 +187,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
     def _lines_of(self, file: DiffFile, side: LineSide) -> list[SideLine]:
         known = self._side_lines[side]
         if file.path not in known:
-            known[file.path] = _side_lines(file, side)
+            known[file.path] = side_lines(file, side)
         return known[file.path]
 
 
@@ -356,8 +356,8 @@ def _chapter_said(chapter: Chapter[ToldStep]) -> dict[StoryBlock, str | None]:
     }
 
 
-def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
-    """Every line of one side of a file, in order.
+def side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
+    """Every line of one side of a file, in order: what a thread's lines, or a story's steps, are looked for in.
 
     A removed line exists only on the old side; everything else, context
     included, is read as the new file.
@@ -372,8 +372,8 @@ def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
     ]
 
 
-def _find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | None:
-    """Where the quoted lines stand together, nearest to where they were.
+def find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | None:
+    """Where the quoted lines stand together, nearest to where they were: the place of the first among `lines`.
 
     A short quote — a closing brace, `return None` — stands in many places,
     and the one nearest the old numbers is the one that moved least; of two

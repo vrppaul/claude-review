@@ -98,8 +98,6 @@ tests. Remove items when done — don't check them off.
       reads lines with `fullmatch`, so only the API's schema needs them,
       which reads a pattern as found anywhere in a text: with either anchor
       gone, every unit and integration test passes.
-- [ ] `refactor(story)`: `ReviewStory.tell` calls the module's `tell`: one
-      name for two things in one file.
 - [ ] `refactor(story)`: in `story_lines_told.py`, `told` names a run of
       lines in `ToldOfRun.tell` and the tree of them in `first_met`.
 - [ ] `test(story)`: the test that a story is told off the event loop waits
@@ -107,10 +105,9 @@ tests. Remove items when done — don't check them off.
       another thread is the fact, and a test of that needs no count.
 - [ ] `refactor(story)`: a told story is frozen, and the rows its pieces
       show are the take's own `DiffLine`s, which are not.
-- [ ] `feat(story)`: a story's steps do not follow the code when the diff
-      is taken again: the whole story is read as the code was, and takes
-      no comment, until the agent tells it again. And the agent is not
-      told its story is stale.
+- [ ] `feat(story)`: the agent is not told its story moved on when the
+      diff is taken again, and the page does not read the story followed
+      until it is loaded again (story step 10, pieces 2-5).
 - [ ] `fix(story)`: a story told while the working tree has moved on from
       the take on screen is checked against the take, and nobody is told.
 - [ ] `fix(cli)`: `story` prints every file it left out on its one line.
