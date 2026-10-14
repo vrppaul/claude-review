@@ -16,7 +16,7 @@ def test_a_request_taken_where_no_story_is_awaited_is_noted_nowhere() -> None:
     story = ReviewStory(FixedClock(NOW))
 
     assert story.taken() is None
-    assert story.standing.asking is None
+    assert story.asking is None
 
 
 def test_a_request_taken_a_second_time_is_not_noted_again() -> None:
