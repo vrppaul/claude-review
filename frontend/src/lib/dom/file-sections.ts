@@ -166,7 +166,7 @@ export class FileSections {
 	 * no area is watched: every line is drawn in one.
 	 */
 	stepLine(step: 1 | -1): void {
-		const area = this.#sections.band.area;
+		const area = this.#sections.area;
 		if (area !== null) moveByLine(area, step);
 	}
 

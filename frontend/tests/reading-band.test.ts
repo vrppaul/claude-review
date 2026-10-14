@@ -66,6 +66,17 @@ afterEach(() => {
 	globalThis.IntersectionObserver = observedBefore;
 });
 
+describe('a step of the keyboard to the next line', () => {
+	it('goes nowhere while no reading area is watched: no line is drawn outside one', () => {
+		const holdsTheKeyboard = document.body.appendChild(document.createElement('button'));
+		holdsTheKeyboard.focus();
+
+		sections.stepLine(1);
+
+		expect(document.activeElement).toBe(holdsTheKeyboard);
+	});
+});
+
 // What crosses the band is reported by the test, not measured: the band
 // over a real layout is held by
 // tests/e2e/test_keys_and_focus.py::test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to,

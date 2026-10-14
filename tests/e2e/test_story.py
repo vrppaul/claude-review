@@ -17,6 +17,7 @@ from playwright.async_api import Locator, Page, ViewportSize, expect
 from claude_review.domain.models import LineSpan
 from claude_review.domain.story import Step, ToldFrom
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, step, story_of, story_of_chapters
 
@@ -82,21 +83,8 @@ THE_LONG_FILE_IN_TWO_CHAPTERS = story_of_chapters(
 FIRST_LINE_OF_THE_SECOND_CHAPTER = f"Comment on line {LAST_LINE_OF_THE_FIRST_STEP + 1}"
 # A fraction of a pixel: where an edge stands is not a whole number, and the area scrolls by whole ones
 LESS_THAN_A_PIXEL = 1
-# How tall everything an area scrolls is, in pixels, and how far down it has scrolled
+# How tall everything an area scrolls is, in pixels
 HEIGHT_HELD = "(area) => area.scrollHeight"
-SCROLLED = "(area) => area.scrollTop"
-# The keys that step a line down and up
-LINE_KEYS = ("j", "k")
-# How far under the foot of its piece's header the line that holds the keyboard begins, in heights of a
-# line: under 0 the header is drawn over it, and from 1 on a line above it is in sight too
-LINES_UNDER_ITS_HEADER = """() => {
-    const line = document.activeElement;
-    const header = line.closest('[data-testid="story-piece"]').querySelector('[data-testid="story-piece-header"]');
-    const under = line.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
-    return under / line.getBoundingClientRect().height;
-}"""
-# A fraction of a line: where an edge stands is not a whole number of pixels
-LESS_THAN_A_LINE_APART = 0.05
 # A wide screen zoomed in: too narrow for a column to stand beside what is read
 ZOOMED: ViewportSize = {"width": 640, "height": 400}
 # Where an element's left edge is, in pixels from the left of the window
@@ -370,8 +358,10 @@ async def test_a_line_key_deep_in_a_chapter_lands_on_the_first_line_in_sight_und
 
     await page.keyboard.press(line_key)
 
+    # The story's one piece: its header is kept in sight under the bar, over its lines
+    kept_in_sight = page.get_by_test_id("story-piece-header")
     assert await page.evaluate(HOLDS_THE_KEYBOARD) == "line-gutter"
-    assert -LESS_THAN_A_LINE_APART <= await page.evaluate(LINES_UNDER_ITS_HEADER) < 1
+    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
     assert await story.evaluate(SCROLLED) == DEEP_IN_THE_PIECE
 
 

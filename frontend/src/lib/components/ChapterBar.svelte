@@ -22,14 +22,15 @@
 </script>
 
 <!-- Where the reader is, once the head of the chapter they read has scrolled away: its number and title,
-	which of its steps is being read, and the ways to the chapters beside it. It stands in a slot of no
-	height stuck to the top of the story's area, so the story never moves as it comes and goes -->
-<div bind:this={slot} class="cr-chapter-bar-slot">
+	which of its steps is being read, and the ways to the chapters beside it. It stands in a slot kept in
+	sight at the top of the story's area, and takes no room there, so the story never moves as it comes
+	and goes -->
+<div bind:this={slot} data-role={KEPT_IN_SIGHT_ROLE} class="cr-chapter-bar-slot">
 	{#if chapter !== null}
 		<!-- The chapters beside it: none before the first, none after the last -->
 		{@const before = contents.chapters[chapter.place - 1]}
 		{@const after = contents.chapters[chapter.place + 1]}
-		<div data-testid="chapter-bar" data-role={KEPT_IN_SIGHT_ROLE} class="cr-chapter-bar">
+		<div data-testid="chapter-bar" class="cr-chapter-bar">
 			<div class="cr-story-measure flex h-full items-center gap-3">
 				<span data-testid="chapter-bar-number" class="cr-faint text-xs">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>

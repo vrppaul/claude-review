@@ -45,12 +45,17 @@ export class Announced<Said extends Announcement> {
 		return this.#byKey.get(key);
 	}
 
-	/** One of them is drawn: it is read in the band with the rest. Returns how to take it back. */
-	add(drawn: Said): () => void {
-		this.#byKey.set(drawn.key, drawn);
-		this.#byElement.set(drawn.element, drawn);
-		this.band.add(drawn.element);
-		return () => this.#takeBack(drawn);
+	/** The area they are read in, while it is watched; null while none is. */
+	get area(): HTMLElement | null {
+		return this.band.area;
+	}
+
+	/** One of them is drawn and says so: it is read in the band with the rest. Returns how to take that back. */
+	add(said: Said): () => void {
+		this.#byKey.set(said.key, said);
+		this.#byElement.set(said.element, said);
+		this.band.add(said.element);
+		return () => this.#takeBack(said);
 	}
 
 	/**
@@ -60,15 +65,15 @@ export class Announced<Said extends Announcement> {
 	watch(root: HTMLElement): () => void {
 		return this.band.watch(
 			root,
-			this.all.map((drawn) => drawn.element)
+			this.all.map((said) => said.element)
 		);
 	}
 
-	#takeBack(drawn: Said): void {
-		this.band.remove(drawn.element);
+	#takeBack(said: Said): void {
+		this.band.remove(said.element);
 		// What the band noted of it before it went may still arrive: it then names nothing being read
-		this.#byElement.delete(drawn.element);
-		// Drawn anew under its key before it was taken back, the one drawn anew is the one known by the key
-		if (this.#byKey.get(drawn.key) === drawn) this.#byKey.delete(drawn.key);
+		this.#byElement.delete(said.element);
+		// Drawn anew under its key before this was taken back, what the one drawn anew said is what the key names
+		if (this.#byKey.get(said.key) === said) this.#byKey.delete(said.key);
 	}
 }

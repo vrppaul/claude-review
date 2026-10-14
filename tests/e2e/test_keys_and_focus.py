@@ -14,6 +14,7 @@ from playwright.async_api import Page, expect
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
 from tests.helpers import ReviewServers, RunningReview, committed_repository, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -31,22 +32,8 @@ JUMPED_FILE_LINES = 40
 PICKED_FILE = "second.py"
 # The first line of a file added whole, as its number names it
 FIRST_LINE = "Comment on line 1"
-# The keys that step a line down and up
-LINE_KEYS = ("j", "k")
-# How far down an area has scrolled, in pixels
-SCROLLED = "(area) => area.scrollTop"
 # How far into the first file the reader scrolls by hand: past its head, with screens of it below still
 DEEP_IN_THE_FILE = 300
-# How far under the foot of its file's header the line that holds the keyboard begins, in heights of a
-# line: under 0 the header is drawn over it, and from 1 on a line above it is in sight too
-LINES_UNDER_ITS_HEADER = """() => {
-    const line = document.activeElement;
-    const header = line.closest('[data-testid="file-section"]').querySelector('[data-testid="file-header"]');
-    const under = line.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
-    return under / line.getBoundingClientRect().height;
-}"""
-# A fraction of a line: where an edge stands is not a whole number of pixels
-LESS_THAN_A_LINE_APART = 0.05
 # A file long enough for the diff to leave out more lines above its change,
 # which is near its end, than one step shows: what the reader shows a step at
 # a time, then all at once
@@ -167,8 +154,10 @@ async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_
 
     await page.keyboard.press(line_key)
 
+    # The file the reader is deep in is the first: its header is the one kept in sight over its lines
+    kept_in_sight = page.get_by_test_id("file-header").first
     assert await _focused(page) == "line-gutter"
-    assert -LESS_THAN_A_LINE_APART <= await page.evaluate(LINES_UNDER_ITS_HEADER) < 1
+    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
     assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
 
 

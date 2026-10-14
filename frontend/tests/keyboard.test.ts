@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect } from 'vitest';
 import { tick } from 'svelte';
-import { isTypingTarget, lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
+import { isTypingTarget, lendKeyboardToWhatRemains, LINE_NUMBER_ROLE, moveByLine } from '$lib/dom/keyboard';
 
 /** Something drawn on the page, by its tag. */
 function drawn(tag: string): HTMLElement {
@@ -31,6 +31,28 @@ describe('which keys belong to the review', () => {
 		search.type = 'search';
 
 		expect(isTypingTarget(search)).toBe(true);
+	});
+});
+
+/** The number of a line in a reading area, begun this far below the top of the window: above it, where that is under 0. */
+function lineBegunAt(area: HTMLElement, top: number): HTMLElement {
+	const number = area.appendChild(document.createElement('button'));
+	number.dataset.role = LINE_NUMBER_ROLE;
+	number.getBoundingClientRect = () => ({ top }) as DOMRect;
+	return number;
+}
+
+// Where a line begins what the reader sees of an area at the top of the window, and line by line above it
+const ABOVE_WHAT_IS_IN_SIGHT = [-60, -40, -20];
+
+describe('a line key pressed with the keyboard outside what is read', () => {
+	it('lands on the last line where every line is above what is in sight: the nearest to where the reader is', () => {
+		const area = drawn('main');
+		const [, , last] = ABOVE_WHAT_IS_IN_SIGHT.map((top) => lineBegunAt(area, top));
+
+		moveByLine(area, 1);
+
+		expect(document.activeElement).toBe(last);
 	});
 });
 

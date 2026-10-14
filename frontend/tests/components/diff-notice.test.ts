@@ -33,6 +33,14 @@ describe('when the tree moves under the review', () => {
 		expect(getByTestId('retake-diff')).toBeTruthy();
 	});
 
+	it('says of one file that it has changed, not that they have', () => {
+		review.diff.treeMoved.note(1);
+
+		const { getByTestId } = render(DiffNotice, inReview(review));
+
+		expect(text(getByTestId('tree-moved'))).toContain('1 file has changed');
+	});
+
 	it('does not say again what the reader has already waved away', () => {
 		review.diff.treeMoved.note(3);
 		review.diff.treeMoved.dismiss();

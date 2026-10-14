@@ -56,8 +56,10 @@ function follows(element: Element, other: Element): boolean {
 
 /**
  * What everything kept in sight at the top of a reading area carries, while
- * what it heads scrolls under it: the header of a section, the bar of a
- * chapter. A line behind one is drawn, and the reader does not see it.
+ * what it heads scrolls under it: the header of a section, the slot of a
+ * chapter's bar. A line behind one is drawn, and the reader does not see it.
+ * The role is what keeps it there: the stylesheet has one rule that does,
+ * and it is the role's.
  */
 export const KEPT_IN_SIGHT_ROLE = 'kept-in-sight';
 
