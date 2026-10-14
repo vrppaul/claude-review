@@ -3,8 +3,8 @@
 A look is a process of its own. It serves a long change with a story told
 of it, opens it in a browser, takes the steps it was handed, and prints a
 line of what is there as the page opens and after each step. Most of what
-is asked of it here is read off one look at the story and one at the files,
-since each is a server and a browser started.
+is asked of it here is read off one look at the story, one at the files and
+one at a change left untold, since each is a server and a browser started.
 """
 
 import asyncio
@@ -76,6 +76,9 @@ FILES_STEPS = [
     "key:n",
     "key:Shift",
 ]
+# The look at a change left untold, by its files. Its steps: the review's agent waits, and the field of
+# the panel a reader writes to it in is pressed; the agent tells the story, and the reader reads it
+UNTOLD_STEPS = ["agent:wait", "press:panel-input", "agent:story", "press:read-as-story"]
 # How tall the window of every look is
 WINDOW_HEIGHT = 900
 # What a line says of the reading area and of what holds the keyboard, value by value
@@ -273,6 +276,14 @@ async def files_look(tmp_path_factory: pytest.TempPathFactory) -> LookWithShots:
     )
     assert looked.exit_code == LOOKED, looked.complaint
     return LookWithShots(said=[_said(line) for line in looked.lines], shots=shots)
+
+
+@in_the_browsers_loop(scope="module")
+async def untold_look() -> list[Said]:
+    """One look at a change left untold, by its files: its agent waits, and then tells the story."""
+    looked = await _look("--untold", "--view", "files", *UNTOLD_STEPS)
+    assert looked.exit_code == LOOKED, looked.complaint
+    return [_said(line) for line in looked.lines]
 
 
 @in_the_browsers_loop
@@ -483,12 +494,35 @@ async def test_the_line_says_that_the_contents_are_put_away_where_it_cannot_say_
     assert put_away.reading == "reading: contents put away"
 
 
-async def test_what_is_not_a_step_is_refused_by_name_before_anything_is_started() -> None:
-    looked = await _look("wave:hello")
+@pytest.mark.parametrize("written", ["wave:hello", "agent:dance"], ids=["no such kind of step", "no such command"])
+async def test_what_is_not_a_step_is_refused_by_name_before_anything_is_started(written: str) -> None:
+    looked = await _look(written)
 
     assert looked.exit_code == NOT_UNDERSTOOD
-    assert "wave:hello" in looked.complaint
+    assert written in looked.complaint
     assert looked.lines == []
+
+
+async def test_a_change_left_untold_has_no_part_of_a_story_to_go_to() -> None:
+    """Told, the story lists its parts where it is read, and a look presses one of them: `press:go-to-part:3`."""
+    looked = await _look("--untold", "--view", "files", "press:read-as-story", "press:go-to-part")
+
+    assert looked.exit_code == NOT_TAKEN
+    assert "there is no element of test id go-to-part on the page" in looked.complaint
+
+
+async def test_the_reviews_agent_waits_in_a_look_and_the_reader_can_write_to_it(untold_look: list[Said]) -> None:
+    """The panel offers its field only while an agent is attached, and an agent is attached once it has waited."""
+    _, _, written_to, *_ = untold_look
+
+    assert _keyboard(written_to).test_id == "panel-input"
+
+
+async def test_the_reviews_agent_tells_the_story_in_a_look_while_the_page_is_open(untold_look: list[Said]) -> None:
+    *_, read_as_story = untold_look
+
+    assert read_as_story.area.startswith("area: story-view ")
+    assert read_as_story.read.startswith("read: Overview")
 
 
 def _written_at(root: Path, path: str, moment: int) -> None:

@@ -251,7 +251,8 @@ tests. Remove items when done — don't check them off.
       page that scrolls would have to be a second page, made for the test.
 - [ ] No test holds what `scripts/look.py` says when it cannot begin or
       cannot settle: a review that does not start or does not say where it
-      is, a story the review refuses, git failing to make the repository,
+      is, a story or a wait of its agent's that the review refuses, before
+      the page opens or as a step, git failing to make the repository,
       and a page still moving after five seconds, whose step is marked
       "still moving". None of these can be brought about from the look's
       command line, which is all its tests use. The same holds of

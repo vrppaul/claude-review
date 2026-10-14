@@ -18,8 +18,13 @@ look writes nothing where it is run, and a fresh reader opens the page
 every time.
 
     uv run python scripts/look.py [--view story|files] [--theme light|dark]
-        [--width PIXELS] [--shots DIRECTORY] STEP...
-    uv run python scripts/look.py --keep
+        [--width PIXELS] [--shots DIRECTORY] [--untold] STEP...
+    uv run python scripts/look.py --keep [--untold]
+
+`--untold` leaves the change untold: the page opens on a review that holds
+no story, as every review does until its agent tells one. What the page
+shows a reader who asks for a story and waits for it is reached from there,
+with the steps that are the agent's.
 
 Run in the repository's root. The review serves the page as it was last
 built, so a look is refused when a file under `frontend/src` was written
@@ -33,6 +38,10 @@ A step is one of
     key:KEY              press a key, named as Playwright names keys: j, Tab, Control+Enter
     scroll:PIXELS        scroll the reading area down by that many pixels, or up by a number below zero
     shot:NAME            keep a picture of the window as NAME.png in the directory --shots names
+    agent:wait           the review's agent waits a moment for what the reader hands over, as
+                         `claude-review wait` does: it is attached from then on, and has taken
+                         what the review held for it
+    agent:story          the review's agent tells the story, as `claude-review story` does
 
 As the page opens and after each step the look prints one line, each value
 under its name: the step; `page`, how much taller than its window the page
@@ -52,18 +61,19 @@ A step that cannot be taken ends the look. Of a press it is said which of
 three things stood in its way: no element of that test id, fewer of them
 than were counted to, or one that is there and takes no press. A key
 Playwright does not know ends it too. The step is named on stderr and the
-look exits 1; the steps after it are not taken. A picture with no
-directory named to keep it in is refused earlier, as the command line is
-read.
+look exits 1; the steps after it are not taken. A command of the agent's
+that the review refuses ends the look the same way, said as the command and
+what it printed. A picture with no directory named to keep it in is refused
+earlier, as the command line is read.
 
 With a story's contents put away, as they are on a narrow window until
 they are brought back, `read` and `reading` say so: the contents are what
 says them.
 
-`--keep`, in place of steps: serve the change, tell its story, print where
-the review is, and stay until the review ends. A review ends once its page
-has been closed, so a kept look opens none: it is how a page is put before
-a person.
+`--keep`, in place of steps: serve the change, tell its story unless it is
+left untold, print where the review is, and stay until the review ends. A
+review ends once its page has been closed, so a kept look opens none: it is
+how a page is put before a person.
 
 Stopped from outside, by SIGTERM or at Ctrl-C, a look ends where it stands:
 it closes its browser, stops its server and removes its directory on the
@@ -90,7 +100,7 @@ import re
 import sys
 import tempfile
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Callable, Generator
+from collections.abc import AsyncGenerator, Callable, Coroutine, Generator
 from enum import StrEnum, auto
 from functools import partial
 from pathlib import Path
@@ -113,6 +123,9 @@ BEFORE_THE_PORT = ":"
 # How long the review has to say where it is, and how long git and the review's commands have to end
 SERVED_WITHIN_SECONDS = 30
 COMMAND_WITHIN_SECONDS = 60
+# How long the agent's wait waits for the reader, in seconds as the command line takes them: what a look
+# hands the agent is held by the review before the wait begins, so a moment is enough to take it
+AGENT_WAITS_SECONDS = "0.1"
 
 # Where the review keeps what it remembers about its reader, by the XDG base directory rules
 CONFIG_HOME_VARIABLE = "XDG_CONFIG_HOME"
@@ -245,7 +258,10 @@ NOT_PRESSED = (
 NOWHERE_TO_KEEP_IT = "{step} keeps a picture, and no directory was named to keep it in: name one with --shots"
 NO_NAME = "a picture is kept under a name"
 # What is said of what the command line cannot be read as
-NOT_A_STEP = "{written} is not a step: a step is press:TEST_ID, press:TEST_ID:NTH, key:KEY, scroll:PIXELS or shot:NAME"
+NOT_A_STEP = (
+    "{written} is not a step: a step is press:TEST_ID, press:TEST_ID:NTH, key:KEY, scroll:PIXELS, shot:NAME, "
+    "agent:wait or agent:story"
+)
 KEPT_TAKES_NO_STEPS = "--keep takes no steps: a kept look opens no page to take them on"
 
 # What the look exits with: looked, or kept until its review ended; ended at a step or before the
@@ -293,19 +309,63 @@ class Theme(StrEnum):
     DARK = auto()
 
 
+class Agent(BaseModel):
+    """The review's agent, whom the look stands in for: each thing it does is one command of the review's own."""
+
+    model_config = FROZEN
+
+    # The port the review is served on, as its commands take it
+    port: str
+    environment: dict[str, str]
+    # Where the story's document is written, for the command that tells it to read
+    document: Path
+
+    async def waits(self) -> None:
+        """Wait a moment for what the reader hands over next: the review counts an agent attached from then on.
+
+        Raises:
+            CommandFailedError: if the review refuses the wait.
+        """
+        await self._runs("wait", "--seconds", AGENT_WAITS_SECONDS)
+
+    async def tells_the_story(self) -> None:
+        """Tell the story of the change: its document handed to the `story` command.
+
+        Raises:
+            CommandFailedError: if the review refuses the story.
+        """
+        await asyncio.to_thread(self.document.write_text, THE_STORY.model_dump_json())
+        await self._runs("story", "--file", str(self.document))
+
+    async def _runs(self, command: str, *options: str) -> None:
+        """Run one command of the review's against the review served, and hold it to having done what it was asked."""
+        ran = await run((*REVIEW, command, "--port", self.port, *options), self.environment, COMMAND_WITHIN_SECONDS)
+        ran.must_have_succeeded()
+
+
+class Stage(BaseModel):
+    """What a step is taken on: the page open in the look's window, and the agent of the review it shows."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    page: Page
+    agent: Agent
+
+
 class Step(BaseModel, ABC):
-    """One thing done on the page, kept as it was written on the command line."""
+    """One thing done in a look, on the page or by the review's agent, kept as it was written on the command line."""
 
     model_config = FROZEN
 
     written: str
 
     @abstractmethod
-    async def take(self, page: Page) -> None:
-        """Do it on the page.
+    async def take(self, stage: Stage) -> None:
+        """Do it.
 
         Raises:
             LookFailedError: if it cannot be done, for a reason the step can say itself.
+            CommandFailedError: if it is the agent's, and the review refuses its command.
         """
 
 
@@ -326,8 +386,8 @@ class Press(Step):
         return cls(written=written, test_id=test_id, nth=int(nth or THE_FIRST))
 
     @override
-    async def take(self, page: Page) -> None:
-        elements = page.get_by_test_id(self.test_id)
+    async def take(self, stage: Stage) -> None:
+        elements = stage.page.get_by_test_id(self.test_id)
         count = await elements.count()
         if count == 0:
             failure = NO_SUCH_ELEMENT.format(step=self.written, test_id=self.test_id)
@@ -357,8 +417,8 @@ class Key(Step):
         return cls(written=written, key=detail)
 
     @override
-    async def take(self, page: Page) -> None:
-        await page.keyboard.press(self.key)
+    async def take(self, stage: Stage) -> None:
+        await stage.page.keyboard.press(self.key)
 
 
 class Scroll(Step):
@@ -376,8 +436,8 @@ class Scroll(Step):
         return cls(written=written, pixels=int(detail))
 
     @override
-    async def take(self, page: Page) -> None:
-        await page.get_by_test_id(READING_AREA).evaluate(SCROLLED_DOWN_BY, self.pixels)
+    async def take(self, stage: Stage) -> None:
+        await stage.page.get_by_test_id(READING_AREA).evaluate(SCROLLED_DOWN_BY, self.pixels)
 
 
 class Shot(Step):
@@ -400,8 +460,41 @@ class Shot(Step):
         return cls(written=written, file=shots / f"{detail}{PICTURE_SUFFIX}")
 
     @override
-    async def take(self, page: Page) -> None:
-        await page.screenshot(path=self.file)
+    async def take(self, stage: Stage) -> None:
+        await stage.page.screenshot(path=self.file)
+
+
+class AgentCommand(StrEnum):
+    """A command of the review's own that a look runs as the review's agent, as a step writes it."""
+
+    WAIT = auto()
+    STORY = auto()
+
+
+# What the review's agent does at each command
+AS_THE_AGENT: dict[AgentCommand, Callable[[Agent], Coroutine[None, None, None]]] = {
+    AgentCommand.WAIT: Agent.waits,
+    AgentCommand.STORY: Agent.tells_the_story,
+}
+
+
+class ByTheAgent(Step):
+    """One thing the review's agent does while the page is open."""
+
+    command: AgentCommand
+
+    @classmethod
+    def read(cls, written: str, detail: str) -> Self:
+        """What a step writes for the agent to do.
+
+        Raises:
+            ValueError: if it names no command a look runs as the agent.
+        """
+        return cls(written=written, command=AgentCommand(detail))
+
+    @override
+    async def take(self, stage: Stage) -> None:
+        await AS_THE_AGENT[self.command](stage.agent)
 
 
 # What makes a step of what is written on the command line, given the step as written and what stands after its kind
@@ -410,7 +503,13 @@ StepReader = Callable[[str, str], Step]
 
 def _step_readers(shots: Path | None) -> dict[str, StepReader]:
     """What reads each kind of step, by what the kind is written as: a picture is read knowing where pictures go."""
-    return {"press": Press.read, "key": Key.read, "scroll": Scroll.read, "shot": partial(Shot.kept_in, shots)}
+    return {
+        "press": Press.read,
+        "key": Key.read,
+        "scroll": Scroll.read,
+        "shot": partial(Shot.kept_in, shots),
+        "agent": ByTheAgent.read,
+    }
 
 
 class Asked(BaseModel):
@@ -421,6 +520,8 @@ class Asked(BaseModel):
     view: View
     theme: Theme
     width: int
+    # Whether the story is told before the page opens: left untold, the review holds none until a step tells it
+    story_told: bool
     keep: bool
     steps: list[Step]
 
@@ -617,18 +718,6 @@ async def _served(repository: Path, environment: dict[str, str]) -> AsyncGenerat
         yield Served(address=await _address_of(server), server=server)
 
 
-async def _story_told(served: Served, document: Path, environment: dict[str, str]) -> None:
-    """Tell the story of the change, as an agent tells one: its document handed to the `story` command.
-
-    Raises:
-        CommandFailedError: if the review refuses the story.
-    """
-    await asyncio.to_thread(document.write_text, THE_STORY.model_dump_json())
-    story = (*REVIEW, "story", "--port", served.port(), "--file", str(document))
-    told = await run(story, environment, COMMAND_WITHIN_SECONDS)
-    told.must_have_succeeded()
-
-
 @contextlib.asynccontextmanager
 async def _window(asked: Asked) -> AsyncGenerator[Page]:
     """A Chromium window of the width and the theme asked for, closed as the block ends."""
@@ -689,15 +778,16 @@ async def _at_rest(page: Page) -> AtRest:
     return AtRest(seen=seen, moving=clock.time() - same_since < STILL_FOR_SECONDS)
 
 
-async def _steps_taken(served: Served, asked: Asked) -> None:
+async def _steps_taken(served: Served, agent: Agent, asked: Asked) -> None:
     """Open the review in a window, take each step, and print what is there as it opens and after each."""
     async with _window(asked) as page:
         with _ending_the_look_at(OPENED):
             await _opened(page, served.address, asked.view)
             print((await _at_rest(page)).said_after(f"{OPENED} {served.address}"), flush=True)
+        stage = Stage(page=page, agent=agent)
         for step in asked.steps:
             with _ending_the_look_at(step.written):
-                await step.take(page)
+                await step.take(stage)
                 print((await _at_rest(page)).said_after(step.written), flush=True)
 
 
@@ -708,15 +798,17 @@ async def _kept(served: Served) -> None:
 
 
 async def _look(asked: Asked, scratch: Path) -> None:
-    """Serve the long change with its story told, and take the steps on its page, or keep it for a reader."""
+    """Serve the long change, its story told unless it is left untold, and take the steps or keep it for a reader."""
     environment = _environment(scratch)
     await _long_change(scratch / REPOSITORY, environment)
     async with _served(scratch / REPOSITORY, environment) as served:
-        await _story_told(served, scratch / STORY_DOCUMENT, environment)
+        agent = Agent(port=served.port(), environment=environment, document=scratch / STORY_DOCUMENT)
+        if asked.story_told:
+            await agent.tells_the_story()
         if asked.keep:
             await _kept(served)
         else:
-            await _steps_taken(served, asked)
+            await _steps_taken(served, agent, asked)
 
 
 def _step(written: str, readers: dict[str, StepReader]) -> Step:
@@ -743,6 +835,7 @@ def _asked(arguments: list[str]) -> Asked:
     parser.add_argument("--theme", type=Theme, choices=list(Theme), default=Theme.LIGHT)
     parser.add_argument("--width", type=int, default=WIDTH_UNLESS_ASKED, metavar="PIXELS")
     parser.add_argument("--shots", type=Path, default=None, metavar="DIRECTORY")
+    parser.add_argument("--untold", action="store_true")
     parser.add_argument("--keep", action="store_true")
     parser.add_argument("steps", nargs="*", metavar="STEP")
     read = parser.parse_args(arguments)
@@ -754,7 +847,14 @@ def _asked(arguments: list[str]) -> Asked:
         steps = [_step(written, readers) for written in read.steps]
     except NotAStepError as refusal:
         parser.error(str(refusal))
-    return Asked(view=VIEWS[read.view], theme=read.theme, width=read.width, keep=read.keep, steps=steps)
+    return Asked(
+        view=VIEWS[read.view],
+        theme=read.theme,
+        width=read.width,
+        story_told=not read.untold,
+        keep=read.keep,
+        steps=steps,
+    )
 
 
 def _last_written(root: Path) -> Path | None:
