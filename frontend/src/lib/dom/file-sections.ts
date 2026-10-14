@@ -1,7 +1,8 @@
 /**
- * Where each section that draws a file's lines, and each thread, sits in the
- * stream, which of them the reader is in, bringing one into view, and
- * stepping the keyboard through the lines they draw.
+ * Where each section that draws a file's lines, each thread, and what offers
+ * each block of a story's words to be asked about sits in the stream, which
+ * of them the reader is in, bringing one into view, and stepping the
+ * keyboard through the lines they draw.
  *
  * A section is known by a key whoever draws it gives: the files' own view
  * draws each file in one section and knows it by the file's path; a story
@@ -70,6 +71,8 @@ export class FileSections {
 	// Every section on the page, and which of them the reader is in, while the reading area is watched
 	readonly #sections = new Announced<Section>();
 	readonly #threads = new Map<string, HTMLElement>();
+	// What offers each block of the story's words to be asked about, by what the block is known by
+	readonly #blocks = new Map<string, HTMLElement>();
 	// A thread asked for before it was drawn, and until when it is waited
 	// for: brought into view once it is drawn, if that is soon
 	#awaitedThread: AwaitedThread | null = null;
@@ -126,6 +129,12 @@ export class FileSections {
 			this.#arriveAtThread(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
+	}
+
+	/** Say what offers a block of the story's words to be asked about, by what the block is known by; returns how to take it back. */
+	registerBlock(blockKey: string, asking: HTMLElement): () => void {
+		this.#blocks.set(blockKey, asking);
+		return () => this.#unregisterBlock(blockKey, asking);
 	}
 
 	/**
@@ -206,19 +215,29 @@ export class FileSections {
 	 * that is soon.
 	 */
 	goToThread(threadId: string, sectionKey: string): void {
-		const drawn = this.#threads.get(threadId);
-		if (drawn) {
-			this.#stopWaiting();
-			this.#arriveAtThread(drawn);
-			return;
-		}
-		this.scrollTo(sectionKey);
-		this.#awaitedThread = { threadId, until: performance.now() + AWAIT_DRAWING_FOR };
+		if (!this.#threads.has(threadId)) this.scrollTo(sectionKey);
+		this.#reachThread(threadId);
+	}
+
+	/**
+	 * Bring a thread on the story's words into view and put the keyboard on
+	 * it: now if it is drawn, or once it is, if that is soon. The story draws
+	 * its words whole as it comes on screen: there is no section to build
+	 * for one.
+	 */
+	goToStoryThread(threadId: string): void {
+		this.#stopWaiting();
+		this.#reachThread(threadId);
 	}
 
 	/** Put the keyboard on a thread once it is drawn, if what had it went: the thread a comment became, or what remains of a change to it. */
 	keyboardToThread(threadId: string): void {
 		focusWhatRemains(() => this.#threads.get(threadId));
+	}
+
+	/** Put the keyboard on what offers a block of the story to be asked about, if what had it went: a comment on the block put away, a thread on it deleted. */
+	keyboardToBlock(blockKey: string): void {
+		focusWhatRemains(() => this.#blocks.get(blockKey));
 	}
 
 	/** Put the keyboard on the toggle that folds a thread, as it is drawn now, if what had it went with the fold. */
@@ -255,6 +274,17 @@ export class FileSections {
 			.map((element) => element.querySelector<HTMLElement>(`[data-place="${lineKey}"]`))
 			.find((found) => found !== null);
 		return line ?? toggleOf(firstInDocument(ofTheFile));
+	}
+
+	/** Take the reader to a thread now if it is drawn, or once it is, if that is soon; a section asked for meanwhile is still waited for. */
+	#reachThread(threadId: string): void {
+		const drawn = this.#threads.get(threadId);
+		if (drawn) {
+			this.#stopWaiting();
+			this.#arriveAtThread(drawn);
+		} else {
+			this.#awaitedThread = { threadId, until: performance.now() + AWAIT_DRAWING_FOR };
+		}
 	}
 
 	/** The reader is being taken somewhere now: whatever was asked for before, and is not drawn yet, is waited for no longer. */
@@ -319,6 +349,10 @@ export class FileSections {
 
 	#unregisterThread(threadId: string, element: HTMLElement): void {
 		if (this.#threads.get(threadId) === element) this.#threads.delete(threadId);
+	}
+
+	#unregisterBlock(blockKey: string, asking: HTMLElement): void {
+		if (this.#blocks.get(blockKey) === asking) this.#blocks.delete(blockKey);
 	}
 
 	#mark(element: HTMLElement): void {

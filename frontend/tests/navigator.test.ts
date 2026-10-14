@@ -3,7 +3,7 @@ import { Navigator, type ViewsOnScreen } from '$lib/review/navigator';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
-import { newComment } from './new-comment';
+import { newComment, storyComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
 
@@ -229,8 +229,22 @@ describe('moving the reader in whatever view the review is read in', () => {
 
 	/** The review read in one view alone, with nothing else to bring on screen: what that view draws none of is nowhere. */
 	function onlyIn(view: ReadingView): ViewsOnScreen {
-		return { onScreen: view, showEverything: () => Promise.resolve(view) };
+		return { onScreen: view, showEverything: () => Promise.resolve(view), showStory: () => view };
 	}
+
+	it("goes to a thread on the story's words in the story, brought on screen for it", async () => {
+		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'on the doubt'));
+		const brought = drawThreads();
+		const [thread] = review.threads.all;
+		const showStory = vi.fn(() => DRAWS_NOTHING);
+		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(DRAWS_NOTHING), showStory });
+
+		navigator.reveal(thread);
+		await settled();
+
+		expect(showStory).toHaveBeenCalledOnce();
+		expect(brought).toEqual(['on the doubt']);
+	});
 
 	/** A section on the page under a key, which says when it is brought into view. */
 	function sectionKnownBy(key: string, brought: string[]): HTMLElement {
@@ -260,7 +274,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOf: () => 'in the files' };
 		const showEverything = vi.fn(() => Promise.resolve(drawsAll));
-		const navigator = new Navigator(review.threads, review.sections, { onScreen: DRAWS_NOTHING, showEverything });
+		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(DRAWS_NOTHING), showEverything });
 
 		navigator.reveal(thread);
 		await settled();
@@ -275,7 +289,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('the piece that draws it', []);
 		const draws = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it' };
 		const showEverything = vi.fn(() => Promise.resolve(DRAWS_NOTHING));
-		const navigator = new Navigator(review.threads, review.sections, { onScreen: draws, showEverything });
+		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(draws), showEverything });
 
 		navigator.reveal(thread);
 
@@ -287,7 +301,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('a.py in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOfFile: () => 'a.py in the files' };
 		const navigator = new Navigator(review.threads, review.sections, {
-			onScreen: DRAWS_NOTHING,
+			...onlyIn(DRAWS_NOTHING),
 			showEverything: () => Promise.resolve(drawsAll)
 		});
 

@@ -4,7 +4,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
 import { A_LATER_TAKE, addedLine, diffFile, hunk, removedLine } from './diff';
 import { fakeServer } from './fake-server';
-import { newComment } from './new-comment';
+import { newComment, storyComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
 import { storyHeld, storyStanding, toldChapter, toldStep } from './story';
@@ -123,6 +123,18 @@ describe('a review read as its story', () => {
 		]);
 	});
 
+	it("walks the threads on the overview's lines first, in the order it says them", () => {
+		review.threads.add(newComment({ file: 'b.py', startLine: 5, body: 'in chapter one' }));
+		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'on the doubt'));
+		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task'));
+
+		expect(review.views.onScreen.threadsInOrder().map((thread) => thread.body)).toEqual([
+			'on the task',
+			'on the doubt',
+			'in chapter one'
+		]);
+	});
+
 	it('takes a removed line before the line that replaced it, as a piece draws them', () => {
 		review.threads.add(newComment({ file: 'c.py', startLine: 4, body: 'on the line added' }));
 		review.threads.add(newComment({ file: 'c.py', side: 'old', startLine: 4, body: 'on the line removed' }));
@@ -238,5 +250,13 @@ describe('which way a review is read', () => {
 		review.views.choose('story');
 
 		expect(review.views.onScreen.sectionKeys()).toEqual([]);
+	});
+
+	it("walks no thread while no story is held, though a thread hangs on the words of the overview's task", () => {
+		review = openReview();
+		review.views.choose('story');
+		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task of a story since lost'));
+
+		expect(review.views.onScreen.threadsInOrder()).toEqual([]);
 	});
 });

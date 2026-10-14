@@ -43,7 +43,8 @@ function itemNumber(item: number): number {
 	return item - FIRST_ITEM + FIRST_ITEM_SAID;
 }
 
-function label({ block }: StoryAnchor): string {
+/** What the story heads a block with, above a comment on it and in a thread's own header: "Doubt". */
+export function blockLabel(block: StoryBlock): string {
 	switch (block.at) {
 		case 'overview':
 			return OVERVIEW_LINE_LABELS[block.text];
@@ -69,8 +70,8 @@ function holderOf(block: StoryBlock, fileNamed: (path: string) => string): strin
 	}
 }
 
-/** The name of a block in its token, which no other block has. */
-function blockName(block: StoryBlock): string {
+/** What a block is known by: the name its token gives it, which no other block has. */
+export function blockKey(block: StoryBlock): string {
 	switch (block.at) {
 		case 'overview':
 			return block.text;
@@ -84,7 +85,7 @@ function blockName(block: StoryBlock): string {
 }
 
 function token({ block }: StoryAnchor): string {
-	return [TOKEN_START, blockName(block)].join(TOKEN_SEPARATOR);
+	return [TOKEN_START, blockKey(block)].join(TOKEN_SEPARATOR);
 }
 
 /**
@@ -93,13 +94,27 @@ function token({ block }: StoryAnchor): string {
  * story's words, so one in it replaces nothing.
  */
 export const storyAnchorView: AnchorView<StoryAnchor> = {
-	label,
-	place: (anchor) => [STORY, ...holderOf(anchor.block, (path) => path), label(anchor)].join(PLACE_SEPARATOR),
-	shortPlace: (anchor) => `${holderOf(anchor.block, fileName).at(0) ?? STORY} ${label(anchor)}`,
+	label: (anchor) => blockLabel(anchor.block),
+	place: (anchor) => [STORY, ...holderOf(anchor.block, (path) => path), blockLabel(anchor.block)].join(PLACE_SEPARATOR),
+	shortPlace: (anchor) =>
+		[holderOf(anchor.block, fileName).at(0) ?? STORY, blockLabel(anchor.block)].join(PLACE_SEPARATOR),
 	token,
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
-	sameSpot: (one, other) => blockName(one.block) === blockName(other.block),
+	sameSpot: (one, other) => blockKey(one.block) === blockKey(other.block),
 	writtenAgainst: (anchor) => anchor.quote,
 	replaces: () => [],
 	placeOf: (anchor) => ({ on: 'story', block: anchor.block })
 };
+
+/** One of the overview's three lines, as a block of the story. */
+export type OverviewBlock = Extract<StoryBlock, { at: 'overview' }>;
+
+/** The block of one of the overview's three lines. */
+export function overviewLine(text: OverviewText): OverviewBlock {
+	return { at: 'overview', text };
+}
+
+/** A block of the story as the reader asks about it, with the words it says now. */
+export function storyAnchor(block: StoryBlock, words: string): StoryAnchor {
+	return { kind: 'story', block, quote: [words], outdated: false };
+}

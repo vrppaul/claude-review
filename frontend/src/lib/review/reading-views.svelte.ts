@@ -26,6 +26,8 @@ type KeptChoice = PageLayout['readingView'];
 
 // The view every review can be read in, and the one that can draw every thread and file it holds
 const FILES: ReadingViewName = 'files';
+// The view that draws the story told of the change, and every thread on its words
+const STORY: ReadingViewName = 'story';
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
@@ -61,6 +63,12 @@ export class ReadingViews implements ViewsOnScreen {
 	/** Bring the files on screen for something only they show: how the reader chose to read stays as they chose it. */
 	showFiles(): void {
 		this.#nameOnScreen = FILES;
+	}
+
+	/** Bring the story on screen for a thread only it draws, and hand its view over: the choice stays as the reader made it. */
+	showStory(): ReadingView {
+		this.#nameOnScreen = STORY;
+		return this.#views[STORY];
 	}
 
 	/**

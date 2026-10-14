@@ -8,14 +8,15 @@
  */
 
 import { askInThread, cancelMessage, followAnchors } from '$lib/api/review-api';
-import { lineAnchor } from '$lib/anchors/line';
-import { threadPlaceOf, type ThreadOnLines } from '$lib/anchors/views';
+import { blockKey } from '$lib/anchors/story';
+import type { ThreadOnLines } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
 import { followedThreads } from '$lib/review/following';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
+import { anchorWrittenOn, withItsBlock, withItsLines } from '$lib/review/thread-places';
 import { type CarriedThread, ThreadSending } from '$lib/review/thread-sending.svelte';
 import { ThreadWriting } from '$lib/review/thread-writing.svelte';
 import type {
@@ -25,6 +26,7 @@ import type {
 	HeldThread,
 	NewComment,
 	NewTurn,
+	StoryBlock,
 	Thread,
 	ThreadInput,
 	Turn
@@ -51,12 +53,6 @@ function questionIdOf(thread: Thread): string {
 
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
-
-/** A thread with the lines of a file it hangs on; nothing for one drawn elsewhere. */
-function withItsLines(thread: Thread): ThreadOnLines[] {
-	const place = threadPlaceOf(thread.anchor);
-	return place.on === 'lines' ? [{ thread, lines: place.lines }] : [];
-}
 
 /** A comment field holding something not said yet, and what it is written on. */
 export interface OpenField {
@@ -109,6 +105,8 @@ export class Threads {
 	readonly #onLines = $derived(this.#all.flatMap(withItsLines));
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
+	// Those on the story's words, by the block they hang on, so a block asks for its own without a scan
+	readonly #byBlock = $derived(Map.groupBy(this.#all.flatMap(withItsBlock), ({ block }) => block));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
 	readonly #unsent = $derived(this.#all.filter((thread) => this.#sending.roundOf(thread.id) === undefined));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
@@ -167,6 +165,11 @@ export class Threads {
 	/** The threads hanging on lines of one file, each with its lines. */
 	onLinesOf(path: string): readonly ThreadOnLines[] {
 		return this.#byFile.get(path) ?? NO_THREADS;
+	}
+
+	/** The threads hanging on a block of the story's words, in the order they were written. */
+	onBlock(block: StoryBlock): Thread[] {
+		return (this.#byBlock.get(blockKey(block)) ?? []).map(({ thread }) => thread);
 	}
 
 	/** The round every thread sent so far went out in, by thread, as the draft keeps them. */
@@ -262,8 +265,9 @@ export class Threads {
 
 	/**
 	 * Put what a field holds into the review, and close the field: a comment
-	 * on lines becomes a thread, a reply a turn of its thread, an edit the
-	 * thread's opening comment. Returns the thread it went into.
+	 * on lines or on a block of the story becomes a thread, a reply a turn of
+	 * its thread, an edit the thread's opening comment. Returns the thread it
+	 * went into.
 	 */
 	say(field: CommentField): string {
 		const thread = this.#writeOut(field, field.severity);
@@ -436,10 +440,9 @@ export class Threads {
 		const images = [...field.attachments.images];
 		const { at } = field;
 		switch (at.kind) {
-			case 'new': {
-				const { side, startLine, endLine } = at.lines;
-				return this.add({ anchor: lineAnchor(at.file, side, startLine, endLine, at.quote), body, severity, images });
-			}
+			case 'new':
+			case 'story':
+				return this.add({ anchor: anchorWrittenOn(at), body, severity, images });
 			case 'reply':
 				this.addTurn(at.thread, { author: READER, body, images });
 				return at.thread;
@@ -452,10 +455,7 @@ export class Threads {
 	/** What an open field is written on, as one, or none when it would say nothing new. */
 	#openOn(field: CommentField): OpenField[] {
 		const { at } = field;
-		if (at.kind === 'new') {
-			const { side, startLine, endLine } = at.lines;
-			return [{ field, anchor: lineAnchor(at.file, side, startLine, endLine, at.quote) }];
-		}
+		if (at.kind === 'new' || at.kind === 'story') return [{ field, anchor: anchorWrittenOn(at) }];
 		const thread = this.#all.find((candidate) => candidate.id === at.thread);
 		// An edit holding nothing the reader put in it says what its thread says already
 		if (!thread || (at.kind === 'edit' && !field.holdsWork)) return [];

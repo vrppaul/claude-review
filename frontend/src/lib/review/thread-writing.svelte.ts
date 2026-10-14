@@ -1,20 +1,22 @@
 /**
  * What is being written in the threads, and not said yet: comments started
- * on lines, replies, and edits of the comment that opened a thread.
+ * on lines or on a block of the story's words, replies, and edits of the
+ * comment that opened a thread.
  *
  * Several comments can be started on one file, each on its own lines; a
- * thread has one reply and one edit at a time. Each stays until its words
- * are added, asked or put away — not when its field stops being drawn — and
- * the draft keeps them across a reload. What happens to each is told to
- * whoever follows the comment fields: the tour.
+ * block of the story has one at a time, and a thread one reply and one
+ * edit. Each stays until its words are added, asked or put away — not when
+ * its field stops being drawn — and the draft keeps them across a reload.
+ * What happens to each is told to whoever follows the comment fields: the
+ * tour.
  */
 
 import { SvelteMap } from 'svelte/reactivity';
 
 import type { KeptField } from '$lib/drafts/draft-shapes';
-import { type BeganFrom, CommentField, fieldKey } from '$lib/review/comment-field.svelte';
+import { type BeganFrom, blockFieldKey, CommentField, fieldKey } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
-import type { CommentFieldEvent, PickedLines, Thread, WrittenAt, WrittenOnLines } from '$lib/types';
+import type { CommentFieldEvent, PickedLines, StoryBlock, Thread, WrittenAt, WrittenOnLines } from '$lib/types';
 
 /** How a field can go: its words added to the review, asked straight away, or put away unsaid. */
 type Ending = Exclude<CommentFieldEvent['type'], 'opened'>;
@@ -85,6 +87,20 @@ export class ThreadWriting {
 	 */
 	pickLines(file: string, lines: PickedLines, quote: string[]): void {
 		this.#open({ kind: 'new', file, lines, quote }, nothingWritten());
+	}
+
+	/**
+	 * Start a comment on a block of the story's words — or bring back the one already being written on it.
+	 *
+	 * @param words what the block says as the reader asks about it
+	 */
+	askAbout(block: StoryBlock, words: string): void {
+		this.#open({ kind: 'story', block, words }, nothingWritten());
+	}
+
+	/** The comment being written on a block of the story, if one is. */
+	aboutBlock(block: StoryBlock): CommentField | undefined {
+		return this.#fields.get(blockFieldKey(block));
 	}
 
 	/** The reply being written in a thread, if one is. */

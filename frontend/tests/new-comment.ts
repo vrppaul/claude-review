@@ -1,5 +1,6 @@
-import type { CommentSeverity, LineSide, NewComment } from '$lib/types';
+import type { CommentSeverity, LineSide, NewComment, StoryBlock } from '$lib/types';
 import { lineAnchor } from '$lib/anchors/line';
+import { storyAnchor } from '$lib/anchors/story';
 
 /** What a reader picks and writes when they comment on lines. */
 interface Written {
@@ -32,4 +33,9 @@ export function newComment(written: Partial<Written> = {}): NewComment {
 		severity: picked.severity,
 		images: picked.images
 	};
+}
+
+/** A note as the reader writes one on a block of the story, which says these words. */
+export function storyComment(block: StoryBlock, body: string, words = 'What the story says there.'): NewComment {
+	return { anchor: storyAnchor(block, words), body, severity: 'note', images: [] };
 }

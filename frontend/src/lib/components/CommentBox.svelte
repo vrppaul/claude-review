@@ -19,6 +19,7 @@
 	// What an empty field says, by what is being written in it: a reply reads as the thread's own "Write a reply…"
 	const PLACEHOLDERS: Record<WrittenAt['kind'], string> = {
 		new: 'What should change here?',
+		story: 'What should change here?',
 		edit: 'What should change here?',
 		reply: 'Write a reply…'
 	};

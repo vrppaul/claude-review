@@ -37,6 +37,8 @@ export interface ViewsOnScreen {
 	 * section asked for before it is.
 	 */
 	showEverything: () => Promise<ReadingView>;
+	/** Bring the story on screen, which alone draws the threads on its words, and hand its view over. */
+	showStory: () => ReadingView;
 }
 
 /** Where the reader is among the threads: the one they were last brought to, among the threads as they stood then. */
@@ -100,10 +102,19 @@ export class Navigator {
 	 * comes on screen for it: the reader asked for the thread. Where the
 	 * whole review cannot be put back for it, the files are on screen as
 	 * their base has them, their bar says why, and the thread is not gone to.
+	 * A thread on the story's words is drawn by the story alone, which comes
+	 * on screen for it.
 	 */
 	reveal(thread: Thread): void {
 		const place = threadPlaceOf(thread.anchor);
-		if (place.on === 'lines') this.#revealOnLines(thread, place.lines);
+		switch (place.on) {
+			case 'lines':
+				this.#revealOnLines(thread, place.lines);
+				break;
+			case 'story':
+				this.#revealOnTheStory(thread);
+				break;
+		}
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -151,6 +162,13 @@ export class Navigator {
 		const onScreen = this.#views.onScreen;
 		if (onScreen.sectionOf(lines) !== null) this.#revealIn(onScreen, thread, lines);
 		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread, lines));
+	}
+
+	/** Bring a thread on the story's words into view in the story, which comes on screen for it. */
+	#revealOnTheStory(thread: Thread): void {
+		const story = this.#views.showStory();
+		this.#at = { thread: thread.id, among: story.threadsInOrder() };
+		this.#sections.goToStoryThread(thread.id);
 	}
 
 	/** Go to a thread on lines in a view, if the view draws them. */

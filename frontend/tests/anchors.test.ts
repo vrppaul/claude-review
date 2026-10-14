@@ -87,9 +87,9 @@ describe('a thread on the story is named by the block it is on', () => {
 	});
 
 	it('names only the chapter, the file or the story in a chip', () => {
-		expect(anchorShortPlace(doubt)).toBe('Story Doubt');
-		expect(anchorShortPlace(chapterWhy)).toBe('images-kept Why');
-		expect(anchorShortPlace(reason)).toBe('routes.py:42 Reason');
+		expect(anchorShortPlace(doubt)).toBe('Story · Doubt');
+		expect(anchorShortPlace(chapterWhy)).toBe('images-kept · Why');
+		expect(anchorShortPlace(reason)).toBe('routes.py:42 · Reason');
 	});
 
 	it('is mentioned in a panel message by the block it is on', () => {

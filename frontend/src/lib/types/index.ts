@@ -134,8 +134,9 @@ export interface PickedLines {
 }
 
 /**
- * Where a comment is being written: on lines of a file, as a reply in a
- * thread, or over the comment that opened a thread.
+ * Where a comment is being written: on lines of a file, on a block of the
+ * story's words, as a reply in a thread, or over the comment that opened a
+ * thread.
  */
 export type WrittenAt =
 	| {
@@ -145,11 +146,19 @@ export type WrittenAt =
 			/** What the lines said when they were picked: the comment quotes them, and a suggestion starts from them. */
 			quote: string[];
 	  }
+	| {
+			kind: 'story';
+			block: StoryBlock;
+			/** What the block said when the reader asked about it: the comment quotes it. */
+			words: string;
+	  }
 	| { kind: 'reply'; thread: string }
 	| { kind: 'edit'; thread: string };
 
 /** A comment being written on lines of a file. */
 export type WrittenOnLines = Extract<WrittenAt, { kind: 'new' }>;
+/** A comment being written on a block of the story's words. */
+export type WrittenOnTheStory = Extract<WrittenAt, { kind: 'story' }>;
 
 /** A comment as the reader writes it, before it has an id and a place in time. */
 export interface NewComment {

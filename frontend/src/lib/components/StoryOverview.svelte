@@ -1,6 +1,9 @@
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
+	import { blockLabel, overviewLine, type OverviewBlock } from '$lib/anchors/story';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
-	import type { StoryHeld } from '$lib/types';
+	import type { OverviewText, StoryHeld } from '$lib/types';
+	import AskableBlock from './AskableBlock.svelte';
 	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
 	import StoryPart from './StoryPart.svelte';
@@ -11,6 +14,13 @@
 	}
 
 	let { held }: Props = $props();
+
+	// How the heading of each of the overview's three lines looks: what to doubt is a warning
+	const HEADING_LOOKS: Record<OverviewText, ClassValue> = {
+		task: 'cr-muted',
+		done: 'cr-muted',
+		doubt: 'font-semibold text-warning'
+	};
 
 	// What each list of the overview is headed by, in the order they are drawn
 	const OVERVIEW_LISTS = [
@@ -23,9 +33,20 @@
 	const listsSomething = $derived(OVERVIEW_LISTS.some((list) => overview[list.field].length > 0));
 </script>
 
+<!-- One of the overview's three lines, which the reader may ask about: what the story heads it with, then
+	its words. What to doubt is a warning, and says so in yellow -->
+{#snippet line(block: OverviewBlock, words: string, testId: string)}
+	<AskableBlock {block} {words} {testId}>
+		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list -->
+		<div class="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-4">
+			<span role="term" class={['pt-0.5 text-xs', HEADING_LOOKS[block.text]]}>{blockLabel(block)}</span>
+			<p role="definition" data-testid="block-words">{words}</p>
+		</div>
+	</AskableBlock>
+{/snippet}
+
 <!-- The story before its first chapter, one part of it: what the change is called, then the change in
-	short. The agent's voice carries its colour down the edge; what to doubt is a warning, and says so
-	in yellow -->
+	short. The agent's voice carries its colour down the edge -->
 <StoryPart partKey={OVERVIEW_PART} testId="story-overview" class="flex flex-col gap-8">
 	{#snippet head(heading)}
 		<StoryHead {held} {heading} />
@@ -33,16 +54,13 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<dl class="cr-agent-voice grid grid-cols-[4rem_minmax(0,1fr)] gap-x-4 gap-y-3 pl-5">
-			<dt class="cr-muted pt-0.5 text-xs">Task</dt>
-			<dd>{overview.task}</dd>
-			<dt class="cr-muted pt-0.5 text-xs">Done</dt>
-			<dd>{overview.done}</dd>
+		<div data-testid="story-in-short" class="cr-agent-voice flex flex-col">
+			{@render line(overviewLine('task'), overview.task, 'overview-task')}
+			{@render line(overviewLine('done'), overview.done, 'overview-done')}
 			{#if overview.doubt}
-				<dt class="pt-0.5 text-xs font-semibold text-warning">Doubt</dt>
-				<dd data-testid="story-doubt">{overview.doubt}</dd>
+				{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
 			{/if}
-		</dl>
+		</div>
 	</section>
 
 	{#if overview.diagram}

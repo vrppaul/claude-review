@@ -1,6 +1,7 @@
 /**
  * The review read as the story the agent told of it: every step a section of
- * its own, in the order the story tells them, then what no step tells.
+ * its own, in the order the story tells them, then what no step tells. The
+ * threads on the story's own words are drawn here alone, under their blocks.
  *
  * A story draws a file in pieces — a step's lines, and whatever of the file
  * no step tells — so a file may stand in several sections, and a line of it
@@ -14,11 +15,15 @@
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
+import { overviewLine } from '$lib/anchors/story';
 import type { FileLines } from '$lib/anchors/views';
 import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
+
+// The overview's three lines, in the order the story says them
+const OVERVIEW_LINES = (['task', 'done', 'doubt'] as const).map(overviewLine);
 
 // What a story held draws, by whose numbers its lines carry: only the review's own take a comment, and
 // only they carry threads
@@ -46,11 +51,15 @@ export class StoryReading implements ReadingView {
 		return this.#story.pieces.keys;
 	}
 
-	/** Down the story, piece by piece and row by row: only the threads a piece draws. */
+	/** Down the story: the threads on the overview's lines in the order it says them, then piece by piece and row by row, only those a piece draws. */
 	threadsInOrder(): Thread[] {
+		if (this.#story.held === null) return [];
 		const pieces = this.#story.pieces;
 		const numbering = this.#story.numbering;
-		return inDrawnOrder(this.#threads.onLines, (lines) => pieces.drawing(lines, numbering));
+		return [
+			...OVERVIEW_LINES.flatMap((block) => this.#threads.onBlock(block)),
+			...inDrawnOrder(this.#threads.onLines, (lines) => pieces.drawing(lines, numbering))
+		];
 	}
 
 	sectionOf(lines: FileLines): string | null {

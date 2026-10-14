@@ -933,11 +933,68 @@
  * the edge is each block's own.
  */
 .cr-agent-voice {
-	border-left: 2px solid var(--cr-agent);
+	border-left: var(--cr-voice-axis) solid var(--cr-agent);
 }
 /* Words about a change the agent did not make: read out of the code and the commits, so the edge is broken */
 .cr-agent-voice-reconstructed {
 	border-left-style: dashed;
+}
+
+/*
+ * A block of the agent's words in a story the reader may ask about.
+ * Pointed at, or holding the keyboard, it is banded whole — its heading and
+ * its words — back to the edge of the agent's voice, and offers "Ask about
+ * this", floating half over its top edge. Banded stronger while a thread or
+ * a comment being written hangs under it. Its room is the same either way,
+ * and so is the place of every word in it: only the band and the button
+ * come and go.
+ */
+.cr-askable {
+	position: relative;
+	margin-left: calc(-1 * var(--cr-voice-axis));
+	padding: 0.5rem 0.75rem 0.5rem calc(var(--cr-voice-axis) + var(--cr-voice-inset));
+	border-radius: 0 0.375rem 0.375rem 0;
+}
+.cr-askable:hover,
+.cr-askable:focus-within {
+	background: var(--cr-mark-band);
+	box-shadow: var(--cr-shadow-band-edge);
+}
+.cr-askable-held,
+.cr-askable-held:hover,
+.cr-askable-held:focus-within {
+	background: var(--cr-mark-band-held);
+	box-shadow: var(--cr-shadow-marked-edge);
+}
+/* Half its height over the block's top edge, near its far end: over the room between blocks, never over a word */
+.cr-ask {
+	position: absolute;
+	top: -0.9375rem;
+	right: 0.625rem;
+	z-index: var(--cr-layer-over-content);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: 1.75rem;
+	padding: 0 0.6875rem;
+	border: 1px solid var(--cr-mark-band-edge);
+	border-radius: 0.375rem;
+	background: var(--color-base-100);
+	color: var(--cr-mark-text);
+	font-size: 0.75rem;
+	font-weight: 600;
+	white-space: nowrap;
+	box-shadow: var(--cr-shadow-floating);
+	opacity: 0;
+}
+.cr-askable:hover > .cr-ask,
+.cr-askable:focus-within > .cr-ask {
+	opacity: 1;
+}
+.cr-ask:hover {
+	border-color: var(--cr-mark);
+	background: var(--cr-mark-tint);
+	color: var(--color-base-content);
 }
 
 /*

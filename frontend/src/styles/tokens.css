@@ -46,6 +46,14 @@
 	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
 
 	/*
+	 * The edge the agent's words in a story stand by, and how far a block of
+	 * them the reader may ask about stands in from it: its band reaches back
+	 * to the edge.
+	 */
+	--cr-voice-axis: 2px;
+	--cr-voice-inset: 1.25rem;
+
+	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
 	 * so as tall as its small buttons, half a rem above and below them, and
 	 * the line under it. What is read under it stands that far down.
@@ -77,6 +85,10 @@
 	--cr-shadow-current-node: 0 0 0 3px var(--cr-mark-chip);
 	/* A line inside the edge of a control that leads to what the agent brought and the reader has not read */
 	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
+	/* The edge of the band over a block of a story's words the reader points at, laid inside it */
+	--cr-shadow-band-edge: inset var(--cr-voice-axis) 0 0 var(--cr-mark-band-edge);
+	/* What lifts a control floating over words off them */
+	--cr-shadow-floating: 0 2px 8px rgb(0 0 0 / 0.25);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);
@@ -85,6 +97,13 @@
 	--cr-mark-chip-hover: color-mix(in srgb, var(--cr-mark) 28%, transparent);
 	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
 	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
+	/*
+	 * The band over a block of a story's words the reader points at, and its
+	 * edge; and the band while something they wrote hangs under the block
+	 */
+	--cr-mark-band: color-mix(in srgb, var(--cr-mark) 7%, transparent);
+	--cr-mark-band-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
+	--cr-mark-band-held: color-mix(in srgb, var(--cr-mark) 16%, transparent);
 	/* The agent's colour, at the strengths the mark uses for the same things */
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);

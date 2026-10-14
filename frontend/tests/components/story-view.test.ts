@@ -112,7 +112,7 @@ describe('a review read as its story', () => {
 
 		expect(within(overview).getByText('What was asked.')).toBeTruthy();
 		expect(within(overview).getByText('What was done.')).toBeTruthy();
-		expect(screen.queryByTestId('story-doubt')).toBeNull();
+		expect(screen.queryByTestId('overview-doubt')).toBeNull();
 	});
 
 	it('says what to doubt of the whole change, where the agent said', () => {
@@ -121,7 +121,8 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByTestId('story-doubt').textContent).toBe('Whether a.py is the place for them.');
+		const doubt = within(screen.getByTestId('overview-doubt')).getByTestId('block-words');
+		expect(doubt.textContent).toBe('Whether a.py is the place for them.');
 	});
 
 	it('tells every chapter in a row, each by its name', () => {

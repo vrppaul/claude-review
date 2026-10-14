@@ -7,15 +7,29 @@
  * page reloaded — with everything still in it.
  */
 
+import { blockKey } from '$lib/anchors/story';
 import type { KeptField } from '$lib/drafts/draft-shapes';
 import { ImageAttachments } from '$lib/review/image-attachments.svelte';
-import type { CommentSeverity, WrittenAt } from '$lib/types';
+import type { CommentSeverity, StoryBlock, WrittenAt } from '$lib/types';
 
 /** What a comment field is known by: where it is written. */
 export function fieldKey(at: WrittenAt): string {
-	if (at.kind !== 'new') return `${at.kind}:${at.thread}`;
-	const { side, startLine, endLine } = at.lines;
-	return `new:${at.file}:${side}:${startLine}-${endLine}`;
+	switch (at.kind) {
+		case 'new': {
+			const { side, startLine, endLine } = at.lines;
+			return `new:${at.file}:${side}:${startLine}-${endLine}`;
+		}
+		case 'story':
+			return blockFieldKey(at.block);
+		case 'reply':
+		case 'edit':
+			return `${at.kind}:${at.thread}`;
+	}
+}
+
+/** What the field a comment is written in on a block of the story is known by. */
+export function blockFieldKey(block: StoryBlock): string {
+	return `story:${blockKey(block)}`;
 }
 
 /**
