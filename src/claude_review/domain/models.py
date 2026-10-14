@@ -220,6 +220,11 @@ ChapterId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern
 
 # The rule a chapter's id is held to, for an id the review reads in a story rather than in an anchor
 CHAPTER_IDS: TypeAdapter[ChapterId] = TypeAdapter(ChapterId)
+# That rule in words, as a story refused for an id says it and the help of `story` does too
+CHAPTER_ID_RULE = (
+    f"A chapter's id is letters, digits, dots, dashes and underscores, {MAX_ID_LENGTH} at most:"
+    " a thread on what the chapter says names it by its id"
+)
 
 
 # What a file path a thread may name, or the agent may say, holds: no control

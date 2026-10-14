@@ -18,7 +18,7 @@ from collections.abc import Iterator
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import CHAPTER_IDS, FIRST_LINE, MAX_ID_LENGTH, LineSpan, runs_backwards, says_nothing
+from claude_review.domain.models import CHAPTER_ID_RULE, CHAPTER_IDS, FIRST_LINE, LineSpan, runs_backwards, says_nothing
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
 from claude_review.services.story_slices import PlacedFile
@@ -55,11 +55,6 @@ TOO_LONG = "is {length} characters long, and may be {limit} at most. {hint}"
 NO_CHAPTERS = "holds no chapter: a story tells at least one"
 NO_STEPS = "holds no step: a chapter shows at least one piece of the change"
 ID_REPEATED = "{chapter} is an earlier chapter's id as well: a link to it could mean either"
-# What a chapter's id may hold, as the help of `story` says it too
-CHAPTER_ID_RULE = (
-    f"A chapter's id is letters, digits, dots, dashes and underscores, {MAX_ID_LENGTH} at most:"
-    " a thread on what the chapter says names it by its id"
-)
 NOT_AN_ID = f"is no id. {CHAPTER_ID_RULE}"
 NO_SUCH_CHAPTER = "leads to chapter {chapter}, and the story has none by that id"
 BEFORE_FIRST_LINE = "starts at line {first}: a file's lines are numbered from {first_line}"

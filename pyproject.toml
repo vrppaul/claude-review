@@ -188,6 +188,21 @@ type = "forbidden"
 source_modules = ["claude_review.cli.agent_commands"]
 forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto"]
 
+[[tool.importlinter.contracts]]
+name = "An agent's command loads none of the review's work"
+type = "forbidden"
+# The review's state and its story are kept, checked and followed in the
+# process that serves it; an agent's command only sends and prints. Through
+# the story's wire models and the help of `story`, every command once loaded
+# seven modules of that work, which it never ran
+source_modules = ["claude_review.cli.agent_commands"]
+forbidden_modules = [
+    "claude_review.services.review",
+    "claude_review.services.story_checks",
+    "claude_review.services.story_telling",
+    "claude_review.services.anchor_service",
+]
+
 [tool.vulture]
 paths = ["src", "tests", "scripts"]
 min_confidence = 60

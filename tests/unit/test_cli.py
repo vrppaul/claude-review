@@ -17,7 +17,7 @@ from click.testing import CliRunner, Result
 import claude_review
 from claude_review.cli.main import main
 from claude_review.cli.story_help import GOOD_STORY
-from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
+from claude_review.domain.models import CHAPTER_ID_RULE, MAX_ID_LENGTH, MAX_QUOTE_LINES
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
@@ -25,7 +25,7 @@ from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_WAIT_SECONDS
 from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.place_words import NOT_LINES
-from claude_review.services.story_checks import CHAPTER_ID_RULE, document_faults
+from claude_review.services.story_checks import document_faults
 from tests.stories import as_the_agent_writes, step, story_of, without_field
 
 # What click exits with when a command is typed wrong, before it runs

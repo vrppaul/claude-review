@@ -28,7 +28,7 @@ was installed, the agent reads the advice of the version it writes for.
 
 from pathlib import Path
 
-from claude_review.domain.models import LineSpan
+from claude_review.domain.models import CHAPTER_ID_RULE, LineSpan
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
 from claude_review.presentation.wire.story import (
     ChapterInput,
@@ -38,7 +38,6 @@ from claude_review.presentation.wire.story import (
     StoryOverviewInput,
     StoryRequest,
 )
-from claude_review.services.story_checks import CHAPTER_ID_RULE
 
 # The chapters of the example, by the ids its overview and its diagram lead to them by
 ARRIVING = "paste-arrives"

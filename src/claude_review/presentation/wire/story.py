@@ -22,7 +22,6 @@ from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, LinesWritten, WireBool, WireModel
 from claude_review.presentation.wire.content import DiffFile
-from claude_review.services.review import review_story
 
 # The most of each thing one document may hold. A story with more is not a
 # story any more, and the request that carries one stays bounded; how much a
@@ -258,11 +257,10 @@ class StoryTakenResponse(WireModel):
     left_out: list[LeftOutOfFile]
 
     @classmethod
-    def summing_up(cls, held: review_story.StoryHeld) -> Self:
-        """A story the review has just taken, summed up for whoever told it."""
-        told = held.story
+    def summing_up(cls, told: story.ToldStory[story.FollowedStep], *, round_number: int) -> Self:
+        """A story the review has just taken, in the round it was told in, summed up for whoever told it."""
         return cls(
-            round=held.round,
+            round=round_number,
             chapters=len(told.chapters),
             steps=sum(len(chapter.steps) for chapter in told.chapters),
             left_out=[LeftOutOfFile(file=left.piece.path, changed_lines=left.changed_lines) for left in told.left_out],

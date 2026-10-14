@@ -14,9 +14,9 @@ from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import MAX_ID_LENGTH, LineSpan
+from claude_review.domain.models import CHAPTER_ID_RULE, MAX_ID_LENGTH, LineSpan
 from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
-from claude_review.services.story_checks import CHAPTER_ID_RULE, document_faults
+from claude_review.services.story_checks import document_faults
 from tests.stories import (
     IMAGE_SERVICE,
     IMAGE_STORE,
