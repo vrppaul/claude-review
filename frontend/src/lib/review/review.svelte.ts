@@ -302,14 +302,17 @@ export class Review {
 
 	/**
 	 * Whether the story view opens without the reader being asked first:
-	 * they turned stories on, or a story is held already, told by an agent of
-	 * its own accord and so paid for. Where neither holds, reading the review
+	 * they turned stories on; or a story is held already, told by an agent of
+	 * its own accord and so paid for; or one is on its way, asked for from
+	 * another page of this review, whose choice this page was never told.
+	 * Its wait, and the way to stop it, must be in reach wherever the header
+	 * says it is being written. Where none of these holds, reading the review
 	 * as its story means having one written, which spends the agent's tokens:
 	 * the reader is asked before that, and a review they open is read by its
 	 * files though they chose the story last.
 	 */
 	get storyViewOpens(): boolean {
-		return this.settings.current.stories || this.story.held !== null;
+		return this.settings.current.stories || this.story.held !== null || isAwaited(this.story.wait);
 	}
 
 	/**

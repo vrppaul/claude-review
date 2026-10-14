@@ -66,6 +66,14 @@ describe('a review opened by a reader who read the last one as its story', () =>
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 	});
 
+	it('opens as its story where one is on its way, though this page holds stories as off', () => {
+		havingChosenTheStoryLast();
+
+		drawn({ asking: TAKEN });
+
+		expect(screen.getByTestId('story-view')).toBeTruthy();
+	});
+
 	it('opens by its files where stories are off and no story is held: nothing was asked for', () => {
 		havingChosenTheStoryLast();
 
@@ -106,6 +114,32 @@ describe('Story pressed in the header', () => {
 
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-opt-in')).toBeNull();
+	});
+
+	it.each([
+		{ where: 'an agent is writing it', asking: TAKEN },
+		{ where: 'it waits for an agent to attach', asking: ASKED }
+	])(
+		'shows the wait for a story asked for elsewhere, where $where, though this page holds stories as off',
+		async ({ asking }) => {
+			const user = userEvent.setup();
+			drawn({ asking });
+
+			await user.click(screen.getByTestId('read-as-story'));
+
+			expect(screen.getByTestId('story-waiting')).toBeTruthy();
+			expect(screen.queryByTestId('story-opt-in')).toBeNull();
+		}
+	);
+
+	it('asks first where the story was stopped and stories are off: writing it again spends tokens', async () => {
+		const user = userEvent.setup();
+		drawn({ asking: STOPPED });
+
+		await user.click(screen.getByTestId('read-as-story'));
+
+		expect(screen.getByTestId('story-opt-in')).toBeTruthy();
+		expect(screen.getByTestId('diff-view')).toBeTruthy();
 	});
 });
 
