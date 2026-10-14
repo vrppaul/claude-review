@@ -32,6 +32,14 @@ export const ICONS = {
 		paths: ['M5.4 5.5a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0 -5.2 0', 'M3 13.5c.8-2.6 2.7-3.8 5-3.8s4.2 1.2 5 3.8'],
 		drawn: TRACED
 	},
+	// Rewriting what was said
+	pencil: { viewBox: '0 0 16 16', paths: ['M10.5 3 13 5.5 6 12.5H3.5V10z'], drawn: { kind: 'traced', width: 1.4 } },
+	// Deleting it
+	trash: {
+		viewBox: '0 0 16 16',
+		paths: ['M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5'],
+		drawn: { kind: 'traced', width: 1.4 }
+	},
 	// A stack of files: the change read file by file
 	files: { viewBox: '0 0 16 16', paths: ['M5.5 2.5h4.5l3 3v8H5.5z', 'M10 2.5v3h3', 'M3 5v9.5h7'], drawn: TRACED },
 	// Points down; turned for up, or to say something is folded

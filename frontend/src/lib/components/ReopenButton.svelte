@@ -16,5 +16,5 @@
 	}
 </script>
 
-<!-- Taking a settled thread up again, from its folded line or its open heading alike -->
-<button type="button" data-testid="reopen-thread" class="btn btn-ghost btn-xs" onclick={reopen}> Reopen </button>
+<!-- Taking a settled thread up again, from its folded line or the head of its first turn alike -->
+<button type="button" data-testid="reopen-thread" class="cr-thread-action" onclick={reopen}>Reopen</button>

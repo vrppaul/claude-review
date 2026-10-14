@@ -12,7 +12,7 @@ type Channels = Paint['channels'];
  * draws — the token named for the words, on the grounds those words sit on.
  */
 const DRAWN: { said: string; text: string; grounds: string[] }[] = [
-	{ said: "a comment's place, on its thread's card", text: '--cr-mark-text', grounds: ['--color-base-200'] },
+	{ said: 'what a thread asks for, on its card', text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a comment's place, over the field being written", text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a marked row's number", text: '--cr-mark-text', grounds: ['--color-base-100', '--cr-mark-tint'] },
 	{
@@ -40,7 +40,7 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	},
 	{ said: "faint words, on a thread's card", text: '--cr-faint', grounds: ['--color-base-200'] },
 	{
-		said: "the agent's name, and its place on the card of a thread it raised",
+		said: "the agent's name, and what a thread it raised asks for, on its card",
 		text: '--cr-agent',
 		grounds: ['--color-base-200']
 	},

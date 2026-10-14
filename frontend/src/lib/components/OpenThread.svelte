@@ -1,13 +1,12 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
-	import { anchorQuoteReads, anchorWrittenAgainst } from '$lib/anchors/views';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
+	import { PLACEHOLDERS } from './placeholders';
 	import ThreadConversation from './ThreadConversation.svelte';
-	import ThreadHeading from './ThreadHeading.svelte';
 	import ThreadTurn from './ThreadTurn.svelte';
 
 	interface Props {
@@ -33,9 +32,6 @@
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour
 	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
-	// What it was written against, kept for when the place it hangs on is gone, and how that reads
-	const writtenAgainst = $derived(anchorWrittenAgainst(thread.anchor));
-	const quoteReads = $derived(anchorQuoteReads(thread.anchor));
 
 	/** Looking at the thread — clicking in it, or moving the keyboard into it — is what makes its answer read. */
 	function markRead() {
@@ -74,32 +70,11 @@
 
 <div
 	data-testid="thread-card"
-	class={[
-		'cr-thread-card group',
-		thread.anchor.outdated && 'cr-stale',
-		sent && !raised && 'cr-sent',
-		raised && 'cr-raised'
-	]}
+	class={['cr-thread-card', thread.anchor.outdated && 'cr-stale', sent && !raised && 'cr-sent', raised && 'cr-raised']}
 	role="presentation"
 	onclick={markRead}
 	onfocusin={markRead}
 >
-	<ThreadHeading {thread} />
-
-	{#if thread.anchor.outdated && writtenAgainst.length > 0}
-		<!-- One that has lost its place keeps its own copy of what was there -->
-		<div data-testid="stale-quote" class="cr-stale-quote rounded-r px-3 py-2">
-			<p class="cr-muted mb-1 text-xs">what it was written against</p>
-			{#each writtenAgainst as line, index (index)}
-				{#if quoteReads === 'code'}
-					<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
-				{:else}
-					<p class="cr-muted">{line}</p>
-				{/if}
-			{/each}
-		</div>
-	{/if}
-
 	<ThreadConversation {thread} />
 
 	{#if askable || failed}
@@ -140,7 +115,7 @@
 				class="cr-reply-field"
 				onclick={() => writing.openReply(thread.id)}
 			>
-				Reply…
+				{PLACEHOLDERS.reply}
 			</button>
 		{/if}
 	</ThreadTurn>

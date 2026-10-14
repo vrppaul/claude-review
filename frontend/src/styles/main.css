@@ -651,8 +651,8 @@
 	box-shadow: var(--cr-shadow-avatar-ring);
 }
 .cr-avatar > svg {
-	width: 0.8125rem;
-	height: 0.8125rem;
+	width: var(--cr-thread-icon-size);
+	height: var(--cr-thread-icon-size);
 }
 .cr-turn-reader .cr-avatar {
 	background: var(--cr-avatar-reader);
@@ -690,6 +690,39 @@
 }
 .cr-turn-agent .cr-turn-name {
 	color: var(--cr-agent);
+}
+/*
+ * What can be done to a thread, at the far end of the head of its first
+ * turn, and Reopen on its folded line: small buttons on the page's own
+ * ground, in the edge of a pane; an icon alone where the icon says it, its
+ * name kept for whoever cannot see it.
+ */
+.cr-thread-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: var(--cr-thread-action-height);
+	padding: 0 0.625rem;
+	border: 1px solid var(--cr-popover-edge);
+	border-radius: 0.375rem;
+	background: var(--color-base-100);
+	color: var(--color-base-content);
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+.cr-thread-action:hover {
+	border-color: var(--cr-node-edge);
+	background: var(--color-base-300);
+}
+.cr-thread-action-icon {
+	justify-content: center;
+	width: var(--cr-thread-action-height);
+	padding: 0;
+	color: var(--cr-muted);
+}
+.cr-thread-action-icon > svg {
+	width: var(--cr-thread-icon-size);
+	height: var(--cr-thread-icon-size);
 }
 /* Where a reply is begun: drawn as the field it opens, before anything is written in it */
 .cr-reply-field {
@@ -831,15 +864,6 @@
 	background: var(--cr-add-tint);
 	border-left-color: var(--cr-add-edge);
 	color: var(--cr-add-text);
-}
-
-/*
- * A thread that has gone out with a round gives up the mark colour where it
- * says its place: what is still in the reader's hands is what the colour is
- * for.
- */
-.cr-sent .cr-comment-ref {
-	color: var(--cr-muted);
 }
 
 /* Folded by hand: one line, and the first words of what was said */

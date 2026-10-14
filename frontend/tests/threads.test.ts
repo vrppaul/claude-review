@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { flushSync } from 'svelte';
 import { AGENT_STOPPED_LISTENING } from '$lib/components/agent-waits';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import CommentThread from '$lib/components/CommentThread.svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import { addedLine, contextLine, diffFile, hunk } from './diff';
 import { said } from './elements';
@@ -395,6 +396,57 @@ describe('a thread is a conversation', () => {
 		expect(getByTestId('resolved-thread')).toBeTruthy();
 		expect(review.threads.all[0].resolved).toBe(true);
 		expect(id).toBe(review.threads.all[0].id);
+	});
+});
+
+describe('the head of the first turn of a thread', () => {
+	beforeEach(() => {
+		review = openReview({ files: [file] });
+	});
+
+	/** The first turn of the review's first thread, drawn open as the page draws it. */
+	function firstTurn() {
+		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+		return getByTestId('thread-question');
+	}
+
+	it('holds what can be done to the thread: resolve, edit, delete and fold', () => {
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const opening = within(firstTurn());
+
+		expect(opening.getByTestId('resolve-comment')).toBeTruthy();
+		expect(opening.getByRole('button', { name: 'Edit' })).toBe(opening.getByTestId('edit-comment'));
+		expect(opening.getByRole('button', { name: 'Delete' })).toBe(opening.getByTestId('delete-comment'));
+		expect(opening.getByTestId('fold-comment')).toBeTruthy();
+	});
+
+	it('names the place the thread hangs on after how long ago it was said', () => {
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		expect(said(firstTurn())).toMatch(/^You \d+s ago \+ Line 2 /);
+	});
+
+	it('says what the thread asks for, that it is outdated, and the round it went out in', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.add({ ...onTheAddedLine('Why 3?'), severity: 'question', anchor: { ...anchor, outdated: true } });
+		review.threads.markSent(review.threads.carry(review.threads.all), 1);
+
+		const opening = within(firstTurn());
+
+		expect(said(opening.getByTestId('comment-severity'))).toBe('question');
+		expect(opening.getByTestId('comment-outdated')).toBeTruthy();
+		expect(said(opening.getByTestId('comment-sent'))).toBe('sent · round 1');
+	});
+
+	it('is followed, on an outdated thread, by what it was written against, and then by its words', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.add({ ...onTheAddedLine('Why 3?'), anchor: { ...anchor, outdated: true } });
+
+		const opening = within(firstTurn());
+
+		const words = opening.getByTestId('markdown-content');
+		expect(opening.getByTestId('stale-quote').compareDocumentPosition(words)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 	});
 });
 

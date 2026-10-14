@@ -9,5 +9,6 @@
 	let { anchor }: Props = $props();
 </script>
 
-<!-- The block of the story's words the thread hangs on, by what the story heads it with -->
-<span data-testid="comment-block-label" class="cr-comment-ref text-xs">{anchorLabel(anchor)}</span>
+<!-- The block of the story's words the thread hangs on, by what the story heads it with, as quietly as the
+	head it is said in says the rest -->
+<span data-testid="comment-block-label">{anchorLabel(anchor)}</span>

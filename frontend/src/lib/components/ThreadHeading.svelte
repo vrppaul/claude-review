@@ -9,13 +9,17 @@
 	import { headingOf } from './anchor-headings';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FoldToggle from './FoldToggle.svelte';
+	import Icon from './Icon.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
 
-	// What is asked before a thread is deleted, and its two answers
+	// What is asked before a thread is deleted, and its two answers; the first also names the button, drawn as
+	// a bin, that asks it
 	const DELETE_QUESTION = 'Delete this comment?';
 	const DELETE = 'Delete';
 	const KEEP_IT = 'Keep it';
+	// The name of the button that rewrites the comment, drawn as a pencil
+	const EDIT = 'Edit';
 
 	interface Props {
 		thread: Thread;
@@ -70,59 +74,65 @@
 	}
 </script>
 
-<!-- What the thread hangs on and what state it is in, and what can be done to it -->
-<div class="flex items-center gap-2">
-	<FoldToggle folded={false} subject="this thread" testId="fold-comment" onToggle={foldAway} />
-	<AnchorHeading anchor={thread.anchor} />
-	{#if thread.severity !== 'note'}
-		<span data-testid="comment-severity" class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
-	{/if}
-	{#if thread.anchor.outdated}
-		<span data-testid="comment-outdated" class="cr-tag cr-muted">outdated</span>
-	{/if}
+<!-- The rest of the head of the thread's first turn, after who said it and when: what the thread hangs on and
+	what state it is in, then, at the far end, what can be done to it -->
+<AnchorHeading anchor={thread.anchor} />
+{#if thread.severity !== 'note'}
+	<span data-testid="comment-severity" class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
+{/if}
+{#if thread.anchor.outdated}
+	<span data-testid="comment-outdated" class="cr-tag cr-muted">outdated</span>
+{/if}
+{#if thread.resolved}
+	<span data-testid="comment-resolved" class="cr-tag cr-muted">resolved</span>
+{/if}
+{#if unread}
+	<NewReplyMark />
+{/if}
+<span class="flex-1"></span>
+{#if raised}
+	<span data-testid="comment-raised" class="cr-tag cr-raised-tag">from the agent</span>
+{:else if sentIn !== undefined}
+	<span data-testid="comment-sent">sent · round {sentIn}</span>
+{/if}
+<span data-testid="thread-actions" class="flex items-center gap-1">
 	{#if thread.resolved}
-		<span data-testid="comment-resolved" class="cr-tag cr-muted">resolved</span>
+		<ReopenButton {thread} />
+	{:else}
+		<!-- Settling a thread folds it away; it can still be opened and read -->
+		<button type="button" data-testid="resolve-comment" class="cr-thread-action" onclick={resolve}>
+			<Icon name="check" class="h-3 w-3 text-(--cr-done)" />
+			Resolve
+		</button>
 	{/if}
-	{#if unread}
-		<NewReplyMark />
+	{#if !raised}
+		<button
+			type="button"
+			data-testid="edit-comment"
+			class="cr-thread-action cr-thread-action-icon"
+			aria-label={EDIT}
+			onclick={() => review.threads.writing.openEdit(thread)}
+		>
+			<Icon name="pencil" />
+		</button>
+		<button
+			type="button"
+			data-testid="delete-comment"
+			class="cr-thread-action cr-thread-action-icon"
+			aria-label={DELETE}
+			onclick={() => (askingToDelete = true)}
+		>
+			<Icon name="trash" />
+		</button>
 	{/if}
-	<div class="flex-1"></div>
-	{#if raised}
-		<span data-testid="comment-raised" class="cr-tag cr-raised-tag">from the agent</span>
-	{:else if sentIn !== undefined}
-		<span data-testid="comment-sent" class="cr-faint text-xs">sent · round {sentIn}</span>
-	{/if}
-	<div class="flex gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-		{#if !raised}
-			<button
-				type="button"
-				data-testid="edit-comment"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.threads.writing.openEdit(thread)}
-			>
-				Edit
-			</button>
-		{/if}
-		{#if thread.resolved}
-			<ReopenButton {thread} />
-		{:else}
-			<!-- Settling a thread folds it away; it can still be opened and read -->
-			<button type="button" data-testid="resolve-comment" class="btn btn-ghost btn-xs" onclick={resolve}>
-				Resolve
-			</button>
-		{/if}
-		{#if !raised}
-			<button
-				type="button"
-				data-testid="delete-comment"
-				class="btn btn-ghost btn-xs hover:text-error"
-				onclick={() => (askingToDelete = true)}
-			>
-				Delete
-			</button>
-		{/if}
-	</div>
-</div>
+	<FoldToggle
+		folded={false}
+		subject="this thread"
+		testId="fold-comment"
+		class="cr-thread-action cr-thread-action-icon"
+		onToggle={foldAway}
+	/>
+</span>
 {#if askingToDelete}
 	<ConfirmDialog
 		question={DELETE_QUESTION}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentSeverity, WrittenAt } from '$lib/types';
+	import type { CommentSeverity } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
@@ -7,6 +7,7 @@
 	import AttachedImages from './AttachedImages.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
+	import { PLACEHOLDERS } from './placeholders';
 
 	// What is asked before words written in the field are dropped, and its two answers
 	const DISCARD_QUESTION = 'Discard this comment?';
@@ -16,14 +17,6 @@
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
 	// What a field with no place said above it is called: a reply, inside the thread it answers
 	const REPLY = 'Reply';
-	// What an empty field says, by what is being written in it: a reply reads as the field the thread
-	// offers it in, "Reply…", and a comment on the story's words as the offer that opened it
-	const PLACEHOLDERS: Record<WrittenAt['kind'], string> = {
-		new: 'What should change here?',
-		story: 'Ask about this…',
-		edit: 'What should change here?',
-		reply: 'Reply…'
-	};
 	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
 		{ value: 'note', label: 'Note' },
 		{ value: 'question', label: 'Question' },

@@ -19,7 +19,8 @@
 	const side = $derived(SIDES[anchor.side]);
 </script>
 
+<!-- Said in the head the thread hangs it in, as quietly as the head says the rest -->
 {#if review.mode === 'diff'}
-	<span data-testid="comment-side" class="font-mono text-xs {side.class}" title={side.title}>{side.sign}</span>
+	<span data-testid="comment-side" class="font-mono {side.class}" title={side.title}>{side.sign}</span>
 {/if}
-<span data-testid="comment-line-label" class="cr-comment-ref font-mono text-xs">{anchorLabel(anchor)}</span>
+<span data-testid="comment-line-label" class="font-mono">{anchorLabel(anchor)}</span>

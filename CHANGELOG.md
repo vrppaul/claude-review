@@ -93,7 +93,13 @@
   "Agent", and how long ago, "2m ago" or "answered 40s ago", the avatars
   joined down the card by a thin line. A comment nobody has answered says
   who wrote it too; an answer still awaited is the agent's turn; the last
-  turn is the field to reply in, "Reply…".
+  turn is the field to reply in, "Reply…". The head of the first turn
+  says, after who and when, the place the thread hangs on, quietly, what
+  it asks for, whether it is outdated, resolved or has a new reply, and
+  "sent · round N" or "from the agent"; at its far end, always at full
+  strength, Resolve with a tick, then a pencil to edit, a bin to delete
+  and a chevron to fold. Under that head an outdated thread shows what it
+  was written against, then its words.
 - **A story's chapter goes by an id a thread can name.** `story` refuses a
   chapter's id that holds anything but letters, digits, dots, dashes and
   underscores, or runs past 200 of them, at `chapters.N.id`, and `story
