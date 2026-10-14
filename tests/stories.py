@@ -359,12 +359,15 @@ ASKED_AT = 1_791_000_000_000
 
 
 async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
-    """The story of the first line told of the first take of a change, then followed onto each take after it, in the second round."""
+    """The story of the first line told of the first take of a change, then followed onto each take after it.
+
+    Each later take is taken in a round of its own: the second, then the third, and so on.
+    """
     story = ReviewStory(FixedClock(ASKED_AT))
     [told_of, *after] = takes
     change = ReviewContent.opening_on(told_of)
     await story.tell(THE_FIRST_LINE, change, round_number=FIRST_ROUND)
-    for files in after:
+    for round_number, files in enumerate(after, start=SECOND_ROUND):
         change = change.taken_again(files, frozenset())
-        await story.follow(change, round_number=SECOND_ROUND)
+        await story.follow(change, round_number=round_number)
     return story

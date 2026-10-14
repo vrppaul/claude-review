@@ -97,8 +97,9 @@
   `GET /api/story`, and what the round added that no step tells is left out
   beside it. The story is always followed from the story as told, so code
   put back reads as told again. It is still the story of the round it was
-  told in; `moved_on` says the round the code moved on in, and how many
-  changed lines no step told when it was told. The page reads the story
+  told in; `moved_on` says the round a take first found the code moved on
+  in, which later takes keep while it stays so, and how many changed lines
+  no step told when it was told. The page reads the story
   again after the diff, keeping what was read of it: its lines are the
   code under review again, and take comments. "The code has changed since
   this story was told" is said only of a story the page could not read

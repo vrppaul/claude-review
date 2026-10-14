@@ -34,7 +34,8 @@ class CodeMovedOn(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    # The round the diff that found it was taken again in
+    # The round of the take that first found it so: a later take that finds
+    # it still so keeps it
     round: int = Field(ge=FIRST_ROUND)
     # How many lines the change added or removed that no step told when the
     # story was told: said beside how many no step tells now
@@ -55,6 +56,18 @@ class StoryHeld(BaseModel):
     moved_on: CodeMovedOn | None
 
 
+class _StoryKept(BaseModel):
+    """A story told, kept both ways at once: as it was told, and as it is held on the take on screen."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # What every take after the one it was told of follows it from: its
+    # pieces are what each step was told with
+    told: ToldStory
+    # The story told until the diff is taken again; followed onto each take after
+    held: StoryHeld
+
+
 class ReviewStory:
     """The story told of the review's change, the last told in place of any before, and the asking for one until then.
 
@@ -65,10 +78,8 @@ class ReviewStory:
 
     def __init__(self, clock: Clock) -> None:
         self._clock = clock
-        # As it was told, on the take it was told of: what every take after it follows it from
-        self._told: StoryHeld | None = None
-        # On the take on screen; the story told until the diff is taken again
-        self._held: StoryHeld | None = None
+        # None while nobody has told one
+        self._kept: _StoryKept | None = None
         # From the reader's request until a story is told; None while nothing is asked
         self._asking: StoryAsking | None = None
         # Stories that arrive together are told one after another, as they
@@ -79,7 +90,7 @@ class ReviewStory:
     @property
     def held(self) -> StoryHeld | None:
         """The story held, on the take of the change on screen: None while nobody has told one."""
-        return self._held
+        return None if self._kept is None else self._kept.held
 
     @property
     def asking(self) -> StoryAsking | None:
@@ -93,7 +104,8 @@ class ReviewStory:
         then it is asked for again, to be told of the code as it stands.
         Asked again after the reader stopped it, the asking begins anew.
         """
-        if (self._held is not None and self._held.moved_on is None) or self._awaited is not None:
+        held = self.held
+        if (held is not None and held.moved_on is None) or self._awaited is not None:
             return None
         self._asking = StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False)
         return self._asking
@@ -128,9 +140,10 @@ class ReviewStory:
         """
         async with self._telling:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
-            self._told = self._held = StoryHeld(story=told, round=round_number, take=change.take, moved_on=None)
+            held = StoryHeld(story=told, round=round_number, take=change.take, moved_on=None)
+            self._kept = _StoryKept(told=told, held=held)
             self._asking = None
-            return self._held
+            return held
 
     async def follow(self, change: ReviewContent, *, round_number: int) -> None:
         """Follow the story told onto a later take of the change, taken again in this round; with none told, nothing.
@@ -139,20 +152,21 @@ class ReviewStory:
         story told while the diff was taken again is followed once it is held.
         """
         async with self._telling:
-            told = self._told
-            if told is None:
+            kept = self._kept
+            if kept is None:
                 return
-            followed = await asyncio.to_thread(story_telling.follow, told.story, change.files)
-            self._held = StoryHeld(
+            followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files)
+            held = StoryHeld(
                 story=followed,
-                round=told.round,
+                round=kept.held.round,
                 take=change.take,
-                moved_on=_moved_on(told.story, followed, round_number=round_number),
+                moved_on=_moved_on(kept.told, followed, moved_on_before=kept.held.moved_on, round_number=round_number),
             )
+            self._kept = _StoryKept(told=kept.told, held=held)
 
     def went_stale(self) -> StoryWentStale | None:
         """What went stale of the story held, as it stands now: None while it is current, or none is held."""
-        held = self._held
+        held = self.held
         if held is None or held.moved_on is None:
             return None
         return StoryWentStale(
@@ -174,17 +188,22 @@ class ReviewStory:
         return self._asking
 
 
-def _moved_on(told: ToldStory, followed: ToldStory, *, round_number: int) -> CodeMovedOn | None:
+def _moved_on(
+    told: ToldStory, followed: ToldStory, *, moved_on_before: CodeMovedOn | None, round_number: int
+) -> CodeMovedOn | None:
     """That the round's work moved the code on under the story, if it did: a step changed, or more is left out.
 
     Fewer lines left out than when it was told is no reason: what the round
-    took out of the change leaves the story as true as it was.
+    took out of the change leaves the story as true as it was. It moved on
+    in the round a take first found it so: the take before says which, where
+    it left the story moved on too.
     """
     left_out_when_told = _changed_lines_left_out(told)
     step_changed = any(step.changed_since_told for chapter in followed.chapters for step in chapter.steps)
     if not step_changed and _changed_lines_left_out(followed) <= left_out_when_told:
         return None
-    return CodeMovedOn(round=round_number, left_out_when_told=left_out_when_told)
+    first_round = round_number if moved_on_before is None else moved_on_before.round
+    return CodeMovedOn(round=first_round, left_out_when_told=left_out_when_told)
 
 
 def _changed_lines_left_out(story: ToldStory) -> int:

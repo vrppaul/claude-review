@@ -47,6 +47,8 @@ OLDER_FILE = "older.py"
 NEWER_FILE = "newer.py"
 # Which staging is the first retake's: the opening's comes before it
 FIRST_RETAKES_STAGING = 1
+# The round a story's fourth take is taken in, each take after the first in a round of its own
+FOURTH_ROUND = SECOND_ROUND + 2
 
 
 def _diff_adding(path: str) -> str:
@@ -222,6 +224,23 @@ async def test_a_story_more_is_left_out_of_says_the_round_the_code_moved_on_in_a
 
     assert held is not None
     assert held.moved_on == CodeMovedOn(round=SECOND_ROUND, left_out_when_told=1)
+
+
+async def test_a_story_the_code_stays_moved_on_under_says_the_round_it_first_moved_on_in() -> None:
+    """Taken again in a later round with nothing more changed under it, it moved on when it first did."""
+    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN, FIRST_REWRITTEN)).held
+
+    assert held is not None
+    assert held.moved_on is not None
+    assert held.moved_on.round == SECOND_ROUND
+
+
+async def test_a_story_current_again_then_moved_on_again_says_the_round_it_moved_on_in_the_second_time() -> None:
+    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN, TOLD_OF, FIRST_REWRITTEN)).held
+
+    assert held is not None
+    assert held.moved_on is not None
+    assert held.moved_on.round == FOURTH_ROUND
 
 
 async def test_a_story_whose_step_changed_has_moved_on() -> None:
