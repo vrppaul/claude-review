@@ -1,21 +1,25 @@
 /**
  * The review read as the story the agent told of it: every step a section of
  * its own, in the order the story tells them, then what no step tells. The
- * threads on the story's own words are drawn here alone, under their blocks.
+ * threads on the story's own words are drawn here alone: under their blocks,
+ * and at its head where the story held has no such block, which a story
+ * told before it had.
  *
  * A story draws a file in pieces — a step's lines, and whatever of the file
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
  * thread on a line no piece shows is not drawn here at all; the files,
  * read against the review's own base, draw every thread. Nor is any thread
- * drawn in a story told of another take of the change than the page reads:
- * its lines are numbered as that take, and a thread hangs on a line of the
- * take on screen.
+ * on lines drawn in a story told of another take of the change than the
+ * page reads: its lines are numbered as that take, and a thread hangs on a
+ * line of the take on screen.
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
 import {
+	askableReason,
+	CHAPTER_TEXTS_IN_ORDER,
 	chapterText,
 	OVERVIEW_LINES_IN_ORDER,
 	OVERVIEW_LISTS_IN_ORDER,
@@ -28,13 +32,24 @@ import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView }
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { ChapterListed } from '$lib/review/story-contents';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { DiffFile, Thread, ToldStory } from '$lib/types';
+import type { DiffFile, StoryBlock, Thread, ToldStory } from '$lib/types';
 
-/** The threads on the overview's words, in the order it says them: its three lines, then each of its lists. */
+/**
+ * The threads on a block of the story's words, where the story says
+ * something there: a text it left out, a doubt or a reason, is no block,
+ * and draws none.
+ */
+function threadsOnWordsSaid(words: string | null, block: StoryBlock, threads: Threads): Thread[] {
+	return words === null ? [] : threads.onBlock(block);
+}
+
+/** The threads on the overview's words, in the order it says them: its lines it says, then each of its lists. */
 export function threadsOnTheOverview(overview: ToldStory['overview'], threads: Threads): Thread[] {
-	const lines = OVERVIEW_LINES_IN_ORDER.map(overviewLine);
 	const items = OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
-	return [...lines, ...items].flatMap((block) => threads.onBlock(block));
+	return [
+		...OVERVIEW_LINES_IN_ORDER.flatMap((text) => threadsOnWordsSaid(overview[text], overviewLine(text), threads)),
+		...items.flatMap((block) => threads.onBlock(block))
+	];
 }
 
 /**
@@ -43,14 +58,43 @@ export function threadsOnTheOverview(overview: ToldStory['overview'], threads: T
  * step on its reason and down the rows of its piece.
  */
 export function threadsInTheChapter(chapter: ChapterListed, story: ReviewStory, threads: Threads): Thread[] {
-	const { id } = chapter.told;
+	const { told } = chapter;
 	return [
-		...threads.onBlock(chapterText(id, 'why')),
-		...threads.onBlock(chapterText(id, 'doubt')),
-		...chapter.steps.flatMap(({ told, section }) => [
-			...threads.onBlock(stepReason(told.file, told.lines.first)),
-			...threadsOnThePiece(section, told.piece, story, threads)
+		...CHAPTER_TEXTS_IN_ORDER.flatMap((text) => threadsOnWordsSaid(told[text], chapterText(told.id, text), threads)),
+		...chapter.steps.flatMap((step) => [
+			...threadsOnWordsSaid(askableReason(step.told), stepReason(step.told.file, step.told.lines.first), threads),
+			...threadsOnThePiece(step.section, step.told.piece, story, threads)
 		])
+	];
+}
+
+/**
+ * The threads on the story's words that no block of the story held draws,
+ * in the order they were written: each on a block a story told before it
+ * had, and it has not. They stand at the head of the story.
+ */
+export function threadsOffTheStory(story: ReviewStory, threads: Threads): Thread[] {
+	return offTheStoryAmong(threadsPlaced(story, threads), threads);
+}
+
+/** The threads on the story's words that are none of those placed under what they hang on. */
+function offTheStoryAmong(placed: readonly Thread[], threads: Threads): Thread[] {
+	const drawnUnderTheirPlace = new Set(placed);
+	return threads.onTheStory.flatMap(({ thread }) => (drawnUnderTheirPlace.has(thread) ? [] : [thread]));
+}
+
+/**
+ * The threads the story held draws under what they hang on, part by part
+ * down it: the overview's, each chapter's, then those on what no step
+ * tells. None while no story is held.
+ */
+function threadsPlaced(story: ReviewStory, threads: Threads): Thread[] {
+	const held = story.held;
+	if (held === null) return [];
+	return [
+		...threadsOnTheOverview(held.story.overview, threads),
+		...story.contents.chapters.flatMap((chapter) => threadsInTheChapter(chapter, story, threads)),
+		...story.contents.leftOut.flatMap((left) => threadsOnThePiece(left.section, left.told.piece, story, threads))
 	];
 }
 
@@ -92,18 +136,15 @@ export class StoryReading implements ReadingView {
 		return this.#story.pieces.keys;
 	}
 
-	/** Down the story, part by part: the overview's, each chapter's, then those on what no step tells. */
+	/**
+	 * Down the story, from its head: those on words it says nowhere, then
+	 * part by part, the overview's, each chapter's, and those on what no step
+	 * tells. None until a story is told.
+	 */
 	threadsInOrder(): Thread[] {
-		const held = this.#story.held;
-		if (held === null) return [];
-		const contents = this.#story.contents;
-		return [
-			...threadsOnTheOverview(held.story.overview, this.#threads),
-			...contents.chapters.flatMap((chapter) => threadsInTheChapter(chapter, this.#story, this.#threads)),
-			...contents.leftOut.flatMap((left) =>
-				threadsOnThePiece(left.section, left.told.piece, this.#story, this.#threads)
-			)
-		];
+		if (this.#story.held === null) return [];
+		const placed = threadsPlaced(this.#story, this.#threads);
+		return [...offTheStoryAmong(placed, this.#threads), ...placed];
 	}
 
 	sectionOf(lines: FileLines): string | null {

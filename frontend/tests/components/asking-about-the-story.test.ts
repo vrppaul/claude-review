@@ -1,10 +1,12 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import { storyAnchor } from '$lib/anchors/story';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
+import { storyComment } from '../new-comment';
 import { AGENT_ATTACHED, openReview } from '../review';
 import { storyHeld, toldChapter, toldStep, toldStory } from '../story';
 
@@ -152,5 +154,23 @@ describe("the overview's three lines", () => {
 
 		expect(screen.queryByTestId('comment-box')).toBeNull();
 		expect(review.threads.all).toEqual([]);
+	});
+});
+
+describe('a story told again', () => {
+	it('stands a thread on words it says nowhere at its head, saying why, and under no block', () => {
+		// The story told now says nothing to doubt: the thread was on what the story before said
+		review = openReview({ files, story: storyHeld(), facts: AGENT_ATTACHED });
+		const lost = { ...storyAnchor({ at: 'overview', text: 'doubt' }, DOUBT), outdated: true };
+		review.threads.add({ ...storyComment(lost.block, 'Is it checked at all?'), anchor: lost });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const head = screen.getByTestId('threads-off-their-lines');
+		expect(head.textContent).toContain('1 thread on words the story no longer says');
+		expect(within(head).getByTestId('comment-thread').textContent).toContain('Is it checked at all?');
+		expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+		const overview = screen.getByTestId('story-overview');
+		expect(head.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 });

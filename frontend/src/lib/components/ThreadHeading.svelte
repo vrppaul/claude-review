@@ -3,6 +3,7 @@
 	import { blockKey } from '$lib/anchors/story';
 	import { threadPlaceOf } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
@@ -46,7 +47,11 @@
 		review.sections.keyboardToThread(thread.id);
 	}
 
-	/** Delete the thread; the keyboard goes back to the line it hung under, or to what offered the block it hung on. */
+	/**
+	 * Delete the thread; the keyboard goes back to the line it hung under, or
+	 * to what offered the block it hung on, or, for a block the story no
+	 * longer draws, to the head of the story the thread stood at.
+	 */
 	function remove() {
 		const place = threadPlaceOf(thread.anchor);
 		review.threads.remove(thread.id);
@@ -57,7 +62,9 @@
 				break;
 			}
 			case 'story':
+				// Each gives the keyboard only where it is still on nothing, in the order asked: the block first
 				review.sections.keyboardToBlock(blockKey(place.block));
+				review.parts.keyboardToHeadOf(OVERVIEW_PART);
 				break;
 		}
 	}

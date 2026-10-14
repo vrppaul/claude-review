@@ -2,18 +2,28 @@
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
+	import { threadsOffTheStory } from '$lib/review/story-reading';
+	import type { CountedWords } from '$lib/utils/words';
 	import ChapterBar from './ChapterBar.svelte';
 	import StoryChapter from './StoryChapter.svelte';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
 	import StoryOverview from './StoryOverview.svelte';
 	import StoryWaiting from './StoryWaiting.svelte';
+	import UnplacedThreads from './UnplacedThreads.svelte';
+
+	// Why a thread stands at the head of the story rather than under the words it was written on
+	const OFF_THE_STORY: CountedWords = {
+		one: 'thread on words the story no longer says',
+		many: 'threads on words the story no longer says'
+	};
 
 	const review = useReview();
 
 	// What stands here: the story the review holds, or what the reader waits on while it holds none
 	const drawn = $derived(review.story.storyOrWait);
 	const contents = $derived(review.story.contents);
+	const offTheStory = $derived(threadsOffTheStory(review.story, review.threads));
 
 	let container: HTMLElement | undefined = $state();
 	// Every piece of the story scrolls in this area, and builds its rows as it comes near it
@@ -49,7 +59,8 @@
 
 <!-- The same change, read as the agent tells it: one scroll, the overview first, then every chapter in a
 	row, then what no step tells and what the agent called housekeeping. Over it, deep in a chapter, the
-	bar that says which. Until a story is told, what the reader waits on stands in its place -->
+	bar that says which; above it, any thread on words it no longer says. Until a story is told, what the
+	reader waits on stands in its place -->
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
 	{#if drawn.kind === 'wait'}
 		<div bind:this={waitingRoom} class="cr-story-waiting-room">
@@ -60,6 +71,7 @@
 		{@const story = held.story}
 		<ChapterBar />
 		<article class="cr-story-measure flex flex-col gap-8 py-8">
+			<UnplacedThreads threads={offTheStory} why={OFF_THE_STORY} />
 			<StoryOverview {held} />
 
 			{#each contents.chapters as chapter (chapter.told.id)}

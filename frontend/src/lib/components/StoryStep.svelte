@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { stepReason } from '$lib/anchors/story';
+	import { askableReason, stepReason } from '$lib/anchors/story';
 	import type { StepListed } from '$lib/review/story-contents';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
@@ -17,6 +17,8 @@
 	let { step, number }: Props = $props();
 
 	const told = $derived(step.told);
+	// Its reason, where the reader may ask about it
+	const askable = $derived(askableReason(told));
 </script>
 
 <!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
@@ -25,9 +27,9 @@
 {#snippet numberAndReason()}
 	<!-- A reason may be asked about, its number banded with it; a step of a file no thread can name takes none -->
 	<div class="cr-agent-voice mb-2">
-		{#if told.reason && told.piece.commentable}
-			<AskableBlock block={stepReason(told.file, told.lines.first)} words={told.reason} testId="step-reason-block">
-				{@render numberWithReason(told.reason)}
+		{#if askable !== null}
+			<AskableBlock block={stepReason(told.file, told.lines.first)} words={askable} testId="step-reason-block">
+				{@render numberWithReason(askable)}
 			</AskableBlock>
 		{:else}
 			<div class="cr-voice-inset">{@render numberWithReason(told.reason)}</div>

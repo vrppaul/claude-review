@@ -14,7 +14,13 @@
   picked there, it brings the story on screen at it, and `n` and `p` walk
   the story's threads in the order it says what they hang on. A blue dot
   marks the contents' row of a part a thread hangs in, and its name says
-  how many. The agent is handed the words with the question.
+  how many. The agent is handed the words with the question. When the
+  agent tells the story again, each thread follows the words it was
+  written on to the block that says them now; where none does, it stays
+  under its block, outdated, or stands at the head of the story when the
+  story no longer has that block, and `n` takes the reader there first.
+  Either way it shows the words it was written against, wrapped as the
+  story said them.
 - **The reader asks the agent for a story of the change, and sees it being
   written.** A story is the change told by the agent that made it: a short
   overview, then chapters with its reason above each piece of code. Story in

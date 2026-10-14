@@ -13,6 +13,7 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page, expect
 
+from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
@@ -22,15 +23,22 @@ STORY_ROUTE = "/api/story"
 TOLD_FILE = "told.py"
 COMMITTED_FILES = {TOLD_FILE: "keep one\nfirst two\nkeep three\n"}
 THE_CHANGE = {TOLD_FILE: "keep one\nchanged two\nkeep three\n"}
-# A story of the change whose overview says what to doubt
-DOUBT = "Whether the second line needed changing at all."
+# A story of the change whose overview says what to doubt, at more length than one line of a thread holds
+DOUBT = (
+    "Whether the second line needed changing at all, when nothing that reads it changed with it"
+    " and every test of the file passed before the change as it passes after it."
+)
 A_STORY = planted(story_of(step(TOLD_FILE, 2, 2)), ("overview", "doubt"), DOUBT)
+# The same change told again, with nothing to doubt
+TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))
 # Where an element's edges stand on screen, in pixels from the top and the left of the window
 TOP_OF = "(element) => element.getBoundingClientRect().top"
 BOTTOM_OF = "(element) => element.getBoundingClientRect().bottom"
 LEFT_OF = "(element) => element.getBoundingClientRect().left"
 # The colour an element is laid on
 GROUND_OF = "(element) => getComputedStyle(element).backgroundColor"
+# Whether an element, and everything in it, shows its contents whole across, with nothing to scroll sideways
+NOTHING_SCROLLS_ACROSS = "(element) => [element, ...element.querySelectorAll('*')].every((inside) => inside.scrollWidth <= inside.clientWidth)"
 # How strongly an element is drawn, as its style says it, and the strength of one drawn fully and not at all
 OPACITY = "opacity"
 FULLY_DRAWN = "1"
@@ -45,12 +53,17 @@ def changed_repo(tmp_path: Path) -> Path:
     return repo
 
 
+async def _tell(review: RunningReview, story: Story[Step]) -> None:
+    """Tell the review a story of its change, as the agent does."""
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story))
+
+
 @in_the_browsers_loop
 async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review of the change, which the agent has told a story of."""
     started = await servers.start(await repository_opening(changed_repo))
-    async with AsyncClient(base_url=started.url) as agent:
-        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    await _tell(started, A_STORY)
     return started
 
 
@@ -135,3 +148,32 @@ async def test_the_next_thread_key_in_the_story_puts_the_keyboard_on_a_thread_on
     await page.keyboard.press("n")
 
     await expect(doubt.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Was it needed?")
+
+
+async def test_a_thread_on_words_a_story_told_again_says_nowhere_stands_at_its_head_with_those_words_whole(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    await _ask_about(page, doubt, "Was it needed?")
+
+    await _tell(review, TOLD_AGAIN)
+
+    at_the_head = page.get_by_test_id("threads-off-their-lines")
+    await expect(at_the_head).to_contain_text("1 thread on words the story no longer says")
+    written_against = at_the_head.get_by_test_id("stale-quote")
+    await expect(written_against).to_contain_text(DOUBT)
+    assert await written_against.evaluate(NOTHING_SCROLLS_ACROSS)
+
+
+async def test_a_thread_at_the_head_of_the_story_deleted_gives_the_keyboard_to_the_head_of_the_story(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    await _ask_about(page, doubt, "Was it needed?")
+    await _tell(review, TOLD_AGAIN)
+    at_the_head = page.get_by_test_id("threads-off-their-lines")
+
+    await at_the_head.get_by_test_id("delete-comment").click()
+    await page.click('[data-testid="confirm-go-ahead"]')
+
+    await expect(page.get_by_test_id("story-overview").get_by_test_id("part-head")).to_be_focused()

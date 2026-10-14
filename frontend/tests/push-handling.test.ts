@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
+import { storyAnchor } from '$lib/anchors/story';
 import DiffNotice from '$lib/components/DiffNotice.svelte';
 import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
@@ -9,7 +10,7 @@ import { work } from './agent-work';
 import { contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
-import { newComment } from './new-comment';
+import { newComment, storyComment } from './new-comment';
 import { inReview, openReview, settingsWithStoriesOn } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
@@ -19,6 +20,9 @@ import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 function untouched(path: string) {
 	return diffFile({ path, hunks: [hunk([contextLine(1, 1, 'x')])] });
 }
+
+// What the story said to doubt, which a thread on it quotes
+const DOUBT_SAID = 'Whether an image is checked before it is kept.';
 
 let review: Review;
 
@@ -137,6 +141,36 @@ describe('what the server pushes, taken in', () => {
 
 		expect(review.conversation.turns.at(-1)?.body).toBe('the story could not be read — the review fell over');
 		expect(review.story.held).toEqual(before);
+	});
+
+	it('moves every thread on the words of the story where the review says it now hangs, once another story is told', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/story', storyResponse({ held: storyHeld({ title: 'Told just now' }) }));
+		const onTheDoubt = storyAnchor({ at: 'overview', text: 'doubt' }, DOUBT_SAID);
+		const id = review.threads.add(storyComment(onTheDoubt.block, 'Checked at all?', DOUBT_SAID));
+		// The new story says those words where the old one said what was done
+		const movedTo = storyAnchor({ at: 'overview', text: 'done' }, DOUBT_SAID);
+		server.answer('POST /api/anchors/follow', { anchors: [movedTo] });
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect(server.bodiesSentTo('POST /api/anchors/follow')).toEqual([{ anchors: [onTheDoubt] }]);
+		expect(review.threads.all.find((thread) => thread.id === id)?.anchor).toEqual(movedTo);
+	});
+
+	it('says in the panel when the threads on its words could not follow the story told', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/story', storyResponse({ held: storyHeld({ title: 'Told just now' }) }));
+		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'Checked at all?', DOUBT_SAID));
+		server.refuse('POST /api/anchors/follow', SERVER_ERROR, 'the review fell over');
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect(review.conversation.turns.at(-1)?.body).toBe(
+			'the threads could not follow the story told — the review fell over'
+		);
 	});
 
 	it('moves on to the round the server began, never back', () => {

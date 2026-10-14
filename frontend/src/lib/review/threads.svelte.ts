@@ -16,7 +16,7 @@ import type { CommentFields } from '$lib/review/comment-fields';
 import { followedThreads } from '$lib/review/following';
 import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
-import { anchorWrittenOn, withItsBlock, withItsLines } from '$lib/review/thread-places';
+import { anchorWrittenOn, type ThreadOnBlock, withItsBlock, withItsLines } from '$lib/review/thread-places';
 import { type CarriedThread, ThreadSending } from '$lib/review/thread-sending.svelte';
 import { ThreadWriting } from '$lib/review/thread-writing.svelte';
 import type {
@@ -105,8 +105,9 @@ export class Threads {
 	readonly #onLines = $derived(this.#all.flatMap(withItsLines));
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
+	readonly #onTheStory = $derived(this.#all.flatMap(withItsBlock));
 	// Those on the story's words, by the block they hang on, so a block asks for its own without a scan
-	readonly #byBlock = $derived(Map.groupBy(this.#all.flatMap(withItsBlock), ({ block }) => block));
+	readonly #byBlock = $derived(Map.groupBy(this.#onTheStory, ({ block }) => block));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
 	readonly #unsent = $derived(this.#all.filter((thread) => this.#sending.roundOf(thread.id) === undefined));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
@@ -165,6 +166,11 @@ export class Threads {
 	/** The threads hanging on lines of one file, each with its lines. */
 	onLinesOf(path: string): readonly ThreadOnLines[] {
 		return this.#byFile.get(path) ?? NO_THREADS;
+	}
+
+	/** Every thread on a block of the story's words, in the order they were written, each with its block. */
+	get onTheStory(): readonly ThreadOnBlock[] {
+		return this.#onTheStory;
 	}
 
 	/** The threads hanging on a block of the story's words, in the order they were written. */

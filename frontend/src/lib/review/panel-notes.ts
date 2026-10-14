@@ -29,6 +29,10 @@ export function storyNotReadNote(error: unknown): string {
 	return `the story could not be read — ${messageOf(error)}`;
 }
 
+export function storyNotFollowedNote(error: unknown): string {
+	return `the threads could not follow the story told — ${messageOf(error)}`;
+}
+
 export function storyNotAskedForNote(error: unknown): string {
 	return `the story could not be asked for — ${messageOf(error)}`;
 }

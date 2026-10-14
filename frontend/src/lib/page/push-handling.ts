@@ -16,6 +16,7 @@ import {
 	notCaughtUpNote,
 	raisedNote,
 	retakenNote,
+	storyNotFollowedNote,
 	storyNotReadNote
 } from '$lib/review/panel-notes';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
@@ -30,7 +31,8 @@ type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' 
  * Take in what the server said while the review is open.
  *
  * What a push does to the draft — an answer, a raised thread or a note
- * added, what was read of a story told again forgotten — is always done.
+ * added, what was read of a story told again forgotten and the threads
+ * moved onto it — is always done.
  * What it says of the review's facts — its agent, its round, its diff, its
  * story — is taken in only when the facts the page read do not hold it
  * already: a page opening from a draft is handed what was said since the
@@ -105,10 +107,30 @@ function learnFrom(review: Review, push: FactPush): void {
  * is that story already. The story is told which of the two it is: what
  * the reader had read through was of the story before, and forgetting it,
  * as this one comes to be held, is the story's own.
+ *
+ * Then the threads on its words follow it. The review holds the story told,
+ * so they follow it whether or not this page could read it.
  */
 async function toldAnotherStory(review: Review, heard: HeardPush): Promise<void> {
 	if (heard.factsHoldIt) review.story.heldIsAnother();
 	else await readStoryAgain(review, (story) => story.readAnother());
+	await followTheStory(review);
+}
+
+/**
+ * Move the threads on the story's words onto the story the review holds
+ * now, as threads on lines move onto a diff taken again: one on words the
+ * story still says goes where it says them, one on words it says nowhere
+ * is marked. Only they can have moved, so with none there is nothing to
+ * ask; a following that fails is said in the panel.
+ */
+async function followTheStory(review: Review): Promise<void> {
+	if (review.threads.onTheStory.length === 0) return;
+	try {
+		await review.followThreads();
+	} catch (error) {
+		review.conversation.note(storyNotFollowedNote(error));
+	}
 }
 
 /**

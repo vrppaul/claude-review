@@ -38,6 +38,7 @@ export const lineAnchorView: AnchorView<LineAnchor> = {
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
 	sameSpot,
 	writtenAgainst: (anchor) => anchor.quote,
+	quoteReads: 'code',
 	replaces: (anchor) => anchor.quote,
 	placeOf: (anchor) => ({ on: 'lines', lines: anchor })
 };

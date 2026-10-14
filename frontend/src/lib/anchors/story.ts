@@ -1,4 +1,4 @@
-import type { ChapterText, OverviewList, OverviewText, StoryAnchor, StoryBlock } from '$lib/types';
+import type { ChapterText, OverviewList, OverviewText, StoryAnchor, StoryBlock, ToldStep } from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
 import { mentionStarts } from '$lib/anchors/token-mentions';
 import { fileName } from '$lib/utils/paths';
@@ -90,8 +90,9 @@ function token({ block }: StoryAnchor): string {
 
 /**
  * How a thread on a block of the story's words is named, mentioned and told
- * apart. It was written against the words it quotes; no suggestion replaces a
- * story's words, so one in it replaces nothing.
+ * apart. It was written against the words it quotes, which read as the story
+ * said them; no suggestion replaces a story's words, so one in it replaces
+ * nothing.
  */
 export const storyAnchorView: AnchorView<StoryAnchor> = {
 	label: (anchor) => blockLabel(anchor.block),
@@ -102,6 +103,7 @@ export const storyAnchorView: AnchorView<StoryAnchor> = {
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
 	sameSpot: (one, other) => blockKey(one.block) === blockKey(other.block),
 	writtenAgainst: (anchor) => anchor.quote,
+	quoteReads: 'prose',
 	replaces: () => [],
 	placeOf: (anchor) => ({ on: 'story', block: anchor.block })
 };
@@ -112,6 +114,8 @@ export type OverviewBlock = Extract<StoryBlock, { at: 'overview' }>;
 /** The overview's three lines, and its lists, in the order the story says them. */
 export const OVERVIEW_LINES_IN_ORDER: readonly OverviewText[] = ['task', 'done', 'doubt'];
 export const OVERVIEW_LISTS_IN_ORDER: readonly OverviewList[] = ['decisions', 'turned_down', 'later'];
+/** What a chapter says of itself, in the order the story says it. */
+export const CHAPTER_TEXTS_IN_ORDER: readonly ChapterText[] = ['why', 'doubt'];
 
 /** The block of one of the overview's three lines. */
 export function overviewLine(text: OverviewText): OverviewBlock {
@@ -131,6 +135,14 @@ export function chapterText(chapter: string, text: ChapterText): StoryBlock {
 /** The block of a step's reason, the step by its file and the first line it tells. */
 export function stepReason(file: string, firstLine: number): StoryBlock {
 	return { at: 'reason', file, first_line: firstLine };
+}
+
+/**
+ * A step's reason where it is a block of the story to ask about: none where
+ * the step gives no reason, or tells a file no thread can name.
+ */
+export function askableReason(step: ToldStep): string | null {
+	return step.piece.commentable ? step.reason : null;
 }
 
 /** A block of the story as the reader asks about it, with the words it says now. */

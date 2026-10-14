@@ -25,6 +25,20 @@ const TOLD = storyHeld({
 	chapters: [toldChapter('ch-1', [LINE_ONE_OF_A, LINE_FIVE_OF_B]), toldChapter('ch-2', [LINE_NINE_OF_A])],
 	left_out: [LEFT_OUT_OF_C]
 });
+// The same story, saying everything a block of it may say: what to doubt in the overview and in its first
+// chapter, a thing left for later, and why its last step is told
+const TOLD_SAYING_ALL = storyHeld({
+	...TOLD.story,
+	overview: {
+		...TOLD.story.overview,
+		doubt: 'Whether a.py needed both changes.',
+		later: [{ text: 'Dragging a file in.', chapter: null }]
+	},
+	chapters: [
+		toldChapter('ch-1', [LINE_ONE_OF_A, LINE_FIVE_OF_B], { doubt: 'Whether b.py belongs here.' }),
+		toldChapter('ch-2', [toldStep('a.py', 9, 'The ninth line follows from the first.')])
+	]
+});
 // The same steps told in another order, in one chapter
 const TOLD_IN_ANOTHER_ORDER = storyHeld({
 	chapters: [toldChapter('ch-1', [LINE_NINE_OF_A, LINE_FIVE_OF_B, LINE_ONE_OF_A])],
@@ -124,6 +138,8 @@ describe('a review read as its story', () => {
 	});
 
 	it("walks the threads on the overview's lines first, in the order it says them", () => {
+		review = openReview({ story: TOLD_SAYING_ALL });
+		review.views.choose('story');
 		review.threads.add(newComment({ file: 'b.py', startLine: 5, body: 'in chapter one' }));
 		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'on the doubt'));
 		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task'));
@@ -136,8 +152,7 @@ describe('a review read as its story', () => {
 	});
 
 	it("walks a chapter's own words before its steps, and a step's reason before the lines of its piece", () => {
-		const later = [{ text: 'Dragging a file in.', chapter: null }];
-		review = openReview({ story: storyHeld({ ...TOLD.story, overview: { ...TOLD.story.overview, later } }) });
+		review = openReview({ story: TOLD_SAYING_ALL });
 		review.views.choose('story');
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'on a line of chapter two' }));
 		review.threads.add(storyComment({ at: 'reason', file: 'a.py', first_line: 9 }, 'on the reason in chapter two'));
@@ -153,6 +168,22 @@ describe('a review read as its story', () => {
 			'on why chapter two',
 			'on the reason in chapter two',
 			'on a line of chapter two'
+		]);
+	});
+
+	it('walks first, and once, the threads on words the story says nowhere: its blocks no longer say them', () => {
+		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task'));
+		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'on a doubt the story does not say'));
+		review.threads.add(storyComment({ at: 'chapter', chapter: 'gone', text: 'why' }, 'on a chapter it does not tell'));
+		review.threads.add(storyComment({ at: 'chapter', chapter: 'ch-1', text: 'doubt' }, 'on a doubt of a chapter'));
+		review.threads.add(storyComment({ at: 'reason', file: 'a.py', first_line: 9 }, 'on a reason it does not give'));
+
+		expect(review.views.onScreen.threadsInOrder().map((thread) => thread.body)).toEqual([
+			'on a doubt the story does not say',
+			'on a chapter it does not tell',
+			'on a doubt of a chapter',
+			'on a reason it does not give',
+			'on the task'
 		]);
 	});
 
