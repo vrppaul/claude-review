@@ -183,6 +183,19 @@ async def test_the_next_thread_key_in_the_story_puts_the_keyboard_on_a_thread_on
     await expect(doubt.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Was it needed?")
 
 
+async def test_a_thread_on_the_story_picked_in_the_finish_pane_while_the_files_are_read_takes_the_keyboard(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    await _ask_about(page, doubt, "Was it needed?")
+    await page.click('[data-testid="read-as-files"]')
+    await page.click('[data-testid="quick-submit"]')
+
+    await page.click('[data-testid="finish-comment"]')
+
+    await expect(doubt.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Was it needed?")
+
+
 async def _open_the_lists(page: Page) -> Locator:
     """Open what more the overview says, and hand back the one thing it lists."""
     await page.click('[data-testid="story-more-toggle"]')

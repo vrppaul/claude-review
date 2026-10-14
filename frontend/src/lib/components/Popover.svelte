@@ -39,9 +39,9 @@
 </script>
 
 <script lang="ts">
-	import { tick, untrack, type Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { isComposingText } from '$lib/dom/keyboard';
+	import { focusWhatRemains, isComposingText } from '$lib/dom/keyboard';
 	import { arrowOffsetTo, type Placement } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
 
@@ -107,13 +107,14 @@
 	/**
 	 * The keyboard the pane held goes back to what had it before, or to the
 	 * control if that is gone — without moving the screen: where the reader is
-	 * looking is theirs, whatever they did while the pane was open.
+	 * looking is theirs, whatever they did while the pane was open. Only if it
+	 * is on nothing once the pane has gone: a row of the pane may have taken
+	 * the reader to a thread drawn as the pane went, which has it.
 	 */
 	function handBack() {
 		if (!keyboardHere) return;
 		keyboardHere = false;
-		const back = keyboardWasOn?.isConnected ? keyboardWasOn : control;
-		void tick().then(() => back?.focus({ preventScroll: true }));
+		focusWhatRemains(() => (keyboardWasOn?.isConnected ? keyboardWasOn : control));
 	}
 
 	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, or a modal above, which keeps it. */

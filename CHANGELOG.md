@@ -16,7 +16,8 @@
   lists, under "More about this change", stand open whenever a thread or a
   comment hangs under anything they hold, and fold away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;
-  picked there, it brings the story on screen at it, and `n` and `p` walk
+  picked there, it brings the story on screen with the keyboard on the
+  thread, as a thread on lines does; and `n` and `p` walk
   the story's threads in the order it says what they hang on. A blue dot
   marks the contents' row of a part a thread hangs in, and its name says
   how many. The agent is handed the words with the question. When the
