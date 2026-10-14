@@ -284,10 +284,6 @@ tests. Remove items when done — don't check them off.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
-- [ ] No tool holds a pair of counted words to being written once: the
-      words several places count by stand in `utils/words.ts` because a
-      review found the same pair in five places, and the next pair written
-      twice is found by a review again.
 - [ ] No test holds what the button of the list of threads a narrower base
       cannot draw says of several, "List them" and "Hide them"
       (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
