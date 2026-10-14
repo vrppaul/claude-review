@@ -3,7 +3,20 @@
 import pytest
 from hypothesis import given, strategies as strategy
 
-from claude_review.domain.models import LineAnchor, LineSide, LineSpan
+from claude_review.domain.models import (
+    ChapterBlock,
+    ChapterText,
+    ItemBlock,
+    LineAnchor,
+    LineSide,
+    LineSpan,
+    OverviewBlock,
+    OverviewList,
+    OverviewText,
+    ReasonBlock,
+    StoryAnchor,
+    StoryBlock,
+)
 from claude_review.services.place_words import line_span, lines_named, place_in_markdown, place_in_words
 from tests.helpers import line_anchor
 
@@ -23,6 +36,32 @@ LARGEST_LINE_WRITTEN = 9_999_999_999
 def test_a_place_is_named_the_same_way_in_words_and_in_markdown(
     anchor: LineAnchor, in_words: str, in_markdown: str
 ) -> None:
+    assert place_in_words(anchor) == in_words
+    assert place_in_markdown(anchor) == in_markdown
+
+
+@pytest.mark.parametrize(
+    ("block", "in_words", "in_markdown"),
+    [
+        (OverviewBlock(text=OverviewText.DOUBT), "story overview, Doubt", "story overview, Doubt"),
+        (ItemBlock(list=OverviewList.DECISIONS, item=1), "story overview, decision 2", "story overview, decision 2"),
+        (
+            ChapterBlock(chapter="images-kept", text=ChapterText.DOUBT),
+            "story chapter images-kept, where to doubt",
+            "story chapter `images-kept`, where to doubt",
+        ),
+        (
+            ReasonBlock(file="src/a.py", first_line=42),
+            "story step at src/a.py:42, its reason",
+            "story step at `src/a.py`:42, its reason",
+        ),
+    ],
+)
+def test_a_block_of_the_story_is_named_the_same_way_in_words_and_in_markdown(
+    block: StoryBlock, in_words: str, in_markdown: str
+) -> None:
+    anchor = StoryAnchor(block=block)
+
     assert place_in_words(anchor) == in_words
     assert place_in_markdown(anchor) == in_markdown
 

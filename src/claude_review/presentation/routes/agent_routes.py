@@ -13,6 +13,7 @@ from claude_review.domain.exceptions import (
     StoryRefusedError,
     UnknownAnchorFileError,
     UnknownFileError,
+    UnknownStoryBlockError,
     UnknownThreadError,
 )
 from claude_review.presentation.asgi import HTTP_DISCONNECT
@@ -196,7 +197,13 @@ async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)
 
 @router.post(
     "/point",
-    responses=refusals(UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError, takes=Takes.JSON_BODY),
+    responses=refusals(
+        UnknownAnchorFileError,
+        AnchorLinesNotShownError,
+        AnchorTooLongError,
+        UnknownStoryBlockError,
+        takes=Takes.JSON_BODY,
+    ),
 )
 async def raise_a_thread(request: PointRequest, review: Review = Depends(get_review)) -> PointResponse:
     """Put a thread on a line, from the side that wrote the change.

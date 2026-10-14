@@ -30,6 +30,7 @@ from starlette.types import Message, Scope
 from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
 from claude_review.domain.models import (
     FIRST_ROUND,
+    Anchor,
     AnchorKind,
     CommentSeverity,
     DiffFile,
@@ -225,7 +226,7 @@ def line_anchor(
 
 
 def thread(
-    anchor: LineAnchor,
+    anchor: Anchor,
     body: str,
     *,
     thread_id: str = FIRST_THREAD_ID,

@@ -13,7 +13,7 @@ from claude_review.domain.models import (
     Thread,
     TurnAuthor,
 )
-from claude_review.services.anchor_service import AnchorService
+from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler
 from claude_review.services.round_formatter import RoundFormatter
 from claude_review.services.whole_file import whole_file
 from tests.helpers import line_anchor, thread
@@ -27,7 +27,8 @@ def _message(name: str, lines: list[str]) -> DiffFile:
 def _formatted(threads: list[Thread], body: str | None, files: list[DiffFile]) -> ReviewResult:
     """The round as the agent reads it, in its first round."""
     formatter = RoundFormatter.for_mode(ReviewMode.TRANSCRIPT)
-    return formatter.format(threads, body, round_number=FIRST_ROUND, anchors=AnchorService.of_diff(files))
+    anchors = AnchorService(lines=LineAnchorHandler(files), story=StoryAnchorHandler(None))
+    return formatter.format(threads, body, round_number=FIRST_ROUND, anchors=anchors)
 
 
 def test_a_review_of_a_conversation_is_headed_as_one() -> None:

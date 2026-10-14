@@ -35,62 +35,8 @@ export interface components {
             /** At */
             at: number;
         };
-        /**
-         * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
-         *
-         *     A quote left out is filled in by the review from its diff.
-         */
-        "Anchor-Input": {
-            /**
-             * Kind
-             * @default line
-             * @constant
-             */
-            kind: "line";
-            /** File */
-            file: string;
-            side: components["schemas"]["LineSide"];
-            /** Start Line */
-            start_line: number;
-            /** End Line */
-            end_line: number;
-            /** Quote */
-            quote?: string[];
-            /**
-             * Outdated
-             * @default false
-             */
-            outdated: boolean;
-        };
-        /**
-         * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
-         *
-         *     A quote left out is filled in by the review from its diff.
-         */
-        "Anchor-Output": {
-            /**
-             * Kind
-             * @default line
-             * @constant
-             */
-            kind: "line";
-            /** File */
-            file: string;
-            side: components["schemas"]["LineSide"];
-            /** Start Line */
-            start_line: number;
-            /** End Line */
-            end_line: number;
-            /** Quote */
-            quote: string[];
-            /**
-             * Outdated
-             * @default false
-             */
-            outdated: boolean;
-        };
+        "Anchor-Input": components["schemas"]["LineAnchor-Input"] | components["schemas"]["StoryAnchor-Input"];
+        "Anchor-Output": components["schemas"]["LineAnchor-Output"] | components["schemas"]["StoryAnchor-Output"];
         /** AnswererPush */
         AnswererPush: {
             /**
@@ -126,6 +72,40 @@ export interface components {
             /** Paths */
             paths: string[];
         };
+        /**
+         * ChapterBlock
+         * @description What a chapter says of itself, the chapter by its id.
+         */
+        "ChapterBlock-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "chapter";
+            /** Chapter */
+            chapter: string;
+            text: components["schemas"]["ChapterText"];
+        };
+        /**
+         * ChapterBlock
+         * @description What a chapter says of itself, the chapter by its id.
+         */
+        "ChapterBlock-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "chapter";
+            /** Chapter */
+            chapter: string;
+            text: components["schemas"]["ChapterText"];
+        };
+        /**
+         * ChapterText
+         * @description What a chapter says of itself under its title: why its changes belong together, and where to doubt them.
+         * @enum {string}
+         */
+        ChapterText: "why" | "doubt";
         /**
          * ChatPush
          * @description The agent speaking in the panel: an answer to a message, or nothing answered at all.
@@ -205,6 +185,88 @@ export interface components {
             finished: boolean;
         };
         /**
+         * ItemBlock
+         * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
+         */
+        "ItemBlock-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "item";
+            list: components["schemas"]["OverviewList"];
+            /** Item */
+            item: number;
+        };
+        /**
+         * ItemBlock
+         * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
+         */
+        "ItemBlock-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "item";
+            list: components["schemas"]["OverviewList"];
+            /** Item */
+            item: number;
+        };
+        /**
+         * LineAnchor
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         *
+         *     A quote left out is filled in by the review from its diff.
+         */
+        "LineAnchor-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
+            /** File */
+            file: string;
+            side: components["schemas"]["LineSide"];
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
+            /** Quote */
+            quote?: string[];
+            /**
+             * Outdated
+             * @default false
+             */
+            outdated: boolean;
+        };
+        /**
+         * LineAnchor
+         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         *
+         *     A quote left out is filled in by the review from its diff.
+         */
+        "LineAnchor-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
+            /** File */
+            file: string;
+            side: components["schemas"]["LineSide"];
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
+            /** Quote */
+            quote: string[];
+            /**
+             * Outdated
+             * @default false
+             */
+            outdated: boolean;
+        };
+        /**
          * LineSide
          * @description Which version of the file a line belongs to.
          *
@@ -215,6 +277,42 @@ export interface components {
          * @enum {string}
          */
         LineSide: "old" | "new";
+        /**
+         * OverviewBlock
+         * @description One of the overview's three lines, by its name.
+         */
+        "OverviewBlock-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "overview";
+            text: components["schemas"]["OverviewText"];
+        };
+        /**
+         * OverviewBlock
+         * @description One of the overview's three lines, by its name.
+         */
+        "OverviewBlock-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "overview";
+            text: components["schemas"]["OverviewText"];
+        };
+        /**
+         * OverviewList
+         * @description The overview's lists: decisions taken, ways turned down, and what was left for later.
+         * @enum {string}
+         */
+        OverviewList: "decisions" | "turned_down" | "later";
+        /**
+         * OverviewText
+         * @description The overview's three lines: what was asked, what was done, and what to doubt.
+         * @enum {string}
+         */
+        OverviewText: "task" | "done" | "doubt";
         /**
          * PointPush
          * @description A thread the agent raised, quoted from the diff it was checked against.
@@ -256,6 +354,36 @@ export interface components {
              * @default false
              */
             done: boolean;
+        };
+        /**
+         * ReasonBlock
+         * @description A step's reason, the step by its file and the first line it tells.
+         */
+        "ReasonBlock-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "reason";
+            /** File */
+            file: string;
+            /** First Line */
+            first_line: number;
+        };
+        /**
+         * ReasonBlock
+         * @description A step's reason, the step by its file and the first line it tells.
+         */
+        "ReasonBlock-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "reason";
+            /** File */
+            file: string;
+            /** First Line */
+            first_line: number;
         };
         /**
          * ReplyPush
@@ -352,6 +480,48 @@ export interface components {
             agent: components["schemas"]["AgentStatus"];
         };
         /**
+         * StoryAnchor
+         * @description A block of the words of the story told of the change, as the page and the agent name it.
+         *
+         *     A quote left out is filled in by the review from the story it holds.
+         */
+        "StoryAnchor-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "story";
+            block: components["schemas"]["StoryBlock-Input"];
+            /** Quote */
+            quote?: string[];
+            /**
+             * Outdated
+             * @default false
+             */
+            outdated: boolean;
+        };
+        /**
+         * StoryAnchor
+         * @description A block of the words of the story told of the change, as the page and the agent name it.
+         *
+         *     A quote left out is filled in by the review from the story it holds.
+         */
+        "StoryAnchor-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "story";
+            block: components["schemas"]["StoryBlock-Output"];
+            /** Quote */
+            quote: string[];
+            /**
+             * Outdated
+             * @default false
+             */
+            outdated: boolean;
+        };
+        /**
          * StoryAsking
          * @description The reader asking the agent for a story, and how far that has got.
          */
@@ -378,6 +548,8 @@ export interface components {
             type: "story_asking";
             asking: components["schemas"]["StoryAsking"];
         };
+        "StoryBlock-Input": components["schemas"]["OverviewBlock-Input"] | components["schemas"]["ItemBlock-Input"] | components["schemas"]["ChapterBlock-Input"] | components["schemas"]["ReasonBlock-Input"];
+        "StoryBlock-Output": components["schemas"]["OverviewBlock-Output"] | components["schemas"]["ItemBlock-Output"] | components["schemas"]["ChapterBlock-Output"] | components["schemas"]["ReasonBlock-Output"];
         /**
          * StoryPush
          * @description A story was told of the change, in place of any before it: the page fetches it.

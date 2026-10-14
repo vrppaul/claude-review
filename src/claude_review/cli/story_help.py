@@ -13,8 +13,9 @@ to the model the review reads a document with, and a test holds it to
 being a story the review finds no fault in. Which parts may be left out is
 shown, not listed: a second document holds the least a story may be, held
 the same two ways, and what it lacks of the first may be left out. What a
-story may be told from is every value of `ToldFrom`. The lengths are the
-rows of `TEXT_LIMITS`, the one table of them.
+story may be told from is every value of `ToldFrom`. What a chapter's id
+may hold is said in the words the review refuses one in. The lengths are
+the rows of `TEXT_LIMITS`, the one table of them.
 
 Not said here, for want of anything to read it off: which field of the
 document each kind of text stands in, and what else the review refuses a
@@ -32,6 +33,7 @@ from claude_review.presentation.wire.story import (
     StoryOverviewInput,
     StoryRequest,
 )
+from claude_review.services.story_checks import CHAPTER_ID_RULE
 
 # The chapters of the example, by the ids its overview and its diagram lead to them by
 PASTING = "ch-1"
@@ -156,7 +158,8 @@ def story_document_help() -> str:
     """What the help of `story` says of the document.
 
     An example with every part a story may have; the least a story may be, with what it may be
-    told from, every value of `ToldFrom`; then the length each kind of text is held to.
+    told from, every value of `ToldFrom`; what a chapter's id may hold; then the length each kind
+    of text is held to.
     """
     example = EXAMPLE.model_dump_json(indent=DOCUMENT_INDENT)
     least = LEAST.model_dump_json(indent=DOCUMENT_INDENT, exclude_defaults=True)
@@ -166,6 +169,7 @@ def story_document_help() -> str:
             _as_written(example.splitlines()),
             BEFORE_THE_LEAST.format(told_from=BETWEEN_VALUES.join(ToldFrom)),
             _as_written(least.splitlines()),
+            CHAPTER_ID_RULE,
             BEFORE_THE_LIMITS,
             _as_written(_limit_lines()),
         ]

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
-	import { anchorLines } from '$lib/anchors/views';
+	import { threadPlaceOf } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
@@ -47,9 +47,12 @@
 
 	/** Delete the thread; the keyboard goes back to the line it hung under. */
 	function remove() {
-		const lines = anchorLines(thread.anchor);
+		const place = threadPlaceOf(thread.anchor);
 		review.threads.remove(thread.id);
-		review.sections.keyboardToLine(lines.file, placeKey({ side: lines.side, number: lines.end_line }));
+		if (place.on === 'lines') {
+			const { lines } = place;
+			review.sections.keyboardToLine(lines.file, placeKey({ side: lines.side, number: lines.end_line }));
+		}
 	}
 </script>
 

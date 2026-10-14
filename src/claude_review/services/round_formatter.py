@@ -9,9 +9,17 @@ its own way; the round around them is the same.
 """
 
 from abc import ABC, abstractmethod
-from typing import Self, override
+from typing import Self, assert_never, override
 
-from claude_review.domain.models import FIRST_ROUND, ReviewMode, ReviewResult, Thread, says_nothing
+from claude_review.domain.models import (
+    FIRST_ROUND,
+    LineAnchor,
+    ReviewMode,
+    ReviewResult,
+    StoryAnchor,
+    Thread,
+    says_nothing,
+)
 from claude_review.services.anchor_service import AnchorService
 from claude_review.services.markdown_code import code_block
 from claude_review.services.place_words import place_in_markdown
@@ -51,7 +59,11 @@ class ThreadLead(ABC):
 
 
 class PlaceLead(ThreadLead):
-    """The agent has the files: name the place, and carry the old lines once they have moved."""
+    """The agent has the files: name the place, and carry the old lines once they have moved.
+
+    It does not have the story it told in front of it: a thread on the
+    story's words always carries the words.
+    """
 
     @property
     @override
@@ -63,9 +75,13 @@ class PlaceLead(ThreadLead):
         tags = thread_tags(thread)
         tagged = f"{ASIDE}{TAG_SEPARATOR.join(tags)}" if tags else ""
         heading = f"{THREAD_HEADING} {place_in_markdown(thread.anchor)}{tagged}"
-        if thread.anchor.outdated and thread.anchor.quote:
-            return [heading, _written_against(thread.anchor.quote)]
-        return [heading]
+        match thread.anchor:
+            case LineAnchor():
+                return [heading, *_lines_moved(thread.anchor)]
+            case StoryAnchor():
+                return [heading, _words_quoted(thread.anchor)]
+            case _:
+                assert_never(thread.anchor)
 
 
 class ExcerptLead(ThreadLead):
@@ -140,10 +156,18 @@ class RoundFormatter:
         return LINE_END.join([*self._lead.lead(thread, anchors), *format_conversation(thread)]) + LINE_END
 
 
-def _written_against(quote: list[str]) -> str:
-    """The lines a comment was written against, fenced so that no line of them closes the fence.
+def _lines_moved(anchor: LineAnchor) -> list[str]:
+    """The lines a comment was written against, fenced so that no line of them closes the fence, once they have moved.
 
     Once the diff has been retaken those lines may be gone, and a file and a
-    line number then point at whatever moved into their place.
+    line number then point at whatever moved into their place. A thread kept
+    from before quotes were kept has none to carry.
     """
-    return f"{WRITTEN_AGAINST}{PARAGRAPH_END}{code_block(quote)}{LINE_END}"
+    if not (anchor.outdated and anchor.quote):
+        return []
+    return [f"{WRITTEN_AGAINST}{PARAGRAPH_END}{code_block(anchor.quote)}{LINE_END}"]
+
+
+def _words_quoted(anchor: StoryAnchor) -> str:
+    """The words of the story a comment is on, as a blockquote."""
+    return blockquote([line for words in anchor.quote for line in words.splitlines()])

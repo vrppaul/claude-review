@@ -20,7 +20,16 @@ from claude_review.domain.models import (
     LineSpan,
     LineType,
 )
-from claude_review.domain.story import Chapter, Diagram, OverviewItem, Step, Story, StoryOverview, ToldFrom
+from claude_review.domain.story import (
+    Chapter,
+    Diagram,
+    OverviewItem,
+    Step,
+    Story,
+    StoryOverview,
+    ToldFrom,
+    ToldStory,
+)
 from claude_review.presentation.wire.story import StoryRequest
 from tests.helpers import added_line, context_line, removed_line
 
@@ -49,6 +58,14 @@ def canvas_story() -> Story[Step]:
         overview=_overview(),
         chapters=[_paste_chapter(), _keeping_chapter()],
         housekeeping=["CHANGELOG.md", "uv.lock"],
+    )
+
+
+def told_as_written(story: Story[Step]) -> ToldStory:
+    """A story as the review holds one once told, each step showing a piece with no rows: for a test of its words alone."""
+    return story.told(
+        [chapter.told([shown.told(changed_file(shown.file)) for shown in chapter.steps]) for chapter in story.chapters],
+        [],
     )
 
 

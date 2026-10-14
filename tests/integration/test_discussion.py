@@ -37,6 +37,9 @@ ANCHOR = {**line_on_the_wire("src/a.py", 42), "quote": [QUOTED]}
 
 # A thread nothing was said in since the comment that opened it
 A_THREAD = thread_on_the_wire(ANCHOR, OPENING)
+# The overview's doubt, and a thread's anchor on it as the page sends one
+DOUBT_SAID = "Whether a timeout of zero still times out."
+ON_THE_DOUBT = {"kind": "story", "block": {"at": "overview", "text": "doubt"}, "quote": [DOUBT_SAID]}
 # What the agent answered, and what the reader asked next
 ANSWER_ID = "turn-1"
 FOLLOW_UP_ID = "turn-2"
@@ -77,6 +80,19 @@ async def test_the_answerer_is_handed_the_question_in_its_thread(client: AsyncCl
     # The quoted lines travel with it, since the answerer may not have the file
     assert event["question"]["thread"]["anchor"]["quote"] == [QUOTED]
     assert event["question"]["thread"]["where"] == "src/a.py:42"
+
+
+async def test_a_question_on_the_storys_words_reaches_the_agent_with_the_words_and_where_they_stand(
+    client: AsyncClient,
+) -> None:
+    """The agent has the files in front of it, not the story it told: the words come with the question."""
+    await client.post(ASK_ROUTE, json=_asking(thread_on_the_wire(ON_THE_DOUBT, OPENING)))
+
+    thread = (await _question_taken(client))["thread"]
+
+    assert thread["anchor"]["kind"] == "story"
+    assert thread["anchor"]["quote"] == [DOUBT_SAID]
+    assert thread["where"] == "story overview, Doubt"
 
 
 async def test_a_thread_nothing_was_said_in_asks_the_comment_that_opened_it(client: AsyncClient) -> None:

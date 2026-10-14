@@ -44,6 +44,11 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     # Whether a thread may name it, which the review's model answers from its path rather than keeps
     (models.DiffFile, content.DiffFile, frozenset({"commentable"})),
     (models.LineAnchor, threads.LineAnchor, frozenset()),
+    (models.StoryAnchor, threads.StoryAnchor, frozenset()),
+    (models.OverviewBlock, threads.OverviewBlock, frozenset()),
+    (models.ItemBlock, threads.ItemBlock, frozenset()),
+    (models.ChapterBlock, threads.ChapterBlock, frozenset()),
+    (models.ReasonBlock, threads.ReasonBlock, frozenset()),
     (models.Turn, threads.Turn, frozenset()),
     # The place a thread hangs on, in plain words: worked out from its anchor, and written out with it
     (models.Thread, threads.Thread, frozenset({"where"})),

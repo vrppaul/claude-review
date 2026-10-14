@@ -2,25 +2,34 @@
  * What the browser needs to know about each kind of anchor.
  *
  * A thread is named in its own header, in menus and in the panel, a panel
- * message mentions it by a token, it is drawn under the lines of a file it
- * hangs on, it shows what it was written against once that is gone, and a
- * suggestion in it shows what it replaces. Each kind of anchor answers those
- * questions in its own module, so naming, matching, mentioning and drawing a
- * thread never ask what it hangs on; bringing one into view moves the page,
+ * message mentions it by a token, it is drawn under what it hangs on — lines
+ * of a file, or a block of the story's words — it shows what it was written
+ * against once that is gone, and a suggestion in it shows what it replaces.
+ * Each kind of anchor answers those questions in its own module, so naming,
+ * matching and mentioning a thread never ask what it hangs on; drawing one
+ * asks where (`ThreadPlace`), and bringing one into view moves the page,
  * which is the review's `Navigator`.
  *
  * Each answer is a function property rather than a method, so a kind's view
  * is held to anchors of that kind: methods are compared loosely, and with a
  * second kind `viewOf` would still compile, handing one kind's anchor to the
- * other's view. As properties, a second kind stops `viewOf` compiling until
- * it is told which view each kind is answered by.
+ * other's view. As properties, a new kind stops `viewOf` compiling until it
+ * is told which view each kind is answered by.
  */
 
-import type { Anchor, AnchorKind, LineAnchor, Thread } from '$lib/types';
+import type { Anchor, AnchorKind, LineAnchor, StoryBlock, Thread } from '$lib/types';
 import { lineAnchorView } from '$lib/anchors/line';
+import { storyAnchorView } from '$lib/anchors/story';
 
 /** The lines of a file a thread hangs on, whichever kind of anchor says so. */
 export type FileLines = Pick<LineAnchor, 'file' | 'side' | 'start_line' | 'end_line'>;
+
+/**
+ * Where a thread is drawn: under lines of a file, or under a block of the
+ * story's words. Every part of the page that draws threads, or goes to one,
+ * says what it does with each.
+ */
+export type ThreadPlace = { on: 'lines'; lines: FileLines } | { on: 'story'; block: StoryBlock };
 
 /** A thread, with the lines of a file it hangs on. */
 export interface ThreadOnLines {
@@ -43,23 +52,27 @@ export interface AnchorView<Kind extends Anchor> {
 	sameSpot: (one: Kind, other: Kind) => boolean;
 	/** What the comment was written against, as it read then: shown once the place it hangs on is gone. */
 	writtenAgainst: (anchor: Kind) => string[];
-	/** What a suggestion in the thread replaces, a line to each. */
+	/** What a suggestion in the thread replaces, a line to each; nothing where no suggestion replaces anything. */
 	replaces: (anchor: Kind) => string[];
-	/**
-	 * The lines of a file it hangs on. Every kind hangs on lines so far: a kind
-	 * drawn somewhere else makes this an answer of several kinds, and each part
-	 * of the page that reads it then has to say what it does with every one.
-	 */
-	linesOf: (anchor: Kind) => FileLines;
+	/** Where the thread is drawn. */
+	placeOf: (anchor: Kind) => ThreadPlace;
 }
 
-const VIEWS: {
-	[Kind in AnchorKind]: AnchorView<Extract<Anchor, { kind: Kind }>>;
-} = {
-	line: lineAnchorView
+/** Each kind of anchor, by its kind. */
+export type AnchorOfKind = { [Kind in AnchorKind]: Extract<Anchor, { kind: Kind }> };
+
+const VIEWS: { [Kind in AnchorKind]: AnchorView<AnchorOfKind[Kind]> } = {
+	line: lineAnchorView,
+	story: storyAnchorView
 };
 
-function viewOf(anchor: Anchor): AnchorView<Anchor> {
+/**
+ * The view of an anchor's own kind. Taken as `AnchorOfKind[Kind]`, the anchor
+ * stays paired with its kind, so the compiler holds the table to a view of
+ * each kind. Handed any anchor, it hands back a view said to take any: its
+ * own kind's, which is only ever given the anchor it was looked up by.
+ */
+function viewOf<Kind extends AnchorKind>(anchor: AnchorOfKind[Kind]): AnchorView<AnchorOfKind[Kind]> {
 	return VIEWS[anchor.kind];
 }
 
@@ -83,9 +96,9 @@ export function anchorMentionsIn(text: string, anchor: Anchor): number[] {
 	return viewOf(anchor).mentionsIn(text, anchor);
 }
 
-/** Whether two anchors hang on the same spot. */
+/** Whether two anchors hang on the same spot: never, for anchors of two kinds. */
 export function sameSpot(one: Anchor, other: Anchor): boolean {
-	return viewOf(one).sameSpot(one, other);
+	return one.kind === other.kind && viewOf(one).sameSpot(one, other);
 }
 
 /** What a comment on an anchor was written against, as it read then. */
@@ -98,7 +111,7 @@ export function anchorReplaces(anchor: Anchor): string[] {
 	return viewOf(anchor).replaces(anchor);
 }
 
-/** The lines of a file an anchor hangs on. */
-export function anchorLines(anchor: Anchor): FileLines {
-	return viewOf(anchor).linesOf(anchor);
+/** Where a thread on an anchor is drawn. */
+export function threadPlaceOf(anchor: Anchor): ThreadPlace {
+	return viewOf(anchor).placeOf(anchor);
 }

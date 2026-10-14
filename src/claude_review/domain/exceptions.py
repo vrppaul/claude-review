@@ -114,6 +114,10 @@ class UnknownFileError(NotFoundError):
     """Raised when the reader is to be taken to a file this review does not hold."""
 
 
+class UnknownStoryBlockError(NotFoundError):
+    """Raised when an anchor names a block of words the story the review holds does not say, or no story is held."""
+
+
 class AnchorTooLongError(RefusedError):
     """Raised when an anchor names more lines than a thread may quote."""
 

@@ -99,6 +99,21 @@ export type Anchor = Schemas['Anchor-Output'];
 export type AnchorKind = Anchor['kind'];
 /** Lines of one side of a file in the review's own diff. */
 export type LineAnchor = Extract<Anchor, { kind: 'line' }>;
+/** A block of the words of the story told of the change. */
+export type StoryAnchor = Extract<Anchor, { kind: 'story' }>;
+/**
+ * A block of the story's words, by a place that stays when the story is told
+ * again: one of the overview's lines by its name, an item by where it stands
+ * in its list, what a chapter says of itself by the chapter's id, a step's
+ * reason by the step's file and first line.
+ */
+export type StoryBlock = StoryAnchor['block'];
+/** One of the overview's three lines. */
+export type OverviewText = Schemas['OverviewText'];
+/** One of the overview's lists. */
+export type OverviewList = Schemas['OverviewList'];
+/** What a chapter says of itself under its title. */
+export type ChapterText = Schemas['ChapterText'];
 
 /**
  * Where a line of a diff is: the side it belongs to, and its number there.

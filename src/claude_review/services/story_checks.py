@@ -7,18 +7,18 @@ is said in one answer, each fault at the field it is about.
 
 Two readings find them. One is of what the document shows by itself,
 whatever change it is told of: texts that say nothing or run past their
-length, chapters and links that do not hold together, lines no file could
-have or told twice. The other is against the change: a step or a
-housekeeping file the change does not have, and a step that tells nothing
-the change did.
+length, a chapter's id no thread could name it by, chapters and links that
+do not hold together, lines no file could have or told twice. The other is
+against the change: a step or a housekeeping file the change does not
+have, and a step that tells nothing the change did.
 """
 
 from collections.abc import Iterator
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import FIRST_LINE, runs_backwards, says_nothing
+from claude_review.domain.models import CHAPTER_IDS, FIRST_LINE, MAX_ID_LENGTH, runs_backwards, says_nothing
 from claude_review.domain.story import TEXT_LIMITS, Chapter, OverviewItem, Step, Story, StoryOverview, StoryText
 from claude_review.services.place_words import line_span
 from claude_review.services.story_lines_told import first_met
@@ -56,6 +56,12 @@ TOO_LONG = "is {length} characters long, and may be {limit} at most. {hint}"
 NO_CHAPTERS = "holds no chapter: a story tells at least one"
 NO_STEPS = "holds no step: a chapter shows at least one piece of the change"
 ID_REPEATED = "{chapter} is an earlier chapter's id as well: a link to it could mean either"
+# What a chapter's id may hold, as the help of `story` says it too
+CHAPTER_ID_RULE = (
+    f"A chapter's id is letters, digits, dots, dashes and underscores, {MAX_ID_LENGTH} at most:"
+    " a thread on what the chapter says names it by its id"
+)
+NOT_AN_ID = f"is no id. {CHAPTER_ID_RULE}"
 NO_SUCH_CHAPTER = "leads to chapter {chapter}, and the story has none by that id"
 BEFORE_FIRST_LINE = "starts at line {first}: a file's lines are numbered from {first_line}"
 RUNS_BACKWARDS = "runs backwards, from line {first} to line {last}"
@@ -141,7 +147,7 @@ def _texts_out_of_bounds(story: Story[Step], steps: list[StepInDocument]) -> Ite
     yield from _text_faults((TITLE,), story.title, StoryText.TITLE)
     yield from _overview_texts_out_of_bounds(story.overview)
     for index, chapter in enumerate(story.chapters):
-        yield from _blank_faults((CHAPTERS, index, ID), chapter.id)
+        yield from _id_faults((CHAPTERS, index, ID), chapter.id)
         yield from _text_faults((CHAPTERS, index, TITLE), chapter.title, StoryText.CHAPTER_TITLE)
         yield from _text_faults((CHAPTERS, index, WHY), chapter.why, StoryText.CHAPTER_WHY)
         yield from _text_faults((CHAPTERS, index, DOUBT), chapter.doubt, StoryText.CHAPTER_DOUBT)
@@ -181,6 +187,23 @@ def _blank_faults(path: FieldPath, text: str) -> Iterator[FieldFault]:
     """What is wrong with a text that has no length to keep to: it says nothing."""
     if says_nothing(text):
         yield FieldFault(path=path, reason=SAYS_NOTHING)
+
+
+def _id_faults(path: FieldPath, chapter_id: str) -> Iterator[FieldFault]:
+    """What is wrong with a chapter's id: it says nothing, or holds what no thread on the chapter could name it by."""
+    if says_nothing(chapter_id):
+        yield FieldFault(path=path, reason=SAYS_NOTHING)
+    elif not _is_an_id(chapter_id):
+        yield FieldFault(path=path, reason=NOT_AN_ID)
+
+
+def _is_an_id(chapter_id: str) -> bool:
+    """Whether a chapter's id is one a thread on the chapter can name it by."""
+    try:
+        CHAPTER_IDS.validate_python(chapter_id)
+    except ValidationError:
+        return False
+    return True
 
 
 def _parts_missing(chapters: list[Chapter[Step]]) -> Iterator[FieldFault]:

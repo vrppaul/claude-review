@@ -10,18 +10,23 @@ from claude_review.domain.models import (
     FIRST_ROUND,
     CommentSeverity,
     LineSide,
+    OverviewBlock,
+    OverviewText,
     ReviewMode,
     ReviewResult,
+    StoryAnchor,
     Thread,
     Turn,
     TurnAuthor,
 )
-from claude_review.services.anchor_service import AnchorService
+from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler
 from claude_review.services.round_formatter import RoundFormatter
 from tests.helpers import line_anchor, thread
 
 # What the threads hang on: a diff review files them by place, and needs none of it
-NO_CONTENT = AnchorService.of_diff([])
+NO_CONTENT = AnchorService(lines=LineAnchorHandler([]), story=StoryAnchorHandler(None))
+# Words of the story's overview a thread was written on
+DOUBT_SAID = "Whether a cancelled upload gives its room back."
 
 
 def _formatted(
@@ -41,6 +46,16 @@ def test_a_comment_is_filed_under_its_file_and_line() -> None:
     assert "### `src/handler.ts`:42" in result.markdown
     assert "Wrong null check" in result.markdown
     assert result.comment_count == 1
+
+
+def test_a_comment_on_the_story_is_filed_under_its_block_and_quotes_the_words_it_is_on() -> None:
+    """The agent has the files in front of it, not the story it told: the words come with the thread."""
+    on_the_doubt = StoryAnchor(block=OverviewBlock(text=OverviewText.DOUBT), quote=[DOUBT_SAID])
+
+    result = _formatted([thread(on_the_doubt, "Is it given back on every path?")])
+
+    assert f"### story overview, Doubt\n> {DOUBT_SAID}\n" in result.markdown
+    assert "Is it given back on every path?" in result.markdown
 
 
 def test_a_comment_on_several_lines_is_filed_under_the_range() -> None:

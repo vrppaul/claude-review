@@ -8,6 +8,7 @@ from pydantic import (
     ConfigDict,
     Field,
     JsonValue,
+    Strict,
     TypeAdapter,
     ValidationError,
     computed_field,
@@ -16,14 +17,21 @@ from pydantic import (
 
 from claude_review.domain import models
 from claude_review.domain.models import (
+    FIRST_ITEM,
     FIRST_LINE,
     FIRST_ROUND,
     LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
+    STORY_QUOTE_TEXTS,
     AnchorKind,
+    ChapterId,
+    ChapterText,
     CommentSeverity,
     FilePath,
     LineSide,
+    OverviewList,
+    OverviewText,
+    StoryBlockKind,
     TurnAuthor,
     says_nothing,
 )
@@ -69,8 +77,59 @@ class LineAnchor(WireModel):
         return self
 
 
+class OverviewBlock(WireModel):
+    """One of the overview's three lines, by its name."""
+
+    at: Literal[StoryBlockKind.OVERVIEW] = StoryBlockKind.OVERVIEW
+    text: OverviewText
+
+
+class ItemBlock(WireModel):
+    """One thing a list of the overview holds, by where it stands in the list, counted from 0."""
+
+    at: Literal[StoryBlockKind.ITEM] = StoryBlockKind.ITEM
+    list: OverviewList
+    # A number as JSON writes one, and nothing else: `false` would otherwise be read as the first item
+    item: Annotated[int, Strict()] = Field(ge=FIRST_ITEM)
+
+
+class ChapterBlock(WireModel):
+    """What a chapter says of itself, the chapter by its id."""
+
+    at: Literal[StoryBlockKind.CHAPTER] = StoryBlockKind.CHAPTER
+    chapter: ChapterId
+    text: ChapterText
+
+
+class ReasonBlock(WireModel):
+    """A step's reason, the step by its file and the first line it tells."""
+
+    at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
+    file: FilePath
+    first_line: int = Field(ge=FIRST_LINE)
+
+
+# A block of the story's words, as the wire carries it
+type StoryBlock = Annotated[OverviewBlock | ItemBlock | ChapterBlock | ReasonBlock, Field(discriminator="at")]
+
+# The words of a block a story anchor quotes: a text of the story, bounded as anything said in a review is
+QuotedWords = Annotated[str, Field(max_length=MAX_TEXT_LENGTH)]
+
+
+class StoryAnchor(WireModel):
+    """A block of the words of the story told of the change, as the page and the agent name it.
+
+    A quote left out is filled in by the review from the story it holds.
+    """
+
+    kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
+    block: StoryBlock
+    quote: list[QuotedWords] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
+    outdated: WireBool = False
+
+
 # Everything a thread can hang on, as the wire carries it
-type Anchor = LineAnchor
+type Anchor = Annotated[LineAnchor | StoryAnchor, Field(discriminator="kind")]
 
 
 # Every kind of anchor, read from the other side's form by its fields

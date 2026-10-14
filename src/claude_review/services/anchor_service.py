@@ -7,12 +7,36 @@ of looking inside an anchor.
 """
 
 from abc import ABC, abstractmethod
-from typing import Self, assert_never, override
+from typing import assert_never, override
 
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import AnchorLinesNotShownError, AnchorTooLongError, UnknownAnchorFileError
-from claude_review.domain.models import MAX_QUOTE_LINES, Anchor, AnchorBase, DiffFile, LineAnchor, LineSide, LineType
+from claude_review.domain.exceptions import (
+    AnchorLinesNotShownError,
+    AnchorTooLongError,
+    UnknownAnchorFileError,
+    UnknownStoryBlockError,
+)
+from claude_review.domain.models import (
+    FIRST_ITEM,
+    MAX_QUOTE_LINES,
+    Anchor,
+    AnchorBase,
+    ChapterBlock,
+    ChapterText,
+    DiffFile,
+    ItemBlock,
+    LineAnchor,
+    LineSide,
+    LineType,
+    OverviewBlock,
+    OverviewList,
+    OverviewText,
+    ReasonBlock,
+    StoryAnchor,
+    StoryBlock,
+)
+from claude_review.domain.story import Chapter, StoryOverview, ToldStep, ToldStory
 from claude_review.services.place_words import line_span, place_in_words
 
 # How many of the review's files a refusal names, so whoever named the wrong
@@ -27,6 +51,9 @@ FILES_SEPARATOR = ", "
 SIDE_WORDS = {LineSide.OLD: "removed", LineSide.NEW: "new"}
 ONE_LINE = "line"
 SEVERAL_LINES = "lines"
+# How a refusal says a story holds no such block, or that no story is told
+NOT_IN_THE_STORY = "The story told of this review says nothing at {place}"
+NO_STORY_TOLD = "No story is told of this review: nothing is at {place}"
 
 
 class SideLine(BaseModel):
@@ -162,20 +189,74 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         return known[file.path]
 
 
+class StoryAnchorHandler(AnchorHandler[StoryAnchor]):
+    """Anchors on blocks of the story's words, read against the story the review holds.
+
+    What a block said when the thread was written is what the thread is
+    about. The story is replaced whole when it is told again, and the thread
+    follows its words: to its own block while that says them still, to the
+    first block that does when another does, and nowhere when none does — it
+    then stays where it was, outdated.
+    """
+
+    def __init__(self, story: ToldStory | None) -> None:
+        # Every block the story held says something at, with its words, in the order the story tells them:
+        # None while no story is told
+        self._said = None if story is None else _said_in(story)
+
+    @override
+    def quote(self, anchor: StoryAnchor) -> StoryAnchor:
+        """The anchor with the words its block says read off the story.
+
+        Raises:
+            UnknownStoryBlockError: if no story is told, or the one told says nothing at the block.
+        """
+        if self._said is None:
+            raise UnknownStoryBlockError(NO_STORY_TOLD.format(place=place_in_words(anchor)))
+        words = self._said.get(anchor.block)
+        if words is None:
+            raise UnknownStoryBlockError(NOT_IN_THE_STORY.format(place=place_in_words(anchor)))
+        return anchor.quoting(words)
+
+    @override
+    def check_quote(self, anchor: StoryAnchor) -> None:
+        """Take whatever words the page quotes: no suggestion replaces a story's words, so none is held to them."""
+
+    @override
+    def excerpt(self, anchor: StoryAnchor) -> list[str]:
+        """The words the anchor quotes, which are all there is of a block."""
+        return anchor.quote
+
+    @override
+    def follow(self, anchor: StoryAnchor) -> StoryAnchor:
+        """The anchor on the block that says what it quotes, its own first; outdated where it was when none does.
+
+        A review started again holds no story until one is told, and an
+        anchor that never kept its words has none to look for: either is
+        left as it is.
+        """
+        if self._said is None or not anchor.quote:
+            return anchor
+        [words] = anchor.quote
+        if self._said.get(anchor.block) == words:
+            return anchor.current_at(anchor.block)
+        found = next((block for block, said in self._said.items() if said == words), None)
+        if found is None:
+            return anchor.lost()
+        return anchor.current_at(found)
+
+
 class AnchorService:
     """Every kind of anchor, each answered by the handler that knows it.
 
-    Built once for each take of what the review holds: the handlers read it
-    once, however many anchors ask.
+    Built for what the review holds as it is asked: a take of its content,
+    whose handler reads it once however many anchors ask, and the story told
+    of it.
     """
 
-    def __init__(self, lines: AnchorHandler[LineAnchor]) -> None:
+    def __init__(self, lines: AnchorHandler[LineAnchor], story: AnchorHandler[StoryAnchor]) -> None:
         self._lines = lines
-
-    @classmethod
-    def of_diff(cls, diff_files: list[DiffFile]) -> Self:
-        """The anchors of one take of the review's diff."""
-        return cls(lines=LineAnchorHandler(diff_files))
+        self._story = story
 
     def quote(self, anchor: Anchor) -> Anchor:
         """The anchor with what it is about read off what the review holds.
@@ -183,10 +264,13 @@ class AnchorService:
         Raises:
             UnknownAnchorFileError: if the review holds no such file.
             AnchorLinesNotShownError: if the diff does not show those lines.
+            UnknownStoryBlockError: if the story told says nothing at the block, or none is told.
         """
         match anchor:
             case LineAnchor():
                 return self._lines.quote(anchor)
+            case StoryAnchor():
+                return self._story.quote(anchor)
             case _:
                 assert_never(anchor)
 
@@ -199,6 +283,8 @@ class AnchorService:
         match anchor:
             case LineAnchor():
                 self._lines.check_quote(anchor)
+            case StoryAnchor():
+                self._story.check_quote(anchor)
             case _:
                 assert_never(anchor)
 
@@ -207,6 +293,8 @@ class AnchorService:
         match anchor:
             case LineAnchor():
                 return self._lines.excerpt(anchor)
+            case StoryAnchor():
+                return self._story.excerpt(anchor)
             case _:
                 assert_never(anchor)
 
@@ -215,8 +303,55 @@ class AnchorService:
         match anchor:
             case LineAnchor():
                 return self._lines.follow(anchor)
+            case StoryAnchor():
+                return self._story.follow(anchor)
             case _:
                 assert_never(anchor)
+
+
+def _said_in(story: ToldStory) -> dict[StoryBlock, str]:
+    """Every block a story says something at, with its words, in the order the story tells them.
+
+    A text the story left out — a doubt, a step's reason — is no block of
+    it. Nor is the reason of a step of a file no thread could name.
+    """
+    blocks: dict[StoryBlock, str | None] = {
+        **_overview_said(story.overview),
+        **{block: words for chapter in story.chapters for block, words in _chapter_said(chapter).items()},
+    }
+    return {block: words for block, words in blocks.items() if words is not None}
+
+
+def _overview_said(overview: StoryOverview) -> dict[StoryBlock, str | None]:
+    """The overview's three lines, then every item of its lists, by their blocks."""
+    lists = {
+        OverviewList.DECISIONS: overview.decisions,
+        OverviewList.TURNED_DOWN: overview.turned_down,
+        OverviewList.LATER: overview.later,
+    }
+    return {
+        OverviewBlock(text=OverviewText.TASK): overview.task,
+        OverviewBlock(text=OverviewText.DONE): overview.done,
+        OverviewBlock(text=OverviewText.DOUBT): overview.doubt,
+        **{
+            ItemBlock(list=listed, item=place): item.text
+            for listed, items in lists.items()
+            for place, item in enumerate(items, start=FIRST_ITEM)
+        },
+    }
+
+
+def _chapter_said(chapter: Chapter[ToldStep]) -> dict[StoryBlock, str | None]:
+    """What a chapter says of itself, then each of its steps' reasons, by their blocks."""
+    return {
+        ChapterBlock(chapter=chapter.id, text=ChapterText.WHY): chapter.why,
+        ChapterBlock(chapter=chapter.id, text=ChapterText.DOUBT): chapter.doubt,
+        **{
+            ReasonBlock(file=step.file, first_line=step.lines.first): step.reason
+            for step in chapter.steps
+            if step.piece.commentable
+        },
+    }
 
 
 def _side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:

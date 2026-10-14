@@ -3,14 +3,16 @@
 The review's own models say what the review is; these say what crosses to
 its page and its agent. They are kept apart so the one can change without
 the other, and so the rules of the wire — every field written out, every
-id and text a request carries bounded — live on the wire alone.
+id and text a request carries bounded — live on the wire alone. All but
+what an id may hold: the review holds a story's chapters to that as well,
+so the rule is the domain's, and the wire bounds its ids by it.
 """
 
 from typing import Annotated, Self
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
 
-from claude_review.domain.models import says_nothing
+from claude_review.domain.models import MAX_ID_LENGTH, SAFE_ID, says_nothing
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
 
 # What JSON is called on the wire, for whoever writes it there by hand: the agent's client says it of what it
@@ -39,17 +41,9 @@ class WireModel(BaseModel):
 # The most one thing said may hold: a comment, a turn, a panel message
 MAX_TEXT_LENGTH = 50_000
 
-# The longest id a request may name: a thread, a question, a message, an
-# image, a base
-MAX_ID_LENGTH = 200
-
-# What an id may hold. A thread is read back at a path of its own —
-# `/api/catch-up/threads/{id}` — where a slash would name another route, so
-# an id is letters, digits, dots, dashes and underscores, and nothing else.
-SAFE_ID = r"^[A-Za-z0-9._-]+$"
-
 # An id as a request names it, in its body or in a route's path: a thread, a
-# turn, a question, a message, an image
+# turn, a question, a message, an image. Held to the review's one rule for an
+# id (`SAFE_ID`), which a story's chapter is held to as well
 WireId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
 
 # A yes or a no as JSON says it: true or false, never 0, 1 or "yes", which

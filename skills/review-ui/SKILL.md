@@ -150,7 +150,12 @@ somebody who is waiting.
      `resolved` and `raised_by`, which is `author` on a thread you opened
      yourself. Every `images` holds absolute paths to screenshots the
      reader pasted, and the text beside it may be empty when a screenshot
-     is all there is.
+     is all there is. A question about the story you told hangs on a block
+     of its words instead: `anchor` is then `{"kind":"story","block":{"at":
+     "chapter","chapter":"images-kept","text":"doubt"},"quote":["<the
+     words asked about>"],"outdated":false}`, and `where` says it in words
+     (`story chapter images-kept, where to doubt`). Answer it as any
+     thread; to change the words, tell the story again.
    - `{"type":"message","message":{"message_id":"panel-1","body":"...",
      "threads":[...],"images":[...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:

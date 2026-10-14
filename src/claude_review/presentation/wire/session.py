@@ -16,7 +16,8 @@ from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field
 
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, WireBool, WireModel
+from claude_review.domain.models import MAX_ID_LENGTH
+from claude_review.presentation.wire.base import WireBool, WireModel
 from claude_review.presentation.wire.pushes import ServerPush
 
 

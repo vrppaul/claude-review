@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { lineAnchor } from '$lib/anchors/line';
-import type { LineSide } from '$lib/types';
+import type { LineSide, StoryAnchor } from '$lib/types';
 import { ThreadsByLine } from '$lib/anchors/comment-index';
 import { fakeServer, SERVER_ERROR } from './fake-server';
 import { newComment } from './new-comment';
@@ -90,6 +90,19 @@ describe('the comments of a review', () => {
 		expect(review.threads.onLinesOf('a.ts').map(({ thread }) => thread.body)).toEqual(['comment A', 'comment A2']);
 		expect(review.threads.onLinesOf('b.ts')).toHaveLength(1);
 		expect(review.threads.onLinesOf('c.ts')).toHaveLength(0);
+	});
+
+	it('on the story are on the lines of no file', () => {
+		const onTheDoubt: StoryAnchor = {
+			kind: 'story',
+			block: { at: 'overview', text: 'doubt' },
+			quote: ['Whether it holds.'],
+			outdated: false
+		};
+		review.threads.add(newComment({ file: 'a.ts', body: 'on a line' }));
+		review.threads.add({ anchor: onTheDoubt, body: 'on the doubt', severity: 'note', images: [] });
+
+		expect(review.threads.onLines.map(({ thread }) => thread.body)).toEqual(['on a line']);
 	});
 
 	it('draw a thread under the last line of its range only', () => {

@@ -14,9 +14,9 @@ from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import LineSpan
+from claude_review.domain.models import MAX_ID_LENGTH, LineSpan
 from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
-from claude_review.services.story_checks import document_faults
+from claude_review.services.story_checks import CHAPTER_ID_RULE, document_faults
 from tests.stories import (
     IMAGE_SERVICE,
     IMAGE_STORE,
@@ -171,6 +171,18 @@ def test_a_chapter_whose_id_says_nothing_is_refused_though_a_link_leads_to_it(bl
     story = planted(unnamed, ("overview", "diagram", "links", "paste"), blank)
 
     assert paths_of(document_faults(story)) == [("chapters", 0, "id")]
+
+
+@pytest.mark.parametrize("not_an_id", ["images kept", "images/kept", "x" * (MAX_ID_LENGTH + 1)])
+def test_a_chapter_whose_id_no_thread_could_name_is_refused_saying_what_an_id_may_hold(not_an_id: str) -> None:
+    """A thread on what the chapter says names it by its id: told, it would offer to be asked about, and fail."""
+    renamed = planted(canvas_story(), ("chapters", 0, "id"), not_an_id)
+    story = planted(renamed, ("overview", "diagram", "links", "paste"), not_an_id)
+
+    [fault] = document_faults(story)
+
+    assert fault.path == ("chapters", 0, "id")
+    assert CHAPTER_ID_RULE in fault.reason
 
 
 def test_a_story_tells_at_least_one_chapter() -> None:

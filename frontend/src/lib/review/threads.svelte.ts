@@ -9,7 +9,7 @@
 
 import { askInThread, cancelMessage, followAnchors } from '$lib/api/review-api';
 import { lineAnchor } from '$lib/anchors/line';
-import { anchorLines, type ThreadOnLines } from '$lib/anchors/views';
+import { threadPlaceOf, type ThreadOnLines } from '$lib/anchors/views';
 import type { IssuedIds, KeptThreads } from '$lib/drafts/draft-shapes';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
@@ -51,6 +51,12 @@ function questionIdOf(thread: Thread): string {
 
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
+
+/** A thread with the lines of a file it hangs on; nothing for one drawn elsewhere. */
+function withItsLines(thread: Thread): ThreadOnLines[] {
+	const place = threadPlaceOf(thread.anchor);
+	return place.on === 'lines' ? [{ thread, lines: place.lines }] : [];
+}
 
 /** A comment field holding something not said yet, and what it is written on. */
 export interface OpenField {
@@ -100,7 +106,7 @@ export class Threads {
 	readonly #sending: ThreadSending;
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
-	readonly #onLines = $derived(this.#all.map((thread) => ({ thread, lines: anchorLines(thread.anchor) })));
+	readonly #onLines = $derived(this.#all.flatMap(withItsLines));
 	// By the file they hang on, so a file asks for its own without a scan
 	readonly #byFile = $derived(Map.groupBy(this.#onLines, ({ lines }) => lines.file));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
@@ -153,7 +159,7 @@ export class Threads {
 		return this.#answered;
 	}
 
-	/** Every thread, with the lines of a file it hangs on. */
+	/** Every thread on lines of a file, with its lines. */
 	get onLines(): readonly ThreadOnLines[] {
 		return this.#onLines;
 	}

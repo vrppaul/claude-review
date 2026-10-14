@@ -20,7 +20,7 @@
  * to keep.
  */
 
-import { anchorLines } from '$lib/anchors/views';
+import { type FileLines, threadPlaceOf } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
@@ -102,9 +102,8 @@ export class Navigator {
 	 * their base has them, their bar says why, and the thread is not gone to.
 	 */
 	reveal(thread: Thread): void {
-		const onScreen = this.#views.onScreen;
-		if (onScreen.sectionOf(anchorLines(thread.anchor)) !== null) this.#revealIn(onScreen, thread);
-		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread));
+		const place = threadPlaceOf(thread.anchor);
+		if (place.on === 'lines') this.#revealOnLines(thread, place.lines);
 	}
 
 	/** Bring a thread into view to read its answer, which reading it marks read. */
@@ -147,9 +146,15 @@ export class Navigator {
 		else void this.#views.showEverything().then((drawingAll) => this.#showIn(drawingAll, path));
 	}
 
-	/** Go to a thread in a view, if the view draws it. */
-	#revealIn(view: ReadingView, thread: Thread): void {
-		const lines = anchorLines(thread.anchor);
+	/** Bring a thread on lines of a file into view, where the view on screen draws them or where every thread is drawn. */
+	#revealOnLines(thread: Thread, lines: FileLines): void {
+		const onScreen = this.#views.onScreen;
+		if (onScreen.sectionOf(lines) !== null) this.#revealIn(onScreen, thread, lines);
+		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread, lines));
+	}
+
+	/** Go to a thread on lines in a view, if the view draws them. */
+	#revealIn(view: ReadingView, thread: Thread, lines: FileLines): void {
 		const section = view.sectionOf(lines);
 		if (section === null) return;
 		this.#at = { thread: thread.id, among: view.threadsInOrder() };

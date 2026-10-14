@@ -18,9 +18,9 @@ from typing import Annotated, Self
 from pydantic import ConfigDict, Field, PlainSerializer, PlainValidator, WithJsonSchema
 
 from claude_review.domain import models, story
-from claude_review.domain.models import MAX_PATH_LENGTH
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH, WireModel
+from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireModel
 from claude_review.presentation.wire.content import DiffFile
 from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 from claude_review.services.review import review_story

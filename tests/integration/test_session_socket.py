@@ -15,8 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from claude_review.domain.models import MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.base import MAX_ID_LENGTH
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
 from claude_review.presentation.wire.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
 from claude_review.presentation.wire.session import Welcome
 from tests.helpers import (

@@ -1,7 +1,7 @@
-"""One take of what is under review: its files, the anchors read against them, and the tree they were taken from."""
+"""One take of what is under review: its files, their lines as anchors read them, and the tree they were taken from."""
 
 from claude_review.domain.models import DiffFile, TreeState
-from claude_review.services.anchor_service import AnchorService
+from claude_review.services.anchor_service import LineAnchorHandler
 
 # The take a review is made with, from what its opening read: every take
 # after it is counted on from here. A review of a repository takes its diff
@@ -12,16 +12,16 @@ FIRST_TAKE = 1
 class ReviewContent:
     """What the review holds between two takes of it, replaced whole by the next.
 
-    Whatever reads it reads one take: the files and the anchors read against
-    them are never from two different ones. Takes are numbered as they are
-    made, by the take before: what is cut out of one and kept past it — the
-    pieces a story shows — says which take it is of, and whoever holds it
-    beside a later one can tell.
+    Whatever reads it reads one take: the files and the line anchors read
+    against them are never from two different ones. Takes are numbered as
+    they are made, by the take before: what is cut out of one and kept past
+    it — the pieces a story shows — says which take it is of, and whoever
+    holds it beside a later one can tell.
     """
 
     def __init__(self, files: list[DiffFile], tree: TreeState, *, take: int) -> None:
         self._files = files
-        self._anchors = AnchorService.of_diff(files)
+        self._line_anchors = LineAnchorHandler(files)
         # The working tree as it stood when these files were taken; what the
         # watcher compares against. Empty for content no repository holds.
         self._tree = tree
@@ -49,8 +49,8 @@ class ReviewContent:
         return frozenset(file.path for file in self._files)
 
     @property
-    def anchors(self) -> AnchorService:
-        return self._anchors
+    def line_anchors(self) -> LineAnchorHandler:
+        return self._line_anchors
 
     @property
     def tree(self) -> TreeState:

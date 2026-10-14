@@ -22,7 +22,7 @@ from claude_review.domain.exceptions import (
     UnknownImageError,
     UnknownVersionError,
 )
-from claude_review.domain.models import FIRST_LINE, MAX_PATH_LENGTH
+from claude_review.domain.models import FIRST_LINE, MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
 from claude_review.presentation.refusals import Takes, refusals
@@ -41,7 +41,7 @@ from claude_review.presentation.wire.agent import (
     MessageRequest,
     SaidInPanel,
 )
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, WireId
+from claude_review.presentation.wire.base import WireId
 from claude_review.presentation.wire.content import (
     SEND_LIMITS,
     DiffFile,

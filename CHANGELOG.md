@@ -61,6 +61,10 @@
   that id as `said_id`.
 
 ### Changed
+- **A story's chapter goes by an id a thread can name.** `story` refuses a
+  chapter's id that holds anything but letters, digits, dots, dashes and
+  underscores, or runs past 200 of them, at `chapters.N.id`, and `story
+  --help` says so: a question about what a chapter says names it by its id.
 - **Every menu is one kind of pane, with an arrow pointing at what opened
   it**: the list of bases, the settings, the replies, the pane the review
   is finished from, and the @-picker in the agent panel. Opened, it takes

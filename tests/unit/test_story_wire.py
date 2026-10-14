@@ -10,9 +10,9 @@ import pytest
 from pydantic import JsonValue, ValidationError
 
 from claude_review.domain.exceptions import FieldPath
-from claude_review.domain.models import MAX_PATH_LENGTH
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_ID_LENGTH, MAX_TEXT_LENGTH
+from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
 from claude_review.presentation.wire.story import (
     MAX_CHAPTERS,
     MAX_DIAGRAM_LINKS,

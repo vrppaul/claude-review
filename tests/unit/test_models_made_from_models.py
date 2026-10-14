@@ -11,14 +11,19 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import (
+    ChapterBlock,
+    ChapterText,
     DiffFile,
     DiffLayout,
     FileStatus,
     GuideState,
     LineSide,
     LineSpan,
+    OverviewBlock,
+    OverviewText,
     ReaderSettings,
     SaidInPanel,
+    StoryAnchor,
     Theme,
     TurnAuthor,
     Unshown,
@@ -57,6 +62,10 @@ OTHER_ROWS = [hunk(3, 3, "+")]
 QUOTE = ["def walk():", "    run()"]
 ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE)
 OUTDATED_ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE, outdated=True)
+# An anchor on what a chapter of the story says of itself, and the same one marked outdated
+CHAPTER_DOUBT = ChapterBlock(chapter="ch-1", text=ChapterText.DOUBT)
+STORY_ANCHOR = StoryAnchor(block=CHAPTER_DOUBT, quote=["Whether a cancelled reply still closes it."])
+OUTDATED_STORY_ANCHOR = StoryAnchor(block=CHAPTER_DOUBT, quote=STORY_ANCHOR.quote, outdated=True)
 SAID = SaidInPanel(
     said_id="message-1",
     message_id="message-1",
@@ -112,6 +121,21 @@ MADE = [
         replaced={"start_line", "end_line", "outdated"},
     ),
     MadeFrom(what="an anchor lost", source=ANCHOR, made=ANCHOR.lost(), replaced={"outdated"}),
+    MadeFrom(
+        what="an anchor quoting the story's words",
+        source=OUTDATED_STORY_ANCHOR,
+        made=OUTDATED_STORY_ANCHOR.quoting("Whether the store closes."),
+        replaced={"quote", "outdated"},
+    ),
+    MadeFrom(
+        what="an anchor on the story's words found again",
+        source=OUTDATED_STORY_ANCHOR,
+        made=OUTDATED_STORY_ANCHOR.current_at(OverviewBlock(text=OverviewText.DOUBT)),
+        replaced={"block", "outdated"},
+    ),
+    MadeFrom(
+        what="an anchor on the story's words lost", source=STORY_ANCHOR, made=STORY_ANCHOR.lost(), replaced={"outdated"}
+    ),
     MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),
     MadeFrom(
         what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}

@@ -209,9 +209,28 @@ class AnchorKind(StrEnum):
     """What a thread can hang on.
 
     LINE — lines of one side of a file in the review's own diff.
+    STORY — a block of the words of the story told of the change.
     """
 
     LINE = auto()
+    STORY = auto()
+
+
+# The longest id a request may name — a thread, a question, a message, an
+# image, a base — and the longest a story's chapter may go by
+MAX_ID_LENGTH = 200
+
+# What an id may hold. A thread is read back at a path of its own —
+# `/api/catch-up/threads/{id}` — where a slash would name another route, so
+# an id is letters, digits, dots, dashes and underscores, and nothing else.
+# A story's chapter is held to it too: a thread on the chapter names it.
+SAFE_ID = r"^[A-Za-z0-9._-]+$"
+
+# A chapter of a story, by the id a thread on it names it by
+ChapterId = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH, pattern=SAFE_ID)]
+
+# The rule a chapter's id is held to, for an id the review reads in a story rather than in an anchor
+CHAPTER_IDS: TypeAdapter[ChapterId] = TypeAdapter(ChapterId)
 
 
 # What a file path a thread may name, or the agent may say, holds: no control
@@ -324,9 +343,121 @@ class LineAnchor(AnchorBase):
         )
 
 
+class StoryBlockKind(StrEnum):
+    """Which of the story's blocks of words a thread hangs on.
+
+    OVERVIEW — one of the overview's three lines.
+    ITEM — one thing a list of the overview holds.
+    CHAPTER — what a chapter says of itself under its title.
+    REASON — why a step's piece of the change is the way it is.
+    """
+
+    OVERVIEW = auto()
+    ITEM = auto()
+    CHAPTER = auto()
+    REASON = auto()
+
+
+class OverviewText(StrEnum):
+    """The overview's three lines: what was asked, what was done, and what to doubt."""
+
+    TASK = auto()
+    DONE = auto()
+    DOUBT = auto()
+
+
+class OverviewList(StrEnum):
+    """The overview's lists: decisions taken, ways turned down, and what was left for later."""
+
+    DECISIONS = auto()
+    TURNED_DOWN = auto()
+    LATER = auto()
+
+
+class ChapterText(StrEnum):
+    """What a chapter says of itself under its title: why its changes belong together, and where to doubt them."""
+
+    WHY = auto()
+    DOUBT = auto()
+
+
+# Where the first item of an overview's list stands: items are counted from it, as a list's places are
+FIRST_ITEM = 0
+
+
+class StoryPlace(BaseModel):
+    """A block of a story's words, by its place in the story: made once, never changed, and a key a table is read by."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class OverviewBlock(StoryPlace):
+    """One of the overview's three lines, by its name."""
+
+    at: Literal[StoryBlockKind.OVERVIEW] = StoryBlockKind.OVERVIEW
+    text: OverviewText
+
+
+class ItemBlock(StoryPlace):
+    """One thing a list of the overview holds, by where it stands in the list."""
+
+    at: Literal[StoryBlockKind.ITEM] = StoryBlockKind.ITEM
+    list: OverviewList
+    item: int = Field(ge=FIRST_ITEM)
+
+
+class ChapterBlock(StoryPlace):
+    """What a chapter says of itself, the chapter by its id."""
+
+    at: Literal[StoryBlockKind.CHAPTER] = StoryBlockKind.CHAPTER
+    chapter: ChapterId
+    text: ChapterText
+
+
+class ReasonBlock(StoryPlace):
+    """A step's reason, the step by its file and the first line it tells: no two steps of a story share both."""
+
+    at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
+    file: FilePath
+    first_line: int = Field(ge=FIRST_LINE)
+
+
+# A block of the story's words, told apart by `at`
+type StoryBlock = Annotated[OverviewBlock | ItemBlock | ChapterBlock | ReasonBlock, Field(discriminator="at")]
+
+# The most texts a story anchor quotes: a block's words are one text
+STORY_QUOTE_TEXTS = 1
+
+
+class StoryAnchor(AnchorBase):
+    """A block of the words of the story told of the change.
+
+    It quotes the block's words as they were when the thread was written: a
+    story is replaced whole when it is told again, and the thread follows
+    the words to wherever the new story says them.
+    """
+
+    kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
+    block: StoryBlock
+    # The block's words, as one text; none while the review has not quoted them yet
+    quote: list[str] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
+
+    def quoting(self, words: str) -> StoryAnchor:
+        """The anchor quoting the block's words, read off the story the review holds: it is not outdated."""
+        return StoryAnchor(kind=self.kind, block=self.block, quote=[words], outdated=False)
+
+    def current_at(self, block: StoryBlock) -> StoryAnchor:
+        """The anchor on the block of the story the review holds now that says what it quotes: it is not outdated."""
+        return StoryAnchor(kind=self.kind, block=block, quote=self.quote, outdated=False)
+
+    def lost(self) -> StoryAnchor:
+        """The anchor where it was, marked outdated: the story the review holds says what it quotes nowhere."""
+        return StoryAnchor(kind=self.kind, block=self.block, quote=self.quote, outdated=True)
+
+
 # Everything a thread can hang on, told apart by `kind`; `AnchorService`
 # answers for each kind
-type Anchor = LineAnchor
+type Anchor = Annotated[LineAnchor | StoryAnchor, Field(discriminator="kind")]
 
 # The round every review opens on; rounds are counted from it
 FIRST_ROUND = 1

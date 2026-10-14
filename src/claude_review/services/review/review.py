@@ -59,6 +59,7 @@ from claude_review.domain.page_events import (
     TreeMoved,
 )
 from claude_review.domain.story import Step, Story, StoryAsking
+from claude_review.services.anchor_service import AnchorService, StoryAnchorHandler
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -217,8 +218,8 @@ class Review:
         return await self._source.file_window(path, start, end)
 
     def follow(self, anchors: list[Anchor]) -> list[Anchor]:
-        """Where each anchor is in the content as it now stands, or marked outdated."""
-        found = self._source.content.anchors
+        """Where each anchor is in the content and the story as they now stand, or marked outdated."""
+        found = self._anchors
         return [found.follow(anchor) for anchor in anchors]
 
     async def open(self) -> None:
@@ -338,8 +339,9 @@ class Review:
         Raises:
             UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError:
                 if the anchor names something the content does not show.
+            UnknownStoryBlockError: if it names a block of words the story told does not say.
         """
-        quoted = self._source.content.anchors.quote(anchor)
+        quoted = self._anchors.quote(anchor)
         thread_id = self._threads.raise_id()
         self._threads.raised(
             ThreadDraft(
@@ -383,7 +385,7 @@ class Review:
             [self._hand_over(thread) for thread in threads],
             body,
             round_number=number,
-            anchors=self._source.content.anchors,
+            anchors=self._anchors,
         )
         submission = RoundSubmission(number=number, markdown=result.markdown, comment_count=result.comment_count)
         self._rounds.sent(submission)
@@ -515,10 +517,18 @@ class Review:
             AnchorLinesNotShownError: if one names lines it does not quote.
             AgentWordsChangedError: if one the agent raised no longer opens as the agent raised it.
         """
-        anchors = self._source.content.anchors
+        anchors = self._anchors
         for thread in threads:
             anchors.check_quote(thread.anchor)
         self._threads.check_openings(threads)
+
+    @property
+    def _anchors(self) -> AnchorService:
+        """Every kind of anchor, read against what the review holds now: the take of its content, and the story told."""
+        held = self._story.held
+        return AnchorService(
+            lines=self._source.content.line_anchors, story=StoryAnchorHandler(None if held is None else held.story)
+        )
 
     def _hand_over(self, thread: ThreadDraft) -> Thread:
         """A thread as the agent is handed it, which the agent may answer in from now on."""

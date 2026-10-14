@@ -16,15 +16,15 @@ from click.testing import CliRunner, Result
 
 import claude_review
 from claude_review.cli.main import main
-from claude_review.domain.models import MAX_QUOTE_LINES
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
-from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_WAIT_SECONDS
 from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.place_words import NOT_LINES
-from claude_review.services.story_checks import document_faults
+from claude_review.services.story_checks import CHAPTER_ID_RULE, document_faults
 from tests.stories import as_the_agent_writes, step, story_of, without_field
 
 # What click exits with when a command is typed wrong, before it runs
@@ -417,6 +417,13 @@ def test_the_least_story_in_the_help_holds_no_part_that_may_be_left_out(unused_p
 
     assert _failed_in_a_line(result, USAGE_ERROR)
     assert part in result.output
+
+
+def test_the_help_of_story_says_what_a_chapters_id_may_hold() -> None:
+    """An agent learns it here, before the review refuses an id a thread on the chapter could not name."""
+    said_in_one_line = " ".join(_run("story", "--help").output.split())
+
+    assert CHAPTER_ID_RULE in said_in_one_line
 
 
 @pytest.mark.parametrize("told_from", ToldFrom)
