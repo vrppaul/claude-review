@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ChapterListed } from '$lib/review/story-contents';
-	import { chapterEntitled, chapterNumber, filesAndSteps, stepNumber } from './story-words';
+	import { chapterNumber, filesAndSteps, stepNumber } from './story-words';
 	import StoryPart from './StoryPart.svelte';
 	import StoryStep from './StoryStep.svelte';
 
@@ -17,13 +17,12 @@
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
 <StoryPart
 	partKey={chapter.part}
-	label={chapterEntitled(chapter.place, told.title)}
 	testId="story-chapter"
 	class="cr-story-chapter flex flex-col gap-5 border-t border-base-300 pt-6"
 >
-	{#snippet head()}
+	{#snippet head(heading)}
 		<header class="flex items-baseline gap-3">
-			<h2 class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
+			<h2 {...heading} data-testid="part-head" class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
 				<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-title">{told.title}</span>
 			</h2>

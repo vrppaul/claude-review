@@ -17,15 +17,10 @@
 </script>
 
 <!-- Nothing can be hidden: what no step tells is shown all the same, and said to be outside the story -->
-<StoryPart
-	partKey={LEFT_OUT_PART}
-	label={NOT_IN_THE_STORY}
-	testId="story-left-out"
-	class="flex flex-col gap-4 border-t border-base-300 pt-6"
->
-	{#snippet head()}
+<StoryPart partKey={LEFT_OUT_PART} testId="story-left-out" class="flex flex-col gap-4 border-t border-base-300 pt-6">
+	{#snippet head(heading)}
 		<header>
-			<h2 class="text-base font-semibold text-warning">{NOT_IN_THE_STORY}</h2>
+			<h2 {...heading} data-testid="part-head" class="text-base font-semibold text-warning">{NOT_IN_THE_STORY}</h2>
 			<p class="cr-muted text-sm">Changed, and told by no step of the story.</p>
 		</header>
 	{/snippet}

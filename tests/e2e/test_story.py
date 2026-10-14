@@ -123,6 +123,8 @@ TO_THE_MIDDLE = "(element) => element.scrollIntoView({ block: 'center' })"
 # How strongly an element is drawn, and the strength of one that has not stepped back
 OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
 FULLY_DRAWN = 1
+# How far off an element the ring it is drawn while it holds the keyboard stands, in pixels
+RING_OFF_IT = "(element) => parseFloat(getComputedStyle(element).outlineOffset)"
 # Whether nothing on the page holds the keyboard, and what does, by the test id it carries
 KEYBOARD_ON_NOTHING = "document.activeElement === document.body"
 HOLDS_THE_KEYBOARD = "document.activeElement?.dataset.testid"
@@ -454,6 +456,25 @@ async def test_the_bar_of_a_chapter_takes_the_reader_to_the_head_of_the_next_and
     await expect(the_second.get_by_test_id("part-head")).to_be_focused()
     await page.keyboard.press("j")
     await expect(the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)).to_be_focused()
+
+
+async def test_the_ring_round_a_chapters_heading_stands_further_off_it_than_a_controls_ring_off_the_control(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    """A heading is words with no room of their own around them: a ring as close as a button's would touch them."""
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    the_second = page.get_by_test_id("story-chapter").nth(1)
+    await page.get_by_test_id("story-view").evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_PIECE)
+    await page.get_by_test_id("go-to-chapter-after").press("Enter")
+    heading = the_second.get_by_test_id("part-head")
+    await expect(heading).to_be_focused()
+    off_the_heading = await heading.evaluate(RING_OFF_IT)
+
+    await page.keyboard.press("j")
+
+    line = the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)
+    await expect(line).to_be_focused()
+    assert off_the_heading > await line.evaluate(RING_OFF_IT)
 
 
 async def test_the_head_of_a_chapter_holds_the_keyboard_the_bar_handed_it_only_until_the_keyboard_leaves(

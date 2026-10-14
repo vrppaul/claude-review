@@ -95,18 +95,30 @@ describe('the part of a story being read', () => {
 });
 
 describe('the parts of a story, to whoever goes through the page by its parts', () => {
-	it('are each a part of the page with a name: the overview, every chapter by its number and title, and what is left out', () => {
-		expect(screen.getByRole('region', { name: 'Overview' })).toBe(screen.getByTestId('story-overview'));
-		expect(screen.getByRole('region', { name: 'Chapter 2: The end' })).toBe(screen.getAllByTestId('story-chapter')[1]);
+	it('are each a part of the page named by its heading: the overview by what the change is called, a chapter by its number and title, and what is left out', () => {
+		expect(screen.getByRole('region', { name: 'A change, told' })).toBe(screen.getByTestId('story-overview'));
+		expect(screen.getByRole('region', { name: '2 The end' })).toBe(screen.getAllByTestId('story-chapter')[1]);
 		expect(screen.getByRole('region', { name: 'Not in the story' })).toBe(screen.getByTestId('story-left-out'));
 	});
 });
 
 describe('the head of a part of a story, which holds the keyboard a bar that goes hands on', () => {
-	it('says what it is to whoever cannot see it: a group, named as its part is', () => {
+	it('is the heading the part is named by', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');
 
-		expect(screen.getByRole('group', { name: 'Chapter 2: The end' })).toBe(within(theEnd).getByTestId('part-head'));
+		expect(within(theEnd).getByRole('heading', { name: '2 The end' })).toBe(within(theEnd).getByTestId('part-head'));
+	});
+
+	it('is the head of the overview too, whose heading is what the change is called', () => {
+		const overview = screen.getByTestId('story-overview');
+
+		expect(within(overview).getByRole('heading', { name: 'A change, told' })).toBe(
+			within(overview).getByTestId('part-head')
+		);
+	});
+
+	it('stands alone under its part: nothing between them says the name again', () => {
+		expect(screen.queryByRole('group', { name: 'Chapter 2: The end' })).toBeNull();
 	});
 });
 

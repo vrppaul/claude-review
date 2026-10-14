@@ -296,6 +296,14 @@
 	outline-offset: 1px;
 	box-shadow: none;
 }
+/*
+ * Words lent the keyboard, as the heading of a part of a story is by a bar
+ * that goes (`lendKeyboard`): they have no room of their own around them, so
+ * the ring stands off them
+ */
+.cr-lent-keyboard:focus-visible {
+	outline-offset: 0.5rem;
+}
 
 /*
  * Segmented controls. These pick a view, they do not act, so they read as a
@@ -1152,13 +1160,6 @@
 /* A chapter is read under its bar: the headers of its pieces stick under the bar, and a step gone to lands under it */
 .cr-story-chapter {
 	--cr-top-room: var(--cr-chapter-bar-height);
-}
-/*
- * The head of a part of a story, while it holds the keyboard: words with no
- * room of their own around them, so the ring stands off them
- */
-.cr-part-head:focus-visible {
-	outline-offset: 0.5rem;
 }
 
 /*

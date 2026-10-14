@@ -131,11 +131,15 @@ function focusInPlace(element: HTMLElement): void {
 	element.focus({ preventScroll: true });
 }
 
+/** The class of words while they are lent the keyboard: it stands their ring off them, who have no room of their own around them. */
+const LENT_CLASS = 'cr-lent-keyboard';
+
 /** What was lent the keyboard can take it no more, once the keyboard is on something else. */
 function takeBackOnceLeft(element: HTMLElement, lent: AbortController): void {
 	// A window the reader leaves blurs what holds the keyboard, which holds it still when they are back
 	if (document.activeElement === element) return;
 	element.removeAttribute('tabindex');
+	element.classList.remove(LENT_CLASS);
 	lent.abort();
 }
 
@@ -147,6 +151,7 @@ function takeBackOnceLeft(element: HTMLElement, lent: AbortController): void {
 function lendKeyboard(element: HTMLElement): void {
 	const lent = new AbortController();
 	element.tabIndex = KEYBOARD_BY_THE_PAGE_ONLY;
+	element.classList.add(LENT_CLASS);
 	element.addEventListener('blur', () => takeBackOnceLeft(element, lent), { signal: lent.signal });
 	focusInPlace(element);
 }

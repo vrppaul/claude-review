@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { StoryHeld } from '$lib/types';
-	import { chapterNamed, THE_OVERVIEW } from './story-words';
+	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
 	import StoryPart from './StoryPart.svelte';
 
@@ -26,9 +26,9 @@
 <!-- The story before its first chapter, one part of it: what the change is called, then the change in
 	short. The agent's voice carries its colour down the edge; what to doubt is a warning, and says so
 	in yellow -->
-<StoryPart partKey={OVERVIEW_PART} label={THE_OVERVIEW} testId="story-overview" class="flex flex-col gap-8">
-	{#snippet head()}
-		<StoryHead {held} />
+<StoryPart partKey={OVERVIEW_PART} testId="story-overview" class="flex flex-col gap-8">
+	{#snippet head(heading)}
+		<StoryHead {held} {heading} />
 	{/snippet}
 
 	<section>
