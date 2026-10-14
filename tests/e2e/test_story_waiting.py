@@ -293,6 +293,37 @@ async def test_the_note_of_a_storys_arrival_stands_whole_in_a_narrow_window(revi
     assert await page.get_by_test_id("story-ready").evaluate(RIGHT_OF) < await page.evaluate(WINDOW_WIDTH)
 
 
+async def test_the_note_of_a_storys_arrival_put_away_from_the_keyboard_gives_the_keyboard_to_story_in_the_header(
+    review: RunningReview, page: Page
+) -> None:
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await _the_agent_tells_the_story(review)
+    await page.get_by_test_id("open-story").focus()
+
+    await page.keyboard.press("Escape")
+
+    await page.get_by_test_id("story-ready").wait_for(state="detached")
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()
+
+
+async def test_what_the_note_of_a_storys_arrival_stood_over_takes_a_press_once_the_note_is_put_away(
+    review: RunningReview, page: Page
+) -> None:
+    """The note stands over the head of the first file: its fold is pressed where the note was."""
+    await page.set_viewport_size(WIDE)
+    await _an_agent_attaches(review)
+    await _open_with_stories_on(page, review)
+    await _the_agent_tells_the_story(review)
+    await page.get_by_test_id("story-ready").wait_for()
+
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("collapse-file").first.click()
+
+    await page.get_by_test_id("raw-view").first.wait_for(state="detached")
+    await expect(page.get_by_test_id("story-arrived")).to_be_visible()
+
+
 async def test_opening_a_story_from_the_note_of_its_arrival_puts_the_keyboard_on_story_in_the_header(
     review: RunningReview, page: Page
 ) -> None:

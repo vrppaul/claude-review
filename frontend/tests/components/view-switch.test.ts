@@ -18,6 +18,9 @@ const IN_TWO_CHAPTERS = storyHeld({
 	chapters: [toldChapter('ch-1', [toldStep('a.py', 1)]), toldChapter('ch-2', [toldStep('a.py', 9)])]
 });
 
+// What the review says of itself with an agent attached: the panel then offers its field
+const AGENT_ATTACHED = { answerer_attached: true };
+
 /** A server that keeps the reader's choices, and takes every story asked for or stopped. */
 function serving(): FakeServer {
 	const server = takingStoryAskings();
@@ -247,6 +250,66 @@ describe('a story told while the files are read', () => {
 		await toldMeanwhile(review, server);
 
 		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+	});
+
+	it('is put away by Escape, and the Story segment stays marked: the story is not read yet', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		await toldMeanwhile(review, server);
+
+		await user.keyboard('{Escape}');
+
+		expect(screen.queryByTestId('story-ready')).toBeNull();
+		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+	});
+
+	it('is put away by a press elsewhere on the page, and the Story segment stays marked', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		await toldMeanwhile(review, server);
+
+		await user.click(screen.getByTestId('diff-view'));
+
+		expect(screen.queryByTestId('story-ready')).toBeNull();
+		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+	});
+
+	it('stays where the reader presses on the note itself', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		await toldMeanwhile(review, server);
+
+		await user.click(screen.getByTestId('story-ready'));
+
+		expect(screen.getByTestId('story-ready')).toBeTruthy();
+	});
+
+	it('stays where Escape is typed in a field: the key belongs to the field', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN, facts: AGENT_ATTACHED });
+		await toldMeanwhile(review, server);
+		screen.getByTestId('panel-input').focus();
+
+		await user.keyboard('{Escape}');
+
+		expect(screen.getByTestId('story-ready')).toBeTruthy();
+	});
+
+	it('leaves no mark on the Story segment once the story is read, its note put away before', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		await toldMeanwhile(review, server);
+		await user.keyboard('{Escape}');
+
+		await user.click(screen.getByTestId('read-as-story'));
+		await user.click(screen.getByTestId('read-as-files'));
+
+		expect(screen.queryByTestId('story-arrived')).toBeNull();
 	});
 
 	it('is shown where the reader opens it, and is offered no more', async () => {

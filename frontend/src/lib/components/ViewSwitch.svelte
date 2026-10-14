@@ -2,12 +2,15 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import type { StoryArrival } from '$lib/review/review-story.svelte';
 	import Icon from './Icon.svelte';
-	import { arrowOffsetTo } from './pane-placement';
-	import PopoverPanel from './PopoverPanel.svelte';
+	import StoryArrivalNote from './StoryArrivalNote.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
-	import { chaptersIn } from './story-words';
 	import TypingIndicator from './TypingIndicator.svelte';
+
+	// Whether the Story segment is marked, by how the arrival of a story stands with the reader: from its
+	// arrival until they have read it, whether or not they put its note away
+	const MARKS_THE_SEGMENT: Record<StoryArrival, boolean> = { none: false, offered: true, 'put-away': true };
 
 	const review = useReview();
 
@@ -21,14 +24,7 @@
 	// being written, or that it has arrived and waits to be read
 	const readingFiles = $derived(onScreen === 'files');
 	const writing = $derived(readingFiles && review.story.wait?.kind === 'writing');
-	const arrived = $derived(readingFiles && review.story.arrivedUnseen);
-	// The switch, which the note of a story's arrival stands under, its left edge on the switch's
-	let around: HTMLElement | undefined = $state();
-	// How far in from that edge the note points at the Story segment
-	const noteArrowOffset = $derived(arrived && segments.story ? arrowOffsetTo(segments.story) : 0);
-	// How far from the left of the window the note stands, as it is drawn: it is no wider than the window
-	// has room for from there, so on a narrow screen its words wrap, and nothing of it is cut off
-	const noteStandsAt = $derived(arrived && around ? around.getBoundingClientRect().left : 0);
+	const arrival: StoryArrival = $derived(readingFiles ? review.story.arrival : 'none');
 
 	// The view on screen changes from elsewhere too — the files brought on screen from where a story
 	// will be — and whatever held the keyboard in the view that went goes with it. Looked at before the
@@ -55,7 +51,7 @@
 <!-- Offered only where a story can be told: the review says, and nothing here asks what kind it is. The
 	story first, as the canvas has it: an open book, then a stack of files -->
 {#if review.story.canBeTold}
-	<div bind:this={around} class="relative" style:--cr-note-stands-at="{noteStandsAt}px">
+	<div class="relative">
 		<div data-testid="reading-view" class="cr-segmented" role="group" aria-label="How to read this review">
 			<button
 				bind:this={segments.story}
@@ -64,7 +60,7 @@
 				class={[
 					'cr-segment flex items-center gap-1.5',
 					writing && 'cr-segment-writing',
-					arrived && 'cr-segment-unread'
+					MARKS_THE_SEGMENT[arrival] && 'cr-segment-unread'
 				]}
 				aria-pressed={onScreen === 'story'}
 				onclick={readAsStory}
@@ -76,8 +72,8 @@
 					<Icon name="story" class="h-3.5 w-3.5" />
 					Story
 				{/if}
-				{#if arrived}
-					<!-- Unsaid to a screen reader: the note under the switch says it -->
+				{#if MARKS_THE_SEGMENT[arrival]}
+					<!-- Unsaid to a screen reader: the note under the switch said it -->
 					<span data-testid="story-arrived" class="text-(--cr-unread)" aria-hidden="true">●</span>
 				{/if}
 			</button>
@@ -93,29 +89,8 @@
 				Files
 			</button>
 		</div>
-		{#if arrived}
-			<!-- A note, and no popover: it opens from no control, and takes the keyboard from nothing the reader
-				is doing. The view is theirs to change -->
-			<PopoverPanel
-				role="status"
-				label="The story is ready"
-				placement="below-start"
-				arrowOffset={noteArrowOffset}
-				data-testid="story-ready"
-				class="cr-popover-note cr-popover-unread"
-			>
-				<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3.5 text-sm">
-					<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
-					<button
-						type="button"
-						data-testid="open-story"
-						class="btn btn-primary btn-xs"
-						onclick={() => review.views.choose('story')}
-					>
-						Open it
-					</button>
-				</div>
-			</PopoverPanel>
+		{#if arrival === 'offered'}
+			<StoryArrivalNote pointsAt={segments.story} onOpen={() => review.views.choose('story')} />
 		{/if}
 	</div>
 	{#if askedToTurnStoriesOn}

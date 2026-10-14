@@ -25,23 +25,13 @@
 		const focused = document.activeElement;
 		return focused instanceof HTMLElement && focused !== document.body ? focused : null;
 	}
-
-	/**
-	 * Whether something is in a modal dialog open over the page. A modal is a
-	 * layer above every pane: one opened from inside a pane — the help, by ? —
-	 * leaves the pane open under it, takes the keyboard, the presses and
-	 * Escape while it is open, and gives the keyboard back into the pane as it
-	 * closes.
-	 */
-	function inModalAbove(target: EventTarget | null): boolean {
-		return target instanceof Element && target.closest('dialog[open]') !== null;
-	}
 </script>
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { isComposingText } from '$lib/dom/keyboard';
+	import { inModalAbove } from '$lib/dom/modal';
 	import { arrowOffsetTo, type Placement } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
 

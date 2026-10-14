@@ -21,10 +21,11 @@
  * worked out from it (`story-wait.ts`), never kept.
  *
  * A story told while the page is open may land while the reader reads the
- * files, and the page never changes the view for them: it notes that the
- * story arrived unseen, until whoever draws it says the reader has seen it.
- * The note is the page's own and lasts as long as the page: a reload opens
- * on the story held, with nothing to say of how it came.
+ * files, and the page never changes the view for them: it holds how that
+ * arrival stands with the reader, offered until they put the offer away,
+ * unseen until whoever draws the story says they have seen it. That is the
+ * page's own and lasts as long as the page: a reload opens on the story
+ * held, with nothing to say of how it came.
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
@@ -34,6 +35,23 @@ import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
 import { waitOf, type StoryWait } from '$lib/review/story-wait';
 import type { StoryAsking, StoryHeld, StoryResponse } from '$lib/types';
+
+/**
+ * How a story told while the page was open stands with the reader.
+ *
+ * `none`: no story arrived that they have not seen.
+ * `offered`: one arrived, and the page offers it to them.
+ * `put-away`: they put the offer away without reading the story: it is
+ * unseen still, and offered no more.
+ */
+export type StoryArrival = 'none' | 'offered' | 'put-away';
+
+// What putting the offer away makes of each way an arrival stands: only an offer can be put away
+const OFFER_PUT_AWAY: Record<StoryArrival, StoryArrival> = {
+	none: 'none',
+	offered: 'put-away',
+	'put-away': 'put-away'
+};
 
 /** What the story of a page opens on. */
 export interface StoryOpening {
@@ -62,8 +80,8 @@ export class ReviewStory {
 	#held = $state.raw<StoryHeld | null>(null);
 	// How the reader's asking for a story stands, as the review last said: replaced whole, by a read or by what it tells
 	#asking = $state.raw<StoryAsking | null>(null);
-	// Whether the story held was told while the page was open, and the reader has not been shown it yet
-	#arrivedUnseen = $state(false);
+	// How the story held stands with the reader, where it was told while the page was open
+	#arrival = $state<StoryArrival>('none');
 	// What the story lists of itself, read off its steps once for the story held
 	readonly #contents: StoryContents;
 	// And the pieces of what it lists, laid out once, not at every question asked of them
@@ -102,17 +120,22 @@ export class ReviewStory {
 	}
 
 	/**
-	 * Whether the story held was told while this page was open and the
-	 * reader has not been shown it yet: what the header offers them, where
-	 * they are reading the files.
+	 * How the story held stands with the reader, where it was told while
+	 * this page was open: offered to them, unseen with the offer put away,
+	 * or neither once they have been shown it.
 	 */
-	get arrivedUnseen(): boolean {
-		return this.#arrivedUnseen;
+	get arrival(): StoryArrival {
+		return this.#arrival;
+	}
+
+	/** The reader put the offer of the story away without reading it: it is unseen still. */
+	putOfferAway(): void {
+		this.#arrival = OFFER_PUT_AWAY[this.#arrival];
 	}
 
 	/** The reader has been shown the story held: said by whoever draws it. */
 	seen(): void {
-		this.#arrivedUnseen = false;
+		this.#arrival = 'none';
 	}
 
 	/**
@@ -189,7 +212,8 @@ export class ReviewStory {
 	/**
 	 * Hold what the review answered of its story: the story, and how the
 	 * asking for one stands. Where the story is another the review was told,
-	 * nothing of it is read yet, and the reader has not seen it.
+	 * nothing of it is read yet, and it is offered to the reader, who has
+	 * not seen it.
 	 */
 	#hold({ held, asking }: StoryResponse): void {
 		this.#held = held;
@@ -197,6 +221,6 @@ export class ReviewStory {
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
 		this.#progress.forget();
-		this.#arrivedUnseen = held !== null;
+		this.#arrival = held === null ? 'none' : 'offered';
 	}
 }

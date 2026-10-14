@@ -214,23 +214,48 @@ describe('what the reader has read through of the story a page holds', () => {
 });
 
 describe('a story told while the page is open', () => {
-	it('has arrived unseen once it is held', async () => {
+	it('is offered to the reader once it is held: they have not seen it', async () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
 		const story = pageStory();
 
 		await story.readAnother();
 
-		expect(story.arrivedUnseen).toBe(true);
+		expect(story.arrival).toBe('offered');
 	});
 
-	it('is unseen no more once the reader has been shown it', async () => {
+	it('is offered no more, and still unseen, once the reader put the offer away', async () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
 		const story = pageStory();
 		await story.readAnother();
+
+		story.putOfferAway();
+
+		expect(story.arrival).toBe('put-away');
+	});
+
+	it.each([
+		{ how: 'offered still', putAway: () => undefined },
+		{ how: 'its offer put away', putAway: (story: ReviewStory) => story.putOfferAway() }
+	])('is unseen no more once the reader has been shown it, $how', async ({ putAway }) => {
+		fakeServer().answer('GET /api/story', holdingAStory());
+		const story = pageStory();
+		await story.readAnother();
+		putAway(story);
 
 		story.seen();
 
-		expect(story.arrivedUnseen).toBe(false);
+		expect(story.arrival).toBe('none');
+	});
+
+	it('is offered again where another is told after the reader put the offer of the first away', async () => {
+		fakeServer().answer('GET /api/story', holdingAStory());
+		const story = pageStory();
+		await story.readAnother();
+		story.putOfferAway();
+
+		await story.readAnother();
+
+		expect(story.arrival).toBe('offered');
 	});
 
 	it('has not arrived while it could not be read: there is nothing to show', async () => {
@@ -239,7 +264,7 @@ describe('a story told while the page is open', () => {
 
 		await story.readAnother().catch(() => undefined);
 
-		expect(story.arrivedUnseen).toBe(false);
+		expect(story.arrival).toBe('none');
 	});
 
 	it('has not arrived where the review holds none after all', async () => {
@@ -248,7 +273,7 @@ describe('a story told while the page is open', () => {
 
 		await story.readAnother();
 
-		expect(story.arrivedUnseen).toBe(false);
+		expect(story.arrival).toBe('none');
 	});
 });
 
@@ -256,7 +281,7 @@ describe('a story the page did not hear being told', () => {
 	it('is not one that arrived unseen where the page read it as it opened', () => {
 		const story = pageStory({ standing: holdingAStory() });
 
-		expect(story.arrivedUnseen).toBe(false);
+		expect(story.arrival).toBe('none');
 	});
 
 	it('is not one that arrived unseen where the page read it only to catch up', async () => {
@@ -265,6 +290,14 @@ describe('a story the page did not hear being told', () => {
 
 		await story.read();
 
-		expect(story.arrivedUnseen).toBe(false);
+		expect(story.arrival).toBe('none');
+	});
+
+	it('has no offer to put away: putting one away changes nothing', () => {
+		const story = pageStory({ standing: holdingAStory() });
+
+		story.putOfferAway();
+
+		expect(story.arrival).toBe('none');
 	});
 });
