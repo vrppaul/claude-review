@@ -47,10 +47,10 @@ STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
 # The file the repository was committed with, as the change leaves it, with two lines gained that a story
-# tells; and as a round's work leaves it, those two said another way, and one more line no step tells
+# tells; and as a round's work leaves it, those two taken out, and one line put above that no step tells
 TOLD_FILE = "initial.txt"
 TOLD_CONTENT = "initial content\ntwo\nthree\n"
-SAID_ANOTHER_WAY = "initial content\nTwo\nThree\nfour\n"
+TAKEN_OUT_UNDER_ONE_MORE = "zero\ninitial content\n"
 # And as another round's work leaves it: two lines put above everything, and the first of the two said another way
 TWO_ABOVE_AND_TWO_REWORDED = "above\nabove again\ninitial content\nTwo\nthree\n"
 
@@ -136,27 +136,27 @@ async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
     """Each step whose code changed, by its chapter, its file and its lines as they now stand, or none where its code
-    is no longer found, as here, every line of it said another way; and what no step tells."""
-    stale = await stale_once_rewritten(reviews, tmp_git_repo, SAID_ANOTHER_WAY)
+    is no longer found, as here, every line of it taken out; and what no step tells."""
+    stale = await stale_once_rewritten(reviews, tmp_git_repo, TAKEN_OUT_UNDER_ONE_MORE)
 
     assert stale == {
         "round": 2,
         "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": None}],
-        "left_out": 3,
+        "left_out": 1,
     }
 
 
 async def test_a_step_a_round_pushed_down_and_partly_rewrote_is_told_to_the_agent_where_it_now_stands(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
-    """Not on the lines it was told of, which now hold other code: on what is left of its own, the line said another
-    way at its top left out with the two put above."""
+    """Not on the lines it was told of, which now hold other code: on its own, moved down, the line said another way
+    at its top still its own, and only the two put above left out."""
     stale = await stale_once_rewritten(reviews, tmp_git_repo, TWO_ABOVE_AND_TWO_REWORDED)
 
     assert stale == {
         "round": 2,
-        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "5"}],
-        "left_out": 3,
+        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "4-5"}],
+        "left_out": 2,
     }
 
 
