@@ -238,6 +238,15 @@ tests. Remove items when done — don't check them off.
 - [ ] Before a release, decide whether `CLAUDE.md` and `.claude/` are left
       out of the sdist, which leaves out `/frontend` alone: whether PyPI
       takes an sdist that holds a symlink is not checked.
+- [ ] `perf(server)`: GET /api/diff and GET /api/story build and write
+      their whole body on every request, on the event loop: 7.3 and 5.0 ms
+      for the change `scripts/long_change.py` makes (41 files), 45.7 and
+      43.5 ms for ten of it (410 files), about 17 ms a MB. Writing each
+      body once as it changes pays only for changes far larger.
+- [ ] `perf(cli)`: every agent command loads `services/image_service`, and
+      structlog with it, through `presentation/wire/base.py`: about 71 ms
+      of an import of some 245 ms, `wire/agent.py` about 149 ms in all
+      (`python -X importtime`, one run).
 
 ## Testing
 
