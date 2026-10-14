@@ -56,6 +56,14 @@
 	--cr-band-reach: 0.5rem;
 
 	/*
+	 * Where a thread hangs under a line: how far in from each side of the
+	 * line it stands, and how far from the left edge of its card the tail
+	 * points up at the line.
+	 */
+	--cr-thread-inset: 0.75rem;
+	--cr-thread-tail-at: 6rem;
+
+	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
 	 * so as tall as its small buttons, half a rem above and below them, and
 	 * the line under it. What is read under it stands that far down.
@@ -91,9 +99,10 @@
 	--cr-shadow-band-edge: inset var(--cr-voice-axis) 0 0 var(--cr-mark-band-edge);
 	/* What lifts a control floating over words off them */
 	--cr-shadow-floating: 0 2px 8px rgb(0 0 0 / 0.25);
+	/* What lifts a thread's card off what it hangs under */
+	--cr-shadow-thread: 0 8px 24px rgb(0 0 0 / 0.25);
 
 	/* The reader's mark at each strength it is drawn with, faintest first */
-	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) 6%, transparent);
 	--cr-mark-soft: color-mix(in srgb, var(--cr-mark) 10%, transparent);
 	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) 18%, transparent);
 	--cr-mark-chip-hover: color-mix(in srgb, var(--cr-mark) 28%, transparent);

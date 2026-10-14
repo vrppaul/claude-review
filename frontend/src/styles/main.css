@@ -167,10 +167,10 @@
  * Comments.
  *
  * A comment is what the review produces, so it is set larger than the code
- * it annotates, in the reading face rather than the code one, and capped at
- * a readable measure instead of running the full width of the window. Its
- * colour is the mark colour — the same one selection uses — because both are
- * the reader's own marks on someone else's code.
+ * it annotates, in the reading face rather than the code one. One being
+ * written is capped at a readable measure instead of running the full width
+ * of the window. Its colour is the mark colour — the same one selection uses
+ * — because both are the reader's own marks on someone else's code.
  */
 .cr-comment {
 	max-width: var(--cr-comment-measure);
@@ -542,6 +542,67 @@
 }
 
 /*
+ * Where a thread hangs, however it is drawn: a little under what it is
+ * about, with room for the tail of its card to reach up to it, and in from
+ * each side of it.
+ */
+.cr-thread-hang {
+	padding: 0.5rem var(--cr-thread-inset) 0.75rem;
+}
+/*
+ * An open thread is one card, lifted off what it hangs under and pointing
+ * up at it with a tail. It runs as wide as what it hangs under: what is said
+ * in it wraps at the width it has rather than leave empty margins beside it.
+ */
+.cr-thread-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 0.875rem 1rem;
+	border: 1px solid var(--cr-mark-line);
+	border-radius: 0.5rem;
+	background: var(--color-base-200);
+	box-shadow: var(--cr-shadow-thread);
+	/* Read, not coded: the diff table around it sets a monospace face that
+	   would otherwise reach every button inside a thread */
+	font-family: var(--font-sans);
+}
+/* The tail: a square turned on its corner, half over the card's top edge, on its ground and in its edge's colour */
+.cr-thread-card::before {
+	content: '';
+	position: absolute;
+	top: -0.375rem;
+	left: var(--cr-thread-tail-at);
+	width: 0.625rem;
+	height: 0.625rem;
+	border-top: 1px solid;
+	border-left: 1px solid;
+	border-color: inherit;
+	background: inherit;
+	transform: rotate(45deg);
+}
+/*
+ * Its edge, and its tail's, says where the thread stands: in the reader's
+ * mark while it is in their hands, faint once what it was written on is
+ * gone, quieter once it went out with a round, and in the agent's colour
+ * when the agent raised it. Where two hold, the later rule here wins.
+ */
+.cr-thread-card.cr-stale {
+	border-color: var(--cr-faint);
+}
+.cr-thread-card.cr-sent {
+	border-color: var(--color-base-300);
+}
+.cr-thread-card.cr-raised {
+	border-color: var(--cr-agent-line);
+}
+/* At the head of a file, the diff or the story, nothing drawn above a thread is what it is about: no tail */
+.cr-threads-at-the-head .cr-thread-card::before {
+	content: none;
+}
+
+/*
  * A thread reads as a conversation.
  *
  * The reader's turns stay on the comment's own tint — the colour their
@@ -656,10 +717,6 @@
 	border-left: 2px solid var(--color-base-300);
 }
 /* One that has lost its lines keeps its own copy of them */
-.cr-stale {
-	background: var(--cr-mark-wash);
-	border-left: 2px solid var(--cr-faint);
-}
 .cr-stale-quote {
 	background: var(--color-base-100);
 	border-left: 2px solid var(--cr-faint);
@@ -726,14 +783,10 @@
 }
 
 /*
- * A thread that has gone out with a round. It keeps its place and its
- * conversation, and gives up the mark colour: what is still in the reader's
- * hands is what the colour is for.
+ * A thread that has gone out with a round gives up the mark colour where it
+ * says its place: what is still in the reader's hands is what the colour is
+ * for.
  */
-.cr-sent {
-	background: var(--cr-mark-wash);
-	border-left-color: var(--color-base-300);
-}
 .cr-sent .cr-comment-ref {
 	color: var(--cr-muted);
 }
@@ -1008,9 +1061,11 @@
  *
  * Not the reader's mark colour: the marks in a review are theirs, and one
  * that arrived from the other side has to say so before it is read. Violet
- * is the agent's, and nothing else's.
+ * is the agent's, and nothing else's. Its card says so by its edge, its
+ * folded line by its ground and its edge, and what is said inside either in
+ * the agent's colour.
  */
-.cr-raised {
+.cr-folded.cr-raised {
 	background: var(--cr-agent-tint);
 	border-left-color: var(--cr-agent);
 }

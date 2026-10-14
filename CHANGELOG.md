@@ -82,6 +82,13 @@
   that id as `said_id`.
 
 ### Changed
+- **A thread is one card under what it is about.** It hangs right under
+  its line, as wide as the line less a little at each side, lifted off it
+  and pointing up at it with a tail; one at the head of a file, the diff or
+  the story has nothing above it to point at, and no tail. Its edge says
+  where it stands: in the reader's colour while it is theirs, faint once
+  what it was written on is gone, quieter once it went out with a round,
+  and in the agent's colour when the agent raised it.
 - **A story's chapter goes by an id a thread can name.** `story` refuses a
   chapter's id that holds anything but letters, digits, dots, dashes and
   underscores, or runs past 200 of them, at `chapters.N.id`, and `story

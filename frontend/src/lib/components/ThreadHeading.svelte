@@ -71,7 +71,7 @@
 </script>
 
 <!-- What the thread hangs on and what state it is in, and what can be done to it -->
-<div class="mb-2 flex items-center gap-2">
+<div class="flex items-center gap-2">
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" onToggle={foldAway} />
 	<AnchorHeading anchor={thread.anchor} />
 	{#if thread.severity !== 'note'}

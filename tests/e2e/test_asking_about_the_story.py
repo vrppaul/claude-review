@@ -15,6 +15,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.thread_card import TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
 
@@ -176,6 +177,15 @@ async def test_a_thread_on_words_a_story_told_again_says_nowhere_stands_at_its_h
     written_against = at_the_head.get_by_test_id("stale-quote")
     await expect(written_against).to_contain_text(DOUBT)
     assert await written_against.evaluate(NOTHING_SCROLLS_ACROSS)
+
+
+async def test_a_thread_at_the_head_of_the_story_points_at_nothing_above_it(review: RunningReview, page: Page) -> None:
+    doubt = await _read_as_story(page, review)
+    await _ask_about(page, doubt, "Was it needed?")
+
+    await _tell(review, TOLD_AGAIN)
+
+    assert not await page.get_by_test_id("threads-off-their-lines").get_by_test_id("thread-card").evaluate(TAIL_DRAWN)
 
 
 async def test_a_thread_at_the_head_of_the_story_deleted_gives_the_keyboard_to_the_head_of_the_story(

@@ -72,8 +72,9 @@
 </script>
 
 <div
+	data-testid="thread-card"
 	class={[
-		'cr-comment group rounded-r px-4 py-3',
+		'cr-thread-card group',
 		thread.anchor.outdated && 'cr-stale',
 		sent && !raised && 'cr-sent',
 		raised && 'cr-raised'
@@ -86,7 +87,7 @@
 
 	{#if thread.anchor.outdated && writtenAgainst.length > 0}
 		<!-- One that has lost its place keeps its own copy of what was there -->
-		<div data-testid="stale-quote" class="cr-stale-quote mb-3 rounded-r px-3 py-2">
+		<div data-testid="stale-quote" class="cr-stale-quote rounded-r px-3 py-2">
 			<p class="cr-muted mb-1 text-xs">what it was written against</p>
 			{#each writtenAgainst as line, index (index)}
 				{#if quoteReads === 'code'}
@@ -103,7 +104,7 @@
 	{#if askable}
 		<!-- Hands over everything said so far, the comment included, and hangs
 			under the last of it rather than beside the empty field below. -->
-		<div class="mt-3">
+		<div>
 			<button
 				type="button"
 				data-testid="ask-now-thread"
@@ -116,22 +117,20 @@
 	{/if}
 
 	{#if failed}
-		<p data-testid="ask-error" class="mt-2 text-xs text-error">{failed}</p>
+		<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
 	{/if}
 
 	{#if replying}
-		<div class="mt-3">
-			<CommentBox
-				field={replying}
-				onSave={() => reply(replying)}
-				onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
-				onCancel={() => putAway(replying)}
-				severityPicker={false}
-				nested
-			/>
-		</div>
+		<CommentBox
+			field={replying}
+			onSave={() => reply(replying)}
+			onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
+			onCancel={() => putAway(replying)}
+			severityPicker={false}
+			nested
+		/>
 	{:else}
-		<div class="mt-3 border-t border-base-300 pt-3">
+		<div class="border-t border-base-300 pt-3">
 			<button
 				type="button"
 				data-testid="open-reply"

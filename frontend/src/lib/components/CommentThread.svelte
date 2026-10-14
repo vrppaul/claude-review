@@ -35,7 +35,7 @@
 	bind:this={container}
 	data-testid="comment-thread"
 	data-thread-id={thread.id}
-	class="px-3 py-2"
+	class="cr-thread-hang"
 	tabindex="-1"
 	role="group"
 	aria-label="Thread on {anchorPlace(thread.anchor)}"

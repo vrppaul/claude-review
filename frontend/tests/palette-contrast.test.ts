@@ -12,11 +12,7 @@ type Channels = Paint['channels'];
  * draws — the token named for the words, on the grounds those words sit on.
  */
 const DRAWN: { said: string; text: string; grounds: string[] }[] = [
-	{
-		said: "a comment's place, on the comment",
-		text: '--cr-mark-text',
-		grounds: ['--color-base-100', '--cr-mark-tint']
-	},
+	{ said: "a comment's place, on its thread's card", text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a comment's place, over the field being written", text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a marked row's number", text: '--cr-mark-text', grounds: ['--color-base-100', '--cr-mark-tint'] },
 	{
@@ -36,16 +32,16 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	},
 	{ said: 'a placeholder, in the panel', text: '--cr-placeholder', grounds: ['--color-base-100'] },
 	{ said: 'a placeholder, in a field being written', text: '--cr-placeholder', grounds: ['--color-base-200'] },
-	{ said: 'a placeholder, under a comment', text: '--cr-placeholder', grounds: ['--color-base-100', '--cr-mark-tint'] },
+	{ said: "a placeholder, on a thread's card", text: '--cr-placeholder', grounds: ['--color-base-200'] },
+	{ said: "faint words, on a thread's card", text: '--cr-faint', grounds: ['--color-base-200'] },
+	{ said: "the agent's place, on the card of a thread it raised", text: '--cr-agent', grounds: ['--color-base-200'] },
 	{
-		said: 'a placeholder, under a raised thread',
-		text: '--cr-placeholder',
+		said: 'faint words, on the folded line of a thread the agent raised',
+		text: '--cr-faint',
 		grounds: ['--color-base-100', '--cr-agent-tint']
 	},
-	{ said: 'faint words in a comment', text: '--cr-faint', grounds: ['--color-base-100', '--cr-mark-tint'] },
-	{ said: 'faint words in a raised thread', text: '--cr-faint', grounds: ['--color-base-100', '--cr-agent-tint'] },
 	{
-		said: "the agent's place, in its raised thread",
+		said: "the agent's place, on the folded line of a thread it raised",
 		text: '--cr-agent',
 		grounds: ['--color-base-100', '--cr-agent-tint']
 	},
@@ -64,7 +60,7 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		text: '--cr-done',
 		grounds: ['--color-base-200', '--cr-done-soft']
 	},
-	{ said: 'unread, in a comment', text: '--cr-unread', grounds: ['--color-base-100', '--cr-mark-tint'] },
+	{ said: "unread, on a thread's card", text: '--cr-unread', grounds: ['--color-base-200'] },
 	{ said: "a control, on a gap's bar", text: '--cr-control', grounds: ['--color-base-200'] },
 	{
 		said: "the guide's release, on its card",
