@@ -38,6 +38,18 @@ The header says what the working tree is being compared against, and that is a c
 
 Nothing about the review changes with it: a thread stays anchored where it was written, and one a narrower base cannot draw is counted, listed, and one click away.
 
+### Story
+
+The same diff, told by the agent that made it, in the order it is best read. Press **Story** in the header of a diff review.
+
+A story opens with an overview: what was asked, what was done, and the one thing most worth doubting, over a diagram of the change whose nodes lead to its chapters. "More about this change" adds the decisions taken, the ways turned down and what is left for later. Then the chapters, one idea each, in one scroll: why the chapter's pieces belong together, where to doubt it, and its steps, each a piece of one file with the agent's reason above the code. The contents on the left list the chapters with their files, and tick a chapter once you have scrolled through it.
+
+Nothing is left out: every changed line is in a step, in a file the agent named as housekeeping, or under "Not in the story". Every block of the agent's words offers "Ask about this", and the answer comes in its thread, as on a line of code. After a round the steps follow their code, a step whose code changed is marked, and the agent tells the story again. A story told from commits, by an agent that did not make the change, is marked reconstructed.
+
+Stories are off until you turn them on. The first press on Story says that a story spends the agent's tokens and asks first; they then stay on for every review on the machine, and Settings, the gear in the header, turns them off. A story is told by the agent attached to the review, and you can read the files while it writes.
+
+How the agent is advised to tell one, and why: [docs/stories.md](docs/stories.md).
+
 ### Files mode
 
 Review any text files — plans, docs, configs, source code.
@@ -87,6 +99,8 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 **Reading**
 
 - The whole diff as one stream — every file on screen, the sidebar navigates by scrolling
+- Or the change as a [story](#story) the agent tells: an overview, then chapters of
+  steps, each piece of code under the reason it is the way it is
 - Unified or split layout, with what changed inside a replaced line marked word by word
 - Show the lines a hunk left out, or leave whitespace-only changes out entirely
 - Read the same working tree against something else — the base the review
