@@ -8,7 +8,7 @@ import { formatWeight } from '$lib/review/weight';
 import { addedLine, diffFile, hunk } from '../diff';
 import { said } from '../elements';
 import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
-import { guideServer } from '../guide-server';
+import { guideServer, keepingTheGuide } from '../guide-server';
 import { handOverNext } from '../pushes';
 import { AGENT_ATTACHED, openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
@@ -23,11 +23,22 @@ const IN_TWO_CHAPTERS = storyHeld({
 const NOTE_STANDS_FOR = 4_000;
 const A_SECOND = 1_000;
 
-/** A server that keeps the reader's choices, and takes every story asked for or stopped. */
+// The release the reader was shown last, as the guide keeps it
+const RELEASE_SEEN = '1.5.0';
+// What the page says of a reader who pressed Story or had the story on screen: that they tried it
+const STORY_TRIED = ['PUT /api/guide'];
+
+/** A server that keeps the reader's choices and how far they were shown around, and takes every story asked for or stopped. */
 function serving(): FakeServer {
 	const server = takingStoryAskings();
 	keepingSettings(server);
+	keepingTheGuide(server, RELEASE_SEEN);
 	return server;
+}
+
+/** Every request the page made, by its method and path, in the order made. */
+function requestsMade(server: FakeServer): string[] {
+	return server.requests.map(({ method, path }) => `${method} ${path}`);
 }
 
 /** Draw a review of the change as the page opens it. */
@@ -98,7 +109,8 @@ describe('Story pressed in the header', () => {
 
 		expect(screen.getByTestId('story-opt-in')).toBeTruthy();
 		expect(screen.getByTestId('diff-view')).toBeTruthy();
-		expect(server.requests).toEqual([]);
+		await settled();
+		expect(requestsMade(server)).toEqual(STORY_TRIED);
 	});
 
 	it('shows the story view where stories are on', async () => {
@@ -213,7 +225,7 @@ describe('what is asked before stories are turned on', () => {
 		await user.click(screen.getByTestId('stories-not-now'));
 		await settled();
 
-		expect(server.requests).toEqual([]);
+		expect(requestsMade(server)).toEqual(STORY_TRIED);
 		expect(screen.getByTestId('diff-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-opt-in')).toBeNull();
 	});

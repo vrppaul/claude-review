@@ -8,6 +8,8 @@
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
+		/** Whether Story is introduced now, as the switch, which rings Story with it, says. */
+		introducing: boolean;
 		/** Story's segment of the switch, which the introduction stands under and points at. */
 		pointsAt: HTMLElement | undefined;
 		/** What trying Story does: how the review is read is its to change who draws the introduction. */
@@ -17,7 +19,7 @@
 	// What the introduction says first, and is named by
 	const TITLE = 'Read the change as a story';
 
-	let { pointsAt, onTry }: Props = $props();
+	let { introducing, pointsAt, onTry }: Props = $props();
 	const review = useReview();
 
 	let tryStory: HTMLButtonElement | undefined = $state();
@@ -27,16 +29,9 @@
 
 	const arrowOffset = $derived(arrowOffsetTo(pointsAt));
 
-	// A reader with the story on screen, however it came there, is trying Story: it is introduced to them,
-	// and kept so, as Try Story's press keeps it. Looked at again once the guide hears whether it was
-	// introduced before: until then it counts as introduced, and nothing is kept
-	$effect(() => {
-		if (review.views.onScreen.name === 'story') review.guide.noteStoryIntroduced();
-	});
-
 	// The introduction that appears offers Try Story, unless the reader is busy: it takes the keyboard from no one
 	$effect(() => {
-		if (review.guide.introducesStory) focusWhatRemains(() => tryStory);
+		if (introducing) focusWhatRemains(() => tryStory);
 	});
 
 	/** Put it away for this page alone; the keyboard goes to Story, which it pointed at. */
@@ -62,7 +57,7 @@
 <!-- Story, introduced once to a reader who has never tried it, under the switch, pointing at it, in the
 	agent's colour: put there by the page, not opened from a control, so a pane and no popover. The cross puts
 	it away for this review; "Don't show again" for good, with Undo for a slip -->
-{#if review.guide.introducesStory}
+{#if introducing}
 	<PopoverPanel
 		role="dialog"
 		label={TITLE}

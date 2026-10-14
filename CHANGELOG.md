@@ -73,7 +73,10 @@
   stories are off; the cross puts the pane away for this review alone;
   Don't show again puts it away in every review, and a note in its place
   says so for four seconds, fading, with Undo for a slip. A story's
-  arrival, offered under the switch, stands there first.
+  arrival, offered under the switch, stands there first, and the keyboard
+  the pane held goes to Story. Story pressed, or a story on screen,
+  before the review has heard whether it was introduced is kept all the
+  same.
 - **Every review knows whether Story was introduced to the reader.**
   `GET /api/guide` says `story_introduced` beside the release last shown,
   false for a reader shown around by a release before stories; `PUT

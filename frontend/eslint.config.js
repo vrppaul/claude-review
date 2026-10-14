@@ -117,8 +117,8 @@ const NO_PAGE_LOOKUPS = [
 
 // How the reader chose to read is written only where they ask to read a way:
 // the switch in the header, and Try Story where Story is introduced, through
-// the review's `readAsStory`. Taking the reader to what only one view draws
-// changes what is on screen and leaves their choice alone
+// the way into Story's `readAsStory`. Taking the reader to what only one view
+// draws changes what is on screen and leaves their choice alone
 const CHOSEN_BY_THE_READER =
 	'Only the switch and Try Story write how the reader chose to read; to bring a view on screen, call showFiles or showStory.';
 const NO_CHOOSING = [
@@ -128,12 +128,11 @@ const NO_CHOOSING = [
 	},
 	{ selector: "CallExpression[callee.property.name='readAsStory']", message: CHOSEN_BY_THE_READER }
 ];
-// Where the reader asks to read a way: the switch, the news card's Try Story, and the review that holds the
-// way into Story
+// Where the reader asks to read a way: the switch, the news card's Try Story, and the way into Story
 const CHOOSERS = [
 	'src/lib/components/ViewSwitch.svelte',
 	'src/lib/components/GuideCard.svelte',
-	'src/lib/review/review.svelte.ts'
+	'src/lib/review/way-into-story.svelte.ts'
 ];
 
 // How a component is styled: by classes, and by the stylesheet's tokens. A

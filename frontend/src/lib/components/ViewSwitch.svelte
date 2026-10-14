@@ -27,10 +27,10 @@
 		if (review.story.wait?.kind === 'writing') return 'writing';
 		return review.story.arrival === 'none' ? null : 'unread';
 	});
-	// Whether a story that arrived is offered under the switch: while the files are read, until the reader
-	// reads it or puts the offer away
+	// What stands under the switch, pointing at Story: the note of a story that arrived, while the files are
+	// read until the reader reads it or puts it away; else Story's introduction, which waits while the note
+	// stands, its ring on Story with it
 	const storyOffered = $derived(readingFiles && review.story.arrival === 'offered');
-	// Whether Story is introduced under the switch now: the note of a story's arrival stands there first
 	const introducingStory = $derived(!storyOffered && review.guide.introducesStory);
 
 	// The view on screen changes from elsewhere too — the files brought on screen from where a story
@@ -42,12 +42,19 @@
 		if (document.activeElement !== document.body) focusWhatRemains(() => buttons[shown]);
 	});
 
+	// The note of a story that arrived takes the introduction's place from elsewhere, and whatever held the
+	// keyboard in it goes with it. Looked at before the page redraws, as the view is: Story, which both
+	// point at, takes it
+	$effect.pre(() => {
+		if (storyOffered && document.activeElement !== document.body) focusWhatRemains(() => buttons.story);
+	});
+
 	/**
 	 * The question before stories are turned on is closed. The browser gives the keyboard back to what held it
 	 * as it was asked; where that is gone — the news card's Try Story — Story, which the question was about, takes it.
 	 */
 	function stopAsking() {
-		review.stopAskingToTurnStoriesOn();
+		review.wayIntoStory.stopAskingToTurnStoriesOn();
 		focusWhatRemains(() => buttons.story);
 	}
 </script>
@@ -70,7 +77,7 @@
 					introducingStory && 'cr-segment-introduced'
 				]}
 				aria-pressed={onScreen === 'story'}
-				onclick={() => review.readAsStory()}
+				onclick={() => review.wayIntoStory.readAsStory()}
 			>
 				{#if storySays === 'writing'}
 					<TypingIndicator />
@@ -97,12 +104,16 @@
 			</button>
 		</div>
 		{#if storyOffered}
-			<StoryArrivalNote pointsAt={buttons.story} onOpen={() => review.readAsStory()} />
+			<StoryArrivalNote pointsAt={buttons.story} onOpen={() => review.wayIntoStory.readAsStory()} />
 		{:else}
-			<StoryIntroduction pointsAt={buttons.story} onTry={() => review.readAsStory()} />
+			<StoryIntroduction
+				introducing={introducingStory}
+				pointsAt={buttons.story}
+				onTry={() => review.wayIntoStory.readAsStory()}
+			/>
 		{/if}
 	</div>
-	{#if review.askingToTurnStoriesOn}
-		<StoryOptIn onTurnOn={() => review.turnStoriesOnAndRead()} onClose={stopAsking} />
+	{#if review.wayIntoStory.askingToTurnStoriesOn}
+		<StoryOptIn onTurnOn={() => review.wayIntoStory.turnStoriesOnAndRead()} onClose={stopAsking} />
 	{/if}
 {/if}

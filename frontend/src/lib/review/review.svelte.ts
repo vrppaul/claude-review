@@ -36,6 +36,7 @@ import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
 import { Navigator } from '$lib/review/navigator';
 import { Threads } from '$lib/review/threads.svelte';
+import { WayIntoStory } from '$lib/review/way-into-story.svelte';
 import type {
 	ChangesSince,
 	DiffResponse,
@@ -129,6 +130,8 @@ export class Review {
 	readonly parts = new ReadingParts(this.#jumps);
 	/** The ways the review is read — file by file, or as the story told of it — and which is on screen. */
 	readonly views: ReadingViews;
+	/** Every way the reader comes to read the review as its story. */
+	readonly wayIntoStory: WayIntoStory;
 	readonly navigator: Navigator;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
@@ -152,9 +155,6 @@ export class Review {
 	readonly #draft: Draft | null;
 	// The retake being taken in, so the next waits for it
 	#retaking: Promise<unknown> = Promise.resolve();
-	// Whether the reader is being asked before stories are turned on: asked from
-	// the switch or from wherever Story is introduced, drawn by the switch
-	#askingToTurnStoriesOn = $state(false);
 
 	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
@@ -200,7 +200,11 @@ export class Review {
 			this.story.canBeTold && this.storyViewOpens,
 			this.diff
 		);
-		this.navigator = new Navigator(this.threads, this.sections, this.views);
+		this.wayIntoStory = new WayIntoStory(this.views, this.guide, {
+			viewOpens: () => this.storyViewOpens,
+			turnStoriesOn: () => this.turnStoriesOn()
+		});
+		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
 		this.#draftSetAside = $state(draftSetAside);
@@ -349,34 +353,6 @@ export class Review {
 		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
 			await this.story.askFor();
 		}
-	}
-
-	/** Whether the reader is being asked before stories are turned on, having asked to read the story. */
-	get askingToTurnStoriesOn(): boolean {
-		return this.#askingToTurnStoriesOn;
-	}
-
-	/**
-	 * The reader asks to read the review as its story: Story in the header,
-	 * or Try Story where Story is introduced. Story is introduced to them
-	 * from now; where reading it means having one written, they are asked
-	 * first.
-	 */
-	readAsStory(): void {
-		this.guide.noteStoryIntroduced();
-		if (this.storyViewOpens) this.views.choose('story');
-		else this.#askingToTurnStoriesOn = true;
-	}
-
-	/** The reader said yes: stories are on from now, this review's is asked for, and where it will be comes on screen. */
-	turnStoriesOnAndRead(): void {
-		void this.turnStoriesOn();
-		this.views.choose('story');
-	}
-
-	/** The question before stories are turned on is closed, whatever the reader said. */
-	stopAskingToTurnStoriesOn(): void {
-		this.#askingToTurnStoriesOn = false;
 	}
 
 	/**

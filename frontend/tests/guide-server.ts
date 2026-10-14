@@ -26,11 +26,18 @@ class GuideMemory {
 }
 
 /** A server answering `/api/guide` from what it keeps. */
-function servingFrom(memory: GuideMemory): FakeServer {
-	const server = fakeServer();
+function servingFrom(memory: GuideMemory, server: FakeServer = fakeServer()): FakeServer {
 	server.answerWith('GET /api/guide', () => memory.read());
 	server.answerWith('PUT /api/guide', (request) => memory.write(request));
 	return server;
+}
+
+/**
+ * A server that keeps, beside whatever else it answers, how far a reader shown this release was shown around:
+ * for a test where the page notes Story tried, as a press of Story does, and nothing more of the guide matters.
+ */
+export function keepingTheGuide(server: FakeServer, seen: string): void {
+	servingFrom(new GuideMemory({ seen_release: seen, story_introduced: false }, true), server);
 }
 
 /**

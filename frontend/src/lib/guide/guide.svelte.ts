@@ -24,6 +24,9 @@ import { handOverLegacyRelease, legacySeenRelease, writeSeenRelease } from '$lib
 
 export type GuideCard = 'welcome' | 'news';
 
+/** Whether Story has been introduced to the reader, as far as this page knows: before the server says, it does not. */
+type StoryIntroduced = 'unknown' | 'introduced' | 'not';
+
 /** Whoever answers the review, as far as the tour cares: whether anyone is there to send a round to. */
 export interface AnswererPresence {
 	readonly attached: boolean;
@@ -75,9 +78,9 @@ export class Guide {
 	#helpOpen = $state(false);
 	#news = $state.raw<ReleaseNews | undefined>(undefined);
 	#touring = $state(false);
-	// Whether Story has been introduced to the reader: taken as so until the
-	// server says, and when it cannot
-	#storyIntroduced = $state(true);
+	// Whether Story has been introduced to the reader: unknown until the server
+	// says, and where it cannot
+	#storyIntroduced = $state<StoryIntroduced>('unknown');
 	// The introduction put away by its cross: for this page alone, kept nowhere
 	#introductionPutAway = $state(false);
 	// The step on screen, by name: the tour's steps change when an agent joins
@@ -135,19 +138,22 @@ export class Guide {
 	 * introduced than introduced twice.
 	 */
 	get introducesStory(): boolean {
-		return !this.#storyIntroduced && !this.#introductionPutAway && this.#card === null && !this.#touring;
+		return this.#storyIntroduced === 'not' && !this.#introductionPutAway && this.#card === null && !this.#touring;
 	}
 
-	/** Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again. */
+	/**
+	 * Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again.
+	 * Kept also before the server has said whether it was before, which then changes nothing.
+	 */
 	noteStoryIntroduced(): void {
-		if (this.#storyIntroduced) return;
-		this.#storyIntroduced = true;
+		if (this.#storyIntroduced === 'introduced') return;
+		this.#storyIntroduced = 'introduced';
 		this.#keepStoryIntroduced(true);
 	}
 
 	/** The reader undid "Don't show again": Story is introduced again, here and in every review. */
 	introduceStoryAgain(): void {
-		this.#storyIntroduced = false;
+		this.#storyIntroduced = 'not';
 		this.#keepStoryIntroduced(false);
 	}
 
@@ -237,7 +243,8 @@ export class Guide {
 		} catch {
 			return;
 		}
-		this.#storyIntroduced = kept.story_introduced;
+		// A reader who tried Story while the server was asked has been introduced to it, whatever it kept
+		if (this.#storyIntroduced === 'unknown') this.#storyIntroduced = kept.story_introduced ? 'introduced' : 'not';
 		if (seen === null) {
 			this.#card = 'welcome';
 			return;

@@ -286,6 +286,17 @@ describe('Story introduced at the switch', () => {
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
 
+	it('is kept as done where the reader is introduced before the server says, and is not introduced once it does', async () => {
+		const server = guideServer('1.5.0');
+		review = openReview({ facts: { release: '1.5.0' } });
+
+		review.guide.noteStoryIntroduced();
+		await review.guide.open();
+
+		expect(review.guide.introducesStory).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+
 	it('is kept as done once, however often the reader is introduced', async () => {
 		const server = guideServer('1.5.0');
 		await arriveAt('1.5.0');

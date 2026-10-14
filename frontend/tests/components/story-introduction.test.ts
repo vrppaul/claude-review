@@ -156,6 +156,19 @@ describe('Story introduced at the switch', () => {
 		);
 	});
 
+	it('leaves nothing in its place where it is put away for now after Undo', async () => {
+		serving();
+		const user = userEvent.setup();
+		await drawn();
+		await hiddenForGood(user);
+		await user.click(screen.getByTestId('story-introduction-undo'));
+
+		await user.click(screen.getByTestId('story-introduction-close'));
+
+		expect(screen.queryByTestId('story-introduction')).toBeNull();
+		expect(screen.queryByTestId('story-introduction-hidden')).toBeNull();
+	});
+
 	it('says it is gone for good until its four seconds are out', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		serving();
@@ -211,5 +224,40 @@ describe('Story introduced at the switch', () => {
 
 		expect(screen.getByTestId('story-ready')).toBeTruthy();
 		expect(screen.queryByTestId('story-introduction')).toBeNull();
+	});
+
+	it('rings Story while it introduces it, and not while the note of a story that arrived stands in its place', async () => {
+		const server = serving();
+		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
+		const ringed = () => screen.getByTestId('read-as-story').classList.contains('cr-segment-introduced');
+		const whileIntroduced = ringed();
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect([whileIntroduced, ringed()]).toEqual([true, false]);
+	});
+
+	it('hands the keyboard it held to Story where the note of a story that arrived takes its place', async () => {
+		const server = serving();
+		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
+		screen.getByTestId('try-story').focus();
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
+		expect(document.activeElement).toBe(screen.getByTestId('read-as-story'));
+	});
+
+	it('is kept as done once a thread only the story draws brings the story on screen', async () => {
+		const server = serving();
+		const review = await drawn({ story: A_STORY });
+
+		review.wayIntoStory.showStory();
+
+		expect(review.guide.introducesStory).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
 });

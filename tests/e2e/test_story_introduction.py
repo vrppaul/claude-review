@@ -10,12 +10,15 @@ browser.
 from pathlib import Path
 
 import pytest
-from playwright.async_api import Page
+from httpx import AsyncClient
+from playwright.async_api import Page, expect
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
+from tests.stories import as_the_agent_writes, step, story_of
 
+STORY_ROUTE = "/api/story"
 CHANGED_FILE = "told.py"
 COMMITTED_FILES = {CHANGED_FILE: "keep one\nfirst two\n"}
 # The change under review, which a story can be told of
@@ -85,3 +88,16 @@ async def test_the_keyboard_goes_to_story_once_its_introduction_is_put_away_for_
     await page.get_by_test_id("story-introduction").wait_for(state="detached")
 
     assert await page.evaluate(FOCUSED_TEST_ID) == "read-as-story"
+
+
+async def test_the_keyboard_goes_to_story_where_a_story_that_arrived_takes_its_introductions_place(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    await _welcomed_and_introduced(page, review, reader_files)
+    await page.get_by_test_id("try-story").focus()
+
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(CHANGED_FILE, 2, 2))))
+    await page.get_by_test_id("story-ready").wait_for()
+
+    await expect(page.get_by_test_id("read-as-story")).to_be_focused()

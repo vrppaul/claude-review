@@ -61,7 +61,7 @@
 	/** Put the news away and read the review as its story, as Story in the header does: asked first where it must be. */
 	function tryStory() {
 		review.guide.dismiss();
-		review.readAsStory();
+		review.wayIntoStory.readAsStory();
 	}
 </script>
 
