@@ -7,6 +7,8 @@ of looking inside an anchor.
 """
 
 from abc import ABC, abstractmethod
+from bisect import bisect_left
+from heapq import merge
 from typing import assert_never, override
 
 from pydantic import BaseModel
@@ -376,9 +378,19 @@ def _find_run(lines: list[SideLine], quote: list[str], *, near: int) -> int | No
     A short quote — a closing brace, `return None` — stands in many places,
     and the one nearest the old numbers is the one that moved least; of two
     as near, the earlier, so the choice is the same every time.
+
+    So the places are tried outward from where the quote was, the nearest
+    first, and the first that holds it is the answer: a file whose lines are
+    much alike holds a short quote almost everywhere, and trying every place
+    before choosing took seconds when thousands of short quotes were looked
+    for in one long file.
     """
-    starts = [start for start in range(len(lines) - len(quote) + 1) if _stands_at(lines, quote, start)]
-    return min(starts, key=lambda start: abs(lines[start].number - near), default=None)
+    starts = range(len(lines) - len(quote) + 1)
+    # Places before where the quote was, walked back from it, and the rest, walked on; merged by how far
+    # each is from it, those before first where two are as far: that is the earlier
+    ahead = bisect_left(starts, near, key=lambda start: lines[start].number)
+    nearest_first = merge(reversed(starts[:ahead]), starts[ahead:], key=lambda start: abs(lines[start].number - near))
+    return next((start for start in nearest_first if _stands_at(lines, quote, start)), None)
 
 
 def _stands_at(lines: list[SideLine], quote: list[str], start: int) -> bool:
