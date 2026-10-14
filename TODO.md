@@ -250,19 +250,15 @@ tests. Remove items when done — don't check them off.
       was asked for nor the question before a story as it opens (seen once
       in a copy of the look whose name for the question was wrong: "open
       could not be taken", exit 1), git failing to make the repository,
-      and a page still moving after five seconds, whose step is marked
-      "still moving". None of these can be brought about from the look's
-      command line, which is all its tests use. The same holds of
+      a page still moving after five seconds, whose step is marked "still
+      moving", and a page that draws no frame for a while after a step,
+      whose rest the look counts in frames it draws and not by the clock.
+      None of these can be brought about from the look's command line,
+      which is all its tests use. The same holds of
       `scripts/break_lines.py` where pnpm cannot install for the copy, and
       where vitest leaves no report; and of `scripts/commands.py`, of a
       command that runs out of its limit, which neither script's command
       line can make one do.
-- [ ] `tests/scripts/test_look.py::test_a_line_is_printed_once_the_page_has_come_to_rest`
-      failed in 2 of 7 runs on 2026-10-14, once among failed tests run
-      again on four workers and once alone, and passed in the five runs
-      after: the line after `n` said the area at 20165 pixels, the glide
-      back to the comment not yet under way, and the line after it said
-      133. A look takes a page that has not begun to move for one at rest.
 - [ ] A look serves one change (`scripts/look.py`), so a diff of no file
       cannot be looked at with it, and the review's command line serves no
       such diff either: the page reaches one only when a change is undone

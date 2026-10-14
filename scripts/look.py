@@ -56,7 +56,9 @@ the part being read. The line of the page as it opens says where the review
 was served.
 
 The page is read once it has said the same for a moment, so a glide is over
-when its line is printed. A page that has not come to rest after a few
+when its line is printed. The moment is counted in frames the page draws,
+not by the clock: a page busy for a while draws none, and moves nothing it
+was asked to meanwhile. A page that has not come to rest after a few
 seconds is printed as it is, its step marked as still moving.
 
 A step that cannot be taken ends the look. Of a press it is said which of
@@ -159,10 +161,12 @@ WINDOW_HEIGHT = 900
 WIDTH_UNLESS_ASKED = 1440
 # How long the browser waits for an element before a step on it cannot be taken
 STEP_WITHIN_MS = 3_000
-# The page has come to rest once it has said the same for this long, looked at this often;
-# after this long it is said as it is
-STILL_FOR_SECONDS = 0.3
-LOOKED_AT_EVERY_SECONDS = 0.1
+# The page has come to rest once it has said the same at this many looks in a row, each taken once it has
+# drawn this many more frames: about a third of a second at sixty frames a second. A glide moves nothing in
+# its first two to four frames (`frontend/src/lib/dom/jump.ts`), so a look this many frames after a step
+# finds one under way. After this long by the clock the page is said as it is
+STILL_FOR_LOOKS = 3
+LOOKED_AT_EVERY_FRAMES = 6
 GIVEN_UP_AFTER_SECONDS = 5.0
 
 # The button that puts away the card offering a fresh reader the tour: the card stands over the page
@@ -210,6 +214,10 @@ NAMES_OF_THOSE_BEING_READ = """(entries) => entries
     .map((entry) => entry.getAttribute('aria-label') ?? entry.textContent)"""
 # Scroll an area down by a number of pixels, at once
 SCROLLED_DOWN_BY = "(area, pixels) => area.scrollBy(0, pixels)"
+# Wait until the page has drawn a number of frames
+FRAMES_DRAWN = """async (frames) => {
+    for (let drawn = 0; drawn < frames; drawn += 1) await new Promise(requestAnimationFrame);
+}"""
 
 # What parts the kind of a step from the rest of it, and a test id from the count after it
 WITHIN_A_STEP = ":"
@@ -776,16 +784,18 @@ async def _seen(page: Page) -> Seen:
 
 
 async def _at_rest(page: Page) -> AtRest:
-    """What the page says once it has said the same for a moment, or as it is if it never does."""
+    """What the page says once it has said the same over a few frames it drew, or as it is if it never does."""
     clock = asyncio.get_running_loop()
-    started = same_since = clock.time()
+    started = clock.time()
     seen = await _seen(page)
-    while clock.time() - same_since < STILL_FOR_SECONDS and clock.time() - started < GIVEN_UP_AFTER_SECONDS:
-        await asyncio.sleep(LOOKED_AT_EVERY_SECONDS)
+    # How many looks in a row have found the page as the one before
+    unchanged_looks = 0
+    while unchanged_looks < STILL_FOR_LOOKS and clock.time() - started < GIVEN_UP_AFTER_SECONDS:
+        await page.evaluate(FRAMES_DRAWN, LOOKED_AT_EVERY_FRAMES)
         seen_now = await _seen(page)
-        if seen_now != seen:
-            seen, same_since = seen_now, clock.time()
-    return AtRest(seen=seen, moving=clock.time() - same_since < STILL_FOR_SECONDS)
+        unchanged_looks = unchanged_looks + 1 if seen_now == seen else 0
+        seen = seen_now
+    return AtRest(seen=seen, moving=unchanged_looks < STILL_FOR_LOOKS)
 
 
 async def _steps_taken(served: Served, agent: Agent, asked: Asked) -> None:
