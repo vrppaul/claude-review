@@ -323,7 +323,7 @@ export class FileSections {
 	 * does not move the screen again.
 	 */
 	#arriveAtThread(thread: HTMLElement): void {
-		this.#jumps.to(thread, 'center', scrollMotion());
+		this.#jumps.to(thread, this.#sections.area, 'center', scrollMotion());
 		thread.focus({ preventScroll: true });
 	}
 

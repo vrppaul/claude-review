@@ -15,9 +15,11 @@
  * At once, not gliding again: glides one after the other take seconds.
  *
  * A jump is the page's own doing, and gives way to the reader's: once they
- * move themselves or act where they are, the element is left wherever it
- * comes to rest. Nor does it go on for ever: what something else keeps
- * moving is left to it, and the jump says it is over all the same.
+ * move themselves or act where they are, a glide under way is stopped where
+ * it stands, as the browser would glide on through the reader's own scroll,
+ * and the element is not scrolled to again. Nor does it go on for ever:
+ * what something else keeps moving is left to it, and the jump says it is
+ * over all the same.
  *
  * The page takes the reader one place at a time: `Jumps` holds the jump in
  * flight for whoever asks, to a section, a thread or a part of a story.
@@ -48,6 +50,16 @@ const READERS_OWN_MOVES = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as c
 interface UnderWay {
 	hearing: AbortController;
 	since: number;
+}
+
+/**
+ * Stop a glide under way in an area, the page itself where that is null,
+ * where it stands: a scroll made at once ends the glide, and one to where
+ * the area already is moves nothing.
+ */
+function stopWhereItStands(area: HTMLElement | null): void {
+	const scroller = area ?? document.scrollingElement;
+	scroller?.scrollTo({ top: scroller.scrollTop, left: scroller.scrollLeft, behavior: 'instant' });
 }
 
 /**
@@ -104,6 +116,7 @@ class SettleWatch {
 
 class Jump {
 	readonly #element: HTMLElement;
+	readonly #area: HTMLElement | null;
 	readonly #sentTo: ScrollLogicalPosition;
 	readonly #motion: Motion;
 	readonly #atRest: () => void;
@@ -114,13 +127,21 @@ class Jump {
 
 	/**
 	 * @param element what the reader is taken to
-	 * @param sentTo where in the area it scrolls in the element is sent: its head to the top, or itself to the middle
+	 * @param area what it scrolls in, the page itself where that is null
+	 * @param sentTo where in the area the element is sent: its head to the top, or itself to the middle
 	 * @param motion how the first scroll to it moves
 	 * @param atRest called once the element has come to rest, where it was sent or where the reader
 	 *   left it; never by a jump another took the place of
 	 */
-	constructor(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest: () => void) {
+	constructor(
+		element: HTMLElement,
+		area: HTMLElement | null,
+		sentTo: ScrollLogicalPosition,
+		motion: Motion,
+		atRest: () => void
+	) {
 		this.#element = element;
+		this.#area = area;
 		this.#sentTo = sentTo;
 		this.#motion = motion;
 		this.#atRest = atRest;
@@ -131,13 +152,24 @@ class Jump {
 		const hearing = new AbortController();
 		this.#underWay = { hearing, since: performance.now() };
 		for (const move of READERS_OWN_MOVES) {
-			window.addEventListener(move, () => (this.#readerMoved = true), {
+			window.addEventListener(move, () => this.#giveWay(hearing), {
 				capture: true,
 				passive: true,
 				signal: hearing.signal
 			});
 		}
 		this.#scrollThere(this.#motion);
+	}
+
+	/**
+	 * The reader moved, or acted where they are: the glide stops where it
+	 * stands, before their own move is made, and nothing they do after is
+	 * listened for.
+	 */
+	#giveWay(hearing: AbortController): void {
+		this.#readerMoved = true;
+		hearing.abort();
+		stopWhereItStands(this.#area);
 	}
 
 	/** Another jump takes its place: it scrolls no more, and never says it has come to rest. */
@@ -185,6 +217,8 @@ class Jump {
 
 /** What says which of some elements the reader is at, and is told when the page takes them to one: a reading band. */
 interface TakesLandings {
+	/** The area the elements scroll in, while it is watched; null while none is. */
+	readonly area: HTMLElement | null;
 	/** The page is taking the reader to this element: it is the one they are at from now on. */
 	land: (element: Element) => void;
 	/** The reader has come to rest: from here on, where they are is theirs to say by moving on. */
@@ -211,13 +245,20 @@ export class Jumps {
 	 * Take the reader to an element, in place of wherever the page was taking them.
 	 *
 	 * @param element what the reader is taken to
-	 * @param sentTo where in the area it scrolls in the element is sent: its head to the top, or itself to the middle
+	 * @param area what it scrolls in, the page itself where that is null
+	 * @param sentTo where in the area the element is sent: its head to the top, or itself to the middle
 	 * @param motion how the first scroll to it moves
 	 * @param atRest what this jump alone does once it has come to rest, unless another takes its place first
 	 */
-	to(element: HTMLElement, sentTo: ScrollLogicalPosition, motion: Motion, atRest?: () => void): void {
+	to(
+		element: HTMLElement,
+		area: HTMLElement | null,
+		sentTo: ScrollLogicalPosition,
+		motion: Motion,
+		atRest?: () => void
+	): void {
 		this.#latest?.abandon();
-		this.#latest = new Jump(element, sentTo, motion, () => this.#cameToRest(atRest));
+		this.#latest = new Jump(element, area, sentTo, motion, () => this.#cameToRest(atRest));
 		this.#latest.start();
 	}
 
@@ -230,7 +271,7 @@ export class Jumps {
 	land(reading: TakesLandings, element: HTMLElement, motion: Motion, atRest?: () => void): void {
 		reading.land(element);
 		this.#landedOn.add(reading);
-		this.to(element, 'start', motion, atRest);
+		this.to(element, reading.area, 'start', motion, atRest);
 	}
 
 	/** The reader has come to rest where the page took them: whoever was landed on since the last rest hears of it. */

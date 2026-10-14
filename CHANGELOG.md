@@ -413,6 +413,12 @@
   pixels too many, and the 58 pieces 17, as a row is a fraction of a pixel
   shorter than counted. A thread under a line, a comment being written and
   a line that wraps are still not counted.
+- **Scrolling while the page takes you somewhere stops it there.** A turn
+  of the wheel, a touch, a press or a key while the page glides to a file,
+  a thread or a part of a story ends the glide where it stands, before your
+  own scroll is made. The page only stopped scrolling to it again
+  afterwards: the browser glides on through the reader's scroll, so once a
+  file far down holds the room it takes, the glide alone took you there.
 - **On a phone the page is no wider than the screen.** On a screen
   narrower than the diff reads at, the diff took the whole width of the
   row beside the rail of the file tree put away, and the page scrolled

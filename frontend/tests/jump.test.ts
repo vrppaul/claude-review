@@ -15,11 +15,11 @@ function standingStill(): HTMLElement {
 describe('whoever says where the reader is, landed on by a jump', () => {
 	it('hears that the reader came to rest once, not again when a later jump to something else does', async () => {
 		const jumps = new Jumps();
-		const reading = { land: vi.fn(), settle: vi.fn() };
+		const reading = { area: null, land: vi.fn(), settle: vi.fn() };
 		jumps.land(reading, standingStill(), 'instant');
 		await frames();
 
-		jumps.to(standingStill(), 'center', 'instant');
+		jumps.to(standingStill(), null, 'center', 'instant');
 		await frames();
 
 		expect(reading.settle).toHaveBeenCalledTimes(1);

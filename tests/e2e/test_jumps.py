@@ -15,21 +15,12 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page
 
-from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.helpers import (
-    ReviewServers,
-    RunningReview,
-    committed_repository,
-    line_on_the_wire,
-    repository_opening,
-    write_files,
-)
+from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
 
 STORY_ROUTE = "/api/story"
 SHOW_ROUTE = "/api/show"
-POINT_ROUTE = "/api/point"
 # Many screens of files, each changed in several places far apart: a hunk to
 # a place, and lines left out above, between and below them
 FILES_OF_MANY_HUNKS = 30
@@ -45,9 +36,6 @@ LAST_FILE = "zz_last.py"
 THE_LAST_FILE_HOLDS = "one\ntwo\nthree\n"
 # A story that tells one line of the first file and draws nothing of the last
 A_STORY = story_of(step(FIRST_FILE, CHANGED_LINES[0], CHANGED_LINES[0]), housekeeping=(LAST_FILE,))
-# Files on the way to the far one, each with a thread the agent raised under its first changed line: a
-# thread's card is not counted in the room a file holds, so each of them grows once it is built
-THREADED_ON_THE_WAY = PATHS[10:20]
 # How far below the top of the area it scrolls in a section's head stands, in pixels
 BELOW_THE_AREAS_TOP = """(section) => {
     const area = section.closest('main');
@@ -90,17 +78,6 @@ async def review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
     started = await servers.start(await repository_opening(many_hunks))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
-    return started
-
-
-@in_the_browsers_loop
-async def threaded_review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
-    """A review of the change, with the agent's threads on the files on the way to the far one."""
-    started = await servers.start(await repository_opening(many_hunks))
-    async with AsyncClient(base_url=started.url) as agent:
-        for path in THREADED_ON_THE_WAY:
-            anchor = line_on_the_wire(path, CHANGED_LINES[0])
-            await agent.post(POINT_ROUTE, json={"anchor": anchor, "body": "Why?", "severity": CommentSeverity.NOTE})
     return started
 
 
@@ -193,15 +170,14 @@ async def test_the_last_file_shown_while_a_story_is_read_is_marked_in_view_in_th
 
 
 async def test_a_reader_who_scrolls_while_the_page_takes_them_to_a_file_is_left_where_they_went(
-    threaded_review: RunningReview, page: Page
+    review: RunningReview, page: Page
 ) -> None:
-    """The threads on the way leave the file below where the glide ends: the page scrolls on to it only if the reader does not."""
-    await page.goto(threaded_review.url)
+    await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
     area = page.get_by_test_id("diff-view")
     await area.hover()
 
-    await _agent_shows(threaded_review, FAR_FILE)
+    await _agent_shows(review, FAR_FILE)
     await page.wait_for_function(ON_ITS_WAY, arg=FAR_FILE)
     await page.mouse.wheel(0, -A_TURN_OF_THE_WHEEL)
     shown = await _marked(page, FAR_FILE)

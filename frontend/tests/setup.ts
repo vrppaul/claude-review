@@ -55,6 +55,7 @@ globalThis.IntersectionObserver = ImmediateIntersectionObserver as unknown as ty
 if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();
 }
+Element.prototype.scrollTo ??= vi.fn();
 
 /** Never reports: jsdom has no layout, so nothing it watches ever changes size. */
 class SilentResizeObserver implements ResizeObserver {
