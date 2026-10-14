@@ -38,41 +38,53 @@ function cameNear(entries: IntersectionObserverEntry[], watching: IntersectionOb
 }
 
 /**
- * Call back once the head of something and its end have each been on
- * screen in the area it scrolls in, then stop.
+ * Call back once the reader's scrolling has carried the end of something
+ * across the edge of the area it scrolls in — into view, or out above the
+ * top — then stop.
  *
- * That is having read it through: where it begins was in front of the
- * reader, and so was where it ends, in whichever order and however long
- * apart. No time is counted: what the page glides past on its way
- * elsewhere has been on screen too.
+ * That is having read it through. Where the end stands as it is first
+ * watched carries it across nothing: what is on screen as it is drawn is
+ * not read for being there, nor what is above for being past. Out below,
+ * as the reader scrolls back up, counts nothing. No time is counted: what
+ * the page glides past on its way elsewhere is carried across too.
  */
-export function whenReadThrough(
-	head: Element,
-	end: Element,
-	root: HTMLElement | null,
-	onThrough: () => void
-): () => void {
-	const unseen = new Set([head, end]);
-	const observer = new IntersectionObserver((entries, watching) => cameOnScreen(entries, watching, unseen, onThrough), {
+export function whenReadThrough(end: Element, root: HTMLElement | null, onThrough: () => void): () => void {
+	const reports = new EdgeReports(onThrough);
+	const observer = new IntersectionObserver((entries, watching) => reports.heard(entries, watching), {
 		root,
 		threshold: ANY_OF_IT
 	});
-	observer.observe(head);
 	observer.observe(end);
 	return () => observer.disconnect();
 }
 
-/** Some of what is watched came on screen, if any did: once none is left unseen, stop watching, and say so once. */
-function cameOnScreen(
-	entries: IntersectionObserverEntry[],
-	watching: IntersectionObserver,
-	unseen: Set<Element>,
-	onThrough: () => void
-): void {
-	const onScreen = entries.filter((entry) => entry.isIntersecting);
-	if (onScreen.length === 0) return;
-	for (const entry of onScreen) unseen.delete(entry.target);
-	if (unseen.size > 0) return;
-	watching.disconnect();
-	onThrough();
+/**
+ * What an observer of one end reports. Its first report is where the end
+ * stood as it began to watch, and carries it across nothing; any after it
+ * says the end was carried across an edge.
+ */
+class EdgeReports {
+	// Whether the first report, of where the end stood as it was first watched, has been heard
+	#standingHeard = false;
+	readonly #onThrough: () => void;
+
+	constructor(onThrough: () => void) {
+		this.#onThrough = onThrough;
+	}
+
+	/** Reports heard: once one says the end came into view or went out above the top, stop watching, and say so once. */
+	heard(entries: IntersectionObserverEntry[], watching: IntersectionObserver): void {
+		const [, ...afterTheFirst] = entries;
+		const crossings = this.#standingHeard ? entries : afterTheFirst;
+		this.#standingHeard = true;
+		if (!crossings.some(carriedOnward)) return;
+		watching.disconnect();
+		this.#onThrough();
+	}
+}
+
+/** Whether a report says the end came into view, or went out above the top, rather than out below. */
+function carriedOnward(entry: IntersectionObserverEntry): boolean {
+	const aboveTheTop = entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top;
+	return entry.isIntersecting || aboveTheTop;
 }

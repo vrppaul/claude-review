@@ -9,7 +9,7 @@ import { fakeServer } from '../fake-server';
 import { THIS_RUN } from '../fake-socket';
 import { handOverNext, pushedAt } from '../pushes';
 import { type Opened, openReview } from '../review';
-import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
+import { areasWatching, scriptTheScroll, scrollPast, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
 import { gainedPiece, storyHeld, storyResponse, toldChapter, toldStep } from '../story';
 
@@ -54,6 +54,11 @@ function readThrough(part: HTMLElement): void {
 	flushSync();
 }
 
+/** The end of the first chapter of the story. */
+function endOfTheBeginnings(): HTMLElement {
+	return within(theBeginnings()).getByTestId('part-end');
+}
+
 /** The first chapter of the story, as the page draws it. */
 function theBeginnings(): HTMLElement {
 	const [beginnings] = screen.getAllByTestId('story-chapter');
@@ -96,10 +101,18 @@ describe('a part of a story the reader has scrolled through', () => {
 		expect(countSaid()).toBe('2 chapters');
 	});
 
-	it('is a chapter whose head and whose end have each been on screen: its entry says it is read', () => {
-		readThrough(theBeginnings());
+	it('is a chapter whose end the reader scrolled into view: its entry says it is read', () => {
+		scrollTo(endOfTheBeginnings());
+		flushSync();
 
 		expect(entriesNamed()).toEqual(['Overview', 'Chapter 1: The beginnings, read', 'Chapter 2: The end']);
+	});
+
+	it('is a chapter whose end the reader scrolled out above the top, never having seen it', () => {
+		scrollPast(endOfTheBeginnings());
+		flushSync();
+
+		expect(countSaid()).toBe('1 of 2 read');
 	});
 
 	it('is counted among the chapters, in the head of the contents', () => {
@@ -118,13 +131,6 @@ describe('a part of a story the reader has scrolled through', () => {
 
 	it('is not a chapter whose head alone has been on screen', () => {
 		scrollTo(within(theBeginnings()).getByTestId('part-head'));
-		flushSync();
-
-		expect(countSaid()).toBe('2 chapters');
-	});
-
-	it('is not a chapter whose end alone has been on screen', () => {
-		scrollTo(within(theBeginnings()).getByTestId('part-end'));
 		flushSync();
 
 		expect(countSaid()).toBe('2 chapters');
@@ -159,6 +165,19 @@ describe('what the reader has read of a story, once the story is told again', ()
 
 		handOverNext(review, { type: 'story' });
 		await settled();
+		flushSync();
+
+		expect(countSaid()).toBe('2 chapters');
+	});
+
+	it('reads no chapter for its end standing in view as the story told again is drawn, nor as the reader scrolls back up from it', async () => {
+		scrollTo(endOfTheBeginnings());
+		fakeServer().answer('GET /api/story', storyResponse({ held: TOLD }));
+		handOverNext(review, { type: 'story' });
+		await settled();
+		flushSync();
+
+		scrollTo();
 		flushSync();
 
 		expect(countSaid()).toBe('2 chapters');

@@ -341,15 +341,13 @@ tests. Remove items when done — don't check them off.
 
 ## Known limits
 
-- A part of a story is read through once its head and its end have each
-  been on screen, and no time is counted: a jump that glides across a whole
-  chapter (`n`, `p`, a file the agent shows) ticks it.
+- A part of a story is read through once scrolling carries its end into
+  view or out above the top, and no time is counted: a jump that glides
+  across a whole chapter (`n`, `p`, a file the agent shows) ticks it.
 - What the reader has read of a story is forgotten when the page hears the
   story was told again. A story told again in a gap the review could not
   hand over is read as the page catches up, and its ticks stay: they stand
-  for the parts of the new story known by the same names. And a chapter
-  whose head was on screen before the story was told again needs only its
-  end on screen to be read through in the new one.
+  for the parts of the new story known by the same names.
 
 - A file the agent shows far down the review is glided to, and then put in
   place at once: the glide ends where the file stood before the files on

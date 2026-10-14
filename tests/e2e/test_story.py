@@ -111,6 +111,8 @@ TWO_CHAPTERS = "2 chapters"
 ONE_OF_TWO_READ = "1 of 2 read"
 # Bring an element to the middle of the area it scrolls in, at once
 TO_THE_MIDDLE = "(element) => element.scrollIntoView({ block: 'center' })"
+# Two frames drawn: what the browser watches on the page has reported where everything stood as it opened
+TWO_FRAMES = "new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))"
 # How strongly an element is drawn, and the strength of one that has not stepped back
 OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
 FULLY_DRAWN = 1
@@ -577,6 +579,20 @@ async def _read_the_first_chapter_through(page: Page, review: RunningReview) -> 
     await expect(page.get_by_test_id("contents-count")).to_have_text(TWO_CHAPTERS)
     # The end of the overview comes first, then the first chapter's
     await page.get_by_test_id("part-end").nth(1).evaluate(TO_THE_MIDDLE)
+
+
+async def test_the_overview_on_screen_as_the_story_opens_is_read_only_once_the_reader_scrolls_past_it(
+    review_of_a_long_file_in_two_chapters: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review_of_a_long_file_in_two_chapters)
+    of_the_overview = page.get_by_test_id("contents-entry").first
+    await page.evaluate(TWO_FRAMES)
+    await expect(of_the_overview.get_by_test_id("part-read-mark")).to_have_count(0)
+
+    await page.get_by_test_id("part-end").nth(1).evaluate(TO_THE_MIDDLE)
+
+    await expect(of_the_overview.get_by_test_id("part-read-mark")).to_be_visible()
 
 
 async def test_a_chapter_scrolled_through_is_ticked_in_the_contents_and_its_files_step_back(

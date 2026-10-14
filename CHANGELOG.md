@@ -405,6 +405,12 @@
   its fields stop there.
 
 ### Fixed
+- **A part of a story is read once you scroll past it.** The overview, and
+  any part shorter than the screen, counted as read the moment the story
+  opened, its head and its end both on screen before any scroll. A part is
+  now read once your scrolling carries its end into view or out above the
+  top; where it stands as the story is drawn counts for nothing, and
+  scrolling back up away from it counts nothing either.
 - **A file not drawn yet holds the room it takes.** Until the reader came
   near a file, its section held room for its rows alone; drawn, it took the
   header of each hunk and the bar for the lines left out around it too, 57

@@ -55,9 +55,9 @@
 	$effect(() => (element && heading ? review.parts.register(partKey, element, heading) : undefined));
 	// Watched until the reader has read it through, and again once that is forgotten
 	$effect(() =>
-		read || !heading || !endElement
+		read || !endElement
 			? undefined
-			: whenReadThrough(heading, endElement, scrollArea(), () => review.story.progress.markRead(partKey))
+			: whenReadThrough(endElement, scrollArea(), () => review.story.progress.markRead(partKey))
 	);
 </script>
 
