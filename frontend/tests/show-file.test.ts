@@ -662,6 +662,38 @@ describe('a section asked for before it is drawn', () => {
 	});
 });
 
+// A thread, or what offers a block of the story to be asked about, drawn anew under its name before the drawing
+// it replaces is taken back: what is taken back after is the old drawing alone
+describe('what is drawn anew under the same name', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('is the thread gone to, though the drawing it replaced is taken back after', () => {
+		const takeBackTheFirst = sections.registerThread('comment-1', document.createElement('div'));
+		const drawnAnew = document.createElement('div');
+		drawnAnew.scrollIntoView = vi.fn();
+		sections.registerThread('comment-1', drawnAnew);
+
+		takeBackTheFirst();
+		sections.goToThread('comment-1', 'a.py');
+
+		expect(drawnAnew.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('is what takes the keyboard back for a block, though what it replaced is taken back after', async () => {
+		const takeBackTheFirst = sections.registerBlock('story:doubt', document.createElement('button'));
+		const drawnAnew = document.body.appendChild(document.createElement('button'));
+		sections.registerBlock('story:doubt', drawnAnew);
+
+		takeBackTheFirst();
+		sections.keyboardToBlock('story:doubt');
+		await tick();
+
+		expect(document.activeElement).toBe(drawnAnew);
+	});
+});
+
 // The story draws its words whole as it comes on screen: a thread on them is drawn in that same drawing, or never
 describe('a thread on the story’s words asked for before it is drawn', () => {
 	beforeEach(() => {

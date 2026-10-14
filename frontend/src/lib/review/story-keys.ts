@@ -30,8 +30,8 @@ export const OVERVIEW_PART = 'overview';
 export const LEFT_OUT_PART = LEFT_OUT;
 
 /** What a chapter's part of the page is known by: its id. */
-export function chapterPartKey(chapter: ToldChapter): string {
-	return [CHAPTER, chapter.id].join(KEY_SEPARATOR);
+export function chapterPartKey(chapterId: ToldChapter['id']): string {
+	return [CHAPTER, chapterId].join(KEY_SEPARATOR);
 }
 
 /** What a step's section is known by: its file, and the first of the lines it was told on, which never move. */

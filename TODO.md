@@ -146,6 +146,10 @@ tests. Remove items when done — don't check them off.
       while the Story segment says "writing" than while it says "Story":
       the dots that breathe in place of its icon make the header's first
       row a pixel taller. Measured by an independent review, in a look.
+- [ ] `fix(ui)`: at 420 pixels the reading area is 789 pixels tall in Files
+      and 821 in Story: the header wraps a third row in Files, for the base
+      picker, so a switch between the views moves the reading area 32
+      pixels. Measured by an independent review, in a look.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

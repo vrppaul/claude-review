@@ -41,6 +41,10 @@ export function storyNotStoppedNote(error: unknown): string {
 	return `the story could not be stopped — ${messageOf(error)}`;
 }
 
+export function storyIntroductionNotKeptNote(error: unknown): string {
+	return `whether Story is introduced again could not be kept — ${messageOf(error)}`;
+}
+
 /** A thread the agent raised, by where it hangs. */
 export function raisedNote(anchor: Anchor): string {
 	return `pointed at ${anchorShortPlace(anchor)}`;

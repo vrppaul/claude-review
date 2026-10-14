@@ -7,12 +7,14 @@ bring it back. Where the keyboard lands as it goes is only true in a
 browser.
 """
 
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page, expect
 
+from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
@@ -53,6 +55,18 @@ async def _press(page: Page, test_id: str) -> None:
     """Press a control from the keyboard: the keyboard on it, then Enter."""
     await page.get_by_test_id(test_id).focus()
     await page.keyboard.press("Enter")
+
+
+async def test_try_story_takes_the_keyboard_as_the_introduction_appears_to_a_returning_reader(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    """Shown this release already, and never Story: nothing else holds the keyboard as the review opens."""
+    never_introduced = GuideState(seen_release=version("claude-review"), story_introduced=False)
+    reader_files.guide.write_text(never_introduced.model_dump_json())
+
+    await page.goto(review.url)
+
+    await expect(page.get_by_test_id("try-story")).to_be_focused()
 
 
 async def test_story_put_away_for_good_by_a_newcomer_is_not_introduced_after_a_reload(

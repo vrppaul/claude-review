@@ -43,7 +43,7 @@
 	const listsSomething = $derived(OVERVIEW_LISTS_IN_ORDER.some((list) => overview[list].length > 0));
 	// Whether a thread, or a comment being written, hangs under anything the lists hold: they are drawn open
 	// while one does, so that nothing hung there is out of sight
-	const listsHeld = $derived(
+	const writtenUnderLists = $derived(
 		overviewItems(overview).some(
 			(item) => review.threads.onBlock(item).length > 0 || review.threads.writing.aboutBlock(item) !== undefined
 		)
@@ -53,8 +53,8 @@
 	let leftOpen = $state(false);
 
 	/** A press on the lists' heading opens or folds them, but folds nothing while something hangs under them. */
-	function toggleUnlessHeld(press: MouseEvent) {
-		if (listsHeld) press.preventDefault();
+	function toggleUnlessWrittenUnder(press: MouseEvent) {
+		if (writtenUnderLists) press.preventDefault();
 	}
 </script>
 
@@ -89,15 +89,18 @@
 	</section>
 
 	{#if overview.diagram}
-		<StoryDiagram diagram={overview.diagram} chapters={held.story.chapters} />
+		<StoryDiagram diagram={overview.diagram} />
 	{/if}
 
 	{#if listsSomething}
-		<details data-testid="story-more" bind:open={() => listsHeld || leftOpen, (open: boolean) => (leftOpen = open)}>
+		<details
+			data-testid="story-more"
+			bind:open={() => writtenUnderLists || leftOpen, (open: boolean) => (leftOpen = open)}
+		>
 			<summary
 				data-testid="story-more-toggle"
-				class={['text-sm', !listsHeld && 'cursor-pointer']}
-				onclick={toggleUnlessHeld}
+				class={['text-sm', !writtenUnderLists && 'cursor-pointer']}
+				onclick={toggleUnlessWrittenUnder}
 			>
 				More about this change
 			</summary>

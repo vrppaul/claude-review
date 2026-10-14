@@ -84,29 +84,25 @@ export interface StoryContents {
 	stepAt: (section: string | null) => StepListed | null;
 }
 
-/** That a chapter, by its place among the story's, tells lines of a file. */
+/** The files a chapter, by its place among the story's, shows code of. */
 interface ChapterTelling {
-	path: string;
 	place: number;
+	paths: ReadonlySet<string>;
 }
-
-/** The chapters that tell each file, in the story's order: asked of every file a chapter lists. */
-type ChaptersTelling = ReadonlyMap<string, readonly ChapterTelling[]>;
 
 /** What a table holds under a key: nothing under a key it does not hold, nor under none. */
 function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): Held | null {
 	return key === null ? null : (table.get(key) ?? null);
 }
 
-/** The files a chapter tells, each once: those it shows code of. */
-function filesTold(chapter: ToldChapter): Set<string> {
-	return new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.file])));
+/** The files a chapter tells, each once: those it shows code of, by the paths of the pieces it shows. */
+function chapterTelling(chapter: ToldChapter, place: number): ChapterTelling {
+	return { place, paths: new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.now.piece.path]))) };
 }
 
-/** Which chapters tell each file: the story's chapters walked once, for every file any of them lists. */
-function chaptersTelling(chapters: readonly ToldChapter[]): ChaptersTelling {
-	const tellings = chapters.flatMap((chapter, place) => [...filesTold(chapter)].map((path) => ({ path, place })));
-	return Map.groupBy(tellings, ({ path }) => path);
+/** The places of the chapters other than one that tell a file, in the story's order. */
+function alsoTelling(path: string, chapterPlace: number, telling: readonly ChapterTelling[]): number[] {
+	return telling.filter(({ place, paths }) => place !== chapterPlace && paths.has(path)).map(({ place }) => place);
 }
 
 /**
@@ -123,15 +119,15 @@ export function tellsFirst(chapter: ChapterListed, listed: FileListed): boolean 
  * @param firstPiece the piece that step shows
  * @param opensAt what that step's section is known by
  * @param chapterPlace where that chapter stands among the story's
- * @param telling which chapters tell each file
+ * @param telling the files each of the story's chapters tells
  */
-function fileListed(firstPiece: DiffFile, opensAt: string, chapterPlace: number, telling: ChaptersTelling): FileListed {
-	const tellers = telling.get(firstPiece.path) ?? [];
-	return {
-		firstPiece,
-		opensAt,
-		alsoIn: tellers.map(({ place }) => place).filter((place) => place !== chapterPlace)
-	};
+function fileListed(
+	firstPiece: DiffFile,
+	opensAt: string,
+	chapterPlace: number,
+	telling: readonly ChapterTelling[]
+): FileListed {
+	return { firstPiece, opensAt, alsoIn: alsoTelling(firstPiece.path, chapterPlace, telling) };
 }
 
 /**
@@ -140,7 +136,7 @@ function fileListed(firstPiece: DiffFile, opensAt: string, chapterPlace: number,
  * shows code of it, and every later step that shows code of the file is
  * given that same listing. A step that shows none lists nothing.
  */
-function chapterListed(told: ToldChapter, place: number, telling: ChaptersTelling): ChapterListed {
+function chapterListed(told: ToldChapter, place: number, telling: readonly ChapterTelling[]): ChapterListed {
 	// The chapter's files listed so far, by path: each at the first step that shows code of it
 	const files = new Map<string, FileListed>();
 	const steps: StepListed[] = [];
@@ -157,12 +153,12 @@ function chapterListed(told: ToldChapter, place: number, telling: ChaptersTellin
 	}
 	// Only a step that shows code shows it changed: one whose code is no longer found shows none to be current
 	const changedSteps = told.steps.filter((step) => step.now?.changed_since_told === true).length;
-	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps, changedSteps };
+	return { told, place, part: chapterPartKey(told.id), files: [...files.values()], steps, changedSteps };
 }
 
 /** What a story lists of itself. */
 export function contentsOf(story: ToldStory): StoryContents {
-	const telling = chaptersTelling(story.chapters);
+	const telling = story.chapters.map(chapterTelling);
 	const chapters = story.chapters.map((told, place) => chapterListed(told, place, telling));
 	const byPart = new Map(chapters.map((chapter): [string, ChapterListed] => [chapter.part, chapter]));
 	const bySection = new Map(

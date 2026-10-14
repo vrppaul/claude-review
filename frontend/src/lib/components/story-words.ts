@@ -34,6 +34,19 @@ const ALSO_IN = 'also in';
 const READ = 'read';
 // What a step whose code a round changed after the story was told is said to be, to whoever cannot see it step back
 const CHANGED_AFTER_TOLD = 'changed after it was told';
+// What stands between a step's place among its chapter's steps and how many they are, and between chapters read and
+// how many there are
+const OUT_OF = 'of';
+// What the tag beside a story's title says once a later round moved the code on, before that round
+const CODE_MOVED_ON_IN_ROUND = 'the code moved on in round';
+// What a chapter's warning says of the steps a round changed, between how many and which round
+const IN_THIS_CHAPTER_CHANGED_IN_ROUND = `in this ${A_CHAPTER} changed in round`;
+// What is said of the changed lines no step told, between how many there were and how many there are now, and after both
+const NO_STEP_TOLD_WHEN_TOLD = 'no step told when the story was told';
+const NOW = 'now';
+// What a step whose code is no longer found says, before its file and after it
+const ITS_CODE_IN = 'Its code in';
+const IS_NO_LONGER_FOUND = 'is no longer found';
 
 // What stands between how much a story left out when it was told and how much it leaves out now
 const THEN_AND_NOW = ' → ';
@@ -78,7 +91,7 @@ export function changedStepNamed(number: string): string {
 
 /** What that tag says once a later round moved the code on: "the code moved on in round 2". */
 export function codeMovedOnIn(round: number): string {
-	return `the code moved on in round ${round}`;
+	return `${CODE_MOVED_ON_IN_ROUND} ${round}`;
 }
 
 /**
@@ -95,12 +108,12 @@ export function leftOutThenAndNow(then: number, now: number): string {
  * told, 5 now".
  */
 export function leftOutThenAndNowSaid(then: number, now: number): string {
-	return `${NOT_IN_THE_STORY}, ${counted(then, CHANGED_LINES)} no step told when the story was told, ${now} now`;
+	return `${NOT_IN_THE_STORY}, ${counted(then, CHANGED_LINES)} ${NO_STEP_TOLD_WHEN_TOLD}, ${now} ${NOW}`;
 }
 
 /** How many of a chapter's steps a round changed, and which round: "3 steps in this chapter changed in round 2." */
 export function stepsChangedIn(steps: number, round: number): string {
-	return `${counted(steps, STEPS)} in this ${A_CHAPTER} changed in round ${round}.`;
+	return `${counted(steps, STEPS)} ${IN_THIS_CHAPTER_CHANGED_IN_ROUND} ${round}.`;
 }
 
 /** What the overview's part of the page is called, to whoever goes through the page by its parts. */
@@ -121,7 +134,7 @@ export function chapterEntitled(place: number, title: string): string {
 
 /** Which of its chapter's steps a step is, as the bar a chapter is read under says: "step 2 of 5". */
 export function stepAmong(stepPlace: number, steps: number): string {
-	return `${STEPS.one} ${stepPlace + FIRST_NUMBER} of ${steps}`;
+	return `${STEPS.one} ${stepPlace + FIRST_NUMBER} ${OUT_OF} ${steps}`;
 }
 
 /** What a part is called in the contents once the reader has read it through: "Chapter 2: The end, read". */
@@ -144,7 +157,7 @@ export function chaptersIn(chapters: number): string {
  * chapters", and once the reader has read any of them through, "1 of 5 read".
  */
 export function chaptersCounted(chapters: number, read: number): string {
-	return read === 0 ? chaptersIn(chapters) : `${read} of ${chapters} ${READ}`;
+	return read === 0 ? chaptersIn(chapters) : `${read} ${OUT_OF} ${chapters} ${READ}`;
 }
 
 /**
@@ -158,7 +171,7 @@ export function filesAndSteps(files: number, steps: number): string {
 
 /** What a step whose code the review cannot place in the change now says in its place. */
 export function codeNoLongerFound(file: string): string {
-	return `Its code in ${file} is no longer found.`;
+	return `${ITS_CODE_IN} ${file} ${IS_NO_LONGER_FOUND}.`;
 }
 
 /** The numbers of some chapters, by their places: "1", "1, 4". */

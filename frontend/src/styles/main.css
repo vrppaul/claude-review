@@ -1184,10 +1184,10 @@
 	background: var(--cr-mark-band);
 	box-shadow: var(--cr-shadow-band-edge);
 }
-.cr-askable-held,
-.cr-askable-held:hover,
-.cr-askable-held:focus-within {
-	background: var(--cr-mark-band-held);
+.cr-askable-written-under,
+.cr-askable-written-under:hover,
+.cr-askable-written-under:focus-within {
+	background: var(--cr-mark-band-written-under);
 	box-shadow: var(--cr-shadow-marked-edge);
 }
 /* Words beside blocks the reader may ask about, which stand as far from the agent's edge as theirs do */

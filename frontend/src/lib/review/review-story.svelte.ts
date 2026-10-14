@@ -95,13 +95,6 @@ function isOfTake(held: StoryHeld | null, take: number): boolean {
  */
 export type StoryArrival = 'none' | 'offered' | 'put-away';
 
-// What putting the offer away makes of each way an arrival stands: only an offer can be put away
-const OFFER_PUT_AWAY: Record<StoryArrival, StoryArrival> = {
-	none: 'none',
-	offered: 'put-away',
-	'put-away': 'put-away'
-};
-
 /** What the story of a page opens on. */
 export interface StoryOpening {
 	/** Whether the review takes a story. */
@@ -194,9 +187,9 @@ export class ReviewStory {
 		return this.#arrival;
 	}
 
-	/** The reader put the offer of the story away without reading it: it is unseen still. */
+	/** The reader put the offer of the story away without reading it: it is unseen still. Only an offer can be put away. */
 	putOfferAway(): void {
-		this.#arrival = OFFER_PUT_AWAY[this.#arrival];
+		if (this.#arrival === 'offered') this.#arrival = 'put-away';
 	}
 
 	/** The reader has been shown the story held: said by whoever draws it. */

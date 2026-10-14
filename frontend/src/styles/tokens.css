@@ -147,7 +147,7 @@
 	 */
 	--cr-mark-band: color-mix(in srgb, var(--cr-mark) 7%, transparent);
 	--cr-mark-band-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
-	--cr-mark-band-held: color-mix(in srgb, var(--cr-mark) 16%, transparent);
+	--cr-mark-band-written-under: color-mix(in srgb, var(--cr-mark) 16%, transparent);
 	/* The agent's colour, at the strengths the mark uses for the same things */
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);

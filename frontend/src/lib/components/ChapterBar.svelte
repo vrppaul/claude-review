@@ -48,6 +48,7 @@
 						class="btn shrink-0 btn-ghost btn-sm"
 						onclick={() => review.parts.goTo(before.part)}
 					>
+						<Icon name="caret" class="h-2.5 w-2.5 rotate-180" />
 						{chapterByNumber(before.place)}
 					</button>
 				{/if}

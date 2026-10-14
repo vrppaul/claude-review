@@ -2,7 +2,7 @@
 	import { drawDiagram, followLinks, type Drawing } from '$lib/dom/diagram';
 	import { useReview } from '$lib/review/context';
 	import { chapterPartKey } from '$lib/review/story-keys';
-	import type { Diagram, ToldChapter } from '$lib/types';
+	import type { Diagram } from '$lib/types';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
@@ -10,11 +10,9 @@
 	interface Props {
 		/** The change drawn, as the agent wrote it in Mermaid, and the chapter each node it links leads to. */
 		diagram: Diagram;
-		/** The story's chapters, which its links name by id. */
-		chapters: readonly ToldChapter[];
 	}
 
-	let { diagram, chapters }: Props = $props();
+	let { diagram }: Props = $props();
 
 	// What the drawing, and the dialog that draws it large, are called where the agent called it nothing
 	const UNCAPTIONED = 'The change drawn';
@@ -28,25 +26,14 @@
 	const review = useReview();
 	// The source alone: reading the story again hands over an equal diagram, which must draw nothing again
 	const source = $derived(diagram.mermaid);
-	const leadsTo = $derived(partsLinked(diagram.links, chapters));
+	// Where each node the source links leads, by the node's name: the part of the chapter its link names.
+	// The review refuses a link to no chapter, so every link leads to one
+	const leadsTo = $derived(
+		new Map(Object.entries(diagram.links).map(([node, chapterId]) => [node, chapterPartKey(chapterId)]))
+	);
 	const name = $derived(diagram.caption ?? UNCAPTIONED);
 	// Whether the reader opened it large
 	let large = $state(false);
-
-	/**
-	 * Where each node the source links leads: the part of the chapter its link names, by the node's
-	 * name. The review refuses a link to no chapter, so every link pairs with one.
-	 */
-	function partsLinked(links: Diagram['links'], told: readonly ToldChapter[]): Map<string, string> {
-		const linked = Object.entries(links);
-		return new Map(
-			told.flatMap((chapter) =>
-				linked
-					.filter(([, chapterId]) => chapterId === chapter.id)
-					.map(([node]): [string, string] => [node, chapterPartKey(chapter)])
-			)
-		);
-	}
 </script>
 
 <!-- What the figure's caption says: what the agent called the drawing, and once it has drawn, a way to see

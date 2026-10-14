@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ReviewStory, type StoryOpening } from '$lib/review/review-story.svelte';
+import { stepSectionKey } from '$lib/review/story-keys';
 import type { StoryResponse } from '$lib/types';
 import { A_LATER_TAKE, FIRST_TAKE } from './diff';
 import { fakeServer, SERVER_ERROR, takingStoryAskings } from './fake-server';
-import { ASKED, codeMovedOn, readTheStoryAgain, storyHeld, storyResponse, TAKEN } from './story';
+import { ASKED, codeMovedOn, readTheStoryAgain, storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from './story';
 
 /** What a reader who opens the review for the first time has read through of its story. */
 const NOTHING_READ: string[] = [];
@@ -176,20 +177,14 @@ describe('the story a page opens on', () => {
 });
 
 describe('the pieces of the story a page holds', () => {
-	it('are laid out once for the story held, however often they are asked for', () => {
+	it('are those of another story once it is held', async () => {
+		const toldAgain = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('b.py', 3)])] });
+		fakeServer().answer('GET /api/story', storyResponse({ held: toldAgain }));
 		const story = pageStory({ held: storyHeld() });
-
-		expect(story.pieces).toBe(story.pieces);
-	});
-
-	it('are laid out afresh once another story is held', async () => {
-		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld({ title: 'Told again' }) }));
-		const story = pageStory({ held: storyHeld() });
-		const ofTheFirstStory = story.pieces;
 
 		await readTheStoryAgain(story);
 
-		expect(story.pieces).not.toBe(ofTheFirstStory);
+		expect(story.pieces.keys).toEqual([stepSectionKey(toldStep('b.py', 3))]);
 	});
 
 	it('are none while no story is held', () => {

@@ -21,7 +21,7 @@ import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
-import { diffNotTakenNote } from '$lib/review/panel-notes';
+import { diffNotTakenNote, storyIntroductionNotKeptNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
@@ -190,7 +190,9 @@ export class Review {
 			agentAttached: () => this.answerer.attached,
 			sayInPanel: (words) => this.conversation.note(words)
 		});
-		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
+		this.guide = new Guide(this.answerer, this.threads.writing, facts.release, (error) =>
+			this.conversation.note(storyIntroductionNotKeptNote(error))
+		);
 		this.views = new ReadingViews(
 			{
 				files: new FilesReading(this.diff, this.threads, this.reading),

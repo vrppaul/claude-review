@@ -405,6 +405,10 @@
   its fields stop there.
 
 ### Fixed
+- **A choice about Story's introduction the review could not keep is
+  said.** "Don't show again", or its Undo, that the review failed to keep
+  was dropped without a word, and the next review introduced Story again;
+  the panel now says it could not be kept, and why.
 - **A part of a story is read once you scroll past it.** The overview, and
   any part shorter than the screen, counted as read the moment the story
   opened, its head and its end both on screen before any scroll. A part is

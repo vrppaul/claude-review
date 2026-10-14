@@ -45,7 +45,9 @@
 	const field = $derived(review.threads.writing.aboutBlock(block));
 	// Whether something the reader wrote hangs open under it — a thread not folded away, or the comment being
 	// written — which bands it stronger, as an open thread marks the lines it is about
-	const held = $derived(threads.some((thread) => !review.threads.reading.isFolded(thread.id)) || field !== undefined);
+	const writtenUnder = $derived(
+		threads.some((thread) => !review.threads.reading.isFolded(thread.id)) || field !== undefined
+	);
 
 	// Announced to the review, which gives it the keyboard back once what hung under it goes
 	$effect(() => (asking ? review.sections.registerBlock(blockKey(block), asking) : undefined));
@@ -58,7 +60,7 @@
 </script>
 
 {#snippet band()}
-	<div data-testid="askable-band" class={['cr-askable', held && 'cr-askable-held']}>
+	<div data-testid="askable-band" class={['cr-askable', writtenUnder && 'cr-askable-written-under']}>
 		{@render children()}
 		<button
 			bind:this={asking}

@@ -72,6 +72,8 @@ export class Guide {
 	readonly #comments: OpenComments;
 	// Which release serves this review
 	readonly #release: string;
+	// Say that whether Story is introduced again could not be kept, as the page says what a request came to
+	readonly #notKept: (error: unknown) => void;
 	#card = $state<GuideCard | null>(null);
 	// The ? list: the tour, the news and the keys. Opened by the key or by the
 	// button in the header — a browser extension may have the key for itself.
@@ -101,10 +103,11 @@ export class Guide {
 	// ? list's and the tour's own
 	readonly #stops: TourStep[];
 
-	constructor(answerer: AnswererPresence, comments: OpenComments, release: string) {
+	constructor(answerer: AnswererPresence, comments: OpenComments, release: string, notKept: (error: unknown) => void) {
 		this.#answerer = answerer;
 		this.#comments = comments;
 		this.#release = release;
+		this.#notKept = notKept;
 		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
 		this.#stepIndex = $derived(indexOfStep(this.#steps, this.#stepId));
 		this.#stops = $derived(this.#steps.filter((step) => this.#isStop(step)));
@@ -347,10 +350,13 @@ export class Guide {
 		writeSeenRelease(this.#release).catch(() => undefined);
 	}
 
-	/** Keep whether Story has been introduced, for every review. */
+	/**
+	 * Keep whether Story has been introduced, for every review. Not kept, it
+	 * is said: the reader chose, and the next review would introduce Story
+	 * again without a word why.
+	 */
 	#keepStoryIntroduced(introduced: boolean): void {
-		// Not kept this time, if it fails: the next review asks again
-		keepGuide({ story_introduced: introduced }).catch(() => undefined);
+		keepGuide({ story_introduced: introduced }).catch(this.#notKept);
 	}
 
 	/**

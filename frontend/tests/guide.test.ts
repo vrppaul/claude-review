@@ -286,6 +286,20 @@ describe('Story introduced at the switch', () => {
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
 
+	it('says in the panel that it could not be kept, where the server refuses to keep it', async () => {
+		const server = guideServer('1.5.0');
+		await arriveAt('1.5.0');
+		server.refuse('PUT /api/guide', SERVER_ERROR, 'the review fell over');
+
+		review.guide.noteStoryIntroduced();
+
+		await vi.waitFor(() =>
+			expect(review.conversation.turns.at(-1)?.body).toBe(
+				'whether Story is introduced again could not be kept — the review fell over'
+			)
+		);
+	});
+
 	it('is kept as done where the reader is introduced before the server says, and is not introduced once it does', async () => {
 		const server = guideServer('1.5.0');
 		review = openReview({ facts: { release: '1.5.0' } });

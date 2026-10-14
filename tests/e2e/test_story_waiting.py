@@ -51,6 +51,9 @@ LESS_THAN_A_PIXEL = 1
 # Where an element's right edge is, in pixels from the left of the window, and how wide the window is
 RIGHT_OF = "(element) => element.getBoundingClientRect().right"
 WINDOW_WIDTH = "window.innerWidth"
+# How long the note of a story's arrival stands before it puts itself away, in milliseconds, as the page has it
+# (`PassingNote.svelte`): the page's clock is run on by as much, and no test waits it out
+NOTE_STANDS_FOR_MS = 4_000
 
 
 class Middle(BaseModel):
@@ -308,13 +311,15 @@ async def test_the_note_of_a_storys_arrival_closed_from_the_keyboard_gives_the_k
 async def test_the_note_of_a_storys_arrival_going_by_itself_gives_the_keyboard_it_held_to_story_in_the_header(
     review: RunningReview, page: Page
 ) -> None:
+    await page.clock.install()
     await _an_agent_attaches(review)
     await _open_with_stories_on(page, review)
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("open-story").focus()
 
-    await page.get_by_test_id("story-ready").wait_for(state="detached")
+    await page.clock.fast_forward(NOTE_STANDS_FOR_MS)
 
+    await page.get_by_test_id("story-ready").wait_for(state="detached")
     await expect(page.get_by_test_id("read-as-story")).to_be_focused()
 
 
@@ -323,13 +328,15 @@ async def test_the_note_of_a_storys_arrival_goes_by_itself_for_a_reader_who_aske
 ) -> None:
     """Its bar does not run for them, and the note goes all the same: its time is not the bar's."""
     await page.emulate_media(reduced_motion="reduce")
+    await page.clock.install()
     await _an_agent_attaches(review)
     await _open_with_stories_on(page, review)
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("story-ready").wait_for()
 
-    await page.get_by_test_id("story-ready").wait_for(state="detached")
+    await page.clock.fast_forward(NOTE_STANDS_FOR_MS)
 
+    await page.get_by_test_id("story-ready").wait_for(state="detached")
     await expect(page.get_by_test_id("segment-unread")).to_be_visible()
 
 
