@@ -153,6 +153,16 @@ tests. Remove items when done — don't check them off.
       it lands on the first line of the story, and from a file's header
       kept over the middle of its file, on that file's first line. Read in
       the code, not looked at in a browser.
+- [ ] For the owner to decide, not a fault of the code as it is written:
+      with the keyboard on a line the reader has since scrolled away from
+      by hand, `j` and `k` step from that line and bring the reader back to
+      it. Seen in a look by an independent review: `j` on line 1, the area
+      scrolled by hand to 9520 pixels, `j`, and the area is at 0.
+      `dom/keyboard.ts` says the line that holds the keyboard is the
+      cursor, and a step goes from the cursor; a key pressed with the
+      keyboard outside what is read starts at the first line in sight.
+      Whether a line out of sight still counts as where the reader is, is
+      a choice of what the reader sees.
 - [ ] `fix(ui)`: in a review that is over, the agent panel put away by its
       own button leaves the keyboard on nothing: the header then draws no
       control to take it (`ReviewHeader.svelte`).
