@@ -43,9 +43,9 @@ const AWAITED: Record<StoryWait['kind'], boolean> = {
 };
 
 /**
- * What a reader with no current story held is waiting on. A request an agent took
- * is being written whoever is attached now: an agent that went quiet is
- * judged by how long the reader has waited, never guessed at here.
+ * What a reader with no current story held is waiting on. A request an
+ * agent took is being written whoever is attached now: an agent that went
+ * quiet is judged by how long the reader has waited, never guessed at here.
  */
 export function waitOf(asking: StoryAsking | null, agentAttached: boolean): StoryWait {
 	if (asking === null) return UNASKED;

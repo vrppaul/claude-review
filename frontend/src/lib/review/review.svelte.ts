@@ -326,9 +326,9 @@ export class Review {
 	 * must be in reach: the wait screen's Stop while no story is held; over
 	 * a story a round moved the code on under, drawn while it is told again,
 	 * the gear, turning stories off. Where none of these holds, reading the
-	 * review as its story means having one written, which spends the agent's tokens:
-	 * the reader is asked before that, and a review they open is read by its
-	 * files though they chose the story last.
+	 * review as its story means having one written, which spends the
+	 * agent's tokens: the reader is asked before that, and a review they
+	 * open is read by its files though they chose the story last.
 	 */
 	get storyViewOpens(): boolean {
 		return this.settings.current.stories || this.story.held !== null || isAwaited(this.story.wait);

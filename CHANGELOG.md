@@ -111,14 +111,14 @@
   check of a chapter read through, which it still is. The round the story
   was told in is a tag beside its title, "Round 1" and a green dot with
   "current" on the agent's colour, and once a later round moved the code
-  on, "Round 1 the
-  code moved on in round 2" on the warning's; the contents then say beside
-  "Not in the story" how many changed lines no step told when it was told,
-  and how many none tells now, "2 → 5", where the two differ, said in words
-  to a screen reader. Where the reader turned stories on, a story the code
-  moved on under is asked for again, by the one asking a first story is
-  asked by: the header says "Story · writing", the warning ends "The agent
-  is updating them." while it is so, and turning stories off in the gear
+  on, "Round 1 the code moved on in round 2" on the warning's; the
+  contents then say beside "Not in the story" how many changed lines no
+  step told when it was told, and how many none tells now, "2 → 5", where
+  the two differ, said in words to a screen reader. Where the reader
+  turned stories on, a story the code moved on under is asked for again,
+  by the one asking a first story is asked by: while the files are read
+  the header says "Story · writing", the warning ends "The agent is
+  updating them." while it is so, and turning stories off in the gear
   stops it. The agent's `story_request` carries `stale`, `null` for a first
   story: the round, each changed step's chapter, file and lines as they now
   stand ("104-131"), and how many changed lines no step tells, read as the

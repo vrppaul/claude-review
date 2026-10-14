@@ -67,7 +67,10 @@ def canvas_story() -> Story[Step]:
 def told_as_written(story: Story[Step]) -> ToldStory:
     """A story as the review holds one once told, each step showing a piece with no rows: for a test of its words alone."""
     return story.told(
-        [chapter.told([shown.told(changed_file(shown.file)) for shown in chapter.steps]) for chapter in story.chapters],
+        [
+            chapter.told([shown.told(changed_file(shown.file), changed_since_told=False) for shown in chapter.steps])
+            for chapter in story.chapters
+        ],
         [],
     )
 

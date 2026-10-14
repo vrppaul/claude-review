@@ -175,10 +175,10 @@ function raise(review: Review, push: PointPush): void {
  * the diff before it said it was taken: read after the diff, the story is
  * of the same take, and what was read of it stands; one the round moved the
  * code on under is asked for again where the reader wants stories, as a
- * page opening asks for one it has not got. A diff the page read
- * after the retake is already the retaken one, and so is the story: only
- * the threads move, and the ticks the draft kept from before it come off
- * what it rewrote, with no news of a retake.
+ * page opening asks for one it has not got. A diff the page read after the
+ * retake is already the retaken one, and so is the story: only the threads
+ * move, and the ticks the draft kept from before it come off what it
+ * rewrote, with no news of a retake.
  */
 async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise<void> {
 	const moved = heard.factsHoldIt ? await review.followThreads() : await review.takeRetakenDiff();
