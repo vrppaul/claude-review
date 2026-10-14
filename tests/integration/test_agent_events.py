@@ -46,6 +46,8 @@ ABANDONED_POLL_SECONDS = SETTLE_SECONDS * 10
 STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
+SETTINGS_ROUTE = "/api/settings"
+STORY_CANCEL_ROUTE = "/api/story/cancel"
 # The file the repository was committed with, as the change leaves it, with two lines gained that a story
 # tells; and as a round's work leaves it, those two taken out, and one line put above that no step tells
 TOLD_FILE = "initial.txt"
@@ -130,6 +132,60 @@ async def test_a_story_asked_for_where_none_was_told_says_nothing_went_stale(
         event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event == {"type": "story_request", "stale": None}
+
+
+async def test_a_review_opened_while_the_reader_wants_stories_asks_its_agent_for_one_unasked(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    """Stories were turned on in an earlier review: no page asks, and the agent is asked all the same."""
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as earlier:
+        await earlier.put(SETTINGS_ROUTE, json={"stories": True})
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {"type": "story_request", "stale": None}
+
+
+async def test_stories_turned_on_ask_the_agent_for_this_reviews_story(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        await agent.put(SETTINGS_ROUTE, json={"stories": True})
+
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {"type": "story_request", "stale": None}
+
+
+async def test_stories_turned_off_tell_an_agent_that_took_the_request_to_stop(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        await agent.put(SETTINGS_ROUTE, json={"stories": True})
+        await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+
+        await agent.put(SETTINGS_ROUTE, json={"stories": False})
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {"type": "story_cancel"}
+
+
+async def test_another_choice_made_while_stories_are_on_asks_for_no_story_the_reader_stopped(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        await agent.put(SETTINGS_ROUTE, json={"stories": True})
+        await agent.post(STORY_CANCEL_ROUTE)
+
+        await agent.put(SETTINGS_ROUTE, json={"theme": "dark"})
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {"type": "timeout"}
 
 
 async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_agent_what_went_stale(

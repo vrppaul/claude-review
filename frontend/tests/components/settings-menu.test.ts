@@ -55,7 +55,7 @@ describe('the settings', () => {
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
 	});
 
-	it('ask the agent for a story of this review as stories are turned on behind the gear', async () => {
+	it('turn stories on behind the gear, for the server to ask the agent for this review’s story', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ReviewHeader, inReview(review));
 
@@ -63,10 +63,10 @@ describe('the settings', () => {
 		await user.click(getByTestId('stories'));
 		await settled();
 
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
 	});
 
-	it('turn stories off again behind the gear, and stop the story being written', async () => {
+	it('turn stories off again behind the gear, for the server to stop the story being written', async () => {
 		const user = userEvent.setup();
 		review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
 		const { getByTestId } = render(ReviewHeader, inReview(review));
@@ -76,7 +76,7 @@ describe('the settings', () => {
 		await settled();
 
 		expect(review.settings.current.stories).toBe(false);
-		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: false }]);
 	});
 
 	it('say beside the choice of stories what each one costs', async () => {

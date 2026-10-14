@@ -68,8 +68,8 @@ export class ReviewPage {
 	 * review is open, the socket goes on from where its draft or its facts
 	 * left the telling, so whatever was said meanwhile is handed over rather
 	 * than missed, and the threads its draft brought back follow onto the
-	 * diff it opened on. A reader who turned stories on is asked for a story
-	 * then, where none is held or on its way.
+	 * diff it opened on. Where the reader turned stories on, the review asked
+	 * for a story itself as it opened, and the facts say so.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -107,8 +107,6 @@ export class ReviewPage {
 			});
 			this.#state = { kind: 'open', review };
 			void followKeptThreads(review);
-			// Asked once the socket hands pushes over: how the asking then stands is told, not read
-			void review.wantStory();
 			// However it ended, the page lets go; the tab it was sent from shuts too
 			void review.link.ended.then(() => this.close());
 			void review.submission.over.then(() => this.#closeTab());

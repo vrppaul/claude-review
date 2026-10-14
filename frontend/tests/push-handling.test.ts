@@ -391,20 +391,10 @@ describe('what the server pushes, taken in', () => {
 			return server;
 		}
 
-		it('asks for the story told again, once, where the reader turned stories on', async () => {
+		it('asks for no story told again, though the reader turned stories on: the review asked as it retook', async () => {
 			const server = retakingUnderAStoryThatMovedOn();
 			const settings = await settingsWithStoriesOn(server);
 			review = openReview({ files: [untouched('a.py')], story: storyHeld(), settings });
-
-			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
-			await settled();
-
-			expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
-		});
-
-		it('asks for nothing where the reader left stories off', async () => {
-			const server = retakingUnderAStoryThatMovedOn();
-			review = openReview({ files: [untouched('a.py')], story: storyHeld() });
 
 			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
 			await settled();
@@ -476,17 +466,9 @@ describe('catching up on what the server could not hand over again', () => {
 		expect(review.story.wait).toEqual({ kind: 'stopped' });
 	});
 
-	it('asks for a story again where stories are on and the review holds no asking: it was started again', async () => {
+	it('asks for no story after a gap, though stories are on: a review started again asked for one itself', async () => {
 		const server = takingStoryAskings(caughtUpFrom());
 		review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
-
-		await catchUp(review, GOES_ON_FROM);
-
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
-	});
-
-	it('asks for no story after a gap where the reader left stories off', async () => {
-		const server = takingStoryAskings(caughtUpFrom());
 
 		await catchUp(review, GOES_ON_FROM);
 

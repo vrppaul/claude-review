@@ -23,9 +23,10 @@ from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
 import structlog
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import NoRepositoryError, ReviewEndedError, UnknownFileError
-from claude_review.domain.interfaces import Clock, PageChannel, ReviewedRepository
+from claude_review.domain.interfaces import Clock, PageChannel, RecordChange, ReviewedRepository
 from claude_review.domain.models import (
     AgentEvent,
     AgentWork,
@@ -36,6 +37,7 @@ from claude_review.domain.models import (
     PanelEntry,
     PanelMessage,
     ProgressStep,
+    ReaderSettings,
     RoundSubmission,
     SaidInPanel,
     StoryCancelled,
@@ -64,6 +66,7 @@ from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
 from claude_review.services.place_words import place_in_words
+from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
@@ -84,6 +87,15 @@ log = structlog.get_logger()
 NO_CHANGE_TO_TELL = "This review is of no change: its content came from no repository"
 
 
+class KeptForTheReader(BaseModel):
+    """What a review keeps for its reader beyond itself: the images they paste, and their settings for every review."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
+    images: ImageService
+    settings: ReaderRecordService[ReaderSettings]
+
+
 class Review:
     """One review: its content, its rounds, its conversation, and the two sides it passes between."""
 
@@ -92,26 +104,30 @@ class Review:
         opening: ReviewOpening,
         *,
         repository: ReviewedRepository,
-        images: ImageService,
         page: PageChannel,
         clock: Clock,
+        kept: KeptForTheReader,
     ) -> None:
         self._mode = opening.mode
         self._title = opening.title
         self._identity = opening.identity_digest
         self._opened_against = opening.opened_against
         self._page = page
-        self._images = images
+        self._images = kept.images
         self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)
         self._lifetime = ReviewLifetime(page)
         self._rounds = RoundTracker()
         self._answerer = Answerer(page, clock, lease_seconds=ANSWERER_LEASE_SECONDS)
-        self._inbox = AgentInbox(self._lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
-        self._handover = ThreadHandover(images)
+        self._handover = ThreadHandover(kept.images)
         self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
-        self._story = ReviewStory(clock, takes=self._source)
+        self._story = ReviewStory(clock, takes=self._source, tellable=self._source.is_a_change)
+        self._inbox = AgentInbox(self._lifetime, standing=self._story)
+        # The reader's choices, kept for every review on the machine: read
+        # where one decides something here, never copied, since another
+        # review may change them at any moment
+        self._settings = kept.settings
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
         self._formatter = RoundFormatter.for_mode(opening.mode)
@@ -223,8 +239,9 @@ class Review:
         return [found.follow(anchor) for anchor in anchors]
 
     async def open(self) -> None:
-        """Note what the review opens on, before any page or agent can reach it."""
+        """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted."""
         await self._source.open()
+        self._tell_asking(self._story.want(stories_on=await self._stories_on()))
 
     def work_under_way(self) -> AgentWork | None:
         """What the agent says it is doing now, if anything: a page opening, or coming back, learns it here."""
@@ -234,18 +251,18 @@ class Review:
         """The next thing the reader handed over, for the agent asking.
 
         Waiting is what says most plainly that an agent is there, which is
-        what makes rounds worth offering in the review. A request for a
-        story says what went stale of the story held as the agent takes it:
-        the last retake before then is what it is told of.
+        what makes rounds worth offering in the review. A story asked for is
+        handed over once nothing the reader said waits, and says what went
+        stale of the story held as the agent takes it: the last retake before
+        then is what it is told of.
         """
         with self._answerer.waiting():
             taken = await self._inbox.take(within=within, caller_left=caller_left)
-            # Noted before anything else can run, the inbox having given it out with no await since: the
-            # reader's stopping finds the request either still waiting or noted as taken, never between
+            # Told the pages with no await since the story was claimed: the reader's stopping finds the
+            # request either still waiting or noted as taken, never between
             if isinstance(taken, StoryRequested):
-                self._story_request_taken()
-                # Made anew with what went stale by now: the request handed over says nothing of its own
-                return StoryRequested(stale=self._story.went_stale())
+                self._tell_asking(self._story.asking)
+                log.info("story_request_taken")
             return taken
 
     def ask(self, question_id: str, thread: ThreadDraft) -> None:
@@ -419,9 +436,8 @@ class Review:
         if not self._source.is_a_change:
             raise NoRepositoryError(NO_CHANGE_TO_TELL)
         held = await self._story.tell(story, self._source.content, round_number=self._rounds.current)
-        # The asking ended as the story came to be held, with no await since: what no agent took of it
-        # would hand the next one a story to write again, or to stop writing
-        self._inbox.withdraw(StoryRequested())
+        # The asking ended as the story came to be held, with no await since: a stop no agent took would hand
+        # the next one a story to stop writing
         self._inbox.withdraw(StoryCancelled())
         self._page.tell(StoryTold())
         self._page.tell(StoryAskingChanged(asking=self._story.asking))
@@ -440,20 +456,15 @@ class Review:
         Asked once however often it is said: while a story is awaited, or
         the one held is current, nothing changes. Over a story a round moved
         the code on under, it asks for that story told again. With no agent
-        there the request waits, as everything handed over does, for the
-        first that asks.
+        there the request waits for the first that asks, once nothing the
+        reader said is left for it.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
         """
         if not self._source.is_a_change:
             raise NoRepositoryError(NO_CHANGE_TO_TELL)
-        asking = self._story.ask()
-        if asking is None:
-            return
-        self._inbox.hand_in(StoryRequested())
-        self._page.tell(StoryAskingChanged(asking=asking))
-        log.info("story_asked_for")
+        self._tell_asking(self._story.ask())
 
     def stop_story(self) -> None:
         """Stop the story the reader asked for, and tell the pages it is stopped; with none awaited, nothing changes.
@@ -462,13 +473,26 @@ class Review:
         of its stopping. One an agent took cannot be: the agent is handed
         the word to stop, and decides what to do about it.
         """
-        stopped = self._story.stop()
-        if stopped is None:
-            return
-        if not self._inbox.withdraw(StoryRequested()):
-            self._inbox.hand_in(StoryCancelled())
-        self._page.tell(StoryAskingChanged(asking=stopped))
-        log.info("story_stopped")
+        self._story_stopped(self._story.stop())
+
+    async def change_settings(self, change: RecordChange[ReaderSettings]) -> ReaderSettings:
+        """Keep a choice the reader made, for this review and every later one, and act on it here.
+
+        Stories turned on ask for this review's story wherever none is
+        current or awaited, one the reader stopped included; turned off,
+        they stop one awaited. A change made in another review on the
+        machine is acted on at this review's next decision point: a retake,
+        or a change made here.
+        """
+        before = await self._kept_settings()
+        changed = await self._settings.change(change)
+        if changed.stories != before.stories:
+            turned = self._story.stories_turned(on=changed.stories)
+            if changed.stories:
+                self._tell_asking(turned)
+            else:
+                self._story_stopped(turned)
+        return changed
 
     def story_held(self) -> StoryHeld | None:
         """The story the review holds, on the take of its change on screen: None while nobody has told one."""
@@ -488,7 +512,8 @@ class Review:
             NoRepositoryError: if the review's content did not come from a repository.
         """
         retaken = await self._source.retake()
-        await self._story.follow(self._source.content, round_number=retaken.round)
+        content, stories_on = self._source.content, await self._stories_on()
+        self._tell_asking(await self._story.follow(content, round_number=retaken.round, stories_on=stories_on))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
         return retaken
 
@@ -514,12 +539,33 @@ class Review:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
 
-    def _story_request_taken(self) -> None:
-        """Note that an agent took the request for a story, and tell the pages when."""
-        taken = self._story.taken()
-        if taken is not None:
-            self._page.tell(StoryAskingChanged(asking=taken))
-            log.info("story_request_taken")
+    def _tell_asking(self, asking: StoryAsking | None) -> None:
+        """Tell the pages how the asking for a story now stands, where it changed."""
+        if asking is not None:
+            self._page.tell(StoryAskingChanged(asking=asking))
+            log.info("story_asking_changed", taken=asking.taken_at is not None, stopped=asking.stopped)
+
+    def _story_stopped(self, stopped: StoryAsking | None) -> None:
+        """Tell the pages a story awaited was stopped, and the agent too where it had taken the request already.
+
+        A request no agent took goes to none once stopped. One an agent took
+        cannot be taken back: the agent is handed the word to stop, and
+        decides what to do about it.
+        """
+        if stopped is None:
+            return
+        if stopped.taken_at is not None:
+            self._inbox.hand_in(StoryCancelled())
+        self._page.tell(StoryAskingChanged(asking=stopped))
+        log.info("story_stopped")
+
+    async def _stories_on(self) -> bool:
+        """Whether the reader wants a story of every change, as their settings say now."""
+        return (await self._kept_settings()).stories
+
+    async def _kept_settings(self) -> ReaderSettings:
+        """The reader's settings as kept now, or what a reader who never chose gets."""
+        return await self._settings.read() or self._settings.defaults()
 
     def _check_threads(self, threads: list[ThreadDraft]) -> None:
         """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.

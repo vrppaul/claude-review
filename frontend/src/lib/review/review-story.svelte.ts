@@ -46,7 +46,7 @@ import { storyNotAskedForNote, storyNotReadNote, storyNotStoppedNote } from '$li
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
-import { canBeAskedFor, waitOf, type StoryWait } from '$lib/review/story-wait';
+import { waitOf, type StoryWait } from '$lib/review/story-wait';
 import type { StoryAsking, StoryHeld } from '$lib/types';
 
 /**
@@ -252,15 +252,6 @@ export class ReviewStory {
 	/** Take in how the asking for a story stands, as the review's facts say it or the review tells it after them. */
 	learnAsking(asking: StoryAsking | null): void {
 		this.#asking = asking;
-	}
-
-	/**
-	 * Whether a story can be asked for now: one can be told of this review,
-	 * no story held is current and none is on its way. One the reader
-	 * stopped can be.
-	 */
-	get canBeAskedFor(): boolean {
-		return this.canBeTold && canBeAskedFor(this.#wait);
 	}
 
 	/**

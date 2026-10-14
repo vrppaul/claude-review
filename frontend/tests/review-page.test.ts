@@ -186,42 +186,8 @@ describe('opening the page', () => {
 		expect(openedReview(page).story.wait).toEqual({ kind: 'writing', asking: TAKEN });
 	});
 
-	it('asks the agent for a story as it opens, where the reader turned stories on and none is asked for', async () => {
+	it('asks for no story as it opens, though the reader turned stories on: the review asked for one itself', async () => {
 		const server = takingStoryAskings(servingAReaderWithStoriesOn());
-		const page = newPage();
-
-		await page.open();
-		await settled();
-
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
-	});
-
-	it.each([
-		{ where: 'the review holds a story', facts: reviewResponse(), story: storyResponse({ held: storyHeld() }) },
-		{
-			where: 'one is awaited already, asked for from another page',
-			facts: reviewResponse({ story_asking: TAKEN }),
-			story: storyResponse()
-		},
-		{
-			where: 'the reader stopped the one asked for, before a reload',
-			facts: reviewResponse({ story_asking: STOPPED }),
-			story: storyResponse()
-		}
-	])('asks for no story as it opens where $where', async ({ facts, story }) => {
-		const server = takingStoryAskings(servingAReaderWithStoriesOn());
-		server.answer('GET /api/review', facts);
-		server.answer('GET /api/story', story);
-		const page = newPage();
-
-		await page.open();
-		await settled();
-
-		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
-	});
-
-	it('asks for no story as it opens where the reader left stories off', async () => {
-		const server = takingStoryAskings(serving());
 		const page = newPage();
 
 		await page.open();
@@ -704,7 +670,7 @@ describe('the tab shown again', () => {
 		expect(server.requestsTo('GET /api/diff')).toHaveLength(1);
 	});
 
-	it('asks the agent for a story where another tab turned stories on', async () => {
+	it('asks for no story where another tab turned stories on: the server did, as that tab changed them', async () => {
 		const server = takingStoryAskings(serving());
 		const page = newPage();
 		await page.open();
@@ -713,22 +679,7 @@ describe('the tab shown again', () => {
 		showTabAgain();
 		await settled();
 
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
-	});
-
-	it('leaves the tab as it was where the settings cannot be read', async () => {
-		// Stories on, and the asking as the page opened refused: a tab that went on would ask again
-		const server = servingAReaderWithStoriesOn();
-		server.refuse('POST /api/story/request', SERVER_ERROR);
-		const page = newPage();
-		await page.open();
-		await settled();
-		server.refuse('GET /api/settings', SERVER_ERROR);
-
-		showTabAgain();
-		await settled();
-
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('reads nothing as the tab is hidden', async () => {

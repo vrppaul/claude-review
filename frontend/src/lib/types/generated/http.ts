@@ -671,7 +671,7 @@ export interface paths {
         get: operations["reader_settings_api_settings_get"];
         /**
          * Change Reader Settings
-         * @description Keep a choice the reader made, for this review and every later one.
+         * @description Keep a choice the reader made, for this review and every later one; stories turned on or off ask or stop here.
          */
         put: operations["change_reader_settings_api_settings_put"];
         post?: never;

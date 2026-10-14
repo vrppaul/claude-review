@@ -748,19 +748,18 @@ class StoryWentStale(BaseModel):
 
 
 class StoryRequested(BaseModel):
-    """The reader asking for a story of the change.
+    """A story of the change asked for, as an agent is handed it.
 
     The story asked for is of the change the review holds, whole, so there
     is nothing to name. Where a story was told and a round moved the code on
     under it, the request says what went stale, as it stands when an agent
-    takes the request; as it waits to be taken it says nothing, so the
-    request taken back is the one handed over.
+    takes the request: it is made only then.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    # None for a first story, and for a request not yet taken
-    stale: StoryWentStale | None = None
+    # None where no story is held: a first story
+    stale: StoryWentStale | None
 
 
 class StoryCancelled(BaseModel):
@@ -775,7 +774,10 @@ class StoryCancelled(BaseModel):
 
 # Everything the reader hands over for the agent to pick up, in one queue so
 # they are answered in the order they were sent
-type AgentEvent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel | StoryRequested | StoryCancelled
+type SaidToTheAgent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel | StoryCancelled
+# Everything an agent's wait can be handed: what was said, and a story the
+# review wants, which nobody says and which waits in no queue
+type AgentEvent = SaidToTheAgent | StoryRequested
 
 
 class ChangedSinceRound(BaseModel):

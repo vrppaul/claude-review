@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from claude_review.domain import models
-from claude_review.presentation.dependencies import get_guide_service, get_settings_service
+from claude_review.presentation.dependencies import get_guide_service, get_review, get_settings_service
 from claude_review.presentation.refusals import Takes, refusals
 from claude_review.presentation.wire.base import WireModel
 from claude_review.presentation.wire.records import (
@@ -21,6 +21,7 @@ from claude_review.presentation.wire.records import (
     SettingsChange,
 )
 from claude_review.services.reader_record_service import ReaderRecordService
+from claude_review.services.review.review import Review
 
 log = structlog.get_logger()
 
@@ -36,12 +37,9 @@ async def reader_settings(
 
 
 @router.put("/settings", responses=refusals(takes=Takes.JSON_BODY))
-async def change_reader_settings(
-    request: SettingsChange,
-    settings: ReaderRecordService[models.ReaderSettings] = Depends(get_settings_service),
-) -> ReaderSettings:
-    """Keep a choice the reader made, for this review and every later one."""
-    changed = ReaderSettings.of(await settings.change(request))
+async def change_reader_settings(request: SettingsChange, review: Review = Depends(get_review)) -> ReaderSettings:
+    """Keep a choice the reader made, for this review and every later one; stories turned on or off ask or stop here."""
+    changed = ReaderSettings.of(await review.change_settings(request))
     log.info("settings_changed", changed=sorted(request.model_fields_set))
     return changed
 

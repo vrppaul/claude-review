@@ -25,10 +25,10 @@ from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.interfaces import PageChannel
-from claude_review.domain.models import FIRST_ROUND
+from claude_review.domain.models import FIRST_ROUND, ReaderSettings
 from claude_review.domain.page_events import DiffRetaken, PageEvent
 from claude_review.domain.story import Step, Story
-from claude_review.hosting.workspace import ReviewWorkspace
+from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
@@ -42,9 +42,11 @@ from claude_review.presentation.wire.story import (
 )
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.image_store import DirectoryImageStore
+from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
-from claude_review.services.review.review import Review
+from claude_review.services.reader_record_service import ReaderRecordService
+from claude_review.services.review.review import KeptForTheReader, Review
 from claude_review.services.review.review_content import FIRST_TAKE
 from claude_review.services.review.review_story import StoryHeld
 from claude_review.services.review_opening import ReviewOpening
@@ -364,16 +366,21 @@ class PageReadingTheStory(PageChannel):
 
 
 @pytest.fixture
-async def page_reading_the_story(workspace: ReviewWorkspace, tmp_git_repo: Path) -> PageReadingTheStory:
+async def page_reading_the_story(
+    workspace: ReviewWorkspace, reader_files: ReaderFiles, tmp_git_repo: Path
+) -> PageReadingTheStory:
     """The pages of a review of the repository's change, put together as `host_review` puts one, and opened."""
     write_files(tmp_git_repo, THE_CHANGE)
     page = PageReadingTheStory()
+    settings = ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings)
     page.review = Review(
         await repository_opening(tmp_git_repo),
         repository=GitRepository(objects=workspace.objects),
-        images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
         page=page,
         clock=SystemClock(),
+        kept=KeptForTheReader(
+            images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA), settings=settings
+        ),
     )
     await page.review.open()
     return page

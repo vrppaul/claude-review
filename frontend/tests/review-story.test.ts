@@ -145,10 +145,6 @@ describe('what a page holds of the asking for a story', () => {
 		expect(story.wait).toEqual({ kind: 'writing', asking: TAKEN });
 		expect(story.storyOrWait).toEqual({ kind: 'story', held: MOVED_ON });
 	});
-
-	it('lets a story be asked for over one a round moved the code on under', () => {
-		expect(pageStory({ held: MOVED_ON }).canBeAskedFor).toBe(true);
-	});
 });
 
 describe('the story a page holds', () => {

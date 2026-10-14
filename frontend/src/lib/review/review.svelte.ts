@@ -308,11 +308,10 @@ export class Review {
 
 	/**
 	 * Take in the reader's settings again, as another tab may have changed
-	 * them: the diff is taken again where whether whitespace counts changed,
-	 * and a story is asked for where stories were turned on, as after a gap
-	 * in what the server told. Turned off, they stop nothing here: the way
-	 * to stop a story is in reach wherever one is being written. Settings
-	 * that cannot be read leave the review as it was.
+	 * them: the diff is taken again where whether whitespace counts changed.
+	 * Whether a story is asked for is the server's to decide, and it tells
+	 * this page how the asking stands. Settings that cannot be read leave
+	 * the review as it was.
 	 */
 	async readSettingsAgain(): Promise<void> {
 		const whitespaceIgnored = this.settings.current.ignore_whitespace;
@@ -323,7 +322,6 @@ export class Review {
 			return;
 		}
 		if (this.settings.current.ignore_whitespace !== whitespaceIgnored) await this.#takeDiffAgain();
-		await this.wantStory();
 	}
 
 	/**
@@ -344,42 +342,25 @@ export class Review {
 	}
 
 	/**
-	 * Ask the agent for a story where the reader wants one and has none
-	 * coming: they turned stories on, one can be told of this review, no
-	 * story held is current and none was asked for. Called as the page
-	 * opens, after a gap in what the server told, and once the diff is taken
-	 * again. Never where the reader stopped the one asked for: a reload does
-	 * not start it again.
-	 */
-	async wantStory(): Promise<void> {
-		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
-			await this.story.askFor();
-		}
-	}
-
-	/**
-	 * Turn stories on, for this review and every later one, and ask for this
-	 * review's wherever none is on its way. One the reader stopped is asked
-	 * for again, whether they stopped it by hand or by turning stories off:
-	 * turning them on says a story is wanted.
+	 * Turn stories on, for this review and every later one. The server then
+	 * asks for this review's story wherever none is current or on its way,
+	 * one the reader stopped included, and tells the page how the asking
+	 * stands: whether a story is wanted is the server's to say.
 	 */
 	async turnStoriesOn(): Promise<void> {
 		await this.settings.change({ stories: true });
-		if (this.story.canBeAskedFor) await this.story.askFor();
 	}
 
 	/**
-	 * Turn stories off, for this review and every later one. A story still
-	 * awaited is stopped: it would spend the tokens the reader turned
-	 * stories off to keep. With none held the files come on screen: the
-	 * story view has no story to draw, and the reader has said they want
-	 * none. A story held is paid for, and stays to be read; one a round
-	 * moved the code on under is told again no more.
+	 * Turn stories off, for this review and every later one: the server
+	 * stops a story still awaited, which would spend the tokens the reader
+	 * turned stories off to keep. With none held the files come on screen:
+	 * the story view has no story to draw, and the reader has said they want
+	 * none. A story held is paid for, and stays to be read.
 	 */
 	async turnStoriesOff(): Promise<void> {
 		if (this.story.held === null) this.views.showFiles();
 		await this.settings.change({ stories: false });
-		if (isAwaited(this.story.wait)) await this.story.stop();
 	}
 
 	/**

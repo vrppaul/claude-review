@@ -11,23 +11,26 @@ was told of was written down as to the later take's. Its pieces are cut
 out of one take of the change, so it says which: a page that read the diff
 of a later take can tell that they are not yet of the code it shows.
 
-The reader may ask for a story rather than wait to be told one. That
-asking is kept here, beside the story that ends it: when it was asked, when
-an agent took the request, whether the reader stopped it. A story is asked
-for only while no story held is current — none is held, or a round moved
-the code on under it — and none is awaited, so however many pages ask,
-and however often, the review is asked once.
+A story is asked for by the reader, or by the review itself where the
+reader wants stories. That asking is kept here, beside the story that ends
+it: when it was asked, when an agent took the request, whether the reader
+stopped it. A story is asked for only while no story held is current —
+none is held, or a round moved the code on under it — and none is awaited,
+so however many pages are open, and however often, the review is asked
+once.
 """
 
 import asyncio
+from typing import override
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
 from claude_review.domain.interfaces import Clock, GitError
-from claude_review.domain.models import FIRST_ROUND, DiffFile, StaleStep, StoryWentStale
+from claude_review.domain.models import FIRST_ROUND, DiffFile, StaleStep, StoryRequested, StoryWentStale
 from claude_review.domain.story import FollowedStep, Step, Story, StoryAsking, ToldStep, ToldStory
 from claude_review.services import story_telling
+from claude_review.services.review.agent_inbox import StandingRequest
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
 
 log = structlog.get_logger()
@@ -84,22 +87,36 @@ class _StoryKept(BaseModel):
     held: StoryHeld
 
 
-class ReviewStory:
+class ReviewStory(StandingRequest):
     """The story told of the review's change, the last told in place of any before, and the asking for one until then.
 
-    What changes the asking — the reader asks, an agent takes the request,
-    the reader stops it — answers with the asking as it then stands, or
-    with None where it changed nothing.
+    The one owner of a story being wanted. It asks for one itself where the
+    reader wants stories, one can be told of this review, and none is held
+    current, asked for or stopped by the reader: as the review opens, once
+    a retake leaves the story held stale, and when stories are turned on.
+    Whether they are on is the reader's setting, kept for every review on
+    the machine: it is handed in at each of those moments, never kept here,
+    so a change made in another review is acted on at this review's next
+    one. An agent's wait claims the asking (`claim`); nothing of it waits in
+    the agent's inbox, which keeps only what someone said.
+
+    What changes the asking — it is asked, an agent takes it, the reader
+    stops it — answers with the asking as it then stands, or with None
+    where it changed nothing.
     """
 
-    def __init__(self, clock: Clock, takes: TakesCompared) -> None:
+    def __init__(self, clock: Clock, takes: TakesCompared, *, tellable: bool) -> None:
         self._clock = clock
         # What says how the code moved between the take a story was told of and a later one
         self._takes = takes
+        # Whether a story can be told of this review: its content is a change to a repository
+        self._tellable = tellable
         # None while nobody has told one
         self._kept: _StoryKept | None = None
-        # From the reader's request until a story is told; None while nothing is asked
+        # From the asking until a story is told; None while nothing is asked
         self._asking: StoryAsking | None = None
+        # Set while the asking waits for an agent to take it: what wakes an agent's wait
+        self._due = asyncio.Event()
         # Stories that arrive together are told one after another, as they
         # arrived: told side by side, a long one sent first would finish last
         # and take the place of the one sent after it
@@ -115,34 +132,55 @@ class ReviewStory:
         """How the reader's asking for a story stands: None while nothing is asked, and once a story is held."""
         return self._asking
 
+    @property
+    @override
+    def due(self) -> asyncio.Event:
+        return self._due
+
     def ask(self) -> StoryAsking | None:
-        """Begin the reader's asking for a story, now, unless the story held is current or one is still awaited.
+        """Begin asking for a story, now, unless the story held is current or one is still awaited.
 
-        A story held is current until a round moves the code on under it:
-        then it is asked for again, to be told of the code as it stands.
-        Asked again after the reader stopped it, the asking begins anew.
+        What the reader asking does, and turning stories on. A story held is
+        current until a round moves the code on under it: then it is asked
+        for again, to be told of the code as it stands. Asked again after the
+        reader stopped it, the asking begins anew.
         """
-        held = self.held
-        if (held is not None and held.moved_on is None) or self._awaited is not None:
+        if not self._tellable or self._is_current or self._awaited is not None:
             return None
-        self._asking = StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False)
-        return self._asking
+        return self._noted(StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False))
 
-    def taken(self) -> StoryAsking | None:
-        """Note that an agent took the request for the story awaited, now."""
+    def want(self, *, stories_on: bool) -> StoryAsking | None:
+        """Ask for a story where the reader wants stories and none is asked: never over one the reader stopped.
+
+        They stopped it to keep the agent's tokens: only turning stories on
+        again asks once more.
+        """
+        if not stories_on or self._asking is not None:
+            return None
+        return self.ask()
+
+    def stories_turned(self, *, on: bool) -> StoryAsking | None:
+        """The reader turned stories on or off: on asks for this review's story, off stops one awaited."""
+        return self.ask() if on else self.stop()
+
+    @override
+    def claim(self) -> StoryRequested | None:
+        """Hand the story awaited to an agent, noted as taken now: None where none waits to be taken.
+
+        It says what went stale of the story held, as that stands now.
+        """
         awaited = self._awaited
         if awaited is None or awaited.taken_at is not None:
             return None
-        self._asking = awaited.taken(self._clock.now())
-        return self._asking
+        self._noted(awaited.taken(self._clock.now()))
+        return StoryRequested(stale=self.went_stale())
 
     def stop(self) -> StoryAsking | None:
         """Note that the reader stopped the story awaited: one told after all is still taken."""
         awaited = self._awaited
         if awaited is None:
             return None
-        self._asking = awaited.stopped_by_the_reader()
-        return self._asking
+        return self._noted(awaited.stopped_by_the_reader())
 
     async def tell(self, story: Story[Step], change: ReviewContent, *, round_number: int) -> StoryHeld:
         """Tell a story of a take of the change and hold it, in place of any told before, with the round it arrived in.
@@ -160,20 +198,27 @@ class ReviewStory:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
             held = StoryHeld(story=story_telling.as_told(told), round=round_number, take=change.take, moved_on=None)
             self._kept = _StoryKept(told=told, told_on=change.written_as, held=held)
-            self._asking = None
+            self._noted(None)
             return held
 
-    async def follow(self, change: ReviewContent, *, round_number: int) -> None:
-        """Follow the story told onto a later take of the change, taken again in this round; with none told, nothing.
+    async def follow(self, change: ReviewContent, *, round_number: int, stories_on: bool) -> StoryAsking | None:
+        """Follow the story told onto a later take of the change, taken again in this round, and ask for one if due.
 
         Off the event loop and in turn with tellings, as a story is told: a
         story told while the diff was taken again is followed once it is held,
-        compared from the very take it was told of.
+        compared from the very take it was told of. Whether a story is then
+        wanted is asked after that, so a story that arrived during the retake
+        and ended the asking is asked for again if the retake left it stale.
+        Answers with the asking begun, or None.
         """
         async with self._telling:
-            kept = self._kept
-            if kept is None:
-                return
+            await self._followed(change, round_number=round_number)
+            return self.want(stories_on=stories_on)
+
+    async def _followed(self, change: ReviewContent, *, round_number: int) -> None:
+        """Follow the story told, if any, onto a later take of the change, taken again in this round."""
+        kept = self._kept
+        if kept is not None:
             since_told = await self._changed_since(kept.told_on, change.written_as)
             followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files, since_told)
             held = StoryHeld(
@@ -219,6 +264,22 @@ class ReviewStory:
         if self._asking is None or self._asking.stopped:
             return None
         return self._asking
+
+    @property
+    def _is_current(self) -> bool:
+        """Whether a story is held that no round has moved the code on under since it was told."""
+        held = self.held
+        return held is not None and held.moved_on is None
+
+    def _noted(self, asking: StoryAsking | None) -> StoryAsking | None:
+        """Hold the asking as it now stands, and say an agent's wait may claim it exactly while it waits to be taken."""
+        self._asking = asking
+        awaited = self._awaited
+        if awaited is not None and awaited.taken_at is None:
+            self._due.set()
+        else:
+            self._due.clear()
+        return asking
 
 
 def _moved_on(

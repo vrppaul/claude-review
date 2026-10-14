@@ -127,12 +127,10 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `fix(ui)`: a story asked for whose request fails is said in the
-      panel and nowhere else. The page goes on holding no asking, and asks
-      again only at a reload, after a gap in what the server told, or as
-      stories are turned on again (`Review.wantStory`). The story view
-      goes on saying "Asking the agent for a story", with the files as the
-      one way on (`StoryWaiting.svelte`).
+- [ ] `fix(ui)`: a story the reader asks for by hand whose request fails
+      is said in the panel and nowhere else. The page goes on holding no
+      asking, and the story view goes on saying "Asking the agent for a
+      story", with the files as the one way on (`StoryWaiting.svelte`).
 - [ ] `fix(ui)`: a story the page reads only as it catches up, told in a
       gap the review could not hand over, is held and never offered under
       the switch: the page notes a story as arrived unseen only where it

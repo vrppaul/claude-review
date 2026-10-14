@@ -201,7 +201,7 @@ describe('what is asked before stories are turned on', () => {
 		expect(within(screen.getByTestId('story-opt-in')).getByTestId('story-sketch')).toBeTruthy();
 	});
 
-	it('turns stories on for every review, asks the agent for this one and shows where it will be', async () => {
+	it('turns stories on for every review, for the server to ask for this one, and shows where it will be', async () => {
 		const server = serving();
 		const user = userEvent.setup();
 		drawn();
@@ -211,7 +211,6 @@ describe('what is asked before stories are turned on', () => {
 		await settled();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
-		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-opt-in')).toBeNull();
 	});

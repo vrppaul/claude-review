@@ -9,12 +9,11 @@ agent already looks once it hears the review is over.
 from typing import assert_never
 
 from claude_review.domain.models import (
-    AgentEvent,
     PanelCancel,
     PanelMessage,
     RoundSubmission,
+    SaidToTheAgent,
     StoryCancelled,
-    StoryRequested,
     ThreadQuestion,
 )
 from claude_review.services.place_words import place_in_markdown
@@ -34,27 +33,25 @@ PART_SEPARATOR = "\n\n"
 LINE_SEPARATOR = "\n"
 
 
-def exit_report(last_round: RoundSubmission | None, unread: list[AgentEvent]) -> str:
+def exit_report(last_round: RoundSubmission | None, unread: list[SaidToTheAgent]) -> str:
     """The rounds the agent has not read, or the last one if it has; then anything else it never took.
 
     The rounds are the review itself, and come first as they always have:
     a review nobody answered prints exactly what it printed before. The
     last round is written even once read, because the agent is told to
-    look for it here. A story asked for, or the word to stop one, is
-    written nowhere: neither holds anything the reader wrote, and the
-    review a story would have been told of is over.
+    look for it here. The word to stop a story is written nowhere: it holds
+    nothing the reader wrote, and the review the story would have been told
+    of is over.
     """
     unread_rounds = [event.markdown for event in unread if isinstance(event, RoundSubmission)]
     rounds = unread_rounds or ([last_round.markdown] if last_round is not None else [])
     others = [
-        _unread(event)
-        for event in _not_taken_back(unread)
-        if not isinstance(event, RoundSubmission | StoryRequested | StoryCancelled)
+        _unread(event) for event in _not_taken_back(unread) if not isinstance(event, RoundSubmission | StoryCancelled)
     ]
     return PART_SEPARATOR.join([*rounds, *([UNREAD_HEADING, *others] if others else [])])
 
 
-def _not_taken_back(unread: list[AgentEvent]) -> list[AgentEvent]:
+def _not_taken_back(unread: list[SaidToTheAgent]) -> list[SaidToTheAgent]:
     """What is still meant: a message the reader took back goes, and so does the taking back.
 
     A withdrawal of a message the agent did read stays, because it may

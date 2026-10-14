@@ -170,8 +170,6 @@ async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise
 	// The conversation is about code that has just changed under it, so the
 	// panel says where one lot of answers stops applying
 	review.conversation.note(retakenNote(push.file_count, moved));
-	if (heard.factsHoldIt) return;
-	await review.wantStory();
 }
 
 /** Take in a push the connection hands over, unless this page's socket handed it over before. */
@@ -193,8 +191,8 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * read with the diff: one that cannot be read is said so by itself, and
  * what catching up did to the review and its threads is still said. How
  * the asking for one stands comes with the facts: a review started again
- * in the gap holds none, and a reader who turned stories on is asked for
- * anew.
+ * in the gap holds none, and asks for one itself where the reader wants
+ * stories.
  */
 export async function catchUp(review: Review, from: TellingPosition): Promise<void> {
 	review.telling.continueFrom(from);
@@ -206,9 +204,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {
 		review.conversation.note(notCaughtUpNote(error));
-		return;
 	}
-	await review.wantStory();
 }
 
 /**
