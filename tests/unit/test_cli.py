@@ -56,6 +56,8 @@ BETWEEN_WORDS_OF_A_NAME = "_"
 EITHER_WAY_WORDS_ARE_PARTED = "[ _]"
 # How JSON writes a part that is left out, a list of nothing and a table of nothing
 WRITTEN_FOR_WHAT_IS_LEFT_OUT = ["null", "[]", "{}"]
+# How a diagram marks the node at the heart of the change: mermaid's own class, which the page edges in the agent's colour
+HEART_OF_THE_CHANGE = ":::heart"
 
 
 def _repeated(option: str, count: int, value: str = "") -> list[str]:
@@ -385,6 +387,13 @@ def test_the_example_in_the_help_of_story_is_a_document_the_review_reads_and_fin
     example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
 
     assert document_faults(example.in_the_review()) == []
+
+
+def test_the_example_in_the_help_of_story_marks_the_node_at_the_heart_of_the_change() -> None:
+    """The help is where an agent learns how a story is written, and so how its diagram names its heart."""
+    example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
+
+    assert HEART_OF_THE_CHANGE in example.overview.diagram.mermaid
 
 
 @pytest.mark.parametrize("left_out", WRITTEN_FOR_WHAT_IS_LEFT_OUT)

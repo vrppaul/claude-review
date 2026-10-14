@@ -46,7 +46,9 @@ EXAMPLE = StoryRequest(
         done="A pasted image goes to the review, which keeps it. The comment shows it and names it to the agent.",
         doubt="Whether an image is checked before it is kept, or only its size.",
         diagram=DiagramInput(
-            mermaid="flowchart LR\n  paste[Reader pastes] --> store[Image store]",
+            # The node at the heart of the change marked with mermaid's own class, which the page edges in the
+            # agent's colour
+            mermaid="flowchart LR\n  paste[Reader pastes] --> store[Image store]:::heart",
             caption="The way an image takes",
             links={"paste": PASTING, "store": KEEPING},
         ),
