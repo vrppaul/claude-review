@@ -581,9 +581,29 @@ class RoundSubmission(BaseModel):
     comment_count: int
 
 
+class StoryRequested(BaseModel):
+    """The reader asking for a story of the change.
+
+    It carries nothing: the story asked for is of the change the review
+    holds, whole, so there is nothing to name.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+
+class StoryCancelled(BaseModel):
+    """The reader stopping a story an agent had already taken the request for.
+
+    A request, not a kill, as a panel message taken back is: whoever is
+    writing the story decides what to do about it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+
 # Everything the reader hands over for the agent to pick up, in one queue so
 # they are answered in the order they were sent
-type AgentEvent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel
+type AgentEvent = ThreadQuestion | RoundSubmission | PanelMessage | PanelCancel | StoryRequested | StoryCancelled
 
 
 class ChangedSinceRound(BaseModel):

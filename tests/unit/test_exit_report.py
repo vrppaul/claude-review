@@ -2,7 +2,16 @@
 
 from pathlib import Path
 
-from claude_review.domain.models import PanelCancel, PanelMessage, RoundSubmission, ThreadQuestion
+import pytest
+
+from claude_review.domain.models import (
+    PanelCancel,
+    PanelMessage,
+    RoundSubmission,
+    StoryCancelled,
+    StoryRequested,
+    ThreadQuestion,
+)
 from claude_review.services.exit_report import UNREAD_HEADING, exit_report
 from tests.helpers import REVIEWED_FILE, line_anchor, thread
 
@@ -57,6 +66,14 @@ def test_an_unanswered_question_says_which_thread_it_was_asked_in() -> None:
 
     assert asked.thread_id in unread
     assert "Still unsure" in unread
+
+
+@pytest.mark.parametrize("of_a_story", [StoryRequested(), StoryCancelled()], ids=["asked-for", "stopped"])
+def test_a_story_asked_for_or_stopped_that_no_agent_took_is_no_part_of_what_is_written(
+    of_a_story: StoryRequested | StoryCancelled,
+) -> None:
+    """Neither holds a word the reader wrote, and nobody is left to tell a story to."""
+    assert exit_report(LAST_ROUND, [of_a_story]) == LAST_ROUND.markdown
 
 
 def test_a_review_that_sent_nothing_writes_nothing() -> None:

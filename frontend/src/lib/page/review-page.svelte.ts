@@ -17,8 +17,8 @@ import { openKeptReview } from '$lib/page/kept-review';
 import { messageOf } from '$lib/utils/errors';
 import { stopsTogether } from '$lib/utils/stops';
 
-// What a review that takes no story is known to hold of one, without asking
-const NO_STORY: StoryResponse = { held: null };
+// What a review that takes no story is known to hold of one, and of anybody asking for one, without asking it
+const NO_STORY: StoryResponse = { held: null, asking: null };
 
 /** The story a review holds: asked of one that takes a story, known of one that takes none. */
 function storyOf(facts: ReviewResponse): Promise<StoryResponse> {

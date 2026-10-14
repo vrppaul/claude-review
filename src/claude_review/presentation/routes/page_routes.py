@@ -51,7 +51,7 @@ from claude_review.presentation.wire.content import (
     ReviewResponse,
     VersionsResponse,
 )
-from claude_review.presentation.wire.story import StoryHeld, StoryResponse
+from claude_review.presentation.wire.story import StoryResponse
 from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,
@@ -125,10 +125,35 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     """Say what story the review holds: the last the agent told of its change, each step with what it shows.
 
     None while nobody has told one, which is no refusal: a review is read
-    without a story as it always was.
+    without a story as it always was. With it, how the reader's asking for
+    one stands: a page that opens while a story is awaited was told none of
+    it, and reads here what the pages open before it were told.
     """
-    held = review.story_held()
-    return StoryResponse(held=StoryHeld.of(held) if held is not None else None)
+    return StoryResponse.of(review.story_standing())
+
+
+@router.post(
+    "/story/request", status_code=HTTPStatus.NO_CONTENT, responses=refusals(NoRepositoryError, takes=Takes.NOTHING)
+)
+async def ask_for_a_story(review: Review = Depends(get_review)) -> None:
+    """Take the reader's asking for a story of the change, for an agent to pick up.
+
+    Asked once however often it is sent: two pages open on the review, or
+    two presses, hand the agent one request. The reader does not wait here:
+    every page is told how the asking stands, and then that a story was told.
+    """
+    review.ask_for_story()
+
+
+@router.post("/story/cancel", status_code=HTTPStatus.NO_CONTENT)
+async def stop_the_story(review: Review = Depends(get_review)) -> None:
+    """Stop the story the reader asked for, taken by an agent or not.
+
+    Nothing is refused: with no story awaited there is nothing to stop,
+    and that is what the reader wanted. A story an agent sends all the
+    same is still taken.
+    """
+    review.stop_story()
 
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))

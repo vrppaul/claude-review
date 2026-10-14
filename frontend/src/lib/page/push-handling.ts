@@ -91,6 +91,9 @@ function learnFrom(review: Review, push: FactPush): void {
 		case 'round':
 			review.rounds.reach(push.number);
 			return;
+		case 'story_asking':
+			// How the asking for a story stands: nothing on this page holds or draws it
+			return;
 		default:
 			unknown(push);
 	}

@@ -78,9 +78,11 @@ def wait_command(*, client: ReviewClient, seconds: float, until_event: bool) -> 
     Prints one JSON object and exits, so a caller can loop: a "question"
     about a thread, answered with `claude-review reply`; a "message" from
     the agent panel, answered with `claude-review say`; a "round" of the
-    review; a "cancel" taking a message back; "timeout" if nothing was said,
-    or "closed" once the review is over. With --until-event a timeout is
-    never printed: the command waits on until something else happens.
+    review; a "cancel" taking a message back; a "story_request" asking for a
+    story of the change, answered with `claude-review story`; a
+    "story_cancel" stopping the story asked for; "timeout" if nothing was
+    said, or "closed" once the review is over. With --until-event a timeout
+    is never printed: the command waits on until something else happens.
     """
     event = client.next_event(seconds)
     while until_event and isinstance(event, TimeoutEvent):

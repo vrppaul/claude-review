@@ -24,7 +24,7 @@ class Silence(StrEnum):
 
 
 class AgentInbox:
-    """Questions, rounds and panel messages, in the order the reader handed them over.
+    """Questions, rounds, panel messages and a story asked for, in the order the reader handed them over.
 
     One queue rather than several, so they are answered in the order they
     were sent — an answer written after a round must not arrive before it. A
@@ -39,6 +39,10 @@ class AgentInbox:
     left, and one left waiting would swallow the next question for nobody.
     A caller leaving in the very instant its event is handed out still loses
     it; only an acknowledgement could close that, and the loop has none.
+
+    What nobody has taken can be taken back (`withdraw`), and is then
+    handed to no agent. The inbox alone knows whether anybody took it, so
+    it is the one to say.
     """
 
     def __init__(self, lifetime: ReviewLifetime) -> None:
@@ -78,18 +82,34 @@ class AgentInbox:
             leaving.cancel()
             closing.cancel()
 
+    def withdraw(self, event: AgentEvent) -> bool:
+        """Take back something handed over, while nobody has taken it, and say whether it was still waiting.
+
+        Once an agent has it, it cannot be taken back: whoever asks is told
+        so, and tells the agent another way.
+        """
+        if event not in self._waiting:
+            return False
+        self._waiting.remove(event)
+        self._sleep_once_emptied()
+        return True
+
     def drain(self) -> list[AgentEvent]:
         """Take everything nobody took, in the order it was handed over: the review is over."""
         left = list(self._waiting)
         self._waiting.clear()
-        self._filled.clear()
+        self._sleep_once_emptied()
         return left
 
     def _next(self) -> AgentEvent:
         event = self._waiting.popleft()
+        self._sleep_once_emptied()
+        return event
+
+    def _sleep_once_emptied(self) -> None:
+        """Let a poll sleep again once nothing waits to be taken."""
         if not self._waiting:
             self._filled.clear()
-        return event
 
     async def _until_something_changes(self, seconds: float, *watched: asyncio.Future[None]) -> None:
         """Sleep until something arrives, one of the watched finishes, or time is up.

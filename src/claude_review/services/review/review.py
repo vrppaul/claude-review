@@ -13,10 +13,10 @@ whether it is on the reader's screen, `Answerer` of the agent answering it,
 `AgentInbox` of what the reader handed over for the agent, `RoundTracker`
 of which round is being written, `Conversation` of what was said in the
 panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
-story told of its change, and a `ContentSource` of where its content comes
-from. `ThreadHandover` makes a thread's screenshots files the agent may
-open, and a `RoundFormatter`, chosen once for the kind of review, writes a
-round as it is sent.
+story told of its change and of the reader's asking for one, and a
+`ContentSource` of where its content comes from. `ThreadHandover` makes a
+thread's screenshots files the agent may open, and a `RoundFormatter`,
+chosen once for the kind of review, writes a round as it is sent.
 """
 
 from collections.abc import Awaitable
@@ -38,6 +38,8 @@ from claude_review.domain.models import (
     ProgressStep,
     RoundSubmission,
     SaidInPanel,
+    StoryCancelled,
+    StoryRequested,
     Thread,
     ThreadDraft,
     ThreadQuestion,
@@ -50,6 +52,7 @@ from claude_review.domain.page_events import (
     DiffRetaken,
     FileShown,
     RoundBegan,
+    StoryAskingChanged,
     StoryTold,
     ThreadAnswered,
     ThreadRaised,
@@ -67,7 +70,7 @@ from claude_review.services.review.content_sources import ContentSource, DiffVie
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review.review_story import ReviewStory, StoryHeld
+from claude_review.services.review.review_story import ReviewStory, StoryHeld, StoryStanding
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
@@ -105,7 +108,7 @@ class Review:
         self._inbox = AgentInbox(self._lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
-        self._story = ReviewStory()
+        self._story = ReviewStory(clock)
         self._handover = ThreadHandover(images)
         self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
         # Chosen once: a review of a conversation quotes what each comment is
@@ -233,7 +236,12 @@ class Review:
         what makes rounds worth offering in the review.
         """
         with self._answerer.waiting():
-            return await self._inbox.take(within=within, caller_left=caller_left)
+            taken = await self._inbox.take(within=within, caller_left=caller_left)
+            # Noted before anything else can run, the inbox having given it out with no await since: the
+            # reader's stopping finds the request either still waiting or noted as taken, never between
+            if isinstance(taken, StoryRequested):
+                self._story_request_taken()
+            return taken
 
     def ask(self, question_id: str, thread: ThreadDraft) -> None:
         """Take a question asked in one thread, for the agent to pick up.
@@ -395,7 +403,8 @@ class Review:
         Told of the review's own diff as it stands when the story arrives,
         whatever base a page reads, and kept with the round it arrived in
         and the take it was told of. Every page open is told there is one,
-        and reads it from here.
+        and reads it from here. It ends the reader's asking for one, asked
+        for or not, stopped or not.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
@@ -404,6 +413,10 @@ class Review:
         if not self._source.is_a_change:
             raise NoRepositoryError(NO_CHANGE_TO_TELL)
         held = await self._story.tell(story, self._source.content, round_number=self._rounds.current)
+        # The asking ended as the story came to be held, with no await since: what no agent took of it
+        # would hand the next one a story to write again, or to stop writing
+        self._inbox.withdraw(StoryRequested())
+        self._inbox.withdraw(StoryCancelled())
         self._page.tell(StoryTold())
         log.info(
             "story_told",
@@ -414,9 +427,43 @@ class Review:
         )
         return held
 
-    def story_held(self) -> StoryHeld | None:
-        """The story the review holds, as it was told, or None while nobody has told one."""
-        return self._story.held
+    def ask_for_story(self) -> None:
+        """Take the reader's asking for a story of the change, for an agent to pick up, and tell the pages it is asked.
+
+        Asked once however often it is said: while a story is awaited, or
+        one is held, nothing changes. With no agent there the request waits,
+        as everything handed over does, for the first that asks.
+
+        Raises:
+            NoRepositoryError: if the review is of no change: files read once, or a conversation.
+        """
+        if not self._source.is_a_change:
+            raise NoRepositoryError(NO_CHANGE_TO_TELL)
+        asking = self._story.ask()
+        if asking is None:
+            return
+        self._inbox.hand_in(StoryRequested())
+        self._page.tell(StoryAskingChanged(asking=asking))
+        log.info("story_asked_for")
+
+    def stop_story(self) -> None:
+        """Stop the story the reader asked for, and tell the pages it is stopped; with none awaited, nothing changes.
+
+        A request no agent took is taken back, and no agent hears of it or
+        of its stopping. One an agent took cannot be: the agent is handed
+        the word to stop, and decides what to do about it.
+        """
+        stopped = self._story.stop()
+        if stopped is None:
+            return
+        if not self._inbox.withdraw(StoryRequested()):
+            self._inbox.hand_in(StoryCancelled())
+        self._page.tell(StoryAskingChanged(asking=stopped))
+        log.info("story_stopped")
+
+    def story_standing(self) -> StoryStanding:
+        """How the review stands with its story: the one it holds, as it was told, and the reader's asking for one."""
+        return self._story.standing
 
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, and tell the pages to fetch it.
@@ -449,6 +496,13 @@ class Review:
     def exit_report(self) -> str:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""
         return exit_report(self._rounds.last_sent, self._inbox.drain())
+
+    def _story_request_taken(self) -> None:
+        """Note that an agent took the request for a story, and tell the pages when."""
+        taken = self._story.taken()
+        if taken is not None:
+            self._page.tell(StoryAskingChanged(asking=taken))
+            log.info("story_request_taken")
 
     def _check_threads(self, threads: list[ThreadDraft]) -> None:
         """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.

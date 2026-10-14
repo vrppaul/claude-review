@@ -308,7 +308,7 @@ export interface components {
             /** Number */
             number: number;
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["EndedPush"];
+        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
          * @description What the browser says on connecting, and whenever its threads change.
@@ -350,6 +350,33 @@ export interface components {
              */
             type: "status";
             agent: components["schemas"]["AgentStatus"];
+        };
+        /**
+         * StoryAsking
+         * @description The reader asking the agent for a story, and how far that has got.
+         */
+        StoryAsking: {
+            /** Asked At */
+            asked_at: number;
+            /** Taken At */
+            taken_at: number | null;
+            /** Stopped */
+            stopped: boolean;
+        };
+        /**
+         * StoryAskingPush
+         * @description How the reader's asking for a story now stands, whole: asked, taken by an agent, or stopped.
+         *
+         *     Pushed whole, where a story is only announced and then fetched: it is
+         *     three values, not the code of a change.
+         */
+        StoryAskingPush: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "story_asking";
+            asking: components["schemas"]["StoryAsking"];
         };
         /**
          * StoryPush

@@ -9,6 +9,7 @@ from claude_review.domain.models import CommentSeverity, FilePath
 from claude_review.presentation.wire.agent import AgentStatus, AgentWork
 from claude_review.presentation.wire.base import WireBool, WireModel
 from claude_review.presentation.wire.content import ChangesSince
+from claude_review.presentation.wire.story import StoryAsking
 from claude_review.presentation.wire.threads import Anchor
 
 
@@ -26,6 +27,7 @@ class PushKind(StrEnum):
     ROUND — the round now being written.
     DIFF — the diff was taken again.
     STORY — a story was told of the change.
+    STORY_ASKING — how the reader's asking for a story now stands.
     ENDED — the review is over.
     """
 
@@ -40,6 +42,7 @@ class PushKind(StrEnum):
     ROUND = auto()
     DIFF = auto()
     STORY = auto()
+    STORY_ASKING = auto()
     ENDED = auto()
 
 
@@ -139,6 +142,17 @@ class StoryPush(Push):
     type: Literal[PushKind.STORY] = PushKind.STORY
 
 
+class StoryAskingPush(Push):
+    """How the reader's asking for a story now stands, whole: asked, taken by an agent, or stopped.
+
+    Pushed whole, where a story is only announced and then fetched: it is
+    three values, not the code of a change.
+    """
+
+    type: Literal[PushKind.STORY_ASKING] = PushKind.STORY_ASKING
+    asking: StoryAsking
+
+
 class EndedPush(Push):
     """The review is over, and this is the last thing told: the page lets go of it rather than reach for it again.
 
@@ -165,6 +179,7 @@ type ServerPush = Annotated[
     | RoundPush
     | DiffPush
     | StoryPush
+    | StoryAskingPush
     | EndedPush,
     Field(discriminator="type"),
 ]

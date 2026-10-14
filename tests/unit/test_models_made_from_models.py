@@ -23,7 +23,7 @@ from claude_review.domain.models import (
     TurnAuthor,
     Unshown,
 )
-from claude_review.domain.story import Chapter, LeftOut, Step
+from claude_review.domain.story import Chapter, LeftOut, Step, StoryAsking
 from claude_review.presentation.wire.records import GuideChange, SettingsChange
 from claude_review.presentation.wire.refusal import FieldRefusal
 from tests.helpers import line_anchor
@@ -85,6 +85,12 @@ FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
 TOLD_STEP = STEP.told(FILE)
 TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
+# A story asked for and not yet taken, and one an agent took: stopping one writes only that it was stopped,
+# and which of the two it is made from shows that when it was taken is still said
+ASKED_AT = 1_760_000_000_000
+TAKEN_AT = 1_760_000_004_000
+ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
+TAKEN_ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=False)
 
 MADE = [
     MadeFrom(what="a piece of a file", source=FILE, made=FILE.showing(OTHER_ROWS), replaced={"hunks"}),
@@ -127,6 +133,15 @@ MADE = [
         source=STORY,
         made=STORY.told([TOLD_CHAPTER], [LEFT_OUT]),
         replaced={"chapters", "left_out"},
+    ),
+    MadeFrom(
+        what="a story's asking taken by an agent", source=ASKING, made=ASKING.taken(TAKEN_AT), replaced={"taken_at"}
+    ),
+    MadeFrom(
+        what="a story's asking stopped by the reader",
+        source=TAKEN_ASKING,
+        made=TAKEN_ASKING.stopped_by_the_reader(),
+        replaced={"stopped"},
     ),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])

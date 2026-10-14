@@ -8,7 +8,15 @@ agent already looks once it hears the review is over.
 
 from typing import assert_never
 
-from claude_review.domain.models import AgentEvent, PanelCancel, PanelMessage, RoundSubmission, ThreadQuestion
+from claude_review.domain.models import (
+    AgentEvent,
+    PanelCancel,
+    PanelMessage,
+    RoundSubmission,
+    StoryCancelled,
+    StoryRequested,
+    ThreadQuestion,
+)
 from claude_review.services.place_words import place_in_markdown
 from claude_review.services.thread_markdown import format_opening
 
@@ -32,11 +40,17 @@ def exit_report(last_round: RoundSubmission | None, unread: list[AgentEvent]) ->
     The rounds are the review itself, and come first as they always have:
     a review nobody answered prints exactly what it printed before. The
     last round is written even once read, because the agent is told to
-    look for it here.
+    look for it here. A story asked for, or the word to stop one, is
+    written nowhere: neither holds anything the reader wrote, and the
+    review a story would have been told of is over.
     """
     unread_rounds = [event.markdown for event in unread if isinstance(event, RoundSubmission)]
     rounds = unread_rounds or ([last_round.markdown] if last_round is not None else [])
-    others = [_unread(event) for event in _not_taken_back(unread) if not isinstance(event, RoundSubmission)]
+    others = [
+        _unread(event)
+        for event in _not_taken_back(unread)
+        if not isinstance(event, RoundSubmission | StoryRequested | StoryCancelled)
+    ]
     return PART_SEPARATOR.join([*rounds, *([UNREAD_HEADING, *others] if others else [])])
 
 

@@ -19,7 +19,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, LineSpan
+from claude_review.domain.models import DiffFile, EpochMillis, LineSpan
 
 
 class StoryPart(BaseModel):
@@ -227,3 +227,26 @@ class ToldStory(Story[ToldStep]):
     """A story on the change it is told of: every step with what it shows, and what no step tells."""
 
     left_out: list[LeftOut]
+
+
+class StoryAsking(BaseModel):
+    """The reader asking the agent for a story, and how far that has got.
+
+    Every fact a reader waiting for a story is shown: when they asked, when
+    an agent took the request — None while none has — and whether they
+    stopped it. It lasts until a story is told, which ends it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    asked_at: EpochMillis
+    taken_at: EpochMillis | None
+    stopped: bool
+
+    def taken(self, at: EpochMillis) -> StoryAsking:
+        """The asking once an agent has taken the request, at this moment."""
+        return StoryAsking(asked_at=self.asked_at, taken_at=at, stopped=self.stopped)
+
+    def stopped_by_the_reader(self) -> StoryAsking:
+        """The asking once the reader has stopped it: when it was asked and taken is still said."""
+        return StoryAsking(asked_at=self.asked_at, taken_at=self.taken_at, stopped=True)

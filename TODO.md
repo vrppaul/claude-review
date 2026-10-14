@@ -297,6 +297,10 @@ tests. Remove items when done — don't check them off.
 - [ ] No test holds what the button of the list of threads a narrower base
       cannot draw says of several, "List them" and "Hide them"
       (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
+- [ ] The tests write `STORY_ROUTE` in five modules, and the change a story
+      is told of, with the steps that tell it, in two
+      (`tests/integration/test_story.py`, `test_agent_commands.py`):
+      `tests/helpers.py` names every other route once.
 
 ## Known limits
 

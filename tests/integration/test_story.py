@@ -4,34 +4,50 @@ The agent sends the story it wrote in one piece. The review tells it of the
 change it holds, and from then on answers a page with the story as told —
 each step with the piece of the change it shows — until the agent tells
 another, which takes its place whole.
+
+The reader may ask for one. The request waits for an agent as everything
+handed over does, the reader may stop it before or after one takes it, and
+the review says how the asking stands to every page, open then or later,
+until a story is told.
 """
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from http import HTTPStatus
 from pathlib import Path
+from typing import override
 
 import pytest
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from pydantic import TypeAdapter
+from starlette.testclient import WebSocketTestSession
 
-from claude_review.domain.models import FIRST_ROUND
+from claude_review.domain.interfaces import Clock
+from claude_review.domain.models import FIRST_ROUND, EpochMillis
 from claude_review.domain.story import Step, Story
+from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse
-from claude_review.presentation.wire.pushes import StoryPush
+from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
-from claude_review.presentation.wire.story import LeftOutOfFile, StoryResponse, StoryTakenResponse
+from claude_review.presentation.wire.story import LeftOutOfFile, StoryAsking, StoryResponse, StoryTakenResponse
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_content import FIRST_TAKE
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
+    EVENTS_ROUTE,
+    GLANCE_AT_EVENTS,
     REVIEW_ROUTE,
+    STORY_REQUEST_ROUTE,
+    WAIT_FOR_EVENT,
     ReviewFactory,
     http_client,
     next_push,
     open_session,
     page_client,
     repository_opening,
+    until_an_agent_waits,
     write_files,
 )
 from tests.stories import as_the_agent_writes, planted, rows_of, step, story_of
@@ -58,6 +74,24 @@ A_LONG_STORY = story_of(*STEPS_OF_THE_LONG_STORY)
 THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
 THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
 WHOLE_STORY = story_of(THE_LINE_ADDED, THE_FILE_ADDED)
+
+# Where the reader stops the story asked for
+STORY_CANCEL_ROUTE = "/api/story/cancel"
+# Reads what an agent's wait is answered with, as the agent's own command reads it
+EVENTS = TypeAdapter[EventResponse](EventResponse)
+# When the reader asks for a story, when an agent takes the request, and when the reader asks again
+ASKED_AT = 1_791_000_000_000
+TAKEN_AT = ASKED_AT + 4_000
+ASKED_AGAIN_AT = TAKEN_AT + 60_000
+# How the asking stands once the reader has asked, once an agent has taken the request, and once the reader
+# has stopped it, after an agent took the request or before any did
+ASKED = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
+TAKEN = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=False)
+STOPPED_ONCE_TAKEN = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=True)
+STOPPED_UNTAKEN = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=True)
+# What the pages are told, in order, as each of those happens
+ASKED_TAKEN_STOPPED = [ASKED, TAKEN, STOPPED_ONCE_TAKEN]
+ASKED_STOPPED = [ASKED, STOPPED_UNTAKEN]
 
 
 @pytest.fixture
@@ -109,8 +143,8 @@ async def test_what_no_step_tells_is_said_to_the_agent_file_by_file(agent: Async
     assert taken.left_out == [LeftOutOfFile(file=ADDED_FILE, changed_lines=2)]
 
 
-async def test_a_review_nobody_told_a_story_of_holds_none(agent: AsyncClient) -> None:
-    assert await held_by(agent) == StoryResponse(held=None)
+async def test_a_review_nobody_told_a_story_of_or_asked_one_from_holds_neither(agent: AsyncClient) -> None:
+    assert await held_by(agent) == StoryResponse(held=None, asking=None)
 
 
 async def test_a_page_reads_the_story_as_told_each_step_with_the_piece_of_the_change_it_shows(
@@ -177,7 +211,7 @@ async def test_a_review_of_no_change_takes_no_story(client: AsyncClient) -> None
     answered = await client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
 
     assert answered.status_code == HTTPStatus.NOT_FOUND
-    assert await held_by(client) == StoryResponse(held=None)
+    assert await held_by(client) == StoryResponse(held=None, asking=None)
 
 
 async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client: AsyncClient) -> None:
@@ -270,7 +304,7 @@ async def test_of_two_stories_told_at_once_the_one_sent_last_is_the_one_held(rev
 
     await asyncio.gather(sent_first, sent_last)
 
-    assert review.story_held() == sent_last.result()
+    assert review.story_standing().held == sent_last.result()
 
 
 async def test_a_story_is_held_with_the_round_it_arrived_in_though_a_round_begins_while_it_is_told(
@@ -328,3 +362,268 @@ def test_a_page_open_on_the_review_is_told_when_a_story_is_told(
 
         # That it arrives is the whole of it: the push says nothing more, and none arriving fails the test
         next_push(socket, StoryPush)
+
+
+class HandSetClock(Clock):
+    """A clock a test sets by hand, so it can say at which moment each thing happened."""
+
+    def __init__(self, moment: EpochMillis) -> None:
+        self.moment = moment
+
+    @override
+    def now(self) -> EpochMillis:
+        return self.moment
+
+
+@pytest.fixture
+def clock() -> HandSetClock:
+    """The clock of the review a story is asked from, at the moment the reader asks."""
+    return HandSetClock(ASKED_AT)
+
+
+@pytest.fixture
+def page_of_the_change(
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening, clock: HandSetClock
+) -> Iterator[TestClient]:
+    """The page of a review of the repository's change, which a test speaks through as the reader and as the agent."""
+    with page_client(reviews.app(opened_on_the_change, clock=clock)) as review_page:
+        yield review_page
+
+
+def agent_waits(review: TestClient) -> EventResponse:
+    """What an agent's wait is handed next: only a glance, so a review with nothing for it says so at once."""
+    return EVENTS.validate_json(review.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS).content)
+
+
+def story_standing(review: TestClient) -> StoryResponse:
+    """The story the review holds and the asking for one, as a page opening reads them."""
+    return StoryResponse.model_validate_json(review.get(STORY_ROUTE).content)
+
+
+def taken_by_an_agent(review: TestClient, clock: HandSetClock) -> None:
+    """Have the reader ask for a story, and an agent's wait take the request a few seconds later."""
+    review.post(STORY_REQUEST_ROUTE)
+    clock.moment = TAKEN_AT
+    agent_waits(review)
+
+
+def next_askings(socket: WebSocketTestSession, how_many: int) -> list[StoryAsking]:
+    """How the asking stands each of the next few times a page is told, in the order it is told."""
+    return [next_push(socket, StoryAskingPush).asking for _ in range(how_many)]
+
+
+async def test_a_story_the_reader_asks_for_is_handed_to_an_agent_that_waits(agent: AsyncClient) -> None:
+    waiting = asyncio.ensure_future(agent.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT))
+    await until_an_agent_waits(agent)
+
+    await agent.post(STORY_REQUEST_ROUTE)
+
+    assert EVENTS.validate_json((await waiting).content) == StoryRequestEvent()
+
+
+def test_a_story_asked_for_while_no_agent_is_there_waits_for_the_first_that_asks(
+    page_of_the_change: TestClient,
+) -> None:
+    """Nobody there is no refusal: an agent that attaches later takes the request with its first wait."""
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert agent_waits(page_of_the_change) == StoryRequestEvent()
+
+
+def test_a_story_asked_for_twice_is_handed_to_the_agent_once(page_of_the_change: TestClient) -> None:
+    """Two pages open on the review, or two presses, ask the agent once."""
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert [agent_waits(page_of_the_change), agent_waits(page_of_the_change)] == [StoryRequestEvent(), TimeoutEvent()]
+
+
+def test_a_story_stopped_before_any_agent_took_the_request_reaches_no_agent(page_of_the_change: TestClient) -> None:
+    """An agent is not handed work the reader no longer wants, to be told at once to drop it."""
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    assert agent_waits(page_of_the_change) == TimeoutEvent()
+
+
+def test_a_story_stopped_after_an_agent_took_the_request_tells_the_agent_to_stop(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    taken_by_an_agent(page_of_the_change, clock)
+
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    assert agent_waits(page_of_the_change) == StoryCancelEvent()
+
+
+def test_a_story_stopped_twice_tells_the_agent_once(page_of_the_change: TestClient, clock: HandSetClock) -> None:
+    taken_by_an_agent(page_of_the_change, clock)
+
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    assert [agent_waits(page_of_the_change), agent_waits(page_of_the_change)] == [StoryCancelEvent(), TimeoutEvent()]
+
+
+def test_stopping_a_story_nobody_asked_for_is_no_refusal_and_tells_no_agent(page_of_the_change: TestClient) -> None:
+    answered = page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    assert answered.status_code == HTTPStatus.NO_CONTENT
+    assert agent_waits(page_of_the_change) == TimeoutEvent()
+
+
+def test_every_page_is_told_when_a_story_was_asked_for_when_an_agent_took_the_request_and_that_it_was_stopped(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """Told as facts, each as it happens: a page waiting for a story draws them, and asks nothing."""
+    with open_session(page_of_the_change) as socket:
+        taken_by_an_agent(page_of_the_change, clock)
+        page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+        told = next_askings(socket, len(ASKED_TAKEN_STOPPED))
+
+    assert told == ASKED_TAKEN_STOPPED
+
+
+def test_a_story_asked_for_twice_is_told_to_the_pages_once(page_of_the_change: TestClient) -> None:
+    with open_session(page_of_the_change) as socket:
+        page_of_the_change.post(STORY_REQUEST_ROUTE)
+        page_of_the_change.post(STORY_REQUEST_ROUTE)
+        page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+        told = next_askings(socket, len(ASKED_STOPPED))
+
+    assert told == ASKED_STOPPED
+
+
+def test_a_page_opening_while_a_story_is_awaited_reads_when_it_was_asked_for_and_taken(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """A reload, or a second page, was told none of it: it reads what the pages open then were told."""
+    taken_by_an_agent(page_of_the_change, clock)
+
+    assert story_standing(page_of_the_change) == StoryResponse(held=None, asking=TAKEN)
+
+
+def test_a_page_opening_after_the_reader_stopped_the_story_reads_that_it_was_stopped(
+    page_of_the_change: TestClient,
+) -> None:
+    """So it does not ask again for what the reader stopped."""
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    assert story_standing(page_of_the_change).asking == STOPPED_UNTAKEN
+
+
+def test_a_story_asked_for_again_while_it_is_awaited_is_still_asked_when_it_first_was(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """The reader's wait is counted from the request the agent was handed."""
+    taken_by_an_agent(page_of_the_change, clock)
+
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert story_standing(page_of_the_change).asking == TAKEN
+
+
+def test_a_story_asked_for_again_after_it_was_stopped_is_asked_anew(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    taken_by_an_agent(page_of_the_change, clock)
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+    clock.moment = ASKED_AGAIN_AT
+
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert story_standing(page_of_the_change).asking == StoryAsking(
+        asked_at=ASKED_AGAIN_AT, taken_at=None, stopped=False
+    )
+
+
+def test_a_story_asked_for_again_after_it_was_stopped_reaches_the_agent_after_the_word_to_stop(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """In the order the reader said them: an agent that stops, then starts, ends up writing."""
+    taken_by_an_agent(page_of_the_change, clock)
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert [agent_waits(page_of_the_change), agent_waits(page_of_the_change)] == [
+        StoryCancelEvent(),
+        StoryRequestEvent(),
+    ]
+
+
+def test_a_story_told_ends_the_asking_for_it(page_of_the_change: TestClient, clock: HandSetClock) -> None:
+    taken_by_an_agent(page_of_the_change, clock)
+
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    assert story_standing(page_of_the_change).asking is None
+
+
+def test_a_story_told_after_the_reader_stopped_it_is_held_all_the_same(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """The agent had written it by then: thrown away, it would have been paid for and never read."""
+    taken_by_an_agent(page_of_the_change, clock)
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    assert story_standing(page_of_the_change).held is not None
+
+
+def test_a_story_told_before_any_agent_took_the_request_for_it_leaves_no_request_waiting(
+    page_of_the_change: TestClient,
+) -> None:
+    """Told unasked as the reader was asking: an agent taking the request next would write the story twice."""
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    assert agent_waits(page_of_the_change) == TimeoutEvent()
+
+
+def test_a_story_told_before_the_agent_heard_it_was_stopped_leaves_nothing_to_stop(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    taken_by_an_agent(page_of_the_change, clock)
+    page_of_the_change.post(STORY_CANCEL_ROUTE)
+
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    assert agent_waits(page_of_the_change) == TimeoutEvent()
+
+
+def test_a_story_asked_for_while_one_is_held_asks_nothing(page_of_the_change: TestClient) -> None:
+    """A second telling of the same change would be paid for and say what the first said."""
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+
+    page_of_the_change.post(STORY_REQUEST_ROUTE)
+
+    assert story_standing(page_of_the_change).asking is None
+    assert agent_waits(page_of_the_change) == TimeoutEvent()
+
+
+def test_a_story_refused_leaves_the_asking_for_it_as_it_was(
+    page_of_the_change: TestClient, clock: HandSetClock
+) -> None:
+    """The agent mends the story and sends it again: the reader is still waiting for it."""
+    taken_by_an_agent(page_of_the_change, clock)
+    awaited = story_standing(page_of_the_change)
+
+    page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(planted(WHOLE_STORY, ("title",), "")))
+
+    assert story_standing(page_of_the_change) == awaited
+
+
+def test_a_review_of_no_change_refuses_a_story_asked_for(review_page: TestClient) -> None:
+    """Asked all the same, it would leave a reader waiting for a story no agent could tell."""
+    answered = review_page.post(STORY_REQUEST_ROUTE)
+
+    assert answered.status_code == HTTPStatus.NOT_FOUND
+    assert "no change" in Refusal.model_validate_json(answered.content).detail

@@ -36,6 +36,8 @@ from claude_review.presentation.wire.agent import (
     SayRequest,
     ShowRequest,
     StatusRequest,
+    StoryCancelEvent,
+    StoryRequestEvent,
     ThreadQuestion,
     TimeoutEvent,
 )
@@ -97,6 +99,10 @@ def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
             return MessageEvent(message=PanelMessage.of(taken))
         case models.PanelCancel():
             return CancelEvent(cancel=PanelCancel.of(taken))
+        case models.StoryRequested():
+            return StoryRequestEvent()
+        case models.StoryCancelled():
+            return StoryCancelEvent()
         case Silence.CLOSED:
             return ClosedEvent()
         # Nobody reads what a caller that left is answered

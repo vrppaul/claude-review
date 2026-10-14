@@ -286,6 +286,8 @@ class EventKind(StrEnum):
     ROUND — a round of the review, sent.
     MESSAGE — something typed in the agent panel.
     CANCEL — a panel message taken back.
+    STORY_REQUEST — the reader asks for a story of the change.
+    STORY_CANCEL — the reader stopped the story they asked for.
     TIMEOUT — nothing was handed over in the time asked for.
     CLOSED — the review is over, and nothing handed over is left.
     """
@@ -294,6 +296,8 @@ class EventKind(StrEnum):
     ROUND = auto()
     MESSAGE = auto()
     CANCEL = auto()
+    STORY_REQUEST = auto()
+    STORY_CANCEL = auto()
     TIMEOUT = auto()
     CLOSED = auto()
 
@@ -318,6 +322,14 @@ class CancelEvent(WireModel):
     cancel: PanelCancel
 
 
+class StoryRequestEvent(WireModel):
+    type: Literal[EventKind.STORY_REQUEST] = EventKind.STORY_REQUEST
+
+
+class StoryCancelEvent(WireModel):
+    type: Literal[EventKind.STORY_CANCEL] = EventKind.STORY_CANCEL
+
+
 class TimeoutEvent(WireModel):
     type: Literal[EventKind.TIMEOUT] = EventKind.TIMEOUT
 
@@ -329,6 +341,13 @@ class ClosedEvent(WireModel):
 # Response for POST /api/events, the long poll an answerer waits on: one kind
 # of event, carrying only what that kind is
 type EventResponse = Annotated[
-    QuestionEvent | RoundEvent | MessageEvent | CancelEvent | TimeoutEvent | ClosedEvent,
+    QuestionEvent
+    | RoundEvent
+    | MessageEvent
+    | CancelEvent
+    | StoryRequestEvent
+    | StoryCancelEvent
+    | TimeoutEvent
+    | ClosedEvent,
     Field(discriminator="type"),
 ]

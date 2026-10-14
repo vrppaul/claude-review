@@ -16,6 +16,7 @@ from claude_review.domain.models import (
     CommentSeverity,
     FilePath,
 )
+from claude_review.domain.story import StoryAsking
 
 
 class PageEventBase(BaseModel):
@@ -103,6 +104,17 @@ class StoryTold(PageEventBase):
     """
 
 
+class StoryAskingChanged(PageEventBase):
+    """How the reader's asking for a story now stands: asked, taken by an agent, or stopped.
+
+    Told whole, as a fact, so a page takes it as told and asks nothing. A
+    story told ends the asking and is told as `StoryTold` alone: a page
+    reads the story, and with it that nothing is asked any more.
+    """
+
+    asking: StoryAsking
+
+
 class ReviewEnded(PageEventBase):
     """The review is over, and nothing more will be told.
 
@@ -128,5 +140,6 @@ type PageEvent = (
     | RoundBegan
     | DiffRetaken
     | StoryTold
+    | StoryAskingChanged
     | ReviewEnded
 )

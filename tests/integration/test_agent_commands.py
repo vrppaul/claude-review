@@ -26,6 +26,7 @@ from tests.helpers import (
     FIRST_THREAD_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
+    STORY_REQUEST_ROUTE,
     ReviewServers,
     RunningReview,
     added_line,
@@ -312,6 +313,18 @@ async def test_a_story_the_review_refuses_fails_in_a_line_naming_everything_wron
     assert "title: says nothing" in result.output
     assert "chapters.0.steps.1.lines: hold no line" in result.output
     assert (await _story_held(review_of_a_change)).held is None
+
+
+async def test_a_story_the_reader_asks_for_is_printed_by_wait_as_its_kind_and_nothing_more(
+    review_of_a_change: RunningReview,
+) -> None:
+    """The request says only that a story is wanted: it is of the change the review holds, so there is no more to say."""
+    async with AsyncClient(base_url=review_of_a_change.url) as page:
+        await page.post(STORY_REQUEST_ROUTE)
+
+    result = await _run(review_of_a_change, "wait", "--seconds", "5")
+
+    assert result.output == '{"type":"story_request"}\n'
 
 
 async def test_a_file_a_story_leaves_out_is_printed_to_be_read_never_obeyed(

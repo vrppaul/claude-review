@@ -27,6 +27,7 @@ const PUSH_KINDS: Record<ServerPush['type'], true> = {
 	round: true,
 	diff: true,
 	story: true,
+	story_asking: true,
 	ended: true
 };
 

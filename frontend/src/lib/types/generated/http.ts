@@ -87,7 +87,9 @@ export interface paths {
          * @description Say what story the review holds: the last the agent told of its change, each step with what it shows.
          *
          *     None while nobody has told one, which is no refusal: a review is read
-         *     without a story as it always was.
+         *     without a story as it always was. With it, how the reader's asking for
+         *     one stands: a page that opens while a story is awaited was told none of
+         *     it, and reads here what the pages open before it were told.
          */
         get: operations["held_story_api_story_get"];
         /**
@@ -101,6 +103,54 @@ export interface paths {
          */
         put: operations["tell_the_story_api_story_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/story/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask For A Story
+         * @description Take the reader's asking for a story of the change, for an agent to pick up.
+         *
+         *     Asked once however often it is sent: two pages open on the review, or
+         *     two presses, hand the agent one request. The reader does not wait here:
+         *     every page is told how the asking stands, and then that a story was told.
+         */
+        post: operations["ask_for_a_story_api_story_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/story/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop The Story
+         * @description Stop the story the reader asked for, taken by an agent or not.
+         *
+         *     Nothing is refused: with no story awaited there is nothing to stop,
+         *     and that is what the reader wanted. A story an agent sends all the
+         *     same is still taken.
+         */
+        post: operations["stop_the_story_api_story_cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -954,7 +1004,7 @@ export interface components {
             /** Take */
             take: number;
         };
-        EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
+        EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["StoryRequestEvent"] | components["schemas"]["StoryCancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
         /**
          * FieldRefusal
          * @description One field a request had wrong, as pydantic and FastAPI both describe it.
@@ -1519,6 +1569,26 @@ export interface components {
             reason?: string | null;
         };
         /**
+         * StoryAsking
+         * @description The reader asking the agent for a story, and how far that has got.
+         */
+        StoryAsking: {
+            /** Asked At */
+            asked_at: number;
+            /** Taken At */
+            taken_at: number | null;
+            /** Stopped */
+            stopped: boolean;
+        };
+        /** StoryCancelEvent */
+        StoryCancelEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "story_cancel";
+        };
+        /**
          * StoryHeld
          * @description A story as the review holds it: as it was told, the round it was told in, and the take it was told of.
          */
@@ -1585,12 +1655,25 @@ export interface components {
             /** Housekeeping */
             housekeeping?: string[];
         };
+        /** StoryRequestEvent */
+        StoryRequestEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "story_request";
+        };
         /**
          * StoryResponse
-         * @description Response for GET /api/story — the story the review holds, or none while nobody has told one.
+         * @description Response for GET /api/story — the story the review holds, and how the reader's asking for one stands.
+         *
+         *     Read together, so a page never draws a moment with neither: no story is
+         *     held while one is asked for, and a story told ends the asking. Both are
+         *     None in a review nobody has told a story of or asked one from.
          */
         StoryResponse: {
             held: components["schemas"]["StoryHeld"] | null;
+            asking: components["schemas"]["StoryAsking"] | null;
         };
         /**
          * StoryTakenResponse
@@ -2087,6 +2170,69 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    ask_for_a_story_api_story_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    stop_the_story_api_story_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
