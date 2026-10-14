@@ -57,6 +57,10 @@
   after four seconds, a bar running out as it waits, or at once by its ×:
   the view never changes by itself. With no agent attached the page says
   how one is attached, and offers the files meanwhile.
+- **Every review knows whether Story was introduced to the reader.**
+  `GET /api/guide` says `story_introduced` beside the release last shown,
+  false for a reader shown around by a release before stories; `PUT
+  /api/guide` takes either fact alone and keeps the other as it was.
 - **The agent is told when a story is wanted, and how one is written.**
   `wait` hands over `story_request` and `story_cancel`; `claude-review story
   --help` shows the document whole and says how long each of its texts may

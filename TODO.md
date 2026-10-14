@@ -41,6 +41,15 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
+- [ ] `fix(server)`: two reviews running at once can lose one another's
+      change to a record about the reader. The lock that makes changes to
+      a record one after the other is each review's own
+      (`ReaderRecordService._changing`), and every review is a process of
+      its own: one keeping the release a reader was shown while another
+      keeps that Story was introduced can both read `guide.json` before
+      either writes, and the second puts back what the first changed. The
+      settings, several choices in one file, have the same gap.
+
 - [ ] `fix(server)`: a review nobody ever opened lives forever. The server
       winds down when the last browser leaves, and "leaves" needs one to
       have arrived: `BrowserPresence` counts the reader gone only once a

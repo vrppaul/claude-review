@@ -31,6 +31,8 @@ class GuideState(WireModel):
 
     # The release whose news the reader was last shown
     seen_release: str | None
+    # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
+    story_introduced: WireBool
 
 
 class KeptRecord[Record: WireModel](WireModel):
@@ -73,16 +75,24 @@ class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
 
 
 class GuideChange(WireModel, RecordChange[models.GuideState]):
-    """Request body for PUT /api/guide — what the reader has now been shown."""
+    """Request body for PUT /api/guide — what the reader has now been shown, and only that.
+
+    A fact sent as null is a fact not sent, as in every change to what is
+    kept about the reader.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    seen_release: str = Field(min_length=1, max_length=MAX_RELEASE_LENGTH)
+    seen_release: str | None = Field(default=None, min_length=1, max_length=MAX_RELEASE_LENGTH)
+    story_introduced: WireBool | None = None
 
     @override
     def applied_to(self, record: models.GuideState) -> models.GuideState:
-        """What the review remembers of showing the reader around, once they have been shown this release."""
-        return models.GuideState(seen_release=self.seen_release)
+        """What the review remembers of showing the reader around, with each fact sent in place of the one kept."""
+        return models.GuideState(
+            seen_release=_sent_or_kept(self.seen_release, record.seen_release),
+            story_introduced=_sent_or_kept(self.story_introduced, record.story_introduced),
+        )
 
 
 def _sent_or_kept[Choice](sent: Choice | None, kept: Choice) -> Choice:

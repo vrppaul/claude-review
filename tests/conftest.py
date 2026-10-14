@@ -49,12 +49,13 @@ def marking_workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspa
 def reader_files(tmp_path_factory: pytest.TempPathFactory) -> ReaderFiles:
     """What the reviews remember about their reader, kept apart for each test.
 
-    The reader has seen this release, so no welcome or news card sits over
-    what a test clicks; the test of the welcome takes that away.
+    The reader has seen this release and been introduced to Story, so no
+    welcome, news card or introduction at the switch sits over what a test
+    clicks; the tests of the welcome and the introduction take that away.
     """
     directory = tmp_path_factory.mktemp("reader")
     files = ReaderFiles(settings=directory / "settings.json", guide=directory / "guide.json")
-    files.guide.write_text(GuideState(seen_release=version("claude-review")).model_dump_json())
+    files.guide.write_text(GuideState(seen_release=version("claude-review"), story_introduced=True).model_dump_json())
     return files
 
 

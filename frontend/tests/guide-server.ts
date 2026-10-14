@@ -1,39 +1,34 @@
-/** A server that remembers which release a reader was shown, as `/api/guide` does. */
+/** A server that remembers how far a reader was shown around, as `/api/guide` does. */
 
 import type { GuideChange, GuideState } from '$lib/types';
 import { fakeServer, type FakeServer, type ReceivedRequest } from './fake-server';
 
-/** Whether what the page sent says which release the reader was shown. */
-function isGuideChange(body: unknown): body is GuideChange {
-	return typeof body === 'object' && body !== null && 'seen_release' in body && typeof body.seen_release === 'string';
-}
-
-/** What `/api/guide` keeps for this reader: the release they were last shown. */
+/** What `/api/guide` keeps for this reader: the release they were last shown, and whether Story was introduced. */
 class GuideMemory {
-	private seen: string | null;
+	private record: GuideState;
 	private stored: boolean;
 
-	constructor(seen: string | null) {
-		this.seen = seen;
-		this.stored = seen !== null;
+	constructor(record: GuideState, stored: boolean) {
+		this.record = record;
+		this.stored = stored;
 	}
 
 	read(): { record: GuideState; stored: boolean } {
-		return { record: { seen_release: this.seen }, stored: this.stored };
+		return { record: this.record, stored: this.stored };
 	}
 
+	/** Each fact the page sent in place of the one kept, as the server applies a change. */
 	write(request: ReceivedRequest): GuideState {
-		if (!isGuideChange(request.body)) throw new Error('The page sent no release for the guide to keep');
-		this.seen = request.body.seen_release;
+		this.record = { ...this.record, ...(request.body as GuideChange) };
 		this.stored = true;
-		return { seen_release: this.seen };
+		return this.record;
 	}
 }
 
-/** A server remembering which release this reader was shown, as `/api/guide` does. */
+/** A server remembering which release this reader was shown, as `/api/guide` does; nothing kept for a newcomer. */
 export function guideServer(seen: string | null): FakeServer {
 	const server = fakeServer();
-	const memory = new GuideMemory(seen);
+	const memory = new GuideMemory({ seen_release: seen, story_introduced: false }, seen !== null);
 	server.answerWith('GET /api/guide', () => memory.read());
 	server.answerWith('PUT /api/guide', (request) => memory.write(request));
 	return server;

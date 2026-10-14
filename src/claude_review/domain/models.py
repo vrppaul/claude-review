@@ -905,3 +905,5 @@ class GuideState(BaseModel):
 
     # The release whose news the reader was last shown
     seen_release: str | None = None
+    # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
+    story_introduced: bool = False

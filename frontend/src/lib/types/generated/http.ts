@@ -1044,11 +1044,16 @@ export interface components {
         };
         /**
          * GuideChange
-         * @description Request body for PUT /api/guide — what the reader has now been shown.
+         * @description Request body for PUT /api/guide — what the reader has now been shown, and only that.
+         *
+         *     A fact sent as null is a fact not sent, as in every change to what is
+         *     kept about the reader.
          */
         GuideChange: {
             /** Seen Release */
-            seen_release: string;
+            seen_release?: string | null;
+            /** Story Introduced */
+            story_introduced?: boolean | null;
         };
         /**
          * GuideState
@@ -1057,6 +1062,8 @@ export interface components {
         GuideState: {
             /** Seen Release */
             seen_release: string | null;
+            /** Story Introduced */
+            story_introduced: boolean;
         };
         /**
          * ImageResponse

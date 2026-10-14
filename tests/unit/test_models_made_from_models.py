@@ -90,7 +90,7 @@ STORY = canvas_story()
 SETTINGS = ReaderSettings(
     theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True, stories=True
 )
-GUIDE = GuideState(seen_release="1.5.0")
+GUIDE = GuideState(seen_release="1.5.0", story_introduced=True)
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
 TOLD_STEP = STEP.told(FILE, changed_since_told=True)
@@ -151,6 +151,12 @@ MADE = [
         source=GUIDE,
         made=GuideChange(seen_release="1.6.0").applied_to(GUIDE),
         replaced={"seen_release"},
+    ),
+    MadeFrom(
+        what="what a reader was shown, with Story to be introduced again",
+        source=GUIDE,
+        made=GuideChange(story_introduced=False).applied_to(GUIDE),
+        replaced={"story_introduced"},
     ),
     MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece", "changed_since_told"}),
     MadeFrom(what="a step on other lines", source=STEP, made=STEP.at(LineSpan(first=14, last=15)), replaced={"lines"}),

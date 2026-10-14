@@ -144,7 +144,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/conversation', { said: [] });
 	server.answer('GET /api/story', storyResponse());
-	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
+	server.answer('GET /api/guide', { record: { seen_release: '1.5.0', story_introduced: true }, stored: true });
 	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
 	return server;
 }
