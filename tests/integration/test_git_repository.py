@@ -168,6 +168,32 @@ async def test_a_snapshot_leaves_the_repository_alone(
     assert after == before
 
 
+async def test_what_changed_between_two_snapshots_is_what_the_work_between_them_did(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Two takes of a review compared, whatever the working tree says by the time they are: a file added between
+    them untracked, one rewritten, and one left alone."""
+    store = tmp_path_factory.mktemp("review-objects")
+    repo = GitRepository(objects=store)
+    (tmp_git_repo / "work.txt").write_text("first pass\n")
+    (tmp_git_repo / "untouched.txt").write_text("left alone\n")
+    earlier = await _written_tree(repo, tmp_git_repo)
+    (tmp_git_repo / "work.txt").write_text("second pass\n")
+    (tmp_git_repo / "new.txt").write_text("written between\n")
+    later = await _written_tree(repo, tmp_git_repo)
+    (tmp_git_repo / "work.txt").write_text("third pass, after both\n")
+
+    between = await repo.diff_between(tmp_git_repo, earlier, later)
+
+    assert ("-first pass" in between, "+second pass" in between, "+written between" in between) == (True, True, True)
+    assert ("third pass" in between, "untouched.txt" in between) == (False, False)
+
+
+async def test_two_snapshots_are_not_compared_without_a_store_that_kept_them(tmp_git_repo: Path) -> None:
+    with pytest.raises(GitError):
+        await GitRepository(objects=None).diff_between(tmp_git_repo, HEAD, HEAD)
+
+
 async def test_a_snapshot_is_refused_without_a_store_to_keep_it(tmp_git_repo: Path) -> None:
     """Written to a directory that is thrown away, a tree id names nothing."""
     with pytest.raises(GitError):

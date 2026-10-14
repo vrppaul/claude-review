@@ -75,6 +75,10 @@ class Repository(ABC):
     async def empty_tree(self, path: Path) -> str:
         """Return the id of the tree with nothing in it: what a repository with nothing committed is read against."""
 
+    @abstractmethod
+    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
+        """The unified diff from one tree a staging wrote down to another: what changed between two takes."""
+
 
 class TrackedPaths(ABC):
     """Whether the repository keeps a file."""

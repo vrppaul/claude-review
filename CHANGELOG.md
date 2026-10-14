@@ -142,17 +142,17 @@
 
 ### Changed
 - **A story follows its code when the diff is taken again.** Each step
-  looks for the lines it showed as a thread looks for its own, nearest
-  where they were, or, where a round took lines out of them, put lines in
-  or rewrote some, stands on what is left of them, from the first still
-  said as it was to the last; it is cut again from the take as it now
-  stands, and what the round added that no step tells is left out beside
-  it. Each step of `GET /api/story` says where its code stands now, `now`:
-  the lines it stands at, the piece they are and whether a round changed
-  it since it was told (`changed_since_told`), or `null` where the review
-  cannot place its code in the change now — its file left it, nothing of
-  its lines is found, its last line stands above its first, or it would
-  meet another step of its file. A step's own `lines` stay the lines it was
+  follows its lines through what git says changed between the take it was
+  told of and this one: a line kept moves as the lines above it moved, a
+  line the round rewrote stays the step's, and where one block the round
+  rewrote held lines of two steps, it is the upper step's. The step is cut
+  again from the take as it now stands, and what the round added that no
+  step tells is left out beside it. Each step of `GET /api/story` says
+  where its code stands now, `now`: the lines it stands at, the piece they
+  are and whether a round changed it since it was told
+  (`changed_since_told`), or `null` where the review cannot place its code
+  in the change now — its file left it, all its lines are gone, or git
+  could not say what changed since. A step's own `lines` stay the lines it was
   told on: the page knows its place by them and a thread on its reason its
   block, so neither moves with its code, and a step that stands nowhere
   claims no line another step's code has moved to. Such a step shows no

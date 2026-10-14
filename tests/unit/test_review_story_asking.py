@@ -18,6 +18,7 @@ from tests.helpers import FixedClock
 from tests.stories import (
     ASKED_AT,
     FIRST_REWRITTEN,
+    NO_TAKES,
     NOTHING_LEFT_OUT,
     ONLY_CHAPTER,
     SECOND_ROUND,
@@ -32,14 +33,14 @@ ASKED = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
 
 
 def test_a_request_taken_where_no_story_is_awaited_is_noted_nowhere() -> None:
-    story = ReviewStory(FixedClock(ASKED_AT))
+    story = ReviewStory(FixedClock(ASKED_AT), takes=NO_TAKES)
 
     assert story.taken() is None
     assert story.asking is None
 
 
 def test_a_request_taken_a_second_time_is_not_noted_again() -> None:
-    story = ReviewStory(FixedClock(ASKED_AT))
+    story = ReviewStory(FixedClock(ASKED_AT), takes=NO_TAKES)
     story.ask()
     story.taken()
 
@@ -100,4 +101,4 @@ async def test_nothing_went_stale_of_a_story_held_that_is_current() -> None:
 
 
 def test_nothing_went_stale_where_no_story_is_held() -> None:
-    assert ReviewStory(FixedClock(ASKED_AT)).went_stale() is None
+    assert ReviewStory(FixedClock(ASKED_AT), takes=NO_TAKES).went_stale() is None

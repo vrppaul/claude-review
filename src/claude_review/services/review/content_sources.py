@@ -13,7 +13,7 @@ lines a hunk left out; a fixed source holds its one take alone.
 """
 
 import asyncio
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections.abc import AsyncIterator
 from typing import override
 
@@ -25,12 +25,13 @@ from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository,
 from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
-from claude_review.services.review.review_content import ReviewContent
+from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
+from claude_review.services.unified_diff import parse_unified_diff
 
 log = structlog.get_logger()
 
@@ -57,8 +58,8 @@ class Retaken(BaseModel):
     changes: ChangedSinceRound | None
 
 
-class ContentSource(ABC):
-    """What a review asks of where its content comes from."""
+class ContentSource(TakesCompared):
+    """What a review asks of where its content comes from: its takes, and what changed between two of them."""
 
     @property
     @abstractmethod
@@ -190,15 +191,21 @@ class RepositorySource(ContentSource):
         )
         return Retaken(file_count=file_count, round=round_number, changes=changes)
 
+    @override
+    async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
+        """The diff from one take's tree to another's, parsed off the event loop as every diff here is."""
+        raw = await self._repository.diff_between(self._root, earlier, later)
+        return await asyncio.to_thread(parse_unified_diff, raw)
+
     async def _take(self, staged: StagedTree, round_number: int) -> int:
-        """Take the diff from a staging, put it on screen with its tree, mark it for the round; say how many files."""
+        """Take the diff from a staging, mark it for the round, put it on screen with its trees; say how many files."""
         files = await read_diff(staged, base=self._versions.pinned_base, ignore_whitespace=False)
         # Read after the diff, not before: a file saved in between then
         # belongs to the tree the diff was taken at, and the reader is not
         # told about a change that is already on their screen
         tree = await self._watcher.read(self._root)
-        self._content = self._content.taken_again(files, tree)
-        await self._versions.mark(round_number, staged)
+        written_as = await self._versions.mark(round_number, staged)
+        self._content = self._content.taken_again(files, tree, written_as=written_as)
         return len(files)
 
     @override
@@ -251,6 +258,12 @@ class FixedSource(ContentSource):
     async def retake(self) -> Retaken:
         """Raises: NoRepositoryError, always."""
         msg = "No repository to retake the diff from"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
+        """Raises: NoRepositoryError, always: what was read once has no trees."""
+        msg = "No repository to compare takes in"
         raise NoRepositoryError(msg)
 
     @override

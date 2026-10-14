@@ -6,7 +6,8 @@ round's work then moves the code under it, and each take of the change the
 review makes, the story told is followed onto: the story held is that one,
 showing the code as it now stands and saying whether it moved on. It is
 always followed from the story as it was told, whose pieces are what each
-step was told with, as a thread follows from its quote. Its pieces are cut
+step was told with, through what git says changed from the tree the take it
+was told of was written down as to the later take's. Its pieces are cut
 out of one take of the change, so it says which: a page that read the diff
 of a later take can tell that they are not yet of the code it shows.
 
@@ -20,13 +21,16 @@ and however often, the review is asked once.
 
 import asyncio
 
+import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
-from claude_review.domain.interfaces import Clock
-from claude_review.domain.models import FIRST_ROUND, StaleStep, StoryWentStale
+from claude_review.domain.interfaces import Clock, GitError
+from claude_review.domain.models import FIRST_ROUND, DiffFile, StaleStep, StoryWentStale
 from claude_review.domain.story import FollowedStep, Step, Story, StoryAsking, ToldStep, ToldStory
 from claude_review.services import story_telling
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
+from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
+
+log = structlog.get_logger()
 
 
 class LeftOutChanged(BaseModel):
@@ -73,6 +77,9 @@ class _StoryKept(BaseModel):
     # What every take after the one it was told of follows it from: its
     # pieces are what each step was told with
     told: ToldStory[ToldStep]
+    # The tree the take it was told of was written down as, which each later
+    # take is compared with: None where git wrote none
+    told_on: str | None
     # The story told until the diff is taken again; followed onto each take after
     held: StoryHeld
 
@@ -85,8 +92,10 @@ class ReviewStory:
     with None where it changed nothing.
     """
 
-    def __init__(self, clock: Clock) -> None:
+    def __init__(self, clock: Clock, takes: TakesCompared) -> None:
         self._clock = clock
+        # What says how the code moved between the take a story was told of and a later one
+        self._takes = takes
         # None while nobody has told one
         self._kept: _StoryKept | None = None
         # From the reader's request until a story is told; None while nothing is asked
@@ -150,7 +159,7 @@ class ReviewStory:
         async with self._telling:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
             held = StoryHeld(story=story_telling.as_told(told), round=round_number, take=change.take, moved_on=None)
-            self._kept = _StoryKept(told=told, held=held)
+            self._kept = _StoryKept(told=told, told_on=change.written_as, held=held)
             self._asking = None
             return held
 
@@ -158,20 +167,22 @@ class ReviewStory:
         """Follow the story told onto a later take of the change, taken again in this round; with none told, nothing.
 
         Off the event loop and in turn with tellings, as a story is told: a
-        story told while the diff was taken again is followed once it is held.
+        story told while the diff was taken again is followed once it is held,
+        compared from the very take it was told of.
         """
         async with self._telling:
             kept = self._kept
             if kept is None:
                 return
-            followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files)
+            since_told = await self._changed_since(kept.told_on, change.written_as)
+            followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files, since_told)
             held = StoryHeld(
                 story=followed,
                 round=kept.held.round,
                 take=change.take,
                 moved_on=_moved_on(kept.told, followed, moved_on_before=kept.held.moved_on, round_number=round_number),
             )
-            self._kept = _StoryKept(told=kept.told, held=held)
+            self._kept = _StoryKept(told=kept.told, told_on=kept.told_on, held=held)
 
     def went_stale(self) -> StoryWentStale | None:
         """What went stale of the story held, as it stands now: None while it is current, or none is held."""
@@ -188,6 +199,19 @@ class ReviewStory:
             ],
             left_out=_changed_lines_left_out(held.story),
         )
+
+    async def _changed_since(self, told_on: str | None, now_on: str | None) -> list[DiffFile] | None:
+        """What changed from the take a story was told of to a later one: None where either tree, or git, is wanting.
+
+        Then no step can be placed, and none is, rather than one guessed at.
+        """
+        if told_on is None or now_on is None:
+            return None
+        try:
+            return await self._takes.changed_between(told_on, now_on)
+        except GitError as refusal:
+            log.warning("takes_not_compared", reason=str(refusal))
+            return None
 
     @property
     def _awaited(self) -> StoryAsking | None:

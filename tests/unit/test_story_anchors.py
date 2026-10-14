@@ -35,6 +35,7 @@ from tests.stories import (
     PASTE_CHAPTER,
     canvas_story,
     changed_file,
+    diff_of,
     field_at,
     planted,
     story_of,
@@ -45,8 +46,7 @@ STORY = canvas_story()
 HELD = StoryAnchorHandler(told_as_written(STORY))
 NO_STORY = StoryAnchorHandler(None)
 
-# A file whose first line a change rewrote, a step that says why, and the line said another way again since:
-# nothing of the step's code is found, and it shows none
+# A file whose first line a change rewrote, a step that says why, and the line said another way again since
 REWRITTEN = "src/rewritten.py"
 FIRST_LINE = LineSpan(first=1, last=1)
 WHY_REWRITTEN = "Said as the caller expects."
@@ -119,10 +119,11 @@ def test_a_story_that_tells_a_file_no_thread_could_name_still_takes_threads_on_i
     assert held.quote(StoryAnchor(block=THE_DOUBT)).quote == [field_at(STORY, THE_DOUBT_SAID)]
 
 
-def test_the_reason_of_a_step_whose_code_a_round_took_out_of_sight_may_still_be_asked_about() -> None:
-    """Its words are still drawn though it shows no code: a thread on them has its place."""
+def test_the_reason_of_a_step_that_stands_nowhere_may_still_be_asked_about() -> None:
+    """Its words are still drawn though it shows no code: a thread on them has its place. Here what changed since
+    it was told cannot be said, so it stands nowhere."""
     told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
-    held = StoryAnchorHandler(follow(told, REWRITTEN_AGAIN))
+    held = StoryAnchorHandler(follow(told, REWRITTEN_AGAIN, None))
 
     assert held.quote(StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first))).quote == [
         WHY_REWRITTEN
@@ -132,7 +133,7 @@ def test_the_reason_of_a_step_whose_code_a_round_took_out_of_sight_may_still_be_
 def test_a_thread_on_a_steps_reason_keeps_its_block_once_a_round_moves_the_steps_code() -> None:
     """A step is known by where it was told: its code two lines down, its reason is still where the thread hangs."""
     told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
-    held = StoryAnchorHandler(follow(told, PUSHED_DOWN))
+    held = StoryAnchorHandler(follow(told, PUSHED_DOWN, [diff_of(REWRITTEN, ["A"], ["x", "y", "A"])]))
     on_the_reason = StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first), quote=[WHY_REWRITTEN])
 
     assert held.follow(on_the_reason) == on_the_reason

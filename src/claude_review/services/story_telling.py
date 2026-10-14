@@ -8,65 +8,83 @@ added or removed is in a step, in a file named as housekeeping, or among
 what was left out, and a story cannot hide one.
 
 A round's work then moves the code under the story, and the story follows
-it onto each take of the change as a thread follows its lines: by what the
-lines say, looked for nearest where they were (`find_run`), and where the
-round rewrote some of them, by what is left of them. Each step is cut
-again by the same rule, and marked where what it shows is not what it was
-told with; what no step tells is worked out again. A story is followed from
-the story as it was told, every time, so code put back as it was reads as
-told again.
+it onto each take of the change by what the diff from the take it was told
+of to that take says of each of its lines (`_LinesMoved`): a line kept
+moves as the lines above it were put in or taken out, and a step's end
+among lines the round replaced lands on what stands in their place. So a
+step follows its own code whatever its lines say, and a line said another
+way stays in the step that told it. Each step is cut again by the same
+rule, and marked where what it shows is not what it was told with; what no
+step tells is worked out again. A story is followed from the story as it
+was told, every time, so code put back as it was reads as told again.
 """
 
-from typing import Self
+from bisect import bisect_left
+from itertools import accumulate, groupby
 
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import StoryRefusedError
-from claude_review.domain.models import DiffFile, DiffLine, LineSide, LineSpan
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, LineSpan, LineType
 from claude_review.domain.story import Chapter, FollowedStep, LeftOut, Step, StepNow, Story, ToldStep, ToldStory
-from claude_review.services.anchor_service import SideLine, find_run, side_lines
-from claude_review.services.story_checks import document_faults, one_met_by_each, placement_faults, steps_by_file
+from claude_review.services.story_checks import document_faults, placement_faults, steps_by_file
 from claude_review.services.story_slices import PlacedFile, side_told_by
 
 # What a story refused is refused with, before its faults are said one by one
 STORY_REFUSED = "the story may not be told as it is written"
 # How far down a file the line after another stands
 NEXT_LINE = 1
+# The line a file's lines come after: none of them is reached yet
+NO_LINE_REACHED = 0
+# How far a line moves when nothing above it was put in or taken out
+NOT_MOVED = 0
 
 
-class _SideNow(BaseModel):
-    """One side of a file as a later take shows it: its lines in order, and every text any of them says.
+class _Landing(BaseModel):
+    """Where a line of the take a story was told of stands in a later take: as a step's first line, and as its last.
 
-    Lines a side says nowhere are not looked for in it: a round that rewrote
-    a long step whole would otherwise have each of its lines looked for
-    alone through the whole file, which took seconds.
+    The two differ only for a line the rounds replaced, which is no line of
+    the later take.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    lines: list[SideLine]
-    said: frozenset[str]
-
-    @classmethod
-    def of(cls, lines: list[SideLine]) -> Self:
-        """The side these lines make up, in order."""
-        return cls(lines=lines, said=frozenset(line.content for line in lines))
-
-    def says_all_of(self, lines: list[SideLine]) -> bool:
-        """Whether each of these lines says what some line of this side says."""
-        return all(line.content in self.said for line in lines)
+    as_first: int
+    as_last: int
 
 
-class _EndsMoved(BaseModel):
-    """How many lines further down the first and the last line of a run now stand.
+class _LinesMoved:
+    """Where the lines of one file in the take a story was told of stand in a later take, as the diff between says.
 
-    The two differ where a round took lines out of the run or put lines in.
+    A line the rounds kept moves as the lines above it were put in or taken
+    out. A line inside a block they replaced is no line of the later take: a
+    step's first line inside one lands on the first line put in its place,
+    and its last on the last; where the block put none in, on the line after
+    it and the line before, so a step all of whose lines went runs
+    backwards, and stands nowhere.
     """
 
-    model_config = ConfigDict(frozen=True)
+    def __init__(self, changed: DiffFile | None) -> None:
+        # A file the diff between the takes does not name was not changed between them
+        hunks = [] if changed is None else changed.hunks
+        # Every line of the told take a hunk shows, with where it lands
+        self._landings = {line: landing for hunk in hunks for line, landing in _landings(hunk).items()}
+        # Where each hunk ends among the told take's lines, and how far the
+        # lines below each moved: by none above the first hunk
+        self._hunk_ends = [_told_end(hunk) for hunk in hunks]
+        self._moved_below = list(accumulate((_lines_put_in(hunk) for hunk in hunks), initial=NOT_MOVED))
 
-    first: int
-    last: int
+    def carried(self, lines: LineSpan) -> LineSpan:
+        """These lines of the told take on the later one: running backwards where nothing of them is left."""
+        return LineSpan(first=self._landing(lines.first).as_first, last=self._landing(lines.last).as_last)
+
+    def _landing(self, line: int) -> _Landing:
+        """Where one line of the told take lands: by its hunk where one shows it, else moved as the lines above it."""
+        shown = self._landings.get(line)
+        if shown is not None:
+            return shown
+        moved_to = line + self._moved_below[bisect_left(self._hunk_ends, line)]
+        return _Landing(as_first=moved_to, as_last=moved_to)
 
 
 def tell(story: Story[Step], files: list[DiffFile]) -> ToldStory[ToldStep]:
@@ -94,25 +112,26 @@ def as_told(told: ToldStory[ToldStep]) -> ToldStory[FollowedStep]:
     return told.followed(chapters, told.left_out)
 
 
-def follow(told: ToldStory[ToldStep], files: list[DiffFile]) -> ToldStory[FollowedStep]:
+def follow(
+    told: ToldStory[ToldStep], files: list[DiffFile], since_told: list[DiffFile] | None
+) -> ToldStory[FollowedStep]:
     """A story as it was told, on a later take of the change: each step where its code now stands, if anywhere.
 
-    The steps of one file are followed together, since two of them must not
-    come to tell one line, and each is found again by its file and the line
-    it was told to start at: no two steps of a file start at one line.
+    `since_told` is what changed from the take the story was told of to this
+    one, file by file, as a diff between the two takes says it: None where
+    that cannot be said, and then no step can be placed. The steps of one
+    file are followed together, since two of them must not come to tell one
+    line, and each is put back where the story tells it.
     """
     change = {file.path: PlacedFile(file) for file in files}
-    followed = {
-        path: _followed_steps(steps, change.get(path)) for path, steps in _steps_of_each_file(told.chapters).items()
-    }
-    chapters = [
-        chapter.followed([followed[step.file][step.lines.first] for step in chapter.steps]) for chapter in told.chapters
-    ]
+    steps = [step for chapter in told.chapters for step in chapter.steps]
+    followed = _followed(steps, change, since_told)
     # A step that stands nowhere tells none of the lines it was told of: what stands there now is left out
     lines_told = {
-        path: [step.now.lines for step in steps.values() if step.now is not None] for path, steps in followed.items()
+        path: [step.now.lines for step in of_the_file if step.now is not None]
+        for path, of_the_file in steps_by_file(followed, lambda step: step.file).items()
     }
-    return told.followed(chapters, _left_out(lines_told, told.housekeeping, files, change))
+    return told.followed(_in_chapters(told.chapters, followed), _left_out(lines_told, told.housekeeping, files, change))
 
 
 def _told_chapter(chapter: Chapter[Step], change: dict[str, PlacedFile]) -> Chapter[ToldStep]:
@@ -125,18 +144,111 @@ def _told_step(step: Step, file: PlacedFile) -> ToldStep:
     return step.told(file.piece([file.rows_at(step.lines)]))
 
 
-def _followed_steps(steps: list[ToldStep], file: PlacedFile | None) -> dict[int, FollowedStep]:
-    """Steps of one file on a later take of it, by the line each was told to start at.
+def _followed(
+    steps: list[ToldStep], change: dict[str, PlacedFile], since_told: list[DiffFile] | None
+) -> list[FollowedStep]:
+    """Every step on the later take, in the order given; none placed where what changed since it was told is unknown."""
+    if since_told is None:
+        return [_not_placed(step) for step in steps]
+    changed = {file.path: file for file in since_told}
+    places_of_each_file = steps_by_file(list(range(len(steps))), lambda place: steps[place].file)
+    followed: dict[int, FollowedStep] = {}
+    for path, places in places_of_each_file.items():
+        of_the_file = _followed_in_file([steps[place] for place in places], change.get(path), changed.get(path))
+        followed.update(zip(places, of_the_file, strict=True))
+    return [followed[place] for place in range(len(steps))]
 
-    None of them is placed where the file left the change.
+
+def _followed_in_file(steps: list[ToldStep], file: PlacedFile | None, changed: DiffFile | None) -> list[FollowedStep]:
+    """Steps of one file on the later take, in the order given, `changed` being what changed in it since they were told.
+
+    None is placed where the file left the change, or where how its lines
+    moved cannot be said: the diff between the takes shows none of them. Nor
+    is a step the take tells by the other side than it was told by: the
+    numbers of one side say nothing of the other.
     """
-    if file is None:
-        return {step.lines.first: _not_placed(step) for step in steps}
-    standing = _where_steps_stand(steps, file.file)
-    return {
-        step.lines.first: _not_placed(step) if lines is None else _cut_again(step, lines, file)
+    if file is None or (changed is not None and changed.unshown is not None):
+        return [_not_placed(step) for step in steps]
+    moved = _LinesMoved(changed)
+    told_by_now = side_told_by(file.file)
+    carried = [moved.carried(step.lines) if side_told_by(step.piece) == told_by_now else None for step in steps]
+    standing = _down_the_file(steps, carried)
+    return [
+        _not_placed(step) if lines is None else _cut_again(step, lines, file)
         for step, lines in zip(steps, standing, strict=True)
-    }
+    ]
+
+
+def _down_the_file(steps: list[ToldStep], carried: list[LineSpan | None]) -> list[LineSpan | None]:
+    """Where the steps of one file stand, in the order given: their lines carried, read down the file.
+
+    Lines carried keep the order they were told in, and share none, but
+    where one block the round replaced held lines of two steps: then the
+    block is the step above's, and the step below starts after it. A step
+    that has no line left, or none carried, stands nowhere.
+    """
+    standing: list[LineSpan | None] = [None] * len(steps)
+    reached = NO_LINE_REACHED
+    for place in sorted(range(len(steps)), key=lambda place: steps[place].lines.first):
+        lines = carried[place]
+        if lines is None:
+            continue
+        first = max(lines.first, reached + NEXT_LINE)
+        if first <= lines.last:
+            standing[place] = LineSpan(first=first, last=lines.last)
+            reached = lines.last
+    return standing
+
+
+def _in_chapters(chapters: list[Chapter[ToldStep]], followed: list[FollowedStep]) -> list[Chapter[FollowedStep]]:
+    """The chapters, each with its steps followed: `followed` holds every step in the order the story tells them."""
+    in_order = iter(followed)
+    return [chapter.followed([next(in_order) for _ in chapter.steps]) for chapter in chapters]
+
+
+def _landings(hunk: DiffHunk) -> dict[int, _Landing]:
+    """Where each line of the told take a hunk shows lands in the later take.
+
+    A hunk is blocks of lines kept and blocks of lines replaced, one after
+    another; a block replaced lands by what is put in its place, or by the
+    last line of the later take above it where nothing is.
+    """
+    landings: dict[int, _Landing] = {}
+    reached = hunk.new_start - NEXT_LINE
+    for kept, rows in groupby(hunk.lines, key=_is_kept):
+        block = list(rows)
+        told = [row.old_number for row in block if row.old_number is not None]
+        now = [row.new_number for row in block if row.new_number is not None]
+        if kept:
+            landings.update({line: _Landing(as_first=to, as_last=to) for line, to in zip(told, now, strict=True)})
+        else:
+            landings.update(dict.fromkeys(told, _replaced_by(now, reached)))
+        reached = max(now, default=reached)
+    return landings
+
+
+def _replaced_by(put_in: list[int], reached: int) -> _Landing:
+    """Where lines a round replaced land: on the first and the last line put in, or around where they were."""
+    if not put_in:
+        return _Landing(as_first=reached + NEXT_LINE, as_last=reached)
+    return _Landing(as_first=min(put_in), as_last=max(put_in))
+
+
+def _is_kept(row: DiffLine) -> bool:
+    """Whether a row of a diff is a line both its sides have."""
+    return row.kind == LineType.CONTEXT
+
+
+def _told_end(hunk: DiffHunk) -> int:
+    """The last line of the told take a hunk shows; where it puts its lines in, if it shows none."""
+    return max((row.old_number for row in hunk.lines if row.old_number is not None), default=hunk.old_start)
+
+
+def _lines_put_in(hunk: DiffHunk) -> int:
+    """How many more lines the later take has than the told one where a hunk is: fewer, where it took lines out."""
+    lines_now = sum(row.new_number is not None for row in hunk.lines)
+    lines_told = sum(row.old_number is not None for row in hunk.lines)
+    return lines_now - lines_told
 
 
 def _as_told_step(step: ToldStep) -> FollowedStep:
@@ -147,93 +259,6 @@ def _as_told_step(step: ToldStep) -> FollowedStep:
 def _not_placed(step: ToldStep) -> FollowedStep:
     """A step whose code the review cannot place in the change now: standing nowhere, and claiming no line."""
     return step.followed(None)
-
-
-def _where_steps_stand(steps: list[ToldStep], file: DiffFile) -> list[LineSpan | None]:
-    """Where the steps of one file stand in a later take of it, in the order given; None for one not placed.
-
-    Each moves as what is left of its lines moved, and one nothing of which
-    is found is not placed. A step that then meets another is not placed
-    either, since which lines both tell are whose nobody can say; the steps
-    it does not meet keep their places. One not placed claims no line, so
-    no other step goes without its code for having come to stand where it
-    was told.
-    """
-    sides_now = {side: _SideNow.of(side_lines(file, side)) for side in LineSide}
-    moved = [_moved_lines(step, sides_now) for step in steps]
-    meeting = _meeting({place: lines for place, lines in enumerate(moved) if lines is not None})
-    return [None if place in meeting else lines for place, lines in enumerate(moved)]
-
-
-def _meeting(placed: dict[int, LineSpan]) -> frozenset[int]:
-    """The places of the steps placed that tell a line another of them tells."""
-    met = one_met_by_each(list(placed.values()))
-    return frozenset(place for place, other in zip(placed, met, strict=True) if other is not None)
-
-
-def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpan | None:
-    """A step's lines moved as what is left of the lines its piece shows moved; None where nothing of them is found.
-
-    The lines it shows, on the side its file is told by, are runs that follow
-    one another, broken where a hunk ends. Its first line moves as the first
-    line of the first run found moved, and its last as the last line of the
-    last; one whose last line now stands above its first is not placed.
-    """
-    side = side_told_by(step.piece)
-    runs = _runs(side_lines(step.piece, side))
-    moves = [move for run in runs if (move := _how_far_moved(run, sides_now[side])) is not None]
-    if not moves:
-        return None
-    lines = LineSpan(first=step.lines.first + moves[0].first, last=step.lines.last + moves[-1].last)
-    return lines if lines.first <= lines.last else None
-
-
-def _runs(lines: list[SideLine]) -> list[list[SideLine]]:
-    """Lines of one side, cut into runs of lines that follow one another in the file."""
-    runs: list[list[SideLine]] = []
-    for line in lines:
-        if runs and line.number == runs[-1][-1].number + NEXT_LINE:
-            runs[-1].append(line)
-        else:
-            runs.append([line])
-    return runs
-
-
-def _how_far_moved(run: list[SideLine], side_now: _SideNow) -> _EndsMoved | None:
-    """How far down a run's first and last lines moved; None where no line of it is said as it was.
-
-    Where it stands whole, nearest where it was, both moved as that place
-    says. Where a round took lines out of it, put lines in or rewrote some,
-    what is left of it is where it now is: it starts where the first of its
-    lines still said as it was now stands, and ends where the last does,
-    each looked for alone nearest where it stood. A line rewritten at either
-    end is then no line of the run: nobody can say it was not put in beside
-    it.
-    """
-    first, last = run[0], run[-1]
-    whole = _where_found(run, side_now)
-    if whole is not None:
-        moved = whole - first.number
-        return _EndsMoved(first=moved, last=moved)
-    first_left = _where_first_found(run, side_now)
-    last_left = _where_first_found(run[::-1], side_now)
-    if first_left is None or last_left is None:
-        return None
-    return _EndsMoved(first=first_left - first.number, last=last_left - last.number)
-
-
-def _where_first_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
-    """Where the first of these lines still said as it was now stands, each looked for alone; None if none is."""
-    return next((found for line in lines if (found := _where_found([line], side_now)) is not None), None)
-
-
-def _where_found(lines: list[SideLine], side_now: _SideNow) -> int | None:
-    """The line the first of these now stands at, where what they say together stands nearest; None if nowhere."""
-    if not side_now.says_all_of(lines):
-        return None
-    [first, *_] = lines
-    found = find_run(side_now.lines, [line.content for line in lines], near=first.number)
-    return None if found is None else side_now.lines[found].number
 
 
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> FollowedStep:

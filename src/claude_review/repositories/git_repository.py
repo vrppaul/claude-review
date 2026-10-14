@@ -110,9 +110,7 @@ CONTEXT_LINES = 3
 # lines would not be the file's; a copy as the new file it is, never as
 # changes to the file it was copied from; a submodule as the commit it moved
 # to, never as its log or its own files.
-DIFF_STAGED = [
-    "diff",
-    "--cached",
+DIFF_WRITTEN = [
     "--no-ext-diff",
     "--no-color",
     "--no-relative",
@@ -123,6 +121,9 @@ DIFF_STAGED = [
     "--no-textconv",
     "--submodule=short",
 ]
+# The diff from a base to the working tree staged, and the diff between two trees written down
+DIFF_STAGED = ["diff", "--cached", *DIFF_WRITTEN]
+DIFF_OF_TREES = ["diff", *DIFF_WRITTEN]
 
 # Ends the options, so a revision that follows can never be read as one
 END_OF_OPTIONS = "--end-of-options"
@@ -362,6 +363,22 @@ class GitRepository(ReviewedRepository):
         object store holds it or not.
         """
         return (await _run(path, ["hash-object", "-t", "tree", os.devnull])).strip()
+
+    @override
+    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
+        """The unified diff from one tree written down to another, written as every diff here is.
+
+        A tree is written down only into the object store given here, which
+        each staging lends the repository's own, so both are read from it.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        if self._objects is None:
+            msg = "no tree is written down without an object store of the review's own"
+            raise GitError(msg)
+        arguments = [*DIFF_OF_TREES, END_OF_OPTIONS, earlier, later]
+        return await _run(path, arguments, {OBJECTS_VARIABLE: str(self._objects)})
 
     @override
     async def changed_paths(self, path: Path) -> list[str]:

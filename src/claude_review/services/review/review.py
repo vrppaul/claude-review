@@ -109,9 +109,9 @@ class Review:
         self._inbox = AgentInbox(self._lifetime)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
-        self._story = ReviewStory(clock)
         self._handover = ThreadHandover(images)
         self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
+        self._story = ReviewStory(clock, takes=self._source)
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
         self._formatter = RoundFormatter.for_mode(opening.mode)

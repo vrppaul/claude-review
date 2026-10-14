@@ -121,10 +121,9 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(story)`: a story told while the working tree has moved on from
       the take on screen is checked against the take, and nobody is told.
 - [ ] `fix(cli)`: `story` prints every file it left out on its one line.
-- [ ] `fix(story)`: a step whose lines all say the same — blank lines, a
-      run of `}` — is followed onto a later take by nearness alone
-      (`find_run`), so it may land on other lines that say the same and
-      show them as current.
+- [ ] `feat(story)`: a step of a file renamed between two takes stands
+      nowhere: the diff between them finds the rename, and nothing follows
+      the step to the new name.
 
 ## The story, on the page
 

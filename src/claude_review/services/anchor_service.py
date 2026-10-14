@@ -351,7 +351,7 @@ def _chapter_said(chapter: Chapter[FollowedStep]) -> dict[StoryBlock, str | None
 
 
 def side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
-    """Every line of one side of a file, in order: what a thread's lines, or a story's steps, are looked for in.
+    """Every line of one side of a file, in order: what a thread's lines are looked for in.
 
     A removed line exists only on the old side; everything else, context
     included, is read as the new file.

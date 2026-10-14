@@ -85,6 +85,10 @@ class RepositoryThatMoves(Repository):
     async def empty_tree(self, path: Path) -> str:
         return "empty-tree"
 
+    @override
+    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
+        return ""
+
 
 class MarkingReview:
     """The bases of one review over a repository that moves, and its marks left one round at a time."""

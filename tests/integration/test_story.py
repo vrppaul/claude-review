@@ -35,8 +35,8 @@ from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import (
     CodeMovedOn,
-    LeftOutChanged,
     LeftOutOfFile,
+    LineSpan,
     StoryResponse,
     StoryTakenResponse,
 )
@@ -80,6 +80,8 @@ ADDED_FILE = "src/added.py"
 THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "def added() -> None:\n    return None\n"}
 # The edited file as a round's work leaves it: the line the story told, said another way
 REWORDED_SINCE = "initial content\nand a line reworded since\n"
+# The added file as a round's work leaves it: two lines put above it, and its last line rewritten
+REWRITTEN_UNDER_TWO_LINES = "import os\nimport sys\ndef added() -> None:\n    return 1\n"
 # A file added whole and long, and a story with a step to every other line of it: long in the telling, so it is
 # surely still being told when a test that started it looks at the review again, or sends another story after it
 LONG_FILE = "src/long.py"
@@ -139,11 +141,17 @@ async def diff_against(agent: AsyncClient, base: str) -> DiffResponse:
     return DiffResponse.model_validate_json((await agent.get(DIFF_ROUTE, params={"base": base})).content)
 
 
-async def take_again_after_a_round(agent: AsyncClient, repository: Path) -> None:
-    """Send a round, do its work on the file the story told, and take the diff again."""
+async def take_again_after(agent: AsyncClient, repository: Path, work: dict[str, str]) -> None:
+    """Send a round, do its work, leaving these files saying this, and take the diff again."""
     await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "Another word for it, please.", "end": False})
-    write_files(repository, {EDITED_FILE: REWORDED_SINCE})
+    write_files(repository, work)
     await agent.post(RETAKE_ROUTE)
+
+
+async def take_again_after_a_round(agent: AsyncClient, repository: Path) -> None:
+    """Send a round, do its work on the file the story told, rewording the line its step tells, and take the diff
+    again."""
+    await take_again_after(agent, repository, {EDITED_FILE: REWORDED_SINCE})
 
 
 async def test_a_story_told_of_the_change_is_taken_and_summed_up_in_a_line(agent: AsyncClient) -> None:
@@ -239,21 +247,42 @@ async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client:
     assert "no change" in Refusal.model_validate_json(answered.content).detail
 
 
-async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands_and_none_where_it_is_gone(
+async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """The round's work moved the code under a story: a step shows the code under review, or stands nowhere once
-    nothing of its own is there."""
+    """The round's work reworded the line a step tells: the step shows it as it now stands, marked, and the step
+    the round left alone shows what it showed."""
     await tell(agent, WHOLE_STORY)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
     [reworded, untouched] = (await held_by(agent)).held.story.chapters[0].steps
-    assert (reworded.file, reworded.now) == (EDITED_FILE, None)
+    assert (reworded.file, rows_of(reworded.now.piece), reworded.now.changed_since_told) == (
+        EDITED_FILE,
+        ["and a line reworded since"],
+        True,
+    )
     assert (untouched.file, rows_of(untouched.now.piece), untouched.now.changed_since_told) == (
         ADDED_FILE,
         ["def added() -> None:", "    return None"],
         False,
+    )
+
+
+async def test_a_step_moves_with_its_code_as_git_says_and_keeps_its_line_said_another_way(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """Two lines put above it and its last line rewritten: it moves down with its code, and the rewritten line is
+    still its own."""
+    await tell(agent, WHOLE_STORY)
+
+    await take_again_after(agent, tmp_git_repo, {ADDED_FILE: REWRITTEN_UNDER_TWO_LINES})
+
+    [_, rewritten] = (await held_by(agent)).held.story.chapters[0].steps
+    assert (rewritten.now.lines, rows_of(rewritten.now.piece), rewritten.now.changed_since_told) == (
+        LineSpan(first=3, last=4),
+        ["def added() -> None:", "    return 1"],
+        True,
     )
 
 
@@ -265,11 +294,8 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     await take_again_after_a_round(agent, tmp_git_repo)
 
     held = (await held_by(agent)).held
-    # The line the round reworded is in no step now: it is left out
-    assert (held.round, held.moved_on) == (
-        FIRST_ROUND,
-        CodeMovedOn(round=FIRST_ROUND + 1, left_out=LeftOutChanged(when_told=0, now=1)),
-    )
+    # The line the round reworded is still its step's: no more is left out than when the story was told
+    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out=None))
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 

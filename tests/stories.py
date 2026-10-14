@@ -7,17 +7,21 @@ story somebody meant, not against filler.
 """
 
 from collections.abc import Callable
+from difflib import SequenceMatcher
+from typing import override
 
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldPath
 from claude_review.domain.models import (
+    FIRST_LINE,
     FIRST_ROUND,
     NO_HUNK_HEADER,
     DiffFile,
     DiffHunk,
     DiffLine,
     FileStatus,
+    LineSide,
     LineSpan,
     LineType,
 )
@@ -33,7 +37,8 @@ from claude_review.domain.story import (
     ToldStory,
 )
 from claude_review.presentation.wire.story import StoryRequest
-from claude_review.services.review.review_content import ReviewContent
+from claude_review.services.anchor_service import side_lines
+from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
 from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.story_telling import as_told
 from tests.helpers import FixedClock, added_line, context_line, removed_line
@@ -313,6 +318,39 @@ def changed_file(path: str, *hunks: DiffHunk, status: FileStatus = FileStatus.MO
     return DiffFile(path=path, status=status, hunks=list(hunks))
 
 
+def _kept_between(before: list[str], _after: list[str], told: range, now: range) -> list[DiffLine]:
+    """Lines a block difflib found alike says on both sides: rows kept, numbered on each side."""
+    return [context_line(old + FIRST_LINE, new + FIRST_LINE, before[old]) for old, new in zip(told, now, strict=True)]
+
+
+def _changed_between(before: list[str], after: list[str], told: range, now: range) -> list[DiffLine]:
+    """Lines a block difflib found changed: the ones it took out, then the ones it put in their place."""
+    return [
+        *(removed_line(old + FIRST_LINE, before[old]) for old in told),
+        *(added_line(new + FIRST_LINE, after[new]) for new in now),
+    ]
+
+
+# How each kind of block difflib finds between two lists of lines is written as rows of a diff
+BLOCK_ROWS: dict[str, Callable[[list[str], list[str], range, range], list[DiffLine]]] = {
+    "equal": _kept_between,
+    "replace": _changed_between,
+    "delete": _changed_between,
+    "insert": _changed_between,
+}
+
+
+def diff_of(path: str, before: list[str], after: list[str]) -> DiffFile:
+    """What a diff says changed in a file from these lines to those, as one hunk that shows every line."""
+    blocks = SequenceMatcher(a=before, b=after, autojunk=False).get_opcodes()
+    rows = [
+        row
+        for kind, told_start, told_stop, now_start, now_stop in blocks
+        for row in BLOCK_ROWS[kind](before, after, range(told_start, told_stop), range(now_start, now_stop))
+    ]
+    return changed_file(path, DiffHunk(header=NO_HUNK_HEADER, old_start=FIRST_LINE, new_start=FIRST_LINE, lines=rows))
+
+
 def rows_of(file: DiffFile) -> list[str]:
     """What every row of a file says, hunk after hunk."""
     return [line.content for line in lines_of(file)]
@@ -362,16 +400,58 @@ SECOND_ROUND = FIRST_ROUND + 1
 ASKED_AT = 1_791_000_000_000
 
 
+# What a take of a change is written down as, by the take's number
+TREE_OF_TAKE = "tree of take {take}"
+
+
+def tree_of(take: int) -> str:
+    return TREE_OF_TAKE.format(take=take)
+
+
+def take_of(files: list[DiffFile], take: int) -> ReviewContent:
+    """A take of a change, by its number, written down as a tree of its own."""
+    return ReviewContent(files, frozenset(), take=take, written_as=tree_of(take))
+
+
+def _lines_of_each_file(files: list[DiffFile]) -> dict[str, list[str]]:
+    """What each file of a take says: the lines its hunks show on their new side."""
+    return {file.path: [line.content for line in side_lines(file, LineSide.NEW)] for file in files}
+
+
+def between_takes(earlier: list[DiffFile], later: list[DiffFile]) -> list[DiffFile]:
+    """What changed in each file from one take to another, as a diff of the lines each take shows of it says.
+
+    A file a take does not hold says nothing in it.
+    """
+    before, after = _lines_of_each_file(earlier), _lines_of_each_file(later)
+    return [diff_of(path, before.get(path, []), after.get(path, [])) for path in dict.fromkeys([*before, *after])]
+
+
+class TakesComparedByTheirLines(TakesCompared):
+    """Takes of a change by the trees they were written down as, compared by the lines each shows of its files."""
+
+    def __init__(self, takes: dict[str, list[DiffFile]]) -> None:
+        self._takes = takes
+
+    @override
+    async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
+        return between_takes(self._takes[earlier], self._takes[later])
+
+
+# What a story that is never followed onto a take is built with: no take to compare
+NO_TAKES = TakesComparedByTheirLines({})
+
+
 async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
     """The story of the first line told of the first take of a change, then followed onto each take after it.
 
     Each later take is taken in a round of its own: the second, then the third, and so on.
     """
-    story = ReviewStory(FixedClock(ASKED_AT))
-    [told_of, *after] = takes
-    change = ReviewContent.opening_on(told_of)
-    await story.tell(THE_FIRST_LINE, change, round_number=FIRST_ROUND)
-    for round_number, files in enumerate(after, start=SECOND_ROUND):
-        change = change.taken_again(files, frozenset())
+    numbered = dict(enumerate(takes, start=FIRST_TAKE))
+    compared = TakesComparedByTheirLines({tree_of(take): files for take, files in numbered.items()})
+    story = ReviewStory(FixedClock(ASKED_AT), takes=compared)
+    [told_of, *after] = [take_of(files, take) for take, files in numbered.items()]
+    await story.tell(THE_FIRST_LINE, told_of, round_number=FIRST_ROUND)
+    for round_number, change in enumerate(after, start=SECOND_ROUND):
         await story.follow(change, round_number=round_number)
     return story

@@ -21,22 +21,27 @@ from typing import override
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
 from claude_review.services.review.content_sources import ContentSource, content_source
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
+from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
 from claude_review.services.review.review_story import CodeMovedOn, LeftOutChanged, ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file
 from tests.stories import (
     FIRST_REWRITTEN,
+    NO_TAKES,
     NOTHING_LEFT_OUT,
     ONE_MORE_LEFT_OUT,
     SECOND_ROUND,
+    THE_FIRST_LINE,
     TOLD_OF,
+    TakesComparedByTheirLines,
     changed_file,
     hunk,
     step,
     story_of,
+    take_of,
     told_then_followed,
+    tree_of,
 )
 
 ROOT = Path("/repository")
@@ -129,8 +134,21 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
         return "empty-tree"
 
     @override
+    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
+        return ""
+
+    @override
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         return True
+
+
+class TakesGitWillNotCompare(TakesCompared):
+    """Takes whose trees git refuses to read, as when the review's object store was taken away under it."""
+
+    @override
+    async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
+        refusal = "fatal: bad object"
+        raise GitError(refusal)
 
 
 class RepositoryGitWillNotStage(RepositoryBeingWorkedOn):
@@ -286,25 +304,54 @@ async def test_a_story_whose_code_was_put_back_as_it_was_told_is_current_again()
 
 
 async def test_a_story_told_while_the_diff_is_taken_again_is_followed_onto_the_new_take_once_it_is_held() -> None:
-    """The take waits for the telling under way: followed before it, the story told would stay on the take before."""
-    story = ReviewStory(FixedClock(MARKED_AT))
-    told_of = ReviewContent.opening_on(LONG_FILE_ADDED)
+    """The take waits for the telling under way: followed before it, the story told would stay on the take before.
+
+    Followed from the very take it was told of: one line added below every
+    step leaves each on the lines it was told on.
+    """
+    told_of, now = take_of(LONG_FILE_ADDED, FIRST_TAKE), take_of(ONE_LINE_MORE_OF_IT, FIRST_TAKE + 1)
+    takes = TakesComparedByTheirLines(
+        {tree_of(FIRST_TAKE): LONG_FILE_ADDED, tree_of(FIRST_TAKE + 1): ONE_LINE_MORE_OF_IT}
+    )
+    story = ReviewStory(FixedClock(MARKED_AT), takes=takes)
     telling = asyncio.create_task(story.tell(A_LONG_STORY, told_of, round_number=FIRST_ROUND))
     # A turn of the loop, in which the telling begins
     await asyncio.sleep(0)
 
-    await story.follow(told_of.taken_again(ONE_LINE_MORE_OF_IT, frozenset()), round_number=SECOND_ROUND)
+    await story.follow(now, round_number=SECOND_ROUND)
     await telling
 
     assert story.held is not None
     assert story.held.take == FIRST_TAKE + 1
+    assert [told_step.now.lines for told_step in story.held.story.chapters[0].steps] == [
+        told_step.lines for told_step in A_LONG_STORY.chapters[0].steps
+    ]
+
+
+async def test_a_story_told_of_a_take_git_never_wrote_down_is_followed_onto_no_code() -> None:
+    """What changed since it was told cannot be said: no step is drawn on code guessed at."""
+    story = ReviewStory(FixedClock(MARKED_AT), takes=NO_TAKES)
+    await story.tell(THE_FIRST_LINE, ReviewContent.opening_on(TOLD_OF), round_number=FIRST_ROUND)
+
+    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND)
+
+    assert story.held is not None
+    assert [told_step.now for told_step in story.held.story.chapters[0].steps] == [None]
+
+
+async def test_a_story_whose_takes_git_will_not_compare_is_followed_onto_no_code() -> None:
+    story = ReviewStory(FixedClock(MARKED_AT), takes=TakesGitWillNotCompare())
+    await story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=FIRST_ROUND)
+
+    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND)
+
+    assert story.held is not None
+    assert [told_step.now for told_step in story.held.story.chapters[0].steps] == [None]
 
 
 async def test_a_take_with_no_story_told_holds_none() -> None:
-    story = ReviewStory(FixedClock(MARKED_AT))
+    story = ReviewStory(FixedClock(MARKED_AT), takes=NO_TAKES)
 
-    await story.follow(
-        ReviewContent.opening_on(TOLD_OF).taken_again(ONE_MORE_LEFT_OUT, frozenset()), round_number=SECOND_ROUND
-    )
+    await story.follow(take_of(ONE_MORE_LEFT_OUT, FIRST_TAKE + 1), round_number=SECOND_ROUND)
 
     assert story.held is None

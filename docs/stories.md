@@ -113,12 +113,15 @@ Each rule of `good_story.md`, and what it rests on.
   put on screen by itself.
 - **A reconstruction says so.** A story told from commits, by an agent that
   did not make the change, is marked "reconstructed" on the page.
-- **Followed by what its lines say.** On a later take of the change, a step
-  follows its code by its text, looked for nearest where it was, as a
-  thread does. Its limit: a reworded line is not found, so the step says
-  its code changed or is no longer found, and the agent tells the story
-  again. Following lines through the diff between takes, as `git blame`
-  does, would keep a reworded line: an open question.
+- **Followed by what git says changed.** On a later take of the change, a
+  step follows its code through the diff from the take it was told of to
+  this one: a line kept moves as the lines above it moved, and a line the
+  round rewrote stays the step's, so the step shows it as it now stands,
+  marked changed. Found by its text, as a thread is, a step lost a
+  reworded line and could land on another function's `}`. Where two
+  steps' lines were rewritten in one block, the block is the upper step's.
+  A step whose lines are all gone, or whose take git never wrote down,
+  stands nowhere. Decided 2026-10-14; threads still follow by text.
 - **The advice ships with the command, not in the skill.** The skill ships
   twice, as a folder (`npx skills add`) and as one file (the plugin's
   command), and the command line is installed apart from both. Only the

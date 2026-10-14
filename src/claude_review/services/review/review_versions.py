@@ -52,14 +52,15 @@ class ReviewVersions:
         """What every take of the review's own diff is read against: its base as the review opened on it."""
         return self._opened.pinned_base
 
-    async def mark(self, round_number: int, staged: StagedTree) -> None:
-        """Write down the tree the diff has just been taken from, as part of a round."""
+    async def mark(self, round_number: int, staged: StagedTree) -> str | None:
+        """Write down the tree the diff has just been taken from, in a round: its id, or None if git would not."""
         try:
             tree = await staged.write_tree()
         except GitError as refusal:
             log.warning("snapshot_refused", round=round_number, reason=str(refusal))
-            return
+            return None
         self._marks.append(TreeSnapshot(round=round_number, tree=tree, at=self._clock.now()))
+        return tree
 
     async def changed_since_round_began(self, round_number: int, staged: StagedTree) -> ChangedSinceRound | None:
         """Which files have moved since a round began, if it can be said.
