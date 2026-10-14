@@ -10,10 +10,20 @@ so the rule is the domain's, and the wire bounds its ids by it.
 
 from typing import Annotated, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, Strict
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PlainValidator,
+    Strict,
+    WithJsonSchema,
+)
 
-from claude_review.domain.models import MAX_ID_LENGTH, SAFE_ID, says_nothing
+from claude_review.domain.models import MAX_ID_LENGTH, SAFE_ID, LineSpan, says_nothing
 from claude_review.services.image_service import MAX_IMAGES_PER_MESSAGE
+from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 
 # What JSON is called on the wire, for whoever writes it there by hand: the agent's client says it of what it
 # sends, and a refusal of itself. The answers FastAPI writes say it themselves
@@ -69,6 +79,41 @@ def _says_something(text: str) -> str:
 # What the agent says — an answer, a panel message, a thread it raises:
 # words, since it has no screenshots to send
 AgentText = Annotated[str, Field(min_length=1, max_length=MAX_TEXT_LENGTH), AfterValidator(_says_something)]
+
+# How the API describes a step's lines: text, as `LINES_WRITTEN` has it
+LINES_SCHEMA = {"type": "string", "pattern": LINES_WRITTEN.pattern}
+NOT_TEXT = f"wants lines as text, like {LINES_EXAMPLE}"
+
+
+def _lines_read(written: object) -> LineSpan:
+    """A step's lines as the agent wrote them, read; lines the review holds already are taken as they are.
+
+    Raises:
+        ValueError: if they are neither, or text that names no lines: what
+            pydantic reads as a field refused, where any other error would
+            be a fault of this side.
+    """
+    match written:
+        case LineSpan():
+            return written
+        case str():
+            return lines_named(written)
+        case _:
+            raise ValueError(NOT_TEXT)
+
+
+def _lines_written(lines: LineSpan) -> str:
+    """A step's lines as the agent writes them: in a document sent on as read, and in what it is told of a step."""
+    return line_span(lines.first, lines.last)
+
+
+# A step's lines as the agent writes and reads them: "42" or "104-129", held as the lines they name
+LinesWritten = Annotated[
+    LineSpan,
+    PlainValidator(_lines_read),
+    PlainSerializer(_lines_written, return_type=str),
+    WithJsonSchema(LINES_SCHEMA),
+]
 
 # Ids handed out by POST /api/images, as many as one thing said may carry
 ImageIds = Annotated[list[WireId], Field(max_length=MAX_IMAGES_PER_MESSAGE)]

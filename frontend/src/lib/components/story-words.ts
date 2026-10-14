@@ -5,7 +5,7 @@
  */
 
 import type { ToldChapter, ToldStep } from '$lib/types';
-import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
+import { CHANGED_LINES, counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
 const RANGE_DASH = '–';
@@ -45,6 +45,8 @@ export const CODE_CURRENT = 'current';
 export const CHANGED_AFTER_TOLD_HEAD = 'Changed after it was told.';
 /** What that warning says of the code under it, and of the reasons beside it. */
 export const CODE_BELOW_IS_CURRENT = 'The code below is current; the reasons beside it may not be.';
+/** And last, while the agent tells the story again. */
+export const AGENT_UPDATING_REASONS = 'The agent is updating them.';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = ToldStep['lines'];
@@ -85,6 +87,15 @@ export function codeMovedOnIn(round: number): string {
  */
 export function leftOutThenAndNow(then: number, now: number): string {
 	return `${then}${THEN_AND_NOW}${now}`;
+}
+
+/**
+ * The same, with what it stands beside, said to whoever cannot see the
+ * arrow: "Not in the story, 2 changed lines no step told when the story was
+ * told, 5 now".
+ */
+export function leftOutThenAndNowSaid(then: number, now: number): string {
+	return `${NOT_IN_THE_STORY}, ${counted(then, CHANGED_LINES)} no step told when the story was told, ${now} now`;
 }
 
 /** How many of a chapter's steps a round changed, and which round: "3 steps in this chapter changed in round 2." */

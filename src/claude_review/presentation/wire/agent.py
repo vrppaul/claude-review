@@ -12,6 +12,7 @@ from claude_review.presentation.wire.base import (
     MAX_FILES_NAMED,
     MAX_TEXT_LENGTH,
     AgentText,
+    LinesWritten,
     WireBool,
     WireId,
     WireModel,
@@ -322,8 +323,29 @@ class CancelEvent(WireModel):
     cancel: PanelCancel
 
 
+class StaleStep(WireModel):
+    """A step of the story told whose code a round changed after it was told: its chapter, its file, its lines now."""
+
+    chapter: str
+    file: str
+    # Written as the agent writes a step's lines: "104-131"
+    lines: LinesWritten
+
+
+class StoryWentStale(WireModel):
+    """What of the story the agent told a round moved the code on under."""
+
+    # The round the diff that found it was taken again in
+    round: int
+    steps: list[StaleStep]
+    # How many lines the change added or removed that no step tells now
+    left_out: int
+
+
 class StoryRequestEvent(WireModel):
     type: Literal[EventKind.STORY_REQUEST] = EventKind.STORY_REQUEST
+    # What went stale of the story told before, to tell it again; None for a first story
+    stale: StoryWentStale | None = None
 
 
 class StoryCancelEvent(WireModel):

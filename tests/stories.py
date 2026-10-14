@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldPath
 from claude_review.domain.models import (
+    FIRST_ROUND,
     NO_HUNK_HEADER,
     DiffFile,
     DiffHunk,
@@ -31,7 +32,9 @@ from claude_review.domain.story import (
     ToldStory,
 )
 from claude_review.presentation.wire.story import StoryRequest
-from tests.helpers import added_line, context_line, removed_line
+from claude_review.services.review.review_content import ReviewContent
+from claude_review.services.review.review_story import ReviewStory
+from tests.helpers import FixedClock, added_line, context_line, removed_line
 
 # The chapters the canvas tells, by the ids the overview links to them by
 PASTE_CHAPTER = "ch-1"
@@ -336,3 +339,29 @@ def story_of_chapters(
 def story_of(*steps: Step, housekeeping: tuple[str, ...] = ()) -> Story[Step]:
     """A story of one chapter that tells these steps, with nothing wrong in what it says."""
     return story_of_chapters(chapter_of(ONLY_CHAPTER, *steps), housekeeping=housekeeping)
+
+
+# A file the change added two lines to, a story that tells the first of them, and how a round's work may leave
+# the file: a third line added, the first rewritten, or the second taken out
+STORIED = "src/storied.py"
+TOLD_OF = [changed_file(STORIED, hunk(1, 1, "++"))]
+ONE_MORE_LEFT_OUT = [changed_file(STORIED, hunk(1, 1, "+++"))]
+FIRST_REWRITTEN = [changed_file(STORIED, hunk(1, 1, "-++"))]
+NOTHING_LEFT_OUT = [changed_file(STORIED, hunk(1, 1, "+"))]
+THE_FIRST_LINE = story_of(step(STORIED, 1, 1))
+# The round the diff is taken again in, once the first was sent
+SECOND_ROUND = FIRST_ROUND + 1
+# The moment the review's clock says, whenever a story's asking asks it
+ASKED_AT = 1_791_000_000_000
+
+
+async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
+    """The story of the first line told of the first take of a change, then followed onto each take after it, in the second round."""
+    story = ReviewStory(FixedClock(ASKED_AT))
+    [told_of, *after] = takes
+    change = ReviewContent.opening_on(told_of)
+    await story.tell(THE_FIRST_LINE, change, round_number=FIRST_ROUND)
+    for files in after:
+        change = change.taken_again(files, frozenset())
+        await story.follow(change, round_number=SECOND_ROUND)
+    return story

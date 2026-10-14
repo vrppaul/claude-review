@@ -13,7 +13,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, storyResponse, toldChapter, toldStep, toldStepOfLines } from '../story';
+import { ASKED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep, toldStepOfLines } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py gained a line, and so did a lock file
 const files = [
@@ -952,6 +952,26 @@ describe('a story whose code a round changed after it was told', () => {
 		expect(said(within(beginnings).getByTestId('chapter-changed'))).toBe(
 			'Changed after it was told. 2 steps in this chapter changed in round 2. The code below is current; the reasons beside it may not be.'
 		);
+	});
+
+	it('says last that the agent is updating the reasons, while it tells the story again', () => {
+		const story = followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]);
+		review = openReview({ files, story, asking: TAKEN });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(said(screen.getByTestId('chapter-changed'))).toBe(
+			'Changed after it was told. 1 step in this chapter changed in round 2. The code below is current; the reasons beside it may not be. The agent is updating them.'
+		);
+	});
+
+	it('says nothing of the agent updating them where the story asked for again waits for an agent to attach', () => {
+		const story = followedWith([changed(toldStep('a.py', 1)), toldStep('b.py', 5)]);
+		review = openReview({ files, story, asking: ASKED });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(said(screen.getByTestId('chapter-changed'))).not.toContain('The agent is updating them.');
 	});
 
 	it('says one step as one', () => {

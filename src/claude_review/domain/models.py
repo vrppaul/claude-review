@@ -713,14 +713,48 @@ class RoundSubmission(BaseModel):
     comment_count: int
 
 
+class StaleStep(BaseModel):
+    """A step of the story told whose code a round changed after it was told: its chapter, its file, its lines now."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The chapter that tells it, by its id
+    chapter: str
+    file: str
+    lines: LineSpan
+
+
+class StoryWentStale(BaseModel):
+    """What of the story the agent told a round moved the code on under, for it to tell the story again."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The round the diff that found it was taken again in
+    round: int = Field(ge=FIRST_ROUND)
+    # The steps whose code changed since they were told
+    steps: list[StaleStep]
+    # How many lines the change added or removed that no step tells now
+    left_out: int
+
+
 class StoryRequested(BaseModel):
     """The reader asking for a story of the change.
 
-    It carries nothing: the story asked for is of the change the review
-    holds, whole, so there is nothing to name.
+    The story asked for is of the change the review holds, whole, so there
+    is nothing to name. Where a story was told and a round moved the code on
+    under it, the request says what went stale, as it stands when an agent
+    takes the request; as it waits to be taken it says nothing, so the
+    request taken back is the one handed over.
     """
 
     model_config = ConfigDict(frozen=True)
+
+    # None for a first story, and for a request not yet taken
+    stale: StoryWentStale | None = None
+
+    def as_taken(self, stale: StoryWentStale | None) -> StoryRequested:
+        """The request as an agent takes it, saying what went stale of the story held at that moment, if anything."""
+        return StoryRequested(stale=stale)
 
 
 class StoryCancelled(BaseModel):

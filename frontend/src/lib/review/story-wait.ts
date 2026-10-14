@@ -1,6 +1,6 @@
 /**
- * What a reader with no story to read is waiting on, said as one of four
- * kinds: whoever acts on the wait, or draws it, asks which, and never
+ * What a reader with no current story to read is waiting on, said as one of
+ * four kinds: whoever acts on the wait, or draws it, asks which, and never
  * weighs the facts itself.
  *
  * The page holds two facts of it and no third: how the asking for a story
@@ -13,7 +13,8 @@
 import type { StoryAsking } from '$lib/types';
 
 /**
- * What the reader is waiting on while the review holds no story.
+ * What the reader is waiting on while the review holds no story that is
+ * current: none, or one a round moved the code on under.
  *
  * `unasked`: nobody asked for one, or the request has not landed yet.
  * `writing`: one was asked for and is on its way: an agent took the
@@ -42,7 +43,7 @@ const AWAITED: Record<StoryWait['kind'], boolean> = {
 };
 
 /**
- * What a reader with no story held is waiting on. A request an agent took
+ * What a reader with no current story held is waiting on. A request an agent took
  * is being written whoever is attached now: an agent that went quiet is
  * judged by how long the reader has waited, never guessed at here.
  */
@@ -53,14 +54,14 @@ export function waitOf(asking: StoryAsking | null, agentAttached: boolean): Stor
 	return NOBODY_ATTACHED;
 }
 
-/** Whether the reader still waits for a story they asked for. With a story held there is no wait at all. */
+/** Whether the reader still waits for a story they asked for. With a current story held there is no wait at all. */
 export function isAwaited(wait: StoryWait | null): boolean {
 	return wait !== null && AWAITED[wait.kind];
 }
 
 /**
- * Whether a story can be asked for now: none is held, and none is on its
- * way. One the reader stopped can be: asking again is theirs to do.
+ * Whether a story can be asked for now: no current one is held, and none is
+ * on its way. One the reader stopped can be: asking again is theirs to do.
  */
 export function canBeAskedFor(wait: StoryWait | null): boolean {
 	return wait !== null && !AWAITED[wait.kind];

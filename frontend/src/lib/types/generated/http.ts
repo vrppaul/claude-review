@@ -1688,6 +1688,18 @@ export interface components {
             narrowed: boolean;
         };
         /**
+         * StaleStep
+         * @description A step of the story told whose code a round changed after it was told: its chapter, its file, its lines now.
+         */
+        StaleStep: {
+            /** Chapter */
+            chapter: string;
+            /** File */
+            file: string;
+            /** Lines */
+            lines: string;
+        };
+        /**
          * StatusRequest
          * @description Request body for POST /api/status — what only the agent knows.
          *
@@ -1851,6 +1863,7 @@ export interface components {
              * @enum {string}
              */
             type: "story_request";
+            stale: components["schemas"]["StoryWentStale"] | null;
         };
         /**
          * StoryResponse
@@ -1875,6 +1888,18 @@ export interface components {
             steps: number;
             /** Left Out */
             left_out: components["schemas"]["LeftOutOfFile"][];
+        };
+        /**
+         * StoryWentStale
+         * @description What of the story the agent told a round moved the code on under.
+         */
+        StoryWentStale: {
+            /** Round */
+            round: number;
+            /** Steps */
+            steps: components["schemas"]["StaleStep"][];
+            /** Left Out */
+            left_out: number;
         };
         /**
          * SubmitRequest

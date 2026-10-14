@@ -4,6 +4,9 @@ import { handOverNext } from './pushes';
 import { openReview, settingsWithStoriesOn } from './review';
 import { ASKED, STOPPED, storyHeld, TAKEN } from './story';
 
+// A story held that a round moved the code on under
+const MOVED_ON = storyHeld({}, { moved_on: { round: 2, left_out_when_told: 0 } });
+
 /** A server that keeps the reader's choices, and takes every story asked for or stopped. */
 function serving(): FakeServer {
 	const server = takingStoryAskings();
@@ -43,6 +46,15 @@ describe('turning stories on', () => {
 		await review.turnStoriesOn();
 
 		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
+	});
+
+	it('asks for the story held told again, where a round moved the code on under it', async () => {
+		const server = serving();
+		const review = openReview({ story: MOVED_ON });
+
+		await review.turnStoriesOn();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
 	});
 
 	it('asks for a story the reader stopped: turned on, stories are wanted again', async () => {
@@ -97,6 +109,17 @@ describe('turning stories off', () => {
 		await review.turnStoriesOff();
 
 		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
+	});
+
+	it('stops the story held being told again, and leaves it on screen to be read', async () => {
+		const server = serving();
+		const review = openReview({ settings: await settingsWithStoriesOn(server), story: MOVED_ON, asking: TAKEN });
+		review.views.choose('story');
+
+		await review.turnStoriesOff();
+
+		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
+		expect(review.views.onScreen.name).toBe('story');
 	});
 
 	it.each([

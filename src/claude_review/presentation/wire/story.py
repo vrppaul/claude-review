@@ -15,14 +15,13 @@ everything wrong with its story in one answer.
 
 from typing import Annotated, Self
 
-from pydantic import ConfigDict, Field, PlainSerializer, PlainValidator, WithJsonSchema
+from pydantic import ConfigDict, Field
 
-from claude_review.domain import models, story
+from claude_review.domain import story
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireBool, WireModel
+from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, LinesWritten, WireBool, WireModel
 from claude_review.presentation.wire.content import DiffFile
-from claude_review.services.place_words import LINES_EXAMPLE, LINES_WRITTEN, line_span, lines_named
 from claude_review.services.review import review_story
 
 # The most of each thing one document may hold. A story with more is not a
@@ -43,41 +42,6 @@ StoryName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
 # A file of the change, by any name the change gives one: a name no thread
 # could carry is still told
 ChangedFile = Annotated[str, Field(max_length=MAX_PATH_LENGTH)]
-
-# How the API describes a step's lines: text, as `LINES_WRITTEN` has it
-LINES_SCHEMA = {"type": "string", "pattern": LINES_WRITTEN.pattern}
-NOT_TEXT = f"wants lines as text, like {LINES_EXAMPLE}"
-
-
-def _lines_read(written: object) -> models.LineSpan:
-    """A step's lines as the agent wrote them, read; lines the review holds already are taken as they are.
-
-    Raises:
-        ValueError: if they are neither, or text that names no lines: what
-            pydantic reads as a field refused, where any other error would
-            be a fault of this side.
-    """
-    match written:
-        case models.LineSpan():
-            return written
-        case str():
-            return lines_named(written)
-        case _:
-            raise ValueError(NOT_TEXT)
-
-
-def _lines_written(lines: models.LineSpan) -> str:
-    """A step's lines as the agent writes them, for a document sent on as it was read."""
-    return line_span(lines.first, lines.last)
-
-
-# A step's lines in the agent's document: written "42" or "104-129", held as the lines they name
-LinesWritten = Annotated[
-    models.LineSpan,
-    PlainValidator(_lines_read),
-    PlainSerializer(_lines_written, return_type=str),
-    WithJsonSchema(LINES_SCHEMA),
-]
 
 
 class StoryInput(WireModel):

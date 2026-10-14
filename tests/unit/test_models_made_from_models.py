@@ -23,7 +23,10 @@ from claude_review.domain.models import (
     OverviewText,
     ReaderSettings,
     SaidInPanel,
+    StaleStep,
     StoryAnchor,
+    StoryRequested,
+    StoryWentStale,
     Theme,
     TurnAuthor,
     Unshown,
@@ -102,6 +105,10 @@ ASKED_AT = 1_760_000_000_000
 TAKEN_AT = 1_760_000_004_000
 ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
 TAKEN_ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=False)
+# What went stale of a story a round moved the code on under: one step, and two lines no step tells
+WENT_STALE = StoryWentStale(
+    round=2, steps=[StaleStep(chapter="ch-1", file="src/moved.py", lines=LineSpan(first=14, last=15))], left_out=2
+)
 
 MADE = [
     MadeFrom(what="a piece of a file", source=FILE, made=FILE.showing(OTHER_ROWS), replaced={"hunks"}),
@@ -163,6 +170,12 @@ MADE = [
     ),
     MadeFrom(
         what="a story's asking taken by an agent", source=ASKING, made=ASKING.taken(TAKEN_AT), replaced={"taken_at"}
+    ),
+    MadeFrom(
+        what="a request for a story as an agent takes it",
+        source=StoryRequested(),
+        made=StoryRequested().as_taken(WENT_STALE),
+        replaced={"stale"},
     ),
     MadeFrom(
         what="a story's asking stopped by the reader",

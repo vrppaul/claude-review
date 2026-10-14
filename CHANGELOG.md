@@ -114,7 +114,15 @@
   on, "Round 1 the
   code moved on in round 2" on the warning's; the contents then say beside
   "Not in the story" how many changed lines no step told when it was told,
-  and how many none tells now, "2 → 5", where the two differ.
+  and how many none tells now, "2 → 5", where the two differ, said in words
+  to a screen reader. Where the reader turned stories on, a story the code
+  moved on under is asked for again, by the one asking a first story is
+  asked by: the header says "Story · writing", the warning ends "The agent
+  is updating them." while it is so, and turning stories off in the gear
+  stops it. The agent's `story_request` carries `stale`, `null` for a first
+  story: the round, each changed step's chapter, file and lines as they now
+  stand ("104-131"), and how many changed lines no step tells, read as the
+  agent takes the request.
 - **A thread is one card under what it is about.** It hangs right under
   its line, as wide as the line less a little at each side, lifted off it
   and pointing up at it with a tail; one at the head of a file, the diff or

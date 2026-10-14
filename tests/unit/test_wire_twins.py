@@ -61,6 +61,10 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.PanelEntry, agent.PanelEntry, frozenset()),
     (models.SaidInPanel, agent.SaidInPanel, frozenset()),
     (models.RoundSubmission, agent.RoundSubmission, frozenset()),
+    # A request for a story, as the agent takes it: the kind of event it is, and what went stale
+    (models.StoryRequested, agent.StoryRequestEvent, frozenset({"type"})),
+    (models.StoryWentStale, agent.StoryWentStale, frozenset()),
+    (models.StaleStep, agent.StaleStep, frozenset()),
     (models.ReaderSettings, records.ReaderSettings, frozenset()),
     (models.GuideState, records.GuideState, frozenset()),
     # A thread as the page holds it, sent back with whatever is about it

@@ -18,12 +18,13 @@
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
  * which say how far the telling had got, and changed by what the review
- * tells after them. What the reader is waiting on while no story is held
- * is worked out from it (`story-wait.ts`), never kept. Asking and
- * stopping are requests made here and answered there: nothing of the
- * asking changes on this page until the review says so. When a story is
- * wanted — the reader's settings, the view on screen — is the review's own
- * to join.
+ * tells after them, a story told among it, which ends the asking. What the
+ * reader is waiting on while no story held is current — none is held, or a
+ * round moved the code on under it — is worked out from it
+ * (`story-wait.ts`), never kept. Asking and stopping are requests made here
+ * and answered there: nothing of the asking changes on this page until the
+ * review says so. When a story is wanted — the reader's settings, the view
+ * on screen — is the review's own to join.
  *
  * A story told while the page is open may land while the reader reads the
  * files, and the page never changes the view for them: it holds how that
@@ -49,9 +50,14 @@ import type { StoryAsking, StoryHeld } from '$lib/types';
  */
 export type StoryOrWait = { kind: 'story'; held: StoryHeld } | { kind: 'wait'; wait: StoryWait };
 
-/** What stands where the story is read, worked out from what the page holds of the story, its asking and its agent. */
-function storyOrWaitOf(held: StoryHeld | null, asking: StoryAsking | null, agentAttached: boolean): StoryOrWait {
-	return held === null ? { kind: 'wait', wait: waitOf(asking, agentAttached) } : { kind: 'story', held };
+/** What stands where the story is read: the story held, or what the reader waits on while none is. */
+function storyOrWaitOf(held: StoryHeld | null, wait: StoryWait): StoryOrWait {
+	return held === null ? { kind: 'wait', wait } : { kind: 'story', held };
+}
+
+/** Whether a story is held that is current: told of the code under review, which no round moved on since. */
+function isCurrent(held: StoryHeld | null): boolean {
+	return held !== null && held.moved_on === null;
 }
 
 /**
@@ -109,9 +115,11 @@ export class ReviewStory {
 	readonly #contents: StoryContents;
 	// And the pieces of what it lists, laid out once, not at every question asked of them
 	readonly #pieces: StoryPieces;
-	// The story held, or what the reader waits on while none is, worked out anew whenever a fact it is read off changes
+	// What the reader waits on while no story held is current, worked out anew whenever the asking or its agent changes
+	readonly #askingWait: StoryWait;
+	// The story held, or what the reader waits on while none is
 	readonly #storyOrWait: StoryOrWait;
-	// What the reader waits on, read off that: nothing, once a story is held
+	// What the reader waits on: nothing while the story held is current
 	readonly #wait: StoryWait | null;
 	// Which read is the latest. Two can be in flight — two stories told one
 	// after the other — and only the latest is held, whatever order the
@@ -128,8 +136,9 @@ export class ReviewStory {
 		this.#sayInPanel = sayInPanel;
 		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story));
 		this.#pieces = $derived(piecesOf(this.#contents));
-		this.#storyOrWait = $derived(storyOrWaitOf(this.#held, this.#asking, this.#agentAttached()));
-		this.#wait = $derived(this.#storyOrWait.kind === 'wait' ? this.#storyOrWait.wait : null);
+		this.#askingWait = $derived(waitOf(this.#asking, this.#agentAttached()));
+		this.#storyOrWait = $derived(storyOrWaitOf(this.#held, this.#askingWait));
+		this.#wait = $derived(isCurrent(this.#held) ? null : this.#askingWait);
 	}
 
 	/** The story held, on a take of the change, with the round it was told in; null while the agent has told none. */
@@ -143,9 +152,10 @@ export class ReviewStory {
 	}
 
 	/**
-	 * What the reader is waiting on while no story is held: one not asked
-	 * for, one being written, an agent to attach, or nothing more once they
-	 * stopped it. Null once a story is held: there is nothing to wait for.
+	 * What the reader is waiting on while no story held is current — none is
+	 * held, or a round moved the code on under it: one not asked for, one
+	 * being written, an agent to attach, or nothing more once they stopped
+	 * it. Null while the story held is current: there is nothing to wait for.
 	 */
 	get wait(): StoryWait | null {
 		return this.#wait;
@@ -223,7 +233,8 @@ export class ReviewStory {
 
 	/**
 	 * Whether a story can be asked for now: one can be told of this review,
-	 * none is held and none is on its way. One the reader stopped can be.
+	 * no story held is current and none is on its way. One the reader
+	 * stopped can be.
 	 */
 	get canBeAskedFor(): boolean {
 		return this.canBeTold && canBeAskedFor(this.#wait);
@@ -256,10 +267,13 @@ export class ReviewStory {
 	 * The review said it was told another story: read it in place of the one
 	 * held here. What the reader had read through was of the story before,
 	 * and is forgotten as this one is held. A story that cannot be read
-	 * leaves the one before as it was, and as far read.
+	 * leaves the one before as it was, and as far read. Told, a story ends
+	 * the asking for one, as the review's own telling does: it says so to
+	 * no page, and a round that moves this story on asks anew.
 	 */
 	async readAnother(): Promise<void> {
 		this.#anotherAwaited = true;
+		this.#asking = null;
 		await this.read();
 	}
 

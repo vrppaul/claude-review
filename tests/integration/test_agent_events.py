@@ -7,6 +7,7 @@ reader handed over is still the agent's to read through all of that.
 
 import asyncio
 from http import HTTPMethod, HTTPStatus
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -18,6 +19,7 @@ from tests.helpers import (
     LOCAL_HEADERS,
     REVIEWED_FILE,
     SETTLE_SECONDS,
+    STORY_REQUEST_ROUTE,
     CallerThatLeaves,
     ReviewFactory,
     http_client,
@@ -25,10 +27,13 @@ from tests.helpers import (
     methods_allowed,
     one_line_file,
     opening_of,
+    repository_opening,
     thread_on_the_wire,
     thread_route,
     until_an_agent_waits,
+    write_files,
 )
+from tests.stories import ONLY_CHAPTER, as_the_agent_writes, step, story_of
 
 A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
 A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
@@ -36,6 +41,15 @@ A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
 # Far longer than the test waits for anything, so a poll that is still
 # waiting when the test looks is one that never noticed its caller leave
 ABANDONED_POLL_SECONDS = SETTLE_SECONDS * 10
+
+STORY_ROUTE = "/api/story"
+SUBMIT_ROUTE = "/api/submit"
+RETAKE_ROUTE = "/api/retake"
+# The file the repository was committed with, as the change leaves it, with two lines gained that a story
+# tells; and as a round's work leaves it, those two said another way, and one more line no step tells
+TOLD_FILE = "initial.txt"
+TOLD_CONTENT = "initial content\ntwo\nthree\n"
+SAID_ANOTHER_WAY = "initial content\nTwo\nThree\nfour\n"
 
 
 async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews: ReviewFactory) -> None:
@@ -86,6 +100,40 @@ async def test_nothing_handed_over_says_so_and_nothing_else(client: AsyncClient)
     event = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event == {"type": "timeout"}
+
+
+async def test_a_story_asked_for_where_none_was_told_says_nothing_went_stale(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        await agent.post(STORY_REQUEST_ROUTE)
+
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {"type": "story_request", "stale": None}
+
+
+async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_agent_what_went_stale(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    """Each step whose code changed, by its chapter, its file and its lines as they now stand; and what no step tells."""
+    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(TOLD_FILE, 2, 3))))
+        await agent.post(SUBMIT_ROUTE, json={"threads": [], "body": "Say it another way.", "end": False})
+        # The agent takes the round, does its work, and the diff is taken again
+        await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+        write_files(tmp_git_repo, {TOLD_FILE: SAID_ANOTHER_WAY})
+        await agent.post(RETAKE_ROUTE)
+        await agent.post(STORY_REQUEST_ROUTE)
+
+        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+
+    assert event == {
+        "type": "story_request",
+        "stale": {"round": 2, "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "2-3"}], "left_out": 1},
+    }
 
 
 @pytest.mark.parametrize("route", [EVENTS_ROUTE, thread_route(FIRST_THREAD_ID)], ids=["an-event", "a-thread"])

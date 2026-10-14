@@ -173,7 +173,9 @@ function raise(review: Review, push: PointPush): void {
  * is being read on screen. Which files changed is what takes the tick off
  * the ones the agent rewrote. The review followed the story it holds onto
  * the diff before it said it was taken: read after the diff, the story is
- * of the same take, and what was read of it stands. A diff the page read
+ * of the same take, and what was read of it stands; one the round moved the
+ * code on under is asked for again where the reader wants stories, as a
+ * page opening asks for one it has not got. A diff the page read
  * after the retake is already the retaken one, and so is the story: only
  * the threads move, and the ticks the draft kept from before it come off
  * what it rewrote, with no news of a retake.
@@ -185,7 +187,19 @@ async function landed(review: Review, push: DiffPush, heard: HeardPush): Promise
 	// The conversation is about code that has just changed under it, so the
 	// panel says where one lot of answers stops applying
 	review.conversation.note(retakenNote(push.file_count, moved));
-	if (!heard.factsHoldIt) await readStoryAgain(review, (story) => story.read());
+	if (heard.factsHoldIt) return;
+	await storyAgain(review);
+}
+
+/**
+ * Read the story the review holds now, then ask for one where the reader
+ * wants stories and no story held is current: after a gap, which may have
+ * hidden anything, and after a retake, which may have moved the code on
+ * under the story held.
+ */
+async function storyAgain(review: Review): Promise<void> {
+	await readStoryAgain(review, (story) => story.read());
+	await review.wantStory();
 }
 
 /** Take in a push the connection hands over, unless this page's socket handed it over before. */
@@ -222,8 +236,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		review.conversation.note(notCaughtUpNote(error));
 		return;
 	}
-	await readStoryAgain(review, (story) => story.read());
-	await review.wantStory();
+	await storyAgain(review);
 }
 
 /**

@@ -291,6 +291,41 @@ describe('what the server pushes, taken in', () => {
 			expect([review.story.progress.isRead(CHAPTER_READ), review.story.arrival]).toEqual([true, 'none']);
 		});
 	});
+
+	describe('with a story held that the retake leaves moved on', () => {
+		// The story the review followed onto the diff taken again, a round having moved the code on under it
+		const MOVED_ON = storyHeld({}, { take: A_LATER_TAKE, moved_on: { round: 2, left_out_when_told: 0 } });
+
+		/** A server a retake lands from, holding that story, and taking a story asked for. */
+		function retakingUnderAStoryThatMovedOn(): FakeServer {
+			const server = takingStoryAskings();
+			server.answer('POST /api/anchors/follow', { anchors: [] });
+			server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], take: A_LATER_TAKE }));
+			server.answer('GET /api/story', storyResponse({ held: MOVED_ON }));
+			return server;
+		}
+
+		it('asks for the story told again, once, where the reader turned stories on', async () => {
+			const server = retakingUnderAStoryThatMovedOn();
+			const settings = await settingsWithStoriesOn(server);
+			review = openReview({ files: [untouched('a.py')], story: storyHeld(), settings });
+
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await settled();
+
+			expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+		});
+
+		it('asks for nothing where the reader left stories off', async () => {
+			const server = retakingUnderAStoryThatMovedOn();
+			review = openReview({ files: [untouched('a.py')], story: storyHeld() });
+
+			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
+			await settled();
+
+			expect(server.requestsTo('POST /api/story/request')).toEqual([]);
+		});
+	});
 });
 
 // Where the telling goes on after what could not be handed over

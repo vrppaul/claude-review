@@ -13,8 +13,9 @@ of a later take can tell that they are not yet of the code it shows.
 The reader may ask for a story rather than wait to be told one. That
 asking is kept here, beside the story that ends it: when it was asked, when
 an agent took the request, whether the reader stopped it. A story is asked
-for only while none is held and none is awaited, so however many pages
-ask, and however often, the review is asked once.
+for only while no story held is current — none is held, or a round moved
+the code on under it — and none is awaited, so however many pages ask,
+and however often, the review is asked once.
 """
 
 import asyncio
@@ -22,7 +23,7 @@ import asyncio
 from pydantic import BaseModel, ConfigDict, Field
 
 from claude_review.domain.interfaces import Clock
-from claude_review.domain.models import FIRST_ROUND
+from claude_review.domain.models import FIRST_ROUND, StaleStep, StoryWentStale
 from claude_review.domain.story import Step, Story, StoryAsking, ToldStory
 from claude_review.services import story_telling
 from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
@@ -86,11 +87,13 @@ class ReviewStory:
         return self._asking
 
     def ask(self) -> StoryAsking | None:
-        """Begin the reader's asking for a story, now, unless a story is held or one is still awaited.
+        """Begin the reader's asking for a story, now, unless the story held is current or one is still awaited.
 
+        A story held is current until a round moves the code on under it:
+        then it is asked for again, to be told of the code as it stands.
         Asked again after the reader stopped it, the asking begins anew.
         """
-        if self._held is not None or self._awaited is not None:
+        if (self._held is not None and self._held.moved_on is None) or self._awaited is not None:
             return None
         self._asking = StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False)
         return self._asking
@@ -146,6 +149,22 @@ class ReviewStory:
                 take=change.take,
                 moved_on=_moved_on(told.story, followed, round_number=round_number),
             )
+
+    def went_stale(self) -> StoryWentStale | None:
+        """What went stale of the story held, as it stands now: None while it is current, or none is held."""
+        held = self._held
+        if held is None or held.moved_on is None:
+            return None
+        return StoryWentStale(
+            round=held.moved_on.round,
+            steps=[
+                StaleStep(chapter=chapter.id, file=step.file, lines=step.lines)
+                for chapter in held.story.chapters
+                for step in chapter.steps
+                if step.changed_since_told
+            ],
+            left_out=_changed_lines_left_out(held.story),
+        )
 
     @property
     def _awaited(self) -> StoryAsking | None:

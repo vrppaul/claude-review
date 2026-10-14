@@ -295,6 +295,15 @@ describe('what a story leaves out, once a round moved the code on under it', () 
 		expect(said(screen.getByTestId('contents-left-out'))).toBe('Not in the story 2 → 5');
 	});
 
+	it('says both counts in words to whoever cannot see the arrow', () => {
+		drawnLeavingOut(2);
+
+		const named = 'Not in the story, 2 changed lines no step told when the story was told, 5 now';
+		expect(within(screen.getByTestId('contents')).getByRole('button', { name: named })).toBe(
+			screen.getByTestId('contents-left-out')
+		);
+	});
+
 	it('says no count where as many are left out as when it was told', () => {
 		drawnLeavingOut(5);
 

@@ -4,6 +4,7 @@
 	import type { ChapterListed } from '$lib/review/story-contents';
 	import AskableBlock from './AskableBlock.svelte';
 	import {
+		AGENT_UPDATING_REASONS,
 		CHANGED_AFTER_TOLD_HEAD,
 		chapterNumber,
 		CODE_BELOW_IS_CURRENT,
@@ -44,11 +45,15 @@
 	{/snippet}
 	{#if chapter.changedSteps > 0 && movedOn !== null}
 		<!-- A round changed code the chapter tells after it was told: said first, in a warning's frame, since
-			what the agent says below was said of the code before -->
+			what the agent says below was said of the code before; and that the agent is updating it, only
+			while it is -->
 		<p data-testid="chapter-changed" class="cr-warning-frame px-3 py-2">
 			<b class="font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</b>
 			{stepsChangedIn(chapter.changedSteps, movedOn.round)}
 			{CODE_BELOW_IS_CURRENT}
+			{#if review.story.wait?.kind === 'writing'}
+				{AGENT_UPDATING_REASONS}
+			{/if}
 		</p>
 	{/if}
 	<!-- Why its changes belong together, in the agent's voice, and where to doubt them, in a warning: each

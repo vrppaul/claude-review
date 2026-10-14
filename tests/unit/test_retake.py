@@ -26,7 +26,14 @@ from claude_review.services.review.review_story import CodeMovedOn, ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file
-from tests.stories import changed_file, hunk, step, story_of
+from tests.stories import (
+    FIRST_REWRITTEN,
+    NOTHING_LEFT_OUT,
+    ONE_MORE_LEFT_OUT,
+    SECOND_ROUND,
+    TOLD_OF,
+    told_then_followed,
+)
 
 ROOT = Path("/repository")
 # The commit the review opened on: its uncommitted changes, as HEAD stood then
@@ -40,17 +47,6 @@ OLDER_FILE = "older.py"
 NEWER_FILE = "newer.py"
 # Which staging is the first retake's: the opening's comes before it
 FIRST_RETAKES_STAGING = 1
-
-# A file the change added two lines to, a story that tells the first of them, and how a round's work may leave
-# the file: a third line added, the first rewritten, or the second taken out
-STORIED = "src/storied.py"
-TOLD_OF = [changed_file(STORIED, hunk(1, 1, "++"))]
-ONE_MORE_LEFT_OUT = [changed_file(STORIED, hunk(1, 1, "+++"))]
-FIRST_REWRITTEN = [changed_file(STORIED, hunk(1, 1, "-++"))]
-NOTHING_LEFT_OUT = [changed_file(STORIED, hunk(1, 1, "+"))]
-THE_FIRST_LINE = story_of(step(STORIED, 1, 1))
-# The round the diff is taken again in, once the first was sent
-SECOND_ROUND = FIRST_ROUND + 1
 
 
 def _diff_adding(path: str) -> str:
@@ -214,41 +210,29 @@ async def test_a_tree_git_will_not_stage_as_the_review_opens_leaves_on_screen_wh
     assert source.content.take == FIRST_TAKE
 
 
-async def _told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
-    """A story told of the first take of a change, then followed onto each take after it, in the second round."""
-    story = ReviewStory(FixedClock(MARKED_AT))
-    [told_of, *after] = takes
-    change = ReviewContent.opening_on(told_of)
-    await story.tell(THE_FIRST_LINE, change, round_number=FIRST_ROUND)
-    for files in after:
-        change = change.taken_again(files, frozenset())
-        await story.follow(change, round_number=SECOND_ROUND)
-    return story
-
-
 async def test_a_story_followed_onto_a_later_take_is_of_that_take_and_still_of_the_round_that_told_it() -> None:
-    held = (await _told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
+    held = (await told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
 
     assert held is not None
     assert (held.take, held.round) == (FIRST_TAKE + 1, FIRST_ROUND)
 
 
 async def test_a_story_more_is_left_out_of_says_the_round_the_code_moved_on_in_and_what_it_left_out_when_told() -> None:
-    held = (await _told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
+    held = (await told_then_followed(TOLD_OF, ONE_MORE_LEFT_OUT)).held
 
     assert held is not None
     assert held.moved_on == CodeMovedOn(round=SECOND_ROUND, left_out_when_told=1)
 
 
 async def test_a_story_whose_step_changed_has_moved_on() -> None:
-    held = (await _told_then_followed(TOLD_OF, FIRST_REWRITTEN)).held
+    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN)).held
 
     assert held is not None
     assert held.moved_on is not None
 
 
 async def test_a_story_less_is_left_out_of_with_no_step_changed_is_current() -> None:
-    held = (await _told_then_followed(TOLD_OF, NOTHING_LEFT_OUT)).held
+    held = (await told_then_followed(TOLD_OF, NOTHING_LEFT_OUT)).held
 
     assert held is not None
     assert held.moved_on is None
@@ -256,7 +240,7 @@ async def test_a_story_less_is_left_out_of_with_no_step_changed_is_current() -> 
 
 async def test_a_story_whose_code_was_put_back_as_it_was_told_is_current_again() -> None:
     """Followed from the story as it was told, never from the take before."""
-    held = (await _told_then_followed(TOLD_OF, FIRST_REWRITTEN, TOLD_OF)).held
+    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN, TOLD_OF)).held
 
     assert held is not None
     assert held.moved_on is None

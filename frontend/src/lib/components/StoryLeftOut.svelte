@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { LeftOutListed } from '$lib/review/story-contents';
 	import { LEFT_OUT_PART } from '$lib/review/story-keys';
-	import { counted } from '$lib/utils/words';
+	import { CHANGED_LINES, counted } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
 	import { NOT_IN_THE_STORY } from './story-words';
@@ -31,7 +31,7 @@
 				{#snippet beside()}
 					{#if told.changed_lines > 0}
 						<span class="cr-muted text-xs">
-							{counted(told.changed_lines, { one: 'changed line', many: 'changed lines' })}
+							{counted(told.changed_lines, CHANGED_LINES)}
 						</span>
 					{/if}
 				{/snippet}

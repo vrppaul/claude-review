@@ -322,9 +322,11 @@ export class Review {
 	 * they turned stories on; or a story is held already, told by an agent of
 	 * its own accord and so paid for; or one is on its way, asked for from
 	 * another page of this review, whose choice this page was never told.
-	 * Its wait, and the way to stop it, must be in reach wherever the header
-	 * says it is being written. Where none of these holds, reading the review
-	 * as its story means having one written, which spends the agent's tokens:
+	 * Wherever the header says a story is being written, the way to stop it
+	 * must be in reach: the wait screen's Stop while no story is held; over
+	 * a story a round moved the code on under, drawn while it is told again,
+	 * the gear, turning stories off. Where none of these holds, reading the
+	 * review as its story means having one written, which spends the agent's tokens:
 	 * the reader is asked before that, and a review they open is read by its
 	 * files though they chose the story last.
 	 */
@@ -334,10 +336,11 @@ export class Review {
 
 	/**
 	 * Ask the agent for a story where the reader wants one and has none
-	 * coming: they turned stories on, one can be told of this review, none
-	 * is held and none was asked for. Called as the page opens and after a
-	 * gap in what the server told. Never where the reader stopped the one
-	 * asked for: a reload does not start it again.
+	 * coming: they turned stories on, one can be told of this review, no
+	 * story held is current and none was asked for. Called as the page
+	 * opens, after a gap in what the server told, and once the diff is taken
+	 * again. Never where the reader stopped the one asked for: a reload does
+	 * not start it again.
 	 */
 	async wantStory(): Promise<void> {
 		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
@@ -361,7 +364,8 @@ export class Review {
 	 * awaited is stopped: it would spend the tokens the reader turned
 	 * stories off to keep. With none held the files come on screen: the
 	 * story view has no story to draw, and the reader has said they want
-	 * none. A story held is paid for, and stays to be read.
+	 * none. A story held is paid for, and stays to be read; one a round
+	 * moved the code on under is told again no more.
 	 */
 	async turnStoriesOff(): Promise<void> {
 		if (this.story.held === null) this.views.showFiles();

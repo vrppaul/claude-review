@@ -100,7 +100,7 @@ def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
         case models.PanelCancel():
             return CancelEvent(cancel=PanelCancel.of(taken))
         case models.StoryRequested():
-            return StoryRequestEvent()
+            return StoryRequestEvent.of(taken)
         case models.StoryCancelled():
             return StoryCancelEvent()
         case Silence.CLOSED:

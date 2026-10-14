@@ -28,6 +28,9 @@ function nobodyAttached(): boolean {
 /** A page whose panel nobody reads: what the story says there is said to nobody. */
 function saidToNobody(): void {}
 
+/** A story held that a round moved the code on under. */
+const MOVED_ON = storyHeld({}, { moved_on: { round: 2, left_out_when_told: 0 } });
+
 /** What a review that holds a story answers of it. */
 function holdingAStory(): StoryResponse {
 	return storyResponse({ held: storyHeld() });
@@ -126,13 +129,36 @@ describe('what a page holds of the asking for a story', () => {
 		expect(story.wait).toEqual({ kind: 'writing', asking: TAKEN });
 	});
 
-	it('is nothing to wait on once a story is held', async () => {
+	it('is nothing to wait on once a story is held that is current', async () => {
 		fakeServer().answer('GET /api/story', holdingAStory());
 		const story = pageStory({ asking: TAKEN });
 
 		await story.read();
 
 		expect(story.wait).toBeNull();
+	});
+
+	it('is what the reader waits on while a round has moved the code on under the story held, still drawn', () => {
+		const story = pageStory({ held: MOVED_ON, asking: TAKEN });
+
+		expect(story.wait).toEqual({ kind: 'writing', asking: TAKEN });
+		expect(story.storyOrWait).toEqual({ kind: 'story', held: MOVED_ON });
+	});
+
+	it('lets a story be asked for over one a round moved the code on under', () => {
+		expect(pageStory({ held: MOVED_ON }).canBeAskedFor).toBe(true);
+	});
+
+	it('is over once the review says another story was told: the next round to move it on asks again', async () => {
+		const server = fakeServer();
+		const story = pageStory({ held: MOVED_ON, asking: TAKEN });
+		server.answer('GET /api/story', holdingAStory());
+		await story.readAnother();
+
+		server.answer('GET /api/story', storyResponse({ held: MOVED_ON }));
+		await story.read();
+
+		expect(story.wait).toEqual({ kind: 'unasked' });
 	});
 });
 

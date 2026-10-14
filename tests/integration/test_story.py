@@ -458,6 +458,20 @@ def test_a_story_stopped_before_any_agent_took_the_request_reaches_no_agent(page
     assert agent_waits(page_of_the_change) == TimeoutEvent()
 
 
+async def test_a_story_asked_for_again_once_its_code_moved_on_and_stopped_before_any_agent_took_it_reaches_no_agent(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    await tell(agent, WHOLE_STORY)
+    await take_again_after_a_round(agent, tmp_git_repo)
+    # The round the agent takes first, as it does the work the round asked for
+    await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+    await agent.post(STORY_REQUEST_ROUTE)
+
+    await agent.post(STORY_CANCEL_ROUTE)
+
+    assert EVENTS.validate_json((await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).content) == TimeoutEvent()
+
+
 def test_a_story_stopped_after_an_agent_took_the_request_tells_the_agent_to_stop(
     page_of_the_change: TestClient, clock: FixedClock
 ) -> None:
@@ -608,7 +622,7 @@ def test_a_story_told_before_the_agent_heard_it_was_stopped_leaves_nothing_to_st
     assert agent_waits(page_of_the_change) == TimeoutEvent()
 
 
-def test_a_story_asked_for_while_one_is_held_asks_nothing(page_of_the_change: TestClient) -> None:
+def test_a_story_asked_for_while_a_current_one_is_held_asks_nothing(page_of_the_change: TestClient) -> None:
     """A second telling of the same change would be paid for and say what the first said."""
     page_of_the_change.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
 

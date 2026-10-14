@@ -234,7 +234,9 @@ class Review:
         """The next thing the reader handed over, for the agent asking.
 
         Waiting is what says most plainly that an agent is there, which is
-        what makes rounds worth offering in the review.
+        what makes rounds worth offering in the review. A request for a
+        story says what went stale of the story held as the agent takes it:
+        the last retake before then is what it is told of.
         """
         with self._answerer.waiting():
             taken = await self._inbox.take(within=within, caller_left=caller_left)
@@ -242,6 +244,7 @@ class Review:
             # reader's stopping finds the request either still waiting or noted as taken, never between
             if isinstance(taken, StoryRequested):
                 self._story_request_taken()
+                return taken.as_taken(self._story.went_stale())
             return taken
 
     def ask(self, question_id: str, thread: ThreadDraft) -> None:
@@ -433,8 +436,10 @@ class Review:
         """Take the reader's asking for a story of the change, for an agent to pick up, and tell the pages it is asked.
 
         Asked once however often it is said: while a story is awaited, or
-        one is held, nothing changes. With no agent there the request waits,
-        as everything handed over does, for the first that asks.
+        the one held is current, nothing changes. Over a story a round moved
+        the code on under, it asks for that story told again. With no agent
+        there the request waits, as everything handed over does, for the
+        first that asks.
 
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.

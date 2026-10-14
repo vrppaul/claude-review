@@ -80,7 +80,8 @@ def wait_command(*, client: ReviewClient, seconds: float, until_event: bool) -> 
     about a thread, answered with `claude-review reply`; a "message" from
     the agent panel, answered with `claude-review say`; a "round" of the
     review; a "cancel" taking a message back; a "story_request" asking for a
-    story of the change, answered with `claude-review story`; a
+    story of the change, answered with `claude-review story`, its "stale"
+    saying what a round moved on of a story told before; a
     "story_cancel" stopping the story asked for; "timeout" if nothing was
     said, or "closed" once the review is over. With --until-event a timeout
     is never printed: the command waits on until something else happens.

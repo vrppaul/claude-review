@@ -315,16 +315,16 @@ async def test_a_story_the_review_refuses_fails_in_a_line_naming_everything_wron
     assert (await _story_held(review_of_a_change)).held is None
 
 
-async def test_a_story_the_reader_asks_for_is_printed_by_wait_as_its_kind_and_nothing_more(
+async def test_a_first_story_the_reader_asks_for_is_printed_by_wait_as_its_kind_with_nothing_gone_stale(
     review_of_a_change: RunningReview,
 ) -> None:
-    """The request says only that a story is wanted: it is of the change the review holds, so there is no more to say."""
+    """The request says that a story is wanted: it is of the change the review holds, and no story told went stale."""
     async with AsyncClient(base_url=review_of_a_change.url) as page:
         await page.post(STORY_REQUEST_ROUTE)
 
     result = await _run(review_of_a_change, "wait", "--seconds", "5")
 
-    assert result.output == '{"type":"story_request"}\n'
+    assert result.output == '{"type":"story_request","stale":null}\n'
 
 
 async def test_a_file_a_story_leaves_out_is_printed_to_be_read_never_obeyed(
