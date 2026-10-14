@@ -17,6 +17,10 @@
  * held, until the diff of its take is read with it. Reads are taken in one
  * at a time by the review, so the last read is the last held.
  *
+ * Its diagram is drawn once and kept as long as the review: drawing it
+ * takes mermaid a moment, and the story drawn again each time it comes on
+ * screen would grow under the reader as it did.
+ *
  * The reader may ask for a story, and the review holds how that asking
  * stands. The page holds one copy of it: read with the review's facts,
  * which say how far the telling had got, and replaced by whatever the
@@ -37,6 +41,7 @@
  */
 
 import { askForStory, readStory, stopStory } from '$lib/api/review-api';
+import type { Drawing } from '$lib/dom/diagram';
 import { storyNotAskedForNote, storyNotReadNote, storyNotStoppedNote } from '$lib/review/panel-notes';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
@@ -50,6 +55,20 @@ import type { StoryAsking, StoryHeld } from '$lib/types';
  * and never neither, which whoever draws it reads off the kind.
  */
 export type StoryOrWait = { kind: 'story'; held: StoryHeld } | { kind: 'wait'; wait: StoryWait };
+
+/** The story's diagram drawn from one source: the drawing once mermaid has drawn it, and until then the drawing on its way. */
+interface DiagramDrawn {
+	source: string;
+	drawing: Drawing | Promise<Drawing>;
+}
+
+/** Draw the story's diagram from a source, keeping the drawing itself in place of its promise once it is drawn. */
+function drawnFrom(source: string, draw: (source: string) => Promise<Drawing>): DiagramDrawn {
+	const onItsWay = draw(source);
+	const drawn: DiagramDrawn = { source, drawing: onItsWay };
+	void onItsWay.then((drawing) => (drawn.drawing = drawing));
+	return drawn;
+}
 
 /** What stands where the story is read: the story held, or what the reader waits on while none is. */
 function storyOrWaitOf(held: StoryHeld | null, wait: StoryWait): StoryOrWait {
@@ -127,6 +146,8 @@ export class ReviewStory {
 	readonly #storyOrWait: StoryOrWait;
 	// What the reader waits on: nothing while the story held is current
 	readonly #wait: StoryWait | null;
+	// The story's diagram as drawn, kept as long as the review: the story coming on screen again draws it no more
+	#diagram: DiagramDrawn | null = null;
 
 	constructor({ canBeTold, held, asking, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
 		this.canBeTold = canBeTold;
@@ -203,6 +224,17 @@ export class ReviewStory {
 	 */
 	get contents(): StoryContents {
 		return this.#contents;
+	}
+
+	/**
+	 * The story's diagram drawn from a source, drawn once, as whoever draws
+	 * it first draws it: the drawing itself once mermaid has drawn it, so the
+	 * story comes back on screen with it standing drawn, and until then the
+	 * drawing on its way. A source of another diagram is drawn in its place.
+	 */
+	diagramDrawn(source: string, draw: (source: string) => Promise<Drawing>): Drawing | Promise<Drawing> {
+		if (this.#diagram?.source !== source) this.#diagram = drawnFrom(source, draw);
+		return this.#diagram.drawing;
 	}
 
 	/**

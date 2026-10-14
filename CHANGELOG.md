@@ -17,7 +17,8 @@
   text mermaid did not expect there, and shows its source as written.
   Mermaid is fetched only when a story has a diagram to draw, and a source's
   own settings cannot change how safely, in what look or in what layout it
-  is drawn.
+  is drawn. It is drawn once: the story comes back on screen with it
+  standing drawn.
 - **The reader asks about the story's own words.** Pointed at, or reached
   by the keyboard, every block of the agent's words — the Task, Done and
   Doubt of the overview, each thing its lists hold, a chapter's why and

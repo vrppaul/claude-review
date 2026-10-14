@@ -212,6 +212,20 @@ describe("a story's diagram", () => {
 		expect(toTheEnd).toHaveBeenCalled();
 	});
 
+	it('is drawn once, and stands drawn the moment the story comes on screen again', async () => {
+		vi.mocked(drawDiagram).mockImplementation(drawnAs);
+		render(ReviewScreen, { props: { review } });
+		await within(figure()).findByTestId('diagram-drawing');
+
+		review.views.showFiles();
+		flushSync();
+		review.views.showStory();
+		flushSync();
+
+		expect(within(figure()).queryByTestId('diagram-drawing')).not.toBeNull();
+		expect(drawDiagram).toHaveBeenCalledOnce();
+	});
+
 	it('is drawn once, however often the story is read again', async () => {
 		vi.mocked(drawDiagram).mockImplementation(drawnAs);
 		fakeServer().answer('GET /api/story', storyResponse({ held: HELD }));

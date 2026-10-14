@@ -19,7 +19,9 @@
 	// What the drawing, and the dialog that draws it large, are called where the agent called it nothing
 	const UNCAPTIONED = 'The change drawn';
 
-	// What its two drawings are known by, on the page and to mermaid, which scopes each one's look by it
+	// What its two drawings are known by, on the page and to mermaid, which scopes each one's look by it. The
+	// one under the overview is kept by the story for as long as the review (`ReviewStory.diagramDrawn`), under
+	// the id of the figure that drew it first, and no other figure stands on the page with it
 	const figureId = $props.id();
 	const inlineId = `${figureId}-inline`;
 	const largeId = `${figureId}-large`;
@@ -87,10 +89,11 @@
 	{/if}
 {/snippet}
 
-<!-- The diagram under the overview's lines: only its caption while mermaid draws it. Its caption is written
-	in each branch, where the compiler sees it is the figure's own -->
+<!-- The diagram under the overview's lines: only its caption while mermaid draws it, the first time the
+	story comes on screen. Its caption is written in each branch, where the compiler sees it is the figure's
+	own -->
 <figure data-testid="story-diagram" aria-label={name} class="flex flex-col gap-2.5">
-	{#await drawDiagram(source, inlineId)}
+	{#await review.story.diagramDrawn(source, (drawn) => drawDiagram(drawn, inlineId))}
 		{#if diagram.caption}
 			<figcaption class="flex items-baseline gap-3 text-xs">{@render caption(false)}</figcaption>
 		{/if}
