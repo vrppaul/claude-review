@@ -167,6 +167,13 @@ const NO_INLINE_STYLING = [
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
 ];
 
+// Every icon is drawn once, as a row of ICONS that Icon draws by name: a
+// review found a speech bubble written into another component with numbers
+// of its own, beside the same bubble in ICONS
+const DRAWN_BY_ICON = 'Draw an icon with <Icon name="…">: its drawing is a row of ICONS in components/icons.ts.';
+// The one component that writes a drawing
+const ICON_COMPONENT = 'src/lib/components/Icon.svelte';
+
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
 const OWN_REQUESTS = 'Ask the server through lib/api/request.ts, which holds every request to its schema.';
@@ -241,6 +248,11 @@ export default tseslint.config(
 		// only destinations utils/safe-markup.ts lets through, and code is highlighted as the diff is
 		files: ['src/lib/components/MarkdownRenderer.svelte'],
 		rules: { 'svelte/no-at-html-tags': 'off' }
+	},
+	{
+		files: ['**/*.svelte'],
+		ignores: [ICON_COMPONENT],
+		rules: { 'svelte/no-restricted-html-elements': ['error', { elements: ['svg'], message: DRAWN_BY_ICON }] }
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them

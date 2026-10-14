@@ -217,6 +217,20 @@ async def test_a_thread_on_a_thing_the_overview_lists_is_in_sight_once_the_page_
     await expect(decision.locator('[data-testid="comment-thread"]:focus')).to_contain_text("Why in place?")
 
 
+async def test_a_comment_being_written_on_a_thing_the_overview_lists_is_in_sight_once_the_page_is_loaded_again(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    decision = await _open_the_lists(page)
+    await decision.hover()
+    await decision.get_by_test_id("ask-about-this").click()
+    await page.fill('[data-testid="comment-input"]', "Why in place?")
+
+    await page.reload()
+
+    await expect(decision.get_by_test_id("comment-input")).to_be_visible()
+
+
 async def test_a_press_on_the_heading_of_the_lists_a_thread_hangs_in_leaves_them_open(
     review: RunningReview, page: Page
 ) -> None:

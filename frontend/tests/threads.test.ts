@@ -386,6 +386,20 @@ describe('a thread is a conversation', () => {
 		expect(queryByTestId('awaiting-answer')).toBeNull();
 	});
 
+	it('keeps saying why a question could not be sent once nothing is there to ask', async () => {
+		const user = userEvent.setup({ delay: null });
+		fakeServer().refuse('POST /api/ask', SERVER_ERROR);
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { findByTestId, getByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+		await findByTestId('ask-error');
+
+		review.answerer.setAttached(false);
+		flushSync();
+
+		expect(getByTestId('ask-error')).toBeTruthy();
+	});
+
 	it('a settled thread gives back its space and says so on the way out', async () => {
 		const user = userEvent.setup({ delay: null });
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
@@ -419,6 +433,16 @@ describe('the head of the first turn of a thread', () => {
 		expect(opening.getByRole('button', { name: 'Edit' })).toBe(opening.getByTestId('edit-comment'));
 		expect(opening.getByRole('button', { name: 'Delete' })).toBe(opening.getByTestId('delete-comment'));
 		expect(opening.getByTestId('fold-comment')).toBeTruthy();
+	});
+
+	it("is the first turn's alone: a question asked after it holds nothing to do to the thread", () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
+
+		const { getAllByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+		const [, second] = getAllByTestId('thread-question');
+
+		expect(within(second).queryByTestId('resolve-comment')).toBeNull();
 	});
 
 	it('names the place the thread hangs on after how long ago it was said', () => {

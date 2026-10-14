@@ -167,6 +167,13 @@ tests. Remove items when done — don't check them off.
       `'the-reviews'`, `'a-narrower-bases'`, `'another-takes'`
       (`anchors/numbering.ts`): possessives with the apostrophe gone, and
       the last reads as a plural where it is compared.
+- [ ] `refactor(ui)`: where a thread hangs is said twice: `#hangsHere` in
+      `components/line-commenting.svelte.ts`, over the lines a drawing
+      places, and `fileDraws` in `anchors/placement.ts`, over the diff's
+      rows, for the narrower base's notice and the story's pieces. They
+      differ on the old number of a kept line, which the diff's rows carry
+      and a drawing places on the new side only: `fileDraws` counts a
+      thread on it as drawn, and it hangs under no line of the drawing.
 - [ ] `refactor(ui)`: a failed request for a diff is said three ways: an
       `Attempt` in two notices, `changedSinceFailed` in `FileSection`, and
       what the diff itself keeps of the whole review not put back.

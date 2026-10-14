@@ -7,7 +7,10 @@ import { fileName } from '$lib/utils/paths';
 const STORY = 'Story';
 // What stands between the parts of a block's place where there is room
 const PLACE_SEPARATOR = ' · ';
-// What starts every token of a block, and what parts the names in it
+// What starts every token of a block, and what parts the names in it. A
+// chapter is named in a token by its id, which the review holds to letters,
+// digits, dots, dashes and underscores: no colon, space or slash in it cuts
+// `@story:images-kept:why` short or splits it
 const TOKEN_START = '@story';
 const TOKEN_SEPARATOR = ':';
 // What stands between a list's word and an item's number in a token
