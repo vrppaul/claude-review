@@ -39,9 +39,9 @@
 </script>
 
 <script lang="ts">
-	import { untrack, type Snippet } from 'svelte';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { focusWhatRemains, isComposingText } from '$lib/dom/keyboard';
+	import { isComposingText } from '$lib/dom/keyboard';
 	import { arrowOffsetTo, type Placement } from './pane-placement';
 	import PopoverPanel from './PopoverPanel.svelte';
 
@@ -107,14 +107,24 @@
 	/**
 	 * The keyboard the pane held goes back to what had it before, or to the
 	 * control if that is gone — without moving the screen: where the reader is
-	 * looking is theirs, whatever they did while the pane was open. Only if it
-	 * is on nothing once the pane has gone: a row of the pane may have taken
-	 * the reader to a thread drawn as the pane went, which has it.
+	 * looking is theirs, whatever they did while the pane was open. It goes
+	 * back once the pane has gone, and only from where the pane's going left
+	 * it: on nothing, or on the control pressed to close it. A row of the pane
+	 * may have taken the reader to a thread drawn as the pane went, which
+	 * keeps it.
 	 */
 	function handBack() {
 		if (!keyboardHere) return;
 		keyboardHere = false;
-		focusWhatRemains(() => (keyboardWasOn?.isConnected ? keyboardWasOn : control));
+		void tick().then(giveBack);
+	}
+
+	/** Give the keyboard back to what had it before the pane opened, if it is where the pane's going left it. */
+	function giveBack() {
+		const focused = focusedElement();
+		if (focused !== null && focused !== control) return;
+		const back = keyboardWasOn?.isConnected ? keyboardWasOn : control;
+		back?.focus({ preventScroll: true });
 	}
 
 	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, or a modal above, which keeps it. */

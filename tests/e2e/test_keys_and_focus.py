@@ -247,6 +247,19 @@ async def test_the_help_opens_over_a_pane_and_gives_the_keyboard_back_into_it(
     assert await page.evaluate(FOCUSED_TEST_ID) == "settings-toggle"
 
 
+async def test_a_pane_opened_by_its_keys_from_a_field_and_closed_by_its_button_gives_the_keyboard_back_to_the_field(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_review(page, review)
+    await _start_a_comment(page, "Half a thought")
+    await page.keyboard.press("Control+Shift+Enter")
+    await page.get_by_test_id("finish-review").wait_for()
+
+    await page.get_by_test_id("quick-submit").click()
+
+    await expect(page.get_by_test_id("comment-input")).to_be_focused()
+
+
 async def _press(page: Page, test_id: str) -> None:
     """Press a control from the keyboard: the keyboard on it, then Enter."""
     await page.get_by_test_id(test_id).first.focus()
