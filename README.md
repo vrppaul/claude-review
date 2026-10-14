@@ -174,6 +174,7 @@ claude-review progress --port 8765 --message <id> --file a.py "..."   # what you
 claude-review show --port 8765 --file a.py                            # take the reader to a file
 claude-review catch-up --port 8765                                     # catch up on a review under way
 claude-review retake --port 8765            # retake the diff after a round
+claude-review story --port 8765 --file story.json   # tell the change as a story; --help shows the document
 claude-review diff --port 8080             # serve on a port of your choosing
 claude-review diff --no-open               # don't open browser automatically
 claude-review --verbose diff --base HEAD~1 # enable diagnostic logging (before the command)

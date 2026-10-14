@@ -170,6 +170,16 @@ somebody who is waiting.
      `message_id`, or a question asked in a thread, whose `question_id` the
      same field then carries. Drop what you were doing for it if you still
      can, and say nothing about it unless it is already half done.
+   - `{"type":"story_request"}` — the user has asked for the change told as
+     a story, and is watching how long it takes. Run `claude-review story
+     --help` once: it shows the document whole and says how long each of its
+     texts may be. Write the whole document to a file and send it with
+     `claude-review story --port <port> --file <file>`. A story the review
+     refuses comes back with everything wrong at once, each fault at its
+     field of the document: mend every one and send the document whole
+     again. Then wait again.
+   - `{"type":"story_cancel"}` — the user has stopped the story they asked
+     for. Stop writing it, and send nothing.
    - `{"type":"timeout"}` — nothing was asked. Only a `wait` without
      `--until-event` prints it, after `--seconds`; wait again.
    - `{"type":"closed"}` — the review is over. Stop looping. The last round

@@ -3,6 +3,21 @@
 ## [Unreleased]
 
 ### Added
+- **The reader asks the agent for a story of the change, and sees it being
+  written.** A story is the change told by the agent that made it: a short
+  overview, then chapters with its reason above each piece of code. Story in
+  the header asks before the first one is written, since a story spends the
+  agent's tokens, and says what this review would cost; the choice is kept
+  behind the gear for every review. Where the story will be, the page says
+  when it was asked for, when the agent took the request and how long it has
+  been waited for, with the files to read meanwhile and a way to stop and to
+  ask again. While the files are read the switch says the story is being
+  written, and offers it once it has arrived: the view never changes by
+  itself. With no agent attached the page says how one is attached.
+- **The agent is told when a story is wanted, and how one is written.**
+  `wait` hands over `story_request` and `story_cancel`; `claude-review story
+  --help` shows the document whole and says how long each of its texts may
+  be; the skill says what to do at each.
 - **A comment being written is never lost.** What is typed and pasted into a
   new comment, a reply or an edit is kept by the review, not by the box that
   shows it: folding the file or the thread, switching to two columns and

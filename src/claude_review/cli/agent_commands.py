@@ -21,6 +21,7 @@ from claude_review.cli.parameters import (
 )
 from claude_review.cli.rendering import render_catch_up, render_story_taken, render_thread
 from claude_review.cli.review_client import EVENTS, ReviewClient
+from claude_review.cli.story_help import story_document_help
 from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import CommentSeverity, LineSide, says_nothing
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
@@ -330,7 +331,7 @@ def retake_command(*, client: ReviewClient) -> None:
     click.echo(terminal_text(client.retake().model_dump_json()))
 
 
-@click.command("story")
+@click.command("story", epilog=story_document_help())
 @review_port
 @click.option(
     "--file", "story", required=True, type=STORY, help='The story, as a JSON document. Given as "-", read from stdin.'
@@ -341,7 +342,8 @@ def story_command(*, client: ReviewClient, story: StoryRequest) -> None:
     The document is the whole story: what was asked and done and what to
     doubt, then chapters, each a run of steps — a piece of the change, and
     why it is the way it is. It takes the place of any story told before:
-    there is no patching one, so send it again whole.
+    there is no patching one, so send it again whole. This help shows one
+    below, and how long each of its texts may be.
 
     Refused, it comes back with everything wrong at once, each fault at its
     field of the document. Taken, it prints what its steps left out of the

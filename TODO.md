@@ -114,9 +114,6 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(story)`: a story told while the working tree has moved on from
       the take on screen is checked against the take, and nobody is told.
 - [ ] `fix(cli)`: `story` prints every file it left out on its one line.
-- [ ] `docs`: the switch to a story is offered in every review of a
-      change, and neither the skill nor the README tells an agent to tell
-      one.
 
 ## The story, on the page
 

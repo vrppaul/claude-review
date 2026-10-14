@@ -17,11 +17,14 @@ from click.testing import CliRunner, Result
 import claude_review
 from claude_review.cli.main import main
 from claude_review.domain.models import MAX_QUOTE_LINES
+from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_ID_LENGTH, MAX_WAIT_SECONDS
+from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.place_words import NOT_LINES
+from claude_review.services.story_checks import document_faults
 from tests.stories import as_the_agent_writes, step, story_of, without_field
 
 # What click exits with when a command is typed wrong, before it runs
@@ -46,6 +49,14 @@ LOAD_AN_AGENTS_COMMAND = (
 WEB_STACK = {"uvicorn", "fastapi", "starlette", "wsproto"}
 # How a review that is not there is said: the command got past what it was typed with
 NO_REVIEW = "no review is listening"
+# What a JSON document opens and closes with
+DOCUMENT_OPENS = "{"
+DOCUMENT_CLOSES = "}"
+# What parts the words of a kind of text in its name, and a pattern for either way the help may part them
+BETWEEN_WORDS_OF_A_NAME = "_"
+EITHER_WAY_WORDS_ARE_PARTED = "[ _]"
+# How JSON writes a part that is left out, a list of nothing and a table of nothing
+WRITTEN_FOR_WHAT_IS_LEFT_OUT = ["null", "[]", "{}"]
 
 
 def _repeated(option: str, count: int, value: str = "") -> list[str]:
@@ -352,3 +363,32 @@ def test_a_story_file_that_is_not_there_is_said_to_be_missing(unused_port: str, 
 
     assert _failed_in_a_line(result, USAGE_ERROR)
     assert str(missing) in result.output
+
+
+def _example_in_the_help_of_story() -> str:
+    """The document the help of `story` shows: from its first brace to its last, which nothing else in the help has."""
+    said = _run("story", "--help").output
+    return said[said.index(DOCUMENT_OPENS) : said.rindex(DOCUMENT_CLOSES) + len(DOCUMENT_CLOSES)]
+
+
+@pytest.mark.parametrize(("kind", "limit"), TEXT_LIMITS.items(), ids=lambda given: str(given))
+def test_the_help_of_story_says_how_long_each_kind_of_text_may_be_and_where_the_rest_belongs(
+    kind: StoryText, limit: TextLimit
+) -> None:
+    """An agent told to write a story reads its limits here, before the review refuses a text for its length."""
+    said = _run("story", "--help").output
+    called = kind.replace(BETWEEN_WORDS_OF_A_NAME, EITHER_WAY_WORDS_ARE_PARTED)
+
+    assert re.search(rf"^\s*{called}\b.*\b{limit.characters}\b.*{re.escape(limit.hint)}$", said, re.MULTILINE)
+
+
+def test_the_example_in_the_help_of_story_is_a_document_the_review_reads_and_finds_no_fault_in() -> None:
+    example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
+
+    assert document_faults(example.in_the_review()) == []
+
+
+@pytest.mark.parametrize("left_out", WRITTEN_FOR_WHAT_IS_LEFT_OUT)
+def test_the_example_in_the_help_of_story_leaves_out_no_part_a_story_may_have(left_out: str) -> None:
+    """A part the example does not show is one no agent learns it may write."""
+    assert left_out not in _example_in_the_help_of_story()
