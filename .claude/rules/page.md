@@ -5,10 +5,11 @@ paths:
 
 # The page
 
-How a part of the page is built is said at the top of its module. What eslint and stylelint refuse, and why, is said in `frontend/eslint.config.js` and `frontend/stylelint.config.js`.
+How a part of the page is built is said at the top of its module; what eslint and stylelint refuse, and why, in `frontend/eslint.config.js` and `frontend/stylelint.config.js`.
 
 ## Types and state
 
+- The page draws what the server says: a rule that decides from the review's state (what counts, what is stale, where a thread hangs) is the server's. The page keeps layout, what is in sight, keys, focus, scroll, the draft.
 - Svelte 5 runes; TypeScript in strict mode, no `any`.
 - The compiler takes a value read from a list or a table by position or key as possibly missing. Build so that holds, never check around it: a line carries its markup rather than sitting beside it in another list.
 - A place the reader is at is the thing they are at (an id), not its position in a list that changes.
