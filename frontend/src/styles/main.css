@@ -1622,9 +1622,9 @@
 }
 /*
  * How long a note that goes by itself has left: a bar along its foot, in
- * the colour of its edge, that runs out over the time whoever draws the
- * note gives it (--cr-note-lasts). The bar only shows the time: the note
- * keeps its own clock, and goes by it where the bar does not run.
+ * the colour of its edge, that runs out over the time the note stands
+ * (--cr-note-lasts, which PassingNote gives). The bar only shows the time:
+ * the note keeps its own clock, and goes by it where the bar does not run.
  */
 .cr-note-time-left {
 	height: 2px;
