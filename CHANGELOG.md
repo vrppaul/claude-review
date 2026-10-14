@@ -57,16 +57,20 @@
   after four seconds, a bar running out as it waits, or at once by its ×:
   the view never changes by itself. With no agent attached the page says
   how one is attached, and offers the files meanwhile.
-- **Story is introduced once, at the switch.** A reader who has never
-  tried it, by pressing it or by having a story on screen, meets, once the
-  welcome card and the tour are done, a pane
-  under the switch pointing at Story, which is ringed in the agent's
-  colour: what a story is, sketched, and what it spends, with Try Story
-  and Don't show again. Try Story does what Story in the header does,
-  asking first while stories are off; the cross puts the pane away for
-  this review alone; Don't show again puts it away in every review, and a
-  note in its place says so for four seconds, fading, with Undo for a
-  slip. A story's arrival, offered under the switch, stands there first.
+- **Story is introduced once: by this release's news, or at the switch.**
+  A reader back from an older release is told of Story on the news card,
+  with the sketch and Try Story in place of Got it (Got it where the
+  review tells no story); once shown, the card was the introduction. A
+  reader who has never tried Story, by pressing it or by having a story
+  on screen, and is shown no such card meets, once the welcome card and
+  the tour are done, a pane under the switch pointing at Story, which is
+  ringed in the agent's colour: what a story is, sketched, and what it
+  spends, with Try Story and Don't show again. Try Story, on the card or
+  the pane, does what Story in the header does, asking first while
+  stories are off; the cross puts the pane away for this review alone;
+  Don't show again puts it away in every review, and a note in its place
+  says so for four seconds, fading, with Undo for a slip. A story's
+  arrival, offered under the switch, stands there first.
 - **Every review knows whether Story was introduced to the reader.**
   `GET /api/guide` says `story_introduced` beside the release last shown,
   false for a reader shown around by a release before stories; `PUT

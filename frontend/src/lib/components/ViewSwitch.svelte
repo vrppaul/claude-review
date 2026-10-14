@@ -41,6 +41,15 @@
 		const shown = onScreen;
 		if (document.activeElement !== document.body) focusWhatRemains(() => buttons[shown]);
 	});
+
+	/**
+	 * The question before stories are turned on is closed. The browser gives the keyboard back to what held it
+	 * as it was asked; where that is gone — the news card's Try Story — Story, which the question was about, takes it.
+	 */
+	function stopAsking() {
+		review.stopAskingToTurnStoriesOn();
+		focusWhatRemains(() => buttons.story);
+	}
 </script>
 
 <!-- How the review is read, and where the reader changes it; Try Story, where Story is introduced, is the one
@@ -94,6 +103,6 @@
 		{/if}
 	</div>
 	{#if review.askingToTurnStoriesOn}
-		<StoryOptIn onTurnOn={() => review.turnStoriesOnAndRead()} onClose={() => review.stopAskingToTurnStoriesOn()} />
+		<StoryOptIn onTurnOn={() => review.turnStoriesOnAndRead()} onClose={stopAsking} />
 	{/if}
 {/if}

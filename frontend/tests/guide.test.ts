@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, within } from '@testing-library/svelte';
 import fastCheck from 'fast-check';
 import { tick } from 'svelte';
 import Guide from '$lib/components/Guide.svelte';
@@ -9,12 +9,16 @@ import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
 import { writeSeenRelease } from '$lib/guide/seen-release';
 import { contextLine, diffFile, hunk } from './diff';
+import { said } from './elements';
 import { fakeServer, SERVER_ERROR } from './fake-server';
 import { guideServer, guideServerIntroduced } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
 
 let review: Review;
+
+// The release whose news introduces Story
+const STORY_RELEASE = '1.6.0';
 
 beforeEach(() => {
 	review = openReview();
@@ -211,6 +215,41 @@ describe('Story introduced at the switch', () => {
 		expect(review.guide.introducesStory).toBe(true);
 	});
 
+	it('is introduced at the switch once the news of a release before stories is put away', async () => {
+		guideServer('1.4.2');
+		await arriveAt('1.5.0');
+
+		review.guide.dismiss();
+
+		expect(review.guide.introducesStory).toBe(true);
+	});
+
+	it('is introduced by the news of the release that brought it: nothing follows the card at the switch', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+
+		review.guide.dismiss();
+
+		expect(review.guide.introducesStory).toBe(false);
+	});
+
+	it('is kept as done once the news of the release that brought it is shown', async () => {
+		const server = guideServer('1.5.0');
+
+		await arriveAt(STORY_RELEASE);
+
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toContainEqual({ story_introduced: true }));
+	});
+
+	it('is kept as done once that news is read again from the ? list', async () => {
+		const server = guideServer(STORY_RELEASE);
+		await arriveAt(STORY_RELEASE);
+
+		review.guide.showNews();
+
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+
 	it('is never introduced to a reader it was introduced to', async () => {
 		guideServerIntroduced('1.5.0');
 
@@ -293,6 +332,84 @@ describe('the news card', () => {
 		const image = getByTestId('news-image') as HTMLImageElement;
 		expect(image.getAttribute('src')).toBe('/news/paste.gif');
 		expect(image.alt).toBe('A screenshot pasted');
+	});
+
+	it('tells of Story in the release that brought it, as board 0 words it', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		expect(said(getByTestId('guide-news'))).toContain('Read a change as a story');
+		expect(said(getByTestId('guide-news'))).toContain(
+			"The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens."
+		);
+		expect(within(getByTestId('guide-news')).getByTestId('story-sketch')).toBeTruthy();
+	});
+
+	it('offers Try Story in place of Got it for the release that brought Story', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+
+		const { getByTestId, queryByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		expect(said(getByTestId('guide-try-story'))).toBe('Try Story');
+		expect(queryByTestId('guide-got-it')).toBeNull();
+	});
+
+	it('offers Got it, and no Try Story, for any other release', async () => {
+		guideServer('1.4.2');
+		await arriveAt('1.5.0');
+
+		const { getByTestId, queryByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		expect(getByTestId('guide-got-it')).toBeTruthy();
+		expect(queryByTestId('guide-try-story')).toBeNull();
+	});
+
+	it('offers Got it in a review that tells no story: Try Story would lead to a view it does not have', async () => {
+		guideServer('1.5.0');
+		review = openReview({ facts: { release: STORY_RELEASE, takes_a_story: false } });
+		await review.guide.open();
+
+		const { getByTestId, queryByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		expect(getByTestId('guide-got-it')).toBeTruthy();
+		expect(queryByTestId('guide-try-story')).toBeNull();
+	});
+
+	it('puts the card away by Try Story and asks before stories are turned on, as Story in the header does', async () => {
+		guideServer('1.5.0');
+		review = openReview({ facts: { release: STORY_RELEASE } });
+		await review.guide.open();
+		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review } });
+		await tick();
+
+		getByTestId('guide-try-story').click();
+		await tick();
+
+		expect(queryByTestId('guide-news')).toBeNull();
+		expect(getByTestId('story-opt-in')).toBeTruthy();
+	});
+
+	it('leaves the keyboard on Story once the question its Try Story asked is put away: the card is gone', async () => {
+		guideServer('1.5.0');
+		review = openReview({ facts: { release: STORY_RELEASE } });
+		await review.guide.open();
+		const { getByTestId } = render(ReviewScreen, { props: { review } });
+		await tick();
+		getByTestId('guide-try-story').click();
+		await tick();
+
+		getByTestId('stories-not-now').click();
+		await tick();
+		await tick();
+
+		expect(document.activeElement?.getAttribute('data-testid')).toBe('read-as-story');
 	});
 
 	it('draws a story sketched, for an entry that names it', () => {

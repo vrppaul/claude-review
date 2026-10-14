@@ -242,8 +242,8 @@ export class Guide {
 			return;
 		}
 		if (!isNewer(this.#release, seen)) return;
-		this.#news = unseenNews(RELEASE_NEWS, seen, this.#release);
-		if (this.#news) this.#card = 'news';
+		const unseen = unseenNews(RELEASE_NEWS, seen, this.#release);
+		if (unseen) this.#show(unseen);
 		// Nothing worth telling: a patch is remembered as seen without a word
 		else this.#settle();
 	}
@@ -255,8 +255,8 @@ export class Guide {
 	}
 
 	showNews(): void {
-		this.#news = this.latestNews;
-		if (this.#news) this.#card = 'news';
+		const latest = this.latestNews;
+		if (latest) this.#show(latest);
 	}
 
 	startTour(): void {
@@ -324,6 +324,13 @@ export class Guide {
 	#moveOn(done: Done): void {
 		if (done.kind === 'sent') this.#route = done.route;
 		this.next();
+	}
+
+	/** Show a release's news on the card; the news that introduces Story introduces it, so nothing at the switch follows. */
+	#show(news: ReleaseNews): void {
+		this.#news = news;
+		this.#card = 'news';
+		if (news.introducesStory) this.noteStoryIntroduced();
 	}
 
 	/** Remember this release as seen, so the card does not come back. */

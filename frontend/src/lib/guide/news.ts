@@ -23,6 +23,8 @@ export interface ReleaseNews {
 	/** Smaller changes, a line each. */
 	also: string[];
 	illustration?: Illustration;
+	/** The news is Story's introduction: shown, it introduces Story, and its card offers to try it. */
+	introducesStory?: true;
 }
 
 const RELEASES_URL = 'https://github.com/vrppaul/claude-review/releases/tag';
@@ -42,5 +44,15 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 			'The panel waits for the agent to join instead of showing you setup commands.'
 		],
 		illustration: { kind: 'drawing', name: 'pasted-screenshot' }
+	},
+	{
+		// Seen by no reader until the release brings pyproject to its number: the release settles that
+		// number and the lines of what else it brings
+		release: '1.6.0',
+		title: 'Read a change as a story',
+		body: "The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens.",
+		also: [],
+		illustration: { kind: 'drawing', name: 'story-sketch' },
+		introducesStory: true
 	}
 ];

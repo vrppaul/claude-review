@@ -14,6 +14,9 @@
 	const waiting = $derived(step?.waitsFor);
 	// One mark per step, filled up to the one on screen
 	const stepNumbers = $derived([...Array(review.guide.stepCount).keys()]);
+	// Whether the news offers to try Story: it is Story's introduction, in a review a story can be told of. In
+	// any other it says Got it, and has introduced Story all the same
+	const offersStory = $derived(news?.introducesStory === true && review.story.canBeTold);
 
 	let title = $state<HTMLElement | null>(null);
 	let firstAction = $state<HTMLButtonElement | null>(null);
@@ -53,6 +56,12 @@
 	function putAway() {
 		review.guide.dismiss();
 		keyboardToHelp();
+	}
+
+	/** Put the news away and read the review as its story, as Story in the header does: asked first where it must be. */
+	function tryStory() {
+		review.guide.dismiss();
+		review.readAsStory();
 	}
 </script>
 
@@ -174,15 +183,27 @@
 			Everything in {news.release}, on GitHub
 		</a>
 		<div class="flex items-center gap-2">
-			<button
-				type="button"
-				bind:this={firstAction}
-				data-testid="guide-got-it"
-				class="btn btn-primary btn-sm"
-				onclick={putAway}
-			>
-				Got it
-			</button>
+			{#if offersStory}
+				<button
+					type="button"
+					bind:this={firstAction}
+					data-testid="guide-try-story"
+					class="btn btn-primary btn-sm"
+					onclick={tryStory}
+				>
+					Try Story
+				</button>
+			{:else}
+				<button
+					type="button"
+					bind:this={firstAction}
+					data-testid="guide-got-it"
+					class="btn btn-primary btn-sm"
+					onclick={putAway}
+				>
+					Got it
+				</button>
+			{/if}
 			<button
 				type="button"
 				data-testid="guide-take-tour"

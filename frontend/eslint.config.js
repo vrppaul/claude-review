@@ -122,8 +122,13 @@ const NO_CHOOSING = [
 	},
 	{ selector: "CallExpression[callee.property.name='readAsStory']", message: CHOSEN_BY_THE_READER }
 ];
-// Where the reader asks to read a way: the switch, and the review that holds the way into Story
-const CHOOSERS = ['src/lib/components/ViewSwitch.svelte', 'src/lib/review/review.svelte.ts'];
+// Where the reader asks to read a way: the switch, the news card's Try Story, and the review that holds the
+// way into Story
+const CHOOSERS = [
+	'src/lib/components/ViewSwitch.svelte',
+	'src/lib/components/GuideCard.svelte',
+	'src/lib/review/review.svelte.ts'
+];
 
 // How a component is styled: by classes, and by the stylesheet's tokens. A
 // number only the component knows — a dragged width, a depth — reaches the
