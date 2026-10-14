@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { tick } from 'svelte';
 import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { broughtIntoView } from './elements';
@@ -535,8 +536,8 @@ describe('what stands for a line where it is not drawn', () => {
 	});
 });
 
-// A view just brought on screen has drawn nothing yet: what the reader was
-// being taken to in it is asked for first, and announces itself a moment later
+// A view just brought on screen draws its sections as Svelte draws what is pending: what the reader was
+// being taken to in it is asked for first, and announces itself in that same drawing
 describe('a section asked for before it is drawn', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
@@ -550,11 +551,12 @@ describe('a section asked for before it is drawn', () => {
 		return element;
 	}
 
-	it('is gone to once it is drawn', () => {
+	it('is gone to once it is drawn, with the view brought on screen for it', async () => {
 		const late = notYetDrawn();
 
 		sections.scrollTo('a.py');
 		sections.register('a.py', 'a.py', late);
+		await tick();
 
 		expect(late.scrollIntoView).toHaveBeenCalled();
 	});
@@ -565,25 +567,25 @@ describe('a section asked for before it is drawn', () => {
 
 		sections.show('a.py');
 		sections.register('a.py', 'a.py', late);
+		await tick();
 		await untilAGlideWouldHaveBegun();
 
 		expect(late.scrollIntoView).toHaveBeenCalled();
 		expect(isMarked(late)).toBe(true);
 	});
 
-	it('is not gone to when it is drawn long after it was asked for', () => {
+	it('is not waited for once what was pending is drawn: drawn after that, it is not gone to', async () => {
 		const late = notYetDrawn();
-		const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
 		sections.scrollTo('a.py');
+		await tick();
 
-		clock.mockReturnValue(A_MINUTE);
 		sections.register('a.py', 'a.py', late);
+		await tick();
 
 		expect(late.scrollIntoView).not.toHaveBeenCalled();
-		clock.mockRestore();
 	});
 
-	it('is not gone to once the reader has gone somewhere else', () => {
+	it('is not gone to once the reader has gone somewhere else', async () => {
 		const elsewhere = section('b.py');
 		elsewhere.scrollIntoView = vi.fn();
 		const late = notYetDrawn();
@@ -591,31 +593,35 @@ describe('a section asked for before it is drawn', () => {
 		sections.scrollTo('a.py');
 		sections.scrollTo('b.py');
 		sections.register('a.py', 'a.py', late);
+		await tick();
 
 		expect(late.scrollIntoView).not.toHaveBeenCalled();
 	});
 
-	it('is the one gone to, not another section drawn meanwhile', () => {
+	it('is the one gone to, not another section drawn meanwhile', async () => {
 		const another = notYetDrawn();
 
 		sections.scrollTo('a.py');
 		sections.register('b.py', 'b.py', another);
+		await tick();
 
 		expect(another.scrollIntoView).not.toHaveBeenCalled();
 	});
 
-	it('is gone to once, not again when it is drawn anew', () => {
+	it('is gone to once, not again when it is drawn anew', async () => {
 		const late = notYetDrawn();
 		const drawnAnew = notYetDrawn();
-
 		sections.scrollTo('a.py');
 		sections.register('a.py', 'a.py', late);
+		await tick();
+
 		sections.register('a.py', 'a.py', drawnAnew);
+		await tick();
 
 		expect(drawnAnew.scrollIntoView).not.toHaveBeenCalled();
 	});
 
-	it('is no longer the way to a thread once the reader is shown another section', () => {
+	it('is no longer the way to a thread once the reader is shown another section', async () => {
 		const shown = section('b.py');
 		shown.scrollIntoView = vi.fn();
 		const thread = notYetDrawn();
@@ -623,16 +629,18 @@ describe('a section asked for before it is drawn', () => {
 		sections.goToThread('comment-1', 'a.py');
 		sections.show('b.py');
 		sections.registerThread('comment-1', thread);
+		await tick();
 
 		expect(thread.scrollIntoView).not.toHaveBeenCalled();
 	});
 
-	it('takes the reader on to the thread asked for in it, once the thread is drawn too', () => {
+	it('takes the reader on to the thread asked for in it, once the thread is drawn too', async () => {
 		const late = notYetDrawn();
 		const thread = notYetDrawn();
 
 		sections.goToThread('comment-1', 'a.py');
 		sections.register('a.py', 'a.py', late);
+		await tick();
 		expect(late.scrollIntoView).toHaveBeenCalled();
 		expect(thread.scrollIntoView).not.toHaveBeenCalled();
 
@@ -641,14 +649,50 @@ describe('a section asked for before it is drawn', () => {
 		expect(thread.scrollIntoView).toHaveBeenCalled();
 	});
 
-	it('does not pull the screen off a thread that was drawn before it', () => {
+	it('does not pull the screen off a thread that was drawn before it', async () => {
 		const late = notYetDrawn();
 		const thread = notYetDrawn();
 
 		sections.goToThread('comment-1', 'a.py');
 		sections.registerThread('comment-1', thread);
 		sections.register('a.py', 'a.py', late);
+		await tick();
 
 		expect(late.scrollIntoView).not.toHaveBeenCalled();
+	});
+});
+
+// The story draws its words whole as it comes on screen: a thread on them is drawn in that same drawing, or never
+describe('a thread on the story’s words asked for before it is drawn', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	/** A thread on the page that has not announced itself yet, and says when it is brought into view. */
+	function threadNotYetDrawn(): HTMLElement {
+		const thread = document.createElement('div');
+		thread.scrollIntoView = vi.fn();
+		document.body.append(thread);
+		return thread;
+	}
+
+	it('is gone to once it is drawn, with the story brought on screen for it', async () => {
+		const thread = threadNotYetDrawn();
+
+		sections.goToStoryThread('comment-1');
+		sections.registerThread('comment-1', thread);
+		await tick();
+
+		expect(thread.scrollIntoView).toHaveBeenCalled();
+	});
+
+	it('is not waited for once the story is drawn: drawn after that, it is not gone to', async () => {
+		const thread = threadNotYetDrawn();
+		sections.goToStoryThread('comment-1');
+		await tick();
+
+		sections.registerThread('comment-1', thread);
+
+		expect(thread.scrollIntoView).not.toHaveBeenCalled();
 	});
 });

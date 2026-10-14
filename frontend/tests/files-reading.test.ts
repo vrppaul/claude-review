@@ -1,5 +1,7 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fileSectionKey, threadsNotDrawnIn } from '$lib/review/reading-view';
+import { beforeEach, describe, it, expect } from 'vitest';
+import { render } from '@testing-library/svelte';
+import ReviewScreen from '$lib/components/ReviewScreen.svelte';
+import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, diffResponse, hunk, removedLine, REVIEW_BASE, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR } from './fake-server';
@@ -105,16 +107,13 @@ describe('the files read against a narrower base', () => {
 	});
 
 	it('are put back whole for a file the base leaves out, which the reader is shown once it is drawn', async () => {
-		const section = document.createElement('section');
-		const broughtIntoView = vi.fn();
-		section.scrollIntoView = broughtIntoView;
+		render(ReviewScreen, { props: { review } });
 
 		review.navigator.showFile('b.py');
 		await settled();
-		review.sections.register(fileSectionKey('b.py'), 'b.py', section);
 
 		expect(review.diff.narrowed).toBe(false);
-		expect(broughtIntoView).toHaveBeenCalled();
+		expect(review.sections.fileInView).toBe('b.py');
 	});
 
 	it('say why the whole review could not be put back, and take the reader nowhere', async () => {

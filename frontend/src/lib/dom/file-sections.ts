@@ -18,6 +18,7 @@
  * query string.
  */
 
+import { tick } from 'svelte';
 import { Announced, type Announcement } from '$lib/dom/announced';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
@@ -37,13 +38,13 @@ export const FOLD_TOGGLE_ROLE = 'fold-toggle';
 const MARKED_FOR = 2000;
 // The class that draws the mark on a section somebody else pointed at
 const MARKED_CLASS = 'cr-marked';
-// How long a section or a thread asked for before it was drawn is waited
-// for: a view brought on screen draws its sections, and a file is built or
-// unfolded, within a frame or two, and what is never drawn — hidden by a
-// narrower base, or outdated — must not pull the screen to it later
-const AWAIT_DRAWING_FOR = 2000;
+// How long a thread on lines asked for before it was drawn is waited for:
+// the rows of its section are built once the reader comes near it, a frame
+// or a few after the section is gone to, and one drawn much later must not
+// pull the screen to it
+const AWAIT_ROWS_FOR = 2000;
 
-/** A thread asked for before it was drawn, and until when it is waited for. */
+/** A thread on lines asked for before its rows were built, and until when it is waited for. */
 interface AwaitedThread {
 	threadId: string;
 	until: number;
@@ -52,13 +53,6 @@ interface AwaitedThread {
 /** A section as it announced itself: what it is known by and where it is, and the file it draws lines of. */
 interface Section extends Announcement {
 	path: string;
-}
-
-/** A section asked for before it was drawn: how the reader is taken to it once it is, and until when it is waited for. */
-interface AwaitedSection {
-	key: string;
-	arrive: (section: Section) => void;
-	until: number;
 }
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
@@ -73,12 +67,13 @@ export class FileSections {
 	readonly #threads = new Map<string, HTMLElement>();
 	// What offers each block of the story's words to be asked about, by what the block is known by
 	readonly #blocks = new Map<string, HTMLElement>();
-	// A thread asked for before it was drawn, and until when it is waited
-	// for: brought into view once it is drawn, if that is soon
+	// A thread on lines asked for before its rows were built, and until when
+	// it is waited for: brought into view once it is drawn, if that is soon
 	#awaitedThread: AwaitedThread | null = null;
-	// A section asked for before it was drawn — the view that draws it was
-	// only just brought on screen — and until when it is waited for
-	#awaitedSection: AwaitedSection | null = null;
+	// How many times the reader has been taken somewhere: what was asked for
+	// as its view came on screen is gone to once that view is drawn, unless
+	// the reader was taken somewhere else meanwhile
+	#taken = 0;
 	// What is marked, so a second showing can take the mark off the first
 	// rather than leave it lit, and so the first one's timer cannot put it out
 	#marked: Mark | null = null;
@@ -110,14 +105,7 @@ export class FileSections {
 	 * file it draws lines of. Returns how to take it back.
 	 */
 	register(key: string, path: string, element: HTMLElement): () => void {
-		const section = { key, path, element };
-		const takeBack = this.#sections.add(section);
-		const awaited = this.#awaitedSection;
-		if (awaited?.key === key && performance.now() <= awaited.until) {
-			this.#awaitedSection = null;
-			awaited.arrive(section);
-		}
-		return takeBack;
+		return this.#sections.add({ key, path, element });
 	}
 
 	/** Say where a thread is drawn; returns how to take it back. */
@@ -125,7 +113,7 @@ export class FileSections {
 		this.#threads.set(threadId, element);
 		const awaited = this.#awaitedThread;
 		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
-			this.#stopWaiting();
+			this.#beginTaking();
 			this.#arriveAtThread(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
@@ -181,11 +169,13 @@ export class FileSections {
 
 	/**
 	 * Take the reader to a section: its head to the top, and the section the
-	 * one being read. One not drawn yet is gone to once it is, if that is soon.
+	 * one being read. One not drawn yet is gone to once its view is drawn.
 	 */
 	scrollTo(key: string): void {
-		this.#stopWaiting();
-		this.#onceDrawn(key, (section) => this.#scrollToDrawn(section));
+		this.#onceDrawn(
+			() => this.#sections.get(key),
+			(section) => this.#scrollToDrawn(section)
+		);
 	}
 
 	/**
@@ -196,11 +186,13 @@ export class FileSections {
 	 * reader working out what they are looking at. The mark waits for the
 	 * scroll to stop — across sixty files a smooth scroll outlasts the mark
 	 * itself, and the reader would arrive to a file that had already finished
-	 * saying so. A section not drawn yet is shown once it is, if that is soon.
+	 * saying so. A section not drawn yet is shown once its view is drawn.
 	 */
 	show(key: string): void {
-		this.#stopWaiting();
-		this.#onceDrawn(key, (section) => this.#showDrawn(section));
+		this.#onceDrawn(
+			() => this.#sections.get(key),
+			(section) => this.#showDrawn(section)
+		);
 	}
 
 	/**
@@ -210,9 +202,9 @@ export class FileSections {
 	 * A section's rows are only built once it has been near the viewport,
 	 * and a folded file draws none, so a thread further down the review —
 	 * restored from a draft, say — may have nothing drawn yet. Its section is
-	 * brought into view instead, itself once it is drawn if its view has only
-	 * just come on screen, and the thread follows the moment it is drawn, if
-	 * that is soon.
+	 * brought into view instead, itself once its view is drawn if that has
+	 * only just come on screen, and the thread follows the moment its rows
+	 * are built, if that is soon.
 	 */
 	goToThread(threadId: string, sectionKey: string): void {
 		if (!this.#threads.has(threadId)) this.scrollTo(sectionKey);
@@ -221,13 +213,15 @@ export class FileSections {
 
 	/**
 	 * Bring a thread on the story's words into view and put the keyboard on
-	 * it: now if it is drawn, or once it is, if that is soon. The story draws
-	 * its words whole as it comes on screen: there is no section to build
-	 * for one.
+	 * it: now if it is drawn, or once the story is, if it has only just come
+	 * on screen. The story draws its words whole as it is drawn: there is no
+	 * section to build for one.
 	 */
 	goToStoryThread(threadId: string): void {
-		this.#stopWaiting();
-		this.#reachThread(threadId);
+		this.#onceDrawn(
+			() => this.#threads.get(threadId),
+			(thread) => this.#arriveAtThread(thread)
+		);
 	}
 
 	/** Put the keyboard on a thread once it is drawn, if what had it went: the thread a comment became, or what remains of a change to it. */
@@ -276,28 +270,49 @@ export class FileSections {
 		return line ?? toggleOf(firstInDocument(ofTheFile));
 	}
 
-	/** Take the reader to a thread now if it is drawn, or once it is, if that is soon; a section asked for meanwhile is still waited for. */
+	/**
+	 * Take the reader to a thread on lines now if it is drawn, or once its
+	 * rows are built, if that is soon; its section, gone to meanwhile, is
+	 * still gone to once its view is drawn.
+	 */
 	#reachThread(threadId: string): void {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
-			this.#stopWaiting();
+			this.#beginTaking();
 			this.#arriveAtThread(drawn);
 		} else {
-			this.#awaitedThread = { threadId, until: performance.now() + AWAIT_DRAWING_FOR };
+			this.#awaitedThread = { threadId, until: performance.now() + AWAIT_ROWS_FOR };
 		}
 	}
 
-	/** The reader is being taken somewhere now: whatever was asked for before, and is not drawn yet, is waited for no longer. */
-	#stopWaiting(): void {
+	/**
+	 * The reader is being taken somewhere now: whatever was asked for before,
+	 * and is not drawn yet, is waited for no longer. Returns which taking
+	 * this is.
+	 */
+	#beginTaking(): number {
 		this.#awaitedThread = null;
-		this.#awaitedSection = null;
+		return ++this.#taken;
 	}
 
-	/** Take the reader to a section as `arrive` does: now if it is drawn, or once it is, if that is soon. */
-	#onceDrawn(key: string, arrive: (section: Section) => void): void {
-		const section = this.#sections.get(key);
-		if (section) arrive(section);
-		else this.#awaitedSection = { key, arrive, until: performance.now() + AWAIT_DRAWING_FOR };
+	/**
+	 * Take the reader to what `find` finds, as `arrive` does: now if it is
+	 * drawn, or once Svelte has drawn what is pending — the view that draws
+	 * it may have only just come on screen — unless the reader was taken
+	 * somewhere else meanwhile. What its view does not draw by then is not
+	 * waited for.
+	 */
+	#onceDrawn<Drawn>(find: () => Drawn | undefined, arrive: (drawn: Drawn) => void): void {
+		const taking = this.#beginTaking();
+		const drawn = find();
+		if (drawn === undefined) void tick().then(() => this.#arriveOnceDrawn(taking, find, arrive));
+		else arrive(drawn);
+	}
+
+	/** Arrive where `find` finds, now that what was pending is drawn, if this is still where the reader is taken. */
+	#arriveOnceDrawn<Drawn>(taking: number, find: () => Drawn | undefined, arrive: (drawn: Drawn) => void): void {
+		const drawn = find();
+		if (taking === this.#taken && drawn !== undefined) arrive(drawn);
 	}
 
 	/**
