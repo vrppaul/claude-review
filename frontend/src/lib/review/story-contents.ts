@@ -26,6 +26,14 @@ export interface FileListed {
 	alsoIn: number[];
 }
 
+/** What a step shows of its file, where its code is in the change. */
+interface StepShown {
+	/** The piece of its file it shows. */
+	piece: DiffFile;
+	/** Its file, as its chapter lists it: one listing for every step of the file that shows code of it. */
+	fileListed: FileListed;
+}
+
 /** A step as its chapter lists it. */
 export interface StepListed {
 	told: ToldStep;
@@ -33,8 +41,8 @@ export interface StepListed {
 	section: string;
 	/** Where the step stands among its chapter's steps: what it is numbered by, after its chapter. */
 	place: number;
-	/** The step's file, as its chapter lists it: one listing for every step of the file. */
-	fileListed: FileListed;
+	/** What it shows of its file; null where the review says its code is not in the change as it now stands. */
+	shown: StepShown | null;
 }
 
 /** A chapter as the story lists it. */
@@ -88,9 +96,9 @@ function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): 
 	return key === null ? null : (table.get(key) ?? null);
 }
 
-/** The files a chapter tells, each once. */
+/** The files a chapter tells, each once: those it shows code of. */
 function filesTold(chapter: ToldChapter): Set<string> {
-	return new Set(chapter.steps.map((step) => step.file));
+	return new Set(chapter.steps.flatMap((step) => (step.piece === null ? [] : [step.file])));
 }
 
 /** Which chapters tell each file: the story's chapters walked once, for every file any of them lists. */
@@ -108,17 +116,17 @@ export function tellsFirst(chapter: ChapterListed, listed: FileListed): boolean 
 }
 
 /**
- * A file as a chapter lists it, from the first of the chapter's steps that tells it.
+ * A file as a chapter lists it, from the first of the chapter's steps that shows code of it.
  *
- * @param first the first step of the chapter that tells the file
+ * @param firstPiece the piece that step shows
  * @param opensAt what that step's section is known by
  * @param chapterPlace where that chapter stands among the story's
  * @param telling which chapters tell each file
  */
-function fileListed(first: ToldStep, opensAt: string, chapterPlace: number, telling: ChaptersTelling): FileListed {
-	const tellers = telling.get(first.file) ?? [];
+function fileListed(firstPiece: DiffFile, opensAt: string, chapterPlace: number, telling: ChaptersTelling): FileListed {
+	const tellers = telling.get(firstPiece.path) ?? [];
 	return {
-		firstPiece: first.piece,
+		firstPiece,
 		opensAt,
 		alsoIn: tellers.map(({ place }) => place).filter((place) => place !== chapterPlace)
 	};
@@ -127,19 +135,41 @@ function fileListed(first: ToldStep, opensAt: string, chapterPlace: number, tell
 /**
  * A chapter as the story lists it. Its steps are walked once: each is given
  * what its section is known by, a file is listed at the first step that
- * tells it, and every later step of the file is given that same listing.
+ * shows code of it, and every later step that shows code of the file is
+ * given that same listing. A step that shows none lists nothing.
  */
 function chapterListed(told: ToldChapter, place: number, telling: ChaptersTelling): ChapterListed {
 	const files = new Map<string, FileListed>();
 	const steps: StepListed[] = [];
 	for (const [stepPlace, step] of told.steps.entries()) {
 		const section = stepSectionKey(step);
-		const listed = files.get(step.file) ?? fileListed(step, section, place, telling);
-		files.set(step.file, listed);
-		steps.push({ told: step, section, place: stepPlace, fileListed: listed });
+		const shown = step.piece === null ? null : stepShown(step.piece, section, files, place, telling);
+		steps.push({ told: step, section, place: stepPlace, shown });
 	}
 	const changedSteps = told.steps.filter((step) => step.changed_since_told).length;
 	return { told, place, part: chapterPartKey(told), files: [...files.values()], steps, changedSteps };
+}
+
+/**
+ * What a step shows of its file, listing the file in its chapter where no
+ * step before it in the chapter showed code of it.
+ *
+ * @param piece the piece the step shows
+ * @param section what the step's section is known by
+ * @param files the chapter's files listed so far, by path, which this adds to
+ * @param chapterPlace where the chapter stands among the story's
+ * @param telling which chapters tell each file
+ */
+function stepShown(
+	piece: DiffFile,
+	section: string,
+	files: Map<string, FileListed>,
+	chapterPlace: number,
+	telling: ChaptersTelling
+): StepShown {
+	const listed = files.get(piece.path) ?? fileListed(piece, section, chapterPlace, telling);
+	files.set(piece.path, listed);
+	return { piece, fileListed: listed };
 }
 
 /** What a story lists of itself. */

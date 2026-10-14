@@ -31,7 +31,7 @@ import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView }
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { ChapterListed } from '$lib/review/story-contents';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { DiffFile, StoryBlock, Thread, ToldStory } from '$lib/types';
+import type { StoryBlock, Thread, ToldStory } from '$lib/types';
 
 /**
  * The threads on a block of the story's words, where the story says
@@ -61,7 +61,7 @@ export function threadsInTheChapter(chapter: ChapterListed, story: ReviewStory, 
 		...CHAPTER_TEXTS_IN_ORDER.flatMap((text) => threadsOnWordsSaid(told[text], chapterText(told.id, text), threads)),
 		...chapter.steps.flatMap((step) => [
 			...threadsOnWordsSaid(askableReason(step.told), stepReason(step.told.file, step.told.lines.first), threads),
-			...threadsOnThePiece(step.section, step.told.piece, story, threads)
+			...threadsOnThePiece(step.section, step.told.file, story, threads)
 		])
 	];
 }
@@ -92,13 +92,16 @@ function threadsPlaced(story: ReviewStory, threads: Threads): Thread[] {
 	return [
 		...threadsOnTheOverview(held.story.overview, threads),
 		...story.contents.chapters.flatMap((chapter) => threadsInTheChapter(chapter, story, threads)),
-		...story.contents.leftOut.flatMap((left) => threadsOnThePiece(left.section, left.told.piece, story, threads))
+		...story.contents.leftOut.flatMap((left) => threadsOnThePiece(left.section, left.told.piece.path, story, threads))
 	];
 }
 
-/** The threads on lines one piece of a file draws, down its rows. */
-function threadsOnThePiece(section: string, piece: DiffFile, story: ReviewStory, threads: Threads): Thread[] {
-	return inDrawnOrder(threads.onLinesOf(piece.path), (lines) =>
+/**
+ * The threads on lines of a file that the piece known by this section
+ * draws, down its rows: none where that section draws no piece.
+ */
+function threadsOnThePiece(section: string, path: string, story: ReviewStory, threads: Threads): Thread[] {
+	return inDrawnOrder(threads.onLinesOf(path), (lines) =>
 		drawnBy(section, story.pieces.drawing(lines, story.numbering))
 	);
 }

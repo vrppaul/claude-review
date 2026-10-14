@@ -12,9 +12,12 @@ from pydantic import ValidationError
 
 from claude_review.domain.exceptions import FieldPath, UnknownStoryBlockError
 from claude_review.domain.models import (
+    NO_HUNK_HEADER,
     ChapterBlock,
     ChapterText,
+    DiffHunk,
     ItemBlock,
+    LineSpan,
     OverviewBlock,
     OverviewList,
     OverviewText,
@@ -22,20 +25,43 @@ from claude_review.domain.models import (
     StoryAnchor,
     StoryBlock,
 )
+from claude_review.domain.story import Step
 from claude_review.services.anchor_service import StoryAnchorHandler
+from claude_review.services.story_telling import follow, tell
+from tests.helpers import added_line, removed_line
 from tests.stories import (
     IMAGE_SERVICE,
     KEEPING_CHAPTER,
     PASTE_CHAPTER,
     canvas_story,
+    changed_file,
     field_at,
     planted,
+    story_of,
     told_as_written,
 )
 
 STORY = canvas_story()
 HELD = StoryAnchorHandler(told_as_written(STORY))
 NO_STORY = StoryAnchorHandler(None)
+
+# A file whose first line a change rewrote, a step that says why, and the line said another way again since:
+# nothing of the step's code is found, and it shows none
+REWRITTEN = "src/rewritten.py"
+FIRST_LINE = LineSpan(first=1, last=1)
+WHY_REWRITTEN = "Said as the caller expects."
+REWRITTEN_ONCE = [
+    changed_file(
+        REWRITTEN,
+        DiffHunk(header=NO_HUNK_HEADER, old_start=1, new_start=1, lines=[removed_line(1, "a"), added_line(1, "A")]),
+    )
+]
+REWRITTEN_AGAIN = [
+    changed_file(
+        REWRITTEN,
+        DiffHunk(header=NO_HUNK_HEADER, old_start=1, new_start=1, lines=[removed_line(1, "a"), added_line(1, "Aa")]),
+    )
+]
 
 THE_DOUBT = OverviewBlock(text=OverviewText.DOUBT)
 THE_DOUBT_SAID = ("overview", "doubt")
@@ -78,6 +104,16 @@ def test_a_story_that_tells_a_file_no_thread_could_name_still_takes_threads_on_i
     held = StoryAnchorHandler(told_as_written(named_oddly))
 
     assert held.quote(StoryAnchor(block=THE_DOUBT)).quote == [field_at(STORY, THE_DOUBT_SAID)]
+
+
+def test_the_reason_of_a_step_whose_code_a_round_took_out_of_sight_may_still_be_asked_about() -> None:
+    """Its words are still drawn though it shows no code: a thread on them has its place."""
+    told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
+    held = StoryAnchorHandler(follow(told, REWRITTEN_AGAIN))
+
+    assert held.quote(StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first))).quote == [
+        WHY_REWRITTEN
+    ]
 
 
 def test_a_thread_on_the_story_is_refused_while_no_story_is_told() -> None:

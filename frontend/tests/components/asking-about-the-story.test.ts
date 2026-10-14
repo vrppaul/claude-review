@@ -212,8 +212,7 @@ describe("the story's other blocks", () => {
 	});
 
 	it('offer nothing on the reason of a step of a file no thread can name', () => {
-		const step = toldStep('a.py', 1, 'The first line comes first.');
-		const unnamable = { ...step, piece: { ...step.piece, commentable: false } };
+		const unnamable = { ...toldStep('a.py', 1, 'The first line comes first.'), commentable: false };
 		review = openReview({ files, story: storyHeld({ chapters: [toldChapter('ch-1', [unnamable])] }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });

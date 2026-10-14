@@ -140,17 +140,8 @@ class DiffFile(BaseModel):
 
     @property
     def commentable(self) -> bool:
-        """Whether a thread may hang on the file: whether its path is one a thread may name.
-
-        Git hands out names no thread can carry — a tab, a newline, an escape
-        in them — and such a file is still shown, but only to be read: one
-        thread on it would have its whole round refused.
-        """
-        try:
-            FILE_PATHS.validate_python(self.path)
-        except ValidationError:
-            return False
-        return True
+        """Whether a thread may hang on the file: whether its path is one a thread may name."""
+        return thread_may_name(self.path)
 
     def showing(self, hunks: list[DiffHunk]) -> DiffFile:
         """The file showing these rows in place of its own: a piece of it, read as the file is.
@@ -236,7 +227,7 @@ CHAPTER_IDS: TypeAdapter[ChapterId] = TypeAdapter(ChapterId)
 # the review — a whole fabricated section, blocker and all, in what the agent
 # reads — and a tab or an escape has no place in a heading or a chip either.
 # Git quotes such names and the parser faithfully decodes them, so the diff
-# still shows such a file; it only takes no thread (`DiffFile.commentable`).
+# still shows such a file; it only takes no thread (`thread_may_name`).
 SAFE_PATH = r"^[^\x00-\x1f\x7f]+$"
 
 # The longest path a file system here hands out
@@ -247,6 +238,21 @@ FilePath = Annotated[str, Field(min_length=1, max_length=MAX_PATH_LENGTH, patter
 
 # The rule a file path is held to, for a path the review is handed rather than sent
 FILE_PATHS: TypeAdapter[FilePath] = TypeAdapter(FilePath)
+
+
+def thread_may_name(path: str) -> bool:
+    """Whether a thread may hang on a file of this path: whether the path is one a thread may name.
+
+    Git hands out names no thread can carry — a tab, a newline, an escape
+    in them — and such a file is still shown, but only to be read: one
+    thread on it would have its whole round refused.
+    """
+    try:
+        FILE_PATHS.validate_python(path)
+    except ValidationError:
+        return False
+    return True
+
 
 # A moment, in milliseconds since the epoch: the one unit the review says
 # every time in, so the browser reads them all the same way

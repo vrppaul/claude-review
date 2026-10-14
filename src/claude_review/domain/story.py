@@ -19,7 +19,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffFile, EpochMillis, LineSpan
+from claude_review.domain.models import DiffFile, EpochMillis, LineSpan, thread_may_name
 
 
 class StoryPart(BaseModel):
@@ -46,8 +46,8 @@ class Step(StoryPart):
     lines: LineSpan
     reason: str | None = None
 
-    def told(self, piece: DiffFile, *, changed_since_told: bool) -> ToldStep:
-        """The step as it is told: everything it says, the piece of its file it shows, and whether that changed."""
+    def told(self, piece: DiffFile | None, *, changed_since_told: bool) -> ToldStep:
+        """The step as it is told: everything it says, the piece of its file it shows if any, and whether it changed."""
         return ToldStep(
             file=self.file, lines=self.lines, reason=self.reason, piece=piece, changed_since_told=changed_since_told
         )
@@ -210,12 +210,25 @@ TEXT_LIMITS: dict[StoryText, TextLimit] = {
 
 
 class ToldStep(Step):
-    """A step as it is told: with the piece of its file it shows, cut out of the change."""
+    """A step as it is told: with the piece of its file it shows, cut out of the change, while its code is there.
 
-    piece: DiffFile
+    A round's work may leave the review unable to say where a step's code
+    is now: its file left the change, nothing of its lines is found, or the
+    steps of its file would meet once followed. It then shows no piece, on
+    the lines it was told of: a piece cut there would show other code, and
+    an empty one would claim a status its file no longer has.
+    """
+
+    # None where its code is not in the change as it now stands
+    piece: DiffFile | None
     # Whether a round's work changed the code it shows after it was told: its
-    # rows say something else now, or its file left the change
+    # rows say something else now, or it shows none
     changed_since_told: bool
+
+    @property
+    def commentable(self) -> bool:
+        """Whether a thread may hang on what the step says: whether its file's path is one a thread may name."""
+        return thread_may_name(self.file)
 
 
 class LeftOut(StoryPart):

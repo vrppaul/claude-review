@@ -2097,7 +2097,7 @@ export interface components {
         ToldFrom: "memory" | "commits";
         /**
          * ToldStep
-         * @description A step as it is told: its reason, when it has one, and the piece of its file it shows.
+         * @description A step as it is told: its reason, when it has one, and the piece of its file it shows while its code is there.
          */
         ToldStep: {
             /** File */
@@ -2105,9 +2105,11 @@ export interface components {
             lines: components["schemas"]["LineSpan-Output"];
             /** Reason */
             reason: string | null;
-            piece: components["schemas"]["DiffFile"];
+            piece: components["schemas"]["DiffFile"] | null;
             /** Changed Since Told */
             changed_since_told: boolean;
+            /** Commentable */
+            commentable: boolean;
         };
         /**
          * ToldStory

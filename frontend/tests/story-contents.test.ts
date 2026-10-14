@@ -3,7 +3,7 @@ import { contentsOf, tellsFirst } from '$lib/review/story-contents';
 import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { piecesOf } from '$lib/review/story-pieces';
 import { addedLine, diffFile, hunk, removedLine } from './diff';
-import { toldChapter, toldStep, toldStory } from './story';
+import { stepWithoutCode, toldChapter, toldStep, toldStory } from './story';
 
 // A story of three chapters. The first tells a.py twice, around b.py; the second tells b.py and a.py;
 // the third tells c.py, which no other chapter tells, and a.py once more. Every step tells one line
@@ -52,13 +52,25 @@ describe('what a story lists of itself', () => {
 		]);
 	});
 
-	it("gives each step its chapter's one listing of its file", () => {
+	it("gives each step its piece and its chapter's one listing of its file", () => {
 		const [a, b] = ofTheFirst.files;
 		const [ofAFirst, ofB, ofAAgain] = ofTheFirst.steps;
 
-		expect(ofAFirst.fileListed).toBe(a);
-		expect(ofB.fileListed).toBe(b);
-		expect(ofAAgain.fileListed).toBe(a);
+		expect(ofAFirst.shown).toEqual({ piece: aFirst.piece, fileListed: a });
+		expect(ofB.shown).toEqual({ piece: bFirst.piece, fileListed: b });
+		expect(ofAAgain.shown).toEqual({ piece: aAgain.piece, fileListed: a });
+	});
+
+	it('lists no file of a chapter where no step of it shows code of it, and shows nothing of such a step', () => {
+		const ofB = toldStep('b.py', 1);
+		const withoutCode = toldChapter('ch-1', [stepWithoutCode('a.py', 1), ofB]);
+		const [listed] = contentsOf(
+			toldStory({ chapters: [withoutCode, toldChapter('ch-2', [toldStep('a.py', 5)])] })
+		).chapters;
+		const [b] = listed.files;
+
+		expect(listed.files.map(({ firstPiece, alsoIn }) => [firstPiece.path, alsoIn])).toEqual([['b.py', []]]);
+		expect(listed.steps.map(({ shown }) => shown)).toEqual([null, { piece: ofB.piece, fileListed: b }]);
 	});
 
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {

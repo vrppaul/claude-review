@@ -57,26 +57,37 @@
 	</div>
 {/snippet}
 
-<!-- A step is one section of the page, from its number down to its last line: a reader taken to it
-	reads why before the code. A piece that cannot be drawn says so in its place, under the number and
-	reason it still has, and takes no other piece down with it -->
-<svelte:boundary onerror={reportBroken}>
-	<StoryPiece sectionKey={step.section} piece={told.piece} shows="a-step" above={numberAndReason}>
-		{#snippet beside()}
-			<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(told.lines)}</span>
+{#if step.shown === null}
+	<!-- A step whose code the review cannot place in the change now: its number, its reason and its
+		file, and no code, which would be other code or a file's status no longer true. It draws no
+		lines, so it is no section of the page -->
+	<div data-testid="story-step-without-code">
+		{@render numberAndReason()}
+		<p data-testid="step-file" class="cr-voice-inset cr-muted font-mono text-xs wrap-anywhere">{told.file}</p>
+	</div>
+{:else}
+	{@const shown = step.shown}
+	<!-- A step is one section of the page, from its number down to its last line: a reader taken to it
+		reads why before the code. A piece that cannot be drawn says so in its place, under the number and
+		reason it still has, and takes no other piece down with it -->
+	<svelte:boundary onerror={reportBroken}>
+		<StoryPiece sectionKey={step.section} piece={shown.piece} shows="a-step" above={numberAndReason}>
+			{#snippet beside()}
+				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(told.lines)}</span>
+			{/snippet}
+			{#snippet atFarEnd()}
+				{#if shown.fileListed.alsoIn.length > 0}
+					<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
+					<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(shown.fileListed.alsoIn)}</span>
+				{/if}
+			{/snippet}
+		</StoryPiece>
+		{#snippet failed(error, retry)}
+			<!-- One block among the chapter's steps, as the section it stands in for is -->
+			<div>
+				{@render numberAndReason()}
+				<PartFailed what={told.file} {error} {retry} />
+			</div>
 		{/snippet}
-		{#snippet atFarEnd()}
-			{#if step.fileListed.alsoIn.length > 0}
-				<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
-				<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(step.fileListed.alsoIn)}</span>
-			{/if}
-		{/snippet}
-	</StoryPiece>
-	{#snippet failed(error, retry)}
-		<!-- One block among the chapter's steps, as the section it stands in for is -->
-		<div>
-			{@render numberAndReason()}
-			<PartFailed what={told.file} {error} {retry} />
-		</div>
-	{/snippet}
-</svelte:boundary>
+	</svelte:boundary>
+{/if}

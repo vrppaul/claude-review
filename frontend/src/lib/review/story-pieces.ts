@@ -90,12 +90,12 @@ export class StoryPieces {
 
 /**
  * The pieces of what a story lists of itself, in the order it draws them:
- * every step as its chapter lists it, then what the story leaves out; each
- * under the key the listing knows its section by.
+ * every step that shows code as its chapter lists it, then what the story
+ * leaves out; each under the key the listing knows its section by.
  */
 export function piecesOf(contents: StoryContents): StoryPieces {
 	const steps = contents.chapters.flatMap((chapter) =>
-		chapter.steps.map(({ section, told }) => ({ key: section, piece: told.piece }))
+		chapter.steps.flatMap(({ section, shown }) => (shown === null ? [] : [{ key: section, piece: shown.piece }]))
 	);
 	const leftOut = contents.leftOut.map(({ section, told }) => ({ key: section, piece: told.piece }));
 	return new StoryPieces([...steps, ...leftOut]);

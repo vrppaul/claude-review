@@ -25,12 +25,20 @@ export function toldStepOfLines(file: string, first: number, last: number, reaso
 			)
 		]
 	});
-	return { file, lines: { first, last }, reason, piece, changed_since_told: false };
+	return { file, lines: { first, last }, reason, piece, changed_since_told: false, commentable: true };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
 export function toldStep(file: string, line: number, reason: string | null = null): ToldStep {
 	return toldStepOfLines(file, line, line, reason);
+}
+
+/**
+ * A step told of one line a file gained whose code a round took out of the
+ * change, as the review says it: no piece, marked changed.
+ */
+export function stepWithoutCode(file: string, line: number, reason: string | null = null): ToldStep {
+	return { ...toldStep(file, line, reason), piece: null, changed_since_told: true };
 }
 
 /** A chapter of these steps, known by its id. */

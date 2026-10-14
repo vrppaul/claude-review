@@ -154,7 +154,7 @@ export function stepReason(file: string, firstLine: number): StoryBlock {
  * the step gives no reason, or tells a file no thread can name.
  */
 export function askableReason(step: ToldStep): string | null {
-	return step.piece.commentable ? step.reason : null;
+	return step.commentable ? step.reason : null;
 }
 
 /** A block of the story as the reader asks about it, with the words it says now. */

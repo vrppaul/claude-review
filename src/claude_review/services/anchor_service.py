@@ -351,7 +351,7 @@ def _chapter_said(chapter: Chapter[ToldStep]) -> dict[StoryBlock, str | None]:
         **{
             ReasonBlock(file=step.file, first_line=step.lines.first): step.reason
             for step in chapter.steps
-            if step.piece.commentable
+            if step.commentable
         },
     }
 

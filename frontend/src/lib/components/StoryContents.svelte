@@ -84,7 +84,11 @@
 						class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
 					>
 						{#each chapter.files as listed (listed.firstPiece.path)}
-							<ContentsFile file={listed.firstPiece} opensAt={listed.opensAt} current={stepRead?.fileListed === listed}>
+							<ContentsFile
+								file={listed.firstPiece}
+								opensAt={listed.opensAt}
+								current={stepRead?.shown?.fileListed === listed}
+							>
 								<!-- The file's whole change where the story first tells it; after that, where it was told -->
 								{#if tellsFirst(chapter, listed)}
 									<ChangedLines changed={review.story.pieces.changeOf(listed.firstPiece.path)} />

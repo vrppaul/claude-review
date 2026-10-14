@@ -141,7 +141,7 @@ async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_
     assert stale == {
         "round": 2,
         "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": "2-3"}],
-        "left_out": 1,
+        "left_out": 3,
     }
 
 

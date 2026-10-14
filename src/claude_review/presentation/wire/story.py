@@ -149,15 +149,18 @@ class StoryOverview(WireModel):
 
 
 class ToldStep(WireModel):
-    """A step as it is told: its reason, when it has one, and the piece of its file it shows."""
+    """A step as it is told: its reason, when it has one, and the piece of its file it shows while its code is there."""
 
     file: str
     lines: LineSpan
     reason: str | None
-    # The rows of the file the step is, to be drawn as a file is
-    piece: DiffFile
-    # Whether a round's work changed the code it shows after it was told
+    # The rows of the file the step is, to be drawn as a file is; null where
+    # its code is not in the change as it now stands
+    piece: DiffFile | None
+    # Whether a round's work changed the code it shows after it was told, or left it showing none
     changed_since_told: WireBool
+    # Whether a thread may hang on what it says: a path holding a control character is shown, but only to be read
+    commentable: WireBool
 
 
 class ToldChapter(WireModel):

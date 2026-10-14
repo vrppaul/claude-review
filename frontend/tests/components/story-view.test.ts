@@ -13,7 +13,17 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { ASKED, codeMovedOn, storyHeld, storyResponse, TAKEN, toldChapter, toldStep, toldStepOfLines } from '../story';
+import {
+	ASKED,
+	codeMovedOn,
+	stepWithoutCode,
+	storyHeld,
+	storyResponse,
+	TAKEN,
+	toldChapter,
+	toldStep,
+	toldStepOfLines
+} from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py gained a line, and so did a lock file
 const files = [
@@ -990,6 +1000,31 @@ describe('a story whose code a round changed after it was told', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');
 
 		expect(within(theEnd).queryByTestId('chapter-changed')).toBeNull();
+	});
+
+	it('draws a step whose code is out of the change by its number, its reason and its file, with no code', () => {
+		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)]);
+		review = openReview({ files, story });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings] = screen.getAllByTestId('story-chapter');
+		const [withoutCode] = within(beginnings).getAllByTestId('story-step-without-code');
+
+		expect(said(within(withoutCode).getByTestId('step-reason'))).toBe('Why a.py starts so.');
+		expect(said(within(withoutCode).getByTestId('step-file'))).toBe('a.py');
+		expect(within(beginnings).getAllByTestId('story-piece')).toHaveLength(1);
+	});
+
+	it('lets the reader ask about the reason of a step whose code is out of the change', () => {
+		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)]);
+		review = openReview({ files, story });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [withoutCode] = screen.getAllByTestId('story-step-without-code');
+
+		expect(within(withoutCode).getByTestId('step-reason-block')).toBeTruthy();
 	});
 
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {

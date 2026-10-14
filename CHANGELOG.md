@@ -96,16 +96,22 @@
   first of them still said as it was; it is cut again from the take as it
   now stands, and a step whose code changed since it was told is marked,
   `changed_since_told` in `GET /api/story`, and what the round added that
-  no step tells is left out beside it. The story is always followed from
-  the story as told, so code put back reads as told again. It is still the
-  story of the round it was told in; `moved_on` says the round a take
-  first found the code moved on in, which later takes keep while it stays
-  so, and, where the round changed them, how many changed lines no step
-  told when it was told and how many none tells now (`left_out`, else
-  `null`). The page reads the story again after the diff, keeping what was
-  read of it: its lines are the code under review again, and take
-  comments. "The code has changed since this story was told" is said only
-  of a story the page could not read again. A step whose code changed
+  no step tells is left out beside it. A step whose code the review cannot
+  place in the change now — its file left it, nothing of its lines is
+  found, or the steps of its file would meet — shows no code, never other
+  code at its old numbers: its number, its reason, still open to a
+  question, and its file's name, marked; its `piece` is `null`, and every
+  told step says whether a thread may name its file (`commentable`). The
+  story is always followed from the story as told, so code put back reads
+  as told again. It is still the story of the round it was told in;
+  `moved_on` says the round a take first found the code moved on in, which
+  later takes keep while it stays so, and, where the round changed them,
+  how many changed lines no step told when it was told and how many none
+  tells now (`left_out`, else `null`). The page reads the story again
+  after the diff, keeping what was read of it: its lines are the code
+  under review again, and take comments. "The code has changed since this
+  story was told" is said only of a story the page could not read again.
+  A step whose code changed
   shows it as it now stands under a number and reason that step back, and
   is named "Step 2.2, changed after it was told"; its chapter says first,
   in the frame of its doubt, "Changed after it was told. 3 steps in this

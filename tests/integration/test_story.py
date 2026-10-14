@@ -33,7 +33,13 @@ from claude_review.presentation.wire.agent import EventResponse, StoryCancelEven
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
-from claude_review.presentation.wire.story import CodeMovedOn, LeftOutOfFile, StoryResponse, StoryTakenResponse
+from claude_review.presentation.wire.story import (
+    CodeMovedOn,
+    LeftOutChanged,
+    LeftOutOfFile,
+    StoryResponse,
+    StoryTakenResponse,
+)
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.system_clock import SystemClock
@@ -233,19 +239,22 @@ async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client:
     assert "no change" in Refusal.model_validate_json(answered.content).detail
 
 
-async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands_marked_where_it_changed(
+async def test_a_story_follows_the_diff_taken_again_showing_the_code_as_it_now_stands_and_none_where_it_is_gone(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """The round's work moved the code under a story: its steps show the code under review, and say where it changed."""
+    """The round's work moved the code under a story: a step shows the code under review, or none, marked, once
+    nothing of its own is there."""
     await tell(agent, WHOLE_STORY)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
-    held = (await held_by(agent)).held
-    assert [(told.file, rows_of(told.piece), told.changed_since_told) for told in held.story.chapters[0].steps] == [
-        (EDITED_FILE, ["and a line reworded since"], True),
-        (ADDED_FILE, ["def added() -> None:", "    return None"], False),
-    ]
+    [reworded, untouched] = (await held_by(agent)).held.story.chapters[0].steps
+    assert (reworded.file, reworded.piece, reworded.changed_since_told) == (EDITED_FILE, None, True)
+    assert (untouched.file, rows_of(untouched.piece), untouched.changed_since_told) == (
+        ADDED_FILE,
+        ["def added() -> None:", "    return None"],
+        False,
+    )
 
 
 async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_moved_on(
@@ -256,7 +265,11 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     await take_again_after_a_round(agent, tmp_git_repo)
 
     held = (await held_by(agent)).held
-    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out=None))
+    # The line the round reworded is in no step now: it is left out
+    assert (held.round, held.moved_on) == (
+        FIRST_ROUND,
+        CodeMovedOn(round=FIRST_ROUND + 1, left_out=LeftOutChanged(when_told=0, now=1)),
+    )
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 

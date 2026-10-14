@@ -112,6 +112,12 @@ tests. Remove items when done — don't check them off.
       run of `}` — is followed onto a later take by nearness alone
       (`find_run`), so it may land on other lines that say the same and
       show them as current.
+- [ ] `refactor(story)`: where the followed steps of a file would meet,
+      every step of the file shows no code, since two constructions stay
+      as they are: a step is known by its file and first line (the page's
+      keys, a thread on its reason), and `PlacedFile.left_out` takes steps
+      that never share a line. With either changed, only the steps that
+      meet would go without code.
 
 ## The story, on the page
 

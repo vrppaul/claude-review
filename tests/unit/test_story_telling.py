@@ -337,14 +337,20 @@ def test_steps_of_one_file_in_two_chapters_each_follow_their_own_code() -> None:
     ]
 
 
-def test_a_step_whose_line_was_said_another_way_stays_on_its_lines_marked_showing_the_code_as_it_now_stands() -> None:
+def test_a_step_nothing_of_which_is_found_shows_no_code_and_is_marked_on_the_lines_it_was_told_of() -> None:
+    """Its only line was said another way: the review cannot say where its code is, and draws none as current."""
     [told_step, _] = steps_of(
         followed(story_of(step(LETTERS, 2, 2), step(LETTERS, 6, 6)), [LETTERS_TOLD], [B_REWORDED])
     )
 
-    assert told_step.lines == LineSpan(first=2, last=2)
-    assert rows_of(told_step.piece) == ["b", "Bee"]
-    assert told_step.changed_since_told is True
+    assert (told_step.piece, told_step.lines, told_step.changed_since_told) == (None, LineSpan(first=2, last=2), True)
+
+
+def test_the_lines_of_a_step_nothing_of_which_is_found_are_left_out() -> None:
+    """No step shows them now: they are not hidden behind a step that shows nothing."""
+    story = followed(story_of(step(LETTERS, 2, 2), step(LETTERS, 6, 6)), [LETTERS_TOLD], [B_REWORDED])
+
+    assert [rows_of(left.piece) for left in story.left_out] == [["b", "Bee"]]
 
 
 def test_a_step_with_a_line_put_between_its_pieces_takes_it_in_and_is_marked() -> None:
@@ -369,14 +375,23 @@ def test_lines_of_a_step_that_follow_one_another_are_looked_for_together() -> No
     assert (told_step.lines, told_step.changed_since_told) == (LineSpan(first=3, last=4), False)
 
 
-def test_a_step_whose_file_left_the_change_shows_its_file_with_no_rows_and_is_marked() -> None:
+def test_a_step_whose_file_left_the_change_shows_no_code_and_is_marked_on_the_lines_it_was_told_of() -> None:
+    """Its file no longer differs: no status it was told with is true of it now."""
     [told_step, _] = steps_of(
         followed(story_of(step(LETTERS, 2, 2), step(ADDED, 1, 4)), [LETTERS_TOLD, FOUR_ADDED], [FOUR_ADDED])
     )
 
-    assert (told_step.piece.path, told_step.piece.hunks) == (LETTERS, [])
-    assert told_step.lines == LineSpan(first=2, last=2)
-    assert told_step.changed_since_told is True
+    assert (told_step.piece, told_step.lines, told_step.changed_since_told) == (None, LineSpan(first=2, last=2), True)
+
+
+def test_a_step_that_shows_no_code_still_shows_none_followed_onto_a_take_its_file_is_back_in() -> None:
+    """Nothing of what it was told with is left to look for."""
+    story = story_of(step(LETTERS, 2, 2), step(ADDED, 1, 4))
+    gone = followed(story, [LETTERS_TOLD, FOUR_ADDED], [FOUR_ADDED])
+
+    [told_step, _] = steps_of(follow(gone, [LETTERS_TOLD, FOUR_ADDED]))
+
+    assert (told_step.piece, told_step.changed_since_told) == (None, True)
 
 
 def test_a_line_the_round_added_outside_every_step_is_left_out_and_counted() -> None:
@@ -403,13 +418,13 @@ def test_a_step_of_lines_that_all_say_the_same_follows_them_by_nearness() -> Non
     assert (told_step.lines, told_step.changed_since_told) == (LineSpan(first=2, last=3), False)
 
 
-def test_steps_of_a_file_that_would_meet_once_followed_all_stay_on_their_lines() -> None:
-    """The second step's line is found inside the first's lines followed: no line is told twice."""
+def test_steps_of_a_file_that_would_meet_once_followed_all_show_no_code_on_the_lines_they_were_told_of() -> None:
+    """The second step's line is found inside the first's lines followed: where each one's code is, nobody can say."""
     story = followed(
         story_of(step(ALIKE, 1, 2), step(ALIKE, 4, 4)), [SECOND_AND_FOURTH_ALIKE], [ONE_ABOVE_AND_THE_FOURTH_GONE]
     )
 
-    assert [(told_step.lines, told_step.changed_since_told) for told_step in steps_of(story)] == [
-        (LineSpan(first=1, last=2), True),
-        (LineSpan(first=4, last=4), True),
+    assert [(told_step.piece, told_step.lines, told_step.changed_since_told) for told_step in steps_of(story)] == [
+        (None, LineSpan(first=1, last=2), True),
+        (None, LineSpan(first=4, last=4), True),
     ]
