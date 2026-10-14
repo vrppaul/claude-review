@@ -180,14 +180,10 @@ def _moved_lines(step: ToldStep, sides_now: dict[LineSide, _SideNow]) -> LineSpa
     The lines it shows, on the side its file is told by, are runs that follow
     one another, broken where a hunk ends. Its first line moves as the first
     line of the first run found moved, and its last as the last line of the
-    last; one whose last line now stands above its first is not placed. A
-    step whose piece shows no line of that side — a file the change shows no
-    line of — has nothing to look for, and stays.
+    last; one whose last line now stands above its first is not placed.
     """
     side = side_told_by(step.piece)
     runs = _runs(side_lines(step.piece, side))
-    if not runs:
-        return step.lines
     moves = [move for run in runs if (move := _how_far_moved(run, sides_now[side])) is not None]
     if not moves:
         return None

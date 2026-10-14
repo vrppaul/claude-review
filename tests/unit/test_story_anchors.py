@@ -213,6 +213,13 @@ def test_a_thread_on_the_story_is_left_as_it_is_while_no_story_is_held() -> None
     assert NO_STORY.follow(written) == written
 
 
+def test_a_thread_on_the_story_that_never_kept_its_words_is_left_as_it_is() -> None:
+    """With nothing quoted there is nothing to look for, and nothing says the words changed."""
+    unquoted = StoryAnchor(block=THE_DOUBT)
+
+    assert HELD.follow(unquoted) == unquoted
+
+
 def test_a_thread_on_the_story_is_taken_with_the_words_the_page_showed() -> None:
     """No suggestion replaces a story's words, so nothing holds the quote to them: the page quotes what it drew."""
     HELD.check_quote(StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS]))
