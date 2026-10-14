@@ -191,4 +191,11 @@ describe('what the reader waits on', () => {
 
 		expect(screen.getByTestId('story-waiting').getAttribute('role')).toBe('status');
 	});
+
+	it('is not read out second by second: every time and count beside a fact is read when asked for', () => {
+		waiting({ asking: TAKEN });
+
+		const readOutAs = screen.getAllByTestId('story-wait-when').map((when) => when.getAttribute('aria-live'));
+		expect(readOutAs).toEqual(['off', 'off', 'off']);
+	});
 });

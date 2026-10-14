@@ -8,6 +8,10 @@ told another way.
 """
 
 import asyncio
+from collections.abc import AsyncIterator, Coroutine
+from contextvars import Context
+
+import pytest
 
 from claude_review.domain.models import AgentEvent, PanelCancel, StoryCancelled, StoryRequested
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
@@ -19,6 +23,34 @@ A_MOMENT_SECONDS = 0.01
 
 HANDED_IN_FIRST = PanelCancel(message_id="panel-1")
 HANDED_IN_LAST = PanelCancel(message_id="panel-2")
+
+
+# More tasks than a wait starts that sleeps until its time is up: its two watches, and a sleep or two. A
+# wait that never sleeps starts one for every turn of the loop, thousands in the moment it is given
+MORE_THAN_A_SLEEPING_WAIT_STARTS = 10
+
+
+class TasksStarted:
+    """Counts the tasks an event loop starts, standing in for what makes them."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+    def start[ResultT](
+        self, loop: asyncio.AbstractEventLoop, work: Coroutine[None, None, ResultT], **given: Context | None
+    ) -> asyncio.Task[ResultT]:
+        self.count += 1
+        return asyncio.Task(work, loop=loop, **given)
+
+
+@pytest.fixture
+async def tasks_started() -> AsyncIterator[TasksStarted]:
+    """A count of the tasks the test's loop starts, from here to the end of the test."""
+    started = TasksStarted()
+    loop = asyncio.get_running_loop()
+    loop.set_task_factory(started.start)
+    yield started
+    loop.set_task_factory(None)
 
 
 def _inbox() -> AgentInbox:
@@ -77,3 +109,16 @@ async def test_only_what_is_named_is_taken_back() -> None:
     inbox.withdraw(StoryCancelled())
 
     assert await _taken_from(inbox) == StoryRequested()
+
+
+async def test_a_wait_sleeps_until_its_time_is_up_once_what_was_handed_in_is_taken_back(
+    tasks_started: TasksStarted,
+) -> None:
+    """Nothing is left to wake for. A wait that went on waking would start one sleep after another, without end."""
+    inbox = _inbox()
+    inbox.hand_in(StoryRequested())
+    inbox.withdraw(StoryRequested())
+
+    await _taken_from(inbox)
+
+    assert tasks_started.count < MORE_THAN_A_SLEEPING_WAIT_STARTS

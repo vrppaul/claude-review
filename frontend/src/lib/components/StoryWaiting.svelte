@@ -92,7 +92,7 @@
 					<Icon name={DRAWN_AS[fact.state].mark} class="cr-wait-mark" />
 					<span>{fact.says}</span>
 					<!-- A count that moves every second is read when asked for, never read out as it moves -->
-					<span class="cr-wait-when" aria-live="off">{fact.when}</span>
+					<span data-testid="story-wait-when" class="cr-wait-when" aria-live="off">{fact.when}</span>
 				</li>
 			{/each}
 		</ul>
