@@ -123,7 +123,9 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(ui)`: a story asked for whose request fails is said in the
       panel and nowhere else. The page goes on holding no asking, and asks
       again only at a reload, after a gap in what the server told, or as
-      stories are turned on again (`Review.wantStory`).
+      stories are turned on again (`Review.wantStory`). The story view
+      goes on saying "Asking the agent for a story", with the files as the
+      one way on (`StoryWaiting.svelte`).
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
@@ -307,10 +309,11 @@ tests. Remove items when done — don't check them off.
 - [ ] No test holds what the button of the list of threads a narrower base
       cannot draw says of several, "List them" and "Hide them"
       (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
-- [ ] The tests write `STORY_ROUTE` in five modules, and the change a story
-      is told of, with the steps that tell it, in two
-      (`tests/integration/test_story.py`, `test_agent_commands.py`):
-      `tests/helpers.py` names every other route once.
+- [ ] Five test modules write `STORY_ROUTE` themselves, and
+      `tests/integration/test_story.py` the routes a story is asked for and
+      stopped at, where `tests/helpers.py` names all three; and the change
+      a story is told of, with the steps that tell it, is written in two
+      (`tests/integration/test_story.py`, `test_agent_commands.py`).
 
 ## Known limits
 

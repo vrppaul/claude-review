@@ -897,14 +897,6 @@ describe('the files, read where a story could be', () => {
 });
 
 describe('a review nobody has told a story of yet', () => {
-	it('says so where the story would be, and how one is told', () => {
-		review = openReview({ files });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		expect(screen.getByTestId('no-story').textContent).toContain('No story has been told of this change yet.');
-	});
-
 	it('says nothing of the comments it holds: there is no story for them to be off', () => {
 		review = openReview({ files });
 		review.threads.add(newComment({ file: 'a.py', startLine: 9, body: 'about the last line' }));

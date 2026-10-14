@@ -1148,6 +1148,64 @@
 	padding-inline: 1.5rem;
 }
 /*
+ * Where a story will be, while there is none to read: what the reader waits
+ * on stands in the middle of the story's area, both ways. The room is as
+ * tall as the area at least, so the middle is the middle of what is seen,
+ * and the area scrolls only where the words are taller than it.
+ */
+.cr-story-waiting-room {
+	box-sizing: border-box;
+	min-height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem 1rem;
+}
+/* What the reader waits on: one narrow column of words, facts and what can be done meanwhile */
+.cr-story-waiting {
+	width: 28.75rem;
+	max-width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 1.375rem;
+	font-size: 0.875rem;
+	line-height: 1.6;
+}
+/* The facts of a story on its way: a card of rows, each a mark, what happened, and when */
+.cr-wait-facts {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	padding: 0.875rem 1rem;
+	background: var(--color-base-200);
+	border: 1px solid var(--color-base-300);
+	border-radius: 0.5rem;
+}
+.cr-wait-fact {
+	display: grid;
+	grid-template-columns: 1.125rem minmax(0, 1fr) auto;
+	gap: 0.625rem;
+	align-items: center;
+}
+.cr-wait-mark {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+.cr-wait-when {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+}
+/* What has happened is done, and its moment is past; what is waited for is the agent's to do, and its count is read now */
+.cr-wait-fact-happened .cr-wait-mark {
+	color: var(--cr-done);
+}
+.cr-wait-fact-happened .cr-wait-when {
+	color: var(--cr-faint);
+}
+.cr-wait-fact-awaited .cr-wait-mark {
+	color: var(--cr-agent);
+}
+/*
  * Where the bar a chapter is read under stands: a slot kept at the top of
  * the story's area whichever way that scrolls. It is as tall as the bar it
  * holds, and with none, of no height.

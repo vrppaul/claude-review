@@ -43,6 +43,19 @@ export const ICONS = {
 		drawn: { kind: 'traced', width: 1.2 }
 	},
 	cross: { viewBox: '0 0 12 12', paths: ['M3 3l6 6M9 3l-6 6'], drawn: { kind: 'traced', width: 1.6 } },
+	// A ring of six dashes: what has not happened yet, and is waited for
+	awaited: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M13.5 8A5.5 5.5 0 0 1 12.76 10.75',
+			'M10.75 12.76A5.5 5.5 0 0 1 8 13.5',
+			'M5.25 12.76A5.5 5.5 0 0 1 3.24 10.75',
+			'M2.5 8A5.5 5.5 0 0 1 3.24 5.25',
+			'M5.25 3.24A5.5 5.5 0 0 1 8 2.5',
+			'M10.75 3.24A5.5 5.5 0 0 1 12.76 5.25'
+		],
+		drawn: { kind: 'traced', width: 1.6 }
+	},
 	// One version against another: what the diff is taken against
 	compare: {
 		viewBox: '0 0 16 16',

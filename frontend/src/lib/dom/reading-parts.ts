@@ -108,6 +108,17 @@ export class ReadingParts {
 		lendKeyboardToWhatRemains(() => this.#parts.beingRead?.head);
 	}
 
+	/**
+	 * Put the keyboard on the head of a part, by its key, if what had it
+	 * went: the part a story begins with, as the story takes the place of
+	 * what stood there until it was told. No part is being read yet at that
+	 * moment, so the part is named. Its head holds the keyboard as the head
+	 * of the part being read does; nothing does, for a part that is not drawn.
+	 */
+	keyboardToHeadOf(key: string): void {
+		lendKeyboardToWhatRemains(() => this.#parts.get(key)?.head);
+	}
+
 	#stopWatching(stopParts: () => void, stopHeads: () => void): void {
 		stopParts();
 		stopHeads();

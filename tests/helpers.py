@@ -86,8 +86,11 @@ CATCH_UP_ROUTE = "/api/catch-up"
 CONVERSATION_ROUTE = "/api/conversation"
 EVENTS_ROUTE = "/api/events"
 IMAGES_ROUTE = "/api/images"
-# Where the reader asks the agent for a story of the change
+# Where the agent tells the story of the change and a page reads it, where the reader asks the agent for
+# one, and where they stop the one they asked for
+STORY_ROUTE = "/api/story"
 STORY_REQUEST_ROUTE = "/api/story/request"
+STORY_CANCEL_ROUTE = "/api/story/cancel"
 
 
 # How a refusal of a method says which methods are taken, and how it parts them
