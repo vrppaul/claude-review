@@ -10,6 +10,14 @@ const LAYOUT_KEPT_HERE = 'claude-review:layout';
 const WHITESPACE_KEPT_HERE = 'claude-review:ignore-whitespace';
 const SOUND_KEPT_HERE = 'claude-review:reply-sound';
 
+// What this browser hands over of a reader who chose nothing here: the four choices it ever kept, and no other
+const NOTHING_CHOSEN_HERE = {
+	theme: 'system',
+	diff_layout: 'unified',
+	ignore_whitespace: false,
+	sound_on_replies: false
+};
+
 /** A server holding these settings, or none, and taking every change on top of them. */
 function serving(settings: ReaderSettings, stored: boolean): FakeServer {
 	const server = fakeServer();
@@ -42,7 +50,7 @@ describe('the reader settings', () => {
 		await settings.load();
 
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([
-			{ theme: 'system', diff_layout: 'split', ignore_whitespace: false, sound_on_replies: true }
+			{ ...NOTHING_CHOSEN_HERE, diff_layout: 'split', sound_on_replies: true }
 		]);
 		expect(settings.current.diff_layout).toBe('split');
 		// Dropped, so another review does not hand over stale copies later
@@ -56,7 +64,7 @@ describe('the reader settings', () => {
 
 		await settings.load();
 
-		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NEW_READER, theme: 'dark' }]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NOTHING_CHOSEN_HERE, theme: 'dark' }]);
 		expect(settings.current.theme).toBe('dark');
 		expect(localStorage.getItem(THEME_KEPT_HERE)).toBe('dark');
 	});
@@ -93,7 +101,7 @@ describe('the reader settings', () => {
 
 		await settings.load();
 
-		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NEW_READER, ignore_whitespace: true }]);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ...NOTHING_CHOSEN_HERE, ignore_whitespace: true }]);
 	});
 
 	it('hand nothing over when this browser kept nothing', async () => {

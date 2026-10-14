@@ -18,8 +18,12 @@ const NEW_READER: ReaderSettings = {
 	theme: 'system',
 	diff_layout: 'unified',
 	ignore_whitespace: false,
-	sound_on_replies: false
+	sound_on_replies: false,
+	stories: false
 };
+
+/** The choices this browser kept before the server did: these four, and none added since. */
+type KeptHere = Pick<ReaderSettings, 'theme' | 'diff_layout' | 'ignore_whitespace' | 'sound_on_replies'>;
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 const LAYOUTS: readonly DiffLayout[] = ['unified', 'split'];
@@ -32,7 +36,7 @@ const WHITESPACE_KEPT_HERE = 'ignore-whitespace';
 const SOUND_KEPT_HERE = 'reply-sound';
 
 /** What this browser kept before the server did, read under the old names. */
-function keptInThisBrowser(): ReaderSettings {
+function keptInThisBrowser(): KeptHere {
 	return {
 		theme: readChoice(THEME_CACHE, THEMES, NEW_READER.theme),
 		diff_layout: readChoice(LAYOUT_KEPT_HERE, LAYOUTS, NEW_READER.diff_layout),
@@ -41,11 +45,8 @@ function keptInThisBrowser(): ReaderSettings {
 	};
 }
 
-/**
- * Whether this browser kept any choice a new reader would not have. Only
- * these four were ever kept here: a setting added since has no old copy.
- */
-function choseAnything(kept: ReaderSettings): boolean {
+/** Whether this browser kept any choice a new reader would not have. */
+function choseAnything(kept: KeptHere): boolean {
 	return (
 		kept.theme !== NEW_READER.theme ||
 		kept.diff_layout !== NEW_READER.diff_layout ||

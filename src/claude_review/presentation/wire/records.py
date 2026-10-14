@@ -22,6 +22,8 @@ class ReaderSettings(WireModel):
     ignore_whitespace: WireBool
     # A tick when an answer arrives while the review is in a background tab
     sound_on_replies: WireBool
+    # Ask the agent for a story of every change reviewed
+    stories: WireBool
 
 
 class GuideState(WireModel):
@@ -56,6 +58,7 @@ class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
     diff_layout: DiffLayout | None = None
     ignore_whitespace: WireBool | None = None
     sound_on_replies: WireBool | None = None
+    stories: WireBool | None = None
 
     @override
     def applied_to(self, record: models.ReaderSettings) -> models.ReaderSettings:
@@ -65,6 +68,7 @@ class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
             diff_layout=_sent_or_kept(self.diff_layout, record.diff_layout),
             ignore_whitespace=_sent_or_kept(self.ignore_whitespace, record.ignore_whitespace),
             sound_on_replies=_sent_or_kept(self.sound_on_replies, record.sound_on_replies),
+            stories=_sent_or_kept(self.stories, record.stories),
         )
 
 

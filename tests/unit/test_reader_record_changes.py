@@ -2,7 +2,7 @@
 
 The page sends the choices being changed, and only those. A choice sent
 takes the place of the one kept; one not sent, or sent as null, leaves it;
-and no choice lands where another belongs, though two of them are both a
+and no choice lands where another belongs, though three of them are each a
 yes or a no.
 """
 
@@ -12,8 +12,10 @@ from pydantic import BaseModel, ConfigDict
 from claude_review.domain.models import DiffLayout, GuideState, ReaderSettings, Theme
 from claude_review.presentation.wire.records import GuideChange, SettingsChange
 
-# How a reader reads, with the two choices that are a yes or a no kept differently
-KEPT = ReaderSettings(theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=False)
+# How a reader reads, with the choices that are a yes or a no not all kept alike
+KEPT = ReaderSettings(
+    theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=False, stories=True
+)
 
 
 class Choice(BaseModel):
@@ -31,28 +33,51 @@ CHOICES = [
         what="the theme",
         change=SettingsChange(theme=Theme.LIGHT),
         leaves=ReaderSettings(
-            theme=Theme.LIGHT, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=False
+            theme=Theme.LIGHT,
+            diff_layout=DiffLayout.SPLIT,
+            ignore_whitespace=True,
+            sound_on_replies=False,
+            stories=True,
         ),
     ),
     Choice(
         what="how a diff is laid out",
         change=SettingsChange(diff_layout=DiffLayout.UNIFIED),
         leaves=ReaderSettings(
-            theme=Theme.DARK, diff_layout=DiffLayout.UNIFIED, ignore_whitespace=True, sound_on_replies=False
+            theme=Theme.DARK,
+            diff_layout=DiffLayout.UNIFIED,
+            ignore_whitespace=True,
+            sound_on_replies=False,
+            stories=True,
         ),
     ),
     Choice(
         what="whether whitespace is left out",
         change=SettingsChange(ignore_whitespace=False),
         leaves=ReaderSettings(
-            theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=False, sound_on_replies=False
+            theme=Theme.DARK,
+            diff_layout=DiffLayout.SPLIT,
+            ignore_whitespace=False,
+            sound_on_replies=False,
+            stories=True,
         ),
     ),
     Choice(
         what="whether a reply sounds",
         change=SettingsChange(sound_on_replies=True),
         leaves=ReaderSettings(
-            theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True
+            theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True, stories=True
+        ),
+    ),
+    Choice(
+        what="whether a story is asked for",
+        change=SettingsChange(stories=False),
+        leaves=ReaderSettings(
+            theme=Theme.DARK,
+            diff_layout=DiffLayout.SPLIT,
+            ignore_whitespace=True,
+            sound_on_replies=False,
+            stories=False,
         ),
     ),
 ]

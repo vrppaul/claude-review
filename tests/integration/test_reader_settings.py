@@ -16,6 +16,12 @@ from httpx import AsyncClient
 from claude_review.hosting.workspace import ReaderFiles
 from tests.helpers import ReviewFactory, http_client, opening_of
 
+# The settings file as a release before stories wrote it, for a reader who chose the dark theme: no model
+# of this release writes one without the choice
+KEPT_BEFORE_STORIES = (
+    '{"theme": "dark", "diff_layout": "unified", "ignore_whitespace": false, "sound_on_replies": false}'
+)
+
 
 @pytest.fixture
 def reader_files(tmp_path: Path) -> ReaderFiles:
@@ -38,9 +44,32 @@ async def test_a_reader_who_never_chose_gets_the_defaults_and_is_told_so(reviews
             "diff_layout": "unified",
             "ignore_whitespace": False,
             "sound_on_replies": False,
+            "stories": False,
         },
         "stored": False,
     }
+
+
+async def test_stories_turned_on_in_one_review_are_on_in_the_next(reviews: ReviewFactory) -> None:
+    async with _client(reviews) as client:
+        await client.put("/api/settings", json={"stories": True})
+    async with _client(reviews) as another_review:
+        seen = (await another_review.get("/api/settings")).json()
+
+    assert seen["record"]["stories"] is True
+
+
+async def test_settings_kept_before_stories_were_a_choice_are_read_with_stories_off(
+    reviews: ReviewFactory, reader_files: ReaderFiles
+) -> None:
+    """A story spends the agent's tokens: a release that brings the choice turns it on for nobody."""
+    reader_files.settings.parent.mkdir(parents=True)
+    reader_files.settings.write_text(KEPT_BEFORE_STORIES)
+
+    async with _client(reviews) as client:
+        seen = (await client.get("/api/settings")).json()
+
+    assert (seen["record"]["theme"], seen["record"]["stories"], seen["stored"]) == ("dark", False, True)
 
 
 async def test_a_choice_made_in_one_review_is_there_in_the_next(reviews: ReviewFactory) -> None:

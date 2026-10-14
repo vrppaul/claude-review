@@ -99,5 +99,21 @@
 				onchange={(event) => review.settings.change({ sound_on_replies: event.currentTarget.checked })}
 			/>
 		</label>
+
+		{#if review.story.canBeTold}
+			<label class="flex items-center justify-between gap-3">
+				<span>
+					Stories
+					<span class="cr-faint block text-xs">Each story spends the agent's tokens</span>
+				</span>
+				<input
+					data-testid="stories"
+					type="checkbox"
+					class="checkbox checkbox-xs"
+					checked={review.settings.current.stories}
+					onchange={(event) => review.settings.change({ stories: event.currentTarget.checked })}
+				/>
+			</label>
+		{/if}
 	</div>
 </Popover>

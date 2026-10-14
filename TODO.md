@@ -78,6 +78,11 @@ tests. Remove items when done — don't check them off.
       watched anew (`dom/crossing.ts`): no file is then said to be read
       while that section comes first of those counted. Read in the code,
       not seen in a browser.
+- [ ] `fix(ui)`: on a narrow screen the gear's pane opens past the left
+      edge of the window, and the names of its rows are cut off. The gear
+      wraps to the left there, and the pane hangs from its right edge
+      (`placement="below-end"`). Seen at 420 pixels:
+      `scripts/look.py --width 420 press:settings-toggle shot:gear`.
 
 ## The story, from the reviews of its server side
 

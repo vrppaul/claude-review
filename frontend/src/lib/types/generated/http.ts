@@ -1322,6 +1322,8 @@ export interface components {
             ignore_whitespace: boolean;
             /** Sound On Replies */
             sound_on_replies: boolean;
+            /** Stories */
+            stories: boolean;
         };
         /**
          * Refusal
@@ -1515,6 +1517,8 @@ export interface components {
             ignore_whitespace?: boolean | null;
             /** Sound On Replies */
             sound_on_replies?: boolean | null;
+            /** Stories */
+            stories?: boolean | null;
         };
         /**
          * ShowRequest

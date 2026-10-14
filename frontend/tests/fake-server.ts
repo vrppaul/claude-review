@@ -286,7 +286,8 @@ export const NEW_READER: ReaderSettings = {
 	theme: 'system',
 	diff_layout: 'unified',
 	ignore_whitespace: false,
-	sound_on_replies: false
+	sound_on_replies: false,
+	stories: false
 };
 
 // Every choice a change of the reader's settings may carry
@@ -294,7 +295,8 @@ const SETTINGS_FIELDS: readonly string[] = [
 	'theme',
 	'diff_layout',
 	'ignore_whitespace',
-	'sound_on_replies'
+	'sound_on_replies',
+	'stories'
 ] satisfies (keyof SettingsChange)[];
 
 /** Whether what the page sent is a change of the reader's choices, and nothing else. */
@@ -310,7 +312,8 @@ function changedBy(settings: ReaderSettings, change: SettingsChange): ReaderSett
 		theme: change.theme ?? settings.theme,
 		diff_layout: change.diff_layout ?? settings.diff_layout,
 		ignore_whitespace: change.ignore_whitespace ?? settings.ignore_whitespace,
-		sound_on_replies: change.sound_on_replies ?? settings.sound_on_replies
+		sound_on_replies: change.sound_on_replies ?? settings.sound_on_replies,
+		stories: change.stories ?? settings.stories
 	};
 }
 

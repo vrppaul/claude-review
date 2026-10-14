@@ -730,6 +730,9 @@ class ReaderSettings(BaseModel):
     ignore_whitespace: bool = False
     # A tick when an answer arrives while the review is in a background tab
     sound_on_replies: bool = False
+    # Ask the agent for a story of every change reviewed: each story spends
+    # the agent's tokens, so it is the reader who turns them on
+    stories: bool = False
 
 
 class GuideState(BaseModel):

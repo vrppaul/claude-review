@@ -78,7 +78,9 @@ CHAPTER = Chapter[Step](
 )
 STORY = canvas_story()
 # How a reader reads, with nothing left as a new reader gets it, and how far they were shown around
-SETTINGS = ReaderSettings(theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True)
+SETTINGS = ReaderSettings(
+    theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True, stories=True
+)
 GUIDE = GuideState(seen_release="1.5.0")
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
