@@ -6,7 +6,7 @@ import { ReviewPage } from '$lib/page/review-page.svelte';
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
-import { fakeServer, NEW_READER, SERVER_ERROR, type FakeServer } from './fake-server';
+import { fakeServer, NEW_READER, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import { lineAnchor } from '$lib/anchors/line';
 import type { FollowRequest, HeldThread, SaidInPanel, ServerPush } from '$lib/types';
@@ -14,7 +14,7 @@ import { newComment } from './new-comment';
 import { chatPush, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
-import { storyHeld } from './story';
+import { STOPPED, storyHeld, storyStanding, TAKEN } from './story';
 
 const SESSION_URL = 'ws://review.test/api/session';
 // How far the review's telling had got when the page read its facts
@@ -143,9 +143,16 @@ function serving(): FakeServer {
 	server.answer('GET /api/diff', diffResponse());
 	server.answer('GET /api/threads', { threads: [] });
 	server.answer('GET /api/conversation', { said: [] });
-	server.answer('GET /api/story', { held: null });
+	server.answer('GET /api/story', storyStanding());
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0' }, stored: true });
 	server.answerWith('POST /api/anchors/follow', (request) => request.body as FollowRequest);
+	return server;
+}
+
+/** The same server, for a reader who turned stories on in some review. */
+function servingAReaderWithStoriesOn(): FakeServer {
+	const server = serving();
+	server.answer('GET /api/settings', { record: { ...NEW_READER, stories: true }, stored: true });
 	return server;
 }
 
@@ -162,12 +169,56 @@ describe('opening the page', () => {
 
 	it('opens on the story the review holds, where the agent has told one', async () => {
 		const told = storyHeld({ title: 'Told before the page opened' });
-		serving().answer('GET /api/story', { held: told });
+		serving().answer('GET /api/story', storyStanding({ held: told }));
 		const page = newPage();
 
 		await page.open();
 
 		expect(openedReview(page).story.held).toEqual(told);
+	});
+
+	it('opens on how the asking for a story stands, where the reader asked for one before it opened', async () => {
+		serving().answer('GET /api/story', storyStanding({ asking: TAKEN }));
+		const page = newPage();
+
+		await page.open();
+
+		expect(openedReview(page).story.wait).toEqual({ kind: 'writing', asking: TAKEN });
+	});
+
+	it('asks the agent for a story as it opens, where the reader turned stories on and none is asked for', async () => {
+		const server = takingStoryAskings(servingAReaderWithStoriesOn());
+		const page = newPage();
+
+		await page.open();
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it.each([
+		{ where: 'the review holds a story', standing: storyStanding({ held: storyHeld() }) },
+		{ where: 'one is awaited already, asked for from another page', standing: storyStanding({ asking: TAKEN }) },
+		{ where: 'the reader stopped the one asked for, before a reload', standing: storyStanding({ asking: STOPPED }) }
+	])('asks for no story as it opens where $where', async ({ standing }) => {
+		const server = takingStoryAskings(servingAReaderWithStoriesOn());
+		server.answer('GET /api/story', standing);
+		const page = newPage();
+
+		await page.open();
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
+	});
+
+	it('asks for no story as it opens where the reader left stories off', async () => {
+		const server = takingStoryAskings(serving());
+		const page = newPage();
+
+		await page.open();
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('asks for no story of a review that takes none, and holds none', async () => {

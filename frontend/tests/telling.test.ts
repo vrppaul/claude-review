@@ -12,7 +12,7 @@ import { NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
 import { storeDraft } from './stored-draft';
-import { storyHeld } from './story';
+import { storyHeld, storyStanding } from './story';
 
 // How far the review's telling had got when the page read its facts
 const FACTS_READ_AT = 5;
@@ -158,7 +158,7 @@ describe('a fact a page opening from a draft is told', () => {
 
 	it('reads the story the review holds when one was told after its facts were read', async () => {
 		const toldSince = storyHeld({ title: 'Told since' });
-		fakeServer().answer('GET /api/story', { held: toldSince });
+		fakeServer().answer('GET /api/story', storyStanding({ held: toldSince }));
 		const review = reloadedWithAFileDrawn();
 
 		takePush(review, { type: 'story' }, pushedAt(FACTS_READ_AT + 1));

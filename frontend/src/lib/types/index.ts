@@ -36,8 +36,10 @@ export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */
 export type ReviewResponse = Schemas['ReviewResponse'];
 export type DiffResponse = Schemas['DiffResponse'];
-/** The story the review holds, if the agent told one. */
+/** The story the review holds, if the agent told one, and how the reader's asking for one stands, if they asked. */
 export type StoryResponse = Schemas['StoryResponse'];
+/** The reader asking the agent for a story: when they asked, when an agent took the request, whether they stopped it. */
+export type StoryAsking = Schemas['StoryAsking'];
 /** A story as the review holds it: as told, and the round it was told in. */
 export type StoryHeld = Schemas['StoryHeld'];
 /** A story on the change it is told of: each step with the piece of its file it shows, and what no step tells. */

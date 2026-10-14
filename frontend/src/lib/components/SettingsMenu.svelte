@@ -111,7 +111,7 @@
 					type="checkbox"
 					class="checkbox checkbox-xs"
 					checked={review.settings.current.stories}
-					onchange={(event) => review.settings.change({ stories: event.currentTarget.checked })}
+					onchange={(event) => (event.currentTarget.checked ? review.turnStoriesOn() : review.turnStoriesOff())}
 				/>
 			</label>
 		{/if}

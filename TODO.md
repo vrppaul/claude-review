@@ -120,6 +120,10 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
+- [ ] `fix(ui)`: a story asked for whose request fails is said in the
+      panel and nowhere else. The page goes on holding no asking, and asks
+      again only at a reload, after a gap in what the server told, or as
+      stories are turned on again (`Review.wantStory`).
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.

@@ -11,7 +11,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, toldChapter, toldStep } from '../story';
+import { storyHeld, storyStanding, toldChapter, toldStep } from '../story';
 
 // The change under review, and the story told of it: two chapters of a step each, and a line of a.py no step tells
 const files = [
@@ -72,7 +72,7 @@ describe('the part of a story being read', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');
 		const [onlyTheBeginnings] = TOLD.story.chapters;
 		scrollTo(theEnd);
-		fakeServer().answer('GET /api/story', { held: storyHeld({ chapters: [onlyTheBeginnings] }) });
+		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ chapters: [onlyTheBeginnings] }) }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();
@@ -84,7 +84,7 @@ describe('the part of a story being read', () => {
 		const [, theEnd] = screen.getAllByTestId('story-chapter');
 		const itsHead = within(theEnd).getByTestId('part-head');
 		const [onlyTheBeginnings] = TOLD.story.chapters;
-		fakeServer().answer('GET /api/story', { held: storyHeld({ chapters: [onlyTheBeginnings] }) });
+		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld({ chapters: [onlyTheBeginnings] }) }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();

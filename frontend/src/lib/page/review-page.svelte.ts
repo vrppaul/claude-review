@@ -63,10 +63,12 @@ export class ReviewPage {
 	 * after the facts too: a thread the agent raises, or words it says, in
 	 * between are then held and pushed both, and taken in once, where read
 	 * before them they would be neither. So is the story it holds, where it
-	 * takes one. Once the review is open, the socket goes on from where its
-	 * draft or its facts left the telling, so whatever was said meanwhile is
-	 * handed over rather than missed, and the threads its draft brought back
-	 * follow onto the diff it opened on.
+	 * takes one, and how the asking for one stands. Once the review is open,
+	 * the socket goes on from where its draft or its facts left the telling,
+	 * so whatever was said meanwhile is handed over rather than missed, and
+	 * the threads its draft brought back follow onto the diff it opened on.
+	 * A reader who turned stories on is asked for a story then, where none
+	 * is held or on its way.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();
@@ -74,7 +76,7 @@ export class ReviewPage {
 		try {
 			await this.#settings.load();
 			const facts = await readReview();
-			const [firstDiff, { threads: held }, { said }, { held: story }] = await Promise.all([
+			const [firstDiff, { threads: held }, { said }, story] = await Promise.all([
 				takeDiff({ ignoreWhitespace: this.#settings.current.ignore_whitespace, base: null }),
 				readHeldThreads(),
 				readConversation(),
@@ -100,6 +102,8 @@ export class ReviewPage {
 			});
 			this.#state = { kind: 'open', review };
 			void followKeptThreads(review);
+			// Asked once the socket hands pushes over: how the asking then stands is told, not read
+			void review.wantStory();
 			// However it ended, the page lets go; the tab it was sent from shuts too
 			void review.link.ended.then(() => this.close());
 			void review.submission.over.then(() => this.#closeTab());

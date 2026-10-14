@@ -1,5 +1,5 @@
 /** Stories as the review hands them to its page, built with only what a test cares about. */
-import type { StoryHeld, ToldChapter, ToldStep, ToldStory } from '$lib/types';
+import type { StoryAsking, StoryHeld, StoryResponse, ToldChapter, ToldStep, ToldStory } from '$lib/types';
 import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 
 /** The round a story is told in, unless a test says another. */
@@ -58,3 +58,19 @@ export function toldStory(given: Partial<ToldStory> = {}): ToldStory {
 export function storyHeld(given: Partial<ToldStory> = {}, held: Partial<Omit<StoryHeld, 'story'>> = {}): StoryHeld {
 	return { story: toldStory(given), round: FIRST_ROUND, take: FIRST_TAKE, ...held };
 }
+
+/** What the review answers of its story: none told and none asked for, unless a test says one was. */
+export function storyStanding(given: Partial<StoryResponse> = {}): StoryResponse {
+	return { held: null, asking: null, ...given };
+}
+
+/** When the reader asked for a story, and when an agent took the request, a few seconds later. */
+export const ASKED_AT = 1_791_000_000_000;
+export const TAKEN_AT = ASKED_AT + 4_000;
+
+/** The asking for a story as the review says it stands: asked for and taken by no agent yet. */
+export const ASKED: StoryAsking = { asked_at: ASKED_AT, taken_at: null, stopped: false };
+/** Asked for, and the request taken by an agent. */
+export const TAKEN: StoryAsking = { asked_at: ASKED_AT, taken_at: TAKEN_AT, stopped: false };
+/** Stopped by the reader, before any agent took the request. */
+export const STOPPED: StoryAsking = { asked_at: ASKED_AT, taken_at: null, stopped: true };

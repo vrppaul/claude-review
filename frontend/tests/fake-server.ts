@@ -48,6 +48,8 @@ const ROUTES = [
 	'GET /api/threads',
 	'GET /api/conversation',
 	'GET /api/story',
+	'POST /api/story/request',
+	'POST /api/story/cancel',
 	'GET /api/diff',
 	'GET /api/versions',
 	'GET /api/file-window',
@@ -323,6 +325,13 @@ export function keepingSettings(server: FakeServer, settings: ReaderSettings = N
 		if (!isSettingsChange(request.body)) throw new Error('The page sent something other than a settings change');
 		return changedBy(settings, request.body);
 	});
+}
+
+/** A server taking every story the reader asks for, and every one they stop. */
+export function takingStoryAskings(server: FakeServer = fakeServer()): FakeServer {
+	server.answer('POST /api/story/request', null);
+	server.answer('POST /api/story/cancel', null);
+	return server;
 }
 
 /** A server taking every message sent from the agent panel, and every one taken back. */

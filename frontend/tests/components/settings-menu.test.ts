@@ -4,16 +4,18 @@ import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { diffResponse } from '../diff';
-import { fakeServer, keepingSettings, type FakeServer } from '../fake-server';
-import { inReview, openReview } from '../review';
+import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
+import { inReview, openReview, settingsWithStoriesOn } from '../review';
+import { settled } from '../settled';
+import { TAKEN } from '../story';
 
 describe('the settings', () => {
 	let review: Review;
 	let server: FakeServer;
 
 	beforeEach(() => {
-		// A server that answers the diff of one repository, and takes any setting
-		server = fakeServer();
+		// A server that answers the diff of one repository, takes any setting, and any story asked for or stopped
+		server = takingStoryAskings();
 		server.answer('GET /api/diff', diffResponse());
 		keepingSettings(server);
 		review = openReview();
@@ -53,15 +55,28 @@ describe('the settings', () => {
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
 	});
 
-	it('turn stories off again behind the gear', async () => {
+	it('ask the agent for a story of this review as stories are turned on behind the gear', async () => {
 		const user = userEvent.setup();
-		await review.settings.change({ stories: true });
 		const { getByTestId } = render(ReviewHeader, inReview(review));
 
 		await user.click(getByTestId('settings-toggle'));
 		await user.click(getByTestId('stories'));
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('turn stories off again behind the gear, and stop the story being written', async () => {
+		const user = userEvent.setup();
+		review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		const { getByTestId } = render(ReviewHeader, inReview(review));
+
+		await user.click(getByTestId('settings-toggle'));
+		await user.click(getByTestId('stories'));
+		await settled();
 
 		expect(review.settings.current.stories).toBe(false);
+		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
 	});
 
 	it('say beside the choice of stories what each one costs', async () => {

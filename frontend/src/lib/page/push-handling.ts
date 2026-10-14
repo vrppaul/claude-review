@@ -92,7 +92,7 @@ function learnFrom(review: Review, push: FactPush): void {
 			review.rounds.reach(push.number);
 			return;
 		case 'story_asking':
-			// How the asking for a story stands: nothing on this page holds or draws it
+			review.story.learnAsking(push.asking);
 			return;
 		default:
 			unknown(push);
@@ -179,7 +179,9 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * done whether or not one happened. Which files a missed retake rewrote
  * cannot be told, so the ticks stay as the reader left them. The story is
  * read last and apart: one that cannot be read is said so by itself, and
- * what catching up did to the review and its threads is still said.
+ * what catching up did to the review and its threads is still said. With
+ * it comes how the asking for one stands: a review started again in the
+ * gap holds none, and a reader who turned stories on is asked for anew.
  */
 export async function catchUp(review: Review, from: TellingPosition): Promise<void> {
 	review.telling.continueFrom(from);
@@ -194,6 +196,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		return;
 	}
 	await readStoryAgain(review, (story) => story.read());
+	await review.wantStory();
 }
 
 /**

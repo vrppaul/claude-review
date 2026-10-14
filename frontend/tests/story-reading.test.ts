@@ -7,7 +7,7 @@ import { fakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
-import { storyHeld, toldChapter, toldStep } from './story';
+import { storyHeld, storyStanding, toldChapter, toldStep } from './story';
 
 // A story of two chapters: a.py is told in both, line 1 in the first and line 9 in the second, with
 // b.py between them; what no step tells of c.py is left out
@@ -64,7 +64,7 @@ describe('a review read as its story', () => {
 	it('knows the section of a step by what the step tells, wherever the story puts it once it is told again', async () => {
 		const onLineNine = newComment({ file: 'a.py', startLine: 9 }).anchor;
 		const asFirstTold = review.views.onScreen.sectionOf(onLineNine);
-		fakeServer().answer('GET /api/story', { held: TOLD_IN_ANOTHER_ORDER });
+		fakeServer().answer('GET /api/story', storyStanding({ held: TOLD_IN_ANOTHER_ORDER }));
 
 		await review.story.read();
 

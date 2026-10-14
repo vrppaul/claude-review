@@ -54,6 +54,16 @@ export function readStory(): Promise<StoryResponse> {
 	return read('get', '/api/story', { doing: 'Could not read the story' });
 }
 
+/** Ask the agent for a story of the change: asked once, however many pages ask and however often. */
+export function askForStory(): Promise<void> {
+	return send('post', '/api/story/request', { doing: 'Could not ask for a story' });
+}
+
+/** Stop the story the reader asked for; with none awaited, nothing changes. */
+export function stopStory(): Promise<void> {
+	return send('post', '/api/story/cancel', { doing: 'Could not stop the story' });
+}
+
 /** Which diff is asked for: whose whitespace, and against which base. */
 export interface DiffQuery {
 	ignoreWhitespace: boolean;

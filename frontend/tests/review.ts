@@ -7,9 +7,18 @@ import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
 import { reviewContext } from '$lib/review/context';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, DiffResponse, HeldThread, ReviewResponse, SaidInPanel, StoryHeld } from '$lib/types';
+import type {
+	DiffFile,
+	DiffResponse,
+	HeldThread,
+	ReviewResponse,
+	SaidInPanel,
+	StoryAsking,
+	StoryHeld
+} from '$lib/types';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
+import { NEW_READER, type FakeServer } from './fake-server';
 
 /** What a test says about the review it opens; the rest is a diff in its first round. */
 export interface Opened {
@@ -26,6 +35,8 @@ export interface Opened {
 	said?: SaidInPanel[];
 	/** The story the review holds, if the agent told one. */
 	story?: StoryHeld | null;
+	/** How the reader's asking for a story stands, if they asked for one. */
+	asking?: StoryAsking | null;
 }
 
 // The page open in this tab: the review it holds, keeping its draft as the page does
@@ -55,14 +66,29 @@ export function openReview({
 	settings = new Settings(),
 	held = [],
 	said = [],
-	story = null
+	story = null,
+	asking = null
 }: Opened = {}): Review {
 	leavePage();
 	openPage = openKeptReview(
-		{ facts: reviewResponse(facts), firstDiff: diffResponse({ files, ...diff }), held, said, story },
+		{
+			facts: reviewResponse(facts),
+			firstDiff: diffResponse({ files, ...diff }),
+			held,
+			said,
+			story: { held: story, asking }
+		},
 		{ settings, layout: new PageLayout(), sound: new ReplySound(settings), theme: new PageTheme(settings) }
 	);
 	return openPage.review;
+}
+
+/** The settings of a reader who turned stories on in some review, as a page that read them from this server holds them. */
+export async function settingsWithStoriesOn(server: FakeServer): Promise<Settings> {
+	server.answer('GET /api/settings', { record: { ...NEW_READER, stories: true }, stored: true });
+	const settings = new Settings();
+	await settings.load();
+	return settings;
 }
 
 /** What a component drawn on its own is handed down: the review, and how to read the area it scrolls in. */

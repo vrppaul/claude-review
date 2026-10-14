@@ -8,6 +8,7 @@
  * narrowing to what changed — is done here.
  */
 
+import { askForStory, stopStory } from '$lib/api/review-api';
 import { Guide } from '$lib/guide/guide.svelte';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { PageTheme } from '$lib/reader/page-theme.svelte';
@@ -21,7 +22,7 @@ import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
-import { diffNotTakenNote } from '$lib/review/panel-notes';
+import { diffNotTakenNote, storyNotAskedForNote, storyNotStoppedNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
@@ -29,6 +30,7 @@ import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
+import { isAwaited } from '$lib/review/story-wait';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -45,7 +47,7 @@ import type {
 	SaidInPanel,
 	SendLimits,
 	SessionHello,
-	StoryHeld
+	StoryResponse
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
@@ -64,8 +66,8 @@ export interface Opening {
 	held: HeldThread[];
 	/** What the review holds as said in the panel: drawn whatever the draft holds, which adds what it does not. */
 	said: SaidInPanel[];
-	/** The story the review holds, if the agent told one. */
-	story: StoryHeld | null;
+	/** What the review answers of its story: the one it holds, if the agent told one, and how the asking for one stands. */
+	story: StoryResponse;
 }
 
 /** Whoever carries what the page holds to the server. */
@@ -177,12 +179,13 @@ export class Review {
 		if (draft === null) this.threads.adopt(held);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
-		this.story = new ReviewStory(
-			facts.takes_a_story,
-			story,
-			() => this.diff.takeOnScreen,
-			partsReadInRun(kept, facts.instance)
-		);
+		this.story = new ReviewStory({
+			canBeTold: facts.takes_a_story,
+			standing: story,
+			partsRead: partsReadInRun(kept, facts.instance),
+			takeOnScreen: () => this.diff.takeOnScreen,
+			agentAttached: () => this.answerer.attached
+		});
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.views = new ReadingViews(
 			{
@@ -295,6 +298,60 @@ export class Review {
 			// Nobody is waiting on this but the reader, so it is said where they will see it
 			this.conversation.note(diffNotTakenNote(error));
 		}
+	}
+
+	/**
+	 * Ask the agent for a story where the reader wants one and has none
+	 * coming: they turned stories on, one can be told of this review, none
+	 * is held and none was asked for. Called as the page opens, after a gap
+	 * in what the server told, and as stories are turned on. Never where the
+	 * reader stopped the one asked for: a reload does not start it again.
+	 */
+	async wantStory(): Promise<void> {
+		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
+			await this.askAgentForStory();
+		}
+	}
+
+	/**
+	 * Ask the agent for a story of this review. How the asking then stands
+	 * is the review's to say, to this page as to every other; a request
+	 * that fails is said in the panel.
+	 */
+	async askAgentForStory(): Promise<void> {
+		try {
+			await askForStory();
+		} catch (error) {
+			this.conversation.note(storyNotAskedForNote(error));
+		}
+	}
+
+	/** Stop the story the reader asked for; a request that fails is said in the panel. */
+	async stopAwaitedStory(): Promise<void> {
+		try {
+			await stopStory();
+		} catch (error) {
+			this.conversation.note(storyNotStoppedNote(error));
+		}
+	}
+
+	/** Turn stories on, for this review and every later one, and ask for this review's. */
+	async turnStoriesOn(): Promise<void> {
+		await this.settings.change({ stories: true });
+		await this.wantStory();
+	}
+
+	/**
+	 * Turn stories off, for this review and every later one. A story still
+	 * awaited is stopped: it would spend the tokens the reader turned
+	 * stories off to keep. With none held the files come on screen: the
+	 * story view has no story to draw, and the reader has said they want
+	 * none. A story held is paid for, and stays to be read.
+	 */
+	async turnStoriesOff(): Promise<void> {
+		if (this.story.held === null) this.views.showFiles();
+		await this.settings.change({ stories: false });
+		if (isAwaited(this.story.wait)) await this.stopAwaitedStory();
 	}
 
 	/**

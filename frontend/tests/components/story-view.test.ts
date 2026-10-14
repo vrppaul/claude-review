@@ -11,7 +11,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { storyHeld, toldChapter, toldStep, toldStepOfLines } from '../story';
+import { storyHeld, storyStanding, toldChapter, toldStep, toldStepOfLines } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py gained a line, and so did a lock file
 const files = [
@@ -804,7 +804,7 @@ describe('a story the code has moved on from', () => {
 	});
 
 	it('is of the code on screen again once the agent tells it again', async () => {
-		fakeServer().answer('GET /api/story', { held: storyHeld(TOLD.story, { take: A_LATER_TAKE }) });
+		fakeServer().answer('GET /api/story', storyStanding({ held: storyHeld(TOLD.story, { take: A_LATER_TAKE }) }));
 		render(ReviewScreen, { props: { review } });
 
 		handOverNext(review, { type: 'story' });

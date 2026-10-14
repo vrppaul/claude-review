@@ -7,13 +7,13 @@ import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
 import { contextLine, diffFile, diffResponse, hunk, reviewResponse, sinceRound } from './diff';
-import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
+import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment } from './new-comment';
-import { inReview, openReview } from './review';
+import { inReview, openReview, settingsWithStoriesOn } from './review';
 import { chatPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
-import { storyHeld } from './story';
+import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN } from './story';
 
 /** A file whose first line the change left alone. */
 function untouched(path: string) {
@@ -103,9 +103,23 @@ describe('what the server pushes, taken in', () => {
 		expect(section.scrollIntoView).not.toHaveBeenCalled();
 	});
 
+	it('takes in how the asking for a story stands, as the review tells it', () => {
+		handOverNext(review, { type: 'story_asking', asking: TAKEN });
+
+		expect(review.story.wait).toEqual({ kind: 'writing', asking: TAKEN });
+	});
+
+	it('says a story is being written once an agent attaches where the request waited for one', () => {
+		review = openReview({ asking: ASKED });
+
+		handOverNext(review, { type: 'answerer', attached: true });
+
+		expect(review.story.wait).toEqual({ kind: 'writing', asking: ASKED });
+	});
+
 	it('reads the story the review holds when it says one was told', async () => {
 		const told = storyHeld({ title: 'Told just now' });
-		fakeServer().answer('GET /api/story', { held: told });
+		fakeServer().answer('GET /api/story', storyStanding({ held: told }));
 
 		handOverNext(review, { type: 'story' });
 		await settled();
@@ -220,7 +234,7 @@ function caughtUpFrom(): FakeServer {
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('POST /api/anchors/follow', { anchors: [] });
 	server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py'), untouched('b.py')] }));
-	server.answer('GET /api/story', { held: null });
+	server.answer('GET /api/story', storyStanding());
 	return server;
 }
 
@@ -244,11 +258,37 @@ describe('catching up on what the server could not hand over again', () => {
 
 	it('reads the story the review holds now, in case one was told among what was missed', async () => {
 		const told = storyHeld({ title: 'Told while the page was away' });
-		caughtUpFrom().answer('GET /api/story', { held: told });
+		caughtUpFrom().answer('GET /api/story', storyStanding({ held: told }));
 
 		await catchUp(review, GOES_ON_FROM);
 
 		expect(review.story.held).toEqual(told);
+	});
+
+	it('reads how the asking for a story stands now, in case it changed among what was missed', async () => {
+		review = openReview({ asking: TAKEN });
+		caughtUpFrom().answer('GET /api/story', storyStanding({ asking: STOPPED }));
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(review.story.wait).toEqual({ kind: 'stopped' });
+	});
+
+	it('asks for a story again where stories are on and the review holds no asking: it was started again', async () => {
+		const server = takingStoryAskings(caughtUpFrom());
+		review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('asks for no story after a gap where the reader left stories off', async () => {
+		const server = takingStoryAskings(caughtUpFrom());
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('says what catching up did, and apart from it that the story could not be read, when the story alone fails', async () => {
