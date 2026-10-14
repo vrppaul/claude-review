@@ -24,7 +24,9 @@ every time.
 `--untold` leaves the change untold: the page opens on a review that holds
 no story, as every review does until its agent tells one. What the page
 shows a reader who asks for a story and waits for it is reached from there,
-with the steps that are the agent's.
+with the steps that are the agent's. The look's reader has not turned
+stories on, so an untold change asked for as its story opens on the files,
+under the question the page asks before a story is written.
 
 Run in the repository's root. The review serves the page as it was last
 built, so a look is refused when a file under `frontend/src` was written
@@ -745,11 +747,15 @@ def _ending_the_look_at(step: str) -> Generator[None]:
 
 
 async def _opened(page: Page, address: str, view: View) -> None:
-    """Open the review as a reader new to it would, put the offer of a tour away, and read it the way asked."""
+    """Open the review as a reader new to it would, put the offer of a tour away, and ask to read it the way asked.
+
+    The page shows that view, or asks first: a reader who has not turned stories on is asked before
+    a story is written, and what the look then reads is the files, with that question over them.
+    """
     await page.goto(address)
     await page.get_by_test_id(TOUR_NOT_NOW).click()
     await page.get_by_test_id(view.switch).click()
-    await page.get_by_test_id(view.area).wait_for()
+    await page.get_by_test_id(READING_AREA).wait_for()
 
 
 async def _seen(page: Page) -> Seen:
