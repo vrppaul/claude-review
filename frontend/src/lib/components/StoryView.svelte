@@ -11,9 +11,8 @@
 
 	const review = useReview();
 
-	const held = $derived(review.story.held);
-	// What the reader waits on while no story is held: nothing, once one is
-	const wait = $derived(review.story.wait);
+	// What stands here: the story the review holds, or what the reader waits on while it holds none
+	const drawn = $derived(review.story.storyOrWait);
 	const contents = $derived(review.story.contents);
 
 	let container: HTMLElement | undefined = $state();
@@ -25,14 +24,15 @@
 	// A story drawn here is one the reader has been shown: one told while they read the files is new to
 	// them no longer
 	$effect(() => {
-		if (held !== null) review.story.seen();
+		if (drawn.kind === 'story') review.story.seen();
 	});
 
 	// A story told takes the place of what the reader waited on, and whatever held the keyboard there
 	// goes with it. Looked at before the page redraws: the keyboard then goes to the head of the story,
 	// which is the head of its overview
 	$effect.pre(() => {
-		if (held !== null && waitingRoom?.contains(document.activeElement)) review.parts.keyboardToHeadOf(OVERVIEW_PART);
+		const storyTold = drawn.kind === 'story';
+		if (storyTold && waitingRoom?.contains(document.activeElement)) review.parts.keyboardToHeadOf(OVERVIEW_PART);
 	});
 
 	// The story reports which piece is being read, as the files' view does of its files
@@ -51,11 +51,12 @@
 	row, then what no step tells and what the agent called housekeeping. Over it, deep in a chapter, the
 	bar that says which. Until a story is told, what the reader waits on stands in its place -->
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
-	{#if wait !== null}
+	{#if drawn.kind === 'wait'}
 		<div bind:this={waitingRoom} class="cr-story-waiting-room">
-			<StoryWaiting {wait} />
+			<StoryWaiting wait={drawn.wait} />
 		</div>
-	{:else if held !== null}
+	{:else if drawn.kind === 'story'}
+		{@const held = drawn.held}
 		{@const story = held.story}
 		<ChapterBar />
 		<article class="cr-story-measure flex flex-col gap-8 py-8">

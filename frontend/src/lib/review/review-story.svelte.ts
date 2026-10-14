@@ -18,7 +18,10 @@
  * stands. The page holds one copy of it, beside the story that ends it:
  * both come in one answer when the story is read, and the review tells
  * each change of the asking in between. What the reader is waiting on is
- * worked out from it (`story-wait.ts`), never kept.
+ * worked out from it (`story-wait.ts`), never kept. Asking and stopping are
+ * requests made here and answered there: nothing of the asking changes on
+ * this page until the review says so. When a story is wanted — the
+ * reader's settings, the view on screen — is the review's own to join.
  *
  * A story told while the page is open may land while the reader reads the
  * files, and the page never changes the view for them: it holds how that
@@ -29,12 +32,25 @@
  */
 
 import type { StoryNumbering } from '$lib/anchors/numbering';
-import { readStory } from '$lib/api/review-api';
+import { askForStory, readStory, stopStory } from '$lib/api/review-api';
+import { storyNotAskedForNote, storyNotStoppedNote } from '$lib/review/panel-notes';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
 import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
-import { waitOf, type StoryWait } from '$lib/review/story-wait';
+import { canBeAskedFor, waitOf, type StoryWait } from '$lib/review/story-wait';
 import type { StoryAsking, StoryHeld, StoryResponse } from '$lib/types';
+
+/**
+ * What stands where the story is read: the story the review holds, or what
+ * the reader waits on while it holds none. One or the other, never both
+ * and never neither, which whoever draws it reads off the kind.
+ */
+export type StoryOrWait = { kind: 'story'; held: StoryHeld } | { kind: 'wait'; wait: StoryWait };
+
+/** What stands where the story is read, worked out from what the page holds of the story, its asking and its agent. */
+function storyOrWaitOf(held: StoryHeld | null, asking: StoryAsking | null, agentAttached: boolean): StoryOrWait {
+	return held === null ? { kind: 'wait', wait: waitOf(asking, agentAttached) } : { kind: 'story', held };
+}
 
 /**
  * How a story told while the page was open stands with the reader.
@@ -65,6 +81,8 @@ export interface StoryOpening {
 	takeOnScreen: () => number;
 	/** Whether an agent is attached to the review now. */
 	agentAttached: () => boolean;
+	/** Say something in the panel, where the reader is told what a request of theirs came to. */
+	sayInPanel: (words: string) => void;
 }
 
 export class ReviewStory {
@@ -77,6 +95,7 @@ export class ReviewStory {
 	#anotherAwaited = false;
 	readonly #takeOnScreen: () => number;
 	readonly #agentAttached: () => boolean;
+	readonly #sayInPanel: (words: string) => void;
 	#held = $state.raw<StoryHeld | null>(null);
 	// How the reader's asking for a story stands, as the review last said: replaced whole, by a read or by what it tells
 	#asking = $state.raw<StoryAsking | null>(null);
@@ -86,28 +105,37 @@ export class ReviewStory {
 	readonly #contents: StoryContents;
 	// And the pieces of what it lists, laid out once, not at every question asked of them
 	readonly #pieces: StoryPieces;
-	// What the reader is waiting on while no story is held, worked out anew whenever a fact it is read off changes
+	// The story held, or what the reader waits on while none is, worked out anew whenever a fact it is read off changes
+	readonly #storyOrWait: StoryOrWait;
+	// What the reader waits on, read off that: nothing, once a story is held
 	readonly #wait: StoryWait | null;
 	// Which read is the latest. Two can be in flight — two stories told one
 	// after the other — and only the latest is held, whatever order the
 	// answers come back in.
 	#reading = 0;
 
-	constructor({ canBeTold, standing, partsRead, takeOnScreen, agentAttached }: StoryOpening) {
+	constructor({ canBeTold, standing, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
 		this.canBeTold = canBeTold;
 		this.#progress = new StoryProgress(partsRead);
 		this.#held = standing.held;
 		this.#asking = standing.asking;
 		this.#takeOnScreen = takeOnScreen;
 		this.#agentAttached = agentAttached;
+		this.#sayInPanel = sayInPanel;
 		this.#contents = $derived(this.#held === null ? NO_CONTENTS : contentsOf(this.#held.story));
 		this.#pieces = $derived(piecesOf(this.#contents));
-		this.#wait = $derived(this.#held === null ? waitOf(this.#asking, this.#agentAttached()) : null);
+		this.#storyOrWait = $derived(storyOrWaitOf(this.#held, this.#asking, this.#agentAttached()));
+		this.#wait = $derived(this.#storyOrWait.kind === 'wait' ? this.#storyOrWait.wait : null);
 	}
 
 	/** The story held, as it was told, with the round it was told in; null while the agent has told none. */
 	get held(): StoryHeld | null {
 		return this.#held;
+	}
+
+	/** What stands where the story is read: the story held, or what the reader waits on while none is. */
+	get storyOrWait(): StoryOrWait {
+		return this.#storyOrWait;
 	}
 
 	/**
@@ -187,6 +215,37 @@ export class ReviewStory {
 	/** Take in how the asking for a story stands now, as the review tells it between two reads of the story. */
 	learnAsking(asking: StoryAsking): void {
 		this.#asking = asking;
+	}
+
+	/**
+	 * Whether a story can be asked for now: one can be told of this review,
+	 * none is held and none is on its way. One the reader stopped can be.
+	 */
+	get canBeAskedFor(): boolean {
+		return this.canBeTold && canBeAskedFor(this.#wait);
+	}
+
+	/**
+	 * Ask the agent for a story of this review. How the asking then stands
+	 * is the review's to say, to this page as to every other, and nothing is
+	 * held of it here until it does; a request that fails is said in the
+	 * panel.
+	 */
+	async askFor(): Promise<void> {
+		try {
+			await askForStory();
+		} catch (error) {
+			this.#sayInPanel(storyNotAskedForNote(error));
+		}
+	}
+
+	/** Stop the story the reader asked for; a request that fails is said in the panel. */
+	async stop(): Promise<void> {
+		try {
+			await stopStory();
+		} catch (error) {
+			this.#sayInPanel(storyNotStoppedNote(error));
+		}
 	}
 
 	/**

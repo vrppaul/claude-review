@@ -8,7 +8,6 @@
  * narrowing to what changed — is done here.
  */
 
-import { askForStory, stopStory } from '$lib/api/review-api';
 import { Guide } from '$lib/guide/guide.svelte';
 import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { PageTheme } from '$lib/reader/page-theme.svelte';
@@ -22,7 +21,7 @@ import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
-import { diffNotTakenNote, storyNotAskedForNote, storyNotStoppedNote } from '$lib/review/panel-notes';
+import { diffNotTakenNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
@@ -30,7 +29,7 @@ import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
-import { canBeAskedFor, isAwaited } from '$lib/review/story-wait';
+import { isAwaited } from '$lib/review/story-wait';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -184,7 +183,8 @@ export class Review {
 			standing: story,
 			partsRead: partsReadInRun(kept, facts.instance),
 			takeOnScreen: () => this.diff.takeOnScreen,
-			agentAttached: () => this.answerer.attached
+			agentAttached: () => this.answerer.attached,
+			sayInPanel: (words) => this.conversation.note(words)
 		});
 		this.guide = new Guide(this.answerer, this.threads.writing, facts.release);
 		this.views = new ReadingViews(
@@ -324,29 +324,7 @@ export class Review {
 	 */
 	async wantStory(): Promise<void> {
 		if (this.settings.current.stories && this.story.canBeTold && this.story.wait?.kind === 'unasked') {
-			await this.askAgentForStory();
-		}
-	}
-
-	/**
-	 * Ask the agent for a story of this review. How the asking then stands
-	 * is the review's to say, to this page as to every other; a request
-	 * that fails is said in the panel.
-	 */
-	async askAgentForStory(): Promise<void> {
-		try {
-			await askForStory();
-		} catch (error) {
-			this.conversation.note(storyNotAskedForNote(error));
-		}
-	}
-
-	/** Stop the story the reader asked for; a request that fails is said in the panel. */
-	async stopAwaitedStory(): Promise<void> {
-		try {
-			await stopStory();
-		} catch (error) {
-			this.conversation.note(storyNotStoppedNote(error));
+			await this.story.askFor();
 		}
 	}
 
@@ -358,7 +336,7 @@ export class Review {
 	 */
 	async turnStoriesOn(): Promise<void> {
 		await this.settings.change({ stories: true });
-		if (this.story.canBeTold && canBeAskedFor(this.story.wait)) await this.askAgentForStory();
+		if (this.story.canBeAskedFor) await this.story.askFor();
 	}
 
 	/**
@@ -371,7 +349,7 @@ export class Review {
 	async turnStoriesOff(): Promise<void> {
 		if (this.story.held === null) this.views.showFiles();
 		await this.settings.change({ stories: false });
-		if (isAwaited(this.story.wait)) await this.stopAwaitedStory();
+		if (isAwaited(this.story.wait)) await this.story.stop();
 	}
 
 	/**

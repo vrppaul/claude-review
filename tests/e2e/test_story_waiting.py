@@ -321,7 +321,7 @@ async def test_what_the_note_of_a_storys_arrival_stood_over_takes_a_press_once_t
     await page.get_by_test_id("collapse-file").first.click()
 
     await page.get_by_test_id("raw-view").first.wait_for(state="detached")
-    await expect(page.get_by_test_id("story-arrived")).to_be_visible()
+    await expect(page.get_by_test_id("segment-unread")).to_be_visible()
 
 
 async def test_opening_a_story_from_the_note_of_its_arrival_puts_the_keyboard_on_story_in_the_header(

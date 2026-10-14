@@ -249,7 +249,7 @@ describe('a story told while the files are read', () => {
 
 		await toldMeanwhile(review, server);
 
-		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
 	it('is put away by Escape, and the Story segment stays marked: the story is not read yet', async () => {
@@ -261,7 +261,7 @@ describe('a story told while the files are read', () => {
 		await user.keyboard('{Escape}');
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
-		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
 	it('is put away by a press elsewhere on the page, and the Story segment stays marked', async () => {
@@ -273,7 +273,7 @@ describe('a story told while the files are read', () => {
 		await user.click(screen.getByTestId('diff-view'));
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
-		expect(screen.getByTestId('story-arrived')).toBeTruthy();
+		expect(screen.getByTestId('segment-unread')).toBeTruthy();
 	});
 
 	it('stays where the reader presses on the note itself', async () => {
@@ -309,7 +309,7 @@ describe('a story told while the files are read', () => {
 		await user.click(screen.getByTestId('read-as-story'));
 		await user.click(screen.getByTestId('read-as-files'));
 
-		expect(screen.queryByTestId('story-arrived')).toBeNull();
+		expect(screen.queryByTestId('segment-unread')).toBeNull();
 	});
 
 	it('is shown where the reader opens it, and is offered no more', async () => {
@@ -322,7 +322,7 @@ describe('a story told while the files are read', () => {
 
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-ready')).toBeNull();
-		expect(screen.queryByTestId('story-arrived')).toBeNull();
+		expect(screen.queryByTestId('segment-unread')).toBeNull();
 	});
 
 	it('is offered no more once the reader has read it by the switch and come back to the files', async () => {
@@ -335,7 +335,7 @@ describe('a story told while the files are read', () => {
 		await user.click(screen.getByTestId('read-as-files'));
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
-		expect(screen.queryByTestId('story-arrived')).toBeNull();
+		expect(screen.queryByTestId('segment-unread')).toBeNull();
 	});
 });
 
@@ -358,6 +358,6 @@ describe('a review that opens with its story told', () => {
 		drawn({ story: IN_TWO_CHAPTERS });
 
 		expect(screen.queryByTestId('story-ready')).toBeNull();
-		expect(screen.queryByTestId('story-arrived')).toBeNull();
+		expect(screen.queryByTestId('segment-unread')).toBeNull();
 	});
 });

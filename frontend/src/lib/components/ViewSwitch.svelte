@@ -2,15 +2,10 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
-	import type { StoryArrival } from '$lib/review/review-story.svelte';
-	import Icon from './Icon.svelte';
 	import StoryArrivalNote from './StoryArrivalNote.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
-	import TypingIndicator from './TypingIndicator.svelte';
-
-	// Whether the Story segment is marked, by how the arrival of a story stands with the reader: from its
-	// arrival until they have read it, whether or not they put its note away
-	const MARKS_THE_SEGMENT: Record<StoryArrival, boolean> = { none: false, offered: true, 'put-away': true };
+	import ViewSegment from './ViewSegment.svelte';
+	import { OFFERED, saidOfStory, type Said } from './view-segments';
 
 	const review = useReview();
 
@@ -20,11 +15,19 @@
 	let askedToTurnStoriesOn = $state(false);
 
 	const onScreen = $derived(review.views.onScreen.name);
-	// What the switch says of a story the reader is not looking at, while they read the files: that it is
-	// being written, or that it has arrived and waits to be read
+	// What each segment says beyond its name. The files say nothing more; the story does only while the
+	// reader reads the files, where its own view is not there to say it
 	const readingFiles = $derived(onScreen === 'files');
-	const writing = $derived(readingFiles && review.story.wait?.kind === 'writing');
-	const arrival: StoryArrival = $derived(readingFiles ? review.story.arrival : 'none');
+	const said: Record<ReadingViewName, Said> = $derived({
+		story: readingFiles ? saidOfStory(review.story) : 'nothing',
+		files: 'nothing'
+	});
+	// Whether a story that arrived is offered under the switch: while the files are read, until the reader
+	// reads it or puts the offer away
+	const storyOffered = $derived(readingFiles && review.story.arrival === 'offered');
+
+	// What a press on each segment does
+	const READ: Record<ReadingViewName, () => void> = { story: readAsStory, files: readByFiles };
 
 	// The view on screen changes from elsewhere too — the files brought on screen from where a story
 	// will be — and whatever held the keyboard in the view that went goes with it. Looked at before the
@@ -41,6 +44,10 @@
 		else askedToTurnStoriesOn = true;
 	}
 
+	function readByFiles() {
+		review.views.choose('files');
+	}
+
 	/** The reader said yes: stories are on from now, this review's is asked for, and where it will be comes on screen. */
 	function turnStoriesOnAndRead() {
 		void review.turnStoriesOn();
@@ -48,49 +55,23 @@
 	}
 </script>
 
-<!-- Offered only where a story can be told: the review says, and nothing here asks what kind it is. The
-	story first, as the canvas has it: an open book, then a stack of files -->
+<!-- How the review is read, and the one place that changes it. Offered only where a story can be told: the
+	review says, and nothing here asks what kind it is -->
 {#if review.story.canBeTold}
 	<div class="relative">
 		<div data-testid="reading-view" class="cr-segmented" role="group" aria-label="How to read this review">
-			<button
-				bind:this={segments.story}
-				type="button"
-				data-testid="read-as-story"
-				class={[
-					'cr-segment flex items-center gap-1.5',
-					writing && 'cr-segment-writing',
-					MARKS_THE_SEGMENT[arrival] && 'cr-segment-unread'
-				]}
-				aria-pressed={onScreen === 'story'}
-				onclick={readAsStory}
-			>
-				{#if writing}
-					<TypingIndicator />
-					Story · writing
-				{:else}
-					<Icon name="story" class="h-3.5 w-3.5" />
-					Story
-				{/if}
-				{#if MARKS_THE_SEGMENT[arrival]}
-					<!-- Unsaid to a screen reader: the note under the switch said it -->
-					<span data-testid="story-arrived" class="text-(--cr-unread)" aria-hidden="true">●</span>
-				{/if}
-			</button>
-			<button
-				bind:this={segments.files}
-				type="button"
-				data-testid="read-as-files"
-				class="cr-segment flex items-center gap-1.5"
-				aria-pressed={onScreen === 'files'}
-				onclick={() => review.views.choose('files')}
-			>
-				<Icon name="files" class="h-3.5 w-3.5" />
-				Files
-			</button>
+			{#each OFFERED as offered (offered.name)}
+				<ViewSegment
+					{offered}
+					onScreen={onScreen === offered.name}
+					says={said[offered.name]}
+					onPress={READ[offered.name]}
+					bind:segment={segments[offered.name]}
+				/>
+			{/each}
 		</div>
-		{#if arrival === 'offered'}
-			<StoryArrivalNote pointsAt={segments.story} onOpen={() => review.views.choose('story')} />
+		{#if storyOffered}
+			<StoryArrivalNote pointsAt={segments.story} onOpen={readAsStory} />
 		{/if}
 	</div>
 	{#if askedToTurnStoriesOn}

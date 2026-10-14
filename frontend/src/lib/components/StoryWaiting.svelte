@@ -71,7 +71,7 @@
 					type="button"
 					data-testid="write-story-again"
 					class="btn btn-primary btn-sm"
-					onclick={() => review.askAgentForStory()}
+					onclick={() => review.story.askFor()}
 				>
 					Write it again
 				</button>
@@ -111,7 +111,7 @@
 					type="button"
 					data-testid="stop-writing"
 					class="btn btn-ghost btn-sm"
-					onclick={() => review.stopAwaitedStory()}
+					onclick={() => review.story.stop()}
 				>
 					Stop writing
 				</button>

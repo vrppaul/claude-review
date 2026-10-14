@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ReviewStory, type StoryOpening } from '$lib/review/review-story.svelte';
 import type { StoryResponse } from '$lib/types';
 import { A_LATER_TAKE, FIRST_TAKE } from './diff';
-import { fakeServer, SERVER_ERROR } from './fake-server';
+import { fakeServer, SERVER_ERROR, takingStoryAskings } from './fake-server';
 import { ASKED, STOPPED, storyHeld, storyStanding, TAKEN } from './story';
 
 /** What a reader who opens the review for the first time has read through of its story. */
@@ -25,6 +25,9 @@ function nobodyAttached(): boolean {
 	return false;
 }
 
+/** A page whose panel nobody reads: what the story says there is said to nobody. */
+function saidToNobody(): void {}
+
 /** What a review that holds a story answers of it. */
 function holdingAStory(): StoryResponse {
 	return storyStanding({ held: storyHeld() });
@@ -42,9 +45,70 @@ function pageStory(given: Partial<StoryOpening> = {}): ReviewStory {
 		partsRead: NOTHING_READ,
 		takeOnScreen: readingTheFirstTake,
 		agentAttached: nobodyAttached,
+		sayInPanel: saidToNobody,
 		...given
 	});
 }
+
+describe('what stands where the story is read', () => {
+	it('is what the reader waits on, while the review holds no story', () => {
+		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+
+		expect(story.storyOrWait).toEqual({ kind: 'wait', wait: { kind: 'writing', asking: TAKEN } });
+	});
+
+	it('is the story, once the review holds one', () => {
+		const held = storyHeld();
+		const story = pageStory({ standing: storyStanding({ held }) });
+
+		expect(story.storyOrWait).toEqual({ kind: 'story', held });
+	});
+});
+
+describe('asking the agent for a story', () => {
+	it('sends the request to the review, which says to every page how the asking then stands', async () => {
+		const server = takingStoryAskings();
+		const story = pageStory();
+
+		await story.askFor();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('says in the panel why the story could not be asked for', async () => {
+		fakeServer().refuse('POST /api/story/request', SERVER_ERROR, 'the review fell over');
+		const saidInPanel: string[] = [];
+		const story = pageStory({ sayInPanel: (words) => saidInPanel.push(words) });
+
+		await story.askFor();
+
+		expect(saidInPanel).toEqual(['the story could not be asked for — the review fell over']);
+	});
+});
+
+describe('stopping the story asked for', () => {
+	it('sends the stop to the review', async () => {
+		const server = takingStoryAskings();
+		const story = pageStory({ standing: storyStanding({ asking: TAKEN }) });
+
+		await story.stop();
+
+		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
+	});
+
+	it('says in the panel why the story could not be stopped', async () => {
+		fakeServer().refuse('POST /api/story/cancel', SERVER_ERROR, 'the review fell over');
+		const saidInPanel: string[] = [];
+		const story = pageStory({
+			standing: storyStanding({ asking: TAKEN }),
+			sayInPanel: (words) => saidInPanel.push(words)
+		});
+
+		await story.stop();
+
+		expect(saidInPanel).toEqual(['the story could not be stopped — the review fell over']);
+	});
+});
 
 describe('what a page holds of the asking for a story', () => {
 	it('is how the review said it stood as the page opened', () => {
