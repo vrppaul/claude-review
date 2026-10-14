@@ -67,13 +67,19 @@ a person.
 
 Stopped from outside, by SIGTERM or at Ctrl-C, a look ends where it stands:
 it closes its browser, stops its server and removes its directory on the
-way out.
+way out. That holds from the first line of the look's own. Before it, while
+Python is still loading the look, about its first tenth of a second, the
+look has made nothing, and a signal ends it as it ends any process.
 
 Elements are found by test id alone.
 
-Exits 0 having looked, or having kept a review until it ended; 1 at a step
-that could not be taken, or when the review could not be served; 2 at a
-command line it cannot read; 130 stopped from outside.
+Exits 0 having looked, or having kept a review until it ended; 2 at a
+command line it cannot read; 130 stopped from outside. It exits 1, with the
+reason on stderr, whenever it could not look: run where there is no page,
+or the page is not built, or was built before a source of it was last
+written; git could not make the repository, the review could not be served
+or did not take the story, or one of those commands ran out of its time;
+the page did not open; or a step could not be taken.
 """
 
 import argparse
@@ -93,7 +99,7 @@ from typing import Self, override
 from playwright.async_api import Error as BrowserError, Page, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
-from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, Running, StoppedError, complete, run, running
+from commands import CommandFailedError, Running, complete, exit_code_of, run, running
 from long_change import CHANGED, COMMITTED, THE_STORY
 
 # The review's own command line, run in the environment the look runs in
@@ -786,10 +792,8 @@ def main() -> int:
         except (LookFailedError, CommandFailedError) as failure:
             print(failure, file=sys.stderr)
             return NOT_LOOKED
-        except StoppedError:
-            return STOPPED_FROM_OUTSIDE
     return LOOKED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(exit_code_of(main))

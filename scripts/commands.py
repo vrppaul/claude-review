@@ -10,6 +10,14 @@ handed to `complete`, which cancels it when the script is told from outside
 to stop, by SIGTERM or at Ctrl-C, and a command or a server running at that
 moment is stopped on the way out.
 
+A script is run whole through `exit_code_of`, which hears SIGTERM from the
+first line of the script's own as Ctrl-C is heard: before its work is
+handed over a script may have made a directory, and stopped there it
+removes it and exits as one stopped. Not before that line: while Python is
+still loading the script and what it imports, a tenth of a second for a
+look, nothing of the script's has run, nothing is made, and a signal ends
+it as it ends any process.
+
 Commands, and not every process a script is the cause of. The browser a
 look opens is Playwright's to start, with the driver it is run by, and
 Playwright's to stop: they go as the block the look opened them in ends,
@@ -31,7 +39,7 @@ import contextlib
 import os
 import signal
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT, Process
-from collections.abc import AsyncGenerator, Coroutine, Mapping, Sequence
+from collections.abc import AsyncGenerator, Callable, Coroutine, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict
 
@@ -157,6 +165,11 @@ async def _until_told_to_stop[ResultT](work: Coroutine[None, None, ResultT]) -> 
     return await working
 
 
+def _hear_sigterm_as_ctrl_c() -> None:
+    """From here on SIGTERM stops the script where it stands, by the exception Ctrl-C raises, not at once."""
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
+
+
 def complete[ResultT](work: Coroutine[None, None, ResultT]) -> ResultT:
     """Run a script's work to its end, and give what it gives.
 
@@ -167,3 +180,20 @@ def complete[ResultT](work: Coroutine[None, None, ResultT]) -> ResultT:
         return asyncio.run(_until_told_to_stop(work))
     except (KeyboardInterrupt, asyncio.CancelledError) as stopped:
         raise StoppedError from stopped
+    finally:
+        # asyncio leaves SIGTERM to end the process at once as its loop closes: the script has its way out still to go
+        _hear_sigterm_as_ctrl_c()
+
+
+def exit_code_of(script: Callable[[], int]) -> int:
+    """Run a script from the first line of its own to its last, and say what it exits with.
+
+    Told from outside to stop, it stops where it stands and lets go of what it holds on the way
+    out, a directory of its own for one: before its work is handed to `complete` and after, as
+    much as while that work runs. It then exits as a shell says of a program stopped at Ctrl-C.
+    """
+    _hear_sigterm_as_ctrl_c()
+    try:
+        return script()
+    except KeyboardInterrupt, StoppedError:
+        return STOPPED_FROM_OUTSIDE

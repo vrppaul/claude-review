@@ -26,12 +26,14 @@ from tests.e2e.browsers_loop import in_the_browsers_loop
 
 REPOSITORY = Path(__file__).parents[2]
 LOOK = REPOSITORY / "scripts" / "look.py"
-# Where a repository keeps a source of its page, and the page as it was built, from its root
+# Where a repository keeps two sources of its page, and the page as it was built, from its root
 A_SOURCE = "frontend/src/lib/changed.ts"
+AN_OLDER_SOURCE = "frontend/src/styles/kept.css"
 THE_BUILT_PAGE = "src/claude_review/static/dist/index.html"
-# A moment a source was last written at, and one a minute before it, as the clock files are stamped by counts them
+# A moment a source was last written at, and one and two minutes before it, as the clock files are stamped by counts them
 WRITTEN_AT = 1_700_000_000
 A_MINUTE_BEFORE = WRITTEN_AT - 60
+TWO_MINUTES_BEFORE = WRITTEN_AT - 120
 # What a look says of a page it will not look at: how it is built
 HOW_IT_IS_BUILT = "`cd frontend && pnpm build`"
 # How long a look may take before it is cut: several times what one takes
@@ -60,8 +62,20 @@ STORY_SHOT = "deep.png"
 # The look at the files: dark, on a narrow window, one picture kept
 NARROW = 700
 FILES_SHOT = "narrow.png"
-# Its steps: the picture, then the keyboard taken to the first line and a comment begun on it
-FILES_STEPS = ["shot:narrow", "key:j", "key:Enter"]
+# Its steps: the picture, then the keyboard taken to the first line and a comment begun on it; the comment
+# written and added; the area scrolled screens down from it; `n`, which glides back up to the comment; and a
+# key that does nothing, for a line after the glide's
+FAR_BELOW = 20_000
+FILES_STEPS = [
+    "shot:narrow",
+    "key:j",
+    "key:Enter",
+    "key:x",
+    "key:Control+Enter",
+    f"scroll:{FAR_BELOW}",
+    "key:n",
+    "key:Shift",
+]
 # How tall the window of every look is
 WINDOW_HEIGHT = 900
 # What a line says of the reading area and of what holds the keyboard, value by value
@@ -388,7 +402,7 @@ async def test_the_line_says_how_tall_the_reading_area_is(story_look: LookWithSh
 
 async def test_the_line_says_how_much_the_reading_area_holds(files_look: LookWithShots) -> None:
     """The long change is many screens tall, and a comment begun on a line makes it taller."""
-    opened, _, _, commenting = files_look.said
+    opened, _, _, commenting, *_ = files_look.said
 
     assert _area(commenting).holds > _area(opened).holds > _area(opened).height
 
@@ -398,7 +412,7 @@ async def test_the_line_says_what_holds_the_keyboard_by_its_tag_its_label_and_it
 ) -> None:
     """Three holders in turn: the switch that chose the story, an entry of the contents, the field of a comment."""
     opened, _, pressed, *_ = story_look.said
-    *_, commenting = files_look.said
+    _, _, _, commenting, *_ = files_look.said
     switch, entry, field = _keyboard(opened), _keyboard(pressed), _keyboard(commenting)
 
     assert (switch.tag, switch.test_id, switch.label) == ("BUTTON", "read-as-story", "none")
@@ -409,12 +423,12 @@ async def test_the_line_says_what_holds_the_keyboard_by_its_tag_its_label_and_it
     assert switch.height < entry.height < field.height
 
 
-async def test_a_line_is_printed_once_the_page_has_come_to_rest(story_look: LookWithShots) -> None:
-    """The press glides to a chapter; the step after it finds the area where the press's own line said it was."""
-    _, _, pressed, tabbed, *_ = story_look.said
+async def test_a_line_is_printed_once_the_page_has_come_to_rest(files_look: LookWithShots) -> None:
+    """`n` glides back up to the comment from screens below it; the step after finds the area where n's own line said."""
+    *_, scrolled, glided, after_the_glide = files_look.said
 
-    assert _area(pressed).scroll_top > SCROLLED_BY
-    assert pressed.area == tabbed.area
+    assert _area(glided).scroll_top < _area(scrolled).scroll_top
+    assert glided.area == after_the_glide.area
 
 
 async def test_the_window_is_as_wide_as_was_asked(files_look: LookWithShots) -> None:
@@ -485,7 +499,11 @@ def _written_at(root: Path, path: str, moment: int) -> None:
 
 
 async def test_a_page_built_before_its_sources_were_last_written_is_not_looked_at(tmp_path: Path) -> None:
-    """A look at it would be a look at the page as it was, said of the page as it is."""
+    """A look at it would be a look at the page as it was, said of the page as it is.
+
+    One source written since the build is enough, whatever was written before it: the last written is what counts.
+    """
+    _written_at(tmp_path, AN_OLDER_SOURCE, TWO_MINUTES_BEFORE)
     _written_at(tmp_path, A_SOURCE, WRITTEN_AT)
     _written_at(tmp_path, THE_BUILT_PAGE, A_MINUTE_BEFORE)
 

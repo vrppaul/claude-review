@@ -118,6 +118,58 @@ RUNS_WITH_A_LIMIT = dedent('''\
         sys.exit(str(failed))
     ''')
 
+# A script that makes a directory of its own before any of its work is handed over, says so, and waits there
+WAITS_BEFORE_ITS_WORK = dedent('''\
+    """Make a directory under the one given, say it is made, and wait: no work is under way yet."""
+
+    import sys
+    import tempfile
+
+    from commands import exit_code_of
+
+    DONE = 0
+
+
+    def main() -> int:
+        with tempfile.TemporaryDirectory(dir=sys.argv[1]):
+            print("made", flush=True)
+            sys.stdin.readline()
+        return DONE
+
+
+    sys.exit(exit_code_of(main))
+    ''')
+
+# A script that makes a directory of its own, does its work to the end, says so, and waits there
+WAITS_AFTER_ITS_WORK = dedent('''\
+    """Make a directory under the one given, do some work to its end, say so, and wait: no work is under way any more."""
+
+    import asyncio
+    import sys
+    import tempfile
+
+    from commands import complete, exit_code_of
+
+    DONE = 0
+
+
+    def main() -> int:
+        with tempfile.TemporaryDirectory(dir=sys.argv[1]):
+            complete(asyncio.sleep(0))
+            print("made", flush=True)
+            sys.stdin.readline()
+        return DONE
+
+
+    sys.exit(exit_code_of(main))
+    ''')
+# What either script says once its directory is made, and the two of them by when they wait
+MADE = "made\n"
+WAITING_OUTSIDE_ITS_WORK = {
+    "before its work began": WAITS_BEFORE_ITS_WORK,
+    "after its work ended": WAITS_AFTER_ITS_WORK,
+}
+
 
 class Staying(BaseModel):
     """A command that stays and starts a child that stays: how it is run, and where the child's pipe is read."""
@@ -217,3 +269,19 @@ def test_a_command_that_outlasts_its_limit_is_stopped_with_its_child_and_said_to
             f"`{' '.join(staying.command)}` had not ended after {A_SHORT_LIMIT} seconds, and was stopped",
             True,
         )
+
+
+@pytest.mark.parametrize("waiting", WAITING_OUTSIDE_ITS_WORK.values(), ids=WAITING_OUTSIDE_ITS_WORK.keys())
+def test_a_script_stopped_from_outside_while_no_work_runs_exits_as_one_stopped_and_lets_go_of_what_it_made(
+    tmp_path: Path, waiting: str
+) -> None:
+    """SIGTERM is heard from the first line of a script's own to its last, not only while its work runs."""
+    made_in = tmp_path / "made"
+    made_in.mkdir()
+    script = _started(_written(tmp_path, "waits.py", waiting), str(made_in))
+    said = script.stdout.readline()
+
+    script.send_signal(signal.SIGTERM)
+    script.communicate(timeout=SCRIPT_SECONDS)
+
+    assert (said, script.returncode, list(made_in.iterdir())) == (MADE, STOPPED_FROM_OUTSIDE, [])

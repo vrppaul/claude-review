@@ -61,7 +61,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from commands import STOPPED_FROM_OUTSIDE, CommandFailedError, StoppedError, complete, run
+from commands import CommandFailedError, complete, exit_code_of, run
 
 # The page, from the repository's root, and the directory of what pnpm installed for it
 FRONTEND = Path("frontend")
@@ -307,12 +307,10 @@ def main() -> int:
     except (RefusedError, CommandFailedError) as refusal:
         print(refusal, file=sys.stderr)
         return REFUSED
-    except StoppedError:
-        return STOPPED_FROM_OUTSIDE
     for line in said:
         print(line)
     return RAN
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(exit_code_of(main))

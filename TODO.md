@@ -192,6 +192,12 @@ tests. Remove items when done — don't check them off.
       by name (`_read`, `scripts/check_instruction_files.py`). And no test
       holds the gate to stopping at a pattern's first match: with every
       path listed first, as it was, all its tests pass.
+- [ ] A script stopped while Python is still loading it ends by the signal,
+      143 to a shell, where its docstring promises 130 from its own first
+      line on: measured of a look, SIGTERM 0.03 s and 0.08 s after its
+      start, against 130 from 0.11 s. It has made nothing by then. Hearing
+      the signal sooner means a statement before the imports, which ruff
+      refuses (E402), or imports inside a function (PLC0415).
 - [ ] On Windows, a checkout without `core.symlinks` writes `CLAUDE.md` as
       a one-line file where it is a link to `AGENTS.md`, and the
       instruction-files gate (`scripts/check_instruction_files.py`) fails
