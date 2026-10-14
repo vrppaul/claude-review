@@ -41,6 +41,9 @@
 	const threads = $derived(review.threads.onBlock(block));
 	// The comment being written on it, held by the review so that a reload keeps it
 	const field = $derived(review.threads.writing.aboutBlock(block));
+	// Whether something the reader wrote hangs open under it — a thread not folded away, or the comment being
+	// written — which bands it stronger, as an open thread marks the lines it is about
+	const held = $derived(threads.some((thread) => !review.threads.reading.isFolded(thread.id)) || field !== undefined);
 
 	// Announced to the review, which gives it the keyboard back once what hung under it goes
 	$effect(() => (asking ? review.sections.registerBlock(blockKey(block), asking) : undefined));
@@ -53,7 +56,7 @@
 </script>
 
 {#snippet band()}
-	<div data-testid="askable-band" class={['cr-askable', (threads.length > 0 || field) && 'cr-askable-held']}>
+	<div data-testid="askable-band" class={['cr-askable', held && 'cr-askable-held']}>
 		{@render children()}
 		<button
 			bind:this={asking}
@@ -83,7 +86,7 @@
 <!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is
 	pointed at, it offers "Ask about this"; what is asked hangs under it as a thread, as under a line, and
 	outside any frame of the block's own -->
-<div data-testid={testId}>
+<div data-testid={testId} class="cr-askable-block">
 	{#if frame}
 		<div data-testid="askable-frame" class={frame}>
 			{@render band()}

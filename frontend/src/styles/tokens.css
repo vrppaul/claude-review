@@ -58,7 +58,8 @@
 	/*
 	 * Where a thread hangs under a line: how far in from each side of the
 	 * line it stands, and how far from the left edge of its card the tail
-	 * points up at the line.
+	 * points up at the line. One on a block of a story's words hangs by
+	 * values of its own (.cr-askable-block).
 	 */
 	--cr-thread-inset: 0.75rem;
 	--cr-thread-tail-at: 6rem;

@@ -227,6 +227,24 @@ describe('picking lines across what the diff left out', () => {
 	});
 });
 
+describe('the lines a thread hangs on', () => {
+	it('are drawn marked while the thread is open under them, and no line beside them', () => {
+		const lines = commenting();
+		review.threads.add(newComment({ file: file.path, startLine: 12, endLine: 13 }));
+
+		expect([11, 12, 13, 14].map((number) => lines.isMarked(line(number).place))).toEqual([false, true, true, false]);
+	});
+
+	it('are not marked while the thread is folded away', () => {
+		const lines = commenting();
+		const id = review.threads.add(newComment({ file: file.path, startLine: 12, endLine: 13 }));
+
+		review.threads.reading.setFolded(id, true);
+
+		expect([12, 13].map((number) => lines.isMarked(line(number).place))).toEqual([false, false]);
+	});
+});
+
 describe('a file no comment may name', () => {
 	it('takes no comment, by the mouse or by the keyboard', () => {
 		review = openReview({ files: [file] });

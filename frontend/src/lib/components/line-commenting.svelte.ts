@@ -1,7 +1,8 @@
 /**
  * Commenting on the lines of one drawn file: picking them with the mouse or
- * the keyboard, marking what is picked, and what hangs under each line — its
- * threads, and the comments being written there.
+ * the keyboard, marking what is picked and what an open thread is about, and
+ * what hangs under each line — its threads, and the comments being written
+ * there.
  *
  * One for every drawing of a file, in whichever layout: both layouts pick,
  * mark and write the same way, and differ only in where a line's cells are.
@@ -11,6 +12,7 @@
 
 import { ThreadsByLine } from '$lib/anchors/comment-index';
 import { type Numbering, sideIsTheReviews, whyNotTheReviews } from '$lib/anchors/numbering';
+import type { FileLines } from '$lib/anchors/views';
 import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { LinePlace, LineSide, PickedLines, Thread, WrittenOnLines } from '$lib/types';
@@ -111,6 +113,11 @@ function isPicked(place: LinePlace, picked: PickedLines): boolean {
 	return place.side === picked.side && isBetween(place.number, picked.startLine, picked.endLine);
 }
 
+/** Whether a line is among the lines a thread hangs on. */
+function isAmong(place: LinePlace, lines: FileLines): boolean {
+	return place.side === lines.side && isBetween(place.number, lines.start_line, lines.end_line);
+}
+
 export class LineCommenting {
 	readonly #review: Review;
 	readonly #file: DrawnFile;
@@ -118,6 +125,8 @@ export class LineCommenting {
 	readonly #drawn: DrawnNumbers;
 	readonly #threads: ThreadsByLine;
 	readonly #unplaced: readonly Thread[];
+	// The lines of each thread drawn open under a line here
+	readonly #underOpenThreads: readonly FileLines[];
 	readonly #fields: LineField[];
 
 	constructor(review: Review, file: DrawnFile) {
@@ -126,6 +135,7 @@ export class LineCommenting {
 		this.#drawn = $derived(drawnNumbers(file.hunks()));
 		this.#threads = $derived(new ThreadsByLine(review.threads.onLinesOf(file.path()), file.numbering()));
 		this.#unplaced = $derived(this.#withoutTheirLine());
+		this.#underOpenThreads = $derived(this.#linesOfOpenThreads());
 		this.#fields = $derived(
 			review.threads.writing
 				.onLinesOf(file.path())
@@ -190,14 +200,19 @@ export class LineCommenting {
 	}
 
 	/**
-	 * Whether a line is marked: dragged over, or written about. The mark is
-	 * added to the line's change rather than replacing it: a line keeps
-	 * showing what changed on it while it is written about.
+	 * Whether a line is marked: dragged over, written about, or one an open
+	 * thread under it is about — the mark points at what the card below says,
+	 * and goes when the card is folded away. The mark is added to the line's
+	 * change rather than replacing it: a line keeps showing what changed on
+	 * it while it is written about.
 	 */
 	isMarked(place: LinePlace): boolean {
 		const drag = this.#drag;
 		if (drag !== null && drag.side === place.side && isBetween(place.number, drag.start, drag.end)) return true;
-		return this.#fields.some((field) => isPicked(place, field.at.lines));
+		return (
+			this.#fields.some((field) => isPicked(place, field.at.lines)) ||
+			this.#underOpenThreads.some((lines) => isAmong(place, lines))
+		);
 	}
 
 	/** The threads hanging under a line. */
@@ -235,6 +250,19 @@ export class LineCommenting {
 			.onLinesOf(this.#file.path())
 			.filter(({ lines }) => !this.#drawn[lines.side].has(lines.end_line))
 			.map(({ thread }) => thread);
+	}
+
+	/**
+	 * The lines of each thread drawn open here: on a side whose numbers are
+	 * the review's own, under a line drawn, and not folded away.
+	 */
+	#linesOfOpenThreads(): readonly FileLines[] {
+		return this.#review.threads
+			.onLinesOf(this.#file.path())
+			.filter(({ lines }) => sideIsTheReviews(lines.side, this.#file.numbering()))
+			.filter(({ lines }) => this.#drawn[lines.side].has(lines.end_line))
+			.filter(({ thread }) => !this.#review.threads.reading.isFolded(thread.id))
+			.map(({ lines }) => lines);
 	}
 
 	/** Start a comment on picked lines, quoting what they say as they are picked. */

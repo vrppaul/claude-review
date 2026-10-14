@@ -1082,16 +1082,21 @@
 	border-left-style: dashed;
 }
 
+/* A thread on a block of the agent's words hangs flush with it, its tail pointing up at what the block is headed with */
+.cr-askable-block {
+	--cr-thread-inset: 0;
+	--cr-thread-tail-at: 2.5rem;
+}
 /*
  * A block of the agent's words in a story the reader may ask about.
  * Pointed at, or holding the keyboard, it is banded whole — its heading and
  * its words — back to the edge of the agent's voice, and offers "Ask about
- * this", floating half over its top edge. Banded stronger while a thread or
- * a comment being written hangs under it. Its room is the same either way,
- * and so is the place of every word in it: only the band and the button
- * come and go. The band reaches as far above and below its words as it
- * stands off them, and takes no room for it: a block stands where its words
- * would without it.
+ * this", floating half over its top edge. Banded stronger while a thread
+ * hangs open under it, or a comment being written: folded away, a thread
+ * leaves it as it was. Its room is the same either way, and so is the place
+ * of every word in it: only the band and the button come and go. The band
+ * reaches as far above and below its words as it stands off them, and takes
+ * no room for it: a block stands where its words would without it.
  */
 .cr-askable {
 	position: relative;

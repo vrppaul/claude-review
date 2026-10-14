@@ -115,6 +115,19 @@ async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neit
     assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) != unbanded
 
 
+async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_blocks_beside_it(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    await _ask_about(page, doubt, "Was it needed?")
+
+    await doubt.get_by_test_id("fold-comment").click()
+    await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
+
+    unbanded = await page.get_by_test_id("overview-done").get_by_test_id("askable-band").evaluate(GROUND_OF)
+    assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) == unbanded
+
+
 async def test_a_thread_on_a_chapters_own_words_hangs_below_the_frame_they_stand_in(
     review: RunningReview, page: Page
 ) -> None:

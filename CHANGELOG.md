@@ -99,7 +99,11 @@
   "sent · round N" or "from the agent"; at its far end, always at full
   strength, Resolve with a tick, then a pencil to edit, a bin to delete
   and a chevron to fold. Under that head an outdated thread shows what it
-  was written against, then its words.
+  was written against, then its words. While a thread is open, the lines
+  it is about are drawn marked, and a block of the story's words it hangs
+  on banded stronger; folded away, it leaves them as they were. A thread
+  on the story's words hangs flush with them, its tail pointing up at
+  what the block is headed with.
 - **A story's chapter goes by an id a thread can name.** `story` refuses a
   chapter's id that holds anything but letters, digits, dots, dashes and
   underscores, or runs past 200 of them, at `chapters.N.id`, and `story
