@@ -17,14 +17,26 @@ import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
+/** The lines a view draws: none; lines of its files, to be read; or lines that take comments too. */
+type LinesDrawn = 'none' | 'to-read' | 'taking-comments';
+
 /**
- * What a view draws of the review as it stands: nothing; threads alone,
- * the lines they hang on gone from what is read; lines of its files, to be
- * read; or lines that take comments too, and carry the threads on them. A
- * key that acts on what is not drawn does nothing, and is neither answered
- * nor listed.
+ * What a view draws of the review as it stands, in the two things a key
+ * acts on. A key that acts on what is not drawn does nothing, and is
+ * neither answered nor listed: each asks of the one it acts on, so a view
+ * that draws them another way is no change to any key.
  */
-export type Drawn = 'nothing' | 'threads-alone' | 'lines' | 'lines-taking-comments';
+export interface Drawn {
+	lines: LinesDrawn;
+	/** Whether it draws threads: under lines that take comments, or with the lines they hung on gone from what is read. */
+	threads: boolean;
+}
+
+/** What a view draws while it has nothing of the review to draw. */
+export const NOTHING_DRAWN: Drawn = { lines: 'none', threads: false };
+
+/** What a view draws of lines that are the review's own: they take comments, and carry the threads on them. */
+export const LINES_WITH_THEIR_THREADS: Drawn = { lines: 'taking-comments', threads: true };
 
 export interface ReadingView {
 	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */
@@ -77,8 +89,8 @@ export class FilesReading implements ReadingView {
 	 * drawn above it; and with none of those, nothing.
 	 */
 	drawn(): Drawn {
-		if (this.#diff.files.length > 0) return 'lines-taking-comments';
-		return this.threadsInOrder().length > 0 ? 'threads-alone' : 'nothing';
+		if (this.#diff.files.length > 0) return LINES_WITH_THEIR_THREADS;
+		return { ...NOTHING_DRAWN, threads: this.threadsInOrder().length > 0 };
 	}
 
 	sectionKeys(): string[] {

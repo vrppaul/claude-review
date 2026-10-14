@@ -15,15 +15,16 @@
 import type { StoryNumbering } from '$lib/anchors/numbering';
 import { inDrawnOrder } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
-import type { Drawn, ReadingView } from '$lib/review/reading-view';
+import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
 
-// What a story held draws, by whose numbers its lines carry: only the review's own take a comment
+// What a story held draws, by whose numbers its lines carry: only the review's own take a comment, and
+// only they carry threads
 const DRAWN_NUMBERED: Record<StoryNumbering, Drawn> = {
-	'the-reviews': 'lines-taking-comments',
-	'another-takes': 'lines'
+	'the-reviews': LINES_WITH_THEIR_THREADS,
+	'another-takes': { lines: 'to-read', threads: false }
 };
 
 export class StoryReading implements ReadingView {
@@ -38,7 +39,7 @@ export class StoryReading implements ReadingView {
 
 	/** Nothing until a story is told; and of a story told of another take, lines that are read and take nothing. */
 	drawn(): Drawn {
-		return this.#story.held === null ? 'nothing' : DRAWN_NUMBERED[this.#story.numbering];
+		return this.#story.held === null ? NOTHING_DRAWN : DRAWN_NUMBERED[this.#story.numbering];
 	}
 
 	sectionKeys(): string[] {

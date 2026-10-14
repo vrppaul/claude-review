@@ -16,7 +16,6 @@
 
 import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
-import type { Drawn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 
 /**
@@ -81,16 +80,13 @@ const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
 const THE_FILES: readonly ReadingViewName[] = ['files'];
 const THE_STORY: readonly ReadingViewName[] = ['story'];
 
-// What a view may say it draws that has lines in it to walk, and what has threads in it to step through
-const DRAWN_WITH_LINES: readonly Drawn[] = ['lines', 'lines-taking-comments'];
-const DRAWN_WITH_THREADS: readonly Drawn[] = ['threads-alone', 'lines-taking-comments'];
-
 // When a row's keys do something: whatever is on screen; while the view on screen draws lines; while
-// those lines take comments; and while it draws threads, on such lines or on none
+// those lines take comments; and while it draws threads, on such lines or on none. Each asks the view
+// of the one thing its keys act on
 const ALWAYS: Live = () => true;
-const WHILE_LINES_ARE_DRAWN: Live = (review) => DRAWN_WITH_LINES.includes(review.views.onScreen.drawn());
-const WHILE_LINES_TAKE_COMMENTS: Live = (review) => review.views.onScreen.drawn() === 'lines-taking-comments';
-const WHILE_THREADS_ARE_DRAWN: Live = (review) => DRAWN_WITH_THREADS.includes(review.views.onScreen.drawn());
+const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().lines !== 'none';
+const WHILE_LINES_TAKE_COMMENTS: Live = (review) => review.views.onScreen.drawn().lines === 'taking-comments';
+const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().threads;
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
