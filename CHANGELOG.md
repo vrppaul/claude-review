@@ -242,6 +242,12 @@
   its fields stop there.
 
 ### Fixed
+- **A tab you come back to takes in the settings changed in another.**
+  Every review keeps the reader's settings in one place, and a tab read
+  them only as it opened. Now a tab shown again reads them again: the theme
+  and the layout follow, the diff is taken again where whitespace stopped
+  or started counting, and turning stories on asks this review for its
+  story.
 - **What the agent said before the page opened is in the panel when it
   opens.** A page in another browser, or a private window, draws the whole
   conversation too: the reader's messages with their screenshots and the

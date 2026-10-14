@@ -131,6 +131,25 @@ describe('the reader settings', () => {
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ ignore_whitespace: true }]);
 	});
 
+	it('read again are what another tab chose meanwhile, the theme cached for the first paint with them', async () => {
+		serving({ ...NEW_READER, theme: 'dark', stories: true }, true);
+
+		await settings.readAgain();
+
+		expect(settings.current).toEqual({ ...NEW_READER, theme: 'dark', stories: true });
+		expect(localStorage.getItem(THEME_KEPT_HERE)).toBe('dark');
+	});
+
+	it('read again hand nothing over that this browser kept before the server did: that was done as the page opened', async () => {
+		localStorage.setItem(LAYOUT_KEPT_HERE, 'split');
+		const server = serving(NEW_READER, false);
+
+		await settings.readAgain();
+
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
+		expect(settings.current.diff_layout).toBe('unified');
+	});
+
 	it('keep reading with what the tab has when the server cannot be reached', async () => {
 		const server = fakeServer();
 		server.drop('GET /api/settings');

@@ -9,7 +9,7 @@ import { diffResponse, REVIEW_TITLE, reviewResponse } from './diff';
 import { fakeServer, NEW_READER, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './fake-socket';
 import { lineAnchor } from '$lib/anchors/line';
-import type { FollowRequest, HeldThread, SaidInPanel, ServerPush } from '$lib/types';
+import type { FollowRequest, HeldThread, ReaderSettings, SaidInPanel, ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
 import { chatPush, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
@@ -640,5 +640,106 @@ describe('opening the page', () => {
 			kind: 'failed',
 			reason: `Could not open the review: ${SERVER_ERROR}`
 		});
+	});
+});
+
+/** Show the tab again, as the browser does when the reader comes back to it from another. */
+function showTabAgain(): void {
+	document.dispatchEvent(new Event('visibilitychange'));
+}
+
+/** The settings another tab, of this review or another, left the reader with meanwhile. */
+function changedElsewhere(server: FakeServer, settings: Partial<ReaderSettings>): void {
+	server.answer('GET /api/settings', { record: { ...NEW_READER, ...settings }, stored: true });
+}
+
+describe('the tab shown again', () => {
+	beforeEach(() => {
+		FakeSocket.opened = [];
+		vi.stubGlobal('WebSocket', FakeSocket);
+	});
+
+	afterEach(() => {
+		for (const page of openedPages.splice(0)) page.close();
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
+	});
+
+	it("reads the reader's settings again: what another tab chose meanwhile applies here", async () => {
+		const server = serving();
+		const page = newPage();
+		await page.open();
+		changedElsewhere(server, { diff_layout: 'split' });
+
+		showTabAgain();
+		await settled();
+
+		expect(openedReview(page).settings.current.diff_layout).toBe('split');
+	});
+
+	it('takes the diff again where another tab changed whether whitespace counts', async () => {
+		const server = serving();
+		const page = newPage();
+		await page.open();
+		changedElsewhere(server, { ignore_whitespace: true });
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('GET /api/diff').map((request) => request.query)).toEqual([
+			{},
+			{ ignore_whitespace: 'true' }
+		]);
+	});
+
+	it('asks the agent for a story where another tab turned stories on', async () => {
+		const server = takingStoryAskings(serving());
+		const page = newPage();
+		await page.open();
+		changedElsewhere(server, { stories: true });
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('leaves the tab as it was where the settings cannot be read', async () => {
+		// Stories on, and the asking as the page opened refused: a tab that went on would ask again
+		const server = servingAReaderWithStoriesOn();
+		server.refuse('POST /api/story/request', SERVER_ERROR);
+		const page = newPage();
+		await page.open();
+		await settled();
+		server.refuse('GET /api/settings', SERVER_ERROR);
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('reads nothing as the tab is hidden', async () => {
+		const server = serving();
+		const page = newPage();
+		await page.open();
+		vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('GET /api/settings')).toHaveLength(1);
+	});
+
+	it('reads nothing once the page has let its review go', async () => {
+		const server = serving();
+		const page = newPage();
+		await page.open();
+		page.close();
+
+		showTabAgain();
+		await settled();
+
+		expect(server.requestsTo('GET /api/settings')).toHaveLength(1);
 	});
 });

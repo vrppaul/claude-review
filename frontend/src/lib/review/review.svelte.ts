@@ -294,12 +294,27 @@ export class Review {
 	 */
 	async setIgnoreWhitespace(next: boolean): Promise<void> {
 		await this.settings.change({ ignore_whitespace: next });
+		await this.#takeDiffAgain();
+	}
+
+	/**
+	 * Take in the reader's settings again, as another tab may have changed
+	 * them: the diff is taken again where whether whitespace counts changed,
+	 * and a story is asked for where stories were turned on, as after a gap
+	 * in what the server told. Turned off, they stop nothing here: the way
+	 * to stop a story is in reach wherever one is being written. Settings
+	 * that cannot be read leave the review as it was.
+	 */
+	async readSettingsAgain(): Promise<void> {
+		const whitespaceIgnored = this.settings.current.ignore_whitespace;
 		try {
-			await this.diff.take();
-		} catch (error) {
-			// Nobody is waiting on this but the reader, so it is said where they will see it
-			this.conversation.note(diffNotTakenNote(error));
+			await this.settings.readAgain();
+		} catch {
+			// A server that cannot say leaves this tab reading as it was
+			return;
 		}
+		if (this.settings.current.ignore_whitespace !== whitespaceIgnored) await this.#takeDiffAgain();
+		await this.wantStory();
 	}
 
 	/**
@@ -397,6 +412,16 @@ export class Review {
 			storyRead: this.story.progress.kept,
 			round: this.rounds.current
 		};
+	}
+
+	/** Take the diff again with whitespace counted as the settings now say. */
+	async #takeDiffAgain(): Promise<void> {
+		try {
+			await this.diff.take();
+		} catch (error) {
+			// Nobody is waiting on this but the reader, so it is said where they will see it
+			this.conversation.note(diffNotTakenNote(error));
+		}
 	}
 
 	#oneRetakeAtATime(retake: () => Promise<FollowOutcome>): Promise<FollowOutcome> {

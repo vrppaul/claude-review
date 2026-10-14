@@ -37,7 +37,8 @@ export class ReviewPage {
 	readonly #theme = new PageTheme(this.#settings);
 	#state = $state.raw<PageState>({ kind: 'opening' });
 	// How to let go of the review open now: stop telling the server what it
-	// holds, stop keeping its draft, and stop asking before the tab leaves it
+	// holds, stop keeping its draft, stop asking before the tab leaves it, and
+	// stop reading the reader's settings again when the tab is shown
 	#letGo: (() => void) | null = null;
 
 	/** @param closeTab how the tab is closed once the review is over */
@@ -88,8 +89,12 @@ export class ReviewPage {
 				{ settings: this.#settings, layout: this.#layout, sound: new ReplySound(this.#settings), theme: this.#theme }
 			);
 			window.addEventListener('beforeunload', this.#askBeforeLeaving);
-			this.#letGo = stopsTogether(review.tellServerThrough(this.#connection), stopKeeping, () =>
-				window.removeEventListener('beforeunload', this.#askBeforeLeaving)
+			document.addEventListener('visibilitychange', this.#readSettingsWhenShown);
+			this.#letGo = stopsTogether(
+				review.tellServerThrough(this.#connection),
+				stopKeeping,
+				() => window.removeEventListener('beforeunload', this.#askBeforeLeaving),
+				() => document.removeEventListener('visibilitychange', this.#readSettingsWhenShown)
 			);
 			this.#connection.deliverTo({
 				identity: review.identity,
@@ -136,5 +141,14 @@ export class ReviewPage {
 	// it, but leaving ends the review a moment later and lets its agent go
 	readonly #askBeforeLeaving = (event: Event): void => {
 		if (this.#state.kind === 'open' && this.#state.review.submission.hasUnsent) event.preventDefault();
+	};
+
+	// The reader's settings are one record for every review, each served on a
+	// port of its own: a tab shown again reads them again, for another tab may
+	// have changed them meanwhile
+	readonly #readSettingsWhenShown = (): void => {
+		if (document.visibilityState === 'visible' && this.#state.kind === 'open') {
+			void this.#state.review.readSettingsAgain();
+		}
 	};
 }

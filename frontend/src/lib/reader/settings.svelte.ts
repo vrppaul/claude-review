@@ -87,6 +87,17 @@ export class Settings {
 		}
 	}
 
+	/**
+	 * Read again what the reader chose: another tab, of this review or any
+	 * other, may have changed it since. The choices alone: what this browser
+	 * kept before the server did was handed over as the page opened. A read
+	 * that fails throws, and leaves the settings as they were.
+	 */
+	async readAgain(): Promise<void> {
+		this.#current = (await readSettings()).record;
+		writeChoice(THEME_CACHE, this.#current.theme);
+	}
+
 	/** Make a choice, here at once and for every later review once the server has it. */
 	async change(changes: Partial<ReaderSettings>): Promise<void> {
 		this.#current = { ...this.#current, ...changes };
