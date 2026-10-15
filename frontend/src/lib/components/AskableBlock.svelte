@@ -88,18 +88,24 @@
 	{:else}
 		{@render band()}
 	{/if}
-	{#each threads as thread (thread.id)}
-		<CommentThread {thread} />
-	{/each}
-	{#if field}
-		<div class="cr-thread-hang">
-			<CommentBox
-				{field}
-				onSave={() => sayComment(review, field)}
-				onAsk={review.canAsk ? () => askComment(review, field) : undefined}
-				onCancel={() => putAway(field)}
-				label={blockLabel(block)}
-			/>
+	{#if threads.length > 0 || field !== undefined}
+		<!-- What hangs under the block hangs under its band, as what hangs under a line hangs under its row: the
+			band reaches below the words into the room under them, and the cards begin past it -->
+		<div data-testid="askable-hangs" class="cr-askable-hangs">
+			{#each threads as thread (thread.id)}
+				<CommentThread {thread} />
+			{/each}
+			{#if field}
+				<div class="cr-thread-hang">
+					<CommentBox
+						{field}
+						onSave={() => sayComment(review, field)}
+						onAsk={review.canAsk ? () => askComment(review, field) : undefined}
+						onCancel={() => putAway(field)}
+						label={blockLabel(block)}
+					/>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

@@ -15,7 +15,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.thread_card import TAIL_DRAWN
+from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
 
@@ -142,6 +142,24 @@ async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_bl
 
     unbanded = await page.get_by_test_id("overview-done").get_by_test_id("askable-band").evaluate(GROUND_OF)
     assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) == unbanded
+
+
+async def test_a_comment_written_on_the_storys_words_stands_in_from_them_as_a_card_stands_in_from_its_line(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    await doubt.hover()
+
+    await doubt.get_by_test_id("ask-about-this").click()
+
+    block_left, _, block_right = await doubt.evaluate(EDGES)
+    card_left, card_top, card_right = await doubt.get_by_test_id("comment-box").evaluate(EDGES)
+    words_end = await doubt.get_by_test_id("askable-band").evaluate(BOTTOM_OF)
+    frame_end = await page.get_by_test_id("story-in-short").evaluate(BOTTOM_OF)
+    card_end = await doubt.get_by_test_id("comment-box").evaluate(BOTTOM_OF)
+    assert (card_left - block_left, block_right - card_right) == (pytest.approx(CARD_INSET), pytest.approx(CARD_INSET))
+    assert 0 < card_top - words_end <= MOST_UNDER_ITS_LINE
+    assert frame_end - card_end >= CARD_INSET
 
 
 async def test_a_thread_on_a_chapters_own_words_hangs_below_the_frame_they_stand_in(

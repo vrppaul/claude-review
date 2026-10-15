@@ -1158,10 +1158,16 @@
 	font-weight: 400;
 }
 
-/* A thread on a block of the agent's words hangs flush with it, its tail pointing up at what the block is headed with */
+/*
+ * A thread on a block of the agent's words, or a comment being written on it, hangs as one does under a line,
+ * in from each side as far, its tail pointing up at what the block is headed with
+ */
 .cr-askable-block {
-	--cr-thread-inset: 0;
 	--cr-thread-tail-at: 2.5rem;
+}
+/* What hangs under a block begins where its band ends, which reaches below its words */
+.cr-askable-hangs {
+	margin-top: var(--cr-band-reach);
 }
 /*
  * A block of the agent's words in a story the reader may ask about.
@@ -1225,7 +1231,6 @@
 .cr-ask-beside-words {
 	float: right;
 	margin-left: 0.5rem;
-	box-shadow: var(--cr-shadow-floating);
 	opacity: 0;
 }
 .cr-askable:hover > .cr-ask-beside-words,

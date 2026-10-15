@@ -11,7 +11,7 @@ import pytest
 from playwright.async_api import Locator, Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.thread_card import TAIL_DRAWN
+from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -20,11 +20,6 @@ COMMITTED = {CHANGED_FILE: "def hello():\n    return 'hello'\n"}
 CHANGED = {CHANGED_FILE: "def hello():\n    return 'hi'\n"}
 # Where the left, bottom and right edges of the row a line's number stands in are on screen, in pixels
 ROW_EDGES = "(gutter) => { const row = gutter.closest('tr').getBoundingClientRect(); return [row.left, row.bottom, row.right]; }"
-# Where the left, top and right edges of an element are on screen, in pixels
-EDGES = "(element) => { const box = element.getBoundingClientRect(); return [box.left, box.top, box.right]; }"
-# How far a card stands in from each side of its line, and the most it stands under it, as the boards draw them
-CARD_INSET = 12
-MOST_UNDER_ITS_LINE = 12
 # How far apart two things may stand that differ by the edge round one of them, in pixels
 AN_EDGE_APART = 1
 

@@ -2,3 +2,9 @@
 
 # Whether the tail of a card is drawn: what the browser draws before the card's own contents
 TAIL_DRAWN = "(card) => getComputedStyle(card, '::before').content !== 'none'"
+# Where the left, top and right edges of an element are on screen, in pixels
+EDGES = "(element) => { const box = element.getBoundingClientRect(); return [box.left, box.top, box.right]; }"
+# How far a card stands in from each side of what it hangs under, and the most it stands under it, as the boards
+# draw them: under a line of a file and under a block of the story's words alike
+CARD_INSET = 12
+MOST_UNDER_ITS_LINE = 12
