@@ -51,7 +51,7 @@
 	{extent}
 	folded={false}
 	testId="story-piece"
-	class="cr-piece-frame cr-story-bleed border-y border-base-300"
+	class="cr-story-bleed border-y border-base-300"
 	{above}
 >
 	{#snippet header()}

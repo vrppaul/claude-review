@@ -37,15 +37,14 @@ describe('a file in the review', () => {
 		expect(getAllByTestId('line-gutter').map((number) => number.dataset.place)).toEqual(['new:1', 'old:2', 'new:2']);
 	});
 
-	it('says how many rows it draws, for the room it takes before it is drawn, and none once folded', () => {
-		const { getByTestId } = render(FileSection, inReview(review, { file }));
-		const section = getByTestId('file-section');
-		expect(section.style.getPropertyValue('--cr-rows')).toBe('3');
+	it('says how many rows its lines draw, for the room they take before they are drawn, and has none once folded', () => {
+		const { getByTestId, queryByTestId } = render(FileSection, inReview(review, { file }));
+		expect(getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('3');
 
 		review.reading.toggleFolded(file.path);
 		flushSync();
 
-		expect(section.style.getPropertyValue('--cr-rows')).toBe('0');
+		expect(queryByTestId('file-lines')).toBeNull();
 	});
 
 	it('holds a row of room for a file it shows no line of', () => {
@@ -54,7 +53,7 @@ describe('a file in the review', () => {
 
 		const { getByTestId } = render(FileSection, inReview(review, { file: picture }));
 
-		expect(getByTestId('file-section').style.getPropertyValue('--cr-rows')).toBe('1');
+		expect(getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('1');
 	});
 
 	it('is not built until the reader comes near it', () => {

@@ -81,30 +81,43 @@
 }
 
 /*
- * Off-screen files are left undrawn. Unlike a virtual list this keeps every
+ * Off-screen lines are left undrawn. Unlike a virtual list this keeps every
  * row in the document, so find-in-page, anchors and text selection across
- * files all still work. What is left undrawn is a file's header and lines,
- * whose room can be counted; words a view says above them in the same
- * section, a step's reason, are drawn always.
+ * files all still work. What is left undrawn is a file's lines alone, whose
+ * room is counted from the heights their own rules set; its header, and
+ * words a view says above it, a step's reason, are drawn always.
  */
-.cr-file-frame {
+.cr-file-lines {
 	/* What its lines take up, drawn: as many rows, hunks, bars and hunk headers as its section counts */
 	--cr-lines-room: calc(
 		var(--cr-rows) * var(--cr-row-height) + var(--cr-hunks) * var(--cr-hunk-rule) + var(--cr-gaps) *
-			var(--cr-gap-estimate) + var(--cr-hunk-headers) * var(--cr-hunk-header-estimate)
+			var(--cr-gap-height) + var(--cr-hunk-headers) * var(--cr-hunk-header-height)
 	);
-	--cr-header-estimate: var(--cr-file-header-estimate);
 	content-visibility: auto;
-	/* What it would take up, drawn: its header, and its lines */
-	contain-intrinsic-size: auto calc(var(--cr-header-estimate) + var(--cr-lines-room));
-}
-/* A piece of a story is headed as a file is, but for the chips a file's header holds: the fold, Viewed */
-.cr-piece-frame {
-	--cr-header-estimate: var(--cr-piece-header-estimate);
+	contain-intrinsic-size: auto var(--cr-lines-room);
 }
 /* Where a file's lines go before they are built, as tall as they will be */
 .cr-file-placeholder {
 	height: var(--cr-lines-room);
+}
+/* A hunk of lines, ruled off from the next: the rule its room is counted with */
+.cr-hunk {
+	border-bottom: var(--cr-hunk-rule) solid var(--color-base-300);
+}
+/* Over a hunk, where it says so, where in the file it stands: one line, as tall as it is counted */
+.cr-hunk-header {
+	display: flex;
+	align-items: center;
+	height: var(--cr-hunk-header-height);
+	padding-inline: 1rem;
+	border-block: var(--cr-hunk-rule) solid var(--color-base-300);
+}
+/* The bar for lines the diff left out, and the ways to show them: one line, as tall as it is counted */
+.cr-hunk-gap {
+	display: flex;
+	align-items: stretch;
+	height: var(--cr-gap-height);
+	border-block: var(--cr-hunk-rule) solid var(--color-base-300);
 }
 
 /*

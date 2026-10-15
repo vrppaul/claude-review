@@ -713,8 +713,8 @@ describe('the room a piece of a story holds before it is built', () => {
 
 		const [ofFiveLines, ofNoLine] = pieces();
 
-		expect(ofFiveLines.style.getPropertyValue('--cr-rows')).toBe('5');
-		expect(ofNoLine.style.getPropertyValue('--cr-rows')).toBe('1');
+		expect(within(ofFiveLines).getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('5');
+		expect(within(ofNoLine).getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('1');
 	});
 });
 

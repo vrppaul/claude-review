@@ -64,19 +64,19 @@
 	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
 {#if drawn}
 	{#if header}
-		<div data-testid="hunk-header" class="cr-muted border-y border-base-300 bg-base-200 px-4 py-1 font-mono text-xs">
-			{header}
+		<div data-testid="hunk-header" class="cr-hunk-header cr-muted bg-base-200 font-mono text-xs">
+			<span class="truncate">{header}</span>
 		</div>
 	{/if}
-	<div data-testid="hunk-gap" class="flex items-center gap-1 border-y border-base-300 bg-base-200 font-mono text-xs">
+	<div data-testid="hunk-gap" class="cr-hunk-gap gap-1 bg-base-200 font-mono text-xs">
 		{#if onlySaid}
-			<span class="cr-muted px-4 py-1.5">⋯ {counted(hidden ?? 0, onlySaid)}</span>
+			<span class="cr-muted flex items-center px-4">⋯ {counted(hidden ?? 0, onlySaid)}</span>
 		{:else}
 			{#if inOneGo}
 				<button
 					type="button"
 					data-testid="expand-all"
-					class="cr-expand flex w-full items-center gap-2 px-4 py-1.5 text-left"
+					class="cr-expand flex w-full items-center gap-2 px-4 text-left"
 					disabled={reading}
 					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
@@ -84,7 +84,7 @@
 					{reading ? 'Reading…' : `Show the ${hiddenLines}`}
 				</button>
 			{:else}
-				<span class="cr-muted flex flex-1 items-center gap-2 px-4 py-1.5">
+				<span class="cr-muted flex flex-1 items-center gap-2 px-4">
 					<Icon name="expand" class="h-3 w-3 shrink-0" />
 					{reading ? 'Reading…' : hiddenLines}
 				</span>
@@ -93,7 +93,7 @@
 					<button
 						type="button"
 						data-testid="expand-up"
-						class="cr-expand px-3 py-1.5"
+						class="cr-expand px-3"
 						title={said}
 						aria-label={said}
 						disabled={reading}
@@ -107,7 +107,7 @@
 					<button
 						type="button"
 						data-testid="expand-down"
-						class="cr-expand px-3 py-1.5"
+						class="cr-expand px-3"
 						title={said}
 						aria-label={said}
 						disabled={reading}
@@ -121,7 +121,7 @@
 					<button
 						type="button"
 						data-testid="expand-all"
-						class="cr-expand px-3 py-1.5"
+						class="cr-expand px-3"
 						disabled={reading}
 						onclick={(event) => widen(allAtOnce, event.currentTarget)}
 					>
@@ -130,7 +130,9 @@
 				{/if}
 			{/if}
 			{#if failed}
-				<span data-testid="expand-error" class="px-4 text-error">{failed}</span>
+				<span data-testid="expand-error" class="flex min-w-0 items-center truncate px-4 text-error" title={failed}>
+					{failed}
+				</span>
 			{/if}
 		{/if}
 	</div>

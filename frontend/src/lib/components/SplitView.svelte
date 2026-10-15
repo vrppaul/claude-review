@@ -71,7 +71,7 @@
 
 <div data-testid="split-view">
 	{#each drawing.hunks() as hunk (hunk.key)}
-		<div class="border-b border-base-300">
+		<div class="cr-hunk">
 			<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
 
 			<table class="cr-code w-full table-fixed border-collapse font-mono">

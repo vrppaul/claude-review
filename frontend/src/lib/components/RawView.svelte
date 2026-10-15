@@ -46,7 +46,7 @@
 
 <div data-testid="raw-view">
 	{#each drawing.hunks() as hunk (hunk.key)}
-		<div class="border-b border-base-300">
+		<div class="cr-hunk">
 			{#if isDiffMode}
 				<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
 			{/if}

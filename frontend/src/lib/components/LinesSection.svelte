@@ -6,7 +6,7 @@
 	import { useReview } from '$lib/review/context';
 	import type { DiffFile } from '$lib/types';
 	import FileBody from './FileBody.svelte';
-	import { type Extent, type FileView, type LinesRoom, roomOf } from './file-drawing.svelte';
+	import { type Extent, type FileView, roomOf } from './file-drawing.svelte';
 
 	interface Props {
 		/** What the section is known by among those its view draws. */
@@ -30,18 +30,15 @@
 		header: Snippet;
 	}
 
-	// Folded away, its lines take no room
-	const FOLDED: LinesRoom = { rows: 0, hunks: 0, gaps: 0, hunkHeaders: 0 };
-
 	let { sectionKey, file, language, view, extent, folded, testId, class: framed, above, header }: Props = $props();
 	const review = useReview();
 	// The area its view scrolls in, which it comes near to be built: null while that is not drawn yet
 	const scrollArea = useScrollArea();
 
-	// What its lines will take up, so the browser can leave it undrawn off
+	// What its lines will take up, so the browser can leave them undrawn off
 	// screen, and its rows be built late, without what lies below moving as
 	// they are: the stylesheet turns the counts into a height
-	const room = $derived(folded ? FOLDED : roomOf(file, extent, view));
+	const room = $derived(roomOf(file, extent, view));
 
 	let element: HTMLElement | undefined = $state();
 	// Rows are built when the section comes within reach, and kept from then on
@@ -56,27 +53,28 @@
 	Of what is drawn in it, its view says three things: what stands in its header, how its lines are
 	drawn, and what stands above them. That last is inside the section: a reader taken to it reads from
 	there -->
-<section
-	bind:this={element}
-	data-testid={testId}
-	data-path={file.path}
-	class="cr-lines-section"
-	style:--cr-rows={room.rows}
-	style:--cr-hunks={room.hunks}
-	style:--cr-gaps={room.gaps}
-	style:--cr-hunk-headers={room.hunkHeaders}
->
+<section bind:this={element} data-testid={testId} data-path={file.path} class="cr-lines-section">
 	{@render above?.()}
-	<!-- The header and the lines in a frame of their own: what is left undrawn off screen, and what the
-		header stays in sight within -->
-	<div class={['cr-file-frame', framed]}>
+	<!-- The header and the lines in a frame of their own, which the header stays in sight within -->
+	<div class={framed}>
 		{@render header()}
 		{#if !folded}
-			{#if nearness.built}
-				<FileBody {file} {language} {view} {extent} />
-			{:else}
-				<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
-			{/if}
+			<!-- The lines alone are left undrawn off screen, holding the room they are counted to take: the
+				header is drawn always, so nothing has to guess how tall it is -->
+			<div
+				data-testid="file-lines"
+				class="cr-file-lines"
+				style:--cr-rows={room.rows}
+				style:--cr-hunks={room.hunks}
+				style:--cr-gaps={room.gaps}
+				style:--cr-hunk-headers={room.hunkHeaders}
+			>
+				{#if nearness.built}
+					<FileBody {file} {language} {view} {extent} />
+				{:else}
+					<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
+				{/if}
+			</div>
 		{/if}
 	</div>
 </section>
