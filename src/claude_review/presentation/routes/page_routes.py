@@ -79,7 +79,6 @@ async def get_the_review(
     """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
     standing = review.standing()
     work = review.work_under_way()
-    asking = review.story_asking()
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
@@ -90,7 +89,7 @@ async def get_the_review(
         agent=AgentStatus.of(standing.agent),
         work=AgentWork.of(work) if work is not None else None,
         takes_a_story=standing.takes_a_story,
-        story_asking=StoryAsking.of(asking) if asking is not None else None,
+        story_asking=StoryAsking.of(standing.story_asking) if standing.story_asking is not None else None,
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,

@@ -213,8 +213,8 @@ tests. Remove items when done — don't check them off.
       agent panel.
 - [ ] `refactor(server)`: three routes call two methods of the `Review`
       where the rule is that a route calls one (`.claude/rules/wire.md`):
-      GET /api/review (`presentation/routes/page_routes.py:79-80`), GET
-      /api/diff (`149-150`) and GET /api/versions (`162-163`).
+      GET /api/review (`presentation/routes/page_routes.py:80-81`), GET
+      /api/diff (`177-178`) and GET /api/versions (`190-191`).
 - [ ] The instruction-files gate reads a path only between two backticks
       on one line of prose (`scripts/check_instruction_files.py`): a path
       inside a fenced block, or one a Markdown link points at, is not held

@@ -423,6 +423,16 @@ async def test_a_page_told_the_diff_was_taken_again_reads_the_story_already_foll
     assert (told, held) == (DiffRetaken, review.story_held())
 
 
+async def test_where_the_review_stands_says_how_the_readers_asking_for_a_story_stands(review: Review) -> None:
+    """Read in one piece with the rest of where it stands, as a page opening reads it."""
+    review.ask_for_story()
+
+    asking = review.standing().story_asking
+
+    assert asking is not None
+    assert (asking.taken_at, asking.stopped) == (None, False)
+
+
 async def test_the_review_goes_on_answering_while_a_story_is_told(review: Review) -> None:
     """Told on the event loop, a long story kept every page and agent waiting until it was placed."""
     telling = asyncio.ensure_future(review.tell_story(A_LONG_STORY))

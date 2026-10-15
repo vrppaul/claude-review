@@ -3,6 +3,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import AgentStatus, PanelEntry, ReviewMode, ThreadDraft
+from claude_review.domain.story import StoryAsking
 
 
 class ReviewStanding(BaseModel):
@@ -26,6 +27,9 @@ class ReviewStanding(BaseModel):
     # Whether a story can be told of it: of a change somebody made, never
     # of files read once or a conversation
     takes_a_story: bool
+    # How the asking for a story stands: None while nothing is asked, and
+    # once a story is held
+    story_asking: StoryAsking | None
 
 
 class CatchUp(BaseModel):

@@ -148,6 +148,7 @@ class Review:
             answerer_attached=self._answerer.attached,
             agent=self._answerer.status,
             takes_a_story=self._source.is_a_change,
+            story_asking=self._story.asking,
         )
 
     def catch_up(self) -> CatchUp:
@@ -497,10 +498,6 @@ class Review:
     def story_held(self) -> StoryHeld | None:
         """The story the review holds, on the take of its change on screen: None while nobody has told one."""
         return self._story.held
-
-    def story_asking(self) -> StoryAsking | None:
-        """How the reader's asking for a story stands: None while nobody asked for one, and once a story is told."""
-        return self._story.asking
 
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, follow the story told onto it, and tell the pages.
