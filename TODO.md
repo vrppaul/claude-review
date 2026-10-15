@@ -367,6 +367,14 @@ of it is built yet.
       stopped at, where `tests/helpers.py` names all three; and the change
       a story is told of, with the steps that tell it, is written in two
       (`tests/integration/test_story.py`, `test_agent_commands.py`).
+- We need to add the acknowledged status - when the agent received the event and sent back the event that acknowledged. This can be done via mods
+- We need to add a way for the agent to reply to the whole thread and let the server to post the proper ordering
+- We need to add a way to retract the message if needed or to modify it
+- We need to add a rule that all messages from the agent should be concise and well markdown formatted
+- For some reason all agents see --no-open, it should not be the default
+- CHanging the base must not mean restarting
+- keeping the loop running is the boilerplate - from one of the agents
+- add a way to report a bug/suggest an improvement
 
 ## Known limits
 
