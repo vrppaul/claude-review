@@ -115,7 +115,7 @@
 							<section>
 								<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
 								<!-- Each thing listed may be asked about, as the overview's lines may -->
-								<ul class="cr-askable-stack mt-2 text-sm">
+								<ul class="cr-askable-stack mt-2">
 									{#each overview[list] as item, itemPlace (itemPlace)}
 										<li>
 											<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">

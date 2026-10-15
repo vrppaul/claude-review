@@ -51,6 +51,9 @@
 	--cr-contents-row-pad: 0.3125rem;
 	--cr-contents-gap: 0.625rem;
 	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
+	/* The number a node holds, small enough that two digits fit its ring; the dot the overview's holds */
+	--cr-contents-node-number: 0.625rem;
+	--cr-contents-dot: 0.375rem;
 	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
 	--cr-story-gutter: 1.5rem;
 

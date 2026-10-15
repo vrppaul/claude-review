@@ -67,12 +67,12 @@
 			{@html drawing.svg}
 		</div>
 	{:else}
-		<p data-testid="diagram-fault" class="text-[0.8125rem] font-semibold text-warning">
+		<p data-testid="diagram-fault" class="text-sm font-semibold text-warning">
 			{diagramNotDrawn(drawing.fault)}
 		</p>
 		<pre
 			data-testid="diagram-source"
-			class="cr-muted overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2.5 font-mono text-xs">{source}</pre>
+			class="cr-muted overflow-x-auto rounded-(--radius-box) border border-base-300 bg-base-200 px-3 py-2.5 font-mono text-xs">{source}</pre>
 	{/if}
 {/snippet}
 
