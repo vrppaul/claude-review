@@ -64,8 +64,9 @@
 	its words. What to doubt is a warning, and says so in yellow -->
 {#snippet line(block: OverviewBlock, words: string, testId: string)}
 	<AskableBlock {block} {words} {testId}>
-		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list -->
-		<div class="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-4">
+		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list. On
+			a narrow screen the term stands over what it says, which keeps the line's whole width -->
+		<div class="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-[4rem_minmax(0,1fr)]">
 			<span role="term" class={['pt-0.5 text-xs', HEADING_LOOKS[block.text]]}>{blockLabel(block)}</span>
 			<p role="definition" data-testid="block-words">{words}</p>
 		</div>

@@ -65,7 +65,7 @@ ITEM_WORDS = {
     OverviewList.LATER: "left for later",
 }
 # What a chapter says of itself
-CHAPTER_TEXT_WORDS = {ChapterText.WHY: "why", ChapterText.DOUBT: "where to doubt"}
+CHAPTER_TEXT_WORDS = {ChapterText.WHY: "why", ChapterText.DOUBT: "doubt"}
 # The number a person says the first item of a list by
 FIRST_ITEM_SAID = 1
 

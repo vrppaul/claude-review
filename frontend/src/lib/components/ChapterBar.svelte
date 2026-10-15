@@ -32,7 +32,7 @@
 		{@const after = contents.chapters[chapter.place + 1]}
 		<div data-testid="chapter-bar" class="cr-chapter-bar">
 			<div class="cr-story-gutter flex h-full items-center gap-3">
-				<span data-testid="chapter-bar-number" class="cr-faint text-xs">{chapterNumber(chapter.place)}</span>
+				<span data-testid="chapter-bar-number" class="cr-chapter-number text-xs">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>
 				<!-- None while why the changes belong together is read, before the first step -->
 				{#if stepRead !== null && chapter.steps.includes(stepRead)}

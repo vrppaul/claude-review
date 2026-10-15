@@ -154,7 +154,7 @@ somebody who is waiting.
      of its words instead: `anchor` is then `{"kind":"story","block":{"at":
      "chapter","chapter":"images-kept","text":"doubt"},"quote":["<the
      words asked about>"],"outdated":false}`, and `where` says it in words
-     (`story chapter images-kept, where to doubt`). Answer it as any
+     (`story chapter images-kept, doubt`). Answer it as any
      thread; to change the words, tell the story again.
    - `{"type":"message","message":{"message_id":"panel-1","body":"...",
      "threads":[...],"images":[...]}}` — the user has said something in

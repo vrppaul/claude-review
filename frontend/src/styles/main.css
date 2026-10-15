@@ -477,12 +477,14 @@
 
 /*
  * A word or two said beside a heading, in a ring of the colour they are said
- * in: what a thread asks for, that it is outdated, resolved or the agent's.
+ * in: what a thread asks for, that it is outdated, resolved or the agent's;
+ * the round a story was told in, where else a step's file is told. Its
+ * corners are a field's, as a chip's are: never a pill.
  */
 .cr-tag {
 	padding: 0 0.375rem;
 	border: 1px solid currentColor;
-	border-radius: 999px;
+	border-radius: var(--radius-field);
 	font-family: var(--font-sans);
 	font-size: 0.6875rem;
 	text-transform: lowercase;
@@ -1121,41 +1123,11 @@
 	opacity: 0.6;
 }
 
-/*
- * The tag beside a story's title: the round it was told in, on the agent's
- * colour while the code under it is the code it was told of, and on the
- * warning's once a later round moved the code on. It stands in the middle
- * of the title's line, not on its words' base
- */
-.cr-round-tag {
-	display: inline-flex;
-	align-self: center;
-	align-items: center;
-	gap: 0.5rem;
-	height: 1.5rem;
-	padding: 0 0.625rem;
-	border: 1px solid var(--cr-agent-border);
-	border-radius: 999px;
-	background: var(--cr-agent-tint);
-	font-size: 0.75rem;
-	font-weight: 600;
-}
-.cr-round-tag svg {
-	color: var(--cr-agent);
-}
-.cr-round-tag-moved-on {
-	border-color: var(--cr-warning-border);
-	background: var(--cr-warning-tint);
-}
-.cr-round-tag-moved-on svg {
-	color: var(--color-warning);
-}
-/* What the tag says of the code, after the round: quieter than the round */
-.cr-round-tag-said {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.3125rem;
+/* A chapter's number, wherever it heads the chapter: quieter than its title, at the size of the line it is on */
+.cr-chapter-number {
+	color: var(--cr-muted);
 	font-weight: 400;
+	font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -1196,6 +1168,12 @@
 .cr-askable-written-under:focus-within {
 	background: var(--cr-mark-band-written-under);
 	box-shadow: var(--cr-shadow-marked-edge);
+}
+/* Inside a warning the band is never drawn: the warning keeps its own wash and edge, pointed at or not */
+.cr-warning-frame > .cr-askable,
+.cr-warning-frame > .cr-askable:is(:hover, :focus-within) {
+	background: none;
+	box-shadow: none;
 }
 /* Words beside blocks the reader may ask about, which stand as far from the agent's edge as theirs do */
 .cr-voice-inset {

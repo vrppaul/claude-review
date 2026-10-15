@@ -75,7 +75,7 @@ describe('a thread on the story is named by the block it is on', () => {
 		expect(anchorLabel(secondDecision)).toBe('Decision 2');
 		expect(anchorLabel(turnedDown)).toBe('Turned down 1');
 		expect(anchorLabel(chapterWhy)).toBe('Why');
-		expect(anchorLabel(chapterDoubt)).toBe('Where to doubt');
+		expect(anchorLabel(chapterDoubt)).toBe('Doubt');
 		expect(anchorLabel(reason)).toBe('Reason');
 	});
 

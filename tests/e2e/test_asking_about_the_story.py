@@ -137,6 +137,18 @@ async def test_ask_about_this_stands_over_the_top_edge_of_the_block_pointed_at_o
     assert (await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)) == (words_top, words_left)
 
 
+async def test_a_chapters_doubt_pointed_at_keeps_the_warnings_colours(review: RunningReview, page: Page) -> None:
+    await _read_as_story(page, review)
+    doubt = page.get_by_test_id("chapter-doubt-block")
+    band = doubt.get_by_test_id("askable-band")
+    unpointed = await band.evaluate(GROUND_OF)
+
+    await band.hover()
+
+    await expect(doubt.get_by_test_id("ask-about-this")).to_have_css(OPACITY, FULLY_DRAWN)
+    assert await band.evaluate(GROUND_OF) == unpointed
+
+
 @pytest.mark.parametrize("width", READING_WIDTHS)
 async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads_the_chapter(
     review: RunningReview, page: Page, width: int

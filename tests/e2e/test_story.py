@@ -21,7 +21,7 @@ from claude_review.domain.story import Step, ToldFrom
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
-from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, step, story_of, story_of_chapters
+from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, planted, step, story_of, story_of_chapters
 
 STORY_ROUTE = "/api/story"
 RETAKE_ROUTE = "/api/retake"
@@ -39,6 +39,9 @@ MOVED_LINE = "Comment on line 4"
 # The line the housekeeping file gained, which no piece of the story draws
 CHANGED_NOTE = "Comment on line 1"
 A_STORY = story_of(step(TOLD_FILE, 2, 2), housekeeping=(HOUSEKEEPING_FILE,))
+# Where the first chapter's title is in the story's document, and a title longer than a phone's line
+FIRST_CHAPTERS_TITLE = ("chapters", 0, "title")
+A_LONG_TITLE = "The second line changes where it stands, nothing with it"
 # The same change told by an agent that did not make it, from its commits
 A_RECONSTRUCTION = story_of_chapters(
     chapter_of(ONLY_CHAPTER, step(TOLD_FILE, 2, 2)), housekeeping=(HOUSEKEEPING_FILE,), told_from=ToldFrom.COMMITS
@@ -104,6 +107,13 @@ RIGHT_INSIDE_ITS_PADDING = (
 )
 # Where what an element scrolls ends on the right, short of its scrollbar, in pixels from the left of the window
 INNER_RIGHT_OF = "(element) => element.getBoundingClientRect().left + element.clientLeft + element.clientWidth"
+# How many lines an element's words are drawn on, by where each line of them stands; and one
+LINES_OF = """(element) => {
+    const words = document.createRange();
+    words.selectNodeContents(element);
+    return new Set([...words.getClientRects()].map((line) => Math.round(line.top))).size;
+}"""
+ONE_LINE = 1
 # The most room a story leaves either side of it in its area, in pixels: a gutter, never a margin that centres it
 GUTTER_AT_MOST = 32
 # How wide an element is on screen, and how wide the window it is drawn in
@@ -144,6 +154,15 @@ async def review(changed_repo: Path, servers: ReviewServers) -> RunningReview:
     started = await servers.start(await repository_opening(changed_repo))
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
+    return started
+
+
+@in_the_browsers_loop
+async def review_of_a_chapter_with_a_long_title(changed_repo: Path, servers: ReviewServers) -> RunningReview:
+    """A review of the change, told in a chapter whose title runs over more than one line of a phone."""
+    started = await servers.start(await repository_opening(changed_repo))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(planted(A_STORY, FIRST_CHAPTERS_TITLE, A_LONG_TITLE)))
     return started
 
 
@@ -549,6 +568,16 @@ async def test_a_story_stands_as_wide_as_the_area_it_is_read_in_as_the_files_do(
 
     assert await chapter.evaluate(LEFT_OF) - await area.evaluate(LEFT_OF) <= GUTTER_AT_MOST
     assert await area.evaluate(INNER_RIGHT_OF) - await chapter.evaluate(RIGHT_OF) <= GUTTER_AT_MOST
+
+
+async def test_on_a_phone_a_chapters_head_says_how_much_it_tells_on_one_line_of_its_own_beside_no_title_squeezed(
+    review_of_a_chapter_with_a_long_title: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_of_a_chapter_with_a_long_title)
+    await page.set_viewport_size(PHONE)
+    chapter = page.get_by_test_id("story-chapter").first
+
+    assert await chapter.get_by_test_id("chapter-counts").evaluate(LINES_OF) == ONE_LINE
 
 
 async def test_on_a_phone_a_piece_of_a_story_takes_the_whole_width_of_its_area_as_a_file_does(

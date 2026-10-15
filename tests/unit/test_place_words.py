@@ -47,8 +47,8 @@ def test_a_place_is_named_the_same_way_in_words_and_in_markdown(
         (ItemBlock(list=OverviewList.DECISIONS, item=1), "story overview, decision 2", "story overview, decision 2"),
         (
             ChapterBlock(chapter="images-kept", text=ChapterText.DOUBT),
-            "story chapter images-kept, where to doubt",
-            "story chapter `images-kept`, where to doubt",
+            "story chapter images-kept, doubt",
+            "story chapter `images-kept`, doubt",
         ),
         (
             ReasonBlock(file="src/a.py", first_line=42),

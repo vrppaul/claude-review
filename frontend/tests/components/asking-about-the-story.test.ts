@@ -208,7 +208,7 @@ describe("the story's other blocks", () => {
 
 		expect(names).toEqual([
 			'Ask about this: ch-1 · Why',
-			'Ask about this: ch-1 · Where to doubt',
+			'Ask about this: ch-1 · Doubt',
 			'Ask about this: a.py:1 · Reason'
 		]);
 	});

@@ -33,12 +33,13 @@
 	class="cr-story-chapter cr-askable-stack border-t border-base-300 pt-6"
 >
 	{#snippet head(heading)}
-		<header class="flex items-baseline gap-3">
+		<!-- Where the title runs long, what the chapter tells goes onto a line of its own, never squeezed -->
+		<header class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 			<h2 {...heading} data-testid="part-head" class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
-				<span class="cr-muted text-sm font-normal">{chapterNumber(chapter.place)}</span>
+				<span class="cr-chapter-number text-sm">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-title">{told.title}</span>
 			</h2>
-			<span data-testid="chapter-counts" class="cr-faint ml-auto text-xs"
+			<span data-testid="chapter-counts" class="cr-faint ml-auto text-xs whitespace-nowrap"
 				>{filesAndSteps(chapter.files.length, chapter.steps.length)}</span
 			>
 		</header>

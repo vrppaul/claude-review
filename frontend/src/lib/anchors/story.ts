@@ -45,7 +45,7 @@ const ITEM_TOKENS: Record<OverviewList, string> = {
 	later: 'later'
 };
 // What a chapter says of itself
-const CHAPTER_TEXT_LABELS: Record<ChapterText, string> = { why: 'Why', doubt: 'Where to doubt' };
+const CHAPTER_TEXT_LABELS: Record<ChapterText, string> = { why: 'Why', doubt: 'Doubt' };
 // A step's reason
 const REASON_LABEL = 'Reason';
 

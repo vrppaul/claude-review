@@ -21,8 +21,8 @@
   standing drawn.
 - **The reader asks about the story's own words.** Pointed at, or reached
   by the keyboard, every block of the agent's words — the Task, Done and
-  Doubt of the overview, each thing its lists hold, a chapter's why and
-  where to doubt it, a step's reason — is banded and offers "Ask about
+  Doubt of the overview, each thing its lists hold, a chapter's Why and
+  Doubt, a step's reason — is banded and offers "Ask about
   this", floating over the block's top edge so no word moves; a screen
   reader names each by its place, "Ask about this: Story · Doubt", "Ask
   about this: ch-2 · Why", so no two chapters' offers sound alike. The
@@ -30,8 +30,8 @@
   The comment is
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
-  stronger meanwhile: below the frame of a chapter's why, its warning of
-  where to doubt, or a step's reason, never inside it. The overview's
+  stronger meanwhile: below the frame of a chapter's Why, the warning of
+  its Doubt, or a step's reason, never inside it. The overview's
   lists, under "More about this change", stand open whenever a thread or a
   comment hangs under anything they hold, and fold away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;

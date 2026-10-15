@@ -23,27 +23,27 @@
 	<h1 {...heading} data-testid="part-head" class="text-xl font-semibold">
 		<span data-testid="story-title">{held.story.title}</span>
 	</h1>
-	<!-- The round the story was told in, in the agent's colour while its code is current; in the
-		warning's, saying when, once a later round moved the code on under it -->
-	<span data-testid="story-round" class={['cr-round-tag', held.moved_on !== null && 'cr-round-tag-moved-on']}>
+	<!-- The round the story was told in, tagged as the page tags a thing: in the agent's colour while its
+		code is current; in the warning's, saying when, once a later round moved the code on under it -->
+	<span
+		data-testid="story-round"
+		class={['cr-tag inline-flex items-center gap-1', held.moved_on === null ? 'text-(--cr-agent)' : 'text-warning']}
+	>
 		<Icon name="round" class="h-3 w-3" />
 		Round {held.round}
 		{#if held.moved_on === null}
-			<span class="cr-round-tag-said cr-muted">
-				<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-(--cr-done)" aria-hidden="true"></span>
-				{CODE_CURRENT}
-			</span>
+			<span class="cr-muted">{CODE_CURRENT}</span>
 		{:else}
-			<span class="cr-round-tag-said text-warning">{codeMovedOnIn(held.moved_on.round)}</span>
+			<span>{codeMovedOnIn(held.moved_on.round)}</span>
 		{/if}
 	</span>
 	{#if reconstructed}
-		<span data-testid="story-reconstructed" class="text-xs text-(--cr-agent)">reconstructed</span>
+		<span data-testid="story-reconstructed" class="cr-tag text-(--cr-agent)">reconstructed</span>
 	{/if}
 </header>
 
 {#if reconstructed}
-	<p data-testid="story-reconstruction" class="cr-agent-voice cr-agent-voice-reconstructed pl-4 text-sm">
+	<p data-testid="story-reconstruction" class="cr-agent-voice cr-agent-voice-reconstructed cr-voice-inset text-sm">
 		The agent did not make this change. The reasons below are its reading of the code and of the commit messages, not
 		what was decided at the time.
 	</p>
