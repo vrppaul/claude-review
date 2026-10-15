@@ -6,7 +6,7 @@
 		threadsInTheChapter,
 		threadsOnTheFileInTheChapter,
 		threadsOnTheOverview,
-		threadsOnWhatIsLeftOut
+		threadsOnThePiece
 	} from '$lib/review/story-reading';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
@@ -148,7 +148,7 @@
 							testId="contents-file"
 							status={piece.status}
 							current={sectionRead === left.section}
-							threads={threadsOnWhatIsLeftOut(left, review.story, review.threads).length}
+							threads={threadsOnThePiece(left.section, piece.path, review.story, review.threads).length}
 							title={piece.path}
 							onclick={() => review.sections.scrollTo(left.section)}
 						>

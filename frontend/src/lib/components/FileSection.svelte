@@ -1,14 +1,12 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types';
 	import { messageOf } from '$lib/utils/errors';
-	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
-	import ChangedLines from './ChangedLines.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
-	import FilePath from './FilePath.svelte';
+	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import Icon from './Icon.svelte';
@@ -82,34 +80,24 @@
 			/>
 
 			<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
-			<h2 data-testid="file-heading" class="min-w-0 font-mono text-sm font-semibold wrap-anywhere">
-				<FilePath {file} />
-			</h2>
-			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
-				<button
-					type="button"
-					data-testid="file-changed-since"
-					class="cr-chip cr-chip-marked"
-					title="Show only what changed since then"
-					onclick={showChangesSince}
-				>
-					changed since round {review.lastRetake.changedSince}
-				</button>
-				{#if changedSinceFailed}
-					<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
-				{/if}
-			{/if}
-
-			{#if isDiffMode}
-				<span class="cr-muted text-xs">{file.status}</span>
-				<ChangedLines changed={fileStats(file)} />
-			{/if}
-
-			{#if commentCount > 0}
-				<span data-testid="section-comment-count" class="badge badge-sm badge-primary">
-					{commentCount}
-				</span>
-			{/if}
+			<FileTitle {file} element="h2" testId="file-heading" showsChange={isDiffMode} threads={commentCount}>
+				{#snippet beside()}
+					{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
+						<button
+							type="button"
+							data-testid="file-changed-since"
+							class="cr-chip cr-chip-marked"
+							title="Show only what changed since then"
+							onclick={showChangesSince}
+						>
+							changed since round {review.lastRetake.changedSince}
+						</button>
+						{#if changedSinceFailed}
+							<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
+						{/if}
+					{/if}
+				{/snippet}
+			</FileTitle>
 
 			<div class="flex-1"></div>
 

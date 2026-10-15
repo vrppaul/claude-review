@@ -28,12 +28,13 @@
 	/*
 	 * What a section of a file's lines is taken to take up before they are
 	 * drawn, beside its rows. Its header, one row of it: in the files as
-	 * tall as the chips in it, in a story as a line of small text. The rule
+	 * tall as the chips in it, in a story as the line of its file's name,
+	 * which it has no chips beside, as measured in the browser. The rule
 	 * under each hunk. A hunk's header, and the bar for lines the diff left
 	 * out: each a line of small text, its padding and a rule above and below.
 	 */
 	--cr-file-header-estimate: 2.6875rem;
-	--cr-piece-header-estimate: 2.0625rem;
+	--cr-piece-header-estimate: 2.2852rem;
 	--cr-hunk-rule: 1px;
 	--cr-hunk-header-estimate: calc(1.5rem + 2px);
 	--cr-gap-estimate: calc(1.75rem + 2px);
@@ -54,6 +55,8 @@
 	--cr-contents-row-pad: 0.3125rem;
 	--cr-contents-gap: 0.625rem;
 	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
+	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
+	--cr-story-gutter: 1.5rem;
 
 	/*
 	 * The edge the agent's words in a story stand by, and how far a block of

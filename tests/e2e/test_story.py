@@ -90,6 +90,7 @@ LESS_THAN_A_PIXEL = 1
 HEIGHT_HELD = "(area) => area.scrollHeight"
 # A wide screen zoomed in: too narrow for a column to stand beside what is read
 ZOOMED: ViewportSize = {"width": 640, "height": 400}
+PHONE: ViewportSize = {"width": 420, "height": 800}
 # Where an element's left edge is, in pixels from the left of the window
 LEFT_OF = "(element) => element.getBoundingClientRect().left"
 # Where an element's top edge is on screen, in pixels from the top of the window
@@ -548,6 +549,19 @@ async def test_a_story_stands_as_wide_as_the_area_it_is_read_in_as_the_files_do(
 
     assert await chapter.evaluate(LEFT_OF) - await area.evaluate(LEFT_OF) <= GUTTER_AT_MOST
     assert await area.evaluate(INNER_RIGHT_OF) - await chapter.evaluate(RIGHT_OF) <= GUTTER_AT_MOST
+
+
+async def test_on_a_phone_a_piece_of_a_story_takes_the_whole_width_of_its_area_as_a_file_does(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    await page.set_viewport_size(PHONE)
+    area = page.get_by_test_id("story-view")
+    header = page.get_by_test_id("story-piece-header").first
+
+    assert await header.evaluate(LEFT_OF) - await area.evaluate(LEFT_OF) < LESS_THAN_A_PIXEL
+    assert await area.evaluate(INNER_RIGHT_OF) - await header.evaluate(RIGHT_OF) < LESS_THAN_A_PIXEL
+    assert await page.evaluate("document.documentElement.scrollWidth") == PHONE["width"]
 
 
 async def test_the_contents_of_a_story_stand_as_wide_as_the_tree_of_files_and_widen_from_their_edge(

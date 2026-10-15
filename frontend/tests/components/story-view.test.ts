@@ -222,6 +222,26 @@ describe('a review read as its story', () => {
 		expect(within(second).queryByTestId('step-reason')).toBeNull();
 	});
 
+	it("numbers each step in its piece's header, before its file: a step with no reason draws nothing above it", () => {
+		render(ReviewScreen, { props: { review } });
+
+		const [, second] = pieces();
+		const header = within(second).getByTestId('story-piece-header');
+
+		expect(said(header)).toMatch(/^1\.2 b\.py/);
+		expect(within(second).queryByTestId('step-above')).toBeNull();
+	});
+
+	it("counts in a piece's header the threads on the lines it draws, as a file's header does", () => {
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'on the first line' }));
+		render(ReviewScreen, { props: { review } });
+
+		const [first, , third] = pieces();
+
+		expect(within(first).getByTestId('section-comment-count').textContent.trim()).toBe('1');
+		expect(within(third).queryByTestId('section-comment-count')).toBeNull();
+	});
+
 	it('takes the reader to a step from its number and reason down: they head the section gone to', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
@@ -259,13 +279,13 @@ describe('a review read as its story', () => {
 		);
 	});
 
-	it('heads what no step tells of a file with what became of the file and its name, under what says it is not in the story', () => {
+	it('heads what no step tells of a file with its name, as the files head it, under what says it is not in the story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		const leftOut = screen.getByTestId('story-left-out');
 
 		expect(within(leftOut).getByRole('heading', { level: 2, name: 'Not in the story' })).toBeTruthy();
-		expect(within(leftOut).getByRole('heading', { level: 3, name: 'modified a.py' })).toBeTruthy();
+		expect(within(leftOut).getByRole('heading', { level: 3, name: 'a.py' })).toBeTruthy();
 	});
 
 	it('says the change in short under a heading of its own, as what is asked of it and what is said', () => {
@@ -323,30 +343,11 @@ describe('a review read as its story', () => {
 
 		const [ofTheChanged, ofTheMade] = screen.getAllByTestId('story-piece-header');
 
-		expect(within(ofTheChanged).getByText('M')).toBeTruthy();
+		expect(within(ofTheChanged).getByText('modified')).toBeTruthy();
 		expect(within(ofTheChanged).getByText('+1')).toBeTruthy();
-		expect(within(ofTheMade).getByText('A')).toBeTruthy();
+		expect(within(ofTheMade).getByText('added')).toBeTruthy();
 		expect(within(ofTheMade).getByText('+2')).toBeTruthy();
 		expect(within(ofTheMade).getByText('−0')).toBeTruthy();
-	});
-
-	it('says what became of the file of each piece in a word too, to whoever cannot see the letter', () => {
-		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x')])] });
-		const ofTheFileMade = {
-			file: 'new.py',
-			lines: { first: 1, last: 1 },
-			reason: null,
-			now: { lines: { first: 1, last: 1 }, piece: made, changed_since_told: false }
-		};
-		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
-		review = openReview({ files, story: storyHeld({ chapters }) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		const [ofTheChanged, ofTheMade] = screen.getAllByTestId('story-piece-header');
-
-		expect(within(ofTheChanged).getByText('modified')).toBeTruthy();
-		expect(within(ofTheMade).getByText('added')).toBeTruthy();
 	});
 
 	it('shows in each step the piece of its file the step tells, and no more of the file', () => {

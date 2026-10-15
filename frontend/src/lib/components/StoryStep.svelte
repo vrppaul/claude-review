@@ -26,13 +26,25 @@
 </script>
 
 <!-- The reason above the code, never beside it: the code and the panel need the width. The number heads
-	the step: it is "Step 1.2" to whoever cannot see where it stands, and the piece under it says its
-	file and lines once. A step a round changed after it was told shows the code as it now stands under
-	a number and reason that step back, and is named so -->
-{#snippet numberAndReason()}
-	<!-- A reason may be asked about, its number banded with it, and what is asked hangs below the agent's
-		voice; a step of a file no thread can name takes none -->
-	<div class={['mb-2', changed && 'cr-step-changed']}>
+	the step, in its piece's header before its file, as a file's name heads it among the files: it is
+	"Step 1.2" to whoever cannot see where it stands. A step with no reason has nothing above its piece.
+	A step a round changed after it was told shows the code as it now stands under a number and reason
+	that step back, and is named so -->
+{#snippet stepNumber()}
+	<h3
+		data-testid="step-number"
+		aria-label={named}
+		class={['font-mono text-sm font-semibold text-(--cr-agent)', changed && 'cr-step-changed']}
+	>
+		{number}
+	</h3>
+{/snippet}
+
+{#snippet reasonAbove()}
+	<!-- A reason may be asked about, and what is asked hangs below the agent's voice; a step of a file no
+		thread can name takes none. Its band reaches below its words into the room under it, so that room
+		is the band's and a gap more -->
+	<div data-testid="step-above" class={['mb-4', changed && 'cr-step-changed']}>
 		{#if askable !== null}
 			<AskableBlock
 				block={stepReason(told.file, told.lines.first)}
@@ -40,23 +52,20 @@
 				testId="step-reason-block"
 				frame="cr-agent-voice"
 			>
-				{@render numberWithReason(askable)}
+				<p data-testid="step-reason">{askable}</p>
 			</AskableBlock>
 		{:else}
-			<div class="cr-agent-voice cr-voice-inset">{@render numberWithReason(told.reason)}</div>
+			<p data-testid="step-reason" class="cr-agent-voice cr-voice-inset">{told.reason}</p>
 		{/if}
 	</div>
 {/snippet}
 
-{#snippet numberWithReason(reason: string | null)}
-	<div class="flex gap-3">
-		<h3 data-testid="step-number" aria-label={named} class="pt-0.5 font-mono text-xs font-normal text-(--cr-agent)">
-			{number}
-		</h3>
-		{#if reason}
-			<p data-testid="step-reason" class="min-w-0">{reason}</p>
-		{/if}
-	</div>
+<!-- Where the step draws no piece, its number stands over its reason, over what says so -->
+{#snippet numberAndReason()}
+	<div class="mb-2">{@render stepNumber()}</div>
+	{#if told.reason !== null}
+		{@render reasonAbove()}
+	{/if}
 {/snippet}
 
 {#if step.shown === null}
@@ -71,11 +80,17 @@
 	</div>
 {:else}
 	{@const shown = step.shown}
-	<!-- A step is one section of the page, from its number down to its last line: a reader taken to it
+	<!-- A step is one section of the page, from its reason down to its last line: a reader taken to it
 		reads why before the code. A piece that cannot be drawn says so in its place, under the number and
 		reason it still has, and takes no other piece down with it -->
 	<svelte:boundary onerror={reportBroken}>
-		<StoryPiece sectionKey={step.section} piece={shown.piece} shows="a-step" above={numberAndReason}>
+		<StoryPiece
+			sectionKey={step.section}
+			piece={shown.piece}
+			shows="a-step"
+			above={told.reason === null ? undefined : reasonAbove}
+			numbered={stepNumber}
+		>
 			{#snippet beside()}
 				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(shown.lines)}</span>
 			{/snippet}

@@ -1,15 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
+	import { threadsOnThePiece } from '$lib/review/story-reading';
 	import type { DiffFile } from '$lib/types';
-	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
-	import ChangedLines from './ChangedLines.svelte';
-	import FilePath from './FilePath.svelte';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
+	import FileTitle from './FileTitle.svelte';
 	import LinesSection from './LinesSection.svelte';
 	import SectionHeader from './SectionHeader.svelte';
-	import StatusLetter from './StatusLetter.svelte';
 
 	interface Props {
 		/** What the piece's section is known by among those the story draws. */
@@ -18,31 +16,33 @@
 		piece: DiffFile;
 		/** What it is cut out to show: the lines a step tells, or what no step tells of the file. */
 		shows: PieceShows;
-		/** What heads the piece above its file's name, in the same section: a step's number, over its reason. */
-		above?: Snippet;
+		/** What heads the piece above its header, in the same section: a step's reason, where it has one. */
+		above?: Snippet | undefined;
+		/** What heads the header, before the file's name: a step's number, the piece's heading. */
+		numbered?: Snippet;
 		/** What is said beside the file's name: the lines a step tells. */
 		beside?: Snippet;
-		/** What is said at the far end of the header, before how much the piece changes: where else a step's file is told. */
+		/** What is said at the far end of the header: where else a step's file is told. */
 		atFarEnd?: Snippet;
 	}
 
-	// What the file's name is in the piece's header: the piece's heading, or plain words where the piece is
-	// headed above it. A step is headed by its number; what no step tells has no heading but its file
+	// What the file's name is in the piece's header: the piece's heading, or plain words where a step's
+	// number heads it. What no step tells has no heading but its file
 	const AS_ITS_HEADING = 'h3';
 	const AS_PLAIN_WORDS = 'p';
 
-	let { sectionKey, piece, shows, above, beside, atFarEnd }: Props = $props();
+	let { sectionKey, piece, shows, above, numbered, beside, atFarEnd }: Props = $props();
 	const review = useReview();
 
-	const fileNamed = $derived(above === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
+	const fileNamed = $derived(numbered === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
 	const language = $derived(languageOf(review.mode, piece.path));
 	const view = $derived(linesView(review.settings.current.diff_layout, piece));
 	const extent = $derived<Extent>({ kind: 'piece', shows });
+	const threads = $derived(threadsOnThePiece(sectionKey, piece.path, review.story, review.threads).length);
 </script>
 
-<!-- A piece of a file in a frame of its own, under whatever heads it. Clipped to its rounded corners,
-	never hidden past them: `overflow: hidden` would make the piece what its header sticks to, and deep
-	in a long piece the header would scroll away with it. Nothing of a story is folded away -->
+<!-- A piece of a file under whatever heads it, drawn as the files draw a file: across the whole width of
+	the area, through the story's gutter, headed as a file is. Nothing of a story is folded away -->
 <LinesSection
 	{sectionKey}
 	file={piece}
@@ -51,20 +51,15 @@
 	{extent}
 	folded={false}
 	testId="story-piece"
-	class="cr-piece-frame overflow-clip rounded-md border border-base-300"
+	class="cr-piece-frame cr-story-bleed border-y border-base-300"
 	{above}
 >
 	{#snippet header()}
 		<SectionHeader testId="story-piece-header">
-			<!-- What became of the file is part of its name: said with it, never before the heading it belongs to -->
-			<svelte:element this={fileNamed} class="flex min-w-0 items-center gap-x-3 font-mono text-xs font-semibold">
-				<StatusLetter status={piece.status} />
-				<span class="min-w-0 wrap-anywhere"><FilePath file={piece} /></span>
-			</svelte:element>
-			{@render beside?.()}
+			{@render numbered?.()}
+			<FileTitle file={piece} element={fileNamed} testId="piece-file" showsChange {threads} {beside} />
 			<div class="flex-1"></div>
 			{@render atFarEnd?.()}
-			<ChangedLines changed={fileStats(piece)} />
 		</SectionHeader>
 	{/snippet}
 </LinesSection>

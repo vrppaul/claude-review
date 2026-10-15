@@ -98,7 +98,7 @@
 	/* What it would take up, drawn: its header, and its lines */
 	contain-intrinsic-size: auto calc(var(--cr-header-estimate) + var(--cr-lines-room));
 }
-/* A piece of a story is headed by a line of small text, not by the files' chips */
+/* A piece of a story is headed as a file is, but for the chips a file's header holds: the fold, Viewed */
 .cr-piece-frame {
 	--cr-header-estimate: var(--cr-piece-header-estimate);
 }
@@ -1442,7 +1442,11 @@
 
 /* The room either side of a story in its area, as wide as the area: the story's, and that of the bar over it */
 .cr-story-gutter {
-	padding-inline: 1.5rem;
+	padding-inline: var(--cr-story-gutter);
+}
+/* What of a story is drawn as the files draw it, across the whole area: through the gutter, to its edges */
+.cr-story-bleed {
+	margin-inline: calc(-1 * var(--cr-story-gutter));
 }
 /*
  * Where a story will be, while there is none to read: what the reader waits
