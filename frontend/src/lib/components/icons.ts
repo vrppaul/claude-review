@@ -42,10 +42,8 @@ export const ICONS = {
 	trash: { viewBox: '0 0 16 16', paths: ['M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5'], drawn: TRACED_FINE },
 	// A stack of files: the change read file by file
 	files: { viewBox: '0 0 16 16', paths: ['M5.5 2.5h4.5l3 3v8H5.5z', 'M10 2.5v3h3', 'M3 5v9.5h7'], drawn: TRACED },
-	// Points down; turned for up, or to say something is folded
+	// Points down; turned for up, left or right, or to say something is folded
 	chevron: { viewBox: '0 0 12 12', paths: ['M2 4l4 4 4-4z'], drawn: FILLED },
-	// Points right; turned to point left
-	caret: { viewBox: '0 0 12 12', paths: ['M4.5 2L8 6l-3.5 4z'], drawn: FILLED },
 	check: { viewBox: '0 0 12 12', paths: ['M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z'], drawn: FILLED },
 	// Lines read in above a hunk, up and down from where they were left out
 	expand: { viewBox: '0 0 12 12', paths: ['M6 1L3 4h2v4H3l3 3 3-3H7V4h2z'], drawn: FILLED },

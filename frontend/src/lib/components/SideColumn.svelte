@@ -81,7 +81,7 @@
 					aria-label={putAway}
 					onclick={() => column.toggle()}
 				>
-					<Icon name="caret" class="h-3 w-3 rotate-180" />
+					<Icon name="chevron" class="h-3 w-3 rotate-90" />
 				</button>
 			</div>
 			{@render children()}
@@ -98,6 +98,6 @@
 		aria-label={bringBack}
 		onclick={() => column.toggle()}
 	>
-		<Icon name="caret" class="h-3 w-3" />
+		<Icon name="chevron" class="h-3 w-3 -rotate-90" />
 	</button>
 {/if}

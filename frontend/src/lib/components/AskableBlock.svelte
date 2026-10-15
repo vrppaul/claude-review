@@ -60,19 +60,20 @@
 </script>
 
 {#snippet band()}
+	<!-- The offer stands before the words, at their top right, and they wrap around it: never under a word -->
 	<div data-testid="askable-band" class={['cr-askable', writtenUnder && 'cr-askable-written-under']}>
-		{@render children()}
 		<button
 			bind:this={asking}
 			type="button"
 			data-testid="ask-about-this"
 			aria-label={name}
-			class="cr-ask"
+			class="cr-ask cr-ask-beside-words"
 			onclick={() => review.threads.writing.askAbout(block, words)}
 		>
 			<Icon name="conversation" class="h-3.25 w-3.25" />
 			{ASK_ABOUT_THIS}
 		</button>
+		{@render children()}
 	</div>
 {/snippet}
 
@@ -91,7 +92,7 @@
 		<CommentThread {thread} />
 	{/each}
 	{#if field}
-		<div class="px-3 py-2">
+		<div class="cr-thread-hang">
 			<CommentBox
 				{field}
 				onSave={() => sayComment(review, field)}

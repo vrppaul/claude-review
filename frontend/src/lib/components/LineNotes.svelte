@@ -36,7 +36,7 @@
 	<CommentThread {thread} />
 {/each}
 {#each commenting.fieldsUnder(place) as field (field.key)}
-	<div class="px-3 py-2">
+	<div class="cr-thread-hang">
 		<CommentBox
 			{field}
 			onSave={() => sayComment(review, field)}

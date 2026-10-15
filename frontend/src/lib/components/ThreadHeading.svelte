@@ -118,7 +118,7 @@
 		<button
 			type="button"
 			data-testid="delete-comment"
-			class="cr-thread-action cr-thread-action-icon"
+			class="cr-thread-action cr-thread-action-icon cr-thread-action-danger"
 			aria-label={DELETE}
 			onclick={() => (askingToDelete = true)}
 		>

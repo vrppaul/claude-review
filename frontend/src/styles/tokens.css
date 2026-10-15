@@ -39,8 +39,6 @@
 	/* Comments outrank the code they annotate: they are what the review produces */
 	--cr-comment-size: 0.9375rem;
 	--cr-comment-leading: 1.6;
-	/* The width a comment is read at, rather than the width of the window */
-	--cr-comment-measure: 96ch;
 	/* The tallest a field being written in grows with its text, before it scrolls instead */
 	--cr-field-tallest: 30rem;
 	/*
@@ -149,6 +147,8 @@
 	--cr-mark-band: color-mix(in srgb, var(--cr-mark) 7%, transparent);
 	--cr-mark-band-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
 	--cr-mark-band-written-under: color-mix(in srgb, var(--cr-mark) 16%, transparent);
+	/* The mark laid on the page's ground, whole: for a control that must hide what stands behind it */
+	--cr-mark-tint-opaque: color-mix(in srgb, var(--cr-mark) 14%, var(--color-base-100));
 	/* The agent's colour, at the strengths the mark uses for the same things */
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);

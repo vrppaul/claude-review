@@ -5,6 +5,7 @@
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
+	import Icon from './Icon.svelte';
 	import { PLACEHOLDERS } from './placeholders';
 	import ThreadConversation from './ThreadConversation.svelte';
 	import ThreadTurn from './ThreadTurn.svelte';
@@ -85,9 +86,10 @@
 				<button
 					type="button"
 					data-testid="ask-now-thread"
-					class="btn btn-outline btn-xs"
+					class="cr-ask"
 					onclick={() => asking(review.threads.ask(thread.id))}
 				>
+					<Icon name="conversation" class="h-3.25 w-3.25" />
 					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
 				</button>
 			{/if}

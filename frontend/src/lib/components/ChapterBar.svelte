@@ -48,7 +48,7 @@
 						class="btn shrink-0 btn-ghost btn-sm"
 						onclick={() => review.parts.goTo(before.part)}
 					>
-						<Icon name="caret" class="h-2.5 w-2.5 rotate-180" />
+						<Icon name="chevron" class="h-2.5 w-2.5 rotate-90" />
 						{chapterByNumber(before.place)}
 					</button>
 				{/if}
@@ -60,7 +60,7 @@
 						onclick={() => review.parts.goTo(after.part)}
 					>
 						{chapterByNumber(after.place)}
-						<Icon name="caret" class="h-2.5 w-2.5" />
+						<Icon name="chevron" class="h-2.5 w-2.5 -rotate-90" />
 					</button>
 				{/if}
 			</div>

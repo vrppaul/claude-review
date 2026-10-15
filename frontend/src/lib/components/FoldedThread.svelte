@@ -26,12 +26,12 @@
 	}
 </script>
 
-<!-- Folded, by hand or by settling it: one line, and the first words of what
-	was said. Either way it opens to be read. -->
+<!-- Folded, by hand or by settling it: one line as wide as the card it folds, and the first words of what
+	was said. Either way it opens to be read, by the chevron where the open card has it, at the far end -->
 <div
 	data-testid={thread.resolved ? 'resolved-thread' : 'folded-thread'}
 	class={[
-		'flex max-w-(--cr-comment-measure) items-center gap-3 rounded-r px-4 py-2',
+		'flex items-center gap-3 rounded-r px-4 py-2',
 		thread.resolved ? 'cr-resolved' : 'cr-folded',
 		!thread.resolved && raisedByAgent(thread) && 'cr-raised'
 	]}
@@ -39,7 +39,6 @@
 	{#if thread.resolved}
 		<Icon name="check" class="h-3 w-3 shrink-0 text-(--cr-done)" />
 	{/if}
-	<FoldToggle folded subject="this thread" testId="fold-comment" onToggle={unfold} />
 	<button
 		type="button"
 		data-testid="unfold-thread"
@@ -59,4 +58,11 @@
 	{#if thread.resolved}
 		<ReopenButton {thread} />
 	{/if}
+	<FoldToggle
+		folded
+		subject="this thread"
+		testId="fold-comment"
+		class="cr-thread-action cr-thread-action-icon"
+		onToggle={unfold}
+	/>
 </div>

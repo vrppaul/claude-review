@@ -42,6 +42,15 @@ TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))
 TOP_OF = "(element) => element.getBoundingClientRect().top"
 BOTTOM_OF = "(element) => element.getBoundingClientRect().bottom"
 LEFT_OF = "(element) => element.getBoundingClientRect().left"
+# Whether an element stands clear of every line of words drawn in another, by the boxes of those lines
+OVER_NONE_OF_ITS_WORDS = """(words, over) => {
+    const lines = document.createRange();
+    lines.selectNodeContents(words);
+    const box = over.getBoundingClientRect();
+    return [...lines.getClientRects()].every(
+        (line) => line.right <= box.left || line.left >= box.right || line.bottom <= box.top || line.top >= box.bottom
+    );
+}"""
 # The colour an element is laid on
 GROUND_OF = "(element) => getComputedStyle(element).backgroundColor"
 # Whether an element, and everything in it, shows its contents whole across, with nothing to scroll sideways
@@ -91,7 +100,7 @@ async def _ask_about(page: Page, block: Locator, words: str) -> None:
     await expect(block.get_by_test_id("comment-thread")).to_contain_text(words)
 
 
-async def test_ask_about_this_floats_over_the_top_edge_of_the_block_pointed_at_and_no_word_moves(
+async def test_ask_about_this_stands_in_the_block_pointed_at_over_none_of_its_words_and_no_word_moves(
     review: RunningReview, page: Page
 ) -> None:
     doubt = await _read_as_story(page, review)
@@ -104,7 +113,8 @@ async def test_ask_about_this_floats_over_the_top_edge_of_the_block_pointed_at_a
     await band.hover()
 
     await expect(asking).to_have_css(OPACITY, FULLY_DRAWN)
-    assert await asking.evaluate(TOP_OF) < await band.evaluate(TOP_OF) < await asking.evaluate(BOTTOM_OF)
+    assert await band.evaluate(TOP_OF) <= await asking.evaluate(TOP_OF)
+    assert await words.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
     assert (await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)) == (words_top, words_left)
 
 

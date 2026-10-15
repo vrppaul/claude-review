@@ -19,7 +19,8 @@
 	let { question, goAhead, keep, onGoAhead, onClose, testId }: Props = $props();
 </script>
 
-<!-- A question before something written is lost: the safe answer comes first, and takes the keyboard -->
+<!-- A question before something written is lost: the safe answer comes first, and takes the keyboard; the
+	other loses it, and is drawn as what destroys -->
 <Dialog label={question} data-testid={testId} class="w-full max-w-sm" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
 		<p class="mb-4 text-sm font-semibold">{question}</p>
@@ -28,7 +29,7 @@
 			<button
 				type="button"
 				data-testid="confirm-go-ahead"
-				class="btn btn-outline btn-sm"
+				class="btn btn-error btn-sm"
 				onclick={() => closeThen(onGoAhead)}
 			>
 				{goAhead}

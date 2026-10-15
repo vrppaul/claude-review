@@ -190,31 +190,10 @@
  * Comments.
  *
  * A comment is what the review produces, so it is set larger than the code
- * it annotates, in the reading face rather than the code one. One being
- * written is capped at a readable measure instead of running the full width
- * of the window. Its colour is the mark colour — the same one selection uses
- * — because both are the reader's own marks on someone else's code.
+ * it annotates, in the reading face rather than the code one. Its colour is
+ * the mark colour — the same one selection uses — because both are the
+ * reader's own marks on someone else's code.
  */
-.cr-comment {
-	max-width: var(--cr-comment-measure);
-	border-left: 2px solid var(--cr-mark);
-	background: var(--cr-mark-tint);
-	/* Read, not coded: the diff table around it sets a monospace face that
-	   would otherwise reach every button inside a thread */
-	font-family: var(--font-sans);
-}
-/*
- * The box being written in, told apart from the lines it is about.
- *
- * Both are the reader's own mark, so both carry the mark colour — but the
- * tint belongs to the lines they picked, and a box washed in the same tint
- * directly under them reads as one patch with a hole in it. The composer
- * keeps the edge and stands on the page's own surface, which is the same
- * rule the diff rows follow: mark the edge, do not wash the middle.
- */
-.cr-composing {
-	background: var(--color-base-200);
-}
 .cr-comment-body {
 	font-family: var(--font-sans);
 	font-size: var(--cr-comment-size);
@@ -313,6 +292,15 @@
 	opacity: 1;
 }
 
+/*
+ * Whatever can be pressed shows the hand, everywhere and the same: a button,
+ * a segment of a track, a fold, a box around a checkbox. Not while it
+ * cannot be pressed; and of no weight, so a rule that says otherwise wins.
+ */
+:where(button, summary, [role='button'], label:has(> input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
+	cursor: pointer;
+}
+
 /* One focus treatment, in the palette, so keyboard use is visible everywhere */
 :where(button, input, textarea, select, a, [tabindex]):focus-visible {
 	outline: 2px solid var(--cr-control);
@@ -382,7 +370,6 @@
 	border-radius: var(--radius-field);
 	color: var(--cr-muted);
 	font-size: 0.75rem;
-	cursor: pointer;
 }
 .cr-chip:hover {
 	background: var(--color-base-300);
@@ -480,16 +467,12 @@
 	padding: 0 0.5rem;
 	color: inherit;
 	text-align: right;
-	cursor: pointer;
 	font: inherit;
 	font-variant-numeric: tabular-nums;
 }
+/* A number that takes no comment is still a stop for the keyboard, nothing to press: no band, no hand */
 .cr-gutter-button:not([aria-disabled='true']):hover {
 	background: var(--cr-mark-tint);
-}
-/* A number that takes no comment: still a stop for the keyboard, nothing to press */
-.cr-gutter-button[aria-disabled='true'] {
-	cursor: default;
 }
 
 /*
@@ -559,14 +542,12 @@
 /* A gap between hunks is a control, not a caption */
 .cr-expand {
 	color: var(--cr-control);
-	cursor: pointer;
 }
 .cr-expand:hover {
 	background: var(--cr-control-tint);
 }
 .cr-expand:disabled {
 	color: var(--cr-muted);
-	cursor: default;
 }
 
 /*
@@ -751,6 +732,13 @@
 .cr-thread-action-icon > svg {
 	width: var(--cr-thread-icon-size);
 	height: var(--cr-thread-icon-size);
+}
+/* An action that loses what was written: in the colour of what destroys, and edged in it when pointed at */
+.cr-thread-action-danger {
+	color: var(--color-error);
+}
+.cr-thread-action-danger:hover {
+	border-color: var(--color-error);
 }
 /* Where a reply is begun: drawn as the field it opens, before anything is written in it */
 .cr-reply-field {
@@ -1179,7 +1167,7 @@
  * A block of the agent's words in a story the reader may ask about.
  * Pointed at, or holding the keyboard, it is banded whole — its heading and
  * its words — back to the edge of the agent's voice, and offers "Ask about
- * this", floating half over its top edge. Banded stronger while a thread
+ * this" at the top right of its words. Banded stronger while a thread
  * hangs open under it, or a comment being written: folded away, a thread
  * leaves it as it was. Its room is the same either way, and so is the place
  * of every word in it: only the band and the button come and go. The band
@@ -1187,7 +1175,8 @@
  * no room for it: a block stands where its words would without it.
  */
 .cr-askable {
-	position: relative;
+	/* Holds the offer floated beside its words, however short they are */
+	display: flow-root;
 	margin: calc(-1 * var(--cr-band-reach)) 0 calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-voice-axis));
 	padding: var(--cr-band-reach) 0.75rem var(--cr-band-reach) calc(var(--cr-voice-axis) + var(--cr-voice-inset));
 	border-radius: 0 0.375rem 0.375rem 0;
@@ -1207,16 +1196,12 @@
 .cr-voice-inset {
 	padding-left: var(--cr-voice-inset);
 }
-/* Half its height over the block's top edge, near its far end: over the room between blocks, never over a word */
+/* "Ask about this", one look wherever it is offered: over a block of the story's words, in a thread's card */
 .cr-ask {
-	position: absolute;
-	top: -0.9375rem;
-	right: 0.625rem;
-	z-index: var(--cr-layer-over-content);
 	display: inline-flex;
 	align-items: center;
 	gap: 0.375rem;
-	height: 1.75rem;
+	height: var(--cr-thread-action-height);
 	padding: 0 0.6875rem;
 	border: 1px solid var(--cr-mark-band-edge);
 	border-radius: 0.375rem;
@@ -1225,17 +1210,27 @@
 	font-size: 0.75rem;
 	font-weight: 600;
 	white-space: nowrap;
+}
+/* Pointed at, it is filled with the mark laid on the ground, which hides what stands behind it */
+.cr-ask:hover {
+	border-color: var(--cr-mark);
+	background: var(--cr-mark-tint-opaque);
+	color: var(--color-base-content);
+}
+/*
+ * Over a block: at the top right of its words, which wrap around it, so it
+ * stands over none of them; there always, so the words never move, and
+ * seen while the block is pointed at or holds the keyboard
+ */
+.cr-ask-beside-words {
+	float: right;
+	margin-left: 0.5rem;
 	box-shadow: var(--cr-shadow-floating);
 	opacity: 0;
 }
-.cr-askable:hover > .cr-ask,
-.cr-askable:focus-within > .cr-ask {
+.cr-askable:hover > .cr-ask-beside-words,
+.cr-askable:focus-within > .cr-ask-beside-words {
 	opacity: 1;
-}
-.cr-ask:hover {
-	border-color: var(--cr-mark);
-	background: var(--cr-mark-tint);
-	color: var(--color-base-content);
 }
 
 /*
@@ -1375,7 +1370,6 @@
 	font-weight: 500;
 	line-height: 1.35;
 	text-align: left;
-	cursor: pointer;
 }
 .cr-contents-row:hover {
 	border-radius: var(--radius-field);
@@ -1447,7 +1441,6 @@
 	font-size: var(--text-xs);
 	font-weight: 600;
 	text-align: left;
-	cursor: pointer;
 }
 .cr-aside-row:hover {
 	background: var(--color-base-200);

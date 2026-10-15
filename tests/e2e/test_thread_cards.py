@@ -25,6 +25,8 @@ EDGES = "(element) => { const box = element.getBoundingClientRect(); return [box
 # How far a card stands in from each side of its line, and the most it stands under it, as the boards draw them
 CARD_INSET = 12
 MOST_UNDER_ITS_LINE = 12
+# How far apart two things may stand that differ by the edge round one of them, in pixels
+AN_EDGE_APART = 1
 
 
 @pytest.fixture
@@ -69,3 +71,38 @@ async def test_a_thread_under_its_line_points_up_at_it(review: RunningReview, pa
     await _comment_on_the_first_line(page, review)
 
     assert await page.get_by_test_id("thread-card").evaluate(TAIL_DRAWN)
+
+
+async def test_a_comment_being_written_stands_where_its_card_will_as_wide_and_pointing_up_at_its_line(
+    review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+    box = page.get_by_test_id("comment-box")
+    being_written = await box.evaluate(EDGES)
+    await page.keyboard.type("Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id("thread-card").wait_for()
+
+    assert await page.get_by_test_id("thread-card").evaluate(EDGES) == pytest.approx(being_written)
+
+
+async def test_a_thread_folded_away_is_as_wide_as_its_card_and_its_fold_stays_where_it_was(
+    review: RunningReview, page: Page
+) -> None:
+    await _comment_on_the_first_line(page, review)
+    card_left, _, card_right = await page.get_by_test_id("thread-card").evaluate(EDGES)
+    fold_left, _, fold_right = await page.get_by_test_id("fold-comment").evaluate(EDGES)
+
+    await page.get_by_test_id("fold-comment").click()
+
+    folded_left, _, folded_right = await page.get_by_test_id("folded-thread").evaluate(EDGES)
+    unfold_left, _, unfold_right = await page.get_by_test_id("fold-comment").evaluate(EDGES)
+    assert (folded_left, folded_right) == (pytest.approx(card_left), pytest.approx(card_right))
+    # The card's edge is a hair's width round it, the folded line's a mark down its left side alone
+    assert (unfold_left, unfold_right) == (
+        pytest.approx(fold_left, abs=AN_EDGE_APART),
+        pytest.approx(fold_right, abs=AN_EDGE_APART),
+    )

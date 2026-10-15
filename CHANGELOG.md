@@ -217,8 +217,12 @@
   says, after who and when, the place the thread hangs on, quietly, what
   it asks for, whether it is outdated, resolved or has a new reply, and
   "sent · round N" or "from the agent"; at its far end, always at full
-  strength, Resolve with a tick, then a pencil to edit, a bin to delete
-  and a chevron to fold. Under that head an outdated thread shows what it
+  strength, Resolve with a tick, then a pencil to edit, a bin to delete in
+  the colour of what destroys, as Delete is in the question it asks, and
+  a chevron to fold, which stays where it was on the folded line, as wide
+  as the card. A comment being written is that card already, where it
+  will stand and as wide, and "Ask about this" looks the same in a card
+  as over the story's words. Under that head an outdated thread shows what it
   was written against, then its words. While a thread is open, the lines
   it is about are drawn marked, and a block of the story's words it hangs
   on banded stronger; folded away, it leaves them as they were. A thread

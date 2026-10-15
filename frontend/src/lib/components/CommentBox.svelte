@@ -140,9 +140,11 @@
 	}
 </script>
 
+<!-- A comment being written is drawn as the card it becomes: where the card will stand, as wide, pointing up
+	at what it is about. A reply is written inside the card it joins, and is no card of its own -->
 <div
 	data-testid="comment-box"
-	class={nested ? 'space-y-2' : 'cr-comment cr-composing space-y-3 rounded-r px-4 py-3'}
+	class={nested ? 'space-y-2' : 'cr-thread-card'}
 	data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}
 >
 	<div class="flex items-center gap-3">
