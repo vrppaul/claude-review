@@ -42,7 +42,7 @@ function fileRows(): HTMLElement[] {
 
 describe('the contents beside a story', () => {
 	beforeEach(() => {
-		// A story nobody has scrolled yet: with everything on screen at once, all of it would be read through as it is drawn
+		// A story nobody has scrolled yet: no part of it is being read until the test scrolls to one
 		scriptTheScroll();
 		review = openReview({ files, story: TOLD });
 		review.views.choose('story');
@@ -232,7 +232,7 @@ describe('the contents beside a story, as the reader scrolls', () => {
 	});
 });
 
-describe('the contents of a story whose code a round changed after it was told, read through', () => {
+describe('the contents of a story whose code a round changed after it was told, scrolled through', () => {
 	// The review says the second round changed code one of the first chapter's steps shows, and nothing the second
 	// chapter shows. The contents mark a chapter by what the review says of it, whatever its steps' marks
 	const FOLLOWED = storyHeld(
@@ -252,15 +252,18 @@ describe('the contents of a story whose code a round changed after it was told, 
 		scriptTheScroll();
 		review = openReview({ files, story: FOLLOWED });
 		review.views.choose('story');
-		review.story.contents.chapters.forEach((chapter) => review.story.progress.markRead(chapter.part));
 		render(ReviewScreen, { props: { review } });
+		// The reader is in the last chapter: the overview and the first are above it
+		const [, theEnd] = screen.getAllByTestId('story-chapter');
+		scrollTo(theEnd);
+		flushSync();
 	});
 
-	it('draws the number of a chapter a round changed in its node, in place of the check of one read through', () => {
+	it('draws the number of a chapter a round changed in its node, in place of the check of one scrolled past', () => {
 		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
 			'Overview',
 			'1 The beginnings',
-			'The end'
+			'2 The end'
 		]);
 	});
 

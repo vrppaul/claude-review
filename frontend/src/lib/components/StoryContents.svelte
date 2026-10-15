@@ -27,10 +27,9 @@
 	// The section being read, and the step it is of, where it is a step's: the row of that step's file is lit
 	const sectionRead = $derived(review.sections.sectionInView);
 	const stepRead = $derived(review.stepBeingRead);
-	// How many of the chapters the reader has read through: the overview is read through too, and is no chapter
-	const chaptersRead = $derived(
-		contents.chapters.filter((chapter) => review.story.progress.isRead(chapter.part)).length
-	);
+	// The parts above the one being read; and how many chapters of them, the overview being no chapter
+	const scrolledPast = $derived(review.partsScrolledPast);
+	const chaptersRead = $derived(contents.chapters.filter((chapter) => scrolledPast.has(chapter.part)).length);
 	// How many changed lines no step told when the story was told, and how many none tells now: said beside what
 	// is left out where the review says a round changed how many. Null otherwise, when neither is said
 	const leftOutChanged = $derived(held?.moved_on?.left_out ?? null);
@@ -78,12 +77,12 @@
 					{#snippet node()}
 						{chapterNumber(chapter.place)}
 					{/snippet}
-					<!-- The files of a chapter read through step back, as a file the reader has finished with does. A
+					<!-- The files of a chapter scrolled past step back, as a file the reader has finished with does. A
 						chapter none of whose steps shows code any more lists none, and no empty list -->
 					{#if chapter.files.length > 0}
 						<ul
 							data-testid="contents-files"
-							class={['cr-contents-files', review.story.progress.isRead(chapter.part) && 'cr-viewed']}
+							class={['cr-contents-files', scrolledPast.has(chapter.part) && 'cr-viewed']}
 						>
 							{#each chapter.files as listed (listed.firstPiece.path)}
 								<ContentsFile

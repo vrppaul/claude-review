@@ -25,18 +25,18 @@
 	const review = useReview();
 
 	const beingRead = $derived(review.parts.beingRead === part);
-	const read = $derived(review.story.progress.isRead(part));
-	// Read through, its node holds a check, unless a step changed since: then it holds what it held unread
+	const read = $derived(review.partsScrolledPast.has(part));
+	// Scrolled past, its node holds a check, unless a step changed since: then it holds what it held before
 	const checked = $derived(read && !changed);
-	// What the entry is called, with whether its part is read through; its name adds how many threads hang there
+	// What the entry is called, with whether its part is scrolled past; its name adds how many threads hang there
 	const called = $derived(read ? calledOnceRead(label) : label);
 </script>
 
 <!-- An entry of a story's contents: a node on the axis and the part's title, one press to its head.
-	A part read through steps back, a check in its node and its stretch of the axis in the colour of
-	what is done. A chapter a round changed code of after it was told rings its number in the warning's
-	colour in place of the check, read through or not. The node is for the eye; the entry's name says
-	whether the part is read through in words -->
+	A part above the one being read steps back, a check in its node and its stretch of the axis in the
+	colour of what is done. A chapter a round changed code of after it was told rings its number in the
+	warning's colour in place of the check, scrolled past or not. The node is for the eye; the entry's
+	name says whether the part is scrolled past in words -->
 <li data-testid="contents-entry" class={['cr-contents-entry', read && 'cr-contents-entry-read']}>
 	<button
 		type="button"

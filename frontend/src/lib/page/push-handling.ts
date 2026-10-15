@@ -102,16 +102,13 @@ function learnFrom(review: Review, push: FactPush): void {
 /**
  * Take in that the review was told another story. Told only that there is
  * one, the page reads the story itself, unless the one it read as it opened
- * is that story already. The story is told which of the two it is: what
- * the reader had read through was of the story before, and forgetting it,
- * as this one comes to be held, is the story's own.
+ * is that story already.
  *
  * Then the threads on its words follow it. The review holds the story told,
  * so they follow it whether or not this page could read it.
  */
 async function toldAnotherStory(review: Review, heard: HeardPush): Promise<void> {
-	if (heard.factsHoldIt) review.story.heldIsAnother();
-	else await review.takeToldStory();
+	if (!heard.factsHoldIt) await review.takeToldStory();
 	await followTheStory(review);
 }
 

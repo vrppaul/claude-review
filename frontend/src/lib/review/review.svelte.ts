@@ -83,15 +83,6 @@ export interface ReaderParts {
 	theme: PageTheme;
 }
 
-/**
- * The parts of the story a draft says the reader had read through, where it
- * was kept in this run of the review. Each run is told its story anew: of
- * that one, a draft kept in another run says nothing.
- */
-function partsReadInRun(kept: Draft, run: string): readonly string[] {
-	return kept.told?.instance === run ? kept.storyRead : [];
-}
-
 export class Review {
 	/** What is under review — which repository, and against what. */
 	readonly title: string;
@@ -185,7 +176,6 @@ export class Review {
 			canBeTold: facts.takes_a_story,
 			held: story,
 			asking: facts.story_asking,
-			partsRead: partsReadInRun(kept, facts.instance),
 			takeOnScreen: () => this.diff.takeOnScreen,
 			agentAttached: () => this.answerer.attached,
 			sayInPanel: (words) => this.conversation.note(words)
@@ -256,6 +246,15 @@ export class Review {
 	 */
 	get stepBeingRead(): StepListed | null {
 		return this.story.contents.stepAt(this.sections.sectionInView);
+	}
+
+	/**
+	 * The parts of the story above the one being read: how far down it the
+	 * reader has scrolled. Scrolling back up takes them back, and nothing of
+	 * it is kept. None while no part is being read.
+	 */
+	get partsScrolledPast(): ReadonlySet<string> {
+		return this.story.contents.partsAbove(this.parts.beingRead);
 	}
 
 	get restoredCount(): number {
@@ -418,7 +417,6 @@ export class Review {
 			issued: this.threads.issued,
 			told: this.telling.heard,
 			files: this.reading.kept,
-			storyRead: this.story.progress.kept,
 			round: this.rounds.current
 		};
 	}

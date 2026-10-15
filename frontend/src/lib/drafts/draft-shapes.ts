@@ -10,10 +10,9 @@
  * is read — folded, unread, waited on — has moved out of the thread; the
  * draft says how far the server's telling had got for it; it keeps what
  * was being written in the threads and not said yet, which pasted images
- * each field uploaded itself, which files were read and folded away, which
- * parts of the story told of the change were read through, and the round
- * the review had reached, rather than read back from the marks its threads
- * carry; and it is kept under the name the review gives itself rather than
+ * each field uploaded itself, which files were read and folded away, and
+ * the round the review had reached, rather than read back from the marks
+ * its threads carry; and it is kept under the name the review gives itself rather than
  * under its title, which another review on the same port may share. A
  * draft a release kept is brought up to date — never thrown away: it is an
  * hour of somebody's reading. The shapes between the last released one and
@@ -98,12 +97,6 @@ export interface Draft extends KeptThreads {
 	told: TellingPosition | null;
 	/** Which files the reader had read and folded away, which a reload used to undo. */
 	files: FilesRead;
-	/**
-	 * Which parts of the story the reader had read through, by what each is
-	 * known by on the page. They are of the story told in the run of the
-	 * review that `told` names: another run is told its story anew.
-	 */
-	storyRead: string[];
 	/**
 	 * The round the review had reached: a server restarted mid-review comes
 	 * back believing it is round one, and the page is the only side that
@@ -211,7 +204,6 @@ export function emptyDraft(round: number): Draft {
 		issued: { comments: 0, turns: 0 },
 		told: null,
 		files: emptyFilesRead(),
-		storyRead: [],
 		round
 	};
 }
@@ -258,8 +250,6 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		told: null,
 		// Which files were read was never kept before
 		files: emptyFilesRead(),
-		// No review was told a story before
-		storyRead: [],
 		round: roundReached(comments, sent)
 	};
 }

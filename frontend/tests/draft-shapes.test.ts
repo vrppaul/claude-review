@@ -209,7 +209,6 @@ const UP_TO_DATE_1_5_0: Draft = {
 	issued: { comments: 2, turns: 3 },
 	told: null,
 	files: { viewed: [], folded: [] },
-	storyRead: [],
 	// The reader's thread went out in round 1; the agent's arriving in 2 says nothing of a round sent
 	round: 2
 };
@@ -296,7 +295,6 @@ describe('a draft this release kept', () => {
 			issued: { comments: 3, turns: 5 },
 			told: { instance: THIS_RUN, sequence: 4 },
 			files: { viewed: ['a.py'], folded: ['a.py', 'b.py'] },
-			storyRead: ['overview', 'chapter:ch-1'],
 			round: 3
 		};
 

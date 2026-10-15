@@ -13,7 +13,13 @@
  * this listing (`story-pieces.ts`), under the keys it gave.
  */
 
-import { chapterPartKey, leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
+import {
+	chapterPartKey,
+	LEFT_OUT_PART,
+	leftOutSectionKey,
+	OVERVIEW_PART,
+	stepSectionKey
+} from '$lib/review/story-keys';
 import type { DiffFile, FollowedChapter, FollowedStep, LeftOut, ToldStory } from '$lib/types';
 
 /** A file as a chapter lists it: once, however many of the chapter's steps tell lines of it. */
@@ -80,7 +86,12 @@ export interface StoryContents {
 	chapterAt: (part: string | null) => ChapterListed | null;
 	/** The step whose section is known by this key, as its chapter lists it; null for a key no step has. */
 	stepAt: (section: string | null) => StepListed | null;
+	/** The parts drawn above the one known by this key, down the story: none above a key no part has. */
+	partsAbove: (part: string | null) => ReadonlySet<string>;
 }
+
+// What is above the first part, or above none
+const NONE_ABOVE: ReadonlySet<string> = new Set();
 
 /** The files a chapter, by its place among the story's, shows code of. */
 interface ChapterTelling {
@@ -160,13 +171,25 @@ export function contentsOf(story: ToldStory): StoryContents {
 	const bySection = new Map(
 		chapters.flatMap((chapter) => chapter.steps).map((step): [string, StepListed] => [step.section, step])
 	);
+	// Every part, in the order the page draws them down the story; and what is above each
+	const parts = [OVERVIEW_PART, ...chapters.map((chapter) => chapter.part), LEFT_OUT_PART];
+	const above = new Map(
+		parts.map((part, place): [string, ReadonlySet<string>] => [part, new Set(parts.slice(0, place))])
+	);
 	return {
 		chapters,
 		leftOut: story.left_out.map((told) => ({ told, section: leftOutSectionKey(told) })),
 		chapterAt: (part) => heldUnder(byPart, part),
-		stepAt: (section) => heldUnder(bySection, section)
+		stepAt: (section) => heldUnder(bySection, section),
+		partsAbove: (part) => heldUnder(above, part) ?? NONE_ABOVE
 	};
 }
 
 /** What no story lists: while none is held, nothing is drawn. */
-export const NO_CONTENTS: StoryContents = { chapters: [], leftOut: [], chapterAt: () => null, stepAt: () => null };
+export const NO_CONTENTS: StoryContents = {
+	chapters: [],
+	leftOut: [],
+	chapterAt: () => null,
+	stepAt: () => null,
+	partsAbove: () => NONE_ABOVE
+};

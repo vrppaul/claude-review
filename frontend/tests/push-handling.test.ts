@@ -312,14 +312,12 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	describe('with a story held', () => {
-		// The story the review followed onto the diff taken again, and what the reader had read of it
+		// The story the review followed onto the diff taken again
 		const FOLLOWED = storyHeld({}, { take: A_LATER_TAKE });
-		const CHAPTER_READ = 'ch-1';
 		let server: FakeServer;
 
 		beforeEach(() => {
 			review = openReview({ files: [untouched('a.py')], story: storyHeld() });
-			review.story.progress.markRead(CHAPTER_READ);
 			server = fakeServer();
 			server.answer('POST /api/anchors/follow', { anchors: [] });
 			server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], take: A_LATER_TAKE }));
@@ -370,11 +368,11 @@ describe('what the server pushes, taken in', () => {
 			expect(server.requestsTo('GET /api/story')).toHaveLength(2);
 		});
 
-		it('keeps what was read of the story followed, and offers no new one', async () => {
+		it('offers no new story: the one followed is the story the reader was reading', async () => {
 			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
 			await settled();
 
-			expect([review.story.progress.isRead(CHAPTER_READ), review.story.arrival]).toEqual([true, 'none']);
+			expect(review.story.arrival).toBe('none');
 		});
 	});
 

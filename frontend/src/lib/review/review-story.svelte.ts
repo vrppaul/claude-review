@@ -3,11 +3,7 @@
  *
  * The review holds the story, whole, and replaces it whole: the page reads
  * it as it opens and again whenever the review says another was told. It is
- * no part of the reader's draft — nothing of it is theirs to lose. How far
- * they have got through it is theirs, and the draft keeps it: `progress`.
- * It is of the story held: once the review has said it was told another,
- * what was read is forgotten the moment that one is held here, whichever
- * read brings it, and stands with the story before until then.
+ * no part of the reader's draft — nothing of it is theirs to lose.
  *
  * A story is pieces of one take of the change. When the diff is taken
  * again the review follows the story onto the new take, and the page reads
@@ -45,7 +41,6 @@ import type { Drawing } from '$lib/dom/diagram';
 import { storyNotAskedForNote, storyNotReadNote, storyNotStoppedNote } from '$lib/review/panel-notes';
 import { contentsOf, NO_CONTENTS, type StoryContents } from '$lib/review/story-contents';
 import { piecesOf, type StoryPieces } from '$lib/review/story-pieces';
-import { StoryProgress, type PartsRead } from '$lib/review/story-progress.svelte';
 import { waitOf, type StoryWait } from '$lib/review/story-wait';
 import type { StoryAsking, StoryHeld } from '$lib/types';
 
@@ -103,8 +98,6 @@ export interface StoryOpening {
 	held: StoryHeld | null;
 	/** How the reader's asking for a story stood, as the review's facts said it as the page opened. */
 	asking: StoryAsking | null;
-	/** The parts of the story the reader had read through when the page was last open in this run of the review. */
-	partsRead: readonly string[];
 	/** Which take of the review the page reads now. */
 	takeOnScreen: () => number;
 	/** Whether an agent is attached to the review now. */
@@ -116,10 +109,8 @@ export interface StoryOpening {
 export class ReviewStory {
 	/** Whether a story can be told of this review at all: the review says, the page never works it out. */
 	readonly canBeTold: boolean;
-	// How far the reader has got through the story held. Forgotten only here, as another story is held
-	readonly #progress: StoryProgress;
 	// The review said it was told another story, and that one is not held here yet: one that could not
-	// be read, or is on its way. Whichever read holds it, what was read was of the story before
+	// be read, or is on its way. Whichever read holds it, the reader has not seen it
 	#anotherAwaited = false;
 	readonly #takeOnScreen: () => number;
 	readonly #agentAttached: () => boolean;
@@ -142,9 +133,8 @@ export class ReviewStory {
 	// The story's diagram as drawn, kept as long as the review: the story coming on screen again draws it no more
 	#diagram: DiagramDrawn | null = null;
 
-	constructor({ canBeTold, held, asking, partsRead, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
+	constructor({ canBeTold, held, asking, takeOnScreen, agentAttached, sayInPanel }: StoryOpening) {
 		this.canBeTold = canBeTold;
-		this.#progress = new StoryProgress(partsRead);
 		// Read beside the diff as the page opened, it may straddle a retake: then the retake brings both
 		this.#held = isOfTake(held, takeOnScreen()) ? held : null;
 		this.#asking = asking;
@@ -197,15 +187,6 @@ export class ReviewStory {
 		this.#arrival = 'none';
 	}
 
-	/**
-	 * How far the reader has got through the story held: which of its parts
-	 * they have read through, asked and said by whoever draws a part, and
-	 * kept by the draft. That it is of the story held is kept here alone.
-	 */
-	get progress(): PartsRead {
-		return this.#progress;
-	}
-
 	/** The pieces of files the story held draws; none while no story is held. */
 	get pieces(): StoryPieces {
 		return this.#pieces;
@@ -234,9 +215,9 @@ export class ReviewStory {
 	 * Read the story the review holds now, in place of the one held here,
 	 * and return how to hold it: whoever reads it with the diff holds both
 	 * once both are read. For all the page knows the story is the one it
-	 * held, and what was read of it stands. One that cannot be read is said
-	 * in the panel, and none is held: the one held here is of the take
-	 * before. A review that takes no story is not asked, and holds none.
+	 * held. One that cannot be read is said in the panel, and none is held:
+	 * the one held here is of the take before. A review that takes no story
+	 * is not asked, and holds none.
 	 */
 	async read(): Promise<() => void> {
 		if (!this.canBeTold) return () => this.#holdNone();
@@ -279,12 +260,10 @@ export class ReviewStory {
 
 	/**
 	 * The review said it was told another story: read it in place of the one
-	 * held here. What the reader had read through was of the story before,
-	 * and is forgotten as this one is held. A story that cannot be read is
-	 * said in the panel, and leaves the one before as it was, and as far
-	 * read: it is of the take on screen still. That the telling ended the
-	 * asking for one the review says next, as it says any change to the
-	 * asking.
+	 * held here. A story that cannot be read is said in the panel, and
+	 * leaves the one before as it was: it is of the take on screen still.
+	 * That the telling ended the asking for one the review says next, as it
+	 * says any change to the asking.
 	 */
 	async readAnother(): Promise<void> {
 		this.#anotherAwaited = true;
@@ -297,21 +276,11 @@ export class ReviewStory {
 	}
 
 	/**
-	 * The review said it was told another story, and the one held here is
-	 * that story: the page read it as it opened. What the draft brought as
-	 * read through was read of the story before.
-	 */
-	heldIsAnother(): void {
-		this.#progress.forget();
-	}
-
-	/**
 	 * Hold the story the review answered with. Where it is another the
-	 * review was told, nothing of it is read yet, and it is offered to the
-	 * reader, who has not seen it. One of a take the page has not taken in
-	 * — the review took the diff again between this read and the diff's —
-	 * is held with that take's diff, which the review is on its way to
-	 * hand over: none is held until then.
+	 * review was told, it is offered to the reader, who has not seen it. One
+	 * of a take the page has not taken in — the review took the diff again
+	 * between this read and the diff's — is held with that take's diff,
+	 * which the review is on its way to hand over: none is held until then.
 	 */
 	#hold(held: StoryHeld | null): void {
 		if (!isOfTake(held, this.#takeOnScreen())) {
@@ -321,14 +290,12 @@ export class ReviewStory {
 		this.#held = held;
 		if (!this.#anotherAwaited) return;
 		this.#anotherAwaited = false;
-		this.#progress.forget();
 		this.#arrival = held === null ? 'none' : 'offered';
 	}
 
 	/**
 	 * Hold no story, where none to hold is of the take on screen. A story the
-	 * review said it was told is still awaited, and what was read of the one
-	 * before stands until it is held.
+	 * review said it was told is still awaited, and is offered once it is held.
 	 */
 	#holdNone(): void {
 		this.#held = null;

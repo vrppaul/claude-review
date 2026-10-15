@@ -51,7 +51,7 @@ is and how far it has scrolled, both 0 on a page that holds its place;
 `area`, the reading area on screen, how far it has scrolled, its height and
 the height of what it holds; `keyboard`, what holds the keyboard, by its
 tag, test id and label, whether it is ringed, and its box; `bar`, what the
-chapter bar says; `read`, the parts of the story read through; `reading`,
+chapter bar says; `read`, the parts of the story scrolled past; `reading`,
 the part being read. The line of the page as it opens says where the review
 was served.
 
