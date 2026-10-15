@@ -1103,6 +1103,16 @@
 .cr-agent-voice {
 	border-left: var(--cr-voice-axis) solid var(--cr-agent);
 }
+/*
+ * A story's diagram under its overview, fitted to the column: mermaid draws
+ * it at its own size, and it is scaled down to the width it has, never up.
+ * Opened large, it is drawn at its own size.
+ */
+.cr-diagram-fitted > svg {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
 /* What a story says, read as what is said in a thread is: at a comment's size and leading */
 .cr-story-prose {
 	font-size: var(--cr-comment-size);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
 	import { drawDiagram, followLinks, type Drawing } from '$lib/dom/diagram';
 	import { useReview } from '$lib/review/context';
 	import { chapterPartKey } from '$lib/review/story-keys';
@@ -6,6 +7,7 @@
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** The change drawn, as the agent wrote it in Mermaid, and the chapter each node it links leads to. */
@@ -16,6 +18,9 @@
 
 	// What the drawing, and the dialog that draws it large, are called where the agent called it nothing
 	const UNCAPTIONED = 'The change drawn';
+	// How each drawing is sized: under the overview fitted to the column, opened large at its own size
+	const FITTED_TO_THE_COLUMN = 'cr-diagram-fitted';
+	const AT_ITS_OWN_SIZE = 'overflow-auto';
 
 	// What its two drawings are known by, on the page and to mermaid, which scopes each one's look by it. The
 	// one under the overview is kept by the story for as long as the review (`ReviewStory.diagramDrawn`), under
@@ -43,27 +48,18 @@
 		<span class="cr-muted">{diagram.caption}</span>
 	{/if}
 	{#if drawn}
-		<button
-			type="button"
-			data-testid="diagram-open-large"
-			class="cursor-pointer text-(--cr-control) hover:underline"
-			onclick={() => (large = true)}
-		>
+		<button type="button" data-testid="diagram-open-large" class="btn btn-ghost btn-xs" onclick={() => (large = true)}>
 			Open large
 		</button>
 	{/if}
 {/snippet}
 
-<!-- A drawing as mermaid drew it, at its own size, in a box that scrolls sideways where it is wider than the
-	column; a press on a node that leads somewhere is followed there. Or, where it did not draw, why, and the
-	source as the agent wrote it -->
-{#snippet shown(drawing: Drawing, follow: (part: string) => void)}
+<!-- A drawing as mermaid drew it: under the overview fitted to the column, opened large at its own size in a
+	box that scrolls where it is larger than the dialog. A press on a node that leads somewhere is followed
+	there. Or, where it did not draw, why, and the source as the agent wrote it -->
+{#snippet shown(drawing: Drawing, fit: ClassValue, follow: (part: string) => void)}
 	{#if 'svg' in drawing}
-		<div
-			data-testid="diagram-drawing"
-			class="overflow-x-auto"
-			{@attach (box: HTMLElement) => followLinks(box, leadsTo, follow)}
-		>
+		<div data-testid="diagram-drawing" class={fit} {@attach (box: HTMLElement) => followLinks(box, leadsTo, follow)}>
 			{@html drawing.svg}
 		</div>
 	{:else}
@@ -82,23 +78,37 @@
 <figure data-testid="story-diagram" aria-label={name} class="flex flex-col gap-2.5">
 	{#await review.story.diagramDrawn(source, (drawn) => drawDiagram(drawn, inlineId))}
 		{#if diagram.caption}
-			<figcaption class="flex items-baseline gap-3 text-xs">{@render caption(false)}</figcaption>
+			<figcaption class="flex items-center gap-3 text-xs">{@render caption(false)}</figcaption>
 		{/if}
 	{:then drawing}
 		{#if diagram.caption || 'svg' in drawing}
-			<figcaption class="flex items-baseline gap-3 text-xs">{@render caption('svg' in drawing)}</figcaption>
+			<figcaption class="flex items-center gap-3 text-xs">{@render caption('svg' in drawing)}</figcaption>
 		{/if}
-		{@render shown(drawing, (part) => review.parts.goTo(part))}
+		{@render shown(drawing, FITTED_TO_THE_COLUMN, (part) => review.parts.goTo(part))}
 	{/await}
 </figure>
 
 {#if large}
 	<!-- Drawn again, not moved: a drawing's arrowheads and look hang on ids, which one drawing twice on the page
-		would repeat. A press on a node closes it, then goes -->
+		would repeat. Headed by what it is called, beside the way to close it. A press on a node closes it, then
+		goes -->
 	<Dialog label={name} data-testid="diagram-large" onClose={() => (large = false)}>
-		{#snippet children({ closeThen }: Closing)}
+		{#snippet children({ close, closeThen }: Closing)}
+			<header class="mb-3 flex items-center gap-3">
+				<h2 class="text-sm font-semibold">{name}</h2>
+				<div class="flex-1"></div>
+				<button
+					type="button"
+					data-testid="diagram-close"
+					class="btn btn-ghost btn-xs px-1"
+					aria-label="Close {name}"
+					onclick={close}
+				>
+					<Icon name="cross" class="h-3 w-3" />
+				</button>
+			</header>
 			{#await drawDiagram(source, largeId) then drawing}
-				{@render shown(drawing, (part) => closeThen(() => review.parts.goTo(part)))}
+				{@render shown(drawing, AT_ITS_OWN_SIZE, (part) => closeThen(() => review.parts.goTo(part)))}
 			{/await}
 		{/snippet}
 	</Dialog>

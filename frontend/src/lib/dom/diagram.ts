@@ -70,7 +70,8 @@ const SETTINGS: MermaidConfig = {
 	// Mermaid's own layout is elk: a flowchart it lays out fetches 2.2 MB, one dagre lays out 0.8 MB, and draws
 	// in a third of the time. Named here, the layout stays when mermaid next changes its own
 	layout: 'dagre',
-	// A flowchart is drawn at its own size, not shrunk to its column: its box scrolls sideways instead
+	// A flowchart is drawn at its own size; where it stands under the overview the page fits it to the column
+	// (`.cr-diagram-fitted`), and opened large it keeps that size
 	flowchart: { useMaxWidth: false }
 };
 

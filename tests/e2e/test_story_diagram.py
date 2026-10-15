@@ -58,8 +58,11 @@ THE_SECOND_HALF = 1
 THE_HELPS_DIAGRAM = EXAMPLE.overview.diagram
 THE_HELPS_CHAPTERS = [chapter.id for chapter in EXAMPLE.chapters]
 THE_HELPS_HEART = [False, True, False, False]
-# Wide enough for the contents to stand beside the story
+# Wide enough for the contents to stand beside the story; and a phone, narrower than the diagram drawn at its size
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
+PHONE: ViewportSize = {"width": 420, "height": 800}
+# How wide an element is drawn, in pixels
+WIDTH_OF = "(element) => element.getBoundingClientRect().width"
 
 
 def _told_in_two_chapters(drawn: str, links: dict[str, str]) -> Story[Step]:
@@ -142,6 +145,31 @@ async def test_a_diagram_is_drawn_under_the_pages_policy_and_nothing_is_refused(
 
     await expect(page.get_by_test_id("diagram-drawing").locator("svg")).to_have_count(1)
     assert [said for said in console if REFUSED_BY_THE_POLICY in said] == []
+
+
+async def test_on_a_phone_a_diagram_wider_than_the_column_is_drawn_to_fit_it(
+    review_drawn: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(PHONE)
+    await page.goto(review_drawn.url)
+    await page.click('[data-testid="read-as-story"]')
+    drawing = page.get_by_test_id("diagram-drawing")
+    await expect(drawing.locator("svg")).to_have_count(1)
+
+    assert await drawing.locator("svg").evaluate(WIDTH_OF) <= await drawing.evaluate(WIDTH_OF)
+
+
+async def test_a_diagram_opened_large_is_headed_by_its_caption_and_closed_by_its_own_button(
+    review_drawn: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review_drawn)
+    await page.get_by_test_id("diagram-open-large").click()
+    large = page.get_by_test_id("diagram-large")
+
+    await expect(large.get_by_role("heading", name=CAPTION)).to_be_visible()
+    await large.get_by_test_id("diagram-close").click()
+
+    await expect(large).to_have_count(0)
 
 
 async def test_a_press_on_a_node_takes_the_reader_to_the_chapter_it_leads_to(
