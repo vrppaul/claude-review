@@ -1173,7 +1173,7 @@
  * A block of the agent's words in a story the reader may ask about.
  * Pointed at, or holding the keyboard, it is banded whole — its heading and
  * its words — back to the edge of the agent's voice, and offers "Ask about
- * this" at the top right of its words. Banded stronger while a thread
+ * this" over its top right edge. Banded stronger while a thread
  * hangs open under it, or a comment being written: folded away, a thread
  * leaves it as it was. Its room is the same either way, and so is the place
  * of every word in it: only the band and the button come and go. The band
@@ -1181,8 +1181,7 @@
  * no room for it: a block stands where its words would without it.
  */
 .cr-askable {
-	/* Holds the offer floated beside its words, however short they are */
-	display: flow-root;
+	position: relative;
 	margin: calc(-1 * var(--cr-band-reach)) 0 calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-voice-axis));
 	padding: var(--cr-band-reach) 0.75rem var(--cr-band-reach) calc(var(--cr-voice-axis) + var(--cr-voice-inset));
 	border-radius: 0 0.375rem 0.375rem 0;
@@ -1224,18 +1223,28 @@
 	color: var(--color-base-content);
 }
 /*
- * Over a block: at the top right of its words, which wrap around it, so it
- * stands over none of them; there always, so the words never move, and
- * seen while the block is pointed at or holds the keyboard
+ * Over a block: at its top right, out of the flow, so no word moves as it
+ * shows; standing on the line the block's words begin at, over the band's
+ * top edge and the room above it, so none of the block's words lies under
+ * it, and none of the block above (`.cr-askable-stack`). Seen while the
+ * block is pointed at or holds the keyboard
  */
-.cr-ask-beside-words {
-	float: right;
-	margin-left: 0.5rem;
+.cr-ask-over-block {
+	position: absolute;
+	right: 0.625rem;
+	bottom: calc(100% - var(--cr-band-reach));
+	z-index: var(--cr-layer-over-content);
 	opacity: 0;
 }
-.cr-askable:hover > .cr-ask-beside-words,
-.cr-askable:focus-within > .cr-ask-beside-words {
+.cr-askable:hover > .cr-ask-over-block,
+.cr-askable:focus-within > .cr-ask-over-block {
 	opacity: 1;
+}
+/* Blocks of the agent's words one under another: as far apart as the offer over each is tall */
+.cr-askable-stack {
+	display: flex;
+	flex-direction: column;
+	row-gap: var(--cr-thread-action-height);
 }
 
 /*

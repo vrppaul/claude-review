@@ -30,7 +30,7 @@
 <StoryPart
 	partKey={chapter.part}
 	testId="story-chapter"
-	class="cr-story-chapter flex flex-col gap-5 border-t border-base-300 pt-6"
+	class="cr-story-chapter cr-askable-stack border-t border-base-300 pt-6"
 >
 	{#snippet head(heading)}
 		<header class="flex items-baseline gap-3">

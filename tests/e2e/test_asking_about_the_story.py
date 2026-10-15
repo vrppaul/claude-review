@@ -43,6 +43,9 @@ TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))
 TOP_OF = "(element) => element.getBoundingClientRect().top"
 BOTTOM_OF = "(element) => element.getBoundingClientRect().bottom"
 LEFT_OF = "(element) => element.getBoundingClientRect().left"
+# Widths the story is read at, in pixels: a wide screen, and a phone's; and a window tall enough for its overview
+READING_WIDTHS = [1440, 420]
+TALL_ENOUGH = 900
 # Whether an element stands clear of every line of words drawn in another, by the boxes of those lines
 OVER_NONE_OF_ITS_WORDS = """(words, over) => {
     const lines = document.createRange();
@@ -92,6 +95,18 @@ async def _read_as_story(page: Page, review: RunningReview) -> Locator:
     return page.get_by_test_id("overview-doubt")
 
 
+async def _read_as_story_at(page: Page, review: RunningReview, width: int) -> Locator:
+    """Open the review in a window this wide, as its story, and hand back the overview's doubt.
+
+    Opened at that width, the page puts away what it would lay over the story there: the tree and the panel.
+    """
+    await page.set_viewport_size({"width": width, "height": TALL_ENOUGH})
+    await page.goto(review.url)
+    await page.click('[data-testid="read-as-story"]')
+    await page.wait_for_selector('[data-testid="story-piece"]')
+    return page.get_by_test_id("overview-doubt")
+
+
 async def _ask_about(page: Page, block: Locator, words: str) -> None:
     """Ask about a block, and put the words into the review as a thread under it."""
     await block.hover()
@@ -101,22 +116,42 @@ async def _ask_about(page: Page, block: Locator, words: str) -> None:
     await expect(block.get_by_test_id("comment-thread")).to_contain_text(words)
 
 
-async def test_ask_about_this_stands_in_the_block_pointed_at_over_none_of_its_words_and_no_word_moves(
-    review: RunningReview, page: Page
+@pytest.mark.parametrize("width", READING_WIDTHS)
+async def test_ask_about_this_stands_over_the_top_edge_of_the_block_pointed_at_over_no_word_of_it_or_the_one_above(
+    review: RunningReview, page: Page, width: int
 ) -> None:
-    doubt = await _read_as_story(page, review)
+    doubt = await _read_as_story_at(page, review, width)
     band = doubt.get_by_test_id("askable-band")
     asking = doubt.get_by_test_id("ask-about-this")
     words = doubt.get_by_test_id("block-words")
+    words_above = page.get_by_test_id("overview-done").get_by_test_id("block-words")
     words_top, words_left = await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)
     await expect(asking).to_have_css(OPACITY, NOT_DRAWN)
 
     await band.hover()
 
     await expect(asking).to_have_css(OPACITY, FULLY_DRAWN)
-    assert await band.evaluate(TOP_OF) <= await asking.evaluate(TOP_OF)
+    assert await asking.evaluate(TOP_OF) < await band.evaluate(TOP_OF)
     assert await words.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
+    assert await words_above.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
     assert (await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)) == (words_top, words_left)
+
+
+@pytest.mark.parametrize("width", READING_WIDTHS)
+async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads_the_chapter(
+    review: RunningReview, page: Page, width: int
+) -> None:
+    await _read_as_story_at(page, review, width)
+    why = page.get_by_test_id("chapter-why-block")
+    asking = why.get_by_test_id("ask-about-this")
+
+    await why.get_by_test_id("askable-band").hover()
+
+    await expect(asking).to_have_css(OPACITY, FULLY_DRAWN)
+    chapter = page.get_by_test_id("story-chapter")
+    offer = await asking.element_handle()
+    assert await chapter.get_by_test_id("part-head").evaluate(OVER_NONE_OF_ITS_WORDS, offer)
+    assert await chapter.get_by_test_id("chapter-counts").evaluate(OVER_NONE_OF_ITS_WORDS, offer)
 
 
 async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neither_points_nor_types(

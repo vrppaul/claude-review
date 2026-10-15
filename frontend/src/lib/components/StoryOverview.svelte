@@ -81,7 +81,7 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<div data-testid="story-in-short" class="cr-agent-voice flex flex-col gap-4">
+		<div data-testid="story-in-short" class="cr-agent-voice cr-askable-stack">
 			{@render line(overviewLine('task'), overview.task, 'overview-task')}
 			{@render line(overviewLine('done'), overview.done, 'overview-done')}
 			{#if overview.doubt}
@@ -114,7 +114,7 @@
 							<section>
 								<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
 								<!-- Each thing listed may be asked about, as the overview's lines may -->
-								<ul class="mt-2 flex flex-col gap-3 text-sm">
+								<ul class="cr-askable-stack mt-2 text-sm">
 									{#each overview[list] as item, itemPlace (itemPlace)}
 										<li>
 											<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
