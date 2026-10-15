@@ -1059,6 +1059,37 @@ export interface components {
             anchors: components["schemas"]["Anchor-Output"][];
         };
         /**
+         * FollowedChapter
+         * @description A chapter on the take the story is on: why its changes belong together, where to look hardest, and its steps.
+         */
+        FollowedChapter: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+            /** Doubt */
+            doubt: string | null;
+            /** Steps */
+            steps: components["schemas"]["FollowedStep"][];
+            changed: components["schemas"]["ChapterChanged"] | null;
+        };
+        /**
+         * FollowedStep
+         * @description A step on the take the story is on: its reason, when it has one, and where its code stands there, if anywhere.
+         */
+        FollowedStep: {
+            /** File */
+            file: string;
+            lines: components["schemas"]["LineSpan-Output"];
+            /** Reason */
+            reason: string | null;
+            now: components["schemas"]["StepNow"] | null;
+            /** Commentable */
+            commentable: boolean;
+        };
+        /**
          * GuideChange
          * @description Request body for PUT /api/guide — what the reader has now been shown, and only that.
          *
@@ -2103,23 +2134,6 @@ export interface components {
             type: "timeout";
         };
         /**
-         * ToldChapter
-         * @description A chapter as it is told: why its changes belong together, where to look hardest, and its steps.
-         */
-        ToldChapter: {
-            /** Id */
-            id: string;
-            /** Title */
-            title: string;
-            /** Why */
-            why: string;
-            /** Doubt */
-            doubt: string | null;
-            /** Steps */
-            steps: components["schemas"]["ToldStep"][];
-            changed: components["schemas"]["ChapterChanged"] | null;
-        };
-        /**
          * ToldFrom
          * @description What the agent tells a story from.
          *
@@ -2130,20 +2144,6 @@ export interface components {
          */
         ToldFrom: "memory" | "commits";
         /**
-         * ToldStep
-         * @description A step as it is told: its reason, when it has one, and where its code stands now, if anywhere.
-         */
-        ToldStep: {
-            /** File */
-            file: string;
-            lines: components["schemas"]["LineSpan-Output"];
-            /** Reason */
-            reason: string | null;
-            now: components["schemas"]["StepNow"] | null;
-            /** Commentable */
-            commentable: boolean;
-        };
-        /**
          * ToldStory
          * @description A story on the change it is told of: every step with what it shows, and what no step tells.
          */
@@ -2153,7 +2153,7 @@ export interface components {
             told_from: components["schemas"]["ToldFrom"];
             overview: components["schemas"]["StoryOverview"];
             /** Chapters */
-            chapters: components["schemas"]["ToldChapter"][];
+            chapters: components["schemas"]["FollowedChapter"][];
             /** Housekeeping */
             housekeeping: string[];
             /** Left Out */

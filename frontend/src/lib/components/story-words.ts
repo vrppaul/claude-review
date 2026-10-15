@@ -4,7 +4,7 @@
  * head of a piece, in what the overview says a decision leads to.
  */
 
-import type { ToldChapter, ToldStep } from '$lib/types';
+import type { FollowedChapter, FollowedStep } from '$lib/types';
 import { CHANGED_LINES, counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
@@ -62,7 +62,7 @@ export const CODE_BELOW_IS_CURRENT = 'The code below is current; the reasons bes
 export const AGENT_UPDATING_REASONS = 'The agent is updating them.';
 
 /** The lines a step tells: the first and the last, both among them. */
-type StepLines = ToldStep['lines'];
+type StepLines = FollowedStep['lines'];
 
 /** A chapter's number, by its place among the chapters. */
 export function chapterNumber(chapterPlace: number): number {
@@ -196,6 +196,6 @@ export function alsoInShort(places: readonly number[]): string {
  * The chapter something leads to, as the reader knows it: by its number.
  * The review refuses a story that leads to a chapter it does not have.
  */
-export function chapterNamed(chapters: readonly ToldChapter[], id: string): string {
+export function chapterNamed(chapters: readonly FollowedChapter[], id: string): string {
 	return `${A_CHAPTER} ${chapterNumber(chapters.findIndex((chapter) => chapter.id === id))}`;
 }

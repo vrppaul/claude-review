@@ -44,10 +44,10 @@ export type StoryAsking = Schemas['StoryAsking'];
 export type StoryHeld = Schemas['StoryHeld'];
 /** A story on the change it is told of: each step with the piece of its file it shows, and what no step tells. */
 export type ToldStory = Schemas['ToldStory'];
-export type ToldChapter = Schemas['ToldChapter'];
+export type FollowedChapter = Schemas['FollowedChapter'];
 /** The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to, by the part's name. */
 export type Diagram = Schemas['Diagram'];
-export type ToldStep = Schemas['ToldStep'];
+export type FollowedStep = Schemas['FollowedStep'];
 /** What a story leaves out of one file: the piece of it no step tells, and how many of its lines changed. */
 export type LeftOut = Schemas['LeftOut'];
 /** The base a diff was taken against: its key, what the header says, and whether it is narrower than the review's own. */

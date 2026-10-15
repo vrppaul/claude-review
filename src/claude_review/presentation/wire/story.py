@@ -158,8 +158,8 @@ class StepNow(WireModel):
     changed_since_told: WireBool
 
 
-class ToldStep(WireModel):
-    """A step as it is told: its reason, when it has one, and where its code stands now, if anywhere."""
+class FollowedStep(WireModel):
+    """A step on the take the story is on: its reason, when it has one, and where its code stands there, if anywhere."""
 
     file: str
     # The lines it was told on, which it is known by: a round's work never moves them
@@ -187,14 +187,14 @@ class ChapterChanged(WireModel):
     steps: int
 
 
-class ToldChapter(WireModel):
-    """A chapter as it is told: why its changes belong together, where to look hardest, and its steps."""
+class FollowedChapter(WireModel):
+    """A chapter on the take the story is on: why its changes belong together, where to look hardest, and its steps."""
 
     id: str
     title: str
     why: str
     doubt: str | None
-    steps: list[ToldStep]
+    steps: list[FollowedStep]
     # Null while no round has changed code its steps show since the story was told
     changed: ChapterChanged | None
 
@@ -206,7 +206,7 @@ class ToldChapter(WireModel):
             title=chapter.title,
             why=chapter.why,
             doubt=chapter.doubt,
-            steps=[ToldStep.of(step) for step in chapter.steps],
+            steps=[FollowedStep.of(step) for step in chapter.steps],
             changed=_changed(chapter.steps, moved_on=moved_on),
         )
 
@@ -225,7 +225,7 @@ class ToldStory(WireModel):
     title: str
     told_from: ToldFrom
     overview: StoryOverview
-    chapters: list[ToldChapter]
+    chapters: list[FollowedChapter]
     housekeeping: list[str]
     left_out: list[LeftOut]
 
@@ -236,7 +236,7 @@ class ToldStory(WireModel):
             title=told.title,
             told_from=told.told_from,
             overview=StoryOverview.of(told.overview),
-            chapters=[ToldChapter.on_take(chapter, moved_on=moved_on) for chapter in told.chapters],
+            chapters=[FollowedChapter.on_take(chapter, moved_on=moved_on) for chapter in told.chapters],
             housekeeping=told.housekeeping,
             left_out=[LeftOut.of(left) for left in told.left_out],
         )

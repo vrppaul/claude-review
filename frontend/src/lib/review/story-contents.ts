@@ -14,7 +14,7 @@
  */
 
 import { chapterPartKey, leftOutSectionKey, stepSectionKey } from '$lib/review/story-keys';
-import type { DiffFile, LeftOut, ToldChapter, ToldStep, ToldStory } from '$lib/types';
+import type { DiffFile, FollowedChapter, FollowedStep, LeftOut, ToldStory } from '$lib/types';
 
 /** A file as a chapter lists it: once, however many of the chapter's steps tell lines of it. */
 export interface FileListed {
@@ -31,14 +31,14 @@ interface StepShown {
 	/** The piece of its file it shows. */
 	piece: DiffFile;
 	/** The lines its code stands at now: a round's work may have moved them from those it was told on. */
-	lines: ToldStep['lines'];
+	lines: FollowedStep['lines'];
 	/** Its file, as its chapter lists it: one listing for every step of the file that shows code of it. */
 	fileListed: FileListed;
 }
 
 /** A step as its chapter lists it. */
 export interface StepListed {
-	told: ToldStep;
+	told: FollowedStep;
 	/** What the step's section of the page is known by. */
 	section: string;
 	/** Where the step stands among its chapter's steps: what it is numbered by, after its chapter. */
@@ -49,7 +49,7 @@ export interface StepListed {
 
 /** A chapter as the story lists it. */
 export interface ChapterListed {
-	told: ToldChapter;
+	told: FollowedChapter;
 	/** Where the chapter stands among the story's chapters: what it is numbered by. */
 	place: number;
 	/** What the chapter's part of the page is known by. */
@@ -94,7 +94,7 @@ function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): 
 }
 
 /** The files a chapter tells, each once: those it shows code of, by the paths of the pieces it shows. */
-function chapterTelling(chapter: ToldChapter, place: number): ChapterTelling {
+function chapterTelling(chapter: FollowedChapter, place: number): ChapterTelling {
 	return { place, paths: new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.now.piece.path]))) };
 }
 
@@ -134,7 +134,7 @@ function fileListed(
  * shows code of it, and every later step that shows code of the file is
  * given that same listing. A step that shows none lists nothing.
  */
-function chapterListed(told: ToldChapter, place: number, telling: readonly ChapterTelling[]): ChapterListed {
+function chapterListed(told: FollowedChapter, place: number, telling: readonly ChapterTelling[]): ChapterListed {
 	// The chapter's files listed so far, by path: each at the first step that shows code of it
 	const files = new Map<string, FileListed>();
 	const steps: StepListed[] = [];

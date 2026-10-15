@@ -1,6 +1,14 @@
 /** Stories as the review hands them to its page, built with only what a test cares about. */
 import type { ReviewStory } from '$lib/review/review-story.svelte';
-import type { DiffFile, StoryAsking, StoryHeld, StoryResponse, ToldChapter, ToldStep, ToldStory } from '$lib/types';
+import type {
+	DiffFile,
+	FollowedChapter,
+	FollowedStep,
+	StoryAsking,
+	StoryHeld,
+	StoryResponse,
+	ToldStory
+} from '$lib/types';
 import { addedLine, diffFile, FIRST_TAKE, hunk } from './diff';
 
 /** The round a story is told in, unless a test says another. */
@@ -11,7 +19,7 @@ const SECOND_ROUND = FIRST_ROUND + 1;
 /** That a round moved the code on under a story, as the review says it. */
 type CodeMovedOn = NonNullable<StoryHeld['moved_on']>;
 /** That a round changed code a chapter's steps show after the story was told, as the review says it. */
-type ChapterChanged = NonNullable<ToldChapter['changed']>;
+type ChapterChanged = NonNullable<FollowedChapter['changed']>;
 
 /** The piece of a file that shows the lines it gained from one to another, both among them. */
 export function gainedPiece(file: string, first: number, last: number): DiffFile {
@@ -31,19 +39,19 @@ export function gainedPiece(file: string, first: number, last: number): DiffFile
  * A step that shows the lines a file gained from one to another, both among
  * them, and says why if it is given a reason: its code as it was told.
  */
-export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): ToldStep {
+export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): FollowedStep {
 	const lines = { first, last };
 	const now = { lines, piece: gainedPiece(file, first, last), changed_since_told: false };
 	return { file, lines, reason, now, commentable: true };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
-export function toldStep(file: string, line: number, reason: string | null = null): ToldStep {
+export function toldStep(file: string, line: number, reason: string | null = null): FollowedStep {
 	return toldStepOfLines(file, line, line, reason);
 }
 
 /** A step that shows one line a file gained, which a round's work changed after it was told. */
-export function changedStep(file: string, line: number, reason: string | null = null): ToldStep {
+export function changedStep(file: string, line: number, reason: string | null = null): FollowedStep {
 	const now = { lines: { first: line, last: line }, piece: gainedPiece(file, line, line), changed_since_told: true };
 	return { ...toldStep(file, line, reason), now };
 }
@@ -52,12 +60,12 @@ export function changedStep(file: string, line: number, reason: string | null = 
  * A step told of one line a file gained whose code a round took out of the
  * change, as the review says it: standing nowhere.
  */
-export function stepWithoutCode(file: string, line: number, reason: string | null = null): ToldStep {
+export function stepWithoutCode(file: string, line: number, reason: string | null = null): FollowedStep {
 	return { ...toldStep(file, line, reason), now: null };
 }
 
 /** A chapter of these steps, known by its id, whose code no round changed unless a test says one did. */
-export function toldChapter(id: string, steps: ToldStep[], given: Partial<ToldChapter> = {}): ToldChapter {
+export function toldChapter(id: string, steps: FollowedStep[], given: Partial<FollowedChapter> = {}): FollowedChapter {
 	return {
 		id,
 		title: `Chapter ${id}`,

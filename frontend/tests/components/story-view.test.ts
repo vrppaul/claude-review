@@ -4,7 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { StoryHeld, ToldChapter, ToldStep } from '$lib/types';
+import type { FollowedChapter, FollowedStep, StoryHeld } from '$lib/types';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
 import { said } from '../elements';
 import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
@@ -827,7 +827,7 @@ describe('a story whose code a round changed after it was told', () => {
 	// The round the code moved on in, and a story whose first chapter has these steps, marked as a round changed them,
 	// and says of itself what the review says the round changed of it
 	const MOVED_ON_IN = 2;
-	function followedWith(first: ToldStep[], changed: ToldChapter['changed']): StoryHeld {
+	function followedWith(first: FollowedStep[], changed: FollowedChapter['changed']): StoryHeld {
 		return storyHeld(
 			{
 				...TOLD.story,

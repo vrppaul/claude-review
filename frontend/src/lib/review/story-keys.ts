@@ -13,7 +13,7 @@
  * place when the story is told again in another order.
  */
 
-import type { LeftOut, ToldChapter, ToldStep } from '$lib/types';
+import type { FollowedChapter, FollowedStep, LeftOut } from '$lib/types';
 
 // What stands between the halves of a key
 const KEY_SEPARATOR = ':';
@@ -30,12 +30,12 @@ export const OVERVIEW_PART = 'overview';
 export const LEFT_OUT_PART = LEFT_OUT;
 
 /** What a chapter's part of the page is known by: its id. */
-export function chapterPartKey(chapterId: ToldChapter['id']): string {
+export function chapterPartKey(chapterId: FollowedChapter['id']): string {
 	return [CHAPTER, chapterId].join(KEY_SEPARATOR);
 }
 
 /** What a step's section is known by: its file, and the first of the lines it was told on, which never move. */
-export function stepSectionKey(step: ToldStep): string {
+export function stepSectionKey(step: FollowedStep): string {
 	return [STEP, step.file, step.lines.first].join(KEY_SEPARATOR);
 }
 

@@ -1,4 +1,12 @@
-import type { ChapterText, OverviewList, OverviewText, StoryAnchor, StoryBlock, ToldStep, ToldStory } from '$lib/types';
+import type {
+	ChapterText,
+	FollowedStep,
+	OverviewList,
+	OverviewText,
+	StoryAnchor,
+	StoryBlock,
+	ToldStory
+} from '$lib/types';
 import type { AnchorView } from '$lib/anchors/views';
 import { mentionStarts } from '$lib/anchors/token-mentions';
 import { fileName } from '$lib/utils/paths';
@@ -153,7 +161,7 @@ export function stepReason(file: string, firstLine: number): StoryBlock {
  * A step's reason where it is a block of the story to ask about: none where
  * the step gives no reason, or tells a file no thread can name.
  */
-export function askableReason(step: ToldStep): string | null {
+export function askableReason(step: FollowedStep): string | null {
 	return step.commentable ? step.reason : null;
 }
 
