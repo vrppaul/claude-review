@@ -220,7 +220,10 @@
   strength, Resolve with a tick, then a pencil to edit, a bin to delete in
   the colour of what destroys, as Delete is in the question it asks, and
   a chevron to fold, which stays where it was on the folded line, as wide
-  as the card. A comment being written is that card already, where it
+  as the card. Whatever folds on the page — a thread, a file's lines, a
+  folder of the tree, what more a story's overview lists, housekeeping —
+  folds under one chevron at the far end of its line, pointing up while
+  open and down while folded away. A comment being written is that card already, where it
   will stand and as wide, and "Ask about this" looks the same in a card
   as over the story's words. Under that head an outdated thread shows what it
   was written against, then its words. While a thread is open, the lines

@@ -11,5 +11,6 @@
 	let { folded, class: size }: Props = $props();
 </script>
 
-<!-- One chevron for everything that folds: pointing down while open, right while folded -->
-<Icon name="chevron" class={[size, 'transition-transform', folded && '-rotate-90']} />
+<!-- One chevron for everything that folds, at the far end of what it folds: pointing down while what it
+	folds is away, as pressing it opens that below; up while it is open, as pressing it folds that up -->
+<Icon name="chevron" class={[size, 'transition-transform', !folded && 'rotate-180']} />

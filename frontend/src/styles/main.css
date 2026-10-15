@@ -1435,7 +1435,11 @@
 .cr-contents-set-in {
 	margin-left: var(--cr-contents-indent);
 }
-/* The row that heads what the story leaves out, or folds housekeeping away: one press, as a row of the tree */
+/*
+ * A row of a story that heads or folds what is under it: what the story
+ * leaves out, housekeeping, what more the overview lists. One press, as a
+ * row of the tree
+ */
 .cr-aside-row {
 	display: flex;
 	align-items: center;

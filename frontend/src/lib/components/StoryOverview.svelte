@@ -12,6 +12,7 @@
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import AskableBlock from './AskableBlock.svelte';
+	import FoldChevron from './FoldChevron.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
 	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
@@ -48,13 +49,14 @@
 			(item) => review.threads.onBlock(item).length > 0 || review.threads.writing.aboutBlock(item) !== undefined
 		)
 	);
-	// Whether the lists were last left open, by the reader or by what hung under them: what goes from under
-	// them closes nothing, and the keyboard it gives back to what offered it stays in sight
+	// Whether the reader left the lists open: what goes from under them closes nothing, and the keyboard it
+	// gives back to what offered it stays in sight
 	let leftOpen = $state(false);
+	const listsOpen = $derived(writtenUnderLists || leftOpen);
 
-	/** A press on the lists' heading opens or folds them, but folds nothing while something hangs under them. */
-	function toggleUnlessWrittenUnder(press: MouseEvent) {
-		if (writtenUnderLists) press.preventDefault();
+	/** A press on the lists' row opens or folds them, but folds nothing while something hangs under them. */
+	function toggleUnlessWrittenUnder() {
+		if (!writtenUnderLists) leftOpen = !leftOpen;
 	}
 </script>
 
@@ -93,41 +95,44 @@
 	{/if}
 
 	{#if listsSomething}
-		<details
-			data-testid="story-more"
-			bind:open={() => writtenUnderLists || leftOpen, (open: boolean) => (leftOpen = open)}
-		>
-			<summary
+		<!-- What more the overview lists, folded under a row whose chevron stands at its far end -->
+		<div data-testid="story-more">
+			<button
+				type="button"
 				data-testid="story-more-toggle"
-				class={['text-sm', !writtenUnderLists && 'cursor-pointer']}
+				class="cr-aside-row"
+				aria-expanded={listsOpen}
 				onclick={toggleUnlessWrittenUnder}
 			>
-				More about this change
-			</summary>
-			<div class="cr-agent-voice mt-3 flex flex-col gap-4">
-				{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
-					{#if overview[list].length > 0}
-						<section>
-							<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
-							<!-- Each thing listed may be asked about, as the overview's lines may -->
-							<ul class="mt-2 flex flex-col gap-3 text-sm">
-								{#each overview[list] as item, itemPlace (itemPlace)}
-									<li>
-										<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
-											<p data-testid="block-words">
-												{item.text}
-												{#if item.chapter}
-													<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
-												{/if}
-											</p>
-										</AskableBlock>
-									</li>
-								{/each}
-							</ul>
-						</section>
-					{/if}
-				{/each}
-			</div>
-		</details>
+				<span class="min-w-0 flex-1">More about this change</span>
+				<FoldChevron folded={!listsOpen} class="h-2.5 w-2.5 shrink-0" />
+			</button>
+			{#if listsOpen}
+				<div class="cr-agent-voice mt-3 flex flex-col gap-4">
+					{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
+						{#if overview[list].length > 0}
+							<section>
+								<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+								<!-- Each thing listed may be asked about, as the overview's lines may -->
+								<ul class="mt-2 flex flex-col gap-3 text-sm">
+									{#each overview[list] as item, itemPlace (itemPlace)}
+										<li>
+											<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
+												<p data-testid="block-words">
+													{item.text}
+													{#if item.chapter}
+														<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
+													{/if}
+												</p>
+											</AskableBlock>
+										</li>
+									{/each}
+								</ul>
+							</section>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+		</div>
 	{/if}
 </StoryPart>

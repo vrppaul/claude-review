@@ -15,6 +15,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.folds import CHEVRON, CHEVRON_AT_THE_END, POINTING_DOWN, POINTING_UP, TURN
 from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
@@ -142,6 +143,19 @@ async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_bl
 
     unbanded = await page.get_by_test_id("overview-done").get_by_test_id("askable-band").evaluate(GROUND_OF)
     assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) == unbanded
+
+
+async def test_what_more_the_overview_says_folds_under_a_chevron_at_the_end_of_its_row_down_while_away_up_while_open(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    toggle = page.get_by_test_id("story-more-toggle")
+    assert await toggle.evaluate(CHEVRON_AT_THE_END)
+    await expect(toggle.locator(CHEVRON)).to_have_css(TURN, POINTING_DOWN)
+
+    await toggle.click()
+
+    await expect(toggle.locator(CHEVRON)).to_have_css(TURN, POINTING_UP)
 
 
 async def test_a_comment_written_on_the_storys_words_stands_in_from_them_as_a_card_stands_in_from_its_line(

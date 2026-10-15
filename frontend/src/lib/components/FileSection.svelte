@@ -72,13 +72,6 @@
 >
 	{#snippet header()}
 		<SectionHeader testId="file-header" class={{ 'cr-viewed': viewed }}>
-			<FoldToggle
-				folded={collapsed}
-				subject={file.path}
-				testId="collapse-file"
-				onToggle={() => review.reading.toggleFolded(file.path)}
-			/>
-
 			<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
 			<FileTitle {file} element="h2" testId="file-heading" showsChange={isDiffMode} threads={commentCount}>
 				{#snippet beside()}
@@ -116,6 +109,14 @@
 				<!-- One box per file, so the box says which file it is about -->
 				Viewed<span class="sr-only">: {file.path}</span>
 			</label>
+
+			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds -->
+			<FoldToggle
+				folded={collapsed}
+				subject={file.path}
+				testId="collapse-file"
+				onToggle={() => review.reading.toggleFolded(file.path)}
+			/>
 		</SectionHeader>
 	{/snippet}
 </LinesSection>

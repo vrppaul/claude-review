@@ -8,9 +8,10 @@ wide it is and whether its tail is drawn are only true in a browser.
 from pathlib import Path
 
 import pytest
-from playwright.async_api import Locator, Page
+from playwright.async_api import Locator, Page, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.folds import CHEVRON, POINTING_DOWN, POINTING_UP, TURN
 from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
@@ -84,17 +85,19 @@ async def test_a_comment_being_written_stands_where_its_card_will_as_wide_and_po
     assert await page.get_by_test_id("thread-card").evaluate(EDGES) == pytest.approx(being_written)
 
 
-async def test_a_thread_folded_away_is_as_wide_as_its_card_and_its_fold_stays_where_it_was(
+async def test_a_thread_folded_away_is_as_wide_as_its_card_and_its_fold_stays_where_it_was_turned_from_up_to_down(
     review: RunningReview, page: Page
 ) -> None:
     await _comment_on_the_first_line(page, review)
     card_left, _, card_right = await page.get_by_test_id("thread-card").evaluate(EDGES)
     fold_left, _, fold_right = await page.get_by_test_id("fold-comment").evaluate(EDGES)
+    await expect(page.get_by_test_id("fold-comment").locator(CHEVRON)).to_have_css(TURN, POINTING_UP)
 
     await page.get_by_test_id("fold-comment").click()
 
     folded_left, _, folded_right = await page.get_by_test_id("folded-thread").evaluate(EDGES)
     unfold_left, _, unfold_right = await page.get_by_test_id("fold-comment").evaluate(EDGES)
+    await expect(page.get_by_test_id("fold-comment").locator(CHEVRON)).to_have_css(TURN, POINTING_DOWN)
     assert (folded_left, folded_right) == (pytest.approx(card_left), pytest.approx(card_right))
     # The card's edge is a hair's width round it, the folded line's a mark down its left side alone
     assert (unfold_left, unfold_right) == (

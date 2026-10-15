@@ -123,8 +123,8 @@
 				aria-expanded={!folded}
 				onclick={() => layout.toggleFolder(node.path)}
 			>
-				<FoldChevron {folded} class="h-2.5 w-2.5" />
-				{node.name}/
+				<span class="min-w-0 flex-1 truncate">{node.name}/</span>
+				<FoldChevron {folded} class="h-2.5 w-2.5 shrink-0" />
 			</button>
 			{#if !folded}
 				<ul>

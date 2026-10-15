@@ -36,8 +36,8 @@
 		aria-expanded={!folded}
 		onclick={() => (folded = !folded)}
 	>
-		<FoldChevron {folded} class="h-2.5 w-2.5" />
-		Housekeeping · {counted(paths.length, FILES)}
+		<span class="min-w-0 flex-1">Housekeeping · {counted(paths.length, FILES)}</span>
+		<FoldChevron {folded} class="h-2.5 w-2.5 shrink-0" />
 	</button>
 	{#if !folded}
 		<ul>

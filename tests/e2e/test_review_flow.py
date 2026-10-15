@@ -14,6 +14,7 @@ from claude_review.hosting.workspace import ReaderFiles
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.folds import CHEVRON, POINTING_DOWN, POINTING_UP, TURN
 from tests.helpers import (
     SETTLE_SECONDS,
     ReviewServers,
@@ -57,6 +58,13 @@ NEW_FILE_TYPED = Path(NEW_FILE).stem
 FOCUSED_LABEL = "document.activeElement?.getAttribute('aria-label')"
 # How solidly an element is drawn, as the browser worked it out: 1 at full strength
 OPACITY_DRAWN = "element => getComputedStyle(element).opacity"
+# Where an element's right edge is on screen; where what an element holds ends, short of its padding; and where
+# the chip a checkbox stands in ends
+RIGHT_OF = "(element) => element.getBoundingClientRect().right"
+INNER_RIGHT_OF = (
+    "(element) => element.getBoundingClientRect().right - parseFloat(getComputedStyle(element).paddingRight)"
+)
+CHIP_RIGHT_OF = "(box) => box.closest('label').getBoundingClientRect().right"
 # A review long enough that its last file stands far further below the screen
 # than a file is built ahead of being reached: files added whole, each of many lines
 LONG_FILE_COUNT = 8
@@ -585,6 +593,22 @@ async def test_folding_a_file_hides_its_lines(diff_review: RunningReview, page: 
 
     # The other files are untouched
     assert await _section(page, NEW_FILE).get_by_test_id("raw-view").is_visible()
+
+
+async def test_a_files_fold_is_the_last_thing_in_its_header_pointing_up_while_open_and_down_once_folded(
+    diff_review: RunningReview, page: Page
+) -> None:
+    await page.goto(diff_review.url)
+    main = _section(page, MAIN_FILE)
+    await main.get_by_test_id("raw-view").wait_for()
+    fold = main.get_by_test_id("collapse-file")
+    header_right = await main.get_by_test_id("file-header").evaluate(INNER_RIGHT_OF)
+    viewed_right = await main.get_by_test_id("viewed-toggle").evaluate(CHIP_RIGHT_OF)
+
+    assert viewed_right < await fold.evaluate(RIGHT_OF) <= header_right
+    await expect(fold.locator(CHEVRON)).to_have_css(TURN, POINTING_UP)
+    await fold.click()
+    await expect(fold.locator(CHEVRON)).to_have_css(TURN, POINTING_DOWN)
 
 
 async def test_marking_a_file_viewed_folds_it(diff_review: RunningReview, page: Page) -> None:

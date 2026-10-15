@@ -167,6 +167,8 @@ describe("the story's other blocks", () => {
 		'take a thread on $called, drawn under it and nowhere else',
 		async ({ drawnIn, nth, block }) => {
 			render(ReviewScreen, { props: { review } });
+			// What more the overview lists stands folded away until the reader opens it
+			await userEvent.setup().click(screen.getByTestId('story-more-toggle'));
 			const asked = screen.getAllByTestId(drawnIn)[nth] as HTMLElement;
 
 			await userEvent.setup().click(within(asked).getByTestId('ask-about-this'));

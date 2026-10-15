@@ -600,7 +600,8 @@ describe('a review read as its story', () => {
 		expect(document.activeElement).toBe(inChapterTwo);
 	});
 
-	it('keeps what was decided, turned down and left for later one fold away, each saying the chapter it leads to', () => {
+	it('keeps what was decided, turned down and left for later one fold away, each saying the chapter it leads to', async () => {
+		const user = userEvent.setup();
 		const overview = {
 			...TOLD.story.overview,
 			decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }],
@@ -609,8 +610,13 @@ describe('a review read as its story', () => {
 		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
+		const toggle = screen.getByTestId('story-more-toggle');
+		expect([toggle.getAttribute('aria-expanded'), screen.queryByText('Decided, and why')]).toEqual(['false', null]);
+
+		await user.click(toggle);
 
 		const more = screen.getByTestId('story-more');
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
 
 		expect(more.textContent).toContain('Decided, and why');
 		expect(more.textContent).toContain('The last line closes the file. — chapter 2');
@@ -618,7 +624,7 @@ describe('a review read as its story', () => {
 		expect(more.textContent).not.toContain('Turned down');
 	});
 
-	it('heads each of those lists a level under the change in short, never beside the chapters', () => {
+	it('heads each of those lists a level under the change in short, never beside the chapters', async () => {
 		const overview = {
 			...TOLD.story.overview,
 			decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }],
@@ -627,6 +633,7 @@ describe('a review read as its story', () => {
 		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
+		await userEvent.setup().click(screen.getByTestId('story-more-toggle'));
 
 		const headings = within(screen.getByTestId('story-more')).getAllByRole('heading', { level: 3 });
 
