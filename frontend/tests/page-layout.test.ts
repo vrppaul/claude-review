@@ -14,11 +14,10 @@ const WIDE = 1280;
 const PIXELS_PER_REM = 16;
 // Where each column stops lying over the diff and stands beside it, as the stylesheet names them
 const BREAKPOINTS = ['--breakpoint-cr-side-column-beside', '--breakpoint-cr-panel-beside'];
-// How wide the tree of files and a story's contents each stand until the reader sizes them, in pixels,
-// and a width the reader leaves the contents at
+// How wide the tree of files and a story's contents stand until the reader sizes them, in pixels,
+// and a width the reader leaves them at
 const TREE_AT_FIRST = 240;
-const CONTENTS_AT_FIRST = 260;
-const CONTENTS_AS_LEFT = 300;
+const WIDTH_AS_LEFT = 300;
 // How a media query asks for a screen at least so wide: `(width >= 46rem)`
 const AT_LEAST = /^\(width >= ([\d.]+)rem\)$/;
 
@@ -101,16 +100,15 @@ describe('the columns, until the reader opens or shuts them', () => {
 	});
 });
 
-describe('the contents beside a story, which the reader puts away and sizes apart from the tree of files', () => {
+describe('the contents beside a story, which the reader puts away apart from the tree of files, and which are as wide as it', () => {
 	beforeEach(() => {
 		screenOf(WIDE);
 	});
 
-	it('start as wide as their design draws them, and the tree as wide as its own', () => {
+	it('start as wide as the tree', () => {
 		const layout = new PageLayout();
 
-		expect(layout.storyContents.width).toBe(CONTENTS_AT_FIRST);
-		expect(layout.fileTree.width).toBe(TREE_AT_FIRST);
+		expect([layout.storyContents.width, layout.fileTree.width]).toEqual([TREE_AT_FIRST, TREE_AT_FIRST]);
 	});
 
 	it('are still put away when the page opens again, and the tree still beside the files', () => {
@@ -122,12 +120,19 @@ describe('the contents beside a story, which the reader puts away and sizes apar
 		expect(openedAgain.fileTree.open).toBe(true);
 	});
 
-	it('are as wide as the reader left them when the page opens again, and the tree as wide as it was', () => {
-		new PageLayout().storyContents.setWidth(CONTENTS_AS_LEFT);
+	it('widen the tree with them: one column beside what is read, whichever view it stands in', () => {
+		const layout = new PageLayout();
+
+		layout.storyContents.setWidth(WIDTH_AS_LEFT);
+
+		expect(layout.fileTree.width).toBe(WIDTH_AS_LEFT);
+	});
+
+	it('are as wide as the reader left either when the page opens again', () => {
+		new PageLayout().fileTree.setWidth(WIDTH_AS_LEFT);
 
 		const openedAgain = new PageLayout();
 
-		expect(openedAgain.storyContents.width).toBe(CONTENTS_AS_LEFT);
-		expect(openedAgain.fileTree.width).toBe(TREE_AT_FIRST);
+		expect([openedAgain.storyContents.width, openedAgain.fileTree.width]).toEqual([WIDTH_AS_LEFT, WIDTH_AS_LEFT]);
 	});
 });

@@ -53,8 +53,10 @@ describe('the contents beside a story', () => {
 		expect(screen.getByRole('navigation', { name: 'Story contents' })).toBe(screen.getByTestId('contents'));
 	});
 
-	it('counts the chapters in its head', () => {
-		expect(screen.getByTestId('contents-count').textContent).toBe('2 chapters');
+	it('is headed by how many chapters it lists, as the tree of files is by how many files', () => {
+		const contents = within(screen.getByTestId('contents'));
+
+		expect(contents.getByRole('heading', { name: '2 chapters' })).toBe(screen.getByTestId('contents-count'));
 	});
 
 	it('lists the overview, then every chapter by its number and its title', () => {
@@ -71,10 +73,14 @@ describe('the contents beside a story', () => {
 		review.threads.add(newComment({ file: 'src/a.py', startLine: 9, body: 'in the end again' }));
 		flushSync();
 
-		const marked = entries().map((entry) => within(entry).queryAllByTestId('part-threads').length);
+		const marked = entries().map((entry) =>
+			within(entry)
+				.queryAllByTestId('part-threads')
+				.map((badge) => badge.textContent.trim())
+		);
 		const contents = within(screen.getByTestId('contents'));
 
-		expect(marked).toEqual([1, 0, 1]);
+		expect(marked).toEqual([['1'], [], ['2']]);
 		expect(contents.getByRole('button', { name: 'Overview, 1 thread' })).toBeTruthy();
 		expect(contents.getByRole('button', { name: 'Chapter 2: The end, 2 threads' })).toBeTruthy();
 	});
@@ -138,12 +144,25 @@ describe('the contents beside a story', () => {
 		expect(toLineNine).toHaveBeenCalled();
 	});
 
-	it('lists what the story leaves out under what says so, by how many hunks of each file no step tells', () => {
+	it('marks a file of a chapter with how many threads hang on the lines that chapter shows of it', () => {
+		review.threads.add(newComment({ file: 'src/a.py', startLine: 9, body: 'in the end' }));
+		flushSync();
+
+		// a.py in the beginnings, b.py, a.py in the end, and what is left out of a.py
+		const marked = fileRows().map((row) =>
+			within(row)
+				.queryAllByTestId('file-threads')
+				.map((badge) => badge.textContent.trim())
+		);
+
+		expect(marked).toEqual([[], [], ['1'], []]);
+	});
+
+	it('lists what the story leaves out under what says so, by how much of each file no step tells', () => {
 		const [, , , leftOutOfA] = fileRows();
 
 		expect(screen.getByTestId('contents-left-out').textContent.trim()).toBe('Not in the story');
-		expect(within(leftOutOfA).getByText('a.py')).toBeTruthy();
-		expect(within(leftOutOfA).getByText('1 hunk')).toBeTruthy();
+		expect(said(leftOutOfA)).toBe('M modified a.py +1 −0');
 	});
 
 	it('takes the reader to what the story leaves out', async () => {
@@ -155,11 +174,25 @@ describe('the contents beside a story', () => {
 		expect(toWhatIsLeftOut).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
 	});
 
-	it('names the files the agent called housekeeping', () => {
-		const housekeeping = screen.getByTestId('contents-housekeeping');
+	it('names the files the agent called housekeeping, folded under a row that unfolds them', async () => {
+		const user = userEvent.setup();
+		const housekeeping = within(screen.getByTestId('contents-housekeeping'));
+		expect(housekeeping.getByTestId('fold-housekeeping').textContent.trim()).toBe('Housekeeping · 1 file');
+		expect(housekeeping.queryByTestId('housekeeping-file')).toBeNull();
 
-		expect(within(housekeeping).getByText('Housekeeping · 1 file')).toBeTruthy();
-		expect(housekeeping.textContent).toContain('uv.lock');
+		await user.click(housekeeping.getByTestId('fold-housekeeping'));
+
+		expect(said(housekeeping.getByTestId('housekeeping-file'))).toBe('M modified uv.lock +1 −0');
+	});
+
+	it('shows a file the agent called housekeeping among the files when it is pressed: the story draws none of it', async () => {
+		const user = userEvent.setup();
+		const housekeeping = within(screen.getByTestId('contents-housekeeping'));
+		await user.click(housekeeping.getByTestId('fold-housekeeping'));
+
+		await user.click(housekeeping.getByTestId('housekeeping-file'));
+
+		expect(review.views.onScreen.name).toBe('files');
 	});
 
 	it('is put away to a rail and brought back by itself: the tree of files is left as it was', async () => {
@@ -354,7 +387,7 @@ describe('the contents of a story that tells every change, and names no housekee
 });
 
 describe('a file a story leaves out whole, which shows no line', () => {
-	it('is listed with no count of hunks: it has none', () => {
+	it('is listed as the tree of files lists it: no line added, none removed', () => {
 		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
 		review = openReview({ files, story: storyHeld({ left_out: [{ piece: picture, changed_lines: 0 }] }) });
 		review.views.choose('story');
@@ -363,7 +396,7 @@ describe('a file a story leaves out whole, which shows no line', () => {
 		// The one file the story's one chapter tells, then the picture
 		const [, ofThePicture] = fileRows();
 
-		expect(said(ofThePicture)).toBe('A added logo.png');
+		expect(said(ofThePicture)).toBe('A added logo.png +0 −0');
 	});
 });
 

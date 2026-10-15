@@ -25,7 +25,7 @@ import {
 import type { FileLines } from '$lib/anchors/views';
 import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView } from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
-import type { ChapterListed } from '$lib/review/story-contents';
+import type { ChapterListed, FileListed, LeftOutListed } from '$lib/review/story-contents';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { StoryBlock, Thread, ToldStory } from '$lib/types';
 
@@ -63,6 +63,26 @@ export function threadsInTheChapter(chapter: ChapterListed, story: ReviewStory, 
 }
 
 /**
+ * The threads on lines of a file that a chapter's pieces of it draw, down
+ * their rows: those the contents count beside the file, under the chapter.
+ */
+export function threadsOnTheFileInTheChapter(
+	chapter: ChapterListed,
+	listed: FileListed,
+	story: ReviewStory,
+	threads: Threads
+): Thread[] {
+	return chapter.steps
+		.filter((step) => step.shown?.fileListed === listed)
+		.flatMap((step) => threadsOnThePiece(step.section, listed.firstPiece.path, story, threads));
+}
+
+/** The threads on lines of what a story leaves out of a file, down its rows. */
+export function threadsOnWhatIsLeftOut(left: LeftOutListed, story: ReviewStory, threads: Threads): Thread[] {
+	return threadsOnThePiece(left.section, left.told.piece.path, story, threads);
+}
+
+/**
  * The threads on the story's words that no block of the story held draws,
  * in the order they were written: each on a block a story told before it
  * had, and it has not. They stand at the head of the story.
@@ -88,7 +108,7 @@ function threadsPlaced(story: ReviewStory, threads: Threads): Thread[] {
 	return [
 		...threadsOnTheOverview(held.story.overview, threads),
 		...story.contents.chapters.flatMap((chapter) => threadsInTheChapter(chapter, story, threads)),
-		...story.contents.leftOut.flatMap((left) => threadsOnThePiece(left.section, left.told.piece.path, story, threads))
+		...story.contents.leftOut.flatMap((left) => threadsOnWhatIsLeftOut(left, story, threads))
 	];
 }
 

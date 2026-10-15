@@ -64,7 +64,7 @@
 <main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
 	{#if drawn.kind === 'wait'}
 		<!-- Threads the review picked up on the words of a story it no longer holds: nothing else draws them -->
-		<div class="cr-story-measure">
+		<div class="cr-story-gutter">
 			<UnplacedThreads threads={offTheStory} why={OFF_THE_STORY} />
 		</div>
 		<div bind:this={waitingRoom} class="cr-story-waiting-room">
@@ -74,7 +74,7 @@
 		{@const held = drawn.held}
 		{@const story = held.story}
 		<ChapterBar />
-		<article class="cr-story-measure flex flex-col gap-8 py-8">
+		<article class="cr-story-gutter flex flex-col gap-8 py-8">
 			<UnplacedThreads threads={offTheStory} why={OFF_THE_STORY} />
 			<StoryOverview {held} />
 

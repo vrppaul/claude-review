@@ -20,8 +20,8 @@
 		shows: PieceShows;
 		/** What heads the piece above its file's name, in the same section: a step's number, over its reason. */
 		above?: Snippet;
-		/** What is said beside the file's name: the lines a step tells, how much was left out. */
-		beside: Snippet;
+		/** What is said beside the file's name: the lines a step tells. */
+		beside?: Snippet;
 		/** What is said at the far end of the header, before how much the piece changes: where else a step's file is told. */
 		atFarEnd?: Snippet;
 	}
@@ -61,7 +61,7 @@
 				<StatusLetter status={piece.status} />
 				<span class="min-w-0 wrap-anywhere"><FilePath file={piece} /></span>
 			</svelte:element>
-			{@render beside()}
+			{@render beside?.()}
 			<div class="flex-1"></div>
 			{@render atFarEnd?.()}
 			<ChangedLines changed={fileStats(piece)} />

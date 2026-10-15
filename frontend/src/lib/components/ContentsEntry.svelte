@@ -63,8 +63,11 @@
 		</span>
 		<span class="min-w-0">{title}</span>
 		{#if threads > 0}
-			<!-- A thread hangs in the part: a dot at the row's far end, its count said in the entry's name -->
-			<span data-testid="part-threads" aria-hidden="true" class="cr-contents-dot cr-contents-threads"></span>
+			<!-- Threads hang in the part: how many, at the row's far end, as the tree of files says of a file; said
+				in the entry's name to whoever cannot see it -->
+			<span data-testid="part-threads" aria-hidden="true" class="badge badge-xs badge-primary ml-auto">
+				{threads}
+			</span>
 		{/if}
 	</button>
 	{@render children?.()}

@@ -101,6 +101,10 @@ RIGHT_OF = "(element) => element.getBoundingClientRect().right"
 RIGHT_INSIDE_ITS_PADDING = (
     "(element) => element.getBoundingClientRect().right - parseFloat(getComputedStyle(element).paddingRight)"
 )
+# Where what an element scrolls ends on the right, short of its scrollbar, in pixels from the left of the window
+INNER_RIGHT_OF = "(element) => element.getBoundingClientRect().left + element.clientLeft + element.clientWidth"
+# The most room a story leaves either side of it in its area, in pixels: a gutter, never a margin that centres it
+GUTTER_AT_MOST = 32
 # How wide an element is on screen, and how wide the window it is drawn in
 WIDTH_OF = "(element) => element.getBoundingClientRect().width"
 WINDOW_WIDTH = "window.innerWidth"
@@ -121,8 +125,8 @@ RING_OFF_IT = "(element) => parseFloat(getComputedStyle(element).outlineOffset)"
 # Whether nothing on the page holds the keyboard, and what does, by the test id it carries
 KEYBOARD_ON_NOTHING = "document.activeElement === document.body"
 HOLDS_THE_KEYBOARD = "document.activeElement?.dataset.testid"
-# How wide a story's contents stand, in pixels, until the reader sizes them
-CONTENTS_WIDTH_AT_FIRST = 260
+# How wide a story's contents stand, in pixels, until the reader sizes them: as wide as the tree of files
+CONTENTS_WIDTH_AT_FIRST = 240
 
 
 @pytest.fixture
@@ -534,7 +538,19 @@ async def test_f_with_the_keyboard_on_an_entry_of_the_contents_of_a_story_leaves
     await expect(page.get_by_test_id("show-contents")).to_be_focused()
 
 
-async def test_the_contents_of_a_story_stand_as_wide_as_their_design_draws_them_and_widen_from_their_edge(
+async def test_a_story_stands_as_wide_as_the_area_it_is_read_in_as_the_files_do(
+    review: RunningReview, page: Page
+) -> None:
+    await page.set_viewport_size(WIDE_SCREEN)
+    await _read_as_story(page, review)
+    area = page.get_by_test_id("story-view")
+    chapter = page.get_by_test_id("story-chapter").first
+
+    assert await chapter.evaluate(LEFT_OF) - await area.evaluate(LEFT_OF) <= GUTTER_AT_MOST
+    assert await area.evaluate(INNER_RIGHT_OF) - await chapter.evaluate(RIGHT_OF) <= GUTTER_AT_MOST
+
+
+async def test_the_contents_of_a_story_stand_as_wide_as_the_tree_of_files_and_widen_from_their_edge(
     review: RunningReview, page: Page
 ) -> None:
     await page.set_viewport_size(WIDE_SCREEN)

@@ -2,11 +2,17 @@
 	import { useReview } from '$lib/review/context';
 	import { tellsFirst } from '$lib/review/story-contents';
 	import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
-	import { threadsInTheChapter, threadsOnTheOverview } from '$lib/review/story-reading';
-	import { counted } from '$lib/utils/words';
+	import {
+		threadsInTheChapter,
+		threadsOnTheFileInTheChapter,
+		threadsOnTheOverview,
+		threadsOnWhatIsLeftOut
+	} from '$lib/review/story-reading';
+	import { fileStats } from '$lib/utils/file-stats';
+	import { fileName } from '$lib/utils/paths';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
-	import ContentsFile from './ContentsFile.svelte';
+	import FileRow from './FileRow.svelte';
 	import SideColumn from './SideColumn.svelte';
 	import {
 		alsoInShort,
@@ -36,8 +42,9 @@
 </script>
 
 <!-- The story's contents, beside it: its parts down an axis, the overview and then every chapter with
-	the files it tells, then what it leaves out and what the agent called housekeeping. Nothing while
-	no story is held: there is nothing to find a way through -->
+	the files it tells, then what it leaves out and what the agent called housekeeping. Each file is a
+	row as the tree of files draws it. Nothing while no story is held: there is nothing to find a way
+	through -->
 {#if held !== null}
 	{@const story = held.story}
 	<SideColumn
@@ -45,14 +52,13 @@
 		landmark="nav"
 		label="Story contents"
 		called="the contents"
-		class="bg-base-200"
+		class="bg-base-100"
 		testIds={{ column: 'contents', resize: 'contents-resize', putAway: 'hide-contents', bringBack: 'show-contents' }}
 	>
 		{#snippet heading()}
-			<h2 class="text-sm font-semibold">Story</h2>
-			<span data-testid="contents-count" class="cr-faint text-xs">
+			<h2 data-testid="contents-count" class="text-sm font-semibold">
 				{chaptersCounted(contents.chapters.length, chaptersRead)}
-			</span>
+			</h2>
 		{/snippet}
 
 		<ol data-testid="contents-parts">
@@ -82,21 +88,30 @@
 					{#if chapter.files.length > 0}
 						<ul
 							data-testid="contents-files"
-							class={['cr-contents-files', scrolledPast.has(chapter.part) && 'cr-viewed']}
+							class={['cr-contents-set-in', scrolledPast.has(chapter.part) && 'cr-viewed']}
 						>
 							{#each chapter.files as listed (listed.firstPiece.path)}
-								<ContentsFile
-									file={listed.firstPiece}
-									opensAt={listed.opensAt}
+								{@const file = listed.firstPiece}
+								<FileRow
+									testId="contents-file"
+									status={file.status}
 									current={stepRead?.shown?.fileListed === listed}
+									threads={threadsOnTheFileInTheChapter(chapter, listed, review.story, review.threads).length}
+									title={file.path}
+									onclick={() => review.sections.scrollTo(listed.opensAt)}
 								>
-									<!-- The file's whole change where the story first tells it; after that, where it was told -->
-									{#if tellsFirst(chapter, listed)}
-										<ChangedLines changed={review.story.pieces.changeOf(listed.firstPiece.path)} />
-									{:else}
-										{alsoInShort(listed.alsoIn)}
-									{/if}
-								</ContentsFile>
+									{#snippet name()}
+										{fileName(file.path)}
+									{/snippet}
+									{#snippet end()}
+										<!-- The file's whole change where the story first tells it; after that, where it was told -->
+										{#if tellsFirst(chapter, listed)}
+											<ChangedLines changed={review.story.pieces.changeOf(file.path)} />
+										{:else}
+											<span class="cr-faint whitespace-nowrap">{alsoInShort(listed.alsoIn)}</span>
+										{/if}
+									{/snippet}
+								</FileRow>
 							{/each}
 						</ul>
 					{/if}
@@ -106,41 +121,54 @@
 
 		{#if contents.leftOut.length > 0}
 			<!-- Nothing can be hidden: what no step tells has its place here too, said to be outside the story -->
-			<button
-				type="button"
-				data-testid="contents-left-out"
-				class="cr-contents-aside mt-2 font-semibold text-warning"
-				aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
-				aria-label={leftOutChanged === null
-					? undefined
-					: leftOutThenAndNowSaid(leftOutChanged.when_told, leftOutChanged.now)}
-				onclick={() => review.parts.goTo(LEFT_OUT_PART)}
-			>
-				{NOT_IN_THE_STORY}
-				{#if leftOutChanged !== null}
-					<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
-						words to whoever cannot see the arrow -->
-					<span class="ml-2" aria-hidden="true">{leftOutThenAndNow(leftOutChanged.when_told, leftOutChanged.now)}</span>
-				{/if}
-			</button>
-			<ul data-testid="contents-left-out-files" class="cr-contents-files cr-contents-files-left-out">
-				{#each contents.leftOut as left (left.section)}
-					{@const piece = left.told.piece}
-					<ContentsFile file={piece} opensAt={left.section} current={sectionRead === left.section}>
-						<!-- A file that shows no line has no hunk to count -->
-						{#if piece.hunks.length > 0}
-							{counted(piece.hunks.length, { one: 'hunk', many: 'hunks' })}
-						{/if}
-					</ContentsFile>
-				{/each}
-			</ul>
+			<div class="cr-contents-set-in mt-2">
+				<button
+					type="button"
+					data-testid="contents-left-out"
+					class="cr-aside-row text-warning"
+					aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
+					aria-label={leftOutChanged === null
+						? undefined
+						: leftOutThenAndNowSaid(leftOutChanged.when_told, leftOutChanged.now)}
+					onclick={() => review.parts.goTo(LEFT_OUT_PART)}
+				>
+					{NOT_IN_THE_STORY}
+					{#if leftOutChanged !== null}
+						<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
+							words to whoever cannot see the arrow -->
+						<span class="ml-2" aria-hidden="true">
+							{leftOutThenAndNow(leftOutChanged.when_told, leftOutChanged.now)}
+						</span>
+					{/if}
+				</button>
+				<ul data-testid="contents-left-out-files">
+					{#each contents.leftOut as left (left.section)}
+						{@const piece = left.told.piece}
+						<FileRow
+							testId="contents-file"
+							status={piece.status}
+							current={sectionRead === left.section}
+							threads={threadsOnWhatIsLeftOut(left, review.story, review.threads).length}
+							title={piece.path}
+							onclick={() => review.sections.scrollTo(left.section)}
+						>
+							{#snippet name()}
+								{fileName(piece.path)}
+							{/snippet}
+							{#snippet end()}
+								<ChangedLines changed={fileStats(piece)} />
+							{/snippet}
+						</FileRow>
+					{/each}
+				</ul>
+			</div>
 		{/if}
 
 		{#if story.housekeeping.length > 0}
 			<StoryHousekeeping
 				paths={story.housekeeping}
 				testId="contents-housekeeping"
-				class="cr-contents-aside cr-faint mt-1.5"
+				class="cr-contents-set-in cr-faint mt-1.5"
 			/>
 		{/if}
 	</SideColumn>

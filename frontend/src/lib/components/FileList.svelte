@@ -8,10 +8,10 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import ChangedLines from './ChangedLines.svelte';
+	import FileRow from './FileRow.svelte';
 	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
 	import SideColumn from './SideColumn.svelte';
-	import StatusLetter from './StatusLetter.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed extends CountedWords {
@@ -67,32 +67,26 @@
 	}
 </script>
 
-{#snippet fileRow(file: DiffFile, name: string, depth: number)}
-	{@const threadCount = review.threads.onLinesOf(file.path).length}
+{#snippet fileRow(file: DiffFile, shownAs: string, depth: number)}
 	{@const viewed = review.reading.isViewed(file.path)}
-	<li>
-		<button
-			type="button"
-			data-testid="file-item"
-			data-role={FILE_ROW_ROLE}
-			class={[
-				'cr-tree-row btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs',
-				viewed && 'cr-viewed',
-				review.sections.fileInView === file.path && 'cr-current'
-			]}
-			style:--cr-depth={depth}
-			onclick={() => review.sections.scrollTo(fileSectionKey(file.path))}
-		>
-			{#if isDiffMode}
-				<StatusLetter status={file.status} />
+	<FileRow
+		testId="file-item"
+		role={FILE_ROW_ROLE}
+		{depth}
+		status={isDiffMode ? file.status : null}
+		current={review.sections.fileInView === file.path}
+		{viewed}
+		threads={review.threads.onLinesOf(file.path).length}
+		onclick={() => review.sections.scrollTo(fileSectionKey(file.path))}
+	>
+		{#snippet name()}
+			{#if file.old_path}
+				<!-- Moved: what it was called, quieter than what it is called now -->
+				<span class="cr-muted">{formerName(file.old_path, file.path)} →</span>
 			{/if}
-			<span class="flex-1 truncate">
-				{#if file.old_path}
-					<!-- Moved: what it was called, quieter than what it is called now -->
-					<span class="cr-muted">{formerName(file.old_path, file.path)} →</span>
-				{/if}
-				{name}
-			</span>
+			{shownAs}
+		{/snippet}
+		{#snippet marks()}
 			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 				<!-- The same fact the file header spells out, where there is no
 					room to spell it -->
@@ -106,14 +100,13 @@
 			{#if viewed}
 				<Icon name="check" data-testid="file-viewed-mark" class="h-3 w-3 text-(--cr-done)" label="Viewed" />
 			{/if}
-			{#if threadCount > 0}
-				<span class="badge badge-xs badge-primary">{threadCount}</span>
-			{/if}
+		{/snippet}
+		{#snippet end()}
 			{#if isDiffMode}
 				<ChangedLines changed={fileStats(file)} />
 			{/if}
-		</button>
-	</li>
+		{/snippet}
+	</FileRow>
 {/snippet}
 
 {#snippet treeNode(node: TreeNode, depth: number)}

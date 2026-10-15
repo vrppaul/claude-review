@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { LeftOutListed } from '$lib/review/story-contents';
 	import { LEFT_OUT_PART } from '$lib/review/story-keys';
-	import { CHANGED_LINES, counted } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
 	import { NOT_IN_THE_STORY } from './story-words';
@@ -27,15 +26,7 @@
 	{#each leftOut as { told, section } (section)}
 		<!-- A piece that cannot be drawn says so in its place, and takes no other piece down with it -->
 		<svelte:boundary onerror={reportBroken}>
-			<StoryPiece sectionKey={section} piece={told.piece} shows="what-no-step-tells">
-				{#snippet beside()}
-					{#if told.changed_lines > 0}
-						<span class="cr-muted text-xs">
-							{counted(told.changed_lines, CHANGED_LINES)}
-						</span>
-					{/if}
-				{/snippet}
-			</StoryPiece>
+			<StoryPiece sectionKey={section} piece={told.piece} shows="what-no-step-tells" />
 			{#snippet failed(error, retry)}
 				<PartFailed what={told.piece.path} {error} {retry} />
 			{/snippet}

@@ -373,7 +373,7 @@ describe('a review read as its story', () => {
 		const leftOut = screen.getByTestId('story-left-out');
 
 		expect(leftOut.textContent).toContain('line 5 of a.py');
-		expect(within(leftOut).getByText('1 changed line')).toBeTruthy();
+		expect(within(leftOut).getByText('+1')).toBeTruthy();
 	});
 
 	it('shows a file it leaves out whole as that file says of itself, with no count of lines it has none of', () => {
@@ -388,13 +388,15 @@ describe('a review read as its story', () => {
 		expect(leftOut.textContent).not.toContain('changed line');
 	});
 
-	it('names the one file the agent called housekeeping, and draws none of it', () => {
+	it('names the one file the agent called housekeeping once unfolded, and draws none of it', async () => {
+		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
+		const housekeeping = within(screen.getByTestId('story-housekeeping'));
 
-		const housekeeping = screen.getByTestId('story-housekeeping');
+		await user.click(housekeeping.getByTestId('fold-housekeeping'));
 
-		expect(within(housekeeping).getByText('Housekeeping · 1 file')).toBeTruthy();
-		expect(housekeeping.textContent).toContain('uv.lock');
+		expect(housekeeping.getByTestId('fold-housekeeping').textContent.trim()).toBe('Housekeeping · 1 file');
+		expect(housekeeping.getByTestId('housekeeping-file').textContent).toContain('uv.lock');
 		expect(pieces().map((piece) => piece.dataset.path)).toEqual(['a.py', 'b.py', 'a.py', 'a.py']);
 	});
 
