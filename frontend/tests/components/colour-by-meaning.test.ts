@@ -3,7 +3,7 @@ import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import CommentThread from '$lib/components/CommentThread.svelte';
-import HelpDialog from '$lib/components/HelpDialog.svelte';
+import HelpMenu from '$lib/components/HelpMenu.svelte';
 import PresenceDot from '$lib/components/PresenceDot.svelte';
 import RepliesMenu from '$lib/components/RepliesMenu.svelte';
 import { lineAnchor } from '$lib/anchors/line';
@@ -119,8 +119,9 @@ describe('each thing is drawn in the colour of what it means', () => {
 
 	it('draws the keys in the help as controls', () => {
 		const review = answeredReview();
+		review.guide.setHelpOpen(true);
 
-		const { getByTestId } = render(HelpDialog, inReview(review));
+		const { getByTestId } = render(HelpMenu, inReview(review));
 
 		const keys = getByTestId('shortcuts-list').querySelectorAll('dt');
 		expect(keys.length).toBeGreaterThan(0);

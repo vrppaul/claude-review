@@ -28,7 +28,7 @@
 
 	/**
 	 * Whether something is in a modal dialog open over the page. A modal is a
-	 * layer above every pane: one opened from inside a pane — the help, by ? —
+	 * layer above every pane: one opened from inside a pane — a question asked before a comment is lost —
 	 * leaves the pane open under it, takes the keyboard, the presses and
 	 * Escape while it is open, and gives the keyboard back into the pane as it
 	 * closes.

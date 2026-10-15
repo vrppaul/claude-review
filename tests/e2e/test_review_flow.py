@@ -76,7 +76,7 @@ LONG_FILES = {
 FIRST_LONG_FILE, *_, LAST_LONG_FILE = LONG_FILES
 # What a round heads each thread with
 THREAD_HEADING = "### "
-# A point on the page, in pixels, that no dialog in the middle of it covers
+# A point on the page, in pixels, that no dialog in the middle of it covers, nor a pane under a control
 OUTSIDE_THE_DIALOG = 5
 # The conversation the transcript is written with, one entry a line: a question, and its answer
 TRANSCRIPT_LINES = [
@@ -796,27 +796,30 @@ async def test_question_mark_shows_the_keys(diff_review: RunningReview, page: Pa
     await page.get_by_test_id("shortcuts-list").wait_for(state="detached")
 
 
-async def test_the_keys_list_holds_the_keyboard_until_it_closes(diff_review: RunningReview, page: Page) -> None:
-    """A modal: the keyboard goes into it, no Tab reaches the page under it, and Escape gives it back."""
+async def test_the_keys_list_opens_as_a_pane_under_help_takes_the_keyboard_and_gives_it_back_on_escape(
+    diff_review: RunningReview, page: Page
+) -> None:
+    """A pane, as Settings is: under its control, the keyboard in it, headed, and closed by Escape or its own button."""
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
     await page.get_by_test_id("open-help").focus()
 
     await page.keyboard.press("Enter")
-    help_dialog = page.get_by_test_id("help-dialog")
-    await help_dialog.wait_for()
-    assert await help_dialog.evaluate("dialog => dialog.contains(document.activeElement)")
-    # Past its last control the browser's own bar may take it, never the page under the dialog
-    for _ in range(6):
-        await page.keyboard.press("Tab")
-        assert await help_dialog.evaluate(
-            "dialog => dialog.contains(document.activeElement) || document.activeElement === document.body"
-        )
+    help_menu = page.get_by_test_id("help-menu")
+    await help_menu.wait_for()
+    assert await help_menu.evaluate("pane => pane.contains(document.activeElement)")
+    await expect(help_menu.get_by_role("heading", name="Help", exact=True)).to_be_visible()
+    help_top = await help_menu.evaluate("(pane) => pane.getBoundingClientRect().top")
+    assert help_top >= await page.get_by_test_id("open-help").evaluate("(help) => help.getBoundingClientRect().bottom")
 
     await page.keyboard.press("Escape")
-    await help_dialog.wait_for(state="detached")
+    await help_menu.wait_for(state="detached")
     focused = await page.evaluate("document.activeElement?.dataset.testid")
     assert focused == "open-help"
+
+    await page.get_by_test_id("open-help").click()
+    await help_menu.get_by_test_id("close-help").click()
+    await help_menu.wait_for(state="detached")
 
 
 async def test_question_mark_closes_the_keys_list_and_gives_the_keyboard_back(
@@ -830,9 +833,9 @@ async def test_question_mark_closes_the_keys_list_and_gives_the_keyboard_back(
     reading = await page.evaluate(FOCUSED_LABEL)
 
     await page.keyboard.press("?")
-    await page.get_by_test_id("help-dialog").wait_for()
+    await page.get_by_test_id("help-menu").wait_for()
     await page.keyboard.press("?")
-    await page.get_by_test_id("help-dialog").wait_for(state="detached")
+    await page.get_by_test_id("help-menu").wait_for(state="detached")
 
     assert await page.evaluate(FOCUSED_LABEL) == reading
 
@@ -843,8 +846,8 @@ async def test_a_press_outside_the_keys_list_closes_it_and_a_selection_let_go_th
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
     await page.keyboard.press("?")
-    help_dialog = page.get_by_test_id("help-dialog")
-    await help_dialog.wait_for()
+    help_menu = page.get_by_test_id("help-menu")
+    await help_menu.wait_for()
     words = await page.get_by_text("Keyboard", exact=True).bounding_box()
     assert words is not None
 
@@ -852,10 +855,10 @@ async def test_a_press_outside_the_keys_list_closes_it_and_a_selection_let_go_th
     await page.mouse.down()
     await page.mouse.move(OUTSIDE_THE_DIALOG, OUTSIDE_THE_DIALOG)
     await page.mouse.up()
-    assert await help_dialog.evaluate("dialog => dialog.open")
+    await expect(help_menu).to_be_visible()
 
     await page.mouse.click(OUTSIDE_THE_DIALOG, OUTSIDE_THE_DIALOG)
-    await help_dialog.wait_for(state="detached")
+    await help_menu.wait_for(state="detached")
 
 
 async def test_the_keyboard_leaving_a_pane_closes_it(diff_review: RunningReview, page: Page) -> None:

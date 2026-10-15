@@ -5,8 +5,9 @@
 	import BasePicker from './BasePicker.svelte';
 	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
+	import HelpMenu from './HelpMenu.svelte';
 	import Icon from './Icon.svelte';
-	import { FINISH_KEYS, HELP_BUTTON_ROLE, PANEL_TOGGLE_ROLE } from './keymap';
+	import { FINISH_KEYS, PANEL_TOGGLE_ROLE } from './keymap';
 	import Popover from './Popover.svelte';
 	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
@@ -64,17 +65,7 @@
 		class="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-base-300 bg-base-200 px-4 py-1.5"
 	>
 		<span class="font-semibold">Review</span>
-		<!-- The ? key may belong to a browser extension, so the list has a button too -->
-		<button
-			type="button"
-			data-testid="open-help"
-			data-role={HELP_BUTTON_ROLE}
-			class="cr-chip"
-			title="The tour, what is new, and the keys (?)"
-			onclick={() => review.guide.setHelpOpen(true)}
-		>
-			<kbd class="cr-guide-key">?</kbd> Help
-		</button>
+		<HelpMenu />
 		<!-- Right after Help, where it never moves, whatever else the header shows -->
 		<ViewSwitch />
 		<!-- What the diff is compared against, as a control. The repository it is

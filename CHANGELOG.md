@@ -4,16 +4,17 @@
 
 ### Added
 - **A story's diagram is drawn.** The diagram the agent writes in Mermaid
-  stands under the overview's lines at its own size, under its caption, its
-  box scrolling sideways where it is wider than the column; its nodes have
+  stands under the overview's lines, under its caption, fitted to the
+  column where it is wider, never drawn larger than its size; its nodes have
   the page's rounded corners, and the lines between them are drawn twice as
   wide as a node's edge. A screen reader names it by its caption, or "The
   change drawn" where the agent gave none. The node the
   agent marks as the heart of the change, with mermaid's `:::heart` as the
   example in `claude-review story --help` does, is edged in the agent's
   colour. A node the agent links to a chapter takes the reader to it when
-  pressed, and "Open large" draws it again in a dialog, where a press closes
-  the dialog first. One that does not draw says why, by the line and the
+  pressed, and "Open large" draws it again at its own size in a dialog
+  headed by its caption, with a button that closes it, where a press on a
+  node closes the dialog first. One that does not draw says why, by the line and the
   text mermaid did not expect there, and shows its source as written.
   Mermaid is fetched only when a story has a diagram to draw, and a source's
   own settings cannot change how safely, in what look or in what layout it
@@ -243,10 +244,12 @@
   a press anywhere else closes it and still lands where it was aimed. The
   pane the review is finished from no longer lays an invisible layer over
   the page that swallowed the click closing it.
-- **The list of keys is a real dialog**: while it is open the keyboard
-  stays inside it and the review under it takes no key or press. Escape, a
-  press outside, or `?` again closes it. Every key it lists is the key the
-  review answers, from one table.
+- **Help is a pane under its button, as Settings is**: headed "Help", with
+  the tour, the news and the list of keys, the keyboard in it while it is
+  open and the review's keys its own. Escape, a press outside, its ×, or
+  `?` again closes it, and the keyboard goes back to where it was; opened
+  from inside another pane, it takes that pane's place. Every key it lists
+  is the key the review answers, from one table.
 - **How long ago is said one way everywhere**: "12s ago", "3m ago", "1h
   ago", "2d ago". A question waited on for an hour said "asked 3600s ago",
   and a base taken a moment ago "0m ago". One clock ticks for the whole

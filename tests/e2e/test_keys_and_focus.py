@@ -224,27 +224,24 @@ async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_co
     assert reached.group(1) == announced.group(1)
 
 
-async def test_the_help_opens_over_a_pane_and_gives_the_keyboard_back_into_it(
+async def test_the_help_opened_from_inside_a_pane_takes_its_place_and_gives_the_keyboard_to_help_as_it_closes(
     review: RunningReview, page: Page
 ) -> None:
-    """A modal is a layer above a pane: ? from inside the pane leaves it open, and Escape returns into it."""
+    """One pane at a time: ? from inside a pane opens the help in its place, and Escape gives the keyboard back."""
     await _open_review(page, review)
     await page.get_by_test_id("settings-toggle").click()
     pane = page.get_by_test_id("settings-menu")
     assert await pane.evaluate("pane => pane.contains(document.activeElement)")
 
     await page.keyboard.press("?")
-    help_dialog = page.get_by_test_id("help-dialog")
-    await help_dialog.wait_for()
-    await help_dialog.get_by_text("Keyboard", exact=True).click()
-    assert await pane.is_visible()
-    await page.keyboard.press("Escape")
-    await help_dialog.wait_for(state="detached")
-
-    assert await pane.evaluate("pane => pane.contains(document.activeElement)")
-    await page.keyboard.press("Escape")
+    help_menu = page.get_by_test_id("help-menu")
+    await help_menu.wait_for()
+    assert await help_menu.evaluate("pane => pane.contains(document.activeElement)")
     await pane.wait_for(state="detached")
-    assert await page.evaluate(FOCUSED_TEST_ID) == "settings-toggle"
+    await page.keyboard.press("Escape")
+    await help_menu.wait_for(state="detached")
+
+    assert await page.evaluate(FOCUSED_TEST_ID) == "open-help"
 
 
 async def test_a_pane_opened_by_its_keys_from_a_field_and_closed_by_its_button_gives_the_keyboard_back_to_the_field(

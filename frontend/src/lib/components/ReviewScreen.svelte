@@ -11,7 +11,6 @@
 	import DiffView from './DiffView.svelte';
 	import FileList from './FileList.svelte';
 	import Guide from './Guide.svelte';
-	import HelpDialog from './HelpDialog.svelte';
 	import { pressKey } from './keymap';
 	import NoticeBar from './NoticeBar.svelte';
 	import ReviewHeader from './ReviewHeader.svelte';
@@ -56,9 +55,6 @@
 <!-- The review's keys, from anywhere on the page -->
 <svelte:window onkeydown={(event: KeyboardEvent) => pressKey(review, event)} />
 
-{#if review.guide.helpOpen}
-	<HelpDialog />
-{/if}
 <Guide />
 <!-- The dots are for the eye; this says the same aloud as it changes, without moving the keyboard -->
 <p data-testid="arrivals" role="status" class="sr-only">
