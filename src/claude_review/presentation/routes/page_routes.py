@@ -52,7 +52,7 @@ from claude_review.presentation.wire.content import (
     StoryAsking,
     VersionsResponse,
 )
-from claude_review.presentation.wire.story import StoryHeld, StoryResponse
+from claude_review.presentation.wire.story_held import StoryHeld, StoryResponse
 from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,
@@ -133,7 +133,7 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     had got.
     """
     held = review.story_held()
-    return StoryResponse(held=StoryHeld.of(held) if held is not None else None)
+    return StoryResponse(held=StoryHeld.as_held(held) if held is not None else None)
 
 
 @router.post(

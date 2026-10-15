@@ -3,7 +3,7 @@ import { contentsOf, tellsFirst } from '$lib/review/story-contents';
 import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 import { piecesOf } from '$lib/review/story-pieces';
 import { addedLine, diffFile, hunk, removedLine } from './diff';
-import { changedStep, stepWithoutCode, toldChapter, toldStep, toldStory } from './story';
+import { stepWithoutCode, toldChapter, toldStep, toldStory } from './story';
 
 // A story of three chapters. The first tells a.py twice, around b.py; the second tells b.py and a.py;
 // the third tells c.py, which no other chapter tells, and a.py once more. Every step tells one line
@@ -124,23 +124,6 @@ describe('what a story lists of itself', () => {
 		const [c] = ofTheThird.files;
 
 		expect(c.alsoIn).toEqual([]);
-	});
-
-	it('counts the steps of each chapter whose code a round changed after it was told', () => {
-		const followed = toldStory({
-			chapters: [
-				toldChapter('ch-1', [changedStep('a.py', 1), toldStep('a.py', 5), changedStep('b.py', 1)]),
-				toldChapter('ch-2', [toldStep('c.py', 1)])
-			]
-		});
-
-		expect(contentsOf(followed).chapters.map((chapter) => chapter.changedSteps)).toEqual([2, 0]);
-	});
-
-	it('counts no step whose code is no longer found among those a round changed: it shows no code to be current', () => {
-		const followed = toldStory({ chapters: [toldChapter('ch-1', [stepWithoutCode('a.py', 1), toldStep('b.py', 1)])] });
-
-		expect(contentsOf(followed).chapters.map((chapter) => chapter.changedSteps)).toEqual([0]);
 	});
 });
 

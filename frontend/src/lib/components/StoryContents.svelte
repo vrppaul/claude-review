@@ -73,7 +73,7 @@
 					label={chapterEntitled(chapter.place, chapter.told.title)}
 					title={chapter.told.title}
 					threads={threadsInTheChapter(chapter, review.story, review.threads).length}
-					changed={chapter.changedSteps > 0}
+					changed={chapter.told.changed !== null}
 				>
 					{#snippet node()}
 						{chapterNumber(chapter.place)}

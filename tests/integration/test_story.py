@@ -34,12 +34,13 @@ from claude_review.presentation.wire.content import DiffResponse, ReviewResponse
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import (
+    ChapterChanged,
     CodeMovedOn,
     LeftOutOfFile,
     LineSpan,
-    StoryResponse,
     StoryTakenResponse,
 )
+from claude_review.presentation.wire.story_held import StoryResponse
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
@@ -68,7 +69,7 @@ from tests.helpers import (
     until_an_agent_waits,
     write_files,
 )
-from tests.stories import as_the_agent_writes, planted, rows_of, step, story_of
+from tests.stories import as_the_agent_writes, chapter_of, planted, rows_of, step, story_of, story_of_chapters
 
 STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
@@ -94,6 +95,8 @@ A_LONG_STORY = story_of(*STEPS_OF_THE_LONG_STORY)
 THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
 THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
 WHOLE_STORY = story_of(THE_LINE_ADDED, THE_FILE_ADDED)
+# The same two steps, each in a chapter of its own
+A_CHAPTER_TO_EACH = story_of_chapters(chapter_of("the-line", THE_LINE_ADDED), chapter_of("the-file", THE_FILE_ADDED))
 
 # Where the reader stops the story asked for
 STORY_CANCEL_ROUTE = "/api/story/cancel"
@@ -299,6 +302,26 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     # The line the round reworded is still its step's: no more is left out than when the story was told
     assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out=None))
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
+
+
+async def test_each_chapter_of_a_story_followed_says_how_many_of_its_steps_the_round_changed_and_in_which(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """A page draws it under the chapter's head and beside it in the contents, and counts nothing: a chapter whose
+    code the round left alone says nothing."""
+    await tell(agent, A_CHAPTER_TO_EACH)
+
+    await take_again_after_a_round(agent, tmp_git_repo)
+
+    chapters = (await held_by(agent)).held.story.chapters
+    assert [chapter.changed for chapter in chapters] == [ChapterChanged(round=FIRST_ROUND + 1, steps=1), None]
+
+
+async def test_a_story_as_it_was_told_says_of_no_chapter_that_a_round_changed_it(agent: AsyncClient) -> None:
+    await tell(agent, A_CHAPTER_TO_EACH)
+
+    chapters = (await held_by(agent)).held.story.chapters
+    assert [chapter.changed for chapter in chapters] == [None, None]
 
 
 async def test_a_story_is_of_the_take_of_the_change_the_review_holds_as_it_is_told(agent: AsyncClient) -> None:

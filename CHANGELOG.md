@@ -168,9 +168,12 @@
   `moved_on` says the round a take first found the code moved on in, which
   later takes keep while it stays so, and, where the round changed them,
   how many changed lines no step told when it was told and how many none
-  tells now (`left_out`, else `null`). The page reads the story again
-  with the diff, and holds neither until both are read, keeping what was
-  read of it: its lines are the code under review, and take comments. A
+  tells now (`left_out`, else `null`). Each chapter says `changed`: that
+  round, and how many of its steps show code changed since they were told,
+  or `null` where none does, so the page counts nothing. The page reads the
+  story again with the diff, and holds neither until both are read,
+  keeping what was read of it: its lines are the code under review, and
+  take comments. A
   story it could not read with the diff is drawn no more until the next is
   read, and the panel says why; one read of a take the page has not taken
   in yet is drawn once that take's diff is.

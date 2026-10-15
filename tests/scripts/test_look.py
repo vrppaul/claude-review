@@ -23,7 +23,7 @@ from httpx import URL, AsyncClient, ConnectError
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.presentation.wire.content import DiffResponse
-from claude_review.presentation.wire.story import StoryResponse
+from claude_review.presentation.wire.story_held import StoryResponse
 from tests.helpers import DIFF_ROUTE, STORY_ROUTE
 from tests.page_socket import PageSocket
 

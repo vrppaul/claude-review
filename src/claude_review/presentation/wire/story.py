@@ -171,6 +171,22 @@ class ToldStep(WireModel):
     commentable: WireBool
 
 
+class ChapterChanged(WireModel):
+    """That a round changed code a chapter's steps show after the story was told: in which round, and how many steps.
+
+    Made here on the wire, as the story held is written out for a page
+    (`StoryHeld.as_held`): its round is the one the story held says the code
+    moved on in, which the review's own chapter does not keep, and its count
+    is of the chapter's own steps. A page draws it under the chapter's head
+    and in the story's contents, and counts nothing.
+    """
+
+    # The round the code first moved on under the story in
+    round: int
+    # How many of its steps show code changed since it was told: one at least
+    steps: int
+
+
 class ToldChapter(WireModel):
     """A chapter as it is told: why its changes belong together, where to look hardest, and its steps."""
 
@@ -179,6 +195,20 @@ class ToldChapter(WireModel):
     why: str
     doubt: str | None
     steps: list[ToldStep]
+    # Null while no round has changed code its steps show since the story was told
+    changed: ChapterChanged | None
+
+    @classmethod
+    def on_take(cls, chapter: story.Chapter[story.FollowedStep], *, moved_on: CodeMovedOn | None) -> Self:
+        """The chapter on the take the story is on, `moved_on` saying whether the code moved on under the story."""
+        return cls(
+            id=chapter.id,
+            title=chapter.title,
+            why=chapter.why,
+            doubt=chapter.doubt,
+            steps=[ToldStep.of(step) for step in chapter.steps],
+            changed=_changed(chapter.steps, moved_on=moved_on),
+        )
 
 
 class LeftOut(WireModel):
@@ -199,6 +229,18 @@ class ToldStory(WireModel):
     housekeeping: list[str]
     left_out: list[LeftOut]
 
+    @classmethod
+    def on_take(cls, told: story.ToldStory[story.FollowedStep], *, moved_on: CodeMovedOn | None) -> Self:
+        """The story on the take it is on, `moved_on` saying whether the code moved on under it: None while current."""
+        return cls(
+            title=told.title,
+            told_from=told.told_from,
+            overview=StoryOverview.of(told.overview),
+            chapters=[ToldChapter.on_take(chapter, moved_on=moved_on) for chapter in told.chapters],
+            housekeeping=told.housekeeping,
+            left_out=[LeftOut.of(left) for left in told.left_out],
+        )
+
 
 class LeftOutChanged(WireModel):
     """How many changed lines no step told when a story was told, and how many none tells now."""
@@ -216,23 +258,16 @@ class CodeMovedOn(WireModel):
     left_out: LeftOutChanged | None
 
 
-class StoryHeld(WireModel):
-    """A story as the review holds it: on a take of the change, with the round it was told in."""
+def _changed(steps: list[story.FollowedStep], *, moved_on: CodeMovedOn | None) -> ChapterChanged | None:
+    """How many of a chapter's steps show code a round changed after they were told, and in which round.
 
-    story: ToldStory
-    round: int
-    # The take of the change its pieces were cut out of: their lines are
-    # numbered as the threads' are only while the diff a page read says the
-    # same take
-    take: int
-    # Set while the code under it moved on after it was told; None while it is current
-    moved_on: CodeMovedOn | None
-
-
-class StoryResponse(WireModel):
-    """Response for GET /api/story — the story the review holds, or none while nobody has told one."""
-
-    held: StoryHeld | None
+    None where none does, or no round moved the code on. A step that stands
+    nowhere shows no code, and none to be current or not.
+    """
+    changed = [step for step in steps if step.now is not None and step.now.changed_since_told]
+    if moved_on is None or not changed:
+        return None
+    return ChapterChanged(round=moved_on.round, steps=len(changed))
 
 
 class LeftOutOfFile(WireModel):

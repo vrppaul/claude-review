@@ -9,7 +9,7 @@ import { broughtIntoView, said } from '../elements';
 import { newComment, storyComment } from '../new-comment';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
-import { changedStep, codeMovedOn, gainedPiece, stepWithoutCode, storyHeld, toldChapter, toldStep } from '../story';
+import { chapterChanged, codeMovedOn, gainedPiece, stepWithoutCode, storyHeld, toldChapter, toldStep } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py a line, and so did a lock file
 const files = [
@@ -233,12 +233,14 @@ describe('the contents beside a story, as the reader scrolls', () => {
 });
 
 describe('the contents of a story whose code a round changed after it was told, read through', () => {
-	// The first chapter's second step shows code the second round changed; nothing the second chapter shows changed
+	// The review says the second round changed code one of the first chapter's steps shows, and nothing the second
+	// chapter shows. The contents mark a chapter by what the review says of it, whatever its steps' marks
 	const FOLLOWED = storyHeld(
 		{
 			chapters: [
-				toldChapter('ch-1', [toldStep('src/a.py', 1), changedStep('src/b.py', 5)], {
-					title: 'The beginnings'
+				toldChapter('ch-1', [toldStep('src/a.py', 1), toldStep('src/b.py', 5)], {
+					title: 'The beginnings',
+					changed: chapterChanged()
 				}),
 				toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
 			]
@@ -254,7 +256,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 		render(ReviewScreen, { props: { review } });
 	});
 
-	it('draws the number of a chapter with a changed step in its node, in place of the check of one read through', () => {
+	it('draws the number of a chapter a round changed in its node, in place of the check of one read through', () => {
 		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
 			'Overview',
 			'1 The beginnings',
@@ -262,7 +264,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 		]);
 	});
 
-	it('still names a chapter with a changed step as read through', () => {
+	it('still names a chapter a round changed as read through', () => {
 		const contents = within(screen.getByTestId('contents'));
 
 		expect(contents.getByRole('button', { name: 'Chapter 1: The beginnings, read' })).toBeTruthy();

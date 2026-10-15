@@ -24,8 +24,6 @@
 	const review = useReview();
 
 	const told = $derived(chapter.told);
-	// That the code moved on under the story held after it was told, and in which round; null while it is current
-	const movedOn = $derived(review.story.held?.moved_on ?? null);
 </script>
 
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
@@ -45,13 +43,13 @@
 			>
 		</header>
 	{/snippet}
-	{#if chapter.changedSteps > 0 && movedOn !== null}
-		<!-- A round changed code the chapter tells after it was told: said first, in a warning's frame, since
-			what the agent says below was said of the code before; and that the agent is updating it, only
-			while it is -->
+	{#if told.changed !== null}
+		<!-- A round changed code the chapter tells after it was told, as the review says: said first, in a
+			warning's frame, since what the agent says below was said of the code before; and that the agent
+			is updating it, only while it is -->
 		<p data-testid="chapter-changed" class="cr-warning-frame px-3 py-2">
 			<b class="font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</b>
-			{stepsChangedIn(chapter.changedSteps, movedOn.round)}
+			{stepsChangedIn(told.changed.steps, told.changed.round)}
 			{CODE_BELOW_IS_CURRENT}
 			{#if review.story.wait?.kind === 'writing'}
 				{AGENT_UPDATING_REASONS}

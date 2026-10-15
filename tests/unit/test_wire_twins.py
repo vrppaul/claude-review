@@ -14,7 +14,7 @@ import pytest
 from pydantic import BaseModel
 
 from claude_review.domain import models, page_events, story as told
-from claude_review.presentation.wire import agent, content, pushes, records, story, threads
+from claude_review.presentation.wire import agent, content, pushes, records, story, story_held, threads
 from claude_review.services.review import review_story
 
 # What a push carries of its own: the kind the page tells it apart by
@@ -85,10 +85,12 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     # Whether a thread may name its file, which the review's model answers from its path rather than keeps
     (told.StepNow, story.StepNow, frozenset()),
     (told.FollowedStep, story.ToldStep, frozenset({"commentable"})),
-    (told.Chapter[told.FollowedStep], story.ToldChapter, frozenset()),
+    # Whether a round changed code its steps show, and in which: the round is the story held's, said where it is
+    # written out for a page
+    (told.Chapter[told.FollowedStep], story.ToldChapter, frozenset({"changed"})),
     (told.LeftOut, story.LeftOut, frozenset()),
     (told.ToldStory[told.FollowedStep], story.ToldStory, frozenset()),
-    (review_story.StoryHeld, story.StoryHeld, frozenset()),
+    (review_story.StoryHeld, story_held.StoryHeld, frozenset()),
     (review_story.CodeMovedOn, story.CodeMovedOn, frozenset()),
     (review_story.LeftOutChanged, story.LeftOutChanged, frozenset()),
     # and the reader's asking for one, read with the review's facts
