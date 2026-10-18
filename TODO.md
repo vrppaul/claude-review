@@ -221,7 +221,16 @@ of it is built yet.
 - [ ] `feat(ui)`: a new look for the arrows.
 - [ ] `feat(ui)`: every chip, looked at again.
 - [ ] `feat(ui)`: animations.
-- [ ] `refactor(ui)`: one set of buttons across the page.
+- [ ] `refactor(ui)`: the buttons still drawn outside the library
+      (`frontend/src/lib/ui/`): the tree's and the contents' rows, the
+      gutter, the hunk gap's ways, a thread's chips and the × of a chip
+      naming one in a message, the reply field, the folded line and the
+      rail. Until Row, Chip and Field take them, no gate refuses a
+      `<button>` drawn outside the library.
+- [ ] `fix(ui)`: inside a chapter's warning, a block a thread hangs under
+      is not drawn as selected: `.cr-warning-frame >
+      .cr-askable-written-under` keeps the selected ground off it, a guard
+      over the band laid on the warning's wash, for the Frame step.
 - [ ] `refactor(ui)`: one kind of dialog everywhere, the agent's panel
       included.
 
@@ -302,6 +311,12 @@ of it is built yet.
 - [ ] `scripts/look.py` has no step that moves the code under a story it
       told, so no look shows a chapter's warning ("Changed after it was
       told") or the story's tag that the code moved on.
+- [ ] `test_a_review_stopped_while_it_opens_leaves_nothing_of_its_staging_behind`
+      (`tests/integration/test_cli_process.py`) failed once in a whole run
+      at `1619483` (a `.git-objects` staging file left behind) and passed
+      alone and in the whole runs after it. Why is not known.
+- [ ] No test holds where a thread's tail points under a block of a
+      story's words (`--cr-tail-at`): broken on purpose, nothing failed.
 - [ ] A review leaves in its event loop what nothing ends. The answerer's
       lease is a timer of ten minutes (`Answerer.heard`,
       `src/claude_review/services/review/answerer.py`) that outlives the
