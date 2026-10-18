@@ -13,6 +13,7 @@ import { handOverNext } from '../pushes';
 import { AGENT_ATTACHED, openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
 import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
+import { colourDrawn, paint, THEMES } from '../stylesheets';
 
 const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one'), addedLine(9, 'nine')])] })];
 // A story of the change, in two chapters
@@ -235,6 +236,16 @@ describe('the Story segment while a story is being written', () => {
 		await drawnWithStoriesOn(serving(), { asking: TAKEN });
 
 		expect(said(screen.getByTestId('read-as-story'))).toBe('Story · writing');
+	});
+
+	it("breathes its dots in the agent's colour, as it says so", async () => {
+		await drawnWithStoriesOn(serving(), { asking: TAKEN });
+
+		const dots = [...within(screen.getByTestId('read-as-story')).getByTestId('breathing-dots').children];
+		expect(dots.length).toBeGreaterThan(0);
+		for (const dot of dots) {
+			for (const theme of THEMES) expect(colourDrawn(dot, 'background', theme)).toEqual(paint('--cr-agent', theme));
+		}
 	});
 
 	it('says no more than Story once the story view is on screen: the view says the rest', async () => {

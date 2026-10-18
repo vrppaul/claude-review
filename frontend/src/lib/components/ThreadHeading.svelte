@@ -102,7 +102,7 @@
 		<ReopenButton {thread} />
 	{:else}
 		<!-- Settling a thread folds it away; it can still be opened and read -->
-		<Button tone="secondary" size="xs" data-testid="resolve-comment" onclick={resolve}>
+		<Button tone="secondary" size="xs" testId="resolve-comment" onclick={resolve}>
 			<Icon name="check" class="h-3 w-3 text-(--cr-done)" />
 			Resolve
 		</Button>
@@ -112,18 +112,12 @@
 			tone="secondary"
 			size="xs"
 			label={EDIT}
-			data-testid="edit-comment"
+			testId="edit-comment"
 			onclick={() => review.threads.writing.openEdit(thread)}
 		>
 			<Icon name="pencil" />
 		</IconButton>
-		<IconButton
-			tone="danger"
-			size="xs"
-			label={DELETE}
-			data-testid="delete-comment"
-			onclick={() => (askingToDelete = true)}
-		>
+		<IconButton tone="danger" size="xs" label={DELETE} testId="delete-comment" onclick={() => (askingToDelete = true)}>
 			<Icon name="trash" />
 		</IconButton>
 	{/if}

@@ -47,10 +47,10 @@
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>
 			<div class="flex flex-wrap gap-2.5 pt-1">
-				<Button tone="primary" size="sm" data-testid="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
+				<Button tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
 					Turn on stories
 				</Button>
-				<Button tone="secondary" size="sm" data-testid="stories-not-now" onclick={close}>Not now</Button>
+				<Button tone="secondary" size="sm" testId="stories-not-now" onclick={close}>Not now</Button>
 			</div>
 		</div>
 	{/snippet}

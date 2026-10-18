@@ -32,7 +32,7 @@
 						tone="secondary"
 						size="xs"
 						label="Remove this image"
-						data-testid="detach-image"
+						testId="detach-image"
 						{disabled}
 						onclick={() => attachments.detach(imageId)}
 					>

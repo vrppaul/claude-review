@@ -8,13 +8,14 @@
 		size: ButtonSize;
 		/** What it does, in words: said to whoever cannot see its icon, and shown under the pointer. */
 		label: string;
+		testId: string;
 		/** The button itself, for whoever hands the keyboard to it. */
 		element?: HTMLButtonElement | undefined;
 		/** Its icon, drawn at the size the button gives it. */
 		children: Snippet;
 	}
 
-	let { tone, size, label, element = $bindable(), children, ...attributes }: Props = $props();
+	let { tone, size, label, testId, element = $bindable(), children, ...attributes }: Props = $props();
 </script>
 
 <!-- A button that is an icon alone: as tall as it is wide, its words kept for whoever cannot see the icon -->
@@ -24,6 +25,7 @@
 	{...attributes}
 	aria-label={label}
 	title={label}
+	data-testid={testId}
 	class={['cr-ui-button cr-ui-icon-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size]]}
 >
 	{@render children()}

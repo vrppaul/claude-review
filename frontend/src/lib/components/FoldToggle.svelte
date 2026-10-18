@@ -24,7 +24,7 @@
 	{tone}
 	size="xs"
 	label={folded ? `Unfold ${subject}` : `Fold ${subject} away`}
-	data-testid={testId}
+	{testId}
 	data-role={FOLD_TOGGLE_ROLE}
 	aria-expanded={!folded}
 	onclick={onToggle}

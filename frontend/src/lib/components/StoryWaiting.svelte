@@ -62,7 +62,7 @@
 					bind:element={takesKeyboard}
 					tone="primary"
 					size="sm"
-					data-testid="write-story-again"
+					testId="write-story-again"
 					onclick={() => review.story.askFor()}
 				>
 					Write it again
@@ -92,9 +92,7 @@
 		<div class="flex flex-wrap justify-center gap-2.5">
 			{@render readFilesMeanwhile()}
 			{#if wait.kind === 'writing'}
-				<Button tone="quiet" size="sm" data-testid="stop-writing" onclick={() => review.story.stop()}>
-					Stop writing
-				</Button>
+				<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>
 			{/if}
 		</div>
 	{/if}
@@ -107,7 +105,7 @@
 		bind:element={takesKeyboard}
 		tone="secondary"
 		size="sm"
-		data-testid="read-files-meanwhile"
+		testId="read-files-meanwhile"
 		onclick={() => review.views.showFiles()}
 	>
 		Read the files meanwhile

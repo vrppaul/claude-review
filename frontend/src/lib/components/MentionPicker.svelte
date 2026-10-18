@@ -49,16 +49,18 @@
 >
 	<div class="cr-scroller max-h-60 p-1">
 		{#each mentions.candidates as pick, index (keyOf(pick))}
+			{@const lit = index === mentions.highlighted}
+			<!-- The option the keys lit is the one of the list the reader is at -->
 			<button
 				type="button"
 				id={optionIdOf(listId, index)}
 				role="option"
 				tabindex="-1"
-				aria-selected={index === mentions.highlighted}
+				aria-selected={lit}
 				data-testid={pick.kind === 'thread' ? 'thread-option' : 'file-option'}
-				class="cr-option cr-pressable"
+				class={['cr-option cr-pressable', lit && 'cr-current']}
 				onclick={() => onTake(pick)}
-				{@attach (option: HTMLElement) => showIfHighlighted(option, index === mentions.highlighted)}
+				{@attach (option: HTMLElement) => showIfHighlighted(option, lit)}
 			>
 				{#if pick.kind === 'thread'}
 					<span class="cr-comment-ref block truncate font-mono text-xs">{anchorShortPlace(pick.thread.anchor)}</span>

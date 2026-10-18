@@ -26,8 +26,8 @@
 	{#snippet children({ close, closeThen }: Closing)}
 		<p class="mb-4 text-sm font-semibold">{question}</p>
 		<div class="flex justify-end gap-2">
-			<Button tone="quiet" size="sm" data-testid="confirm-keep" onclick={close}>{keep}</Button>
-			<Button tone="danger" size="sm" data-testid="confirm-go-ahead" onclick={() => closeThen(onGoAhead)}>
+			<Button tone="quiet" size="sm" testId="confirm-keep" onclick={close}>{keep}</Button>
+			<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={() => closeThen(onGoAhead)}>
 				{goAhead}
 			</Button>
 		</div>

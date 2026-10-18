@@ -133,7 +133,7 @@
 				<Button
 					tone="quiet"
 					size="sm"
-					data-testid="end-review"
+					testId="end-review"
 					disabled={!submission.canEnd}
 					onclick={() => submission.end()}
 				>
@@ -143,7 +143,7 @@
 			<Button
 				tone="primary"
 				size="sm"
-				data-testid="modal-submit"
+				testId="modal-submit"
 				disabled={!submission.canSend}
 				onclick={() => submission.send()}
 			>

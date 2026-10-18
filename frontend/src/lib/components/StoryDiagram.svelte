@@ -50,7 +50,7 @@
 		<span class="cr-muted">{diagram.caption}</span>
 	{/if}
 	{#if drawn}
-		<Button tone="quiet" size="xs" data-testid="diagram-open-large" onclick={() => (large = true)}>Open large</Button>
+		<Button tone="quiet" size="xs" testId="diagram-open-large" onclick={() => (large = true)}>Open large</Button>
 	{/if}
 {/snippet}
 
@@ -97,7 +97,7 @@
 			<header class="mb-3 flex items-center gap-3">
 				<h2 class="text-sm font-semibold">{name}</h2>
 				<div class="flex-1"></div>
-				<IconButton tone="quiet" size="xs" label="Close {name}" data-testid="diagram-close" onclick={close}>
+				<IconButton tone="quiet" size="xs" label="Close {name}" testId="diagram-close" onclick={close}>
 					<Icon name="cross" />
 				</IconButton>
 			</header>

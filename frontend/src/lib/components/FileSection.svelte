@@ -80,7 +80,7 @@
 						<Button
 							tone="marked"
 							size="xs"
-							data-testid="file-changed-since"
+							testId="file-changed-since"
 							title="Show only what changed since then"
 							onclick={showChangesSince}
 						>

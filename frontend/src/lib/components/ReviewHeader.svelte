@@ -85,7 +85,7 @@
 							tone="quiet"
 							size="xs"
 							label="Show whitespace changes again"
-							data-testid="show-whitespace"
+							testId="show-whitespace"
 							onclick={() => review.setIgnoreWhitespace(false)}
 						>
 							<Icon name="cross" />
@@ -123,7 +123,7 @@
 					tone="quiet"
 					size="xs"
 					label="Previous comment"
-					data-testid="prev-comment"
+					testId="prev-comment"
 					onclick={() => review.navigator.step(-1)}
 				>
 					<Icon name="chevron" class="rotate-180" />
@@ -132,7 +132,7 @@
 					tone="quiet"
 					size="xs"
 					label="Next comment"
-					data-testid="next-comment"
+					testId="next-comment"
 					onclick={() => review.navigator.step(1)}
 				>
 					<Icon name="chevron" />
@@ -143,7 +143,7 @@
 		<Button
 			tone="quiet"
 			size="xs"
-			data-testid="toggle-panel"
+			testId="toggle-panel"
 			data-role={PANEL_TOGGLE_ROLE}
 			data-tour="agent-panel-toggle"
 			aria-pressed={review.layout.agentPanel.open}
@@ -172,7 +172,7 @@
 					{...control}
 					tone="primary"
 					size="sm"
-					data-testid="quick-submit"
+					testId="quick-submit"
 					data-tour="send"
 					disabled={review.submission.sending}
 					title={FINISH_KEYS}

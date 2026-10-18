@@ -49,7 +49,7 @@
 			{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
 		</span>
 		{#if messageId}
-			<Button tone="secondary" size="xs" data-testid="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
+			<Button tone="secondary" size="xs" testId="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
 		{/if}
 	</div>
 	{#if failed}

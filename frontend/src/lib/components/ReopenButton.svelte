@@ -18,4 +18,4 @@
 </script>
 
 <!-- Taking a settled thread up again, from its folded line or the head of its first turn alike -->
-<Button tone="secondary" size="xs" data-testid="reopen-thread" onclick={reopen}>Reopen</Button>
+<Button tone="secondary" size="xs" testId="reopen-thread" onclick={reopen}>Reopen</Button>

@@ -19,10 +19,10 @@
 		{#if retaking.failed}
 			<span data-testid="retake-error" class="text-error">{retaking.failed}</span>
 		{/if}
-		<Button tone="quiet" size="xs" data-testid="retake-diff" onclick={() => retaking.run(() => review.diff.retake())}>
+		<Button tone="quiet" size="xs" testId="retake-diff" onclick={() => retaking.run(() => review.diff.retake())}>
 			Retake
 		</Button>
-		<Button tone="quiet" size="xs" data-testid="dismiss-moved" onclick={() => review.diff.treeMoved.dismiss()}>
+		<Button tone="quiet" size="xs" testId="dismiss-moved" onclick={() => review.diff.treeMoved.dismiss()}>
 			Dismiss
 		</Button>
 	{/snippet}

@@ -68,7 +68,7 @@
 				bind:element={asking}
 				tone="secondary"
 				size="xs"
-				data-testid="ask-about-this"
+				testId="ask-about-this"
 				aria-label={name}
 				onclick={() => review.threads.writing.askAbout(block, words)}
 			>

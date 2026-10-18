@@ -14,13 +14,14 @@
 		/** Whether the agent is writing what it picks: said in the agent's colour. */
 		written?: boolean;
 		calling?: Calling | undefined;
+		testId: string;
 		/** The segment itself, for whoever hands the keyboard to it or points at it. */
 		element?: HTMLButtonElement | undefined;
 		/** What it says: its words, an icon before them. */
 		children: Snippet;
 	}
 
-	let { pressed, written = false, calling, element = $bindable(), children, ...attributes }: Props = $props();
+	let { pressed, written = false, calling, testId, element = $bindable(), children, ...attributes }: Props = $props();
 </script>
 
 <!-- A segment of a track: one way of reading, pressed while it is the one picked -->
@@ -29,6 +30,7 @@
 	type="button"
 	{...attributes}
 	aria-pressed={pressed}
+	data-testid={testId}
 	class={['cr-ui-segment cr-pressable', written && 'cr-ui-segment-written', calling && CALLINGS[calling]]}
 >
 	{@render children()}

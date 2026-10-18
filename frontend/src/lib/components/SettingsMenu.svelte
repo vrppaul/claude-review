@@ -27,7 +27,7 @@
 	out of the header, where only what is switched while reading belongs -->
 <Popover bind:open label="Settings" placement="below-end" data-testid="settings-menu" class="w-72 text-xs">
 	{#snippet trigger(control)}
-		<IconButton {...control} tone="quiet" size="sm" label="Settings" data-testid="settings-toggle">
+		<IconButton {...control} tone="quiet" size="sm" label="Settings" testId="settings-toggle">
 			<Icon name="settings" />
 		</IconButton>
 	{/snippet}
@@ -41,7 +41,7 @@
 				<Segmented label="Diff layout" testId="diff-layout-toggle">
 					{#each layouts as layout (layout.value)}
 						<Segment
-							data-testid={layout.testId}
+							testId={layout.testId}
 							pressed={review.settings.current.diff_layout === layout.value}
 							onclick={() => review.settings.change({ diff_layout: layout.value })}
 						>
@@ -68,7 +68,7 @@
 			<Segmented label="Theme" testId="theme-toggle">
 				{#each themes as choice (choice.value)}
 					<Segment
-						data-testid={choice.testId}
+						testId={choice.testId}
 						pressed={review.settings.current.theme === choice.value}
 						onclick={() => review.settings.change({ theme: choice.value })}
 					>

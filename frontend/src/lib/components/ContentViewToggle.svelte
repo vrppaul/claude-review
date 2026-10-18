@@ -16,7 +16,7 @@
 <Segmented label="How to show this file" testId="content-view-toggle">
 	{#each modes as mode (mode.value)}
 		<Segment
-			data-testid={mode.testId}
+			testId={mode.testId}
 			pressed={review.layout.contentView.mode === mode.value}
 			onclick={() => review.layout.contentView.set(mode.value)}
 		>

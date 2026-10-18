@@ -30,7 +30,6 @@
  */
 .cr-pressable:not(:disabled, [aria-disabled='true']):not(
 		.cr-current,
-		[aria-selected='true'],
 		[aria-pressed='true'],
 		[aria-haspopup][aria-expanded='true']
 	):hover {
@@ -41,8 +40,7 @@
  * the base the diff is read against, the option the keys lit — on their
  * mark's tint, its edge at the row's start
  */
-.cr-current,
-.cr-option[aria-selected='true'] {
+.cr-current {
 	background-color: var(--cr-selected);
 	box-shadow: var(--cr-shadow-selected-start);
 }
@@ -175,9 +173,8 @@
 .cr-ui-segment[aria-pressed='true'] {
 	font-weight: 600;
 }
-/* A segment whose view the agent is writing: said in the agent's colour, the dots that breathe for it with it */
+/* A segment whose view the agent is writing: said in the agent's colour */
 .cr-ui-segment-written {
-	--cr-dot-colour: var(--cr-agent);
 	color: var(--cr-agent);
 }
 /* A segment whose view holds what the agent brought and the reader has not read */

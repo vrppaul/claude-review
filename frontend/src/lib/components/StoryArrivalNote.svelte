@@ -30,8 +30,8 @@
 	{#snippet children(putAway: () => void)}
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3.5 text-sm">
 			<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
-			<Button tone="primary" size="xs" data-testid="open-story" onclick={onOpen}>Open it</Button>
-			<IconButton tone="quiet" size="xs" label="Close" data-testid="story-ready-close" onclick={putAway}>
+			<Button tone="primary" size="xs" testId="open-story" onclick={onOpen}>Open it</Button>
+			<IconButton tone="quiet" size="xs" label="Close" testId="story-ready-close" onclick={putAway}>
 				<Icon name="cross" />
 			</IconButton>
 		</div>

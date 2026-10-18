@@ -69,7 +69,7 @@
 		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
 			Picked up {counted(review.restoredCount, COMMENTS)} you had not sent yet.
 			{#snippet actions()}
-				<Button tone="quiet" size="xs" data-testid="dismiss-restored" onclick={() => review.dismissRestored()}>
+				<Button tone="quiet" size="xs" testId="dismiss-restored" onclick={() => review.dismissRestored()}>
 					Dismiss
 				</Button>
 			{/snippet}
@@ -81,7 +81,7 @@
 		<NoticeBar testId="draft-set-aside" kind="cr-notice-set-aside" icon="notice">
 			A kept draft could not be read; it is set aside.
 			{#snippet actions()}
-				<Button tone="quiet" size="xs" data-testid="dismiss-set-aside" onclick={() => review.dismissSetAside()}>
+				<Button tone="quiet" size="xs" testId="dismiss-set-aside" onclick={() => review.dismissSetAside()}>
 					Dismiss
 				</Button>
 			{/snippet}

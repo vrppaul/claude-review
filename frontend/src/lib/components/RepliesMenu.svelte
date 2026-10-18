@@ -32,7 +32,7 @@
 
 <Popover bind:open label="Replies" placement="below-end" data-testid="replies-list" class="w-96">
 	{#snippet trigger(control)}
-		<Button {...control} tone="quiet" size="xs" data-testid="replies-menu">
+		<Button {...control} tone="quiet" size="xs" testId="replies-menu">
 			<Icon name="reply" class="h-3.5 w-3.5" />
 			Replies
 			{#if review.threads.unread.length > 0}
@@ -53,7 +53,7 @@
 		<Button
 			tone="quiet"
 			size="xs"
-			data-testid="mark-all-read"
+			testId="mark-all-read"
 			disabled={review.threads.unread.length === 0}
 			onclick={() => review.threads.reading.markAllRead()}
 		>

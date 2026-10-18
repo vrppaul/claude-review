@@ -24,7 +24,7 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 			render(Button, {
 				tone: 'quiet',
 				size: 'xs',
-				'data-testid': TEST_ID,
+				testId: TEST_ID,
 				children: drawn,
 				class: FROM_OUTSIDE
 			} as never)
@@ -36,7 +36,7 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 				tone: 'quiet',
 				size: 'xs',
 				label: WORDS,
-				'data-testid': TEST_ID,
+				testId: TEST_ID,
 				children: drawn,
 				class: FROM_OUTSIDE
 			} as never)
@@ -47,8 +47,7 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	},
 	{
 		part: 'a segment',
-		render: () =>
-			render(Segment, { pressed: false, 'data-testid': TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+		render: () => render(Segment, { pressed: false, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
 	},
 	{
 		part: 'a segmented control',
@@ -71,7 +70,7 @@ describe('the component library', () => {
 		const { getByTestId } = render(Button, {
 			tone: 'primary',
 			size: 'sm',
-			'data-testid': TEST_ID,
+			testId: TEST_ID,
 			onclick,
 			children: drawn
 		});
@@ -87,7 +86,7 @@ describe('the component library', () => {
 			tone: 'quiet',
 			size: 'xs',
 			label: WORDS,
-			'data-testid': TEST_ID,
+			testId: TEST_ID,
 			children: drawn
 		});
 
@@ -114,7 +113,7 @@ describe('the component library', () => {
 	});
 
 	it('says a segment is pressed to whoever cannot see it', () => {
-		const { getByTestId } = render(Segment, { pressed: true, 'data-testid': TEST_ID, children: drawn });
+		const { getByTestId } = render(Segment, { pressed: true, testId: TEST_ID, children: drawn });
 
 		expect(getByTestId(TEST_ID).getAttribute('aria-pressed')).toBe('true');
 	});

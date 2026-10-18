@@ -634,9 +634,12 @@
 	width: 5px;
 	height: 5px;
 	border-radius: 999px;
-	/* Quiet, unless what it stands in says whose it is (a segment the agent is writing) */
-	background: var(--cr-dot-colour, var(--cr-muted));
+	background: var(--cr-muted);
 	display: inline-block;
+}
+/* Dots that breathe in the agent's colour, beside words said in it: on Story while the agent writes the story */
+.cr-dot-agent {
+	background: var(--cr-agent);
 }
 /*
  * What breathes while the agent works on it: the dots of a turn on its way,

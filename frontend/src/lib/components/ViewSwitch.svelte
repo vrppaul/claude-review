@@ -72,14 +72,14 @@
 		<Segmented label="How to read this review" testId="reading-view">
 			<Segment
 				bind:element={buttons.story}
-				data-testid="read-as-story"
+				testId="read-as-story"
 				pressed={onScreen === 'story'}
 				written={storySays === 'writing'}
 				calling={storyCalling}
 				onclick={() => review.wayIntoStory.readAsStory()}
 			>
 				{#if storySays === 'writing'}
-					<TypingIndicator />
+					<TypingIndicator inTheAgentsColour />
 					Story · writing
 				{:else}
 					<Icon name="story" class="h-3.5 w-3.5" />
@@ -92,7 +92,7 @@
 			</Segment>
 			<Segment
 				bind:element={buttons.files}
-				data-testid="read-as-files"
+				testId="read-as-files"
 				pressed={readingFiles}
 				onclick={() => review.views.choose('files')}
 			>

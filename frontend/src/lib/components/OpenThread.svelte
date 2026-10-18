@@ -87,7 +87,7 @@
 				<Button
 					tone="secondary"
 					size="xs"
-					data-testid="ask-now-thread"
+					testId="ask-now-thread"
 					onclick={() => asking(review.threads.ask(thread.id))}
 				>
 					<Icon name="conversation" class="h-3.25 w-3.25" />

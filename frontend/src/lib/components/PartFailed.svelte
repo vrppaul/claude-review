@@ -25,5 +25,5 @@
 	<span class="min-w-0 flex-1">
 		{what} could not be drawn: {messageOf(error)}. The rest of the review still works.
 	</span>
-	<Button tone="quiet" size="xs" data-testid="redraw-part" onclick={retry}>Try again</Button>
+	<Button tone="quiet" size="xs" testId="redraw-part" onclick={retry}>Try again</Button>
 </div>

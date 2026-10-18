@@ -70,7 +70,7 @@
 
 <!-- The way to put the welcome or the news away, where each card is headed -->
 {#snippet close()}
-	<IconButton tone="quiet" size="xs" label="Close" data-testid="guide-close" onclick={putAway}>
+	<IconButton tone="quiet" size="xs" label="Close" testId="guide-close" onclick={putAway}>
 		<Icon name="cross" />
 	</IconButton>
 {/snippet}
@@ -113,11 +113,11 @@
 		{/if}
 		<div class="flex items-center gap-2">
 			{#if review.guide.canGoBack}
-				<Button tone="secondary" size="sm" data-testid="guide-back" onclick={() => review.guide.back()}>Back</Button>
+				<Button tone="secondary" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
 			{/if}
 			<span class="flex-1"></span>
 			{#if !waiting}
-				<Button tone="primary" size="sm" data-testid="guide-next" onclick={goOn}>
+				<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
 					{review.guide.isLastStep ? 'Done' : 'Next'}
 				</Button>
 			{/if}
@@ -140,12 +140,12 @@
 				bind:element={firstAction}
 				tone="primary"
 				size="sm"
-				data-testid="guide-start"
+				testId="guide-start"
 				onclick={() => review.guide.startTour()}
 			>
 				Show me around
 			</Button>
-			<Button tone="quiet" size="sm" data-testid="guide-not-now" onclick={putAway}>Not now</Button>
+			<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
 		</div>
 		<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
 	</section>
@@ -175,15 +175,15 @@
 		</p>
 		<div class="flex items-center gap-2">
 			{#if offersStory}
-				<Button bind:element={firstAction} tone="primary" size="sm" data-testid="guide-try-story" onclick={tryStory}>
+				<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
 					Try Story
 				</Button>
 			{:else}
-				<Button bind:element={firstAction} tone="primary" size="sm" data-testid="guide-got-it" onclick={putAway}>
+				<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
 					Got it
 				</Button>
 			{/if}
-			<Button tone="quiet" size="sm" data-testid="guide-take-tour" onclick={() => review.guide.startTour()}>
+			<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
 				Take the tour
 			</Button>
 		</div>

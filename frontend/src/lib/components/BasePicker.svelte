@@ -77,7 +77,7 @@
 			{...control}
 			tone={review.diff.narrowed ? 'marked' : 'quiet'}
 			size="xs"
-			data-testid="base-picker"
+			testId="base-picker"
 			data-tour="review-base"
 			title="What the working tree is compared against"
 		>

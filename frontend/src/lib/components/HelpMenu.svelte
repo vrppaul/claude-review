@@ -50,7 +50,7 @@
 			{...control}
 			tone="quiet"
 			size="xs"
-			data-testid="open-help"
+			testId="open-help"
 			data-role={HELP_BUTTON_ROLE}
 			title="The tour, what is new, and the keys (?)"
 		>
@@ -66,7 +66,7 @@
 				tone="quiet"
 				size="xs"
 				label="Close {HEADING}"
-				data-testid="close-help"
+				testId="close-help"
 				onclick={() => review.guide.setHelpOpen(false)}
 			>
 				<Icon name="cross" />

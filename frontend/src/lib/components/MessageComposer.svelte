@@ -146,7 +146,7 @@
 						tone="quiet"
 						size="xs"
 						label="Take this thread out of the message"
-						data-testid="drop-thread"
+						testId="drop-thread"
 						onclick={() => drop(thread)}
 					>
 						<Icon name="cross" />
@@ -173,13 +173,13 @@
 		onpaste={onPaste}
 	></textarea>
 	<div class="mt-2 flex items-center gap-2">
-		<Button tone="quiet" size="xs" data-testid="mention-thread" onclick={mention}>@ thread or file</Button>
+		<Button tone="quiet" size="xs" testId="mention-thread" onclick={mention}>@ thread or file</Button>
 		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
 		<div class="flex-1"></div>
 		{#if whatWentWrong}
 			<span data-testid="panel-error" class="text-xs text-error">{whatWentWrong}</span>
 		{/if}
-		<Button tone="primary" size="xs" data-testid="send-message" disabled={!canSend} onclick={send}>
+		<Button tone="primary" size="xs" testId="send-message" disabled={!canSend} onclick={send}>
 			{review.conversation.sending ? 'Sending' : 'Send'}
 		</Button>
 	</div>

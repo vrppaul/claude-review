@@ -44,14 +44,14 @@
 			<Button
 				tone="quiet"
 				size="xs"
-				data-testid="list-off-screen"
+				testId="list-off-screen"
 				aria-expanded={listing}
 				onclick={() => (listedOver = listing ? null : review.diff.files)}
 			>
 				{wordsFor(offScreen.length, listWords)}
 			</Button>
 		{/if}
-		<Button tone="quiet" size="xs" data-testid="show-everything" onclick={() => review.diff.showWholeReview()}>
+		<Button tone="quiet" size="xs" testId="show-everything" onclick={() => review.diff.showWholeReview()}>
 			Show the whole diff
 		</Button>
 	{/snippet}

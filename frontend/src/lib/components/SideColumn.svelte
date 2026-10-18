@@ -78,7 +78,7 @@
 					tone="quiet"
 					size="xs"
 					label={putAway}
-					data-testid={testIds.putAway}
+					testId={testIds.putAway}
 					onclick={() => column.toggle()}
 				>
 					<Icon name="chevron" class="rotate-90" />

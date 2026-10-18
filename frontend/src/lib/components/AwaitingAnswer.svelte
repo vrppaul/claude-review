@@ -51,7 +51,7 @@
 				? `asked ${timeAgo(askedAt, review.clock.now)} — keep reading, the answer lands here`
 				: AGENT_STOPPED_LISTENING}
 		</span>
-		<Button tone="secondary" size="xs" data-testid="take-back-question" onclick={takeBack}>{TAKE_BACK}</Button>
+		<Button tone="secondary" size="xs" testId="take-back-question" onclick={takeBack}>{TAKE_BACK}</Button>
 	{/snippet}
 	{#if failed}
 		<p data-testid="take-back-error" class="text-xs text-error">{failed}</p>

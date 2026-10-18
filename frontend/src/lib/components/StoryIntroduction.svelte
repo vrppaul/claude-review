@@ -75,7 +75,7 @@
 					tone="quiet"
 					size="xs"
 					label="Close for now"
-					data-testid="story-introduction-close"
+					testId="story-introduction-close"
 					onclick={putAwayForNow}
 				>
 					<Icon name="cross" />
@@ -88,12 +88,8 @@
 			</p>
 			<p class="cr-muted text-xs">It spends the agent's tokens, so it asks before it starts.</p>
 			<div class="flex items-center gap-1.5 pt-0.5">
-				<Button bind:element={tryStory} tone="primary" size="sm" data-testid="try-story" onclick={onTry}>
-					Try Story
-				</Button>
-				<Button tone="quiet" size="sm" data-testid="story-introduction-hide" onclick={hideForGood}>
-					Don't show again
-				</Button>
+				<Button bind:element={tryStory} tone="primary" size="sm" testId="try-story" onclick={onTry}>Try Story</Button>
+				<Button tone="quiet" size="sm" testId="story-introduction-hide" onclick={hideForGood}>Don't show again</Button>
 			</div>
 		</div>
 	</PopoverPanel>
@@ -108,7 +104,7 @@
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2.5 pl-3.5 text-sm">
 			<Icon name="check" class="h-3.5 w-3.5 text-(--cr-done)" />
 			<span>Won't show again, in any review. Story is still in the header.</span>
-			<Button bind:element={undo} tone="secondary" size="xs" data-testid="story-introduction-undo" onclick={showAgain}>
+			<Button bind:element={undo} tone="secondary" size="xs" testId="story-introduction-undo" onclick={showAgain}>
 				Undo
 			</Button>
 		</div>

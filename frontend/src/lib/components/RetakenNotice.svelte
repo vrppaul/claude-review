@@ -53,17 +53,13 @@
 			<span data-testid="retaken-error" class="text-error">{showing.failed}</span>
 		{/if}
 		{#if review.lastRetake.changedSince !== null && review.lastRetake.changedCount > 0}
-			<Button tone="quiet" size="xs" data-testid="show-what-changed" onclick={showWhatChanged}>
-				Show what changed
-			</Button>
+			<Button tone="quiet" size="xs" testId="show-what-changed" onclick={showWhatChanged}>Show what changed</Button>
 		{/if}
 		{#if stranded}
-			<Button tone="quiet" size="xs" data-testid="show-outdated" onclick={() => review.navigator.reveal(stranded)}>
+			<Button tone="quiet" size="xs" testId="show-outdated" onclick={() => review.navigator.reveal(stranded)}>
 				{wordsFor(outdated.length, SHOW_OUTDATED)}
 			</Button>
 		{/if}
-		<Button tone="quiet" size="xs" data-testid="dismiss-retaken" onclick={() => review.lastRetake.dismiss()}>
-			Dismiss
-		</Button>
+		<Button tone="quiet" size="xs" testId="dismiss-retaken" onclick={() => review.lastRetake.dismiss()}>Dismiss</Button>
 	{/snippet}
 </NoticeBar>

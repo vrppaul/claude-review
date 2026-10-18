@@ -6,6 +6,7 @@ import CommentThread from '$lib/components/CommentThread.svelte';
 import HelpMenu from '$lib/components/HelpMenu.svelte';
 import PresenceDot from '$lib/components/PresenceDot.svelte';
 import RepliesMenu from '$lib/components/RepliesMenu.svelte';
+import TypingIndicator from '$lib/components/TypingIndicator.svelte';
 import { lineAnchor } from '$lib/anchors/line';
 import { raisedNote } from '$lib/review/panel-notes';
 import type { Review } from '$lib/review/review.svelte';
@@ -27,6 +28,8 @@ const READERS_WORDS = '--cr-mark-text';
 const DONE = '--cr-add-text';
 // And nothing in particular: the quiet ground of a dot saying nobody is there
 const NOBODY = '--color-base-300';
+// Quiet, as words that say less than those beside them
+const QUIET = '--cr-muted';
 
 /** That a part of an element is drawn in a meaning's colour, in every theme, whatever token stands between. */
 function expectDrawnIn(element: Element | null | undefined, drawn: Drawn, meaning: string): void {
@@ -126,6 +129,14 @@ describe('each thing is drawn in the colour of what it means', () => {
 		const keys = getByTestId('shortcuts-list').querySelectorAll('dt');
 		expect(keys.length).toBeGreaterThan(0);
 		for (const key of keys) expectDrawnIn(key, 'color', READERS_WORDS);
+	});
+
+	it('breathes the dots of a turn on its way quietly, beside the words that say whose it is', () => {
+		const { getByTestId } = render(TypingIndicator);
+
+		const dots = [...getByTestId('breathing-dots').children];
+		expect(dots.length).toBeGreaterThan(0);
+		for (const dot of dots) expectDrawnIn(dot, 'background', QUIET);
 	});
 
 	it('draws an agent listening in the colour of something ready', () => {

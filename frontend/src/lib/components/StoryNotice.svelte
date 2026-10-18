@@ -23,7 +23,7 @@
 	<NoticeBar testId="threads-off-the-story" kind="cr-notice-taken" icon="story">
 		{counted(notDrawn.length, COMMENTS_BEING)} on lines the story does not show.
 		{#snippet actions()}
-			<Button tone="quiet" size="xs" data-testid="show-in-files" onclick={() => review.navigator.reveal(firstNotDrawn)}>
+			<Button tone="quiet" size="xs" testId="show-in-files" onclick={() => review.navigator.reveal(firstNotDrawn)}>
 				Show in Files
 			</Button>
 		{/snippet}

@@ -159,7 +159,7 @@
 			<Segmented label="What the comment asks for" testId="severity-picker">
 				{#each SEVERITIES as choice (choice.value)}
 					<Segment
-						data-testid="severity-{choice.value}"
+						testId="severity-{choice.value}"
 						pressed={field.severity === choice.value}
 						onclick={() => (field.severity = choice.value)}
 					>
@@ -187,24 +187,16 @@
 	{/if}
 	<div class="flex items-center gap-2">
 		{#if suggestFrom && suggestFrom.length > 0}
-			<Button
-				tone="quiet"
-				size="xs"
-				data-testid="suggest-change"
-				disabled={hasSuggestion(field.text)}
-				onclick={suggest}
-			>
+			<Button tone="quiet" size="xs" testId="suggest-change" disabled={hasSuggestion(field.text)} onclick={suggest}>
 				Suggest a change
 			</Button>
 		{/if}
 		<div class="flex-1"></div>
-		<Button tone="quiet" size="xs" data-testid="cancel-comment" onclick={putAway}>Cancel</Button>
+		<Button tone="quiet" size="xs" testId="cancel-comment" onclick={putAway}>Cancel</Button>
 		{#if onAsk}
-			<Button tone="secondary" size="xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
+			<Button tone="secondary" size="xs" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
 		{/if}
-		<Button tone="primary" size="xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
-			Add to review
-		</Button>
+		<Button tone="primary" size="xs" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
 	</div>
 	<p class="cr-faint text-xs">
 		{#if onAsk}
