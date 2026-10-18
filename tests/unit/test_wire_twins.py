@@ -81,9 +81,10 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.OverviewItem, story.OverviewItem, frozenset()),
     (told.Diagram, story.Diagram, frozenset()),
     (told.StoryOverview, story.StoryOverview, frozenset()),
-    # Whether a thread may name its file, which the review's model answers from its path rather than keeps
+    # Whether a thread may name its file, and whether it shows code a round changed after it was told, which the
+    # review's model answers from its path and from where its code stands rather than keeps
     (told.StepNow, story.StepNow, frozenset()),
-    (told.FollowedStep, story.FollowedStep, frozenset({"commentable"})),
+    (told.FollowedStep, story.FollowedStep, frozenset({"commentable", "shows_changed_code"})),
     # How many of its steps show code changed since the story was told, which the review's model answers from its
     # steps rather than keeps
     (told.Chapter[told.FollowedStep], story.FollowedChapter, frozenset({"changed_steps"})),

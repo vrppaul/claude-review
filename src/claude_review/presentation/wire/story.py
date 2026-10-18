@@ -169,6 +169,9 @@ class FollowedStep(WireModel):
     now: StepNow | None
     # Whether a thread may hang on what it says: a path holding a control character is shown, but only to be read
     commentable: WireBool
+    # Whether it shows code a round changed after it was told: a page steps its number and reason back, and
+    # decides nothing
+    shows_changed_code: WireBool
 
 
 class FollowedChapter(WireModel):

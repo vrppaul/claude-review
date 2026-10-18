@@ -19,8 +19,8 @@
 	const told = $derived(step.told);
 	// Its reason, where the reader may ask about it
 	const askable = $derived(askableReason(told));
-	// Whether it shows code a round changed after it was told: one whose code is no longer found shows none
-	const changed = $derived(told.now?.changed_since_told === true);
+	// Whether it shows code a round changed after it was told, as the review says
+	const changed = $derived(told.shows_changed_code);
 	// What its heading is named, with whether a round changed its code after it was told
 	const named = $derived(changed ? changedStepNamed(number) : stepNamed(number));
 </script>

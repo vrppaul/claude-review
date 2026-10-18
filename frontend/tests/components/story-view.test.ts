@@ -17,6 +17,8 @@ import {
 	ASKED,
 	changedStep,
 	codeMovedOn,
+	gainedPiece,
+	stepStandingAt,
 	stepWithoutCode,
 	storyHeld,
 	TAKEN,
@@ -318,8 +320,7 @@ describe('a review read as its story', () => {
 	});
 
 	it("says the lines a step's code stands at now, where a round moved it from those it was told on", () => {
-		const told = toldStep('a.py', 1);
-		const movedDown = { ...told, now: { ...toldStepOfLines('a.py', 3, 4).now, changed_since_told: false } };
+		const movedDown = stepStandingAt('a.py', { first: 1, last: 1 }, { first: 3, last: 4 }, gainedPiece('a.py', 3, 4));
 		review = openReview({ files, story: storyHeld({ chapters: [toldChapter('ch-1', [movedDown])] }) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -329,12 +330,7 @@ describe('a review read as its story', () => {
 
 	it('says of each piece what became of its file, and how many lines the piece adds and removes', () => {
 		const made = diffFile({ path: 'new.py', status: 'added', hunks: [hunk([addedLine(1, 'x'), addedLine(2, 'y')])] });
-		const ofTheFileMade = {
-			file: 'new.py',
-			lines: { first: 1, last: 2 },
-			reason: null,
-			now: { lines: { first: 1, last: 2 }, piece: made, changed_since_told: false }
-		};
+		const ofTheFileMade = stepStandingAt('new.py', { first: 1, last: 2 }, { first: 1, last: 2 }, made);
 		const chapters = [toldChapter('ch-1', [toldStep('a.py', 1), ofTheFileMade])];
 		review = openReview({ files, story: storyHeld({ chapters }) });
 		review.views.choose('story');
@@ -751,12 +747,7 @@ describe('a piece of a file that was moved', () => {
 		});
 		const told = storyHeld({
 			chapters: [
-				toldChapter('ch-1', [
-					{
-						...toldStep('new_name.py', 1),
-						now: { lines: { first: 1, last: 1 }, piece: moved, changed_since_told: false }
-					}
-				])
+				toldChapter('ch-1', [stepStandingAt('new_name.py', { first: 1, last: 1 }, { first: 1, last: 1 }, moved)])
 			]
 		});
 		review = openReview({ files, story: told });
@@ -786,13 +777,7 @@ describe('what a piece of a story leaves out between its hunks', () => {
 	});
 	const told = storyHeld({
 		chapters: [
-			toldChapter('ch-1', [
-				{
-					...toldStep('a.py', 1),
-					lines: { first: 1, last: 9 },
-					now: { lines: { first: 1, last: 9 }, piece: overTwoChanges, changed_since_told: false }
-				}
-			])
+			toldChapter('ch-1', [stepStandingAt('a.py', { first: 1, last: 9 }, { first: 1, last: 9 }, overTwoChanges)])
 		],
 		left_out: [{ piece: twoRunsNoStepTells, changed_lines: 2 }]
 	});
@@ -940,6 +925,22 @@ describe('a story whose code a round changed after it was told', () => {
 		const [withoutCode] = screen.getAllByTestId('story-step-without-code');
 
 		expect(within(withoutCode).getByTestId('step-reason-block')).toBeTruthy();
+	});
+
+	it('steps back a step the review says shows code changed since it was told, whatever its code says of itself', () => {
+		// The page decides nothing: it draws the step's own word, here the only one that says so
+		const saidChanged: FollowedStep = { ...toldStep('a.py', 1), shows_changed_code: true };
+		review = openReview({ files, story: followedWith([saidChanged, toldStep('b.py', 5)], 1) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [beginnings] = screen.getAllByTestId('story-chapter');
+
+		expect(
+			within(beginnings)
+				.getAllByTestId('step-number')
+				.map((number) => number.getAttribute('aria-label'))
+		).toEqual(['Step 1.1, changed after it was told', 'Step 1.2']);
 	});
 
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {

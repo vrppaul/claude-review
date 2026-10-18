@@ -18,6 +18,8 @@ const SECOND_ROUND = FIRST_ROUND + 1;
 
 /** That a round moved the code on under a story, as the review says it. */
 type CodeMovedOn = NonNullable<StoryHeld['moved_on']>;
+/** The lines of a file a step was told on, or stands at now: the first and the last, both among them. */
+type StepLines = FollowedStep['lines'];
 
 /** The piece of a file that shows the lines it gained from one to another, both among them. */
 export function gainedPiece(file: string, first: number, last: number): DiffFile {
@@ -40,7 +42,7 @@ export function gainedPiece(file: string, first: number, last: number): DiffFile
 export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): FollowedStep {
 	const lines = { first, last };
 	const now = { lines, piece: gainedPiece(file, first, last), changed_since_told: false };
-	return { file, lines, reason, now, commentable: true };
+	return { file, lines, reason, now, commentable: true, shows_changed_code: false };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
@@ -48,10 +50,21 @@ export function toldStep(file: string, line: number, reason: string | null = nul
 	return toldStepOfLines(file, line, line, reason);
 }
 
+/**
+ * A step told of some lines of a file, with no reason, whose code stands at
+ * these lines now, in this piece, as it was told: a round's work moved it,
+ * or the piece is one a test made.
+ */
+export function stepStandingAt(file: string, told: StepLines, now: StepLines, piece: DiffFile): FollowedStep {
+	const standing = { lines: now, piece, changed_since_told: false };
+	return { file, lines: told, reason: null, now: standing, commentable: true, shows_changed_code: false };
+}
+
 /** A step that shows one line a file gained, which a round's work changed after it was told. */
 export function changedStep(file: string, line: number, reason: string | null = null): FollowedStep {
-	const now = { lines: { first: line, last: line }, piece: gainedPiece(file, line, line), changed_since_told: true };
-	return { ...toldStep(file, line, reason), now };
+	const lines = { first: line, last: line };
+	const now = { lines, piece: gainedPiece(file, line, line), changed_since_told: true };
+	return { file, lines, reason, now, commentable: true, shows_changed_code: true };
 }
 
 /**
@@ -59,7 +72,8 @@ export function changedStep(file: string, line: number, reason: string | null = 
  * change, as the review says it: standing nowhere.
  */
 export function stepWithoutCode(file: string, line: number, reason: string | null = null): FollowedStep {
-	return { ...toldStep(file, line, reason), now: null };
+	const lines = { first: line, last: line };
+	return { file, lines, reason, now: null, commentable: true, shows_changed_code: false };
 }
 
 /** A chapter of these steps, known by its id, none of whose steps a round changed unless a test says how many. */

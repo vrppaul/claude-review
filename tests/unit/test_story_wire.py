@@ -222,15 +222,15 @@ def test_a_told_story_reaches_a_page_with_every_piece_and_every_line_it_was_told
 
     on_the_wire = ToldStory.of(told)
 
-    # A step and a piece on the wire say whether a thread may name their file, and a chapter how many of its steps
-    # changed since it was told, which the review's own answer from the path and from the steps
+    # A step and a piece on the wire say whether a thread may name their file, a step whether it shows changed
+    # code, and a chapter how many of its steps do, which the review's own answer from what they hold
     whether_commentable = {"piece": {"commentable"}}
     as_the_review_holds_it = on_the_wire.model_dump(
         exclude={
             "chapters": {
                 "__all__": {
                     "changed_steps": True,
-                    "steps": {"__all__": {"commentable": True, "now": whether_commentable}},
+                    "steps": {"__all__": {"commentable": True, "shows_changed_code": True, "now": whether_commentable}},
                 }
             },
             "left_out": {"__all__": whether_commentable},
