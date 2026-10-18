@@ -169,9 +169,9 @@
   `moved_on` says the round a take first found the code moved on in, which
   later takes keep while it stays so, and, where the round changed them,
   how many changed lines no step told when it was told and how many none
-  tells now (`left_out`, else `null`). Each chapter says `changed`: that
-  round, and how many of its steps show code changed since they were told,
-  or `null` where none does, so the page counts nothing. The page reads the
+  tells now (`left_out`, else `null`). Each chapter says how many of its
+  steps show code changed since they were told (`changed_steps`), so the
+  page counts nothing; the round is the story's alone. The page reads the
   story again with the diff, and holds neither until both are read,
   keeping what was read of it: its lines are the code under review, and
   take comments. A
@@ -182,7 +182,7 @@
   shows it as it now stands under a number and reason that step back, and
   is named "Step 2.2, changed after it was told"; its chapter says first,
   in the frame of its doubt, "Changed after it was told. 3 steps in this
-  chapter changed in round 2. The code below is current; the reasons
+  chapter changed. The code below is current; the reasons
   beside it may not be."; and its node in the contents rings its number
   in the warning's colour, in place of the check of a chapter read
   through, which it still is. The round the story was told in is a tag

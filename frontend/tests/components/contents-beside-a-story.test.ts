@@ -9,7 +9,7 @@ import { broughtIntoView, said } from '../elements';
 import { newComment, storyComment } from '../new-comment';
 import { openReview } from '../review';
 import { scriptTheScroll, scrollTo } from '../scripted-scroll';
-import { chapterChanged, codeMovedOn, gainedPiece, stepWithoutCode, storyHeld, toldChapter, toldStep } from '../story';
+import { codeMovedOn, gainedPiece, stepWithoutCode, storyHeld, toldChapter, toldStep } from '../story';
 
 // The change under review: a.py gained lines 1, 5 and 9, b.py a line, and so did a lock file
 const files = [
@@ -266,16 +266,17 @@ describe('the contents beside a story, as the reader scrolls', () => {
 });
 
 describe('the contents of a story whose code a round changed after it was told, scrolled through', () => {
-	// The review says the second round changed code one of the first chapter's steps shows, and nothing the second
-	// chapter shows. The contents mark a chapter by what the review says of it, whatever its steps' marks
+	// The review says a round changed code one of the first chapter's steps shows, and nothing the other two
+	// chapters show. The contents mark a chapter by what the review says of it, whatever its steps' marks
 	const FOLLOWED = storyHeld(
 		{
 			chapters: [
 				toldChapter('ch-1', [toldStep('src/a.py', 1), toldStep('src/b.py', 5)], {
 					title: 'The beginnings',
-					changed: chapterChanged()
+					changed_steps: 1
 				}),
-				toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
+				toldChapter('ch-2', [toldStep('src/a.py', 5)], { title: 'The middle' }),
+				toldChapter('ch-3', [toldStep('src/a.py', 9)], { title: 'The end' })
 			]
 		},
 		{ moved_on: codeMovedOn() }
@@ -286,8 +287,8 @@ describe('the contents of a story whose code a round changed after it was told, 
 		review = openReview({ files, story: FOLLOWED });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
-		// The reader is in the last chapter: the overview and the first are above it
-		const [, theEnd] = screen.getAllByTestId('story-chapter');
+		// The reader is in the last chapter: the overview and the first two are above it
+		const [, , theEnd] = screen.getAllByTestId('story-chapter');
 		scrollTo(theEnd);
 		flushSync();
 	});
@@ -296,7 +297,8 @@ describe('the contents of a story whose code a round changed after it was told, 
 		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
 			'Overview',
 			'1 The beginnings',
-			'2 The end'
+			'The middle',
+			'3 The end'
 		]);
 	});
 

@@ -34,7 +34,6 @@ from claude_review.presentation.wire.content import DiffResponse, ReviewResponse
 from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
 from claude_review.presentation.wire.refusal import Refusal
 from claude_review.presentation.wire.story import (
-    ChapterChanged,
     CodeMovedOn,
     LeftOutOfFile,
     LineSpan,
@@ -83,6 +82,8 @@ THE_CHANGE = {EDITED_FILE: "initial content\nand a line since\n", ADDED_FILE: "d
 REWORDED_SINCE = "initial content\nand a line reworded since\n"
 # The added file as a round's work leaves it: two lines put above it, and its last line rewritten
 REWRITTEN_UNDER_TWO_LINES = "import os\nimport sys\ndef added() -> None:\n    return 1\n"
+# A file a round's work adds, which no step of a story told before it tells: more is left out
+FILE_ADDED_SINCE = {"src/since.py": "def since() -> None:\n    return None\n"}
 # A file added whole and long, and a story with a step to every other line of it: long in the telling, so it is
 # surely still being told when a test that started it looks at the review again, or sends another story after it
 LONG_FILE = "src/long.py"
@@ -302,24 +303,41 @@ async def test_a_story_followed_says_which_round_told_it_and_in_which_the_code_m
     assert (await tell(agent, WHOLE_STORY)).round == FIRST_ROUND + 1
 
 
-async def test_each_chapter_of_a_story_followed_says_how_many_of_its_steps_the_round_changed_and_in_which(
+async def test_each_chapter_of_a_story_followed_says_how_many_of_its_steps_show_code_the_round_changed(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
-    """A page draws it under the chapter's head and beside it in the contents, and counts nothing: a chapter whose
-    code the round left alone says nothing."""
+    """A page draws it under the chapter's head and beside it in the contents, and counts nothing."""
     await tell(agent, A_CHAPTER_TO_EACH)
 
     await take_again_after_a_round(agent, tmp_git_repo)
 
     chapters = (await held_by(agent)).held.story.chapters
-    assert [chapter.changed for chapter in chapters] == [ChapterChanged(round=FIRST_ROUND + 1, steps=1), None]
+    assert [chapter.changed_steps for chapter in chapters] == [1, 0]
 
 
-async def test_a_story_as_it_was_told_says_of_no_chapter_that_a_round_changed_it(agent: AsyncClient) -> None:
+async def test_a_chapter_a_later_round_changed_counts_its_step_and_the_story_keeps_the_round_it_went_stale_in(
+    agent: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """The story went stale in the round that added a file no step tells; the chapter's step changed a round later.
+
+    The review keeps no round a chapter's steps changed in: a chapter that
+    said the story's round as its own would say the wrong one.
+    """
+    await tell(agent, A_CHAPTER_TO_EACH)
+
+    await take_again_after(agent, tmp_git_repo, FILE_ADDED_SINCE)
+    await take_again_after(agent, tmp_git_repo, {ADDED_FILE: REWRITTEN_UNDER_TWO_LINES})
+
+    held = (await held_by(agent)).held
+    assert held.moved_on.round == FIRST_ROUND + 1
+    assert [chapter.changed_steps for chapter in held.story.chapters] == [0, 1]
+
+
+async def test_a_story_as_it_was_told_says_of_no_chapter_that_a_round_changed_its_steps(agent: AsyncClient) -> None:
     await tell(agent, A_CHAPTER_TO_EACH)
 
     chapters = (await held_by(agent)).held.story.chapters
-    assert [chapter.changed for chapter in chapters] == [None, None]
+    assert [chapter.changed_steps for chapter in chapters] == [0, 0]
 
 
 async def test_a_story_is_of_the_take_of_the_change_the_review_holds_as_it_is_told(agent: AsyncClient) -> None:

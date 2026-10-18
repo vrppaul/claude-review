@@ -690,6 +690,24 @@ def test_whatever_a_round_did_a_step_is_known_by_the_lines_it_was_told_on(steps:
     assert [told_step.lines for told_step in steps_of(story)] == [told.lines for told in steps]
 
 
+def test_each_chapter_followed_says_how_many_of_its_steps_show_code_a_round_changed() -> None:
+    """The fifth line taken out changes the code of the first chapter's step, and leaves the second's as told."""
+    story = story_of_chapters(
+        chapter_of(EARLIER_CHAPTER, step(TWENTY, 1, 10)), chapter_of(LATER_CHAPTER, step(TWENTY, 11, 20))
+    )
+
+    fifth_taken_out = followed_whole(story, TWENTY, TWENTY_LINES, FIFTH_TAKEN_OUT)
+
+    assert [chapter.changed_steps for chapter in fifth_taken_out.chapters] == [1, 0]
+
+
+def test_a_step_that_stands_nowhere_is_not_counted_among_the_steps_of_its_chapter_a_round_changed() -> None:
+    """It shows no code, and so none that changed since it was told."""
+    story = followed_whole(story_of(step(TWENTY, 1, 10), step(TWENTY, 11, 20)), TWENTY, TWENTY_LINES, ELEVENTH_ON)
+
+    assert [chapter.changed_steps for chapter in story.chapters] == [0]
+
+
 def test_a_files_first_step_taken_out_whole_leaves_the_next_step_its_code_on_the_lines_it_moved_up_to() -> None:
     """The step that stands nowhere claims no line: the lines it was told on are the next step's code now."""
     story = followed_whole(story_of(step(TWENTY, 1, 10), step(TWENTY, 11, 20)), TWENTY, TWENTY_LINES, ELEVENTH_ON)

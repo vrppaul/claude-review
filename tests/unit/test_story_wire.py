@@ -10,7 +10,7 @@ import pytest
 from pydantic import JsonValue, ValidationError
 
 from claude_review.domain.exceptions import FieldPath
-from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH, DiffFile
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
 from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
 from claude_review.presentation.wire.story import (
@@ -19,27 +19,14 @@ from claude_review.presentation.wire.story import (
     MAX_HOUSEKEEPING_FILES,
     MAX_OVERVIEW_ITEMS,
     MAX_STEPS_IN_CHAPTER,
-    StoryHeld,
     StoryRequest,
     ToldStory,
 )
 from claude_review.services.story_telling import as_told, tell
-from tests.stories import (
-    TOLD_OF,
-    as_the_agent_writes,
-    canvas_story,
-    changed_file,
-    hunk,
-    step,
-    story_of,
-    told_then_followed,
-    without_field,
-)
+from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of, without_field
 
 SERVICE = "src/service.py"
 CHANGE = [changed_file(SERVICE, hunk(10, 10, "  -++ -- "))]
-# A take of the change the file a story told left: none of its steps shows code there
-FILE_LEFT_THE_CHANGE: list[DiffFile] = []
 FIRST_STEP: FieldPath = ("chapters", 0, "steps", 0)
 # Every part of a document the agent may write a field into
 PARTS: list[FieldPath] = [
@@ -233,28 +220,20 @@ def test_a_document_written_out_again_is_the_document_that_was_read(lines: str) 
 def test_a_told_story_reaches_a_page_with_every_piece_and_every_line_it_was_told_with() -> None:
     told = as_told(tell(story_of(step(SERVICE, 12, 13)), CHANGE))
 
-    on_the_wire = ToldStory.on_take(told, moved_on=None)
+    on_the_wire = ToldStory.of(told)
 
-    # A step and a piece on the wire say whether a thread may name their file, which the review's own answer from
-    # the path; a chapter, whether a round changed its code, which the story held says
+    # A step and a piece on the wire say whether a thread may name their file, and a chapter how many of its steps
+    # changed since it was told, which the review's own answer from the path and from the steps
     whether_commentable = {"piece": {"commentable"}}
     as_the_review_holds_it = on_the_wire.model_dump(
         exclude={
             "chapters": {
-                "__all__": {"changed": True, "steps": {"__all__": {"commentable": True, "now": whether_commentable}}}
+                "__all__": {
+                    "changed_steps": True,
+                    "steps": {"__all__": {"commentable": True, "now": whether_commentable}},
+                }
             },
             "left_out": {"__all__": whether_commentable},
         }
     )
     assert as_the_review_holds_it == told.model_dump()
-
-
-async def test_a_chapter_whose_steps_show_no_code_any_more_says_no_round_changed_it() -> None:
-    """The story moved on, its one step standing nowhere: a step that shows no code shows none to be current."""
-    held = (await told_then_followed(TOLD_OF, FILE_LEFT_THE_CHANGE)).held
-    assert held is not None
-
-    on_the_wire = StoryHeld.as_held(held)
-
-    assert on_the_wire.moved_on is not None
-    assert on_the_wire.story.chapters[0].changed is None

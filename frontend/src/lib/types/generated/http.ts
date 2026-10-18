@@ -833,22 +833,6 @@ export interface components {
             text: components["schemas"]["ChapterText"];
         };
         /**
-         * ChapterChanged
-         * @description That a round changed code a chapter's steps show after the story was told: in which round, and how many steps.
-         *
-         *     Made here on the wire, as the story held is written out for a page
-         *     (`StoryHeld.as_held`): its round is the one the story held says the code
-         *     moved on in, which the review's own chapter does not keep, and its count
-         *     is of the chapter's own steps. A page draws it under the chapter's head
-         *     and in the story's contents, and counts nothing.
-         */
-        ChapterChanged: {
-            /** Round */
-            round: number;
-            /** Steps */
-            steps: number;
-        };
-        /**
          * ChapterInput
          * @description Changes that belong together, told one step after another.
          */
@@ -1073,7 +1057,8 @@ export interface components {
             doubt: string | null;
             /** Steps */
             steps: components["schemas"]["FollowedStep"][];
-            changed: components["schemas"]["ChapterChanged"] | null;
+            /** Changed Steps */
+            changed_steps: number;
         };
         /**
          * FollowedStep

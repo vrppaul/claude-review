@@ -18,8 +18,6 @@ const SECOND_ROUND = FIRST_ROUND + 1;
 
 /** That a round moved the code on under a story, as the review says it. */
 type CodeMovedOn = NonNullable<StoryHeld['moved_on']>;
-/** That a round changed code a chapter's steps show after the story was told, as the review says it. */
-type ChapterChanged = NonNullable<FollowedChapter['changed']>;
 
 /** The piece of a file that shows the lines it gained from one to another, both among them. */
 export function gainedPiece(file: string, first: number, last: number): DiffFile {
@@ -64,7 +62,7 @@ export function stepWithoutCode(file: string, line: number, reason: string | nul
 	return { ...toldStep(file, line, reason), now: null };
 }
 
-/** A chapter of these steps, known by its id, whose code no round changed unless a test says one did. */
+/** A chapter of these steps, known by its id, none of whose steps a round changed unless a test says how many. */
 export function toldChapter(id: string, steps: FollowedStep[], given: Partial<FollowedChapter> = {}): FollowedChapter {
 	return {
 		id,
@@ -72,14 +70,9 @@ export function toldChapter(id: string, steps: FollowedStep[], given: Partial<Fo
 		why: `Why the changes of ${id} belong together.`,
 		doubt: null,
 		steps,
-		changed: null,
+		changed_steps: 0,
 		...given
 	};
-}
-
-/** That the second round changed code one of a chapter's steps shows, unless a test says otherwise. */
-export function chapterChanged(given: Partial<ChapterChanged> = {}): ChapterChanged {
-	return { round: SECOND_ROUND, steps: 1, ...given };
 }
 
 /** A story of one chapter and one step, told from memory, leaving nothing out. */

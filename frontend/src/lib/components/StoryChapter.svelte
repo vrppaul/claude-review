@@ -10,7 +10,7 @@
 		CODE_BELOW_IS_CURRENT,
 		filesAndSteps,
 		stepNumber,
-		stepsChangedIn
+		stepsChanged
 	} from './story-words';
 	import StoryPart from './StoryPart.svelte';
 	import StoryStep from './StoryStep.svelte';
@@ -44,13 +44,13 @@
 			>
 		</header>
 	{/snippet}
-	{#if told.changed !== null}
+	{#if told.changed_steps > 0}
 		<!-- A round changed code the chapter tells after it was told, as the review says: said first, in a
 			warning's frame, since what the agent says below was said of the code before; and that the agent
 			is updating it, only while it is -->
 		<p data-testid="chapter-changed" class="cr-warning-frame px-3 py-2">
 			<b class="font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</b>
-			{stepsChangedIn(told.changed.steps, told.changed.round)}
+			{stepsChanged(told.changed_steps)}
 			{CODE_BELOW_IS_CURRENT}
 			{#if review.story.wait?.kind === 'writing'}
 				{AGENT_UPDATING_REASONS}

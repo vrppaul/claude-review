@@ -39,8 +39,8 @@ const CHANGED_AFTER_TOLD = 'changed after it was told';
 const OUT_OF = 'of';
 // What the tag beside a story's title says once a later round moved the code on, before that round
 const CODE_MOVED_ON_IN_ROUND = 'the code moved on in round';
-// What a chapter's warning says of the steps a round changed, between how many and which round
-const IN_THIS_CHAPTER_CHANGED_IN_ROUND = `in this ${A_CHAPTER} changed in round`;
+// What a chapter's warning says of the steps a round changed, after how many
+const IN_THIS_CHAPTER_CHANGED = `in this ${A_CHAPTER} changed`;
 // What is said of the changed lines no step told, between how many there were and how many there are now, and after both
 const NO_STEP_TOLD_WHEN_TOLD = 'no step told when the story was told';
 const NOW = 'now';
@@ -111,9 +111,9 @@ export function leftOutThenAndNowSaid(then: number, now: number): string {
 	return `${NOT_IN_THE_STORY}, ${counted(then, CHANGED_LINES)} ${NO_STEP_TOLD_WHEN_TOLD}, ${now} ${NOW}`;
 }
 
-/** How many of a chapter's steps a round changed, and which round: "3 steps in this chapter changed in round 2." */
-export function stepsChangedIn(steps: number, round: number): string {
-	return `${counted(steps, STEPS)} ${IN_THIS_CHAPTER_CHANGED_IN_ROUND} ${round}.`;
+/** How many of a chapter's steps a round changed after the story was told: "3 steps in this chapter changed." */
+export function stepsChanged(steps: number): string {
+	return `${counted(steps, STEPS)} ${IN_THIS_CHAPTER_CHANGED}.`;
 }
 
 /** What the overview's part of the page is called, to whoever goes through the page by its parts. */

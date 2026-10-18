@@ -71,7 +71,8 @@ class Chapter[StepKind: Step](StoryPart):
     """Changes that belong together, told one step after another.
 
     Its steps are as the agent wrote them, or as they are told, each with
-    what it shows: a chapter is the same either way.
+    what it shows: a chapter is the same either way. Followed onto a take of
+    the change, it says too how many of its steps changed since it was told.
     """
 
     # What the overview and the diagram lead to it by
@@ -90,6 +91,16 @@ class Chapter[StepKind: Step](StoryPart):
     def followed(self, steps: list[FollowedStep]) -> Chapter[FollowedStep]:
         """The chapter on a take of the change: everything it says, with its steps as they stand there."""
         return Chapter[FollowedStep](id=self.id, title=self.title, why=self.why, doubt=self.doubt, steps=steps)
+
+    @property
+    def changed_steps(self: Chapter[FollowedStep]) -> int:
+        """How many of its steps show code a round changed after they were told: one that stands nowhere shows none.
+
+        Asked only of a chapter followed onto a take of the change, as its
+        `self` says: a step as written shows no code, and one as told the code
+        it was told with.
+        """
+        return len([step for step in self.steps if step.now is not None and step.now.changed_since_told])
 
 
 class OverviewItem(StoryPart):

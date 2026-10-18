@@ -4,7 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { FollowedChapter, FollowedStep, StoryHeld } from '$lib/types';
+import type { FollowedStep, StoryHeld } from '$lib/types';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
 import { said } from '../elements';
 import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
@@ -15,7 +15,6 @@ import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
 import {
 	ASKED,
-	chapterChanged,
 	changedStep,
 	codeMovedOn,
 	stepWithoutCode,
@@ -834,23 +833,24 @@ describe('the files, read where a story could be', () => {
 });
 
 describe('a story whose code a round changed after it was told', () => {
-	// The round the code moved on in, and a story whose first chapter has these steps, marked as a round changed them,
-	// and says of itself what the review says the round changed of it
-	const MOVED_ON_IN = 2;
-	function followedWith(first: FollowedStep[], changed: FollowedChapter['changed']): StoryHeld {
+	// A story the code moved on under, whose first chapter has these steps, marked as a round changed them, and says
+	// of itself how many of them the review says a round changed
+	function followedWith(first: FollowedStep[], changedSteps: number): StoryHeld {
 		return storyHeld(
 			{
 				...TOLD.story,
-				chapters: [toldChapter('ch-1', first, { title: 'The beginnings', changed }), ...TOLD.story.chapters.slice(1)]
+				chapters: [
+					toldChapter('ch-1', first, { title: 'The beginnings', changed_steps: changedSteps }),
+					...TOLD.story.chapters.slice(1)
+				]
 			},
-			{ moved_on: codeMovedOn({ round: MOVED_ON_IN }) }
+			{ moved_on: codeMovedOn() }
 		);
 	}
 
-	it('says first under the head of a chapter the review says it changed, how many steps, and in which round', () => {
+	it('says first under the head of a chapter the review says it changed, and how many steps', () => {
 		// The page counts no step: the warning says the review's count, whatever the steps' marks
-		const changed = chapterChanged({ round: MOVED_ON_IN, steps: 2 });
-		review = openReview({ files, story: followedWith([toldStep('a.py', 1), toldStep('b.py', 5)], changed) });
+		review = openReview({ files, story: followedWith([toldStep('a.py', 1), toldStep('b.py', 5)], 2) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -865,23 +865,23 @@ describe('a story whose code a round changed after it was told', () => {
 			'chapter-why-block'
 		]);
 		expect(said(within(beginnings).getByTestId('chapter-changed'))).toBe(
-			'Changed after it was told. 2 steps in this chapter changed in round 2. The code below is current; the reasons beside it may not be.'
+			'Changed after it was told. 2 steps in this chapter changed. The code below is current; the reasons beside it may not be.'
 		);
 	});
 
 	it('says last that the agent is updating the reasons, while it tells the story again', () => {
-		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], chapterChanged());
+		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1);
 		review = openReview({ files, story, asking: TAKEN });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
 		expect(said(screen.getByTestId('chapter-changed'))).toBe(
-			'Changed after it was told. 1 step in this chapter changed in round 2. The code below is current; the reasons beside it may not be. The agent is updating them.'
+			'Changed after it was told. 1 step in this chapter changed. The code below is current; the reasons beside it may not be. The agent is updating them.'
 		);
 	});
 
 	it('says nothing of the agent updating them where the story asked for again waits for an agent to attach', () => {
-		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], chapterChanged());
+		const story = followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1);
 		review = openReview({ files, story, asking: ASKED });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -890,21 +890,15 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('says one step as one', () => {
-		review = openReview({
-			files,
-			story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], chapterChanged())
-		});
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(said(screen.getByTestId('chapter-changed'))).toContain('1 step in this chapter changed in round 2.');
+		expect(said(screen.getByTestId('chapter-changed'))).toContain('1 step in this chapter changed.');
 	});
 
 	it('says nothing of it in a chapter the review says it changed nothing of', () => {
-		review = openReview({
-			files,
-			story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], chapterChanged())
-		});
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -914,7 +908,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('draws a step whose code is out of the change by its number and its reason, and says in a line it is gone', () => {
-		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)], null);
+		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)], 0);
 		review = openReview({ files, story });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -928,7 +922,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('counts in the head of a chapter whose steps show no code only its steps, and no files', () => {
-		review = openReview({ files, story: followedWith([stepWithoutCode('a.py', 1)], null) });
+		review = openReview({ files, story: followedWith([stepWithoutCode('a.py', 1)], 0) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
@@ -938,7 +932,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('lets the reader ask about the reason of a step whose code is out of the change', () => {
-		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)], null);
+		const story = followedWith([stepWithoutCode('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5)], 0);
 		review = openReview({ files, story });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
@@ -949,10 +943,7 @@ describe('a story whose code a round changed after it was told', () => {
 	});
 
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {
-		review = openReview({
-			files,
-			story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], chapterChanged())
-		});
+		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1) });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
