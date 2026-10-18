@@ -82,9 +82,10 @@ tests. Remove items when done — don't check them off.
       Read in the code, not looked at in a browser.
 - [ ] `fix(ui)`: a file the page was taking the reader to stays the one
       being read after a thread in another file took them instead — a
-      file shown, then `n` before the glide ends — until the reader
-      scrolls on: the band is handed back once they are at rest, and
-      nothing crosses it until they move (`dom/reading-band.svelte.ts`).
+      file shown, then `n` within the frames before it comes to rest —
+      until the reader scrolls on: the band is handed back once they are
+      at rest, and nothing crosses it until they move
+      (`dom/reading-band.svelte.ts`).
       Read in the code, not looked at in a browser.
 
 - [ ] `fix(ui)`: what the browser noted of a section before it was taken
@@ -397,24 +398,23 @@ of it is built yet.
 ## Known limits
 
 - A part of a story is read through once scrolling carries its end into
-  view or out above the top, and no time is counted: a jump that glides
-  across a whole chapter (`n`, `p`, a file the agent shows) ticks it.
+  view or out above the top, and no time is counted: a jump across a whole
+  chapter (`n`, `p`, a file the agent shows, a part picked in the
+  contents) ticks it.
 - What the reader has read of a story is forgotten when the page hears the
   story was told again. A story told again in a gap the review could not
   hand over is read as the page catches up, and its ticks stay: they stand
   for the parts of the new story known by the same names.
 
-- A file the agent shows far down the review is glided to, and then put in
-  place at once: the glide ends where the file stood before the files on
-  the way were built, and what is left to go is not glided. A section holds
-  the room its rows, hunk headers and bars take, so what is left is what it
-  does not count: a thread's card, about 155 pixels each, a comment being
-  written, and lines and headers that wrap. On the look's long change,
-  without threads, the 38 files not yet built held 25 pixels more than they
-  took, and the story's 58 pieces 17; with four threads among those files
-  they held 595 pixels less, and at 420 pixels wide, where its lines wrap,
-  the story held 7029 less. A glide that far also builds every file it
-  passes.
+- A file or thread the page takes the reader to is scrolled to at once,
+  and once more three frames later, when the files beside it stand at their
+  real size: counted, since nothing says when all of them are built, and
+  seen in Chromium only. A section holds the room its rows, hunk headers
+  and bars take, not a thread's card (about 155 pixels), a comment being
+  written, or lines and headers that wrap; Chromium's scroll anchoring makes
+  up for what grows above only where the file lands at or above the pixel,
+  so the second scroll does. If that scroll moves the area up, a file above
+  can come into view and grow after it, and nothing follows it.
 - A single generated file of ~12,000 lines takes about 2.6s to become
   readable, because a file is built as one unit. Splitting a hunk into
   separately contained blocks was measured and made it worse. Worth
