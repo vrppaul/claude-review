@@ -19,6 +19,7 @@ thread's screenshots files the agent may open, and a `RoundFormatter`,
 chosen once for the kind of review, writes a round as it is sent.
 """
 
+import asyncio
 from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
@@ -121,7 +122,9 @@ class Review:
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
         self._handover = ThreadHandover(kept.images)
-        self._source: ContentSource = content_source(opening, repository=repository, clock=clock, rounds=self._rounds)
+        self._source: ContentSource = content_source(opening, repository=repository, clock=clock)
+        # Held while the source takes the diff again: a retake's turn (`retake`)
+        self._retaking = asyncio.Lock()
         self._story = ReviewStory(clock, takes=self._source, tellable=self._source.is_a_change)
         self._inbox = AgentInbox(self._lifetime, standing=self._story)
         # The reader's choices, kept for every review on the machine: read
@@ -241,7 +244,7 @@ class Review:
 
     async def open(self) -> None:
         """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted."""
-        await self._source.open()
+        await self._source.open(self._rounds.current)
         self._tell_asking(self._story.want(stories_on=await self._stories_on()))
 
     def work_under_way(self) -> AgentWork | None:
@@ -502,13 +505,16 @@ class Review:
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, follow the story told onto it, and tell the pages.
 
-        Followed before the pages are told, so a page that reads the diff
-        and then the story reads both of one take.
+        One retake at a time, each in the round current as its turn comes:
+        a round sent while git works on it is not its round. Followed before
+        the pages are told, so a page that reads the diff and then the story
+        reads both of one take.
 
         Raises:
             NoRepositoryError: if the review's content did not come from a repository.
         """
-        retaken = await self._source.retake()
+        async with self._retaking:
+            retaken = await self._source.retake(self._rounds.current)
         content, stories_on = self._source.content, await self._stories_on()
         self._tell_asking(await self._story.follow(content, round_number=retaken.round, stories_on=stories_on))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))

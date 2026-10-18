@@ -9,7 +9,8 @@ whether its content is a change (`is_a_change`): what a story can be told of.
 Either source holds the take on screen, a `ReviewContent`. A repository's
 holds beside it what that take can be compared against, its
 `ReviewVersions`, with what watches the tree for moving and what reads the
-lines a hunk left out; a fixed source holds its one take alone.
+lines a hunk left out; a fixed source holds its one take alone. Neither
+counts rounds: the review that does hands in the round each take is in.
 """
 
 import asyncio
@@ -28,7 +29,6 @@ from claude_review.services.file_window_service import FileWindow, FileWindowSer
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
-from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.tree_watcher_service import TreeWatcherService
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from claude_review.services.unified_diff import parse_unified_diff
@@ -72,8 +72,8 @@ class ContentSource(TakesCompared):
         """Whether the content is a change somebody made to a repository: what a story can be told of."""
 
     @abstractmethod
-    async def open(self) -> None:
-        """Note what the review opens on: whatever later takes are measured against."""
+    async def open(self, round_number: int) -> None:
+        """Note what the review opens on, in the round it opens in: whatever later takes are measured against."""
 
     @abstractmethod
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
@@ -84,8 +84,12 @@ class ContentSource(TakesCompared):
         """The bases the diff can be read against."""
 
     @abstractmethod
-    async def retake(self) -> Retaken:
-        """Take the diff again, after the work a round asked for."""
+    async def retake(self, round_number: int) -> Retaken:
+        """Take the diff again, after the work a round asked for, in the round it is taken in.
+
+        One retake at a time: whoever owns the rounds waits for the one under
+        way before it reads the round of the next and hands it in.
+        """
 
     @abstractmethod
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
@@ -100,13 +104,7 @@ class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
 
     def __init__(
-        self,
-        opening: ReviewOpening,
-        opened: OpenedRepository,
-        *,
-        repository: ReviewedRepository,
-        clock: Clock,
-        rounds: RoundTracker,
+        self, opening: ReviewOpening, opened: OpenedRepository, *, repository: ReviewedRepository, clock: Clock
     ) -> None:
         self._root = opened.root
         self._content = ReviewContent.opening_on(opening.diff_files)
@@ -114,9 +112,6 @@ class RepositorySource(ContentSource):
         self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
         self._versions = ReviewVersions(repository, clock, opened)
-        self._rounds = rounds
-        # Held while the diff is taken again, so two retakes never interleave
-        self._retaking = asyncio.Lock()
 
     @property
     @override
@@ -129,8 +124,8 @@ class RepositorySource(ContentSource):
         return True
 
     @override
-    async def open(self) -> None:
-        """Take the diff the review opens on, and leave round one's mark from the same staging.
+    async def open(self, round_number: int) -> None:
+        """Take the diff the review opens on, and leave the mark of the round it opens in from the same staging.
 
         Taken again here rather than kept from whoever read it first, so the
         mark rounds go back to is the very tree on screen. A repository git
@@ -139,7 +134,7 @@ class RepositorySource(ContentSource):
         """
         try:
             async with self._repository.staged(self._root) as staged:
-                await self._take(staged, self._rounds.current)
+                await self._take(staged, round_number)
         except GitError as refusal:
             log.warning("opening_mark_refused", reason=str(refusal))
             self._content = self._content.on_tree(await self._watcher.read(self._root))
@@ -171,16 +166,15 @@ class RepositorySource(ContentSource):
         return await self._versions.offer()
 
     @override
-    async def retake(self) -> Retaken:
-        """Take the diff again, under the round it was taken in.
+    async def retake(self, round_number: int) -> Retaken:
+        """Take the diff again, under the round it is taken in.
 
-        One retake at a time, each about one round: a round sent while git is
-        working must not tag this retake's mark with the round after it. One
+        The round is handed in, a number, so a round sent while git is
+        working cannot tag this retake's mark with the round after it. One
         staging serves the whole of it, so the diff on screen, the tree
         written down and what changed since are all of the same tree.
         """
-        async with self._retaking, self._repository.staged(self._root) as staged:
-            round_number = self._rounds.current
+        async with self._repository.staged(self._root) as staged:
             # Asked before the new tree is written down, while the last mark is
             # still the one the diff on screen was taken at
             changes = await self._versions.changed_since_round_began(round_number, staged)
@@ -234,7 +228,7 @@ class FixedSource(ContentSource):
         return False
 
     @override
-    async def open(self) -> None:
+    async def open(self, round_number: int) -> None:
         """Nothing to note: what was read is all there will be."""
 
     @override
@@ -255,7 +249,7 @@ class FixedSource(ContentSource):
         return []
 
     @override
-    async def retake(self) -> Retaken:
+    async def retake(self, round_number: int) -> Retaken:
         """Raises: NoRepositoryError, always."""
         msg = "No repository to retake the diff from"
         raise NoRepositoryError(msg)
@@ -284,10 +278,8 @@ async def _no_moves() -> AsyncIterator[int]:
         yield moved
 
 
-def content_source(
-    opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock, rounds: RoundTracker
-) -> ContentSource:
+def content_source(opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock) -> ContentSource:
     """Where this review's content comes from: its repository, when it has one."""
     if opening.repository is None:
         return FixedSource(opening)
-    return RepositorySource(opening, opening.repository, repository=repository, clock=clock, rounds=rounds)
+    return RepositorySource(opening, opening.repository, repository=repository, clock=clock)
