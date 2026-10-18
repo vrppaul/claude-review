@@ -14,8 +14,7 @@ import pytest
 from pydantic import BaseModel
 
 from claude_review.domain import models, page_events, story as told
-from claude_review.presentation.wire import agent, content, pushes, records, story, story_held, threads
-from claude_review.services.review import review_story
+from claude_review.presentation.wire import agent, content, pushes, records, story, threads
 
 # What a push carries of its own: the kind the page tells it apart by
 PUSH_KIND = frozenset({"type"})
@@ -90,9 +89,9 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (told.Chapter[told.FollowedStep], story.FollowedChapter, frozenset({"changed"})),
     (told.LeftOut, story.LeftOut, frozenset()),
     (told.ToldStory[told.FollowedStep], story.ToldStory, frozenset()),
-    (review_story.StoryHeld, story_held.StoryHeld, frozenset()),
-    (review_story.CodeMovedOn, story.CodeMovedOn, frozenset()),
-    (review_story.LeftOutChanged, story.LeftOutChanged, frozenset()),
+    (told.StoryHeld, story.StoryHeld, frozenset()),
+    (told.CodeMovedOn, story.CodeMovedOn, frozenset()),
+    (told.LeftOutChanged, story.LeftOutChanged, frozenset()),
     # and the reader's asking for one, read with the review's facts
     (told.StoryAsking, content.StoryAsking, frozenset()),
     *EVENTS_AND_PUSHES,

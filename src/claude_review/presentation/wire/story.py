@@ -258,6 +258,33 @@ class CodeMovedOn(WireModel):
     left_out: LeftOutChanged | None
 
 
+class StoryHeld(WireModel):
+    """A story as the review holds it: on a take of the change, with the round it was told in."""
+
+    story: ToldStory
+    round: int
+    # The take of the change its pieces were cut out of: their lines are
+    # numbered as the threads' are only while the diff a page read says the
+    # same take
+    take: int
+    # Set while the code under it moved on after it was told; None while it is current
+    moved_on: CodeMovedOn | None
+
+    @classmethod
+    def as_held(cls, held: story.StoryHeld) -> Self:
+        """The story held, each of its chapters saying whether a round changed code its steps show, and in which."""
+        moved_on = None if held.moved_on is None else CodeMovedOn.of(held.moved_on)
+        return cls(
+            story=ToldStory.on_take(held.story, moved_on=moved_on), round=held.round, take=held.take, moved_on=moved_on
+        )
+
+
+class StoryResponse(WireModel):
+    """Response for GET /api/story — the story the review holds, or none while nobody has told one."""
+
+    held: StoryHeld | None
+
+
 def _changed(steps: list[story.FollowedStep], *, moved_on: CodeMovedOn | None) -> ChapterChanged | None:
     """How many of a chapter's steps show code a round changed after they were told, and in which round.
 

@@ -471,6 +471,10 @@ type Anchor = Annotated[LineAnchor | StoryAnchor, Field(discriminator="kind")]
 
 # The round every review opens on; rounds are counted from it
 FIRST_ROUND = 1
+# The take a review is made with, from what its opening read: every take
+# after it is counted on from here. A review of a repository takes its diff
+# again as it opens, so the first take its page reads is the one after.
+FIRST_TAKE = 1
 
 
 class Turn(BaseModel):

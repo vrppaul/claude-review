@@ -24,52 +24,26 @@ import asyncio
 from typing import override
 
 import structlog
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.interfaces import Clock, GitError
-from claude_review.domain.models import FIRST_ROUND, DiffFile, StaleStep, StoryRequested, StoryWentStale
-from claude_review.domain.story import FollowedStep, Step, Story, StoryAsking, ToldStep, ToldStory
+from claude_review.domain.models import DiffFile, StaleStep, StoryRequested, StoryWentStale
+from claude_review.domain.story import (
+    CodeMovedOn,
+    FollowedStep,
+    LeftOutChanged,
+    Step,
+    Story,
+    StoryAsking,
+    StoryHeld,
+    ToldStep,
+    ToldStory,
+)
 from claude_review.services import story_telling
 from claude_review.services.review.agent_inbox import StandingRequest
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
+from claude_review.services.review.review_content import ReviewContent, TakesCompared
 
 log = structlog.get_logger()
-
-
-class LeftOutChanged(BaseModel):
-    """How many changed lines no step told when a story was told, and how many none tells now."""
-
-    model_config = ConfigDict(frozen=True)
-
-    when_told: int
-    now: int
-
-
-class CodeMovedOn(BaseModel):
-    """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
-
-    model_config = ConfigDict(frozen=True)
-
-    # The round of the take that first found it so: a later take that finds
-    # it still so keeps it
-    round: int = Field(ge=FIRST_ROUND)
-    # Said only where the round changed how much is left out; None where as
-    # much is left out as when it was told
-    left_out: LeftOutChanged | None
-
-
-class StoryHeld(BaseModel):
-    """A story as the review holds it: on a take of the change, with the round it was told in."""
-
-    model_config = ConfigDict(frozen=True)
-
-    story: ToldStory[FollowedStep]
-    round: int = Field(ge=FIRST_ROUND)
-    # The take of the change its pieces were cut out of
-    take: int = Field(ge=FIRST_TAKE)
-    # Set while the code under it moved on after it was told: a step shows
-    # other code than it was told with, or more is left out than was
-    moved_on: CodeMovedOn | None
 
 
 class _StoryKept(BaseModel):

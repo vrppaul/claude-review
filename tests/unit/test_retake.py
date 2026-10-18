@@ -19,10 +19,10 @@ from pathlib import Path
 from typing import override
 
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import FIRST_ROUND, DiffFile, GitRef, ReviewMode
+from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, DiffFile, GitRef, ReviewMode
+from claude_review.domain.story import CodeMovedOn, LeftOutChanged
 from claude_review.services.review.content_sources import ContentSource, content_source
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
-from claude_review.services.review.review_story import CodeMovedOn, LeftOutChanged
+from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, one_line_file

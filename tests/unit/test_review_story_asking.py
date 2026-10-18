@@ -10,9 +10,9 @@ it then stands.
 
 import asyncio
 
-from claude_review.domain.models import LineSpan, StaleStep, StoryRequested, StoryWentStale
+from claude_review.domain.models import FIRST_TAKE, LineSpan, StaleStep, StoryRequested, StoryWentStale
 from claude_review.domain.story import StoryAsking
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent
+from claude_review.services.review.review_content import ReviewContent
 from claude_review.services.review.review_story import ReviewStory
 from tests.helpers import FixedClock
 from tests.stories import (

@@ -25,9 +25,9 @@ from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.interfaces import PageChannel
-from claude_review.domain.models import FIRST_ROUND, ReaderSettings
+from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, ReaderSettings
 from claude_review.domain.page_events import DiffRetaken, PageEvent
-from claude_review.domain.story import Step, Story
+from claude_review.domain.story import Step, Story, StoryHeld
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
 from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
@@ -38,9 +38,9 @@ from claude_review.presentation.wire.story import (
     CodeMovedOn,
     LeftOutOfFile,
     LineSpan,
+    StoryResponse,
     StoryTakenResponse,
 )
-from claude_review.presentation.wire.story_held import StoryResponse
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
@@ -48,8 +48,6 @@ from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.review import KeptForTheReader, Review
-from claude_review.services.review.review_content import FIRST_TAKE
-from claude_review.services.review.review_story import StoryHeld
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,

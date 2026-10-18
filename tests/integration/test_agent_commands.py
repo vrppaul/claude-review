@@ -20,7 +20,7 @@ from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
 from claude_review.presentation.wire.pushes import ChatPush, PointPush, ReplyPush
-from claude_review.presentation.wire.story_held import StoryResponse
+from claude_review.presentation.wire.story import StoryResponse
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,

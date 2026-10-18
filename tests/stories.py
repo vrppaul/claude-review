@@ -16,6 +16,7 @@ from claude_review.domain.exceptions import FieldPath
 from claude_review.domain.models import (
     FIRST_LINE,
     FIRST_ROUND,
+    FIRST_TAKE,
     NO_HUNK_HEADER,
     DiffFile,
     DiffHunk,
@@ -38,7 +39,7 @@ from claude_review.domain.story import (
 )
 from claude_review.presentation.wire.story import StoryRequest
 from claude_review.services.anchor_service import side_lines
-from claude_review.services.review.review_content import FIRST_TAKE, ReviewContent, TakesCompared
+from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.story_telling import as_told
 from tests.helpers import FixedClock, added_line, context_line, removed_line

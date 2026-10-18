@@ -2,13 +2,8 @@
 
 from abc import ABC, abstractmethod
 
-from claude_review.domain.models import DiffFile, TreeState
+from claude_review.domain.models import FIRST_TAKE, DiffFile, TreeState
 from claude_review.services.anchor_service import LineAnchorHandler
-
-# The take a review is made with, from what its opening read: every take
-# after it is counted on from here. A review of a repository takes its diff
-# again as it opens, so the first take its page reads is the one after.
-FIRST_TAKE = 1
 
 
 class ReviewContent:

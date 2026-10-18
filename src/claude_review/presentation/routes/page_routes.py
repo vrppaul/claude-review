@@ -52,7 +52,7 @@ from claude_review.presentation.wire.content import (
     StoryAsking,
     VersionsResponse,
 )
-from claude_review.presentation.wire.story_held import StoryHeld, StoryResponse
+from claude_review.presentation.wire.story import StoryHeld, StoryResponse
 from claude_review.presentation.wire.threads import (
     AskRequest,
     FollowRequest,

@@ -19,10 +19,10 @@ from claude_review.presentation.wire.story import (
     MAX_HOUSEKEEPING_FILES,
     MAX_OVERVIEW_ITEMS,
     MAX_STEPS_IN_CHAPTER,
+    StoryHeld,
     StoryRequest,
     ToldStory,
 )
-from claude_review.presentation.wire.story_held import StoryHeld
 from claude_review.services.story_telling import as_told, tell
 from tests.stories import (
     TOLD_OF,

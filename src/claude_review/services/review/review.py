@@ -60,7 +60,7 @@ from claude_review.domain.page_events import (
     ThreadRaised,
     TreeMoved,
 )
-from claude_review.domain.story import Step, Story, StoryAsking
+from claude_review.domain.story import Step, Story, StoryAsking, StoryHeld
 from claude_review.services.anchor_service import AnchorService, StoryAnchorHandler
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
@@ -74,7 +74,7 @@ from claude_review.services.review.content_sources import ContentSource, DiffVie
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review.review_story import ReviewStory, StoryHeld
+from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
