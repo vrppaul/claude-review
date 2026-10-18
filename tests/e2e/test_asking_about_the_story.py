@@ -16,6 +16,7 @@ from playwright.async_api import Locator, Page, expect
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, CHEVRON_AT_THE_END, POINTING_DOWN, POINTING_UP, TURN
+from tests.e2e.laid_out import SHOWN_WHOLE_ACROSS
 from tests.e2e.painted import on_a_probe, painted
 from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
@@ -58,8 +59,6 @@ OVER_NONE_OF_ITS_WORDS = """(words, over) => {
 }"""
 # The colour an element is laid on
 GROUND_OF = "(element) => getComputedStyle(element).backgroundColor"
-# Whether an element, and everything in it, shows its contents whole across, with nothing to scroll sideways
-NOTHING_SCROLLS_ACROSS = "(element) => [element, ...element.querySelectorAll('*')].every((inside) => inside.scrollWidth <= inside.clientWidth)"
 # How strongly an element is drawn on screen: its own opacity and that of everything it stands in, multiplied; and
 # the strength of one drawn fully and not at all
 DRAWN_STRENGTH = """(element) => {
@@ -378,7 +377,7 @@ async def test_a_thread_on_words_a_story_told_again_says_nowhere_stands_at_its_h
     await expect(at_the_head).to_contain_text("1 thread on words the story no longer says")
     written_against = at_the_head.get_by_test_id("stale-quote")
     await expect(written_against).to_contain_text(DOUBT)
-    assert await written_against.evaluate(NOTHING_SCROLLS_ACROSS)
+    assert await written_against.evaluate(SHOWN_WHOLE_ACROSS)
 
 
 async def test_a_thread_at_the_head_of_the_story_points_at_nothing_above_it(review: RunningReview, page: Page) -> None:

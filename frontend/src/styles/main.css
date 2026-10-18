@@ -105,13 +105,19 @@
 .cr-hunk {
 	border-bottom: var(--cr-hunk-rule) solid var(--color-base-300);
 }
-/* Over a hunk, where it says so, where in the file it stands: one line, as tall as it is counted */
+/*
+ * Over a hunk, where it says so, where in the file it stands: read whole,
+ * so a line wider than the diff wraps, anywhere in a name if it must. One
+ * line stands as tall as a header is counted; one that wraps takes more,
+ * and its room is counted as one line's, the least it takes.
+ */
 .cr-hunk-header {
 	display: flex;
 	align-items: center;
-	height: var(--cr-hunk-header-height);
-	padding-inline: 1rem;
+	min-height: var(--cr-hunk-header-height);
+	padding: 0.25rem 1rem;
 	border-block: var(--cr-hunk-rule) solid var(--color-base-300);
+	overflow-wrap: anywhere;
 }
 /* The bar for lines the diff left out, and the ways to show them: one line, as tall as it is counted */
 .cr-hunk-gap {

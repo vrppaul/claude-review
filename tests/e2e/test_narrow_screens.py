@@ -12,6 +12,7 @@ import pytest
 from playwright.async_api import FloatRect, Locator, Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.laid_out import SHOWN_WHOLE_ACROSS, TALL_AS_ITS_TOKEN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # A file whose header is long: its path alone is wider than the diff on a laptop's screen, and as
@@ -30,6 +31,17 @@ PHONE = {"width": 420, "height": 800}
 WITHIN_ROUNDING = 1
 # What a file's path is read across at the least: half the diff, not a sliver beside the header's controls
 PATH_SHARE = 0.5
+# A function whose first line is wider than a phone's screen, and a line of it far enough below that a change
+# there is a hunk git heads with that first line
+LONG_HEADER_FILE = "far_below.py"
+FAR_BELOW_IT = "    step_fifteen = 15\n"
+CHANGED_FAR_BELOW_IT = "    step_fifteen = 150\n"
+LONG_HEADED_FUNCTION = (
+    "def a_function_whose_name_and_arguments_run_on_past_a_phones_screen(first_argument, second_argument):\n"
+    + "".join(f"    step_{number} = {number}\n" for number in range(1, 15))
+    + FAR_BELOW_IT
+    + "".join(f"    step_{number} = {number}\n" for number in range(16, 25))
+)
 
 
 @pytest.fixture
@@ -157,3 +169,31 @@ async def test_on_a_phone_the_diff_takes_what_the_rail_leaves_and_the_page_is_no
     diff = await _box(page.get_by_test_id("diff-view"))
     assert diff["x"] >= rail["x"] + rail["width"] - WITHIN_ROUNDING
     assert await page.evaluate("document.documentElement.scrollWidth") == PHONE["width"]
+
+
+@pytest.fixture
+def repository_of_a_long_hunk_header(tmp_path: Path) -> Path:
+    """A function whose first line is wider than a phone, changed far enough below it that git heads the hunk with it."""
+    repository = tmp_path / "long-header"
+    committed_repository(repository, {LONG_HEADER_FILE: LONG_HEADED_FUNCTION})
+    write_files(repository, {LONG_HEADER_FILE: LONG_HEADED_FUNCTION.replace(FAR_BELOW_IT, CHANGED_FAR_BELOW_IT)})
+    return repository
+
+
+@in_the_browsers_loop
+async def review_of_a_long_hunk_header(repository_of_a_long_hunk_header: Path, servers: ReviewServers) -> RunningReview:
+    return await servers.start(await repository_opening(repository_of_a_long_hunk_header))
+
+
+async def test_on_a_phone_a_hunk_header_wider_than_the_screen_reads_whole_on_more_lines(
+    review_of_a_long_hunk_header: RunningReview, page: Page
+) -> None:
+    """Where in the file a hunk stands is read whole: cut at the screen's edge, it says nothing of where that is."""
+    await page.set_viewport_size(PHONE)
+    await page.goto(review_of_a_long_hunk_header.url)
+
+    header = page.get_by_test_id("hunk-header")
+    await header.wait_for()
+
+    assert await header.evaluate(SHOWN_WHOLE_ACROSS)
+    assert (await _box(header))["height"] > await page.evaluate(TALL_AS_ITS_TOKEN, "--cr-hunk-header-height")

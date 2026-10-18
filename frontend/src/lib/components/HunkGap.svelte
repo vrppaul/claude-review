@@ -64,9 +64,7 @@
 	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
 {#if drawn}
 	{#if header}
-		<div data-testid="hunk-header" class="cr-hunk-header cr-muted bg-base-200 font-mono text-xs">
-			<span class="truncate">{header}</span>
-		</div>
+		<div data-testid="hunk-header" class="cr-hunk-header cr-muted bg-base-200 font-mono text-xs">{header}</div>
 	{/if}
 	<div data-testid="hunk-gap" class="cr-hunk-gap gap-1 bg-base-200 font-mono text-xs">
 		{#if onlySaid}
