@@ -5,9 +5,6 @@
 	/** What draws the reader to a segment: what the agent brought there and they have not read, or the way of reading the page introduces. */
 	type Calling = 'unread' | 'introduced';
 
-	// The edge each draws round the segment, a class of the library's stylesheet
-	const CALLINGS: Record<Calling, string> = { unread: 'cr-ui-segment-unread', introduced: 'cr-ui-segment-introduced' };
-
 	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children' | 'aria-pressed'> {
 		/** Whether it is the one picked. */
 		pressed: boolean;
@@ -24,14 +21,16 @@
 	let { pressed, written = false, calling, testId, element = $bindable(), children, ...attributes }: Props = $props();
 </script>
 
-<!-- A segment of a track: one way of reading, pressed while it is the one picked -->
+<!-- A segment of a track: one way of reading, pressed while it is the one picked, and saying what draws the
+	reader to it, which the stylesheet edges it by -->
 <button
 	bind:this={element}
 	type="button"
 	{...attributes}
 	aria-pressed={pressed}
+	data-calling={calling}
 	data-testid={testId}
-	class={['cr-ui-segment cr-pressable', written && 'cr-ui-segment-written', calling && CALLINGS[calling]]}
+	class={['cr-ui-segment cr-pressable', written && 'cr-ui-segment-written']}
 >
 	{@render children()}
 </button>

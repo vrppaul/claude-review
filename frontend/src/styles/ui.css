@@ -202,12 +202,12 @@
 	color: var(--cr-agent);
 }
 /* A segment whose view holds what the agent brought and the reader has not read */
-.cr-ui-segment-unread {
+.cr-ui-segment[data-calling='unread'] {
 	color: var(--color-base-content);
 	box-shadow: var(--cr-shadow-unread-edge);
 }
 /* The segment of a way of reading the page introduces, while the introduction points at it */
-.cr-ui-segment-introduced {
+.cr-ui-segment[data-calling='introduced'] {
 	color: var(--color-base-content);
 	box-shadow: var(--cr-shadow-introduced-edge);
 }

@@ -17,7 +17,7 @@ from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, CHEVRON_AT_THE_END, POINTING_DOWN, POINTING_UP, TURN
 from tests.e2e.laid_out import SHOWN_WHOLE_ACROSS
-from tests.e2e.painted import on_a_probe, painted
+from tests.e2e.painted import light, on_a_probe, painted
 from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
@@ -57,8 +57,8 @@ OVER_NONE_OF_ITS_WORDS = """(words, over) => {
         (line) => line.right <= box.left || line.left >= box.right || line.bottom <= box.top || line.top >= box.bottom
     );
 }"""
-# The colour an element is laid on
-GROUND_OF = "(element) => getComputedStyle(element).backgroundColor"
+# What an element draws inside its edge where it draws nothing
+NO_EDGE = "none"
 # How strongly an element is drawn on screen: its own opacity and that of everything it stands in, multiplied; and
 # the strength of one drawn fully and not at all
 DRAWN_STRENGTH = """(element) => {
@@ -157,16 +157,26 @@ async def test_ask_about_this_is_offered_in_the_readers_colour_on_the_pages_own_
     )
 
 
-async def test_a_chapters_doubt_pointed_at_keeps_the_warnings_colours(review: RunningReview, page: Page) -> None:
+async def test_a_chapters_doubt_pointed_at_is_lit_by_the_pointers_light_with_the_warnings_wash_showing_through(
+    review: RunningReview, page: Page
+) -> None:
+    """Pointed at, the doubt is lit as a block is, by a light that takes no edge and leaves the warning's wash under it."""
     await _read_as_story(page, review)
     doubt = page.get_by_test_id("chapter-doubt-block")
     band = doubt.get_by_test_id("askable-band")
-    unpointed = await band.evaluate(GROUND_OF)
 
     await band.hover()
 
+    lit = await painted(band)
+    assert (lit.laid, lit.ground, lit.edge) == (
+        await light(page, "--cr-hover"),
+        await on_a_probe(page, "backgroundColor", "transparent"),
+        NO_EDGE,
+    )
+    assert (await painted(doubt.get_by_test_id("askable-frame"))).ground == await on_a_probe(
+        page, "backgroundColor", "var(--cr-warning-tint)"
+    )
     assert await doubt.get_by_test_id("ask-about-this").evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
-    assert await band.evaluate(GROUND_OF) == unpointed
 
 
 @pytest.mark.parametrize("width", READING_WIDTHS)
@@ -195,8 +205,8 @@ async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neit
 
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    unbanded = await done.get_by_test_id("askable-band").evaluate(GROUND_OF)
-    assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) != unbanded
+    unbanded = (await painted(done.get_by_test_id("askable-band"))).ground
+    assert (await painted(doubt.get_by_test_id("askable-band"))).ground != unbanded
 
 
 async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_blocks_beside_it(
@@ -208,8 +218,8 @@ async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_bl
     await doubt.get_by_test_id("fold-comment").click()
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    unbanded = await page.get_by_test_id("overview-done").get_by_test_id("askable-band").evaluate(GROUND_OF)
-    assert await doubt.get_by_test_id("askable-band").evaluate(GROUND_OF) == unbanded
+    unbanded = (await painted(page.get_by_test_id("overview-done").get_by_test_id("askable-band"))).ground
+    assert (await painted(doubt.get_by_test_id("askable-band"))).ground == unbanded
 
 
 async def test_what_more_the_overview_says_folds_under_a_chevron_at_the_end_of_its_row_down_while_away_up_while_open(
