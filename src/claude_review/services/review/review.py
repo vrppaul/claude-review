@@ -21,7 +21,6 @@ open, and a `RoundFormatter`, chosen once for the kind of review, writes a
 round as it is sent.
 """
 
-import asyncio
 from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
@@ -115,8 +114,6 @@ class Review:
         self._threads = ReaderThreads()
         self._handover = ThreadHandover(images)
         self._source = source
-        # Held while the source takes the diff again: a retake's turn (`retake`)
-        self._retaking = asyncio.Lock()
         self._story = ReviewStory(clock, takes=source, takes_a_story=source.is_a_change)
         self._inbox = AgentInbox(self._lifetime, standing=self._story)
         # The reader's choices, kept for every review on the machine: read
@@ -493,16 +490,15 @@ class Review:
     async def retake(self) -> Retaken:
         """Take the diff again, after the work a round asked for, follow the story told onto it, and tell the pages.
 
-        One retake at a time, each in the round current as its turn comes:
-        a round sent while git works on it is not its round. Followed before
-        the pages are told, so a page that reads the diff and then the story
-        reads both of one take.
+        The source takes one retake at a time and reads the round from the
+        review's rounds once its turn comes, so a round sent while git works
+        is not its round. Followed before the pages are told, so a page that
+        reads the diff and then the story reads both of one take.
 
         Raises:
             NoRepositoryError: if the review's content did not come from a repository.
         """
-        async with self._retaking:
-            retaken = await self._source.retake(self._rounds.current)
+        retaken = await self._source.retake(self._rounds)
         content, stories_on = self._source.content, await self._stories_on()
         self._tell_asking(await self._story.follow(content, round_number=retaken.round, stories_on=stories_on))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
