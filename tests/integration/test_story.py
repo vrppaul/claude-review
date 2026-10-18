@@ -46,7 +46,8 @@ from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecordService
-from claude_review.services.review.review import KeptForTheReader, Review
+from claude_review.services.review.content_sources import content_source
+from claude_review.services.review.review import Review
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
@@ -408,18 +409,22 @@ class PageReadingTheStory(PageChannel):
 async def page_reading_the_story(
     workspace: ReviewWorkspace, reader_files: ReaderFiles, tmp_git_repo: Path
 ) -> PageReadingTheStory:
-    """The pages of a review of the repository's change, put together as `host_review` puts one, and opened."""
+    """The pages of a review of the repository's change, put together as `host_review` puts one, and opened.
+
+    Put together here, not by `host_review`: the broadcast that makes queues
+    what it tells for each page's socket, and these pages must read the story
+    at the moment they are told.
+    """
     write_files(tmp_git_repo, THE_CHANGE)
     page = PageReadingTheStory()
-    settings = ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings)
+    opening, clock = await repository_opening(tmp_git_repo), SystemClock()
     page.review = Review(
-        await repository_opening(tmp_git_repo),
-        repository=GitRepository(objects=workspace.objects),
+        opening,
+        source=content_source(opening, repository=GitRepository(objects=workspace.objects), clock=clock),
         page=page,
-        clock=SystemClock(),
-        kept=KeptForTheReader(
-            images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA), settings=settings
-        ),
+        clock=clock,
+        images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
+        settings=ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings),
     )
     await page.review.open()
     return page

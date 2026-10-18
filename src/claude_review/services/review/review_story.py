@@ -26,6 +26,7 @@ from typing import override
 import structlog
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.interfaces import Clock, GitError
 from claude_review.domain.models import DiffFile, StaleStep, StoryRequested, StoryWentStale
 from claude_review.domain.story import (
@@ -44,6 +45,9 @@ from claude_review.services.review.agent_inbox import StandingRequest
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
 
 log = structlog.get_logger()
+
+# What a review of files read once, or of a conversation, says to a story told of it, and to the asking for one
+NO_CHANGE_TO_TELL = "This review is of no change: its content came from no repository"
 
 
 class _StoryKept(BaseModel):
@@ -77,14 +81,18 @@ class ReviewStory(StandingRequest):
     What changes the asking — it is asked, an agent takes it, the reader
     stops it — answers with the asking as it then stands, or with None
     where it changed nothing.
+
+    Whether a story can be told of this review at all is its own to say
+    (`takes_a_story`): where none can, a story told and the reader's asking
+    for one are refused, and stories turned on ask for none.
     """
 
-    def __init__(self, clock: Clock, takes: TakesCompared, *, tellable: bool) -> None:
+    def __init__(self, clock: Clock, takes: TakesCompared, *, takes_a_story: bool) -> None:
         self._clock = clock
         # What says how the code moved between the take a story was told of and a later one
         self._takes = takes
         # Whether a story can be told of this review: its content is a change to a repository
-        self._tellable = tellable
+        self._takes_a_story = takes_a_story
         # None while nobody has told one
         self._kept: _StoryKept | None = None
         # From the asking until a story is told; None while nothing is asked
@@ -95,6 +103,11 @@ class ReviewStory(StandingRequest):
         # arrived: told side by side, a long one sent first would finish last
         # and take the place of the one sent after it
         self._telling = asyncio.Lock()
+
+    @property
+    def takes_a_story(self) -> bool:
+        """Whether a story can be told of this review: of a change somebody made, never of files or a conversation."""
+        return self._takes_a_story
 
     @property
     def held(self) -> StoryHeld | None:
@@ -112,16 +125,13 @@ class ReviewStory(StandingRequest):
         return self._due
 
     def ask(self) -> StoryAsking | None:
-        """Begin asking for a story, now, unless the story held is current or one is still awaited.
+        """The reader asking for a story: begun now, unless the story held is current or one is still awaited.
 
-        What the reader asking does, and turning stories on. A story held is
-        current until a round moves the code on under it: then it is asked
-        for again, to be told of the code as it stands. Asked again after the
-        reader stopped it, the asking begins anew.
+        Raises:
+            NoRepositoryError: if no story can be told of this review: files read once, or a conversation.
         """
-        if not self._tellable or self._is_current or self._awaited is not None:
-            return None
-        return self._noted(StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False))
+        self._require_a_change()
+        return self._begun()
 
     def want(self, *, stories_on: bool) -> StoryAsking | None:
         """Ask for a story where the reader wants stories and none is asked: never over one the reader stopped.
@@ -131,11 +141,11 @@ class ReviewStory(StandingRequest):
         """
         if not stories_on or self._asking is not None:
             return None
-        return self.ask()
+        return self._begun()
 
     def stories_turned(self, *, on: bool) -> StoryAsking | None:
         """The reader turned stories on or off: on asks for this review's story, off stops one awaited."""
-        return self.ask() if on else self.stop()
+        return self._begun() if on else self.stop()
 
     @override
     def claim(self) -> StoryRequested | None:
@@ -165,9 +175,11 @@ class ReviewStory(StandingRequest):
         stopped or not.
 
         Raises:
+            NoRepositoryError: if no story can be told of this review: files read once, or a conversation.
             StoryRefusedError: if anything is wrong with the story, carrying all of it; the story held stays,
                 and so does the asking.
         """
+        self._require_a_change()
         async with self._telling:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
             held = StoryHeld(story=story_telling.as_told(told), round=round_number, take=change.take, moved_on=None)
@@ -231,6 +243,27 @@ class ReviewStory(StandingRequest):
         except GitError as refusal:
             log.warning("takes_not_compared", reason=str(refusal))
             return None
+
+    def _require_a_change(self) -> None:
+        """Refuse what only a review of a change can do: tell a story, or ask for one.
+
+        Raises:
+            NoRepositoryError: if no story can be told of this review: files read once, or a conversation.
+        """
+        if not self._takes_a_story:
+            raise NoRepositoryError(NO_CHANGE_TO_TELL)
+
+    def _begun(self) -> StoryAsking | None:
+        """Begin asking for a story, now, where one can be told and no story held is current or awaited.
+
+        What the reader asking does, the review wanting one, and turning
+        stories on. A story held is current until a round moves the code on
+        under it: then it is asked for again, to be told of the code as it
+        stands. Asked again after the reader stopped it, the asking begins anew.
+        """
+        if not self._takes_a_story or self._is_current or self._awaited is not None:
+            return None
+        return self._noted(StoryAsking(asked_at=self._clock.now(), taken_at=None, stopped=False))
 
     @property
     def _awaited(self) -> StoryAsking | None:

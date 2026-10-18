@@ -453,7 +453,7 @@ async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
     """
     numbered = dict(enumerate(takes, start=FIRST_TAKE))
     compared = TakesComparedByTheirLines({tree_of(take): files for take, files in numbered.items()})
-    story = ReviewStory(FixedClock(ASKED_AT), takes=compared, tellable=True)
+    story = ReviewStory(FixedClock(ASKED_AT), takes=compared, takes_a_story=True)
     [told_of, *after] = [take_of(files, take) for take, files in numbered.items()]
     await story.tell(THE_FIRST_LINE, told_of, round_number=FIRST_ROUND)
     for round_number, change in enumerate(after, start=SECOND_ROUND):
@@ -463,4 +463,9 @@ async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
 
 def review_story(takes: TakesCompared) -> ReviewStory:
     """The story of a review of a change, on the clock the asking for one is dated by."""
-    return ReviewStory(FixedClock(ASKED_AT), takes=takes, tellable=True)
+    return ReviewStory(FixedClock(ASKED_AT), takes=takes, takes_a_story=True)
+
+
+def story_of_no_change() -> ReviewStory:
+    """The story of a review of files read once, or of a conversation: there is no change to tell one of."""
+    return ReviewStory(FixedClock(ASKED_AT), takes=NO_TAKES, takes_a_story=False)

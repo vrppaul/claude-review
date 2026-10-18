@@ -5,16 +5,18 @@ round moved the code on under the one held. The reader asks, or turns
 stories on; with stories on the story asks for itself as the review opens
 and after each retake, never over one the reader stopped. An agent's wait
 claims the asking once, and is told what went stale of the story held, as
-it then stands.
+it then stands. A review of no change asks for none, and refuses both the
+reader's asking and a story told of it.
 """
 
 import asyncio
 
-from claude_review.domain.models import FIRST_TAKE, LineSpan, StaleStep, StoryRequested, StoryWentStale
+import pytest
+
+from claude_review.domain.exceptions import NoRepositoryError
+from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, LineSpan, StaleStep, StoryRequested, StoryWentStale
 from claude_review.domain.story import StoryAsking
 from claude_review.services.review.review_content import ReviewContent
-from claude_review.services.review.review_story import ReviewStory
-from tests.helpers import FixedClock
 from tests.stories import (
     ASKED_AT,
     FIRST_REWRITTEN,
@@ -29,6 +31,7 @@ from tests.stories import (
     TOLD_OF,
     TakesComparedByTheirLines,
     review_story,
+    story_of_no_change,
     take_of,
     told_then_followed,
     tree_of,
@@ -49,9 +52,26 @@ def test_a_review_whose_reader_wants_no_story_asks_for_none() -> None:
 
 def test_a_review_of_no_change_asks_for_no_story_whatever_the_reader_wants() -> None:
     """Files read once, or a conversation: there is nothing to tell a story of."""
-    story = ReviewStory(FixedClock(ASKED_AT), takes=NO_TAKES, tellable=False)
+    assert story_of_no_change().want(stories_on=STORIES_ON) is None
 
-    assert story.want(stories_on=STORIES_ON) is None
+
+def test_a_review_of_no_change_asks_for_no_story_as_stories_are_turned_on_and_refuses_nothing() -> None:
+    """Turned on for every review on the machine, stories ask nothing of a review with no change to tell."""
+    assert story_of_no_change().stories_turned(on=True) is None
+
+
+def test_a_review_of_no_change_refuses_the_readers_asking_for_a_story() -> None:
+    with pytest.raises(NoRepositoryError):
+        story_of_no_change().ask()
+
+
+async def test_a_review_of_no_change_refuses_a_story_told_of_it_and_holds_none() -> None:
+    story = story_of_no_change()
+
+    with pytest.raises(NoRepositoryError):
+        await story.tell(THE_FIRST_LINE, ReviewContent.opening_on(TOLD_OF), round_number=FIRST_ROUND)
+
+    assert story.held is None
 
 
 def test_a_story_the_reader_stopped_is_not_asked_for_again_while_stories_stay_on() -> None:

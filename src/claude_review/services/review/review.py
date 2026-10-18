@@ -13,10 +13,12 @@ whether it is on the reader's screen, `Answerer` of the agent answering it,
 `AgentInbox` of what the reader handed over for the agent, `RoundTracker`
 of which round is being written, `Conversation` of what was said in the
 panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
-story told of its change and of the reader's asking for one, and a
-`ContentSource` of where its content comes from. `ThreadHandover` makes a
-thread's screenshots files the agent may open, and a `RoundFormatter`,
-chosen once for the kind of review, writes a round as it is sent.
+story told of its change and of the reader's asking for one, and the
+`ContentSource` of where its content comes from. That one is handed in:
+its host picks it by what was opened, so a review of files is never handed
+git. `ThreadHandover` makes a thread's screenshots files the agent may
+open, and a `RoundFormatter`, chosen once for the kind of review, writes a
+round as it is sent.
 """
 
 import asyncio
@@ -24,10 +26,9 @@ from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
 import structlog
-from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.exceptions import NoRepositoryError, ReviewEndedError, UnknownFileError
-from claude_review.domain.interfaces import Clock, PageChannel, RecordChange, ReviewedRepository
+from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
+from claude_review.domain.interfaces import Clock, PageChannel, RecordChange
 from claude_review.domain.models import (
     AgentEvent,
     AgentWork,
@@ -71,7 +72,7 @@ from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
-from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken, content_source
+from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
@@ -84,53 +85,44 @@ from claude_review.services.round_formatter import RoundFormatter
 
 log = structlog.get_logger()
 
-# What a review of files read once, or of a conversation, says to a story told of it
-NO_CHANGE_TO_TELL = "This review is of no change: its content came from no repository"
-
-
-class KeptForTheReader(BaseModel):
-    """What a review keeps for its reader beyond itself: the images they paste, and their settings for every review."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
-
-    images: ImageService
-    settings: ReaderRecordService[ReaderSettings]
-
 
 class Review:
     """One review: its content, its rounds, its conversation, and the two sides it passes between."""
 
-    def __init__(
+    # PLR0913 allows five arguments; this asks six, as its one exception: the one owner of a review's state
+    # (server.md) is made of what it opened on and five things its host hands it, none reachable through another
+    def __init__(  # noqa: PLR0913
         self,
         opening: ReviewOpening,
         *,
-        repository: ReviewedRepository,
+        source: ContentSource,
         page: PageChannel,
         clock: Clock,
-        kept: KeptForTheReader,
+        images: ImageService,
+        settings: ReaderRecordService[ReaderSettings],
     ) -> None:
         self._mode = opening.mode
         self._title = opening.title
         self._identity = opening.identity_digest
         self._opened_against = opening.opened_against
         self._page = page
-        self._images = kept.images
+        self._images = images
         self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)
         self._lifetime = ReviewLifetime(page)
         self._rounds = RoundTracker()
         self._answerer = Answerer(page, clock, lease_seconds=ANSWERER_LEASE_SECONDS)
         self._conversation = Conversation(clock)
         self._threads = ReaderThreads()
-        self._handover = ThreadHandover(kept.images)
-        self._source: ContentSource = content_source(opening, repository=repository, clock=clock)
+        self._handover = ThreadHandover(images)
+        self._source = source
         # Held while the source takes the diff again: a retake's turn (`retake`)
         self._retaking = asyncio.Lock()
-        self._story = ReviewStory(clock, takes=self._source, tellable=self._source.is_a_change)
+        self._story = ReviewStory(clock, takes=source, takes_a_story=source.is_a_change)
         self._inbox = AgentInbox(self._lifetime, standing=self._story)
         # The reader's choices, kept for every review on the machine: read
         # where one decides something here, never copied, since another
         # review may change them at any moment
-        self._settings = kept.settings
+        self._settings = settings
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
         self._formatter = RoundFormatter.for_mode(opening.mode)
@@ -150,7 +142,7 @@ class Review:
             round=self._rounds.current,
             answerer_attached=self._answerer.attached,
             agent=self._answerer.status,
-            takes_a_story=self._source.is_a_change,
+            takes_a_story=self._story.takes_a_story,
             story_asking=self._story.asking,
         )
 
@@ -437,8 +429,6 @@ class Review:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
             StoryRefusedError: if anything is wrong with the story, carrying all of it.
         """
-        if not self._source.is_a_change:
-            raise NoRepositoryError(NO_CHANGE_TO_TELL)
         held = await self._story.tell(story, self._source.content, round_number=self._rounds.current)
         # The asking ended as the story came to be held, with no await since: a stop no agent took would hand
         # the next one a story to stop writing
@@ -466,8 +456,6 @@ class Review:
         Raises:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
         """
-        if not self._source.is_a_change:
-            raise NoRepositoryError(NO_CHANGE_TO_TELL)
         self._tell_asking(self._story.ask())
 
     def stop_story(self) -> None:

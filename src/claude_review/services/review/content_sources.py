@@ -3,8 +3,10 @@
 A review of a repository can be read against other bases, widened past its
 hunks, taken again after a round and watched for the tree moving under it.
 Files and a conversation can do none of that. Each kind of review answers
-for itself here. The one thing the review asks a source about its kind is
-whether its content is a change (`is_a_change`): what a story can be told of.
+for itself here, and its host picks the kind by what was opened
+(`content_source`). The one thing the review asks a source about its kind
+is whether its content is a change (`is_a_change`), once, as it makes its
+story: what a story can be told of.
 
 Either source holds the take on screen, a `ReviewContent`. A repository's
 holds beside it what that take can be compared against, its
