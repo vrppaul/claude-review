@@ -63,7 +63,11 @@ class Retaken(BaseModel):
 
 
 class ContentSource(TakesCompared):
-    """What a review asks of where its content comes from: its takes, and what changed between two of them."""
+    """What a review asks of where its content comes from: its takes, and what changed between two of them.
+
+    It carries too the opening it was made from, which the review reads its
+    name and kind from: made from one opening, it cannot be paired with another.
+    """
 
     @property
     @abstractmethod
