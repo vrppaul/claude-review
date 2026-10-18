@@ -62,6 +62,8 @@ DEEP_IN_THE_PIECE = 1500
 # and why the second is as it is, said above its piece
 LAST_LINE_OF_THE_FIRST_STEP = 100
 REASON_OF_THE_SECOND_STEP = "The second half of the file goes on from the first."
+# The frame a step's reason stands in, which is drawn from where the step begins: its words stand inside it
+REASONS_FRAME = "askable-frame"
 THE_LONG_FILE_IN_TWO_STEPS = story_of(
     step(LONG_FILE, 1, LAST_LINE_OF_THE_FIRST_STEP),
     Step(
@@ -394,7 +396,7 @@ async def test_a_step_gone_to_stands_right_under_the_bar_of_its_chapter_from_its
     await page.keyboard.press("]")
     await page.keyboard.press("]")
 
-    reason = page.get_by_test_id("step-reason")
+    reason = page.get_by_test_id("step-reason-block").get_by_test_id(REASONS_FRAME)
     await expect(reason).to_be_in_viewport()
     assert abs(await _below_the_bar(page, reason)) < LESS_THAN_A_PIXEL
 
@@ -408,7 +410,7 @@ async def test_a_file_picked_in_the_contents_of_a_story_lands_its_step_under_the
     # The long file as the second chapter lists it: its step there is the one with a reason
     await page.get_by_test_id("contents-file").nth(1).click()
 
-    reason = page.get_by_test_id("step-reason")
+    reason = page.get_by_test_id("step-reason-block").get_by_test_id(REASONS_FRAME)
     await expect(reason).to_be_in_viewport()
     assert abs(await _below_the_bar(page, reason)) < LESS_THAN_A_PIXEL
 

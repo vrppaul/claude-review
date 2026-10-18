@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { ClassValue } from 'svelte/elements';
 	import { blockKey, blockLabel, blockShortPlace } from '$lib/anchors/story';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { StoryBlock } from '$lib/types';
 	import Button from '$lib/ui/Button.svelte';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import type { FrameLook } from '$lib/ui/frame';
 	import Icon from '$lib/ui/Icon.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
@@ -21,11 +22,11 @@
 		children: Snippet;
 		/**
 		 * The frame its words stand in where they have one of their own, as its
-		 * part of the story draws it: the band stays inside the frame, and what
-		 * hangs under the block hangs below it. None for a block that shares
-		 * the frame of the blocks around it.
+		 * part of the story draws it: the band fills the frame, and what hangs
+		 * under the block hangs below it. None for a block that shares the
+		 * frame of the blocks around it.
 		 */
-		frame?: ClassValue;
+		frame?: FrameLook | undefined;
 	}
 
 	let { block, words, testId, children, frame }: Props = $props();
@@ -84,9 +85,9 @@
 	outside any frame of the block's own -->
 <div data-testid={testId} class="cr-askable-block">
 	{#if frame}
-		<div data-testid="askable-frame" class={frame}>
+		<EdgeFrame {...frame} testId="askable-frame">
 			{@render band()}
-		</div>
+		</EdgeFrame>
 	{:else}
 		{@render band()}
 	{/if}

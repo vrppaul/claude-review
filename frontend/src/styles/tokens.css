@@ -58,13 +58,17 @@
 	--cr-story-gutter: 1.5rem;
 
 	/*
-	 * The edge the agent's words in a story stand by, and how far a block of
-	 * them the reader may ask about stands in from it: its band reaches back
-	 * to the edge.
+	 * A frame with an edge at its start (lib/ui EdgeFrame) — the agent's words
+	 * in a story, a warning, what the reader said in the panel: its edge, how
+	 * far its words stand in from it, and from its other side as far as a
+	 * thread's card stands what it holds in from its own, so a thread folded
+	 * to a frame keeps what stands at its end where it stood; and above and
+	 * below them as far as the band of a block the reader may ask about
+	 * reaches past its words. The band fills the frame to its edge.
 	 */
-	--cr-voice-axis: 2px;
-	--cr-voice-inset: 1.25rem;
-	/* How far that band reaches above and below the block's words */
+	--cr-edge-width: 2px;
+	--cr-edge-inset: 1.25rem;
+	--cr-edge-end-room: 1rem;
 	--cr-band-reach: 0.5rem;
 
 	/*
@@ -362,7 +366,11 @@
 	--color-info-content: #ffffff;
 	--color-success: #1f8b3a;
 	--color-success-content: #ffffff;
-	--color-warning: #796000;
+	/*
+	 * A warning in words reads at 4.5:1 on its own wash with the reader's mark laid over it — a chapter's doubt a
+	 * thread hangs under — with a tenth to spare for how a browser rounds the layers
+	 */
+	--color-warning: #775e00;
 	--color-warning-content: #ffffff;
 	--color-error: #c22c37;
 	--color-error-content: #ffffff;

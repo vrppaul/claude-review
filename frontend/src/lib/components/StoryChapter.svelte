@@ -2,7 +2,9 @@
 	import { blockLabel, chapterText } from '$lib/anchors/story';
 	import { useReview } from '$lib/review/context';
 	import type { ChapterListed } from '$lib/review/story-contents';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import AskableBlock from './AskableBlock.svelte';
+	import { A_WARNING, AGENTS_VOICE } from './story-frames';
 	import {
 		AGENT_UPDATING_REASONS,
 		CHANGED_AFTER_TOLD_HEAD,
@@ -48,24 +50,25 @@
 		<!-- A round changed code the chapter tells after it was told, as the review says: said first, in a
 			warning's frame, since what the agent says below was said of the code before; and that the agent
 			is updating it, only while it is -->
-		<p data-testid="chapter-changed" class="cr-warning-frame px-3 py-2">
-			<b class="font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</b>
-			{stepsChanged(told.changed_steps)}
-			{CODE_BELOW_IS_CURRENT}
-			{#if review.story.wait?.kind === 'writing'}
-				{AGENT_UPDATING_REASONS}
-			{/if}
-		</p>
+		<EdgeFrame {...A_WARNING} testId="chapter-changed">
+			<p>
+				<span class="block text-xs font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</span>
+				{stepsChanged(told.changed_steps)}
+				{CODE_BELOW_IS_CURRENT}
+				{#if review.story.wait?.kind === 'writing'}
+					{AGENT_UPDATING_REASONS}
+				{/if}
+			</p>
+		</EdgeFrame>
 	{/if}
-	<!-- Why its changes belong together, in the agent's voice, and where to doubt them, in a warning: each
-		may be asked about, and what is asked hangs below its frame -->
-	<AskableBlock block={chapterText(told.id, 'why')} words={told.why} testId="chapter-why-block" frame="cr-agent-voice">
+	<!-- Why its changes belong together, in the agent's voice, and where to doubt them, in a warning headed as
+		the warning above is: each may be asked about, and what is asked hangs below its frame -->
+	<AskableBlock block={chapterText(told.id, 'why')} words={told.why} testId="chapter-why-block" frame={AGENTS_VOICE}>
 		<p data-testid="chapter-why">{told.why}</p>
 	</AskableBlock>
 	{#if told.doubt}
 		{@const doubt = chapterText(told.id, 'doubt')}
-		<!-- The warning as deep as the band reaches, so a band over the doubt stays inside it -->
-		<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block" frame="cr-warning-frame py-2">
+		<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block" frame={A_WARNING}>
 			<p data-testid="chapter-doubt">
 				<span class="block text-xs font-semibold text-warning">{blockLabel(doubt)}</span>
 				{told.doubt}

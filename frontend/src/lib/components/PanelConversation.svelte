@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
@@ -141,21 +142,23 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						<span></span>
 					</div>
 				{:else if turn.author === READER}
-					<div data-testid="panel-said" class={['cr-panel-said rounded-r px-3 py-2', turn.cancelled && 'cr-faint']}>
-						<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
-						{#if turn.body}
-							<MarkdownRenderer text={turn.body} dense />
-						{/if}
-						<SaidImages images={turn.images ?? []} />
-						{#if turn.threads && turn.threads.length > 0}
-							{@render threadChips(turn.threads, 'panel-thread-ref', false)}
-						{/if}
-						{#if turn.cancelled}
-							<p data-testid="panel-cancelled" class="cr-faint mt-1 text-xs">
-								stopped — the agent was asked to drop it
-							</p>
-						{/if}
-					</div>
+					<EdgeFrame tone="reader" ground="tint" testId="panel-said">
+						<div class={[turn.cancelled && 'cr-faint']}>
+							<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
+							{#if turn.body}
+								<MarkdownRenderer text={turn.body} dense />
+							{/if}
+							<SaidImages images={turn.images ?? []} />
+							{#if turn.threads && turn.threads.length > 0}
+								{@render threadChips(turn.threads, 'panel-thread-ref', false)}
+							{/if}
+							{#if turn.cancelled}
+								<p data-testid="panel-cancelled" class="cr-faint mt-1 text-xs">
+									stopped — the agent was asked to drop it
+								</p>
+							{/if}
+						</div>
+					</EdgeFrame>
 				{:else}
 					<div data-testid="panel-answer" class="cr-answer">
 						<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>

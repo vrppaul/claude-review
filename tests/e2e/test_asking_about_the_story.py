@@ -179,6 +179,26 @@ async def test_a_chapters_doubt_pointed_at_is_lit_by_the_pointers_light_with_the
     assert await doubt.get_by_test_id("ask-about-this").evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
 
 
+async def test_a_chapters_doubt_a_thread_hangs_under_is_drawn_as_the_one_the_reader_is_at_on_the_warnings_wash(
+    review: RunningReview, page: Page
+) -> None:
+    """As every block a thread hangs under: on the reader's mark's tint, its edge at its start, laid over the wash."""
+    await _read_as_story(page, review)
+    doubt = page.get_by_test_id("chapter-doubt-block")
+    await _ask_about(page, doubt, "Was it needed?")
+
+    await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
+
+    band = await painted(doubt.get_by_test_id("askable-band"))
+    assert (band.ground, band.edge) == (
+        await on_a_probe(page, "backgroundColor", "var(--cr-selected)"),
+        await on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-start)"),
+    )
+    assert (await painted(doubt.get_by_test_id("askable-frame"))).ground == await on_a_probe(
+        page, "backgroundColor", "var(--cr-warning-tint)"
+    )
+
+
 @pytest.mark.parametrize("width", READING_WIDTHS)
 async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads_the_chapter(
     review: RunningReview, page: Page, width: int

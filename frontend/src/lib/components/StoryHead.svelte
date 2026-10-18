@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { StoryHeld } from '$lib/types';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { AGENTS_READING } from './story-frames';
 	import { CODE_CURRENT, codeMovedOnIn } from './story-words';
 
 	interface Props {
@@ -43,8 +45,10 @@
 </header>
 
 {#if reconstructed}
-	<p data-testid="story-reconstruction" class="cr-agent-voice cr-agent-voice-reconstructed cr-voice-inset text-sm">
-		The agent did not make this change. The reasons below are its reading of the code and of the commit messages, not
-		what was decided at the time.
-	</p>
+	<EdgeFrame {...AGENTS_READING} testId="story-reconstruction">
+		<p class="text-sm">
+			The agent did not make this change. The reasons below are its reading of the code and of the commit messages, not
+			what was decided at the time.
+		</p>
+	</EdgeFrame>
 {/if}

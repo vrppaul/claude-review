@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import Button from '$lib/ui/Button.svelte';
 import ColumnBar from '$lib/ui/ColumnBar.svelte';
 import Dialog from '$lib/ui/Dialog.svelte';
+import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
@@ -84,6 +85,17 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	{
 		part: "a column's bar",
 		render: () => render(ColumnBar, { testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a frame with an edge at its start',
+		render: () =>
+			render(EdgeFrame, {
+				tone: 'agent',
+				ground: 'none',
+				testId: TEST_ID,
+				children: drawn,
+				class: FROM_OUTSIDE
+			} as never)
 	},
 	{
 		part: 'a link',

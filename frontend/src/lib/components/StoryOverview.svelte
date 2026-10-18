@@ -11,9 +11,11 @@
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import FoldChevron from './FoldChevron.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
+	import { AGENTS_VOICE } from './story-frames';
 	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
 	import StoryPart from './StoryPart.svelte';
@@ -82,13 +84,15 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<div data-testid="story-in-short" class="cr-agent-voice cr-askable-stack">
-			{@render line(overviewLine('task'), overview.task, 'overview-task')}
-			{@render line(overviewLine('done'), overview.done, 'overview-done')}
-			{#if overview.doubt}
-				{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
-			{/if}
-		</div>
+		<EdgeFrame {...AGENTS_VOICE} testId="story-in-short">
+			<div class="cr-askable-stack">
+				{@render line(overviewLine('task'), overview.task, 'overview-task')}
+				{@render line(overviewLine('done'), overview.done, 'overview-done')}
+				{#if overview.doubt}
+					{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
+				{/if}
+			</div>
+		</EdgeFrame>
 	</section>
 
 	{#if overview.diagram}
@@ -97,7 +101,7 @@
 
 	{#if listsSomething}
 		<!-- What more the overview lists, folded under a row whose chevron stands at its far end -->
-		<div data-testid="story-more">
+		<div data-testid="story-more" class="flex flex-col gap-3">
 			<button
 				type="button"
 				data-testid="story-more-toggle"
@@ -109,30 +113,32 @@
 				<FoldChevron folded={!listsOpen} />
 			</button>
 			{#if listsOpen}
-				<div class="cr-agent-voice mt-3 flex flex-col gap-4">
-					{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
-						{#if overview[list].length > 0}
-							<section>
-								<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
-								<!-- Each thing listed may be asked about, as the overview's lines may -->
-								<ul class="cr-askable-stack mt-2">
-									{#each overview[list] as item, itemPlace (itemPlace)}
-										<li>
-											<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
-												<p data-testid="block-words">
-													{item.text}
-													{#if item.chapter}
-														<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
-													{/if}
-												</p>
-											</AskableBlock>
-										</li>
-									{/each}
-								</ul>
-							</section>
-						{/if}
-					{/each}
-				</div>
+				<EdgeFrame {...AGENTS_VOICE} testId="overview-lists">
+					<div class="flex flex-col gap-4">
+						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
+							{#if overview[list].length > 0}
+								<section>
+									<h3 class="cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+									<!-- Each thing listed may be asked about, as the overview's lines may -->
+									<ul class="cr-askable-stack mt-2">
+										{#each overview[list] as item, itemPlace (itemPlace)}
+											<li>
+												<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
+													<p data-testid="block-words">
+														{item.text}
+														{#if item.chapter}
+															<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
+														{/if}
+													</p>
+												</AskableBlock>
+											</li>
+										{/each}
+									</ul>
+								</section>
+							{/if}
+						{/each}
+					</div>
+				</EdgeFrame>
 			{/if}
 		</div>
 	{/if}

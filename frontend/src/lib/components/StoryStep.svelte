@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { askableReason, stepReason } from '$lib/anchors/story';
 	import type { StepListed } from '$lib/review/story-contents';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
+	import { AGENTS_VOICE } from './story-frames';
 	import { alsoInChapters, changedStepNamed, codeNoLongerFound, linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
@@ -50,12 +52,14 @@
 				block={stepReason(told.file, told.lines.first)}
 				words={askable}
 				testId="step-reason-block"
-				frame="cr-agent-voice"
+				frame={AGENTS_VOICE}
 			>
 				<p data-testid="step-reason">{askable}</p>
 			</AskableBlock>
 		{:else}
-			<p data-testid="step-reason" class="cr-agent-voice cr-voice-inset">{told.reason}</p>
+			<EdgeFrame {...AGENTS_VOICE} testId="step-reason-frame">
+				<p data-testid="step-reason">{told.reason}</p>
+			</EdgeFrame>
 		{/if}
 	</div>
 {/snippet}

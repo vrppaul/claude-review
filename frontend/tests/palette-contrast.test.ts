@@ -88,6 +88,16 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		text: '--color-warning',
 		grounds: ['--color-base-100', '--cr-warning-tint', '--cr-hover']
 	},
+	{
+		said: 'where to doubt a chapter, heading its warning, a thread hanging under it',
+		text: '--color-warning',
+		grounds: ['--color-base-100', '--cr-warning-tint', '--cr-selected']
+	},
+	{
+		said: 'what to doubt in a chapter, a thread hanging under it',
+		text: '--color-base-content',
+		grounds: ['--color-base-100', '--cr-warning-tint', '--cr-selected']
+	},
 	{ said: 'the title of a part read through, in the contents', text: '--cr-muted', grounds: ['--color-base-200'] },
 	{
 		said: 'the check of a part read through, on its node in the contents',
@@ -256,6 +266,8 @@ describe('the palette', () => {
 	}
 });
 
+// A warning's wash on the page, which a chapter's doubt stands on
+const WARNING_WASH = ['--color-base-100', '--cr-warning-tint'];
 // Every surface a state is drawn on: the page's, a raised one, and a segmented control's track
 const STATE_SURFACES = [...SURFACES, { said: 'a track', surface: '--color-base-300' }];
 // What the pointer lights, and the light it lays: whatever stands on a surface, and a filled button, whose
@@ -292,5 +304,14 @@ describe('the states of whatever can be pressed', () => {
 				);
 			});
 		}
+
+		it(`a block a thread hangs under inside a warning stands off the warning's wash at ${LIT}:1, its edge at ${NEEDED}:1, in the ${theme} theme`, () => {
+			const wash = laid(WARNING_WASH, theme);
+			const selected = laid([...WARNING_WASH, '--cr-selected'], theme);
+			const edge = paint('--cr-selected-edge', theme).channels;
+
+			expect(contrast(selected, wash)).toBeGreaterThanOrEqual(LIT);
+			expect(Math.min(contrast(edge, selected), contrast(edge, wash))).toBeGreaterThanOrEqual(NEEDED);
+		});
 	}
 });

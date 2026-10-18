@@ -4,7 +4,9 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Dialog from '$lib/ui/Dialog.svelte';
 	import type { Closing } from '$lib/ui/dialog-closing';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import { A_WARNING } from './story-frames';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
@@ -37,13 +39,15 @@
 				The agent that made the change tells it as a story: a short overview, then chapters with its reason above each
 				piece of code.
 			</p>
-			<p data-testid="story-cost" class="cr-cost-note">
-				<span class="mt-0.5 text-warning"><Icon name="notice" size="base" /></span>
-				<span>
-					It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to
-					<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.
-				</span>
-			</p>
+			<EdgeFrame {...A_WARNING} testId="story-cost">
+				<p class="cr-cost-note">
+					<span class="mt-0.5 text-warning"><Icon name="notice" size="base" /></span>
+					<span>
+						It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to
+						<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.
+					</span>
+				</p>
+			</EdgeFrame>
 			<p class="cr-muted text-xs">
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>

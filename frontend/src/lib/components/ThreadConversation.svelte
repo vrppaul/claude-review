@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import { AGENT } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
@@ -67,15 +68,17 @@
 		{/snippet}
 		{#if opening && thread.anchor.outdated && writtenAgainst.length > 0}
 			<!-- One that has lost its place keeps its own copy of what was there -->
-			<div data-testid="stale-quote" class="cr-stale-quote my-1 rounded-r px-3 py-2">
-				<p class="cr-muted mb-1 text-xs">what it was written against</p>
-				{#each writtenAgainst as line, lineIndex (lineIndex)}
-					{#if quoteReads === 'code'}
-						<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
-					{:else}
-						<p class="cr-muted">{line}</p>
-					{/if}
-				{/each}
+			<div class="my-1">
+				<EdgeFrame tone="stale" ground="tint" testId="stale-quote">
+					<p class="cr-muted mb-1 text-xs">what it was written against</p>
+					{#each writtenAgainst as line, lineIndex (lineIndex)}
+						{#if quoteReads === 'code'}
+							<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
+						{:else}
+							<p class="cr-muted">{line}</p>
+						{/if}
+					{/each}
+				</EdgeFrame>
 			</div>
 		{/if}
 		{#each splitSuggestions(exchange.asked) as part, partIndex (partIndex)}
