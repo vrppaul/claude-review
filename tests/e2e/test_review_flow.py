@@ -1110,6 +1110,29 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
     assert thread["anchor"]["quote"] == ["def hello():"]
 
 
+async def test_the_option_the_keys_light_in_the_picker_stands_on_the_selected_tint_with_its_edge_at_its_start(
+    diff_review: RunningReview, page: Page
+) -> None:
+    """It is the one of the list the reader is at, drawn as the file they are in is drawn in the tree."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    # Attaching is what shows the panel; the message the test ends by sending lets the agent's wait end
+    waiting = asyncio.create_task(_next_event(diff_review))
+    await page.get_by_test_id("panel-input").wait_for()
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Is this greeting used?")
+
+    await page.get_by_test_id("panel-input").fill("Look again at @")
+
+    lit = await painted(page.get_by_test_id("thread-option").first)
+    await page.get_by_test_id("thread-option").first.click()
+    await page.get_by_test_id("send-message").click()
+    await waiting
+    assert (lit.ground, lit.edge) == (
+        await on_a_probe(page, "backgroundColor", "var(--cr-selected)"),
+        await on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-start)"),
+    )
+
+
 async def test_a_thread_pointed_at_in_a_message_being_written_is_a_chip_as_tall_as_once_sent_its_cross_in_its_colour(
     diff_review: RunningReview, page: Page
 ) -> None:

@@ -17,6 +17,7 @@ from playwright.async_api import Page, expect
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
 
@@ -55,6 +56,27 @@ async def _press(page: Page, test_id: str) -> None:
     """Press a control from the keyboard: the keyboard on it, then Enter."""
     await page.get_by_test_id(test_id).focus()
     await page.keyboard.press("Enter")
+
+
+async def test_storys_introduction_is_edged_in_the_agents_colour(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    """It speaks for the agent's way of reading, so its pane says so by its edge."""
+    await _welcomed_and_introduced(page, review, reader_files)
+
+    introduction = await painted(page.get_by_test_id("story-introduction"))
+
+    assert introduction.border == await on_a_probe(page, "borderTopColor", "var(--cr-agent)")
+
+
+async def test_story_is_ringed_in_the_agents_colour_while_its_introduction_points_at_it(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    await _welcomed_and_introduced(page, review, reader_files)
+
+    story = await painted(page.get_by_test_id("read-as-story"))
+
+    assert story.edge == await on_a_probe(page, "boxShadow", "var(--cr-shadow-introduced-edge)")
 
 
 async def test_try_story_takes_the_keyboard_as_the_introduction_appears_to_a_returning_reader(
