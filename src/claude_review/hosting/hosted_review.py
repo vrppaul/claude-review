@@ -50,8 +50,7 @@ def host_review(
     broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     records = _reader_records(reader_files)
     review = Review(
-        opening,
-        source=content_source(opening, repository=repository, clock=clock),
+        content_source(opening, repository=repository, clock=clock),
         page=broadcast,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),

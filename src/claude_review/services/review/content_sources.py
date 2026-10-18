@@ -67,6 +67,11 @@ class ContentSource(TakesCompared):
 
     @property
     @abstractmethod
+    def opening(self) -> ReviewOpening:
+        """What the review was opened on, which this source was made from: the one place the review reads it."""
+
+    @property
+    @abstractmethod
     def content(self) -> ReviewContent:
         """The take on screen now."""
 
@@ -109,6 +114,7 @@ class RepositorySource(ContentSource):
     def __init__(
         self, opening: ReviewOpening, opened: OpenedRepository, *, repository: ReviewedRepository, clock: Clock
     ) -> None:
+        self._opening = opening
         self._root = opened.root
         self._content = ReviewContent.opening_on(opening.diff_files)
         self._repository = repository
@@ -117,6 +123,11 @@ class RepositorySource(ContentSource):
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
+
+    @property
+    @override
+    def opening(self) -> ReviewOpening:
+        return self._opening
 
     @property
     @override
@@ -224,7 +235,13 @@ class FixedSource(ContentSource):
     """Files or a conversation, read once: nothing to compare against, nothing to take again."""
 
     def __init__(self, opening: ReviewOpening) -> None:
+        self._opening = opening
         self._content = ReviewContent.opening_on(opening.diff_files)
+
+    @property
+    @override
+    def opening(self) -> ReviewOpening:
+        return self._opening
 
     @property
     @override

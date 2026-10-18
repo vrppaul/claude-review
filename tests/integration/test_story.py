@@ -411,16 +411,15 @@ async def page_reading_the_story(
 ) -> PageReadingTheStory:
     """The pages of a review of the repository's change, put together as `host_review` puts one, and opened.
 
-    Put together here, not by `host_review`: the broadcast that makes queues
-    what it tells for each page's socket, and these pages must read the story
-    at the moment they are told.
+    Put together here, not by `host_review`: the broadcast `host_review` makes
+    queues what it tells for each page's socket, and these pages must read
+    the story at the moment they are told.
     """
     write_files(tmp_git_repo, THE_CHANGE)
     page = PageReadingTheStory()
     opening, clock = await repository_opening(tmp_git_repo), SystemClock()
     page.review = Review(
-        opening,
-        source=content_source(opening, repository=GitRepository(objects=workspace.objects), clock=clock),
+        content_source(opening, repository=GitRepository(objects=workspace.objects), clock=clock),
         page=page,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),

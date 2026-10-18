@@ -16,9 +16,10 @@ panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
 story told of its change and of the reader's asking for one, and the
 `ContentSource` of where its content comes from. That one is handed in:
 its host picks it by what was opened, so a review of files is never handed
-git. `ThreadHandover` makes a thread's screenshots files the agent may
-open, and a `RoundFormatter`, chosen once for the kind of review, writes a
-round as it is sent.
+git, and the review reads what it was opened on from it. `ThreadHandover`
+makes a thread's screenshots files the agent may open, and a
+`RoundFormatter`, chosen once for the kind of review, writes a round as it
+is sent.
 """
 
 from collections.abc import Awaitable
@@ -79,7 +80,6 @@ from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
 from claude_review.services.review.thread_handover import ThreadHandover
-from claude_review.services.review_opening import ReviewOpening
 from claude_review.services.round_formatter import RoundFormatter
 
 log = structlog.get_logger()
@@ -88,18 +88,17 @@ log = structlog.get_logger()
 class Review:
     """One review: its content, its rounds, its conversation, and the two sides it passes between."""
 
-    # PLR0913 allows five arguments; this asks six, as its one exception: the one owner of a review's state
-    # (server.md) is made of what it opened on and five things its host hands it, none reachable through another
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
-        opening: ReviewOpening,
-        *,
         source: ContentSource,
+        *,
         page: PageChannel,
         clock: Clock,
         images: ImageService,
         settings: ReaderRecordService[ReaderSettings],
     ) -> None:
+        # What it was opened on, read from the source made from it: handed once, it cannot be another's
+        opening = source.opening
         self._mode = opening.mode
         self._title = opening.title
         self._identity = opening.identity_digest
