@@ -233,7 +233,7 @@ class Review:
 
     async def open(self) -> None:
         """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted."""
-        await self._source.open(self._rounds.current)
+        await self._source.open(self._rounds)
         self._tell_asking(self._story.want(stories_on=await self._stories_on()))
 
     def work_under_way(self) -> AgentWork | None:

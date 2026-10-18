@@ -1,4 +1,12 @@
-"""Which round of the review is being written, and the last one sent."""
+"""Which round of the review is being written, and the last one sent.
+
+Whoever tags its work with the round, as the content's source tags each
+take, is handed the round being written to read (`RoundBeingWritten`), and
+never what moves it on.
+"""
+
+from abc import ABC, abstractmethod
+from typing import override
 
 import structlog
 
@@ -7,7 +15,16 @@ from claude_review.domain.models import FIRST_ROUND, RoundSubmission
 log = structlog.get_logger()
 
 
-class RoundTracker:
+class RoundBeingWritten(ABC):
+    """Which round of the review is being written, read at the moment it is asked, never changed."""
+
+    @property
+    @abstractmethod
+    def current(self) -> int:
+        """The round being written now."""
+
+
+class RoundTracker(RoundBeingWritten):
     """The round being written, which goes up each time one is sent and the review stays open."""
 
     def __init__(self) -> None:
@@ -16,6 +33,7 @@ class RoundTracker:
         self._last_sent: RoundSubmission | None = None
 
     @property
+    @override
     def current(self) -> int:
         return self._current
 
