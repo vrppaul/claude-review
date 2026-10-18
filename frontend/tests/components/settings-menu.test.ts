@@ -44,6 +44,13 @@ describe('the settings', () => {
 		expect(queryByTestId('whitespace-hidden')).toBeNull();
 	});
 
+	it('name the button that says whitespace is hidden by what pressing it does, for whoever cannot see it', async () => {
+		await review.settings.change({ ignore_whitespace: true });
+		const { getByRole } = render(ReviewHeader, inReview(review));
+
+		expect(getByRole('button', { name: 'Show whitespace changes again' })).toBeTruthy();
+	});
+
 	it('turn stories on behind the gear, here and for every later review', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ReviewHeader, inReview(review));

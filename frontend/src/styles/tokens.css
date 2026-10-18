@@ -191,8 +191,8 @@
 	 * open — stands on their mark's tint, the strongest the words on it allow,
 	 * and says so at 3:1 by an edge of their mark (the shadows above); a
 	 * control pressed or open keeps its own ground and words, the tint laid
-	 * over them. The pointer leaves it as it is. What holds the keyboard is ringed in the
-	 * control's colour.
+	 * over them. The pointer leaves it as it is. What holds the keyboard is
+	 * ringed in the control's colour.
 	 */
 	--cr-selected: var(--cr-mark-tint);
 	--cr-selected-edge: var(--cr-mark);

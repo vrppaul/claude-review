@@ -39,6 +39,10 @@
 		}
 	};
 
+	// What pressing the header's note that whitespace is hidden does: its name, for whoever cannot see the note's
+	// words say a state, and its hint under the pointer
+	const SHOW_WHITESPACE_AGAIN = 'Show whitespace changes again';
+
 	const review = useReview();
 
 	const inRounds = $derived(review.submission.inRounds);
@@ -84,7 +88,8 @@
 						tone="marked"
 						size="xs"
 						testId="whitespace-hidden"
-						title="Show whitespace changes again"
+						aria-label={SHOW_WHITESPACE_AGAIN}
+						title={SHOW_WHITESPACE_AGAIN}
 						onclick={() => review.setIgnoreWhitespace(false)}
 					>
 						No whitespace
