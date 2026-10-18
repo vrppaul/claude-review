@@ -8,6 +8,13 @@ The repository here holds every staging until the test lets it say what
 moved, and the working tree has moved on between any two stagings of it.
 And a tree git will not stage as the review opens leaves the review what the
 command line read for it.
+
+These are integration tests with a repository that is not git. The review
+is put together by `host_review`, as the command line puts it together, with
+a workspace and the reader's settings file it reads at each retake: I/O,
+which `tests/unit/` holds none of. And git cannot be held between staging a
+tree and saying what moved in it, which every test here needs, so the
+repository is one that holds each staging until the test lets it go.
 """
 
 import asyncio

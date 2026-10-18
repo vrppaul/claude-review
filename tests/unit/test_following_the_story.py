@@ -1,9 +1,11 @@
-"""A story told of one take of the change, followed onto each take after it as the diff is taken again.
+"""Following the story told onto each later take of the change, as the review holds it.
 
-It is always followed from the story as it was told: it says whether the
-code moved on under it, in which round, and how much it left out when it was
-told. How the takes themselves are taken, one at a time and each in its
-round, is said in `tests/integration/test_taking_the_diff.py`.
+A story is always followed from the story as it was told, by the review's
+own story part: it says which take it is of, whether the code moved on under
+it, in which round, and how much it left out when it was told; and a story
+told while the diff is taken again is followed once it is held. How the
+takes themselves are taken, one at a time and each in its round, is said in
+`tests/integration/test_taking_the_diff.py`.
 """
 
 import asyncio
