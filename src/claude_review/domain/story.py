@@ -24,6 +24,7 @@ moved on.
 """
 
 from enum import StrEnum, auto
+from typing import override
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -66,13 +67,23 @@ class Step(StoryPart):
         """The step as it is told: everything it says, and the piece of its file it shows."""
         return ToldStep(file=self.file, lines=self.lines, reason=self.reason, piece=piece)
 
+    @property
+    def shows_changed_code(self) -> bool:
+        """Whether it shows code a round changed after it was told: never as written, with no code, nor as told.
+
+        As told, it shows the code it was told with; only a step followed onto
+        a later take can show other code (`FollowedStep`).
+        """
+        return False
+
 
 class Chapter[StepKind: Step](StoryPart):
     """Changes that belong together, told one step after another.
 
     Its steps are as the agent wrote them, or as they are told, each with
-    what it shows: a chapter is the same either way. Followed onto a take of
-    the change, it says too how many of its steps changed since it was told.
+    what it shows: a chapter is the same either way, and says how many of
+    its steps show code a round changed after it was told, none until it is
+    followed onto a later take.
     """
 
     # What the overview and the diagram lead to it by
@@ -93,14 +104,9 @@ class Chapter[StepKind: Step](StoryPart):
         return Chapter[FollowedStep](id=self.id, title=self.title, why=self.why, doubt=self.doubt, steps=steps)
 
     @property
-    def changed_steps(self: Chapter[FollowedStep]) -> int:
-        """How many of its steps show code a round changed after they were told: one that stands nowhere shows none.
-
-        Asked only of a chapter followed onto a take of the change, as its
-        `self` says: a step as written shows no code, and one as told the code
-        it was told with.
-        """
-        return len([step for step in self.steps if step.now is not None and step.now.changed_since_told])
+    def changed_steps(self) -> int:
+        """How many of its steps show code a round changed after they were told."""
+        return len([step for step in self.steps if step.shows_changed_code])
 
 
 class OverviewItem(StoryPart):
@@ -281,6 +287,15 @@ class FollowedStep(Step):
 
     # None where its code is not in the change as it now stands
     now: StepNow | None
+
+    @property
+    @override
+    def shows_changed_code(self) -> bool:
+        """Whether it shows code a round changed after it was told: placed in the change, and changed since.
+
+        A step that stands nowhere shows no code, and none that changed.
+        """
+        return self.now is not None and self.now.changed_since_told
 
     @property
     def stands_as_told(self) -> bool:

@@ -690,6 +690,15 @@ def test_whatever_a_round_did_a_step_is_known_by_the_lines_it_was_told_on(steps:
     assert [told_step.lines for told_step in steps_of(story)] == [told.lines for told in steps]
 
 
+def test_a_chapter_as_written_and_as_told_counts_no_step_whose_code_a_round_changed() -> None:
+    """Nothing has followed it onto a later take: its steps show no code, or the code they were told with."""
+    written = story_of(step(SERVICE, 12, 13))
+
+    told = tell(written, CHANGE)
+
+    assert [written.chapters[0].changed_steps, told.chapters[0].changed_steps] == [0, 0]
+
+
 def test_each_chapter_followed_says_how_many_of_its_steps_show_code_a_round_changed() -> None:
     """The fifth line taken out changes the code of the first chapter's step, and leaves the second's as told."""
     story = story_of_chapters(
