@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
+	import Icon from './Icon.svelte';
 	import PassingNote from './PassingNote.svelte';
 	import { chaptersIn } from './story-words';
 
@@ -27,14 +30,10 @@
 	{#snippet children(putAway: () => void)}
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3.5 text-sm">
 			<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
-			<button type="button" data-testid="open-story" class="btn btn-primary btn-xs" onclick={onOpen}>Open it</button>
-			<button
-				type="button"
-				data-testid="story-ready-close"
-				class="btn btn-ghost btn-xs"
-				aria-label="Close"
-				onclick={putAway}>×</button
-			>
+			<Button tone="primary" size="xs" data-testid="open-story" onclick={onOpen}>Open it</Button>
+			<IconButton tone="quiet" size="xs" label="Close" data-testid="story-ready-close" onclick={putAway}>
+				<Icon name="cross" />
+			</IconButton>
 		</div>
 		<div data-testid="story-ready-time-left" class="cr-note-time-left" aria-hidden="true"></div>
 	{/snippet}

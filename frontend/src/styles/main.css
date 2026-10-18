@@ -2,6 +2,7 @@
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
 @import './tokens.css';
+@import './ui.css';
 
 @theme {
 	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -293,101 +294,12 @@
 }
 
 /*
- * Whatever can be pressed shows the hand, everywhere and the same: a button,
- * a segment of a track, a fold, a box around a checkbox. Not while it
- * cannot be pressed; and of no weight, so a rule that says otherwise wins.
- */
-:where(button, summary, [role='button'], label:has(> input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
-	cursor: pointer;
-}
-
-/*
- * Whatever of the page's own can be pressed is lit under the pointer the
- * same way: the pointer's light laid over whatever it is drawn on, as an
- * image above its own ground, so a chip keeps its colour under it. Not
- * while it cannot be pressed; and not the one of a set the reader is at,
- * which is lit already and stays as it is, so the words on it keep their
- * contrast. Pressed, it keeps the same light (tokens.css says why).
- */
-.cr-pressable:not(:disabled, [aria-disabled='true']):not(
-		.cr-current,
-		[aria-selected='true'],
-		[aria-pressed='true'],
-		[aria-haspopup][aria-expanded='true']
-	):hover {
-	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
-}
-/*
- * The one of a set the reader is at, down a column — the file they are in,
- * the base the diff is read against, the option the keys lit — on their
- * mark's tint, its edge at the row's start
- */
-.cr-current,
-.cr-option[aria-selected='true'] {
-	background-color: var(--cr-selected);
-	box-shadow: var(--cr-shadow-selected-start);
-}
-/* A control of a bar pressed down — a segment of a track, a toggle that is on — or whose pane is open: the edge at its foot */
-.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) {
-	background-color: var(--cr-selected);
-	box-shadow: var(--cr-shadow-selected-foot);
-}
-
-/* One focus treatment, in the palette, so keyboard use is visible everywhere */
-:where(button, summary, input, textarea, select, a, [tabindex]):focus-visible {
-	outline: 2px solid var(--cr-focus-ring);
-	outline-offset: 1px;
-	box-shadow: none;
-}
-/*
  * Words lent the keyboard, as the heading of a part of a story is by a bar
  * that goes (`lendKeyboard`): they have no room of their own around them, so
  * the ring stands off them
  */
 .cr-lent-keyboard:focus-visible {
 	outline-offset: 0.5rem;
-}
-
-/*
- * Segmented controls. These pick a view, they do not act, so they read as a
- * track with the one picked marked on it, as whatever is picked is marked,
- * rather than as rows of primary buttons.
- */
-.cr-segmented {
-	display: inline-flex;
-	gap: 2px;
-	padding: 2px;
-	border-radius: var(--radius-field);
-	background: var(--color-base-300);
-}
-.cr-segment {
-	padding: 3px 10px;
-	border-radius: calc(var(--radius-field) - 1px);
-	color: var(--cr-muted);
-	font-size: 0.6875rem;
-	line-height: 1.5;
-	white-space: nowrap;
-}
-.cr-segment[aria-pressed='true'] {
-	color: var(--color-base-content);
-	font-weight: 600;
-}
-/* A segment whose view the agent is writing: said in the agent's colour, its dots with it */
-.cr-segment-writing {
-	color: var(--cr-agent);
-}
-.cr-segment-writing .cr-dot {
-	background: var(--cr-agent);
-}
-/* A segment whose view holds what the agent brought and the reader has not read */
-.cr-segment-unread {
-	color: var(--color-base-content);
-	box-shadow: var(--cr-shadow-unread-edge);
-}
-/* The segment of a way of reading the page introduces, while the introduction points at it */
-.cr-segment-introduced {
-	color: var(--color-base-content);
-	box-shadow: var(--cr-shadow-introduced-edge);
 }
 
 /* A chip the whole of which is the hit target, over a 16px checkbox */
@@ -414,16 +326,10 @@
 	outline: 2px solid var(--cr-focus-ring);
 	outline-offset: 1px;
 }
-/* A chip saying the reader sees less than the whole diff — a narrower base,
-   whitespace hidden — in their mark's tint, and plain, not muted like a control */
+/* A chip saying the reader sees less than the whole diff — whitespace hidden — in their mark's tint, and plain */
 .cr-chip-narrowing {
 	background: var(--cr-mark-tint);
 	color: var(--color-base-content);
-}
-/* A chip offering the reader something of their own to look at, in their mark */
-.cr-chip-marked {
-	background: var(--cr-mark-tint);
-	color: var(--cr-mark-text);
 }
 
 /* Rendered prose gets the same measure as a comment: it is prose too */
@@ -439,19 +345,6 @@
 .cr-image-named {
 	color: var(--cr-muted);
 	font-style: italic;
-}
-
-/*
- * A disabled action still has to be readable: a field's Add button waits for
- * words, and at the default opacity the reader would see a button they
- * cannot make out.
- */
-.btn:disabled,
-.btn[disabled] {
-	opacity: 1;
-	background-color: var(--color-base-300);
-	color: var(--cr-muted);
-	border-color: transparent;
 }
 
 /* A dialog over the whole review: lifted off the page, which is shaded under it */
@@ -719,39 +612,6 @@
 .cr-turn-agent .cr-turn-name {
 	color: var(--cr-agent);
 }
-/*
- * What can be done to a thread, at the far end of the head of its first
- * turn, and Reopen on its folded line: small buttons on the page's own
- * ground, in the edge of a pane; an icon alone where the icon says it, its
- * name kept for whoever cannot see it.
- */
-.cr-thread-action {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	height: var(--cr-thread-action-height);
-	padding: 0 0.625rem;
-	border: 1px solid var(--cr-popover-edge);
-	border-radius: 0.375rem;
-	background: var(--color-base-100);
-	color: var(--color-base-content);
-	font-size: 0.75rem;
-	font-weight: 600;
-}
-.cr-thread-action-icon {
-	justify-content: center;
-	width: var(--cr-thread-action-height);
-	padding: 0;
-	color: var(--cr-muted);
-}
-.cr-thread-action-icon > svg {
-	width: var(--cr-thread-icon-size);
-	height: var(--cr-thread-icon-size);
-}
-/* An action that loses what was written: in the colour of what destroys */
-.cr-thread-action-danger {
-	color: var(--color-error);
-}
 /* Where a reply is begun: drawn as the field it opens, before anything is written in it */
 .cr-reply-field {
 	display: block;
@@ -774,7 +634,8 @@
 	width: 5px;
 	height: 5px;
 	border-radius: 999px;
-	background: var(--cr-muted);
+	/* Quiet, unless what it stands in says whose it is (a segment the agent is writing) */
+	background: var(--cr-dot-colour, var(--cr-muted));
 	display: inline-block;
 }
 /*
@@ -949,18 +810,11 @@
 	position: relative;
 	display: inline-flex;
 }
+/* Where the button that takes an image off stands: over its top right corner */
 .cr-image-detach {
 	position: absolute;
-	top: -0.375rem;
-	right: -0.375rem;
-	width: 1rem;
-	height: 1rem;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--color-base-300);
-	font-size: 0.6875rem;
-	line-height: 1;
+	top: -0.5rem;
+	right: -0.5rem;
 }
 .cr-image-pending {
 	display: inline-flex;
@@ -1193,27 +1047,13 @@
 .cr-voice-inset {
 	padding-left: var(--cr-voice-inset);
 }
-/* "Ask about this", one look wherever it is offered: over a block of the story's words, in a thread's card */
-.cr-ask {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	height: var(--cr-thread-action-height);
-	padding: 0 0.6875rem;
-	border: 1px solid var(--cr-mark-ask-edge);
-	border-radius: var(--radius-field);
-	background: var(--color-base-100);
-	color: var(--cr-mark-text);
-	font-size: var(--text-xs);
-	font-weight: 600;
-	white-space: nowrap;
-}
 /*
- * Over a block: at its top right, out of the flow, so no word moves as it
- * shows; standing on the line the block's words begin at, over the band's
- * top edge and the room above it, so none of the block's words lies under
- * it, and none of the block above (`.cr-askable-stack`). Seen while the
- * block is pointed at or holds the keyboard
+ * "Ask about this" over a block: at its top right, out of the flow, so no
+ * word moves as it shows; standing on the line the block's words begin at,
+ * over the band's top edge and the room above it, so none of the block's
+ * words lies under it, and none of the block above (`.cr-askable-stack`).
+ * Seen while the block is pointed at or holds the keyboard. Its button is
+ * the library's, on the page's own ground, so no word behind shows through
  */
 .cr-ask-over-block {
 	position: absolute;
@@ -1230,7 +1070,7 @@
 .cr-askable-stack {
 	display: flex;
 	flex-direction: column;
-	row-gap: var(--cr-thread-action-height);
+	row-gap: var(--cr-button-xs);
 }
 
 /*
@@ -1832,10 +1672,6 @@
 	border: 1px solid var(--color-base-300);
 	border-radius: 3px;
 	font-family: var(--font-mono);
-}
-.cr-guide-link {
-	font-size: 0.8125rem;
-	color: var(--cr-control-text);
 }
 .cr-guide-entry {
 	display: flex;

@@ -3,6 +3,7 @@
 	import type { Anchor, Thread } from '$lib/types';
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { COMMENTS, counted } from '$lib/utils/words';
@@ -129,20 +130,20 @@
 			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
 			<div class="flex-1"></div>
 			{#if submission.inRounds}
-				<button
-					type="button"
+				<Button
+					tone="quiet"
+					size="sm"
 					data-testid="end-review"
-					class="btn btn-ghost btn-sm"
 					disabled={!submission.canEnd}
 					onclick={() => submission.end()}
 				>
 					End review
-				</button>
+				</Button>
 			{/if}
-			<button
-				type="button"
+			<Button
+				tone="primary"
+				size="sm"
 				data-testid="modal-submit"
-				class="btn btn-primary btn-sm"
 				disabled={!submission.canSend}
 				onclick={() => submission.send()}
 			>
@@ -153,7 +154,7 @@
 				{:else}
 					Send review
 				{/if}
-			</button>
+			</Button>
 		</div>
 	</div>
 </div>

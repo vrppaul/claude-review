@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -17,4 +18,4 @@
 </script>
 
 <!-- Taking a settled thread up again, from its folded line or the head of its first turn alike -->
-<button type="button" data-testid="reopen-thread" class="cr-thread-action cr-pressable" onclick={reopen}>Reopen</button>
+<Button tone="secondary" size="xs" data-testid="reopen-thread" onclick={reopen}>Reopen</Button>

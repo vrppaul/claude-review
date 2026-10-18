@@ -4,6 +4,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
 	import Icon from './Icon.svelte';
 
@@ -41,7 +42,7 @@
 
 	// The column and its way to its rail, while it is on screen; the rail, while it is put away
 	let columnElement: HTMLElement | undefined = $state();
-	let putAwayButton: HTMLElement | undefined = $state();
+	let putAwayButton: HTMLButtonElement | undefined = $state();
 	let rail: HTMLElement | undefined = $state();
 
 	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
@@ -72,17 +73,16 @@
 			<div class="mb-2 flex items-center gap-2">
 				{@render heading()}
 				<div class="flex-1"></div>
-				<button
-					bind:this={putAwayButton}
-					type="button"
+				<IconButton
+					bind:element={putAwayButton}
+					tone="quiet"
+					size="xs"
+					label={putAway}
 					data-testid={testIds.putAway}
-					class="btn btn-ghost btn-xs px-1"
-					title={putAway}
-					aria-label={putAway}
 					onclick={() => column.toggle()}
 				>
-					<Icon name="chevron" class="h-3 w-3 rotate-90" />
-				</button>
+					<Icon name="chevron" class="rotate-90" />
+				</IconButton>
 			</div>
 			{@render children()}
 		</div>

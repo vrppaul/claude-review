@@ -5,6 +5,7 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { StoryBlock } from '$lib/types';
+	import Button from '$lib/ui/Button.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import { askComment, sayComment } from './comment-endings';
@@ -62,17 +63,19 @@
 {#snippet band()}
 	<div data-testid="askable-band" class={['cr-askable', writtenUnder && 'cr-askable-written-under']}>
 		{@render children()}
-		<button
-			bind:this={asking}
-			type="button"
-			data-testid="ask-about-this"
-			aria-label={name}
-			class="cr-ask cr-ask-over-block cr-pressable"
-			onclick={() => review.threads.writing.askAbout(block, words)}
-		>
-			<Icon name="conversation" class="h-3.25 w-3.25" />
-			{ASK_ABOUT_THIS}
-		</button>
+		<span class="cr-ask-over-block">
+			<Button
+				bind:element={asking}
+				tone="secondary"
+				size="xs"
+				data-testid="ask-about-this"
+				aria-label={name}
+				onclick={() => review.threads.writing.askAbout(block, words)}
+			>
+				<Icon name="conversation" class="h-3.25 w-3.25" />
+				{ASK_ABOUT_THIS}
+			</Button>
+		</span>
 	</div>
 {/snippet}
 

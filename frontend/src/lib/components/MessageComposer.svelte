@@ -5,7 +5,10 @@
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import AttachedImages from './AttachedImages.svelte';
+	import Icon from './Icon.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
 	import { Mentions, optionIdOf, tokenOf, type Mentionable } from './mentions.svelte';
@@ -139,13 +142,15 @@
 			{#each pointed as thread (thread.id)}
 				<span data-testid="pointed-thread" class="cr-thread-chip">
 					{anchorShortPlace(thread.anchor)}
-					<button
-						type="button"
+					<IconButton
+						tone="quiet"
+						size="xs"
+						label="Take this thread out of the message"
 						data-testid="drop-thread"
-						class="px-1"
-						aria-label="Take this thread out of the message"
-						onclick={() => drop(thread)}>×</button
+						onclick={() => drop(thread)}
 					>
+						<Icon name="cross" />
+					</IconButton>
 				</span>
 			{/each}
 		</div>
@@ -168,16 +173,14 @@
 		onpaste={onPaste}
 	></textarea>
 	<div class="mt-2 flex items-center gap-2">
-		<button type="button" data-testid="mention-thread" class="btn btn-ghost btn-xs" onclick={mention}>
-			@ thread or file
-		</button>
+		<Button tone="quiet" size="xs" data-testid="mention-thread" onclick={mention}>@ thread or file</Button>
 		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
 		<div class="flex-1"></div>
 		{#if whatWentWrong}
 			<span data-testid="panel-error" class="text-xs text-error">{whatWentWrong}</span>
 		{/if}
-		<button type="button" data-testid="send-message" class="btn btn-primary btn-xs" disabled={!canSend} onclick={send}>
+		<Button tone="primary" size="xs" data-testid="send-message" disabled={!canSend} onclick={send}>
 			{review.conversation.sending ? 'Sending' : 'Send'}
-		</button>
+		</Button>
 	</div>
 </div>

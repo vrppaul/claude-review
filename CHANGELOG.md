@@ -143,6 +143,22 @@
   that id as `said_id`.
 
 ### Changed
+- **One set of buttons across the page.** Every button is one of a few
+  tones at one of two heights: primary, the one act a pane or a card leads
+  to; quiet, an act that must not outweigh the words beside it; secondary,
+  edged on the page's own ground, an act on what is read — a thread's
+  Resolve and Reopen, "Ask about this", Ask now, Take back; danger, the
+  same in the colour of what destroys — the bin and Delete; and the
+  reader's own, on their mark's tint — the base picker while it narrows
+  the diff, and "changed since round N". 24 pixels among words, 32 where a
+  pane, a card or a bar ends. A button that is an icon alone says what it
+  does under the pointer. Each lights the same way under the pointer in
+  both themes, the primary a little more so its blue shows it too; one
+  that cannot be pressed keeps its ground and steps back to muted words,
+  the primary on a surface's grey. A thread's buttons stand 24 pixels tall
+  with a field's corners, where they stood 26 with a box's; every × is the
+  cross the rest of the page draws; "Skip tour" and the release's link are
+  links, in the colour of the reader's controls.
 - **A story follows its code when the diff is taken again.** Each step
   follows its lines through what git says changed between the take it was
   told of and this one: a line kept moves as the lines above it moved, a

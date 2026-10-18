@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import { finishingTitle } from './finishing';
@@ -79,16 +81,15 @@
 					<!-- Said here as well as in the settings, because it hides changes -->
 					<span data-testid="whitespace-hidden" class="cr-chip cr-chip-narrowing">
 						No whitespace
-						<button
-							type="button"
+						<IconButton
+							tone="quiet"
+							size="xs"
+							label="Show whitespace changes again"
 							data-testid="show-whitespace"
-							class="btn btn-ghost btn-xs px-1"
-							aria-label="Show whitespace changes again"
-							title="Show whitespace changes again"
 							onclick={() => review.setIgnoreWhitespace(false)}
 						>
-							<Icon name="cross" class="h-2.5 w-2.5" />
-						</button>
+							<Icon name="cross" />
+						</IconButton>
 					</span>
 				{/if}
 			{:else if review.title}
@@ -117,36 +118,34 @@
 		</span>
 
 		{#if review.threads.count > 0}
-			<div class="join">
-				<button
-					type="button"
+			<div class="flex">
+				<IconButton
+					tone="quiet"
+					size="xs"
+					label="Previous comment"
 					data-testid="prev-comment"
-					class="btn join-item btn-ghost btn-xs"
 					onclick={() => review.navigator.step(-1)}
-					title="Previous comment"
-					aria-label="Previous comment"
 				>
-					<Icon name="chevron" class="h-3 w-3 rotate-180" />
-				</button>
-				<button
-					type="button"
+					<Icon name="chevron" class="rotate-180" />
+				</IconButton>
+				<IconButton
+					tone="quiet"
+					size="xs"
+					label="Next comment"
 					data-testid="next-comment"
-					class="btn join-item btn-ghost btn-xs"
 					onclick={() => review.navigator.step(1)}
-					title="Next comment"
-					aria-label="Next comment"
 				>
-					<Icon name="chevron" class="h-3 w-3" />
-				</button>
+					<Icon name="chevron" />
+				</IconButton>
 			</div>
 		{/if}
 
-		<button
-			type="button"
+		<Button
+			tone="quiet"
+			size="xs"
 			data-testid="toggle-panel"
 			data-role={PANEL_TOGGLE_ROLE}
 			data-tour="agent-panel-toggle"
-			class="cr-chip cr-pressable"
 			aria-pressed={review.layout.agentPanel.open}
 			title="The agent panel — talk about the review, not one line of it"
 			onclick={() => review.layout.agentPanel.toggle()}
@@ -158,7 +157,7 @@
 					<span aria-hidden="true">●</span><span class="sr-only">new answers</span>
 				</span>
 			{/if}
-		</button>
+		</Button>
 
 		<!-- One door: what has been written, a summary, and the two ways out -->
 		<Popover
@@ -169,10 +168,10 @@
 			class="w-[26rem]"
 		>
 			{#snippet trigger(control)}
-				<button
+				<Button
 					{...control}
-					type="button"
-					class="btn btn-primary btn-sm"
+					tone="primary"
+					size="sm"
 					data-testid="quick-submit"
 					data-tour="send"
 					disabled={review.submission.sending}
@@ -187,7 +186,7 @@
 						Finish review
 					{/if}
 					<Icon name="chevron" class="h-2.5 w-2.5" />
-				</button>
+				</Button>
 			{/snippet}
 
 			<FinishReview />

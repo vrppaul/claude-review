@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import Icon from './Icon.svelte';
 	import { arrowOffsetTo } from './pane-placement';
 	import PassingNote from './PassingNote.svelte';
@@ -69,13 +71,15 @@
 		<div class="flex flex-col gap-2.5 px-4 py-3.5">
 			<div class="flex items-start gap-2">
 				<h2 class="flex-1 text-sm font-semibold">{TITLE}</h2>
-				<button
-					type="button"
+				<IconButton
+					tone="quiet"
+					size="xs"
+					label="Close for now"
 					data-testid="story-introduction-close"
-					class="btn btn-ghost btn-xs"
-					aria-label="Close for now"
-					onclick={putAwayForNow}>×</button
+					onclick={putAwayForNow}
 				>
+					<Icon name="cross" />
+				</IconButton>
 			</div>
 			<StorySketch />
 			<p class="text-sm leading-relaxed">
@@ -84,18 +88,12 @@
 			</p>
 			<p class="cr-muted text-xs">It spends the agent's tokens, so it asks before it starts.</p>
 			<div class="flex items-center gap-1.5 pt-0.5">
-				<button
-					bind:this={tryStory}
-					type="button"
-					data-testid="try-story"
-					class="btn btn-primary btn-sm"
-					onclick={onTry}
-				>
+				<Button bind:element={tryStory} tone="primary" size="sm" data-testid="try-story" onclick={onTry}>
 					Try Story
-				</button>
-				<button type="button" data-testid="story-introduction-hide" class="btn btn-ghost btn-sm" onclick={hideForGood}>
+				</Button>
+				<Button tone="quiet" size="sm" data-testid="story-introduction-hide" onclick={hideForGood}>
 					Don't show again
-				</button>
+				</Button>
 			</div>
 		</div>
 	</PopoverPanel>
@@ -110,15 +108,9 @@
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2.5 pl-3.5 text-sm">
 			<Icon name="check" class="h-3.5 w-3.5 text-(--cr-done)" />
 			<span>Won't show again, in any review. Story is still in the header.</span>
-			<button
-				bind:this={undo}
-				type="button"
-				data-testid="story-introduction-undo"
-				class="btn btn-xs"
-				onclick={showAgain}
-			>
+			<Button bind:element={undo} tone="secondary" size="xs" data-testid="story-introduction-undo" onclick={showAgain}>
 				Undo
-			</button>
+			</Button>
 		</div>
 	</PassingNote>
 {/if}

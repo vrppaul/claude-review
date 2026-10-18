@@ -8,6 +8,8 @@ import svelteConfig from './svelte.config.js';
 // components, which build on everything, are built on by nothing but
 // components.
 const LAYERS = {
+	// The component library: what the page is drawn with, building on nothing of the page
+	ui: [],
 	types: [],
 	// Plain helpers over plain data; nothing of the page in them
 	utils: ['types'],
@@ -202,6 +204,53 @@ const NO_INLINE_STYLING = [
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
 ];
 
+// A button is drawn by the component library (lib/ui), in its tones and sizes, and nothing outside it draws one
+// its own way: DaisyUI's buttons darkened a dark ground under the pointer, and the page's own copies of a button
+// drifted into seven looks. A class of DaisyUI's buttons is refused in a class list and in any string a component
+// holds, a constant of classes as much as markup; a class of the library's own outside it
+const DRAWN_BY_THE_LIBRARY =
+	'Draw a button with lib/ui (Button, IconButton, Link, Segment), not with classes of its look.';
+// DaisyUI's button classes, behind any variants: `btn`, `btn-ghost`, `join`, `join-item`
+const DAISY_BUTTON = '/(^|\\s)([^\\s:]+:)*(btn|btn-[a-z]+|join|join-item)(\\s|$)/';
+// The same in any string: `join` alone is a word of a sentence as often, and is refused in class lists only
+const DAISY_BUTTON_IN_A_STRING = '/(^|\\s)(btn|btn-[a-z]+|join-item)(\\s|$)/';
+// A class of the library's own stylesheet
+const LIBRARY_CLASS = '/(^|\\s)([^\\s:]+:)*cr-ui-/';
+// The library draws its buttons from the tokens, so DaisyUI's are refused inside it too
+const NO_DAISY_BUTTONS = [
+	...inClassLists(DAISY_BUTTON, DRAWN_BY_THE_LIBRARY),
+	{ selector: `Literal[value=${DAISY_BUTTON_IN_A_STRING}]`, message: DRAWN_BY_THE_LIBRARY },
+	{ selector: `TemplateElement[value.raw=${DAISY_BUTTON_IN_A_STRING}]`, message: DRAWN_BY_THE_LIBRARY }
+];
+const NO_BUTTONS_OF_ITS_OWN = [
+	...NO_DAISY_BUTTONS,
+	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
+	{ selector: `Literal[value=${LIBRARY_CLASS}]`, message: DRAWN_BY_THE_LIBRARY }
+];
+
+// A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
+// reason. So no part takes a class, by its own name or with the attributes of an element it draws, which it takes
+// only with the class left out
+const NO_LOOK_FROM_OUTSIDE =
+	'A part of the library takes no class: add the look the page needs as a variant inside it.';
+// `Omit<…>`, written as a type or as what an interface extends
+const OMIT = ":matches(TSTypeReference[typeName.name='Omit'], TSInterfaceHeritage[expression.name='Omit'])";
+// The attributes of an element: `HTMLButtonAttributes`, `HTMLAttributes<…>`
+const ATTRIBUTES = 'TSTypeReference[typeName.name=/Attributes$/]';
+const TAKES_NO_CLASS = [
+	{ selector: "TSPropertySignature[key.name='class']", message: NO_LOOK_FROM_OUTSIDE },
+	{ selector: "TSPropertySignature[key.value='class']", message: NO_LOOK_FROM_OUTSIDE },
+	{ selector: 'TSInterfaceHeritage[expression.name=/Attributes$/]', message: NO_LOOK_FROM_OUTSIDE },
+	{
+		selector: `${ATTRIBUTES}:not(${OMIT} > TSTypeParameterInstantiation > ${ATTRIBUTES})`,
+		message: NO_LOOK_FROM_OUTSIDE
+	},
+	{
+		selector: `${OMIT}:has(${ATTRIBUTES}):not(:has(TSLiteralType > Literal[value='class']))`,
+		message: NO_LOOK_FROM_OUTSIDE
+	}
+];
+
 // Every drawing is drawn in its one component: an icon as a row of ICONS that
 // Icon draws by name, the sketch of a story by StorySketch. A review found a
 // speech bubble written into another component with numbers of its own,
@@ -318,7 +367,7 @@ export default tseslint.config(
 				'error',
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING],
+			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_BUTTONS_OF_ITS_OWN],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
 			'@typescript-eslint/method-signature-style': ['error', 'property'],
@@ -358,13 +407,41 @@ export default tseslint.config(
 	{
 		files: ['src/lib/**'],
 		rules: {
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_PAGE_LOOKUPS, ...NO_CHOOSING]
+			'no-restricted-syntax': [
+				'error',
+				...NO_NESTED_HELPERS,
+				...NO_INLINE_STYLING,
+				...NO_PAGE_LOOKUPS,
+				...NO_CHOOSING,
+				...NO_BUTTONS_OF_ITS_OWN
+			]
 		}
 	},
 	{
 		files: CHOOSERS,
 		rules: {
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_PAGE_LOOKUPS]
+			'no-restricted-syntax': [
+				'error',
+				...NO_NESTED_HELPERS,
+				...NO_INLINE_STYLING,
+				...NO_PAGE_LOOKUPS,
+				...NO_BUTTONS_OF_ITS_OWN
+			]
+		}
+	},
+	{
+		// The library draws its parts with its own classes, and takes no look from outside
+		files: ['src/lib/ui/**'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				...NO_NESTED_HELPERS,
+				...NO_INLINE_STYLING,
+				...NO_PAGE_LOOKUPS,
+				...NO_CHOOSING,
+				...NO_DAISY_BUTTONS,
+				...TAKES_NO_CLASS
+			]
 		}
 	},
 	{

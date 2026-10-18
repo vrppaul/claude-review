@@ -59,10 +59,15 @@ OVER_NONE_OF_ITS_WORDS = """(words, over) => {
 GROUND_OF = "(element) => getComputedStyle(element).backgroundColor"
 # Whether an element, and everything in it, shows its contents whole across, with nothing to scroll sideways
 NOTHING_SCROLLS_ACROSS = "(element) => [element, ...element.querySelectorAll('*')].every((inside) => inside.scrollWidth <= inside.clientWidth)"
-# How strongly an element is drawn, as its style says it, and the strength of one drawn fully and not at all
-OPACITY = "opacity"
-FULLY_DRAWN = "1"
-NOT_DRAWN = "0"
+# How strongly an element is drawn on screen: its own opacity and that of everything it stands in, multiplied; and
+# the strength of one drawn fully and not at all
+DRAWN_STRENGTH = """(element) => {
+    let strength = 1;
+    for (let node = element; node; node = node.parentElement) strength *= Number(getComputedStyle(node).opacity);
+    return strength;
+}"""
+FULLY_DRAWN = 1
+NOT_DRAWN = 0
 
 
 @pytest.fixture
@@ -126,11 +131,11 @@ async def test_ask_about_this_stands_over_the_top_edge_of_the_block_pointed_at_o
     words = doubt.get_by_test_id("block-words")
     words_above = page.get_by_test_id("overview-done").get_by_test_id("block-words")
     words_top, words_left = await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)
-    await expect(asking).to_have_css(OPACITY, NOT_DRAWN)
+    assert await asking.evaluate(DRAWN_STRENGTH) == NOT_DRAWN
 
     await band.hover()
 
-    await expect(asking).to_have_css(OPACITY, FULLY_DRAWN)
+    assert await asking.evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
     assert await asking.evaluate(TOP_OF) < await band.evaluate(TOP_OF)
     assert await words.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
     assert await words_above.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
@@ -145,7 +150,7 @@ async def test_a_chapters_doubt_pointed_at_keeps_the_warnings_colours(review: Ru
 
     await band.hover()
 
-    await expect(doubt.get_by_test_id("ask-about-this")).to_have_css(OPACITY, FULLY_DRAWN)
+    assert await doubt.get_by_test_id("ask-about-this").evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
     assert await band.evaluate(GROUND_OF) == unpointed
 
 
@@ -159,7 +164,7 @@ async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads
 
     await why.get_by_test_id("askable-band").hover()
 
-    await expect(asking).to_have_css(OPACITY, FULLY_DRAWN)
+    assert await asking.evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
     chapter = page.get_by_test_id("story-chapter")
     offer = await asking.element_handle()
     assert await chapter.get_by_test_id("part-head").evaluate(OVER_NONE_OF_ITS_WORDS, offer)

@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { AGENT } from '$lib/utils/speakers';
 	import Icon from './Icon.svelte';
@@ -31,15 +32,15 @@
 
 <Popover bind:open label="Replies" placement="below-end" data-testid="replies-list" class="w-96">
 	{#snippet trigger(control)}
-		<button {...control} type="button" data-testid="replies-menu" class="cr-chip cr-pressable">
+		<Button {...control} tone="quiet" size="xs" data-testid="replies-menu">
 			<Icon name="reply" class="h-3.5 w-3.5" />
 			Replies
 			{#if review.threads.unread.length > 0}
-				<span data-testid="unread-count" class="font-semibold text-(--cr-unread)">
+				<span data-testid="unread-count" class="text-(--cr-unread)">
 					{review.threads.unread.length}
 				</span>
 			{/if}
-		</button>
+		</Button>
 	{/snippet}
 
 	<div class="flex items-center gap-2 px-3 py-2">
@@ -49,15 +50,15 @@
 		</span>
 		<div class="flex-1"></div>
 		<!-- Nothing to do while everything has been read: offered, it would do nothing -->
-		<button
-			type="button"
+		<Button
+			tone="quiet"
+			size="xs"
 			data-testid="mark-all-read"
-			class="btn btn-ghost btn-xs"
 			disabled={review.threads.unread.length === 0}
 			onclick={() => review.threads.reading.markAllRead()}
 		>
 			Mark all read
-		</button>
+		</Button>
 	</div>
 
 	{#each threads as thread (thread.id)}

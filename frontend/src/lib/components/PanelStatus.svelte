@@ -2,6 +2,7 @@
 	import { focusWhatCarries } from '$lib/dom/keyboard';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import Icon from './Icon.svelte';
@@ -57,15 +58,9 @@
 			said {since(lastAnswer)}
 		</span>
 	{/if}
-	<button
-		type="button"
-		data-testid="close-panel"
-		class="btn btn-ghost btn-xs px-1"
-		aria-label="Hide the agent panel"
-		onclick={putAway}
-	>
-		<Icon name="chevron" class="h-3 w-3 -rotate-90" />
-	</button>
+	<IconButton tone="quiet" size="xs" label="Hide the agent panel" data-testid="close-panel" onclick={putAway}>
+		<Icon name="chevron" class="-rotate-90" />
+	</IconButton>
 </header>
 
 <!-- Two numbers, told apart: one this side measures, one the agent reports -->

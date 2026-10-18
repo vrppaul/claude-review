@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { formatWeight } from '$lib/review/weight';
+	import Button from '$lib/ui/Button.svelte';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import Icon from './Icon.svelte';
@@ -46,15 +47,10 @@
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>
 			<div class="flex flex-wrap gap-2.5 pt-1">
-				<button
-					type="button"
-					data-testid="turn-on-stories"
-					class="btn btn-primary btn-sm"
-					onclick={() => closeThen(onTurnOn)}
-				>
+				<Button tone="primary" size="sm" data-testid="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
 					Turn on stories
-				</button>
-				<button type="button" data-testid="stories-not-now" class="btn btn-sm" onclick={close}>Not now</button>
+				</Button>
+				<Button tone="secondary" size="sm" data-testid="stories-not-now" onclick={close}>Not now</Button>
 			</div>
 		</div>
 	{/snippet}

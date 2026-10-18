@@ -2,6 +2,7 @@
 	import type { Thread } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
@@ -83,15 +84,15 @@
 			the column of what was said, rather than beside the empty field below; and why it could not be -->
 		<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
 			{#if askable}
-				<button
-					type="button"
+				<Button
+					tone="secondary"
+					size="xs"
 					data-testid="ask-now-thread"
-					class="cr-ask cr-pressable"
 					onclick={() => asking(review.threads.ask(thread.id))}
 				>
 					<Icon name="conversation" class="h-3.25 w-3.25" />
 					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
-				</button>
+				</Button>
 			{/if}
 			{#if failed}
 				<p data-testid="ask-error" class="text-xs text-error">{failed}</p>

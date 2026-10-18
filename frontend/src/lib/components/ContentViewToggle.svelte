@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ContentViewMode } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import Segment from '$lib/ui/Segment.svelte';
+	import Segmented from '$lib/ui/Segmented.svelte';
 
 	const review = useReview();
 
@@ -11,16 +13,14 @@
 	];
 </script>
 
-<div data-testid="content-view-toggle" class="cr-segmented">
+<Segmented label="How to show this file" testId="content-view-toggle">
 	{#each modes as mode (mode.value)}
-		<button
-			type="button"
+		<Segment
 			data-testid={mode.testId}
-			class="cr-segment cr-pressable"
-			aria-pressed={review.layout.contentView.mode === mode.value}
+			pressed={review.layout.contentView.mode === mode.value}
 			onclick={() => review.layout.contentView.set(mode.value)}
 		>
 			{mode.label}
-		</button>
+		</Segment>
 	{/each}
-</div>
+</Segmented>

@@ -2,14 +2,13 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import Segment from '$lib/ui/Segment.svelte';
+	import Segmented from '$lib/ui/Segmented.svelte';
 	import Icon from './Icon.svelte';
 	import StoryArrivalNote from './StoryArrivalNote.svelte';
 	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
-
-	// The classes both buttons carry: a segment of the switch, its icon and its words in a row
-	const SEGMENT_CLASSES = 'cr-segment cr-pressable flex items-center gap-1.5';
 
 	const review = useReview();
 
@@ -32,6 +31,11 @@
 	// stands, its ring on Story with it
 	const storyOffered = $derived(readingFiles && review.story.arrival === 'offered');
 	const introducingStory = $derived(!storyOffered && review.guide.introducesStory);
+	// What draws the reader to Story's segment: its introduction while the page introduces it, else a story unread
+	const storyCalling = $derived.by(() => {
+		if (introducingStory) return 'introduced';
+		return storySays === 'unread' ? 'unread' : undefined;
+	});
 
 	// The view on screen changes from elsewhere too — the files brought on screen from where a story
 	// will be — and whatever held the keyboard in the view that went goes with it. Looked at before the
@@ -65,18 +69,13 @@
 	then a stack of files. While the agent writes the story, dots that breathe stand for its book -->
 {#if review.story.canBeTold}
 	<div class="relative">
-		<div data-testid="reading-view" class="cr-segmented" role="group" aria-label="How to read this review">
-			<button
-				bind:this={buttons.story}
-				type="button"
+		<Segmented label="How to read this review" testId="reading-view">
+			<Segment
+				bind:element={buttons.story}
 				data-testid="read-as-story"
-				class={[
-					SEGMENT_CLASSES,
-					storySays === 'writing' && 'cr-segment-writing',
-					storySays === 'unread' && 'cr-segment-unread',
-					introducingStory && 'cr-segment-introduced'
-				]}
-				aria-pressed={onScreen === 'story'}
+				pressed={onScreen === 'story'}
+				written={storySays === 'writing'}
+				calling={storyCalling}
 				onclick={() => review.wayIntoStory.readAsStory()}
 			>
 				{#if storySays === 'writing'}
@@ -90,19 +89,17 @@
 					<!-- Unsaid to a screen reader: the note under the switch said it -->
 					<span data-testid="segment-unread" class="text-(--cr-unread)" aria-hidden="true">●</span>
 				{/if}
-			</button>
-			<button
-				bind:this={buttons.files}
-				type="button"
+			</Segment>
+			<Segment
+				bind:element={buttons.files}
 				data-testid="read-as-files"
-				class={SEGMENT_CLASSES}
-				aria-pressed={readingFiles}
+				pressed={readingFiles}
 				onclick={() => review.views.choose('files')}
 			>
 				<Icon name="files" class="h-3.5 w-3.5" />
 				Files
-			</button>
-		</div>
+			</Segment>
+		</Segmented>
 		{#if storyOffered}
 			<StoryArrivalNote pointsAt={buttons.story} onOpen={() => review.wayIntoStory.readAsStory()} />
 		{:else}

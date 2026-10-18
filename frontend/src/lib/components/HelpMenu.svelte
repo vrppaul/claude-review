@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import Icon from './Icon.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 	import Popover from './Popover.svelte';
@@ -44,31 +46,31 @@
 	onkeydown={closeOnQuestionMark}
 >
 	{#snippet trigger(control)}
-		<button
+		<Button
 			{...control}
-			type="button"
+			tone="quiet"
+			size="xs"
 			data-testid="open-help"
 			data-role={HELP_BUTTON_ROLE}
-			class="cr-chip cr-pressable"
 			title="The tour, what is new, and the keys (?)"
 		>
 			<kbd class="cr-guide-key">?</kbd> Help
-		</button>
+		</Button>
 	{/snippet}
 
 	<div class="flex flex-col p-4">
 		<header class="mb-3 flex items-center gap-3">
 			<h2 class="text-xs font-semibold">{HEADING}</h2>
 			<div class="flex-1"></div>
-			<button
-				type="button"
+			<IconButton
+				tone="quiet"
+				size="xs"
+				label="Close {HEADING}"
 				data-testid="close-help"
-				class="btn btn-ghost btn-xs px-1"
-				aria-label="Close {HEADING}"
 				onclick={() => review.guide.setHelpOpen(false)}
 			>
-				<Icon name="cross" class="h-3 w-3" />
-			</button>
+				<Icon name="cross" />
+			</IconButton>
 		</header>
 		<div class="mb-5 flex flex-col gap-1">
 			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-pressable" onclick={takeTour}>

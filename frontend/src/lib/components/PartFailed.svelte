@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/ui/Button.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import Icon from './Icon.svelte';
 
@@ -24,5 +25,5 @@
 	<span class="min-w-0 flex-1">
 		{what} could not be drawn: {messageOf(error)}. The rest of the review still works.
 	</span>
-	<button type="button" data-testid="redraw-part" class="btn btn-ghost btn-xs" onclick={retry}>Try again</button>
+	<Button tone="quiet" size="xs" data-testid="redraw-part" onclick={retry}>Try again</Button>
 </div>

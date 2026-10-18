@@ -263,7 +263,7 @@ describe('a story told while the files are read', () => {
 
 		await toldMeanwhile(review, server);
 
-		expect(said(screen.getByTestId('story-ready'))).toBe('The story is ready: 2 chapters. Open it ×');
+		expect(said(screen.getByTestId('story-ready'))).toBe('The story is ready: 2 chapters. Open it');
 		expect(screen.getByTestId('story-ready').getAttribute('role')).toBe('status');
 	});
 

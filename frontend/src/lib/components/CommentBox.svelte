@@ -3,6 +3,9 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import Segment from '$lib/ui/Segment.svelte';
+	import Segmented from '$lib/ui/Segmented.svelte';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
@@ -153,19 +156,17 @@
 		{/if}
 		<div class="flex-1"></div>
 		{#if severityPicker}
-			<div data-testid="severity-picker" class="cr-segmented">
+			<Segmented label="What the comment asks for" testId="severity-picker">
 				{#each SEVERITIES as choice (choice.value)}
-					<button
-						type="button"
+					<Segment
 						data-testid="severity-{choice.value}"
-						class="cr-segment cr-pressable"
-						aria-pressed={field.severity === choice.value}
+						pressed={field.severity === choice.value}
 						onclick={() => (field.severity = choice.value)}
 					>
 						{choice.label}
-					</button>
+					</Segment>
 				{/each}
-			</div>
+			</Segmented>
 		{/if}
 	</div>
 	<textarea
@@ -186,26 +187,24 @@
 	{/if}
 	<div class="flex items-center gap-2">
 		{#if suggestFrom && suggestFrom.length > 0}
-			<button
-				type="button"
-				class="btn btn-ghost btn-xs"
+			<Button
+				tone="quiet"
+				size="xs"
 				data-testid="suggest-change"
 				disabled={hasSuggestion(field.text)}
 				onclick={suggest}
 			>
 				Suggest a change
-			</button>
+			</Button>
 		{/if}
 		<div class="flex-1"></div>
-		<button type="button" class="btn btn-ghost btn-xs" data-testid="cancel-comment" onclick={putAway}> Cancel </button>
+		<Button tone="quiet" size="xs" data-testid="cancel-comment" onclick={putAway}>Cancel</Button>
 		{#if onAsk}
-			<button type="button" class="btn btn-outline btn-xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>
-				Ask now
-			</button>
+			<Button tone="secondary" size="xs" data-testid="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
 		{/if}
-		<button type="button" class="btn btn-primary btn-xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
+		<Button tone="primary" size="xs" data-testid="save-comment" disabled={!sayable} onclick={save}>
 			Add to review
-		</button>
+		</Button>
 	</div>
 	<p class="cr-faint text-xs">
 		{#if onAsk}

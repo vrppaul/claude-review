@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { counted, FILES_HAVING } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
 	import NoticeBar from './NoticeBar.svelte';
@@ -18,21 +19,11 @@
 		{#if retaking.failed}
 			<span data-testid="retake-error" class="text-error">{retaking.failed}</span>
 		{/if}
-		<button
-			type="button"
-			data-testid="retake-diff"
-			class="btn btn-ghost btn-xs"
-			onclick={() => retaking.run(() => review.diff.retake())}
-		>
+		<Button tone="quiet" size="xs" data-testid="retake-diff" onclick={() => retaking.run(() => review.diff.retake())}>
 			Retake
-		</button>
-		<button
-			type="button"
-			data-testid="dismiss-moved"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.diff.treeMoved.dismiss()}
-		>
+		</Button>
+		<Button tone="quiet" size="xs" data-testid="dismiss-moved" onclick={() => review.diff.treeMoved.dismiss()}>
 			Dismiss
-		</button>
+		</Button>
 	{/snippet}
 </NoticeBar>

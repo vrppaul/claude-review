@@ -5,6 +5,7 @@
 	import { isRenderable } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
+	import Button from '$lib/ui/Button.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
@@ -76,15 +77,15 @@
 			<FileTitle {file} element="h2" testId="file-heading" showsChange={isDiffMode} threads={commentCount}>
 				{#snippet beside()}
 					{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
-						<button
-							type="button"
+						<Button
+							tone="marked"
+							size="xs"
 							data-testid="file-changed-since"
-							class="cr-chip cr-chip-marked cr-pressable"
 							title="Show only what changed since then"
 							onclick={showChangesSince}
 						>
 							changed since round {review.lastRetake.changedSince}
-						</button>
+						</Button>
 						{#if changedSinceFailed}
 							<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
 						{/if}
@@ -115,6 +116,7 @@
 				folded={collapsed}
 				subject={file.path}
 				testId="collapse-file"
+				tone="quiet"
 				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>
 		</SectionHeader>

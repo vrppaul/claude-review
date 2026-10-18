@@ -1,0 +1,35 @@
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import type { HTMLButtonAttributes } from 'svelte/elements';
+
+	/** What draws the reader to a segment: what the agent brought there and they have not read, or the way of reading the page introduces. */
+	type Calling = 'unread' | 'introduced';
+
+	// The edge each draws round the segment, a class of the library's stylesheet
+	const CALLINGS: Record<Calling, string> = { unread: 'cr-ui-segment-unread', introduced: 'cr-ui-segment-introduced' };
+
+	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children' | 'aria-pressed'> {
+		/** Whether it is the one picked. */
+		pressed: boolean;
+		/** Whether the agent is writing what it picks: said in the agent's colour. */
+		written?: boolean;
+		calling?: Calling | undefined;
+		/** The segment itself, for whoever hands the keyboard to it or points at it. */
+		element?: HTMLButtonElement | undefined;
+		/** What it says: its words, an icon before them. */
+		children: Snippet;
+	}
+
+	let { pressed, written = false, calling, element = $bindable(), children, ...attributes }: Props = $props();
+</script>
+
+<!-- A segment of a track: one way of reading, pressed while it is the one picked -->
+<button
+	bind:this={element}
+	type="button"
+	{...attributes}
+	aria-pressed={pressed}
+	class={['cr-ui-segment cr-pressable', written && 'cr-ui-segment-written', calling && CALLINGS[calling]]}
+>
+	{@render children()}
+</button>

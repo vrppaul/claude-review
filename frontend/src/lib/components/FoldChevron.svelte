@@ -4,8 +4,8 @@
 
 	interface Props {
 		folded: boolean;
-		/** How large it is drawn, for the control it sits in. */
-		class: ClassValue;
+		/** How large it is drawn, for the row it sits in; none in a button of the library's, which sizes its icon. */
+		class?: ClassValue;
 	}
 
 	let { folded, class: size }: Props = $props();

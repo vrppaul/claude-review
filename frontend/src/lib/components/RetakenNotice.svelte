@@ -2,6 +2,7 @@
 	import type { FollowOutcome } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
+	import Button from '$lib/ui/Button.svelte';
 	import { counted, FILES_HAVING, wordsFor } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
 	import NoticeBar from './NoticeBar.svelte';
@@ -52,27 +53,17 @@
 			<span data-testid="retaken-error" class="text-error">{showing.failed}</span>
 		{/if}
 		{#if review.lastRetake.changedSince !== null && review.lastRetake.changedCount > 0}
-			<button type="button" data-testid="show-what-changed" class="btn btn-ghost btn-xs" onclick={showWhatChanged}>
+			<Button tone="quiet" size="xs" data-testid="show-what-changed" onclick={showWhatChanged}>
 				Show what changed
-			</button>
+			</Button>
 		{/if}
 		{#if stranded}
-			<button
-				type="button"
-				data-testid="show-outdated"
-				class="btn btn-ghost btn-xs"
-				onclick={() => review.navigator.reveal(stranded)}
-			>
+			<Button tone="quiet" size="xs" data-testid="show-outdated" onclick={() => review.navigator.reveal(stranded)}>
 				{wordsFor(outdated.length, SHOW_OUTDATED)}
-			</button>
+			</Button>
 		{/if}
-		<button
-			type="button"
-			data-testid="dismiss-retaken"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.lastRetake.dismiss()}
-		>
+		<Button tone="quiet" size="xs" data-testid="dismiss-retaken" onclick={() => review.lastRetake.dismiss()}>
 			Dismiss
-		</button>
+		</Button>
 	{/snippet}
 </NoticeBar>

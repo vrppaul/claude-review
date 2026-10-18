@@ -58,11 +58,5 @@
 	{#if thread.resolved}
 		<ReopenButton {thread} />
 	{/if}
-	<FoldToggle
-		folded
-		subject="this thread"
-		testId="fold-comment"
-		class="cr-thread-action cr-thread-action-icon cr-pressable"
-		onToggle={unfold}
-	/>
+	<FoldToggle folded subject="this thread" testId="fold-comment" tone="secondary" onToggle={unfold} />
 </div>

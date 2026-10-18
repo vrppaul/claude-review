@@ -3,6 +3,7 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
+	import Button from '$lib/ui/Button.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, FILES, wordsFor } from '$lib/utils/words';
 	import NoticeBar from './NoticeBar.svelte';
@@ -40,24 +41,19 @@
 			<span data-testid="narrow-error" class="text-error">{review.diff.wholeReviewFailed}</span>
 		{/if}
 		{#if offScreen.length > 0}
-			<button
-				type="button"
+			<Button
+				tone="quiet"
+				size="xs"
 				data-testid="list-off-screen"
-				class="btn btn-ghost btn-xs"
 				aria-expanded={listing}
 				onclick={() => (listedOver = listing ? null : review.diff.files)}
 			>
 				{wordsFor(offScreen.length, listWords)}
-			</button>
+			</Button>
 		{/if}
-		<button
-			type="button"
-			data-testid="show-everything"
-			class="btn btn-ghost btn-xs"
-			onclick={() => review.diff.showWholeReview()}
-		>
+		<Button tone="quiet" size="xs" data-testid="show-everything" onclick={() => review.diff.showWholeReview()}>
 			Show the whole diff
-		</button>
+		</Button>
 	{/snippet}
 </NoticeBar>
 

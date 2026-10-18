@@ -4,6 +4,8 @@
 	import { useReview } from '$lib/review/context';
 	import { chapterPartKey } from '$lib/review/story-keys';
 	import type { Diagram } from '$lib/types';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
@@ -48,9 +50,7 @@
 		<span class="cr-muted">{diagram.caption}</span>
 	{/if}
 	{#if drawn}
-		<button type="button" data-testid="diagram-open-large" class="btn btn-ghost btn-xs" onclick={() => (large = true)}>
-			Open large
-		</button>
+		<Button tone="quiet" size="xs" data-testid="diagram-open-large" onclick={() => (large = true)}>Open large</Button>
 	{/if}
 {/snippet}
 
@@ -97,15 +97,9 @@
 			<header class="mb-3 flex items-center gap-3">
 				<h2 class="text-sm font-semibold">{name}</h2>
 				<div class="flex-1"></div>
-				<button
-					type="button"
-					data-testid="diagram-close"
-					class="btn btn-ghost btn-xs px-1"
-					aria-label="Close {name}"
-					onclick={close}
-				>
-					<Icon name="cross" class="h-3 w-3" />
-				</button>
+				<IconButton tone="quiet" size="xs" label="Close {name}" data-testid="diagram-close" onclick={close}>
+					<Icon name="cross" />
+				</IconButton>
 			</header>
 			{#await drawDiagram(source, largeId) then drawing}
 				{@render shown(drawing, AT_ITS_OWN_SIZE, (part) => closeThen(() => review.parts.goTo(part)))}

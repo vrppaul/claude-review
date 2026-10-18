@@ -84,20 +84,22 @@
 	--cr-avatar-size: 1.5rem;
 	--cr-turn-gap: 0.75rem;
 	--cr-reply-field-height: 2.25rem;
-	/*
-	 * An icon in a thread, on an avatar or a button of what can be done to
-	 * it; and how tall such a button stands, and how wide one that is an
-	 * icon alone
-	 */
+	/* The icon on the avatar a thread's speaker stands by */
 	--cr-thread-icon-size: 0.8125rem;
-	--cr-thread-action-height: 1.625rem;
+
+	/*
+	 * How tall a button stands (lib/ui/button.ts): among words and small
+	 * controls, and where it ends a pane, a card or a bar
+	 */
+	--cr-button-xs: 1.5rem;
+	--cr-button-sm: 2rem;
 
 	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
-	 * so as tall as its small buttons, half a rem above and below them, and
-	 * the line under it. What is read under it stands that far down.
+	 * so as tall as its buttons, half a rem above and below them, and the
+	 * line under it. What is read under it stands that far down.
 	 */
-	--cr-chapter-bar-height: 3.0625rem;
+	--cr-chapter-bar-height: calc(var(--cr-button-sm) + 1rem + 1px);
 
 	/*
 	 * What lies over what, lowest first: a file's sticky header and a
@@ -142,8 +144,6 @@
 	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) 18%, transparent);
 	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
 	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-	/* The edge of "Ask about this", offered over a block of a story's words and in a thread */
-	--cr-mark-ask-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
 	/* The agent's colour, at the strengths the mark uses for the same things */
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);
@@ -289,7 +289,7 @@
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
 	--cr-agent: #b39ae6;
-	/* The edge of a pane the reader opened, a step above the lines between surfaces */
+	/* The edge of a pane the reader opened, and of a button that acts on what is read: a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
 	/*
 	 * The axis a story's parts stand on in its contents, and the spine a
@@ -305,6 +305,12 @@
 	--cr-faint: #8894a4;
 	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
+	/*
+	 * And over the control's own fill, the primary button's: a saturated
+	 * fill moves less under the same light, so it takes more of it, which
+	 * only parts it further from the words on it
+	 */
+	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 15%, transparent);
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 
@@ -367,6 +373,7 @@
 	--cr-muted: #4c5866;
 	--cr-faint: #5b6878;
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 8%, transparent);
+	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 12%, transparent);
 	--cr-add-text: #16702e;
 	--cr-del-text: #a5222c;
 

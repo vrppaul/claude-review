@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { DiffLayout, Theme } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import IconButton from '$lib/ui/IconButton.svelte';
+	import Segment from '$lib/ui/Segment.svelte';
+	import Segmented from '$lib/ui/Segmented.svelte';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
@@ -24,16 +27,9 @@
 	out of the header, where only what is switched while reading belongs -->
 <Popover bind:open label="Settings" placement="below-end" data-testid="settings-menu" class="w-72 text-xs">
 	{#snippet trigger(control)}
-		<button
-			{...control}
-			type="button"
-			data-testid="settings-toggle"
-			class="btn btn-circle btn-ghost btn-sm"
-			aria-label="Settings"
-			title="Settings"
-		>
-			<Icon name="settings" class="h-4 w-4" />
-		</button>
+		<IconButton {...control} tone="quiet" size="sm" label="Settings" data-testid="settings-toggle">
+			<Icon name="settings" />
+		</IconButton>
 	{/snippet}
 
 	<div class="flex flex-col gap-2.5 p-3">
@@ -42,19 +38,17 @@
 		{#if review.mode === 'diff'}
 			<div class="flex items-center justify-between gap-3">
 				<span>Diff layout</span>
-				<div data-testid="diff-layout-toggle" class="cr-segmented">
+				<Segmented label="Diff layout" testId="diff-layout-toggle">
 					{#each layouts as layout (layout.value)}
-						<button
-							type="button"
+						<Segment
 							data-testid={layout.testId}
-							class="cr-segment cr-pressable"
-							aria-pressed={review.settings.current.diff_layout === layout.value}
+							pressed={review.settings.current.diff_layout === layout.value}
 							onclick={() => review.settings.change({ diff_layout: layout.value })}
 						>
 							{layout.label}
-						</button>
+						</Segment>
 					{/each}
-				</div>
+				</Segmented>
 			</div>
 
 			<label class="flex items-center justify-between gap-3">
@@ -71,19 +65,17 @@
 
 		<div class="flex items-center justify-between gap-3">
 			<span>Theme</span>
-			<div data-testid="theme-toggle" class="cr-segmented">
+			<Segmented label="Theme" testId="theme-toggle">
 				{#each themes as choice (choice.value)}
-					<button
-						type="button"
+					<Segment
 						data-testid={choice.testId}
-						class="cr-segment cr-pressable"
-						aria-pressed={review.settings.current.theme === choice.value}
+						pressed={review.settings.current.theme === choice.value}
 						onclick={() => review.settings.change({ theme: choice.value })}
 					>
 						{choice.label}
-					</button>
+					</Segment>
 				{/each}
-			</div>
+			</Segmented>
 		</div>
 
 		<label class="flex items-center justify-between gap-3">

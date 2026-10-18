@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { counted, FILES } from '$lib/utils/words';
@@ -72,18 +73,18 @@
 	class="w-80"
 >
 	{#snippet trigger(control)}
-		<button
+		<Button
 			{...control}
-			type="button"
+			tone={review.diff.narrowed ? 'marked' : 'quiet'}
+			size="xs"
 			data-testid="base-picker"
 			data-tour="review-base"
-			class={['cr-chip cr-pressable font-mono', review.diff.narrowed && 'cr-chip-narrowing']}
 			title="What the working tree is compared against"
 		>
-			<Icon name="compare" class={['h-3 w-3 shrink-0', review.diff.narrowed && 'text-(--cr-mark)']} />
+			<Icon name="compare" class="h-3 w-3 shrink-0" />
 			{review.diff.phrase}
 			<Icon name="chevron" class="h-3 w-3 shrink-0" />
-		</button>
+		</Button>
 	{/snippet}
 
 	<div class="px-3 pt-2 pb-1">

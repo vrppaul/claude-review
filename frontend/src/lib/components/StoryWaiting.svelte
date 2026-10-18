@@ -2,6 +2,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import type { StoryWait } from '$lib/review/story-wait';
+	import Button from '$lib/ui/Button.svelte';
 	import Icon from './Icon.svelte';
 	import type { IconName } from './icons';
 	import StorySketch from './StorySketch.svelte';
@@ -29,7 +30,7 @@
 
 	// Everything drawn of the wait, and the control of it that takes the keyboard: each kind of wait says which
 	let drawn: HTMLElement | undefined = $state();
-	let takesKeyboard: HTMLElement | undefined = $state();
+	let takesKeyboard: HTMLButtonElement | undefined = $state();
 
 	// The wait changes under the reader — stopped, asked for again, the agent gone — and the control
 	// that held the keyboard goes with what was drawn. Looked at before the page redraws: the keyboard
@@ -57,15 +58,15 @@
 		<div class="flex flex-col items-center gap-3 text-center">
 			<p>The story was not finished: you stopped it.</p>
 			<div class="flex flex-wrap items-center justify-center gap-3">
-				<button
-					bind:this={takesKeyboard}
-					type="button"
+				<Button
+					bind:element={takesKeyboard}
+					tone="primary"
+					size="sm"
 					data-testid="write-story-again"
-					class="btn btn-primary btn-sm"
 					onclick={() => review.story.askFor()}
 				>
 					Write it again
-				</button>
+				</Button>
 				<span class="cr-muted">or read the files</span>
 			</div>
 		</div>
@@ -91,14 +92,9 @@
 		<div class="flex flex-wrap justify-center gap-2.5">
 			{@render readFilesMeanwhile()}
 			{#if wait.kind === 'writing'}
-				<button
-					type="button"
-					data-testid="stop-writing"
-					class="btn btn-ghost btn-sm"
-					onclick={() => review.story.stop()}
-				>
+				<Button tone="quiet" size="sm" data-testid="stop-writing" onclick={() => review.story.stop()}>
 					Stop writing
-				</button>
+				</Button>
 			{/if}
 		</div>
 	{/if}
@@ -107,13 +103,13 @@
 <!-- The way to the files while the story is not there: offered wherever one is still awaited, and the
 	control that takes the keyboard there -->
 {#snippet readFilesMeanwhile()}
-	<button
-		bind:this={takesKeyboard}
-		type="button"
+	<Button
+		bind:element={takesKeyboard}
+		tone="secondary"
+		size="sm"
 		data-testid="read-files-meanwhile"
-		class="btn btn-sm"
 		onclick={() => review.views.showFiles()}
 	>
 		Read the files meanwhile
-	</button>
+	</Button>
 {/snippet}

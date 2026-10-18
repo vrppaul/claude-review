@@ -1,0 +1,192 @@
+/*
+ * The page's component library (src/lib/ui): how each of its parts looks,
+ * and the states of whatever can be pressed, written from the tokens
+ * (tokens.css) alone. A part takes no look from outside: what the page needs
+ * of one is a tone, a size or a variant written here, with the reason a
+ * reader needs it. Outside of the library the page draws its own drawings —
+ * code rows, a thread's spine, a story's contents and sketch — and its rows,
+ * and lights what of them can be pressed with the states below.
+ *
+ * Outside Tailwind's layers, as the review's own classes are, so they win
+ * over any utility on the same element.
+ */
+
+/*
+ * Whatever can be pressed shows the hand, everywhere and the same: a button,
+ * a segment of a track, a fold, a box around a checkbox. Not while it
+ * cannot be pressed; and of no weight, so a rule that says otherwise wins.
+ */
+:where(button, summary, [role='button'], label:has(> input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
+	cursor: pointer;
+}
+
+/*
+ * Whatever can be pressed is lit under the pointer the same way: the
+ * pointer's light laid over whatever it is drawn on, as an image above its
+ * own ground, so a chip keeps its colour under it. Not while it cannot be
+ * pressed; and not the one of a set the reader is at, which is lit already
+ * and stays as it is, so the words on it keep their contrast. Pressed, it
+ * keeps the same light (tokens.css says why).
+ */
+.cr-pressable:not(:disabled, [aria-disabled='true']):not(
+		.cr-current,
+		[aria-selected='true'],
+		[aria-pressed='true'],
+		[aria-haspopup][aria-expanded='true']
+	):hover {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
+/*
+ * The one of a set the reader is at, down a column — the file they are in,
+ * the base the diff is read against, the option the keys lit — on their
+ * mark's tint, its edge at the row's start
+ */
+.cr-current,
+.cr-option[aria-selected='true'] {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-start);
+}
+/*
+ * A control of a bar pressed down — a segment of a track, a toggle that is
+ * on — or whose pane is open: on the mark's tint, in plain words whatever
+ * its tone, the edge at its foot
+ */
+.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-foot);
+	color: var(--color-base-content);
+}
+
+/* One focus treatment, in the palette, so keyboard use is visible everywhere */
+:where(button, summary, input, textarea, select, a, [tabindex]):focus-visible {
+	outline: 2px solid var(--cr-focus-ring);
+	outline-offset: 1px;
+	box-shadow: none;
+}
+
+/*
+ * A button (Button, IconButton): its tone and its size (lib/ui/button.ts).
+ * Its words are small and strong at either size, so a row of buttons of two
+ * sizes reads as one row.
+ */
+.cr-ui-button {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	height: var(--cr-ui-button-height);
+	padding-inline: var(--cr-ui-button-padding);
+	border: 1px solid transparent;
+	border-radius: var(--radius-field);
+	font-size: 0.75rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+.cr-ui-xs {
+	--cr-ui-button-height: var(--cr-button-xs);
+	--cr-ui-button-padding: 0.5rem;
+	--cr-ui-icon-size: 0.75rem;
+}
+.cr-ui-sm {
+	--cr-ui-button-height: var(--cr-button-sm);
+	--cr-ui-button-padding: 0.75rem;
+	--cr-ui-icon-size: 1rem;
+}
+/* An icon alone: as wide as it is tall, the icon at the size the button's size gives it */
+.cr-ui-icon-button {
+	width: var(--cr-ui-button-height);
+	padding-inline: 0;
+}
+.cr-ui-icon-button > svg {
+	width: var(--cr-ui-icon-size);
+	height: var(--cr-ui-icon-size);
+}
+/* Under the pointer, lit with the light for the control's own fill, which a saturated fill needs to show it */
+.cr-ui-primary {
+	--cr-hover: var(--cr-hover-on-fill);
+	background-color: var(--cr-control);
+	color: var(--color-primary-content);
+}
+.cr-ui-quiet {
+	color: var(--color-base-content);
+}
+.cr-ui-secondary,
+.cr-ui-danger {
+	border-color: var(--cr-popover-edge);
+	background-color: var(--color-base-100);
+	color: var(--color-base-content);
+}
+.cr-ui-danger {
+	color: var(--color-error);
+}
+.cr-ui-marked {
+	background-color: var(--cr-mark-tint);
+	color: var(--cr-mark-text);
+}
+/*
+ * One that cannot be pressed keeps its ground and steps back to muted
+ * words; the primary, whose ground is the control's own, takes a surface's
+ * instead, so it no longer reads as the act to take
+ */
+.cr-ui-button:disabled {
+	color: var(--cr-muted);
+}
+.cr-ui-primary:disabled {
+	background-color: var(--color-base-300);
+}
+
+/*
+ * Words that lead somewhere or do something (Link), in the colour of the
+ * reader's controls as words, at the size of the line they stand in;
+ * underlined under the pointer, as a link is
+ */
+.cr-ui-link {
+	color: var(--cr-control-text);
+	text-underline-offset: 0.2em;
+}
+.cr-ui-link:hover {
+	text-decoration-line: underline;
+}
+
+/*
+ * A segmented control (Segmented, Segment). It picks a way of reading, it
+ * does not act, so it reads as a track with the one picked marked on it, as
+ * whatever is picked is marked, rather than as a row of buttons.
+ */
+.cr-ui-segmented {
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	border-radius: var(--radius-field);
+	background: var(--color-base-300);
+}
+.cr-ui-segment {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 3px 10px;
+	border-radius: calc(var(--radius-field) - 1px);
+	color: var(--cr-muted);
+	font-size: 0.6875rem;
+	line-height: 1.5;
+	white-space: nowrap;
+}
+.cr-ui-segment[aria-pressed='true'] {
+	font-weight: 600;
+}
+/* A segment whose view the agent is writing: said in the agent's colour, the dots that breathe for it with it */
+.cr-ui-segment-written {
+	--cr-dot-colour: var(--cr-agent);
+	color: var(--cr-agent);
+}
+/* A segment whose view holds what the agent brought and the reader has not read */
+.cr-ui-segment-unread {
+	color: var(--color-base-content);
+	box-shadow: var(--cr-shadow-unread-edge);
+}
+/* The segment of a way of reading the page introduces, while the introduction points at it */
+.cr-ui-segment-introduced {
+	color: var(--color-base-content);
+	box-shadow: var(--cr-shadow-introduced-edge);
+}

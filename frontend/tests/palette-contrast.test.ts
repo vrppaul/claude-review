@@ -95,6 +95,17 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--color-base-200', '--cr-done-soft']
 	},
 	{ said: "unread, on a thread's card", text: '--cr-unread', grounds: ['--color-base-200'] },
+	{ said: 'the one act a pane leads to, on its button', text: '--color-primary-content', grounds: ['--cr-control'] },
+	{
+		said: 'the one act a pane leads to, on its button pointed at',
+		text: '--color-primary-content',
+		grounds: ['--cr-control', '--cr-hover-on-fill']
+	},
+	{
+		said: 'the one act a pane leads to, while it cannot be taken',
+		text: '--cr-muted',
+		grounds: ['--color-base-300']
+	},
 	{ said: "a control, on a gap's bar", text: '--cr-control-text', grounds: ['--color-base-200'] },
 	{
 		said: "a control on a gap's bar, pointed at",
@@ -232,20 +243,25 @@ describe('the palette', () => {
 
 // Every surface a state is drawn on: the page's, a raised one, and a segmented control's track
 const STATE_SURFACES = [...SURFACES, { said: 'a track', surface: '--color-base-300' }];
-// The fills a state lays over the surface it is on
-const STATE_FILLS = [
-	{ said: 'what the pointer is on', fill: '--cr-hover' },
-	{ said: 'the one of a set the reader is at', fill: '--cr-selected' }
+// What the pointer lights, and the light it lays: whatever stands on a surface, and the primary button, whose
+// saturated fill moves less under the same light and so takes more of it
+const POINTED_AT = [
+	...STATE_SURFACES.map(({ said, surface }) => ({ said, surface, light: '--cr-hover' })),
+	{ said: "the primary button's own fill", surface: '--cr-control', light: '--cr-hover-on-fill' }
 ];
 
 describe('the states of whatever can be pressed', () => {
 	for (const theme of THEMES) {
+		for (const { said: on, surface, light } of POINTED_AT) {
+			it(`what the pointer is on stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
+				expect(contrast(laid([surface, light], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
+			});
+		}
+
 		for (const { said: on, surface } of STATE_SURFACES) {
-			for (const { said, fill } of STATE_FILLS) {
-				it(`${said} stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
-					expect(contrast(laid([surface, fill], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
-				});
-			}
+			it(`the one of a set the reader is at stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
+				expect(contrast(laid([surface, '--cr-selected'], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
+			});
 
 			it(`the edge of the one of a set the reader is at reads at ${NEEDED}:1 against its fill and ${on}, in the ${theme} theme`, () => {
 				const edge = paint('--cr-selected-edge', theme).channels;

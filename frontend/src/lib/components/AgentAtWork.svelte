@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
@@ -48,9 +49,7 @@
 			{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
 		</span>
 		{#if messageId}
-			<button type="button" data-testid="stop-message" class="btn btn-outline btn-xs" onclick={takeBack}>
-				{TAKE_BACK}
-			</button>
+			<Button tone="secondary" size="xs" data-testid="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
 		{/if}
 	</div>
 	{#if failed}

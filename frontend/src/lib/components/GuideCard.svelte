@@ -2,6 +2,9 @@
 	import { focusWhatCarries, focusWhatRemains } from '$lib/dom/keyboard';
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
+	import Link from '$lib/ui/Link.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import Icon from './Icon.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
@@ -19,7 +22,7 @@
 	const offersStory = $derived(news?.introducesStory === true && review.story.canBeTold);
 
 	let title = $state<HTMLElement | null>(null);
-	let firstAction = $state<HTMLButtonElement | null>(null);
+	let firstAction = $state<HTMLButtonElement>();
 
 	// A card that appears offers its first button, unless the reader is busy:
 	// it takes the keyboard from no one — not from a comment the tour asked for
@@ -65,6 +68,13 @@
 	}
 </script>
 
+<!-- The way to put the welcome or the news away, where each card is headed -->
+{#snippet close()}
+	<IconButton tone="quiet" size="xs" label="Close" data-testid="guide-close" onclick={putAway}>
+		<Icon name="cross" />
+	</IconButton>
+{/snippet}
+
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
 {#if review.guide.touring && step}
 	<section data-testid="guide-tour" class="cr-guide-card" aria-label="Tour of the review">
@@ -76,9 +86,9 @@
 			</div>
 			<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
 			<span class="flex-1"></span>
-			<button type="button" data-testid="guide-skip" class="cr-faint px-0.5 text-xs" onclick={skipTour}>
-				Skip tour
-			</button>
+			<span class="text-xs">
+				<Link testId="guide-skip" onclick={skipTour}>Skip tour</Link>
+			</span>
 		</div>
 		<!-- What a screen reader is told at each step: the words, not the controls -->
 		<div class="flex flex-col gap-3" aria-live="polite">
@@ -103,20 +113,13 @@
 		{/if}
 		<div class="flex items-center gap-2">
 			{#if review.guide.canGoBack}
-				<button
-					type="button"
-					data-testid="guide-back"
-					class="btn btn-outline btn-sm"
-					onclick={() => review.guide.back()}
-				>
-					Back
-				</button>
+				<Button tone="secondary" size="sm" data-testid="guide-back" onclick={() => review.guide.back()}>Back</Button>
 			{/if}
 			<span class="flex-1"></span>
 			{#if !waiting}
-				<button type="button" data-testid="guide-next" class="btn btn-primary btn-sm" onclick={goOn}>
+				<Button tone="primary" size="sm" data-testid="guide-next" onclick={goOn}>
 					{review.guide.isLastStep ? 'Done' : 'Next'}
-				</button>
+				</Button>
 			{/if}
 		</div>
 	</section>
@@ -126,27 +129,23 @@
 			<Icon name="compass" class="cr-guide-compass" />
 			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
 			<span class="flex-1"></span>
-			<button type="button" data-testid="guide-close" class="btn btn-ghost btn-xs" aria-label="Close" onclick={putAway}
-				>×</button
-			>
+			{@render close()}
 		</div>
 		<p class="cr-guide-body">
 			A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
 				.guide.stepCount} stops, about two minutes.
 		</p>
 		<div class="flex items-center gap-2">
-			<button
-				type="button"
-				bind:this={firstAction}
+			<Button
+				bind:element={firstAction}
+				tone="primary"
+				size="sm"
 				data-testid="guide-start"
-				class="btn btn-primary btn-sm"
 				onclick={() => review.guide.startTour()}
 			>
 				Show me around
-			</button>
-			<button type="button" data-testid="guide-not-now" class="btn btn-ghost btn-sm" onclick={putAway}>
-				Not now
-			</button>
+			</Button>
+			<Button tone="quiet" size="sm" data-testid="guide-not-now" onclick={putAway}>Not now</Button>
 		</div>
 		<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
 	</section>
@@ -156,9 +155,7 @@
 			<span class="cr-faint text-xs">New in</span>
 			<span class="cr-guide-release">{news.release}</span>
 			<span class="flex-1"></span>
-			<button type="button" data-testid="guide-close" class="btn btn-ghost btn-xs" aria-label="Close" onclick={putAway}
-				>×</button
-			>
+			{@render close()}
 		</div>
 		<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
 		{#if news.illustration}
@@ -173,45 +170,22 @@
 				{/each}
 			</div>
 		{/if}
-		<a
-			data-testid="guide-release-link"
-			class="cr-guide-link"
-			href={releaseUrl(news.release)}
-			target="_blank"
-			rel="noopener noreferrer"
-		>
-			Everything in {news.release}, on GitHub
-		</a>
+		<p class="cr-guide-body">
+			<Link testId="guide-release-link" href={releaseUrl(news.release)}>Everything in {news.release}, on GitHub</Link>
+		</p>
 		<div class="flex items-center gap-2">
 			{#if offersStory}
-				<button
-					type="button"
-					bind:this={firstAction}
-					data-testid="guide-try-story"
-					class="btn btn-primary btn-sm"
-					onclick={tryStory}
-				>
+				<Button bind:element={firstAction} tone="primary" size="sm" data-testid="guide-try-story" onclick={tryStory}>
 					Try Story
-				</button>
+				</Button>
 			{:else}
-				<button
-					type="button"
-					bind:this={firstAction}
-					data-testid="guide-got-it"
-					class="btn btn-primary btn-sm"
-					onclick={putAway}
-				>
+				<Button bind:element={firstAction} tone="primary" size="sm" data-testid="guide-got-it" onclick={putAway}>
 					Got it
-				</button>
+				</Button>
 			{/if}
-			<button
-				type="button"
-				data-testid="guide-take-tour"
-				class="btn btn-ghost btn-sm"
-				onclick={() => review.guide.startTour()}
-			>
+			<Button tone="quiet" size="sm" data-testid="guide-take-tour" onclick={() => review.guide.startTour()}>
 				Take the tour
-			</button>
+			</Button>
 		</div>
 	</section>
 {/if}

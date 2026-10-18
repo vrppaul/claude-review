@@ -4,6 +4,7 @@
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
+	import Button from '$lib/ui/Button.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import AgentPanel from './AgentPanel.svelte';
 	import { reportBroken } from './broken-parts';
@@ -68,14 +69,9 @@
 		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
 			Picked up {counted(review.restoredCount, COMMENTS)} you had not sent yet.
 			{#snippet actions()}
-				<button
-					type="button"
-					data-testid="dismiss-restored"
-					class="btn btn-ghost btn-xs"
-					onclick={() => review.dismissRestored()}
-				>
+				<Button tone="quiet" size="xs" data-testid="dismiss-restored" onclick={() => review.dismissRestored()}>
 					Dismiss
-				</button>
+				</Button>
 			{/snippet}
 		</NoticeBar>
 	{/if}
@@ -85,14 +81,9 @@
 		<NoticeBar testId="draft-set-aside" kind="cr-notice-set-aside" icon="notice">
 			A kept draft could not be read; it is set aside.
 			{#snippet actions()}
-				<button
-					type="button"
-					data-testid="dismiss-set-aside"
-					class="btn btn-ghost btn-xs"
-					onclick={() => review.dismissSetAside()}
-				>
+				<Button tone="quiet" size="xs" data-testid="dismiss-set-aside" onclick={() => review.dismissSetAside()}>
 					Dismiss
-				</button>
+				</Button>
 			{/snippet}
 		</NoticeBar>
 	{/if}

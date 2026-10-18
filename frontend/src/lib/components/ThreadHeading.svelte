@@ -4,6 +4,8 @@
 	import { threadPlaceOf } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
+	import Button from '$lib/ui/Button.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
@@ -100,38 +102,32 @@
 		<ReopenButton {thread} />
 	{:else}
 		<!-- Settling a thread folds it away; it can still be opened and read -->
-		<button type="button" data-testid="resolve-comment" class="cr-thread-action cr-pressable" onclick={resolve}>
+		<Button tone="secondary" size="xs" data-testid="resolve-comment" onclick={resolve}>
 			<Icon name="check" class="h-3 w-3 text-(--cr-done)" />
 			Resolve
-		</button>
+		</Button>
 	{/if}
 	{#if !raised}
-		<button
-			type="button"
+		<IconButton
+			tone="secondary"
+			size="xs"
+			label={EDIT}
 			data-testid="edit-comment"
-			class="cr-thread-action cr-thread-action-icon cr-pressable"
-			aria-label={EDIT}
 			onclick={() => review.threads.writing.openEdit(thread)}
 		>
 			<Icon name="pencil" />
-		</button>
-		<button
-			type="button"
+		</IconButton>
+		<IconButton
+			tone="danger"
+			size="xs"
+			label={DELETE}
 			data-testid="delete-comment"
-			class="cr-thread-action cr-thread-action-icon cr-thread-action-danger cr-pressable"
-			aria-label={DELETE}
 			onclick={() => (askingToDelete = true)}
 		>
 			<Icon name="trash" />
-		</button>
+		</IconButton>
 	{/if}
-	<FoldToggle
-		folded={false}
-		subject="this thread"
-		testId="fold-comment"
-		class="cr-thread-action cr-thread-action-icon cr-pressable"
-		onToggle={foldAway}
-	/>
+	<FoldToggle folded={false} subject="this thread" testId="fold-comment" tone="secondary" onToggle={foldAway} />
 </span>
 {#if askingToDelete}
 	<ConfirmDialog

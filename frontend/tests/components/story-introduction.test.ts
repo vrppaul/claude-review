@@ -230,7 +230,7 @@ describe('Story introduced at the switch', () => {
 		const server = serving();
 		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
 		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
-		const ringed = () => screen.getByTestId('read-as-story').classList.contains('cr-segment-introduced');
+		const ringed = () => screen.getByTestId('read-as-story').classList.contains('cr-ui-segment-introduced');
 		const whileIntroduced = ringed();
 
 		handOverNext(review, { type: 'story' });

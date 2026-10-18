@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/ui/Button.svelte';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 
@@ -25,15 +26,10 @@
 	{#snippet children({ close, closeThen }: Closing)}
 		<p class="mb-4 text-sm font-semibold">{question}</p>
 		<div class="flex justify-end gap-2">
-			<button type="button" data-testid="confirm-keep" class="btn btn-ghost btn-sm" onclick={close}>{keep}</button>
-			<button
-				type="button"
-				data-testid="confirm-go-ahead"
-				class="btn btn-error btn-sm"
-				onclick={() => closeThen(onGoAhead)}
-			>
+			<Button tone="quiet" size="sm" data-testid="confirm-keep" onclick={close}>{keep}</Button>
+			<Button tone="danger" size="sm" data-testid="confirm-go-ahead" onclick={() => closeThen(onGoAhead)}>
 				{goAhead}
-			</button>
+			</Button>
 		</div>
 	{/snippet}
 </Dialog>

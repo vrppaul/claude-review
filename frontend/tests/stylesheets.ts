@@ -6,7 +6,7 @@
  *
  * A token is followed through tokens.css to the colour it is in a theme. An
  * element's colour is the token its own classes name: a `cr-` class by its
- * rule in main.css — the last such rule wins, as the classes are of one
+ * rule in ui.css or main.css — the last such rule wins, as the classes are of one
  * weight — and otherwise a utility that names a token, `text-(--…)` or
  * `bg-(--…)`, which a `cr-` class always outranks.
  */
@@ -16,8 +16,12 @@ import { join } from 'node:path';
 
 const STYLES = join(__dirname, '../src/styles');
 const tokens = readFileSync(join(STYLES, 'tokens.css'), 'utf8');
-// Its comments taken out, so that what stands before a rule is its selectors alone
-const main = readFileSync(join(STYLES, 'main.css'), 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+// The rules the page is drawn with: the component library's, then the page's own, in the order main.css imports
+// them; their comments taken out, so that what stands before a rule is its selectors alone
+const drawnWith = ['ui.css', 'main.css']
+	.map((sheet) => readFileSync(join(STYLES, sheet), 'utf8'))
+	.join('\n')
+	.replaceAll(/\/\*[\s\S]*?\*\//g, '');
 
 export const THEMES = ['light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -73,21 +77,21 @@ export function paint(token: string, theme: Theme): Paint {
 	return { channels: [red, green, blue], alpha };
 }
 
-/** A rule of main.css as it is written: what it is a rule for, and what stands between its braces. */
+/** A rule of the stylesheets as it is written: what it is a rule for, and what stands between its braces. */
 export interface StyleRule {
 	selectors: string;
 	declarations: string;
 }
 
-/** Every rule of main.css, in the file's order: one written inside an `@media` among them. */
+/** Every rule of ui.css and main.css, in the order the page has them: one written inside an `@media` among them. */
 export function styleRules(): StyleRule[] {
-	return [...main.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
+	return [...drawnWith.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
 		selectors: selectors.trim(),
 		declarations
 	}));
 }
 
-/** Every rule of main.css that sets a part's colour by a token, for a selector of one class alone: the class and the token, in the file's order. */
+/** Every rule of the stylesheets that sets a part's colour by a token, for a selector of one class alone: the class and the token, in the file's order. */
 function classRules(drawn: Drawn): { className: string; token: string }[] {
 	return styleRules().flatMap(({ selectors, declarations }) => {
 		const token = new RegExp(`(?:^|[;\\s])${drawn}:\\s*var\\((--[a-z0-9-]+)\\)`).exec(declarations)?.[1];

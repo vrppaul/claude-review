@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
@@ -50,9 +51,7 @@
 				? `asked ${timeAgo(askedAt, review.clock.now)} — keep reading, the answer lands here`
 				: AGENT_STOPPED_LISTENING}
 		</span>
-		<button type="button" data-testid="take-back-question" class="btn btn-outline btn-xs" onclick={takeBack}>
-			{TAKE_BACK}
-		</button>
+		<Button tone="secondary" size="xs" data-testid="take-back-question" onclick={takeBack}>{TAKE_BACK}</Button>
 	{/snippet}
 	{#if failed}
 		<p data-testid="take-back-error" class="text-xs text-error">{failed}</p>

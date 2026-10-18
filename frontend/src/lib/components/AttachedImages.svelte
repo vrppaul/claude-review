@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { imageUrl } from '$lib/api/review-api';
+	import IconButton from '$lib/ui/IconButton.svelte';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		attachments: ImageAttachments;
@@ -25,14 +27,18 @@
 					class="cr-image-thumb"
 					onerror={() => onLost(imageId)}
 				/>
-				<button
-					type="button"
-					data-testid="detach-image"
-					class="cr-image-detach rounded-full"
-					aria-label="Remove this image"
-					{disabled}
-					onclick={() => attachments.detach(imageId)}>×</button
-				>
+				<span class="cr-image-detach">
+					<IconButton
+						tone="secondary"
+						size="xs"
+						label="Remove this image"
+						data-testid="detach-image"
+						{disabled}
+						onclick={() => attachments.detach(imageId)}
+					>
+						<Icon name="cross" />
+					</IconButton>
+				</span>
 			</span>
 		{/each}
 		{#if attachments.uploading > 0}
