@@ -117,8 +117,16 @@
 		>
 			<Icon name="pencil" />
 		</IconButton>
-		<IconButton tone="danger" size="xs" label={DELETE} testId="delete-comment" onclick={() => (askingToDelete = true)}>
-			<Icon name="trash" />
+		<!-- It asks before anything is lost, so it stands as the acts beside it do, its bin in the colour of what
+			destroys, as Resolve's check is in the colour of what is done -->
+		<IconButton
+			tone="secondary"
+			size="xs"
+			label={DELETE}
+			testId="delete-comment"
+			onclick={() => (askingToDelete = true)}
+		>
+			<Icon name="trash" class="text-error" />
 		</IconButton>
 	{/if}
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" tone="secondary" onToggle={foldAway} />

@@ -71,10 +71,11 @@
 	 * Where a thread hangs under a line: how far in from each side of the
 	 * line it stands, and how far from the left edge of its card the tail
 	 * points up at the line. One on a block of a story's words stands in as
-	 * far, its tail where the block's heading is (.cr-askable-block).
+	 * far, its tail where the block's heading is (.cr-askable-block says so).
 	 */
 	--cr-thread-inset: 0.75rem;
 	--cr-thread-tail-at: 6rem;
+	--cr-block-thread-tail-at: 2.5rem;
 	/*
 	 * A thread's turns, a row each: the room between rows, the avatar each
 	 * speaker stands by and the gap between it and what was said, and the
@@ -124,6 +125,11 @@
 	 */
 	--cr-shadow-selected-start: inset 2px 0 0 var(--cr-selected-edge);
 	--cr-shadow-selected-foot: inset 0 -2px 0 var(--cr-selected-edge);
+	/*
+	 * And at the foot of a filled button whose pane is open, in the colour of
+	 * its own words: the mark's edge would vanish on the mark's own fill
+	 */
+	--cr-shadow-selected-foot-on-fill: inset 0 -2px 0 currentColor;
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
 	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
 	/* The reader's mark round the node of the part of a story they are reading */
@@ -175,13 +181,17 @@
 	 * (1.02:1). It stands off its ground at about 1.15:1 and no more, since
 	 * the words on it lose as much: every colour of words is held at 4.5:1 on
 	 * it. Pressed, a thing keeps the same light: a stronger one would take
-	 * the quietest words below 4.5:1.
+	 * the quietest words below 4.5:1. A saturated fill — a filled button's —
+	 * moves less under the same light, so it takes a stronger one of its own
+	 * (--cr-hover-on-fill, in each theme below), which only parts it further
+	 * from the words on it.
 	 *
 	 * The one of a set the reader is at — the file they are in, the option
 	 * the keys lit, a segment pressed, a toggle on, a control whose pane is
 	 * open — stands on their mark's tint, the strongest the words on it allow,
-	 * and says so at 3:1 by an edge of their mark (the shadows above). The
-	 * pointer leaves it as it is. What holds the keyboard is ringed in the
+	 * and says so at 3:1 by an edge of their mark (the shadows above); a
+	 * control pressed or open keeps its own ground and words, the tint laid
+	 * over them. The pointer leaves it as it is. What holds the keyboard is ringed in the
 	 * control's colour.
 	 */
 	--cr-selected: var(--cr-mark-tint);
@@ -306,11 +316,10 @@
 	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
 	/*
-	 * And over the control's own fill, the primary button's: a saturated
-	 * fill moves less under the same light, so it takes more of it, which
-	 * only parts it further from the words on it
+	 * And over a filled button's own fill: the least that stands off both
+	 * fills, the control's and the error's, at 1.15:1 as the screen draws it
 	 */
-	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 15%, transparent);
+	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 22%, transparent);
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 

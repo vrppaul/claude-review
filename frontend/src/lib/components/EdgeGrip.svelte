@@ -23,7 +23,7 @@
 	role="separator"
 	tabindex="0"
 	data-testid={testId}
-	class={['cr-grip cr-pressable', EDGES[grows]]}
+	class={['cr-grip', EDGES[grows]]}
 	aria-label={label}
 	aria-orientation="vertical"
 	aria-valuenow={column.width}

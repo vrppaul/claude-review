@@ -16,12 +16,12 @@ import { join } from 'node:path';
 
 const STYLES = join(__dirname, '../src/styles');
 const tokens = readFileSync(join(STYLES, 'tokens.css'), 'utf8');
-// The rules the page is drawn with: the component library's, then the page's own, in the order main.css imports
-// them; their comments taken out, so that what stands before a rule is its selectors alone
-const drawnWith = ['ui.css', 'main.css']
-	.map((sheet) => readFileSync(join(STYLES, sheet), 'utf8'))
-	.join('\n')
-	.replaceAll(/\/\*[\s\S]*?\*\//g, '');
+// The stylesheets the page is drawn with besides the tokens: the component library's, then the page's own, in the
+// order main.css imports them
+const DRAWN_WITH = ['ui.css', 'main.css'] as const;
+type Sheet = (typeof DRAWN_WITH)[number];
+// The custom property a declaration sets
+const DECLARED = /(?:^|[;{\s])(--[a-z0-9-]+)\s*:/g;
 
 export const THEMES = ['light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -77,18 +77,44 @@ export function paint(token: string, theme: Theme): Paint {
 	return { channels: [red, green, blue], alpha };
 }
 
-/** A rule of the stylesheets as it is written: what it is a rule for, and what stands between its braces. */
+/** Every custom property tokens.css declares, in either theme or in neither. */
+export function tokenNames(): Set<string> {
+	return new Set([...tokens.matchAll(DECLARED)].map(([, name]) => name));
+}
+
+/** A rule of the stylesheets as it is written: the sheet it is in, what it is a rule for, and what stands between its braces. */
 export interface StyleRule {
+	sheet: Sheet;
 	selectors: string;
 	declarations: string;
 }
 
-/** Every rule of ui.css and main.css, in the order the page has them: one written inside an `@media` among them. */
-export function styleRules(): StyleRule[] {
-	return [...drawnWith.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
+/** The rules of one sheet, in its order: one written inside an `@media` among them. Comments are taken out, so that what stands before a rule is its selectors alone. */
+function parsed(sheet: Sheet): StyleRule[] {
+	const written = readFileSync(join(STYLES, sheet), 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+	return [...written.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
+		sheet,
 		selectors: selectors.trim(),
 		declarations
 	}));
+}
+
+// Each sheet's rules, read once
+const RULES_OF: Record<Sheet, StyleRule[]> = { 'ui.css': parsed('ui.css'), 'main.css': parsed('main.css') };
+
+/** The rules of one sheet, in its order. */
+export function rulesOf(sheet: Sheet): StyleRule[] {
+	return RULES_OF[sheet];
+}
+
+/** Every rule of ui.css and main.css, in the order the page has them. */
+export function styleRules(): StyleRule[] {
+	return DRAWN_WITH.flatMap(rulesOf);
+}
+
+/** The custom properties a rule declares. */
+export function customPropertiesOf(rule: StyleRule): string[] {
+	return [...rule.declarations.matchAll(DECLARED)].map(([, name]) => name);
 }
 
 /** Every rule of the stylesheets that sets a part's colour by a token, for a selector of one class alone: the class and the token, in the file's order. */

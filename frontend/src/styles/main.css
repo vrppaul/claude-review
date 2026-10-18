@@ -489,12 +489,15 @@
 	   would otherwise reach every button inside a thread */
 	font-family: var(--font-sans);
 }
-/* The tail: a square turned on its corner, half over the card's top edge, on its ground and in its edge's colour */
+/*
+ * The tail: a square turned on its corner, half over the card's top edge, on its ground and in its edge's colour;
+ * as far in as what the card hangs under says (--cr-tail-at), and under a line where a line's thread points
+ */
 .cr-thread-card::before {
 	content: '';
 	position: absolute;
 	top: -0.375rem;
-	left: var(--cr-thread-tail-at);
+	left: var(--cr-tail-at, var(--cr-thread-tail-at));
 	width: 0.625rem;
 	height: 0.625rem;
 	border-top: 1px solid;
@@ -801,6 +804,13 @@
 .cr-grip-right {
 	right: -3px;
 }
+/*
+ * A target this thin needs more than the pointer's light to be found under
+ * it: it shows itself in the colour of the selected edge, at 3:1 on any surface
+ */
+.cr-grip:hover {
+	background-color: var(--cr-selected-edge);
+}
 /* An image in the panel: small enough to keep the words beside it in view */
 .cr-image-thumb {
 	width: 4rem;
@@ -1005,7 +1015,7 @@
  * in from each side as far, its tail pointing up at what the block is headed with
  */
 .cr-askable-block {
-	--cr-thread-tail-at: 2.5rem;
+	--cr-tail-at: var(--cr-block-thread-tail-at);
 }
 /* What hangs under a block begins where its band ends, which reaches below its words */
 .cr-askable-hangs {
@@ -1448,11 +1458,11 @@
 }
 /* A pane that says the agent brought something not read yet: its edge, and its arrow's, in that colour */
 .cr-popover-unread {
-	--cr-popover-edge: var(--cr-unread);
+	border-color: var(--cr-unread);
 }
 /* A pane that speaks for the agent, or of what it does: its edge, and its arrow's, in its colour */
 .cr-popover-agent {
-	--cr-popover-edge: var(--cr-agent);
+	border-color: var(--cr-agent);
 }
 /* A note under a control that is not about the control, as the note that Story will not be introduced again: no arrow */
 .cr-popover-arrowless::before {
@@ -1490,14 +1500,15 @@
 	}
 }
 /*
- * How long a note that goes by itself has left: a bar along its foot, in
- * the colour of its edge, that runs out over the time the note stands
- * (--cr-note-lasts, which PassingNote gives). The bar only shows the time:
- * the note keeps its own clock, and goes by it where the bar does not run.
+ * How long the note of a story's arrival has left, as it goes by itself: a
+ * bar along its foot, in the colour of what is not read yet, as the note's
+ * edge is, that runs out over the time the note stands (--cr-note-lasts,
+ * which PassingNote gives). The bar only shows the time: the note keeps its
+ * own clock, and goes by it where the bar does not run.
  */
 .cr-note-time-left {
 	height: 2px;
-	background: var(--cr-popover-edge);
+	background: var(--cr-unread);
 	transform-origin: left;
 	animation: cr-run-out var(--cr-note-lasts) linear forwards;
 }

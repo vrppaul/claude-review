@@ -9,13 +9,15 @@
  */
 
 /**
- * - primary: the one act a pane, a card or a field leads to.
+ * - primary: the one act a pane, a card or a field leads to, filled with the
+ *   control's blue.
  * - quiet: an act that must not outweigh the words beside it.
  * - secondary: an act on what is read — a thread, a block of the story's
  *   words — which would read as part of it were it quiet: edged, on the
  *   page's own ground.
- * - danger: an act that loses what was written, said in the colour of what
- *   destroys, on the secondary's ground.
+ * - danger: the act that loses what was written, once it was asked, filled
+ *   with the colour of what destroys, so it is never taken for the safe
+ *   answer beside it.
  * - marked: something of the reader's own to look at, or what they narrowed
  *   the review to, on their mark's tint.
  */
@@ -24,11 +26,12 @@ export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'danger' | 'marked'
 /** xs among words and small controls, 24 pixels; sm where it ends a pane, a card or a bar, 32 pixels. */
 export type ButtonSize = 'xs' | 'sm';
 
+// The classes of each tone; a filled one (primary, danger) is drawn over its own way under the pointer and open
 export const BUTTON_TONES: Record<ButtonTone, string> = {
-	primary: 'cr-ui-primary',
+	primary: 'cr-ui-primary cr-ui-filled',
 	quiet: 'cr-ui-quiet',
 	secondary: 'cr-ui-secondary',
-	danger: 'cr-ui-danger',
+	danger: 'cr-ui-danger cr-ui-filled',
 	marked: 'cr-ui-marked'
 };
 

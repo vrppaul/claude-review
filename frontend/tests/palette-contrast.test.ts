@@ -102,9 +102,24 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--cr-control', '--cr-hover-on-fill']
 	},
 	{
-		said: 'the one act a pane leads to, while it cannot be taken',
+		said: 'an act that loses what was written, on its button',
+		text: '--color-error-content',
+		grounds: ['--color-error']
+	},
+	{
+		said: 'an act that loses what was written, on its button pointed at',
+		text: '--color-error-content',
+		grounds: ['--color-error', '--cr-hover-on-fill']
+	},
+	{
+		said: 'a filled button, while it cannot be pressed',
 		text: '--cr-muted',
 		grounds: ['--color-base-300']
+	},
+	{
+		said: 'the narrowed base picked against, its list open',
+		text: '--cr-mark-text',
+		grounds: ['--color-base-200', '--cr-mark-tint', '--cr-selected']
 	},
 	{ said: "a control, on a gap's bar", text: '--cr-control-text', grounds: ['--color-base-200'] },
 	{
@@ -243,11 +258,12 @@ describe('the palette', () => {
 
 // Every surface a state is drawn on: the page's, a raised one, and a segmented control's track
 const STATE_SURFACES = [...SURFACES, { said: 'a track', surface: '--color-base-300' }];
-// What the pointer lights, and the light it lays: whatever stands on a surface, and the primary button, whose
+// What the pointer lights, and the light it lays: whatever stands on a surface, and a filled button, whose
 // saturated fill moves less under the same light and so takes more of it
 const POINTED_AT = [
 	...STATE_SURFACES.map(({ said, surface }) => ({ said, surface, light: '--cr-hover' })),
-	{ said: "the primary button's own fill", surface: '--cr-control', light: '--cr-hover-on-fill' }
+	{ said: "the primary button's own fill", surface: '--cr-control', light: '--cr-hover-on-fill' },
+	{ said: 'the fill of a button that loses what was written', surface: '--color-error', light: '--cr-hover-on-fill' }
 ];
 
 describe('the states of whatever can be pressed', () => {
