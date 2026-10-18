@@ -19,11 +19,11 @@ import { chatPush } from '../pushes';
 
 // The colour of each meaning, by the token it is written once in: violet is
 // the agent's — what it raised, said or brought the reader to, and what of
-// it is not read yet; blue is the reader's — their marks in words, and the
-// controls they act with; green, beside what the diff added, is what is done
+// it is not read yet; blue is the reader's — their marks, and the controls
+// they act with, said in words; green, beside what the diff added, is what is
+// done
 const AGENTS = '--cr-agent';
 const READERS_WORDS = '--cr-mark-text';
-const READERS_CONTROLS = '--cr-mark';
 const DONE = '--cr-add-text';
 // And nothing in particular: the quiet ground of a dot saying nobody is there
 const NOBODY = '--color-base-300';
@@ -117,7 +117,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 		expectDrawnIn(dot, 'background', AGENTS);
 	});
 
-	it('draws the keys in the help as controls', () => {
+	it('draws the keys in the help in the colour of the reader’s controls, as words that read at 4.5:1', () => {
 		const review = answeredReview();
 		review.guide.setHelpOpen(true);
 
@@ -125,7 +125,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 
 		const keys = getByTestId('shortcuts-list').querySelectorAll('dt');
 		expect(keys.length).toBeGreaterThan(0);
-		for (const key of keys) expectDrawnIn(key, 'color', READERS_CONTROLS);
+		for (const key of keys) expectDrawnIn(key, 'color', READERS_WORDS);
 	});
 
 	it('draws an agent listening in the colour of something ready', () => {

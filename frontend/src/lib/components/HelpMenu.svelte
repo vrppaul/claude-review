@@ -49,7 +49,7 @@
 			type="button"
 			data-testid="open-help"
 			data-role={HELP_BUTTON_ROLE}
-			class="cr-chip"
+			class="cr-chip cr-pressable"
 			title="The tour, what is new, and the keys (?)"
 		>
 			<kbd class="cr-guide-key">?</kbd> Help
@@ -71,13 +71,13 @@
 			</button>
 		</header>
 		<div class="mb-5 flex flex-col gap-1">
-			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-guide-entry-lead" onclick={takeTour}>
+			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-pressable" onclick={takeTour}>
 				<Icon name="compass" class="cr-guide-compass" />
 				<span class="flex-1 text-left">Take the tour again</span>
 				<span class="cr-faint text-xs">{review.guide.stepCount} stops</span>
 			</button>
 			{#if review.guide.latestNews}
-				<button type="button" data-testid="read-news" class="cr-guide-entry" onclick={readNews}>
+				<button type="button" data-testid="read-news" class="cr-guide-entry cr-pressable" onclick={readNews}>
 					<Icon name="plus" class="cr-guide-plus" />
 					<span class="flex-1 text-left">What's new in {review.guide.latestNews.release}</span>
 				</button>
@@ -87,13 +87,13 @@
 		<dl data-testid="shortcuts-list" class="space-y-2">
 			{#each keysOf(review) as row (row.keys)}
 				<div class="flex items-baseline gap-4">
-					<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control)">{row.keys}</dt>
+					<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control-text)">{row.keys}</dt>
 					<dd class="text-sm">{row.does}</dd>
 				</div>
 			{/each}
 			<!-- The list's own key, and every open pane's: not one the review answers -->
 			<div class="flex items-baseline gap-4">
-				<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control)">Esc</dt>
+				<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control-text)">Esc</dt>
 				<dd class="text-sm">Close it</dd>
 			</div>
 		</dl>

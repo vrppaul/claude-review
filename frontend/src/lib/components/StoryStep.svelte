@@ -34,7 +34,7 @@
 	<h3
 		data-testid="step-number"
 		aria-label={named}
-		class={['font-mono text-sm font-semibold text-(--cr-agent)', changed && 'cr-step-changed']}
+		class={['font-mono text-sm font-semibold', changed ? 'cr-step-changed' : 'text-(--cr-agent)']}
 	>
 		{number}
 	</h3>

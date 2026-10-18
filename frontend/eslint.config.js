@@ -165,6 +165,14 @@ const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\
 const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
 // Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
 const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|${UTILITY_END})/`;
+// A state — under the pointer, pressed, holding the keyboard, the one of a set the reader is at — is drawn by
+// the stylesheet with its token (tokens.css), which the palette test holds in both themes: a state variant in
+// markup paints with a colour of its own, unseen by that test, as `hover:bg-base-200` did at 1.06:1 in the dark
+const PAINTED_BY_STATE_TOKENS =
+	'Draw a state in the stylesheet with its token (--cr-hover, --cr-selected, --cr-focus-ring), not with a variant in markup.';
+// A variant of a state, the element's own or one it stands in: `hover:`, `focus-visible:`, `aria-pressed:`, `group-hover:`
+const STATE_VARIANT =
+	'/(^|\\s)([^\\s:]+:)*(hover|focus|focus-visible|focus-within|active|visited|disabled|enabled|checked|open|aria-[^\\s:]+|data-[^\\s:]+|group-[^\\s:]+|peer-[^\\s:]+|has-[^\\s:]+):/';
 // What scrolls down the page is a `cr-scroller`, which is the box its contents
 // are placed in: words kept for a screen reader are out of the flow, and in a
 // scroller made by a utility they stay put while the rest scrolls, on a page
@@ -190,6 +198,7 @@ const NO_INLINE_STYLING = [
 	...inClassLists(Z_UTILITY, LAYERED_BY_TOKENS),
 	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS),
+	...inClassLists(STATE_VARIANT, PAINTED_BY_STATE_TOKENS),
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
 ];
 

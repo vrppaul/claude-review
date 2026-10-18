@@ -52,7 +52,7 @@
 		data-testid={testId}
 		data-role={role}
 		class={[
-			'cr-tree-row btn btn-ghost btn-sm w-full justify-start gap-1 text-left font-mono text-xs',
+			'cr-tree-row cr-pressable flex h-8 w-full items-center gap-1 rounded pr-3 text-left font-mono text-xs font-semibold',
 			viewed && 'cr-viewed',
 			current && 'cr-current'
 		]}

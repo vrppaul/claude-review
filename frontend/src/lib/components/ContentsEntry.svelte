@@ -41,7 +41,7 @@
 	<button
 		type="button"
 		data-testid="go-to-part"
-		class={['cr-contents-row', read && 'cr-muted']}
+		class={['cr-contents-row cr-pressable', read && 'cr-muted']}
 		aria-label={threads > 0 ? calledWithThreads(called, threads) : called}
 		aria-current={beingRead ? 'location' : undefined}
 		onclick={() => review.parts.goTo(part)}

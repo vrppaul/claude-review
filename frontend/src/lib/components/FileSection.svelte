@@ -79,7 +79,7 @@
 						<button
 							type="button"
 							data-testid="file-changed-since"
-							class="cr-chip cr-chip-marked"
+							class="cr-chip cr-chip-marked cr-pressable"
 							title="Show only what changed since then"
 							onclick={showChangesSince}
 						>
@@ -98,7 +98,7 @@
 				<ContentViewToggle />
 			{/if}
 
-			<label class="cr-chip">
+			<label class="cr-chip cr-pressable">
 				<input
 					data-testid="viewed-toggle"
 					type="checkbox"

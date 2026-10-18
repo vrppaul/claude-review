@@ -422,6 +422,24 @@
   its fields stop there.
 
 ### Fixed
+- **What the pointer is on is seen in the dark theme too.** A row of the
+  tree, the contents or a pane, a chip, a segment, a line's number, a hunk
+  gap's ways to show lines, a column's rail and grip, a thread's buttons:
+  each is lit the same way in both themes, at about 1.16:1 against its
+  ground, where the dark theme lit the tree's rows at 1.02:1 and Help's
+  entries not at all. The one of a set you are at — the file you are in,
+  the base the diff is read against, the option the keys lit, a segment
+  pressed, Agent on, a control whose pane is open — stands on your mark's
+  tint with an edge of it that reads at 3:1, where a pressed segment read
+  at 1.27:1 and an open pane's control was drawn as a closed one. Words
+  read at 4.5:1 on every one of these grounds: faint words, line numbers,
+  the agent's colour, a warning, an error, a modified file's letter and the
+  mark as words are a shade stronger, and what the page faded — a file you
+  viewed (3.03:1 in the light theme), a comment sent with a round, a turn
+  taken back, a step a round changed — is said in faint words instead. A
+  row of code is no longer brightened under the pointer, which showed at
+  1.00:1; its number is lit. The column's grip and "Started the review
+  yourself?" take the focus ring.
 - **A choice about Story's introduction the review could not keep is
   said.** "Don't show again", or its Undo, that the review failed to keep
   was dropped without a word, and the next review introduced Story again;

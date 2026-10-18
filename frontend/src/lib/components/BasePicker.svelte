@@ -77,7 +77,7 @@
 			type="button"
 			data-testid="base-picker"
 			data-tour="review-base"
-			class={['cr-chip font-mono', review.diff.narrowed && 'cr-chip-narrowing']}
+			class={['cr-chip cr-pressable font-mono', review.diff.narrowed && 'cr-chip-narrowing']}
 			title="What the working tree is compared against"
 		>
 			<Icon name="compare" class={['h-3 w-3 shrink-0', review.diff.narrowed && 'text-(--cr-mark)']} />
@@ -106,10 +106,7 @@
 				<button
 					type="button"
 					data-testid="base-option"
-					class={[
-						'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-base-300',
-						inForce && 'bg-(--cr-control-tint)'
-					]}
+					class={['cr-pressable flex w-full items-center gap-2 px-3 py-1.5 text-left', inForce && 'cr-current']}
 					onclick={() => pick(version)}
 				>
 					<span class="w-3 shrink-0">

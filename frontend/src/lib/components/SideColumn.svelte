@@ -93,7 +93,7 @@
 		type="button"
 		data-testid={testIds.bringBack}
 		data-tour={tour}
-		class="cr-side-column-rail"
+		class="cr-side-column-rail cr-pressable"
 		title={bringBack}
 		aria-label={bringBack}
 		onclick={() => column.toggle()}

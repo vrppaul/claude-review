@@ -31,7 +31,7 @@
 
 <Popover bind:open label="Replies" placement="below-end" data-testid="replies-list" class="w-96">
 	{#snippet trigger(control)}
-		<button {...control} type="button" data-testid="replies-menu" class="cr-chip">
+		<button {...control} type="button" data-testid="replies-menu" class="cr-chip cr-pressable">
 			<Icon name="reply" class="h-3.5 w-3.5" />
 			Replies
 			{#if review.threads.unread.length > 0}
@@ -65,7 +65,7 @@
 		<button
 			type="button"
 			data-testid="reply-row"
-			class="flex w-full gap-2 border-t border-base-300 px-3 py-2 text-left hover:bg-base-300"
+			class="cr-pressable flex w-full gap-2 border-t border-base-300 px-3 py-2 text-left"
 			onclick={() => goTo(thread)}
 		>
 			<span class="w-2 pt-1.5">

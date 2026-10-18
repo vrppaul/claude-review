@@ -116,8 +116,12 @@
 
 	/* Every shadow the page is drawn with. What lifts a pane off the page it lies over: */
 	--cr-shadow-raised: 0 18px 48px rgb(0 0 0 / 0.45);
-	/* The reader's mark at the left edge of a row, laid inside it */
-	--cr-shadow-marked-edge: inset 2px 0 0 var(--cr-mark);
+	/*
+	 * The edge of the one of a set the reader is at, laid inside it: at the
+	 * start of a row read down a column, at the foot of a control in a bar
+	 */
+	--cr-shadow-selected-start: inset 2px 0 0 var(--cr-selected-edge);
+	--cr-shadow-selected-foot: inset 0 -2px 0 var(--cr-selected-edge);
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
 	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
 	/* The reader's mark round the node of the part of a story they are reading */
@@ -128,8 +132,6 @@
 	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
 	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
 	--cr-shadow-introduced-edge: inset 0 0 0 1px var(--cr-agent);
-	/* The edge of the band over a block of a story's words the reader points at, laid inside it */
-	--cr-shadow-band-edge: inset var(--cr-voice-axis) 0 0 var(--cr-mark-band-edge);
 	/* What lifts a thread's card off what it hangs under */
 	--cr-shadow-thread: 0 8px 24px rgb(0 0 0 / 0.25);
 	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
@@ -138,22 +140,13 @@
 	/* The reader's mark at each strength it is drawn with, faintest first */
 	--cr-mark-soft: color-mix(in srgb, var(--cr-mark) 10%, transparent);
 	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) 18%, transparent);
-	--cr-mark-chip-hover: color-mix(in srgb, var(--cr-mark) 28%, transparent);
 	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
 	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-	/*
-	 * The band over a block of a story's words the reader points at, and its
-	 * edge; and the band while something they wrote hangs under the block
-	 */
-	--cr-mark-band: color-mix(in srgb, var(--cr-mark) 7%, transparent);
-	--cr-mark-band-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
-	--cr-mark-band-written-under: color-mix(in srgb, var(--cr-mark) 16%, transparent);
-	/* The mark laid on the page's ground, whole: for a control that must hide what stands behind it */
-	--cr-mark-tint-opaque: color-mix(in srgb, var(--cr-mark) 14%, var(--color-base-100));
+	/* The edge of "Ask about this", offered over a block of a story's words and in a thread */
+	--cr-mark-ask-edge: color-mix(in srgb, var(--cr-mark) 55%, transparent);
 	/* The agent's colour, at the strengths the mark uses for the same things */
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);
-	--cr-agent-chip-hover: color-mix(in srgb, var(--cr-agent) 28%, transparent);
 	--cr-agent-border: color-mix(in srgb, var(--cr-agent) 35%, transparent);
 	--cr-agent-line: color-mix(in srgb, var(--cr-agent) 45%, transparent);
 	/*
@@ -166,13 +159,34 @@
 
 	/*
 	 * A control is the reader's, so it is drawn in their blue: every focus
-	 * ring, a key in the help, what shows hidden lines, a list's lit option,
-	 * a column's grip, the tour's light and its buttons.
+	 * ring, a key in the help, what shows hidden lines, the tour's light and
+	 * its buttons. As words, in the mark's words colour.
 	 */
 	--cr-control: var(--cr-mark);
 	--cr-control-text: var(--cr-mark-text);
 	--cr-control-tint: var(--cr-mark-tint);
-	--cr-control-line: var(--cr-mark-line);
+
+	/*
+	 * The states of whatever can be pressed, each one token for both themes.
+	 * Under the pointer, a thing is lit by the page's words laid faintly over
+	 * whatever it is drawn on (--cr-hover, in each theme below): that
+	 * lightens a dark ground as it darkens a light one, where DaisyUI's hover
+	 * only darkened, and a near-black ground darkened stayed near-black
+	 * (1.02:1). It stands off its ground at about 1.15:1 and no more, since
+	 * the words on it lose as much: every colour of words is held at 4.5:1 on
+	 * it. Pressed, a thing keeps the same light: a stronger one would take
+	 * the quietest words below 4.5:1.
+	 *
+	 * The one of a set the reader is at — the file they are in, the option
+	 * the keys lit, a segment pressed, a toggle on, a control whose pane is
+	 * open — stands on their mark's tint, the strongest the words on it allow,
+	 * and says so at 3:1 by an edge of their mark (the shadows above). The
+	 * pointer leaves it as it is. What holds the keyboard is ringed in the
+	 * control's colour.
+	 */
+	--cr-selected: var(--cr-mark-tint);
+	--cr-selected-edge: var(--cr-mark);
+	--cr-focus-ring: var(--cr-control);
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
 	--cr-unread: var(--cr-agent);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
@@ -250,7 +264,7 @@
 	--color-success-content: #08150c;
 	--color-warning: #e8c440;
 	--color-warning-content: #1c1608;
-	--color-error: #f2545b;
+	--color-error: #fb5c62;
 	--color-error-content: #1c0a0c;
 
 	--radius-selector: 0.375rem;
@@ -274,7 +288,7 @@
 	--cr-mark-tint: rgb(91 141 239 / 0.14);
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
-	--cr-agent: #a68dd8;
+	--cr-agent: #b39ae6;
 	/* The edge of a pane the reader opened, a step above the lines between surfaces */
 	--cr-popover-edge: #2f3a48;
 	/*
@@ -286,9 +300,11 @@
 	--cr-node-edge: #3a4556;
 	/* A modified file's letter: the one place orange appears outside the code's own colours */
 	--cr-status-modified: #e0a458;
-	--cr-gutter-fg: #7c8a9e;
+	--cr-gutter-fg: #8694a8;
 	--cr-muted: #98a5b6;
-	--cr-faint: #8490a0;
+	--cr-faint: #8894a4;
+	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
+	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 
@@ -322,9 +338,9 @@
 	--color-info-content: #ffffff;
 	--color-success: #1f8b3a;
 	--color-success-content: #ffffff;
-	--color-warning: #806600;
+	--color-warning: #796000;
 	--color-warning-content: #ffffff;
-	--color-error: #c8323c;
+	--color-error: #c22c37;
 	--color-error-content: #ffffff;
 
 	--radius-selector: 0.375rem;
@@ -339,17 +355,18 @@
 	--cr-del-edge: #d24049;
 	--cr-del-tint: rgb(200 50 60 / 0.08);
 	--cr-mark: #2c6bd9;
-	--cr-mark-text: #1f53ad;
+	--cr-mark-text: #1b4fa9;
 	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
-	--cr-agent: #6b4bb8;
+	--cr-agent: #6645b2;
 	--cr-popover-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;
 	--cr-node-edge: #b3bfcd;
-	--cr-status-modified: #935f0f;
-	--cr-gutter-fg: #5d6a7a;
+	--cr-status-modified: #8f5c07;
+	--cr-gutter-fg: #5b6878;
 	--cr-muted: #4c5866;
-	--cr-faint: #5d6a7a;
+	--cr-faint: #5b6878;
+	--cr-hover: color-mix(in srgb, var(--color-base-content) 8%, transparent);
 	--cr-add-text: #16702e;
 	--cr-del-text: #a5222c;
 

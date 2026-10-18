@@ -84,7 +84,7 @@
 						<button
 							type="button"
 							data-testid="finish-comment"
-							class={['cr-finish-row w-full rounded px-2 py-1.5 text-left', sent !== undefined && 'opacity-55']}
+							class={['cr-pressable w-full rounded px-2 py-1.5 text-left', sent !== undefined && 'cr-viewed']}
 							onclick={() => jump(thread)}
 						>
 							<span class="flex items-baseline gap-2">

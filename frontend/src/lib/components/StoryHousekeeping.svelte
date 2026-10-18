@@ -32,7 +32,7 @@
 	<button
 		type="button"
 		data-testid="fold-housekeeping"
-		class="cr-aside-row"
+		class="cr-aside-row cr-pressable"
 		aria-expanded={!folded}
 		onclick={() => (folded = !folded)}
 	>

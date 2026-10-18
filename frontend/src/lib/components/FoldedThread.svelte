@@ -62,7 +62,7 @@
 		folded
 		subject="this thread"
 		testId="fold-comment"
-		class="cr-thread-action cr-thread-action-icon"
+		class="cr-thread-action cr-thread-action-icon cr-pressable"
 		onToggle={unfold}
 	/>
 </div>

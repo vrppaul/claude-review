@@ -86,7 +86,7 @@
 				<button
 					type="button"
 					data-testid="ask-now-thread"
-					class="cr-ask"
+					class="cr-ask cr-pressable"
 					onclick={() => asking(review.threads.ask(thread.id))}
 				>
 					<Icon name="conversation" class="h-3.25 w-3.25" />

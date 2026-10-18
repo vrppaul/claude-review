@@ -100,7 +100,7 @@
 		<ReopenButton {thread} />
 	{:else}
 		<!-- Settling a thread folds it away; it can still be opened and read -->
-		<button type="button" data-testid="resolve-comment" class="cr-thread-action" onclick={resolve}>
+		<button type="button" data-testid="resolve-comment" class="cr-thread-action cr-pressable" onclick={resolve}>
 			<Icon name="check" class="h-3 w-3 text-(--cr-done)" />
 			Resolve
 		</button>
@@ -109,7 +109,7 @@
 		<button
 			type="button"
 			data-testid="edit-comment"
-			class="cr-thread-action cr-thread-action-icon"
+			class="cr-thread-action cr-thread-action-icon cr-pressable"
 			aria-label={EDIT}
 			onclick={() => review.threads.writing.openEdit(thread)}
 		>
@@ -118,7 +118,7 @@
 		<button
 			type="button"
 			data-testid="delete-comment"
-			class="cr-thread-action cr-thread-action-icon cr-thread-action-danger"
+			class="cr-thread-action cr-thread-action-icon cr-thread-action-danger cr-pressable"
 			aria-label={DELETE}
 			onclick={() => (askingToDelete = true)}
 		>
@@ -129,7 +129,7 @@
 		folded={false}
 		subject="this thread"
 		testId="fold-comment"
-		class="cr-thread-action cr-thread-action-icon"
+		class="cr-thread-action cr-thread-action-icon cr-pressable"
 		onToggle={foldAway}
 	/>
 </span>

@@ -67,7 +67,7 @@
 			type="button"
 			data-testid="ask-about-this"
 			aria-label={name}
-			class="cr-ask cr-ask-over-block"
+			class="cr-ask cr-ask-over-block cr-pressable"
 			onclick={() => review.threads.writing.askAbout(block, words)}
 		>
 			<Icon name="conversation" class="h-3.25 w-3.25" />

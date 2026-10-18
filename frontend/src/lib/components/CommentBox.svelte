@@ -158,7 +158,7 @@
 					<button
 						type="button"
 						data-testid="severity-{choice.value}"
-						class="cr-segment"
+						class="cr-segment cr-pressable"
 						aria-pressed={field.severity === choice.value}
 						onclick={() => (field.severity = choice.value)}
 					>

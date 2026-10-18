@@ -26,7 +26,7 @@
 	<button
 		type="button"
 		data-testid={testId}
-		class="cr-thread-chip cr-thread-chip-agent"
+		class="cr-thread-chip cr-thread-chip-agent cr-pressable"
 		title={path}
 		onclick={() => review.navigator.showFile(path)}
 	>

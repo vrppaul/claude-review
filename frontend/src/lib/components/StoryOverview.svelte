@@ -101,7 +101,7 @@
 			<button
 				type="button"
 				data-testid="story-more-toggle"
-				class="cr-aside-row"
+				class="cr-aside-row cr-pressable"
 				aria-expanded={listsOpen}
 				onclick={toggleUnlessWrittenUnder}
 			>

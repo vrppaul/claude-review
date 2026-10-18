@@ -68,7 +68,7 @@
 				<tbody>
 					{#each hunk.lines as drawn (drawn.key)}
 						<tr
-							class={['cr-row', rowClass(drawn.line.kind, commenting.isMarked(drawn.place)), 'hover:brightness-110']}
+							class={['cr-row', rowClass(drawn.line.kind, commenting.isMarked(drawn.place))]}
 							onmouseenter={() => commenting.enter(drawn)}
 						>
 							{#if isDiffMode}

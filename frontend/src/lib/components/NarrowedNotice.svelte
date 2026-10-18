@@ -70,7 +70,7 @@
 			<button
 				type="button"
 				data-testid="off-screen-thread"
-				class="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-base-200"
+				class="cr-pressable flex w-full items-center gap-2 rounded px-2 py-1 text-left"
 				onclick={() => review.navigator.reveal(thread)}
 			>
 				<span class="cr-comment-ref shrink-0 font-mono text-xs">

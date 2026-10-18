@@ -146,7 +146,7 @@
 			data-testid="toggle-panel"
 			data-role={PANEL_TOGGLE_ROLE}
 			data-tour="agent-panel-toggle"
-			class="cr-chip"
+			class="cr-chip cr-pressable"
 			aria-pressed={review.layout.agentPanel.open}
 			title="The agent panel — talk about the review, not one line of it"
 			onclick={() => review.layout.agentPanel.toggle()}

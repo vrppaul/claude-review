@@ -56,7 +56,7 @@
 				tabindex="-1"
 				aria-selected={index === mentions.highlighted}
 				data-testid={pick.kind === 'thread' ? 'thread-option' : 'file-option'}
-				class="cr-option"
+				class="cr-option cr-pressable"
 				onclick={() => onTake(pick)}
 				{@attach (option: HTMLElement) => showIfHighlighted(option, index === mentions.highlighted)}
 			>

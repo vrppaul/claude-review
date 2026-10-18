@@ -9,7 +9,7 @@
 	import TypingIndicator from './TypingIndicator.svelte';
 
 	// The classes both buttons carry: a segment of the switch, its icon and its words in a row
-	const SEGMENT_CLASSES = 'cr-segment flex items-center gap-1.5';
+	const SEGMENT_CLASSES = 'cr-segment cr-pressable flex items-center gap-1.5';
 
 	const review = useReview();
 

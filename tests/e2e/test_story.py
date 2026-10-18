@@ -20,6 +20,7 @@ from claude_review.domain.models import LineSpan
 from claude_review.domain.story import Step, ToldFrom
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
+from tests.e2e.words_colour import FAINT_WORDS, WORDS_COLOUR
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, planted, step, story_of, story_of_chapters
 
@@ -50,8 +51,6 @@ A_RECONSTRUCTION = story_of_chapters(
 EDGE_STYLE = "(element) => getComputedStyle(element).borderLeftStyle"
 EDGE_WIDTH = "(element) => getComputedStyle(element).borderLeftWidth"
 EDGE_COLOUR = "(element) => getComputedStyle(element).borderLeftColor"
-# The colour an element's words are drawn in
-WORDS_COLOUR = "(element) => getComputedStyle(element).color"
 # How wide the agent's edge is drawn
 AGENT_EDGE_WIDTH = "2px"
 # A file added whole, long enough that its piece runs far past the bottom of the screen
@@ -128,9 +127,6 @@ ONE_OF_TWO_READ = "1 of 2 read"
 TO_THE_TOP = "(element) => element.scrollIntoView({ block: 'start' })"
 # Two frames drawn: what the browser watches on the page has reported where everything stood as it opened
 TWO_FRAMES = "new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))"
-# How strongly an element is drawn, and the strength of one that has not stepped back
-OPACITY_OF = "(element) => Number(getComputedStyle(element).opacity)"
-FULLY_DRAWN = 1
 # How far off an element the ring it is drawn while it holds the keyboard stands, in pixels
 RING_OFF_IT = "(element) => parseFloat(getComputedStyle(element).outlineOffset)"
 # Whether nothing on the page holds the keyboard, and what does, by the test id it carries
@@ -652,18 +648,19 @@ async def test_the_overview_on_screen_as_the_story_opens_is_ticked_only_once_the
     await expect(of_the_overview.get_by_test_id("part-read-mark")).to_be_visible()
 
 
-async def test_a_chapter_above_the_one_being_read_is_ticked_in_the_contents_and_its_files_step_back(
+async def test_a_chapter_above_the_one_being_read_is_ticked_in_the_contents_and_its_files_step_back_into_faint_words(
     review_of_a_long_file_in_two_chapters: RunningReview, page: Page
 ) -> None:
     await _read_the_second_chapter(page, review_of_a_long_file_in_two_chapters)
+    faint = await page.evaluate(FAINT_WORDS)
 
     await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
     # The overview's entry, then the first chapter's
     of_the_first = page.get_by_test_id("contents-entry").nth(1)
     await expect(of_the_first.get_by_test_id("part-read-mark")).to_be_visible()
     files_of_the_first, files_of_the_second = await page.get_by_test_id("contents-files").all()
-    assert await files_of_the_first.evaluate(OPACITY_OF) < FULLY_DRAWN
-    assert await files_of_the_second.evaluate(OPACITY_OF) == FULLY_DRAWN
+    assert await files_of_the_first.get_by_test_id("contents-file").first.evaluate(WORDS_COLOUR) == faint
+    assert await files_of_the_second.get_by_test_id("contents-file").first.evaluate(WORDS_COLOUR) != faint
 
 
 async def test_a_chapter_is_ticked_no_more_once_the_reader_scrolls_back_up_into_it(

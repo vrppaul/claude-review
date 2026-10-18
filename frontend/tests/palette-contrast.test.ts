@@ -1,8 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { paint, type Paint, THEMES } from './stylesheets';
+import { paint, type Paint, type Theme, THEMES } from './stylesheets';
 
-// WCAG AA for text below 18pt: what every word on the page has to reach
+// WCAG AA for text below 18pt: what every word on the page has to reach, in every state it is seen in
 const SMALL_TEXT = 4.5;
+// How far what the pointer is on, and the one of a set the reader is at, stand off their ground: in both themes, so
+// a dark ground is lit too
+const LIT = 1.15;
+// What a reader needs to see to know where they are, and where the keyboard is (WCAG 1.4.11, 2.4.13)
+const NEEDED = 3;
 
 type Channels = Paint['channels'];
 
@@ -14,7 +19,7 @@ type Channels = Paint['channels'];
 const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	{ said: 'what a thread asks for, on its card', text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a comment's place, over the field being written", text: '--cr-mark-text', grounds: ['--color-base-200'] },
-	{ said: "a marked row's number", text: '--cr-mark-text', grounds: ['--color-base-100', '--cr-mark-tint'] },
+	{ said: "a marked row's number", text: '--cr-mark-text', grounds: ['--color-base-100', '--cr-selected'] },
 	{
 		said: 'the changed-since chip, on a file header',
 		text: '--cr-mark-text',
@@ -28,7 +33,7 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	{
 		said: 'M on the current row of the tree',
 		text: '--cr-status-modified',
-		grounds: ['--color-base-100', '--cr-mark-tint']
+		grounds: ['--color-base-100', '--cr-selected']
 	},
 	{ said: 'a placeholder, in the panel', text: '--cr-placeholder', grounds: ['--color-base-100'] },
 	{ said: 'a placeholder, in a field being written', text: '--cr-placeholder', grounds: ['--color-base-200'] },
@@ -56,6 +61,21 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	},
 	{ said: "an agent's chip, in the panel", text: '--cr-agent', grounds: ['--color-base-100', '--cr-agent-chip'] },
 	{
+		said: "an agent's chip in the panel, pointed at",
+		text: '--cr-agent',
+		grounds: ['--color-base-100', '--cr-agent-chip', '--cr-hover']
+	},
+	{
+		said: "a thread chip in the reader's message, pointed at",
+		text: '--cr-mark-text',
+		grounds: ['--color-base-100', '--cr-mark-tint', '--cr-mark-chip', '--cr-hover']
+	},
+	{
+		said: 'the changed-since chip on a file header, pointed at',
+		text: '--cr-mark-text',
+		grounds: ['--color-base-200', '--cr-mark-tint', '--cr-hover']
+	},
+	{
 		said: "the other chapters that tell a file, on the header of a story's piece",
 		text: '--cr-agent',
 		grounds: ['--color-base-200']
@@ -63,6 +83,11 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 	{ said: "a chapter's number, on its node in the contents", text: '--cr-faint', grounds: ['--color-base-200'] },
 	{ said: 'what is said of a file in the contents', text: '--cr-faint', grounds: ['--color-base-100'] },
 	{ said: 'what a story leaves out, named in its contents', text: '--color-warning', grounds: ['--color-base-200'] },
+	{
+		said: 'where to doubt a chapter, heading its warning, pointed at',
+		text: '--color-warning',
+		grounds: ['--color-base-100', '--cr-warning-tint', '--cr-hover']
+	},
 	{ said: 'the title of a part read through, in the contents', text: '--cr-muted', grounds: ['--color-base-200'] },
 	{
 		said: 'the check of a part read through, on its node in the contents',
@@ -70,13 +95,77 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--color-base-200', '--cr-done-soft']
 	},
 	{ said: "unread, on a thread's card", text: '--cr-unread', grounds: ['--color-base-200'] },
-	{ said: "a control, on a gap's bar", text: '--cr-control', grounds: ['--color-base-200'] },
+	{ said: "a control, on a gap's bar", text: '--cr-control-text', grounds: ['--color-base-200'] },
+	{
+		said: "a control on a gap's bar, pointed at",
+		text: '--cr-control-text',
+		grounds: ['--color-base-200', '--cr-hover']
+	},
 	{
 		said: "the guide's release, on its card",
 		text: '--cr-control-text',
 		grounds: ['--color-base-200', '--cr-control-tint']
 	}
 ];
+
+// Every colour words are drawn in, by what they say in it
+const WORDS = [
+	{ said: 'words', text: '--color-base-content' },
+	{ said: 'muted words', text: '--cr-muted' },
+	{ said: 'faint words', text: '--cr-faint' },
+	{ said: 'a line number', text: '--cr-gutter-fg' },
+	{ said: "the reader's mark in words", text: '--cr-mark-text' },
+	{ said: "the agent's words", text: '--cr-agent' },
+	{ said: 'what was added', text: '--cr-add-text' },
+	{ said: 'what was taken away', text: '--cr-del-text' },
+	{ said: "a modified file's letter", text: '--cr-status-modified' },
+	{ said: 'a warning', text: '--color-warning' },
+	{ said: 'an error', text: '--color-error' }
+];
+// The surfaces words stand on: the page's own, and the one a bar, a pane or a card is raised on
+const SURFACES = [
+	{ said: "the page's ground", surface: '--color-base-100' },
+	{ said: 'a raised surface', surface: '--color-base-200' }
+];
+// What a state lays over a surface under the words of what is in it: nothing at rest, the pointer's light, and
+// the reader's mark on the one of a set they are at, which the pointer leaves as it is
+const AT_REST_OR_POINTED_AT = [
+	{ said: 'at rest', fills: [] },
+	{ said: 'pointed at', fills: ['--cr-hover'] }
+];
+const STATES = [...AT_REST_OR_POINTED_AT, { said: 'selected', fills: ['--cr-selected'] }];
+// Every colour of words, on every surface, in every state
+const WORDS_IN_EVERY_STATE = WORDS.flatMap(({ said, text }) =>
+	SURFACES.flatMap(({ said: on, surface }) =>
+		STATES.map(({ said: state, fills }) => ({
+			said: `${said}, on ${on}, ${state}`,
+			text,
+			grounds: [surface, ...fills]
+		}))
+	)
+);
+// A segmented control's track, under the words of its segments: muted, and plain on the one pressed
+const ON_A_TRACK = ['--cr-muted', '--color-base-content'].flatMap((text) =>
+	STATES.map(({ said: state, fills }) => ({
+		said: `a segment's words ${text}, on its track, ${state}`,
+		text,
+		grounds: ['--color-base-300', ...fills]
+	}))
+);
+// A line's number, on the row it numbers, in the row's colour; pointed at, it is lit as whatever can be pressed
+const NUMBERED_ROWS = [
+	{ row: 'an unchanged row', text: '--cr-gutter-fg', tints: [] },
+	{ row: 'an added row', text: '--cr-add-text', tints: ['--cr-add-tint'] },
+	{ row: 'a removed row', text: '--cr-del-text', tints: ['--cr-del-tint'] },
+	{ row: 'a marked row', text: '--cr-mark-text', tints: ['--cr-selected'] }
+];
+const LINE_NUMBERS = NUMBERED_ROWS.flatMap(({ row, text, tints }) =>
+	AT_REST_OR_POINTED_AT.map(({ said: state, fills }) => ({
+		said: `the number of ${row}, ${state}`,
+		text,
+		grounds: ['--color-base-100', ...tints, ...fills]
+	}))
+);
 
 // Every colour code is highlighted in, by what it colours
 const SYNTAX = ['keyword', 'string', 'comment', 'number', 'type', 'function', 'variable', 'meta'];
@@ -87,11 +176,11 @@ const ROWS = [
 	{ row: 'an unchanged row', tints: [] },
 	{ row: 'an added row', tints: ['--cr-add-tint'] },
 	{ row: 'a removed row', tints: ['--cr-del-tint'] },
-	{ row: 'a marked row', tints: ['--cr-mark-tint'] },
+	{ row: 'a marked row', tints: ['--cr-selected'] },
 	{ row: 'the band of a word an added row changed', tints: ['--cr-add-tint', '--cr-add-word'] },
 	{ row: 'the band of a word a removed row changed', tints: ['--cr-del-tint', '--cr-del-word'] },
-	{ row: 'the band of a word a marked added row changed', tints: ['--cr-mark-tint', '--cr-add-word'] },
-	{ row: 'the band of a word a marked removed row changed', tints: ['--cr-mark-tint', '--cr-del-word'] }
+	{ row: 'the band of a word a marked added row changed', tints: ['--cr-selected', '--cr-add-word'] },
+	{ row: 'the band of a word a marked removed row changed', tints: ['--cr-selected', '--cr-del-word'] }
 ];
 // Highlighted code, on every ground it is drawn on
 const CODE_DRAWN = SYNTAX.flatMap((colour) =>
@@ -123,14 +212,52 @@ function contrast(one: Channels, other: Channels): number {
 	return (lighter + 0.05) / (darker + 0.05);
 }
 
+/** A surface with the tints laid over it, in order, as the page paints them. */
+function laid(grounds: string[], theme: Theme): Channels {
+	const [surface, ...tints] = grounds;
+	return tints.reduce((under, tint) => over(paint(tint, theme), under), paint(surface, theme).channels);
+}
+
 describe('the palette', () => {
 	for (const theme of THEMES) {
-		for (const pair of [...DRAWN, ...CODE_DRAWN]) {
+		for (const pair of [...DRAWN, ...WORDS_IN_EVERY_STATE, ...ON_A_TRACK, ...LINE_NUMBERS, ...CODE_DRAWN]) {
 			it(`reads at ${SMALL_TEXT}:1 in the ${theme} theme: ${pair.said}`, () => {
-				const [surface, ...tints] = pair.grounds;
-				const ground = tints.reduce((under, tint) => over(paint(tint, theme), under), paint(surface, theme).channels);
+				expect(contrast(paint(pair.text, theme).channels, laid(pair.grounds, theme))).toBeGreaterThanOrEqual(
+					SMALL_TEXT
+				);
+			});
+		}
+	}
+});
 
-				expect(contrast(paint(pair.text, theme).channels, ground)).toBeGreaterThanOrEqual(SMALL_TEXT);
+// Every surface a state is drawn on: the page's, a raised one, and a segmented control's track
+const STATE_SURFACES = [...SURFACES, { said: 'a track', surface: '--color-base-300' }];
+// The fills a state lays over the surface it is on
+const STATE_FILLS = [
+	{ said: 'what the pointer is on', fill: '--cr-hover' },
+	{ said: 'the one of a set the reader is at', fill: '--cr-selected' }
+];
+
+describe('the states of whatever can be pressed', () => {
+	for (const theme of THEMES) {
+		for (const { said: on, surface } of STATE_SURFACES) {
+			for (const { said, fill } of STATE_FILLS) {
+				it(`${said} stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
+					expect(contrast(laid([surface, fill], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
+				});
+			}
+
+			it(`the edge of the one of a set the reader is at reads at ${NEEDED}:1 against its fill and ${on}, in the ${theme} theme`, () => {
+				const edge = paint('--cr-selected-edge', theme).channels;
+
+				expect(contrast(edge, laid([surface, '--cr-selected'], theme))).toBeGreaterThanOrEqual(NEEDED);
+				expect(contrast(edge, laid([surface], theme))).toBeGreaterThanOrEqual(NEEDED);
+			});
+
+			it(`the ring round what holds the keyboard reads at ${NEEDED}:1 on ${on}, in the ${theme} theme`, () => {
+				expect(contrast(paint('--cr-focus-ring', theme).channels, laid([surface], theme))).toBeGreaterThanOrEqual(
+					NEEDED
+				);
 			});
 		}
 	}

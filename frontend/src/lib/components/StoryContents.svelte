@@ -86,16 +86,14 @@
 					<!-- The files of a chapter scrolled past step back, as a file the reader has finished with does. A
 						chapter none of whose steps shows code any more lists none, and no empty list -->
 					{#if chapter.files.length > 0}
-						<ul
-							data-testid="contents-files"
-							class={['cr-contents-set-in', scrolledPast.has(chapter.part) && 'cr-viewed']}
-						>
+						<ul data-testid="contents-files" class="cr-contents-set-in">
 							{#each chapter.files as listed (listed.firstPiece.path)}
 								{@const file = listed.firstPiece}
 								<FileRow
 									testId="contents-file"
 									status={file.status}
 									current={stepRead?.shown?.fileListed === listed}
+									viewed={scrolledPast.has(chapter.part)}
 									threads={threadsOnTheFileInTheChapter(chapter, listed, review.story, review.threads).length}
 									title={file.path}
 									onclick={() => review.sections.scrollTo(listed.opensAt)}
@@ -125,7 +123,7 @@
 				<button
 					type="button"
 					data-testid="contents-left-out"
-					class="cr-aside-row text-warning"
+					class="cr-aside-row cr-pressable text-warning"
 					aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
 					aria-label={leftOutChanged === null
 						? undefined

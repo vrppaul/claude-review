@@ -149,12 +149,12 @@
 .cr-row-del > td:first-child {
 	border-left-color: var(--cr-del-edge);
 }
-/* Selection outranks the change underneath it: it is the reader's own mark */
+/* Selection outranks the change underneath it: it is the reader's own mark, drawn as whatever is selected is */
 .cr-row-marked {
-	background: var(--cr-mark-tint);
+	background: var(--cr-selected);
 }
 .cr-row-marked > td:first-child {
-	border-left-color: var(--cr-mark);
+	border-left-color: var(--cr-selected-edge);
 }
 
 .cr-gutter {
@@ -251,7 +251,7 @@
 	background: var(--cr-del-tint);
 }
 .cr-cell-marked {
-	background: var(--cr-mark-tint);
+	background: var(--cr-selected);
 }
 .cr-edge {
 	border-left: 2px solid transparent;
@@ -263,7 +263,7 @@
 	border-left-color: var(--cr-del-edge);
 }
 .cr-edge-marked {
-	border-left-color: var(--cr-mark);
+	border-left-color: var(--cr-selected-edge);
 }
 /* An absent side of a replacement: nothing was there, and it is not a gap */
 .cr-cell-absent {
@@ -301,9 +301,41 @@
 	cursor: pointer;
 }
 
+/*
+ * Whatever of the page's own can be pressed is lit under the pointer the
+ * same way: the pointer's light laid over whatever it is drawn on, as an
+ * image above its own ground, so a chip keeps its colour under it. Not
+ * while it cannot be pressed; and not the one of a set the reader is at,
+ * which is lit already and stays as it is, so the words on it keep their
+ * contrast. Pressed, it keeps the same light (tokens.css says why).
+ */
+.cr-pressable:not(:disabled, [aria-disabled='true']):not(
+		.cr-current,
+		[aria-selected='true'],
+		[aria-pressed='true'],
+		[aria-haspopup][aria-expanded='true']
+	):hover {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
+/*
+ * The one of a set the reader is at, down a column — the file they are in,
+ * the base the diff is read against, the option the keys lit — on their
+ * mark's tint, its edge at the row's start
+ */
+.cr-current,
+.cr-option[aria-selected='true'] {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-start);
+}
+/* A control of a bar pressed down — a segment of a track, a toggle that is on — or whose pane is open: the edge at its foot */
+.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-foot);
+}
+
 /* One focus treatment, in the palette, so keyboard use is visible everywhere */
-:where(button, input, textarea, select, a, [tabindex]):focus-visible {
-	outline: 2px solid var(--cr-control);
+:where(button, summary, input, textarea, select, a, [tabindex]):focus-visible {
+	outline: 2px solid var(--cr-focus-ring);
 	outline-offset: 1px;
 	box-shadow: none;
 }
@@ -318,7 +350,8 @@
 
 /*
  * Segmented controls. These pick a view, they do not act, so they read as a
- * track with the current chip raised rather than as rows of primary buttons.
+ * track with the one picked marked on it, as whatever is picked is marked,
+ * rather than as rows of primary buttons.
  */
 .cr-segmented {
 	display: inline-flex;
@@ -335,11 +368,7 @@
 	line-height: 1.5;
 	white-space: nowrap;
 }
-.cr-segment:hover {
-	color: var(--color-base-content);
-}
 .cr-segment[aria-pressed='true'] {
-	background: var(--color-base-100);
 	color: var(--color-base-content);
 	font-weight: 600;
 }
@@ -371,10 +400,6 @@
 	color: var(--cr-muted);
 	font-size: 0.75rem;
 }
-.cr-chip:hover {
-	background: var(--color-base-300);
-	color: var(--color-base-content);
-}
 /* A box ticked is something done: a file read through */
 .cr-chip:has(:checked) {
 	color: var(--cr-done);
@@ -386,7 +411,7 @@
 	opacity: 0;
 }
 .cr-chip:has(:focus-visible) {
-	outline: 2px solid var(--cr-control);
+	outline: 2px solid var(--cr-focus-ring);
 	outline-offset: 1px;
 }
 /* A chip saying the reader sees less than the whole diff — a narrower base,
@@ -470,10 +495,6 @@
 	font: inherit;
 	font-variant-numeric: tabular-nums;
 }
-/* A number that takes no comment is still a stop for the keyboard, nothing to press: no band, no hand */
-.cr-gutter-button:not([aria-disabled='true']):hover {
-	background: var(--cr-mark-tint);
-}
 
 /*
  * A word or two said beside a heading, in a ring of the colour they are said
@@ -530,23 +551,19 @@
 	scroll-margin-top: var(--cr-top-room, 0);
 }
 
-/* What the reader has finished with steps back: a file's row in the tree and its header, the files of a chapter read through */
+/*
+ * What the reader has finished with steps back, in faint words that still
+ * read at 4.5:1, where fading it whole took them below: a file's row in the
+ * tree and its header, the files of a chapter read through, a comment sent
+ * with a round
+ */
 .cr-viewed {
-	opacity: 0.5;
-}
-
-/* Which file the reader is in, marked the way selection is marked elsewhere */
-.cr-current {
-	background: var(--cr-mark-tint);
-	box-shadow: var(--cr-shadow-marked-edge);
+	color: var(--cr-faint);
 }
 
 /* A gap between hunks is a control, not a caption */
 .cr-expand {
-	color: var(--cr-control);
-}
-.cr-expand:hover {
-	background: var(--cr-control-tint);
+	color: var(--cr-control-text);
 }
 .cr-expand:disabled {
 	color: var(--cr-muted);
@@ -721,10 +738,6 @@
 	font-size: 0.75rem;
 	font-weight: 600;
 }
-.cr-thread-action:hover {
-	border-color: var(--cr-node-edge);
-	background: var(--color-base-300);
-}
 .cr-thread-action-icon {
 	justify-content: center;
 	width: var(--cr-thread-action-height);
@@ -735,12 +748,9 @@
 	width: var(--cr-thread-icon-size);
 	height: var(--cr-thread-icon-size);
 }
-/* An action that loses what was written: in the colour of what destroys, and edged in it when pointed at */
+/* An action that loses what was written: in the colour of what destroys */
 .cr-thread-action-danger {
 	color: var(--color-error);
-}
-.cr-thread-action-danger:hover {
-	border-color: var(--color-error);
 }
 /* Where a reply is begun: drawn as the field it opens, before anything is written in it */
 .cr-reply-field {
@@ -814,7 +824,7 @@
 	border: 1px solid var(--cr-mark-border);
 }
 .cr-field:focus {
-	border-color: var(--cr-mark);
+	border-color: var(--cr-focus-ring);
 }
 /* A field that grows with what is written in it, up to a height, and scrolls from there */
 .cr-field-grows {
@@ -927,11 +937,6 @@
 .cr-grip-right {
 	right: -3px;
 }
-.cr-grip:hover,
-.cr-grip:focus-visible {
-	background: var(--cr-control-line);
-	outline: none;
-}
 /* An image in the panel: small enough to keep the words beside it in view */
 .cr-image-thumb {
 	width: 4rem;
@@ -1017,19 +1022,12 @@
 	font-family: var(--font-mono);
 	font-size: 0.6875rem;
 }
-.cr-thread-chip:hover {
-	background: var(--cr-mark-chip-hover);
-}
 .cr-thread-chip-agent {
 	background: var(--cr-agent-chip);
 	color: var(--cr-agent);
 }
-.cr-thread-chip-agent:hover {
-	background: var(--cr-agent-chip-hover);
-}
 /* A file the agent named that the diff does not hold yet: named, not a way to it */
-.cr-thread-chip-elsewhere,
-.cr-thread-chip-elsewhere:hover {
+.cr-thread-chip-elsewhere {
 	background: transparent;
 	outline: 1px dashed var(--cr-agent-border);
 	outline-offset: -1px;
@@ -1037,8 +1035,9 @@
 
 /*
  * One of a list picked from while the keyboard stays in a field: lit as the
- * keys move through it. Lit inside the pane's own margin, never to its edge,
- * so the edge the pane's arrow grows from keeps the pane's colour.
+ * keys move through it, as the one of a set the reader is at. Lit inside the
+ * pane's own margin, never to its edge, so the edge the pane's arrow grows
+ * from keeps the pane's colour.
  */
 .cr-option {
 	display: block;
@@ -1046,10 +1045,6 @@
 	padding: 0.375rem 0.625rem;
 	border-radius: var(--radius-field);
 	text-align: left;
-}
-.cr-option:hover,
-.cr-option[aria-selected='true'] {
-	background: var(--cr-control-tint);
 }
 
 /*
@@ -1133,9 +1128,12 @@
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 	background: var(--cr-warning-tint);
 }
-/* The number and reason of a step a round changed after it was told step back: the code under them is what stands now */
+/*
+ * The number and reason of a step a round changed after it was told step
+ * back, in faint words: the code under them is what stands now
+ */
 .cr-step-changed {
-	opacity: 0.6;
+	color: var(--cr-faint);
 }
 
 /* A chapter's number, wherever it heads the chapter: quieter than its title, at the size of the line it is on */
@@ -1159,13 +1157,15 @@
 /*
  * A block of the agent's words in a story the reader may ask about.
  * Pointed at, or holding the keyboard, it is banded whole — its heading and
- * its words — back to the edge of the agent's voice, and offers "Ask about
- * this" over its top right edge. Banded stronger while a thread
- * hangs open under it, or a comment being written: folded away, a thread
- * leaves it as it was. Its room is the same either way, and so is the place
- * of every word in it: only the band and the button come and go. The band
- * reaches as far above and below its words as it stands off them, and takes
- * no room for it: a block stands where its words would without it.
+ * its words — back to the edge of the agent's voice, in the pointer's light,
+ * and offers "Ask about this" over its top right edge. While a thread hangs
+ * open under it, or a comment being written, it is the one the reader is
+ * at: on their mark's tint, its edge at its start, as the pointer leaves it;
+ * folded away, a thread leaves it as it was. Its room is the same either
+ * way, and so is the place of every word in it: only the band and the
+ * button come and go. The band reaches as far above and below its words as
+ * it stands off them, and takes no room for it: a block stands where its
+ * words would without it.
  */
 .cr-askable {
 	position: relative;
@@ -1173,21 +1173,20 @@
 	padding: var(--cr-band-reach) 0.75rem var(--cr-band-reach) calc(var(--cr-voice-axis) + var(--cr-voice-inset));
 	border-radius: 0 var(--radius-box) var(--radius-box) 0;
 }
-.cr-askable:hover,
-.cr-askable:focus-within {
-	background: var(--cr-mark-band);
-	box-shadow: var(--cr-shadow-band-edge);
+.cr-askable:not(.cr-askable-written-under):is(:hover, :focus-within) {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
 }
-.cr-askable-written-under,
-.cr-askable-written-under:hover,
-.cr-askable-written-under:focus-within {
-	background: var(--cr-mark-band-written-under);
-	box-shadow: var(--cr-shadow-marked-edge);
+.cr-askable-written-under {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-start);
 }
-/* Inside a warning the band is never drawn: the warning keeps its own wash and edge, pointed at or not */
-.cr-warning-frame > .cr-askable,
-.cr-warning-frame > .cr-askable:is(:hover, :focus-within) {
-	background: none;
+/*
+ * Inside a warning, a block something hangs under is not drawn as the one
+ * the reader is at: the warning keeps its own wash and edge. The pointer's
+ * light, which takes no edge and lets the wash through, is drawn there too
+ */
+.cr-warning-frame > .cr-askable-written-under {
+	background-color: transparent;
 	box-shadow: none;
 }
 /* Words beside blocks the reader may ask about, which stand as far from the agent's edge as theirs do */
@@ -1201,19 +1200,13 @@
 	gap: 0.375rem;
 	height: var(--cr-thread-action-height);
 	padding: 0 0.6875rem;
-	border: 1px solid var(--cr-mark-band-edge);
+	border: 1px solid var(--cr-mark-ask-edge);
 	border-radius: var(--radius-field);
 	background: var(--color-base-100);
 	color: var(--cr-mark-text);
 	font-size: var(--text-xs);
 	font-weight: 600;
 	white-space: nowrap;
-}
-/* Pointed at, it is filled with the mark laid on the ground, which hides what stands behind it */
-.cr-ask:hover {
-	border-color: var(--cr-mark);
-	background: var(--cr-mark-tint-opaque);
-	color: var(--color-base-content);
 }
 /*
  * Over a block: at its top right, out of the flow, so no word moves as it
@@ -1323,10 +1316,6 @@
 	background: var(--color-base-100);
 	color: var(--cr-faint);
 }
-.cr-side-column-rail:hover {
-	background: var(--color-base-200);
-	color: var(--color-base-content);
-}
 
 /* A row of the tree of files, set in by how deep its folder is */
 .cr-tree-row {
@@ -1373,15 +1362,12 @@
 	gap: var(--cr-contents-gap);
 	width: 100%;
 	padding: var(--cr-contents-row-pad) 0.125rem var(--cr-contents-row-pad) var(--cr-contents-inset);
+	border-radius: var(--radius-field);
 	/* As large as a row of the tree of files, as its files' rows under it are */
 	font-size: var(--text-xs);
 	font-weight: 500;
 	line-height: var(--text-xs--line-height);
 	text-align: left;
-}
-.cr-contents-row:hover {
-	border-radius: var(--radius-field);
-	background: var(--color-base-200);
 }
 /* A node: a ring on the column's ground, over the axis, round a chapter's number or the overview's dot */
 .cr-contents-node {
@@ -1454,9 +1440,6 @@
 	font-size: var(--text-xs);
 	font-weight: 600;
 	text-align: left;
-}
-.cr-aside-row:hover {
-	background: var(--color-base-200);
 }
 
 /* The room either side of a story in its area, as wide as the area: the story's, and that of the bar over it */
@@ -1683,9 +1666,6 @@
 		transform: scaleX(0);
 	}
 }
-.cr-finish-row:hover {
-	background: var(--cr-control-tint);
-}
 
 /*
  * The branches of a piece of the agent's work, hanging off the line that
@@ -1831,7 +1811,7 @@
 	align-items: center;
 	gap: 0.5rem;
 	font-size: 0.75rem;
-	color: var(--cr-control);
+	color: var(--cr-control-text);
 }
 .cr-guide-hint-dot {
 	width: 6px;
@@ -1855,7 +1835,7 @@
 }
 .cr-guide-link {
 	font-size: 0.8125rem;
-	color: var(--cr-control);
+	color: var(--cr-control-text);
 }
 .cr-guide-entry {
 	display: flex;
@@ -1864,10 +1844,6 @@
 	padding: 0.5rem 0.75rem;
 	border-radius: var(--radius-box);
 	font-size: 0.8125rem;
-}
-.cr-guide-entry:hover,
-.cr-guide-entry-lead {
-	background: var(--color-base-200);
 }
 .cr-guide-plus {
 	width: 1.125rem;

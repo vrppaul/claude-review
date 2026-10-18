@@ -16,7 +16,7 @@
 		<button
 			type="button"
 			data-testid={mode.testId}
-			class="cr-segment"
+			class="cr-segment cr-pressable"
 			aria-pressed={review.layout.contentView.mode === mode.value}
 			onclick={() => review.layout.contentView.set(mode.value)}
 		>

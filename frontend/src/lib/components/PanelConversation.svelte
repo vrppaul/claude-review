@@ -63,7 +63,7 @@
 				<button
 					type="button"
 					data-testid={testId}
-					class={['cr-thread-chip', byTheAgent && 'cr-thread-chip-agent']}
+					class={['cr-thread-chip cr-pressable', byTheAgent && 'cr-thread-chip-agent']}
 					onclick={() => review.navigator.reveal(thread)}
 				>
 					{anchorShortPlace(thread.anchor)}
@@ -130,7 +130,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 							<button
 								type="button"
 								data-testid="panel-thread-ref"
-								class="cr-thread-chip cr-thread-chip-agent"
+								class="cr-thread-chip cr-thread-chip-agent cr-pressable"
 								onclick={() => review.navigator.reveal(raised)}
 							>
 								{turn.body}
@@ -141,7 +141,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						<span></span>
 					</div>
 				{:else if turn.author === READER}
-					<div data-testid="panel-said" class={['cr-panel-said rounded-r px-3 py-2', turn.cancelled && 'opacity-60']}>
+					<div data-testid="panel-said" class={['cr-panel-said rounded-r px-3 py-2', turn.cancelled && 'cr-faint']}>
 						<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
 						{#if turn.body}
 							<MarkdownRenderer text={turn.body} dense />

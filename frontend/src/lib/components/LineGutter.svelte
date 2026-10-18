@@ -46,7 +46,7 @@
 		data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
 		data-place={pointerOnly ? undefined : drawn.key}
 		data-tour={isRowStop ? 'line-number' : undefined}
-		class="cr-gutter-button"
+		class="cr-gutter-button cr-pressable"
 		tabindex={pointerOnly ? -1 : 0}
 		aria-hidden={pointerOnly ? 'true' : undefined}
 		aria-label="Comment on {lineInWords(drawn.place)}"

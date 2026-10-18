@@ -15,6 +15,7 @@ from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, POINTING_DOWN, POINTING_UP, TURN
+from tests.e2e.words_colour import FAINT_WORDS, WORDS_COLOUR
 from tests.helpers import (
     SETTLE_SECONDS,
     ReviewServers,
@@ -56,8 +57,6 @@ MOVED_AFTER_THE_RETAKE = {MAIN_FILE: "def hello():\n    return 'hey'\n", UTILS_F
 NEW_FILE_TYPED = Path(NEW_FILE).stem
 # What has the keyboard, by what it says it does
 FOCUSED_LABEL = "document.activeElement?.getAttribute('aria-label')"
-# How solidly an element is drawn, as the browser worked it out: 1 at full strength
-OPACITY_DRAWN = "element => getComputedStyle(element).opacity"
 # Where an element's right edge is on screen; where what an element holds ends, short of its padding; and where
 # the chip a checkbox stands in ends
 RIGHT_OF = "(element) => element.getBoundingClientRect().right"
@@ -113,11 +112,6 @@ def _section(page: Page, path_suffix: str) -> Locator:
 
 def _first_gutter(page: Page, path_suffix: str) -> Locator:
     return _section(page, path_suffix).get_by_test_id("line-gutter").first
-
-
-async def _opacity(drawn: Locator) -> float:
-    """How solidly something is drawn on the page: 1 at full strength, less where it steps back."""
-    return float(await drawn.evaluate(OPACITY_DRAWN))
 
 
 async def _send(page: Page) -> str:
@@ -623,17 +617,17 @@ async def test_marking_a_file_viewed_folds_it(diff_review: RunningReview, page: 
     await main.get_by_test_id("raw-view").wait_for(state="detached")
 
 
-async def test_a_file_marked_viewed_steps_back(diff_review: RunningReview, page: Page) -> None:
-    """What the reader has finished with is drawn fainter: its header beside that of a file not viewed yet."""
+async def test_a_file_marked_viewed_steps_back_into_faint_words(diff_review: RunningReview, page: Page) -> None:
+    """What the reader has finished with says its name in faint words, which still read: a file not viewed does not."""
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
     main = _section(page, MAIN_FILE)
+    faint = await page.evaluate(FAINT_WORDS)
 
     await main.get_by_test_id("viewed-toggle").check()
 
-    viewed = await _opacity(main.get_by_test_id("file-header"))
-    not_viewed = await _opacity(_section(page, NEW_FILE).get_by_test_id("file-header"))
-    assert viewed < not_viewed
+    assert await main.get_by_test_id("file-heading").evaluate(WORDS_COLOUR) == faint
+    assert await _section(page, NEW_FILE).get_by_test_id("file-heading").evaluate(WORDS_COLOUR) != faint
 
 
 async def test_filtering_the_sidebar_narrows_the_list(diff_review: RunningReview, page: Page) -> None:

@@ -47,7 +47,7 @@
 						<button
 							type="button"
 							data-testid={layout.testId}
-							class="cr-segment"
+							class="cr-segment cr-pressable"
 							aria-pressed={review.settings.current.diff_layout === layout.value}
 							onclick={() => review.settings.change({ diff_layout: layout.value })}
 						>
@@ -76,7 +76,7 @@
 					<button
 						type="button"
 						data-testid={choice.testId}
-						class="cr-segment"
+						class="cr-segment cr-pressable"
 						aria-pressed={review.settings.current.theme === choice.value}
 						onclick={() => review.settings.change({ theme: choice.value })}
 					>

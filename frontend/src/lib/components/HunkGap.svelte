@@ -76,7 +76,7 @@
 				<button
 					type="button"
 					data-testid="expand-all"
-					class="cr-expand flex w-full items-center gap-2 px-4 text-left"
+					class="cr-expand cr-pressable flex w-full items-center gap-2 px-4 text-left"
 					disabled={reading}
 					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
@@ -93,7 +93,7 @@
 					<button
 						type="button"
 						data-testid="expand-up"
-						class="cr-expand px-3"
+						class="cr-expand cr-pressable px-3"
 						title={said}
 						aria-label={said}
 						disabled={reading}
@@ -107,7 +107,7 @@
 					<button
 						type="button"
 						data-testid="expand-down"
-						class="cr-expand px-3"
+						class="cr-expand cr-pressable px-3"
 						title={said}
 						aria-label={said}
 						disabled={reading}
@@ -121,7 +121,7 @@
 					<button
 						type="button"
 						data-testid="expand-all"
-						class="cr-expand px-3"
+						class="cr-expand cr-pressable px-3"
 						disabled={reading}
 						onclick={(event) => widen(allAtOnce, event.currentTarget)}
 					>
