@@ -42,7 +42,7 @@ export function gainedPiece(file: string, first: number, last: number): DiffFile
 export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): FollowedStep {
 	const lines = { first, last };
 	const now = { lines, piece: gainedPiece(file, first, last), changed_since_told: false };
-	return { file, lines, reason, now, commentable: true, shows_changed_code: false };
+	return { file, lines, reason, now, commentable: true };
 }
 
 /** A step that shows one line a file gained, and says why if it is given a reason. */
@@ -57,14 +57,14 @@ export function toldStep(file: string, line: number, reason: string | null = nul
  */
 export function stepStandingAt(file: string, told: StepLines, now: StepLines, piece: DiffFile): FollowedStep {
 	const standing = { lines: now, piece, changed_since_told: false };
-	return { file, lines: told, reason: null, now: standing, commentable: true, shows_changed_code: false };
+	return { file, lines: told, reason: null, now: standing, commentable: true };
 }
 
 /** A step that shows one line a file gained, which a round's work changed after it was told. */
 export function changedStep(file: string, line: number, reason: string | null = null): FollowedStep {
 	const lines = { first: line, last: line };
 	const now = { lines, piece: gainedPiece(file, line, line), changed_since_told: true };
-	return { file, lines, reason, now, commentable: true, shows_changed_code: true };
+	return { file, lines, reason, now, commentable: true };
 }
 
 /**
@@ -73,7 +73,7 @@ export function changedStep(file: string, line: number, reason: string | null = 
  */
 export function stepWithoutCode(file: string, line: number, reason: string | null = null): FollowedStep {
 	const lines = { first: line, last: line };
-	return { file, lines, reason, now: null, commentable: true, shows_changed_code: false };
+	return { file, lines, reason, now: null, commentable: true };
 }
 
 /** A chapter of these steps, known by its id, none of whose steps a round changed unless a test says how many. */

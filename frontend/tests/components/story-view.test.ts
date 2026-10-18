@@ -927,22 +927,6 @@ describe('a story whose code a round changed after it was told', () => {
 		expect(within(withoutCode).getByTestId('step-reason-block')).toBeTruthy();
 	});
 
-	it('steps back a step the review says shows code changed since it was told, whatever its code says of itself', () => {
-		// The page decides nothing: it draws the step's own word, here the only one that says so
-		const saidChanged: FollowedStep = { ...toldStep('a.py', 1), shows_changed_code: true };
-		review = openReview({ files, story: followedWith([saidChanged, toldStep('b.py', 5)], 1) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		const [beginnings] = screen.getAllByTestId('story-chapter');
-
-		expect(
-			within(beginnings)
-				.getAllByTestId('step-number')
-				.map((number) => number.getAttribute('aria-label'))
-		).toEqual(['Step 1.1, changed after it was told', 'Step 1.2']);
-	});
-
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {
 		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1) });
 		review.views.choose('story');

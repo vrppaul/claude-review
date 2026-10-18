@@ -163,9 +163,7 @@
   line, "Its code in app.py is no longer found."; it counts as no file of
   its chapter, whose head then counts only its steps, and the agent asked
   for the story again is told it with `lines` `null`. Every told step says
-  whether a thread may name its file (`commentable`), and whether it shows
-  code a round changed after it was told (`shows_changed_code`), so the page
-  decides neither. The
+  whether a thread may name its file (`commentable`). The
   story is always followed from the story as told, so code put back reads
   as told again. It is still the story of the round it was told in;
   `moved_on` says the round a take first found the code moved on in, which

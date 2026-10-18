@@ -1073,8 +1073,6 @@ export interface components {
             now: components["schemas"]["StepNow"] | null;
             /** Commentable */
             commentable: boolean;
-            /** Shows Changed Code */
-            shows_changed_code: boolean;
         };
         /**
          * GuideChange
