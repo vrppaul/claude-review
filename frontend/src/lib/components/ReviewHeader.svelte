@@ -6,11 +6,9 @@
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
-	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
 	import HelpMenu from './HelpMenu.svelte';
-	import { FINISH_KEYS, PANEL_TOGGLE_ROLE } from './keymap';
-	import Popover from './Popover.svelte';
+	import { PANEL_TOGGLE_ROLE } from './keymap';
 	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
@@ -163,38 +161,7 @@
 			{/if}
 		</Button>
 
-		<!-- One door: what has been written, a summary, and the two ways out -->
-		<Popover
-			bind:open={() => review.submission.finishing, (open: boolean) => review.submission.setFinishing(open)}
-			label={finishingTitle(inRounds, review.rounds.current)}
-			placement="below-end"
-			data-testid="finish-review"
-			class="w-[26rem]"
-		>
-			{#snippet trigger(control)}
-				<Button
-					{...control}
-					tone="primary"
-					size="sm"
-					testId="quick-submit"
-					data-tour="send"
-					disabled={review.submission.sending}
-					title={FINISH_KEYS}
-				>
-					{#if review.submission.sending}
-						<span class="loading loading-xs loading-spinner"></span>
-						Sending
-					{:else if inRounds}
-						Send round {review.rounds.current}
-					{:else}
-						Finish review
-					{/if}
-					<Icon name="chevron" size="xs" />
-				</Button>
-			{/snippet}
-
-			<FinishReview />
-		</Popover>
+		<FinishReview />
 
 		<SettingsMenu />
 	</header>

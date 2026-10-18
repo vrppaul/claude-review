@@ -1,15 +1,21 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLAttributes } from 'svelte/elements';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
-	import { arrowOffsetTo } from './pane-placement';
-	import PopoverPanel from './PopoverPanel.svelte';
+	import { arrowOffsetTo, type PaneEdge } from '$lib/ui/pane';
+	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 
-	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
+	interface Props {
 		/** The control the note stands under, which the keyboard goes back to as the note goes. */
 		pointsAt: HTMLElement | undefined;
 		/** What the note is called, said to whoever cannot see it. */
 		label: string;
+		/** Whether it points at the control: a note that is not about it does not. */
+		arrow: boolean;
+		/** What it says by its edge, where it says anything by it. */
+		edge?: PaneEdge | undefined;
+		/** Whether it fades as its time runs out; one that does not shows the time left itself. */
+		fades: boolean;
+		testId: string;
 		/** Called once the note goes, by itself or as it is put away, for whoever drew it to stop drawing it. */
 		onGone: () => void;
 		/** What the note says and offers, handed the way to put it away at once. */
@@ -21,7 +27,7 @@
 	// runs for no reader who asked for less motion
 	const STANDS_FOR_MS = 4_000;
 
-	let { pointsAt, label, onGone, children, class: look, ...marked }: Props = $props();
+	let { pointsAt, label, arrow, edge, fades, testId, onGone, children }: Props = $props();
 
 	let pane: HTMLDivElement | undefined = $state();
 	// How far in from its left edge the note points at the control, where it draws an arrow
@@ -45,13 +51,16 @@
 	by itself in a few seconds, or at once as it is put away -->
 <div class="contents" style:--cr-note-lasts="{STANDS_FOR_MS}ms">
 	<PopoverPanel
-		{...marked}
 		bind:pane
 		role="status"
 		{label}
 		placement="below-start"
+		width="fitted"
+		{arrow}
 		{arrowOffset}
-		class={['cr-popover-note', look]}
+		{edge}
+		fading={fades}
+		{testId}
 	>
 		{@render children(putAway)}
 	</PopoverPanel>

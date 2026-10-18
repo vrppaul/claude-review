@@ -3,10 +3,9 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
-	import { arrowOffsetTo } from './pane-placement';
+	import { arrowOffsetTo } from '$lib/ui/pane';
+	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 	import PassingNote from './PassingNote.svelte';
-	import PopoverPanel from './PopoverPanel.svelte';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
@@ -18,8 +17,9 @@
 		onTry: () => void;
 	}
 
-	// What the introduction says first, and is named by
+	// What the introduction says first, and is named by; and what its close does, beside "Don't show again"
 	const TITLE = 'Read the change as a story';
+	const CLOSE_FOR_NOW = 'Close for now';
 
 	let { introducing, pointsAt, onTry }: Props = $props();
 	const review = useReview();
@@ -64,23 +64,14 @@
 		role="dialog"
 		label={TITLE}
 		placement="below-start"
+		width="medium"
+		arrow
 		{arrowOffset}
-		data-testid="story-introduction"
-		class="cr-popover-note cr-popover-agent cr-story-introduction"
+		edge="agent"
+		head={{ heading: TITLE, close: putAwayForNow, closing: CLOSE_FOR_NOW }}
+		testId="story-introduction"
 	>
-		<div class="flex flex-col gap-2.5 px-4 py-3.5">
-			<div class="flex items-start gap-2">
-				<h2 class="flex-1 text-sm font-semibold">{TITLE}</h2>
-				<IconButton
-					tone="quiet"
-					size="xs"
-					label="Close for now"
-					testId="story-introduction-close"
-					onclick={putAwayForNow}
-				>
-					<Icon name="cross" size="xs" />
-				</IconButton>
-			</div>
+		<div class="flex flex-col gap-2.5 p-3">
 			<StorySketch />
 			<p class="text-sm leading-relaxed">
 				The agent that made it walks you through: a short overview, then chapters, with its reason above each piece of
@@ -97,8 +88,9 @@
 	<PassingNote
 		{pointsAt}
 		label="Story will not be shown again"
-		data-testid="story-introduction-hidden"
-		class="cr-popover-arrowless cr-note-fading"
+		arrow={false}
+		fades
+		testId="story-introduction-hidden"
 		onGone={() => (hiddenForGood = false)}
 	>
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2.5 pl-3.5 text-sm">

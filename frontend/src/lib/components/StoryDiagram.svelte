@@ -5,10 +5,8 @@
 	import { chapterPartKey } from '$lib/review/story-keys';
 	import type { Diagram } from '$lib/types';
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
-	import Dialog from './Dialog.svelte';
-	import type { Closing } from './dialog-closing';
+	import Dialog from '$lib/ui/Dialog.svelte';
+	import type { Closing } from '$lib/ui/dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
 
 	interface Props {
@@ -20,9 +18,10 @@
 
 	// What the drawing, and the dialog that draws it large, are called where the agent called it nothing
 	const UNCAPTIONED = 'The change drawn';
-	// How each drawing is sized: under the overview fitted to the column, opened large at its own size
+	// How each drawing is sized: under the overview fitted to the column; opened large at its own size, with room
+	// round it in the dialog, which scrolls it where it is larger than the window
 	const FITTED_TO_THE_COLUMN = 'cr-diagram-fitted';
-	const AT_ITS_OWN_SIZE = 'overflow-auto';
+	const AT_ITS_OWN_SIZE = 'p-4';
 
 	// What its two drawings are known by, on the page and to mermaid, which scopes each one's look by it. The
 	// one under the overview is kept by the story for as long as the review (`ReviewStory.diagramDrawn`), under
@@ -92,15 +91,8 @@
 	<!-- Drawn again, not moved: a drawing's arrowheads and look hang on ids, which one drawing twice on the page
 		would repeat. Headed by what it is called, beside the way to close it. A press on a node closes it, then
 		goes -->
-	<Dialog label={name} data-testid="diagram-large" onClose={() => (large = false)}>
-		{#snippet children({ close, closeThen }: Closing)}
-			<header class="mb-3 flex items-center gap-3">
-				<h2 class="text-sm font-semibold">{name}</h2>
-				<div class="flex-1"></div>
-				<IconButton tone="quiet" size="xs" label="Close {name}" testId="diagram-close" onclick={close}>
-					<Icon name="cross" size="xs" />
-				</IconButton>
-			</header>
+	<Dialog label={name} heading={name} width="fitted" testId="diagram-large" onClose={() => (large = false)}>
+		{#snippet children({ closeThen }: Closing)}
 			{#await drawDiagram(source, largeId) then drawing}
 				{@render shown(drawing, AT_ITS_OWN_SIZE, (part) => closeThen(() => review.parts.goTo(part)))}
 			{/await}

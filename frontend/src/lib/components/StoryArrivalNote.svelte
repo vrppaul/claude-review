@@ -23,8 +23,10 @@
 <PassingNote
 	{pointsAt}
 	label="The story is ready"
-	data-testid="story-ready"
-	class="cr-popover-unread"
+	arrow
+	edge="unread"
+	fades={false}
+	testId="story-ready"
 	onGone={() => review.story.putOfferAway()}
 >
 	{#snippet children(putAway: () => void)}

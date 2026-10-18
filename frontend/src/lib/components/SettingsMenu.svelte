@@ -7,6 +7,9 @@
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import Popover from './Popover.svelte';
 
+	// What the pane is called, and headed with, and what its control says to whoever cannot see the gear
+	const SETTINGS = 'Settings';
+
 	const review = useReview();
 
 	const layouts: { value: DiffLayout; label: string; testId: string }[] = [
@@ -25,16 +28,14 @@
 
 <!-- Choices a reader makes once, kept for every review on this machine:
 	out of the header, where only what is switched while reading belongs -->
-<Popover bind:open label="Settings" placement="below-end" data-testid="settings-menu" class="w-72 text-xs">
+<Popover bind:open label={SETTINGS} heading={SETTINGS} placement="below-end" width="medium" testId="settings-menu">
 	{#snippet trigger(control)}
-		<IconButton {...control} tone="quiet" size="sm" label="Settings" testId="settings-toggle">
+		<IconButton {...control} tone="quiet" size="sm" label={SETTINGS} testId="settings-toggle">
 			<Icon name="settings" size="base" />
 		</IconButton>
 	{/snippet}
 
-	<div class="flex flex-col gap-2.5 p-3">
-		<span class="text-xs font-semibold">Settings</span>
-
+	<div class="flex flex-col gap-2.5 p-3 text-xs">
 		{#if review.mode === 'diff'}
 			<div class="flex items-center justify-between gap-3">
 				<span>Diff layout</span>

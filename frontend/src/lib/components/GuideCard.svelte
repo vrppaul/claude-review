@@ -6,6 +6,7 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Link from '$lib/ui/Link.svelte';
+	import Pane from '$lib/ui/Pane.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
 
@@ -77,115 +78,129 @@
 
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
 {#if review.guide.touring && step}
-	<section data-testid="guide-tour" class="cr-guide-card" aria-label="Tour of the review">
-		<div class="flex items-center gap-2.5">
-			<div class="flex gap-1" aria-hidden="true">
-				{#each stepNumbers as index (index)}
-					<span class={['cr-guide-tick', index <= review.guide.stepPosition && 'cr-guide-tick-done']}></span>
-				{/each}
+	<div class="cr-guide-place">
+		<Pane width="medium" testId="guide-tour" aria-label="Tour of the review">
+			<div class="cr-guide-card">
+				<div class="flex items-center gap-2.5">
+					<div class="flex gap-1" aria-hidden="true">
+						{#each stepNumbers as index (index)}
+							<span class={['cr-guide-tick', index <= review.guide.stepPosition && 'cr-guide-tick-done']}></span>
+						{/each}
+					</div>
+					<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
+					<span class="flex-1"></span>
+					<span class="text-xs">
+						<Link testId="guide-skip" onclick={skipTour}>Skip tour</Link>
+					</span>
+				</div>
+				<!-- What a screen reader is told at each step: the words, not the controls -->
+				<div class="flex flex-col gap-3" aria-live="polite">
+					<h2 bind:this={title} class="cr-guide-title" tabindex="-1">{step.title}</h2>
+					<p class="cr-guide-body">{step.body}</p>
+				</div>
+				{#if step.fork}
+					<ol class="cr-guide-forks">
+						{#each step.fork as option (option.label)}
+							<li class="cr-guide-fork">
+								<span class={['cr-guide-route', option.primary && 'cr-guide-route-primary']}>{option.label}</span>
+								<span class="cr-guide-body">{option.says}</span>
+							</li>
+						{/each}
+					</ol>
+				{/if}
+				{#if waiting}
+					<p data-testid="guide-waiting" class="cr-guide-hint">
+						<span class="cr-guide-hint-dot"></span>
+						{waiting.hint}
+					</p>
+				{/if}
+				<div class="flex items-center gap-2">
+					{#if review.guide.canGoBack}
+						<Button tone="secondary" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
+					{/if}
+					<span class="flex-1"></span>
+					{#if !waiting}
+						<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
+							{review.guide.isLastStep ? 'Done' : 'Next'}
+						</Button>
+					{/if}
+				</div>
 			</div>
-			<span class="cr-faint text-xs">{review.guide.stepPosition + 1} of {review.guide.stepCount}</span>
-			<span class="flex-1"></span>
-			<span class="text-xs">
-				<Link testId="guide-skip" onclick={skipTour}>Skip tour</Link>
-			</span>
-		</div>
-		<!-- What a screen reader is told at each step: the words, not the controls -->
-		<div class="flex flex-col gap-3" aria-live="polite">
-			<h2 bind:this={title} class="cr-guide-title" tabindex="-1">{step.title}</h2>
-			<p class="cr-guide-body">{step.body}</p>
-		</div>
-		{#if step.fork}
-			<ol class="cr-guide-forks">
-				{#each step.fork as option (option.label)}
-					<li class="cr-guide-fork">
-						<span class={['cr-guide-route', option.primary && 'cr-guide-route-primary']}>{option.label}</span>
-						<span class="cr-guide-body">{option.says}</span>
-					</li>
-				{/each}
-			</ol>
-		{/if}
-		{#if waiting}
-			<p data-testid="guide-waiting" class="cr-guide-hint">
-				<span class="cr-guide-hint-dot"></span>
-				{waiting.hint}
-			</p>
-		{/if}
-		<div class="flex items-center gap-2">
-			{#if review.guide.canGoBack}
-				<Button tone="secondary" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
-			{/if}
-			<span class="flex-1"></span>
-			{#if !waiting}
-				<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
-					{review.guide.isLastStep ? 'Done' : 'Next'}
-				</Button>
-			{/if}
-		</div>
-	</section>
+		</Pane>
+	</div>
 {:else if review.guide.card === 'welcome'}
-	<section data-testid="guide-welcome" class="cr-guide-card" role="complementary" aria-labelledby="guide-welcome-title">
-		<div class="flex items-center gap-2.5">
-			<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
-			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
-			<span class="flex-1"></span>
-			{@render close()}
-		</div>
-		<p class="cr-guide-body">
-			A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
-				.guide.stepCount} stops, about two minutes.
-		</p>
-		<div class="flex items-center gap-2">
-			<Button
-				bind:element={firstAction}
-				tone="primary"
-				size="sm"
-				testId="guide-start"
-				onclick={() => review.guide.startTour()}
-			>
-				Show me around
-			</Button>
-			<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
-		</div>
-		<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
-	</section>
-{:else if review.guide.card === 'news' && news}
-	<section data-testid="guide-news" class="cr-guide-card" role="complementary" aria-labelledby="guide-news-title">
-		<div class="flex items-center gap-2">
-			<span class="cr-faint text-xs">New in</span>
-			<span class="cr-guide-release">{news.release}</span>
-			<span class="flex-1"></span>
-			{@render close()}
-		</div>
-		<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
-		{#if news.illustration}
-			<NewsIllustration illustration={news.illustration} />
-		{/if}
-		<p class="cr-guide-body">{news.body}</p>
-		{#if news.also.length > 0}
-			<div class="flex flex-col gap-1.5 border-t border-base-300 pt-2.5">
-				<span class="cr-faint text-xs">Also in this release</span>
-				{#each news.also as line (line)}
-					<span class="cr-guide-body">{line}</span>
-				{/each}
+	<div class="cr-guide-place">
+		<Pane width="medium" testId="guide-welcome" role="complementary" aria-labelledby="guide-welcome-title">
+			<div class="cr-guide-card">
+				<div class="flex items-center gap-2.5">
+					<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
+					<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
+					<span class="flex-1"></span>
+					{@render close()}
+				</div>
+				<p class="cr-guide-body">
+					A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
+						.guide.stepCount} stops, about two minutes.
+				</p>
+				<div class="flex items-center gap-2">
+					<Button
+						bind:element={firstAction}
+						tone="primary"
+						size="sm"
+						testId="guide-start"
+						onclick={() => review.guide.startTour()}
+					>
+						Show me around
+					</Button>
+					<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
+				</div>
+				<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
 			</div>
-		{/if}
-		<p class="cr-guide-body">
-			<Link testId="guide-release-link" href={releaseUrl(news.release)}>Everything in {news.release}, on GitHub</Link>
-		</p>
-		<div class="flex items-center gap-2">
-			{#if offersStory}
-				<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
-					Try Story
-				</Button>
-			{:else}
-				<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
-					Got it
-				</Button>
-			{/if}
-			<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
-				Take the tour
-			</Button>
-		</div>
-	</section>
+		</Pane>
+	</div>
+{:else if review.guide.card === 'news' && news}
+	<div class="cr-guide-place">
+		<Pane width="medium" testId="guide-news" role="complementary" aria-labelledby="guide-news-title">
+			<div class="cr-guide-card">
+				<div class="flex items-center gap-2">
+					<span class="cr-faint text-xs">New in</span>
+					<span class="cr-guide-release">{news.release}</span>
+					<span class="flex-1"></span>
+					{@render close()}
+				</div>
+				<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
+				{#if news.illustration}
+					<NewsIllustration illustration={news.illustration} />
+				{/if}
+				<p class="cr-guide-body">{news.body}</p>
+				{#if news.also.length > 0}
+					<div class="flex flex-col gap-1.5 border-t border-base-300 pt-2.5">
+						<span class="cr-faint text-xs">Also in this release</span>
+						{#each news.also as line (line)}
+							<span class="cr-guide-body">{line}</span>
+						{/each}
+					</div>
+				{/if}
+				<p class="cr-guide-body">
+					<Link testId="guide-release-link" href={releaseUrl(news.release)}
+						>Everything in {news.release}, on GitHub</Link
+					>
+				</p>
+				<div class="flex items-center gap-2">
+					{#if offersStory}
+						<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
+							Try Story
+						</Button>
+					{:else}
+						<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
+							Got it
+						</Button>
+					{/if}
+					<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
+						Take the tour
+					</Button>
+				</div>
+			</div>
+		</Pane>
+	</div>
 {/if}

@@ -2,9 +2,9 @@
 	import { useReview } from '$lib/review/context';
 	import { formatWeight } from '$lib/review/weight';
 	import Button from '$lib/ui/Button.svelte';
+	import Dialog from '$lib/ui/Dialog.svelte';
+	import type { Closing } from '$lib/ui/dialog-closing';
 	import Icon from '$lib/ui/Icon.svelte';
-	import Dialog from './Dialog.svelte';
-	import type { Closing } from './dialog-closing';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
@@ -24,12 +24,13 @@
 <!-- Asked before the first story is written: a story spends the agent's tokens, so whether to have them is
 	the reader's to say, knowing what this review would cost. The way on comes first, and takes the
 	keyboard; Escape and a press outside are "Not now" -->
-<Dialog label={QUESTION} data-testid="story-opt-in" class="w-full max-w-lg" {onClose}>
+<Dialog label={QUESTION} width="wide" testId="story-opt-in" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
-		<div class="flex flex-col gap-3.5 text-sm">
-			<div class="flex items-center gap-2.5">
-				<span class="text-(--cr-agent)"><Icon name="story" size="base" /></span>
-				<h2 class="text-base font-semibold">{QUESTION}</h2>
+		<div class="flex flex-col gap-3.5 p-4 text-sm">
+			<!-- A question has no head of its own: it is asked first, at a pane's heading's size, and its answers close it -->
+			<div class="flex items-center gap-2">
+				<span class="text-(--cr-agent)"><Icon name="story" size="sm" /></span>
+				<h2 class="text-sm font-semibold">{QUESTION}</h2>
 			</div>
 			<StorySketch />
 			<p>

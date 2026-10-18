@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/ui/Button.svelte';
-	import Dialog from './Dialog.svelte';
-	import type { Closing } from './dialog-closing';
+	import Dialog from '$lib/ui/Dialog.svelte';
+	import type { Closing } from '$lib/ui/dialog-closing';
 
 	interface Props {
 		/** What is asked, as the dialog says it and is named by: "Discard this comment?" */
@@ -22,14 +22,16 @@
 
 <!-- A question before something written is lost: the safe answer comes first, and takes the keyboard; the
 	other loses it, and is drawn as what destroys -->
-<Dialog label={question} data-testid={testId} class="w-full max-w-sm" {onClose}>
+<Dialog label={question} width="fitted" {testId} {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
-		<p class="mb-4 text-sm font-semibold">{question}</p>
-		<div class="flex justify-end gap-2">
-			<Button tone="quiet" size="sm" testId="confirm-keep" onclick={close}>{keep}</Button>
-			<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={() => closeThen(onGoAhead)}>
-				{goAhead}
-			</Button>
+		<div class="flex flex-col gap-4 p-4">
+			<p class="text-sm font-semibold">{question}</p>
+			<div class="flex justify-end gap-2">
+				<Button tone="quiet" size="sm" testId="confirm-keep" onclick={close}>{keep}</Button>
+				<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={() => closeThen(onGoAhead)}>
+					{goAhead}
+				</Button>
+			</div>
 		</div>
 	{/snippet}
 </Dialog>

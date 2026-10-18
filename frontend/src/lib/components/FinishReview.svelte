@@ -1,32 +1,36 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { Anchor, Thread } from '$lib/types';
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
+	import Popover from './Popover.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
 
 	const review = useReview();
 
-	let summary = $state<HTMLTextAreaElement | null>(null);
-
 	const submission = review.submission;
+	const inRounds = $derived(submission.inRounds);
+	// What the pane is called, and headed with: the round it sends, or the end
+	const title = $derived(finishingTitle(inRounds, review.rounds.current));
 	const unsent = $derived(review.threads.unsent.length);
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
-
-	// The pane opens on the summary: the one thing in it that is written here
-	onMount(() => summary?.focus());
 
 	/** Put the pane away and go to a thread in it. */
 	function jump(thread: Thread) {
 		submission.setFinishing(false);
 		review.navigator.reveal(thread);
+	}
+
+	/** The pane opens on the summary: the one thing in it that is written here. */
+	function focusOnDraw(field: HTMLTextAreaElement) {
+		field.focus();
 	}
 </script>
 
@@ -41,22 +45,98 @@
 	{/each}
 {/snippet}
 
-<!-- What has been written, a summary, and the two ways out -->
-<div class="flex max-h-[70vh] flex-col">
-	<div class="flex items-baseline gap-2 border-b border-base-300 px-4 py-2.5">
-		<h3 class="text-sm font-semibold">
-			{finishingTitle(submission.inRounds, review.rounds.current)}
-		</h3>
-		<span data-testid="finish-count" class="cr-faint text-xs">
-			{#if submission.inRounds}
-				{unsent} unsent of {review.threads.count}
-			{:else}
-				{counted(review.threads.count, COMMENTS)}
-			{/if}
-		</span>
-	</div>
+<!-- How many comments go, beside the pane's heading: those unsent of all, in a review in rounds -->
+{#snippet howMany()}
+	<span data-testid="finish-count" class="cr-faint text-xs">
+		{#if inRounds}
+			{unsent} unsent of {review.threads.count}
+		{:else}
+			{counted(review.threads.count, COMMENTS)}
+		{/if}
+	</span>
+{/snippet}
 
-	<div class="cr-scroller min-h-0 flex-1 px-4 py-3">
+<!-- A summary, and the two ways out: at the pane's foot, in sight however far what was written scrolls -->
+{#snippet sending()}
+	<div class="p-3">
+		<textarea
+			{@attach focusOnDraw}
+			data-testid="review-body"
+			class="cr-field cr-comment-body min-h-16 w-full rounded px-3 py-2"
+			placeholder="Summary — optional, about the change as a whole"
+			maxlength={review.limits.max_text_length}
+			aria-label="Summary of the review"
+			value={submission.body}
+			oninput={(event) => submission.setBody(event.currentTarget.value)}
+		></textarea>
+
+		<div class="mt-2 flex items-center gap-2">
+			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
+			<div class="flex-1"></div>
+			{#if inRounds}
+				<Button
+					tone="quiet"
+					size="sm"
+					testId="end-review"
+					disabled={!submission.canEnd}
+					onclick={() => submission.end()}
+				>
+					End review
+				</Button>
+			{/if}
+			<Button
+				tone="primary"
+				size="sm"
+				testId="modal-submit"
+				disabled={!submission.canSend}
+				onclick={() => submission.send()}
+			>
+				{#if submission.sending}
+					Sending
+				{:else if inRounds}
+					Send round {review.rounds.current}
+				{:else}
+					Send review
+				{/if}
+			</Button>
+		</div>
+	</div>
+{/snippet}
+
+<!-- One door: what has been written, a summary, and the two ways out -->
+<Popover
+	bind:open={() => submission.finishing, (opened: boolean) => submission.setFinishing(opened)}
+	label={title}
+	heading={title}
+	aside={howMany}
+	foot={sending}
+	placement="below-end"
+	width="wide"
+	testId="finish-review"
+>
+	{#snippet trigger(control)}
+		<Button
+			{...control}
+			tone="primary"
+			size="sm"
+			testId="quick-submit"
+			data-tour="send"
+			disabled={submission.sending}
+			title={FINISH_KEYS}
+		>
+			{#if submission.sending}
+				<span class="loading loading-xs loading-spinner"></span>
+				Sending
+			{:else if inRounds}
+				Send round {review.rounds.current}
+			{:else}
+				Finish review
+			{/if}
+			<Icon name="chevron" size="xs" />
+		</Button>
+	{/snippet}
+
+	<div class="px-3 py-3">
 		{#if open.length > 0}
 			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
 			<div data-testid="open-fields" class="mb-3">
@@ -113,48 +193,4 @@
 			</ul>
 		{/if}
 	</div>
-
-	<div class="border-t border-base-300 px-4 py-3">
-		<textarea
-			bind:this={summary}
-			data-testid="review-body"
-			class="cr-field cr-comment-body min-h-16 w-full rounded px-3 py-2"
-			placeholder="Summary — optional, about the change as a whole"
-			maxlength={review.limits.max_text_length}
-			aria-label="Summary of the review"
-			value={submission.body}
-			oninput={(event) => submission.setBody(event.currentTarget.value)}
-		></textarea>
-
-		<div class="mt-2 flex items-center gap-2">
-			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
-			<div class="flex-1"></div>
-			{#if submission.inRounds}
-				<Button
-					tone="quiet"
-					size="sm"
-					testId="end-review"
-					disabled={!submission.canEnd}
-					onclick={() => submission.end()}
-				>
-					End review
-				</Button>
-			{/if}
-			<Button
-				tone="primary"
-				size="sm"
-				testId="modal-submit"
-				disabled={!submission.canSend}
-				onclick={() => submission.send()}
-			>
-				{#if submission.sending}
-					Sending
-				{:else if submission.inRounds}
-					Send round {review.rounds.current}
-				{:else}
-					Send review
-				{/if}
-			</Button>
-		</div>
-	</div>
-</div>
+</Popover>

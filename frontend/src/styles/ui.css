@@ -123,7 +123,7 @@
 	color: var(--color-base-content);
 }
 .cr-ui-secondary {
-	border-color: var(--cr-popover-edge);
+	border-color: var(--cr-pane-edge);
 	background-color: var(--color-base-100);
 	color: var(--color-base-content);
 }
@@ -202,6 +202,182 @@
 .cr-ui-segment[data-calling='introduced'] {
 	color: var(--color-base-content);
 	box-shadow: var(--cr-shadow-introduced-edge);
+}
+
+/*
+ * A pane (PopoverPanel, Dialog, Pane): what the reader opens from a
+ * control, what the page puts by one as a note, a modal and the guide's
+ * card, all on one ground, edge, corner and lift, at one of the widths of
+ * lib/ui/pane.ts.
+ */
+.cr-ui-pane {
+	box-sizing: border-box;
+	border: 1px solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+	background: var(--color-base-200);
+	color: var(--color-base-content);
+	box-shadow: var(--cr-shadow-raised);
+}
+.cr-ui-pane-medium {
+	width: var(--cr-pane-medium);
+}
+.cr-ui-pane-wide {
+	width: var(--cr-pane-wide);
+}
+.cr-ui-pane-fitted {
+	width: max-content;
+}
+/* As wide as what it stands over: from its left edge to its right */
+.cr-ui-pane-along {
+	right: 0;
+	left: 0;
+}
+/* A pane that speaks for the agent, or of what it brought that is not read yet: its edge, and its arrow's, in that colour */
+.cr-ui-pane-agent {
+	border-color: var(--cr-agent);
+}
+.cr-ui-pane-unread {
+	border-color: var(--cr-unread);
+}
+/*
+ * What heads a pane (PaneHead): its name at the one size a pane's heading
+ * has, whatever stands beside it, and its close at the far end; ruled off
+ * from what scrolls under it
+ */
+.cr-ui-pane-head {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border-bottom: 1px solid var(--color-base-300);
+}
+.cr-ui-pane-heading {
+	flex: 1;
+	min-width: 0;
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	font-weight: 600;
+}
+/* What a pane holds, scrolling inside it once it is as tall as the window leaves it room for */
+.cr-ui-pane-body {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+/* What stays at a pane's foot while what it holds scrolls, ruled off from that */
+.cr-ui-pane-foot {
+	flex-shrink: 0;
+	border-top: 1px solid var(--color-base-300);
+}
+/*
+ * A pane that stands by a control (PopoverPanel), over what is under it,
+ * with an arrow pointing at the middle of the control. Measured in the
+ * window, it is moved along to stand whole inside it and kept as narrow and
+ * as short as the window leaves it room for; the arrow is moved back as
+ * far, so it still points at the control.
+ */
+.cr-ui-popover {
+	position: absolute;
+	z-index: var(--cr-layer-popover);
+	display: flex;
+	flex-direction: column;
+	max-width: var(--cr-pane-most-width, none);
+	max-height: var(--cr-pane-most-height, none);
+	translate: var(--cr-pane-shift, 0px) 0;
+}
+/* What the pane holds, over the arrow's inner half; it rounds what scrolls or is lit inside it */
+.cr-ui-pane-inside {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+	border-radius: inherit;
+	background: inherit;
+	overflow: hidden;
+}
+/*
+ * The arrow: a square with the pane's fill and edge, turned on its corner
+ * and centred on the pane's inner side. Its outer half covers the pane's
+ * edge where it leaves it and carries that edge on to a point; its inner
+ * half lies under what the pane holds.
+ */
+.cr-ui-popover::before {
+	content: '';
+	position: absolute;
+	width: var(--cr-pane-arrow);
+	height: var(--cr-pane-arrow);
+	border: inherit;
+	background: inherit;
+	rotate: 45deg;
+}
+.cr-ui-below-start,
+.cr-ui-below-end {
+	top: calc(100% + var(--cr-pane-gap));
+}
+.cr-ui-below-start {
+	left: 0;
+}
+.cr-ui-below-end {
+	right: 0;
+}
+.cr-ui-above-start {
+	bottom: calc(100% + var(--cr-pane-gap));
+	left: 0;
+}
+.cr-ui-below-start::before,
+.cr-ui-below-end::before {
+	top: calc(var(--cr-pane-arrow) / -2);
+}
+.cr-ui-above-start::before {
+	bottom: calc(var(--cr-pane-arrow) / -2);
+}
+/* Centred on the middle of the control, measured from the edge the pane lines up with, less how far it was moved */
+.cr-ui-below-start::before,
+.cr-ui-above-start::before {
+	left: calc(var(--cr-arrow-offset) - var(--cr-pane-shift, 0px));
+	translate: -50% 0;
+}
+.cr-ui-below-end::before {
+	right: calc(var(--cr-arrow-offset) + var(--cr-pane-shift, 0px));
+	translate: 50% 0;
+}
+/* A note under a control that is not about the control, as the note that Story will not be introduced again: no arrow */
+.cr-ui-arrowless::before {
+	content: none;
+}
+/*
+ * A note that fades as its time runs out (--cr-note-lasts): whole for most
+ * of it, gone by its end. One class, so asking the system for less motion
+ * stills it, and the note just goes
+ */
+.cr-ui-pane-fading {
+	animation: cr-fade-out var(--cr-note-lasts) ease-in forwards;
+}
+@keyframes cr-fade-out {
+	0%,
+	75% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+/*
+ * A modal (Dialog), in the middle of the window over a shade of the page,
+ * as tall as the browser leaves a modal room for, what it holds scrolling
+ */
+.cr-ui-dialog {
+	margin: auto;
+	padding: 0;
+	overflow: hidden;
+}
+.cr-ui-dialog[open] {
+	display: flex;
+	flex-direction: column;
+}
+.cr-ui-dialog::backdrop {
+	background: var(--cr-shade);
 }
 
 /*

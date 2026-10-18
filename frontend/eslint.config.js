@@ -226,7 +226,7 @@ const NO_DAISY_BUTTONS = [
 // give. A part that takes its element's attributes would take a `data-testid` among them too, unseen by any type
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
-const LIBRARY_PART = '/^(Button|Icon|IconButton|Link|Segment|Segmented)$/';
+const LIBRARY_PART = '/^(Button|Dialog|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),

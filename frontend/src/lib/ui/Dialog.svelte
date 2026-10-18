@@ -1,18 +1,23 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLDialogAttributes } from 'svelte/elements';
 	import type { Closing } from './dialog-closing';
+	import { PANE_WIDTHS, type PaneWidth } from './pane';
+	import PaneHead from './PaneHead.svelte';
 
-	interface Props extends Omit<HTMLDialogAttributes, 'children'> {
+	interface Props {
 		/** What the dialog is called, said to whoever cannot see it. */
 		label: string;
+		width: PaneWidth;
+		/** What heads it, beside the way to close it: none for a question, whose answers are its ways out. */
+		heading?: string | undefined;
+		testId: string;
 		/** Called once it closes, by Escape, a press outside it or its own words, for whoever drew it to stop drawing it. */
 		onClose: () => void;
 		/** What it holds, handed the ways to close it. */
 		children: Snippet<[closing: Closing]>;
 	}
 
-	let { label, onClose, children, class: sized, ...marked }: Props = $props();
+	let { label, width, heading, testId, onClose, children }: Props = $props();
 
 	let dialog = $state<HTMLDialogElement>();
 	// What the dialog's own words asked to be done once it has closed: nothing, where it is closed any other way
@@ -61,20 +66,24 @@
 	}
 </script>
 
-<!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`: a layer above the page,
-	which holds the keyboard inside it, and gives it back to what had it when it is closed with `close()`.
-	A pane open under it neither closes nor takes what is pressed in it: `Popover` asks whether a modal
-	is above it -->
+<!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`, in the look of every pane: a
+	layer above the page, which holds the keyboard inside it, and gives it back to what had it when it is closed
+	with `close()`. A pane open under it neither closes nor takes what is pressed in it: `Popover` asks whether a
+	modal is above it -->
 <dialog
-	{...marked}
 	bind:this={dialog}
 	aria-label={label}
-	class={['cr-dialog', sized]}
+	data-testid={testId}
+	class={['cr-ui-pane cr-ui-dialog', PANE_WIDTHS[width]]}
 	onclose={closed}
 	onpointerdown={notePress}
 	onclick={closeOnBackdrop}
 >
-	<div class="cr-dialog-body">
+	{#if heading !== undefined}
+		<PaneHead head={{ heading, close }} {testId} />
+	{/if}
+	<!-- What it holds, inside its edge: a press here is not a press outside it -->
+	<div class="cr-scroller cr-ui-pane-body">
 		{@render children({ close, closeThen })}
 	</div>
 </dialog>

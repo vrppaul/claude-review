@@ -94,6 +94,17 @@
 	--cr-button-sm: 2rem;
 
 	/*
+	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
+	 * keys, things to pick — and one of what was written. And the arrow it
+	 * points at what opened it with, which stands out from its edge half its
+	 * diagonal: the room between the two.
+	 */
+	--cr-pane-medium: 20rem;
+	--cr-pane-wide: 24rem;
+	--cr-pane-arrow: 0.625rem;
+	--cr-pane-gap: calc(var(--cr-pane-arrow) / sqrt(2));
+
+	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
 	 * so as tall as its buttons, half a rem above and below them, and the
 	 * line under it. What is read under it stands that far down.
@@ -297,8 +308,8 @@
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
 	--cr-agent: #b39ae6;
-	/* The edge of a pane the reader opened, and of a button that acts on what is read: a step above the lines between surfaces */
-	--cr-popover-edge: #2f3a48;
+	/* The edge of a pane, and of a button that acts on what is read: a step above the lines between surfaces */
+	--cr-pane-edge: #2f3a48;
 	/*
 	 * The axis a story's parts stand on in its contents, and the spine a
 	 * thread's turns are joined by, a step above the lines between surfaces;
@@ -372,7 +383,7 @@
 	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
 	--cr-agent: #6645b2;
-	--cr-popover-edge: #c3cdd9;
+	--cr-pane-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;
 	--cr-node-edge: #b3bfcd;
 	--cr-status-modified: #8f5c07;

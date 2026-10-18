@@ -40,27 +40,53 @@
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
-	import type { HTMLAttributes } from 'svelte/elements';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import { arrowOffsetTo, type Placement } from './pane-placement';
-	import PopoverPanel from './PopoverPanel.svelte';
+	import type { TourTarget } from '$lib/guide/tour';
+	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement } from '$lib/ui/pane';
+	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 
-	interface Props extends HTMLAttributes<HTMLDivElement> {
+	interface Props {
 		/** Whether the pane is open: the reader's to change, by the control or by leaving the pane. */
 		open: boolean;
 		/** What the pane is called, said to whoever cannot see it. */
 		label: string;
 		placement: Placement;
+		width: PaneWidth;
+		/** What heads it, beside the way to close it, where it is headed. */
+		heading?: string | undefined;
+		/** What stands beside its heading: a count, an act on all it holds. */
+		aside?: Snippet | undefined;
+		testId: string;
+		/** The name the tour lights it by, where the tour stops at it. */
+		tour?: TourTarget | undefined;
+		/** A key pressed inside it, for a pane that answers one of its own. */
+		onkeydown?: ((event: KeyboardEvent) => void) | undefined;
 		/** The control that opens it, drawn by whoever uses the popover, carrying the props it is handed. */
 		trigger: Snippet<[TriggerProps]>;
 		children: Snippet;
+		/** What stays at its foot while what it holds scrolls: the act it leads to. */
+		foot?: Snippet | undefined;
 	}
 
-	let { open = $bindable(), label, placement, trigger, children, ...marked }: Props = $props();
+	let {
+		open = $bindable(),
+		label,
+		placement,
+		width,
+		heading,
+		aside,
+		testId,
+		tour,
+		onkeydown,
+		trigger,
+		children,
+		foot
+	}: Props = $props();
 
 	const paneId = $props.id();
 	let control = $state<HTMLElement>();
 	let pane = $state<HTMLDivElement>();
+	let body = $state<HTMLDivElement>();
 	let around = $state<HTMLElement>();
 	// What had the keyboard as the pane opened — its control, or a field a key opened it from —
 	// which gets it back when the pane closes with the keyboard in it
@@ -72,6 +98,8 @@
 
 	// How far in from the edge the pane lines up with the arrow points
 	const arrowOffset = $derived(open ? arrowOffsetTo(control) : 0);
+	// What heads the pane where it is headed: its heading, and the way to close it as Escape does
+	const head = $derived<PaneHead | undefined>(heading === undefined ? undefined : { heading, close, aside });
 
 	const triggerProps = $derived<TriggerProps>({
 		'aria-haspopup': 'dialog',
@@ -87,10 +115,16 @@
 		return () => (control = undefined);
 	}
 
-	// An open pane takes the keyboard, unless something in it already has — a field it opened on
+	// An open pane gives the keyboard to the first of what it holds, unless something in it already has it — a
+	// field it opened on. Only where it holds nothing that takes the keyboard does its close take it
 	$effect(() => {
-		if (pane && !pane.contains(document.activeElement)) firstFocusable(pane)?.focus();
+		if (pane && body && !pane.contains(document.activeElement)) (firstFocusable(body) ?? firstFocusable(pane))?.focus();
 	});
+
+	/** Close the pane from the close at its head, as Escape does: the keyboard goes back as it would then. */
+	function close() {
+		open = false;
+	}
 
 	// Opening, it notes what has the keyboard, before the pane is drawn and takes it; closing, it
 	// hands the keyboard back, rather than leave it nowhere
@@ -155,7 +189,23 @@
 	{@render trigger(triggerProps)}
 	{#if open}
 		<!-- It takes the keyboard itself, as a native dialog does, so a press on its words keeps it in -->
-		<PopoverPanel {...marked} bind:pane id={paneId} role="dialog" tabindex={-1} {label} {placement} {arrowOffset}>
+		<PopoverPanel
+			bind:pane
+			bind:body
+			id={paneId}
+			role="dialog"
+			tabindex={-1}
+			data-tour={tour}
+			{label}
+			{placement}
+			{width}
+			arrow
+			{arrowOffset}
+			{head}
+			{testId}
+			{onkeydown}
+			{foot}
+		>
 			{@render children()}
 		</PopoverPanel>
 	{/if}

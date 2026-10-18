@@ -812,7 +812,7 @@ async def test_the_keys_list_opens_as_a_pane_under_help_takes_the_keyboard_and_g
     assert focused == "open-help"
 
     await page.get_by_test_id("open-help").click()
-    await help_menu.get_by_test_id("close-help").click()
+    await help_menu.get_by_test_id("help-menu-close").click()
     await help_menu.wait_for(state="detached")
 
 

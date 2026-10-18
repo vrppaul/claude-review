@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
+	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 	import { counted } from '$lib/utils/words';
 	import { keyOf, optionIdOf, type Mentionable, type Mentions } from './mentions.svelte';
-	import PopoverPanel from './PopoverPanel.svelte';
 
 	// The arrow points down into the field, near where its words start: this far in from the list's left edge, in pixels
 	const INTO_THE_FIELD = 20;
@@ -43,10 +43,12 @@
 	role="listbox"
 	label="Threads and files to point at"
 	placement="above-start"
+	width="along"
+	arrow
 	arrowOffset={INTO_THE_FIELD}
-	data-testid="thread-picker"
-	class="right-0"
+	testId="thread-picker"
 >
+	<!-- A short list over the conversation, whatever room the window leaves above the field: it scrolls itself -->
 	<div class="cr-scroller max-h-60 p-1">
 		{#each mentions.candidates as pick, index (keyOf(pick))}
 			{@const lit = index === mentions.highlighted}

@@ -53,6 +53,26 @@ describe('a menu in the header', () => {
 		expect(screen.getByTestId('settings-menu').contains(document.activeElement)).toBe(true);
 	});
 
+	it('gives the keyboard to the first of what it holds, not to the close at its head', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+
+		await user.click(screen.getByTestId('settings-toggle'));
+
+		expect(document.activeElement).toBe(screen.getByTestId('layout-unified'));
+	});
+
+	it('closes from the close at its head and gives the keyboard back to what opened it', async () => {
+		const user = userEvent.setup();
+		render(ReviewHeader, inReview(review));
+		await user.click(screen.getByTestId('settings-toggle'));
+
+		await user.click(screen.getByTestId('settings-menu-close'));
+
+		expect(screen.queryByTestId('settings-menu')).toBeNull();
+		expect(document.activeElement).toBe(screen.getByTestId('settings-toggle'));
+	});
+
 	it('closes on Escape and gives the keyboard back to what opened it', async () => {
 		const user = userEvent.setup();
 		render(ReviewHeader, inReview(review));

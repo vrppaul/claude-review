@@ -10,7 +10,8 @@ from playwright.async_api import Locator, Page
 from pydantic import BaseModel, ConfigDict
 
 # How an element is painted, as the browser works it out: its ground, what is laid over it, its words, the edge
-# drawn inside it, the colour of its border, the weight and face of its words, and how tall it stands
+# drawn inside it or the shadow it casts, the colour of its border and how round its corners are, the size,
+# weight and face of its words, and how tall it stands
 _PAINTED = """(element) => {
     const style = getComputedStyle(element);
     return {
@@ -19,6 +20,8 @@ _PAINTED = """(element) => {
         words: style.color,
         edge: style.boxShadow,
         border: style.borderTopColor,
+        radius: style.borderTopLeftRadius,
+        size: style.fontSize,
         weight: style.fontWeight,
         face: style.fontFamily,
         height: element.getBoundingClientRect().height,
@@ -49,6 +52,8 @@ class Painted(BaseModel):
     words: str
     edge: str
     border: str
+    radius: str
+    size: str
     weight: str
     face: str
     height: float

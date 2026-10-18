@@ -3,9 +3,12 @@ import { render } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import Button from '$lib/ui/Button.svelte';
+import Dialog from '$lib/ui/Dialog.svelte';
 import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
+import Pane from '$lib/ui/Pane.svelte';
+import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
 
@@ -45,6 +48,37 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	{
 		part: 'an icon',
 		render: () => render(Icon, { name: 'check', size: 'xs', testId: TEST_ID, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a pane by a control',
+		render: () =>
+			render(PopoverPanel, {
+				role: 'dialog',
+				label: WORDS,
+				placement: 'below-start',
+				width: 'medium',
+				arrow: true,
+				arrowOffset: 0,
+				testId: TEST_ID,
+				children: drawn,
+				class: FROM_OUTSIDE
+			} as never)
+	},
+	{
+		part: 'a pane that stands by itself',
+		render: () => render(Pane, { width: 'medium', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a modal',
+		render: () =>
+			render(Dialog, {
+				label: WORDS,
+				width: 'wide',
+				testId: TEST_ID,
+				onClose: () => undefined,
+				children: drawn,
+				class: FROM_OUTSIDE
+			} as never)
 	},
 	{
 		part: 'a link',

@@ -8,6 +8,9 @@
 	import { counted, FILES } from '$lib/utils/words';
 	import Popover from './Popover.svelte';
 
+	// What the list is called, and headed with
+	const COMPARED_AGAINST = 'Compare the working tree against';
+
 	const review = useReview();
 
 	let open = $state(false);
@@ -66,11 +69,12 @@
 	as one sentence, and takes the mark tint while a narrower base is on. -->
 <Popover
 	bind:open={() => open, setOpen}
-	label="Compare the working tree against"
+	label={COMPARED_AGAINST}
+	heading={COMPARED_AGAINST}
 	placement="below-start"
-	data-testid="base-list"
-	data-tour="review-base-list"
-	class="w-80"
+	width="medium"
+	testId="base-list"
+	tour="review-base-list"
 >
 	{#snippet trigger(control)}
 		<Button
@@ -89,10 +93,9 @@
 	{/snippet}
 
 	<div class="px-3 pt-2 pb-1">
-		<p class="cr-muted text-xs">Compare the working tree against</p>
 		<input
 			data-testid="base-filter"
-			class="mt-2 w-full rounded border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
+			class="w-full rounded border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
 			placeholder="filter"
 			aria-label="Filter the bases"
 			bind:value={filter}

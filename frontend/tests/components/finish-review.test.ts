@@ -14,11 +14,18 @@ const SHORTEST = 5;
 // What the server says once a review is sent for good
 const SENT_FOR_GOOD = { markdown: '## Comments', comment_count: 1, round: 1, ended: true };
 
+/** A review, opened with what its server says, whose pane the reader finishes it from is open. */
+function openToFinish(...told: Parameters<typeof openReview>): Review {
+	const opened = openReview(...told);
+	opened.submission.setFinishing(true);
+	return opened;
+}
+
 describe('finishing a review', () => {
 	let review: Review;
 
 	beforeEach(() => {
-		review = openReview();
+		review = openToFinish();
 	});
 
 	it('counts the comments about to go', () => {
@@ -120,7 +127,7 @@ describe('finishing a review', () => {
 	});
 
 	it('takes no longer a summary than the server takes', async () => {
-		review = openReview({ facts: { limits: { ...SEND_LIMITS, max_text_length: SHORTEST } } });
+		review = openToFinish({ facts: { limits: { ...SEND_LIMITS, max_text_length: SHORTEST } } });
 		const { getByTestId } = render(FinishReview, inReview(review));
 
 		await userEvent.type(getByTestId('review-body'), 'Longer than that');
@@ -153,7 +160,7 @@ describe('the line a comment sits on, before it is sent', () => {
 	let review: Review;
 
 	beforeEach(() => {
-		review = openReview();
+		review = openToFinish();
 	});
 
 	it('marks a comment that sits on a removed line', () => {
@@ -179,7 +186,7 @@ describe('a comment still open in its field as the review is finished', () => {
 	let review: Review;
 
 	beforeEach(() => {
-		review = openReview();
+		review = openToFinish();
 	});
 
 	/** Start a comment on lines of a file and type into it, without adding it. */

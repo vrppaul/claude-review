@@ -2,7 +2,6 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 	import Popover from './Popover.svelte';
 
@@ -40,9 +39,10 @@
 <Popover
 	bind:open={() => review.guide.helpOpen, (open: boolean) => review.guide.setHelpOpen(open)}
 	label={CALLED}
+	heading={HEADING}
 	placement="below-start"
-	data-testid="help-menu"
-	class="w-80"
+	width="medium"
+	testId="help-menu"
 	onkeydown={closeOnQuestionMark}
 >
 	{#snippet trigger(control)}
@@ -58,20 +58,7 @@
 		</Button>
 	{/snippet}
 
-	<div class="flex flex-col p-4">
-		<header class="mb-3 flex items-center gap-3">
-			<h2 class="text-xs font-semibold">{HEADING}</h2>
-			<div class="flex-1"></div>
-			<IconButton
-				tone="quiet"
-				size="xs"
-				label="Close {HEADING}"
-				testId="close-help"
-				onclick={() => review.guide.setHelpOpen(false)}
-			>
-				<Icon name="cross" size="xs" />
-			</IconButton>
-		</header>
+	<div class="flex flex-col p-3">
 		<div class="mb-5 flex flex-col gap-1">
 			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-pressable" onclick={takeTour}>
 				<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
@@ -85,7 +72,7 @@
 				</button>
 			{/if}
 		</div>
-		<h3 class="mb-3 text-sm font-semibold">Keyboard</h3>
+		<h3 class="mb-3 text-xs font-semibold">Keyboard</h3>
 		<dl data-testid="shortcuts-list" class="space-y-2">
 			{#each keysOf(review) as row (row.keys)}
 				<div class="flex items-baseline gap-4">

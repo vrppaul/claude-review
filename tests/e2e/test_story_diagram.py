@@ -167,7 +167,7 @@ async def test_a_diagram_opened_large_is_headed_by_its_caption_and_closed_by_its
     large = page.get_by_test_id("diagram-large")
 
     await expect(large.get_by_role("heading", name=CAPTION)).to_be_visible()
-    await large.get_by_test_id("diagram-close").click()
+    await large.get_by_test_id("diagram-large-close").click()
 
     await expect(large).to_have_count(0)
 
