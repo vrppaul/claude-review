@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
-import { frames, untilAGlideWouldHaveBegun } from './frames';
+import { frames } from './frames';
 
 /** An observer the test reports crossings through, as the browser would once it has laid the page out. */
 class ReportedObserver {
@@ -36,7 +36,6 @@ let observedBefore: typeof IntersectionObserver;
 function drawn(): HTMLElement {
 	const element = document.createElement('div');
 	element.scrollIntoView = () => undefined;
-	element.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 	document.body.append(element);
 	return element;
 }
@@ -105,6 +104,21 @@ describe('the file being read', () => {
 		expect(sections.fileInView).toBe('b.py');
 	});
 
+	it('is the file a jump took the reader to, though the band says the file above crosses it each time the page scrolls there', async () => {
+		const first = section('a.py');
+		const last = section('b.py');
+		const watched = band();
+		watched.report([first]);
+		// A file at the end, which cannot scroll up as far as the band: each scroll to it leaves the file
+		// above across the band, and the band says so once the browser has laid that scroll out
+		last.scrollIntoView = () => setTimeout(() => watched.report([first]));
+
+		sections.scrollTo('b.py');
+		await frames();
+
+		expect(sections.fileInView).toBe('b.py');
+	});
+
 	it('is the band’s to say again once the reader moves on from where a jump landed', async () => {
 		const first = section('a.py');
 		const second = section('b.py');
@@ -126,7 +140,7 @@ describe('the file being read', () => {
 		const watched = band();
 		watched.report([first]);
 		sections.show('c.py');
-		await untilAGlideWouldHaveBegun();
+		await frames();
 
 		watched.report([second], [first]);
 
@@ -143,7 +157,7 @@ describe('the file being read', () => {
 		// it is drawn, before the jump to the file has come to rest
 		sections.goToThread('comment-1', 'c.py');
 		sections.registerThread('comment-1', drawn());
-		await untilAGlideWouldHaveBegun();
+		await frames();
 
 		watched.report([second], [first]);
 

@@ -1,26 +1,36 @@
-"""E2E: the page takes the reader to a file, and the file is where it took them.
+"""E2E: the page takes the reader to a file at once, and the file is where it took them.
 
 A file's rows are built once the reader comes near it; until then its
 section holds the room they are counted to take: its rows, the header of
 each hunk and the bar for the lines left out around it. Built, a file takes
 more only for what is not counted, a thread under a line or a line that
-wraps, so what lies below may still move while the files on the way are
-built, after the page aimed at it. Only a browser lays a page out and
-scrolls it.
+wraps, so what lies below may still move while the files around it are
+built, after the page took the reader there. Only a browser lays a page out
+and scrolls it.
 """
 
+import time
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
-from playwright.async_api import Locator, Page
+from playwright.async_api import Locator, Page, expect
 
+from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
+from tests.helpers import (
+    ReviewServers,
+    RunningReview,
+    committed_repository,
+    line_on_the_wire,
+    repository_opening,
+    write_files,
+)
 from tests.stories import as_the_agent_writes, step, story_of
 
 STORY_ROUTE = "/api/story"
 SHOW_ROUTE = "/api/show"
+POINT_ROUTE = "/api/point"
 # Many screens of files, each changed in several places far apart: a hunk to
 # a place, and lines left out above, between and below them
 FILES_OF_MANY_HUNKS = 30
@@ -30,6 +40,12 @@ PATHS = [f"file_{number:02}.py" for number in range(FILES_OF_MANY_HUNKS)]
 FIRST_FILE = PATHS[0]
 # Far down the review, with screens of files below it still: it can be brought to the top of the area
 FAR_FILE = PATHS[24]
+# The file right above it, and what the agent says on its last changed line: drawn as a card under that
+# line once the file is built, room its section does not hold for it
+ABOVE_THE_FAR_FILE = PATHS[23]
+A_THREAD_ABOVE = "Kept apart from the file below on purpose."
+# The file after the first, about a screen down the review
+NEAR_FILE = PATHS[1]
 # The last file of the review, added with a few lines. Nothing is below it: brought as far up as the
 # area scrolls, it stands at the area's foot
 LAST_FILE = "zz_last.py"
@@ -41,13 +57,45 @@ BELOW_THE_AREAS_TOP = """(section) => {
     const area = section.closest('main');
     return section.getBoundingClientRect().top - area.getBoundingClientRect().top;
 }"""
-# Whether the page has begun to scroll the files towards one, and has screens to go before it is there
-ON_ITS_WAY = """(path) => {
-    const section = document.querySelector(`[data-testid="file-section"][data-path="${path}"]`);
+# How far below the top of the area a section's head stands the first time the area moves from now on: the
+# promise of it, held in an object so that it is kept rather than waited for until the test reads it
+AT_THE_FIRST_MOVE = """(section) => {
     const area = section.closest('main');
-    const below = section.getBoundingClientRect().top - area.getBoundingClientRect().top;
-    return area.scrollTop > 0 && below > 2 * area.clientHeight;
+    const promise = new Promise((resolve) => area.addEventListener(
+        'scroll',
+        () => resolve(section.getBoundingClientRect().top - area.getBoundingClientRect().top),
+        { once: true }
+    ));
+    return { promise };
 }"""
+# That the page has heard the reader turn the wheel over an area, from now on: its promise held the same way
+HEARS_THE_WHEEL = """(area) => {
+    const promise = new Promise((resolve) => area.addEventListener('wheel', () => resolve(), { once: true }));
+    return { promise };
+}"""
+# What a promise held so comes to
+KEPT = "(holding) => holding.promise"
+# How far ahead of the test's clock the page's is stopped, in seconds: more than the moment the test takes to
+# ask for it, which the page's clock runs through first. Stopped, it runs none of the frames its code waits for
+CLOCK_HELD_FROM_SECONDS = 1
+# Whether a section was marked at each move of its area from now on, in the order the area moved
+MARKED_AT_EACH_MOVE = """(section) => {
+    const moves = [];
+    section.closest('main').addEventListener('scroll', () => moves.push(section.hasAttribute('data-marked')));
+    return moves;
+}"""
+# Let the page draw a number of frames
+FRAMES_DRAWN = (
+    "async (count) => { for (let frame = 0; frame < count; frame += 1) await new Promise(requestAnimationFrame); }"
+)
+# How long the area is watched once the page has marked a file, in frames: a third of a second at sixty a
+# second, many times the few frames the page takes to put a file right
+WATCHED_FOR_FRAMES = 20
+# The reading area of a browser that does not anchor its scroll: what grows above what is in view pushes it
+# down. Chromium anchors it, but not where a file brought to the top lands a fraction of a pixel low, the
+# file above left in view by that fraction. Where the fractions fall is a sum of every height above, so a
+# test takes the anchoring away rather than look for a file that lands so
+WITHOUT_SCROLL_ANCHORING = '[data-testid="diff-view"] { overflow-anchor: none; }'
 # A fraction of a pixel: where a head stands is not a whole number, and the area scrolls by whole ones
 LESS_THAN_A_PIXEL = 1
 # How tall a section stands on the page
@@ -79,6 +127,19 @@ async def review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
     async with AsyncClient(base_url=started.url) as agent:
         await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
     return started
+
+
+@in_the_browsers_loop
+async def review_with_a_thread_above_the_far_file(review: RunningReview) -> RunningReview:
+    """The review, with a thread the agent raised on the last changed line of the file right above the far one."""
+    raised = {
+        "anchor": line_on_the_wire(ABOVE_THE_FAR_FILE, CHANGED_LINES[-1]),
+        "body": A_THREAD_ABOVE,
+        "severity": CommentSeverity.NOTE,
+    }
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.post(POINT_ROUTE, json=raised)).raise_for_status()
+    return review
 
 
 def _section(page: Page, path: str) -> Locator:
@@ -154,6 +215,50 @@ async def test_a_file_the_agent_shows_far_down_the_review_is_marked_at_the_top_o
     assert abs(await shown.evaluate(BELOW_THE_AREAS_TOP)) < LESS_THAN_A_PIXEL
 
 
+@pytest.mark.parametrize("path", [NEAR_FILE, FAR_FILE])
+async def test_a_file_the_agent_shows_is_at_the_top_of_the_reading_area_from_the_first_frame_the_area_moves_in(
+    review: RunningReview, page: Page, path: str
+) -> None:
+    """Taken there at once, a screen down or many: a glide would have it still on its way, below."""
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    first_move = await _section(page, path).evaluate_handle(AT_THE_FIRST_MOVE)
+
+    await _agent_shows(review, path)
+
+    assert abs(await first_move.evaluate(KEPT)) < LESS_THAN_A_PIXEL
+
+
+async def test_a_file_the_agent_shows_far_down_under_a_file_that_holds_a_thread_is_marked_at_the_top_of_the_reading_area(
+    review_with_a_thread_above_the_far_file: RunningReview, page: Page
+) -> None:
+    """The card is drawn as the file above is built, after the page took the reader there, and pushes the file down."""
+    await page.goto(review_with_a_thread_above_the_far_file.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.add_style_tag(content=WITHOUT_SCROLL_ANCHORING)
+
+    await _agent_shows(review_with_a_thread_above_the_far_file, FAR_FILE)
+    shown = await _marked(page, FAR_FILE)
+
+    assert abs(await shown.evaluate(BELOW_THE_AREAS_TOP)) < LESS_THAN_A_PIXEL
+
+
+async def test_the_reading_area_stays_where_it_is_once_a_file_the_agent_showed_is_marked(
+    review_with_a_thread_above_the_far_file: RunningReview, page: Page
+) -> None:
+    """The mark says the reader has come to rest: the page moves them no more, though a thread's card above was drawn late."""
+    await page.goto(review_with_a_thread_above_the_far_file.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.add_style_tag(content=WITHOUT_SCROLL_ANCHORING)
+    marked_at_each_move = await _section(page, FAR_FILE).evaluate_handle(MARKED_AT_EACH_MOVE)
+
+    await _agent_shows(review_with_a_thread_above_the_far_file, FAR_FILE)
+    await _marked(page, FAR_FILE)
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+
+    assert True not in await marked_at_each_move.json_value()
+
+
 async def test_the_last_file_shown_while_a_story_is_read_is_marked_in_view_in_the_files(
     review: RunningReview, page: Page
 ) -> None:
@@ -172,14 +277,20 @@ async def test_the_last_file_shown_while_a_story_is_read_is_marked_in_view_in_th
 async def test_a_reader_who_scrolls_while_the_page_takes_them_to_a_file_is_left_where_they_went(
     review: RunningReview, page: Page
 ) -> None:
+    """The page's clock is stopped before it scrolls there, so the wheel is turned before it puts the file right."""
+    await page.clock.install()
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
     area = page.get_by_test_id("diff-view")
     await area.hover()
+    wheel_heard = await area.evaluate_handle(HEARS_THE_WHEEL)
+    await page.clock.pause_at(time.time() + CLOCK_HELD_FROM_SECONDS)
 
     await _agent_shows(review, FAR_FILE)
-    await page.wait_for_function(ON_ITS_WAY, arg=FAR_FILE)
+    await expect(area).not_to_have_js_property("scrollTop", 0)
     await page.mouse.wheel(0, -A_TURN_OF_THE_WHEEL)
+    await wheel_heard.evaluate(KEPT)
+    await page.clock.resume()
     shown = await _marked(page, FAR_FILE)
 
-    assert await shown.evaluate(BELOW_THE_AREAS_TOP) > await area.evaluate("(area) => area.clientHeight")
+    assert await shown.evaluate(BELOW_THE_AREAS_TOP) >= A_TURN_OF_THE_WHEEL - LESS_THAN_A_PIXEL

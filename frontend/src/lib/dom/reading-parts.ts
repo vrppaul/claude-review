@@ -94,7 +94,7 @@ export class ReadingParts {
 		if (!part) return;
 		// Where the reader is taken is its head: in view from now on, before what watches the heads has looked again
 		this.#headsInView.countIn(part.head);
-		this.#jumps.land(this.#parts.band, part.element, 'instant');
+		this.#jumps.land(this.#parts.band, part.element);
 	}
 
 	/**

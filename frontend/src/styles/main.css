@@ -2048,8 +2048,8 @@
  * Last in the stylesheet and as specific as one class, it wins over each
  * rule above that moves something — a rule more specific than one class
  * that adds motion must not be written — and over Tailwind's and DaisyUI's,
- * which sit in layers under it. A scroll the page starts itself asks the
- * same question in dom/motion.ts.
+ * which sit in layers under it. A scroll the page starts itself never
+ * glides, for any reader (dom/jump.ts).
  */
 @media (prefers-reduced-motion: reduce) {
 	:root *,

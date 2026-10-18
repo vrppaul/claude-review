@@ -3,7 +3,7 @@ import { tick } from 'svelte';
 import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { broughtIntoView } from './elements';
-import { frames, FRAMES_TO_SETTLE, untilAGlideWouldHaveBegun } from './frames';
+import { frames } from './frames';
 
 let sections: FileSections;
 
@@ -11,8 +11,6 @@ beforeEach(() => {
 	sections = new FileSections(new Jumps());
 });
 
-// Enough for a jump that came to rest, was scrolled on from there, and came to rest where it was sent
-const FRAMES_TO_SETTLE_TWICE = FRAMES_TO_SETTLE * 2;
 // Where a section's head stands on screen, in pixels below the top of its area: at the top, where a
 // jump sends it; pushed down from there by what was built above it; and where a reader's scroll left it
 const AT_THE_TOP = 0;
@@ -20,18 +18,11 @@ const PUSHED_DOWN = 300;
 const WHERE_THE_READER_WENT = 500;
 // And scrolled off it, above the area, by going to a thread far down the section
 const OFF_THE_TOP = -400;
-// Where a section far down the review stands before a glide to it begins, and where the glide has it half-way
-const FAR_BELOW = 900;
-const HALF_WAY_THERE = 450;
-// A frame in which a glide has moved nothing yet; and the two after it moved: it is seen to have
-// moved in the first, and to stand still, for one frame, in the second
-const FRAMES_BEFORE_IT_MOVES = 1;
-const FRAMES_TO_SEE_IT_STILL_ONCE = 2;
 // What a reader does to move themselves, or to act where they are
 const READERS_OWN_MOVES = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
-// A moment into a scroll that is still on its way
-const FRAMES_WHILE_MOVING = 2;
-// Long after anything asked for has had time to be drawn, or to come to rest, in milliseconds
+// Long after a jump has come to rest, in frames: what it has not done by then, it does not do
+const LONG_AFTER_IT_CAME_TO_REST = 20;
+// Long after anything asked for has had time to be drawn, in milliseconds
 const A_MINUTE = 60_000;
 
 function isMarked(section: HTMLElement): boolean {
@@ -50,13 +41,9 @@ interface Standing {
 	top: number;
 }
 
-/**
- * Give an element a place on screen that a test moves it from: scrolling to
- * it puts it where the scroll sends it, and it says where it stands now.
- */
+/** Give an element a place on screen that a test moves it from: scrolling to it puts it where the scroll sends it. */
 function placed(element: HTMLElement, sentTo: number): Standing {
 	const standing = { top: sentTo };
-	element.getBoundingClientRect = () => ({ top: standing.top }) as DOMRect;
 	element.scrollIntoView = () => (standing.top = sentTo);
 	return standing;
 }
@@ -69,82 +56,38 @@ describe('being taken to a file somebody else pointed at', () => {
 		document.body.innerHTML = '';
 	});
 
-	it('does not mark the file until the scroll has stopped', async () => {
-		const moving = section('a.py');
-		let top = 900;
-		moving.getBoundingClientRect = () => ({ top }) as DOMRect;
-
-		sections.show('a.py');
-		await frames(FRAMES_WHILE_MOVING);
-		expect(isMarked(moving)).toBe(false);
-
-		top = 0;
-		await frames();
-		expect(isMarked(moving)).toBe(true);
-	});
-
-	it('does not mark a file that stands still before the glide to it has begun: a glide takes a few frames to begin', async () => {
-		const yetToMove = section('a.py');
-		yetToMove.getBoundingClientRect = () => ({ top: 900 }) as DOMRect;
-
-		sections.show('a.py');
-		await frames();
-
-		expect(isMarked(yetToMove)).toBe(false);
-	});
-
-	it('marks a file that stands where it is sent already, once a glide would have begun', async () => {
+	it('marks the file once the reader has come to rest at it', async () => {
 		const shown = section('a.py');
-		shown.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
 		sections.show('a.py');
-		await untilAGlideWouldHaveBegun();
+		await frames();
 
 		expect(isMarked(shown)).toBe(true);
 	});
 
 	it('marks the file again when it is shown twice running', async () => {
 		const shown = section('a.py');
-		shown.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
 		sections.show('a.py');
-		await untilAGlideWouldHaveBegun();
+		await frames();
 		expect(isMarked(shown)).toBe(true);
 
 		sections.show('a.py');
 		expect(isMarked(shown)).toBe(false);
-		await untilAGlideWouldHaveBegun();
+		await frames();
 		expect(isMarked(shown)).toBe(true);
 	});
 
 	it('marks only the file asked for last', async () => {
 		const first = section('a.py');
 		const second = section('b.py');
-		first.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
-		second.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
 		sections.show('a.py');
 		sections.show('b.py');
-		await untilAGlideWouldHaveBegun();
+		await frames();
 
 		expect(isMarked(first)).toBe(false);
 		expect(isMarked(second)).toBe(true);
-	});
-
-	it('marks a file that never comes to rest all the same, once it has been waited on long enough', async () => {
-		const restless = section('a.py');
-		let top = 0;
-		// Wherever it is looked at, it has moved on from where it was
-		restless.getBoundingClientRect = () => ({ top: (top += 1) }) as DOMRect;
-		const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
-
-		sections.show('a.py');
-		await frames();
-		expect(isMarked(restless)).toBe(false);
-
-		clock.mockReturnValue(A_MINUTE);
-		await frames();
-		expect(isMarked(restless)).toBe(true);
 	});
 
 	it('says nothing about a file the review does not hold', () => {
@@ -157,10 +100,35 @@ describe('being taken to a file somebody else pointed at', () => {
 
 		sections.show('a.py');
 		standing.top = PUSHED_DOWN;
-		await frames(FRAMES_TO_SETTLE_TWICE);
+		await frames();
 
 		expect(standing.top).toBe(AT_THE_TOP);
 		expect(isMarked(shown)).toBe(true);
+	});
+
+	it('is scrolled to once more at most, however long something else goes on moving it', async () => {
+		const restless = section('a.py');
+		let top = 0;
+		// Wherever it is looked at, it has moved on from where it was
+		restless.getBoundingClientRect = () => ({ top: (top += 1) }) as DOMRect;
+		const scrolledTo = broughtIntoView(restless);
+
+		sections.show('a.py');
+		await frames(LONG_AFTER_IT_CAME_TO_REST);
+
+		expect(scrolledTo).toHaveBeenCalledTimes(2);
+	});
+
+	it('marks a file something else goes on moving all the same, once the reader has come to rest at it', async () => {
+		const restless = section('a.py');
+		let top = 0;
+		// Wherever it is looked at, it has moved on from where it was
+		restless.getBoundingClientRect = () => ({ top: (top += 1) }) as DOMRect;
+
+		sections.show('a.py');
+		await frames();
+
+		expect(isMarked(restless)).toBe(true);
 	});
 
 	it('is left where the reader went when what they pressed a key on keeps the key to itself', async () => {
@@ -172,23 +140,9 @@ describe('being taken to a file somebody else pointed at', () => {
 		sections.show('a.py');
 		keepsItsKeys.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
 		standing.top = WHERE_THE_READER_WENT;
-		await frames(FRAMES_TO_SETTLE_TWICE);
+		await frames();
 
 		expect(standing.top).toBe(WHERE_THE_READER_WENT);
-	});
-
-	it('is not scrolled to again for standing still one frame on its way: a glide may pause that long', async () => {
-		const gliding = section('a.py');
-		const standing = { top: FAR_BELOW };
-		gliding.getBoundingClientRect = () => ({ top: standing.top }) as DOMRect;
-		const scrolledTo = broughtIntoView(gliding);
-
-		sections.show('a.py');
-		await frames(FRAMES_BEFORE_IT_MOVES);
-		standing.top = HALF_WAY_THERE;
-		await frames(FRAMES_TO_SEE_IT_STILL_ONCE);
-
-		expect(scrolledTo).toHaveBeenCalledTimes(1);
 	});
 
 	it.each(READERS_OWN_MOVES)(
@@ -200,7 +154,7 @@ describe('being taken to a file somebody else pointed at', () => {
 			sections.show('a.py');
 			window.dispatchEvent(new Event(move));
 			standing.top = WHERE_THE_READER_WENT;
-			await frames(FRAMES_TO_SETTLE_TWICE);
+			await frames();
 
 			expect(standing.top).toBe(WHERE_THE_READER_WENT);
 			expect(isMarked(shown)).toBe(true);
@@ -218,7 +172,7 @@ describe('being taken to a section', () => {
 
 		sections.scrollTo('a.py');
 		standing.top = PUSHED_DOWN;
-		await frames(FRAMES_TO_SETTLE_TWICE);
+		await frames();
 
 		expect(standing.top).toBe(AT_THE_TOP);
 	});
@@ -242,7 +196,7 @@ describe('being taken to a section', () => {
 		sections.scrollTo('a.py');
 		sections.scrollTo('b.py');
 		first.top = PUSHED_DOWN;
-		await frames(FRAMES_TO_SETTLE_TWICE);
+		await frames();
 
 		expect(first.top).toBe(PUSHED_DOWN);
 	});
@@ -296,7 +250,7 @@ describe('being taken to a thread', () => {
 
 		sections.goToThread('comment-1', 'a.py');
 		sections.registerThread('comment-1', thread);
-		await frames(FRAMES_TO_SETTLE_TWICE);
+		await frames();
 
 		expect(file.top).toBe(OFF_THE_TOP);
 	});
@@ -331,31 +285,7 @@ describe('moving the reader', () => {
 		document.body.innerHTML = '';
 	});
 
-	/** A system that has, or has not, asked for less motion. */
-	function lessMotion(asked: boolean) {
-		vi.stubGlobal(
-			'matchMedia',
-			vi.fn().mockImplementation((query: string) => ({ matches: asked && query.includes('reduced-motion') }))
-		);
-	}
-
-	it('glides a file’s head to the top of its area, and a thread to the middle', () => {
-		lessMotion(false);
-		const file = section('a.py');
-		file.scrollIntoView = vi.fn();
-		const thread = document.createElement('div');
-		thread.scrollIntoView = vi.fn();
-		sections.registerThread('comment-1', thread);
-
-		sections.show('a.py');
-		sections.goToThread('comment-1', 'a.py');
-
-		expect(file.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
-		expect(thread.scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
-	});
-
-	it('puts them there at once for a reader who asked their system for less motion', () => {
-		lessMotion(true);
+	it('takes a file’s head to the top of its area at once, and a thread to the middle', () => {
 		const file = section('a.py');
 		file.scrollIntoView = vi.fn();
 		const thread = document.createElement('div');
@@ -563,12 +493,11 @@ describe('a section asked for before it is drawn', () => {
 
 	it('is shown and marked once it is drawn, where somebody else pointed at it', async () => {
 		const late = notYetDrawn();
-		late.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
 		sections.show('a.py');
 		sections.register('a.py', 'a.py', late);
 		await tick();
-		await untilAGlideWouldHaveBegun();
+		await frames();
 
 		expect(late.scrollIntoView).toHaveBeenCalled();
 		expect(isMarked(late)).toBe(true);

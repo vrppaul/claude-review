@@ -23,7 +23,6 @@ import { Announced, type Announcement } from '$lib/dom/announced';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains, moveByLine } from '$lib/dom/keyboard';
-import { scrollMotion } from '$lib/dom/motion';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /**
@@ -184,9 +183,9 @@ export class FileSections {
 	 * Somebody else moved this screen, so the section has to say "here" when
 	 * it arrives: a page that has jumped somewhere without a word leaves the
 	 * reader working out what they are looking at. The mark waits for the
-	 * scroll to stop — across sixty files a smooth scroll outlasts the mark
-	 * itself, and the reader would arrive to a file that had already finished
-	 * saying so. A section not drawn yet is shown once its view is drawn.
+	 * jump to come to rest, so it is drawn where the section is put right
+	 * once the files around it are built. A section not drawn yet is shown
+	 * once its view is drawn.
 	 */
 	show(key: string): void {
 		this.#onceDrawn(
@@ -320,25 +319,25 @@ export class FileSections {
 	 * read from now on, whatever the band says while it is on its way.
 	 */
 	#scrollToDrawn({ element }: Section): void {
-		this.#jumps.land(this.#sections.band, element, 'instant');
+		this.#jumps.land(this.#sections.band, element);
 	}
 
-	/** Bring a section that is drawn to the top, as the one being read from now on, and mark it once it has come to rest. */
+	/** Bring a section that is drawn to the top at once, as the one being read from now on, and mark it once it has come to rest. */
 	#showDrawn({ element }: Section): void {
 		this.#unmark();
-		this.#jumps.land(this.#sections.band, element, scrollMotion(), () => this.#mark(element));
+		this.#jumps.land(this.#sections.band, element, () => this.#mark(element));
 	}
 
 	/**
-	 * Take the reader to a thread, to the middle of its scrolling area —
-	 * smoothly, unless they asked for less motion — and put the keyboard on
-	 * it: the reader is there now, and the next key — a line down, the next
-	 * file, marking it viewed — acts from there rather than from where the
-	 * keyboard was before. The scroll is under way, so taking the keyboard
-	 * does not move the screen again.
+	 * Take the reader to a thread at once, to the middle of its scrolling
+	 * area, and put the keyboard on it: the reader is there now, and the
+	 * next key — a line down, the next file, marking it viewed — acts from
+	 * there rather than from where the keyboard was before. The jump puts
+	 * the thread where it goes, so taking the keyboard does not move the
+	 * screen again.
 	 */
 	#arriveAtThread(thread: HTMLElement): void {
-		this.#jumps.to(thread, this.#sections.area, 'center', scrollMotion());
+		this.#jumps.to(thread, 'center');
 		thread.focus({ preventScroll: true });
 	}
 

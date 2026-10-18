@@ -1,224 +1,120 @@
 /**
- * The page taking the reader to an element, until it stands where it was
- * sent.
+ * The page taking the reader to an element: at once, and put right once
+ * what that brought near stands at its real size.
  *
- * One scroll is aimed at where the element stands as it starts. A file's
- * rows are built once the reader comes near it, and built it takes another
- * room than its section held for it: so what lies below moves while the
- * files on the way are built, after the scroll was aimed. A scroll that
- * glides ends where the element was; one made at once to the foot of the
- * area is pushed out of it as the files beside it are built. So each time
- * the element has come to rest it is scrolled to once more, at once: a
- * scroll that moves nothing is the only proof that it stands where it was
- * sent, and one that moves it has put it there, to be looked at again.
+ * A file's rows are built once the reader comes near it, and built they may
+ * take more room than their section held for them: a thread's card, a line
+ * that wraps. A scroll made at once puts the element where it was sent;
+ * then the files beside it are built, and what grows above it pushes it
+ * down. The browser's scroll anchoring does not always hold it there:
+ * Chromium does not where the element lands a fraction of a pixel low, the
+ * file above left in view by that fraction. So once those files stand at
+ * their real size, the element is scrolled to once more, at once. Once: that
+ * scroll moves the area by what grew, and what grows below the element
+ * moves nothing above it.
  *
- * At once, not gliding again: glides one after the other take seconds.
+ * Never a glide: across sixty files one took a second and a half, and ended
+ * short of where the files built on its way had pushed the element.
  *
  * A jump is the page's own doing, and gives way to the reader's: once they
- * move themselves or act where they are, a glide under way is stopped where
- * it stands, as the browser would glide on through the reader's own scroll,
- * and the element is not scrolled to again. Nor does it go on for ever:
- * what something else keeps moving is left to it, and the jump says it is
- * over all the same.
+ * move themselves or act where they are, the element is not scrolled to
+ * again, and stays where they take it.
  *
  * The page takes the reader one place at a time: `Jumps` holds the jump in
  * flight for whoever asks, to a section, a thread or a part of a story.
  */
 
-import type { Motion } from '$lib/dom/motion';
-
-// A smooth scroll that never ends — a scroll container that cannot reach the
-// element, a tab put in the background mid-flight — must not be waited on for ever
-const SETTLE_WITHIN = 2000;
-// How many frames in a row an element has to stay put to count as come to rest
-const STILL_FRAMES = 2;
-// How long an element may stand still, in milliseconds, before a scroll to it
-// has begun to move it. A glide moves nothing in its first frames — two to
-// four of them, 75 ms at the longest of twelve measured in Chromium — so it
-// is given over three times that: what has not moved by then had nowhere to
-// go. A scroll made at once has moved what it moves before anyone looks
-const BEGINS_WITHIN: Record<Motion, number> = { smooth: 250, instant: 0 };
-// How long a jump goes on scrolling to its element, in milliseconds: as long
-// as a glide is waited on, and as long again for the scroll made at once
-// that lands it. What still moves then is moved by something else, which is
-// not the jump's to chase: whoever waits to hear it has come to rest hears it
-const SCROLLS_ON_FOR = SETTLE_WITHIN + SETTLE_WITHIN;
+// How many frames a file the first scroll brought near takes to stand at its real size. In the first,
+// the browser says it has come near (`dom/built-when-near.svelte.ts`), and its rows are built after it;
+// in the second, content-visibility lets them be drawn; by the third they are laid out at the height
+// they take. Counted, not heard: each file is built on its own observer's word, and content-visibility
+// speaks only of a file whose drawing it changes, so nothing says when all of them are done, and a jump
+// that brought nothing new near would wait for a word never said. Seen so in Chromium, frame by frame
+const FRAMES_TO_REAL_SIZE = 3;
+// And how many more for whoever reads where the reader is, a reading band, to look at where the scroll
+// that put the element right left them: told they had come to rest before then, the band would take what
+// it says of that scroll for the reader moving on
+const FRAMES_TO_LOOK_AGAIN = 1;
 // What the reader does to move themselves, or to act where they are
 const READERS_OWN_MOVES = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
 
-/** A jump under way: what stops the hearing of the reader's own moves, and when it started. */
-interface UnderWay {
-	hearing: AbortController;
-	since: number;
-}
-
-/**
- * Stop a glide under way in an area, the page itself where that is null,
- * where it stands: a scroll made at once ends the glide, and one to where
- * the area already is moves nothing.
- */
-function stopWhereItStands(area: HTMLElement | null): void {
-	const scroller = area ?? document.scrollingElement;
-	scroller?.scrollTo({ top: scroller.scrollTop, left: scroller.scrollLeft, behavior: 'instant' });
-}
-
-/**
- * Call back once an element a scroll was asked to move has stopped moving.
- *
- * Where the element actually is, rather than which element is doing the
- * scrolling: a section sits inside whatever container the layout gives it,
- * and asking the element itself works wherever it ends up.
- */
-class SettleWatch {
-	readonly #element: HTMLElement;
-	readonly #beginsWithin: number;
-	readonly #then: () => void;
-	readonly #startedAt = performance.now();
-	readonly #startedFrom: number;
-	#previousTop = Number.NaN;
-	#stillFor = 0;
-	#hasMoved = false;
-
-	/**
-	 * @param element what the scroll was asked to move
-	 * @param moving how the scroll moves it, which says how long it may take to begin
-	 * @param then called once the element is still, or has been waited on long enough
-	 */
-	constructor(element: HTMLElement, moving: Motion, then: () => void) {
-		this.#element = element;
-		this.#beginsWithin = BEGINS_WITHIN[moving];
-		this.#then = then;
-		this.#startedFrom = element.getBoundingClientRect().top;
-	}
-
-	/** Start looking, once a frame, until the element is still. */
-	start(): void {
-		requestAnimationFrame(() => this.#look());
-	}
-
-	#look(): void {
-		const top = this.#element.getBoundingClientRect().top;
-		const waited = performance.now() - this.#startedAt;
-		this.#stillFor = top === this.#previousTop ? this.#stillFor + 1 : 0;
-		this.#previousTop = top;
-		this.#hasMoved ||= top !== this.#startedFrom;
-
-		// Standing still before it has begun to move is not having come to rest
-		const begun = this.#hasMoved || waited >= this.#beginsWithin;
-		const settled = begun && this.#stillFor >= STILL_FRAMES;
-		if (settled || waited > SETTLE_WITHIN) {
-			this.#then();
-			return;
-		}
-		requestAnimationFrame(() => this.#look());
-	}
-}
-
 class Jump {
 	readonly #element: HTMLElement;
-	readonly #area: HTMLElement | null;
 	readonly #sentTo: ScrollLogicalPosition;
-	readonly #motion: Motion;
 	readonly #atRest: () => void;
-	// Held while the jump is under way: null before it starts, and once it is over
-	#underWay: UnderWay | null = null;
-	// Whether the reader has moved since it started: the element is then left wherever it comes to rest
+	// What hears the reader's own moves while the jump is under way
+	readonly #hearing = new AbortController();
+	// Whether the reader has moved since it started: the element is then left where they take it
 	#readerMoved = false;
+	// The frame the jump waits for next, as the browser numbers its request: cancelled when another
+	// jump takes its place
+	#frameAwaited = 0;
 
 	/**
 	 * @param element what the reader is taken to
-	 * @param area what it scrolls in, the page itself where that is null
-	 * @param sentTo where in the area the element is sent: its head to the top, or itself to the middle
-	 * @param motion how the first scroll to it moves
+	 * @param sentTo where in its area the element is sent: its head to the top, or itself to the middle
 	 * @param atRest called once the element has come to rest, where it was sent or where the reader
 	 *   left it; never by a jump another took the place of
 	 */
-	constructor(
-		element: HTMLElement,
-		area: HTMLElement | null,
-		sentTo: ScrollLogicalPosition,
-		motion: Motion,
-		atRest: () => void
-	) {
+	constructor(element: HTMLElement, sentTo: ScrollLogicalPosition, atRest: () => void) {
 		this.#element = element;
-		this.#area = area;
 		this.#sentTo = sentTo;
-		this.#motion = motion;
 		this.#atRest = atRest;
 	}
 
-	/** Scroll to the element, and go on until it rests where it was sent. */
+	/** Scroll to the element at once, hearing the reader's own moves until the jump is over, and put it right later. */
 	start(): void {
-		const hearing = new AbortController();
-		this.#underWay = { hearing, since: performance.now() };
 		for (const move of READERS_OWN_MOVES) {
-			window.addEventListener(move, () => this.#giveWay(hearing), {
+			window.addEventListener(move, () => this.#giveWay(), {
 				capture: true,
 				passive: true,
-				signal: hearing.signal
+				signal: this.#hearing.signal
 			});
 		}
-		this.#scrollThere(this.#motion);
+		this.#scrollThere();
+		this.#inFrames(FRAMES_TO_REAL_SIZE, () => this.#putRight());
 	}
 
-	/**
-	 * The reader moved, or acted where they are: the glide stops where it
-	 * stands, before their own move is made, and nothing they do after is
-	 * listened for.
-	 */
-	#giveWay(hearing: AbortController): void {
-		this.#readerMoved = true;
-		hearing.abort();
-		stopWhereItStands(this.#area);
-	}
-
-	/** Another jump takes its place: it scrolls no more, and never says it has come to rest. */
+	/** Another jump takes its place: the frame it waits for is cancelled, so it scrolls no more and never says it has come to rest. */
 	abandon(): void {
-		this.#end();
-	}
-
-	/** Scroll to the element, and look again once it has come to rest. */
-	#scrollThere(moving: Motion): void {
-		const from = this.#top();
-		this.#element.scrollIntoView({ block: this.#sentTo, behavior: moving });
-		new SettleWatch(this.#element, moving, () => this.#cameToRest(from)).start();
+		cancelAnimationFrame(this.#frameAwaited);
+		this.#hearing.abort();
 	}
 
 	/**
-	 * The element has come to rest since it was last scrolled to, or was
-	 * waited on long enough. Where that scroll moved it, or something has
-	 * since, it may not stand where it was sent: it is scrolled to once
-	 * more, at once — unless the reader has moved, or the jump has gone on
-	 * as long as one may.
+	 * What the first scroll brought near stands at its real size: the
+	 * element is scrolled to once more, unless the reader has moved, and
+	 * comes to rest once where that left them has been looked at.
 	 */
-	#cameToRest(from: number): void {
-		const underWay = this.#underWay;
-		if (underWay === null) return;
-		const movedSince = this.#top() !== from;
-		const jumpGoesOn = !this.#readerMoved && performance.now() - underWay.since <= SCROLLS_ON_FOR;
-		if (movedSince && jumpGoesOn) {
-			this.#scrollThere('instant');
-			return;
-		}
-		this.#end();
+	#putRight(): void {
+		if (!this.#readerMoved) this.#scrollThere();
+		this.#inFrames(FRAMES_TO_LOOK_AGAIN, () => this.#cameToRest());
+	}
+
+	/** The reader has come to rest: their moves are theirs alone again. */
+	#cameToRest(): void {
+		this.#hearing.abort();
 		this.#atRest();
 	}
 
-	#top(): number {
-		return this.#element.getBoundingClientRect().top;
+	/** The reader moved, or acted where they are: the element is not scrolled to again, and nothing they do after is listened for. */
+	#giveWay(): void {
+		this.#readerMoved = true;
+		this.#hearing.abort();
 	}
 
-	/** The jump is over, however it ended: the reader's moves are theirs alone again. */
-	#end(): void {
-		this.#underWay?.hearing.abort();
-		this.#underWay = null;
+	#scrollThere(): void {
+		this.#element.scrollIntoView({ block: this.#sentTo, behavior: 'instant' });
+	}
+
+	/** Call back as the browser begins to draw the frame as many frames from now, before it lays that one out. */
+	#inFrames(count: number, then: () => void): void {
+		this.#frameAwaited = requestAnimationFrame(() => (count > 1 ? this.#inFrames(count - 1, then) : then()));
 	}
 }
 
 /** What says which of some elements the reader is at, and is told when the page takes them to one: a reading band. */
 interface TakesLandings {
-	/** The area the elements scroll in, while it is watched; null while none is. */
-	readonly area: HTMLElement | null;
 	/** The page is taking the reader to this element: it is the one they are at from now on. */
 	land: (element: Element) => void;
 	/** The reader has come to rest: from here on, where they are is theirs to say by moving on. */
@@ -245,20 +141,12 @@ export class Jumps {
 	 * Take the reader to an element, in place of wherever the page was taking them.
 	 *
 	 * @param element what the reader is taken to
-	 * @param area what it scrolls in, the page itself where that is null
-	 * @param sentTo where in the area the element is sent: its head to the top, or itself to the middle
-	 * @param motion how the first scroll to it moves
+	 * @param sentTo where in its area the element is sent: its head to the top, or itself to the middle
 	 * @param atRest what this jump alone does once it has come to rest, unless another takes its place first
 	 */
-	to(
-		element: HTMLElement,
-		area: HTMLElement | null,
-		sentTo: ScrollLogicalPosition,
-		motion: Motion,
-		atRest?: () => void
-	): void {
+	to(element: HTMLElement, sentTo: ScrollLogicalPosition, atRest?: () => void): void {
 		this.#latest?.abandon();
-		this.#latest = new Jump(element, area, sentTo, motion, () => this.#cameToRest(atRest));
+		this.#latest = new Jump(element, sentTo, () => this.#cameToRest(atRest));
 		this.#latest.start();
 	}
 
@@ -268,10 +156,10 @@ export class Jumps {
 	 * on, whatever is at the top while it is on its way. They hear once the
 	 * reader has come to rest, from this jump or from one that took its place.
 	 */
-	land(reading: TakesLandings, element: HTMLElement, motion: Motion, atRest?: () => void): void {
+	land(reading: TakesLandings, element: HTMLElement, atRest?: () => void): void {
 		reading.land(element);
 		this.#landedOn.add(reading);
-		this.to(element, reading.area, 'start', motion, atRest);
+		this.to(element, 'start', atRest);
 	}
 
 	/** The reader has come to rest where the page took them: whoever was landed on since the last rest hears of it. */

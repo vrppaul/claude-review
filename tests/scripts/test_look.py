@@ -68,8 +68,8 @@ STORY_SHOT = "deep.png"
 NARROW = 700
 FILES_SHOT = "narrow.png"
 # Its steps: the picture, then the keyboard taken to the first line and a comment begun on it; the comment
-# written and added; the area scrolled screens down from it; `n`, which glides back up to the comment; and a
-# key that does nothing, for a line after the glide's
+# written and added; the area scrolled screens down from it; `n`, which takes the reader back up to the
+# comment; and a key that does nothing, for a line after the jump's
 FAR_BELOW = 20_000
 FILES_STEPS = [
     "shot:narrow",
@@ -441,11 +441,11 @@ async def test_the_line_says_what_holds_the_keyboard_by_its_tag_its_label_and_it
 
 
 async def test_a_line_is_printed_once_the_page_has_come_to_rest(files_look: LookWithShots) -> None:
-    """`n` glides back up to the comment from screens below it; the step after finds the area where n's own line said."""
-    *_, scrolled, glided, after_the_glide = files_look.said
+    """`n` jumps back up to the comment from screens below it, and puts it right frames later: the step after finds the area where n's own line said."""
+    *_, scrolled, jumped, after_the_jump = files_look.said
 
-    assert _area(glided).scroll_top < _area(scrolled).scroll_top
-    assert glided.area == after_the_glide.area
+    assert _area(jumped).scroll_top < _area(scrolled).scroll_top
+    assert jumped.area == after_the_jump.area
 
 
 async def test_the_window_is_as_wide_as_was_asked(files_look: LookWithShots) -> None:

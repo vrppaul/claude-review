@@ -6,7 +6,6 @@ import { frames } from './frames';
 function standingStill(): HTMLElement {
 	const element = document.body.appendChild(document.createElement('div'));
 	element.scrollIntoView = () => undefined;
-	element.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 	return element;
 }
 
@@ -15,11 +14,11 @@ function standingStill(): HTMLElement {
 describe('whoever says where the reader is, landed on by a jump', () => {
 	it('hears that the reader came to rest once, not again when a later jump to something else does', async () => {
 		const jumps = new Jumps();
-		const reading = { area: null, land: vi.fn(), settle: vi.fn() };
-		jumps.land(reading, standingStill(), 'instant');
+		const reading = { land: vi.fn(), settle: vi.fn() };
+		jumps.land(reading, standingStill());
 		await frames();
 
-		jumps.to(standingStill(), null, 'center', 'instant');
+		jumps.to(standingStill(), 'center');
 		await frames();
 
 		expect(reading.settle).toHaveBeenCalledTimes(1);

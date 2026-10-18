@@ -413,6 +413,19 @@
   thread with one unread.
 - **A reader who asked for less motion gets none**: no animation, no
   transition, no smooth scroll.
+- **The page takes you where it sends you at once.** A file the agent
+  shows and a thread you are taken to, by `n`, a chip or the finishing
+  pane, were glided to: on the look's long change a file shown far down
+  took a second and a half, built the 37 files it passed, and ended as much
+  as 709 pixels short, to be put in place at once at the end; one a screen
+  down took 0.6 seconds. The page now scrolls there at once, and once more
+  three frames later, when the files beside it are built: a thread's card
+  in the file above, which the browser does not always make room for, no
+  longer pushes the file below from where it was sent. Every jump the look's
+  long change was measured on stood still within 80 milliseconds, a file
+  shown far down building 2 files. A turn of the wheel, a touch, a press or
+  a key of yours in those frames is left alone: the page does not scroll
+  there again.
 - **The review serves no description of its API** (`/docs`, `/redoc`,
   `/openapi.json`); the page is asked for again whenever it is opened, so
   an upgrade serves the new one, and its built files are kept for good. The
@@ -461,12 +474,6 @@
   pixels too many, and the 58 pieces 17, as a row is a fraction of a pixel
   shorter than counted. A thread under a line, a comment being written and
   a line that wraps are still not counted.
-- **Scrolling while the page takes you somewhere stops it there.** A turn
-  of the wheel, a touch, a press or a key while the page glides to a file,
-  a thread or a part of a story ends the glide where it stands, before your
-  own scroll is made. The page only stopped scrolling to it again
-  afterwards: the browser glides on through the reader's scroll, so once a
-  file far down holds the room it takes, the glide alone took you there.
 - **On a phone the page is no wider than the screen.** On a screen
   narrower than the diff reads at, the diff took the whole width of the
   row beside the rail of the file tree put away, and the page scrolled

@@ -1,7 +1,7 @@
 """A change long enough to look at, and a story told of it: what `look.py` serves.
 
 Most of what a look is for shows only on a long review: a reading area that
-scrolls for screens, a glide from one chapter to another, the bar that says
+scrolls for screens, a jump from one chapter to another, the bar that says
 which chapter is read, contents longer than their column. So the change is
 thirty files changed in four places each, far apart, ten files added whole,
 and a note: forty-one files. The story tells it in six chapters and

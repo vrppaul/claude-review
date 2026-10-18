@@ -55,8 +55,8 @@ chapter bar says; `read`, the parts of the story scrolled past; `reading`,
 the part being read. The line of the page as it opens says where the review
 was served.
 
-The page is read once it has said the same for a moment, so a glide is over
-when its line is printed. The moment is counted in frames the page draws,
+The page is read once it has said the same for a moment, so what a step set
+moving has stopped when its line is printed. The moment is counted in frames the page draws,
 not by the clock: a page busy for a while draws none, and moves nothing it
 was asked to meanwhile. A page that has not come to rest after a few
 seconds is printed as it is, its step marked as still moving.
@@ -162,9 +162,9 @@ WIDTH_UNLESS_ASKED = 1440
 # How long the browser waits for an element before a step on it cannot be taken
 STEP_WITHIN_MS = 3_000
 # The page has come to rest once it has said the same at this many looks in a row, each taken once it has
-# drawn this many more frames: about a third of a second at sixty frames a second. A glide moves nothing in
-# its first two to four frames (`frontend/src/lib/dom/jump.ts`), so a look this many frames after a step
-# finds one under way. After this long by the clock the page is said as it is
+# drawn this many more frames: about a third of a second at sixty frames a second. A jump puts the reader
+# right in its third frame and comes to rest in its fourth (`frontend/src/lib/dom/jump.ts`), so the first
+# look after a step finds it over. After this long by the clock the page is said as it is
 STILL_FOR_LOOKS = 3
 LOOKED_AT_EVERY_FRAMES = 6
 GIVEN_UP_AFTER_SECONDS = 5.0
