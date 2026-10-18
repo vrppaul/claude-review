@@ -12,9 +12,21 @@
  */
 
 import type { Snippet } from 'svelte';
+import type { Attachment } from 'svelte/attachments';
+
+/**
+ * What the control that opens a pane carries (Popover): spread on it, it says what it opens, opens it, and makes
+ * the control known to the pane, which points at it and gives the keyboard back to it.
+ */
+export type TriggerProps = {
+	'aria-haspopup': 'dialog';
+	'aria-expanded': boolean;
+	'aria-controls': string | undefined;
+	onclick: () => void;
+} & Record<symbol, Attachment<HTMLElement>>;
 
 /** Where a pane opens beside what opened it, and which of its edges it lines up with. */
-export type Placement = 'below-start' | 'below-end' | 'above-start';
+export type Placement = 'below-start' | 'below-end' | 'above-start' | 'above-end';
 
 /** A box on the screen, in the window's pixels. */
 export interface ScreenBox {
@@ -65,7 +77,8 @@ function upToTheTop(pane: ScreenBox): number {
 const PLACINGS: Record<Placement, Placing> = {
 	'below-start': { drawnAs: 'cr-ui-below-start', leftAt: keptStart, mostHeight: downToTheFoot },
 	'below-end': { drawnAs: 'cr-ui-below-end', leftAt: keptEnd, mostHeight: downToTheFoot },
-	'above-start': { drawnAs: 'cr-ui-above-start', leftAt: keptStart, mostHeight: upToTheTop }
+	'above-start': { drawnAs: 'cr-ui-above-start', leftAt: keptStart, mostHeight: upToTheTop },
+	'above-end': { drawnAs: 'cr-ui-above-end', leftAt: keptEnd, mostHeight: upToTheTop }
 };
 
 /** The class a placement is drawn with. */

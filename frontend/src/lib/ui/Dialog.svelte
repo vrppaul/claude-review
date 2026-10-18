@@ -68,8 +68,8 @@
 
 <!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`, in the look of every pane: a
 	layer above the page, which holds the keyboard inside it, and gives it back to what had it when it is closed
-	with `close()`. A pane open under it neither closes nor takes what is pressed in it: `Popover` asks whether a
-	modal is above it -->
+	with `close()`. It is for what stands over the whole review, not by one control: a pane opened from a control
+	is a `Popover` -->
 <dialog
 	bind:this={dialog}
 	aria-label={label}

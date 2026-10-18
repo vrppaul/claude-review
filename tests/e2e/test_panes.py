@@ -40,6 +40,11 @@ HEADING_SIZES = "(pane) => [...pane.querySelectorAll('h1, h2, h3, h4, h5, h6')].
 MEDIUM_PANE = 320
 # What the browser writes after a length in pixels
 PIXELS = "px"
+# How far a pane stands from the control it points at, at the most, in pixels: the room its arrow takes, half
+# the diagonal of a 10 px square, and a pixel's rounding
+ARROWS_ROOM = 8
+# Which element holds the keyboard, by its test id
+FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 
 
 class Pane(BaseModel):
@@ -162,6 +167,86 @@ async def test_every_pane_the_header_opens_is_headed_by_its_name_at_one_size_bes
 
     the_head = (await on_a_probe(page, "fontSize", "var(--text-sm)"), "600")
     assert heads == [the_head] * len(FROM_THE_HEADER)
+
+
+async def _comment_on_the_first_line(page: Page, words: str) -> None:
+    """Write a comment on the review's first line from the keyboard, and leave it being written."""
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type(words)
+
+
+async def _boxes(page: Page, control: str, question: str) -> tuple[FloatRect, FloatRect]:
+    """Where a control stands, and the question it opened."""
+    control_box = await page.get_by_test_id(control).bounding_box()
+    question_box = await page.get_by_test_id(question).bounding_box()
+    assert control_box is not None
+    assert question_box is not None
+    return control_box, question_box
+
+
+async def test_the_question_before_a_comment_is_deleted_hangs_under_the_bin_that_asked_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _open(page, review, SHORT_LAPTOP)
+    await _comment_on_the_first_line(page, "Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+
+    await page.get_by_test_id("delete-comment").click()
+
+    bin_box, question = await _boxes(page, "delete-comment", "delete-dialog")
+    below_by = question["y"] - (bin_box["y"] + bin_box["height"])
+    ends_apart = abs(question["x"] + question["width"] - (bin_box["x"] + bin_box["width"]))
+    assert (0 <= below_by <= ARROWS_ROOM, ends_apart <= WITHIN_ROUNDING, _inside(question, SHORT_LAPTOP)) == (
+        True,
+        True,
+        True,
+    ), (bin_box, question)
+
+
+async def test_the_question_before_a_comment_is_deleted_leaves_the_rest_of_the_page_to_be_pressed(
+    review: RunningReview, page: Page
+) -> None:
+    await _open(page, review, SHORT_LAPTOP)
+    await _comment_on_the_first_line(page, "Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id("delete-comment").click()
+
+    await page.get_by_test_id(SETTINGS.control).click()
+
+    await page.get_by_test_id(SETTINGS.pane).wait_for()
+    await page.get_by_test_id("delete-dialog").wait_for(state="detached")
+
+
+async def test_keeping_a_comment_the_question_asked_about_gives_the_keyboard_back_to_the_bin(
+    review: RunningReview, page: Page
+) -> None:
+    await _open(page, review, SHORT_LAPTOP)
+    await _comment_on_the_first_line(page, "Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id("delete-comment").focus()
+    await page.keyboard.press("Enter")
+    asked_on = await page.evaluate(FOCUSED_TEST_ID)
+
+    await page.keyboard.press("Enter")
+
+    await page.get_by_test_id("delete-dialog").wait_for(state="detached")
+    assert (asked_on, await page.evaluate(FOCUSED_TEST_ID)) == ("confirm-keep", "delete-comment")
+
+
+async def test_the_question_before_a_comment_is_discarded_hangs_over_the_cancel_that_asked_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _open(page, review, SHORT_LAPTOP)
+    await _comment_on_the_first_line(page, "Half a thought")
+
+    await page.get_by_test_id("cancel-comment").click()
+
+    cancel, question = await _boxes(page, "cancel-comment", "discard-dialog")
+    above_by = cancel["y"] - (question["y"] + question["height"])
+    ends_apart = abs(question["x"] + question["width"] - (cancel["x"] + cancel["width"]))
+    assert (0 <= above_by <= ARROWS_ROOM, ends_apart <= WITHIN_ROUNDING) == (True, True), (cancel, question)
 
 
 async def test_no_heading_inside_a_pane_is_larger_than_the_pane_is_headed_with(

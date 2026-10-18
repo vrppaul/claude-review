@@ -10,7 +10,7 @@
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
-	import ConfirmDialog from './ConfirmDialog.svelte';
+	import ConfirmPopover from './ConfirmPopover.svelte';
 	import FoldToggle from './FoldToggle.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
@@ -117,27 +117,23 @@
 		>
 			<Icon name="pencil" size="xs" />
 		</IconButton>
-		<!-- It asks before anything is lost, so it stands as the acts beside it do, its bin in the colour of what
-			destroys, as Resolve's check is in the colour of what is done -->
-		<IconButton
-			tone="secondary"
-			size="xs"
-			label={DELETE}
-			testId="delete-comment"
-			onclick={() => (askingToDelete = true)}
+		<!-- It asks before anything is lost, under itself, so it stands as the acts beside it do, its bin in the
+			colour of what destroys, as Resolve's check is in the colour of what is done -->
+		<ConfirmPopover
+			bind:open={askingToDelete}
+			question={DELETE_QUESTION}
+			goAhead={DELETE}
+			keep={KEEP_IT}
+			placement="below-end"
+			testId="delete-dialog"
+			onGoAhead={remove}
 		>
-			<span class="text-error"><Icon name="trash" size="xs" /></span>
-		</IconButton>
+			{#snippet trigger(control)}
+				<IconButton {...control} tone="secondary" size="xs" label={DELETE} testId="delete-comment">
+					<span class="text-error"><Icon name="trash" size="xs" /></span>
+				</IconButton>
+			{/snippet}
+		</ConfirmPopover>
 	{/if}
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" tone="secondary" onToggle={foldAway} />
 </span>
-{#if askingToDelete}
-	<ConfirmDialog
-		question={DELETE_QUESTION}
-		goAhead={DELETE}
-		keep={KEEP_IT}
-		testId="delete-dialog"
-		onGoAhead={remove}
-		onClose={() => (askingToDelete = false)}
-	/>
-{/if}

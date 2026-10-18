@@ -315,21 +315,24 @@
 .cr-ui-below-end {
 	top: calc(100% + var(--cr-pane-gap));
 }
-.cr-ui-below-start {
-	left: 0;
-}
-.cr-ui-below-end {
-	right: 0;
-}
-.cr-ui-above-start {
+.cr-ui-above-start,
+.cr-ui-above-end {
 	bottom: calc(100% + var(--cr-pane-gap));
+}
+.cr-ui-below-start,
+.cr-ui-above-start {
 	left: 0;
+}
+.cr-ui-below-end,
+.cr-ui-above-end {
+	right: 0;
 }
 .cr-ui-below-start::before,
 .cr-ui-below-end::before {
 	top: calc(var(--cr-pane-arrow) / -2);
 }
-.cr-ui-above-start::before {
+.cr-ui-above-start::before,
+.cr-ui-above-end::before {
 	bottom: calc(var(--cr-pane-arrow) / -2);
 }
 /* Centred on the middle of the control, measured from the edge the pane lines up with, less how far it was moved */
@@ -338,7 +341,8 @@
 	left: calc(var(--cr-arrow-offset) - var(--cr-pane-shift, 0px));
 	translate: -50% 0;
 }
-.cr-ui-below-end::before {
+.cr-ui-below-end::before,
+.cr-ui-above-end::before {
 	right: calc(var(--cr-arrow-offset) + var(--cr-pane-shift, 0px));
 	translate: 50% 0;
 }

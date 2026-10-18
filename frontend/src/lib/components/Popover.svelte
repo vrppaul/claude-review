@@ -1,19 +1,11 @@
 <script lang="ts" module>
-	import { createAttachmentKey, type Attachment } from 'svelte/attachments';
+	import { createAttachmentKey } from 'svelte/attachments';
 
 	// Whatever can take the keyboard inside a pane, in the order the page has it
 	const FOCUSABLE = 'input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
 
 	// How the control that opens a popover is made known to it, as part of what it is given to carry
 	const HELD_AS_CONTROL = createAttachmentKey();
-
-	/** What the control that opens a popover carries: spread on it, it says what it opens, and opens it. */
-	type TriggerProps = {
-		'aria-haspopup': 'dialog';
-		'aria-expanded': boolean;
-		'aria-controls': string | undefined;
-		onclick: () => void;
-	} & Record<symbol, Attachment<HTMLElement>>;
 
 	/** The first thing in a pane that takes the keyboard, if anything does. */
 	function firstFocusable(pane: HTMLElement): HTMLElement | null {
@@ -25,24 +17,13 @@
 		const focused = document.activeElement;
 		return focused instanceof HTMLElement && focused !== document.body ? focused : null;
 	}
-
-	/**
-	 * Whether something is in a modal dialog open over the page. A modal is a
-	 * layer above every pane: one opened from inside a pane — a question asked before a comment is lost —
-	 * leaves the pane open under it, takes the keyboard, the presses and
-	 * Escape while it is open, and gives the keyboard back into the pane as it
-	 * closes.
-	 */
-	function inModalAbove(target: EventTarget | null): boolean {
-		return target instanceof Element && target.closest('dialog[open]') !== null;
-	}
 </script>
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
-	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement } from '$lib/ui/pane';
+	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from '$lib/ui/pane';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 
 	interface Props {
@@ -161,10 +142,10 @@
 		back?.focus({ preventScroll: true });
 	}
 
-	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, or a modal above, which keeps it. */
+	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, which keeps it. */
 	function noteKeyboardLeaving(event: FocusEvent) {
 		const next = event.relatedTarget;
-		if (!(next instanceof Node) || around?.contains(next) || inModalAbove(next)) return;
+		if (!(next instanceof Node) || around?.contains(next)) return;
 		keyboardHere = false;
 		if (open) open = false;
 	}
@@ -172,13 +153,16 @@
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
 		if (!open || !around || !(event.target instanceof Node) || around.contains(event.target)) return;
-		if (inModalAbove(event.target)) return;
 		keyboardHere = false;
 		open = false;
 	}
 
+	/**
+	 * Escape closes the pane, unless something answered it already: a field that asks its question with
+	 * Escape, which would otherwise close the question as it opens.
+	 */
 	function closeOnEscape(event: KeyboardEvent) {
-		if (open && event.key === 'Escape' && !isComposingText(event) && !inModalAbove(event.target)) open = false;
+		if (open && event.key === 'Escape' && !event.defaultPrevented && !isComposingText(event)) open = false;
 	}
 </script>
 

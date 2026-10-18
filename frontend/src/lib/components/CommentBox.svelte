@@ -8,7 +8,7 @@
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
-	import ConfirmDialog from './ConfirmDialog.svelte';
+	import ConfirmPopover from './ConfirmPopover.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
 
@@ -136,7 +136,7 @@
 			save();
 		}
 		if (event.key === 'Escape') {
-			// Left to the browser, the same key would close the question it opens
+			// Answered here, the same key is not the question's to close itself with as it opens
 			event.preventDefault();
 			putAway();
 		}
@@ -192,7 +192,21 @@
 			</Button>
 		{/if}
 		<div class="flex-1"></div>
-		<Button tone="quiet" size="xs" testId="cancel-comment" onclick={putAway}>Cancel</Button>
+		<!-- Asked over Cancel, which asks it, or as Escape does in the field: over the words it would lose, inside
+			the card, so nothing past the card's foot can cut it off -->
+		<ConfirmPopover
+			bind:open={askingToDiscard}
+			question={DISCARD_QUESTION}
+			goAhead={DISCARD}
+			keep={KEEP_WRITING}
+			placement="above-end"
+			testId="discard-dialog"
+			onGoAhead={onCancel}
+		>
+			{#snippet trigger(control)}
+				<Button {...control} tone="quiet" size="xs" testId="cancel-comment" onclick={putAway}>Cancel</Button>
+			{/snippet}
+		</ConfirmPopover>
 		{#if onAsk}
 			<Button tone="asking" size="xs" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
 		{/if}
@@ -206,13 +220,3 @@
 		{/if}
 	</p>
 </div>
-{#if askingToDiscard}
-	<ConfirmDialog
-		question={DISCARD_QUESTION}
-		goAhead={DISCARD}
-		keep={KEEP_WRITING}
-		testId="discard-dialog"
-		onGoAhead={onCancel}
-		onClose={() => (askingToDiscard = false)}
-	/>
-{/if}

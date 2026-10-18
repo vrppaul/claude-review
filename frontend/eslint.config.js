@@ -260,6 +260,15 @@ const TAKES_NO_CLASS = [
 	}
 ];
 
+// A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,
+// by none. The modals the page asks in, each with why: the question before stories are turned on, asked on the
+// way into Story from whichever control the reader pressed — the switch, Story's introduction, the news, whose
+// card goes as it is asked; and a story's diagram at its own size, as large as the window allows, which no pane
+// by its button could hold
+const MODALS = ['src/lib/components/StoryOptIn.svelte', 'src/lib/components/StoryDiagram.svelte'];
+const A_PANE_OF_A_CONTROL =
+	'A pane opened from a control is a Popover: a modal (Dialog) is only for what MODALS in eslint.config.js lists, with why.';
+
 // Every drawing is drawn in its one component: an icon as a row of ICONS that
 // Icon draws by name, the sketch of a story by StorySketch. A review found a
 // speech bubble written into another component with numbers of its own,
@@ -365,6 +374,17 @@ export default tseslint.config(
 		// each part of src/lib below says so again with what it may not reach
 		files: ['src/**'],
 		rules: { 'no-restricted-imports': ['error', { patterns: [PLAINLY_NAMED] }] }
+	},
+	{
+		// A modal only where MODALS says why: every other component opens its panes by their controls
+		files: ['src/lib/components/**'],
+		ignores: MODALS,
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{ paths: [{ name: '$lib/ui/Dialog.svelte', message: A_PANE_OF_A_CONTROL }], patterns: [PLAINLY_NAMED] }
+			]
+		}
 	},
 	...layerRules,
 	{
