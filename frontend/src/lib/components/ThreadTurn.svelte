@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { TurnAuthor } from '$lib/types';
+	import Icon from '$lib/ui/Icon.svelte';
+	import type { IconName } from '$lib/ui/icons';
 	import { AGENT, READER } from '$lib/utils/speakers';
-	import Icon from './Icon.svelte';
-	import type { IconName } from './icons';
 
 	/** Who a turn is drawn as: whoever said it, or the reader about to say something in the field to reply in. */
 	type Voice = TurnAuthor | 'reply';
@@ -46,7 +46,7 @@
 	data-tour={tour}
 	class={['cr-thread-row cr-thread-turn', speaker.look, landing && 'cr-answer-new']}
 >
-	<span class="cr-avatar"><Icon name={speaker.icon} /></span>
+	<span class="cr-avatar"><Icon name={speaker.icon} size="xs" /></span>
 	<div data-testid="turn-body" class="cr-turn-body">
 		{#if speaker.name !== null}
 			<div data-testid="turn-head" class="cr-turn-head">

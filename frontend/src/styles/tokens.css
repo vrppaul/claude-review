@@ -85,8 +85,6 @@
 	--cr-avatar-size: 1.5rem;
 	--cr-turn-gap: 0.75rem;
 	--cr-reply-field-height: 2.25rem;
-	/* The icon on the avatar a thread's speaker stands by */
-	--cr-thread-icon-size: 0.8125rem;
 
 	/*
 	 * How tall a button stands (lib/ui/button.ts): among words and small

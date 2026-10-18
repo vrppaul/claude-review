@@ -3,9 +3,9 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { AGENT } from '$lib/utils/speakers';
-	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
 	const review = useReview();
@@ -33,7 +33,7 @@
 <Popover bind:open label="Replies" placement="below-end" data-testid="replies-list" class="w-96">
 	{#snippet trigger(control)}
 		<Button {...control} tone="quiet" size="xs" testId="replies-menu">
-			<Icon name="reply" class="h-3.5 w-3.5" />
+			<Icon name="reply" size="sm" />
 			Replies
 			{#if review.threads.unread.length > 0}
 				<span data-testid="unread-count" class="text-(--cr-unread)">

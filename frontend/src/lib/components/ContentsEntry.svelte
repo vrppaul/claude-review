@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
-	import Icon from './Icon.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { calledOnceRead, calledWithThreads } from './story-words';
 
 	interface Props {
@@ -56,7 +56,7 @@
 			]}
 		>
 			{#if checked}
-				<Icon name="check" data-testid="part-read-mark" class="h-2.5 w-2.5" />
+				<Icon name="check" size="xs" testId="part-read-mark" />
 			{:else}
 				{@render node()}
 			{/if}

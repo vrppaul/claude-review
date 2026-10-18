@@ -5,11 +5,11 @@
 	import { chapterPartKey } from '$lib/review/story-keys';
 	import type { Diagram } from '$lib/types';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
-	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** The change drawn, as the agent wrote it in Mermaid, and the chapter each node it links leads to. */
@@ -98,7 +98,7 @@
 				<h2 class="text-sm font-semibold">{name}</h2>
 				<div class="flex-1"></div>
 				<IconButton tone="quiet" size="xs" label="Close {name}" testId="diagram-close" onclick={close}>
-					<Icon name="cross" />
+					<Icon name="cross" size="xs" />
 				</IconButton>
 			</header>
 			{#await drawDiagram(source, largeId) then drawing}

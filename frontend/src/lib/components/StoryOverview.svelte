@@ -106,7 +106,7 @@
 				onclick={toggleUnlessWrittenUnder}
 			>
 				<span class="min-w-0 flex-1">More about this change</span>
-				<FoldChevron folded={!listsOpen} class="h-2.5 w-2.5 shrink-0" />
+				<FoldChevron folded={!listsOpen} />
 			</button>
 			{#if listsOpen}
 				<div class="cr-agent-voice mt-3 flex flex-col gap-4">

@@ -3,6 +3,7 @@ import { render } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import Button from '$lib/ui/Button.svelte';
+import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
 import Segment from '$lib/ui/Segment.svelte';
@@ -40,6 +41,10 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 				children: drawn,
 				class: FROM_OUTSIDE
 			} as never)
+	},
+	{
+		part: 'an icon',
+		render: () => render(Icon, { name: 'check', size: 'xs', testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	},
 	{
 		part: 'a link',

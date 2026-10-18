@@ -37,7 +37,7 @@
 		onclick={() => (folded = !folded)}
 	>
 		<span class="min-w-0 flex-1">Housekeeping · {counted(paths.length, FILES)}</span>
-		<FoldChevron {folded} class="h-2.5 w-2.5 shrink-0" />
+		<FoldChevron {folded} />
 	</button>
 	{#if !folded}
 		<ul>

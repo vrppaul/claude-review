@@ -4,9 +4,9 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
-	import Icon from './Icon.svelte';
 
 	/** What the tests know each part of the column by, written whole where the column is drawn. */
 	interface TestIds {
@@ -81,7 +81,7 @@
 					testId={testIds.putAway}
 					onclick={() => column.toggle()}
 				>
-					<Icon name="chevron" class="rotate-90" />
+					<Icon name="chevron" size="xs" pointing="left" />
 				</IconButton>
 			</div>
 			{@render children()}
@@ -98,6 +98,6 @@
 		aria-label={bringBack}
 		onclick={() => column.toggle()}
 	>
-		<Icon name="chevron" class="h-3 w-3 -rotate-90" />
+		<Icon name="chevron" size="xs" pointing="right" />
 	</button>
 {/if}

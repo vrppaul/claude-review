@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
 	import FileChip from './FileChip.svelte';
-	import Icon from './Icon.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 
 	interface Props {
@@ -65,7 +65,7 @@
 			{#each work.steps as step, position (position)}
 				<li class={['cr-branch', step.done && 'cr-branch-done']}>
 					{#if step.done}
-						<Icon name="check" class="cr-branch-mark" />
+						<span class="cr-branch-mark"><Icon name="check" size="xs" /></span>
 					{:else}
 						<span class="cr-branch-mark"><span class="cr-dot"></span></span>
 					{/if}

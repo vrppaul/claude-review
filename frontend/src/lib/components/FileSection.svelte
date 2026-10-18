@@ -6,11 +6,11 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import FoldToggle from './FoldToggle.svelte';
-	import Icon from './Icon.svelte';
 	import LinesSection from './LinesSection.svelte';
 	import SectionHeader from './SectionHeader.svelte';
 
@@ -106,7 +106,7 @@
 					checked={viewed}
 					onchange={() => review.reading.toggleViewed(file.path)}
 				/>
-				<Icon name={viewed ? 'ticked' : 'box'} class="h-3 w-3" />
+				<Icon name={viewed ? 'ticked' : 'box'} size="xs" />
 				<!-- One box per file, so the box says which file it is about -->
 				Viewed<span class="sr-only">: {file.path}</span>
 			</label>

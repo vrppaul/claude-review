@@ -6,10 +6,10 @@
 	import { useReview } from '$lib/review/context';
 	import type { StoryBlock } from '$lib/types';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import CommentBox from './CommentBox.svelte';
 	import CommentThread from './CommentThread.svelte';
 	import { askComment, sayComment } from './comment-endings';
-	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** The block of the story's words it draws. */
@@ -72,7 +72,7 @@
 				aria-label={name}
 				onclick={() => review.threads.writing.askAbout(block, words)}
 			>
-				<Icon name="conversation" class="h-3.25 w-3.25" />
+				<Icon name="conversation" size="xs" />
 				{ASK_ABOUT_THIS}
 			</Button>
 		</span>

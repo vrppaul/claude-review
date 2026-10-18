@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { DiffLayout, Theme } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
-	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
 	const review = useReview();
@@ -28,7 +28,7 @@
 <Popover bind:open label="Settings" placement="below-end" data-testid="settings-menu" class="w-72 text-xs">
 	{#snippet trigger(control)}
 		<IconButton {...control} tone="quiet" size="sm" label="Settings" testId="settings-toggle">
-			<Icon name="settings" />
+			<Icon name="settings" size="base" />
 		</IconButton>
 	{/snippet}
 

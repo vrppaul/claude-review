@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
 	import FileChip from './FileChip.svelte';
-	import Icon from './Icon.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 
@@ -88,7 +88,7 @@
 	{#if review.conversation.turns.length === 0 && !review.answerer.work}
 		{#if attached}
 			<div data-testid="panel-empty" class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-				<Icon name="conversation" class="h-5 w-5 text-base-300" />
+				<span class="text-base-300"><Icon name="conversation" size="xl" /></span>
 				<p class="cr-faint text-sm leading-relaxed">
 					Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
 					about the rest.

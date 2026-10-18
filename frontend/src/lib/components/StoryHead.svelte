@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { StoryHeld } from '$lib/types';
-	import Icon from './Icon.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { CODE_CURRENT, codeMovedOnIn } from './story-words';
 
 	interface Props {
@@ -29,7 +29,7 @@
 		data-testid="story-round"
 		class={['cr-tag inline-flex items-center gap-1', held.moved_on === null ? 'text-(--cr-agent)' : 'text-warning']}
 	>
-		<Icon name="round" class="h-3 w-3" />
+		<Icon name="round" size="xs" />
 		Round {held.round}
 		{#if held.moved_on === null}
 			<span class="cr-muted">{CODE_CURRENT}</span>

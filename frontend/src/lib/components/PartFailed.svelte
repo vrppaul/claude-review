@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
-	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** What could not be drawn, as the reader knows it: a file's path, the panel. */
@@ -21,7 +21,7 @@
 	role="alert"
 	class="cr-notice cr-notice-broken flex items-center gap-3 border-b border-base-300 px-4 py-2 text-xs"
 >
-	<Icon name="notice" class="h-3 w-3 shrink-0" />
+	<span class="cr-notice-mark"><Icon name="notice" size="xs" /></span>
 	<span class="min-w-0 flex-1">
 		{what} could not be drawn: {messageOf(error)}. The rest of the review still works.
 	</span>

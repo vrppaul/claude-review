@@ -3,8 +3,8 @@
 	import { useReview } from '$lib/review/context';
 	import type { StoryWait } from '$lib/review/story-wait';
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from './Icon.svelte';
-	import type { IconName } from './icons';
+	import Icon from '$lib/ui/Icon.svelte';
+	import type { IconName } from '$lib/ui/icons';
 	import StorySketch from './StorySketch.svelte';
 	import { factsOnTheWay, type WaitFact } from './story-wait-facts';
 
@@ -82,7 +82,7 @@
 		<ul data-testid="story-wait-facts" class="cr-wait-facts">
 			{#each factsOnTheWay(wait, review.clock) as fact (fact.says)}
 				<li data-testid="story-wait-fact" class={['cr-wait-fact', DRAWN_AS[fact.state].class]}>
-					<Icon name={DRAWN_AS[fact.state].mark} class="cr-wait-mark" />
+					<span class="cr-wait-mark"><Icon name={DRAWN_AS[fact.state].mark} size="sm" /></span>
 					<span>{fact.says}</span>
 					<!-- A count that moves every second is read when asked for, never read out as it moves -->
 					<span data-testid="story-wait-when" class="cr-wait-when" aria-live="off">{fact.when}</span>

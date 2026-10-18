@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
 	import { placeKey } from '$lib/utils/line-places';
 	import { counted } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
-	import Icon from './Icon.svelte';
 
 	interface Props {
 		/** What the diff left out above a hunk, between two, or below the last. */
@@ -78,12 +78,12 @@
 					disabled={reading}
 					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
-					<Icon name="expand" class="h-3 w-3 shrink-0" />
+					<Icon name="expand" size="xs" />
 					{reading ? 'Reading…' : `Show the ${hiddenLines}`}
 				</button>
 			{:else}
 				<span class="cr-muted flex flex-1 items-center gap-2 px-4">
-					<Icon name="expand" class="h-3 w-3 shrink-0" />
+					<Icon name="expand" size="xs" />
 					{reading ? 'Reading…' : hiddenLines}
 				</span>
 				{#if stepUp}

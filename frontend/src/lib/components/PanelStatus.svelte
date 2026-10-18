@@ -2,10 +2,10 @@
 	import { focusWhatCarries } from '$lib/dom/keyboard';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
-	import Icon from './Icon.svelte';
 	import { PANEL_TOGGLE_ROLE } from './keymap';
 	import PresenceDot from './PresenceDot.svelte';
 
@@ -59,7 +59,7 @@
 		</span>
 	{/if}
 	<IconButton tone="quiet" size="xs" label="Hide the agent panel" testId="close-panel" onclick={putAway}>
-		<Icon name="chevron" class="-rotate-90" />
+		<Icon name="chevron" size="xs" pointing="right" />
 	</IconButton>
 </header>
 

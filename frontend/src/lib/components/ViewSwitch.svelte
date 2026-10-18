@@ -2,9 +2,9 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
-	import Icon from './Icon.svelte';
 	import StoryArrivalNote from './StoryArrivalNote.svelte';
 	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
@@ -82,7 +82,7 @@
 					<TypingIndicator inTheAgentsColour />
 					Story · writing
 				{:else}
-					<Icon name="story" class="h-3.5 w-3.5" />
+					<Icon name="story" size="sm" />
 					Story
 				{/if}
 				{#if storySays === 'unread'}
@@ -96,7 +96,7 @@
 				pressed={readingFiles}
 				onclick={() => review.views.choose('files')}
 			>
-				<Icon name="files" class="h-3.5 w-3.5" />
+				<Icon name="files" size="sm" />
 				Files
 			</Segment>
 		</Segmented>

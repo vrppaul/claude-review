@@ -3,10 +3,10 @@
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Link from '$lib/ui/Link.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
-	import Icon from './Icon.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
 
 	const review = useReview();
@@ -71,7 +71,7 @@
 <!-- The way to put the welcome or the news away, where each card is headed -->
 {#snippet close()}
 	<IconButton tone="quiet" size="xs" label="Close" testId="guide-close" onclick={putAway}>
-		<Icon name="cross" />
+		<Icon name="cross" size="xs" />
 	</IconButton>
 {/snippet}
 
@@ -126,7 +126,7 @@
 {:else if review.guide.card === 'welcome'}
 	<section data-testid="guide-welcome" class="cr-guide-card" role="complementary" aria-labelledby="guide-welcome-title">
 		<div class="flex items-center gap-2.5">
-			<Icon name="compass" class="cr-guide-compass" />
+			<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
 			<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
 			<span class="flex-1"></span>
 			{@render close()}

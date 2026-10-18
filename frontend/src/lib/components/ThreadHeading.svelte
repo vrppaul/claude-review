@@ -5,13 +5,13 @@
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FoldToggle from './FoldToggle.svelte';
-	import Icon from './Icon.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
 
@@ -103,7 +103,7 @@
 	{:else}
 		<!-- Settling a thread folds it away; it can still be opened and read -->
 		<Button tone="secondary" size="xs" testId="resolve-comment" onclick={resolve}>
-			<Icon name="check" class="h-3 w-3 text-(--cr-done)" />
+			<span class="text-(--cr-done)"><Icon name="check" size="xs" /></span>
 			Resolve
 		</Button>
 	{/if}
@@ -115,7 +115,7 @@
 			testId="edit-comment"
 			onclick={() => review.threads.writing.openEdit(thread)}
 		>
-			<Icon name="pencil" />
+			<Icon name="pencil" size="xs" />
 		</IconButton>
 		<!-- It asks before anything is lost, so it stands as the acts beside it do, its bin in the colour of what
 			destroys, as Resolve's check is in the colour of what is done -->
@@ -126,7 +126,7 @@
 			testId="delete-comment"
 			onclick={() => (askingToDelete = true)}
 		>
-			<Icon name="trash" class="text-error" />
+			<span class="text-error"><Icon name="trash" size="xs" /></span>
 		</IconButton>
 	{/if}
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" tone="secondary" onToggle={foldAway} />

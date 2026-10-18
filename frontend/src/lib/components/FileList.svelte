@@ -7,10 +7,10 @@
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
+	import Icon from '$lib/ui/Icon.svelte';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
 	import FoldChevron from './FoldChevron.svelte';
-	import Icon from './Icon.svelte';
 	import SideColumn from './SideColumn.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
@@ -98,7 +98,7 @@
 				<span class="sr-only">changed since round {review.lastRetake.changedSince}</span>
 			{/if}
 			{#if viewed}
-				<Icon name="check" data-testid="file-viewed-mark" class="h-3 w-3 text-(--cr-done)" label="Viewed" />
+				<span class="text-(--cr-done)"><Icon name="check" size="xs" label="Viewed" testId="file-viewed-mark" /></span>
 			{/if}
 		{/snippet}
 		{#snippet end()}
@@ -124,7 +124,7 @@
 				onclick={() => layout.toggleFolder(node.path)}
 			>
 				<span class="min-w-0 flex-1 truncate">{node.name}/</span>
-				<FoldChevron {folded} class="h-2.5 w-2.5 shrink-0" />
+				<FoldChevron {folded} />
 			</button>
 			{#if !folded}
 				<ul>

@@ -3,10 +3,10 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
-	import Icon from './Icon.svelte';
 	import { PLACEHOLDERS } from './placeholders';
 	import ThreadConversation from './ThreadConversation.svelte';
 	import ThreadTurn from './ThreadTurn.svelte';
@@ -85,7 +85,7 @@
 		<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
 			{#if askable}
 				<Button tone="asking" size="xs" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
-					<Icon name="conversation" class="h-3.25 w-3.25" />
+					<Icon name="conversation" size="xs" />
 					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
 				</Button>
 			{/if}

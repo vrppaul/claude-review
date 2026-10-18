@@ -2,13 +2,13 @@
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import { finishingTitle } from './finishing';
 	import FinishReview from './FinishReview.svelte';
 	import HelpMenu from './HelpMenu.svelte';
-	import Icon from './Icon.svelte';
 	import { FINISH_KEYS, PANEL_TOGGLE_ROLE } from './keymap';
 	import Popover from './Popover.svelte';
 	import PresenceDot from './PresenceDot.svelte';
@@ -58,9 +58,9 @@
 		]}
 	>
 		{#if over.underTheReader}
-			<Icon name="notice" class="h-4 w-4" />
+			<span class="text-warning"><Icon name="notice" size="base" /></span>
 		{:else}
-			<Icon name="check" class="h-4 w-4 text-(--cr-done)" />
+			<span class="text-(--cr-done)"><Icon name="check" size="base" /></span>
 		{/if}
 		<p class="font-semibold">{over.said}</p>
 	</div>
@@ -93,7 +93,7 @@
 						onclick={() => review.setIgnoreWhitespace(false)}
 					>
 						No whitespace
-						<Icon name="cross" class="h-3 w-3 shrink-0" />
+						<Icon name="cross" size="xs" />
 					</Button>
 				{/if}
 			{:else if review.title}
@@ -130,7 +130,7 @@
 					testId="prev-comment"
 					onclick={() => review.navigator.step(-1)}
 				>
-					<Icon name="chevron" class="rotate-180" />
+					<Icon name="chevron" size="xs" pointing="up" />
 				</IconButton>
 				<IconButton
 					tone="quiet"
@@ -139,7 +139,7 @@
 					testId="next-comment"
 					onclick={() => review.navigator.step(1)}
 				>
-					<Icon name="chevron" />
+					<Icon name="chevron" size="xs" />
 				</IconButton>
 			</div>
 		{/if}
@@ -189,7 +189,7 @@
 					{:else}
 						Finish review
 					{/if}
-					<Icon name="chevron" class="h-2.5 w-2.5" />
+					<Icon name="chevron" size="xs" />
 				</Button>
 			{/snippet}
 
@@ -204,7 +204,7 @@
 			data-testid="connection-lost"
 			class="cr-warning-bar flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
 		>
-			<Icon name="notice" class="h-3 w-3 shrink-0" />
+			<span class="text-warning"><Icon name="notice" size="xs" /></span>
 			<span>
 				The review cannot be reached — trying again. What you write is kept. Nothing is sent until it is back.
 			</span>

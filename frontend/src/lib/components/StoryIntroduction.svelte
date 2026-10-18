@@ -2,8 +2,8 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import Icon from './Icon.svelte';
 	import { arrowOffsetTo } from './pane-placement';
 	import PassingNote from './PassingNote.svelte';
 	import PopoverPanel from './PopoverPanel.svelte';
@@ -78,7 +78,7 @@
 					testId="story-introduction-close"
 					onclick={putAwayForNow}
 				>
-					<Icon name="cross" />
+					<Icon name="cross" size="xs" />
 				</IconButton>
 			</div>
 			<StorySketch />
@@ -102,7 +102,7 @@
 		onGone={() => (hiddenForGood = false)}
 	>
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2.5 pl-3.5 text-sm">
-			<Icon name="check" class="h-3.5 w-3.5 text-(--cr-done)" />
+			<span class="text-(--cr-done)"><Icon name="check" size="sm" /></span>
 			<span>Won't show again, in any review. Story is still in the header.</span>
 			<Button bind:element={undo} tone="secondary" size="xs" testId="story-introduction-undo" onclick={showAgain}>
 				Undo

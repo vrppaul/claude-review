@@ -2,9 +2,9 @@
 	import { useReview } from '$lib/review/context';
 	import { formatWeight } from '$lib/review/weight';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import Dialog from './Dialog.svelte';
 	import type { Closing } from './dialog-closing';
-	import Icon from './Icon.svelte';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
@@ -28,7 +28,7 @@
 	{#snippet children({ close, closeThen }: Closing)}
 		<div class="flex flex-col gap-3.5 text-sm">
 			<div class="flex items-center gap-2.5">
-				<Icon name="story" class="h-4.5 w-4.5 text-(--cr-agent)" />
+				<span class="text-(--cr-agent)"><Icon name="story" size="base" /></span>
 				<h2 class="text-base font-semibold">{QUESTION}</h2>
 			</div>
 			<StorySketch />
@@ -37,7 +37,7 @@
 				piece of code.
 			</p>
 			<p data-testid="story-cost" class="cr-cost-note">
-				<Icon name="notice" class="mt-0.5 h-4 w-4 text-warning" />
+				<span class="mt-0.5 text-warning"><Icon name="notice" size="base" /></span>
 				<span>
 					It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to
 					<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.

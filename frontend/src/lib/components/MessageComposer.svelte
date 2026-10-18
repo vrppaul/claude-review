@@ -6,8 +6,8 @@
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import AttachedImages from './AttachedImages.svelte';
-	import Icon from './Icon.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
 	import { Mentions, optionIdOf, tokenOf, type Mentionable } from './mentions.svelte';
@@ -152,7 +152,7 @@
 						title={DROP_THREAD}
 						onclick={() => drop(thread)}
 					>
-						<Icon name="cross" class="h-2.5 w-2.5" />
+						<Icon name="cross" size="xs" />
 					</button>
 				</span>
 			{/each}

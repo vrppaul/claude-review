@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import Icon from './Icon.svelte';
 	import PassingNote from './PassingNote.svelte';
 	import { chaptersIn } from './story-words';
 
@@ -32,7 +32,7 @@
 			<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
 			<Button tone="primary" size="xs" testId="open-story" onclick={onOpen}>Open it</Button>
 			<IconButton tone="quiet" size="xs" label="Close" testId="story-ready-close" onclick={putAway}>
-				<Icon name="cross" />
+				<Icon name="cross" size="xs" />
 			</IconButton>
 		</div>
 		<div data-testid="story-ready-time-left" class="cr-note-time-left" aria-hidden="true"></div>

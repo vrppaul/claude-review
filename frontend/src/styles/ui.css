@@ -102,18 +102,10 @@
 	height: var(--cr-button-sm);
 	padding-inline: 0.75rem;
 }
-/* An icon alone: as wide as it is tall, the icon at the size the button's size gives it */
+/* An icon alone: as wide as it is tall */
 .cr-ui-icon-button {
 	aspect-ratio: 1;
 	padding-inline: 0;
-}
-.cr-ui-icon-button.cr-ui-xs > svg {
-	width: 0.75rem;
-	height: 0.75rem;
-}
-.cr-ui-icon-button.cr-ui-sm > svg {
-	width: 1rem;
-	height: 1rem;
 }
 /*
  * A filled button (cr-ui-filled), on a saturated ground of its own, which
@@ -210,4 +202,40 @@
 .cr-ui-segment[data-calling='introduced'] {
 	color: var(--color-base-content);
 	box-shadow: var(--cr-shadow-introduced-edge);
+}
+
+/*
+ * An icon (Icon), in the colour of the words it stands in, never squeezed
+ * by what stands beside it. Each size is as tall as words of that size, so
+ * an icon beside words stands as tall as they do.
+ */
+.cr-ui-icon {
+	flex-shrink: 0;
+	transition: rotate var(--default-transition-duration) var(--default-transition-timing-function);
+}
+.cr-ui-icon-xs {
+	width: var(--text-xs);
+	height: var(--text-xs);
+}
+.cr-ui-icon-sm {
+	width: var(--text-sm);
+	height: var(--text-sm);
+}
+.cr-ui-icon-base {
+	width: var(--text-base);
+	height: var(--text-base);
+}
+.cr-ui-icon-xl {
+	width: var(--text-xl);
+	height: var(--text-xl);
+}
+/* One that points — a chevron, drawn pointing down — turned to where it points, and seen turning when that changes */
+.cr-ui-icon-up {
+	rotate: 180deg;
+}
+.cr-ui-icon-left {
+	rotate: 90deg;
+}
+.cr-ui-icon-right {
+	rotate: -90deg;
 }

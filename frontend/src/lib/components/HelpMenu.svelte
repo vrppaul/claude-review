@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import Icon from './Icon.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 	import Popover from './Popover.svelte';
 
@@ -69,18 +69,18 @@
 				testId="close-help"
 				onclick={() => review.guide.setHelpOpen(false)}
 			>
-				<Icon name="cross" />
+				<Icon name="cross" size="xs" />
 			</IconButton>
 		</header>
 		<div class="mb-5 flex flex-col gap-1">
 			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-pressable" onclick={takeTour}>
-				<Icon name="compass" class="cr-guide-compass" />
+				<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
 				<span class="flex-1 text-left">Take the tour again</span>
 				<span class="cr-faint text-xs">{review.guide.stepCount} stops</span>
 			</button>
 			{#if review.guide.latestNews}
 				<button type="button" data-testid="read-news" class="cr-guide-entry cr-pressable" onclick={readNews}>
-					<Icon name="plus" class="cr-guide-plus" />
+					<span class="cr-guide-plus"><Icon name="plus" size="xl" /></span>
 					<span class="flex-1 text-left">What's new in {review.guide.latestNews.release}</span>
 				</button>
 			{/if}

@@ -2,7 +2,7 @@
 	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from './Icon.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { chapterByNumber, chapterNumber, stepAmong } from './story-words';
 
 	const review = useReview();
@@ -44,14 +44,14 @@
 				<div class="flex-1"></div>
 				{#if before}
 					<Button tone="quiet" size="sm" testId="go-to-chapter-before" onclick={() => review.parts.goTo(before.part)}>
-						<Icon name="chevron" class="h-2.5 w-2.5 rotate-90" />
+						<Icon name="chevron" size="xs" pointing="left" />
 						{chapterByNumber(before.place)}
 					</Button>
 				{/if}
 				{#if after}
 					<Button tone="quiet" size="sm" testId="go-to-chapter-after" onclick={() => review.parts.goTo(after.part)}>
 						{chapterByNumber(after.place)}
-						<Icon name="chevron" class="h-2.5 w-2.5 -rotate-90" />
+						<Icon name="chevron" size="xs" pointing="right" />
 					</Button>
 				{/if}
 			</div>

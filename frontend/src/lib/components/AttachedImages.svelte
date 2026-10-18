@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { imageUrl } from '$lib/api/review-api';
+	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import Icon from './Icon.svelte';
 
 	interface Props {
 		attachments: ImageAttachments;
@@ -36,7 +36,7 @@
 						{disabled}
 						onclick={() => attachments.detach(imageId)}
 					>
-						<Icon name="cross" />
+						<Icon name="cross" size="xs" />
 					</IconButton>
 				</span>
 			</span>

@@ -2,10 +2,10 @@
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { counted, FILES } from '$lib/utils/words';
-	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
 	const review = useReview();
@@ -81,10 +81,10 @@
 			data-tour="review-base"
 			title="What the working tree is compared against"
 		>
-			<Icon name="compare" class="h-3 w-3 shrink-0" />
+			<Icon name="compare" size="xs" />
 			<!-- What it is read against, named as the bases listed are: in the code's face -->
 			<span data-testid="base-named" class="font-mono">{review.diff.phrase}</span>
-			<Icon name="chevron" class="h-3 w-3 shrink-0" />
+			<Icon name="chevron" size="xs" />
 		</Button>
 	{/snippet}
 
@@ -111,9 +111,9 @@
 					class={['cr-pressable flex w-full items-center gap-2 px-3 py-1.5 text-left', inForce && 'cr-current']}
 					onclick={() => pick(version)}
 				>
-					<span class="w-3 shrink-0">
+					<span class="w-3 shrink-0 text-(--cr-control)">
 						{#if inForce}
-							<Icon name="check" class="h-3 w-3 text-(--cr-control)" label="In force" />
+							<Icon name="check" size="xs" label="In force" />
 						{/if}
 					</span>
 					<span class="flex-1 truncate font-mono text-xs">{version.label}</span>

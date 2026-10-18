@@ -226,7 +226,7 @@ const NO_DAISY_BUTTONS = [
 // give. A part that takes its element's attributes would take a `data-testid` among them too, unseen by any type
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
-const LIBRARY_PART = '/^(Button|IconButton|Link|Segment|Segmented)$/';
+const LIBRARY_PART = '/^(Button|Icon|IconButton|Link|Segment|Segmented)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -265,9 +265,9 @@ const TAKES_NO_CLASS = [
 // speech bubble written into another component with numbers of its own,
 // beside the same bubble in ICONS
 const DRAWN_IN_ITS_COMPONENT =
-	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in components/icons.ts; a story sketched is <StorySketch>.';
-// The components that write a drawing: Icon, every icon; StorySketch, the sketch of a story
-const DRAWING_COMPONENTS = ['src/lib/components/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
+	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in ui/icons.ts; a story sketched is <StorySketch>.';
+// The components that write a drawing: the library's Icon, every icon; StorySketch, the sketch of a story
+const DRAWING_COMPONENTS = ['src/lib/ui/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
 
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server

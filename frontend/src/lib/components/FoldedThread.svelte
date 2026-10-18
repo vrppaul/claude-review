@@ -2,11 +2,11 @@
 	import type { Thread } from '$lib/types';
 	import { anchorLabel } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Icon from '$lib/ui/Icon.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted } from '$lib/utils/words';
 	import FoldToggle from './FoldToggle.svelte';
-	import Icon from './Icon.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
 
@@ -37,7 +37,7 @@
 	]}
 >
 	{#if thread.resolved}
-		<Icon name="check" class="h-3 w-3 shrink-0 text-(--cr-done)" />
+		<span class="text-(--cr-done)"><Icon name="check" size="xs" /></span>
 	{/if}
 	<button
 		type="button"

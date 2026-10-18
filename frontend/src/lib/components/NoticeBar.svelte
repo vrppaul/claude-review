@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Icon from './Icon.svelte';
-	import type { IconName } from './icons';
+	import Icon from '$lib/ui/Icon.svelte';
+	import type { IconName } from '$lib/ui/icons';
 
 	interface Props {
 		testId: string;
@@ -26,7 +26,7 @@
 	data-testid={testId}
 	class={['cr-notice', kind, 'flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs']}
 >
-	<Icon name={icon} class="h-3 w-3 shrink-0" />
+	<span class="cr-notice-mark"><Icon name={icon} size="xs" /></span>
 	<span>{@render children()}</span>
 	<div class="flex-1"></div>
 	{@render actions()}
