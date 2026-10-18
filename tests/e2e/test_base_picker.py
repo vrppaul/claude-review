@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from playwright.async_api import Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 
@@ -30,6 +31,8 @@ ANSWERING_ROUND_ONE = {READ_FILE: "first pass\nsecond pass\nand what round 1 ask
 # What the review holds once round 1 is answered, and what of it changed after round 1 began
 FILES_IN_THE_REVIEW = tuple(BEFORE_ROUND_ONE)
 FILES_SINCE_ROUND_ONE = tuple(ANSWERING_ROUND_ONE)
+# Where the pointer rests when it is on none of the header's controls: the top left corner, over its words
+AWAY = (0, 0)
 
 
 @pytest.fixture
@@ -100,3 +103,38 @@ async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(revi
 
     assert "1 thread is not on this screen" in await _said(page, "narrowed-to")
     assert "1 comment" in await _said(page, "comment-count")
+
+
+async def test_a_narrower_base_and_whitespace_hidden_are_said_alike_in_the_header(
+    review: RunningReview, page: Page
+) -> None:
+    """Each narrows what the diff shows, so the header says both as one part, in the reader's mark."""
+    await page.goto(review.url)
+    await page.click('[data-testid="base-picker"]')
+    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
+    await page.wait_for_selector('[data-testid="narrowed-to"]')
+    await page.get_by_test_id("settings-toggle").click()
+    await page.get_by_test_id("ignore-whitespace").check()
+    await page.keyboard.press("Escape")
+
+    await page.mouse.move(*AWAY)
+
+    base = await painted(page.get_by_test_id("base-picker"))
+    whitespace = await painted(page.get_by_test_id("whitespace-hidden"))
+    assert (base.ground, base.words, base.border, base.weight, base.face, base.height) == (
+        whitespace.ground,
+        whitespace.words,
+        whitespace.border,
+        whitespace.weight,
+        whitespace.face,
+        whitespace.height,
+    )
+
+
+async def test_the_base_is_named_in_the_codes_face_as_the_bases_listed_are(review: RunningReview, page: Page) -> None:
+    await page.goto(review.url)
+
+    named = page.get_by_test_id("base-named")
+    await named.wait_for()
+
+    assert (await painted(named)).face == await on_a_probe(page, "fontFamily", "var(--font-mono)")

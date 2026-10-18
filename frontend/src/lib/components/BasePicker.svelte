@@ -82,7 +82,8 @@
 			title="What the working tree is compared against"
 		>
 			<Icon name="compare" class="h-3 w-3 shrink-0" />
-			{review.diff.phrase}
+			<!-- What it is read against, named as the bases listed are: in the code's face -->
+			<span data-testid="base-named" class="font-mono">{review.diff.phrase}</span>
 			<Icon name="chevron" class="h-3 w-3 shrink-0" />
 		</Button>
 	{/snippet}

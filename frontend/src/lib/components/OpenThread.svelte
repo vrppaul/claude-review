@@ -84,12 +84,7 @@
 			the column of what was said, rather than beside the empty field below; and why it could not be -->
 		<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
 			{#if askable}
-				<Button
-					tone="secondary"
-					size="xs"
-					testId="ask-now-thread"
-					onclick={() => asking(review.threads.ask(thread.id))}
-				>
+				<Button tone="asking" size="xs" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
 					<Icon name="conversation" class="h-3.25 w-3.25" />
 					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
 				</Button>

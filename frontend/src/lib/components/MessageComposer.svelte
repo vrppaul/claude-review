@@ -6,7 +6,6 @@
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
 	import AttachedImages from './AttachedImages.svelte';
 	import Icon from './Icon.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
@@ -15,6 +14,8 @@
 
 	// What the field says when it took off an image it could not show
 	const IMAGE_LOST = 'An image could not be shown and was taken off the message';
+	// What the cross in a thread's chip does, said to whoever cannot see it and under the pointer
+	const DROP_THREAD = 'Take this thread out of the message';
 
 	interface Props {
 		/** Called as a message goes: sending is a deliberate act, and the conversation follows it to its foot. */
@@ -142,15 +143,17 @@
 			{#each pointed as thread (thread.id)}
 				<span data-testid="pointed-thread" class="cr-thread-chip">
 					{anchorShortPlace(thread.anchor)}
-					<IconButton
-						tone="quiet"
-						size="xs"
-						label="Take this thread out of the message"
-						testId="drop-thread"
+					<!-- Drawn by the page until the library has a chip: its smallest button is taller than the chip's line -->
+					<button
+						type="button"
+						data-testid="drop-thread"
+						class="cr-chip-drop cr-pressable"
+						aria-label={DROP_THREAD}
+						title={DROP_THREAD}
 						onclick={() => drop(thread)}
 					>
-						<Icon name="cross" />
-					</IconButton>
+						<Icon name="cross" class="h-2.5 w-2.5" />
+					</button>
 				</span>
 			{/each}
 		</div>

@@ -15,13 +15,16 @@
  * - secondary: an act on what is read — a thread, a block of the story's
  *   words — which would read as part of it were it quiet: edged, on the
  *   page's own ground.
+ * - asking: asking the agent about what is read, the secondary's act in
+ *   the reader's own blue, edge and words: what they ask is theirs, as every
+ *   control of theirs is drawn in it.
  * - danger: the act that loses what was written, once it was asked, filled
  *   with the colour of what destroys, so it is never taken for the safe
  *   answer beside it.
  * - marked: something of the reader's own to look at, or what they narrowed
  *   the review to, on their mark's tint.
  */
-export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'danger' | 'marked';
+export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked';
 
 /** xs among words and small controls, 24 pixels; sm where it ends a pane, a card or a bar, 32 pixels. */
 export type ButtonSize = 'xs' | 'sm';
@@ -31,6 +34,7 @@ export const BUTTON_TONES: Record<ButtonTone, string> = {
 	primary: 'cr-ui-primary cr-ui-filled',
 	quiet: 'cr-ui-quiet',
 	secondary: 'cr-ui-secondary',
+	asking: 'cr-ui-asking',
 	danger: 'cr-ui-danger cr-ui-filled',
 	marked: 'cr-ui-marked'
 };

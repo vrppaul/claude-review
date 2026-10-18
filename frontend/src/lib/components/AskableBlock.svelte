@@ -66,7 +66,7 @@
 		<span class="cr-ask-over-block">
 			<Button
 				bind:element={asking}
-				tone="secondary"
+				tone="asking"
 				size="xs"
 				testId="ask-about-this"
 				aria-label={name}

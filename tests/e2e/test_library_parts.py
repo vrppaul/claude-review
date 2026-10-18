@@ -10,10 +10,11 @@ another meaning fails here in either theme.
 from pathlib import Path
 
 import pytest
-from playwright.async_api import Locator, Page
+from playwright.async_api import Page
 from pydantic import BaseModel, ConfigDict
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.painted import light, on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -31,46 +32,8 @@ SM = 32
 NOTHING_LAID = "none"
 REGULAR = "400"
 BOLD = "600"
-
-# How an element is painted, as the browser works it out: its ground, what is laid over it, its words, the edge
-# drawn inside it, the weight of its words and how tall it stands
-PAINTED = """(element) => {
-    const style = getComputedStyle(element);
-    return {
-        ground: style.backgroundColor,
-        laid: style.backgroundImage,
-        words: style.color,
-        edge: style.boxShadow,
-        weight: style.fontWeight,
-        height: element.getBoundingClientRect().height,
-    };
-}"""
-# A value painted on a probe, as the browser works it out in the theme the page is in: a property of the probe's
-# style, what it is set to, and the colour of the probe's words, which a value naming the words' colour takes
-ON_A_PROBE = """([property, value, words]) => {
-    const probe = document.createElement('span');
-    probe.style.color = words;
-    probe.style[property] = value;
-    document.body.append(probe);
-    const painted = getComputedStyle(probe)[property];
-    probe.remove();
-    return painted;
-}"""
 # Whether a button can be pressed: set from here, as no one view of the page holds a part of every tone disabled
 DISABLED = "(button, disabled) => { button.disabled = disabled; }"
-
-
-class Painted(BaseModel):
-    """How an element is painted, as PAINTED reads it."""
-
-    model_config = ConfigDict(frozen=True)
-
-    ground: str
-    laid: str
-    words: str
-    edge: str
-    weight: str
-    height: float
 
 
 class Tone(BaseModel):
@@ -90,7 +53,8 @@ class Tone(BaseModel):
     height: float
 
 
-# Every tone the page shows beside a thread, once one is written: each tone, at both sizes between them
+# Every tone the page shows beside a thread, once one is written and whitespace is hidden: each tone, at both
+# sizes between them
 BESIDE_A_THREAD = [
     Tone(
         said="primary",
@@ -119,6 +83,15 @@ BESIDE_A_THREAD = [
         ground_disabled="var(--color-base-100)",
         height=XS,
     ),
+    Tone(
+        said="marked",
+        test_id="whitespace-hidden",
+        ground="var(--cr-mark-tint)",
+        words="var(--cr-mark-text)",
+        light="--cr-hover",
+        ground_disabled="var(--cr-mark-tint)",
+        height=XS,
+    ),
 ]
 # And in the question asked before a thread is deleted, which holds the page's keyboard while it is open
 IN_THE_DELETE_QUESTION = [
@@ -141,8 +114,6 @@ IN_THE_DELETE_QUESTION = [
         height=SM,
     ),
 ]
-
-
 # A button that is an icon alone, at each size, as a review opens: the tree's, put away, and the settings
 ICONS_ALONE = [("hide-sidebar", XS), ("settings-toggle", SM)]
 
@@ -161,10 +132,18 @@ async def review(repository: Path, servers: ReviewServers) -> RunningReview:
 
 
 async def _open_in(page: Page, review: RunningReview, scheme: str) -> None:
-    """Open the review for a reader whose system asks for a theme, the page put away from nothing."""
+    """Open the review for a reader whose system asks for a theme."""
     await page.emulate_media(color_scheme=scheme)
     await page.goto(review.url)
     await page.get_by_test_id("sidebar").wait_for()
+
+
+async def _hide_whitespace(page: Page) -> None:
+    """Hide changes of whitespace from the settings, which the header says from then on."""
+    await page.get_by_test_id("settings-toggle").click()
+    await page.get_by_test_id("ignore-whitespace").check()
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("whitespace-hidden").wait_for()
 
 
 async def _comment_on_the_first_line(page: Page) -> None:
@@ -177,44 +156,31 @@ async def _comment_on_the_first_line(page: Page) -> None:
     await page.get_by_test_id("thread-card").wait_for()
 
 
-async def _painted(part: Locator) -> Painted:
-    return Painted.model_validate(await part.evaluate(PAINTED))
-
-
-async def _on_a_probe(page: Page, property_name: str, value: str, words: str = "inherit") -> str:
-    return await page.evaluate(ON_A_PROBE, [property_name, value, words])
-
-
-async def _light(page: Page, token: str) -> str:
-    """The pointer's light a token is, laid over a ground as the stylesheet lays it."""
-    return await _on_a_probe(page, "backgroundImage", f"linear-gradient(var({token}), var({token}))")
-
-
 async def _expect_painted_by_its_tokens(page: Page, tone: Tone) -> None:
     """A part of a tone, at rest, under the pointer, and while it cannot be pressed, against its tokens."""
     part = page.get_by_test_id(tone.test_id)
-    ground = await _on_a_probe(page, "backgroundColor", tone.ground)
+    ground = await on_a_probe(page, "backgroundColor", tone.ground)
     await page.mouse.move(*AWAY)
 
-    at_rest = await _painted(part)
+    at_rest = await painted(part)
     await part.hover()
-    pointed_at = await _painted(part)
+    pointed_at = await painted(part)
     await part.evaluate(DISABLED, True)
-    disabled_pointed_at = await _painted(part)
+    disabled_pointed_at = await painted(part)
     await page.mouse.move(*AWAY)
-    disabled = await _painted(part)
+    disabled = await painted(part)
     await part.evaluate(DISABLED, False)
 
     assert (at_rest.ground, at_rest.words, at_rest.laid, at_rest.height) == (
         ground,
-        await _on_a_probe(page, "color", tone.words),
+        await on_a_probe(page, "color", tone.words),
         NOTHING_LAID,
         tone.height,
     ), tone.said
-    assert (pointed_at.ground, pointed_at.laid) == (ground, await _light(page, tone.light)), tone.said
+    assert (pointed_at.ground, pointed_at.laid) == (ground, await light(page, tone.light)), tone.said
     assert (disabled.ground, disabled.words) == (
-        await _on_a_probe(page, "backgroundColor", tone.ground_disabled),
-        await _on_a_probe(page, "color", "var(--cr-muted)"),
+        await on_a_probe(page, "backgroundColor", tone.ground_disabled),
+        await on_a_probe(page, "color", "var(--cr-muted)"),
     ), tone.said
     assert disabled_pointed_at.laid == NOTHING_LAID, tone.said
 
@@ -224,6 +190,7 @@ async def test_a_button_of_every_tone_is_painted_by_its_tokens_at_rest_under_the
     review: RunningReview, page: Page, scheme: str
 ) -> None:
     await _open_in(page, review, scheme)
+    await _hide_whitespace(page)
     await _comment_on_the_first_line(page)
 
     for tone in BESIDE_A_THREAD:
@@ -239,13 +206,13 @@ async def test_a_filled_button_whose_pane_is_open_keeps_its_fill_and_its_words_w
 ) -> None:
     await _open_in(page, review, scheme)
     trigger = page.get_by_test_id("quick-submit")
-    closed = await _painted(trigger)
+    closed = await painted(trigger)
 
     await trigger.click()
     await page.mouse.move(*AWAY)
 
-    opened = await _painted(trigger)
-    edge = await _on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-foot-on-fill)", opened.words)
+    opened = await painted(trigger)
+    edge = await on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-foot-on-fill)", opened.words)
     assert (opened.ground, opened.words, opened.edge) == (closed.ground, closed.words, edge)
 
 
@@ -259,13 +226,13 @@ async def test_a_segment_pressed_stands_on_the_selected_tint_with_its_edge_at_it
 
     await pressed.hover()
 
-    painted = await _painted(pressed)
-    not_pressed = await _painted(page.get_by_test_id("layout-split"))
-    assert (painted.ground, painted.laid, painted.edge, painted.words, painted.weight) == (
-        await _on_a_probe(page, "backgroundColor", "transparent"),
-        await _light(page, "--cr-selected"),
-        await _on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-foot)"),
-        await _on_a_probe(page, "color", "var(--color-base-content)"),
+    segment = await painted(pressed)
+    not_pressed = await painted(page.get_by_test_id("layout-split"))
+    assert (segment.ground, segment.laid, segment.edge, segment.words, segment.weight) == (
+        await on_a_probe(page, "backgroundColor", "transparent"),
+        await light(page, "--cr-selected"),
+        await on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-foot)"),
+        await on_a_probe(page, "color", "var(--color-base-content)"),
         BOLD,
     )
     assert (not_pressed.laid, not_pressed.edge, not_pressed.weight) == (NOTHING_LAID, NOTHING_LAID, REGULAR)
@@ -292,4 +259,4 @@ async def test_a_columns_grip_under_the_pointer_shows_the_edge_of_the_one_the_re
 
     await grip.hover()
 
-    assert (await _painted(grip)).ground == await _on_a_probe(page, "backgroundColor", "var(--cr-selected-edge)")
+    assert (await painted(grip)).ground == await on_a_probe(page, "backgroundColor", "var(--cr-selected-edge)")

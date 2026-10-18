@@ -15,7 +15,7 @@ from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, POINTING_DOWN, POINTING_UP, TURN
-from tests.e2e.words_colour import FAINT_WORDS, WORDS_COLOUR
+from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import (
     SETTLE_SECONDS,
     ReviewServers,
@@ -622,12 +622,12 @@ async def test_a_file_marked_viewed_steps_back_into_faint_words(diff_review: Run
     await page.goto(diff_review.url)
     await page.get_by_test_id("sidebar").wait_for()
     main = _section(page, MAIN_FILE)
-    faint = await page.evaluate(FAINT_WORDS)
+    faint = await on_a_probe(page, "color", "var(--cr-faint)")
 
     await main.get_by_test_id("viewed-toggle").check()
 
-    assert await main.get_by_test_id("file-heading").evaluate(WORDS_COLOUR) == faint
-    assert await _section(page, NEW_FILE).get_by_test_id("file-heading").evaluate(WORDS_COLOUR) != faint
+    assert (await painted(main.get_by_test_id("file-heading"))).words == faint
+    assert (await painted(_section(page, NEW_FILE).get_by_test_id("file-heading"))).words != faint
 
 
 async def test_filtering_the_sidebar_narrows_the_list(diff_review: RunningReview, page: Page) -> None:
@@ -1108,6 +1108,27 @@ async def test_a_message_carries_the_thread_it_points_at(diff_review: RunningRev
     [thread] = handed_over["message"]["threads"]
     assert thread["body"] == "Is this greeting used?"
     assert thread["anchor"]["quote"] == ["def hello():"]
+
+
+async def test_a_thread_pointed_at_in_a_message_being_written_is_a_chip_as_tall_as_once_sent_its_cross_in_its_colour(
+    diff_review: RunningReview, page: Page
+) -> None:
+    """The way to take a thread out of a message stands inside its chip, which it neither grows nor recolours."""
+    await page.goto(diff_review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    waiting = asyncio.create_task(_next_event(diff_review))
+    await page.get_by_test_id("panel-input").wait_for()
+    await _click_line_and_comment(page, _first_gutter(page, MAIN_FILE), "Is this greeting used?")
+    await page.get_by_test_id("panel-input").fill("Look again at @")
+    await page.get_by_test_id("thread-option").first.click()
+    being_written = await painted(page.get_by_test_id("pointed-thread"))
+    cross = await painted(page.get_by_test_id("drop-thread"))
+
+    await page.get_by_test_id("send-message").click()
+    await waiting
+
+    sent = await painted(page.get_by_test_id("panel-thread-ref"))
+    assert (being_written.height, cross.words) == (sent.height, being_written.words)
 
 
 async def test_the_review_says_when_the_tree_moves_under_it(e2e_repo: Path, servers: ReviewServers, page: Page) -> None:

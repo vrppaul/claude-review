@@ -12,7 +12,7 @@
 /*
  * The classes below are the review's own, outside Tailwind's layers, so they
  * win over any utility on the same element: a utility never changes what a
- * cr- class sets. Another cr- class does — a chip's state is `.cr-chip-…` —
+ * cr- class sets. Another cr- class does — a chip's voice is `.cr-thread-chip-…` —
  * or the utility goes in place of the class.
  */
 
@@ -325,11 +325,6 @@
 .cr-chip:has(:focus-visible) {
 	outline: 2px solid var(--cr-focus-ring);
 	outline-offset: 1px;
-}
-/* A chip saying the reader sees less than the whole diff — whitespace hidden — in their mark's tint, and plain */
-.cr-chip-narrowing {
-	background: var(--cr-mark-tint);
-	color: var(--color-base-content);
 }
 
 /* Rendered prose gets the same measure as a comment: it is prose too */
@@ -898,6 +893,19 @@
 	background: transparent;
 	outline: 1px dashed var(--cr-agent-border);
 	outline-offset: -1px;
+}
+/*
+ * The way to take a thread out of the message being written, inside its
+ * chip: as tall as the chip's line, so the chip keeps its height, and in the
+ * chip's own colour, as part of it
+ */
+.cr-chip-drop {
+	display: inline-flex;
+	align-items: center;
+	align-self: stretch;
+	padding-inline: 0.125rem;
+	border-radius: calc(var(--radius-field) - 1px);
+	color: inherit;
 }
 
 /*

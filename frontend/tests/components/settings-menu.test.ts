@@ -32,13 +32,13 @@ describe('the settings', () => {
 		expect(review.settings.current.diff_layout).toBe('split');
 	});
 
-	it('say in the header that whitespace is hidden, and show it again from there', async () => {
+	it('say in the header that whitespace is hidden, and show it again when that is pressed', async () => {
 		const user = userEvent.setup();
 		await review.settings.change({ ignore_whitespace: true });
 		const { getByTestId, queryByTestId } = render(ReviewHeader, inReview(review));
 		expect(getByTestId('whitespace-hidden').textContent).toContain('No whitespace');
 
-		await user.click(getByTestId('show-whitespace'));
+		await user.click(getByTestId('whitespace-hidden'));
 
 		expect(review.settings.current.ignore_whitespace).toBe(false);
 		expect(queryByTestId('whitespace-hidden')).toBeNull();

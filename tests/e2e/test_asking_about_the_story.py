@@ -16,6 +16,7 @@ from playwright.async_api import Locator, Page, expect
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, CHEVRON_AT_THE_END, POINTING_DOWN, POINTING_UP, TURN
+from tests.e2e.painted import on_a_probe, painted
 from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
@@ -140,6 +141,21 @@ async def test_ask_about_this_stands_over_the_top_edge_of_the_block_pointed_at_o
     assert await words.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
     assert await words_above.evaluate(OVER_NONE_OF_ITS_WORDS, await asking.element_handle())
     assert (await words.evaluate(TOP_OF), await words.evaluate(LEFT_OF)) == (words_top, words_left)
+
+
+async def test_ask_about_this_is_offered_in_the_readers_colour_on_the_pages_own_ground(
+    review: RunningReview, page: Page
+) -> None:
+    """Asking is the reader's own act, said and edged in their mark, on a ground that hides the words behind it."""
+    doubt = await _read_as_story(page, review)
+
+    asking = await painted(doubt.get_by_test_id("ask-about-this"))
+
+    assert (asking.ground, asking.words, asking.border) == (
+        await on_a_probe(page, "backgroundColor", "var(--color-base-100)"),
+        await on_a_probe(page, "color", "var(--cr-mark-text)"),
+        await on_a_probe(page, "borderTopColor", "var(--cr-mark-border)"),
+    )
 
 
 async def test_a_chapters_doubt_pointed_at_keeps_the_warnings_colours(review: RunningReview, page: Page) -> None:

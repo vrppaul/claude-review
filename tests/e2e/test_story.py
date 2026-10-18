@@ -20,7 +20,7 @@ from claude_review.domain.models import LineSpan
 from claude_review.domain.story import Step, ToldFrom
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
-from tests.e2e.words_colour import FAINT_WORDS, WORDS_COLOUR
+from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, chapter_of, planted, step, story_of, story_of_chapters
 
@@ -323,7 +323,7 @@ async def test_the_agents_words_carry_its_colour_down_their_edge_and_a_reconstru
     await _read_as_story(page, review_of_a_reconstruction)
     why = page.get_by_test_id("chapter-why-block").get_by_test_id("askable-frame")
     reconstruction = page.get_by_test_id("story-reconstruction")
-    the_agents_colour = await page.get_by_test_id("story-reconstructed").evaluate(WORDS_COLOUR)
+    the_agents_colour = (await painted(page.get_by_test_id("story-reconstructed"))).words
 
     assert await why.evaluate(EDGE_STYLE) == "solid"
     assert await why.evaluate(EDGE_WIDTH) == AGENT_EDGE_WIDTH
@@ -652,15 +652,15 @@ async def test_a_chapter_above_the_one_being_read_is_ticked_in_the_contents_and_
     review_of_a_long_file_in_two_chapters: RunningReview, page: Page
 ) -> None:
     await _read_the_second_chapter(page, review_of_a_long_file_in_two_chapters)
-    faint = await page.evaluate(FAINT_WORDS)
+    faint = await on_a_probe(page, "color", "var(--cr-faint)")
 
     await expect(page.get_by_test_id("contents-count")).to_have_text(ONE_OF_TWO_READ)
     # The overview's entry, then the first chapter's
     of_the_first = page.get_by_test_id("contents-entry").nth(1)
     await expect(of_the_first.get_by_test_id("part-read-mark")).to_be_visible()
     files_of_the_first, files_of_the_second = await page.get_by_test_id("contents-files").all()
-    assert await files_of_the_first.get_by_test_id("contents-file").first.evaluate(WORDS_COLOUR) == faint
-    assert await files_of_the_second.get_by_test_id("contents-file").first.evaluate(WORDS_COLOUR) != faint
+    assert (await painted(files_of_the_first.get_by_test_id("contents-file").first)).words == faint
+    assert (await painted(files_of_the_second.get_by_test_id("contents-file").first)).words != faint
 
 
 async def test_a_chapter_is_ticked_no_more_once_the_reader_scrolls_back_up_into_it(

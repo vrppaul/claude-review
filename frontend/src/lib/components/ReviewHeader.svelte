@@ -78,19 +78,18 @@
 			{#if review.diff.phrase}
 				<BasePicker />
 				{#if review.settings.current.ignore_whitespace}
-					<!-- Said here as well as in the settings, because it hides changes -->
-					<span data-testid="whitespace-hidden" class="cr-chip cr-chip-narrowing">
+					<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a
+						narrower base is, since it narrows the diff too. Pressed, it shows them again -->
+					<Button
+						tone="marked"
+						size="xs"
+						testId="whitespace-hidden"
+						title="Show whitespace changes again"
+						onclick={() => review.setIgnoreWhitespace(false)}
+					>
 						No whitespace
-						<IconButton
-							tone="quiet"
-							size="xs"
-							label="Show whitespace changes again"
-							testId="show-whitespace"
-							onclick={() => review.setIgnoreWhitespace(false)}
-						>
-							<Icon name="cross" />
-						</IconButton>
-					</span>
+						<Icon name="cross" class="h-3 w-3 shrink-0" />
+					</Button>
 				{/if}
 			{:else if review.title}
 				<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">

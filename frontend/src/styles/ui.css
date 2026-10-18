@@ -135,6 +135,11 @@
 	background-color: var(--color-base-100);
 	color: var(--color-base-content);
 }
+.cr-ui-asking {
+	border-color: var(--cr-mark-border);
+	background-color: var(--color-base-100);
+	color: var(--cr-mark-text);
+}
 .cr-ui-marked {
 	background-color: var(--cr-mark-tint);
 	color: var(--cr-mark-text);

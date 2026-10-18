@@ -194,7 +194,7 @@
 		<div class="flex-1"></div>
 		<Button tone="quiet" size="xs" testId="cancel-comment" onclick={putAway}>Cancel</Button>
 		{#if onAsk}
-			<Button tone="secondary" size="xs" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
+			<Button tone="asking" size="xs" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
 		{/if}
 		<Button tone="primary" size="xs" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
 	</div>
