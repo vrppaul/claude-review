@@ -45,6 +45,13 @@ PIXELS = "px"
 ARROWS_ROOM = 8
 # Which element holds the keyboard, by its test id
 FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
+# More changed files than a short window's tree shows at once, each changed on its one line
+LONG_TREE = [f"src/part_{number:02}.py" for number in range(40)]
+BEFORE = "value = 1\n"
+AFTER = "value = 2\n"
+# How far the tree is scrolled down, in pixels, and whether an element has moved up from where it stood
+SCROLLED_BY = 400
+SCROLLED_ABOVE = "([element, top]) => element.getBoundingClientRect().top < top"
 
 
 class Pane(BaseModel):
@@ -247,6 +254,46 @@ async def test_the_question_before_a_comment_is_discarded_hangs_over_the_cancel_
     above_by = cancel["y"] - (question["y"] + question["height"])
     ends_apart = abs(question["x"] + question["width"] - (cancel["x"] + cancel["width"]))
     assert (0 <= above_by <= ARROWS_ROOM, ends_apart <= WITHIN_ROUNDING) == (True, True), (cancel, question)
+
+
+@pytest.fixture
+def many_files(tmp_path: Path) -> Path:
+    """A repository with more changed files than the tree of files shows at once on a short window."""
+    committed_repository(tmp_path, dict.fromkeys(LONG_TREE, BEFORE))
+    write_files(tmp_path, dict.fromkeys(LONG_TREE, AFTER))
+    return tmp_path
+
+
+@in_the_browsers_loop
+async def long_tree(many_files: Path, servers: ReviewServers) -> RunningReview:
+    return await servers.start(await repository_opening(many_files))
+
+
+async def test_the_tree_of_files_keeps_its_heading_in_sight_as_its_list_scrolls(
+    long_tree: RunningReview, page: Page
+) -> None:
+    await _open(page, long_tree, SHORT_LAPTOP)
+    heading = page.get_by_test_id("sidebar-heading")
+    first_file = page.get_by_test_id("file-item").first
+    heading_before, file_before = await heading.bounding_box(), await first_file.bounding_box()
+    assert heading_before is not None
+    assert file_before is not None
+
+    await first_file.hover()
+    await page.mouse.wheel(0, SCROLLED_BY)
+    await page.wait_for_function(SCROLLED_ABOVE, arg=[await first_file.element_handle(), file_before["y"]])
+
+    assert await heading.bounding_box() == heading_before
+
+
+async def test_the_side_column_and_the_agent_panel_are_headed_by_one_bar(review: RunningReview, page: Page) -> None:
+    await _open(page, review, SHORT_LAPTOP)
+    await page.get_by_test_id("toggle-panel").click()
+
+    side = await painted(page.get_by_test_id("sidebar-head"))
+    panel = await painted(page.get_by_test_id("panel-status"))
+
+    assert (side.ground, side.height) == (panel.ground, panel.height)
 
 
 async def test_no_heading_inside_a_pane_is_larger_than_the_pane_is_headed_with(

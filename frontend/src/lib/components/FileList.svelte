@@ -145,7 +145,13 @@
 	called="the file tree"
 	tour="file-tree"
 	class="bg-base-100"
-	testIds={{ column: 'sidebar', resize: 'sidebar-resize', putAway: 'hide-sidebar', bringBack: 'show-sidebar' }}
+	testIds={{
+		column: 'sidebar',
+		head: 'sidebar-head',
+		resize: 'sidebar-resize',
+		putAway: 'hide-sidebar',
+		bringBack: 'show-sidebar'
+	}}
 >
 	{#snippet heading()}
 		<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{headedBy}</h2>

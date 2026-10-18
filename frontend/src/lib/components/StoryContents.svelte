@@ -53,7 +53,13 @@
 		label="Story contents"
 		called="the contents"
 		class="bg-base-100"
-		testIds={{ column: 'contents', resize: 'contents-resize', putAway: 'hide-contents', bringBack: 'show-contents' }}
+		testIds={{
+			column: 'contents',
+			head: 'contents-head',
+			resize: 'contents-resize',
+			putAway: 'hide-contents',
+			bringBack: 'show-contents'
+		}}
 	>
 		{#snippet heading()}
 			<h2 data-testid="contents-count" class="text-sm font-semibold">

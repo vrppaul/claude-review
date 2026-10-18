@@ -4,6 +4,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
+	import ColumnBar from '$lib/ui/ColumnBar.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
@@ -11,6 +12,7 @@
 	/** What the tests know each part of the column by, written whole where the column is drawn. */
 	interface TestIds {
 		column: string;
+		head: string;
 		resize: string;
 		putAway: string;
 		bringBack: string;
@@ -69,21 +71,21 @@
 	>
 		<!-- The column is on the left, so it grows rightward -->
 		<EdgeGrip {column} grows="right" label="Resize {called}" testId={testIds.resize} />
+		<ColumnBar testId={testIds.head}>
+			{@render heading()}
+			<div class="flex-1"></div>
+			<IconButton
+				bind:element={putAwayButton}
+				tone="quiet"
+				size="xs"
+				label={putAway}
+				testId={testIds.putAway}
+				onclick={() => column.toggle()}
+			>
+				<Icon name="chevron" size="xs" pointing="left" />
+			</IconButton>
+		</ColumnBar>
 		<div class="cr-scroller min-h-0 flex-1 p-3">
-			<div class="mb-2 flex items-center gap-2">
-				{@render heading()}
-				<div class="flex-1"></div>
-				<IconButton
-					bind:element={putAwayButton}
-					tone="quiet"
-					size="xs"
-					label={putAway}
-					testId={testIds.putAway}
-					onclick={() => column.toggle()}
-				>
-					<Icon name="chevron" size="xs" pointing="left" />
-				</IconButton>
-			</div>
 			{@render children()}
 		</div>
 	</svelte:element>

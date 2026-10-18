@@ -385,6 +385,22 @@
 }
 
 /*
+ * The bar a column beside what is read is headed by (ColumnBar): the side
+ * column's and the agent panel's, as tall as a small button with room
+ * round it, on a raised ground, ruled off from what scrolls under it
+ */
+.cr-ui-column-bar {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.5rem;
+	min-height: calc(var(--cr-button-xs) + 0.75rem);
+	padding-inline: 0.75rem;
+	border-bottom: 1px solid var(--color-base-300);
+	background: var(--color-base-200);
+}
+
+/*
  * An icon (Icon), in the colour of the words it stands in, never squeezed
  * by what stands beside it. Each size is as tall as words of that size, so
  * an icon beside words stands as tall as they do.
