@@ -274,6 +274,16 @@ of it is built yet.
       structlog with it, through `presentation/wire/base.py`: about 71 ms
       of an import of some 245 ms, `wire/agent.py` about 149 ms in all
       (`python -X importtime`, one run).
+- [ ] `refactor(hosting)`: `hold_open` (`hosting/serving.py`) makes a
+      `GitRepository` for every kind of review and hands it to
+      `host_review`, where only a review of a change reads it
+      (`content_source`): a review of files or of a conversation is made a
+      git reader it never calls. Making one only for a change would choose
+      the source by kind in two callers, `serving.py` and the tests'
+      `hosted` (`tests/helpers.py`), unless the choice moves with it.
+- [ ] `refactor(wire)`: `StoryTakenResponse.summing_up` builds its
+      `LeftOutOfFile`s field by field (`presentation/wire/story.py`), not
+      with `.of()` from a domain twin as wire.md asks of every wire model.
 
 ## Testing
 
@@ -283,6 +293,14 @@ of it is built yet.
       in the six runs of it that followed, one of them of every test again.
       Schemathesis draws its requests anew each run, and the request that
       failed was not kept.
+- [ ] `page_reading_the_story` (`tests/integration/test_story.py`) puts a
+      `Review` together by hand, not through `host_review`, against
+      server.md's one place for it: the pages it stands for read the story
+      as each event is told, and the broadcast `host_review` makes queues
+      what it tells.
+- [ ] `scripts/look.py` has no step that moves the code under a story it
+      told, so no look shows a chapter's warning ("Changed after it was
+      told") or the story's tag that the code moved on.
 - [ ] A review leaves in its event loop what nothing ends. The answerer's
       lease is a timer of ten minutes (`Answerer.heard`,
       `src/claude_review/services/review/answerer.py`) that outlives the
