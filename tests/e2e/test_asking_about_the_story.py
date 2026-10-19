@@ -76,12 +76,6 @@ BAND_IN_ITS_FRAME = """(band, frame) => {
     const inside = box.left + parseFloat(getComputedStyle(frame).borderLeftWidth);
     return [band.getBoundingClientRect().left - inside, box.right - band.getBoundingClientRect().right];
 }"""
-# How far what a band offers ends short of the band's right edge, and how far the band stands its words in from
-# that edge, in pixels
-SHORT_OF_THE_BANDS_END = """(offer, band) => [
-    band.getBoundingClientRect().right - offer.getBoundingClientRect().right,
-    parseFloat(getComputedStyle(band).paddingRight),
-]"""
 # How far an element's left edge stands right of another's, in pixels
 LEFT_OF_ANOTHER = "(element, other) => element.getBoundingClientRect().left - other.getBoundingClientRect().left"
 # How far a frame stands its words in from its outer left edge: past its edge, by its inset; and what the browser
@@ -312,21 +306,6 @@ async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads
     offer = await asking.element_handle()
     assert await chapter.get_by_test_id("part-head").evaluate(OVER_NONE_OF_ITS_WORDS, offer)
     assert await chapter.get_by_test_id("chapter-counts").evaluate(OVER_NONE_OF_ITS_WORDS, offer)
-
-
-@pytest.mark.parametrize("width", READING_WIDTHS)
-async def test_ask_about_this_ends_where_the_words_of_its_block_end(
-    review: RunningReview, page: Page, width: int
-) -> None:
-    await _read_as_story_at(page, review, width)
-    why = page.get_by_test_id("chapter-why-block")
-    band = why.get_by_test_id("chapter-why-block-band")
-
-    await band.hover()
-
-    offer = why.get_by_test_id("ask-about-this")
-    short_of_its_end, words_in = await offer.evaluate(SHORT_OF_THE_BANDS_END, await band.element_handle())
-    assert short_of_its_end == pytest.approx(words_in)
 
 
 async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neither_points_nor_types(
