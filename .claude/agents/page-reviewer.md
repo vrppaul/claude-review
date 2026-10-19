@@ -32,11 +32,11 @@ What no gate sees, and you hold:
 - A fix made by a list without looking at the whole: after each change, what stands beside it (spacing to its
   neighbours, its frame, the row it sits in).
 
-In the browser, with `uv run python scripts/look.py` (its docstring says its steps; its servers live and die in a
-directory of its own): in each theme and width the change can differ in, a window of 1366×560 for panes; the page
-itself never scrolls; every pane inside the window; keyboard only — the ring on every stop, the keyboard never on
-nothing. Say what each shot shows, with numbers read off the page. What you measure goes in the report, never into
-a test.
+In the browser, on the long change `uv run python scripts/look.py` serves until its page is closed, driven by a
+Playwright script of your own in your scratch directory: in each theme and width the change can differ in, a window
+of 1366×560 for panes; the page itself never scrolls; every pane inside the window; keyboard only — the ring on every
+stop, the keyboard never on nothing. Say what each shot shows, with numbers read off the page. What you measure goes
+in the report, never into a test.
 
 Tests, by `.claude/rules/tests.md`: a test to delete — one that reads a look back, restates the code, repeats
 another test or a gate, runs once per theme, or cannot fail; and a behaviour the change added that someone can name

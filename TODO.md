@@ -305,13 +305,6 @@ of it is built yet.
       server.md's one place for it: the pages it stands for read the story
       as each event is told, and the broadcast `host_review` makes queues
       what it tells.
-- [ ] `scripts/look.py` has no step that moves the code under a story it
-      told, so no look shows a chapter's warning ("Changed after it was
-      told") or the story's tag that the code moved on.
-- [ ] `test_a_review_stopped_while_it_opens_leaves_nothing_of_its_staging_behind`
-      (`tests/integration/test_cli_process.py`) failed once in a whole run
-      at `1619483` (a `.git-objects` staging file left behind) and passed
-      alone and in the whole runs after it. Why is not known.
 - [ ] A review leaves in its event loop what nothing ends. The answerer's
       lease is a timer of ten minutes (`Answerer.heard`,
       `src/claude_review/services/review/answerer.py`) that outlives the
