@@ -74,7 +74,8 @@
 		{@const held = drawn.held}
 		{@const story = held.story}
 		<ChapterBar />
-		<article class="cr-story-gutter cr-story-prose flex flex-col gap-8 py-8">
+		<!-- What a story says, read as what is said in a thread is: in a comment's reading face -->
+		<article class="cr-story-gutter cr-comment-body flex flex-col gap-8 py-8">
 			<UnplacedThreads threads={offTheStory} why={OFF_THE_STORY} />
 			<StoryOverview {held} />
 

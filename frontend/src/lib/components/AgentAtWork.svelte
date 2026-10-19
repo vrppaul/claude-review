@@ -70,7 +70,7 @@
 				{#each work.steps as step, position (position)}
 					<li class={['cr-branch', step.done && 'cr-branch-done']}>
 						{#if step.done}
-							<span class="cr-branch-mark"><Icon name="check" size="xs" /></span>
+							<span class="cr-branch-mark"><Icon name="check" size="xs" tone="done" /></span>
 						{:else}
 							<span class="cr-branch-mark"><Dot tone="quiet" breathing testId="branch-running" /></span>
 						{/if}

@@ -5,9 +5,9 @@
 	interface Props {
 		/**
 		 * The colour they breathe in: quietly beside words that say what is waited on, in the agent's colour while
-		 * the agent writes, in the colour of what they stand in on a button's fill.
+		 * the agent writes, in the colour of what they stand in on a button's fill or among its words.
 		 */
-		tone: DotTone;
+		tone: Extract<DotTone, 'quiet' | 'agent' | 'inherited'>;
 		/** Their test id; each dot is known by it followed by `-dot`. */
 		testId: string;
 	}

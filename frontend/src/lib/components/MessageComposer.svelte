@@ -5,6 +5,7 @@
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
@@ -174,7 +175,12 @@
 			<Failure stands="inline" testId="panel-error" said={whatWentWrong} />
 		{/if}
 		<Button tone="primary" size="xs" testId="send-message" disabled={!canSend} onclick={send}>
-			{review.conversation.sending ? 'Sending' : 'Send'}
+			{#if review.conversation.sending}
+				<BreathingDots tone="inherited" testId="message-sending-dots" />
+				Sending
+			{:else}
+				Send
+			{/if}
 		</Button>
 	</div>
 </div>

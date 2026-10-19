@@ -99,3 +99,14 @@ export const ICONS = {
 } as const satisfies Record<string, IconShape>;
 
 export type IconName = keyof typeof ICONS;
+
+/**
+ * What an icon says by its colour, where it says more than the words it stands in:
+ * - done: something done — a file viewed, a thread settled, a step taken
+ * - danger: what destroys, on the button that does it
+ * - agent: the agent's own, and what it is still to do
+ * - warning: what the reader is warned of
+ * - reader: in the colour of the reader's controls — the one of a list in force, the way into the tour
+ * - absent: a mark standing for what is not there yet, on a surface's grey
+ */
+export type IconTone = 'done' | 'danger' | 'agent' | 'warning' | 'reader' | 'absent';

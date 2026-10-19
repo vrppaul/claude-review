@@ -6,7 +6,7 @@
 	import Card from '$lib/ui/Card.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import type { IconName } from '$lib/ui/icons';
+	import type { IconName, IconTone } from '$lib/ui/icons';
 	import StorySketch from './StorySketch.svelte';
 	import { factsOnTheWay, type WaitFact } from './story-wait-facts';
 
@@ -15,16 +15,17 @@
 		wait: StoryWait;
 	}
 
-	/** How a fact is drawn, by whether it has happened: its mark, and the class that colours its mark and its time. */
+	/** How a fact is drawn, by whether it has happened: its mark in its tone, and the class that steps its time back. */
 	interface Drawing {
 		mark: IconName;
-		class: string;
+		tone: IconTone;
+		class: string | null;
 	}
 
 	// A tick for what is done; a ring of dashes for what is waited for, which is the agent's to do
 	const DRAWN_AS: Record<WaitFact['state'], Drawing> = {
-		happened: { mark: 'check', class: 'cr-wait-fact-happened' },
-		awaited: { mark: 'awaited', class: 'cr-wait-fact-awaited' }
+		happened: { mark: 'check', tone: 'done', class: 'cr-wait-fact-happened' },
+		awaited: { mark: 'awaited', tone: 'agent', class: null }
 	};
 
 	let { wait }: Props = $props();
@@ -86,7 +87,7 @@
 			<ul class="flex flex-col gap-2">
 				{#each factsOnTheWay(wait, review.clock) as fact (fact.says)}
 					<li data-testid="story-wait-fact" class={['cr-wait-fact', DRAWN_AS[fact.state].class]}>
-						<span class="cr-wait-mark"><Icon name={DRAWN_AS[fact.state].mark} size="sm" /></span>
+						<Icon name={DRAWN_AS[fact.state].mark} size="sm" tone={DRAWN_AS[fact.state].tone} />
 						<span>{fact.says}</span>
 						<!-- A count that moves every second is read when asked for, never read out as it moves -->
 						<span data-testid="story-wait-when" class="cr-wait-when" aria-live="off">{fact.when}</span>

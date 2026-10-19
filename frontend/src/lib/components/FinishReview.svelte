@@ -102,6 +102,7 @@
 				onclick={() => submission.send()}
 			>
 				{#if submission.sending}
+					<BreathingDots tone="inherited" testId="pane-sending-dots" />
 					Sending
 				{:else if inRounds}
 					Send round {review.rounds.current}

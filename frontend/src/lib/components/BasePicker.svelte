@@ -2,6 +2,7 @@
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
@@ -131,7 +132,10 @@
 	</div>
 
 	{#if asking && matching.length === 0}
-		<EmptyNote within="list" testId="bases-asking">Asking git what this can be read against…</EmptyNote>
+		<EmptyNote within="list" testId="bases-asking">
+			<BreathingDots tone="quiet" testId="bases-asking-dots" />
+			Asking git what this can be read against
+		</EmptyNote>
 	{:else if matching.length === 0 && !failed}
 		<EmptyNote within="list" testId="no-bases">
 			{filter.trim() ? 'Nothing here answers to that.' : 'Nothing to compare against.'}
@@ -139,7 +143,7 @@
 	{/if}
 
 	{#if failed}
-		<div class="border-t border-base-300 px-3 py-2">
+		<div data-testid="base-error-room" class="border-t border-base-300 px-3 py-2">
 			<Failure stands="apart" testId="base-error" said={failed} />
 		</div>
 	{/if}

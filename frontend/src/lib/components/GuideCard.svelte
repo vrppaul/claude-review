@@ -142,7 +142,7 @@
 		>
 			<div class="cr-guide-card">
 				<div class="flex items-start gap-3">
-					<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
+					<Icon name="compass" size="xl" tone="reader" />
 					<p class="cr-guide-body">
 						A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
 							.guide.stepCount} stops, about two minutes.

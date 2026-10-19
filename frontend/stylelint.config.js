@@ -57,6 +57,10 @@ const THE_SCALES_WORDS = {
 // words kept for a screen reader scroll with them and never stretch the page. Its rule, and the reading area's own,
 // say so where they turn this off
 const SCROLLS_DOWN = { '/^overflow(-y)?$/': ['/\\b(auto|scroll)\\b/'] };
+// A class of the library's stylesheet is the library's to draw: its parts' own, and the two the page's drawings and
+// words take from it, the states of what can be pressed and a comment's reading face. A rule of another stylesheet
+// selecting one would lay a look over a part from outside, so none may
+const CLASSES_OF_THE_LIBRARY = ['/\\.cr-(ui-|pressable\\b|comment-body\\b)/'];
 
 export default {
 	rules: {
@@ -76,7 +80,8 @@ export default {
 			...SCROLLS_DOWN
 		},
 		'no-duplicate-selectors': true,
-		'declaration-no-important': true
+		'declaration-no-important': true,
+		'selector-disallowed-list': CLASSES_OF_THE_LIBRARY
 	},
 	overrides: [
 		{
@@ -90,13 +95,14 @@ export default {
 			}
 		},
 		{
-			// The library's stylesheet, which lays a notice's washes and its parts' rooms
+			// The library's stylesheet, which lays a notice's washes and its parts' rooms, and selects its own classes
 			files: ['src/styles/ui.css'],
 			rules: {
 				'declaration-property-value-disallowed-list': {
 					'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED],
 					...SCROLLS_DOWN
-				}
+				},
+				'selector-disallowed-list': null
 			}
 		}
 	]

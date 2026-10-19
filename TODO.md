@@ -209,7 +209,8 @@ of it is built yet.
 
 - [ ] `refactor(ui)`: the kinds the page still draws outside the library,
       each to become a part of it with its rule (`.claude/rules/page.md`):
-      an image's thumbnail (`.cr-image-*`); a
+      an image's thumbnail (`.cr-image-*`); a file's status letter
+      (StatusLetter, a mark drawn with utilities); a
       turn's avatar (`.cr-avatar`); a link in rendered text, drawn by the
       typography plugin; and the folds, a `<details>` and a folded thread's
       line.

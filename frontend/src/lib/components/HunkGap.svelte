@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
@@ -82,8 +83,13 @@
 					disabled={reading}
 					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
-					<Icon name="expand" size="xs" />
-					{reading ? 'Reading…' : `Show the ${hiddenLines}`}
+					{#if reading}
+						<BreathingDots tone="inherited" testId="reading-dots" />
+						Reading
+					{:else}
+						<Icon name="expand" size="xs" />
+						Show the {hiddenLines}
+					{/if}
 				</button>
 			{:else}
 				<span class="cr-muted flex flex-1 items-center gap-2 px-4">
@@ -132,8 +138,8 @@
 				{/if}
 			{/if}
 			{#if failed}
-				<span class="flex min-w-0 items-center truncate px-4" title={failed}>
-					<Failure stands="inline" testId="expand-error" said={failed} />
+				<span data-testid="expand-error-room" class="flex min-w-0 items-center px-4">
+					<Failure stands="cut" testId="expand-error" said={failed} />
 				</span>
 			{/if}
 		{/if}

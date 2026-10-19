@@ -51,7 +51,7 @@ STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
 COMMENT_ON_A_LINE = "Comment on a line"
 ADD_IT = "Add it to the review"
 # What a gap says while its lines are being read, in place of how many it hides
-READING = "Reading…"
+READING = "Reading"
 
 
 @pytest.fixture

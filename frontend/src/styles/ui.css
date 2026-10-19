@@ -4,8 +4,10 @@
  * (tokens.css) alone. A part takes no look from outside: what the page needs
  * of one is a tone, a size or a variant written here, with the reason a
  * reader needs it. Outside of the library the page draws its own drawings —
- * code rows, a thread's spine, a story's contents and sketch — and lights
- * what of them can be pressed with the states below.
+ * code rows, a thread's spine, a story's contents and sketch — and takes two
+ * classes of this stylesheet for them: the states of whatever can be pressed
+ * (cr-pressable), and a comment's reading face (cr-comment-body). No other
+ * stylesheet selects a class of this one (stylelint).
  *
  * Outside Tailwind's layers, as the review's own classes are, so they win
  * over any utility on the same element.
@@ -1220,10 +1222,17 @@
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
 }
+/* One cut where its room ends, in a line that holds one line alone */
+.cr-ui-failure-cut {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 
 /*
  * What a list or a view says while it has nothing to show (EmptyNote): in
- * muted words, in the middle of the room it is given, at the size of a
+ * muted words, centred across the room it is given, at the size of a
  * list's words or of a view's, with the mark that stands for what is not
  * there yet above them, where it has one
  */

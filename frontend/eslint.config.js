@@ -146,8 +146,6 @@ const CHOOSERS = [
 // never a z- utility, so the stylesheet keeps the one list of layers.
 const STYLED_BY_CLASSES = 'Style with a class; hand a number the stylesheet needs to it as style:--name.';
 const LAYERED_BY_TOKENS = 'Lay one thing over another with a --cr-layer-* token in the stylesheet, not a z- class.';
-// A z- utility in a class, behind any variants and its sign: `z-10`, `md:z-10`, `-z-1`
-const Z_UTILITY = '/(^|\\s)([^\\s:]+:)*-?z-/';
 // A colour or a shadow is a token too, written once in tokens.css for both
 // themes: markup paints with a cr- class or names a token (`text-(--cr-mark)`,
 // `bg-base-200`), never with Tailwind's palette (`bg-blue-500`, `text-white`),
@@ -159,6 +157,8 @@ const PAINTED_BY_TOKENS =
 const UTILITY_START = '(^|\\s)([^\\s:]+:)*!?-?';
 // Where one ends: at a space or the list's end, behind the mark that makes it important (`shadow!`)
 const UTILITY_END = '!?(\\s|$)';
+// A z- utility in a class, behind any variants, its sign and its mark: `z-10`, `md:z-10`, `-z-1`, `!z-10`
+const Z_UTILITY = `/${UTILITY_START}z-/`;
 // The utilities that take a colour
 const PAINTS =
 	'(bg|text|border(-[xytblrse])?|ring(-offset)?|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|inset-ring)';
@@ -248,25 +248,27 @@ const NO_INLINE_STYLING = [
 // whose plugin stays for its themes' colours alone: its buttons darkened a dark ground under the pointer, its badges
 // counted threads at two sizes, its textarea, checkboxes and spinners stood beside the page's own, and its alert
 // said a review could not be opened. A class of any of its components is refused in a class list everywhere, inside
-// the library too, and in any string a component holds where the class is no word of a sentence: `btn`, `kbd` and
-// `badge` at any variant, `join-item`, and a variant of a spinner, a checkbox or a textarea, as a constant of
-// classes holds them as much as markup does, and `<svelte:element this="kbd">` would draw a key past the rule on
-// elements below. Tailwind's own `table`, `collapse`, `filter`, `list-…`, `select-…` and `mask-…` share names with
-// DaisyUI's, so only the forms Tailwind has not are refused
-const DRAWN_BY_A_PART = "Draw it with a part of lib/ui, not with a class of DaisyUI's components.";
+// the library too; and in any string a component holds, as a constant of classes holds them as much as markup does,
+// where the class is no word of a sentence: `btn`, `kbd` and `badge` alone, as `<svelte:element this="kbd">` would
+// draw a key past the rule on elements below, and any component's variant, `alert-error`, `modal-box`. Tailwind's
+// own `table`, `collapse`, `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only the forms Tailwind
+// has not are refused: held against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the rule refuses no
+// class of Tailwind's, and lets through of DaisyUI's only `mask-circle`, which Tailwind has too, the names of its
+// states and sizes inside other rules (`is-*`, `lg`), and the classes of other libraries it styles (`pika-*`)
+const DRAWN_BY_A_PART =
+	"Draw it with a part of lib/ui (a Button, a Field, a Checkbox, a Tag, a Key…), not with a class of DaisyUI's components.";
 const DAISY_COMPONENT =
-	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|footer|hero|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|steps|swap|tab|tabs|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|list(-row)?|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?)(\\s|$)/';
+	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|cally|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|floating-label|footer|hero|hover-3d|hover-gallery|image-full|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|step|steps|swap|tab|tabs|text-rotate|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|collapse-(title|content|arrow|plus|open|close)|filter(-reset)?|list(-row|-col-(grow|wrap))?|mask(-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12]))?|row-hover|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl))(\\s|$)/';
 const DAISY_COMPONENT_IN_A_STRING =
-	'/(^|\\s)((btn|kbd|badge)(-[a-z]+)?|join-item|(loading|checkbox|textarea)-[a-z]+)(\\s|$)/';
+	'/(^|\\s)((btn|kbd|badge)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|file-input|hero|indicator|loading|menu|mockup|modal|navbar|radial-progress|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+)(\\s|$)/';
 const NO_DAISY_COMPONENTS = [
 	...inClassLists(DAISY_COMPONENT, DRAWN_BY_A_PART),
 	{ selector: `Literal[value=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART },
 	{ selector: `TemplateElement[value.raw=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART }
 ];
 
-// A button is drawn by the library, in its tones and sizes, and nothing outside it draws one its own way: the
-// page's own copies of a button drifted into seven looks. A class of the library's own is refused outside it, in a
-// class list and in any string a component holds
+// A class of the library's own is its parts' alone, refused outside it in a class list and in any string a component
+// holds: the page's copies of a button, drawn with the classes of one, drifted into seven looks
 const DRAWN_BY_THE_LIBRARY = "Draw it with a part of lib/ui: a class of the library's own is its parts' alone.";
 // A class of the library's own stylesheet
 const LIBRARY_CLASS = '/(^|\\s)([^\\s:]+:)*cr-ui-/';
@@ -281,7 +283,7 @@ const LIBRARY_PARTS = readdirSync(LIBRARY_FOLDER)
 	.filter((file) => file.endsWith(COMPONENT))
 	.map((file) => basename(file, COMPONENT));
 const LIBRARY_PART = `/^(${LIBRARY_PARTS.join('|')})$/`;
-const NO_BUTTONS_OF_ITS_OWN = [
+const NO_LIBRARY_CLASSES_OUTSIDE = [
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${LIBRARY_CLASS}]`, message: DRAWN_BY_THE_LIBRARY },
 	{
@@ -530,13 +532,15 @@ const TAKES_NO_CLASS = [
 
 // The colour of what fails is the library's alone — why something could not be done (Failure), the button and the
 // icon of what destroys (Button and Icon, of tone danger): the page said what failed in five forms at three sizes,
-// and painted its bin by hand. A utility painting with it, or its token named, is refused in a class list and in
-// any string outside the library; stylelint refuses the token in every stylesheet but the library's
+// and painted its bin by hand. A utility painting with it, at any strength (`text-error/80`), or its token named, is
+// refused outside the library in a class list, in any value of markup (a style directive's) and in any string;
+// stylelint refuses the token in every stylesheet but the library's
 const FAILED_IN_THE_LIBRARY =
 	'Say what failed with lib/ui Failure, and draw what destroys as a danger Button or an Icon of tone danger.';
-const THE_COLOUR_OF_FAILING = `/${UTILITY_START}${PAINTS}-error(-content)?${UTILITY_END}|--color-error/`;
+const THE_COLOUR_OF_FAILING = `/${UTILITY_START}${PAINTS}-error(-content)?(\\/|${UTILITY_END})|--color-error/`;
 const NO_FAILURES_OF_ITS_OWN = [
 	...inClassLists(THE_COLOUR_OF_FAILING, FAILED_IN_THE_LIBRARY),
+	{ selector: `SvelteLiteral[value=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY },
 	{ selector: `Literal[value=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY },
 	{ selector: `TemplateElement[value.raw=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY }
 ];
@@ -559,7 +563,7 @@ const NO_BARS_OF_ITS_OWN = [
 // What a component outside the library is refused: drawing a part of the library its own way
 const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_DAISY_COMPONENTS,
-	...NO_BUTTONS_OF_ITS_OWN,
+	...NO_LIBRARY_CLASSES_OUTSIDE,
 	...NO_CARDS_OF_ITS_OWN,
 	...NO_CODE_BOXES_OF_ITS_OWN,
 	...NO_NOTICES_OF_THEIR_OWN,

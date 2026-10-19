@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ICONS, type IconName, type IconShape } from './icons';
+	import { ICONS, type IconName, type IconShape, type IconTone } from './icons';
 
 	/**
 	 * How large an icon is drawn: as tall as words of that size, so one beside words stands as tall as they do.
@@ -11,16 +11,6 @@
 	type IconSize = 'xs' | 'sm' | 'base' | 'xl';
 	/** Which way an icon that points is turned: each is drawn pointing down. */
 	type Pointing = 'down' | 'up' | 'left' | 'right';
-	/**
-	 * What an icon says by its colour, where it says more than the words it stands in:
-	 * - done: something done — a file viewed, a thread settled, a step taken
-	 * - danger: what destroys, on the button that does it
-	 * - agent: the agent's own
-	 * - warning: what the reader is warned of
-	 * - reader: the one of a list in force, in the colour of the reader's controls
-	 * - absent: a mark standing for what is not there yet, on a surface's grey
-	 */
-	type IconTone = 'done' | 'danger' | 'agent' | 'warning' | 'reader' | 'absent';
 
 	// The class of each size and each turn in the library's stylesheet; pointing down, as drawn, it is not turned
 	const SIZES: Record<IconSize, string> = {

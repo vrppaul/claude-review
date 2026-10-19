@@ -596,11 +596,6 @@
 	max-width: 100%;
 	height: auto;
 }
-/* What a story says, read as what is said in a thread is: at a comment's size and leading */
-.cr-story-prose {
-	font-size: var(--cr-comment-size);
-	line-height: var(--cr-comment-leading);
-}
 /*
  * The number and reason of a step a round changed after it was told step
  * back, in faint words: the code under them is what stands now
@@ -801,15 +796,9 @@
 	font-family: var(--font-mono);
 	font-size: var(--text-xs);
 }
-/* What has happened is done, and its moment is past; what is waited for is the agent's to do, and its count is read now */
-.cr-wait-fact-happened .cr-wait-mark {
-	color: var(--cr-done);
-}
+/* What has happened has its moment past, so its time steps back; what is waited for has its count read now */
 .cr-wait-fact-happened .cr-wait-when {
 	color: var(--cr-faint);
-}
-.cr-wait-fact-awaited .cr-wait-mark {
-	color: var(--cr-agent);
 }
 /*
  * Where the bar a chapter is read under stands: a slot kept at the top of
@@ -901,7 +890,6 @@
 	width: var(--text-xs);
 	height: var(--text-xs);
 	flex-shrink: 0;
-	color: var(--cr-done);
 }
 .cr-branch-done {
 	color: var(--cr-faint);
@@ -946,9 +934,6 @@
 	transition-property: left, top, width, height;
 	transition-duration: var(--cr-guide-glide);
 	transition-timing-function: var(--cr-glide-easing);
-}
-.cr-guide-compass {
-	color: var(--cr-control);
 }
 /* A step of the tour: a bar, round at its ends */
 .cr-guide-tick {
