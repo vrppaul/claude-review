@@ -94,7 +94,7 @@
 		onGone={() => (hiddenForGood = false)}
 	>
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3 text-sm">
-			<span class="text-(--cr-done)"><Icon name="check" size="sm" /></span>
+			<Icon name="check" size="sm" tone="done" />
 			<span>Won't show again, in any review. Story is still in the header.</span>
 			<Button bind:element={undo} tone="secondary" size="xs" testId="story-introduction-undo" onclick={showAgain}>
 				Undo

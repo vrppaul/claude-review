@@ -8,6 +8,9 @@ const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
 // (lib/ui NoticeBar, and EdgeFrame's warning): a rule of another stylesheet naming one draws a notice its own way,
 // as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
 const A_NOTICE_WASH = ['/var\\(--cr-(warning-tint|mark-soft)\\)/'];
+// The colour of what fails is the library's alone (lib/ui Failure, and a Button and an Icon of tone danger), as
+// eslint holds the markup to: a rule of another stylesheet painting with it says what failed its own way
+const THE_COLOUR_OF_FAILING = ['/var\\(--color-error/'];
 // A part of the library keeps its own room, named after it in tokens.css — an EdgeFrame's edge and room, a band's
 // reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights — and lays out what
 // stands round it itself, so no rule outside the library names such a token: the page's band reached back over its
@@ -62,7 +65,14 @@ export default {
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
 		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS },
 		'declaration-property-value-disallowed-list': {
-			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM],
+			'/.*/': [
+				...A_WRITTEN_SIZE,
+				...OFF_THE_SCALE,
+				...THE_STEP_MULTIPLIED,
+				...A_NOTICE_WASH,
+				...THE_COLOUR_OF_FAILING,
+				...A_LIBRARY_ROOM
+			],
 			...SCROLLS_DOWN
 		},
 		'no-duplicate-selectors': true,

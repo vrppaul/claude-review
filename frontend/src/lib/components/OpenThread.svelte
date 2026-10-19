@@ -5,6 +5,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging, CardTone } from '$lib/ui/card';
+	import Failure from '$lib/ui/Failure.svelte';
 	import type { FieldVoice } from '$lib/ui/field';
 	import FieldButton from '$lib/ui/FieldButton.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -101,7 +102,7 @@
 					</Button>
 				{/if}
 				{#if failed}
-					<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
+					<Failure stands="apart" testId="ask-error" said={failed} />
 				{/if}
 			</div>
 		{/if}

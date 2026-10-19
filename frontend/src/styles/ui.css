@@ -750,6 +750,25 @@
 .cr-ui-icon-right {
 	rotate: -90deg;
 }
+/* One that says something by its colour (lib/ui Icon's tones) */
+.cr-ui-icon-done {
+	color: var(--cr-done);
+}
+.cr-ui-icon-danger {
+	color: var(--color-error);
+}
+.cr-ui-icon-agent {
+	color: var(--cr-agent);
+}
+.cr-ui-icon-warning {
+	color: var(--color-warning);
+}
+.cr-ui-icon-reader {
+	color: var(--cr-control);
+}
+.cr-ui-icon-absent {
+	color: var(--color-base-300);
+}
 
 /*
  * A notice (NoticeBar, lib/ui/notice.ts): a bar across what it is about,
@@ -1067,4 +1086,42 @@
 	50% {
 		opacity: 1;
 	}
+}
+/* Three dots side by side that breathe in turn (BreathingDots): something on its way */
+.cr-ui-breathing-dots {
+	display: inline-flex;
+	align-items: center;
+	gap: --spacing(1);
+}
+
+/* Why something the reader did could not be done (Failure): in the colour of what fails, in small words */
+.cr-ui-failure {
+	color: var(--color-error);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+
+/*
+ * What a list or a view says while it has nothing to show (EmptyNote): in
+ * muted words, in the middle of the room it is given, at the size of a
+ * list's words or of a view's, with the mark that stands for what is not
+ * there yet above them, where it has one
+ */
+.cr-ui-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: --spacing(3);
+	color: var(--cr-muted);
+	text-align: center;
+}
+.cr-ui-empty-in-a-list {
+	padding: --spacing(6) --spacing(2);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+.cr-ui-empty-in-a-view {
+	padding: --spacing(8) --spacing(4);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
 }

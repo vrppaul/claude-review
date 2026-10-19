@@ -7,6 +7,7 @@
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
 	import CheckChip from '$lib/ui/CheckChip.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
@@ -87,7 +88,7 @@
 							changed since round {review.lastRetake.changedSince}
 						</Button>
 						{#if changedSinceFailed}
-							<span data-testid="changed-since-error" class="text-error text-xs">{changedSinceFailed}</span>
+							<Failure stands="inline" testId="changed-since-error" said={changedSinceFailed} />
 						{/if}
 					{/if}
 				{/snippet}

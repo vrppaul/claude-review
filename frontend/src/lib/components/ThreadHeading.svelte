@@ -107,7 +107,7 @@
 	{:else}
 		<!-- Settling a thread folds it away; it can still be opened and read -->
 		<Button tone="secondary" size="xs" testId="resolve-comment" onclick={resolve}>
-			<span class="text-(--cr-done)"><Icon name="check" size="xs" /></span>
+			<Icon name="check" size="xs" tone="done" />
 			Resolve
 		</Button>
 	{/if}
@@ -134,7 +134,7 @@
 		>
 			{#snippet trigger(control)}
 				<IconButton {...control} tone="secondary" size="xs" label={DELETE} testId="delete-comment">
-					<span class="text-error"><Icon name="trash" size="xs" /></span>
+					<Icon name="trash" size="xs" tone="danger" />
 				</IconButton>
 			{/snippet}
 		</ConfirmPopover>

@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
@@ -42,7 +43,7 @@
 	{/if}
 	{#snippet actions()}
 		{#if review.diff.wholeReviewFailed}
-			<span data-testid="narrow-error" class="text-error">{review.diff.wholeReviewFailed}</span>
+			<Failure stands="inline" testId="narrow-error" said={review.diff.wholeReviewFailed} />
 		{/if}
 		{#if offScreen.length > 0}
 			<Button

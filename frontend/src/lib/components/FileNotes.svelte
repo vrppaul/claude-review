@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile, Thread, Unshown } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { modeChangeOf } from '$lib/utils/file-modes';
 	import { wholeMegabytes } from '$lib/utils/sizes';
@@ -55,7 +56,5 @@
 <UnplacedThreads threads={unplaced} why={OFF_THEIR_LINES} />
 
 {#if emptyReason}
-	<div data-testid="empty-file-note" class="cr-muted px-4 py-8 text-center text-sm">
-		{emptyReason}
-	</div>
+	<EmptyNote within="view" testId="empty-file-note">{emptyReason}</EmptyNote>
 {/if}

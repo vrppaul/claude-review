@@ -32,7 +32,7 @@
 		<div class="flex flex-col gap-3 p-4 text-sm">
 			<!-- A question has no head of its own: it is asked first, and its answers close it -->
 			<div class="flex items-center gap-2">
-				<span class="text-(--cr-agent)"><Icon name="story" size="sm" /></span>
+				<Icon name="story" size="sm" tone="agent" />
 				<PaneQuestion question={QUESTION} testId="story-opt-in-question" />
 			</div>
 			<StorySketch />
@@ -42,7 +42,7 @@
 			</p>
 			<EdgeFrame {...A_WARNING} testId="story-cost">
 				<p class="cr-cost-note">
-					<span class="mt-0.5 text-warning"><Icon name="notice" size="base" /></span>
+					<span class="mt-0.5"><Icon name="notice" size="base" tone="warning" /></span>
 					<span>
 						It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to
 						<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.

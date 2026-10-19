@@ -239,24 +239,32 @@ const NO_INLINE_STYLING = [
 	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE)
 ];
 
-// A button is drawn by the component library (lib/ui), in its tones and sizes, and nothing outside it draws one
-// its own way: DaisyUI's buttons darkened a dark ground under the pointer, and the page's own copies of a button
-// drifted into seven looks. A class of DaisyUI's buttons is refused in a class list and in any string a component
-// holds, a constant of classes as much as markup; a class of the library's own outside it
-const DRAWN_BY_THE_LIBRARY =
-	'Draw a button with lib/ui (Button, IconButton, Link, Segment), not with classes of its look.';
-// DaisyUI's button classes, behind any variants: `btn`, `btn-ghost`, `join`, `join-item`
-const DAISY_BUTTON = '/(^|\\s)([^\\s:]+:)*(btn|btn-[a-z]+|join|join-item)(\\s|$)/';
-// The same in any string: `join` alone is a word of a sentence as often, and is refused in class lists only
-const DAISY_BUTTON_IN_A_STRING = '/(^|\\s)(btn|btn-[a-z]+|join-item)(\\s|$)/';
+// Every kind the page draws is drawn by the component library (lib/ui), from the tokens, and none by DaisyUI,
+// whose plugin stays for its themes' colours alone: its buttons darkened a dark ground under the pointer, its badges
+// counted threads at two sizes, its textarea, checkboxes and spinners stood beside the page's own, and its alert
+// said a review could not be opened. A class of any of its components is refused in a class list everywhere, inside
+// the library too, and in any string a component holds where the class is no word of a sentence: `btn`, `kbd` and
+// `badge` at any variant, `join-item`, and a variant of a spinner, a checkbox or a textarea, as a constant of
+// classes holds them as much as markup does, and `<svelte:element this="kbd">` would draw a key past the rule on
+// elements below. Tailwind's own `table`, `collapse`, `filter`, `list-…`, `select-…` and `mask-…` share names with
+// DaisyUI's, so only the forms Tailwind has not are refused
+const DRAWN_BY_A_PART = "Draw it with a part of lib/ui, not with a class of DaisyUI's components.";
+const DAISY_COMPONENT =
+	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|footer|hero|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|steps|swap|tab|tabs|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|list(-row)?|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?)(\\s|$)/';
+const DAISY_COMPONENT_IN_A_STRING =
+	'/(^|\\s)((btn|kbd|badge)(-[a-z]+)?|join-item|(loading|checkbox|textarea)-[a-z]+)(\\s|$)/';
+const NO_DAISY_COMPONENTS = [
+	...inClassLists(DAISY_COMPONENT, DRAWN_BY_A_PART),
+	{ selector: `Literal[value=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART },
+	{ selector: `TemplateElement[value.raw=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART }
+];
+
+// A button is drawn by the library, in its tones and sizes, and nothing outside it draws one its own way: the
+// page's own copies of a button drifted into seven looks. A class of the library's own is refused outside it, in a
+// class list and in any string a component holds
+const DRAWN_BY_THE_LIBRARY = "Draw it with a part of lib/ui: a class of the library's own is its parts' alone.";
 // A class of the library's own stylesheet
 const LIBRARY_CLASS = '/(^|\\s)([^\\s:]+:)*cr-ui-/';
-// The library draws its buttons from the tokens, so DaisyUI's are refused inside it too
-const NO_DAISY_BUTTONS = [
-	...inClassLists(DAISY_BUTTON, DRAWN_BY_THE_LIBRARY),
-	{ selector: `Literal[value=${DAISY_BUTTON_IN_A_STRING}]`, message: DRAWN_BY_THE_LIBRARY },
-	{ selector: `TemplateElement[value.raw=${DAISY_BUTTON_IN_A_STRING}]`, message: DRAWN_BY_THE_LIBRARY }
-];
 // A part of the library is handed its test id one way, as `testId`, a prop svelte-check holds every caller to
 // give. A part that takes its element's attributes would take a `data-testid` among them too, unseen by any type
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
@@ -269,7 +277,6 @@ const LIBRARY_PARTS = readdirSync(LIBRARY_FOLDER)
 	.map((file) => basename(file, COMPONENT));
 const LIBRARY_PART = `/^(${LIBRARY_PARTS.join('|')})$/`;
 const NO_BUTTONS_OF_ITS_OWN = [
-	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${LIBRARY_CLASS}]`, message: DRAWN_BY_THE_LIBRARY },
 	{
@@ -360,24 +367,18 @@ const NO_MARKS_OF_UTILITIES = [
 	{ selector: `Literal[value=${A_ROUNDED_CORNER}][value=${A_GROUND}]`, message: DRAWN_AS_A_MARK },
 	{ selector: `TemplateElement[value.raw=${A_ROUNDED_CORNER}][value.raw=${A_GROUND}]`, message: DRAWN_AS_A_MARK }
 ];
-// DaisyUI's key and badge, behind any variants and at any size, refused inside the library too, which draws its
-// own: `kbd`, `kbd-sm`, `badge`, `badge-primary`. In any string as well: `<svelte:element this="kbd">` would draw a
-// key past the rule on elements below, and a badge's classes are as often kept in a constant as written in markup
-const DAISY_MARK = '/(^|\\s)([^\\s:]+:)*(kbd|badge)(-[a-z]+)?(\\s|$)/';
-// A dot or a cross written as a glyph, in words of markup or in a string: drawn at the size of the words round it,
-// it drifts with them, as the page's three dots drawn so were 7 px across beside dots of 6 and 5
+// A dot or a cross written as a glyph, in words of markup or in a string, refused inside the library too: drawn at
+// the size of the words round it, it drifts with them, as the page's three dots drawn so were 7 px across beside dots
+// of 6 and 5
 const DRAWN_AS_A_GLYPH = 'Draw a dot with lib/ui Dot, and a cross with <Icon name="cross">, not as a glyph in words.';
 const A_GLYPH_MARK = '/[●•⬤×✕✖]/';
-const NO_GLYPHS_OR_DAISY_MARKS = [
-	...inClassLists(DAISY_MARK, DRAWN_AS_A_MARK),
-	{ selector: `Literal[value=${DAISY_MARK}]`, message: DRAWN_AS_A_MARK },
-	{ selector: `TemplateElement[value.raw=${DAISY_MARK}]`, message: DRAWN_AS_A_MARK },
+const NO_GLYPH_MARKS = [
 	{ selector: `SvelteText[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
 	{ selector: `Literal[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
 	{ selector: `TemplateElement[value.raw=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH }
 ];
 const NO_MARKS_OF_ITS_OWN = [
-	...NO_GLYPHS_OR_DAISY_MARKS,
+	...NO_GLYPH_MARKS,
 	...inClassLists(A_MARK_OF_ITS_OWN, DRAWN_AS_A_MARK),
 	{ selector: `Literal[value=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
 	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
@@ -514,8 +515,22 @@ const TAKES_NO_CLASS = [
 	}
 ];
 
+// The colour of what fails is the library's alone — why something could not be done (Failure), the button and the
+// icon of what destroys (Button and Icon, of tone danger): the page said what failed in five forms at three sizes,
+// and painted its bin by hand. A utility painting with it, or its token named, is refused in a class list and in
+// any string outside the library; stylelint refuses the token in every stylesheet but the library's
+const FAILED_IN_THE_LIBRARY =
+	'Say what failed with lib/ui Failure, and draw what destroys as a danger Button or an Icon of tone danger.';
+const THE_COLOUR_OF_FAILING = `/${UTILITY_START}${PAINTS}-error(-content)?${UTILITY_END}|--color-error/`;
+const NO_FAILURES_OF_ITS_OWN = [
+	...inClassLists(THE_COLOUR_OF_FAILING, FAILED_IN_THE_LIBRARY),
+	{ selector: `Literal[value=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY },
+	{ selector: `TemplateElement[value.raw=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY }
+];
+
 // What a component outside the library is refused: drawing a part of the library its own way
 const DRAWN_BY_THE_LIBRARY_ALONE = [
+	...NO_DAISY_COMPONENTS,
 	...NO_BUTTONS_OF_ITS_OWN,
 	...NO_CARDS_OF_ITS_OWN,
 	...NO_CODE_BOXES_OF_ITS_OWN,
@@ -524,6 +539,7 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_ROWS_OF_ITS_OWN,
 	...NO_HEADINGS_OF_ITS_OWN,
 	...NO_BANDS_OF_ITS_OWN,
+	...NO_FAILURES_OF_ITS_OWN,
 	...NO_LAYOUT_ROUND_THE_LIBRARY
 ];
 
@@ -793,9 +809,9 @@ export default tseslint.config(
 			'no-restricted-syntax': refusedSyntax(
 				NO_PAGE_LOOKUPS,
 				NO_CHOOSING,
-				NO_DAISY_BUTTONS,
+				NO_DAISY_COMPONENTS,
 				TAKES_NO_CLASS,
-				NO_GLYPHS_OR_DAISY_MARKS
+				NO_GLYPH_MARKS
 			)
 		}
 	},

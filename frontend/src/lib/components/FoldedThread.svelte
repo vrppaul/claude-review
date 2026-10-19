@@ -50,7 +50,7 @@
 <EdgeFrame tone={drawnAs.tone} ground="tint" testId={drawnAs.testId}>
 	<div class={['flex items-center gap-3', folded === 'raised' && 'cr-raised']}>
 		{#if thread.resolved}
-			<span class="text-(--cr-done)"><Icon name="check" size="xs" /></span>
+			<Icon name="check" size="xs" tone="done" />
 		{/if}
 		<button
 			type="button"

@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 	import Button from '$lib/ui/Button.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { counted, FILES_HAVING, wordsFor } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
@@ -50,7 +51,7 @@
 	{[whatChanged(), ...followWords(retaken)].join(PHRASE_BREAK)}
 	{#snippet actions()}
 		{#if showing.failed}
-			<span data-testid="retaken-error" class="text-error">{showing.failed}</span>
+			<Failure stands="inline" testId="retaken-error" said={showing.failed} />
 		{/if}
 		{#if review.lastRetake.changedSince !== null && review.lastRetake.changedCount > 0}
 			<Button tone="quiet" size="xs" testId="show-what-changed" onclick={showWhatChanged}>Show what changed</Button>

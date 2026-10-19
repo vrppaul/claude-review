@@ -6,6 +6,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import type { FieldVoice } from '$lib/ui/field';
 	import Segment from '$lib/ui/Segment.svelte';
@@ -188,7 +189,7 @@
 	/>
 	<AttachedImages attachments={field.attachments} onLost={onImageLost} />
 	{#if failed}
-		<p data-testid="comment-error" class="text-xs text-error">{failed}</p>
+		<Failure stands="apart" testId="comment-error" said={failed} />
 	{/if}
 	<div class="flex items-center gap-2">
 		{#if suggestFrom && suggestFrom.length > 0}

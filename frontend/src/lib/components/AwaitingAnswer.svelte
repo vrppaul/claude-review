@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
 	import ThreadTurn from './ThreadTurn.svelte';
-	import TypingIndicator from './TypingIndicator.svelte';
 
 	interface Props {
 		/** The thread the question was asked in. */
@@ -43,7 +44,7 @@
 <ThreadTurn voice={AGENT} testId="awaiting-answer" tour="awaited-answer">
 	{#snippet head()}
 		{#if listening}
-			<TypingIndicator />
+			<BreathingDots tone="quiet" testId="awaiting-dots" />
 		{/if}
 		<span class="flex-1"></span>
 		<span class="cr-muted">
@@ -54,6 +55,6 @@
 		<Button tone="secondary" size="xs" testId="take-back-question" onclick={takeBack}>{TAKE_BACK}</Button>
 	{/snippet}
 	{#if failed}
-		<p data-testid="take-back-error" class="text-xs text-error">{failed}</p>
+		<Failure stands="apart" testId="take-back-error" said={failed} />
 	{/if}
 </ThreadTurn>

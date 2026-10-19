@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
@@ -131,8 +132,8 @@
 				{/if}
 			{/if}
 			{#if failed}
-				<span data-testid="expand-error" class="flex min-w-0 items-center truncate px-4 text-error" title={failed}>
-					{failed}
+				<span class="flex min-w-0 items-center truncate px-4" title={failed}>
+					<Failure stands="inline" testId="expand-error" said={failed} />
 				</span>
 			{/if}
 		{/if}

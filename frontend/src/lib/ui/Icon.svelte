@@ -11,6 +11,16 @@
 	type IconSize = 'xs' | 'sm' | 'base' | 'xl';
 	/** Which way an icon that points is turned: each is drawn pointing down. */
 	type Pointing = 'down' | 'up' | 'left' | 'right';
+	/**
+	 * What an icon says by its colour, where it says more than the words it stands in:
+	 * - done: something done — a file viewed, a thread settled, a step taken
+	 * - danger: what destroys, on the button that does it
+	 * - agent: the agent's own
+	 * - warning: what the reader is warned of
+	 * - reader: the one of a list in force, in the colour of the reader's controls
+	 * - absent: a mark standing for what is not there yet, on a surface's grey
+	 */
+	type IconTone = 'done' | 'danger' | 'agent' | 'warning' | 'reader' | 'absent';
 
 	// The class of each size and each turn in the library's stylesheet; pointing down, as drawn, it is not turned
 	const SIZES: Record<IconSize, string> = {
@@ -25,24 +35,35 @@
 		left: 'cr-ui-icon-left',
 		right: 'cr-ui-icon-right'
 	};
+	const TONES: Record<IconTone, string> = {
+		done: 'cr-ui-icon-done',
+		danger: 'cr-ui-icon-danger',
+		agent: 'cr-ui-icon-agent',
+		warning: 'cr-ui-icon-warning',
+		reader: 'cr-ui-icon-reader',
+		absent: 'cr-ui-icon-absent'
+	};
 
 	interface Props {
 		name: IconName;
 		size: IconSize;
 		pointing?: Pointing;
+		/** Its colour where it says something by it; the colour of the words it stands in where it names none. */
+		tone?: IconTone | undefined;
 		/** What the icon says on its own, for whoever cannot see it; without one it is left unsaid, as words beside it say it. */
 		label?: string;
 		/** For an icon that is a mark the tests look for: a file viewed, a part read. */
 		testId?: string;
 	}
 
-	let { name, size, pointing = 'down', label, testId }: Props = $props();
+	let { name, size, pointing = 'down', tone, label, testId }: Props = $props();
 
 	const shape: IconShape = $derived(ICONS[name]);
 	const traced = $derived(shape.drawn.kind === 'traced' ? shape.drawn : null);
 </script>
 
-<!-- An icon, drawn once in ICONS: in the colour of the words it stands in, at the size its caller names -->
+<!-- An icon, drawn once in ICONS: in the colour of the words it stands in or of its tone, at the size its caller
+	names -->
 <svg
 	viewBox={shape.viewBox}
 	fill={traced ? 'none' : 'currentColor'}
@@ -54,7 +75,7 @@
 	aria-label={label}
 	aria-hidden={label ? undefined : 'true'}
 	data-testid={testId}
-	class={['cr-ui-icon', SIZES[size], TURNS[pointing]]}
+	class={['cr-ui-icon', SIZES[size], TURNS[pointing], tone && TONES[tone]]}
 >
 	{#each shape.paths as path (path)}
 		<path d={path} />

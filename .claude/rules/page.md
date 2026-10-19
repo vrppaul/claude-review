@@ -22,11 +22,11 @@ How a part of the page is built is said at the top of its module; what eslint an
 ## Parts and elements
 
 - Every kind of element the page draws — a button, a field, a pane, a notice, a mark, a list's row — is a part of `frontend/src/lib/ui/`, whose file says what it is for.
-- A kind the library lacks is added there first, with the variants the page uses now and a rule in `frontend/eslint.config.js` refusing it elsewhere.
+- A kind the library lacks is added there first, with the variants the page uses now and an eslint rule refusing it elsewhere, where a pattern can tell it.
 - The parts of `frontend/src/lib/` build on each other in one direction, as `LAYERS` in `frontend/eslint.config.js` lists them: components build on everything, and only components build on them.
 - The page's own code never finds an element by test id or by a page-wide id. An element announces itself to whoever needs it, as every file section and thread does to `FileSections`.
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
-- Every new button, input, textarea and container gets a `data-testid`, for the tests to act on.
+- Every new container gets a `data-testid`; a part of the library takes its own as `testId`.
 - Markup a library draws (mermaid's `g.node`) is read by the library's names in the module that calls it, and gets its test ids there by `setAttribute`.
 - A change to what the reader sees is looked at in a browser, in each theme and width it can differ in, before it is called done: in the report, never in a test.
 

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ReviewPage } from '$lib/page/review-page.svelte';
 	import ReviewScreen from '$lib/components/ReviewScreen.svelte';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 
 	interface Props {
 		page: ReviewPage;
@@ -11,12 +13,12 @@
 
 {#if page.state.kind === 'opening'}
 	<div class="flex items-center justify-center min-h-screen">
-		<span class="loading loading-spinner loading-lg"></span>
+		<BreathingDots tone="quiet" testId="opening-dots" />
 	</div>
 {:else if page.state.kind === 'failed'}
 	<div class="flex items-center justify-center min-h-screen">
-		<div class="alert alert-error max-w-(--cr-failure-width)">
-			<span>{page.state.reason}</span>
+		<div class="max-w-(--cr-failure-width)">
+			<Failure stands="apart" testId="opening-failed" said={page.state.reason} />
 		</div>
 	</div>
 {:else}

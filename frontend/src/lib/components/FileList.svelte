@@ -8,6 +8,7 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Filter from '$lib/ui/Filter.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -97,7 +98,7 @@
 				<span class="sr-only">changed since round {review.lastRetake.changedSince}</span>
 			{/if}
 			{#if viewed}
-				<span class="text-(--cr-done)"><Icon name="check" size="xs" label="Viewed" testId="file-viewed-mark" /></span>
+				<Icon name="check" size="xs" tone="done" label="Viewed" testId="file-viewed-mark" />
 			{/if}
 		{/snippet}
 		{#snippet end()}
@@ -163,11 +164,9 @@
 
 	{#if review.diff.files.length === 0}
 		<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
-		<p data-testid="no-files" class="cr-muted px-2 py-4 text-xs">No {listed.many}.</p>
+		<EmptyNote within="list" testId="no-files">No {listed.many}.</EmptyNote>
 	{:else if matching.length === 0}
-		<p data-testid="no-matches" class="cr-muted px-2 py-4 text-xs">
-			No {listed.sought} matches “{layout.filter}”.
-		</p>
+		<EmptyNote within="list" testId="no-matches">No {listed.sought} matches “{layout.filter}”.</EmptyNote>
 	{:else}
 		<ul bind:this={list}>
 			{#if isDiffMode}

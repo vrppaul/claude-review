@@ -3,6 +3,7 @@
 	import { threadsOffTheDiff } from '$lib/anchors/placement';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
@@ -65,7 +66,7 @@
 		<!-- The work undone and the diff taken again, say: nothing differs from
 			the base. Under a narrower base the notice above the diff says so. -->
 		{#if !review.diff.narrowed}
-			<p data-testid="no-changes" class="cr-muted px-4 py-8 text-center text-sm">No changes found.</p>
+			<EmptyNote within="view" testId="no-changes">No changes found.</EmptyNote>
 		{/if}
 	{/each}
 </main>

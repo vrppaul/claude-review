@@ -2,6 +2,8 @@
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Filter from '$lib/ui/Filter.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
@@ -109,9 +111,9 @@
 					<Row names="path" testId="base-option" current={inForce} onclick={() => pick(version)}>
 						{#snippet leading()}
 							<!-- Room for the check of the one in force in every row, so their names stand in one line -->
-							<span class="w-(--cr-list-row-mark-slot) text-(--cr-control)">
+							<span class="w-(--cr-list-row-mark-slot)">
 								{#if inForce}
-									<Icon name="check" size="xs" label="In force" />
+									<Icon name="check" size="xs" tone="reader" label="In force" />
 								{/if}
 							</span>
 						{/snippet}
@@ -128,19 +130,17 @@
 	</div>
 
 	{#if asking && matching.length === 0}
-		<p data-testid="bases-asking" class="cr-muted px-3 py-6 text-center text-xs">
-			Asking git what this can be read against…
-		</p>
+		<EmptyNote within="list" testId="bases-asking">Asking git what this can be read against…</EmptyNote>
 	{:else if matching.length === 0 && !failed}
-		<p data-testid="no-bases" class="cr-muted px-3 py-6 text-center text-xs">
+		<EmptyNote within="list" testId="no-bases">
 			{filter.trim() ? 'Nothing here answers to that.' : 'Nothing to compare against.'}
-		</p>
+		</EmptyNote>
 	{/if}
 
 	{#if failed}
-		<p data-testid="base-error" class="border-t border-base-300 px-3 py-2 text-xs text-error">
-			{failed}
-		</p>
+		<div class="border-t border-base-300 px-3 py-2">
+			<Failure stands="apart" testId="base-error" said={failed} />
+		</div>
 	{/if}
 
 	{#if hasRounds}

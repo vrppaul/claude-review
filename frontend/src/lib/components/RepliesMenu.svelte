@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
@@ -95,7 +96,7 @@
 				{/snippet}
 			</Row>
 		{:else}
-			<p data-testid="no-replies" class="cr-muted px-2 py-6 text-center text-xs">Nothing new. Answers land here.</p>
+			<EmptyNote within="list" testId="no-replies">Nothing new. Answers land here.</EmptyNote>
 		{/each}
 	</div>
 </Popover>

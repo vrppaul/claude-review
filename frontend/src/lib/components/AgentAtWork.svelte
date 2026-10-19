@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
 	import FileChip from './FileChip.svelte';
-	import TypingIndicator from './TypingIndicator.svelte';
 
 	interface Props {
 		/** When the work began: the message that asked for it, or the work itself. */
@@ -46,7 +47,7 @@
 		<div class="flex items-center gap-3">
 			<span class="cr-who"><strong>Agent</strong></span>
 			{#if listening}
-				<TypingIndicator />
+				<BreathingDots tone="quiet" testId="working-dots" />
 			{/if}
 			<div class="flex-1"></div>
 			<span class="cr-faint text-xs">
@@ -57,7 +58,7 @@
 			{/if}
 		</div>
 		{#if failed}
-			<p data-testid="stop-error" class="text-xs text-error">{failed}</p>
+			<Failure stands="apart" testId="stop-error" said={failed} />
 		{/if}
 		{#if work?.text}
 			<p data-testid="panel-progress" class="cr-progress text-sm">{work.text}</p>

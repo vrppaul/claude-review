@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { counted, FILES_HAVING } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
@@ -17,7 +18,7 @@
 	The working tree has moved on — {counted(moved, FILES_HAVING)} changed since this diff was taken.
 	{#snippet actions()}
 		{#if retaking.failed}
-			<span data-testid="retake-error" class="text-error">{retaking.failed}</span>
+			<Failure stands="inline" testId="retake-error" said={retaking.failed} />
 		{/if}
 		<Button tone="quiet" size="xs" testId="retake-diff" onclick={() => retaking.run(() => review.diff.retake())}>
 			Retake

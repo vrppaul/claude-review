@@ -2,6 +2,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
@@ -9,7 +10,6 @@
 	import StoryArrivalNote from './StoryArrivalNote.svelte';
 	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
-	import TypingIndicator from './TypingIndicator.svelte';
 
 	const review = useReview();
 
@@ -80,7 +80,7 @@
 				onclick={() => review.wayIntoStory.readAsStory()}
 			>
 				{#if storySays === 'writing'}
-					<TypingIndicator inTheAgentsColour />
+					<BreathingDots tone="agent" testId="story-writing-dots" />
 					Story · writing
 				{:else}
 					<Icon name="story" size="sm" />

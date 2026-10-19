@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { imageUrl } from '$lib/api/review-api';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 
@@ -43,7 +44,7 @@
 		{/each}
 		{#if attachments.uploading > 0}
 			<span data-testid="image-uploading" class="cr-image-thumb cr-image-pending">
-				<span class="loading loading-xs loading-spinner"></span>
+				<BreathingDots tone="quiet" testId="uploading-dots" />
 			</span>
 		{/if}
 	</div>

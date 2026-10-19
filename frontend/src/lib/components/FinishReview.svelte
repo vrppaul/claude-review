@@ -2,6 +2,7 @@
 	import type { Anchor, Thread } from '$lib/types';
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -133,7 +134,7 @@
 			title={FINISH_KEYS}
 		>
 			{#if submission.sending}
-				<span class="loading loading-xs loading-spinner"></span>
+				<BreathingDots tone="inherited" testId="sending-dots" />
 				Sending
 			{:else if inRounds}
 				Send round {review.rounds.current}

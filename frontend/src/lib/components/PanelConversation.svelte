@@ -5,7 +5,7 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import type { ChipVoice } from '$lib/ui/chip';
 	import CodeBox from '$lib/ui/CodeBox.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
+	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
@@ -89,12 +89,11 @@
 		no other way of seeing. -->
 	{#if review.conversation.turns.length === 0 && !review.answerer.work}
 		{#if attached}
-			<div data-testid="panel-empty" class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-				<span class="text-base-300"><Icon name="conversation" size="xl" /></span>
-				<p class="cr-faint text-sm">
+			<div class="flex h-full flex-col justify-center">
+				<EmptyNote within="view" mark="conversation" testId="panel-empty">
 					Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
 					about the rest.
-				</p>
+				</EmptyNote>
 			</div>
 		{:else}
 			<!-- Before the agent's first wait this is what the reader sees, and

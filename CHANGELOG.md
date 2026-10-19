@@ -196,6 +196,23 @@
   the colour of the reader's controls. Fields, filters and checkboxes are
   parts of the library, and eslint refuses an `<input>`, a `<textarea>` or
   a `<select>` anywhere else.
+- **One look for what is on its way, for what failed, and for nothing.**
+  Whatever is on its way — the review opening, a review being sent, an
+  image uploading, an answer, the agent at work, a story being written —
+  breathes as three dots, where the page drew DaisyUI's spinner at two
+  sizes beside its own dots. Why something could not be done is said in
+  small words in the colour of what fails, in one form wherever it is said,
+  where it stood in five forms at three sizes; a review that cannot be
+  opened says so the same way, where DaisyUI's alert said it. A list or a
+  view with nothing in it — the replies, the tree, the bases, the diff, a
+  file, the panel — says so in muted words in the middle of its room, at a
+  list's size in a list and a view's in a view, where it stood in five
+  forms. An icon that says something by its colour — a check of something
+  done, the bin, the agent's book, a warning, the base in force, the
+  panel's empty mark — takes it from its tone. The library draws each of
+  these. eslint refuses a class of any of DaisyUI's components anywhere,
+  and the colour of what fails outside the library, as stylelint does in
+  every stylesheet but the library's.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

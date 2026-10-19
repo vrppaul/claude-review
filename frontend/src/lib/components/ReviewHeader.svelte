@@ -3,6 +3,7 @@
 	import type { Ending } from '$lib/review/server-link.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import type { IconName } from '$lib/ui/icons';
@@ -98,7 +99,7 @@
 		<div class="flex-1"></div>
 
 		{#if review.submission.failed}
-			<span data-testid="submit-error" class="text-sm text-error">{review.submission.failed}</span>
+			<Failure stands="inline" testId="submit-error" said={review.submission.failed} />
 		{/if}
 
 		{#if review.threads.answered.length > 0}

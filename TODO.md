@@ -224,7 +224,10 @@ of it is built yet.
       drawings (avatars, a story's nodes); the story contents' axis laid
       out in `main.css` from Row's tokens; utilities held in a script's
       string and handed to `class={…}`, which no gate of a class list
-      reads. A rule that each look class has one owner is to hold them.
+      reads; a list's or a view's "nothing here" drawn by hand rather than
+      with `EmptyNote`, muted words with room round them that no pattern
+      tells from other words. A rule that each look class has one owner is
+      to hold them.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces

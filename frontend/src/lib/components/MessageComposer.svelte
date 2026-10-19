@@ -7,6 +7,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AttachedImages from './AttachedImages.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
@@ -170,7 +171,7 @@
 		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
 		<div class="flex-1"></div>
 		{#if whatWentWrong}
-			<span data-testid="panel-error" class="text-xs text-error">{whatWentWrong}</span>
+			<Failure stands="inline" testId="panel-error" said={whatWentWrong} />
 		{/if}
 		<Button tone="primary" size="xs" testId="send-message" disabled={!canSend} onclick={send}>
 			{review.conversation.sending ? 'Sending' : 'Send'}
