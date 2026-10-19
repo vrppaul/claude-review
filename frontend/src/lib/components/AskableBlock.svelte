@@ -4,6 +4,7 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import type { StoryBlock } from '$lib/types';
+	import Band from '$lib/ui/Band.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import type { FrameLook } from '$lib/ui/frame';
@@ -22,9 +23,9 @@
 		children: Snippet;
 		/**
 		 * The frame its words stand in where they have one of their own, as its
-		 * part of the story draws it: the band fills the frame, and what hangs
-		 * under the block hangs below it. None for a block that shares the
-		 * frame of the blocks around it.
+		 * part of the story draws it: a frame of bands, which its band fills,
+		 * and what hangs under the block hangs below it. None for a block that
+		 * shares the frame of bands of the blocks around it.
 		 */
 		frame?: FrameLook | undefined;
 	}
@@ -62,9 +63,9 @@
 </script>
 
 {#snippet band()}
-	<div data-testid="askable-band" class={['cr-askable', writtenUnder && 'cr-askable-written-under']}>
+	<Band current={writtenUnder} testId="askable-band">
 		{@render children()}
-		<span class="cr-ask-over-block">
+		{#snippet offer()}
 			<Button
 				bind:element={asking}
 				tone="asking"
@@ -76,8 +77,8 @@
 				<Icon name="conversation" size="xs" />
 				{ASK_ABOUT_THIS}
 			</Button>
-		</span>
-	</div>
+		{/snippet}
+	</Band>
 {/snippet}
 
 <!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is

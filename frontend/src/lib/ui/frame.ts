@@ -5,6 +5,14 @@
  * One radius for every one, and room of its own round what it holds, which
  * says where the room is taken: round its words, or inside the bands of the
  * blocks it holds that the reader may ask about.
+ *
+ * A band (Band) is such a block: lit across its frame from inside the
+ * frame's edge to its far side, its words standing in as a frame's words
+ * do. It reaches above and below its words into the room its frame keeps
+ * there, taking none, so a block stands where its words would without it;
+ * and it offers its act over its top right edge while it is lit. The frame
+ * and the band are drawn together here and in the library's stylesheet, so
+ * nothing outside the library reaches into either.
  */
 
 /**
@@ -28,10 +36,10 @@ export type FrameGround = 'tint' | 'none';
  * What a frame holds, which says where its room is taken:
  * - words: it stands them in from its edge and its far side, and above and
  *   below them
- * - bands: blocks the reader may ask about, each lit as a band from inside
- *   the frame's edge to its far side, which take that room inside the band;
- *   the frame keeps the room above and below what it holds, which a band
- *   reaches into past its words
+ * - bands: blocks the reader may ask about, each a Band, which takes the
+ *   room at the frame's edge and far side inside itself; the frame keeps the
+ *   room above and below what it holds, which a band reaches into past its
+ *   words
  */
 export type FrameHolds = 'words' | 'bands';
 

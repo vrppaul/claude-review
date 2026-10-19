@@ -412,6 +412,40 @@
 .cr-ui-frame-holds-bands {
 	padding-block: var(--cr-edge-block-room);
 }
+/*
+ * A band (Band) in a frame of bands: across the frame from inside its edge
+ * to its far side, its words standing in as a frame's words do, its corners
+ * at the far side the frame's. It reaches above and below its words into
+ * the room the frame keeps there, and takes none: a block stands where its
+ * words would without it. As the one the reader is at (.cr-ui-band-current)
+ * it is painted as a row the reader is at, below
+ */
+.cr-ui-band {
+	position: relative;
+	margin-block: calc(-1 * var(--cr-band-reach));
+	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
+	border-radius: 0 var(--radius-field) var(--radius-field) 0;
+}
+/* Pointed at, or holding the keyboard, in the pointer's light, the frame's wash showing through */
+.cr-ui-band:not(.cr-ui-band-current):is(:hover, :focus-within) {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
+/*
+ * What it offers over its top right edge: out of the flow, so no word moves
+ * as it shows; standing on the line its words begin at, over its top edge
+ * and the room above it, so none of its words lies under it. Seen while the
+ * band is pointed at or holds the keyboard
+ */
+.cr-ui-band-offer {
+	position: absolute;
+	right: 0.625rem;
+	bottom: calc(100% - var(--cr-band-reach));
+	z-index: var(--cr-layer-over-content);
+	opacity: 0;
+}
+.cr-ui-band:is(:hover, :focus-within) > .cr-ui-band-offer {
+	opacity: 1;
+}
 .cr-ui-frame-dashed {
 	border-left-style: dashed;
 }
@@ -749,9 +783,11 @@
 /*
  * The one of its list the reader is at — the file they are in, the base
  * the diff is read against, the option the keys lit — on their mark's
- * tint, its edge at the row's start
+ * tint, its edge at the row's start; and so the band (Band) of the story's
+ * words a thread of theirs hangs open under
  */
-.cr-ui-row-current {
+.cr-ui-row-current,
+.cr-ui-band-current {
 	background-color: var(--cr-selected);
 	box-shadow: var(--cr-shadow-selected-start);
 }

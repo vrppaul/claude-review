@@ -745,59 +745,14 @@
 .cr-askable-hangs {
 	margin-top: var(--cr-band-reach);
 }
-/*
- * A block of the agent's words in a story the reader may ask about.
- * Pointed at, or holding the keyboard, it is banded whole — its heading and
- * its words — across the frame of bands it stands in (an EdgeFrame, of its
- * own or of the blocks round it), from inside the frame's edge to its far
- * side, in the pointer's light, and offers "Ask about this" over its top
- * right edge. While a thread hangs open under it, or a comment being
- * written, it is the one the reader is at: on their mark's tint, its edge
- * at its start beside the frame's, as the pointer leaves it, the frame's
- * wash showing through; folded away, a thread leaves it as it was. Its room
- * is the same either way, and so is the place of every word in it: only
- * the band and the button come and go. Its words stand in from the frame's
- * edge and far side as a frame's words do; the band reaches above and
- * below them, and takes no room for it: a block stands where its words
- * would without it. At the frame's far side its corners are the frame's.
- */
-.cr-askable {
-	position: relative;
-	margin-block: calc(-1 * var(--cr-band-reach));
-	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
-	border-radius: 0 var(--radius-field) var(--radius-field) 0;
-}
-.cr-askable:not(.cr-askable-written-under):is(:hover, :focus-within) {
-	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
-}
-.cr-askable-written-under {
-	background-color: var(--cr-selected);
-	box-shadow: var(--cr-shadow-selected-start);
-}
 /* Words beside framed blocks the reader may ask about, which stand as far in as theirs do */
 .cr-voice-inset {
 	padding-left: var(--cr-edge-inset);
 }
 /*
- * "Ask about this" over a block: at its top right, out of the flow, so no
- * word moves as it shows; standing on the line the block's words begin at,
- * over the band's top edge and the room above it, so none of the block's
- * words lies under it, and none of the block above (`.cr-askable-stack`).
- * Seen while the block is pointed at or holds the keyboard. Its button is
- * the library's, on the page's own ground, so no word behind shows through
+ * Blocks of the agent's words one under another: as far apart as the offer
+ * over each is tall, so it lies over none of the words of the block above
  */
-.cr-ask-over-block {
-	position: absolute;
-	right: 0.625rem;
-	bottom: calc(100% - var(--cr-band-reach));
-	z-index: var(--cr-layer-over-content);
-	opacity: 0;
-}
-.cr-askable:hover > .cr-ask-over-block,
-.cr-askable:focus-within > .cr-ask-over-block {
-	opacity: 1;
-}
-/* Blocks of the agent's words one under another: as far apart as the offer over each is tall */
 .cr-askable-stack {
 	display: flex;
 	flex-direction: column;

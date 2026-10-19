@@ -81,9 +81,8 @@
 	--cr-edge-end-room: var(--cr-card-room-inline);
 	--cr-edge-block-room: 0.5rem;
 	/*
-	 * How far the band of a block the reader may ask about reaches above and
-	 * below its words: into the room a frame of bands keeps there, so a band
-	 * fills its frame
+	 * How far a band (lib/ui Band) reaches above and below its words: into
+	 * the room a frame of bands keeps there, so a band fills its frame
 	 */
 	--cr-band-reach: var(--cr-edge-block-room);
 

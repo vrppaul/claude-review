@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|Dot|EdgeFrame|FoldChevron|Icon|IconButton|Key|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
+	'/^(Band|Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|Dot|EdgeFrame|FoldChevron|Icon|IconButton|Key|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -349,6 +349,20 @@ const STILL_PRESSED_BY_HAND = [
 	'src/lib/components/HunkGap.svelte'
 ];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
+
+// A block of the story the reader may ask about is banded by the library (Band, in an EdgeFrame of bands), and
+// nothing outside it bands one its own way: the page's band reached back over its frame's room and edge by
+// margins built from the frame's tokens, and lay its edge over a warning's. The classes it was drawn with are
+// refused in a class list and in any string a component holds; stylelint refuses a margin outside the library
+// that takes back a library part's room, however the band is drawn anew
+const DRAWN_AS_A_BAND = 'Band a block the reader may ask about with lib/ui Band, in an EdgeFrame of bands.';
+// The classes the page drew its bands with
+const A_BAND_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(cr-askable|cr-askable-written-under|cr-ask-over-block)(\\s|$)/';
+const NO_BANDS_OF_ITS_OWN = [
+	...inClassLists(A_BAND_OF_ITS_OWN, DRAWN_AS_A_BAND),
+	{ selector: `Literal[value=${A_BAND_OF_ITS_OWN}]`, message: DRAWN_AS_A_BAND },
+	{ selector: `TemplateElement[value.raw=${A_BAND_OF_ITS_OWN}]`, message: DRAWN_AS_A_BAND }
+];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
 // reason. So no part takes a class, by its own name or with the attributes of an element it draws, which it takes
@@ -545,7 +559,8 @@ export default tseslint.config(
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
 				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN
+				...NO_ROWS_OF_ITS_OWN,
+				...NO_BANDS_OF_ITS_OWN
 			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
@@ -597,7 +612,8 @@ export default tseslint.config(
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
 				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN
+				...NO_ROWS_OF_ITS_OWN,
+				...NO_BANDS_OF_ITS_OWN
 			]
 		}
 	},
@@ -614,7 +630,8 @@ export default tseslint.config(
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
 				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN
+				...NO_ROWS_OF_ITS_OWN,
+				...NO_BANDS_OF_ITS_OWN
 			]
 		}
 	},
