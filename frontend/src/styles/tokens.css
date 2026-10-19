@@ -132,6 +132,9 @@
 	 */
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + 1rem + 1px);
 
+	/* How long one breath takes of whatever breathes while the agent works on it: a dot (lib/ui Dot), a story's sketch */
+	--cr-breath: 1.4s;
+
 	/*
 	 * A notice (lib/ui NoticeBar): how far its words stand in from its edges,
 	 * above and below them and at either end, as far as the review's header

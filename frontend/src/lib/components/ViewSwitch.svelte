@@ -2,6 +2,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
@@ -86,8 +87,8 @@
 					Story
 				{/if}
 				{#if storySays === 'unread'}
-					<!-- Unsaid to a screen reader: the note under the switch said it -->
-					<span data-testid="segment-unread" class="text-(--cr-unread)" aria-hidden="true">●</span>
+					<!-- Unsaid to a screen reader, as every dot is: the note under the switch said it -->
+					<Dot tone="unread" testId="segment-unread" />
 				{/if}
 			</Segment>
 			<Segment

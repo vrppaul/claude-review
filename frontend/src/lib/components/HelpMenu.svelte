@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Key from '$lib/ui/Key.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 	import Popover from './Popover.svelte';
@@ -9,6 +10,8 @@
 	// What the pane is called, said to whoever cannot see it, and what heads it
 	const CALLED = 'Getting around, and the keyboard';
 	const HEADING = 'Help';
+	// What stands between two keys that do opposite things: a slash, as what they do is written
+	const OPPOSITES_APART = ' / ';
 
 	const review = useReview();
 
@@ -55,7 +58,7 @@
 			data-role={HELP_BUTTON_ROLE}
 			title="The tour, what is new, and the keys (?)"
 		>
-			<kbd class="cr-guide-key">?</kbd> Help
+			<Key keys="?" testId="help-key" /> Help
 		</Button>
 	{/snippet}
 
@@ -87,15 +90,19 @@
 		</div>
 		<h3 class="mb-3 text-xs font-semibold">Keyboard</h3>
 		<dl data-testid="shortcuts-list" class="space-y-2">
-			{#each keysOf(review) as row (row.keys)}
+			{#each keysOf(review) as row (row.does)}
 				<div class="flex items-baseline gap-4">
-					<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control-text)">{row.keys}</dt>
+					<dt class="cr-muted w-32 shrink-0 text-xs">
+						{#each row.keys as key, position (key)}
+							{#if position > 0}{OPPOSITES_APART}{/if}<Key keys={key} testId="shortcut-key" />
+						{/each}
+					</dt>
 					<dd class="text-sm">{row.does}</dd>
 				</div>
 			{/each}
 			<!-- The list's own key, and every open pane's: not one the review answers -->
 			<div class="flex items-baseline gap-4">
-				<dt class="w-32 shrink-0 font-mono text-xs text-(--cr-control-text)">Esc</dt>
+				<dt class="w-32 shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
 				<dd class="text-sm">Close it</dd>
 			</div>
 		</dl>

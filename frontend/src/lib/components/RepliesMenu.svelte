@@ -3,6 +3,7 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
@@ -79,9 +80,9 @@
 			<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
 				{#snippet leading()}
 					<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
-					<span class="w-2">
+					<span class="flex w-2">
 						{#if unread}
-							<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-unread)"></span>
+							<Dot tone="unread" testId="reply-unread" />
 							<span class="sr-only">unread:</span>
 						{/if}
 					</span>

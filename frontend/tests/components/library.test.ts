@@ -20,6 +20,8 @@ import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
 import Chip from '$lib/ui/Chip.svelte';
 import Count from '$lib/ui/Count.svelte';
+import Dot from '$lib/ui/Dot.svelte';
+import Key from '$lib/ui/Key.svelte';
 import Tag from '$lib/ui/Tag.svelte';
 
 // What a test hands the library's parts to draw inside them, and what it finds each by
@@ -33,6 +35,8 @@ const RELEASE = 'https://github.com/pavelparanin/claude-review/releases';
 const THREADS = 3;
 // What a chip's cross says it does
 const REMOVING = 'Take this thread out of the message';
+// Keys held together, as the help writes them
+const CHORD = 'Ctrl+Enter';
 
 /** A part of the library, drawn with what every one of them is drawn with, and a class handed to it besides. */
 const WITH_A_CLASS_FROM_OUTSIDE = [
@@ -159,6 +163,14 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 				children: drawn,
 				class: FROM_OUTSIDE
 			} as never)
+	},
+	{
+		part: 'a dot',
+		render: () => render(Dot, { tone: 'unread', testId: TEST_ID, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a key',
+		render: () => render(Key, { keys: CHORD, testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	}
 ];
 
@@ -276,6 +288,19 @@ describe('the component library', () => {
 		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
 		expect(getByTestId(TEST_ID).querySelector('button')).toBeNull();
 		expect(getByTestId(TEST_ID).tagName).toBe('SPAN');
+	});
+
+	it('leaves a dot unsaid to whoever cannot see it: the words beside it say what it marks', () => {
+		const { getByTestId } = render(Dot, { tone: 'unread', testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).getAttribute('aria-hidden')).toBe('true');
+	});
+
+	it('says a key is a key of the keyboard, to whoever cannot see its box', () => {
+		const { getByTestId } = render(Key, { keys: CHORD, testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).tagName).toBe('KBD');
+		expect(getByTestId(TEST_ID).textContent).toBe(CHORD);
 	});
 });
 

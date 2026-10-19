@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|EdgeFrame|FoldChevron|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
+	'/^(Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|Dot|EdgeFrame|FoldChevron|Icon|IconButton|Key|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -281,18 +281,36 @@ const NO_NOTICES_OF_THEIR_OWN = [
 	{ selector: `TemplateElement[value.raw=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE }
 ];
 
-// A mark standing in a line of words is drawn by the library — a tag, a count or a chip (Tag, Count, Chip) — and
-// nothing outside it draws one its own way: the page drew a tag two ways, an edged word its class lowercased and a
-// filled pill, at three heights by the line each stood in; counted threads with DaisyUI's badges at two sizes, at
-// the box's corner where a tag had the field's; and drew its chips by hand, the cross that takes one out of a
-// message a button of its own beside them. The classes it drew them with are refused in a class list and in any
-// string a component holds. DaisyUI's `badge` joins them once the rows of the tree and of a story's contents count
-// with Count too
-const DRAWN_AS_A_MARK = 'Draw a tag, a count or a chip with lib/ui (Tag, Count, Chip), not with classes of its own.';
+// A mark standing in a line of words is drawn by the library — a tag, a count, a chip, a dot or a key (Tag, Count,
+// Chip, Dot, Key) — and nothing outside it draws one its own way: the page drew a tag two ways, an edged word its
+// class lowercased and a filled pill, at three heights by the line each stood in; counted threads with DaisyUI's
+// badges at two sizes, at the box's corner where a tag had the field's; drew its chips by hand, the cross that
+// takes one out of a message a button of its own beside them; its dots as a glyph, as circles of 6 px and of 5;
+// and its keys as a `kbd` of its own and as bare words. The classes it drew them with are refused in a class list
+// and in any string a component holds. DaisyUI's `badge` joins them once the rows of the tree and of a story's
+// contents count with Count, and `rounded-full` once the tree's dot is a Dot
+const DRAWN_AS_A_MARK =
+	'Draw a tag, a count, a chip, a dot or a key with lib/ui (Tag, Count, Chip, Dot, Key), not with classes of its own.';
 // The classes the page drew its marks with
 const A_MARK_OF_ITS_OWN =
-	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop)(\\s|$)/';
+	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-guide-hint-dot|cr-guide-key)(\\s|$)/';
+// DaisyUI's key, behind any variants and at any size, refused inside the library too, which draws its own: `kbd`,
+// `kbd-sm`. In any string as well: `<svelte:element this="kbd">` would draw one past the rule on elements below
+const DAISY_KEY = '/(^|\\s)([^\\s:]+:)*kbd(-[a-z]+)?(\\s|$)/';
+// A dot or a cross written as a glyph, in words of markup or in a string: drawn at the size of the words round it,
+// it drifts with them, as the page's three dots drawn so were 7 px across beside dots of 6 and 5
+const DRAWN_AS_A_GLYPH = 'Draw a dot with lib/ui Dot, and a cross with <Icon name="cross">, not as a glyph in words.';
+const A_GLYPH_MARK = '/[●•⬤×✕✖]/';
+const NO_GLYPHS_OR_DAISY_KEYS = [
+	...inClassLists(DAISY_KEY, DRAWN_AS_A_MARK),
+	{ selector: `Literal[value=${DAISY_KEY}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `TemplateElement[value.raw=${DAISY_KEY}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `SvelteText[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
+	{ selector: `Literal[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
+	{ selector: `TemplateElement[value.raw=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH }
+];
 const NO_MARKS_OF_ITS_OWN = [
+	...NO_GLYPHS_OR_DAISY_KEYS,
 	...inClassLists(A_MARK_OF_ITS_OWN, DRAWN_AS_A_MARK),
 	{ selector: `Literal[value=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
 	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK }
@@ -373,6 +391,9 @@ const DRAWN_IN_ITS_COMPONENT =
 // The components that write a drawing: the library's Icon, every icon; StorySketch, the sketch of a story
 const DRAWING_COMPONENTS = ['src/lib/ui/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
 const SVG_IN_ITS_COMPONENT = { elements: ['svg'], message: DRAWN_IN_ITS_COMPONENT };
+// A key of the keyboard is drawn by the library's Key alone, the one component that writes a `kbd`
+const KEY_COMPONENTS = ['src/lib/ui/Key.svelte'];
+const KBD_IN_ITS_COMPONENT = { elements: ['kbd'], message: 'Draw a key of the keyboard with lib/ui Key.' };
 
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
@@ -456,22 +477,32 @@ export default tseslint.config(
 		rules: { 'svelte/no-at-html-tags': 'off' }
 	},
 	{
+		// A drawing and a key of the keyboard each in its one component, and in no other. The rule takes one list of
+		// what it refuses in a file, the last written for it, so each list below names again what it still refuses
 		files: ['**/*.svelte'],
-		ignores: DRAWING_COMPONENTS,
+		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT] }
+	},
+	{
+		files: DRAWING_COMPONENTS,
+		rules: { 'svelte/no-restricted-html-elements': ['error', KBD_IN_ITS_COMPONENT] }
+	},
+	{
+		files: KEY_COMPONENTS,
 		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
 	},
 	{
-		// Outside the library a component draws no button of its own either, but those still pressed by hand. The
-		// rule takes one list of what it refuses in a file, the last written for it, so the svg is named here again
+		// Outside the library a component draws no button of its own either, but those still pressed by hand
 		files: ['src/**/*.svelte'],
 		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
-		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY] }
+		rules: {
+			'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY]
+		}
 	},
 	{
 		// A component of the page that draws a drawing draws no button of its own
 		files: DRAWING_COMPONENTS,
 		ignores: ['src/lib/ui/**'],
-		rules: { 'svelte/no-restricted-html-elements': ['error', BUTTON_IN_THE_LIBRARY] }
+		rules: { 'svelte/no-restricted-html-elements': ['error', KBD_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY] }
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
@@ -598,7 +629,8 @@ export default tseslint.config(
 				...NO_PAGE_LOOKUPS,
 				...NO_CHOOSING,
 				...NO_DAISY_BUTTONS,
-				...TAKES_NO_CLASS
+				...TAKES_NO_CLASS,
+				...NO_GLYPHS_OR_DAISY_KEYS
 			]
 		}
 	},

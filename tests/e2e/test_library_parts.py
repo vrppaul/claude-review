@@ -604,3 +604,80 @@ async def test_every_tag_count_and_chip_stands_in_one_box_at_a_fields_corner_wha
 
     corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
     assert boxes == [MarkBox(height=boxes[0].height, corner=corner, size=boxes[0].size)] * len(EVERY_MARK_IN_A_LINE)
+
+
+# Every dot a review draws once an agent is at work and raised a thread, each where it stands: how the agent stands
+# with the review, in the header; that the thread's answer is new, on its card; and the dots that breathe while the
+# agent works, on the card of its work
+EVERY_DOT = ["presence-dot", "comment-unread-dot", "breathing-dot"]
+# A dot is round: each corner half its size
+ROUND = "50%"
+# Every key of the keyboard the help shows: its own, on the button that opens it, and those it lists
+EVERY_KEY = ["help-key", "shortcut-key"]
+
+
+class DotLook(BaseModel):
+    """How a dot is drawn: how wide and how tall, and how round."""
+
+    model_config = ConfigDict(frozen=True)
+
+    width: float
+    height: float
+    corner: str
+
+
+class KeyLook(BaseModel):
+    """How a key is drawn: how tall, at what corner, in words of what size, weight and face."""
+
+    model_config = ConfigDict(frozen=True)
+
+    height: float
+    corner: str
+    size: str
+    weight: str
+    face: str
+
+
+async def _dot_of(page: Page, test_id: str) -> DotLook:
+    """How the first dot of a test id is drawn, as the browser works it out."""
+    dot = page.get_by_test_id(test_id).first
+    look = await painted(dot)
+    box = await dot.bounding_box()
+    assert box is not None
+    return DotLook(width=box["width"], height=look.height, corner=look.radius)
+
+
+async def _key_of(page: Page, test_id: str) -> KeyLook:
+    """How the first key of a test id is drawn, as the browser works it out."""
+    look = await painted(page.get_by_test_id(test_id).first)
+    return KeyLook(height=look.height, corner=look.radius, size=look.size, weight=look.weight, face=look.face)
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_every_dot_is_drawn_at_one_size_and_round(review: RunningReview, page: Page, scheme: str) -> None:
+    await _open_in(page, review, scheme)
+    await page.get_by_test_id("toggle-panel").click()
+    await _an_agent_attaches_and_answers(review)
+    await _the_agent_raises_a_question(review)
+    await page.get_by_test_id("comment-unread-dot").wait_for()
+    await page.get_by_test_id("breathing-dot").first.wait_for()
+
+    dots = [await _dot_of(page, test_id) for test_id in EVERY_DOT]
+
+    assert dots == [DotLook(width=dots[0].height, height=dots[0].height, corner=ROUND)] * len(EVERY_DOT)
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_every_key_the_help_shows_stands_in_one_box_in_the_codes_regular_face(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await page.get_by_test_id("open-help").click()
+    await page.get_by_test_id("shortcut-key").first.wait_for()
+
+    keys = [await _key_of(page, test_id) for test_id in EVERY_KEY]
+
+    face = await on_a_probe(page, "fontFamily", "var(--font-mono)")
+    corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
+    one_box = KeyLook(height=keys[0].height, corner=corner, size=keys[0].size, weight=REGULAR, face=face)
+    assert keys == [one_box] * len(EVERY_KEY)

@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
@@ -70,7 +71,7 @@
 						{#if step.done}
 							<span class="cr-branch-mark"><Icon name="check" size="xs" /></span>
 						{:else}
-							<span class="cr-branch-mark"><span class="cr-dot"></span></span>
+							<span class="cr-branch-mark"><Dot tone="quiet" breathing testId="branch-running" /></span>
 						{/if}
 						<span>{step.text}</span>
 					</li>

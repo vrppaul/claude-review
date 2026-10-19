@@ -533,43 +533,12 @@
 }
 
 /*
- * A turn that has not arrived is still a turn: it holds its place and
- * breathes, because a line that never changes reads as a hang.
+ * What the agent writes first in a story's sketch (.cr-sketch-waiting)
+ * breathes while it writes it, as the library's dots of a turn on its way
+ * do. One class, so asking the system for less motion stills it
  */
-.cr-dot {
-	width: 5px;
-	height: 5px;
-	border-radius: 999px;
-	background: var(--cr-muted);
-	display: inline-block;
-}
-/* Dots that breathe in the agent's colour, beside words said in it: on Story while the agent writes the story */
-.cr-dot-agent {
-	background: var(--cr-agent);
-}
-/*
- * What breathes while the agent works on it: the dots of a turn on its way,
- * and what it writes first in a story's sketch (.cr-sketch-waiting). Each
- * one class, so asking the system for less motion stills it
- */
-.cr-dot,
 .cr-sketch-writing {
-	animation: cr-pulse 1.4s ease-in-out infinite;
-}
-.cr-dot:nth-of-type(2) {
-	animation-delay: 0.18s;
-}
-.cr-dot:nth-of-type(3) {
-	animation-delay: 0.36s;
-}
-@keyframes cr-pulse {
-	0%,
-	100% {
-		opacity: 0.25;
-	}
-	50% {
-		opacity: 1;
-	}
+	animation: cr-breathe var(--cr-breath) ease-in-out infinite;
 }
 
 /* An answer lands in the agent's colour, a tint that fades, and leaves the words "new reply" behind */
@@ -1236,12 +1205,6 @@
 	font-size: 0.75rem;
 	color: var(--cr-control-text);
 }
-.cr-guide-hint-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 9999px;
-	background: var(--cr-control);
-}
 .cr-guide-release {
 	padding: 0 0.375rem;
 	border-radius: var(--radius-field);
@@ -1249,12 +1212,6 @@
 	color: var(--cr-control-text);
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
-}
-.cr-guide-key {
-	padding: 0 0.3rem;
-	border: 1px solid var(--color-base-300);
-	border-radius: 3px;
-	font-family: var(--font-mono);
 }
 .cr-guide-plus {
 	color: var(--cr-muted);
@@ -1302,17 +1259,18 @@
 .cr-illustration-line-short {
 	width: 55%;
 }
+/* The way to take the image off, its cross the icon the real one is drawn with */
 .cr-illustration-detach {
 	position: absolute;
 	top: -0.375rem;
 	right: -0.375rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	width: 0.875rem;
 	height: 0.875rem;
 	border-radius: 9999px;
 	background: var(--color-base-300);
-	font-size: 0.625rem;
-	line-height: 0.875rem;
-	text-align: center;
 }
 .cr-illustration-field {
 	height: 1.75rem;

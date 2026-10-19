@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import type { DotTone } from '$lib/ui/dot';
+	import Dot from '$lib/ui/Dot.svelte';
 
 	/** How the agent stands with the review, as far as the page can tell. */
 	type Presence = 'absent' | 'working' | 'listening';
 	// Each in its own colour: at work in the agent's, listening in the colour of something ready
-	const DOTS: Record<Presence, string> = {
-		absent: 'bg-(--color-base-300)',
-		working: 'bg-(--cr-agent)',
-		listening: 'bg-(--cr-done)'
+	const TONES: Record<Presence, DotTone> = {
+		absent: 'absent',
+		working: 'agent',
+		listening: 'done'
 	};
 
 	const review = useReview();
@@ -23,4 +25,4 @@
 </script>
 
 <!-- How the agent stands with the review, the same dot wherever it is said; words beside it say it aloud -->
-<span class={['h-1.5 w-1.5 shrink-0 rounded-full', DOTS[presence]]} aria-hidden="true"></span>
+<Dot tone={TONES[presence]} testId="presence-dot" />

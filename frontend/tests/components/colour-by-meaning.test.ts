@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import CommentThread from '$lib/components/CommentThread.svelte';
@@ -35,6 +35,8 @@ const NOBODY = '--color-base-300';
 const QUIET = '--cr-muted';
 // What has to be dealt with
 const A_WARNING = '--color-warning';
+// The dot that says how the agent stands with the review
+const PRESENCE = 'presence-dot';
 // The edge of a thread's card, by where the thread stands: in the reader's hands, raised by the agent, its lines
 // gone, and gone out with a round, a line between surfaces like any card's
 const THE_READERS_EDGE = '--cr-mark-line';
@@ -125,10 +127,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 		getByTestId('replies-menu').click();
 		await tick();
 
-		const dot = [...getByTestId('reply-row').querySelectorAll('span')].find((mark) =>
-			mark.classList.contains('rounded-full')
-		);
-		expectDrawnIn(dot, 'background', AGENTS);
+		expectDrawnIn(within(getByTestId('reply-row')).getByTestId('reply-unread'), 'background', AGENTS);
 	});
 
 	it('draws the keys in the help in the colour of the reader’s controls, as words that read at 4.5:1', () => {
@@ -137,7 +136,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 
 		const { getByTestId } = render(HelpMenu, inReview(review));
 
-		const keys = getByTestId('shortcuts-list').querySelectorAll('dt');
+		const keys = within(getByTestId('shortcuts-list')).getAllByTestId('shortcut-key');
 		expect(keys.length).toBeGreaterThan(0);
 		for (const key of keys) expectDrawnIn(key, 'color', READERS_WORDS);
 	});
@@ -153,26 +152,26 @@ describe('each thing is drawn in the colour of what it means', () => {
 	it('draws an agent listening in the colour of something ready', () => {
 		const review = answeredReview();
 
-		const { container } = render(PresenceDot, inReview(review));
+		const { getByTestId } = render(PresenceDot, inReview(review));
 
-		expectDrawnIn(container.querySelector('span'), 'background', DONE);
+		expectDrawnIn(getByTestId(PRESENCE), 'background', DONE);
 	});
 
 	it('draws an agent as nobody while the review cannot be reached: the page cannot know it is still there', () => {
 		const review = answeredReview();
 		review.link.lost();
 
-		const { container } = render(PresenceDot, inReview(review));
+		const { getByTestId } = render(PresenceDot, inReview(review));
 
-		expectDrawnIn(container.querySelector('span'), 'background', NOBODY);
+		expectDrawnIn(getByTestId(PRESENCE), 'background', NOBODY);
 	});
 
 	it('draws no agent as nobody', () => {
 		const review = openReview({ files: [file] });
 
-		const { container } = render(PresenceDot, inReview(review));
+		const { getByTestId } = render(PresenceDot, inReview(review));
 
-		expectDrawnIn(container.querySelector('span'), 'background', NOBODY);
+		expectDrawnIn(getByTestId(PRESENCE), 'background', NOBODY);
 	});
 
 	it('draws the agent at work on a message in its own colour', async () => {
@@ -181,9 +180,9 @@ describe('each thing is drawn in the colour of what it means', () => {
 		review.conversation.composer.setText('Run the tests');
 		await review.conversation.send([]);
 
-		const { container } = render(PresenceDot, inReview(review));
+		const { getByTestId } = render(PresenceDot, inReview(review));
 
-		expectDrawnIn(container.querySelector('span'), 'background', AGENTS);
+		expectDrawnIn(getByTestId(PRESENCE), 'background', AGENTS);
 	});
 });
 

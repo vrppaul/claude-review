@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Empty, and kept: without a script svelte-check cannot type the component
-	// for the illustration map. A drawing for the 1.5.0 release news.
+	// A drawing for the 1.5.0 release news.
+	import Icon from '$lib/ui/Icon.svelte';
 </script>
 
 <!-- A comment being written with a screenshot pasted under it, drawn in the
@@ -10,7 +10,7 @@
 		<span class="cr-illustration-line cr-illustration-line-added"></span>
 		<span class="cr-illustration-line"></span>
 		<span class="cr-illustration-line cr-illustration-line-short"></span>
-		<span class="cr-illustration-detach">×</span>
+		<span class="cr-illustration-detach"><Icon name="cross" size="xs" /></span>
 	</div>
 	<div class="cr-illustration-field">Why does this wrap here?</div>
 </div>

@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import type { IconName } from '$lib/ui/icons';
@@ -148,9 +149,7 @@
 			<PresenceDot />
 			Agent
 			{#if review.layout.agentPanel.unread > 0}
-				<span data-testid="panel-unread" class="text-(--cr-unread)">
-					<span aria-hidden="true">●</span><span class="sr-only">new answers</span>
-				</span>
+				<Dot tone="unread" testId="panel-unread" /><span class="sr-only">new answers</span>
 			{/if}
 		</Button>
 

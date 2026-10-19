@@ -3,8 +3,10 @@
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import Key from '$lib/ui/Key.svelte';
 	import Link from '$lib/ui/Link.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
@@ -110,7 +112,7 @@
 				{/if}
 				{#if waiting}
 					<p data-testid="guide-waiting" class="cr-guide-hint">
-						<span class="cr-guide-hint-dot"></span>
+						<Dot tone="reader" testId="guide-waiting-dot" />
 						{waiting.hint}
 					</p>
 				{/if}
@@ -154,7 +156,7 @@
 					</Button>
 					<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
 				</div>
-				<p class="cr-faint text-xs">You can take it later from the <kbd class="cr-guide-key">?</kbd> list.</p>
+				<p class="cr-faint text-xs">You can take it later from the <Key keys="?" testId="guide-help-key" /> list.</p>
 			</div>
 		</Pane>
 	</div>

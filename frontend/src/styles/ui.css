@@ -765,3 +765,72 @@
 	background: var(--color-base-100);
 	color: var(--cr-faint);
 }
+
+/*
+ * A key of the keyboard (Key): in the code's face and the colour of the
+ * reader's controls, what they press, in a line round it at a field's
+ * corner, as tall as a tag
+ */
+.cr-ui-key {
+	display: inline-block;
+	padding: 0 0.25rem;
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-field);
+	color: var(--cr-control-text);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-weight: 400;
+	line-height: 1rem;
+}
+
+/* A dot (Dot, lib/ui/dot.ts): round, 6 px across, in its tone's colour */
+.cr-ui-dot {
+	display: inline-block;
+	flex-shrink: 0;
+	width: 0.375rem;
+	height: 0.375rem;
+	border-radius: 50%;
+}
+.cr-ui-dot-unread {
+	background-color: var(--cr-unread);
+}
+.cr-ui-dot-agent {
+	background-color: var(--cr-agent);
+}
+.cr-ui-dot-done {
+	background-color: var(--cr-done);
+}
+/* Nobody there: in the colour of a line between surfaces, saying nothing */
+.cr-ui-dot-absent {
+	background-color: var(--color-base-300);
+}
+.cr-ui-dot-quiet {
+	background-color: var(--cr-muted);
+}
+.cr-ui-dot-reader {
+	background-color: var(--cr-mark);
+}
+/*
+ * One that breathes while what it marks is on its way, as a line that never
+ * changes reads as a hang; dots side by side breathe in turn, 0.18 s apart.
+ * One class, so asking the system for less motion stills it
+ */
+.cr-ui-dot-breathing {
+	animation: cr-breathe var(--cr-breath) ease-in-out infinite;
+}
+.cr-ui-dot-breathing:nth-of-type(2) {
+	animation-delay: 0.18s;
+}
+.cr-ui-dot-breathing:nth-of-type(3) {
+	animation-delay: 0.36s;
+}
+/* A breath: faint, whole, and faint again */
+@keyframes cr-breathe {
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	50% {
+		opacity: 1;
+	}
+}

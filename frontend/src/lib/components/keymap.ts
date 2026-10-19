@@ -57,7 +57,8 @@ type Live = (review: Review) => boolean;
 
 /** One line of the help: the keys as it writes them, what they do, each press, and where and when they are keys at all. */
 export interface KeyRow {
-	keys: string;
+	/** The keys, the help drawing each as a key: one, or two that do opposite things, in the order `does` names them. Keys held together are one: `Ctrl+Enter`. */
+	keys: readonly string[];
 	does: string;
 	presses: readonly Press[];
 	/**
@@ -123,7 +124,7 @@ function finish(review: Review): void {
 
 const KEYMAP: readonly KeyRow[] = [
 	{
-		keys: 'j / k',
+		keys: ['j', 'k'],
 		does: 'Down / up a line',
 		presses: [
 			alone('j', (review) => review.sections.stepLine(1)),
@@ -134,7 +135,7 @@ const KEYMAP: readonly KeyRow[] = [
 	},
 	// Enter on a line's number is the number's own: it is a button
 	{
-		keys: 'Enter',
+		keys: ['Enter'],
 		does: 'Comment on this line',
 		presses: [],
 		views: EVERY_VIEW,
@@ -143,14 +144,14 @@ const KEYMAP: readonly KeyRow[] = [
 	// The chord in a comment or a message is the field's own: it knows where what it holds goes.
 	// A message is written whatever is drawn
 	{
-		keys: FIELD_KEYS,
+		keys: [FIELD_KEYS],
 		does: 'Add the comment, or send the message, being written',
 		presses: [],
 		views: EVERY_VIEW,
 		live: ALWAYS
 	},
 	{
-		keys: '] / [',
+		keys: [']', '['],
 		does: 'Next / previous file',
 		presses: SECTION_PRESSES,
 		views: THE_FILES,
@@ -158,7 +159,7 @@ const KEYMAP: readonly KeyRow[] = [
 	},
 	// A story's sections are its pieces: every step, then what no step tells
 	{
-		keys: '] / [',
+		keys: [']', '['],
 		does: 'Next / previous piece of the story',
 		presses: SECTION_PRESSES,
 		views: THE_STORY,
@@ -167,7 +168,7 @@ const KEYMAP: readonly KeyRow[] = [
 	// Threads are stepped through wherever they are drawn: under lines that take comments, or above
 	// a diff that no longer holds their file, even one that holds no file at all
 	{
-		keys: 'n / p',
+		keys: ['n', 'p'],
 		does: 'Next / previous comment',
 		presses: [alone('n', (review) => review.navigator.step(1)), alone('p', (review) => review.navigator.step(-1))],
 		views: EVERY_VIEW,
@@ -175,16 +176,16 @@ const KEYMAP: readonly KeyRow[] = [
 	},
 	// An answer on a line the view does not draw is gone to in the files, whatever is on screen
 	{
-		keys: 'a',
+		keys: ['a'],
 		does: 'Next unread reply',
 		presses: [alone('a', (review) => review.navigator.nextUnread())],
 		views: EVERY_VIEW,
 		live: ALWAYS
 	},
-	{ keys: 'c', does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW, live: ALWAYS },
+	{ keys: ['c'], does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW, live: ALWAYS },
 	// The tree stands beside the files whatever the diff holds: of no file, it says so
 	{
-		keys: 'f',
+		keys: ['f'],
 		does: 'Show or hide the file tree',
 		presses: [alone('f', (review) => review.layout.fileTree.toggle())],
 		views: THE_FILES,
@@ -193,35 +194,35 @@ const KEYMAP: readonly KeyRow[] = [
 	// The same key in a story is its own column's: the contents, not the tree it does not draw.
 	// The contents stand beside a story's lines, and with none told there are none to put away
 	{
-		keys: 'f',
+		keys: ['f'],
 		does: 'Show or hide the contents',
 		presses: [alone('f', (review) => review.layout.storyContents.toggle())],
 		views: THE_STORY,
 		live: WHILE_LINES_ARE_DRAWN
 	},
 	{
-		keys: 'v',
+		keys: ['v'],
 		does: 'Mark this file viewed',
 		presses: [alone('v', (review) => onCurrentFile(review, (path) => review.reading.toggleViewed(path)))],
 		views: THE_FILES,
 		live: WHILE_LINES_ARE_DRAWN
 	},
 	{
-		keys: 'u',
+		keys: ['u'],
 		does: 'Fold or unfold this file',
 		presses: [alone('u', (review) => onCurrentFile(review, (path) => review.reading.toggleFolded(path)))],
 		views: THE_FILES,
 		live: WHILE_LINES_ARE_DRAWN
 	},
 	{
-		keys: FINISH_KEYS,
+		keys: [FINISH_KEYS],
 		does: 'Finish the review',
 		presses: [{ key: 'Enter', held: 'command-and-shift', run: finish }],
 		views: EVERY_VIEW,
 		live: ALWAYS
 	},
 	{
-		keys: '?',
+		keys: ['?'],
 		does: 'Show this list',
 		presses: [alone('?', (review) => review.guide.setHelpOpen(true))],
 		views: EVERY_VIEW,
