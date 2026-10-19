@@ -179,7 +179,7 @@
   claims no line another step's code has moved to. Such a step shows no
   code, never other code at its old numbers: its number and its reason,
   still open to a question, and one
-  line, "Its code in app.py is no longer found."; it counts as no file of
+  line, "Its code in app.py is no longer found.", where its number stands; it counts as no file of
   its chapter, whose head then counts only its steps, and the agent asked
   for the story again is told it with `lines` `null`. Every told step says
   whether a thread may name its file (`commentable`). The
@@ -266,7 +266,9 @@
   Story's introduction and the notes under the switch, the modals and the
   guide's card — stands on one ground, edge, corner and lift, at one of
   four widths, and one with a name is headed alike: the name at one size,
-  the way to put it away at the far end. A pane stands whole where the
+  the way to put it away at the far end. A pane that asks a question —
+  before a comment is deleted or put away, before stories are turned on —
+  is headed by it, at that size. A pane stands whole where the
   reader sees it: moved in from the window's edges, never under a file's
   header or a chapter's bar kept in sight over what is read, nor past the
   foot of the area it is drawn in, where it opens the other way; what it
@@ -474,13 +476,15 @@
   alike, and what a story costs is said in one. A block of the story
   pointed at is banded inside its frame's edge; one a thread of the
   reader's hangs under stands on their tint with their edge beside the
-  frame's, so a doubt still shows the warning's yellow. The light theme's
-  warning is a shade darker, to read on that tint.
+  frame's, so a doubt still shows the warning's yellow. What hangs under a
+  block hangs 8 pixels below its band, as under a line of code, also where
+  the block has a frame of its own, below which it hung 16. The light
+  theme's warning is a shade darker, to read on that tint.
 - **A thread, every turn of the panel — what the reader asks, the agent's
   answer and its work — and a story on its way stand on one kind of
   card**: on the raised ground, edged in the colour of whose it is, at one
   corner — 6 pixels, where a thread's was 8 — with one room round what it
-  holds, so the panel's turns line their words up. Code set apart, the commands to attach an
+  holds, 16 pixels on every side, so the panel's turns line their words up. Code set apart, the commands to attach an
   agent and the source of a diagram that did not draw, stands on a quiet
   card at the code's size. A hanging card points up at what it is about
   with the arrow a pane points with. The agent's violet moves a shade,
@@ -501,7 +505,8 @@
   the reader's mark. A thread or a file
   named in what is said is a chip in the same box, in the colour of who
   named it; the cross that takes one out of a message being written is
-  the chip's own.
+  the chip's own. The release the news card is of is a quiet tag beside
+  its heading.
 - **Every row of a list is one row, 32 pixels tall at the least**: the
   tree's files and folders, a story's contents, the bases to read against,
   the replies, the @-picker, the comments the finish pane lists, Help's
@@ -512,7 +517,10 @@
   words. A chapter's title longer than the column is wide wraps onto more
   lines and reads whole, its node and its count level with its first line;
   a file's name stays one line, cut where its row ends. A list of threads
-  gives one line to each: where it hangs, then what it says.
+  gives one line to each: where it hangs, then what it says. A comment the
+  finish pane lists is one row, its words in full under the line it hangs
+  on: a press on them takes the reader to it, and one sent with a round
+  steps back whole.
 - **Every dot is one dot, and every key one key.** A reply not read, the
   agent there, a turn on its way, a file changed since the round, the
   overview's node in a story's contents: round, 6 pixels across. A key to
