@@ -220,18 +220,19 @@ of it is built yet.
 - [ ] `refactor(ui)`: sizes are still numbers in `frontend/src/styles/ui.css`
       (gaps, rooms, words, widths): the scale's tokens (spacing, type,
       corner, line) are to hold them, and stylelint to refuse a number
-      outside `tokens.css`. A card's room, 14 px, moves to the scale's 16.
-- [ ] `refactor(ui)`: gates that refuse old names only: a tag or a card
-      drawn anew with utilities, a quiet or done notice bar on base-200,
-      an opacity form such as `bg-warning/10` (a colour `tokens.css` never
-      wrote), and the stylesheet's round drawings (avatars, a story's
-      nodes) pass. A rule that each look class has one owner is to hold
-      them.
+      outside `tokens.css`.
+- [ ] `refactor(ui)`: what every gate still lets through: a quiet or done
+      notice bar on base-200; an opacity form such as `bg-warning/10` (a
+      colour `tokens.css` never wrote); a mark whose corner and ground are
+      split over two strings, or over a class and a stylesheet rule; a role
+      or an element in a spread of attributes; a mark, a question or a
+      heading drawn by `main.css` or by utilities; the stylesheet's round
+      drawings (avatars, a story's nodes); the story contents' axis laid
+      out in `main.css` from Row's tokens. A rule that each look class has
+      one owner is to hold them.
 - [ ] `refactor(ui)`: a heading is written twice: the tour's step title and
       a pane's head name the same type tokens in two rules, until a
       Heading part draws both.
-- [ ] `refactor(ui)`: `EdgeFrame`'s `holds` defaults to `'words'`; every
-      caller is to say what its frame holds.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces
