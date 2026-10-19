@@ -94,11 +94,6 @@ tests. Remove items when done — don't check them off.
       watched anew (`dom/crossing.ts`): no file is then said to be read
       while that section comes first of those counted. Read in the code,
       not seen in a browser.
-- [ ] `fix(ui)`: on a narrow screen the gear's pane opens past the left
-      edge of the window, and the names of its rows are cut off. The gear
-      wraps to the left there, and the pane hangs from its right edge
-      (`placement="below-end"`). Seen at 420 pixels:
-      `scripts/look.py --width 420 press:settings-toggle shot:gear`.
 
 ## The story, from the reviews of its server side
 
@@ -136,11 +131,6 @@ tests. Remove items when done — don't check them off.
       gap the review could not hand over, is held and never offered under
       the switch: the page notes a story as arrived unseen only where it
       heard it being told (`ReviewStory.readAnother`).
-- [ ] `fix(ui)`: a pane the page puts under the switch — a story's
-      arrival, Story's introduction, the note that it is put away for
-      good — is as wide as the window had room for when it was drawn
-      (`PopoverPanel.svelte`, `standsAt`): a window made narrower under it
-      cuts it off until it is drawn again.
 - [ ] `fix(ui)`: at 420 pixels the reading area stands one pixel lower
       while the Story segment says "writing" than while it says "Story":
       the dots that breathe in place of its icon make the header's first
@@ -203,10 +193,6 @@ tests. Remove items when done — don't check them off.
 The owner's list of 2026-10-15, after the story's UI round ("потом"): none
 of it is built yet.
 
-- [ ] `feat(ui)`: the question before a comment is deleted ("Delete this
-      comment? Keep it / Delete", `ConfirmDialog`) is a `Popover` right
-      under the bin that opened it, as page.md asks of a pane opened from a
-      control, not a modal in the middle of the screen.
 - [ ] `feat(ui)`: a new look for the agent's progress in its panel.
 - [ ] `feat(ui)`: a new look for a folded thread's line.
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
@@ -227,10 +213,6 @@ of it is built yet.
       naming one in a message, the reply field, the folded line and the
       rail. Until Row, Chip and Field take them, no gate refuses a
       `<button>` drawn outside the library.
-- [ ] `fix(ui)`: inside a chapter's warning, a block a thread hangs under
-      is not drawn as selected: `.cr-warning-frame >
-      .cr-askable-written-under` keeps the selected ground off it, a guard
-      over the band laid on the warning's wash, for the Frame step.
 - [ ] `refactor(ui)`: one kind of dialog everywhere, the agent's panel
       included.
 
@@ -382,10 +364,10 @@ of it is built yet.
 - [ ] eslint's rule for a utility that makes a box scroll down reads the
       named values alone: one written in place, `overflow-y-[auto]` or
       `[overflow-y:auto]`, is let through. The page writes neither.
-- [ ] Nothing holds the finish pane, the mention list and the panel's
-      conversation to being `cr-scroller`s: with the class taken off any of
-      the three every browser test passes, since none has a pane longer
-      than its box.
+- [ ] Nothing holds the mention list's own list and the panel's
+      conversation to being `cr-scroller`s: with the class taken off either
+      every browser test passes, since neither has a list longer than its
+      box. Every pane's body is the library's scroller.
 - [ ] `RequestPart.QUERY` and `RequestPart.PATH`
       (`src/claude_review/presentation/wire/refusal.py`) are named by a
       test alone, `tests/unit/test_refused_fields.py`: the package matches
