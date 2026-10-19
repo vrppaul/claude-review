@@ -2,9 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { handOverNext } from './pushes';
 import { openReview } from './review';
-import { themeVariable } from './stylesheets';
 
-// A wide screen zoomed to twice its size, or a phone's: too narrow for either column beside the diff
+// A screen too narrow for either column beside the diff
 const NARROW = 640;
 // Room for the tree beside the diff, not for the panel as well
 const MIDDLING = 900;
@@ -12,8 +11,12 @@ const MIDDLING = 900;
 const WIDE = 1280;
 // What a rem is in a media query: the browser's own size of type, whatever the page sets
 const PIXELS_PER_REM = 16;
-// Where each column stops lying over the diff and stands beside it, as the stylesheet names them
-const BREAKPOINTS = ['--breakpoint-cr-side-column-beside', '--breakpoint-cr-panel-beside'];
+// Where each column stops lying over the diff and stands beside it, by the names the built stylesheet sets them
+// under on the page's root: the tree at 800 px, the panel at 1120 px, so each screen above falls between two
+const BREAKPOINTS = [
+	{ name: '--breakpoint-cr-side-column-beside', width: '50rem' },
+	{ name: '--breakpoint-cr-panel-beside', width: '70rem' }
+];
 // How wide the tree of files and a story's contents stand until the reader sizes them, in pixels,
 // and a width the reader leaves them at
 const TREE_AT_FIRST = 240;
@@ -38,12 +41,11 @@ function columns(layout: PageLayout): { tree: boolean; panel: boolean } {
 }
 
 beforeEach(() => {
-	// The breakpoints as the built stylesheet sets them on the page's root
-	for (const name of BREAKPOINTS) document.documentElement.style.setProperty(name, themeVariable(name));
+	for (const { name, width } of BREAKPOINTS) document.documentElement.style.setProperty(name, width);
 });
 
 afterEach(() => {
-	for (const name of BREAKPOINTS) document.documentElement.style.removeProperty(name);
+	for (const { name } of BREAKPOINTS) document.documentElement.style.removeProperty(name);
 	vi.unstubAllGlobals();
 });
 

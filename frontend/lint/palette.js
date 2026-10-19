@@ -1,5 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { paint, type Paint, type Theme, THEMES } from './stylesheets';
+/**
+ * Every word of the review reads on whatever it is drawn on, in both themes,
+ * and whatever the pointer is on or the reader is at stands off its ground:
+ * the palette's contrasts, worked out from tokens.css as a browser lays its
+ * tints, layer by layer in whole channels. A rule of stylelint's, run on
+ * tokens.css alone (stylelint.config.js), so a token changed to a colour
+ * that does not read is refused at the commit, at the token's own line.
+ *
+ * What is drawn on what is the lists below, each pair one the stylesheets
+ * draw: a reader's need, not a look, so it is held here and not by an eye.
+ */
+import stylelint from 'stylelint';
+
+const RULE_NAME = 'claude-review/palette-reads';
 
 // WCAG AA for text below 18pt: what every word on the page has to reach, in every state it is seen in
 const SMALL_TEXT = 4.5;
@@ -9,14 +21,39 @@ const LIT = 1.15;
 // What a reader needs to see to know where they are, and where the keyboard is (WCAG 1.4.11, 2.4.13)
 const NEEDED = 3;
 
-type Channels = Paint['channels'];
+// The blocks of tokens.css a token is written in: once for both themes, or once in each
+const BOTH_THEMES = ':root';
+const THEME_BLOCKS = { light: "[data-theme='light']", dark: "[data-theme='dark']" };
+const THEMES = Object.keys(THEME_BLOCKS);
+
+// How tokens.css writes a colour: a share of another token over nothing, another token, or channels
+const MIXED = /^color-mix\(in srgb, var\((--[a-z0-9-]+)\) ([\d.]+)%, transparent\)$/;
+const NAMED = /^var\((--[a-z0-9-]+)\)$/;
+const HEX = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i;
+const NUMBER = /[\d.]+/g;
+const PERCENT = 100;
+const HEX_BASE = 16;
+const OPAQUE = 1;
+
+// The sRGB curve, by which a channel's share of light is worked out (WCAG 2.x relative luminance)
+const CHANNEL_MAX = 255;
+const LINEAR_BELOW = 0.04045;
+const LINEAR_SLOPE = 12.92;
+const CURVE_OFFSET = 0.055;
+const CURVE_SCALE = 1.055;
+const CURVE_POWER = 2.4;
+const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722];
+// What WCAG adds to each luminance before dividing the lighter by the darker: the glare of a screen
+const FLARE = 0.05;
+// How many decimals a ratio is told in
+const RATIO_DECIMALS = 2;
 
 /**
  * What is drawn on what: a text colour, the page's surface under it, and the
  * tints laid over that surface, in order. Each pair is one the stylesheet
  * draws — the token named for the words, on the grounds those words sit on.
  */
-const DRAWN: { said: string; text: string; grounds: string[] }[] = [
+const DRAWN = [
 	{ said: 'what a thread asks for, on its card', text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a comment's place, over the field being written", text: '--cr-mark-text', grounds: ['--color-base-200'] },
 	{ said: "a marked row's number", text: '--cr-mark-text', grounds: ['--color-base-100', '--cr-selected'] },
@@ -130,11 +167,7 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		text: '--color-error-content',
 		grounds: ['--color-error', '--cr-hover-on-fill']
 	},
-	{
-		said: 'a filled button, while it cannot be pressed',
-		text: '--cr-muted',
-		grounds: ['--color-base-300']
-	},
+	{ said: 'a filled button, while it cannot be pressed', text: '--cr-muted', grounds: ['--color-base-300'] },
 	{
 		said: 'the narrowed base picked against, its list open',
 		text: '--cr-mark-text',
@@ -230,7 +263,7 @@ const SYNTAX = ['keyword', 'string', 'comment', 'number', 'type', 'function', 'v
 // Every ground code is drawn on, by the tints laid over the page under it: a
 // marked row's tint takes the place of its change's, it does not stack on it;
 // the band behind a changed word lies over its row's tint, marked or not
-const ROWS = [
+const CODE_ROWS = [
 	{ row: 'an unchanged row', tints: [] },
 	{ row: 'an added row', tints: ['--cr-add-tint'] },
 	{ row: 'a removed row', tints: ['--cr-del-tint'] },
@@ -240,60 +273,18 @@ const ROWS = [
 	{ row: 'the band of a word a marked added row changed', tints: ['--cr-selected', '--cr-add-word'] },
 	{ row: 'the band of a word a marked removed row changed', tints: ['--cr-selected', '--cr-del-word'] }
 ];
-// Highlighted code, on every ground it is drawn on
 const CODE_DRAWN = SYNTAX.flatMap((colour) =>
-	ROWS.map(({ row, tints }) => ({
+	CODE_ROWS.map(({ row, tints }) => ({
 		said: `code coloured as ${colour}, on ${row}`,
 		text: `--cr-syn-${colour}`,
 		grounds: ['--color-base-100', ...tints]
 	}))
 );
 
-/**
- * A tint laid over a ground, in whole channels, as a browser paints each
- * layer: a pair that reads at 4.5:1 only before rounding is drawn below it.
- */
-function over(top: Paint, ground: Channels): Channels {
-	return ground.map((channel, at) => Math.round(top.channels[at] * top.alpha + channel * (1 - top.alpha))) as Channels;
-}
-
-function luminance(channels: Channels): number {
-	const [red, green, blue] = channels.map((channel) => {
-		const share = channel / 255;
-		return share <= 0.04045 ? share / 12.92 : ((share + 0.055) / 1.055) ** 2.4;
-	});
-	return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-}
-
-function contrast(one: Channels, other: Channels): number {
-	const [lighter, darker] = [luminance(one), luminance(other)].sort((first, second) => second - first);
-	return (lighter + 0.05) / (darker + 0.05);
-}
-
-/** A surface with the tints laid over it, in order, as the page paints them. */
-function laid(grounds: string[], theme: Theme): Channels {
-	const [surface, ...tints] = grounds;
-	return tints.reduce((under, tint) => over(paint(tint, theme), under), paint(surface, theme).channels);
-}
-
-describe('the palette', () => {
-	for (const theme of THEMES) {
-		for (const pair of [
-			...DRAWN,
-			...WORDS_IN_EVERY_STATE,
-			...ON_A_TRACK,
-			...LINE_NUMBERS,
-			...CODE_DRAWN,
-			...ON_A_NOTICE
-		]) {
-			it(`reads at ${SMALL_TEXT}:1 in the ${theme} theme: ${pair.said}`, () => {
-				expect(contrast(paint(pair.text, theme).channels, laid(pair.grounds, theme))).toBeGreaterThanOrEqual(
-					SMALL_TEXT
-				);
-			});
-		}
-	}
-});
+// Every pair of words and what they stand on, held to reading as small text
+const READ = [...DRAWN, ...WORDS_IN_EVERY_STATE, ...ON_A_TRACK, ...LINE_NUMBERS, ...CODE_DRAWN, ...ON_A_NOTICE].map(
+	({ said, text, grounds }) => ({ said, front: [text], back: grounds, needed: SMALL_TEXT })
+);
 
 // A warning's wash on the page, which a chapter's doubt stands on
 const WARNING_WASH = ['--color-base-100', '--cr-warning-tint'];
@@ -306,51 +297,154 @@ const POINTED_AT = [
 	{ said: "the primary button's own fill", surface: '--cr-control', light: '--cr-hover-on-fill' },
 	{ said: 'the fill of a button that loses what was written', surface: '--color-error', light: '--cr-hover-on-fill' }
 ];
+const SELECTED_EDGE = '--cr-selected-edge';
+const FOCUS_RING = '--cr-focus-ring';
 
-describe('the states of whatever can be pressed', () => {
+// Every state held to standing off what it is drawn on: what is in front, laid over what, and how far apart
+const SEEN = [
+	...POINTED_AT.map(({ said, surface, light }) => ({
+		said: `what the pointer is on, against ${said}`,
+		front: [surface, light],
+		back: [surface],
+		needed: LIT
+	})),
+	...STATE_SURFACES.flatMap(({ said, surface }) => [
+		{
+			said: `the one of a set the reader is at, against ${said}`,
+			front: [surface, '--cr-selected'],
+			back: [surface],
+			needed: LIT
+		},
+		{
+			said: `the edge of the one of a set the reader is at, against its fill on ${said}`,
+			front: [SELECTED_EDGE],
+			back: [surface, '--cr-selected'],
+			needed: NEEDED
+		},
+		{
+			said: `the edge of the one of a set the reader is at, against ${said}`,
+			front: [SELECTED_EDGE],
+			back: [surface],
+			needed: NEEDED
+		},
+		{ said: `the ring round what holds the keyboard, on ${said}`, front: [FOCUS_RING], back: [surface], needed: NEEDED }
+	]),
+	{
+		said: "a block a thread hangs under inside a warning, against the warning's wash",
+		front: [...WARNING_WASH, '--cr-selected'],
+		back: WARNING_WASH,
+		needed: LIT
+	},
+	{
+		said: 'the edge of a block a thread hangs under inside a warning, against its fill',
+		front: [SELECTED_EDGE],
+		back: [...WARNING_WASH, '--cr-selected'],
+		needed: NEEDED
+	},
+	{
+		said: "the edge of a block a thread hangs under inside a warning, against the warning's wash",
+		front: [SELECTED_EDGE],
+		back: WARNING_WASH,
+		needed: NEEDED
+	},
+	...NOTICE_WASHES.flatMap(({ said, grounds }) => [
+		{ said: `what the pointer is on, against ${said}`, front: [...grounds, '--cr-hover'], back: grounds, needed: LIT },
+		{ said: `the ring round what holds the keyboard, on ${said}`, front: [FOCUS_RING], back: grounds, needed: NEEDED }
+	])
+];
+
+const CONTRASTS = [...READ, ...SEEN];
+
+const messages = stylelint.utils.ruleMessages(RULE_NAME, {
+	unreadable: (said, theme, ratio, needed) =>
+		`${said}, in the ${theme} theme: ${ratio.toFixed(RATIO_DECIMALS)}:1, where ${needed}:1 is needed`
+});
+
+/** The custom properties a block of tokens.css declares, each by its name. */
+function declaredIn(root, selector) {
+	const declarations = root.nodes
+		.filter((node) => node.type === 'rule' && node.selector === selector)
+		.flatMap((rule) => rule.nodes.filter((node) => node.type === 'decl'));
+	return new Map(declarations.map((declaration) => [declaration.prop, declaration]));
+}
+
+/** The tokens of tokens.css: those written once for both themes, and those written in each theme's own block. */
+function tokensOf(root) {
+	return {
+		bothThemes: declaredIn(root, BOTH_THEMES),
+		byTheme: Object.fromEntries(THEMES.map((theme) => [theme, declaredIn(root, THEME_BLOCKS[theme])]))
+	};
+}
+
+/** Where a token is written for a theme: in the theme's own block, or in the one for both. */
+function declarationOf(tokens, token, theme) {
+	const declaration = tokens.byTheme[theme].get(token) ?? tokens.bothThemes.get(token);
+	if (declaration === undefined) throw new Error(`${RULE_NAME}: ${token} is not in tokens.css`);
+	return declaration;
+}
+
+/** A token's colour in a theme, following the tokens it is written in terms of: its channels, and how much of what lies under it it covers. */
+function paint(tokens, token, theme) {
+	const value = declarationOf(tokens, token, theme).value;
+	const mixed = MIXED.exec(value);
+	if (mixed) return { channels: paint(tokens, mixed[1], theme).channels, alpha: Number(mixed[2]) / PERCENT };
+	const named = NAMED.exec(value);
+	if (named) return paint(tokens, named[1], theme);
+	const hex = HEX.exec(value);
+	if (hex) return { channels: hex.slice(1).map((pair) => parseInt(pair, HEX_BASE)), alpha: OPAQUE };
+	const [red, green, blue, alpha = OPAQUE] = [...value.matchAll(NUMBER)].map(([number]) => Number(number));
+	return { channels: [red, green, blue], alpha };
+}
+
+/** A tint laid over a ground, in whole channels, as a browser paints each layer: a pair that reads only before rounding is drawn below it. */
+function over(top, ground) {
+	return ground.map((channel, channelIndex) =>
+		Math.round(top.channels[channelIndex] * top.alpha + channel * (OPAQUE - top.alpha))
+	);
+}
+
+/** The first layer, with each after it laid over it in order, as the page paints them. */
+function laid(tokens, layers, theme) {
+	const [first, ...tints] = layers;
+	return tints.reduce((under, tint) => over(paint(tokens, tint, theme), under), paint(tokens, first, theme).channels);
+}
+
+/** How much light a colour gives off, by WCAG's measure. */
+function luminance(channels) {
+	return channels
+		.map((channel) => channel / CHANNEL_MAX)
+		.map((share) =>
+			share <= LINEAR_BELOW ? share / LINEAR_SLOPE : ((share + CURVE_OFFSET) / CURVE_SCALE) ** CURVE_POWER
+		)
+		.reduce((sum, linear, channelIndex) => sum + linear * CHANNEL_WEIGHTS[channelIndex], 0);
+}
+
+/** How far two colours stand apart, by WCAG's measure: from 1:1, the same, to 21:1. */
+function contrast(one, other) {
+	const [lighter, darker] = [luminance(one), luminance(other)].sort((first, second) => second - first);
+	return (lighter + FLARE) / (darker + FLARE);
+}
+
+/** Every contrast held, in both themes, reported at the line of the token in front where one falls short. */
+function reportUnreadable(root, result) {
+	const tokens = tokensOf(root);
 	for (const theme of THEMES) {
-		for (const { said: on, surface, light } of POINTED_AT) {
-			it(`what the pointer is on stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
-				expect(contrast(laid([surface, light], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
-			});
-		}
-
-		for (const { said: on, surface } of STATE_SURFACES) {
-			it(`the one of a set the reader is at stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
-				expect(contrast(laid([surface, '--cr-selected'], theme), laid([surface], theme))).toBeGreaterThanOrEqual(LIT);
-			});
-
-			it(`the edge of the one of a set the reader is at reads at ${NEEDED}:1 against its fill and ${on}, in the ${theme} theme`, () => {
-				const edge = paint('--cr-selected-edge', theme).channels;
-
-				expect(contrast(edge, laid([surface, '--cr-selected'], theme))).toBeGreaterThanOrEqual(NEEDED);
-				expect(contrast(edge, laid([surface], theme))).toBeGreaterThanOrEqual(NEEDED);
-			});
-
-			it(`the ring round what holds the keyboard reads at ${NEEDED}:1 on ${on}, in the ${theme} theme`, () => {
-				expect(contrast(paint('--cr-focus-ring', theme).channels, laid([surface], theme))).toBeGreaterThanOrEqual(
-					NEEDED
-				);
-			});
-		}
-
-		it(`a block a thread hangs under inside a warning stands off the warning's wash at ${LIT}:1, its edge at ${NEEDED}:1, in the ${theme} theme`, () => {
-			const wash = laid(WARNING_WASH, theme);
-			const selected = laid([...WARNING_WASH, '--cr-selected'], theme);
-			const edge = paint('--cr-selected-edge', theme).channels;
-
-			expect(contrast(selected, wash)).toBeGreaterThanOrEqual(LIT);
-			expect(Math.min(contrast(edge, selected), contrast(edge, wash))).toBeGreaterThanOrEqual(NEEDED);
-		});
-
-		for (const { said: on, grounds } of NOTICE_WASHES) {
-			it(`what the pointer is on stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
-				expect(contrast(laid([...grounds, '--cr-hover'], theme), laid(grounds, theme))).toBeGreaterThanOrEqual(LIT);
-			});
-
-			it(`the ring round what holds the keyboard reads at ${NEEDED}:1 on ${on}, in the ${theme} theme`, () => {
-				expect(contrast(paint('--cr-focus-ring', theme).channels, laid(grounds, theme))).toBeGreaterThanOrEqual(NEEDED);
+		for (const { said, front, back, needed } of CONTRASTS) {
+			const ratio = contrast(laid(tokens, front, theme), laid(tokens, back, theme));
+			if (ratio >= needed) continue;
+			stylelint.utils.report({
+				result,
+				ruleName: RULE_NAME,
+				message: messages.unreadable(said, theme, ratio, needed),
+				node: declarationOf(tokens, front.at(-1), theme)
 			});
 		}
 	}
-});
+}
+
+/** The rule as stylelint takes one: on, it reads the whole palette of the sheet it is run on. */
+const palette = () => (root, result) => reportUnreadable(root, result);
+palette.ruleName = RULE_NAME;
+palette.messages = messages;
+
+export default stylelint.createPlugin(RULE_NAME, palette);

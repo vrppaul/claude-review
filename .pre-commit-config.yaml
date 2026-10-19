@@ -136,7 +136,7 @@ repos:
         name: eslint and stylelint (frontend)
         entry: bash scripts/page_check.sh lint
         language: system
-        files: ^frontend/(src/|eslint\.config\.js$|stylelint\.config\.js$)
+        files: ^frontend/(src/|lint/|eslint\.config\.js$|stylelint\.config\.js$)
         pass_filenames: false
 
       # Reads frontend/tsconfig.json, which includes src/ alone: the tests are
@@ -163,7 +163,7 @@ repos:
         name: prettier (frontend)
         entry: bash scripts/page_check.sh format:check
         language: system
-        files: ^frontend/(src/|tests/|[^/]+\.config\.(js|ts)$|knip\.ts$|\.prettierrc\.json$)
+        files: ^frontend/(src/|tests/|lint/|[^/]+\.config\.(js|ts)$|knip\.ts$|\.prettierrc\.json$)
         pass_filenames: false
 
   # The browser's types are generated from the server's schemas: a schema
