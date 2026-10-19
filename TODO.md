@@ -297,8 +297,6 @@ of it is built yet.
       (`tests/integration/test_cli_process.py`) failed once in a whole run
       at `1619483` (a `.git-objects` staging file left behind) and passed
       alone and in the whole runs after it. Why is not known.
-- [ ] No test holds where a thread's tail points under a block of a
-      story's words (`--cr-tail-at`): broken on purpose, nothing failed.
 - [ ] A review leaves in its event loop what nothing ends. The answerer's
       lease is a timer of ten minutes (`Answerer.heard`,
       `src/claude_review/services/review/answerer.py`) that outlives the
