@@ -32,6 +32,7 @@ jobs:
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - run: uv sync --no-install-project
       - run: uv run pytest tests/unit/ tests/integration/ -v
+      - run: uv run pytest tests/integration/ -m schema -v
 
   test-frontend:
     runs-on: ubuntu-latest

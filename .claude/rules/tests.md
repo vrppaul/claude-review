@@ -49,6 +49,6 @@ paths:
 - Iterating: the tests of the code in hand. A commit runs the gates alone.
 - At a chunk's end each part changed runs once, by whoever commits; a reviewer reads that run and does not repeat it.
 - The page: vitest, and `tests/e2e` where the change touches what it holds.
-- The server: `tests/unit` and `tests/integration`, and `tests/e2e` where a route or a wire model changes. `scripts/`: that script's tests.
-- A release, or a merge to master, runs everything.
+- The server: `tests/unit` and `tests/integration`, and `tests/e2e` and the schema's fuzzing (`-m schema`) where a route or a wire model changes. `scripts/`: that script's tests.
+- A release, or a merge to master, runs everything, `-m schema` with it.
 - A review's findings about tests are two: a test to delete (a look, a twin, internals, one that cannot fail) and a behaviour no test holds.

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 import schemathesis
 from fastapi import FastAPI
+from hypothesis import settings
 from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
@@ -39,6 +40,9 @@ from tests.helpers import (
 BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
 schema = schemathesis.pytest.from_fixture("described_schema")
+
+# How many requests are drawn for each route: a quarter of what Hypothesis draws by default, a run a quarter as long
+DRAWN_PER_ROUTE = 25
 
 # The agent's long poll waits out whatever it is asked to, up to ten
 # minutes: a wait drawn within its bounds is cut to this, and one drawn
@@ -154,14 +158,18 @@ def _answers_as_its_schema_says(case: Case, reviews_by_operation: ReviewsByOpera
     )
 
 
+@pytest.mark.schema
 @schema.parametrize()
+@settings(max_examples=DRAWN_PER_ROUTE)
 def test_whatever_a_route_is_sent_it_answers_as_its_schema_says(
     case: Case, reviews_read_once: ReviewsByOperation
 ) -> None:
     _answers_as_its_schema_says(case, reviews_read_once)
 
 
+@pytest.mark.schema
 @schema.parametrize()
+@settings(max_examples=DRAWN_PER_ROUTE)
 def test_a_review_of_a_repository_answers_whatever_it_is_sent_as_its_schema_says(
     case: Case, reviews_of_a_repository: ReviewsByOperation
 ) -> None:

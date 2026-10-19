@@ -29,7 +29,7 @@ uv run claude-review diff
 uv run claude-review files some-file.md
 
 # Run tests
-uv run pytest tests -n 4             # all Python tests, on four workers
+uv run pytest tests -n 4             # the Python tests; -m schema: the API's fuzzing
 cd frontend && pnpm test             # frontend tests
 
 # Lint & type check

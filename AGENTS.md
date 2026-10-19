@@ -6,7 +6,7 @@ A code review in the browser for Claude Code: a git diff, files or a transcript,
 
 ```bash
 uv sync                              # Python dependencies
-uv run pytest tests -n 4             # every Python test, in four processes
+uv run pytest tests -n 4             # the Python tests; -m schema: the API's fuzzing
 uv run pre-commit run --all-files    # every gate a commit runs, over every file
 uv run claude-review diff            # run the tool; `files` and `transcript` are its other modes
 cd frontend && pnpm install          # the page's dependencies
