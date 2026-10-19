@@ -21,6 +21,8 @@ How a part of the page is built is said at the top of its module; what eslint an
 
 ## Parts and elements
 
+- Every kind of element the page draws — a button, a field, a pane, a notice, a mark, a list's row — is a part of `frontend/src/lib/ui/`, whose file says what it is for.
+- A kind the library lacks is added there first, with the variants the page uses now and a rule in `frontend/eslint.config.js` refusing it elsewhere.
 - The parts of `frontend/src/lib/` build on each other in one direction, as `LAYERS` in `frontend/eslint.config.js` lists them: components build on everything, and only components build on them.
 - The page's own code never finds an element by test id or by a page-wide id. An element announces itself to whoever needs it, as every file section and thread does to `FileSections`.
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
@@ -33,8 +35,6 @@ How a part of the page is built is said at the top of its module; what eslint an
 - A colour, a layer or a shadow is written once, in `frontend/src/styles/tokens.css`, for both themes. Every other stylesheet and the markup only name tokens.
 - A colour is named by what it means, never by its hue: the top of `frontend/src/styles/tokens.css` says whose each is.
 - A utility never overrides what a `cr-` class sets on the same element: change it with another `cr-` class, or use the utility in place of the class.
-- Markup carries no `style="…"` and no `z-` utility: a number only a component knows reaches the stylesheet as `style:--cr-name`, and a layer is a token.
-- What scrolls down the page is a `cr-scroller`, never a box a utility makes scroll. Its contents are placed in it, so `sr-only` words scroll with them and never stretch the page.
 
 ## Panes and keys
 

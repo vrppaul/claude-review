@@ -49,9 +49,9 @@ const THE_SCALES_WORDS = {
 	'stroke-width': A_DRAWN_LINE,
 	'stroke-dasharray': A_DRAWN_LINE
 };
-// What scrolls down the page is a cr-scroller (page.md): the box its contents are placed in, so words kept for a
-// screen reader scroll with them and never stretch the page. Its rule, and the reading area's own, say so where they
-// turn this off
+// What scrolls down the page is a cr-scroller, as eslint holds the markup to: the box its contents are placed in, so
+// words kept for a screen reader scroll with them and never stretch the page. Its rule, and the reading area's own,
+// say so where they turn this off
 const SCROLLS_DOWN = { '/^overflow(-y)?$/': ['/\\b(auto|scroll)\\b/'] };
 
 export default {

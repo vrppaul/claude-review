@@ -177,6 +177,13 @@
   the review is read, the diff's layout, the theme, what a comment asks
   for — stands 24 pixels tall, level with the buttons beside it, where it
   stood 26.5.
+- **A rule for the page's parts: every kind comes from its library.**
+  `.claude/rules/page.md` says each kind of element the page draws — a
+  button, a field, a pane, a notice, a mark, a list's row — is a part of
+  `frontend/src/lib/ui/`, and a kind the library lacks is added there
+  first, with a rule in eslint that refuses it anywhere else. Two rules it
+  held that eslint and stylelint hold whole, no `style="…"` or `z-` utility
+  in markup and what scrolls being a `cr-scroller`, are left to them.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or
