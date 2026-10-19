@@ -96,7 +96,7 @@
 	<div class="px-3 pt-2 pb-1">
 		<input
 			data-testid="base-filter"
-			class="w-full rounded border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
+			class="w-full rounded-field border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
 			placeholder="filter"
 			aria-label="Filter the bases"
 			bind:value={filter}

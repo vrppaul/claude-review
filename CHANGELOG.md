@@ -167,20 +167,36 @@
   for — stands 24 pixels tall, level with the buttons beside it, where it
   stood 26.5.
 - **Every size is taken off one scale.** Room between things is one of
-  nine steps from 0 to 32 pixels, words one of a few sizes in two weights,
-  a line 1 or 2 pixels, a corner a field's or a box's. What moves: who said
-  a turn of a thread is named at the size of its head, 12 pixels, where it
-  was 13; the field to reply in has the corner of the field it opens; the
-  guide's card speaks at 14 pixels, where it spoke at 13; the branches of
-  the agent's work are listed at 12 pixels, their rail a thin line; a
-  story's chapters stand 12 pixels apart in its contents, where they stood
-  10, their numbers at 11 pixels, where they were 10; a fact of a story on
-  its way stands its mark in a column as wide as the mark; what a story
-  leaves out is headed at a chapter's size, 18 pixels, where it was 16;
-  the parts of Story's introduction, of its waiting room and its question,
-  of the settings, of the guide's card and of a diagram stand 8 pixels
-  apart, where they stood 10, and the words of a passing note 12 pixels in
-  from its edge, where they stood 14.
+  nine steps from 0 to 32 pixels, words one of a few sizes in two weights
+  at their size's own leading, a line 1 or 2 pixels, a corner a field's or
+  a box's. What moves, in a thread: who said a turn is named at its head's
+  size, 12 pixels, where it was 13, and what was said stands 4 pixels under
+  it, where it stood 3; the field to reply in has the corner of the field
+  it opens, 4 pixels, where it had 6. In the panel: the agent's branches of
+  work are listed at 12 pixels, where they were 13, on a 1 pixel rail,
+  where it was 1.5; the line of what it is doing stands 20 pixels tall,
+  where it stood 21; an answer stays marked 2 seconds as it lands, where it
+  stayed 1.8; an image still uploading says so at 11 pixels, where it said
+  it at 10; the words of an empty panel take 20 pixels a line, where they
+  took 22.75. In a story: its chapters stand 12 pixels apart in its
+  contents, where they stood 10, their numbers at 11 pixels, where they
+  were 10; what it leaves out is headed at a chapter's size, 18 pixels,
+  where it was 16; the overview's Task and Done are headed in bold, as its
+  lists are; Story's question stands its parts 12 pixels apart, where they
+  stood 14, and its buttons 8, where they stood 10; its introduction, the
+  facts and buttons of its waiting room and a diagram stand theirs 8
+  pixels apart, where they stood 10, and the waiting room its column 24,
+  where it stood 22; a fact of a story on its way stands its mark in a
+  column as wide as the mark, 14 pixels, where it was 18; the sketch and
+  the news's drawing stand what they hold 12 pixels in, where they stood
+  10. Elsewhere: the guide's card speaks at 14 pixels, where it spoke at
+  13, its parts 8 pixels apart, where they stood 10, and "Also in this
+  release" 12 pixels under its rule, where it stood 10; the settings stand
+  their parts 8 pixels apart, where they stood 10; Help's keys stand 16
+  pixels under its rows, where they stood 20; a passing note stands its
+  words 12 pixels in from its left edge and 8 from its right, where they
+  stood 14 and 10; a segment of a track stands its words 8 pixels in from
+  either side, where they stood 10, its corner 2 pixels, where it was 3.
 - **A story follows its code when the diff is taken again.** Each step
   follows its lines through what git says changed between the take it was
   told of and this one: a line kept moves as the lines above it moved, a

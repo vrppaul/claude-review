@@ -151,7 +151,7 @@
 	<textarea
 		data-testid="panel-input"
 		bind:this={field}
-		class="cr-field cr-comment-body w-full resize-y rounded px-3 py-2"
+		class="cr-field cr-comment-body w-full resize-y rounded-field px-3 py-2"
 		rows="2"
 		placeholder="Ask about anything, or paste a screenshot…"
 		maxlength={review.limits.max_text_length}

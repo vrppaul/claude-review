@@ -153,7 +153,7 @@
 	<input
 		data-testid="file-filter"
 		type="search"
-		class="mb-2 w-full rounded border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
+		class="mb-2 w-full rounded-field border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
 		placeholder="Jump to a {listed.sought}"
 		aria-label="Find a {listed.sought} by its {listed.soughtBy}"
 		bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}

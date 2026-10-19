@@ -241,7 +241,8 @@
 }
 .cr-word {
 	background: linear-gradient(var(--cr-word-bg), var(--cr-word-bg)) center / 100% var(--cr-word-band) no-repeat;
-	border-radius: var(--radius-field);
+	/* Half a field's corner: a band one character wide stays a band, not a capsule */
+	border-radius: calc(var(--radius-field) / 2);
 	/* A mark that wraps keeps its shape on both lines */
 	box-decoration-break: clone;
 	-webkit-box-decoration-break: clone;
@@ -349,13 +350,10 @@
 	font-style: italic;
 }
 
-/*
- * What something costs, said before the reader agrees to it, in a warning's
- * frame: its mark, as wide as an icon of the base size, and the words beside it
- */
+/* What something costs, said before the reader agrees to it, in a warning's frame: its mark, and the words beside it */
 .cr-cost-note {
 	display: grid;
-	grid-template-columns: var(--text-base) minmax(0, 1fr);
+	grid-template-columns: auto minmax(0, 1fr);
 	gap: --spacing(2);
 }
 
@@ -928,10 +926,10 @@
 	font-size: var(--text-sm);
 	line-height: var(--cr-comment-leading);
 }
-/* A fact of a story on its way, a row of its card: a mark, as wide as its small icon, what happened, and when */
+/* A fact of a story on its way, a row of its card: a mark, what happened, and when */
 .cr-wait-fact {
 	display: grid;
-	grid-template-columns: var(--text-sm) minmax(0, 1fr) auto;
+	grid-template-columns: auto minmax(0, 1fr) auto;
 	gap: --spacing(2);
 	align-items: center;
 }
@@ -1026,7 +1024,7 @@
 	content: '';
 	position: absolute;
 	left: 0;
-	top: calc(--spacing(0.5) + 0.5lh);
+	top: calc(--spacing(0.5) + var(--cr-one-line) / 2);
 	width: --spacing(2);
 	height: var(--cr-line);
 	background: var(--cr-agent-border);

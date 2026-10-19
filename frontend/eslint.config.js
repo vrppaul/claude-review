@@ -187,18 +187,24 @@ const SCROLLS_IN_ITS_OWN_BOX = 'Make what scrolls a cr-scroller: it is the box i
 // A utility that makes a box scroll down: `overflow-auto`, `overflow-y-auto`, `overflow-scroll`, `overflow-y-scroll`
 const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY_END}/`;
 // Every size is taken off one scale (tokens.css), in markup as in a stylesheet, where stylelint holds the same
-// steps: what stands apart, stands in or is set in stands one of its steps of Tailwind's spacing; words are set at
-// one of its sizes, at that size's own leading, in one of its two weights; and nothing is written as an arbitrary
-// value, a token being named instead, as a colour is (`grid-cols-(--cr-…)`)
+// steps: what stands apart, stands in or is set in, and where a thing stands, is one of its steps of Tailwind's
+// spacing; words are set at one of its sizes, at that size's own leading, in one of its two weights; a corner is a
+// field's or a box's, and a line, a strength or a time a token; and nothing is written as an arbitrary value, a
+// token being named instead, as a colour is (`grid-cols-(--cr-…)`)
 const ON_THE_SCALE =
 	'Take the size off the scale (tokens.css): a spacing step it has, a size and weight of its words, or a token by name.';
-// A utility of room at a step off the scale, behind any variants and its sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`
-const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy])-(?!(0|0\\.5|1|1\\.5|2|3|4|6|8)${UTILITY_END})[0-9]/`;
+// A utility of room or of where a thing stands at a step off the scale or a hairline, behind any variants and its
+// sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `p-px`
+const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy]|inset(-[xy])?|top|right|bottom|left|start|end|translate-[xy]|scroll-[mp][xytblrse]?)-((?!(0|0\\.5|1|1\\.5|2|3|4|6|8)${UTILITY_END})[0-9]|px${UTILITY_END})/`;
 // A value written in place: `grid-cols-[4rem_1fr]`, `w-[26rem]`, `text-[13px]`
 const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
 // Words at a size off the scale, with a leading of their own beside their size's, or in a weight off it:
-// `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `font-medium`
-const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-([2-9]xl|base)(${UTILITY_END}|\\/)|text-[a-z0-9]+\\/|leading-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
+// `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `font-medium`; a colour at a strength, `text-primary/80`,
+// is no size of words
+const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
+// A corner, a line, a ring, a strength or a time at a step of Tailwind's own beside the scale's: `rounded`,
+// `rounded-sm`, `rounded-t-lg`, `border-4`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`
+const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl))?${UTILITY_END}|border(-[xytblrse])?-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {
@@ -220,7 +226,8 @@ const NO_INLINE_STYLING = [
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX),
 	...inClassLists(ROOM_OFF_THE_SCALE, ON_THE_SCALE),
 	...inClassLists(ARBITRARY_VALUE, ON_THE_SCALE),
-	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE)
+	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE),
+	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE)
 ];
 
 // A button is drawn by the component library (lib/ui), in its tones and sizes, and nothing outside it draws one
@@ -432,6 +439,14 @@ const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LI
 // by a component handed its element, and the story's headings each took their size from utilities of their own
 const DRAWN_AS_A_HEADING = 'Draw a heading with lib/ui Heading, as what it heads, not as an element of its own.';
 const HEADING_IN_THE_LIBRARY = { elements: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], message: DRAWN_AS_A_HEADING };
+// Nor an element that says it is one by its role
+const NO_HEADINGS_OF_ITS_OWN = [
+	{
+		selector:
+			"SvelteElement[kind='html'] > SvelteStartTag > SvelteAttribute[key.name='role'] SvelteLiteral[value='heading']",
+		message: DRAWN_AS_A_HEADING
+	}
+];
 
 // A block of the story the reader may ask about is banded by the library (Band, stacked by Bands), and nothing
 // outside it bands one its own way: the page's band reached back over its frame's room and edge by margins built
@@ -449,13 +464,13 @@ const NO_BANDS_OF_ITS_OWN = [
 ];
 
 // A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
-// reach, a card's, a notice's and a pane's room, a button's height — and lays out what stands round it itself: the
-// page hung a band's threads past its reach, stood words as far in as a frame's and stacked blocks as far apart as
-// a button is tall, each by naming such a token. Named in a class list or in any string, or set by a style
-// directive, one is refused outside the library; stylelint refuses one named in a stylesheet but the library's
+// reach, a card's, a notice's, a pane's and a track's room, a button's height — and lays out what stands round it
+// itself: the page hung a band's threads past its reach, stood words as far in as a frame's and stacked blocks as
+// far apart as a button is tall, each by naming such a token. Named in a class list or in any string, or set by a
+// style directive, one is refused outside the library; stylelint refuses one named in a stylesheet but the library's
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
-const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|button)-/';
+const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button)-/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
@@ -494,6 +509,7 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_NOTICES_OF_THEIR_OWN,
 	...NO_MARKS_OF_ITS_OWN,
 	...NO_ROWS_OF_ITS_OWN,
+	...NO_HEADINGS_OF_ITS_OWN,
 	...NO_BANDS_OF_ITS_OWN,
 	...NO_LAYOUT_ROUND_THE_LIBRARY
 ];

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { ClassValue } from 'svelte/elements';
 	import {
 		blockLabel,
 		OVERVIEW_LISTS_IN_ORDER,
@@ -14,6 +13,7 @@
 	import Bands from '$lib/ui/Bands.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
+	import type { HeadingTone } from '$lib/ui/heading';
 	import Row from '$lib/ui/Row.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
@@ -29,11 +29,11 @@
 
 	let { held }: Props = $props();
 
-	// How the heading of each of the overview's three lines looks: what to doubt is a warning
-	const HEADING_LOOKS: Record<OverviewText, ClassValue> = {
-		task: 'cr-muted',
-		done: 'cr-muted',
-		doubt: 'font-semibold text-warning'
+	// The tone each of the overview's three lines is headed in, as its lists are: quietly, but what to doubt, a warning
+	const HEADING_TONES: Record<OverviewText, HeadingTone> = {
+		task: 'quiet',
+		done: 'quiet',
+		doubt: 'warning'
 	};
 
 	// What each list of the overview is headed by
@@ -70,8 +70,8 @@
 	<AskableBlock {block} {words} {testId}>
 		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list. On
 			a narrow screen the term stands over what it says, which keeps the line's whole width -->
-		<div class="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-(--cr-overview-columns)">
-			<span role="term" class={['pt-0.5 text-xs', HEADING_LOOKS[block.text]]}>{blockLabel(block)}</span>
+		<div class="grid grid-cols-1 items-baseline gap-x-4 gap-y-1 sm:grid-cols-(--cr-overview-columns)">
+			<Heading tag="p" heads="list" tone={HEADING_TONES[block.text]} role="term">{blockLabel(block)}</Heading>
 			<p role="definition" data-testid="block-words">{words}</p>
 		</div>
 	</AskableBlock>

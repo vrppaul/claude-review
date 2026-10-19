@@ -30,9 +30,10 @@
 	const told = $derived(chapter.told);
 </script>
 
-<!-- What heads a warning among the chapter's words, the same over each: in the warning's colour, a line of its own -->
+<!-- What heads a warning among the chapter's words, the same over each: in the warning's colour, a line of its own
+	above the words it heads -->
 {#snippet warningHead(words: string)}
-	<span class="block text-xs font-semibold text-warning">{words}</span>
+	<Heading tag="p" heads="list" tone="warning">{words}</Heading>
 {/snippet}
 
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
@@ -57,8 +58,8 @@
 				warning's frame, since what the agent says below was said of the code before; and that the agent
 				is updating it, only while it is -->
 			<EdgeFrame {...A_WARNING} testId="chapter-changed">
+				{@render warningHead(CHANGED_AFTER_TOLD_HEAD)}
 				<p>
-					{@render warningHead(CHANGED_AFTER_TOLD_HEAD)}
 					{stepsChanged(told.changed_steps)}
 					{CODE_BELOW_IS_CURRENT}
 					{#if review.story.wait?.kind === 'writing'}
@@ -75,10 +76,8 @@
 		{#if told.doubt}
 			{@const doubt = chapterText(told.id, 'doubt')}
 			<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block" frame={A_WARNING}>
-				<p data-testid="chapter-doubt">
-					{@render warningHead(blockLabel(doubt))}
-					{told.doubt}
-				</p>
+				{@render warningHead(blockLabel(doubt))}
+				<p data-testid="chapter-doubt">{told.doubt}</p>
 			</AskableBlock>
 		{/if}
 

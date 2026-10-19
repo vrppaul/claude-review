@@ -212,8 +212,8 @@
  */
 .cr-ui-segmented {
 	display: inline-flex;
-	gap: --spacing(0.5);
-	padding: --spacing(0.5);
+	gap: var(--cr-track-room);
+	padding: var(--cr-track-room);
 	border-radius: var(--radius-field);
 	background: var(--color-base-300);
 }
@@ -223,7 +223,7 @@
 	align-items: center;
 	gap: --spacing(1.5);
 	padding: --spacing(0.5) --spacing(2);
-	border-radius: calc(var(--radius-field) - --spacing(0.5));
+	border-radius: calc(var(--radius-field) - var(--cr-track-room));
 	color: var(--cr-muted);
 	font-size: var(--text-2xs);
 	line-height: var(--text-2xs--line-height);
@@ -813,7 +813,7 @@
 	display: block;
 	width: 100%;
 	min-height: var(--cr-list-row-height);
-	padding-block: calc((var(--cr-list-row-height) - 1lh) / 2);
+	padding-block: calc((var(--cr-list-row-height) - var(--cr-one-line)) / 2);
 	padding-inline: calc(var(--cr-depth) * var(--cr-list-row-indent) + var(--cr-list-row-room)) var(--cr-list-row-room);
 	border-radius: var(--radius-field);
 	color: var(--color-base-content);
@@ -840,7 +840,7 @@
 	flex-shrink: 0;
 	align-items: center;
 	gap: var(--cr-list-row-gap);
-	height: 1lh;
+	height: var(--cr-one-line);
 }
 .cr-ui-row-end {
 	margin-inline-start: auto;
@@ -921,7 +921,7 @@
 	font-family: var(--font-mono);
 	font-size: var(--text-xs);
 	font-weight: var(--font-weight-normal);
-	line-height: var(--text-2xs--line-height);
+	line-height: var(--text-xs--line-height);
 }
 
 /* A dot (Dot, lib/ui/dot.ts): round, in its tone's colour */

@@ -41,6 +41,8 @@
 	 */
 	--cr-line: 1px;
 	--cr-line-strong: 2px;
+	/* One line of the words of whatever names it, as tall as their leading makes it there */
+	--cr-one-line: 1lh;
 
 	--cr-code-size: 0.8125rem;
 	--cr-code-leading: 1.55;
@@ -131,6 +133,8 @@
 	 */
 	--cr-button-xs: 1.5rem;
 	--cr-button-sm: 2rem;
+	/* The room a track (lib/ui Segmented) keeps round its segments and between them */
+	--cr-track-room: --spacing(0.5);
 
 	/*
 	 * A row of a list (lib/ui Row) — a file of the tree, a part of a story in
@@ -356,8 +360,8 @@
  * The size a mark's words are set at — a tag, a count, a chip, a segment of
  * a track — and a caption's, who said a turn of the panel: below Tailwind's
  * least, at the leading that keeps a mark as tall in whatever line it stands
- * in. Handed to Tailwind's theme, so the markup sets it as `text-2xs`, as it
- * does the theme's own sizes.
+ * in. Handed to Tailwind's theme, so it is one of the theme's sizes, named
+ * `--text-2xs` as they are and set as `text-2xs` as they are.
  */
 @theme {
 	--text-2xs: 0.6875rem;

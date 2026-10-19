@@ -65,7 +65,7 @@
 		<textarea
 			{@attach focusOnDraw}
 			data-testid="review-body"
-			class="cr-field cr-comment-body min-h-16 w-full rounded px-3 py-2"
+			class="cr-field cr-comment-body min-h-16 w-full rounded-field px-3 py-2"
 			placeholder="Summary — optional, about the change as a whole"
 			maxlength={review.limits.max_text_length}
 			aria-label="Summary of the review"
