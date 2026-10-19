@@ -125,13 +125,13 @@ describe('where the keyboard is after a thread changes', () => {
 		expect(document.activeElement).toBe(thread());
 	});
 
-	it('is on the toggle that folded the thread, and on the one that opens it again', async () => {
+	it('is on the line the thread folded to, and on the toggle of the thread it opens again', async () => {
 		const user = userEvent.setup();
 		render(DiffView, inReview(review));
 
 		await user.click(within(thread()).getByTestId('fold-comment'));
 		await drawn();
-		expect(document.activeElement).toBe(within(thread()).getByTestId('fold-comment'));
+		expect(document.activeElement).toBe(within(thread()).getByTestId('unfold-thread'));
 		expect(screen.getByTestId('folded-thread')).toBeTruthy();
 
 		await user.click(within(thread()).getByTestId('unfold-thread'));

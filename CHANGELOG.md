@@ -242,6 +242,14 @@
   library's. eslint refuses an `<img>` or an `<a>` drawn outside it. A
   turn's avatar stays the thread's own drawing: the turn and the thread's
   spine are laid out from its size.
+- **Everything that folds folds one way.** A thread folded to a line is
+  one row of the library's that opens it again pressed anywhere, its
+  chevron at the far end, where the line and the chevron were two buttons
+  that did the same; folding a thread leaves the keyboard on that row.
+  The panel's way to attach an agent by hand is a row that folds its
+  commands away until asked for, where it was the browser's own
+  `<details>`, its triangle beside the page's chevrons. eslint refuses a
+  `<details>` or a `<summary>` outside the library.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

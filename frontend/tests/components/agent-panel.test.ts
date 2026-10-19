@@ -92,15 +92,20 @@ describe('the agent panel', () => {
 		expect(queryByTestId('panel-input')).toBeNull();
 	});
 
-	it('keeps the commands for attaching by hand folded away', () => {
+	it('keeps the commands for attaching by hand folded away until they are asked for', async () => {
+		const user = userEvent.setup();
 		// Nobody attached after all
 		review.answerer.setAttached(false);
 
-		const { getByTestId } = render(AgentPanel, inReview(review));
+		const { getByTestId, queryByTestId } = render(AgentPanel, inReview(review));
 
 		// An agent that opened the review is about to attach; the reader
 		// should not be met with setup instructions meant for somebody else
-		expect((getByTestId('panel-attach-by-hand') as HTMLDetailsElement).open).toBe(false);
+		expect(queryByTestId('attach-commands')).toBeNull();
+
+		await user.click(getByTestId('panel-attach-by-hand'));
+
+		expect(getByTestId('attach-commands')).toBeTruthy();
 	});
 
 	it('takes no longer a message than the server takes', async () => {

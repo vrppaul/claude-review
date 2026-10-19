@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorLabel } from '$lib/anchors/views';
+	import { FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 	import { useReview } from '$lib/review/context';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
-	import FoldToggle from '$lib/ui/FoldToggle.svelte';
 	import type { FrameTone } from '$lib/ui/frame';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, type CountedWords } from '$lib/utils/words';
@@ -45,31 +46,43 @@
 	}
 </script>
 
-<!-- Folded, by hand or by settling it: one line as wide as the card it folds, and the first words of what
-	was said. Either way it opens to be read, by the chevron where the open card has it, at the far end -->
+{#snippet settled()}
+	<Icon name="check" size="xs" tone="done" />
+{/snippet}
+{#snippet hangsOn()}
+	<span class="cr-comment-ref">{anchorLabel(thread.anchor)}</span>
+{/snippet}
+{#snippet firstWords()}
+	{plainWords(thread.body) || 'an image'}
+{/snippet}
+<!-- How many replies are under it, and whether one of them is new -->
+{#snippet replies()}
+	{#if thread.turns.length > 0}
+		<span class="cr-faint">{counted(thread.turns.length, REPLIES)}</span>
+	{/if}
+	{#if unread}
+		<NewReplyMark />
+	{/if}
+{/snippet}
+
+<!-- Folded, by hand or by settling it: one row as wide as the card it folds, the line it hangs on and the first
+	words of what was said, one press anywhere on it to open it again, its chevron at the far end where the open
+	card has its own. A settled one is taken up again by Reopen beside it -->
 <EdgeFrame tone={drawnAs.tone} ground="tint" testId={drawnAs.testId}>
 	<div class={['flex items-center gap-3', folded === 'raised' && 'cr-raised']}>
-		{#if thread.resolved}
-			<Icon name="check" size="xs" tone="done" />
-		{/if}
-		<button
-			type="button"
-			data-testid="unfold-thread"
-			class="flex min-w-0 flex-1 items-baseline gap-3 text-left"
+		<Row
+			names="path"
+			folded
+			testId="unfold-thread"
+			data-role={FOLD_TOGGLE_ROLE}
+			leading={thread.resolved ? settled : undefined}
+			label={hangsOn}
+			said={firstWords}
+			trailing={replies}
 			onclick={unfold}
-		>
-			<span class="cr-comment-ref shrink-0 font-mono text-xs">{anchorLabel(thread.anchor)}</span>
-			<span class="cr-muted truncate text-sm">{plainWords(thread.body) || 'an image'}</span>
-			{#if thread.turns.length > 0}
-				<span class="cr-faint shrink-0 text-xs">{counted(thread.turns.length, REPLIES)}</span>
-			{/if}
-		</button>
-		{#if unread}
-			<NewReplyMark />
-		{/if}
+		/>
 		{#if thread.resolved}
 			<ReopenButton {thread} />
 		{/if}
-		<FoldToggle folded subject="this thread" testId="fold-comment" tone="secondary" onToggle={unfold} />
 	</div>
 </EdgeFrame>

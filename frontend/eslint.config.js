@@ -436,8 +436,6 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 // The components that still draw a <button> of their own, each with the part that is to take it or why it is the
 // page's: each is let off the rule that refuses one, and nothing else is
 const STILL_PRESSED_BY_HAND = [
-	// The line a thread is folded to, which opens it again: the library's Fold is to draw it
-	'src/lib/components/FoldedThread.svelte',
 	// A line's number, and the ways to the lines a gap leaves out: controls in the code, drawn with its rows
 	'src/lib/components/LineGutter.svelte',
 	'src/lib/components/HunkGap.svelte'
@@ -455,6 +453,12 @@ const FIELD_IN_THE_LIBRARY = { elements: ['input', 'textarea', 'select'], messag
 const IMAGE_IN_THE_LIBRARY = {
 	elements: ['img'],
 	message: 'Draw an image with lib/ui Thumbnail or Picture, not with an element of its own.'
+};
+// What folds is drawn by the library too, a row that folds what is under it or a toggle: the page drew one fold as
+// the browser's own <details>, its triangle beside the chevron everything else on the page folds with
+const FOLD_IN_THE_LIBRARY = {
+	elements: ['details', 'summary'],
+	message: 'Fold with lib/ui Row (folded) or FoldToggle, not with an element of its own.'
 };
 const LINK_IN_THE_LIBRARY = {
 	elements: ['a'],
@@ -743,6 +747,7 @@ export default tseslint.config(
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,
 				LINK_IN_THE_LIBRARY,
+				FOLD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
@@ -758,6 +763,7 @@ export default tseslint.config(
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,
 				LINK_IN_THE_LIBRARY,
+				FOLD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
@@ -774,6 +780,7 @@ export default tseslint.config(
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,
 				LINK_IN_THE_LIBRARY,
+				FOLD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
