@@ -752,15 +752,14 @@
  * of the tree, a part of a story in its contents, a fold, an option of a
  * pane — its words small and strong, a path in the code's face; set in as
  * far as its folder stands deep in the tree. One line of words stands in the
- * middle of a row's height, the least a row stands; a title of more lines
- * keeps that room above and below them, and what stands before and after it
- * stays level with its first line. The pointer lights it as it lights
- * whatever can be pressed.
+ * middle of a row's height, the least a row stands; a title of more lines,
+ * or what a row holds in full under its line, keeps that room above and
+ * below them, and what stands before and after the title stays level with
+ * its first line. The pointer lights it, whole, as it lights whatever can be
+ * pressed.
  */
 .cr-ui-row {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--cr-list-row-gap);
+	display: block;
 	width: 100%;
 	min-height: var(--cr-list-row-height);
 	padding-block: calc((var(--cr-list-row-height) - 1lh) / 2);
@@ -771,6 +770,17 @@
 	font-weight: 600;
 	line-height: var(--text-xs--line-height);
 	text-align: left;
+}
+/* Its line: what stands before its label, the label, what it says of that, and what stands at its end */
+.cr-ui-row-line {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--cr-list-row-gap);
+}
+/* What it holds in full under its line — a comment's words — in their own weight, stepping back with the row */
+.cr-ui-row-below {
+	display: block;
+	font-weight: 400;
 }
 /* What stands before its label and at its end: never squeezed, level with its first line, its end at the far side */
 .cr-ui-row-leading,
@@ -794,7 +804,7 @@
  * break inside a name, at a slash or a dot, and the tree reads as a tree
  * only while each of its rows is one line under the folder it stands in
  */
-.cr-ui-row-path {
+.cr-ui-row-path .cr-ui-row-line {
 	white-space: nowrap;
 }
 .cr-ui-row-path .cr-ui-row-label {

@@ -46,14 +46,6 @@
 	}: Props = $props();
 </script>
 
-<!-- What became of the file, before its name, where the review says; the compiler is told again inside, as it
-	cannot see the condition the snippet is handed under -->
-{#snippet letter()}
-	{#if status !== null}
-		<StatusLetter {status} />
-	{/if}
-{/snippet}
-
 <!-- Its marks, its threads, and how much it changes, at its end -->
 {#snippet trailing()}
 	{@render marks?.()}
@@ -63,9 +55,8 @@
 	{@render end?.()}
 {/snippet}
 
-<!-- A file in a column beside what is read, the tree of files or a story's contents: what became of it,
-	its name, its threads and how much it changes. One press to where it is drawn -->
-<li>
+<!-- The row, led by what stands before its name, if anything does -->
+{#snippet row(leading: Snippet | undefined)}
 	<Row
 		names="path"
 		{testId}
@@ -76,8 +67,23 @@
 		aria-current={current ? 'true' : undefined}
 		{title}
 		{onclick}
-		leading={status === null ? undefined : letter}
+		{leading}
 		label={name}
 		{trailing}
 	/>
+{/snippet}
+
+<!-- A file in a column beside what is read, the tree of files or a story's contents: what became of it, where
+	the review says, its name, its threads and how much it changes. One press to where it is drawn -->
+<li>
+	{#if status === null}
+		{@render row(undefined)}
+	{:else}
+		<!-- Held as it is here, where it is known, for the letter drawn from it -->
+		{@const became = status}
+		{#snippet letter()}
+			<StatusLetter status={became} />
+		{/snippet}
+		{@render row(letter)}
+	{/if}
 </li>

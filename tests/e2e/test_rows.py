@@ -227,17 +227,13 @@ async def test_the_rows_of_the_tree_stand_one_height_and_are_lit_by_the_pointer_
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)
-async def test_the_rows_of_help_of_the_base_picker_and_of_the_finish_pane_stand_one_height_and_are_lit_by_the_pointer(
+async def test_the_rows_of_help_and_of_the_base_picker_stand_one_height_and_are_lit_by_the_pointer(
     review: RunningReview, page: Page, scheme: str
 ) -> None:
     await _open_in(page, review, scheme)
-    await _comment_on_the_first_line(page)
 
     await page.get_by_test_id("open-help").click()
     await _expect_rows_of_one_height_lit_by_the_pointer(page, IN_HELP)
-    await page.keyboard.press("Escape")
-    await page.get_by_test_id("quick-submit").click()
-    await _expect_rows_of_one_height_lit_by_the_pointer(page, IN_THE_FINISH_PANE)
     await page.keyboard.press("Escape")
     await page.get_by_test_id("base-picker").click()
     rows = await _rows(page, IN_THE_BASE_PICKER)
@@ -249,6 +245,25 @@ async def test_the_rows_of_help_of_the_base_picker_and_of_the_finish_pane_stand_
     assert await _heights(rows) == [ROW_HEIGHT] * len(rows)
     others = await not_in_force.all()
     assert await _lit_under_the_pointer(others) == [await light(page, "--cr-hover")] * len(others)
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_a_comment_in_the_finish_pane_is_one_row_lit_whole_from_its_words_and_faint_once_sent_with_a_round(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await _comment_on_the_first_line(page)
+    await page.get_by_test_id("quick-submit").click()
+    [comment] = await _rows(page, IN_THE_FINISH_PANE)
+    words = page.get_by_test_id("finish-comment-below")
+
+    await words.hover()
+
+    assert (await painted(comment)).laid == await light(page, "--cr-hover")
+    await page.keyboard.press("Escape")
+    await _send_the_round(page)
+    await page.get_by_test_id("quick-submit").click()
+    assert (await painted(words)).words == await on_a_probe(page, "color", "var(--cr-faint)")
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)

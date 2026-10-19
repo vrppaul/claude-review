@@ -161,8 +161,8 @@
 				<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
 			{/if}
 		{:else}
-			<!-- Each comment headed by a row, one press to its thread, what it says in full under it; one sent with a
-				round steps back -->
+			<!-- Each comment a row, one press to its thread, all of it: where it hangs on its line and what it says
+				in full under that; one sent with a round steps back -->
 			<ul class="flex flex-col gap-1.5">
 				{#each review.threads.all as thread (thread.id)}
 					{@const sent = review.threads.sentInRound(thread.id)}
@@ -185,10 +185,10 @@
 									<span class="cr-faint">round {sent}</span>
 								{/if}
 							{/snippet}
+							{#snippet below()}
+								{@render said(thread.body, thread.anchor)}
+							{/snippet}
 						</Row>
-						<div data-testid="finish-comment-words" class={['px-2', sent !== undefined && 'cr-viewed']}>
-							{@render said(thread.body, thread.anchor)}
-						</div>
 					</li>
 				{/each}
 			</ul>

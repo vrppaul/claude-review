@@ -397,9 +397,9 @@
 
 /*
  * What the reader has finished with steps back, in faint words that still
- * read at 4.5:1, where fading it whole took them below: a file's header,
- * the words of a comment sent with a round. A row steps back so in the
- * library's own stylesheet (lib/ui Row)
+ * read at 4.5:1, where fading it whole took them below: a file's header. A
+ * row steps back so in the library's own stylesheet (lib/ui Row), a
+ * comment sent with a round among them
  */
 .cr-viewed {
 	color: var(--cr-faint);

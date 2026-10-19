@@ -100,6 +100,15 @@ describe('finishing a review', () => {
 		expect(getByTestId('modal-comment-ref').textContent).toContain('src/app.ts');
 	});
 
+	it('takes the reader to a comment from a press on its words, as from the line it hangs on', async () => {
+		review.threads.add(newComment({ file: 'file.ts', startLine: 1, body: 'Rename this' }));
+		const { getByText } = render(FinishReview, inReview(review));
+
+		await userEvent.setup().click(getByText('Rename this'));
+
+		expect(review.submission.finishing).toBe(false);
+	});
+
 	it('shows a suggestion as the change it makes, never as its fence', () => {
 		review.threads.add(
 			newComment({
@@ -112,8 +121,8 @@ describe('finishing a review', () => {
 
 		const { getByTestId, getAllByTestId } = render(FinishReview, inReview(review));
 
-		expect(getByTestId('finish-comment-words').textContent).not.toContain('```');
-		expect(getByTestId('finish-comment-words').textContent).toContain('Name it:');
+		expect(getByTestId('finish-comment-below').textContent).not.toContain('```');
+		expect(getByTestId('finish-comment-below').textContent).toContain('Name it:');
 		expect(getAllByTestId('suggestion-line').map((line) => line.textContent)).toEqual([
 			'−const limit = 3;',
 			'+const limit = MAX_LINES;'
