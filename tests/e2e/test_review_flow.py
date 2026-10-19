@@ -327,10 +327,8 @@ async def test_a_press_outside_the_keys_list_closes_it_and_a_selection_let_go_th
     await page.keyboard.press("?")
     help_menu = page.get_by_test_id("help-menu")
     await help_menu.wait_for()
-    words = await page.get_by_text("Keyboard", exact=True).bounding_box()
-    assert words is not None
+    await help_menu.get_by_test_id("shortcuts-list").hover()
 
-    await page.mouse.move(words["x"] + 1, words["y"] + words["height"] / 2)
     await page.mouse.down()
     await page.mouse.move(OUTSIDE_THE_DIALOG, OUTSIDE_THE_DIALOG)
     await page.mouse.up()

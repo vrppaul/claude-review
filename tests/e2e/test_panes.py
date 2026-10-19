@@ -11,6 +11,7 @@ from playwright.async_api import Page, ViewportSize, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.page_reads import FOCUSED_TEST_ID, PAGE_SCROLLED_BY, SCROLLED
+from tests.e2e.placing import TOP_UNDER
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 CHANGED_FILE = "told.py"
@@ -35,19 +36,12 @@ HALF_A_THOUGHT = "Half a thought"
 LONG_FILE = "long.py"
 LONG_FILE_LINES = 80
 DEEP_LINE = 40
-# How far under the foot of the file's header a control is scrolled to, and how far its foot stands above the
-# foot of the reading area, in pixels: near enough that a question opened its own way would lie under the
-# header, or past the area's foot
+# How far under the foot of the file's header a control is scrolled to, in pixels: near enough that a question
+# opened its own way would lie under the header
 JUST_UNDER_THE_HEADER = 10
-JUST_ABOVE_THE_FOOT = 20
-# Scroll the reading area by as much as stands a control's top that far under the foot of a header kept over it
-TOP_UNDER = """(area, [control, header, under]) => {
-    area.scrollTop += control.getBoundingClientRect().top - (header.getBoundingClientRect().bottom + under);
-}"""
-# Scroll the reading area by as much as stands a control's foot that far above the area's own foot
-FOOT_ABOVE = """(area, [control, above]) => {
-    area.scrollTop += control.getBoundingClientRect().bottom - (area.getBoundingClientRect().bottom - above);
-}"""
+# Scroll a control's foot to the foot of the area it scrolls in, where a question opened its own way would
+# reach past it
+AT_THE_FOOT = "(control) => control.scrollIntoView({ block: 'end' })"
 
 
 @pytest.fixture
@@ -145,23 +139,21 @@ async def test_the_question_before_a_comment_is_discarded_asked_just_under_the_f
     assert await area.evaluate(SCROLLED) == scrolled_to
 
 
-async def _bin_near_the_foot(page: Page, review: RunningReview) -> None:
-    """A comment saved deep in the long file, its bin scrolled to stand just above the foot of the reading area."""
+async def _bin_at_the_foot(page: Page, review: RunningReview) -> None:
+    """A comment saved deep in the long file, its bin scrolled to stand at the foot of the reading area."""
     await _open(page, review)
     await _comment_deep_in_the_file(page, SAVED_WORDS)
     await page.keyboard.press("Control+Enter")
     bin_button = page.get_by_test_id("delete-comment")
     await bin_button.wait_for()
-    await page.get_by_test_id("diff-view").evaluate(
-        FOOT_ABOVE, [await bin_button.element_handle(), JUST_ABOVE_THE_FOOT]
-    )
+    await bin_button.evaluate(AT_THE_FOOT)
 
 
-async def test_the_question_before_a_comment_is_deleted_asked_near_the_foot_of_the_reading_area_is_answered_where_it_opens(
+async def test_the_question_before_a_comment_is_deleted_asked_at_the_foot_of_the_reading_area_is_answered_where_it_opens(
     long_change: RunningReview, page: Page
 ) -> None:
     """Pressed where it opened, its answer is reached without the reading area moving to show it."""
-    await _bin_near_the_foot(page, long_change)
+    await _bin_at_the_foot(page, long_change)
     area = page.get_by_test_id("diff-view")
     scrolled_to = await area.evaluate(SCROLLED)
     await page.get_by_test_id("delete-comment").click()
@@ -175,7 +167,7 @@ async def test_the_question_before_a_comment_is_deleted_asked_near_the_foot_of_t
 async def test_the_question_taking_the_keyboard_leaves_the_reading_area_where_the_reader_had_it(
     long_change: RunningReview, page: Page
 ) -> None:
-    await _bin_near_the_foot(page, long_change)
+    await _bin_at_the_foot(page, long_change)
     area = page.get_by_test_id("diff-view")
     scrolled_to = await area.evaluate(SCROLLED)
 

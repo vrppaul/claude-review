@@ -29,6 +29,25 @@ repos:
         types: [python]
         exclude: ^tests/
 
+      # A test checks what an act did, never how the page looks
+      # (.claude/rules/tests.md): a browser test reads no box, no size and no
+      # style. tests/e2e/placing.py puts a control where the reader would have
+      # scrolled it before a test acts, and is let alone for that
+      - id: no-look-in-browser-tests
+        name: no browser test reads a box, a size or a style
+        entry: 'bounding_box\(|getBoundingClientRect|getComputedStyle|opacity|elementFromPoint|to_have_css|scroll(Height|Width)|client(Height|Width)|inner(Height|Width)|offset(Top|Left|Height|Width)'
+        language: pygrep
+        files: ^tests/e2e/.*\.py$
+        exclude: ^tests/e2e/placing\.py$
+
+      # The page's tests hand jsdom the boxes it cannot lay out, and read no
+      # style and no class back
+      - id: no-look-in-page-tests
+        name: no page test reads a style or a class back
+        entry: 'getComputedStyle|getPropertyValue|toHaveStyle|toHaveClass|classList'
+        language: pygrep
+        files: ^frontend/tests/
+
       - id: typos
         name: typos
         # What pyproject.toml excludes stays excluded when the hook names a file

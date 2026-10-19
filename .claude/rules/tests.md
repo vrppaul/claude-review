@@ -13,6 +13,7 @@ paths:
 - Its name states that behaviour: `tests/integration/test_diff_reading.py` is the standard.
 - First find the test that already holds the behaviour and extend it. A new test only where none does.
 - It is written before its code and seen failing. A refactor gets no new test: the old ones pass unchanged.
+- A test rewritten is seen failing too: with the line of code it holds broken, then restored.
 - Never how it looks: no colour, size, weight, face, corner, room, pixel, opacity or position, measured or read from a style. Tokens, the gates and a reviewer's eye hold a look.
 - A width the reader sets, dragging a column or with its keys, is what they did, not a look: a test may hold it.
 - How far an area has scrolled is what a scroll or a key did: a test may compare it, never where a box stands.
@@ -38,6 +39,7 @@ paths:
 - Data with a shape is a typed model, never a raw `dict` or `Mapping`, in tests too.
 - Wire JSON is written out by hand only where a test speaks as the browser or the agent and its neighbours already do.
 - The tests are held to formatting alone, `ruff format` and Prettier: no linter, type checker or spelling check reads them. vulture and knip read them for what of the package and the page they use.
+- One check reads them for a look: a commit refuses a browser test that reads a box, a size or a style, and a page test that reads a style or a class back (`.pre-commit-config.yaml`).
 - A test acts on an element by its `data-testid`, and never asserts one. `getByText` and `text=` only assert words the user sees. Never a CSS class selector.
 
 ## The browser
